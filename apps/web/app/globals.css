@@ -1,0 +1,64 @@
+:root {
+  --bg: #f4f1ea;
+  --surface: #fffaf1;
+  --ink: #1f2328;
+  --muted: #5f6b76;
+  --accent: #0f766e;
+  --border: #d5cdbd;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Avenir Next", "Nunito Sans", sans-serif;
+  background: radial-gradient(circle at top right, #fff7d9 0%, var(--bg) 45%, #e7efe7 100%);
+  color: var(--ink);
+}
+
+main {
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.cards {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+}
+
+.kpi {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0.25rem 0;
+}
+
+.badge {
+  display: inline-block;
+  border-radius: 999px;
+  background: #e0f2f1;
+  color: #065f46;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
