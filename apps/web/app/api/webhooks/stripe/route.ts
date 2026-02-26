@@ -1,0 +1,116 @@
+import { NextRequest, NextResponse } from "next/server";
+import { verifyWebhookSignature } from "@/lib/stripe";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+export async function POST(request: NextRequest) {
+  const payload = await request.text();
+  const signatureHeader = request.headers.get("stripe-signature");
+
+  if (!signatureHeader) {
+    return NextResponse.json({ error: "Missing stripe-signature header." }, { status: 400 });
+  }
+
+  let event;
+  try {
+    event = await verifyWebhookSignature(payload, signatureHeader);
+  } catch {
+    return NextResponse.json({ error: "Invalid webhook signature." }, { status: 400 });
+  }
+
+  if (event.type !== "checkout.session.completed") {
+    return NextResponse.json({ received: true });
+  }
+
+  const session = event.data.object;
+  const chargeId = session.metadata?.charge_id;
+  const userId = session.metadata?.user_id;
+
+  if (!chargeId || !userId || session.payment_status !== "paid" || !session.amount_total) {
+    return NextResponse.json({ received: true });
+  }
+
+  const supabase = createAdminClient();
+
+  // Idempotency: check if already recorded
+  const { data: existingPayment } = await supabase
+    .from("payments")
+    .select("id")
+    .eq("stripe_checkout_session_id", session.id)
+    .maybeSingle();
+
+  if (existingPayment) {
+    return NextResponse.json({ received: true, status: "already_recorded" });
+  }
+
+  // Validate the charge exists and walk the ownership chain
+  const { data: charge } = await supabase
+    .from("rent_charges")
+    .select("id, lease_id, status")
+    .eq("id", chargeId)
+    .single();
+
+  if (!charge || charge.status === "paid") {
+    return NextResponse.json({ received: true, status: "charge_already_paid_or_missing" });
+  }
+
+  const { data: lease } = await supabase
+    .from("leases")
+    .select("id, tenant_profile_id, unit_id")
+    .eq("id", charge.lease_id)
+    .single();
+
+  if (!lease) {
+    return NextResponse.json({ error: "Lease not found for charge." }, { status: 422 });
+  }
+
+  const { data: unit } = await supabase
+    .from("units")
+    .select("id, property_id")
+    .eq("id", lease.unit_id)
+    .single();
+
+  if (!unit) {
+    return NextResponse.json({ error: "Unit not found for lease." }, { status: 422 });
+  }
+
+  const { data: property } = await supabase
+    .from("properties")
+    .select("id, owner_profile_id")
+    .eq("id", unit.property_id)
+    .single();
+
+  if (!property) {
+    return NextResponse.json({ error: "Property not found." }, { status: 422 });
+  }
+
+  // Verify the user is authorized (owner or tenant)
+  const isOwner = property.owner_profile_id === userId;
+  const isTenant = lease.tenant_profile_id === userId;
+
+  if (!isOwner && !isTenant) {
+    return NextResponse.json({ error: "Unauthorized user for this charge." }, { status: 403 });
+  }
+
+  // Record the payment
+  const { error: insertError } = await supabase.from("payments").insert({
+    rent_charge_id: charge.id,
+    amount_cents: session.amount_total,
+    method: "card",
+    reference_note: "Stripe Checkout",
+    stripe_checkout_session_id: session.id,
+    stripe_payment_intent_id: session.payment_intent ?? null,
+  });
+
+  if (insertError) {
+    // Unique constraint violation = already recorded (race condition)
+    if (insertError.code === "23505") {
+      return NextResponse.json({ received: true, status: "already_recorded" });
+    }
+    return NextResponse.json({ error: "Failed to record payment." }, { status: 500 });
+  }
+
+  // Mark charge as paid
+  await supabase.from("rent_charges").update({ status: "paid" }).eq("id", charge.id);
+
+  return NextResponse.json({ received: true, status: "payment_recorded" });
+}

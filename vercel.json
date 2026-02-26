@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/generate-charges",
+      "schedule": "0 8 * * *"
+    }
+  ]
+}

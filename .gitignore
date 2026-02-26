@@ -4,6 +4,10 @@ node_modules
 dist
 build
 .env
+.env.local
+.env.*.local
+apps/web/.env.local
+apps/mobile/.env
 .DS_Store
 npm-debug.log*
 coverage

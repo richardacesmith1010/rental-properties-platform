@@ -1,9 +1,5 @@
-import { Dashboard } from "@/components/dashboard";
+import { redirect } from "next/navigation";
 
 export default function HomePage() {
-  return (
-    <main>
-      <Dashboard />
-    </main>
-  );
+  redirect("/portal");
 }

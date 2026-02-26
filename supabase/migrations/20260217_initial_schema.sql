@@ -115,8 +115,8 @@ alter table communication_logs enable row level security;
 
 -- Baseline policy: authenticated users can read rows related to their profile.
 -- Tighten this further once role-specific auth logic is implemented.
-create policy if not exists "profiles_select_self" on profiles
+create policy "profiles_select_self" on profiles
 for select using (auth.uid() = id);
 
-create policy if not exists "profiles_update_self" on profiles
+create policy "profiles_update_self" on profiles
 for update using (auth.uid() = id);
