@@ -4,6 +4,9 @@ import {
   createUnitSchema,
   createLeaseSchema,
   payChargeSchema,
+  createMaintenanceTicketSchema,
+  updateTicketStatusSchema,
+  updateTicketCostSchema,
   parseFormData,
 } from "../validations";
 
@@ -194,6 +197,151 @@ describe("payChargeSchema", () => {
   it("rejects non-UUID strings", () => {
     const result = payChargeSchema.safeParse({
       chargeId: "abc-123",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+/* ─── createMaintenanceTicketSchema ─── */
+describe("createMaintenanceTicketSchema", () => {
+  const validUUID = "550e8400-e29b-41d4-a716-446655440000";
+  const validTicket = {
+    unitId: validUUID,
+    title: "Leaking faucet in kitchen",
+    description: "The kitchen faucet has been dripping steadily for two days.",
+    priority: "medium",
+  };
+
+  it("accepts valid ticket data", () => {
+    const result = createMaintenanceTicketSchema.safeParse(validTicket);
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts all priority levels", () => {
+    for (const priority of ["low", "medium", "high", "urgent"]) {
+      const result = createMaintenanceTicketSchema.safeParse({
+        ...validTicket,
+        priority,
+      });
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it("rejects invalid priority", () => {
+    const result = createMaintenanceTicketSchema.safeParse({
+      ...validTicket,
+      priority: "critical",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty title", () => {
+    const result = createMaintenanceTicketSchema.safeParse({
+      ...validTicket,
+      title: "",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects title over 200 characters", () => {
+    const result = createMaintenanceTicketSchema.safeParse({
+      ...validTicket,
+      title: "A".repeat(201),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty description", () => {
+    const result = createMaintenanceTicketSchema.safeParse({
+      ...validTicket,
+      description: "",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects description over 2000 characters", () => {
+    const result = createMaintenanceTicketSchema.safeParse({
+      ...validTicket,
+      description: "B".repeat(2001),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects non-UUID unit ID", () => {
+    const result = createMaintenanceTicketSchema.safeParse({
+      ...validTicket,
+      unitId: "not-a-uuid",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+/* ─── updateTicketStatusSchema ─── */
+describe("updateTicketStatusSchema", () => {
+  const validUUID = "550e8400-e29b-41d4-a716-446655440000";
+
+  it("accepts all valid statuses", () => {
+    for (const status of ["open", "in_progress", "resolved", "closed"]) {
+      const result = updateTicketStatusSchema.safeParse({
+        ticketId: validUUID,
+        status,
+      });
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it("rejects invalid status", () => {
+    const result = updateTicketStatusSchema.safeParse({
+      ticketId: validUUID,
+      status: "pending",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects non-UUID ticket ID", () => {
+    const result = updateTicketStatusSchema.safeParse({
+      ticketId: "bad-id",
+      status: "open",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+/* ─── updateTicketCostSchema ─── */
+describe("updateTicketCostSchema", () => {
+  const validUUID = "550e8400-e29b-41d4-a716-446655440000";
+
+  it("accepts valid cost data", () => {
+    const result = updateTicketCostSchema.safeParse({
+      ticketId: validUUID,
+      actualCostDollars: "250.50",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.actualCostDollars).toBe(250.5);
+    }
+  });
+
+  it("accepts zero cost", () => {
+    const result = updateTicketCostSchema.safeParse({
+      ticketId: validUUID,
+      actualCostDollars: "0",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects negative cost", () => {
+    const result = updateTicketCostSchema.safeParse({
+      ticketId: validUUID,
+      actualCostDollars: "-50",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects non-UUID ticket ID", () => {
+    const result = updateTicketCostSchema.safeParse({
+      ticketId: "invalid",
+      actualCostDollars: "100",
     });
     expect(result.success).toBe(false);
   });

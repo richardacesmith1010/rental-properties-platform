@@ -1,11 +1,13 @@
 import type { DashboardData } from "@/lib/dashboard";
 import type { PortfolioData } from "@/lib/portfolio";
+import type { MaintenanceTicket } from "@/lib/maintenance";
 import type { ActionState } from "@/app/actions";
 import { Badge } from "@/components/ui/badge";
 import { SidebarNav, MobileTopBar } from "./sidebar-nav";
 import { KpiGrid } from "./kpi-grid";
 import { ChargesSection } from "./charges-section";
 import { PaymentsSection } from "./payments-section";
+import { MaintenanceSection } from "./maintenance-section";
 import { OperationsSection } from "./operations-section";
 import { PortfolioSection } from "./portfolio-section";
 import { LeasesSection } from "./leases-section";
@@ -16,23 +18,27 @@ type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionS
 interface DashboardProps {
   data: DashboardData;
   portfolio?: PortfolioData;
+  tickets?: MaintenanceTicket[];
   userEmail: string;
   onSignOut: FormAction;
   onCreateProperty: StatefulAction;
   onCreateUnit: StatefulAction;
   onCreateLease: StatefulAction;
   onPayCharge: FormAction;
+  onUpdateTicketStatus?: StatefulAction;
 }
 
 export function Dashboard({
   data,
   portfolio,
+  tickets,
   userEmail,
   onSignOut,
   onCreateProperty,
   onCreateUnit,
   onCreateLease,
   onPayCharge,
+  onUpdateTicketStatus,
 }: DashboardProps) {
   const safePortfolio: PortfolioData = portfolio ?? {
     properties: [],
@@ -94,6 +100,12 @@ export function Dashboard({
           <ChargesSection charges={data.charges} onPayCharge={onPayCharge} />
 
           <PaymentsSection payments={data.recentPayments} />
+
+          <MaintenanceSection
+            tickets={tickets ?? []}
+            showControls={!!onUpdateTicketStatus}
+            onUpdateStatus={onUpdateTicketStatus}
+          />
 
           <OperationsSection
             portfolio={safePortfolio}

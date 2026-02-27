@@ -1,18 +1,25 @@
-import { createCheckoutForCharge, signOut } from "@/app/actions";
+import { createCheckoutForCharge, createMaintenanceTicket, signOut } from "@/app/actions";
 import { requireRole } from "@/lib/auth";
 import { getTenantPaymentData } from "@/lib/tenant-payments";
+import { getTenantMaintenanceData } from "@/lib/maintenance";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/shared/empty-state";
+import { SubmitButton } from "@/components/shared/submit-button";
+import { TicketForm } from "@/components/dashboard/ticket-form";
+import { MaintenanceSection } from "@/components/dashboard/maintenance-section";
 import { LogOut, CreditCard } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function TenantPage() {
   const { user } = await requireRole(["tenant"]);
-  const paymentData = await getTenantPaymentData(user.id);
+
+  const [paymentData, maintenanceData] = await Promise.all([
+    getTenantPaymentData(user.id),
+    getTenantMaintenanceData(user.id),
+  ]);
 
   return (
     <div className="min-h-screen bg-[#fafafa] px-4 py-8">
@@ -25,19 +32,19 @@ export default async function TenantPage() {
                 Tenant Workspace
               </h1>
               <p className="mt-1 text-sm text-zinc-500">
-                Pay rent securely and track outstanding charges.
+                Pay rent, track maintenance, and more.
               </p>
             </div>
             <form action={signOut}>
-              <Button variant="outline" size="sm" type="submit">
+              <SubmitButton variant="outline" size="sm">
                 <LogOut className="mr-2 h-3.5 w-3.5" />
                 Sign out
-              </Button>
+              </SubmitButton>
             </form>
           </CardContent>
         </Card>
 
-        {/* Charges card */}
+        {/* Outstanding Rent Charges */}
         <Card>
           <CardHeader>
             <CardTitle>Outstanding Rent Charges</CardTitle>
@@ -67,10 +74,10 @@ export default async function TenantPage() {
                       </p>
                       <form action={createCheckoutForCharge} className="mt-2">
                         <input type="hidden" name="chargeId" value={charge.id} />
-                        <Button size="sm" type="submit">
+                        <SubmitButton size="sm">
                           <CreditCard className="mr-2 h-3.5 w-3.5" />
                           Pay with Card
-                        </Button>
+                        </SubmitButton>
                       </form>
                     </div>
                   </DataRow>
@@ -79,6 +86,18 @@ export default async function TenantPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Submit Maintenance Request */}
+        <TicketForm
+          units={maintenanceData.units}
+          onCreateTicket={createMaintenanceTicket}
+        />
+
+        {/* My Maintenance Requests */}
+        <MaintenanceSection
+          tickets={maintenanceData.tickets}
+          showControls={false}
+        />
       </div>
     </div>
   );

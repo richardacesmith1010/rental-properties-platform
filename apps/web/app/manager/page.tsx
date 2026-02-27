@@ -1,22 +1,20 @@
-import { RoleShell } from "@/components/role/role-shell";
+import { ManagerDashboard } from "@/components/dashboard/manager-dashboard";
+import { getManagerDashboardData } from "@/lib/manager-dashboard";
+import { signOut, updateTicketStatus } from "@/app/actions";
 import { requireRole } from "@/lib/auth";
-import { signOut } from "@/app/actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function ManagerPage() {
-  await requireRole(["manager"]);
+  const { user } = await requireRole(["manager"]);
+  const data = await getManagerDashboardData(user.id);
 
   return (
-    <RoleShell
-      title="Manager Workspace"
-      subtitle="Operational access for property managers."
-      bullets={[
-        "Track assigned properties and units",
-        "Manage maintenance workflows and vendor assignment",
-        "Review rent status and follow up on delinquencies"
-      ]}
+    <ManagerDashboard
+      data={data}
+      userEmail={user.email ?? "unknown"}
       onSignOut={signOut}
+      onUpdateTicketStatus={updateTicketStatus}
     />
   );
 }

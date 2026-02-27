@@ -42,6 +42,35 @@ export const payChargeSchema = z.object({
   chargeId: z.string().uuid("Invalid charge ID."),
 });
 
+/* ─── Maintenance ─── */
+
+export const createMaintenanceTicketSchema = z.object({
+  unitId: z.string().uuid("Invalid unit selection."),
+  title: z
+    .string()
+    .min(1, "Title is required.")
+    .max(200, "Title must be under 200 characters."),
+  description: z
+    .string()
+    .min(1, "Description is required.")
+    .max(2000, "Description must be under 2,000 characters."),
+  priority: z.enum(["low", "medium", "high", "urgent"], {
+    message: "Select a valid priority.",
+  }),
+});
+
+export const updateTicketStatusSchema = z.object({
+  ticketId: z.string().uuid("Invalid ticket ID."),
+  status: z.enum(["open", "in_progress", "resolved", "closed"], {
+    message: "Select a valid status.",
+  }),
+});
+
+export const updateTicketCostSchema = z.object({
+  ticketId: z.string().uuid("Invalid ticket ID."),
+  actualCostDollars: z.coerce.number().min(0, "Cost cannot be negative."),
+});
+
 /** Parse FormData against a Zod schema. Returns parsed data or a formatted error string. */
 export function parseFormData<T extends z.ZodTypeAny>(
   schema: T,

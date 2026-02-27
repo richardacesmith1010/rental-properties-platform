@@ -10,6 +10,9 @@ import {
   createUnitSchema,
   createLeaseSchema,
   payChargeSchema,
+  createMaintenanceTicketSchema,
+  updateTicketStatusSchema,
+  updateTicketCostSchema,
   parseFormData,
 } from "@/lib/validations";
 
@@ -225,4 +228,145 @@ export async function createCheckoutForCharge(formData: FormData) {
   if (session.url) {
     redirect(session.url);
   }
+}
+
+/* ─── Maintenance Actions ─── */
+
+export async function createMaintenanceTicket(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "tenant" && role !== "owner") {
+    redirect("/portal");
+  }
+
+  const parsed = parseFormData(createMaintenanceTicketSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { unitId, title, description, priority } = parsed.data;
+
+  // Look up property_id from the unit
+  const { data: unit } = await supabase
+    .from("units")
+    .select("id, property_id")
+    .eq("id", unitId)
+    .single();
+
+  if (!unit) {
+    return { success: false, error: "Unit not found." };
+  }
+
+  const { error } = await supabase.from("maintenance_tickets").insert({
+    property_id: unit.property_id,
+    unit_id: unitId,
+    tenant_profile_id: user.id,
+    title,
+    description,
+    priority,
+  });
+
+  if (error) {
+    return { success: false, error: "Failed to create maintenance request. Please try again." };
+  }
+
+  revalidatePath("/tenant");
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  return { success: true };
+}
+
+export async function updateTicketStatus(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" && role !== "manager") {
+    redirect("/portal");
+  }
+
+  const parsed = parseFormData(updateTicketStatusSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { ticketId, status } = parsed.data;
+
+  const updateData: Record<string, unknown> = { status };
+  if (status === "resolved") {
+    updateData.resolved_at = new Date().toISOString();
+  }
+
+  const { error } = await supabase
+    .from("maintenance_tickets")
+    .update(updateData)
+    .eq("id", ticketId);
+
+  if (error) {
+    return { success: false, error: "Failed to update ticket status." };
+  }
+
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  revalidatePath("/tenant");
+  return { success: true };
+}
+
+export async function updateTicketCost(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner") {
+    redirect("/portal");
+  }
+
+  const parsed = parseFormData(updateTicketCostSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { ticketId, actualCostDollars } = parsed.data;
+
+  const { error } = await supabase
+    .from("maintenance_tickets")
+    .update({ actual_cost_cents: Math.round(actualCostDollars * 100) })
+    .eq("id", ticketId);
+
+  if (error) {
+    return { success: false, error: "Failed to update repair cost." };
+  }
+
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  return { success: true };
 }

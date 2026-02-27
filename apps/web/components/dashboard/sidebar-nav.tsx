@@ -2,11 +2,19 @@ import {
   LayoutDashboard,
   Receipt,
   CreditCard,
+  Wrench,
   Settings,
   Building2,
   FileText,
   LogOut,
+  type LucideIcon,
 } from "lucide-react";
+
+export interface NavItem {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+}
 
 interface SidebarNavProps {
   userEmail: string;
@@ -14,12 +22,14 @@ interface SidebarNavProps {
   activeLeaseCount: number;
   role: string;
   onSignOut: (formData: FormData) => Promise<void>;
+  items?: NavItem[];
 }
 
-const navItems = [
+const defaultNavItems: NavItem[] = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "charges", label: "Charges", icon: Receipt },
   { id: "payments", label: "Payments", icon: CreditCard },
+  { id: "maintenance", label: "Maintenance", icon: Wrench },
   { id: "operations", label: "Operations", icon: Settings },
   { id: "portfolio", label: "Portfolio", icon: Building2 },
   { id: "leases", label: "Leases", icon: FileText },
@@ -31,7 +41,9 @@ export function SidebarNav({
   activeLeaseCount,
   role,
   onSignOut,
+  items,
 }: SidebarNavProps) {
+  const navItems = items ?? defaultNavItems;
   return (
     <aside className="gradient-sidebar hidden lg:flex lg:w-[260px] lg:flex-col lg:flex-shrink-0 fixed inset-y-0 left-0 z-30">
       {/* Logo */}
