@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import MarketingLayout from "./(marketing)/layout";
-import RentFlowMarketingPage from "./(marketing)/page";
+import { LandingShell } from "@/components/marketing/landing-shell";
+import { LandingPage } from "@/components/marketing/landing-page";
 
 export default async function HomePage() {
   const supabase = createClient();
@@ -14,8 +14,8 @@ export default async function HomePage() {
   }
 
   return (
-    <MarketingLayout>
-      <RentFlowMarketingPage />
-    </MarketingLayout>
+    <LandingShell>
+      <LandingPage />
+    </LandingShell>
   );
 }

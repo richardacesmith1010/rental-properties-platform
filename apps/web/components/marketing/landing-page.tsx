@@ -64,7 +64,7 @@ const tiers = [
   }
 ];
 
-export default function RentFlowMarketingPage() {
+export function LandingPage() {
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-20 px-6 pb-16 pt-10 md:px-10">
       <header className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-5 py-3 backdrop-blur">
