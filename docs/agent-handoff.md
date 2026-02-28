@@ -46,6 +46,7 @@
 
 ## In Progress (Codex)
 - Production deployment + live migration application verification.
+- Blocker: local `vercel --prod` failed with invalid token; Git push to `main` completed.
 
 ## Pending (Claude)
 - Apply and verify Phase 8 migration in live Supabase if not yet applied.
