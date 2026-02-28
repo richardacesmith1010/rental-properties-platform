@@ -85,11 +85,29 @@ Run this migration to enable manager foundation:
 Run this migration for Stripe payment tracking:
 - `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260218_phase5_payments_stripe.sql`
 
+## Phase 6-8 Update (Current)
+
+- Manager maintenance status updates (Phase 6)
+- Invitation table + metadata-role-aware auth trigger + invitation RLS (Phase 7)
+- Owner document templates and packet workflows
+- Tenant e-sign workflow with signature audit fields
+- In-app notifications with email delivery records
+- Vendor assignment + maintenance photo upload metadata
+- Tenant-first mobile V1 workflow shell upgrade
+
+Run these migrations after Phase 5:
+- `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260225_phase6_manager_maintenance.sql`
+- `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase7_invitations.sql`
+- `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase8_documents_notifications_maintenance.sql`
+
 ## Automatic Rent Charge Generation
 
 - Scheduled endpoint: `/api/cron/generate-charges`
 - Authentication: `CRON_SECRET` via `Authorization: Bearer <CRON_SECRET>` or `x-cron-secret`
 - Uses `SUPABASE_SERVICE_ROLE_KEY` server-side to bypass RLS for scheduled processing
+- Optional email delivery for notifications uses:
+  - `RESEND_API_KEY`
+  - `RESEND_FROM_EMAIL`
 - Vercel schedule: daily at 08:00 UTC (configured in `/Users/courtneysmith/Documents/Codex/Rental Properties/vercel.json`)
 
 Local manual trigger example:
@@ -99,7 +117,7 @@ curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/gene
 
 ## Next Build Steps
 
-1. Add rent charge generation job and payment posting flow
-2. Add maintenance ticket create/update UI
-3. Add document uploads via Supabase Storage
-4. Build tenant mobile workflows (tickets, payments, documents)
+1. Apply Phase 8 migration in Supabase and verify RLS policies
+2. Configure `RESEND_API_KEY` + `RESEND_FROM_EMAIL` in Vercel for email notifications
+3. Validate production flows: owner docs, tenant signing, ticket notifications, late-rent notifications
+4. Add signed URL rendering for maintenance photos and lease documents

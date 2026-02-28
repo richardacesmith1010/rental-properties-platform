@@ -1,4 +1,5 @@
 import type { ManagerDashboardData } from "@/lib/manager-dashboard";
+import type { VendorDTO } from "@/lib/vendors";
 import type { ActionState } from "@/app/actions";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,9 +23,12 @@ type StatefulAction = (
 
 interface ManagerDashboardProps {
   data: ManagerDashboardData;
+  vendors: VendorDTO[];
   userEmail: string;
   onSignOut: FormAction;
   onUpdateTicketStatus: StatefulAction;
+  onAssignVendor: StatefulAction;
+  onUploadPhoto: StatefulAction;
 }
 
 const managerNavItems: NavItem[] = [
@@ -40,9 +44,12 @@ function dollars(cents: number) {
 
 export function ManagerDashboard({
   data,
+  vendors,
   userEmail,
   onSignOut,
   onUpdateTicketStatus,
+  onAssignVendor,
+  onUploadPhoto
 }: ManagerDashboardProps) {
   const occupancy =
     data.kpis.totalUnits > 0
@@ -163,6 +170,9 @@ export function ManagerDashboard({
             tickets={data.tickets}
             showControls={true}
             onUpdateStatus={onUpdateTicketStatus}
+            vendors={vendors}
+            onAssignVendor={onAssignVendor}
+            onUploadPhoto={onUploadPhoto}
           />
 
           {/* Rent Status */}

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createNotificationWithDelivery } from "@/lib/notifications";
 
 type SupabaseLikeClient = {
   from: (table: string) => any;
@@ -24,6 +25,23 @@ interface LeaseRow {
 interface ExistingChargeRow {
   lease_id: string;
   due_date: string;
+}
+
+interface LateChargeRow {
+  id: string;
+  lease_id: string;
+  due_date: string;
+  amount_cents: number;
+}
+
+interface LeaseTenantRow {
+  id: string;
+  tenant_profile_id: string;
+}
+
+interface ProfileEmailRow {
+  id: string;
+  email: string | null;
 }
 
 async function generateMonthlyChargesForOwnerWithClient(
@@ -150,12 +168,67 @@ async function generateMonthlyChargesForOwnerWithClient(
     await supabase.from("rent_charges").insert(inserts);
   }
 
+  const { data: toMarkLate } = await supabase
+    .from("rent_charges")
+    .select("id, lease_id, due_date, amount_cents")
+    .in("lease_id", leaseIds)
+    .eq("status", "pending")
+    .lt("due_date", todayIso);
+
   await supabase
     .from("rent_charges")
     .update({ status: "late" })
     .in("lease_id", leaseIds)
     .eq("status", "pending")
     .lt("due_date", todayIso);
+
+  if ((toMarkLate ?? []).length > 0) {
+    const lateChargeRows = (toMarkLate ?? []) as LateChargeRow[];
+    const lateLeaseIds = Array.from(new Set(lateChargeRows.map((charge) => charge.lease_id)));
+    const { data: lateLeases } = await supabase
+      .from("leases")
+      .select("id, tenant_profile_id")
+      .in("id", lateLeaseIds);
+
+    const leaseRows = (lateLeases ?? []) as LeaseTenantRow[];
+    const tenantIdByLeaseId = new Map(leaseRows.map((lease) => [lease.id, lease.tenant_profile_id]));
+    const tenantIds = Array.from(
+      new Set(
+        leaseRows
+          .map((lease) => lease.tenant_profile_id)
+          .filter((id): id is string => !!id)
+      )
+    );
+
+    let emailByTenantId = new Map<string, string | null>();
+    if (tenantIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, email")
+        .in("id", tenantIds);
+
+      emailByTenantId = new Map(
+        ((profiles ?? []) as ProfileEmailRow[]).map((profile) => [profile.id, profile.email ?? null])
+      );
+    }
+
+    for (const charge of lateChargeRows) {
+      const tenantId = tenantIdByLeaseId.get(charge.lease_id);
+      if (!tenantId) {
+        continue;
+      }
+
+      await createNotificationWithDelivery({
+        recipientProfileId: tenantId,
+        recipientEmail: emailByTenantId.get(tenantId) ?? null,
+        type: "late_rent",
+        title: "Rent payment overdue",
+        body: `Your rent charge due on ${charge.due_date} is now marked late.`,
+        entityType: "rent_charge",
+        entityId: charge.id
+      });
+    }
+  }
 
   return inserts.length > 0
     ? `Generated ${inserts.length} new charge${inserts.length === 1 ? "" : "s"}.`

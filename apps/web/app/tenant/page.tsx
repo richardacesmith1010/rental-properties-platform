@@ -1,7 +1,15 @@
-import { createCheckoutForCharge, createMaintenanceTicket, signOut } from "@/app/actions";
+import {
+  createCheckoutForCharge,
+  createMaintenanceTicket,
+  signOut,
+  markNotificationRead,
+  signDocumentPacket
+} from "@/app/actions";
 import { requireRole } from "@/lib/auth";
 import { getTenantPaymentData } from "@/lib/tenant-payments";
 import { getTenantMaintenanceData } from "@/lib/maintenance";
+import { getTenantDocumentsData } from "@/lib/documents";
+import { getNotificationsForUser } from "@/lib/notifications";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DataRow } from "@/components/shared/data-row";
@@ -9,6 +17,8 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { TicketForm } from "@/components/dashboard/ticket-form";
 import { MaintenanceSection } from "@/components/dashboard/maintenance-section";
+import { TenantDocumentsSection } from "@/components/dashboard/tenant-documents-section";
+import { NotificationsSection } from "@/components/dashboard/notifications-section";
 import { LogOut, CreditCard } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -16,9 +26,11 @@ export const dynamic = "force-dynamic";
 export default async function TenantPage() {
   const { user } = await requireRole(["tenant"]);
 
-  const [paymentData, maintenanceData] = await Promise.all([
+  const [paymentData, maintenanceData, documentsData, notifications] = await Promise.all([
     getTenantPaymentData(user.id),
     getTenantMaintenanceData(user.id),
+    getTenantDocumentsData(user.id),
+    getNotificationsForUser(user.id)
   ]);
 
   return (
@@ -97,6 +109,16 @@ export default async function TenantPage() {
         <MaintenanceSection
           tickets={maintenanceData.tickets}
           showControls={false}
+        />
+
+        <TenantDocumentsSection
+          packets={documentsData.packets}
+          onSignPacket={signDocumentPacket}
+        />
+
+        <NotificationsSection
+          notifications={notifications}
+          onMarkRead={markNotificationRead}
         />
       </div>
     </div>

@@ -10,6 +10,14 @@ import {
   inviteTenantSchema,
   inviteManagerSchema,
   resendInviteSchema,
+  createDocumentTemplateSchema,
+  createDocumentPacketSchema,
+  sendDocumentPacketSchema,
+  signDocumentPacketSchema,
+  markNotificationReadSchema,
+  createVendorSchema,
+  assignVendorSchema,
+  uploadMaintenancePhotoSchema,
   parseFormData,
 } from "../validations";
 
@@ -447,6 +455,124 @@ describe("resendInviteSchema", () => {
       invitationId: "abc-123",
     });
     expect(result.success).toBe(false);
+  });
+});
+
+/* ─── Document schemas ─── */
+describe("createDocumentTemplateSchema", () => {
+  it("accepts valid template data", () => {
+    const result = createDocumentTemplateSchema.safeParse({
+      name: "Lease Addendum",
+      category: "Lease",
+      bodyMarkdown: "## Terms"
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects empty body", () => {
+    const result = createDocumentTemplateSchema.safeParse({
+      name: "Lease Addendum",
+      category: "Lease",
+      bodyMarkdown: ""
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("createDocumentPacketSchema", () => {
+  const validUUID = "550e8400-e29b-41d4-a716-446655440000";
+
+  it("accepts valid packet payload", () => {
+    const result = createDocumentPacketSchema.safeParse({
+      templateId: validUUID,
+      leaseId: validUUID
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid UUID fields", () => {
+    const result = createDocumentPacketSchema.safeParse({
+      templateId: "bad",
+      leaseId: "bad"
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("sendDocumentPacketSchema", () => {
+  it("accepts packet ID", () => {
+    const result = sendDocumentPacketSchema.safeParse({
+      packetId: "550e8400-e29b-41d4-a716-446655440000"
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("signDocumentPacketSchema", () => {
+  it("accepts valid signer input", () => {
+    const result = signDocumentPacketSchema.safeParse({
+      packetId: "550e8400-e29b-41d4-a716-446655440000",
+      signatureText: "Jane Tenant"
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects short signature", () => {
+    const result = signDocumentPacketSchema.safeParse({
+      packetId: "550e8400-e29b-41d4-a716-446655440000",
+      signatureText: "J"
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+/* ─── Notifications ─── */
+describe("markNotificationReadSchema", () => {
+  it("accepts valid notification ID", () => {
+    const result = markNotificationReadSchema.safeParse({
+      notificationId: "550e8400-e29b-41d4-a716-446655440000"
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+/* ─── Vendors + Maintenance completion ─── */
+describe("createVendorSchema", () => {
+  it("accepts valid vendor payload", () => {
+    const result = createVendorSchema.safeParse({
+      name: "Rapid Plumbing",
+      email: "ops@rapidplumbing.com",
+      phone: "555-333-1111",
+      trade: "Plumbing"
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects empty name", () => {
+    const result = createVendorSchema.safeParse({
+      name: ""
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("assignVendorSchema", () => {
+  it("accepts valid assignment payload", () => {
+    const result = assignVendorSchema.safeParse({
+      ticketId: "550e8400-e29b-41d4-a716-446655440000",
+      vendorId: "550e8400-e29b-41d4-a716-446655440000"
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("uploadMaintenancePhotoSchema", () => {
+  it("accepts valid photo metadata payload", () => {
+    const result = uploadMaintenancePhotoSchema.safeParse({
+      ticketId: "550e8400-e29b-41d4-a716-446655440000",
+      caption: "After repair"
+    });
+    expect(result.success).toBe(true);
   });
 });
 

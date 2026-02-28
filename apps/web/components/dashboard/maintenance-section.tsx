@@ -3,6 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/shared/empty-state";
 import { TicketStatusControl } from "./ticket-status-control";
+import { TicketVendorControl } from "./ticket-vendor-control";
+import { TicketPhotoUpload } from "./ticket-photo-upload";
 import type { MaintenanceTicket } from "@/lib/maintenance";
 import type { ActionState } from "@/app/actions";
 
@@ -15,6 +17,9 @@ interface MaintenanceSectionProps {
   tickets: MaintenanceTicket[];
   showControls?: boolean;
   onUpdateStatus?: StatefulAction;
+  vendors?: Array<{ id: string; name: string }>;
+  onAssignVendor?: StatefulAction;
+  onUploadPhoto?: StatefulAction;
 }
 
 const statusVariant: Record<string, "warning" | "default" | "success" | "outline"> = {
@@ -39,6 +44,9 @@ export function MaintenanceSection({
   tickets,
   showControls = false,
   onUpdateStatus,
+  vendors = [],
+  onAssignVendor,
+  onUploadPhoto,
 }: MaintenanceSectionProps) {
   return (
     <Card id="maintenance">
@@ -86,16 +94,36 @@ export function MaintenanceSection({
                       })}`}
                     {ticket.actualCostCents != null &&
                       ` \u2022 Cost: $${(ticket.actualCostCents / 100).toLocaleString()}`}
+                    {ticket.vendorName && ` \u2022 Vendor: ${ticket.vendorName}`}
+                    {ticket.assignmentStatus &&
+                      ` \u2022 ${statusLabel(ticket.assignmentStatus)}`}
+                    {ticket.photoCount > 0 &&
+                      ` \u2022 ${ticket.photoCount} photo${ticket.photoCount === 1 ? "" : "s"}`}
                   </p>
                 </div>
 
-                {showControls && onUpdateStatus && (
-                  <div className="flex-shrink-0">
-                    <TicketStatusControl
-                      ticketId={ticket.id}
-                      currentStatus={ticket.status}
-                      onUpdateStatus={onUpdateStatus}
-                    />
+                {showControls && (
+                  <div className="flex-shrink-0 space-y-2">
+                    {onUpdateStatus && (
+                      <TicketStatusControl
+                        ticketId={ticket.id}
+                        currentStatus={ticket.status}
+                        onUpdateStatus={onUpdateStatus}
+                      />
+                    )}
+                    {onAssignVendor && vendors.length > 0 && (
+                      <TicketVendorControl
+                        ticketId={ticket.id}
+                        vendors={vendors}
+                        onAssignVendor={onAssignVendor}
+                      />
+                    )}
+                    {onUploadPhoto && (
+                      <TicketPhotoUpload
+                        ticketId={ticket.id}
+                        onUploadPhoto={onUploadPhoto}
+                      />
+                    )}
                   </div>
                 )}
               </DataRow>

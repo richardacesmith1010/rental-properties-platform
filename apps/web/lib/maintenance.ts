@@ -9,6 +9,9 @@ export interface MaintenanceTicket {
   status: "open" | "in_progress" | "resolved" | "closed";
   priority: "low" | "medium" | "high" | "urgent";
   actualCostCents: number | null;
+  vendorName: string | null;
+  assignmentStatus: "assigned" | "reassigned" | "cancelled" | null;
+  photoCount: number;
   createdAt: string;
   resolvedAt: string | null;
   tenantEmail: string | null;
@@ -23,6 +26,65 @@ export interface TenantUnit {
 export interface TenantMaintenanceData {
   tickets: MaintenanceTicket[];
   units: TenantUnit[];
+}
+
+async function buildTicketEnhancementMaps(
+  supabase: ReturnType<typeof createClient>,
+  ticketIds: string[]
+) {
+  const assignmentByTicketId = new Map<
+    string,
+    { vendorId: string; status: "assigned" | "reassigned" | "cancelled" }
+  >();
+  const vendorNameById = new Map<string, string>();
+  const photoCountByTicketId = new Map<string, number>();
+
+  if (ticketIds.length === 0) {
+    return { assignmentByTicketId, vendorNameById, photoCountByTicketId };
+  }
+
+  const { data: assignments } = await supabase
+    .from("maintenance_assignments")
+    .select("ticket_id, vendor_id, status, assigned_at")
+    .in("ticket_id", ticketIds)
+    .order("assigned_at", { ascending: false });
+
+  for (const assignment of assignments ?? []) {
+    if (!assignmentByTicketId.has(assignment.ticket_id)) {
+      assignmentByTicketId.set(assignment.ticket_id, {
+        vendorId: assignment.vendor_id,
+        status: assignment.status as "assigned" | "reassigned" | "cancelled"
+      });
+    }
+  }
+
+  const vendorIds = Array.from(
+    new Set((assignments ?? []).map((assignment) => assignment.vendor_id))
+  );
+  if (vendorIds.length > 0) {
+    const { data: vendors } = await supabase
+      .from("vendors")
+      .select("id, name")
+      .in("id", vendorIds);
+
+    for (const vendor of vendors ?? []) {
+      vendorNameById.set(vendor.id, vendor.name);
+    }
+  }
+
+  const { data: photos } = await supabase
+    .from("maintenance_photos")
+    .select("ticket_id")
+    .in("ticket_id", ticketIds);
+
+  for (const photo of photos ?? []) {
+    photoCountByTicketId.set(
+      photo.ticket_id,
+      (photoCountByTicketId.get(photo.ticket_id) ?? 0) + 1
+    );
+  }
+
+  return { assignmentByTicketId, vendorNameById, photoCountByTicketId };
 }
 
 /* ─── Tenant: tickets + available units for the create form ─── */
@@ -81,11 +143,19 @@ export async function getTenantMaintenanceData(
     .eq("tenant_profile_id", userId)
     .order("created_at", { ascending: false });
 
+  const ticketRows = tickets ?? [];
+  const { assignmentByTicketId, vendorNameById, photoCountByTicketId } =
+    await buildTicketEnhancementMaps(
+      supabase,
+      ticketRows.map((ticket) => ticket.id)
+    );
+
   return {
     units: tenantUnits,
-    tickets: (tickets ?? []).map((ticket) => {
+    tickets: ticketRows.map((ticket) => {
       const property = propertyById.get(ticket.property_id);
       const unit = ticket.unit_id ? unitById.get(ticket.unit_id) : null;
+      const assignment = assignmentByTicketId.get(ticket.id);
 
       return {
         id: ticket.id,
@@ -96,6 +166,9 @@ export async function getTenantMaintenanceData(
         status: ticket.status as MaintenanceTicket["status"],
         priority: ticket.priority as MaintenanceTicket["priority"],
         actualCostCents: ticket.actual_cost_cents,
+        vendorName: assignment ? vendorNameById.get(assignment.vendorId) ?? null : null,
+        assignmentStatus: assignment?.status ?? null,
+        photoCount: photoCountByTicketId.get(ticket.id) ?? 0,
         createdAt: ticket.created_at,
         resolvedAt: ticket.resolved_at,
         tenantEmail: null,
@@ -166,12 +239,20 @@ export async function getOwnerMaintenanceTickets(
     );
   }
 
-  return (tickets ?? []).map((ticket) => {
+  const ticketRows = tickets ?? [];
+  const { assignmentByTicketId, vendorNameById, photoCountByTicketId } =
+    await buildTicketEnhancementMaps(
+      supabase,
+      ticketRows.map((ticket) => ticket.id)
+    );
+
+  return ticketRows.map((ticket) => {
     const property = propertyById.get(ticket.property_id);
     const unit = ticket.unit_id ? unitById.get(ticket.unit_id) : null;
     const tenant = ticket.tenant_profile_id
       ? profileById.get(ticket.tenant_profile_id)
       : null;
+    const assignment = assignmentByTicketId.get(ticket.id);
 
     return {
       id: ticket.id,
@@ -182,6 +263,9 @@ export async function getOwnerMaintenanceTickets(
       status: ticket.status as MaintenanceTicket["status"],
       priority: ticket.priority as MaintenanceTicket["priority"],
       actualCostCents: ticket.actual_cost_cents,
+      vendorName: assignment ? vendorNameById.get(assignment.vendorId) ?? null : null,
+      assignmentStatus: assignment?.status ?? null,
+      photoCount: photoCountByTicketId.get(ticket.id) ?? 0,
       createdAt: ticket.created_at,
       resolvedAt: ticket.resolved_at,
       tenantEmail: tenant?.email ?? null,
@@ -254,12 +338,20 @@ export async function getManagerMaintenanceTickets(
     );
   }
 
-  return (tickets ?? []).map((ticket) => {
+  const ticketRows = tickets ?? [];
+  const { assignmentByTicketId, vendorNameById, photoCountByTicketId } =
+    await buildTicketEnhancementMaps(
+      supabase,
+      ticketRows.map((ticket) => ticket.id)
+    );
+
+  return ticketRows.map((ticket) => {
     const property = propertyById.get(ticket.property_id);
     const unit = ticket.unit_id ? unitById.get(ticket.unit_id) : null;
     const tenant = ticket.tenant_profile_id
       ? profileById.get(ticket.tenant_profile_id)
       : null;
+    const assignment = assignmentByTicketId.get(ticket.id);
 
     return {
       id: ticket.id,
@@ -270,6 +362,9 @@ export async function getManagerMaintenanceTickets(
       status: ticket.status as MaintenanceTicket["status"],
       priority: ticket.priority as MaintenanceTicket["priority"],
       actualCostCents: ticket.actual_cost_cents,
+      vendorName: assignment ? vendorNameById.get(assignment.vendorId) ?? null : null,
+      assignmentStatus: assignment?.status ?? null,
+      photoCount: photoCountByTicketId.get(ticket.id) ?? 0,
       createdAt: ticket.created_at,
       resolvedAt: ticket.resolved_at,
       tenantEmail: tenant?.email ?? null,

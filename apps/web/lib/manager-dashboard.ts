@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { MaintenanceTicket } from "@/lib/maintenance";
+import { getManagerMaintenanceTickets, type MaintenanceTicket } from "@/lib/maintenance";
 
 interface ManagerProperty {
   id: string;
@@ -117,64 +117,7 @@ export async function getManagerDashboardData(
     .in("property_id", propertyIds)
     .in("status", ["open", "in_progress"]);
 
-  // Fetch full ticket details for the list
-  const propertyById = new Map(
-    (properties ?? []).map((p) => [p.id, p])
-  );
-  const unitById = new Map(
-    (units ?? []).map((u) => [u.id, u])
-  );
-
-  const { data: ticketRows } = await supabase
-    .from("maintenance_tickets")
-    .select(
-      "id, property_id, unit_id, tenant_profile_id, title, description, status, priority, actual_cost_cents, created_at, resolved_at"
-    )
-    .in("property_id", propertyIds)
-    .order("created_at", { ascending: false });
-
-  // Fetch tenant emails
-  const tenantIds = Array.from(
-    new Set(
-      (ticketRows ?? [])
-        .map((t) => t.tenant_profile_id)
-        .filter((id): id is string => id !== null)
-    )
-  );
-
-  let profileById = new Map<string, { email: string }>();
-  if (tenantIds.length > 0) {
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, email")
-      .in("id", tenantIds);
-
-    profileById = new Map(
-      (profiles ?? []).map((p) => [p.id, p])
-    );
-  }
-
-  const tickets: MaintenanceTicket[] = (ticketRows ?? []).map((ticket) => {
-    const property = propertyById.get(ticket.property_id);
-    const unit = ticket.unit_id ? unitById.get(ticket.unit_id) : null;
-    const tenant = ticket.tenant_profile_id
-      ? profileById.get(ticket.tenant_profile_id)
-      : null;
-
-    return {
-      id: ticket.id,
-      propertyName: property?.name ?? "Unknown Property",
-      unitNumber: unit?.unit_number ?? null,
-      title: ticket.title,
-      description: ticket.description,
-      status: ticket.status as MaintenanceTicket["status"],
-      priority: ticket.priority as MaintenanceTicket["priority"],
-      actualCostCents: ticket.actual_cost_cents,
-      createdAt: ticket.created_at,
-      resolvedAt: ticket.resolved_at,
-      tenantEmail: tenant?.email ?? null,
-    };
-  });
+  const tickets: MaintenanceTicket[] = await getManagerMaintenanceTickets(userId);
 
   // Fetch charges
   let charges: ManagerCharge[] = [];

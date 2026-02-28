@@ -1,0 +1,94 @@
+"use client";
+
+import { useFormState } from "react-dom";
+import { Bell } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { SubmitButton } from "@/components/shared/submit-button";
+import { EmptyState } from "@/components/shared/empty-state";
+import { DataRow } from "@/components/shared/data-row";
+import type { ActionState } from "@/app/actions";
+import type { NotificationDTO } from "@/lib/notifications";
+
+type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
+
+interface NotificationsSectionProps {
+  notifications: NotificationDTO[];
+  onMarkRead: StatefulAction;
+}
+
+export function NotificationsSection({
+  notifications,
+  onMarkRead
+}: NotificationsSectionProps) {
+  const unreadCount = notifications.filter((notification) => !notification.readAt).length;
+
+  return (
+    <Card id="notifications">
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="flex items-center gap-2">
+          <Bell className="h-4 w-4" />
+          Notifications
+        </CardTitle>
+        <Badge variant={unreadCount > 0 ? "warning" : "outline"}>
+          {unreadCount} unread
+        </Badge>
+      </CardHeader>
+      <CardContent>
+        {notifications.length === 0 ? (
+          <EmptyState message="No notifications yet." />
+        ) : (
+          <div>
+            {notifications.map((notification, i) => (
+              <NotificationRow
+                key={notification.id}
+                notification={notification}
+                onMarkRead={onMarkRead}
+                last={i === notifications.length - 1}
+              />
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function NotificationRow({
+  notification,
+  onMarkRead,
+  last
+}: {
+  notification: NotificationDTO;
+  onMarkRead: StatefulAction;
+  last: boolean;
+}) {
+  const [state, action] = useFormState(onMarkRead, null);
+
+  return (
+    <DataRow last={last}>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-zinc-900">{notification.title}</p>
+        <p className="mt-0.5 text-xs text-zinc-500">{notification.body}</p>
+        <p className="mt-1 text-[11px] text-zinc-400">
+          {new Date(notification.createdAt).toLocaleString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+            hour: "numeric",
+            minute: "2-digit"
+          })}
+        </p>
+      </div>
+      {!notification.readAt ? (
+        <form action={action}>
+          <input type="hidden" name="notificationId" value={notification.id} />
+          <SubmitButton size="sm" variant="outline">Mark read</SubmitButton>
+          {state && !state.success && <p className="mt-1 text-xs text-red-500">{state.error}</p>}
+        </form>
+      ) : (
+        <Badge variant="outline">Read</Badge>
+      )}
+    </DataRow>
+  );
+}

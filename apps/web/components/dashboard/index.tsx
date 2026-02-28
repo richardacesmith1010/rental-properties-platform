@@ -2,6 +2,9 @@ import type { DashboardData } from "@/lib/dashboard";
 import type { PortfolioData } from "@/lib/portfolio";
 import type { MaintenanceTicket } from "@/lib/maintenance";
 import type { InvitationListItem } from "@/lib/invitations";
+import type { NotificationDTO } from "@/lib/notifications";
+import type { OwnerDocumentsData } from "@/lib/documents";
+import type { VendorDTO } from "@/lib/vendors";
 import type { ActionState } from "@/app/actions";
 import { Badge } from "@/components/ui/badge";
 import { SidebarNav, MobileTopBar } from "./sidebar-nav";
@@ -13,6 +16,9 @@ import { InvitationsSection } from "./invitations-section";
 import { OperationsSection } from "./operations-section";
 import { PortfolioSection } from "./portfolio-section";
 import { LeasesSection } from "./leases-section";
+import { NotificationsSection } from "./notifications-section";
+import { DocumentsSection } from "./documents-section";
+import { VendorsSection } from "./vendors-section";
 
 type FormAction = (formData: FormData) => Promise<void>;
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
@@ -22,6 +28,9 @@ interface DashboardProps {
   portfolio?: PortfolioData;
   tickets?: MaintenanceTicket[];
   invitations?: InvitationListItem[];
+  notifications?: NotificationDTO[];
+  documents?: OwnerDocumentsData;
+  vendors?: VendorDTO[];
   generatedMessage?: string | null;
   userEmail: string;
   onGenerateChargesHref?: string;
@@ -34,6 +43,14 @@ interface DashboardProps {
   onInviteTenant?: StatefulAction;
   onInviteManager?: StatefulAction;
   onResendInvite?: StatefulAction;
+  onMarkNotificationRead?: StatefulAction;
+  onCreateDocumentTemplate?: StatefulAction;
+  onDeleteDocumentTemplate?: StatefulAction;
+  onCreateDocumentPacket?: StatefulAction;
+  onSendDocumentPacket?: StatefulAction;
+  onCreateVendor?: StatefulAction;
+  onAssignVendor?: StatefulAction;
+  onUploadMaintenancePhoto?: StatefulAction;
 }
 
 export function Dashboard({
@@ -41,6 +58,9 @@ export function Dashboard({
   portfolio,
   tickets,
   invitations,
+  notifications,
+  documents,
+  vendors,
   generatedMessage,
   userEmail,
   onGenerateChargesHref,
@@ -53,6 +73,14 @@ export function Dashboard({
   onInviteTenant,
   onInviteManager,
   onResendInvite,
+  onMarkNotificationRead,
+  onCreateDocumentTemplate,
+  onDeleteDocumentTemplate,
+  onCreateDocumentPacket,
+  onSendDocumentPacket,
+  onCreateVendor,
+  onAssignVendor,
+  onUploadMaintenancePhoto
 }: DashboardProps) {
   const safePortfolio: PortfolioData = portfolio ?? {
     properties: [],
@@ -60,6 +88,12 @@ export function Dashboard({
     leases: [],
     tenants: [],
   };
+  const safeDocuments: OwnerDocumentsData = documents ?? {
+    templates: [],
+    packets: []
+  };
+  const safeNotifications: NotificationDTO[] = notifications ?? [];
+  const safeVendors: VendorDTO[] = vendors ?? [];
   const occupancy =
     data.kpis.totalUnits > 0
       ? Math.round((data.kpis.occupiedUnits / data.kpis.totalUnits) * 100)
@@ -129,7 +163,17 @@ export function Dashboard({
             tickets={tickets ?? []}
             showControls={!!onUpdateTicketStatus}
             onUpdateStatus={onUpdateTicketStatus}
+            vendors={safeVendors}
+            onAssignVendor={onAssignVendor}
+            onUploadPhoto={onUploadMaintenancePhoto}
           />
+
+          {onMarkNotificationRead && (
+            <NotificationsSection
+              notifications={safeNotifications}
+              onMarkRead={onMarkNotificationRead}
+            />
+          )}
 
           {onInviteTenant && onInviteManager && onResendInvite && (
             <InvitationsSection
@@ -138,6 +182,28 @@ export function Dashboard({
               onInviteTenant={onInviteTenant}
               onInviteManager={onInviteManager}
               onResendInvite={onResendInvite}
+            />
+          )}
+
+          {onCreateDocumentTemplate &&
+            onDeleteDocumentTemplate &&
+            onCreateDocumentPacket &&
+            onSendDocumentPacket && (
+              <DocumentsSection
+                templates={safeDocuments.templates}
+                packets={safeDocuments.packets}
+                leases={safePortfolio.leases}
+                onCreateTemplate={onCreateDocumentTemplate}
+                onDeleteTemplate={onDeleteDocumentTemplate}
+                onCreatePacket={onCreateDocumentPacket}
+                onSendPacket={onSendDocumentPacket}
+              />
+            )}
+
+          {onCreateVendor && (
+            <VendorsSection
+              vendors={safeVendors}
+              onCreateVendor={onCreateVendor}
             />
           )}
 

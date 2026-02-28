@@ -100,6 +100,90 @@ export const resendInviteSchema = z.object({
   invitationId: z.string().uuid("Invalid invitation ID."),
 });
 
+/* ─── Documents + E-sign ─── */
+
+export const createDocumentTemplateSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Template name is required.")
+    .max(120, "Template name must be under 120 characters."),
+  category: z
+    .string()
+    .min(1, "Category is required.")
+    .max(80, "Category must be under 80 characters."),
+  bodyMarkdown: z
+    .string()
+    .min(1, "Template body is required.")
+    .max(20000, "Template body must be under 20,000 characters.")
+});
+
+export const updateDocumentTemplateSchema = z.object({
+  templateId: z.string().uuid("Invalid template ID."),
+  name: z
+    .string()
+    .min(1, "Template name is required.")
+    .max(120, "Template name must be under 120 characters."),
+  category: z
+    .string()
+    .min(1, "Category is required.")
+    .max(80, "Category must be under 80 characters."),
+  bodyMarkdown: z
+    .string()
+    .min(1, "Template body is required.")
+    .max(20000, "Template body must be under 20,000 characters.")
+});
+
+export const deleteDocumentTemplateSchema = z.object({
+  templateId: z.string().uuid("Invalid template ID.")
+});
+
+export const createDocumentPacketSchema = z.object({
+  templateId: z.string().uuid("Invalid template selection."),
+  leaseId: z.string().uuid("Invalid lease selection.")
+});
+
+export const sendDocumentPacketSchema = z.object({
+  packetId: z.string().uuid("Invalid document packet ID.")
+});
+
+export const signDocumentPacketSchema = z.object({
+  packetId: z.string().uuid("Invalid document packet ID."),
+  signatureText: z
+    .string()
+    .min(2, "Signature is required.")
+    .max(200, "Signature must be under 200 characters.")
+});
+
+/* ─── Notifications ─── */
+
+export const markNotificationReadSchema = z.object({
+  notificationId: z.string().uuid("Invalid notification ID.")
+});
+
+/* ─── Vendors + Maintenance Completion ─── */
+
+export const createVendorSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Vendor name is required.")
+    .max(120, "Vendor name must be under 120 characters."),
+  email: z
+    .union([z.string().email("Enter a valid email address."), z.literal("")])
+    .optional(),
+  phone: z.string().max(30, "Phone must be under 30 characters.").optional(),
+  trade: z.string().max(80, "Trade must be under 80 characters.").optional()
+});
+
+export const assignVendorSchema = z.object({
+  ticketId: z.string().uuid("Invalid ticket ID."),
+  vendorId: z.string().uuid("Invalid vendor selection.")
+});
+
+export const uploadMaintenancePhotoSchema = z.object({
+  ticketId: z.string().uuid("Invalid ticket ID."),
+  caption: z.string().max(300, "Caption must be under 300 characters.").optional()
+});
+
 /** Parse FormData against a Zod schema. Returns parsed data or a formatted error string. */
 export function parseFormData<T extends z.ZodTypeAny>(
   schema: T,
