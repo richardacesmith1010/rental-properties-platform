@@ -1,6 +1,7 @@
 import type { DashboardData } from "@/lib/dashboard";
 import type { PortfolioData } from "@/lib/portfolio";
 import type { MaintenanceTicket } from "@/lib/maintenance";
+import type { InvitationListItem } from "@/lib/invitations";
 import type { ActionState } from "@/app/actions";
 import { Badge } from "@/components/ui/badge";
 import { SidebarNav, MobileTopBar } from "./sidebar-nav";
@@ -8,6 +9,7 @@ import { KpiGrid } from "./kpi-grid";
 import { ChargesSection } from "./charges-section";
 import { PaymentsSection } from "./payments-section";
 import { MaintenanceSection } from "./maintenance-section";
+import { InvitationsSection } from "./invitations-section";
 import { OperationsSection } from "./operations-section";
 import { PortfolioSection } from "./portfolio-section";
 import { LeasesSection } from "./leases-section";
@@ -19,6 +21,7 @@ interface DashboardProps {
   data: DashboardData;
   portfolio?: PortfolioData;
   tickets?: MaintenanceTicket[];
+  invitations?: InvitationListItem[];
   userEmail: string;
   onSignOut: FormAction;
   onCreateProperty: StatefulAction;
@@ -26,12 +29,16 @@ interface DashboardProps {
   onCreateLease: StatefulAction;
   onPayCharge: FormAction;
   onUpdateTicketStatus?: StatefulAction;
+  onInviteTenant?: StatefulAction;
+  onInviteManager?: StatefulAction;
+  onResendInvite?: StatefulAction;
 }
 
 export function Dashboard({
   data,
   portfolio,
   tickets,
+  invitations,
   userEmail,
   onSignOut,
   onCreateProperty,
@@ -39,6 +46,9 @@ export function Dashboard({
   onCreateLease,
   onPayCharge,
   onUpdateTicketStatus,
+  onInviteTenant,
+  onInviteManager,
+  onResendInvite,
 }: DashboardProps) {
   const safePortfolio: PortfolioData = portfolio ?? {
     properties: [],
@@ -106,6 +116,16 @@ export function Dashboard({
             showControls={!!onUpdateTicketStatus}
             onUpdateStatus={onUpdateTicketStatus}
           />
+
+          {onInviteTenant && onInviteManager && onResendInvite && (
+            <InvitationsSection
+              properties={safePortfolio.properties}
+              invitations={invitations ?? []}
+              onInviteTenant={onInviteTenant}
+              onInviteManager={onInviteManager}
+              onResendInvite={onResendInvite}
+            />
+          )}
 
           <OperationsSection
             portfolio={safePortfolio}

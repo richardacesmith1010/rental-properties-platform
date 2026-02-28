@@ -71,6 +71,35 @@ export const updateTicketCostSchema = z.object({
   actualCostDollars: z.coerce.number().min(0, "Cost cannot be negative."),
 });
 
+/* ─── Invitations ─── */
+
+export const inviteTenantSchema = z.object({
+  email: z
+    .string()
+    .min(1, "Email is required.")
+    .email("Enter a valid email address."),
+  fullName: z
+    .string()
+    .min(1, "Full name is required.")
+    .max(100, "Name must be under 100 characters."),
+});
+
+export const inviteManagerSchema = z.object({
+  email: z
+    .string()
+    .min(1, "Email is required.")
+    .email("Enter a valid email address."),
+  fullName: z
+    .string()
+    .min(1, "Full name is required.")
+    .max(100, "Name must be under 100 characters."),
+  propertyId: z.string().uuid("Invalid property selection."),
+});
+
+export const resendInviteSchema = z.object({
+  invitationId: z.string().uuid("Invalid invitation ID."),
+});
+
 /** Parse FormData against a Zod schema. Returns parsed data or a formatted error string. */
 export function parseFormData<T extends z.ZodTypeAny>(
   schema: T,

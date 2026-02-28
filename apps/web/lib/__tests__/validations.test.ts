@@ -7,6 +7,9 @@ import {
   createMaintenanceTicketSchema,
   updateTicketStatusSchema,
   updateTicketCostSchema,
+  inviteTenantSchema,
+  inviteManagerSchema,
+  resendInviteSchema,
   parseFormData,
 } from "../validations";
 
@@ -342,6 +345,106 @@ describe("updateTicketCostSchema", () => {
     const result = updateTicketCostSchema.safeParse({
       ticketId: "invalid",
       actualCostDollars: "100",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+/* ─── inviteTenantSchema ─── */
+describe("inviteTenantSchema", () => {
+  it("accepts valid tenant invite data", () => {
+    const result = inviteTenantSchema.safeParse({
+      email: "tenant@example.com",
+      fullName: "John Doe",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects empty email", () => {
+    const result = inviteTenantSchema.safeParse({
+      email: "",
+      fullName: "John Doe",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid email format", () => {
+    const result = inviteTenantSchema.safeParse({
+      email: "not-an-email",
+      fullName: "John Doe",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty full name", () => {
+    const result = inviteTenantSchema.safeParse({
+      email: "tenant@example.com",
+      fullName: "",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects name over 100 characters", () => {
+    const result = inviteTenantSchema.safeParse({
+      email: "tenant@example.com",
+      fullName: "A".repeat(101),
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+/* ─── inviteManagerSchema ─── */
+describe("inviteManagerSchema", () => {
+  const validUUID = "550e8400-e29b-41d4-a716-446655440000";
+
+  it("accepts valid manager invite data", () => {
+    const result = inviteManagerSchema.safeParse({
+      email: "manager@example.com",
+      fullName: "Jane Manager",
+      propertyId: validUUID,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects missing property ID", () => {
+    const result = inviteManagerSchema.safeParse({
+      email: "manager@example.com",
+      fullName: "Jane Manager",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects non-UUID property ID", () => {
+    const result = inviteManagerSchema.safeParse({
+      email: "manager@example.com",
+      fullName: "Jane Manager",
+      propertyId: "not-a-uuid",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid email", () => {
+    const result = inviteManagerSchema.safeParse({
+      email: "bad",
+      fullName: "Jane Manager",
+      propertyId: validUUID,
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+/* ─── resendInviteSchema ─── */
+describe("resendInviteSchema", () => {
+  it("accepts a valid UUID", () => {
+    const result = resendInviteSchema.safeParse({
+      invitationId: "550e8400-e29b-41d4-a716-446655440000",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects non-UUID strings", () => {
+    const result = resendInviteSchema.safeParse({
+      invitationId: "abc-123",
     });
     expect(result.success).toBe(false);
   });

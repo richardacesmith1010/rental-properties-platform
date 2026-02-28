@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserRole } from "@/lib/auth";
 import { createStripeCheckoutSession } from "@/lib/stripe";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   createPropertySchema,
   createUnitSchema,
@@ -13,6 +14,9 @@ import {
   createMaintenanceTicketSchema,
   updateTicketStatusSchema,
   updateTicketCostSchema,
+  inviteTenantSchema,
+  inviteManagerSchema,
+  resendInviteSchema,
   parseFormData,
 } from "@/lib/validations";
 
@@ -368,5 +372,276 @@ export async function updateTicketCost(
 
   revalidatePath("/owner");
   revalidatePath("/manager");
+  return { success: true };
+}
+
+/* ─── Invitation Actions ─── */
+
+export async function inviteTenant(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner") {
+    redirect("/portal");
+  }
+
+  const parsed = parseFormData(inviteTenantSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { email, fullName } = parsed.data;
+  const admin = createAdminClient();
+
+  // Check if user already exists in profiles
+  const { data: existingProfile } = await admin
+    .from("profiles")
+    .select("id, role")
+    .eq("email", email.toLowerCase())
+    .single();
+
+  if (existingProfile) {
+    if (existingProfile.role === "tenant") {
+      return { success: false, error: "This user is already a tenant." };
+    }
+    return {
+      success: false,
+      error: "A user with this email already exists with a different role.",
+    };
+  }
+
+  // Check for existing pending invitation
+  const { data: existingInvite } = await admin
+    .from("invitations")
+    .select("id, status")
+    .eq("email", email.toLowerCase())
+    .eq("role", "tenant")
+    .eq("invited_by", user.id)
+    .single();
+
+  if (existingInvite && existingInvite.status === "pending") {
+    return {
+      success: false,
+      error: "An invitation has already been sent to this email.",
+    };
+  }
+
+  // Send the invite via Supabase Admin API
+  const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(
+    email,
+    {
+      data: {
+        role: "tenant",
+        full_name: fullName,
+      },
+    }
+  );
+
+  if (inviteError) {
+    return {
+      success: false,
+      error: "Failed to send invitation. Please try again.",
+    };
+  }
+
+  // Track the invitation
+  const { error: insertError } = await admin.from("invitations").insert({
+    email: email.toLowerCase(),
+    full_name: fullName,
+    role: "tenant",
+    invited_by: user.id,
+    status: "pending",
+  });
+
+  if (insertError) {
+    console.error("Failed to track invitation:", insertError);
+  }
+
+  revalidatePath("/owner");
+  return { success: true };
+}
+
+export async function inviteManager(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner") {
+    redirect("/portal");
+  }
+
+  const parsed = parseFormData(inviteManagerSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { email, fullName, propertyId } = parsed.data;
+  const admin = createAdminClient();
+
+  // Verify owner actually owns this property
+  const { data: property } = await supabase
+    .from("properties")
+    .select("id")
+    .eq("id", propertyId)
+    .eq("owner_profile_id", user.id)
+    .single();
+
+  if (!property) {
+    return { success: false, error: "Property not found." };
+  }
+
+  // Check if user already exists
+  const { data: existingProfile } = await admin
+    .from("profiles")
+    .select("id, role")
+    .eq("email", email.toLowerCase())
+    .single();
+
+  if (existingProfile) {
+    if (existingProfile.role === "manager") {
+      // Already a manager — just assign to property
+      const { error: assignError } = await admin
+        .from("property_managers")
+        .upsert(
+          {
+            property_id: propertyId,
+            manager_profile_id: existingProfile.id,
+            active: true,
+          },
+          { onConflict: "property_id,manager_profile_id" }
+        );
+
+      if (assignError) {
+        return { success: false, error: "Failed to assign manager to property." };
+      }
+
+      revalidatePath("/owner");
+      return { success: true };
+    }
+    return {
+      success: false,
+      error: "A user with this email already exists with a different role.",
+    };
+  }
+
+  // Send invite
+  const { data: inviteData, error: inviteError } =
+    await admin.auth.admin.inviteUserByEmail(email, {
+      data: {
+        role: "manager",
+        full_name: fullName,
+      },
+    });
+
+  if (inviteError) {
+    return { success: false, error: "Failed to send invitation. Please try again." };
+  }
+
+  // Track invitation with property_id
+  await admin.from("invitations").insert({
+    email: email.toLowerCase(),
+    full_name: fullName,
+    role: "manager",
+    property_id: propertyId,
+    invited_by: user.id,
+    status: "pending",
+  });
+
+  // Pre-assign manager to property (inviteUserByEmail creates the auth user immediately)
+  if (inviteData?.user?.id) {
+    await admin.from("property_managers").upsert(
+      {
+        property_id: propertyId,
+        manager_profile_id: inviteData.user.id,
+        active: true,
+      },
+      { onConflict: "property_id,manager_profile_id" }
+    );
+  }
+
+  revalidatePath("/owner");
+  return { success: true };
+}
+
+export async function resendInvite(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner") {
+    redirect("/portal");
+  }
+
+  const parsed = parseFormData(resendInviteSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { invitationId } = parsed.data;
+  const admin = createAdminClient();
+
+  // Fetch the invitation (owned by this user)
+  const { data: invitation } = await admin
+    .from("invitations")
+    .select("id, email, full_name, role, status")
+    .eq("id", invitationId)
+    .eq("invited_by", user.id)
+    .single();
+
+  if (!invitation) {
+    return { success: false, error: "Invitation not found." };
+  }
+
+  if (invitation.status === "accepted") {
+    return { success: false, error: "This invitation has already been accepted." };
+  }
+
+  // Resend the invite
+  const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(
+    invitation.email,
+    {
+      data: {
+        role: invitation.role,
+        full_name: invitation.full_name,
+      },
+    }
+  );
+
+  if (inviteError) {
+    return { success: false, error: "Failed to resend invitation." };
+  }
+
+  // Update the invitation timestamp
+  await admin
+    .from("invitations")
+    .update({ created_at: new Date().toISOString() })
+    .eq("id", invitationId);
+
+  revalidatePath("/owner");
   return { success: true };
 }
