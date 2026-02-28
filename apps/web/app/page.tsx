@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import MarketingLayout from "./(marketing)/layout";
 import RentFlowMarketingPage from "./(marketing)/page";
 
 export default async function HomePage() {
@@ -12,5 +13,9 @@ export default async function HomePage() {
     redirect("/portal");
   }
 
-  return <RentFlowMarketingPage />;
+  return (
+    <MarketingLayout>
+      <RentFlowMarketingPage />
+    </MarketingLayout>
+  );
 }

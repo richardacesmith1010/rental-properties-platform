@@ -1,5 +1,6 @@
 import { Dashboard } from "@/components/dashboard";
 import { getDashboardData } from "@/lib/dashboard";
+import { getGeneratedMessage } from "@/lib/owner";
 import { getPortfolioData } from "@/lib/portfolio";
 import { getOwnerMaintenanceTickets } from "@/lib/maintenance";
 import { getOwnerInvitations } from "@/lib/invitations";
@@ -18,8 +19,15 @@ import { requireRole } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-export default async function OwnerPage() {
+interface OwnerPageProps {
+  searchParams?: {
+    generated?: string | string[];
+  };
+}
+
+export default async function OwnerPage({ searchParams }: OwnerPageProps) {
   const { user } = await requireRole(["owner"]);
+  const generatedMessage = getGeneratedMessage(searchParams?.generated);
 
   const [dashboard, portfolio, tickets, invitations] = await Promise.all([
     getDashboardData(user.id),
@@ -40,6 +48,8 @@ export default async function OwnerPage() {
       onCreateUnit={createUnit}
       onCreateLease={createLease}
       onPayCharge={createCheckoutForCharge}
+      onGenerateChargesHref="/owner/generate"
+      generatedMessage={generatedMessage}
       onUpdateTicketStatus={updateTicketStatus}
       onInviteTenant={inviteTenant}
       onInviteManager={inviteManager}

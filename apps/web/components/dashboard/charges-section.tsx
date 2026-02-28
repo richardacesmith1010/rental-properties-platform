@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DataRow } from "@/components/shared/data-row";
@@ -15,17 +16,30 @@ interface Charge {
 interface ChargesSectionProps {
   charges: Charge[];
   onPayCharge: (formData: FormData) => Promise<void>;
+  onGenerateChargesHref?: string;
 }
 
 function dollars(cents: number) {
   return `$${(cents / 100).toLocaleString()}`;
 }
 
-export function ChargesSection({ charges, onPayCharge }: ChargesSectionProps) {
+export function ChargesSection({
+  charges,
+  onPayCharge,
+  onGenerateChargesHref
+}: ChargesSectionProps) {
   return (
     <Card id="charges">
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between gap-3">
         <CardTitle>Upcoming / Late Charges</CardTitle>
+        {onGenerateChargesHref && (
+          <Link
+            href={onGenerateChargesHref}
+            className="rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+          >
+            Generate This Month Charges
+          </Link>
+        )}
       </CardHeader>
       <CardContent>
         {charges.length === 0 ? (

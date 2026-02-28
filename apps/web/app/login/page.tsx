@@ -2,9 +2,18 @@ import { redirect } from "next/navigation";
 import { RoleSelector } from "@/components/auth/role-selector";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function LoginPage() {
+interface LoginPageProps {
+  searchParams?: {
+    error?: string;
+    error_description?: string;
+  };
+}
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
   const supabase = createClient();
   const { data } = await supabase.auth.getUser();
+  const callbackError = searchParams?.error;
+  const callbackErrorDescription = searchParams?.error_description;
 
   if (data.user) {
     redirect("/portal");
@@ -23,6 +32,15 @@ export default async function LoginPage() {
           Choose your role to get started.
         </p>
       </div>
+
+      {callbackError && (
+        <div className="mb-6 w-full max-w-3xl rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <p className="font-medium">Sign-in link failed.</p>
+          <p className="mt-1">
+            {callbackErrorDescription ?? "Please request a new sign-in link and try again."}
+          </p>
+        </div>
+      )}
 
       <RoleSelector />
     </div>

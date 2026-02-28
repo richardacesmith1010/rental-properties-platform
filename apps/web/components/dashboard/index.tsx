@@ -22,7 +22,9 @@ interface DashboardProps {
   portfolio?: PortfolioData;
   tickets?: MaintenanceTicket[];
   invitations?: InvitationListItem[];
+  generatedMessage?: string | null;
   userEmail: string;
+  onGenerateChargesHref?: string;
   onSignOut: FormAction;
   onCreateProperty: StatefulAction;
   onCreateUnit: StatefulAction;
@@ -39,7 +41,9 @@ export function Dashboard({
   portfolio,
   tickets,
   invitations,
+  generatedMessage,
   userEmail,
+  onGenerateChargesHref,
   onSignOut,
   onCreateProperty,
   onCreateUnit,
@@ -95,6 +99,12 @@ export function Dashboard({
 
         {/* Content sections */}
         <div className="space-y-6 px-6 pb-8 pt-6 lg:px-8">
+          {generatedMessage && (
+            <div className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
+              {generatedMessage}
+            </div>
+          )}
+
           <KpiGrid
             monthlyGrossRentCents={data.kpis.monthlyGrossRentCents}
             occupancy={occupancy}
@@ -107,7 +117,11 @@ export function Dashboard({
             lateAccountCount={data.kpis.lateAccountCount}
           />
 
-          <ChargesSection charges={data.charges} onPayCharge={onPayCharge} />
+          <ChargesSection
+            charges={data.charges}
+            onPayCharge={onPayCharge}
+            onGenerateChargesHref={onGenerateChargesHref}
+          />
 
           <PaymentsSection payments={data.recentPayments} />
 
