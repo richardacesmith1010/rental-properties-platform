@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useFormState } from "react-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/shared/empty-state";
+import { FeatureWarning } from "@/components/shared/feature-warning";
 import type { ActionState } from "@/app/actions";
 import type { DocumentTemplateDTO, DocumentPacketDTO } from "@/lib/documents";
 import type { LeaseListItem } from "@/lib/portfolio";
@@ -23,6 +25,10 @@ interface DocumentsSectionProps {
   onDeleteTemplate: StatefulAction;
   onCreatePacket: StatefulAction;
   onSendPacket: StatefulAction;
+  isFeatureReady?: boolean;
+  featureWarning?: string | null;
+  assetAccessEnabled?: boolean;
+  assetAccessWarning?: string | null;
 }
 
 function FormError({ state }: { state: ActionState }) {
@@ -42,13 +48,33 @@ export function DocumentsSection({
   onCreateTemplate,
   onDeleteTemplate,
   onCreatePacket,
-  onSendPacket
+  onSendPacket,
+  isFeatureReady = true,
+  featureWarning = null,
+  assetAccessEnabled = true,
+  assetAccessWarning = null
 }: DocumentsSectionProps) {
   const [templateState, templateAction] = useFormState(onCreateTemplate, null);
   const [packetState, packetAction] = useFormState(onCreatePacket, null);
 
+  if (!isFeatureReady) {
+    return (
+      <div id="documents">
+        <FeatureWarning
+          title="Documents Unavailable"
+          message={
+            featureWarning ??
+            "Documents and e-sign are not ready yet. Apply the Phase 8 migration and reload."
+          }
+        />
+      </div>
+    );
+  }
+
   return (
     <div id="documents" className="space-y-4">
+      {featureWarning && <FeatureWarning title="Documents Setup" message={featureWarning} />}
+      {assetAccessWarning && <FeatureWarning title="File Access" message={assetAccessWarning} />}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -133,6 +159,7 @@ export function DocumentsSection({
                   packet={packet}
                   last={i === packets.length - 1}
                   onSendPacket={onSendPacket}
+                  assetAccessEnabled={assetAccessEnabled}
                 />
               ))}
             </div>
@@ -172,11 +199,13 @@ function TemplateRow({
 function PacketRow({
   packet,
   last,
-  onSendPacket
+  onSendPacket,
+  assetAccessEnabled
 }: {
   packet: DocumentPacketDTO;
   last: boolean;
   onSendPacket: StatefulAction;
+  assetAccessEnabled: boolean;
 }) {
   const [state, action] = useFormState(onSendPacket, null);
 
@@ -189,6 +218,16 @@ function PacketRow({
           <Badge variant={packet.status === "signed" ? "success" : packet.status === "sent" ? "warning" : "outline"}>
             {packet.status.toUpperCase()}
           </Badge>
+          {assetAccessEnabled && (
+            <Link
+              href={`/api/assets/document-packet/${packet.id}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center rounded-md border border-zinc-200 px-2 py-1 text-[11px] font-medium text-zinc-700 hover:bg-zinc-50"
+            >
+              Open File
+            </Link>
+          )}
           {packet.signers.map((signer) => (
             <Badge key={`${packet.id}-${signer.email}`} variant={signer.status === "signed" ? "success" : "outline"}>
               {signer.role}: {signer.status}

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { shouldRecordSuccessfulDelivery } from "@/lib/idempotency";
 
 export type NotificationType = "new_ticket" | "late_rent";
 
@@ -47,47 +48,73 @@ interface CreateNotificationParams {
 }
 
 export async function createNotificationWithDelivery(params: CreateNotificationParams) {
-  const admin = createAdminClient();
+  try {
+    const admin = createAdminClient();
 
-  const { data: notification, error } = await admin
-    .from("notifications")
-    .upsert(
-      {
-        recipient_profile_id: params.recipientProfileId,
-        type: params.type,
-        title: params.title,
-        body: params.body,
-        entity_type: params.entityType,
-        entity_id: params.entityId ?? null
-      },
-      { onConflict: "recipient_profile_id,type,entity_type,entity_id" }
-    )
-    .select("id")
-    .single();
+    const { data: notification, error } = await admin
+      .from("notifications")
+      .upsert(
+        {
+          recipient_profile_id: params.recipientProfileId,
+          type: params.type,
+          title: params.title,
+          body: params.body,
+          entity_type: params.entityType,
+          entity_id: params.entityId ?? null
+        },
+        { onConflict: "recipient_profile_id,type,entity_type,entity_id" }
+      )
+      .select("id")
+      .single();
 
-  if (error || !notification) {
-    return;
+    if (error || !notification) {
+      return;
+    }
+
+    const { data: existingDeliveries } = await admin
+      .from("notification_deliveries")
+      .select("channel, status")
+      .eq("notification_id", notification.id);
+
+    const deliveryRows = (existingDeliveries ?? []).map((row) => ({
+      channel: row.channel as "in_app" | "email",
+      status: row.status as "pending" | "sent" | "failed"
+    }));
+
+    if (shouldRecordSuccessfulDelivery(deliveryRows, "in_app")) {
+      await insertDeliveryRecord(admin, {
+        notification_id: notification.id,
+        channel: "in_app",
+        status: "sent"
+      });
+    }
+
+    let emailResult: {
+      status: "sent" | "failed";
+      providerRef: string | null;
+      errorMessage: string | null;
+    } | null = null;
+
+    if (shouldRecordSuccessfulDelivery(deliveryRows, "email")) {
+      emailResult = await sendNotificationEmail({
+        to: params.recipientEmail,
+        subject: params.title,
+        text: params.body
+      });
+    }
+
+    if (emailResult) {
+      await insertDeliveryRecord(admin, {
+        notification_id: notification.id,
+        channel: "email",
+        status: emailResult.status,
+        provider_ref: emailResult.providerRef,
+        error_message: emailResult.errorMessage
+      });
+    }
+  } catch (error) {
+    console.error("Failed to create notification delivery records:", error);
   }
-
-  await admin.from("notification_deliveries").insert({
-    notification_id: notification.id,
-    channel: "in_app",
-    status: "sent"
-  });
-
-  const emailResult = await sendNotificationEmail({
-    to: params.recipientEmail,
-    subject: params.title,
-    text: params.body
-  });
-
-  await admin.from("notification_deliveries").insert({
-    notification_id: notification.id,
-    channel: "email",
-    status: emailResult.status,
-    provider_ref: emailResult.providerRef,
-    error_message: emailResult.errorMessage
-  });
 }
 
 interface SendNotificationEmailParams {
@@ -153,5 +180,21 @@ async function sendNotificationEmail({ to, subject, text }: SendNotificationEmai
       providerRef: null,
       errorMessage: error instanceof Error ? error.message : "Unknown email delivery error."
     };
+  }
+}
+
+async function insertDeliveryRecord(
+  admin: ReturnType<typeof createAdminClient>,
+  row: {
+    notification_id: string;
+    channel: "in_app" | "email";
+    status: "pending" | "sent" | "failed";
+    provider_ref?: string | null;
+    error_message?: string | null;
+  }
+) {
+  const { error } = await admin.from("notification_deliveries").insert(row);
+  if (error) {
+    console.error("Failed to insert notification delivery row:", error);
   }
 }

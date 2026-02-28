@@ -10,6 +10,7 @@
     "dev:web": "npm run dev --workspace @rental/web",
     "dev:mobile": "npm run start --workspace @rental/mobile",
     "build:web": "npm run build --workspace @rental/web",
-    "lint:web": "npm run lint --workspace @rental/web"
+    "lint:web": "npm run lint --workspace @rental/web",
+    "smoke:web": "bash scripts/smoke-web.sh"
   }
 }

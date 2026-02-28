@@ -5,8 +5,10 @@ import type { InvitationListItem } from "@/lib/invitations";
 import type { NotificationDTO } from "@/lib/notifications";
 import type { OwnerDocumentsData } from "@/lib/documents";
 import type { VendorDTO } from "@/lib/vendors";
+import type { FeatureCapabilitiesDTO } from "@/lib/feature-capabilities";
 import type { ActionState } from "@/app/actions";
 import { Badge } from "@/components/ui/badge";
+import { FeatureWarning } from "@/components/shared/feature-warning";
 import { SidebarNav, MobileTopBar } from "./sidebar-nav";
 import { KpiGrid } from "./kpi-grid";
 import { ChargesSection } from "./charges-section";
@@ -31,6 +33,7 @@ interface DashboardProps {
   notifications?: NotificationDTO[];
   documents?: OwnerDocumentsData;
   vendors?: VendorDTO[];
+  capabilities?: FeatureCapabilitiesDTO;
   generatedMessage?: string | null;
   userEmail: string;
   onGenerateChargesHref?: string;
@@ -61,6 +64,7 @@ export function Dashboard({
   notifications,
   documents,
   vendors,
+  capabilities,
   generatedMessage,
   userEmail,
   onGenerateChargesHref,
@@ -94,6 +98,14 @@ export function Dashboard({
   };
   const safeNotifications: NotificationDTO[] = notifications ?? [];
   const safeVendors: VendorDTO[] = vendors ?? [];
+  const safeCapabilities: FeatureCapabilitiesDTO = capabilities ?? {
+    documentsEnabled: true,
+    documentAssetAccessEnabled: true,
+    notificationsEnabled: true,
+    vendorWorkflowEnabled: true,
+    photoWorkflowEnabled: true,
+    warnings: {}
+  };
   const occupancy =
     data.kpis.totalUnits > 0
       ? Math.round((data.kpis.occupiedUnits / data.kpis.totalUnits) * 100)
@@ -164,15 +176,29 @@ export function Dashboard({
             showControls={!!onUpdateTicketStatus}
             onUpdateStatus={onUpdateTicketStatus}
             vendors={safeVendors}
-            onAssignVendor={onAssignVendor}
-            onUploadPhoto={onUploadMaintenancePhoto}
+            onAssignVendor={safeCapabilities.vendorWorkflowEnabled ? onAssignVendor : undefined}
+            onUploadPhoto={safeCapabilities.photoWorkflowEnabled ? onUploadMaintenancePhoto : undefined}
+            vendorWorkflowEnabled={safeCapabilities.vendorWorkflowEnabled}
+            photoWorkflowEnabled={safeCapabilities.photoWorkflowEnabled}
+            vendorWorkflowWarning={safeCapabilities.warnings.vendorWorkflow}
+            photoWorkflowWarning={safeCapabilities.warnings.photoWorkflow}
           />
 
           {onMarkNotificationRead && (
-            <NotificationsSection
-              notifications={safeNotifications}
-              onMarkRead={onMarkNotificationRead}
-            />
+            safeCapabilities.notificationsEnabled ? (
+              <NotificationsSection
+                notifications={safeNotifications}
+                onMarkRead={onMarkNotificationRead}
+              />
+            ) : (
+              <FeatureWarning
+                title="Notifications Unavailable"
+                message={
+                  safeCapabilities.warnings.notifications ??
+                  "Notifications are not ready yet. Complete setup and reload."
+                }
+              />
+            )
           )}
 
           {onInviteTenant && onInviteManager && onResendInvite && (
@@ -197,14 +223,32 @@ export function Dashboard({
                 onDeleteTemplate={onDeleteDocumentTemplate}
                 onCreatePacket={onCreateDocumentPacket}
                 onSendPacket={onSendDocumentPacket}
+                isFeatureReady={safeCapabilities.documentsEnabled}
+                featureWarning={safeCapabilities.warnings.documents}
+                assetAccessEnabled={safeCapabilities.documentAssetAccessEnabled}
+                assetAccessWarning={
+                  safeCapabilities.documentsEnabled && !safeCapabilities.documentAssetAccessEnabled
+                    ? "Document packet records are available, but file storage access is not configured yet."
+                    : null
+                }
               />
             )}
 
           {onCreateVendor && (
-            <VendorsSection
-              vendors={safeVendors}
-              onCreateVendor={onCreateVendor}
-            />
+            safeCapabilities.vendorWorkflowEnabled ? (
+              <VendorsSection
+                vendors={safeVendors}
+                onCreateVendor={onCreateVendor}
+              />
+            ) : (
+              <FeatureWarning
+                title="Vendors Unavailable"
+                message={
+                  safeCapabilities.warnings.vendorWorkflow ??
+                  "Vendor workflows are not ready yet. Complete setup and reload."
+                }
+              />
+            )
           )}
 
           <OperationsSection

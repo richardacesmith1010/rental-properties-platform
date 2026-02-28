@@ -24,6 +24,8 @@ export interface DocumentPacketDTO {
   sentAt: string | null;
   signedAt: string | null;
   signers: SignerDTO[];
+  isFeatureReady?: boolean;
+  featureWarning?: string | null;
 }
 
 export interface OwnerDocumentsData {
@@ -40,6 +42,8 @@ export interface TenantDocumentPacketDTO {
   createdAt: string;
   sentAt: string | null;
   signedAt: string | null;
+  isFeatureReady?: boolean;
+  featureWarning?: string | null;
 }
 
 export interface TenantDocumentsData {
@@ -126,7 +130,9 @@ export async function getOwnerDocumentsData(userId: string): Promise<OwnerDocume
       createdAt: packet.created_at,
       sentAt: packet.sent_at,
       signedAt: packet.signed_at,
-      signers: signerMap.get(packet.id) ?? []
+      signers: signerMap.get(packet.id) ?? [],
+      isFeatureReady: true,
+      featureWarning: null
     }))
   };
 }
@@ -200,7 +206,9 @@ export async function getTenantDocumentsData(userId: string): Promise<TenantDocu
       signerStatus: signerStatusByPacket.get(packet.id) ?? "pending",
       createdAt: packet.created_at,
       sentAt: packet.sent_at,
-      signedAt: packet.signed_at
+      signedAt: packet.signed_at,
+      isFeatureReady: true,
+      featureWarning: null
     }))
   };
 }

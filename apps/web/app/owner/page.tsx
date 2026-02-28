@@ -7,6 +7,7 @@ import { getOwnerInvitations } from "@/lib/invitations";
 import { getOwnerDocumentsData } from "@/lib/documents";
 import { getNotificationsForUser } from "@/lib/notifications";
 import { getOwnerVendors } from "@/lib/vendors";
+import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import {
   createCheckoutForCharge,
   createLease,
@@ -38,6 +39,7 @@ interface OwnerPageProps {
 
 export default async function OwnerPage({ searchParams }: OwnerPageProps) {
   const { user } = await requireRole(["owner"]);
+  const capabilities = await getFeatureCapabilities();
   const generatedMessage = getGeneratedMessage(searchParams?.generated);
 
   const [dashboard, portfolio, tickets, invitations, documents, notifications, vendors] = await Promise.all([
@@ -45,9 +47,15 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
     getPortfolioData(user.id),
     getOwnerMaintenanceTickets(user.id),
     getOwnerInvitations(user.id),
-    getOwnerDocumentsData(user.id),
-    getNotificationsForUser(user.id),
-    getOwnerVendors(user.id)
+    capabilities.documentsEnabled
+      ? getOwnerDocumentsData(user.id)
+      : Promise.resolve({ templates: [], packets: [] }),
+    capabilities.notificationsEnabled
+      ? getNotificationsForUser(user.id)
+      : Promise.resolve([]),
+    capabilities.vendorWorkflowEnabled
+      ? getOwnerVendors(user.id)
+      : Promise.resolve([])
   ]);
 
   return (
@@ -59,6 +67,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       documents={documents}
       notifications={notifications}
       vendors={vendors}
+      capabilities={capabilities}
       userEmail={user.email ?? "unknown"}
       onSignOut={signOut}
       onCreateProperty={createProperty}

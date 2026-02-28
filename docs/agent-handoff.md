@@ -23,19 +23,37 @@
 - Upgraded mobile shell to tenant-first V1 workflow skeleton:
   - `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/mobile/app/index.tsx`
 - Added regression and schema validation coverage for new validation contracts.
+- Added feature capability probing + graceful degradation layer:
+  - `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/lib/feature-capabilities.ts`
+  - Gates owner/manager/tenant sections when Phase 8 tables/buckets are unavailable.
+- Added signed private-asset access flows with role authorization:
+  - `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/lib/assets.ts`
+  - `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/lib/asset-authorization.ts`
+  - `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/app/api/assets/maintenance-photo/[photoId]/route.ts`
+  - `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/app/api/assets/document-packet/[packetId]/route.ts`
+- Added idempotency helpers and action hardening:
+  - throttled duplicate packet send submissions
+  - duplicate vendor assignment suppression + reassigned status
+  - notification delivery de-duplication for successful channels
+- Added smoke/runbook guardrails:
+  - `/Users/courtneysmith/Documents/Codex/Rental Properties/scripts/smoke-web.sh`
+  - `/Users/courtneysmith/Documents/Codex/Rental Properties/docs/release-checklist.md`
 - Validation status:
-  - `npm test --workspace @rental/web` passed (74 tests)
+  - `npm test --workspace @rental/web` passed (92 tests)
   - `npm run lint:web` passed
   - `npm run build:web` passed
   - `npx tsc -p apps/mobile/tsconfig.json --noEmit` passed
 
 ## In Progress (Codex)
 - Production deployment + live migration application verification.
-- Signed URL rendering flow for maintenance photos and lease document assets.
 
 ## Pending (Claude)
 - Apply and verify Phase 8 migration in live Supabase if not yet applied.
 - Validate storage bucket access strategy for private assets.
+- Confirm storage object-level policies for:
+  - `lease-documents`
+  - `maintenance-photos`
+- Post proof in this document (SQL run output + policy diff, if any).
 
 ## Guardrails
 - Do not overwrite live-db-correct logic with stale local SQL.

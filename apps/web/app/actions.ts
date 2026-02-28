@@ -8,6 +8,11 @@ import { getCurrentUserRole } from "@/lib/auth";
 import { createStripeCheckoutSession } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createNotificationWithDelivery } from "@/lib/notifications";
+import { getFeatureCapabilities } from "@/lib/feature-capabilities";
+import {
+  getVendorAssignmentPlan,
+  shouldThrottleDocumentPacketSend
+} from "@/lib/idempotency";
 import {
   createPropertySchema,
   createUnitSchema,
@@ -33,6 +38,53 @@ import {
 } from "@/lib/validations";
 
 export type ActionState = { success: true } | { success: false; error: string } | null;
+
+type CapabilityKey =
+  | "documentsEnabled"
+  | "notificationsEnabled"
+  | "vendorWorkflowEnabled"
+  | "photoWorkflowEnabled";
+
+async function ensureCapabilityEnabled(capability: CapabilityKey): Promise<ActionState> {
+  const capabilities = await getFeatureCapabilities();
+  if (capabilities[capability]) {
+    return null;
+  }
+
+  if (capability === "documentsEnabled") {
+    return {
+      success: false,
+      error:
+        capabilities.warnings.documents ??
+        "Documents are not available yet. Complete setup and retry."
+    };
+  }
+
+  if (capability === "notificationsEnabled") {
+    return {
+      success: false,
+      error:
+        capabilities.warnings.notifications ??
+        "Notifications are not available yet. Complete setup and retry."
+    };
+  }
+
+  if (capability === "vendorWorkflowEnabled") {
+    return {
+      success: false,
+      error:
+        capabilities.warnings.vendorWorkflow ??
+        "Vendor workflow is not available yet. Complete setup and retry."
+    };
+  }
+
+  return {
+    success: false,
+    error:
+      capabilities.warnings.photoWorkflow ??
+      "Photo workflow is not available yet. Complete setup and retry."
+  };
+}
 
 export async function signOut(_formData: FormData) {
   const supabase = createClient();
@@ -731,6 +783,11 @@ export async function markNotificationRead(
     redirect("/login");
   }
 
+  const capabilityError = await ensureCapabilityEnabled("notificationsEnabled");
+  if (capabilityError) {
+    return capabilityError;
+  }
+
   const parsed = parseFormData(markNotificationReadSchema, formData);
   if (!parsed.success) {
     return parsed;
@@ -772,6 +829,11 @@ export async function createDocumentTemplate(
     redirect("/portal");
   }
 
+  const capabilityError = await ensureCapabilityEnabled("documentsEnabled");
+  if (capabilityError) {
+    return capabilityError;
+  }
+
   const parsed = parseFormData(createDocumentTemplateSchema, formData);
   if (!parsed.success) {
     return parsed;
@@ -808,6 +870,11 @@ export async function updateDocumentTemplate(
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner") {
     redirect("/portal");
+  }
+
+  const capabilityError = await ensureCapabilityEnabled("documentsEnabled");
+  if (capabilityError) {
+    return capabilityError;
   }
 
   const parsed = parseFormData(updateDocumentTemplateSchema, formData);
@@ -851,6 +918,11 @@ export async function deleteDocumentTemplate(
     redirect("/portal");
   }
 
+  const capabilityError = await ensureCapabilityEnabled("documentsEnabled");
+  if (capabilityError) {
+    return capabilityError;
+  }
+
   const parsed = parseFormData(deleteDocumentTemplateSchema, formData);
   if (!parsed.success) {
     return parsed;
@@ -886,6 +958,11 @@ export async function createDocumentPacket(
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner") {
     redirect("/portal");
+  }
+
+  const capabilityError = await ensureCapabilityEnabled("documentsEnabled");
+  if (capabilityError) {
+    return capabilityError;
   }
 
   const parsed = parseFormData(createDocumentPacketSchema, formData);
@@ -969,6 +1046,11 @@ export async function sendDocumentPacket(
     redirect("/portal");
   }
 
+  const capabilityError = await ensureCapabilityEnabled("documentsEnabled");
+  if (capabilityError) {
+    return capabilityError;
+  }
+
   const parsed = parseFormData(sendDocumentPacketSchema, formData);
   if (!parsed.success) {
     return parsed;
@@ -979,7 +1061,7 @@ export async function sendDocumentPacket(
 
   const { data: packet } = await supabase
     .from("document_packets")
-    .select("id, lease_id, property_id, status")
+    .select("id, lease_id, property_id, status, sent_at")
     .eq("id", packetId)
     .single();
 
@@ -995,6 +1077,14 @@ export async function sendDocumentPacket(
 
   if (!property || property.owner_profile_id !== user.id) {
     return { success: false, error: "You do not have access to this packet." };
+  }
+
+  if (packet.status === "signed" || packet.status === "void") {
+    return { success: false, error: "This packet can no longer be sent." };
+  }
+
+  if (packet.status === "sent" && shouldThrottleDocumentPacketSend(packet.sent_at)) {
+    return { success: true };
   }
 
   if (!packet.lease_id) {
@@ -1074,6 +1164,11 @@ export async function signDocumentPacket(
 
   if (!user) {
     redirect("/login");
+  }
+
+  const capabilityError = await ensureCapabilityEnabled("documentsEnabled");
+  if (capabilityError) {
+    return capabilityError;
   }
 
   const parsed = parseFormData(signDocumentPacketSchema, formData);
@@ -1181,6 +1276,11 @@ export async function createVendor(
     redirect("/portal");
   }
 
+  const capabilityError = await ensureCapabilityEnabled("vendorWorkflowEnabled");
+  if (capabilityError) {
+    return capabilityError;
+  }
+
   const parsed = parseFormData(createVendorSchema, formData);
   if (!parsed.success) {
     return parsed;
@@ -1221,6 +1321,11 @@ export async function assignVendorToTicket(
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
     redirect("/portal");
+  }
+
+  const capabilityError = await ensureCapabilityEnabled("vendorWorkflowEnabled");
+  if (capabilityError) {
+    return capabilityError;
   }
 
   const parsed = parseFormData(assignVendorSchema, formData);
@@ -1279,11 +1384,28 @@ export async function assignVendorToTicket(
     return { success: false, error: "Vendor is not valid for this property owner." };
   }
 
+  const { data: latestAssignment } = await admin
+    .from("maintenance_assignments")
+    .select("vendor_id")
+    .eq("ticket_id", ticketId)
+    .order("assigned_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const assignmentPlan = getVendorAssignmentPlan(
+    latestAssignment?.vendor_id ?? null,
+    vendorId
+  );
+
+  if (!assignmentPlan.shouldInsert) {
+    return { success: true };
+  }
+
   const { error } = await admin.from("maintenance_assignments").insert({
     ticket_id: ticketId,
     vendor_id: vendorId,
     assigned_by_profile_id: user.id,
-    status: "assigned"
+    status: assignmentPlan.status
   });
 
   if (error) {
@@ -1311,6 +1433,11 @@ export async function uploadMaintenancePhoto(
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
     redirect("/portal");
+  }
+
+  const capabilityError = await ensureCapabilityEnabled("photoWorkflowEnabled");
+  if (capabilityError) {
+    return capabilityError;
   }
 
   const parsed = parseFormData(uploadMaintenancePhotoSchema, formData);

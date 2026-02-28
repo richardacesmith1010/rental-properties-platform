@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useFormState } from "react-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SubmitButton } from "@/components/shared/submit-button";
+import { FeatureWarning } from "@/components/shared/feature-warning";
 import type { ActionState } from "@/app/actions";
 import type { TenantDocumentPacketDTO } from "@/lib/documents";
 
@@ -15,15 +17,48 @@ type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionS
 interface TenantDocumentsSectionProps {
   packets: TenantDocumentPacketDTO[];
   onSignPacket: StatefulAction;
+  isFeatureReady?: boolean;
+  featureWarning?: string | null;
+  assetAccessEnabled?: boolean;
+  assetAccessWarning?: string | null;
 }
 
-export function TenantDocumentsSection({ packets, onSignPacket }: TenantDocumentsSectionProps) {
+export function TenantDocumentsSection({
+  packets,
+  onSignPacket,
+  isFeatureReady = true,
+  featureWarning = null,
+  assetAccessEnabled = true,
+  assetAccessWarning = null
+}: TenantDocumentsSectionProps) {
+  if (!isFeatureReady) {
+    return (
+      <FeatureWarning
+        title="Documents Unavailable"
+        message={
+          featureWarning ??
+          "Documents and signatures are not available yet. Ask your admin to complete setup."
+        }
+      />
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Documents & Signatures</CardTitle>
       </CardHeader>
       <CardContent>
+        {featureWarning && (
+          <div className="mb-3">
+            <FeatureWarning title="Documents Setup" message={featureWarning} />
+          </div>
+        )}
+        {assetAccessWarning && (
+          <div className="mb-3">
+            <FeatureWarning title="File Access" message={assetAccessWarning} />
+          </div>
+        )}
         {packets.length === 0 ? (
           <EmptyState message="No documents requiring action right now." />
         ) : (
@@ -33,6 +68,7 @@ export function TenantDocumentsSection({ packets, onSignPacket }: TenantDocument
                 key={packet.id}
                 packet={packet}
                 onSignPacket={onSignPacket}
+                assetAccessEnabled={assetAccessEnabled}
                 last={i === packets.length - 1}
               />
             ))}
@@ -46,10 +82,12 @@ export function TenantDocumentsSection({ packets, onSignPacket }: TenantDocument
 function PacketSignRow({
   packet,
   onSignPacket,
+  assetAccessEnabled,
   last
 }: {
   packet: TenantDocumentPacketDTO;
   onSignPacket: StatefulAction;
+  assetAccessEnabled: boolean;
   last: boolean;
 }) {
   const [state, action] = useFormState(onSignPacket, null);
@@ -66,6 +104,16 @@ function PacketSignRow({
           <Badge variant={packet.signerStatus === "signed" ? "success" : "outline"}>
             Signer: {packet.signerStatus.toUpperCase()}
           </Badge>
+          {assetAccessEnabled && (
+            <Link
+              href={`/api/assets/document-packet/${packet.id}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center rounded-md border border-zinc-200 px-2 py-1 text-[11px] font-medium text-zinc-700 hover:bg-zinc-50"
+            >
+              Open File
+            </Link>
+          )}
         </div>
       </div>
       {packet.signerStatus !== "signed" ? (

@@ -93,6 +93,10 @@ Run this migration for Stripe payment tracking:
 - Tenant e-sign workflow with signature audit fields
 - In-app notifications with email delivery records
 - Vendor assignment + maintenance photo upload metadata
+- Capability-gated feature availability checks when Phase 8 tables/buckets are missing
+- Signed asset access endpoints for private maintenance/document files:
+  - `/api/assets/maintenance-photo/:photoId`
+  - `/api/assets/document-packet/:packetId`
 - Tenant-first mobile V1 workflow shell upgrade
 
 Run these migrations after Phase 5:
@@ -115,9 +119,28 @@ Local manual trigger example:
 curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/generate-charges
 ```
 
+## Smoke Test Script
+
+Run lightweight production-safe checks:
+
+```bash
+APP_URL=http://localhost:3000 npm run smoke:web
+```
+
+Optional authenticated cron verification:
+
+```bash
+APP_URL=http://localhost:3000 CRON_SECRET=<secret> npm run smoke:web
+```
+
 ## Next Build Steps
 
-1. Apply Phase 8 migration in Supabase and verify RLS policies
+1. Apply/verify Phase 8 migration and storage policies in live Supabase
 2. Configure `RESEND_API_KEY` + `RESEND_FROM_EMAIL` in Vercel for email notifications
-3. Validate production flows: owner docs, tenant signing, ticket notifications, late-rent notifications
-4. Add signed URL rendering for maintenance photos and lease documents
+3. Run pre-release checks and smoke tests:
+   - `npm test --workspace @rental/web`
+   - `npm run lint:web`
+   - `npm run build:web`
+   - `npx tsc -p apps/mobile/tsconfig.json --noEmit`
+   - `APP_URL=<vercel-url> npm run smoke:web`
+4. Validate production role paths (owner, manager, tenant) end-to-end

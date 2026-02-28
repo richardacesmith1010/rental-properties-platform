@@ -10,11 +10,13 @@ import { getTenantPaymentData } from "@/lib/tenant-payments";
 import { getTenantMaintenanceData } from "@/lib/maintenance";
 import { getTenantDocumentsData } from "@/lib/documents";
 import { getNotificationsForUser } from "@/lib/notifications";
+import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SubmitButton } from "@/components/shared/submit-button";
+import { FeatureWarning } from "@/components/shared/feature-warning";
 import { TicketForm } from "@/components/dashboard/ticket-form";
 import { MaintenanceSection } from "@/components/dashboard/maintenance-section";
 import { TenantDocumentsSection } from "@/components/dashboard/tenant-documents-section";
@@ -25,12 +27,17 @@ export const dynamic = "force-dynamic";
 
 export default async function TenantPage() {
   const { user } = await requireRole(["tenant"]);
+  const capabilities = await getFeatureCapabilities();
 
   const [paymentData, maintenanceData, documentsData, notifications] = await Promise.all([
     getTenantPaymentData(user.id),
     getTenantMaintenanceData(user.id),
-    getTenantDocumentsData(user.id),
-    getNotificationsForUser(user.id)
+    capabilities.documentsEnabled
+      ? getTenantDocumentsData(user.id)
+      : Promise.resolve({ packets: [] }),
+    capabilities.notificationsEnabled
+      ? getNotificationsForUser(user.id)
+      : Promise.resolve([])
   ]);
 
   return (
@@ -109,17 +116,37 @@ export default async function TenantPage() {
         <MaintenanceSection
           tickets={maintenanceData.tickets}
           showControls={false}
+          photoWorkflowEnabled={capabilities.photoWorkflowEnabled}
+          photoWorkflowWarning={capabilities.warnings.photoWorkflow}
         />
 
         <TenantDocumentsSection
           packets={documentsData.packets}
           onSignPacket={signDocumentPacket}
+          isFeatureReady={capabilities.documentsEnabled}
+          featureWarning={capabilities.warnings.documents}
+          assetAccessEnabled={capabilities.documentAssetAccessEnabled}
+          assetAccessWarning={
+            capabilities.documentsEnabled && !capabilities.documentAssetAccessEnabled
+              ? "Document records are available, but secure file links are not configured yet."
+              : null
+          }
         />
 
-        <NotificationsSection
-          notifications={notifications}
-          onMarkRead={markNotificationRead}
-        />
+        {capabilities.notificationsEnabled ? (
+          <NotificationsSection
+            notifications={notifications}
+            onMarkRead={markNotificationRead}
+          />
+        ) : (
+          <FeatureWarning
+            title="Notifications Unavailable"
+            message={
+              capabilities.warnings.notifications ??
+              "Notifications are not ready yet. Complete setup and reload."
+            }
+          />
+        )}
       </div>
     </div>
   );

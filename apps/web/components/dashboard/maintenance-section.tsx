@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/shared/empty-state";
+import { FeatureWarning } from "@/components/shared/feature-warning";
 import { TicketStatusControl } from "./ticket-status-control";
 import { TicketVendorControl } from "./ticket-vendor-control";
 import { TicketPhotoUpload } from "./ticket-photo-upload";
@@ -20,6 +22,10 @@ interface MaintenanceSectionProps {
   vendors?: Array<{ id: string; name: string }>;
   onAssignVendor?: StatefulAction;
   onUploadPhoto?: StatefulAction;
+  vendorWorkflowEnabled?: boolean;
+  photoWorkflowEnabled?: boolean;
+  vendorWorkflowWarning?: string | null;
+  photoWorkflowWarning?: string | null;
 }
 
 const statusVariant: Record<string, "warning" | "default" | "success" | "outline"> = {
@@ -47,6 +53,10 @@ export function MaintenanceSection({
   vendors = [],
   onAssignVendor,
   onUploadPhoto,
+  vendorWorkflowEnabled = true,
+  photoWorkflowEnabled = true,
+  vendorWorkflowWarning = null,
+  photoWorkflowWarning = null,
 }: MaintenanceSectionProps) {
   return (
     <Card id="maintenance">
@@ -54,6 +64,22 @@ export function MaintenanceSection({
         <CardTitle>Maintenance Tickets</CardTitle>
       </CardHeader>
       <CardContent>
+        {(vendorWorkflowWarning || photoWorkflowWarning) && (
+          <div className="mb-4 space-y-2">
+            {vendorWorkflowWarning && (
+              <FeatureWarning
+                title="Vendor Workflow Unavailable"
+                message={vendorWorkflowWarning}
+              />
+            )}
+            {photoWorkflowWarning && (
+              <FeatureWarning
+                title="Photo Workflow Unavailable"
+                message={photoWorkflowWarning}
+              />
+            )}
+          </div>
+        )}
         {tickets.length === 0 ? (
           <EmptyState message="No maintenance tickets yet." />
         ) : (
@@ -99,30 +125,43 @@ export function MaintenanceSection({
                       ` \u2022 ${statusLabel(ticket.assignmentStatus)}`}
                     {ticket.photoCount > 0 &&
                       ` \u2022 ${ticket.photoCount} photo${ticket.photoCount === 1 ? "" : "s"}`}
+                    {ticket.photoCount > 0 &&
+                      !photoWorkflowEnabled &&
+                      " \u2022 Photo access unavailable"}
                   </p>
                 </div>
 
-                {showControls && (
+                {(showControls || (photoWorkflowEnabled && ticket.latestPhotoId)) && (
                   <div className="flex-shrink-0 space-y-2">
-                    {onUpdateStatus && (
+                    {showControls && onUpdateStatus && (
                       <TicketStatusControl
                         ticketId={ticket.id}
                         currentStatus={ticket.status}
                         onUpdateStatus={onUpdateStatus}
                       />
                     )}
-                    {onAssignVendor && vendors.length > 0 && (
+                    {showControls && onAssignVendor && vendorWorkflowEnabled && vendors.length > 0 && (
                       <TicketVendorControl
                         ticketId={ticket.id}
                         vendors={vendors}
                         onAssignVendor={onAssignVendor}
                       />
                     )}
-                    {onUploadPhoto && (
+                    {showControls && onUploadPhoto && photoWorkflowEnabled && (
                       <TicketPhotoUpload
                         ticketId={ticket.id}
                         onUploadPhoto={onUploadPhoto}
                       />
+                    )}
+                    {photoWorkflowEnabled && ticket.latestPhotoId && (
+                      <Link
+                        href={`/api/assets/maintenance-photo/${ticket.latestPhotoId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex h-8 items-center justify-center rounded-md border border-zinc-200 px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                      >
+                        View Photo
+                      </Link>
                     )}
                   </div>
                 )}

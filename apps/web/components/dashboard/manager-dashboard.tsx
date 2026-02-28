@@ -1,5 +1,6 @@
 import type { ManagerDashboardData } from "@/lib/manager-dashboard";
 import type { VendorDTO } from "@/lib/vendors";
+import type { FeatureCapabilitiesDTO } from "@/lib/feature-capabilities";
 import type { ActionState } from "@/app/actions";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +25,7 @@ type StatefulAction = (
 interface ManagerDashboardProps {
   data: ManagerDashboardData;
   vendors: VendorDTO[];
+  capabilities?: FeatureCapabilitiesDTO;
   userEmail: string;
   onSignOut: FormAction;
   onUpdateTicketStatus: StatefulAction;
@@ -45,12 +47,22 @@ function dollars(cents: number) {
 export function ManagerDashboard({
   data,
   vendors,
+  capabilities,
   userEmail,
   onSignOut,
   onUpdateTicketStatus,
   onAssignVendor,
   onUploadPhoto
 }: ManagerDashboardProps) {
+  const safeCapabilities: FeatureCapabilitiesDTO = capabilities ?? {
+    documentsEnabled: true,
+    documentAssetAccessEnabled: true,
+    notificationsEnabled: true,
+    vendorWorkflowEnabled: true,
+    photoWorkflowEnabled: true,
+    warnings: {}
+  };
+
   const occupancy =
     data.kpis.totalUnits > 0
       ? Math.round((data.kpis.occupiedUnits / data.kpis.totalUnits) * 100)
@@ -171,8 +183,12 @@ export function ManagerDashboard({
             showControls={true}
             onUpdateStatus={onUpdateTicketStatus}
             vendors={vendors}
-            onAssignVendor={onAssignVendor}
-            onUploadPhoto={onUploadPhoto}
+            onAssignVendor={safeCapabilities.vendorWorkflowEnabled ? onAssignVendor : undefined}
+            onUploadPhoto={safeCapabilities.photoWorkflowEnabled ? onUploadPhoto : undefined}
+            vendorWorkflowEnabled={safeCapabilities.vendorWorkflowEnabled}
+            photoWorkflowEnabled={safeCapabilities.photoWorkflowEnabled}
+            vendorWorkflowWarning={safeCapabilities.warnings.vendorWorkflow}
+            photoWorkflowWarning={safeCapabilities.warnings.photoWorkflow}
           />
 
           {/* Rent Status */}

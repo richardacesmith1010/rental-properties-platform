@@ -12,9 +12,12 @@ export interface MaintenanceTicket {
   vendorName: string | null;
   assignmentStatus: "assigned" | "reassigned" | "cancelled" | null;
   photoCount: number;
+  latestPhotoId: string | null;
   createdAt: string;
   resolvedAt: string | null;
   tenantEmail: string | null;
+  isFeatureReady?: boolean;
+  featureWarning?: string | null;
 }
 
 export interface TenantUnit {
@@ -38,9 +41,15 @@ async function buildTicketEnhancementMaps(
   >();
   const vendorNameById = new Map<string, string>();
   const photoCountByTicketId = new Map<string, number>();
+  const latestPhotoIdByTicketId = new Map<string, string>();
 
   if (ticketIds.length === 0) {
-    return { assignmentByTicketId, vendorNameById, photoCountByTicketId };
+    return {
+      assignmentByTicketId,
+      vendorNameById,
+      photoCountByTicketId,
+      latestPhotoIdByTicketId
+    };
   }
 
   const { data: assignments } = await supabase
@@ -74,17 +83,26 @@ async function buildTicketEnhancementMaps(
 
   const { data: photos } = await supabase
     .from("maintenance_photos")
-    .select("ticket_id")
-    .in("ticket_id", ticketIds);
+    .select("id, ticket_id, created_at")
+    .in("ticket_id", ticketIds)
+    .order("created_at", { ascending: false });
 
   for (const photo of photos ?? []) {
     photoCountByTicketId.set(
       photo.ticket_id,
       (photoCountByTicketId.get(photo.ticket_id) ?? 0) + 1
     );
+    if (!latestPhotoIdByTicketId.has(photo.ticket_id)) {
+      latestPhotoIdByTicketId.set(photo.ticket_id, photo.id);
+    }
   }
 
-  return { assignmentByTicketId, vendorNameById, photoCountByTicketId };
+  return {
+    assignmentByTicketId,
+    vendorNameById,
+    photoCountByTicketId,
+    latestPhotoIdByTicketId
+  };
 }
 
 /* ─── Tenant: tickets + available units for the create form ─── */
@@ -144,7 +162,12 @@ export async function getTenantMaintenanceData(
     .order("created_at", { ascending: false });
 
   const ticketRows = tickets ?? [];
-  const { assignmentByTicketId, vendorNameById, photoCountByTicketId } =
+  const {
+    assignmentByTicketId,
+    vendorNameById,
+    photoCountByTicketId,
+    latestPhotoIdByTicketId
+  } =
     await buildTicketEnhancementMaps(
       supabase,
       ticketRows.map((ticket) => ticket.id)
@@ -169,9 +192,12 @@ export async function getTenantMaintenanceData(
         vendorName: assignment ? vendorNameById.get(assignment.vendorId) ?? null : null,
         assignmentStatus: assignment?.status ?? null,
         photoCount: photoCountByTicketId.get(ticket.id) ?? 0,
+        latestPhotoId: latestPhotoIdByTicketId.get(ticket.id) ?? null,
         createdAt: ticket.created_at,
         resolvedAt: ticket.resolved_at,
         tenantEmail: null,
+        isFeatureReady: true,
+        featureWarning: null
       };
     }),
   };
@@ -240,7 +266,12 @@ export async function getOwnerMaintenanceTickets(
   }
 
   const ticketRows = tickets ?? [];
-  const { assignmentByTicketId, vendorNameById, photoCountByTicketId } =
+  const {
+    assignmentByTicketId,
+    vendorNameById,
+    photoCountByTicketId,
+    latestPhotoIdByTicketId
+  } =
     await buildTicketEnhancementMaps(
       supabase,
       ticketRows.map((ticket) => ticket.id)
@@ -266,9 +297,12 @@ export async function getOwnerMaintenanceTickets(
       vendorName: assignment ? vendorNameById.get(assignment.vendorId) ?? null : null,
       assignmentStatus: assignment?.status ?? null,
       photoCount: photoCountByTicketId.get(ticket.id) ?? 0,
+      latestPhotoId: latestPhotoIdByTicketId.get(ticket.id) ?? null,
       createdAt: ticket.created_at,
       resolvedAt: ticket.resolved_at,
       tenantEmail: tenant?.email ?? null,
+      isFeatureReady: true,
+      featureWarning: null
     };
   });
 }
@@ -339,7 +373,12 @@ export async function getManagerMaintenanceTickets(
   }
 
   const ticketRows = tickets ?? [];
-  const { assignmentByTicketId, vendorNameById, photoCountByTicketId } =
+  const {
+    assignmentByTicketId,
+    vendorNameById,
+    photoCountByTicketId,
+    latestPhotoIdByTicketId
+  } =
     await buildTicketEnhancementMaps(
       supabase,
       ticketRows.map((ticket) => ticket.id)
@@ -365,9 +404,12 @@ export async function getManagerMaintenanceTickets(
       vendorName: assignment ? vendorNameById.get(assignment.vendorId) ?? null : null,
       assignmentStatus: assignment?.status ?? null,
       photoCount: photoCountByTicketId.get(ticket.id) ?? 0,
+      latestPhotoId: latestPhotoIdByTicketId.get(ticket.id) ?? null,
       createdAt: ticket.created_at,
       resolvedAt: ticket.resolved_at,
       tenantEmail: tenant?.email ?? null,
+      isFeatureReady: true,
+      featureWarning: null
     };
   });
 }
