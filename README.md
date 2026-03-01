@@ -130,6 +130,13 @@ Run these migrations after Phase 5:
 Run this migration after Phase 8:
 - `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase9_llc_and_shared_operator_access.sql`
 
+## Stability Compatibility Note
+
+- `FeatureCapabilitiesDTO` now includes `ownershipEnabled` and optional `warnings.ownership`.
+- App behavior is backward-compatible with pre-Phase-9 databases:
+  - legacy owner-based property access remains functional until Phase 9 is applied
+  - ownership-account workflows are disabled with setup guidance when Phase 9 is missing
+
 ## Automatic Rent Charge Generation
 
 - Scheduled endpoint: `/api/cron/generate-charges`

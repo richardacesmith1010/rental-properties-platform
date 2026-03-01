@@ -27,7 +27,7 @@ interface InvitationsSectionProps {
   invitations: InvitationListItem[];
   onInviteTenant: StatefulAction;
   onInviteManager: StatefulAction;
-  onInviteOwner: StatefulAction;
+  onInviteOwner?: StatefulAction;
   onResendInvite: StatefulAction;
 }
 
@@ -73,12 +73,12 @@ export function InvitationsSection({
 }: InvitationsSectionProps) {
   const [tenantState, tenantAction] = useFormState(onInviteTenant, null);
   const [managerState, managerAction] = useFormState(onInviteManager, null);
-  const [ownerState, ownerAction] = useFormState(onInviteOwner, null);
+  const [ownerState, ownerAction] = useFormState(onInviteOwner ?? onInviteManager, null);
 
   return (
     <div id="invitations">
       {/* Invite forms — 2-column grid */}
-      <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className={`mb-4 grid grid-cols-1 gap-4 ${onInviteOwner ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}>
         {/* Invite Tenant */}
         <Card>
           <CardHeader>
@@ -130,33 +130,35 @@ export function InvitationsSection({
         </Card>
 
         {/* Invite Co-owner */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Invite Co-owner</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-3" action={ownerAction}>
-              <FormError state={ownerState} />
-              <FormSuccess state={ownerState} />
-              <Input
-                name="email"
-                type="email"
-                placeholder="Co-owner email"
-                required
-              />
-              <Input name="fullName" placeholder="Full name" required />
-              <Select name="ownershipAccountId" required>
-                <option value="">Select ownership account</option>
-                {ownershipAccounts.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.displayName}
-                  </option>
-                ))}
-              </Select>
-              <SubmitButton className="w-full">Send Invitation</SubmitButton>
-            </form>
-          </CardContent>
-        </Card>
+        {onInviteOwner && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Invite Co-owner</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form className="space-y-3" action={ownerAction}>
+                <FormError state={ownerState} />
+                <FormSuccess state={ownerState} />
+                <Input
+                  name="email"
+                  type="email"
+                  placeholder="Co-owner email"
+                  required
+                />
+                <Input name="fullName" placeholder="Full name" required />
+                <Select name="ownershipAccountId" required>
+                  <option value="">Select ownership account</option>
+                  {ownershipAccounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.displayName}
+                    </option>
+                  ))}
+                </Select>
+                <SubmitButton className="w-full">Send Invitation</SubmitButton>
+              </form>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Sent Invitations listing */}

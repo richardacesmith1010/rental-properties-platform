@@ -58,7 +58,8 @@ type CapabilityKey =
   | "documentsEnabled"
   | "notificationsEnabled"
   | "vendorWorkflowEnabled"
-  | "photoWorkflowEnabled";
+  | "photoWorkflowEnabled"
+  | "ownershipEnabled";
 
 async function ensureCapabilityEnabled(capability: CapabilityKey): Promise<ActionState> {
   const capabilities = await getFeatureCapabilities();
@@ -90,6 +91,15 @@ async function ensureCapabilityEnabled(capability: CapabilityKey): Promise<Actio
       error:
         capabilities.warnings.vendorWorkflow ??
         "Vendor workflow is not available yet. Complete setup and retry."
+    };
+  }
+
+  if (capability === "ownershipEnabled") {
+    return {
+      success: false,
+      error:
+        capabilities.warnings.ownership ??
+        "Ownership accounts are not available yet. Complete setup and retry."
     };
   }
 
@@ -126,27 +136,46 @@ export async function createProperty(_prev: ActionState, formData: FormData): Pr
     return parsed;
   }
 
+  const capabilities = await getFeatureCapabilities();
   const { name, addressLine1, city, state, postalCode, ownerAccountId } = parsed.data;
-  let targetOwnerAccountId = ownerAccountId;
+  let property: { id: string } | null = null;
+  let error: { message: string } | null = null;
 
-  if (!targetOwnerAccountId) {
-    targetOwnerAccountId = await getOrCreateIndividualOwnershipAccount(user.id);
-  } else {
-    const canUseAccount = await canUserAdministerOwnershipAccount(user.id, targetOwnerAccountId);
-    if (!canUseAccount) {
-      return { success: false, error: "You do not have access to that ownership account." };
+  if (capabilities.ownershipEnabled) {
+    let targetOwnerAccountId = ownerAccountId;
+
+    if (!targetOwnerAccountId) {
+      targetOwnerAccountId = await getOrCreateIndividualOwnershipAccount(user.id);
+    } else {
+      const canUseAccount = await canUserAdministerOwnershipAccount(user.id, targetOwnerAccountId);
+      if (!canUseAccount) {
+        return { success: false, error: "You do not have access to that ownership account." };
+      }
     }
-  }
 
-  const { data: property, error } = await supabase.from("properties").insert({
-    owner_profile_id: user.id,
-    owner_account_id: targetOwnerAccountId,
-    name,
-    address_line1: addressLine1,
-    city,
-    state,
-    postal_code: postalCode
-  }).select("id").single();
+    const insertResult = await supabase.from("properties").insert({
+      owner_profile_id: user.id,
+      owner_account_id: targetOwnerAccountId,
+      name,
+      address_line1: addressLine1,
+      city,
+      state,
+      postal_code: postalCode
+    }).select("id").single();
+    property = insertResult.data;
+    error = insertResult.error;
+  } else {
+    const insertResult = await supabase.from("properties").insert({
+      owner_profile_id: user.id,
+      name,
+      address_line1: addressLine1,
+      city,
+      state,
+      postal_code: postalCode
+    }).select("id").single();
+    property = insertResult.data;
+    error = insertResult.error;
+  }
 
   if (error) {
     return { success: false, error: "Failed to create property. Please try again." };
@@ -878,6 +907,11 @@ export async function inviteOwner(
     redirect("/portal");
   }
 
+  const capabilityError = await ensureCapabilityEnabled("ownershipEnabled");
+  if (capabilityError) {
+    return capabilityError;
+  }
+
   const parsed = parseFormData(inviteOwnerSchema, formData);
   if (!parsed.success) {
     return parsed;
@@ -981,6 +1015,11 @@ export async function createOwnershipAccount(
     redirect("/portal");
   }
 
+  const capabilityError = await ensureCapabilityEnabled("ownershipEnabled");
+  if (capabilityError) {
+    return capabilityError;
+  }
+
   const parsed = parseFormData(createOwnershipAccountSchema, formData);
   if (!parsed.success) {
     return parsed;
@@ -1037,6 +1076,11 @@ export async function addOwnershipMember(
     redirect("/portal");
   }
 
+  const capabilityError = await ensureCapabilityEnabled("ownershipEnabled");
+  if (capabilityError) {
+    return capabilityError;
+  }
+
   const parsed = parseFormData(addOwnershipMemberSchema, formData);
   if (!parsed.success) {
     return parsed;
@@ -1085,6 +1129,11 @@ export async function linkPropertyToOwnershipAccount(
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
     redirect("/portal");
+  }
+
+  const capabilityError = await ensureCapabilityEnabled("ownershipEnabled");
+  if (capabilityError) {
+    return capabilityError;
   }
 
   const parsed = parseFormData(linkPropertyToOwnershipAccountSchema, formData);
@@ -1259,28 +1308,42 @@ export async function createDocumentTemplate(
     return parsed;
   }
 
+  const capabilities = await getFeatureCapabilities();
   const { name, category, bodyMarkdown, ownerAccountId } = parsed.data;
-  const ownerAccountIds = await getAdministeredOwnerAccountIds(user.id);
-  const targetOwnerAccountId = ownerAccountId ?? ownerAccountIds[0];
+  let error: { message: string } | null = null;
 
-  if (!targetOwnerAccountId) {
-    return {
-      success: false,
-      error: "No ownership account is available. Create or link a property first."
-    };
+  if (capabilities.ownershipEnabled) {
+    const ownerAccountIds = await getAdministeredOwnerAccountIds(user.id);
+    const targetOwnerAccountId = ownerAccountId ?? ownerAccountIds[0];
+
+    if (!targetOwnerAccountId) {
+      return {
+        success: false,
+        error: "No ownership account is available. Create or link a property first."
+      };
+    }
+
+    if (!ownerAccountIds.includes(targetOwnerAccountId)) {
+      return { success: false, error: "You do not have access to that ownership account." };
+    }
+
+    const insertResult = await supabase.from("document_templates").insert({
+      owner_account_id: targetOwnerAccountId,
+      owner_profile_id: user.id,
+      name,
+      category,
+      body_markdown: bodyMarkdown
+    });
+    error = insertResult.error;
+  } else {
+    const insertResult = await supabase.from("document_templates").insert({
+      owner_profile_id: user.id,
+      name,
+      category,
+      body_markdown: bodyMarkdown
+    });
+    error = insertResult.error;
   }
-
-  if (!ownerAccountIds.includes(targetOwnerAccountId)) {
-    return { success: false, error: "You do not have access to that ownership account." };
-  }
-
-  const { error } = await supabase.from("document_templates").insert({
-    owner_account_id: targetOwnerAccountId,
-    owner_profile_id: user.id,
-    name,
-    category,
-    body_markdown: bodyMarkdown
-  });
 
   if (error) {
     return { success: false, error: "Failed to create document template." };
@@ -1760,29 +1823,45 @@ export async function createVendor(
     return parsed;
   }
 
+  const capabilities = await getFeatureCapabilities();
   const { name, email, phone, trade, ownerAccountId } = parsed.data;
-  const ownerAccountIds = await getAdministeredOwnerAccountIds(user.id);
-  const targetOwnerAccountId = ownerAccountId ?? ownerAccountIds[0];
-  if (!targetOwnerAccountId) {
-    return {
-      success: false,
-      error: "No ownership account is available. Link or create a property first."
-    };
-  }
+  let error: { message: string } | null = null;
 
-  if (!ownerAccountIds.includes(targetOwnerAccountId)) {
-    return { success: false, error: "You do not have access to that ownership account." };
-  }
+  if (capabilities.ownershipEnabled) {
+    const ownerAccountIds = await getAdministeredOwnerAccountIds(user.id);
+    const targetOwnerAccountId = ownerAccountId ?? ownerAccountIds[0];
+    if (!targetOwnerAccountId) {
+      return {
+        success: false,
+        error: "No ownership account is available. Link or create a property first."
+      };
+    }
 
-  const { error } = await supabase.from("vendors").insert({
-    owner_profile_id: user.id,
-    owner_account_id: targetOwnerAccountId,
-    name,
-    email: email || null,
-    phone: phone || null,
-    trade: trade || null,
-    active: true
-  });
+    if (!ownerAccountIds.includes(targetOwnerAccountId)) {
+      return { success: false, error: "You do not have access to that ownership account." };
+    }
+
+    const insertResult = await supabase.from("vendors").insert({
+      owner_profile_id: user.id,
+      owner_account_id: targetOwnerAccountId,
+      name,
+      email: email || null,
+      phone: phone || null,
+      trade: trade || null,
+      active: true
+    });
+    error = insertResult.error;
+  } else {
+    const insertResult = await supabase.from("vendors").insert({
+      owner_profile_id: user.id,
+      name,
+      email: email || null,
+      phone: phone || null,
+      trade: trade || null,
+      active: true
+    });
+    error = insertResult.error;
+  }
 
   if (error) {
     return { success: false, error: "Failed to create vendor." };

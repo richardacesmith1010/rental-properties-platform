@@ -8,7 +8,7 @@ export interface PropertyListItem {
   state: string;
   postalCode: string;
   unitCount: number;
-  ownerAccountId: string;
+  ownerAccountId: string | null;
   ownerAccountName: string;
 }
 
@@ -43,6 +43,24 @@ export interface PortfolioData {
   units: UnitListItem[];
   leases: LeaseListItem[];
   tenants: TenantOption[];
+}
+
+function isMissingSchemaError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const code = "code" in error ? String(error.code ?? "") : "";
+  const message = "message" in error ? String(error.message ?? "").toLowerCase() : "";
+
+  return (
+    code === "42P01" ||
+    code === "42703" ||
+    code === "PGRST205" ||
+    message.includes("does not exist") ||
+    message.includes("could not find the table") ||
+    message.includes("column") && message.includes("does not exist")
+  );
 }
 
 export async function getPortfolioData(userId: string): Promise<PortfolioData> {
@@ -88,7 +106,7 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
     };
   }
 
-  const [{ data: properties }, { data: units }, { data: tenants }] = await Promise.all([
+  const [{ data: properties, error: propertiesError }, { data: units }, { data: tenants }] = await Promise.all([
     admin
       .from("properties")
       .select("id, name, city, state, postal_code, owner_account_id")
@@ -107,17 +125,41 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
       .limit(100)
   ]);
 
-  const propertyRows = properties ?? [];
+  const legacyPropertiesQuery =
+    propertiesError && isMissingSchemaError(propertiesError)
+      ? await admin
+          .from("properties")
+          .select("id, name, city, state, postal_code")
+          .in("id", propertyIds)
+          .order("created_at", { ascending: true })
+      : null;
+
+  const propertyRows = propertiesError && legacyPropertiesQuery
+    ? (legacyPropertiesQuery.data ?? []).map((property) => ({
+        ...property,
+        owner_account_id: null as string | null
+      }))
+    : (properties ?? []).map((property) => ({
+        ...property,
+        owner_account_id: property.owner_account_id as string | null
+      }));
   const unitRows = units ?? [];
   const unitIds = unitRows.map((unit) => unit.id);
 
-  const { data: ownershipAccounts } = await admin
-    .from("ownership_accounts")
-    .select("id, display_name")
-    .in(
-      "id",
-      Array.from(new Set(propertyRows.map((property) => property.owner_account_id)))
-    );
+  const ownerAccountIds = Array.from(
+    new Set(
+      propertyRows
+        .map((property) => property.owner_account_id)
+        .filter((id): id is string => Boolean(id))
+    )
+  );
+
+  const { data: ownershipAccounts } = ownerAccountIds.length
+    ? await admin
+        .from("ownership_accounts")
+        .select("id, display_name")
+        .in("id", ownerAccountIds)
+    : { data: [] as Array<{ id: string; display_name: string }> };
 
   const ownershipAccountNameById = new Map(
     (ownershipAccounts ?? []).map((account) => [account.id, account.display_name])
@@ -157,7 +199,9 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
     unitCount: unitRows.filter((unit) => unit.property_id === property.id).length,
     ownerAccountId: property.owner_account_id,
     ownerAccountName:
-      ownershipAccountNameById.get(property.owner_account_id) ?? "Ownership Account"
+      property.owner_account_id
+        ? ownershipAccountNameById.get(property.owner_account_id) ?? "Ownership Account"
+        : "Owner Account"
   }));
 
   const unitsWithProperty: UnitListItem[] = unitRows.map((unit) => ({

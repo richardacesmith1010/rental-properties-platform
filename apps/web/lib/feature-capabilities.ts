@@ -7,11 +7,13 @@ export interface FeatureCapabilitiesDTO {
   notificationsEnabled: boolean;
   vendorWorkflowEnabled: boolean;
   photoWorkflowEnabled: boolean;
+  ownershipEnabled: boolean;
   warnings: {
     documents?: string;
     notifications?: string;
     vendorWorkflow?: string;
     photoWorkflow?: string;
+    ownership?: string;
   };
 }
 
@@ -24,6 +26,10 @@ interface FeatureCapabilityProbe {
   vendorsTable: boolean;
   maintenanceAssignmentsTable: boolean;
   maintenancePhotosTable: boolean;
+  ownershipAccountsTable: boolean;
+  ownershipAccountMembersTable: boolean;
+  propertiesOwnerAccountColumn: boolean;
+  invitationsOwnershipAccountColumn: boolean;
   leaseDocumentsBucket: boolean;
   maintenancePhotosBucket: boolean;
   leaseDocumentsBucketReason?: string;
@@ -71,6 +77,35 @@ async function probeTable(
   return true;
 }
 
+async function probeColumn(
+  supabase: ReturnType<typeof createClient>,
+  tableName: string,
+  columnName: string
+): Promise<boolean> {
+  const { error } = await supabase
+    .from(tableName)
+    .select(columnName, { head: true, count: "exact" })
+    .limit(1);
+
+  if (!error) {
+    return true;
+  }
+
+  if (isMissingTableError(error)) {
+    return false;
+  }
+
+  const maybeCode = typeof error === "object" && error && "code" in error ? String(error.code ?? "") : "";
+  const maybeMessage = typeof error === "object" && error && "message" in error ? String(error.message ?? "").toLowerCase() : "";
+
+  if (maybeCode === "42703" || maybeMessage.includes("column") && maybeMessage.includes("does not exist")) {
+    return false;
+  }
+
+  // Non-schema errors should not disable features preemptively.
+  return true;
+}
+
 async function probeBucket(bucketName: string): Promise<{ exists: boolean; reason?: string }> {
   try {
     const admin = createAdminClient();
@@ -102,6 +137,11 @@ export function deriveFeatureCapabilities(probe: FeatureCapabilityProbe): Featur
     probe.notificationsTable && probe.notificationDeliveriesTable;
   const vendorTablesReady = probe.vendorsTable && probe.maintenanceAssignmentsTable;
   const photoTablesReady = probe.maintenancePhotosTable;
+  const ownershipReady =
+    probe.ownershipAccountsTable &&
+    probe.ownershipAccountMembersTable &&
+    probe.propertiesOwnerAccountColumn &&
+    probe.invitationsOwnershipAccountColumn;
 
   const warnings: FeatureCapabilitiesDTO["warnings"] = {};
 
@@ -132,12 +172,18 @@ export function deriveFeatureCapabilities(probe: FeatureCapabilityProbe): Featur
       "Maintenance photo storage is not configured yet. Upload and preview are disabled.";
   }
 
+  if (!ownershipReady) {
+    warnings.ownership =
+      "LLC/shared ownership is not ready yet. Run the Phase 9 migration to enable ownership accounts and co-owner access.";
+  }
+
   return {
     documentsEnabled: documentsTablesReady,
     documentAssetAccessEnabled: documentsTablesReady && probe.leaseDocumentsBucket,
     notificationsEnabled: notificationsTablesReady,
     vendorWorkflowEnabled: vendorTablesReady,
     photoWorkflowEnabled: photoTablesReady && probe.maintenancePhotosBucket,
+    ownershipEnabled: ownershipReady,
     warnings
   };
 }
@@ -154,6 +200,10 @@ export async function getFeatureCapabilities(): Promise<FeatureCapabilitiesDTO> 
     vendorsTable,
     maintenanceAssignmentsTable,
     maintenancePhotosTable,
+    ownershipAccountsTable,
+    ownershipAccountMembersTable,
+    propertiesOwnerAccountColumn,
+    invitationsOwnershipAccountColumn,
     leaseDocumentsBucketProbe,
     maintenancePhotosBucketProbe
   ] = await Promise.all([
@@ -165,6 +215,10 @@ export async function getFeatureCapabilities(): Promise<FeatureCapabilitiesDTO> 
     probeTable(supabase, "vendors"),
     probeTable(supabase, "maintenance_assignments"),
     probeTable(supabase, "maintenance_photos"),
+    probeTable(supabase, "ownership_accounts"),
+    probeTable(supabase, "ownership_account_members"),
+    probeColumn(supabase, "properties", "owner_account_id"),
+    probeColumn(supabase, "invitations", "ownership_account_id"),
     probeBucket("lease-documents"),
     probeBucket("maintenance-photos")
   ]);
@@ -178,6 +232,10 @@ export async function getFeatureCapabilities(): Promise<FeatureCapabilitiesDTO> 
     vendorsTable,
     maintenanceAssignmentsTable,
     maintenancePhotosTable,
+    ownershipAccountsTable,
+    ownershipAccountMembersTable,
+    propertiesOwnerAccountColumn,
+    invitationsOwnershipAccountColumn,
     leaseDocumentsBucket: leaseDocumentsBucketProbe.exists,
     maintenancePhotosBucket: maintenancePhotosBucketProbe.exists,
     leaseDocumentsBucketReason: leaseDocumentsBucketProbe.reason,

@@ -64,13 +64,43 @@
 ## In Progress (Codex)
 - Production deployment + live migration application verification for Phase 9.
 
+## Stability Gate Snapshot (2026-02-28)
+- Baseline commit: `cdf4dad` on `main`.
+- Local regression gates:
+  - `npm test --workspace @rental/web` ✅
+  - `npm run lint:web` ✅
+  - `npm run build:web` ✅
+  - `npx tsc -p apps/mobile/tsconfig.json --noEmit` ✅
+  - `APP_URL=https://rental-properties-platform-web.vercel.app npm run smoke:web` ✅
+- Unauthenticated production security checks:
+  - `/owner`, `/manager`, `/tenant` return redirect to `/login` ✅
+  - `/api/assets/maintenance-photo/:id` returns `401` when unauthenticated ✅
+  - `/api/assets/document-packet/:id` returns `401` when unauthenticated ✅
+- Live DB runtime verification (service-role read-only probe) shows Phase 8/9 schema is **not** applied yet:
+  - missing tables in schema cache: `ownership_accounts`, `ownership_account_members`, `document_templates`, `vendors`
+  - missing columns: `properties.owner_account_id`, `invitations.ownership_account_id`
+  - missing functions: `can_administer_property`, `can_view_property`
+- Codex mitigation applied:
+  - legacy compatibility fallback for pre-Phase-9 installs in property access/portfolio/invitations/vendors/documents paths
+  - ownership workflows now capability-gated with clear user-facing errors if Phase 9 is absent
+  - smoke script expanded with protected-route and private-asset auth checks
+  - private buckets created by Codex via service-role API:
+    - `lease-documents`
+    - `maintenance-photos`
+
 ## Pending (Claude)
-- Apply and verify Phase 9 migration in live Supabase if not yet applied.
-- Validate storage bucket access strategy for private assets.
-- Confirm storage object-level policies for:
-  - `lease-documents`
-  - `maintenance-photos`
-- Post proof in this document (SQL run output + policy diff, if any).
+1. Apply and verify Phase 8 migration in live Supabase:
+   - `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase8_documents_notifications_maintenance.sql`
+2. Apply and verify Phase 9 migration in live Supabase:
+   - `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase9_llc_and_shared_operator_access.sql`
+3. Create/verify private storage buckets:
+   - `lease-documents`
+   - `maintenance-photos`
+   - status: buckets now exist; Claude should verify policies/permissions post-migration
+4. Validate RLS and function behavior after migrations:
+   - `can_administer_property(uuid)`
+   - `can_view_property(uuid)`
+5. Post SQL execution proof and policy outcomes in this document.
 
 ## Guardrails
 - Do not overwrite live-db-correct logic with stale local SQL.

@@ -60,7 +60,9 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
     capabilities.vendorWorkflowEnabled
       ? getOwnerVendors(user.id)
       : Promise.resolve([]),
-    getOwnershipAccountsForUser(user.id)
+    capabilities.ownershipEnabled
+      ? getOwnershipAccountsForUser(user.id)
+      : Promise.resolve([])
   ]);
 
   return (

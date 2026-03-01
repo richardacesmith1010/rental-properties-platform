@@ -115,6 +115,7 @@ export function Dashboard({
     notificationsEnabled: true,
     vendorWorkflowEnabled: true,
     photoWorkflowEnabled: true,
+    ownershipEnabled: true,
     warnings: {}
   };
   const occupancy =
@@ -213,19 +214,29 @@ export function Dashboard({
           )}
 
           {onCreateOwnershipAccount && onLinkPropertyToOwnershipAccount && (
-            <OwnershipSection
-              accounts={safeOwnershipAccounts}
-              properties={safePortfolio.properties.map((property) => ({
-                id: property.id,
-                name: property.name,
-                ownerAccountName: property.ownerAccountName
-              }))}
-              onCreateOwnershipAccount={onCreateOwnershipAccount}
-              onLinkPropertyToOwnershipAccount={onLinkPropertyToOwnershipAccount}
-            />
+            safeCapabilities.ownershipEnabled ? (
+              <OwnershipSection
+                accounts={safeOwnershipAccounts}
+                properties={safePortfolio.properties.map((property) => ({
+                  id: property.id,
+                  name: property.name,
+                  ownerAccountName: property.ownerAccountName
+                }))}
+                onCreateOwnershipAccount={onCreateOwnershipAccount}
+                onLinkPropertyToOwnershipAccount={onLinkPropertyToOwnershipAccount}
+              />
+            ) : (
+              <FeatureWarning
+                title="Ownership Accounts Unavailable"
+                message={
+                  safeCapabilities.warnings.ownership ??
+                  "LLC/shared ownership is not ready yet. Complete Phase 9 setup and reload."
+                }
+              />
+            )
           )}
 
-          {onInviteTenant && onInviteManager && onInviteOwner && onResendInvite && (
+          {onInviteTenant && onInviteManager && onResendInvite && (
             <InvitationsSection
               ownershipAccounts={safeOwnershipAccounts.map((account) => ({
                 id: account.id,
@@ -235,7 +246,7 @@ export function Dashboard({
               invitations={invitations ?? []}
               onInviteTenant={onInviteTenant}
               onInviteManager={onInviteManager}
-              onInviteOwner={onInviteOwner}
+              onInviteOwner={safeCapabilities.ownershipEnabled ? onInviteOwner : undefined}
               onResendInvite={onResendInvite}
             />
           )}

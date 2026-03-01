@@ -67,7 +67,9 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       capabilities.vendorWorkflowEnabled
         ? getManagerVendors(user.id)
         : Promise.resolve([]),
-      getOwnershipAccountsForUser(user.id)
+      capabilities.ownershipEnabled
+        ? getOwnershipAccountsForUser(user.id)
+        : Promise.resolve([])
     ]);
 
   return (

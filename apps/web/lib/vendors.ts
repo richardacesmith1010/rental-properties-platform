@@ -10,22 +10,85 @@ export interface VendorDTO {
   active: boolean;
 }
 
+function isMissingSchemaError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const code = "code" in error ? String(error.code ?? "") : "";
+  const message = "message" in error ? String(error.message ?? "").toLowerCase() : "";
+
+  return (
+    code === "42P01" ||
+    code === "42703" ||
+    code === "PGRST205" ||
+    message.includes("does not exist") ||
+    message.includes("could not find the table") ||
+    message.includes("column") && message.includes("does not exist")
+  );
+}
+
 export async function getOwnerVendors(userId: string): Promise<VendorDTO[]> {
   const supabase = createClient();
   const ownerAccountIds = await getAdministeredOwnerAccountIds(userId);
+  const modernQuery = ownerAccountIds.length
+    ? await supabase
+        .from("vendors")
+        .select("id, name, email, phone, trade, active")
+        .in("owner_account_id", ownerAccountIds)
+        .eq("active", true)
+        .order("name", { ascending: true })
+    : { data: [] as any[], error: null };
 
-  if (ownerAccountIds.length === 0) {
-    return [];
+  if (!modernQuery.error && ownerAccountIds.length > 0) {
+    return (modernQuery.data ?? []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      phone: row.phone,
+      trade: row.trade,
+      active: row.active
+    }));
   }
 
-  const { data } = await supabase
-    .from("vendors")
-    .select("id, name, email, phone, trade, active")
-    .in("owner_account_id", ownerAccountIds)
-    .eq("active", true)
-    .order("name", { ascending: true });
+  if (!modernQuery.error && ownerAccountIds.length === 0) {
+    // Legacy fallback for pre-Phase-9 installations.
+    const { data: legacyData } = await supabase
+      .from("vendors")
+      .select("id, name, email, phone, trade, active")
+      .eq("owner_profile_id", userId)
+      .eq("active", true)
+      .order("name", { ascending: true });
 
-  return (data ?? []).map((row) => ({
+    return (legacyData ?? []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      phone: row.phone,
+      trade: row.trade,
+      active: row.active
+    }));
+  }
+
+  if (modernQuery.error && isMissingSchemaError(modernQuery.error)) {
+    const { data: legacyData } = await supabase
+      .from("vendors")
+      .select("id, name, email, phone, trade, active")
+      .eq("owner_profile_id", userId)
+      .eq("active", true)
+      .order("name", { ascending: true });
+
+    return (legacyData ?? []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      phone: row.phone,
+      trade: row.trade,
+      active: row.active
+    }));
+  }
+
+  return (modernQuery.data ?? []).map((row) => ({
     id: row.id,
     name: row.name,
     email: row.email,

@@ -12,6 +12,10 @@ describe("deriveFeatureCapabilities", () => {
       vendorsTable: true,
       maintenanceAssignmentsTable: true,
       maintenancePhotosTable: true,
+      ownershipAccountsTable: true,
+      ownershipAccountMembersTable: true,
+      propertiesOwnerAccountColumn: true,
+      invitationsOwnershipAccountColumn: true,
       leaseDocumentsBucket: true,
       maintenancePhotosBucket: true,
     });
@@ -21,6 +25,7 @@ describe("deriveFeatureCapabilities", () => {
     expect(capabilities.notificationsEnabled).toBe(true);
     expect(capabilities.vendorWorkflowEnabled).toBe(true);
     expect(capabilities.photoWorkflowEnabled).toBe(true);
+    expect(capabilities.ownershipEnabled).toBe(true);
     expect(capabilities.warnings).toEqual({});
   });
 
@@ -34,6 +39,10 @@ describe("deriveFeatureCapabilities", () => {
       vendorsTable: true,
       maintenanceAssignmentsTable: true,
       maintenancePhotosTable: true,
+      ownershipAccountsTable: true,
+      ownershipAccountMembersTable: true,
+      propertiesOwnerAccountColumn: true,
+      invitationsOwnershipAccountColumn: true,
       leaseDocumentsBucket: true,
       maintenancePhotosBucket: true,
     });
@@ -53,6 +62,10 @@ describe("deriveFeatureCapabilities", () => {
       vendorsTable: true,
       maintenanceAssignmentsTable: true,
       maintenancePhotosTable: true,
+      ownershipAccountsTable: true,
+      ownershipAccountMembersTable: true,
+      propertiesOwnerAccountColumn: true,
+      invitationsOwnershipAccountColumn: true,
       leaseDocumentsBucket: false,
       maintenancePhotosBucket: true,
       leaseDocumentsBucketReason: "bucket missing"
@@ -73,6 +86,10 @@ describe("deriveFeatureCapabilities", () => {
       vendorsTable: true,
       maintenanceAssignmentsTable: true,
       maintenancePhotosTable: true,
+      ownershipAccountsTable: true,
+      ownershipAccountMembersTable: true,
+      propertiesOwnerAccountColumn: true,
+      invitationsOwnershipAccountColumn: true,
       leaseDocumentsBucket: true,
       maintenancePhotosBucket: false,
       maintenancePhotosBucketReason: "photo bucket missing"
@@ -80,5 +97,27 @@ describe("deriveFeatureCapabilities", () => {
 
     expect(capabilities.photoWorkflowEnabled).toBe(false);
     expect(capabilities.warnings.photoWorkflow).toBe("photo bucket missing");
+  });
+
+  it("disables ownership workflows when phase 9 schema is missing", () => {
+    const capabilities = deriveFeatureCapabilities({
+      documentTemplatesTable: true,
+      documentPacketsTable: true,
+      documentSignersTable: true,
+      notificationsTable: true,
+      notificationDeliveriesTable: true,
+      vendorsTable: true,
+      maintenanceAssignmentsTable: true,
+      maintenancePhotosTable: true,
+      ownershipAccountsTable: false,
+      ownershipAccountMembersTable: false,
+      propertiesOwnerAccountColumn: false,
+      invitationsOwnershipAccountColumn: false,
+      leaseDocumentsBucket: true,
+      maintenancePhotosBucket: true
+    });
+
+    expect(capabilities.ownershipEnabled).toBe(false);
+    expect(capabilities.warnings.ownership).toContain("Phase 9");
   });
 });

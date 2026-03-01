@@ -4,6 +4,24 @@ import {
   getAdministeredPropertyIds
 } from "@/lib/property-access";
 
+function isMissingSchemaError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const code = "code" in error ? String(error.code ?? "") : "";
+  const message = "message" in error ? String(error.message ?? "").toLowerCase() : "";
+
+  return (
+    code === "42P01" ||
+    code === "42703" ||
+    code === "PGRST205" ||
+    message.includes("does not exist") ||
+    message.includes("could not find the table") ||
+    message.includes("column") && message.includes("does not exist")
+  );
+}
+
 export interface SignerDTO {
   email: string;
   role: "owner" | "manager" | "tenant";
@@ -61,7 +79,7 @@ export async function getOwnerDocumentsData(userId: string): Promise<OwnerDocume
     getAdministeredPropertyIds(userId)
   ]);
 
-  const { data: templates } = ownerAccountIds.length
+  const modernTemplatesQuery = ownerAccountIds.length
     ? await supabase
         .from("document_templates")
         .select("id, name, category, body_markdown, created_at")
@@ -73,9 +91,31 @@ export async function getOwnerDocumentsData(userId: string): Promise<OwnerDocume
         category: string;
         body_markdown: string;
         created_at: string;
-      }> };
+      }>, error: null };
 
-  const templateRows = templates ?? [];
+  let templateRows: Array<{
+    id: string;
+    name: string;
+    category: string;
+    body_markdown: string;
+    created_at: string;
+  }> = [];
+
+  if (!modernTemplatesQuery.error && ownerAccountIds.length > 0) {
+    templateRows = modernTemplatesQuery.data ?? [];
+  } else {
+    const { data: legacyTemplates, error: legacyError } = await supabase
+      .from("document_templates")
+      .select("id, name, category, body_markdown, created_at")
+      .eq("owner_profile_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (legacyError && !isMissingSchemaError(legacyError)) {
+      templateRows = [];
+    } else {
+      templateRows = legacyTemplates ?? [];
+    }
+  }
 
   const { data: properties } = propertyIds.length
     ? await supabase

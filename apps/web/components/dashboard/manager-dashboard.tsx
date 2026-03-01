@@ -60,6 +60,7 @@ export function ManagerDashboard({
     notificationsEnabled: true,
     vendorWorkflowEnabled: true,
     photoWorkflowEnabled: true,
+    ownershipEnabled: true,
     warnings: {}
   };
 

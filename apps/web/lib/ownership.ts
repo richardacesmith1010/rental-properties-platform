@@ -21,12 +21,30 @@ function unique<T>(values: T[]): T[] {
   return Array.from(new Set(values));
 }
 
+function isMissingSchemaError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const code = "code" in error ? String(error.code ?? "") : "";
+  const message = "message" in error ? String(error.message ?? "").toLowerCase() : "";
+
+  return (
+    code === "42P01" ||
+    code === "42703" ||
+    code === "PGRST205" ||
+    message.includes("does not exist") ||
+    message.includes("could not find the table") ||
+    message.includes("column") && message.includes("does not exist")
+  );
+}
+
 export async function getOwnershipAccountsForUser(userId: string): Promise<OwnershipAccountDTO[]> {
   const admin = createAdminClient();
 
   const propertyAccountIds = await getAdministeredOwnerAccountIds(userId);
 
-  const [{ data: memberRows }, { data: createdRows }] = await Promise.all([
+  const [{ data: memberRows, error: memberError }, { data: createdRows, error: creatorError }] = await Promise.all([
     admin
       .from("ownership_account_members")
       .select("account_id")
@@ -38,6 +56,10 @@ export async function getOwnershipAccountsForUser(userId: string): Promise<Owner
       .eq("created_by_profile_id", userId)
   ]);
 
+  if ((memberError && isMissingSchemaError(memberError)) || (creatorError && isMissingSchemaError(creatorError))) {
+    return [];
+  }
+
   const accountIds = unique([
     ...propertyAccountIds,
     ...(memberRows ?? []).map((row) => row.account_id),
@@ -48,7 +70,7 @@ export async function getOwnershipAccountsForUser(userId: string): Promise<Owner
     return [];
   }
 
-  const [{ data: accounts }, { data: members }] = await Promise.all([
+  const [{ data: accounts, error: accountsError }, { data: members, error: membersError }] = await Promise.all([
     admin
       .from("ownership_accounts")
       .select("id, account_type, display_name")
@@ -60,6 +82,10 @@ export async function getOwnershipAccountsForUser(userId: string): Promise<Owner
       .in("account_id", accountIds)
       .eq("active", true)
   ]);
+
+  if ((accountsError && isMissingSchemaError(accountsError)) || (membersError && isMissingSchemaError(membersError))) {
+    return [];
+  }
 
   const memberCountByAccount = new Map<string, number>();
   for (const row of members ?? []) {
@@ -93,7 +119,11 @@ export async function getOwnershipMembersForAccount(
     .eq("account_id", accountId)
     .order("created_at", { ascending: true });
 
-  const profileIds = (members ?? []).map((member) => member.profile_id);
+  if (!members) {
+    return [];
+  }
+
+  const profileIds = members.map((member) => member.profile_id);
   if (profileIds.length === 0) {
     return [];
   }
@@ -124,7 +154,7 @@ export async function getOrCreateIndividualOwnershipAccount(
 ): Promise<string> {
   const admin = createAdminClient();
 
-  const { data: existing } = await admin
+  const { data: existing, error: existingError } = await admin
     .from("ownership_accounts")
     .select("id")
     .eq("account_type", "individual")
@@ -132,6 +162,10 @@ export async function getOrCreateIndividualOwnershipAccount(
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
+
+  if (existingError && isMissingSchemaError(existingError)) {
+    throw new Error("Ownership accounts are not enabled yet. Run the Phase 9 migration first.");
+  }
 
   if (existing?.id) {
     await admin.from("ownership_account_members").upsert(
@@ -168,6 +202,10 @@ export async function getOrCreateIndividualOwnershipAccount(
     .select("id")
     .single();
 
+  if (error && isMissingSchemaError(error)) {
+    throw new Error("Ownership accounts are not enabled yet. Run the Phase 9 migration first.");
+  }
+
   if (error || !created?.id) {
     throw new Error("Failed to create ownership account.");
   }
@@ -189,7 +227,7 @@ export async function canUserAdministerOwnershipAccount(
 ): Promise<boolean> {
   const admin = createAdminClient();
 
-  const [{ data: member }, { data: creator }] = await Promise.all([
+  const [{ data: member, error: memberError }, { data: creator, error: creatorError }] = await Promise.all([
     admin
       .from("ownership_account_members")
       .select("account_id")
@@ -204,6 +242,10 @@ export async function canUserAdministerOwnershipAccount(
       .eq("created_by_profile_id", userId)
       .maybeSingle()
   ]);
+
+  if ((memberError && isMissingSchemaError(memberError)) || (creatorError && isMissingSchemaError(creatorError))) {
+    return false;
+  }
 
   return Boolean(member?.account_id || creator?.id);
 }

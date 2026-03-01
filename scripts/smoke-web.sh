@@ -18,6 +18,24 @@ if [[ "$PORTAL_STATUS" != "307" && "$PORTAL_STATUS" != "302" && "$PORTAL_STATUS"
   exit 1
 fi
 
+echo "[smoke] Checking protected route guards"
+for path in /owner /manager /tenant; do
+  STATUS="$(curl -s -o /dev/null -w "%{http_code}" "$APP_URL$path")"
+  if [[ "$STATUS" != "307" && "$STATUS" != "302" ]]; then
+    echo "[smoke] Expected redirect for unauthenticated $path, got $STATUS"
+    exit 1
+  fi
+done
+
+echo "[smoke] Checking private asset API auth guards"
+for path in /api/assets/maintenance-photo/test-id /api/assets/document-packet/test-id; do
+  STATUS="$(curl -s -o /dev/null -w "%{http_code}" "$APP_URL$path")"
+  if [[ "$STATUS" != "401" ]]; then
+    echo "[smoke] Expected 401 from unauthenticated $path, got $STATUS"
+    exit 1
+  fi
+done
+
 echo "[smoke] Checking cron endpoint auth guard"
 UNAUTH_CRON_STATUS="$(curl -s -o /dev/null -w "%{http_code}" "$APP_URL/api/cron/generate-charges")"
 if [[ "$UNAUTH_CRON_STATUS" != "401" ]]; then

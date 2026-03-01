@@ -12,18 +12,50 @@ export interface InvitationListItem {
   acceptedAt: string | null;
 }
 
+function isMissingSchemaError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const code = "code" in error ? String(error.code ?? "") : "";
+  const message = "message" in error ? String(error.message ?? "").toLowerCase() : "";
+
+  return (
+    code === "42P01" ||
+    code === "42703" ||
+    code === "PGRST205" ||
+    message.includes("does not exist") ||
+    message.includes("could not find the table") ||
+    message.includes("column") && message.includes("does not exist")
+  );
+}
+
 export async function getOwnerInvitations(
   userId: string
 ): Promise<InvitationListItem[]> {
   const supabase = createClient();
 
-  const { data: invitations } = await supabase
+  const query = await supabase
     .from("invitations")
     .select(
       "id, email, full_name, role, property_id, ownership_account_id, status, created_at, accepted_at"
     )
     .eq("invited_by", userId)
     .order("created_at", { ascending: false });
+
+  let invitations = query.data;
+  if (query.error && isMissingSchemaError(query.error)) {
+    const legacyQuery = await supabase
+      .from("invitations")
+      .select("id, email, full_name, role, property_id, status, created_at, accepted_at")
+      .eq("invited_by", userId)
+      .order("created_at", { ascending: false });
+
+    invitations = (legacyQuery.data ?? []).map((row) => ({
+      ...row,
+      ownership_account_id: null
+    }));
+  }
 
   if (!invitations || invitations.length === 0) {
     return [];

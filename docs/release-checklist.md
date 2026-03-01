@@ -26,6 +26,7 @@ Run/verify Supabase migrations in order:
 6. `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260225_phase6_manager_maintenance.sql`
 7. `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase7_invitations.sql`
 8. `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase8_documents_notifications_maintenance.sql`
+9. `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase9_llc_and_shared_operator_access.sql`
 
 Verify private buckets:
 
