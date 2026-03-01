@@ -305,6 +305,69 @@ export const updateFileVisibilitySchema = z.object({
   visibility: z.enum(["owner_manager", "all"], { message: "Select a valid visibility option." })
 });
 
+const expenseCategorySchema = z.enum(
+  [
+    "mortgage",
+    "insurance",
+    "property_tax",
+    "hoa",
+    "repair",
+    "maintenance",
+    "utility",
+    "management_fee",
+    "legal",
+    "other"
+  ],
+  { message: "Select a valid expense category." }
+);
+
+const recurringFrequencySchema = z.enum(["monthly", "quarterly", "annually"], {
+  message: "Select a valid recurring frequency."
+});
+
+const checkboxBooleanSchema = z.preprocess(
+  (value) => value === "true" || value === "on" || value === true,
+  z.boolean()
+);
+
+export const createExpenseSchema = z
+  .object({
+    propertyId: z.string().uuid("Invalid property."),
+    category: expenseCategorySchema,
+    description: z.string().max(500, "Description must be under 500 characters.").optional(),
+    amountDollars: z.coerce.number().positive("Amount must be greater than $0."),
+    expenseDate: z.string().min(1, "Expense date is required."),
+    recurring: checkboxBooleanSchema,
+    recurringFrequency: z.union([recurringFrequencySchema, z.literal("")]).optional(),
+    vendorId: z.union([z.string().uuid("Invalid vendor."), z.literal("")]).optional(),
+    receiptFileId: z.union([z.string().uuid("Invalid receipt file."), z.literal("")]).optional()
+  })
+  .refine((data) => !data.recurring || Boolean(data.recurringFrequency), {
+    message: "Recurring frequency is required for recurring expenses.",
+    path: ["recurringFrequency"]
+  });
+
+export const updateExpenseSchema = z
+  .object({
+    expenseId: z.string().uuid("Invalid expense."),
+    category: expenseCategorySchema,
+    description: z.string().max(500, "Description must be under 500 characters.").optional(),
+    amountDollars: z.coerce.number().positive("Amount must be greater than $0."),
+    expenseDate: z.string().min(1, "Expense date is required."),
+    recurring: checkboxBooleanSchema,
+    recurringFrequency: z.union([recurringFrequencySchema, z.literal("")]).optional(),
+    vendorId: z.union([z.string().uuid("Invalid vendor."), z.literal("")]).optional(),
+    receiptFileId: z.union([z.string().uuid("Invalid receipt file."), z.literal("")]).optional()
+  })
+  .refine((data) => !data.recurring || Boolean(data.recurringFrequency), {
+    message: "Recurring frequency is required for recurring expenses.",
+    path: ["recurringFrequency"]
+  });
+
+export const deleteExpenseSchema = z.object({
+  expenseId: z.string().uuid("Invalid expense.")
+});
+
 /* ─── Ownership Accounts (LLC/Co-Owner) ─── */
 
 export const createOwnershipAccountSchema = z.object({

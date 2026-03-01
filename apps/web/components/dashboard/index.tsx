@@ -7,6 +7,7 @@ import type { OwnerDocumentsData } from "@/lib/documents";
 import type { VendorDTO } from "@/lib/vendors";
 import type { FeatureCapabilitiesDTO } from "@/lib/feature-capabilities";
 import type { OwnershipAccountDTO } from "@/lib/ownership";
+import type { ExpenseDashboardData } from "@/lib/expenses";
 import type { ActionState } from "@/app/actions";
 import { Badge } from "@/components/ui/badge";
 import { FeatureWarning } from "@/components/shared/feature-warning";
@@ -23,6 +24,7 @@ import { LeasesSection } from "./leases-section";
 import { NotificationsSection } from "./notifications-section";
 import { DocumentsSection } from "./documents-section";
 import { VendorsSection } from "./vendors-section";
+import { ExpensesSection } from "./expenses-section";
 import { OwnershipSection } from "./ownership-section";
 
 type FormAction = (formData: FormData) => Promise<void>;
@@ -36,6 +38,7 @@ interface DashboardProps {
   notifications?: NotificationDTO[];
   documents?: OwnerDocumentsData;
   vendors?: VendorDTO[];
+  expensesData?: ExpenseDashboardData;
   capabilities?: FeatureCapabilitiesDTO;
   ownershipAccounts?: OwnershipAccountDTO[];
   generatedMessage?: string | null;
@@ -69,6 +72,9 @@ interface DashboardProps {
   onUpdateVendor?: StatefulAction;
   onAssignVendor?: StatefulAction;
   onUploadMaintenancePhoto?: StatefulAction;
+  onCreateExpense?: StatefulAction;
+  onUpdateExpense?: StatefulAction;
+  onDeleteExpense?: StatefulAction;
   onCreateOwnershipAccount?: StatefulAction;
   onLinkPropertyToOwnershipAccount?: StatefulAction;
 }
@@ -81,6 +87,7 @@ export function Dashboard({
   notifications,
   documents,
   vendors,
+  expensesData,
   capabilities,
   ownershipAccounts,
   generatedMessage,
@@ -114,6 +121,9 @@ export function Dashboard({
   onUpdateVendor,
   onAssignVendor,
   onUploadMaintenancePhoto,
+  onCreateExpense,
+  onUpdateExpense,
+  onDeleteExpense,
   onCreateOwnershipAccount,
   onLinkPropertyToOwnershipAccount
 }: DashboardProps) {
@@ -132,6 +142,15 @@ export function Dashboard({
   };
   const safeNotifications: NotificationDTO[] = notifications ?? [];
   const safeVendors: VendorDTO[] = vendors ?? [];
+  const safeExpenses: ExpenseDashboardData = expensesData ?? {
+    enabled: true,
+    warning: null,
+    properties: [],
+    expenses: [],
+    pnlByProperty: [],
+    monthlyByProperty: {},
+    categoryByProperty: {}
+  };
   const safeOwnershipAccounts: OwnershipAccountDTO[] = ownershipAccounts ?? [];
   const safeCapabilities: FeatureCapabilitiesDTO = capabilities ?? {
     documentsEnabled: true,
@@ -336,6 +355,20 @@ export function Dashboard({
               />
             )
           )}
+
+          {data.profileRole === "owner" &&
+            onCreateExpense &&
+            onUpdateExpense &&
+            onDeleteExpense && (
+              <ExpensesSection
+                data={safeExpenses}
+                vendors={safeVendors}
+                propertyFiles={safeDocuments.propertyFiles}
+                onCreateExpense={onCreateExpense}
+                onUpdateExpense={onUpdateExpense}
+                onDeleteExpense={onDeleteExpense}
+              />
+            )}
 
           <OperationsSection
             portfolio={safePortfolio}

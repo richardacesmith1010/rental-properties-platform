@@ -9,6 +9,7 @@ import { getNotificationsForUser } from "@/lib/notifications";
 import { getOwnerVendors } from "@/lib/vendors";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { getOwnershipAccountsForUser } from "@/lib/ownership";
+import { getOwnerExpenseData } from "@/lib/expenses";
 import {
   createCheckoutForCharge,
   createLease,
@@ -38,6 +39,9 @@ import {
   updateVendor,
   assignVendorToTicket,
   uploadMaintenancePhoto,
+  createExpense,
+  updateExpense,
+  deleteExpense,
   createOwnershipAccount,
   linkPropertyToOwnershipAccount
 } from "@/app/actions";
@@ -56,7 +60,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
   const capabilities = await getFeatureCapabilities();
   const generatedMessage = getGeneratedMessage(searchParams?.generated);
 
-  const [dashboard, portfolio, tickets, invitations, documents, notifications, vendors, ownershipAccounts] = await Promise.all([
+  const [dashboard, portfolio, tickets, invitations, documents, notifications, vendors, ownershipAccounts, expenses] = await Promise.all([
     getDashboardData(user.id),
     getPortfolioData(user.id),
     getOwnerMaintenanceTickets(user.id),
@@ -78,7 +82,8 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       : Promise.resolve([]),
     capabilities.ownershipEnabled
       ? getOwnershipAccountsForUser(user.id)
-      : Promise.resolve([])
+      : Promise.resolve([]),
+    getOwnerExpenseData(user.id)
   ]);
 
   return (
@@ -90,6 +95,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       documents={documents}
       notifications={notifications}
       vendors={vendors}
+      expensesData={expenses}
       ownershipAccounts={ownershipAccounts}
       capabilities={capabilities}
       userEmail={user.email ?? "unknown"}
@@ -123,6 +129,9 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       onUpdateVendor={updateVendor}
       onAssignVendor={assignVendorToTicket}
       onUploadMaintenancePhoto={uploadMaintenancePhoto}
+      onCreateExpense={createExpense}
+      onUpdateExpense={updateExpense}
+      onDeleteExpense={deleteExpense}
       onCreateOwnershipAccount={createOwnershipAccount}
       onLinkPropertyToOwnershipAccount={linkPropertyToOwnershipAccount}
     />
