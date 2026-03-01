@@ -350,3 +350,23 @@ NEXT_ACTION=tag v1.0.0
   - `APP_URL=https://rental-properties-platform-web.vercel.app npm run gate:web` -> PASS
   - Includes runtime verification, tests, lint, build, mobile typecheck, and smoke checks.
   - `set -a && source apps/web/.env.local && set +a && APP_URL=https://rental-properties-platform-web.vercel.app npm run smoke:web` -> PASS (authenticated cron check included)
+
+## V2 UX + Tester Visibility Batch (Codex)
+
+- Timestamp (UTC): `2026-03-01T19:45:00Z`
+- Branch: `main`
+- HEAD: `87046f8`
+- Scope delivered:
+  - Added focused dashboard mode for owner/manager: one section visible at a time, selected from the left sidebar.
+  - Added explicit previous/next section controls in dashboard header.
+  - Added hover explanations (`title`) for sidebar items and key clickable controls.
+  - Upgraded tester actions to return plain-English success details for generated/cleaned records.
+  - Added tester health probes for `vendors` and `ownership_accounts`.
+  - Added feature-by-feature tester runner with real-time checkpoint pass/fail visibility.
+- Validation:
+  - `npm test --workspace @domus/web` -> PASS (103/103)
+  - `npm run lint:web` -> PASS
+  - `npm run build:web` -> PASS
+  - `npx tsc -p apps/mobile/tsconfig.json --noEmit` -> PASS
+  - `npx vercel deploy --prod --yes` -> PASS
+  - `APP_URL=https://rental-properties-platform-web.vercel.app npm run smoke:web` -> PASS
