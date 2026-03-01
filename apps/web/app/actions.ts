@@ -62,6 +62,8 @@ import {
   createOwnershipAccountSchema,
   addOwnershipMemberSchema,
   linkPropertyToOwnershipAccountSchema,
+  grantTesterAccessSchema,
+  revokeTesterAccessSchema,
   parseFormData,
 } from "@/lib/validations";
 
@@ -3352,4 +3354,119 @@ export async function cleanupTesterData(
     success: true,
     message: `Archived tester data for ${propertyIds.length} properties, ${unitIds.length} units, and ${leaseIds.length} leases.`
   };
+}
+
+export async function grantTesterAccess(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" || !(await hasTesterAccess(user.id))) {
+    return { success: false, error: "Only owner tester accounts can grant tester access." };
+  }
+
+  const parsed = parseFormData(grantTesterAccessSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const normalizedEmail = parsed.data.email.toLowerCase();
+  const admin = createAdminClient();
+
+  const { data: profile, error: profileLookupError } = await admin
+    .from("profiles")
+    .select("id, email, is_tester")
+    .ilike("email", normalizedEmail)
+    .single();
+
+  if (profileLookupError || !profile) {
+    return {
+      success: false,
+      error: "No profile found for that email. They need to sign in at least once first."
+    };
+  }
+
+  if (profile.is_tester) {
+    return { success: true, message: `${profile.email} already has tester access.` };
+  }
+
+  const { error: updateError } = await admin
+    .from("profiles")
+    .update({ is_tester: true })
+    .eq("id", profile.id);
+
+  if (updateError) {
+    return { success: false, error: "Failed to grant tester access." };
+  }
+
+  revalidatePath("/tester");
+  revalidatePath("/owner");
+  return { success: true, message: `Granted tester access to ${profile.email}.` };
+}
+
+export async function revokeTesterAccess(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" || !(await hasTesterAccess(user.id))) {
+    return { success: false, error: "Only owner tester accounts can revoke tester access." };
+  }
+
+  const parsed = parseFormData(revokeTesterAccessSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  if (parsed.data.profileId === user.id) {
+    return {
+      success: false,
+      error: "You cannot revoke your own tester access from this page."
+    };
+  }
+
+  const admin = createAdminClient();
+  const { data: profile, error: profileLookupError } = await admin
+    .from("profiles")
+    .select("id, email, is_tester")
+    .eq("id", parsed.data.profileId)
+    .single();
+
+  if (profileLookupError || !profile) {
+    return { success: false, error: "Tester profile not found." };
+  }
+
+  if (!profile.is_tester) {
+    return { success: true, message: `${profile.email} is already not a tester.` };
+  }
+
+  const { error: updateError } = await admin
+    .from("profiles")
+    .update({ is_tester: false })
+    .eq("id", profile.id);
+
+  if (updateError) {
+    return { success: false, error: "Failed to revoke tester access." };
+  }
+
+  revalidatePath("/tester");
+  return { success: true, message: `Revoked tester access for ${profile.email}.` };
 }

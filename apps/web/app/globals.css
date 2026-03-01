@@ -3,12 +3,50 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --domus-body-bg: #f4f6ff;
+    --domus-body-text: #18181b;
+    --domus-surface-bg:
+      radial-gradient(circle at 12% 10%, rgba(99, 102, 241, 0.17), transparent 34%),
+      radial-gradient(circle at 88% 82%, rgba(59, 130, 246, 0.12), transparent 38%),
+      linear-gradient(180deg, #f8faff 0%, #eef2ff 62%, #f4f6ff 100%);
+    --domus-sidebar-bg:
+      radial-gradient(circle at 15% 15%, rgba(129, 140, 248, 0.3), transparent 40%),
+      linear-gradient(180deg, #0f172a, #1e1b4b 45%, #312e81 100%);
+  }
+
+  html[data-domus-theme="noctis-neon"] {
+    --domus-body-bg: #060914;
+    --domus-body-text: #e6eefc;
+    --domus-surface-bg:
+      radial-gradient(circle at 14% 8%, rgba(34, 211, 238, 0.18), transparent 28%),
+      radial-gradient(circle at 82% 84%, rgba(129, 140, 248, 0.2), transparent 32%),
+      linear-gradient(180deg, #050912 0%, #0a1426 56%, #071121 100%);
+    --domus-sidebar-bg:
+      radial-gradient(circle at 18% 14%, rgba(56, 189, 248, 0.35), transparent 38%),
+      linear-gradient(180deg, #04070f, #0d1a31 46%, #11193e 100%);
+  }
+
+  html[data-domus-theme="imperium-night"] {
+    --domus-body-bg: #0d0a0a;
+    --domus-body-text: #efe8dc;
+    --domus-surface-bg:
+      radial-gradient(circle at 18% 12%, rgba(220, 38, 38, 0.2), transparent 32%),
+      radial-gradient(circle at 86% 76%, rgba(245, 158, 11, 0.14), transparent 36%),
+      linear-gradient(180deg, #130d0d 0%, #1f1414 52%, #120d0d 100%);
+    --domus-sidebar-bg:
+      radial-gradient(circle at 18% 16%, rgba(239, 68, 68, 0.3), transparent 40%),
+      linear-gradient(180deg, #170f0f, #291717 46%, #3a1f17 100%);
+  }
+
   * {
     box-sizing: border-box;
   }
 
   body {
-    @apply bg-[#f4f6ff] text-zinc-900 antialiased;
+    background-color: var(--domus-body-bg);
+    color: var(--domus-body-text);
+    @apply antialiased;
   }
 
   h1, h2, h3, p {
@@ -18,16 +56,11 @@
 
 @layer components {
   .app-surface {
-    background:
-      radial-gradient(circle at 12% 10%, rgba(99, 102, 241, 0.17), transparent 34%),
-      radial-gradient(circle at 88% 82%, rgba(59, 130, 246, 0.12), transparent 38%),
-      linear-gradient(180deg, #f8faff 0%, #eef2ff 62%, #f4f6ff 100%);
+    background: var(--domus-surface-bg);
   }
 
   .gradient-sidebar {
-    background:
-      radial-gradient(circle at 15% 15%, rgba(129, 140, 248, 0.3), transparent 40%),
-      linear-gradient(180deg, #0f172a, #1e1b4b 45%, #312e81 100%);
+    background: var(--domus-sidebar-bg);
   }
 
   .gradient-btn {
@@ -37,5 +70,49 @@
 
   .gradient-btn:hover {
     @apply from-indigo-600 to-violet-600;
+  }
+}
+
+@layer utilities {
+  html[data-domus-theme="noctis-neon"] .bg-white,
+  html[data-domus-theme="imperium-night"] .bg-white {
+    background-color: rgba(15, 23, 42, 0.76) !important;
+  }
+
+  html[data-domus-theme="noctis-neon"] .bg-zinc-50,
+  html[data-domus-theme="imperium-night"] .bg-zinc-50 {
+    background-color: rgba(15, 23, 42, 0.55) !important;
+  }
+
+  html[data-domus-theme="noctis-neon"] .text-zinc-900,
+  html[data-domus-theme="imperium-night"] .text-zinc-900 {
+    color: #e7edf8 !important;
+  }
+
+  html[data-domus-theme="noctis-neon"] .text-zinc-700,
+  html[data-domus-theme="imperium-night"] .text-zinc-700 {
+    color: #cdd7ea !important;
+  }
+
+  html[data-domus-theme="noctis-neon"] .text-zinc-600,
+  html[data-domus-theme="imperium-night"] .text-zinc-600 {
+    color: #aab6d0 !important;
+  }
+
+  html[data-domus-theme="noctis-neon"] .text-zinc-500,
+  html[data-domus-theme="imperium-night"] .text-zinc-500 {
+    color: #91a0bd !important;
+  }
+
+  html[data-domus-theme="noctis-neon"] .border-zinc-200,
+  html[data-domus-theme="imperium-night"] .border-zinc-200 {
+    border-color: rgba(148, 163, 184, 0.38) !important;
+  }
+
+  html[data-domus-theme="noctis-neon"] .shadow-sm,
+  html[data-domus-theme="noctis-neon"] .shadow-md,
+  html[data-domus-theme="imperium-night"] .shadow-sm,
+  html[data-domus-theme="imperium-night"] .shadow-md {
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.32) !important;
   }
 }

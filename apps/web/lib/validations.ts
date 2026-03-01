@@ -389,6 +389,19 @@ export const linkPropertyToOwnershipAccountSchema = z.object({
   ownershipAccountId: z.string().uuid("Invalid ownership account.")
 });
 
+/* ─── Tester Access ─── */
+
+export const grantTesterAccessSchema = z.object({
+  email: z
+    .string()
+    .min(1, "Email is required.")
+    .email("Enter a valid email address.")
+});
+
+export const revokeTesterAccessSchema = z.object({
+  profileId: z.string().uuid("Invalid tester profile.")
+});
+
 /** Parse FormData against a Zod schema. Returns parsed data or a formatted error string. */
 export function parseFormData<T extends z.ZodTypeAny>(
   schema: T,

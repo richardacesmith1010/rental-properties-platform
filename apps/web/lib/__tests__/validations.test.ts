@@ -25,6 +25,8 @@ import {
   createExpenseSchema,
   updateExpenseSchema,
   deleteExpenseSchema,
+  grantTesterAccessSchema,
+  revokeTesterAccessSchema,
   parseFormData,
 } from "../validations";
 
@@ -662,6 +664,29 @@ describe("expense schemas", () => {
   it("accepts valid delete expense payload", () => {
     const result = deleteExpenseSchema.safeParse({
       expenseId: "550e8400-e29b-41d4-a716-446655440000"
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("tester access schemas", () => {
+  it("accepts valid tester grant payload", () => {
+    const result = grantTesterAccessSchema.safeParse({
+      email: "tester.user@example.com"
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid tester grant email", () => {
+    const result = grantTesterAccessSchema.safeParse({
+      email: "not-an-email"
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts valid tester revoke payload", () => {
+    const result = revokeTesterAccessSchema.safeParse({
+      profileId: "550e8400-e29b-41d4-a716-446655440000"
     });
     expect(result.success).toBe(true);
   });

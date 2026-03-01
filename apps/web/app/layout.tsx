@@ -14,8 +14,22 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} font-sans`}>{children}</body>
+    <html lang="en" data-domus-theme="atlas-light">
+      <body className={`${inter.variable} font-sans`}>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('domus-theme') || 'atlas-light';
+                  document.documentElement.setAttribute('data-domus-theme', theme);
+                } catch (e) {}
+              })();
+            `
+          }}
+        />
+        {children}
+      </body>
     </html>
   );
 }

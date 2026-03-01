@@ -10,6 +10,7 @@ interface SubmitButtonProps {
   variant?: "default" | "outline" | "ghost" | "destructive" | "link";
   size?: "default" | "sm" | "lg" | "icon";
   title?: string;
+  disabled?: boolean;
 }
 
 export function SubmitButton({
@@ -17,18 +18,20 @@ export function SubmitButton({
   className,
   variant = "default",
   size = "default",
-  title
+  title,
+  disabled = false
 }: SubmitButtonProps) {
   const { pending } = useFormStatus();
+  const resolvedTitle = title ?? "Click to submit this action.";
 
   return (
     <Button
       type="submit"
-      disabled={pending}
+      disabled={pending || disabled}
       variant={variant}
       size={size}
       className={className}
-      title={title}
+      title={resolvedTitle}
     >
       {pending ? (
         <>

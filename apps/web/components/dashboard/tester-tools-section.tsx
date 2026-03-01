@@ -37,11 +37,21 @@ export interface TesterHealthRow {
 }
 
 interface TesterToolsSectionProps {
+  currentUserId: string;
+  currentUserRole: string;
   userEmail: string;
   capabilities: FeatureCapabilitiesDTO;
   healthRows: TesterHealthRow[];
+  testerProfiles: Array<{
+    id: string;
+    email: string;
+    fullName: string | null;
+    role: string;
+  }>;
   onGenerateTestData: StatefulAction;
   onCleanupTestData: StatefulAction;
+  onGrantTesterAccess: StatefulAction;
+  onRevokeTesterAccess: StatefulAction;
 }
 
 interface CheckpointResult {
@@ -162,15 +172,22 @@ function delay(ms: number) {
 }
 
 export function TesterToolsSection({
+  currentUserId,
+  currentUserRole,
   userEmail,
   capabilities,
   healthRows,
+  testerProfiles,
   onGenerateTestData,
-  onCleanupTestData
+  onCleanupTestData,
+  onGrantTesterAccess,
+  onRevokeTesterAccess
 }: TesterToolsSectionProps) {
   const router = useRouter();
   const [generateState, generateAction] = useFormState(onGenerateTestData, null);
   const [cleanupState, cleanupAction] = useFormState(onCleanupTestData, null);
+  const [grantState, grantAction] = useFormState(onGrantTesterAccess, null);
+  const [revokeState, revokeAction] = useFormState(onRevokeTesterAccess, null);
   const [previewRole, setPreviewRole] = useState<PreviewRole>("owner");
   const [runningFeatureId, setRunningFeatureId] = useState<FeatureTestId | null>(null);
   const [featureRuns, setFeatureRuns] = useState<Record<FeatureTestId, FeatureRunResult>>(() =>
@@ -457,6 +474,12 @@ export function TesterToolsSection({
 
   return (
     <div className="space-y-6">
+      {currentUserRole !== "owner" && (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+          You can run tests, but only owner accounts can grant or revoke tester access.
+        </p>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Tester Access</CardTitle>
@@ -564,6 +587,93 @@ export function TesterToolsSection({
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Tester Access Control</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-zinc-600">
+            Tester mode is restricted. Only users explicitly marked as tester can open this page.
+          </p>
+          <form action={grantAction} className="space-y-2">
+            <FormError state={grantState} />
+            <FormSuccess state={grantState} message="Tester access updated." />
+            <label className="block text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              Grant tester access by email
+            </label>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                type="email"
+                name="email"
+                required
+                className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="teammate@example.com"
+                title="Enter an existing user email to grant tester mode."
+                disabled={currentUserRole !== "owner"}
+              />
+              <SubmitButton
+                className="sm:w-auto"
+                title="Grant tester diagnostics access to this user."
+                disabled={currentUserRole !== "owner"}
+              >
+                Grant Access
+              </SubmitButton>
+            </div>
+          </form>
+
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              Current tester accounts
+            </p>
+            {testerProfiles.length === 0 ? (
+              <p className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600">
+                No tester accounts are currently enabled.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {testerProfiles.map((profile) => {
+                  const isCurrentUser = profile.id === currentUserId;
+                  return (
+                    <div
+                      key={profile.id}
+                      className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div>
+                        <p className="text-sm font-semibold text-zinc-900">
+                          {profile.fullName ?? "Unnamed user"}{" "}
+                          {isCurrentUser ? "(you)" : ""}
+                        </p>
+                        <p className="text-xs text-zinc-500">
+                          {profile.email} • {profile.role}
+                        </p>
+                      </div>
+                      <form action={revokeAction}>
+                        <input type="hidden" name="profileId" value={profile.id} />
+                        <SubmitButton
+                          variant="outline"
+                          size="sm"
+                          disabled={currentUserRole !== "owner" || isCurrentUser}
+                          title={
+                            isCurrentUser
+                              ? "You cannot revoke your own tester access from this page."
+                              : "Remove tester diagnostics access for this account."
+                          }
+                          className="w-full sm:w-auto"
+                        >
+                          Revoke Access
+                        </SubmitButton>
+                      </form>
+                    </div>
+                  );
+                })}
+                <FormError state={revokeState} />
+                <FormSuccess state={revokeState} message="Tester access updated." />
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
