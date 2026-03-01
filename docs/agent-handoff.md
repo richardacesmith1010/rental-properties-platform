@@ -399,3 +399,21 @@ NEXT_ACTION=tag v1.0.0
   - `npx tsc -p apps/mobile/tsconfig.json --noEmit` -> PASS
   - `npx vercel deploy --prod --yes` -> PASS
   - `APP_URL=https://rental-properties-platform-web.vercel.app npm run smoke:web` -> PASS
+
+## V2 Tester Live Preview + Settings Button (Codex)
+
+- Timestamp (UTC): `2026-03-01T20:12:00Z`
+- Branch: `main`
+- HEAD: `aef6042`
+- Scope delivered:
+  - Theme selector is now behind an explicit `Settings` button (desktop + mobile sidebar/top bar).
+  - Tester page now includes in-page role switching (Owner / Manager / Tenant) with a live iframe preview while staying in tester mode.
+  - Feature test runner now updates the preview target while tests execute so the UI visibly shifts to the path being validated.
+  - Added tester-preview route allowance (`?testerPreview=true`) for owner/manager/tenant pages so tester users can inspect all role UIs without role-switching auth sessions.
+- Validation:
+  - `npm test --workspace @domus/web` -> PASS (106/106)
+  - `npm run lint:web` -> PASS
+  - `npm run build:web` -> PASS
+  - `npx tsc -p apps/mobile/tsconfig.json --noEmit` -> PASS
+  - `npx vercel deploy --prod --yes` -> PASS
+  - `APP_URL=https://rental-properties-platform-web.vercel.app npm run smoke:web` -> PASS
