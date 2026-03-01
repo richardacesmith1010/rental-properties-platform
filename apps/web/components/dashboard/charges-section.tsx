@@ -36,6 +36,7 @@ export function ChargesSection({
           <Link
             href={onGenerateChargesHref}
             className="rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+            title="Generate rent charges for the current billing period."
           >
             Generate This Month Charges
           </Link>
@@ -66,7 +67,9 @@ export function ChargesSection({
                   </div>
                   <form action={onPayCharge}>
                     <input type="hidden" name="chargeId" value={charge.id} />
-                    <SubmitButton size="sm">Pay now</SubmitButton>
+                    <SubmitButton size="sm" title="Open secure checkout for this charge.">
+                      Pay now
+                    </SubmitButton>
                   </form>
                 </div>
               </DataRow>

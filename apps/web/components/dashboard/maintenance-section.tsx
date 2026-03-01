@@ -159,6 +159,7 @@ export function MaintenanceSection({
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex h-8 items-center justify-center rounded-md border border-zinc-200 px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                        title="Open the latest maintenance photo for this ticket."
                       >
                         View Photo
                       </Link>

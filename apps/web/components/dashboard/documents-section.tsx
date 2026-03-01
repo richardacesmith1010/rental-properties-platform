@@ -288,7 +288,9 @@ function TemplateRow({
       </div>
       <form action={action}>
         <input type="hidden" name="templateId" value={template.id} />
-        <SubmitButton size="sm" variant="outline">Delete</SubmitButton>
+        <SubmitButton size="sm" variant="outline" title="Delete this template.">
+          Delete
+        </SubmitButton>
         {state && !state.success && <p className="mt-1 text-xs text-red-500">{state.error}</p>}
       </form>
     </DataRow>
@@ -323,6 +325,7 @@ function PacketRow({
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center rounded-md border border-zinc-200 px-2 py-1 text-[11px] font-medium text-zinc-700 hover:bg-zinc-50"
+              title="Open this document packet file."
             >
               Open File
             </Link>
@@ -337,7 +340,11 @@ function PacketRow({
       {packet.status !== "signed" && packet.status !== "void" && (
         <form action={action}>
           <input type="hidden" name="packetId" value={packet.id} />
-          <SubmitButton size="sm" variant="outline">
+          <SubmitButton
+            size="sm"
+            variant="outline"
+            title={packet.status === "draft" ? "Send this packet to signers." : "Resend this packet to signers."}
+          >
             {packet.status === "draft" ? "Send" : "Resend"}
           </SubmitButton>
           {state && !state.success && <p className="mt-1 text-xs text-red-500">{state.error}</p>}
@@ -379,6 +386,7 @@ function PropertyFileRow({
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center rounded-md border border-zinc-200 px-2 py-1 text-[11px] font-medium text-zinc-700 hover:bg-zinc-50"
+            title="Open this property file."
           >
             Open File
           </Link>
@@ -389,7 +397,15 @@ function PropertyFileRow({
         <form action={visibilityAction}>
           <input type="hidden" name="fileId" value={file.id} />
           <input type="hidden" name="visibility" value={nextVisibility} />
-          <SubmitButton size="sm" variant="outline">
+          <SubmitButton
+            size="sm"
+            variant="outline"
+            title={
+              file.visibility === "all"
+                ? "Hide this file from tenant view."
+                : "Make this file visible to tenant view."
+            }
+          >
             {file.visibility === "all" ? "Hide from tenant" : "Show to tenant"}
           </SubmitButton>
           {visibilityState && !visibilityState.success && (
@@ -406,7 +422,9 @@ function PropertyFileRow({
           }}
         >
           <input type="hidden" name="fileId" value={file.id} />
-          <SubmitButton size="sm" variant="outline">Delete</SubmitButton>
+          <SubmitButton size="sm" variant="outline" title="Delete this file from the vault.">
+            Delete
+          </SubmitButton>
           {deleteState && !deleteState.success && (
             <p className="mt-1 text-xs text-red-500">{deleteState.error}</p>
           )}

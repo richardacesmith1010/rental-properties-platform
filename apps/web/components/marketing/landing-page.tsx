@@ -72,6 +72,7 @@ export function LandingPage() {
         <Link
           href="/login"
           className="inline-flex items-center gap-2 rounded-lg border border-indigo-300/30 bg-indigo-500/20 px-4 py-2 text-sm font-medium text-indigo-100 transition hover:bg-indigo-500/30"
+          title="Open role-based sign in."
         >
           Sign in
           <ArrowRight className="h-4 w-4" />
@@ -94,6 +95,7 @@ export function LandingPage() {
             <Link
               href="/login"
               className="inline-flex items-center gap-2 rounded-xl bg-indigo-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-400"
+              title="Open role-based sign in."
             >
               Get started
               <ArrowRight className="h-4 w-4" />
@@ -190,6 +192,7 @@ export function LandingPage() {
           <Link
             href="/login"
             className="inline-flex items-center gap-2 rounded-xl bg-indigo-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-indigo-400"
+            title="Open role-based sign in."
           >
             Launch Domus
             <ArrowRight className="h-4 w-4" />

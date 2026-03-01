@@ -110,6 +110,7 @@ export function TenantDocumentsSection({
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center rounded-md border border-zinc-200 px-2 py-1 text-[11px] font-medium text-zinc-700 hover:bg-zinc-50"
+                    title="Open this shared property file."
                   >
                     Open File
                   </Link>
@@ -154,6 +155,7 @@ function PacketSignRow({
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center rounded-md border border-zinc-200 px-2 py-1 text-[11px] font-medium text-zinc-700 hover:bg-zinc-50"
+              title="Open this document packet file."
             >
               Open File
             </Link>
@@ -164,7 +166,9 @@ function PacketSignRow({
         <form action={action} className="space-y-2">
           <input type="hidden" name="packetId" value={packet.id} />
           <Input name="signatureText" placeholder="Type full legal name" required />
-          <SubmitButton size="sm">Sign</SubmitButton>
+          <SubmitButton size="sm" title="Sign this packet with the entered legal name.">
+            Sign
+          </SubmitButton>
           {state && !state.success && <p className="text-xs text-red-500">{state.error}</p>}
           {state && state.success && <p className="text-xs text-emerald-600">Signed.</p>}
         </form>
