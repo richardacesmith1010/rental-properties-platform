@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ["@rental/shared"]
+  transpilePackages: ["@domus/shared"]
 };
 
 export default nextConfig;

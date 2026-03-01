@@ -26,7 +26,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           R
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-          Welcome to RentFlow
+          Welcome to Domus
         </h1>
         <p className="mt-2 text-sm text-zinc-500">
           Choose your role to get started.

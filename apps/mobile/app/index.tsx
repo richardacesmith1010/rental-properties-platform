@@ -233,7 +233,7 @@ export default function MobileHome() {
     }
 
     const supabase = getSupabaseClient();
-    const redirectTo = "rentflow://auth/callback";
+    const redirectTo = "domus://auth/callback";
 
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
@@ -324,7 +324,7 @@ export default function MobileHome() {
   return (
     <SafeAreaView style={styles.root}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>RentFlow Mobile</Text>
+        <Text style={styles.title}>Domus Mobile</Text>
         <Text style={styles.subtitle}>Tenant-first workspace with live account data.</Text>
 
         <View style={styles.card}>

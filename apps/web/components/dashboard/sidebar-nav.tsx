@@ -73,7 +73,7 @@ export function SidebarNav({
           R
         </div>
         <div>
-          <div className="text-base font-bold text-white">RentFlow</div>
+          <div className="text-base font-bold text-white">Domus</div>
           <div className="text-[11px] text-white/60">Property Management</div>
         </div>
       </div>
@@ -142,7 +142,7 @@ export function MobileTopBar({
           R
         </div>
         <div>
-          <span className="block text-sm font-bold text-white">RentFlow</span>
+          <span className="block text-sm font-bold text-white">Domus</span>
           <span className="block text-[10px] uppercase tracking-wide text-white/60">
             {role}
           </span>

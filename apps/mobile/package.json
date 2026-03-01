@@ -1,5 +1,5 @@
 {
-  "name": "@rental/mobile",
+  "name": "@domus/mobile",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^3.0.1",
-    "@rental/shared": "0.1.0",
+    "@domus/shared": "0.1.0",
     "@supabase/supabase-js": "^2.49.1",
     "expo": "~52.0.17",
     "expo-status-bar": "~2.0.1",

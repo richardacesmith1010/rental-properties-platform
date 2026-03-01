@@ -1,5 +1,5 @@
 {
-  "name": "@rental/web",
+  "name": "@domus/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
-    "@rental/shared": "0.1.0",
+    "@domus/shared": "0.1.0",
     "@supabase/ssr": "0.5.2",
     "@supabase/supabase-js": "2.49.1",
     "class-variance-authority": "^0.7.1",
