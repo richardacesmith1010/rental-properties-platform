@@ -349,3 +349,4 @@ NEXT_ACTION=tag v1.0.0
 - Verification:
   - `APP_URL=https://rental-properties-platform-web.vercel.app npm run gate:web` -> PASS
   - Includes runtime verification, tests, lint, build, mobile typecheck, and smoke checks.
+  - `set -a && source apps/web/.env.local && set +a && APP_URL=https://rental-properties-platform-web.vercel.app npm run smoke:web` -> PASS (authenticated cron check included)
