@@ -80,6 +80,7 @@ Verify Supabase Auth redirect URLs include:
 From repo root:
 
 ```bash
+npm run verify:phase9-runtime
 npm test --workspace @rental/web
 npm run lint:web
 npm run build:web

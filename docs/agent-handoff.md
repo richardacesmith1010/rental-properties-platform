@@ -58,6 +58,10 @@
   - `/Users/courtneysmith/Documents/Codex/Rental Properties/scripts/smoke-web.sh`
   - `/Users/courtneysmith/Documents/Codex/Rental Properties/docs/release-checklist.md`
   - smoke script now validates redirect targets (must route unauthenticated protected paths to `/login`)
+- Added runtime-proof automation and operator runbooks:
+  - `/Users/courtneysmith/Documents/Codex/Rental Properties/scripts/verify-phase9-runtime.mjs`
+  - `/Users/courtneysmith/Documents/Codex/Rental Properties/docs/claude-runtime-apply.md`
+  - `/Users/courtneysmith/Documents/Codex/Rental Properties/docs/v1-final-uat.md`
 - Removed accidental duplicate file:
   - `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/lib/charges 2.ts`
 - V1 closeout UI polish pass applied:
@@ -93,6 +97,8 @@
 - `main` now contains the V1 closeout batch commits and is pushed at `83812a9`.
 - Live migration apply from Codex is currently blocked by missing Supabase migration tooling/credentials in this environment (`supabase` CLI not installed, no DB management token available).
 - Codex attempted Supabase management API apply path using service-role key and received `401 JWT failed verification` (service-role cannot run management SQL API).
+- Runtime verification command for Claude/Codex:
+  - `npm run verify:phase9-runtime`
 
 ## Stability Gate Snapshot (2026-02-28)
 - Baseline commit: `cdf4dad` on `main`.
