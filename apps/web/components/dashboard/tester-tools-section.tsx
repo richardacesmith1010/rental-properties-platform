@@ -151,6 +151,13 @@ const featureTests: FeatureTestDefinition[] = [
   }
 ];
 
+function createInitialFeatureRuns(): Record<FeatureTestId, FeatureRunResult> {
+  return featureTests.reduce((acc, item) => {
+    acc[item.id] = { status: "idle", checkpoints: [] };
+    return acc;
+  }, {} as Record<FeatureTestId, FeatureRunResult>);
+}
+
 function FormError({ state }: { state: ActionState }) {
   if (!state || state.success) return null;
   return (
@@ -221,6 +228,7 @@ export function TesterToolsSection({
   const [activeTestTarget, setActiveTestTarget] = useState<string>("/tester");
   const [runningFeatureId, setRunningFeatureId] = useState<FeatureTestId | null>(null);
   const [failurePrompt, setFailurePrompt] = useState<string | null>(null);
+  const [failureEntries, setFailureEntries] = useState<FailureEntry[]>([]);
   const [failureCopyState, setFailureCopyState] = useState<"idle" | "copied" | "error">("idle");
   const [walkthroughState, setWalkthroughState] = useState<WalkthroughState>({
     status: "idle",
@@ -233,12 +241,7 @@ export function TesterToolsSection({
     startedAt: null,
     finishedAt: null
   });
-  const [featureRuns, setFeatureRuns] = useState<Record<FeatureTestId, FeatureRunResult>>(() =>
-    featureTests.reduce((acc, item) => {
-      acc[item.id] = { status: "idle", checkpoints: [] };
-      return acc;
-    }, {} as Record<FeatureTestId, FeatureRunResult>)
-  );
+  const [featureRuns, setFeatureRuns] = useState<Record<FeatureTestId, FeatureRunResult>>(createInitialFeatureRuns);
 
   const lastGenerateMessage = useRef<string | null>(null);
   const lastCleanupMessage = useRef<string | null>(null);
@@ -540,6 +543,29 @@ export function TesterToolsSection({
     }
   };
 
+  const resetTesterRuns = () => {
+    if (runningFeatureId || walkthroughState.status === "running") {
+      return;
+    }
+
+    setFeatureRuns(createInitialFeatureRuns());
+    setFailureEntries([]);
+    setFailurePrompt(null);
+    setFailureCopyState("idle");
+    setActiveTestTarget("/tester");
+    setWalkthroughState({
+      status: "idle",
+      total: featureTests.length,
+      completed: 0,
+      passed: 0,
+      failed: 0,
+      currentFeatureLabel: null,
+      currentCheckpointLabel: null,
+      startedAt: null,
+      finishedAt: null
+    });
+  };
+
   const runFeatureTest = async (
     featureId: FeatureTestId,
     options?: { fromWalkthrough?: boolean }
@@ -552,6 +578,7 @@ export function TesterToolsSection({
     const featureLabel = featureTests.find((item) => item.id === featureId)?.label ?? featureId;
 
     if (!fromWalkthrough) {
+      setFailureEntries([]);
       setFailurePrompt(null);
       setFailureCopyState("idle");
       setActiveTestTarget("/tester");
@@ -642,6 +669,7 @@ export function TesterToolsSection({
           detail
         };
         if (!fromWalkthrough) {
+          setFailureEntries([failure]);
           setFailurePrompt(buildFailurePrompt(failure));
         }
         setFeatureRuns((prev) => {
@@ -723,7 +751,10 @@ export function TesterToolsSection({
 
     const status = failures.length > 0 ? "fail" : "pass";
     if (failures.length > 0) {
+      setFailureEntries(failures);
       setFailurePrompt(buildWalkthroughFailurePrompt(failures));
+    } else {
+      setFailureEntries([]);
     }
     setWalkthroughState((prev) => ({
       ...prev,
@@ -1047,6 +1078,16 @@ export function TesterToolsSection({
                     Open Running Target
                   </a>
                 )}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={resetTesterRuns}
+                  disabled={Boolean(runningFeatureId) || walkthroughState.status === "running"}
+                  title="Clear all test run statuses and start fresh."
+                >
+                  Reset Results
+                </Button>
               </div>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
@@ -1186,6 +1227,24 @@ export function TesterToolsSection({
                       : "Copy Prompt"}
                 </Button>
               </div>
+              {failureEntries.length > 0 && (
+                <div className="mt-3 rounded-lg border border-red-200 bg-white p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-red-700">
+                    Failure Summary
+                  </p>
+                  <ul className="mt-2 space-y-1.5 text-xs text-zinc-700">
+                    {failureEntries.map((entry) => (
+                      <li key={`${entry.featureLabel}-${entry.checkpointLabel}-${entry.path}`}>
+                        <span className="font-semibold">{entry.featureLabel}</span>
+                        {" -> "}
+                        <span>{entry.checkpointLabel}</span>
+                        {" @ "}
+                        <span className="font-mono">{entry.path}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <textarea
                 readOnly
                 value={failurePrompt}
