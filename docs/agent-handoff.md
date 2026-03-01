@@ -86,6 +86,8 @@
 - Vercel CLI deploy attempt from Codex is currently blocked by missing local credentials (`vercel login` or `--token` required).
 - Latest deploy check on `main` (post closeout merge) returned the same blocker:
   - `npx vercel deploy --prod --yes` -> `No existing credentials found`
+- `main` now contains the V1 closeout batch commits and is pushed at `83812a9`.
+- Live migration apply from Codex is currently blocked by missing Supabase migration tooling/credentials in this environment (`supabase` CLI not installed, no DB management token available).
 
 ## Stability Gate Snapshot (2026-02-28)
 - Baseline commit: `cdf4dad` on `main`.
@@ -100,10 +102,11 @@
   - `/owner`, `/manager`, `/tenant` return redirect to `/login` ✅
   - `/api/assets/maintenance-photo/:id` returns `401` when unauthenticated ✅
   - `/api/assets/document-packet/:id` returns `401` when unauthenticated ✅
-- Live DB runtime verification (service-role read-only probe) shows Phase 8/9 schema is **not** applied yet:
-  - missing tables in schema cache: `ownership_accounts`, `ownership_account_members`, `document_templates`, `vendors`
-  - missing columns: `properties.owner_account_id`, `invitations.ownership_account_id`
-  - missing functions: `can_administer_property`, `can_view_property`
+- Live DB runtime verification (service-role read-only probe) now shows mixed Phase 8/9 state:
+  - present tables: `document_templates`, `document_packets`, `document_signers`, `notifications`, `notification_deliveries`, `vendors`, `maintenance_assignments`, `maintenance_photos`, `ownership_accounts`, `ownership_account_members`
+  - present functions: `can_administer_property(uuid)`, `can_view_property(uuid)`
+  - present buckets: `lease-documents`, `maintenance-photos`
+  - still missing columns: `properties.owner_account_id`, `invitations.ownership_account_id`
 - Codex mitigation applied:
   - legacy compatibility fallback for pre-Phase-9 installs in property access/portfolio/invitations/vendors/documents paths
   - ownership workflows now capability-gated with clear user-facing errors if Phase 9 is absent
@@ -117,14 +120,17 @@
    - `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase8_documents_notifications_maintenance.sql`
 2. Apply and verify Phase 9 migration in live Supabase:
    - `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase9_llc_and_shared_operator_access.sql`
-3. Create/verify private storage buckets:
+3. Verify and complete Phase 9 column rollout:
+   - `properties.owner_account_id`
+   - `invitations.ownership_account_id`
+4. Create/verify private storage buckets:
    - `lease-documents`
    - `maintenance-photos`
-   - status: buckets now exist; Claude should verify policies/permissions post-migration
-4. Validate RLS and function behavior after migrations:
+   - status: buckets exist; Claude should verify policies/permissions post-migration
+5. Validate RLS and function behavior after migrations:
    - `can_administer_property(uuid)`
    - `can_view_property(uuid)`
-5. Post SQL execution proof and policy outcomes in this document.
+6. Post SQL execution proof and policy outcomes in this document.
 
 ## Guardrails
 - Do not overwrite live-db-correct logic with stale local SQL.
