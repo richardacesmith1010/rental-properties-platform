@@ -3,6 +3,7 @@
     "name": "Rental Mobile",
     "slug": "rental-mobile",
     "version": "0.1.0",
+    "scheme": "rentflow",
     "orientation": "portrait",
     "platforms": ["ios", "android", "web"]
   }
