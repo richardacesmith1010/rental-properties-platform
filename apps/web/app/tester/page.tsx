@@ -60,9 +60,11 @@ export default async function TesterPage() {
       loadTableCount("rent_charges"),
       loadTableCount("payments"),
       loadTableCount("maintenance_tickets"),
+      loadTableCount("vendors"),
       loadTableCount("document_packets"),
       loadTableCount("property_files"),
       loadTableCount("property_expenses"),
+      loadTableCount("ownership_accounts"),
       loadTableCount("notifications"),
       loadTableCount("notification_deliveries")
     ])

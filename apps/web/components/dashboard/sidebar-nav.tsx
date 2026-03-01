@@ -1,3 +1,5 @@
+"use client";
+
 import {
   LayoutDashboard,
   Receipt,
@@ -20,6 +22,8 @@ export interface NavItem {
   label: string;
   icon: LucideIcon;
   href?: string;
+  description?: string;
+  clickHint?: string;
 }
 
 interface SidebarNavProps {
@@ -30,6 +34,8 @@ interface SidebarNavProps {
   showTesterLink?: boolean;
   onSignOut: (formData: FormData) => Promise<void>;
   items?: NavItem[];
+  activeItemId?: string;
+  onSelectItem?: (id: string) => void;
   snapshot?: {
     label: string;
     value: string;
@@ -38,19 +44,105 @@ interface SidebarNavProps {
 }
 
 const defaultNavItems: NavItem[] = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "charges", label: "Charges", icon: Receipt },
-  { id: "payments", label: "Payments", icon: CreditCard },
-  { id: "maintenance", label: "Maintenance", icon: Wrench },
-  { id: "notifications", label: "Notifications", icon: Bell },
-  { id: "ownership", label: "Ownership", icon: UserPlus },
-  { id: "invitations", label: "Invitations", icon: UserPlus },
-  { id: "documents", label: "Documents", icon: FileSignature },
-  { id: "vendors", label: "Vendors", icon: BriefcaseBusiness },
-  { id: "operations", label: "Operations", icon: Settings },
-  { id: "portfolio", label: "Portfolio", icon: Building2 },
-  { id: "leases", label: "Leases", icon: FileText },
+  {
+    id: "overview",
+    label: "Overview",
+    icon: LayoutDashboard,
+    description: "High-level property and lease snapshot.",
+    clickHint: "open the dashboard summary"
+  },
+  {
+    id: "charges",
+    label: "Charges",
+    icon: Receipt,
+    description: "Rent charges and due-date tracking.",
+    clickHint: "open billing charges"
+  },
+  {
+    id: "payments",
+    label: "Payments",
+    icon: CreditCard,
+    description: "Recent payment history and status.",
+    clickHint: "open payment records"
+  },
+  {
+    id: "maintenance",
+    label: "Maintenance",
+    icon: Wrench,
+    description: "Maintenance tickets and progress.",
+    clickHint: "open maintenance workflow"
+  },
+  {
+    id: "notifications",
+    label: "Notifications",
+    icon: Bell,
+    description: "System alerts and unread activity.",
+    clickHint: "open notifications"
+  },
+  {
+    id: "ownership",
+    label: "Ownership",
+    icon: UserPlus,
+    description: "LLC accounts and co-owner membership.",
+    clickHint: "open ownership settings"
+  },
+  {
+    id: "invitations",
+    label: "Invitations",
+    icon: UserPlus,
+    description: "Tenant, manager, and owner invites.",
+    clickHint: "open invitation tools"
+  },
+  {
+    id: "documents",
+    label: "Documents",
+    icon: FileSignature,
+    description: "Lease packets and property file vault.",
+    clickHint: "open document tools"
+  },
+  {
+    id: "vendors",
+    label: "Vendors",
+    icon: BriefcaseBusiness,
+    description: "Vendor directory and assignment options.",
+    clickHint: "open vendor management"
+  },
+  {
+    id: "operations",
+    label: "Operations",
+    icon: Settings,
+    description: "Create properties, units, and leases.",
+    clickHint: "open operations forms"
+  },
+  {
+    id: "portfolio",
+    label: "Portfolio",
+    icon: Building2,
+    description: "Property list and property-level edits.",
+    clickHint: "open portfolio list"
+  },
+  {
+    id: "units",
+    label: "Units",
+    icon: Building2,
+    description: "Unit inventory and rent defaults.",
+    clickHint: "open unit management"
+  },
+  {
+    id: "leases",
+    label: "Leases",
+    icon: FileText,
+    description: "Lease terms and lease lifecycle.",
+    clickHint: "open lease management"
+  },
 ];
+
+function getNavTitle(item: NavItem) {
+  const description = item.description ?? `${item.label} section.`;
+  const clickHint =
+    item.clickHint ?? (item.href ? `open ${item.label}.` : `show the ${item.label} section.`);
+  return `${description} Click to ${clickHint}`;
+}
 
 export function SidebarNav({
   userEmail,
@@ -60,11 +152,23 @@ export function SidebarNav({
   showTesterLink = false,
   onSignOut,
   items,
+  activeItemId,
+  onSelectItem,
   snapshot,
 }: SidebarNavProps) {
   const navItems = items ?? defaultNavItems;
   const renderedNavItems = showTesterLink
-    ? [...navItems, { id: "tester", label: "Tester", icon: FlaskConical, href: "/tester" }]
+    ? [
+        ...navItems,
+        {
+          id: "tester",
+          label: "Tester",
+          icon: FlaskConical,
+          href: "/tester",
+          description: "Diagnostics workspace and feature checks.",
+          clickHint: "open tester tools"
+        }
+      ]
     : navItems;
   const summary = snapshot ?? {
     label: "Snapshot",
@@ -74,10 +178,9 @@ export function SidebarNav({
 
   return (
     <aside className="gradient-sidebar hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-[260px] lg:flex-shrink-0 lg:flex-col">
-      {/* Logo */}
       <div className="flex items-center gap-3 px-5 py-6">
         <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/15 text-lg font-bold text-white shadow-lg shadow-indigo-950/25 backdrop-blur-sm">
-          R
+          D
         </div>
         <div>
           <div className="text-base font-bold text-white">Domus</div>
@@ -85,15 +188,47 @@ export function SidebarNav({
         </div>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 space-y-1 px-3 pb-4">
         {renderedNavItems.map((item) => {
           const Icon = item.icon;
+          const isActive = activeItemId === item.id;
+          const itemClassName = [
+            "flex w-full items-center gap-3 rounded-[10px] px-3.5 py-2.5 text-[13px] transition-all",
+            isActive
+              ? "bg-white/20 text-white shadow-sm"
+              : "text-white/60 hover:bg-white/15 hover:text-white"
+          ].join(" ");
+
+          if (item.href) {
+            return (
+              <a key={item.id} href={item.href} className={itemClassName} title={getNavTitle(item)}>
+                <Icon className="h-4 w-4" />
+                {item.label}
+              </a>
+            );
+          }
+
+          if (onSelectItem) {
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onSelectItem(item.id)}
+                className={itemClassName}
+                title={getNavTitle(item)}
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
+              </button>
+            );
+          }
+
           return (
             <a
               key={item.id}
-              href={item.href ?? `#${item.id}`}
-              className="flex items-center gap-3 rounded-[10px] px-3.5 py-2.5 text-[13px] text-white/60 transition-all hover:bg-white/15 hover:text-white"
+              href={`#${item.id}`}
+              className={itemClassName}
+              title={getNavTitle(item)}
             >
               <Icon className="h-4 w-4" />
               {item.label}
@@ -102,7 +237,6 @@ export function SidebarNav({
         })}
       </nav>
 
-      {/* Snapshot panel */}
       <div className="mx-4 mb-3 rounded-xl border border-white/15 bg-white/10 p-3.5">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">
           {summary.label}
@@ -111,7 +245,6 @@ export function SidebarNav({
         <p className="text-xs text-white/50">{summary.note}</p>
       </div>
 
-      {/* User + Sign out */}
       <div className="border-t border-white/[0.12] px-5 py-4">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-violet-400 text-xs font-semibold text-white">
@@ -126,6 +259,7 @@ export function SidebarNav({
           <button
             type="submit"
             className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs font-medium text-white/70 transition-colors hover:bg-white/15 hover:text-white"
+            title="Sign out and return to login."
           >
             <LogOut className="h-3.5 w-3.5" />
             Sign out
@@ -136,7 +270,6 @@ export function SidebarNav({
   );
 }
 
-/* Mobile top bar for small screens */
 export function MobileTopBar({
   userEmail,
   role,
@@ -147,7 +280,7 @@ export function MobileTopBar({
     <div className="gradient-sidebar flex items-center justify-between px-4 py-3 shadow-lg lg:hidden">
       <div className="flex items-center gap-2.5">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-sm font-bold text-white">
-          R
+          D
         </div>
         <div>
           <span className="block text-sm font-bold text-white">Domus</span>
@@ -161,6 +294,7 @@ export function MobileTopBar({
           <a
             href="/tester"
             className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-white/10"
+            title="Open tester diagnostics workspace."
           >
             Tester
           </a>
@@ -170,6 +304,7 @@ export function MobileTopBar({
           <button
             type="submit"
             className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/70 hover:bg-white/10"
+            title="Sign out and return to login."
           >
             <LogOut className="h-3.5 w-3.5" />
           </button>

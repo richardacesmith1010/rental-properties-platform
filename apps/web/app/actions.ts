@@ -65,7 +65,10 @@ import {
   parseFormData,
 } from "@/lib/validations";
 
-export type ActionState = { success: true } | { success: false; error: string } | null;
+export type ActionState =
+  | { success: true; message?: string }
+  | { success: false; error: string }
+  | null;
 
 type CapabilityKey =
   | "documentsEnabled"
@@ -3260,7 +3263,10 @@ export async function generateTesterData(
 
   revalidatePath("/owner");
   revalidatePath("/tester");
-  return { success: true };
+  return {
+    success: true,
+    message: `Created tester data: 1 property, 1 unit, 1 tenant lease, and 2 rent charges.`
+  };
 }
 
 export async function cleanupTesterData(
@@ -3289,7 +3295,10 @@ export async function cleanupTesterData(
 
   const propertyIds = (properties ?? []).map((property) => property.id);
   if (propertyIds.length === 0) {
-    return { success: true };
+    return {
+      success: true,
+      message: "No tester data was found to archive."
+    };
   }
 
   const { data: units } = await admin
@@ -3339,5 +3348,8 @@ export async function cleanupTesterData(
 
   revalidatePath("/owner");
   revalidatePath("/tester");
-  return { success: true };
+  return {
+    success: true,
+    message: `Archived tester data for ${propertyIds.length} properties, ${unitIds.length} units, and ${leaseIds.length} leases.`
+  };
 }

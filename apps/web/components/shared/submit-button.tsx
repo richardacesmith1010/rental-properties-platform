@@ -9,6 +9,7 @@ interface SubmitButtonProps {
   className?: string;
   variant?: "default" | "outline" | "ghost" | "destructive" | "link";
   size?: "default" | "sm" | "lg" | "icon";
+  title?: string;
 }
 
 export function SubmitButton({
@@ -16,6 +17,7 @@ export function SubmitButton({
   className,
   variant = "default",
   size = "default",
+  title
 }: SubmitButtonProps) {
   const { pending } = useFormStatus();
 
@@ -26,6 +28,7 @@ export function SubmitButton({
       variant={variant}
       size={size}
       className={className}
+      title={title}
     >
       {pending ? (
         <>
