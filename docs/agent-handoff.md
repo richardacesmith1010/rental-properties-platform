@@ -417,3 +417,22 @@ NEXT_ACTION=tag v1.0.0
   - `npx tsc -p apps/mobile/tsconfig.json --noEmit` -> PASS
   - `npx vercel deploy --prod --yes` -> PASS
   - `APP_URL=https://rental-properties-platform-web.vercel.app npm run smoke:web` -> PASS
+
+## V2 Tenant Focused Flow (Codex)
+
+- Timestamp (UTC): `2026-03-01T20:18:00Z`
+- Branch: `main`
+- HEAD: `304a5c9`
+- Scope delivered:
+  - Tenant workspace now supports focused, one-section-at-a-time navigation via `section` query mode.
+  - Sidebar navigation now drives explicit section routes:
+    - `overview`, `charges`, `maintenance`, `documents`, `notifications`
+  - Added Previous/Next section controls in tenant header for guided flow.
+  - Preserves tester preview mode through section navigation links (`testerPreview=true`).
+- Validation:
+  - `npm test --workspace @domus/web` -> PASS (106/106)
+  - `npm run lint:web` -> PASS
+  - `npm run build:web` -> PASS
+  - `npx tsc -p apps/mobile/tsconfig.json --noEmit` -> PASS
+  - `npx vercel deploy --prod --yes` -> PASS
+  - `APP_URL=https://rental-properties-platform-web.vercel.app npm run smoke:web` -> PASS
