@@ -234,21 +234,21 @@ export function SidebarNav({
       <div className="space-y-2 px-3 pb-3">
         <a
           href="/settings"
-          className="block rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/20"
+          className="block rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
           title="Open full settings page."
         >
           Settings
         </a>
         <a
           href="/portal"
-          className="block rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/20"
+          className="block rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
           title="Go to the role home screen while staying signed in."
         >
           Portal Home
         </a>
         <a
           href={workspacePath}
-          className="block rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/20"
+          className="block rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
           title="Return to your main workspace for this role."
         >
           {role === "owner" ? "Owner Workspace" : role === "manager" ? "Manager Workspace" : "Tenant Workspace"}
@@ -256,7 +256,7 @@ export function SidebarNav({
         {showTesterLink && (
           <a
             href="/tester"
-            className="block rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/20"
+            className="block rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
             title="Open tester diagnostics mode."
           >
             Tester Mode
@@ -277,7 +277,12 @@ export function SidebarNav({
 
           if (item.href) {
             return (
-              <a key={item.id} href={item.href} className={itemClassName} title={getNavTitle(item)}>
+              <a
+                key={item.id}
+                href={item.href}
+                className={`${itemClassName} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900`}
+                title={getNavTitle(item)}
+              >
                 <Icon className="h-4 w-4" />
                 {item.label}
               </a>
@@ -290,7 +295,7 @@ export function SidebarNav({
                 key={item.id}
                 type="button"
                 onClick={() => onSelectItem(item.id)}
-                className={itemClassName}
+                className={`${itemClassName} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900`}
                 title={getNavTitle(item)}
               >
                 <Icon className="h-4 w-4" />
@@ -303,7 +308,7 @@ export function SidebarNav({
             <a
               key={item.id}
               href={`#${item.id}`}
-              className={itemClassName}
+              className={`${itemClassName} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900`}
               title={getNavTitle(item)}
             >
               <Icon className="h-4 w-4" />
@@ -326,7 +331,7 @@ export function SidebarNav({
         <form action={onSignOut} className="mt-3">
           <button
             type="submit"
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs font-medium text-white/70 transition-colors hover:bg-white/15 hover:text-white"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs font-medium text-white/70 transition-colors hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
             title="Sign out and return to login."
           >
             <LogOut className="h-3.5 w-3.5" />
@@ -363,21 +368,21 @@ export function MobileTopBar({
       <div className="flex items-center gap-3">
         <a
           href="/settings"
-          className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-white/10"
+          className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
           title="Open full settings page."
         >
           Settings
         </a>
         <a
           href={workspacePath}
-          className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-white/10"
+          className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
           title="Open your role workspace."
         >
           Workspace
         </a>
         <a
           href="/portal"
-          className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-white/10"
+          className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
           title="Go to role home screen."
         >
           Home
@@ -385,7 +390,7 @@ export function MobileTopBar({
         {showTesterLink && (
           <a
             href="/tester"
-            className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-white/10"
+            className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
             title="Open tester diagnostics workspace."
           >
             Tester
@@ -395,8 +400,9 @@ export function MobileTopBar({
         <form action={onSignOut}>
           <button
             type="submit"
-            className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/70 hover:bg-white/10"
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/70 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
             title="Sign out and return to login."
+            aria-label="Sign out"
           >
             <LogOut className="h-3.5 w-3.5" />
           </button>

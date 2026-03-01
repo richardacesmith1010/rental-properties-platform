@@ -916,7 +916,7 @@ export function TesterToolsSection({
             </div>
             <a
               href={workspacePreviewPath}
-              className="inline-flex text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+              className="inline-flex text-xs font-semibold text-indigo-600 hover:text-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
               title="Open current preview in a full page tab."
             >
               Open current preview full page
