@@ -22,6 +22,8 @@
   - `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase8_documents_notifications_maintenance.sql`
 - Added migration:
   - `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase9_llc_and_shared_operator_access.sql`
+- Added targeted delta migration for mixed Phase 9 live states:
+  - `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260301_phase9_owner_account_columns_delta.sql`
 - Added ownership + shared-operator app layer:
   - `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/lib/property-access.ts`
   - `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/lib/ownership.ts`
@@ -86,8 +88,11 @@
 - Vercel CLI deploy attempt from Codex is currently blocked by missing local credentials (`vercel login` or `--token` required).
 - Latest deploy check on `main` (post closeout merge) returned the same blocker:
   - `npx vercel deploy --prod --yes` -> `No existing credentials found`
+- Re-checked after delta-handoff prep; blocker unchanged:
+  - `npx vercel deploy --prod --yes` -> `No existing credentials found`
 - `main` now contains the V1 closeout batch commits and is pushed at `83812a9`.
 - Live migration apply from Codex is currently blocked by missing Supabase migration tooling/credentials in this environment (`supabase` CLI not installed, no DB management token available).
+- Codex attempted Supabase management API apply path using service-role key and received `401 JWT failed verification` (service-role cannot run management SQL API).
 
 ## Stability Gate Snapshot (2026-02-28)
 - Baseline commit: `cdf4dad` on `main`.
@@ -104,7 +109,8 @@
   - `/api/assets/document-packet/:id` returns `401` when unauthenticated ✅
 - Live DB runtime verification (service-role read-only probe) now shows mixed Phase 8/9 state:
   - present tables: `document_templates`, `document_packets`, `document_signers`, `notifications`, `notification_deliveries`, `vendors`, `maintenance_assignments`, `maintenance_photos`, `ownership_accounts`, `ownership_account_members`
-  - present functions: `can_administer_property(uuid)`, `can_view_property(uuid)`
+  - present function: `can_access_property(target_property_id uuid)`
+  - missing functions: `can_administer_property(uuid)`, `can_view_property(uuid)` (not in PostgREST schema cache)
   - present buckets: `lease-documents`, `maintenance-photos`
   - still missing columns: `properties.owner_account_id`, `invitations.ownership_account_id`
 - Codex mitigation applied:
@@ -120,17 +126,35 @@
    - `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase8_documents_notifications_maintenance.sql`
 2. Apply and verify Phase 9 migration in live Supabase:
    - `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase9_llc_and_shared_operator_access.sql`
-3. Verify and complete Phase 9 column rollout:
+3. Apply targeted delta to complete mixed Phase 9 column rollout:
+   - `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260301_phase9_owner_account_columns_delta.sql`
+4. Verify and complete Phase 9 column rollout:
    - `properties.owner_account_id`
    - `invitations.ownership_account_id`
-4. Create/verify private storage buckets:
+5. Create/verify private storage buckets:
    - `lease-documents`
    - `maintenance-photos`
    - status: buckets exist; Claude should verify policies/permissions post-migration
-5. Validate RLS and function behavior after migrations:
+6. Validate RLS and function behavior after migrations:
    - `can_administer_property(uuid)`
    - `can_view_property(uuid)`
-6. Post SQL execution proof and policy outcomes in this document.
+7. Post SQL execution proof and policy outcomes in this document.
+
+## Claude Execution Notes (No Decisions Needed)
+1. Execute this SQL file in live Supabase SQL editor:
+   - `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260301_phase9_owner_account_columns_delta.sql`
+2. After execution, verify:
+   - `properties.owner_account_id` exists and is non-null for all rows.
+   - `invitations.ownership_account_id` exists.
+   - RPC endpoints resolve:
+     - `can_administer_property(target_property_id uuid)`
+     - `can_view_property(target_property_id uuid)`
+     - `can_access_property(target_property_id uuid)`
+3. Verification query snippets:
+   - `select count(*) from properties where owner_account_id is null;` (must return `0`)
+   - `select column_name from information_schema.columns where table_name='properties' and column_name='owner_account_id';`
+   - `select column_name from information_schema.columns where table_name='invitations' and column_name='ownership_account_id';`
+4. Keep existing app compatibility fallbacks in place until this verification is logged.
 
 ## Guardrails
 - Do not overwrite live-db-correct logic with stale local SQL.

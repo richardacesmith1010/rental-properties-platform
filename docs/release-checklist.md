@@ -33,6 +33,7 @@ Run/verify Supabase migrations in order:
 7. `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase7_invitations.sql`
 8. `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase8_documents_notifications_maintenance.sql`
 9. `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase9_llc_and_shared_operator_access.sql`
+10. `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260301_phase9_owner_account_columns_delta.sql` (only required for partially-applied live Phase 9 states)
 
 Verify private buckets:
 
@@ -60,6 +61,7 @@ Confirm these objects exist in live Supabase:
 - Functions:
   - `can_administer_property(uuid)`
   - `can_view_property(uuid)`
+  - `can_access_property(uuid)` (compatibility alias)
 
 Then verify private storage behavior:
 

@@ -129,6 +129,8 @@ Run these migrations after Phase 5:
 
 Run this migration after Phase 8:
 - `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase9_llc_and_shared_operator_access.sql`
+- If live DB is in a partially-applied Phase 9 state, also run:
+  - `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260301_phase9_owner_account_columns_delta.sql`
 
 ## Stability Compatibility Note
 
