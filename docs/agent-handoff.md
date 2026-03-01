@@ -329,3 +329,23 @@ NEXT_ACTION=tag v1.0.0
 - Added and committed migration reference file: `supabase/migrations/20260301_v2_domus_schema.sql`.
 - Merged `codex/v2-domus` into `main` and pushed to origin.
 - Remaining optional manual check: authenticated cron smoke (`CRON_SECRET` set locally).
+
+## V2 Hardening Batch (Codex)
+
+- Timestamp (UTC): `2026-03-01T19:26:20Z`
+- Branch: `main`
+- HEAD: `4ee384d`
+- What changed:
+  - Expanded unauthenticated smoke coverage in `scripts/smoke-web.sh`:
+    - Brand sanity check on `/login` ("Domus")
+    - Route guard checks now include `/tester` and `/owner/generate`
+    - Private asset guard checks now include `/api/assets/property-file/test-id`
+  - Added one-command release gate script: `scripts/gate-web.sh`
+  - Added root npm scripts:
+    - `test:web`
+    - `typecheck:mobile`
+    - `gate:web`
+  - Updated release runbook in `docs/release-checklist.md` to use `npm run gate:web`
+- Verification:
+  - `APP_URL=https://rental-properties-platform-web.vercel.app npm run gate:web` -> PASS
+  - Includes runtime verification, tests, lint, build, mobile typecheck, and smoke checks.
