@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Rental Mobile",
-    "slug": "rental-mobile",
-    "version": "0.1.0",
+    "name": "Domus Mobile",
+    "slug": "domus-mobile",
+    "version": "1.0.0",
     "scheme": "domus",
     "orientation": "portrait",
     "platforms": ["ios", "android", "web"]
