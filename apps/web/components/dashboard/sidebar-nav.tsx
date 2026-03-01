@@ -29,8 +29,6 @@ export interface NavItem {
 
 interface SidebarNavProps {
   userEmail: string;
-  occupancy: number;
-  activeLeaseCount: number;
   role: string;
   navPreset?: "default" | "tenant";
   showTesterLink?: boolean;
@@ -38,11 +36,6 @@ interface SidebarNavProps {
   items?: NavItem[];
   activeItemId?: string;
   onSelectItem?: (id: string) => void;
-  snapshot?: {
-    label: string;
-    value: string;
-    note: string;
-  };
 }
 
 const defaultNavItems: NavItem[] = [
@@ -148,8 +141,6 @@ function getNavTitle(item: NavItem) {
 
 export function SidebarNav({
   userEmail,
-  occupancy,
-  activeLeaseCount,
   role,
   navPreset = "default",
   showTesterLink = false,
@@ -157,7 +148,6 @@ export function SidebarNav({
   items,
   activeItemId,
   onSelectItem,
-  snapshot,
 }: SidebarNavProps) {
   const [tenantPreviewParam, setTenantPreviewParam] = useState("");
 
@@ -227,11 +217,6 @@ export function SidebarNav({
         }
       ]
     : navItems;
-  const summary = snapshot ?? {
-    label: "Snapshot",
-    value: `${occupancy}% occupied`,
-    note: `${activeLeaseCount} active leases`
-  };
   const workspacePath = role === "owner" ? "/owner" : role === "manager" ? "/manager" : "/tenant";
 
   return (
@@ -327,14 +312,6 @@ export function SidebarNav({
           );
         })}
       </nav>
-
-      <div className="mx-4 mb-3 shrink-0 rounded-xl border border-white/15 bg-white/10 p-3.5">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">
-          {summary.label}
-        </p>
-        <p className="mt-1 text-xl font-extrabold text-white">{summary.value}</p>
-        <p className="text-xs text-white/50">{summary.note}</p>
-      </div>
 
       <div className="shrink-0 border-t border-white/[0.12] px-5 py-4">
         <div className="flex items-center gap-2.5">

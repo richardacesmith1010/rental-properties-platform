@@ -77,8 +77,6 @@ export function ManagerDashboard({
       {/* Desktop sidebar */}
       <SidebarNav
         userEmail={userEmail}
-        occupancy={occupancy}
-        activeLeaseCount={data.kpis.activeLeaseCount}
         role="manager"
         onSignOut={onSignOut}
         items={managerNavItems}

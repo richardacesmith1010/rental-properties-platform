@@ -386,17 +386,26 @@ export function Dashboard({
   const renderActiveSection = () => {
     if (activeSection === "overview") {
       return (
-        <KpiGrid
-          monthlyGrossRentCents={data.kpis.monthlyGrossRentCents}
-          occupancy={occupancy}
-          occupiedUnits={data.kpis.occupiedUnits}
-          totalUnits={data.kpis.totalUnits}
-          activeLeaseCount={data.kpis.activeLeaseCount}
-          openMaintenanceCount={data.kpis.openMaintenanceCount}
-          highPriorityMaintenanceCount={data.kpis.highPriorityMaintenanceCount}
-          lateRentCents={data.kpis.lateRentCents}
-          lateAccountCount={data.kpis.lateAccountCount}
-        />
+        <>
+          <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-xs uppercase tracking-wide text-zinc-500">Snapshot</p>
+            <p className="mt-1 text-xl font-bold text-zinc-900">{occupancy}% occupied</p>
+            <p className="text-sm text-zinc-600">
+              {data.kpis.activeLeaseCount} active lease{data.kpis.activeLeaseCount === 1 ? "" : "s"}
+            </p>
+          </div>
+          <KpiGrid
+            monthlyGrossRentCents={data.kpis.monthlyGrossRentCents}
+            occupancy={occupancy}
+            occupiedUnits={data.kpis.occupiedUnits}
+            totalUnits={data.kpis.totalUnits}
+            activeLeaseCount={data.kpis.activeLeaseCount}
+            openMaintenanceCount={data.kpis.openMaintenanceCount}
+            highPriorityMaintenanceCount={data.kpis.highPriorityMaintenanceCount}
+            lateRentCents={data.kpis.lateRentCents}
+            lateAccountCount={data.kpis.lateAccountCount}
+          />
+        </>
       );
     }
 
@@ -612,8 +621,6 @@ export function Dashboard({
 
       <SidebarNav
         userEmail={userEmail}
-        occupancy={occupancy}
-        activeLeaseCount={data.kpis.activeLeaseCount}
         role={data.profileRole}
         showTesterLink={showTesterLink}
         onSignOut={onSignOut}

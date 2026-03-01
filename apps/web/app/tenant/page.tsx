@@ -155,18 +155,11 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
 
       <SidebarNav
         userEmail={user.email ?? "unknown"}
-        occupancy={0}
-        activeLeaseCount={0}
         role="tenant"
         navPreset="tenant"
         showTesterLink={testerAccess}
         onSignOut={signOut}
         activeItemId={activeSection}
-        snapshot={{
-          label: "Tenant Snapshot",
-          value: dollars(outstandingCents),
-          note: `${paymentData.charges.length} open charge${paymentData.charges.length === 1 ? "" : "s"}`
-        }}
       />
 
       <main className="relative flex-1 lg:ml-[260px]">
@@ -228,33 +221,44 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
           </div>
 
           {activeSection === "overview" && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <KpiCard
-                label="Outstanding Rent"
-                value={dollars(outstandingCents)}
-                badge={`${paymentData.charges.length} open charge${paymentData.charges.length === 1 ? "" : "s"}`}
-                gradient="linear-gradient(135deg, #6366f1, #8b5cf6)"
-                alert={outstandingCents > 0}
-              />
-              <KpiCard
-                label="Late Charges"
-                value={lateChargeCount.toString()}
-                badge={lateChargeCount > 0 ? "Needs payment" : "All current"}
-                gradient="linear-gradient(135deg, #f59e0b, #ef4444)"
-                alert={lateChargeCount > 0}
-              />
-              <KpiCard
-                label="Open Tickets"
-                value={openTicketCount.toString()}
-                badge={`${maintenanceData.tickets.length} total`}
-                gradient="linear-gradient(135deg, #06b6d4, #3b82f6)"
-              />
-              <KpiCard
-                label="Pending Signatures"
-                value={pendingDocumentCount.toString()}
-                badge={`${unreadNotificationCount} unread alerts`}
-                gradient="linear-gradient(135deg, #10b981, #14b8a6)"
-              />
+            <div className="space-y-4">
+              <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+                <p className="text-xs uppercase tracking-wide text-zinc-500">Snapshot</p>
+                <p className="mt-1 text-xl font-bold text-zinc-900">
+                  {dollars(outstandingCents)} outstanding
+                </p>
+                <p className="text-sm text-zinc-600">
+                  {paymentData.charges.length} open charge{paymentData.charges.length === 1 ? "" : "s"}
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <KpiCard
+                  label="Outstanding Rent"
+                  value={dollars(outstandingCents)}
+                  badge={`${paymentData.charges.length} open charge${paymentData.charges.length === 1 ? "" : "s"}`}
+                  gradient="linear-gradient(135deg, #6366f1, #8b5cf6)"
+                  alert={outstandingCents > 0}
+                />
+                <KpiCard
+                  label="Late Charges"
+                  value={lateChargeCount.toString()}
+                  badge={lateChargeCount > 0 ? "Needs payment" : "All current"}
+                  gradient="linear-gradient(135deg, #f59e0b, #ef4444)"
+                  alert={lateChargeCount > 0}
+                />
+                <KpiCard
+                  label="Open Tickets"
+                  value={openTicketCount.toString()}
+                  badge={`${maintenanceData.tickets.length} total`}
+                  gradient="linear-gradient(135deg, #06b6d4, #3b82f6)"
+                />
+                <KpiCard
+                  label="Pending Signatures"
+                  value={pendingDocumentCount.toString()}
+                  badge={`${unreadNotificationCount} unread alerts`}
+                  gradient="linear-gradient(135deg, #10b981, #14b8a6)"
+                />
+              </div>
             </div>
           )}
 
