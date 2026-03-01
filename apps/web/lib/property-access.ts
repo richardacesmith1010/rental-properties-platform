@@ -8,6 +8,7 @@ export interface AdministeredProperty {
 interface LegacyPropertyRow {
   id: string;
   owner_profile_id: string;
+  active?: boolean;
 }
 
 function unique<T>(values: T[]): T[] {
@@ -35,10 +36,10 @@ function isMissingSchemaError(error: unknown): boolean {
 async function getLegacyAdministeredProperties(userId: string): Promise<AdministeredProperty[]> {
   const admin = createAdminClient();
 
-  const [{ data: ownedRows }, { data: managerAssignments }] = await Promise.all([
+  const [{ data: ownedRows, error: ownedError }, { data: managerAssignments }] = await Promise.all([
     admin
       .from("properties")
-      .select("id, owner_profile_id")
+      .select("id, owner_profile_id, active")
       .eq("owner_profile_id", userId),
     admin
       .from("property_managers")
@@ -47,15 +48,35 @@ async function getLegacyAdministeredProperties(userId: string): Promise<Administ
       .eq("active", true)
   ]);
 
+  const ownedRowsSafe: LegacyPropertyRow[] =
+    ownedError && isMissingSchemaError(ownedError)
+      ? (
+          await admin
+            .from("properties")
+            .select("id, owner_profile_id")
+            .eq("owner_profile_id", userId)
+        ).data ?? []
+      : ((ownedRows ?? []) as LegacyPropertyRow[]);
+
   const managerPropertyIds = unique((managerAssignments ?? []).map((row) => row.property_id));
-  const { data: managerPropertyRows } = managerPropertyIds.length
+  const { data: managerPropertyRows, error: managerPropertiesError } = managerPropertyIds.length
     ? await admin
         .from("properties")
-        .select("id, owner_profile_id")
+        .select("id, owner_profile_id, active")
         .in("id", managerPropertyIds)
-    : { data: [] as LegacyPropertyRow[] };
+    : { data: [] as LegacyPropertyRow[], error: null };
 
-  const merged = [...((ownedRows ?? []) as LegacyPropertyRow[]), ...((managerPropertyRows ?? []) as LegacyPropertyRow[])];
+  const managerRowsSafe: LegacyPropertyRow[] =
+    managerPropertiesError && isMissingSchemaError(managerPropertiesError)
+      ? (
+          await admin
+            .from("properties")
+            .select("id, owner_profile_id")
+            .in("id", managerPropertyIds)
+        ).data ?? []
+      : ((managerPropertyRows ?? []) as LegacyPropertyRow[]);
+
+  const merged = [...ownedRowsSafe, ...managerRowsSafe].filter((property) => property.active !== false);
   const byPropertyId = new Map<string, AdministeredProperty>();
 
   for (const property of merged) {
@@ -94,15 +115,32 @@ export async function getAdministeredProperties(userId: string): Promise<Adminis
   const ownerQuery = ownerAccountIds.length
     ? await admin
         .from("properties")
-        .select("id, owner_account_id")
+        .select("id, owner_account_id, active")
         .in("owner_account_id", ownerAccountIds)
-    : { data: [] as Array<{ id: string; owner_account_id: string }>, error: null };
+    : { data: [] as Array<{ id: string; owner_account_id: string; active?: boolean }>, error: null };
 
+  let ownerProperties: Array<{ id: string; owner_account_id: string; active?: boolean }> = [];
   if (ownerQuery.error && isMissingSchemaError(ownerQuery.error)) {
-    return getLegacyAdministeredProperties(userId);
+    const fallbackOwnerQuery = ownerAccountIds.length
+      ? await admin
+          .from("properties")
+          .select("id, owner_account_id")
+          .in("owner_account_id", ownerAccountIds)
+      : { data: [] as Array<{ id: string; owner_account_id: string }>, error: null };
+
+    if (fallbackOwnerQuery.error && isMissingSchemaError(fallbackOwnerQuery.error)) {
+      return getLegacyAdministeredProperties(userId);
+    }
+
+    ownerProperties = (fallbackOwnerQuery.data ?? []).map((property) => ({
+      ...property,
+      active: true
+    }));
+  } else {
+    ownerProperties = ownerQuery.data ?? [];
   }
 
-  const ownerProperties = ownerQuery.data ?? [];
+  ownerProperties = ownerProperties.filter((property) => property.active !== false);
   const managerPropertyIds = unique((managerAssignments ?? []).map((row) => row.property_id));
   const managerOnlyPropertyIds = managerPropertyIds.filter(
     (id) => !ownerProperties.some((property) => property.id === id)
@@ -111,15 +149,32 @@ export async function getAdministeredProperties(userId: string): Promise<Adminis
   const managerQuery = managerOnlyPropertyIds.length
     ? await admin
         .from("properties")
-        .select("id, owner_account_id")
+        .select("id, owner_account_id, active")
         .in("id", managerOnlyPropertyIds)
-    : { data: [] as Array<{ id: string; owner_account_id: string }>, error: null };
+    : { data: [] as Array<{ id: string; owner_account_id: string; active?: boolean }>, error: null };
 
+  let managerProperties: Array<{ id: string; owner_account_id: string; active?: boolean }> = [];
   if (managerQuery.error && isMissingSchemaError(managerQuery.error)) {
-    return getLegacyAdministeredProperties(userId);
+    const fallbackManagerQuery = managerOnlyPropertyIds.length
+      ? await admin
+          .from("properties")
+          .select("id, owner_account_id")
+          .in("id", managerOnlyPropertyIds)
+      : { data: [] as Array<{ id: string; owner_account_id: string }>, error: null };
+
+    if (fallbackManagerQuery.error && isMissingSchemaError(fallbackManagerQuery.error)) {
+      return getLegacyAdministeredProperties(userId);
+    }
+
+    managerProperties = (fallbackManagerQuery.data ?? []).map((property) => ({
+      ...property,
+      active: true
+    }));
+  } else {
+    managerProperties = managerQuery.data ?? [];
   }
 
-  const merged = [...ownerProperties, ...(managerQuery.data ?? [])];
+  const merged = [...ownerProperties, ...managerProperties].filter((property) => property.active !== false);
   const byPropertyId = new Map<string, AdministeredProperty>();
 
   for (const property of merged) {

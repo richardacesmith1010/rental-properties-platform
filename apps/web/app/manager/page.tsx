@@ -11,8 +11,14 @@ import { getOwnershipAccountsForUser } from "@/lib/ownership";
 import {
   createCheckoutForCharge,
   createLease,
+  updateLease,
+  deleteLease,
   createProperty,
+  updateProperty,
+  deleteProperty,
   createUnit,
+  updateUnit,
+  deleteUnit,
   signOut,
   updateTicketStatus,
   inviteTenant,
@@ -88,6 +94,12 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       onCreateProperty={createProperty}
       onCreateUnit={createUnit}
       onCreateLease={createLease}
+      onUpdateProperty={updateProperty}
+      onDeleteProperty={deleteProperty}
+      onUpdateUnit={updateUnit}
+      onDeleteUnit={deleteUnit}
+      onUpdateLease={updateLease}
+      onDeleteLease={deleteLease}
       onPayCharge={createCheckoutForCharge}
       onGenerateChargesHref="/owner/generate"
       generatedMessage={generatedMessage}

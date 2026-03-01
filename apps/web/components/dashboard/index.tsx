@@ -18,6 +18,7 @@ import { MaintenanceSection } from "./maintenance-section";
 import { InvitationsSection } from "./invitations-section";
 import { OperationsSection } from "./operations-section";
 import { PortfolioSection } from "./portfolio-section";
+import { UnitsSection } from "./units-section";
 import { LeasesSection } from "./leases-section";
 import { NotificationsSection } from "./notifications-section";
 import { DocumentsSection } from "./documents-section";
@@ -44,6 +45,12 @@ interface DashboardProps {
   onCreateProperty: StatefulAction;
   onCreateUnit: StatefulAction;
   onCreateLease: StatefulAction;
+  onUpdateProperty?: StatefulAction;
+  onDeleteProperty?: StatefulAction;
+  onUpdateUnit?: StatefulAction;
+  onDeleteUnit?: StatefulAction;
+  onUpdateLease?: StatefulAction;
+  onDeleteLease?: StatefulAction;
   onPayCharge: FormAction;
   onUpdateTicketStatus?: StatefulAction;
   onInviteTenant?: StatefulAction;
@@ -79,6 +86,12 @@ export function Dashboard({
   onCreateProperty,
   onCreateUnit,
   onCreateLease,
+  onUpdateProperty,
+  onDeleteProperty,
+  onUpdateUnit,
+  onDeleteUnit,
+  onUpdateLease,
+  onDeleteLease,
   onPayCharge,
   onUpdateTicketStatus,
   onInviteTenant,
@@ -122,6 +135,7 @@ export function Dashboard({
     data.kpis.totalUnits > 0
       ? Math.round((data.kpis.occupiedUnits / data.kpis.totalUnits) * 100)
       : 0;
+  const canManagePortfolio = data.profileRole === "owner" || data.profileRole === "manager";
 
   return (
     <div className="app-surface flex min-h-screen flex-col lg:flex-row">
@@ -303,9 +317,26 @@ export function Dashboard({
             onCreateLease={onCreateLease}
           />
 
-          <PortfolioSection properties={safePortfolio.properties} />
+          <PortfolioSection
+            properties={safePortfolio.properties}
+            showControls={canManagePortfolio}
+            onUpdateProperty={onUpdateProperty}
+            onDeleteProperty={onDeleteProperty}
+          />
 
-          <LeasesSection leases={safePortfolio.leases} />
+          <UnitsSection
+            units={safePortfolio.units}
+            showControls={canManagePortfolio}
+            onUpdateUnit={onUpdateUnit}
+            onDeleteUnit={onDeleteUnit}
+          />
+
+          <LeasesSection
+            leases={safePortfolio.leases}
+            showControls={canManagePortfolio}
+            onUpdateLease={onUpdateLease}
+            onDeleteLease={onDeleteLease}
+          />
         </div>
       </main>
     </div>

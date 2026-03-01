@@ -28,6 +28,12 @@ import {
   createPropertySchema,
   createUnitSchema,
   createLeaseSchema,
+  updateLeaseSchema,
+  deleteLeaseSchema,
+  updatePropertySchema,
+  deletePropertySchema,
+  updateUnitSchema,
+  deleteUnitSchema,
   payChargeSchema,
   createMaintenanceTicketSchema,
   updateTicketStatusSchema,
@@ -60,6 +66,23 @@ type CapabilityKey =
   | "vendorWorkflowEnabled"
   | "photoWorkflowEnabled"
   | "ownershipEnabled";
+
+function isMissingSchemaError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const code = "code" in error ? String(error.code ?? "") : "";
+  const message = "message" in error ? String(error.message ?? "").toLowerCase() : "";
+
+  return (
+    code === "42P01" ||
+    code === "42703" ||
+    code === "PGRST205" ||
+    message.includes("does not exist") ||
+    (message.includes("column") && message.includes("does not exist"))
+  );
+}
 
 async function ensureCapabilityEnabled(capability: CapabilityKey): Promise<ActionState> {
   const capabilities = await getFeatureCapabilities();
@@ -322,6 +345,451 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
       entityType: "lease",
       entityId: null
     });
+  }
+
+  revalidatePath("/");
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  return { success: true };
+}
+
+export async function updateLease(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" && role !== "manager") {
+    redirect("/portal");
+  }
+
+  const parsed = parseFormData(updateLeaseSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { leaseId, endDate, dueDayOfMonth, monthlyRentDollars, depositDollars } = parsed.data;
+
+  const { data: lease } = await supabase
+    .from("leases")
+    .select("id, unit_id, tenant_profile_id")
+    .eq("id", leaseId)
+    .single();
+
+  if (!lease) {
+    return { success: false, error: "Lease not found." };
+  }
+
+  const { data: unit } = await supabase
+    .from("units")
+    .select("id, property_id")
+    .eq("id", lease.unit_id)
+    .single();
+
+  if (!unit) {
+    return { success: false, error: "Unit not found for this lease." };
+  }
+
+  const canAdminister = await canUserAdministerProperty(user.id, unit.property_id);
+  if (!canAdminister) {
+    return { success: false, error: "You do not have access to this lease." };
+  }
+
+  const { error } = await supabase
+    .from("leases")
+    .update({
+      end_date: endDate,
+      due_day_of_month: dueDayOfMonth,
+      monthly_rent_cents: Math.round(monthlyRentDollars * 100),
+      deposit_cents: Math.round(depositDollars * 100)
+    })
+    .eq("id", leaseId);
+
+  if (error) {
+    return { success: false, error: "Failed to update lease. Please try again." };
+  }
+
+  await notifyOwnerMembersForProperty({
+    propertyId: unit.property_id,
+    type: "lease_updated",
+    title: "Lease updated",
+    body: "A lease was updated for one of your properties.",
+    entityType: "lease",
+    entityId: leaseId
+  });
+
+  if (lease.tenant_profile_id) {
+    const { data: tenantProfile } = await createAdminClient()
+      .from("profiles")
+      .select("id, email")
+      .eq("id", lease.tenant_profile_id)
+      .maybeSingle();
+
+    if (tenantProfile?.id) {
+      await createNotificationWithDelivery({
+        recipientProfileId: tenantProfile.id,
+        recipientEmail: tenantProfile.email,
+        type: "lease_updated",
+        title: "Lease updated",
+        body: "Your lease terms were updated.",
+        entityType: "lease",
+        entityId: leaseId
+      });
+    }
+  }
+
+  revalidatePath("/");
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  revalidatePath("/tenant");
+  return { success: true };
+}
+
+export async function deleteLease(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" && role !== "manager") {
+    redirect("/portal");
+  }
+
+  const parsed = parseFormData(deleteLeaseSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { leaseId } = parsed.data;
+
+  const { data: lease } = await supabase
+    .from("leases")
+    .select("id, unit_id, tenant_profile_id, active")
+    .eq("id", leaseId)
+    .single();
+
+  if (!lease) {
+    return { success: false, error: "Lease not found." };
+  }
+
+  const { data: unit } = await supabase
+    .from("units")
+    .select("id, property_id")
+    .eq("id", lease.unit_id)
+    .single();
+
+  if (!unit) {
+    return { success: false, error: "Unit not found for this lease." };
+  }
+
+  const canAdminister = await canUserAdministerProperty(user.id, unit.property_id);
+  if (!canAdminister) {
+    return { success: false, error: "You do not have access to this lease." };
+  }
+
+  const { error: leaseError } = await supabase
+    .from("leases")
+    .update({ active: false })
+    .eq("id", leaseId);
+
+  if (leaseError) {
+    return { success: false, error: "Failed to archive lease. Please try again." };
+  }
+
+  const { error: unitError } = await supabase
+    .from("units")
+    .update({ occupied: false })
+    .eq("id", lease.unit_id);
+
+  if (unitError) {
+    return { success: false, error: "Lease archived, but unit occupancy could not be updated." };
+  }
+
+  await notifyOwnerMembersForProperty({
+    propertyId: unit.property_id,
+    type: "lease_updated",
+    title: "Lease archived",
+    body: "A lease was archived for one of your properties.",
+    entityType: "lease",
+    entityId: leaseId
+  });
+
+  if (lease.tenant_profile_id) {
+    const { data: tenantProfile } = await createAdminClient()
+      .from("profiles")
+      .select("id, email")
+      .eq("id", lease.tenant_profile_id)
+      .maybeSingle();
+
+    if (tenantProfile?.id) {
+      await createNotificationWithDelivery({
+        recipientProfileId: tenantProfile.id,
+        recipientEmail: tenantProfile.email,
+        type: "lease_updated",
+        title: "Lease archived",
+        body: "Your lease has been archived by management.",
+        entityType: "lease",
+        entityId: leaseId
+      });
+    }
+  }
+
+  revalidatePath("/");
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  revalidatePath("/tenant");
+  return { success: true };
+}
+
+export async function updateProperty(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" && role !== "manager") {
+    redirect("/portal");
+  }
+
+  const parsed = parseFormData(updatePropertySchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { propertyId, name, addressLine1, city, state, postalCode } = parsed.data;
+  const canAdminister = await canUserAdministerProperty(user.id, propertyId);
+  if (!canAdminister) {
+    return { success: false, error: "You do not have access to this property." };
+  }
+
+  const { error } = await supabase
+    .from("properties")
+    .update({
+      name,
+      address_line1: addressLine1,
+      city,
+      state,
+      postal_code: postalCode
+    })
+    .eq("id", propertyId);
+
+  if (error) {
+    return { success: false, error: "Failed to update property. Please try again." };
+  }
+
+  revalidatePath("/");
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  return { success: true };
+}
+
+export async function deleteProperty(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" && role !== "manager") {
+    redirect("/portal");
+  }
+
+  const parsed = parseFormData(deletePropertySchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { propertyId } = parsed.data;
+  const canAdminister = await canUserAdministerProperty(user.id, propertyId);
+  if (!canAdminister) {
+    return { success: false, error: "You do not have access to this property." };
+  }
+
+  const { data: units } = await supabase
+    .from("units")
+    .select("id")
+    .eq("property_id", propertyId);
+
+  const unitIds = (units ?? []).map((unit) => unit.id);
+  if (unitIds.length > 0) {
+    const { data: activeLease } = await supabase
+      .from("leases")
+      .select("id")
+      .in("unit_id", unitIds)
+      .eq("active", true)
+      .limit(1)
+      .maybeSingle();
+
+    if (activeLease) {
+      return {
+        success: false,
+        error: "Cannot archive a property with active leases. Archive leases first."
+      };
+    }
+  }
+
+  const { error } = await supabase
+    .from("properties")
+    .update({ active: false })
+    .eq("id", propertyId);
+
+  if (error && isMissingSchemaError(error)) {
+    return {
+      success: false,
+      error: "Property archive requires the active column migration to be applied."
+    };
+  }
+
+  if (error) {
+    return { success: false, error: "Failed to archive property. Please try again." };
+  }
+
+  revalidatePath("/");
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  return { success: true };
+}
+
+export async function updateUnit(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" && role !== "manager") {
+    redirect("/portal");
+  }
+
+  const parsed = parseFormData(updateUnitSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { unitId, unitNumber, bedrooms, bathrooms, monthlyRentDollars } = parsed.data;
+  const { data: unit } = await supabase
+    .from("units")
+    .select("id, property_id")
+    .eq("id", unitId)
+    .single();
+
+  if (!unit) {
+    return { success: false, error: "Unit not found." };
+  }
+
+  const canAdminister = await canUserAdministerProperty(user.id, unit.property_id);
+  if (!canAdminister) {
+    return { success: false, error: "You do not have access to this unit." };
+  }
+
+  const { error } = await supabase
+    .from("units")
+    .update({
+      unit_number: unitNumber,
+      bedrooms,
+      bathrooms,
+      monthly_rent_cents: Math.round(monthlyRentDollars * 100)
+    })
+    .eq("id", unitId);
+
+  if (error) {
+    return { success: false, error: "Failed to update unit. Please try again." };
+  }
+
+  revalidatePath("/");
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  return { success: true };
+}
+
+export async function deleteUnit(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" && role !== "manager") {
+    redirect("/portal");
+  }
+
+  const parsed = parseFormData(deleteUnitSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { unitId } = parsed.data;
+  const { data: unit } = await supabase
+    .from("units")
+    .select("id, property_id")
+    .eq("id", unitId)
+    .single();
+
+  if (!unit) {
+    return { success: false, error: "Unit not found." };
+  }
+
+  const canAdminister = await canUserAdministerProperty(user.id, unit.property_id);
+  if (!canAdminister) {
+    return { success: false, error: "You do not have access to this unit." };
+  }
+
+  const { data: activeLease } = await supabase
+    .from("leases")
+    .select("id")
+    .eq("unit_id", unitId)
+    .eq("active", true)
+    .limit(1)
+    .maybeSingle();
+
+  if (activeLease) {
+    return {
+      success: false,
+      error: "Cannot archive a unit with an active lease. Archive the lease first."
+    };
+  }
+
+  const { error } = await supabase
+    .from("units")
+    .update({ active: false, occupied: false })
+    .eq("id", unitId);
+
+  if (error && isMissingSchemaError(error)) {
+    return {
+      success: false,
+      error: "Unit archive requires the active column migration to be applied."
+    };
+  }
+
+  if (error) {
+    return { success: false, error: "Failed to archive unit. Please try again." };
   }
 
   revalidatePath("/");
