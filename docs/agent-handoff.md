@@ -66,6 +66,7 @@
 
 ## Stability Gate Snapshot (2026-02-28)
 - Baseline commit: `cdf4dad` on `main`.
+- Latest stability-hardening commit: `47aa256` on `main`.
 - Local regression gates:
   - `npm test --workspace @rental/web` ✅
   - `npm run lint:web` ✅
