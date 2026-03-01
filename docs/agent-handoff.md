@@ -480,3 +480,31 @@ NEXT_ACTION=tag v1.0.0
   - `npx tsc -p apps/mobile/tsconfig.json --noEmit` -> PASS
   - `npx vercel deploy --prod --yes` -> PASS
   - `APP_URL=https://rental-properties-platform-web.vercel.app npm run smoke:web` -> PASS
+
+## V2 Accessibility + Hover Guidance + Tester Drilldown (Codex)
+
+- Timestamp (UTC): `2026-03-01T21:56:51Z`
+- Branch: `main`
+- HEAD: `cce4b53`
+- Scope delivered (new commits):
+  - `2e23cad` `chore: improve keyboard accessibility for nav and tester links`
+    - Added visible keyboard focus rings across sidebar/mobile navigation, portal/settings/tester quick links, and marketing CTAs.
+    - Added accessible `aria-label` for icon-only mobile sign-out control.
+  - `6907f96` `chore: add hover guidance to core dashboard actions`
+    - Added explicit hover `title` guidance to owner/manager/tenant operational actions (properties, units, leases, invitations, ownership, vendors, expenses, tickets, notifications, document workflows).
+  - `4c3b044` `feat: add per-failure preview and copy actions in tester`
+    - Tester failure summary now provides per-failure controls:
+      - `Preview` (loads the failing path in tester live preview)
+      - `Copy This Failure` (single-failure copy-ready prompt)
+      - `Open in New Tab`
+  - `cce4b53` `chore: align mobile app metadata with Domus rebrand`
+    - Updated `/apps/mobile/app.json` metadata:
+      - `name: Domus Mobile`
+      - `slug: domus-mobile`
+      - `version: 1.0.0`
+- Validation:
+  - `npm test --workspace @domus/web` -> PASS (106/106)
+  - `npm run lint:web` -> PASS
+  - `npm run build:web` -> PASS
+  - `npx tsc -p apps/mobile/tsconfig.json --noEmit` -> PASS
+  - `APP_URL=https://rental-properties-platform-web.vercel.app npm run smoke:web` -> PASS
