@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   createCheckoutForCharge,
   createMaintenanceTicket,
@@ -30,6 +31,8 @@ import { TenantDocumentsSection } from "@/components/dashboard/tenant-documents-
 import { NotificationsSection } from "@/components/dashboard/notifications-section";
 import {
   Bell,
+  ChevronLeft,
+  ChevronRight,
   CreditCard,
   FileSignature,
   LayoutDashboard,
@@ -40,21 +43,55 @@ import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-const tenantNavItems: NavItem[] = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "charges", label: "Charges", icon: Receipt },
-  { id: "maintenance", label: "Maintenance", icon: Wrench },
-  { id: "documents", label: "Documents", icon: FileSignature },
-  { id: "notifications", label: "Notifications", icon: Bell },
+type TenantSection = "overview" | "charges" | "maintenance" | "documents" | "notifications";
+
+const tenantSectionOrder: TenantSection[] = [
+  "overview",
+  "charges",
+  "maintenance",
+  "documents",
+  "notifications"
 ];
+
+const tenantSectionLabel: Record<TenantSection, string> = {
+  overview: "Overview",
+  charges: "Charges",
+  maintenance: "Maintenance",
+  documents: "Documents",
+  notifications: "Notifications"
+};
 
 function dollars(cents: number) {
   return `$${(cents / 100).toLocaleString()}`;
 }
 
+function parseSearchParam(value: string | string[] | undefined): string | null {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value[0] ?? null;
+  return null;
+}
+
+function isTenantSection(value: string | null): value is TenantSection {
+  return value === "overview" ||
+    value === "charges" ||
+    value === "maintenance" ||
+    value === "documents" ||
+    value === "notifications";
+}
+
+function buildTenantHref(section: TenantSection, testerPreview: boolean) {
+  const params = new URLSearchParams();
+  params.set("section", section);
+  if (testerPreview) {
+    params.set("testerPreview", "true");
+  }
+  return `/tenant?${params.toString()}`;
+}
+
 interface TenantPageProps {
   searchParams?: {
     testerPreview?: string | string[];
+    section?: string | string[];
   };
 }
 
@@ -72,6 +109,14 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
   if (role !== "tenant" && !(testerPreview && testerAccess)) {
     redirect(getRoleHomePath(role));
   }
+
+  const sectionValue = parseSearchParam(searchParams?.section);
+  const activeSection: TenantSection = isTenantSection(sectionValue) ? sectionValue : "overview";
+  const activeSectionIndex = tenantSectionOrder.indexOf(activeSection);
+  const previousSection = activeSectionIndex > 0 ? tenantSectionOrder[activeSectionIndex - 1] : null;
+  const nextSection = activeSectionIndex < tenantSectionOrder.length - 1
+    ? tenantSectionOrder[activeSectionIndex + 1]
+    : null;
 
   const capabilities = await getFeatureCapabilities();
 
@@ -104,6 +149,14 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
   ).length;
   const unreadNotificationCount = notifications.filter((notification) => !notification.readAt).length;
 
+  const tenantNavItems: NavItem[] = [
+    { id: "overview", label: "Overview", icon: LayoutDashboard, href: buildTenantHref("overview", testerPreview) },
+    { id: "charges", label: "Charges", icon: Receipt, href: buildTenantHref("charges", testerPreview) },
+    { id: "maintenance", label: "Maintenance", icon: Wrench, href: buildTenantHref("maintenance", testerPreview) },
+    { id: "documents", label: "Documents", icon: FileSignature, href: buildTenantHref("documents", testerPreview) },
+    { id: "notifications", label: "Notifications", icon: Bell, href: buildTenantHref("notifications", testerPreview) },
+  ];
+
   return (
     <div className="app-surface flex min-h-screen flex-col lg:flex-row">
       <MobileTopBar
@@ -121,6 +174,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
         showTesterLink={testerAccess}
         onSignOut={signOut}
         items={tenantNavItems}
+        activeItemId={activeSection}
         snapshot={{
           label: "Tenant Snapshot",
           value: dollars(outstandingCents),
@@ -142,92 +196,145 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
         </div>
 
         <div className="space-y-6 px-6 pb-8 pt-6 lg:px-8">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <KpiCard
-              label="Outstanding Rent"
-              value={dollars(outstandingCents)}
-              badge={`${paymentData.charges.length} open charge${paymentData.charges.length === 1 ? "" : "s"}`}
-              gradient="linear-gradient(135deg, #6366f1, #8b5cf6)"
-              alert={outstandingCents > 0}
-            />
-            <KpiCard
-              label="Late Charges"
-              value={lateChargeCount.toString()}
-              badge={lateChargeCount > 0 ? "Needs payment" : "All current"}
-              gradient="linear-gradient(135deg, #f59e0b, #ef4444)"
-              alert={lateChargeCount > 0}
-            />
-            <KpiCard
-              label="Open Tickets"
-              value={openTicketCount.toString()}
-              badge={`${maintenanceData.tickets.length} total`}
-              gradient="linear-gradient(135deg, #06b6d4, #3b82f6)"
-            />
-            <KpiCard
-              label="Pending Signatures"
-              value={pendingDocumentCount.toString()}
-              badge={`${unreadNotificationCount} unread alerts`}
-              gradient="linear-gradient(135deg, #10b981, #14b8a6)"
-            />
-          </div>
-
-          <Card id="charges">
-            <CardHeader>
-              <CardTitle>Outstanding Rent Charges</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {paymentData.charges.length === 0 ? (
-                <EmptyState message="You currently have no pending rent charges." />
+          <div className="flex flex-col items-start justify-between gap-3 rounded-xl border border-zinc-200/80 bg-white/80 p-4 sm:flex-row sm:items-center">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Focused View</p>
+              <p className="text-sm font-semibold text-zinc-900">
+                Showing section: {tenantSectionLabel[activeSection]}
+              </p>
+              <p className="text-xs text-zinc-500">
+                Switch sections from the left sidebar without scrolling through every block.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {previousSection ? (
+                <Link
+                  href={buildTenantHref(previousSection, testerPreview)}
+                  className="inline-flex items-center rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                  title="Go to the previous section."
+                >
+                  <ChevronLeft className="mr-1 h-4 w-4" />
+                  Previous
+                </Link>
               ) : (
-                <div>
-                  {paymentData.charges.map((charge, i) => (
-                    <DataRow key={charge.id} last={i === paymentData.charges.length - 1}>
-                      <div>
-                        <p className="text-sm font-semibold text-zinc-900">
-                          {charge.propertyLabel}
-                        </p>
-                        <p className="mt-0.5 text-xs text-zinc-500">Due {charge.dueDate}</p>
-                        <Badge
-                          variant={charge.status === "late" ? "destructive" : "warning"}
-                          className="mt-1"
-                        >
-                          {charge.status.toUpperCase()}
-                        </Badge>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold text-zinc-900">
-                          {dollars(charge.amountCents)}
-                        </p>
-                        <form action={createCheckoutForCharge} className="mt-2">
-                          <input type="hidden" name="chargeId" value={charge.id} />
-                          <SubmitButton size="sm">
-                            <CreditCard className="mr-2 h-3.5 w-3.5" />
-                            Pay with Card
-                          </SubmitButton>
-                        </form>
-                      </div>
-                    </DataRow>
-                  ))}
-                </div>
+                <span className="inline-flex items-center rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-400">
+                  <ChevronLeft className="mr-1 h-4 w-4" />
+                  Previous
+                </span>
               )}
-            </CardContent>
-          </Card>
-
-          <div id="maintenance">
-            <TicketForm
-              units={maintenanceData.units}
-              onCreateTicket={createMaintenanceTicket}
-            />
+              {nextSection ? (
+                <Link
+                  href={buildTenantHref(nextSection, testerPreview)}
+                  className="inline-flex items-center rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                  title="Go to the next section."
+                >
+                  Next
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Link>
+              ) : (
+                <span className="inline-flex items-center rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-400">
+                  Next
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </span>
+              )}
+            </div>
           </div>
 
-          <MaintenanceSection
-            tickets={maintenanceData.tickets}
-            showControls={false}
-            photoWorkflowEnabled={capabilities.photoWorkflowEnabled}
-            photoWorkflowWarning={capabilities.warnings.photoWorkflow}
-          />
+          {activeSection === "overview" && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <KpiCard
+                label="Outstanding Rent"
+                value={dollars(outstandingCents)}
+                badge={`${paymentData.charges.length} open charge${paymentData.charges.length === 1 ? "" : "s"}`}
+                gradient="linear-gradient(135deg, #6366f1, #8b5cf6)"
+                alert={outstandingCents > 0}
+              />
+              <KpiCard
+                label="Late Charges"
+                value={lateChargeCount.toString()}
+                badge={lateChargeCount > 0 ? "Needs payment" : "All current"}
+                gradient="linear-gradient(135deg, #f59e0b, #ef4444)"
+                alert={lateChargeCount > 0}
+              />
+              <KpiCard
+                label="Open Tickets"
+                value={openTicketCount.toString()}
+                badge={`${maintenanceData.tickets.length} total`}
+                gradient="linear-gradient(135deg, #06b6d4, #3b82f6)"
+              />
+              <KpiCard
+                label="Pending Signatures"
+                value={pendingDocumentCount.toString()}
+                badge={`${unreadNotificationCount} unread alerts`}
+                gradient="linear-gradient(135deg, #10b981, #14b8a6)"
+              />
+            </div>
+          )}
 
-          <div id="documents">
+          {activeSection === "charges" && (
+            <Card id="charges">
+              <CardHeader>
+                <CardTitle>Outstanding Rent Charges</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {paymentData.charges.length === 0 ? (
+                  <EmptyState message="You currently have no pending rent charges." />
+                ) : (
+                  <div>
+                    {paymentData.charges.map((charge, i) => (
+                      <DataRow key={charge.id} last={i === paymentData.charges.length - 1}>
+                        <div>
+                          <p className="text-sm font-semibold text-zinc-900">
+                            {charge.propertyLabel}
+                          </p>
+                          <p className="mt-0.5 text-xs text-zinc-500">Due {charge.dueDate}</p>
+                          <Badge
+                            variant={charge.status === "late" ? "destructive" : "warning"}
+                            className="mt-1"
+                          >
+                            {charge.status.toUpperCase()}
+                          </Badge>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-zinc-900">
+                            {dollars(charge.amountCents)}
+                          </p>
+                          <form action={createCheckoutForCharge} className="mt-2">
+                            <input type="hidden" name="chargeId" value={charge.id} />
+                            <SubmitButton
+                              size="sm"
+                              title="Open secure checkout to pay this charge."
+                            >
+                              <CreditCard className="mr-2 h-3.5 w-3.5" />
+                              Pay with Card
+                            </SubmitButton>
+                          </form>
+                        </div>
+                      </DataRow>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {activeSection === "maintenance" && (
+            <>
+              <TicketForm
+                units={maintenanceData.units}
+                onCreateTicket={createMaintenanceTicket}
+              />
+
+              <MaintenanceSection
+                tickets={maintenanceData.tickets}
+                showControls={false}
+                photoWorkflowEnabled={capabilities.photoWorkflowEnabled}
+                photoWorkflowWarning={capabilities.warnings.photoWorkflow}
+              />
+            </>
+          )}
+
+          {activeSection === "documents" && (
             <TenantDocumentsSection
               packets={documentsData.packets}
               files={documentsData.files}
@@ -243,22 +350,23 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
                   : null
               }
             />
-          </div>
-
-          {capabilities.notificationsEnabled ? (
-            <NotificationsSection
-              notifications={notifications}
-              onMarkRead={markNotificationRead}
-            />
-          ) : (
-            <FeatureWarning
-              title="Notifications Unavailable"
-              message={
-                capabilities.warnings.notifications ??
-                "Notifications are not ready yet. Complete setup and reload."
-              }
-            />
           )}
+
+          {activeSection === "notifications" &&
+            (capabilities.notificationsEnabled ? (
+              <NotificationsSection
+                notifications={notifications}
+                onMarkRead={markNotificationRead}
+              />
+            ) : (
+              <FeatureWarning
+                title="Notifications Unavailable"
+                message={
+                  capabilities.warnings.notifications ??
+                  "Notifications are not ready yet. Complete setup and reload."
+                }
+              />
+            ))}
         </div>
       </main>
     </div>
