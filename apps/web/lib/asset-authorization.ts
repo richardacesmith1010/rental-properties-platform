@@ -3,8 +3,9 @@ import type { AppRole } from "@/lib/auth";
 interface BaseAuthorizationInput {
   role: AppRole;
   userId: string;
-  propertyOwnerId: string;
+  isPropertyAdmin: boolean;
   isManagerAssigned: boolean;
+  propertyOwnerId?: string;
 }
 
 export interface MaintenancePhotoAuthorizationInput extends BaseAuthorizationInput {
@@ -17,11 +18,11 @@ export interface DocumentPacketAuthorizationInput extends BaseAuthorizationInput
 
 export function canAccessMaintenancePhoto(input: MaintenancePhotoAuthorizationInput): boolean {
   if (input.role === "owner") {
-    return input.propertyOwnerId === input.userId;
+    return Boolean(input.isPropertyAdmin || input.propertyOwnerId === input.userId);
   }
 
   if (input.role === "manager") {
-    return input.isManagerAssigned;
+    return Boolean(input.isManagerAssigned || input.isPropertyAdmin);
   }
 
   return input.ticketTenantId === input.userId;
@@ -29,11 +30,11 @@ export function canAccessMaintenancePhoto(input: MaintenancePhotoAuthorizationIn
 
 export function canAccessDocumentPacket(input: DocumentPacketAuthorizationInput): boolean {
   if (input.role === "owner") {
-    return input.propertyOwnerId === input.userId;
+    return Boolean(input.isPropertyAdmin || input.propertyOwnerId === input.userId);
   }
 
   if (input.role === "manager") {
-    return input.isManagerAssigned;
+    return Boolean(input.isManagerAssigned || input.isPropertyAdmin);
   }
 
   return input.isSigner;

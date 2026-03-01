@@ -1,30 +1,109 @@
-import { ManagerDashboard } from "@/components/dashboard/manager-dashboard";
-import { getManagerDashboardData } from "@/lib/manager-dashboard";
+import { Dashboard } from "@/components/dashboard";
+import { getDashboardData } from "@/lib/dashboard";
+import { getPortfolioData } from "@/lib/portfolio";
+import { getOwnerMaintenanceTickets } from "@/lib/maintenance";
+import { getOwnerInvitations } from "@/lib/invitations";
+import { getOwnerDocumentsData } from "@/lib/documents";
+import { getNotificationsForUser } from "@/lib/notifications";
 import { getManagerVendors } from "@/lib/vendors";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
-import { signOut, updateTicketStatus, assignVendorToTicket, uploadMaintenancePhoto } from "@/app/actions";
+import { getOwnershipAccountsForUser } from "@/lib/ownership";
+import {
+  createCheckoutForCharge,
+  createLease,
+  createProperty,
+  createUnit,
+  signOut,
+  updateTicketStatus,
+  inviteTenant,
+  inviteManager,
+  inviteOwner,
+  resendInvite,
+  markNotificationRead,
+  createDocumentTemplate,
+  deleteDocumentTemplate,
+  createDocumentPacket,
+  sendDocumentPacket,
+  createVendor,
+  assignVendorToTicket,
+  uploadMaintenancePhoto,
+  createOwnershipAccount,
+  linkPropertyToOwnershipAccount
+} from "@/app/actions";
 import { requireRole } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-export default async function ManagerPage() {
+interface ManagerPageProps {
+  searchParams?: {
+    generated?: string | string[];
+  };
+}
+
+function getGeneratedMessage(value: string | string[] | undefined) {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+  return value ?? null;
+}
+
+export default async function ManagerPage({ searchParams }: ManagerPageProps) {
   const { user } = await requireRole(["manager"]);
   const capabilities = await getFeatureCapabilities();
-  const [data, vendors] = await Promise.all([
-    getManagerDashboardData(user.id),
-    capabilities.vendorWorkflowEnabled ? getManagerVendors(user.id) : Promise.resolve([])
-  ]);
+  const generatedMessage = getGeneratedMessage(searchParams?.generated);
+
+  const [dashboard, portfolio, tickets, invitations, documents, notifications, vendors, ownershipAccounts] =
+    await Promise.all([
+      getDashboardData(user.id),
+      getPortfolioData(user.id),
+      getOwnerMaintenanceTickets(user.id),
+      getOwnerInvitations(user.id),
+      capabilities.documentsEnabled
+        ? getOwnerDocumentsData(user.id)
+        : Promise.resolve({ templates: [], packets: [] }),
+      capabilities.notificationsEnabled
+        ? getNotificationsForUser(user.id)
+        : Promise.resolve([]),
+      capabilities.vendorWorkflowEnabled
+        ? getManagerVendors(user.id)
+        : Promise.resolve([]),
+      getOwnershipAccountsForUser(user.id)
+    ]);
 
   return (
-    <ManagerDashboard
-      data={data}
+    <Dashboard
+      data={dashboard}
+      portfolio={portfolio}
+      tickets={tickets}
+      invitations={invitations}
+      documents={documents}
+      notifications={notifications}
       vendors={vendors}
+      ownershipAccounts={ownershipAccounts}
       capabilities={capabilities}
       userEmail={user.email ?? "unknown"}
       onSignOut={signOut}
+      onCreateProperty={createProperty}
+      onCreateUnit={createUnit}
+      onCreateLease={createLease}
+      onPayCharge={createCheckoutForCharge}
+      onGenerateChargesHref="/owner/generate"
+      generatedMessage={generatedMessage}
       onUpdateTicketStatus={updateTicketStatus}
+      onInviteTenant={inviteTenant}
+      onInviteManager={inviteManager}
+      onInviteOwner={inviteOwner}
+      onResendInvite={resendInvite}
+      onMarkNotificationRead={markNotificationRead}
+      onCreateDocumentTemplate={createDocumentTemplate}
+      onDeleteDocumentTemplate={deleteDocumentTemplate}
+      onCreateDocumentPacket={createDocumentPacket}
+      onSendDocumentPacket={sendDocumentPacket}
+      onCreateVendor={createVendor}
       onAssignVendor={assignVendorToTicket}
-      onUploadPhoto={uploadMaintenancePhoto}
+      onUploadMaintenancePhoto={uploadMaintenancePhoto}
+      onCreateOwnershipAccount={createOwnershipAccount}
+      onLinkPropertyToOwnershipAccount={linkPropertyToOwnershipAccount}
     />
   );
 }

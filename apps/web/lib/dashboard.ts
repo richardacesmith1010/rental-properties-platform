@@ -1,4 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getAdministeredPropertyIds } from "@/lib/property-access";
 
 interface DashboardKpis {
   monthlyGrossRentCents: number;
@@ -52,9 +53,9 @@ function emptyData(role: DashboardData["profileRole"]): DashboardData {
 }
 
 export async function getDashboardData(userId: string): Promise<DashboardData> {
-  const supabase = createClient();
+  const admin = createAdminClient();
 
-  const { data: profile } = await supabase
+  const { data: profile } = await admin
     .from("profiles")
     .select("id, role")
     .eq("id", userId)
@@ -62,18 +63,16 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
 
   const role = (profile?.role ?? "tenant") as DashboardData["profileRole"];
 
-  const { data: properties } = await supabase
-    .from("properties")
-    .select("id")
-    .eq("owner_profile_id", userId);
+  if (role === "tenant") {
+    return emptyData(role);
+  }
 
-  const propertyIds = (properties ?? []).map((p) => p.id);
-
+  const propertyIds = await getAdministeredPropertyIds(userId);
   if (propertyIds.length === 0) {
     return emptyData(role);
   }
 
-  const { data: units } = await supabase
+  const { data: units } = await admin
     .from("units")
     .select("id, occupied")
     .in("property_id", propertyIds);
@@ -92,7 +91,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     };
   }
 
-  const { data: leases } = await supabase
+  const { data: leases } = await admin
     .from("leases")
     .select("id, monthly_rent_cents, active")
     .in("unit_id", unitIds);
@@ -100,53 +99,67 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   const activeLeases = (leases ?? []).filter((l) => l.active);
   const leaseIds = (leases ?? []).map((l) => l.id);
 
-  const { data: maintenance } = await supabase
+  const { data: maintenance } = await admin
     .from("maintenance_tickets")
     .select("id, priority")
     .in("property_id", propertyIds)
     .in("status", ["open", "in_progress"]);
 
-  let charges: Array<{ id: string; lease_id: string; due_date: string; amount_cents: number; status: "pending" | "paid" | "late" }> = [];
+  let charges: Array<{
+    id: string;
+    lease_id: string;
+    due_date: string;
+    amount_cents: number;
+    status: "pending" | "paid" | "late";
+  }> = [];
   let lateCharges: Array<{ amount_cents: number; lease_id: string }> = [];
-  let recentPayments: Array<{ id: string; amount_cents: number; paid_at: string; method: string }> = [];
+  let recentPayments: Array<{
+    id: string;
+    amount_cents: number;
+    paid_at: string;
+    method: string;
+  }> = [];
 
   if (leaseIds.length > 0) {
-    const { data: lateChargeRows } = await supabase
-      .from("rent_charges")
-      .select("amount_cents, lease_id")
-      .in("lease_id", leaseIds)
-      .eq("status", "late");
-
-    const { data: chargeRows } = await supabase
-      .from("rent_charges")
-      .select("id, lease_id, due_date, amount_cents, status")
-      .in("lease_id", leaseIds)
-      .in("status", ["pending", "late"])
-      .order("due_date", { ascending: true })
-      .limit(8);
+    const [{ data: lateChargeRows }, { data: chargeRows }, { data: paymentRows }] = await Promise.all([
+      admin
+        .from("rent_charges")
+        .select("amount_cents, lease_id")
+        .in("lease_id", leaseIds)
+        .eq("status", "late"),
+      admin
+        .from("rent_charges")
+        .select("id, lease_id, due_date, amount_cents, status")
+        .in("lease_id", leaseIds)
+        .in("status", ["pending", "late"])
+        .order("due_date", { ascending: true })
+        .limit(8),
+      admin
+        .from("payments")
+        .select("id, amount_cents, paid_at, method")
+        .order("paid_at", { ascending: false })
+        .limit(8)
+    ]);
 
     lateCharges = lateChargeRows ?? [];
     charges = chargeRows ?? [];
-
-    const { data: paymentRows } = await supabase
-      .from("payments")
-      .select("id, amount_cents, paid_at, method")
-      .order("paid_at", { ascending: false })
-      .limit(8);
-
     recentPayments = paymentRows ?? [];
   }
 
   return {
     profileRole: role,
     kpis: {
-      monthlyGrossRentCents: activeLeases.reduce((sum, lease) => sum + lease.monthly_rent_cents, 0),
+      monthlyGrossRentCents: activeLeases.reduce(
+        (sum, lease) => sum + lease.monthly_rent_cents,
+        0
+      ),
       activeLeaseCount: activeLeases.length,
       occupiedUnits,
       totalUnits: units?.length ?? 0,
       openMaintenanceCount: maintenance?.length ?? 0,
       highPriorityMaintenanceCount:
-        maintenance?.filter((m) => m.priority === "high" || m.priority === "urgent").length ?? 0,
+        maintenance?.filter((m) => m.priority === "high" || m.priority === "urgent")
+          .length ?? 0,
       lateRentCents: lateCharges.reduce((sum, charge) => sum + charge.amount_cents, 0),
       lateAccountCount: new Set(lateCharges.map((c) => c.lease_id)).size
     },

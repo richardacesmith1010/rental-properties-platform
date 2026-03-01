@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/shared/submit-button";
 import type { PortfolioData } from "@/lib/portfolio";
+import type { OwnershipAccountDTO } from "@/lib/ownership";
 import type { ActionState } from "@/app/actions";
 
 type StatefulAction = (
@@ -15,6 +16,7 @@ type StatefulAction = (
 
 interface OperationsSectionProps {
   portfolio: PortfolioData;
+  ownershipAccounts: OwnershipAccountDTO[];
   onCreateProperty: StatefulAction;
   onCreateUnit: StatefulAction;
   onCreateLease: StatefulAction;
@@ -40,6 +42,7 @@ function FormSuccess({ state }: { state: ActionState }) {
 
 export function OperationsSection({
   portfolio,
+  ownershipAccounts,
   onCreateProperty,
   onCreateUnit,
   onCreateLease,
@@ -64,6 +67,14 @@ export function OperationsSection({
             <Input name="city" placeholder="City" required />
             <Input name="state" placeholder="State" required />
             <Input name="postalCode" placeholder="ZIP" required />
+            <Select name="ownerAccountId">
+              <option value="">Default ownership account</option>
+              {ownershipAccounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.displayName}
+                </option>
+              ))}
+            </Select>
             <SubmitButton className="w-full">Save Property</SubmitButton>
           </form>
         </CardContent>

@@ -1,4 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getAdministeredProperties } from "@/lib/property-access";
 
 export interface PropertyListItem {
   id: string;
@@ -7,6 +8,8 @@ export interface PropertyListItem {
   state: string;
   postalCode: string;
   unitCount: number;
+  ownerAccountId: string;
+  ownerAccountName: string;
 }
 
 export interface UnitListItem {
@@ -43,8 +46,9 @@ export interface PortfolioData {
 }
 
 export async function getPortfolioData(userId: string): Promise<PortfolioData> {
-  const supabase = createClient();
-  const { data: selfProfile } = await supabase
+  const admin = createAdminClient();
+
+  const { data: selfProfile } = await admin
     .from("profiles")
     .select("id, email, full_name")
     .eq("id", userId)
@@ -65,17 +69,11 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
     return Array.from(byId.values());
   }
 
-  const { data: properties } = await supabase
-    .from("properties")
-    .select("id, name, city, state, postal_code")
-    .eq("owner_profile_id", userId)
-    .order("created_at", { ascending: true });
-
-  const propertyRows = properties ?? [];
-  const propertyIds = propertyRows.map((property) => property.id);
+  const administeredProperties = await getAdministeredProperties(userId);
+  const propertyIds = administeredProperties.map((property) => property.id);
 
   if (propertyIds.length === 0) {
-    const { data: tenants } = await supabase
+    const { data: tenants } = await admin
       .from("profiles")
       .select("id, email, full_name")
       .eq("role", "tenant")
@@ -90,21 +88,40 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
     };
   }
 
-  const { data: units } = await supabase
-    .from("units")
-    .select("id, property_id, unit_number, monthly_rent_cents, occupied")
-    .in("property_id", propertyIds)
-    .order("unit_number", { ascending: true });
+  const [{ data: properties }, { data: units }, { data: tenants }] = await Promise.all([
+    admin
+      .from("properties")
+      .select("id, name, city, state, postal_code, owner_account_id")
+      .in("id", propertyIds)
+      .order("created_at", { ascending: true }),
+    admin
+      .from("units")
+      .select("id, property_id, unit_number, monthly_rent_cents, occupied")
+      .in("property_id", propertyIds)
+      .order("unit_number", { ascending: true }),
+    admin
+      .from("profiles")
+      .select("id, email, full_name")
+      .eq("role", "tenant")
+      .order("email", { ascending: true })
+      .limit(100)
+  ]);
 
+  const propertyRows = properties ?? [];
   const unitRows = units ?? [];
   const unitIds = unitRows.map((unit) => unit.id);
 
-  const { data: tenants } = await supabase
-    .from("profiles")
-    .select("id, email, full_name")
-    .eq("role", "tenant")
-    .order("email", { ascending: true })
-    .limit(100);
+  const { data: ownershipAccounts } = await admin
+    .from("ownership_accounts")
+    .select("id, display_name")
+    .in(
+      "id",
+      Array.from(new Set(propertyRows.map((property) => property.owner_account_id)))
+    );
+
+  const ownershipAccountNameById = new Map(
+    (ownershipAccounts ?? []).map((account) => [account.id, account.display_name])
+  );
 
   let leases: Array<{
     id: string;
@@ -118,7 +135,7 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
   }> = [];
 
   if (unitIds.length > 0) {
-    const { data: leaseRows } = await supabase
+    const { data: leaseRows } = await admin
       .from("leases")
       .select("id, unit_id, tenant_profile_id, monthly_rent_cents, due_day_of_month, start_date, end_date, active")
       .in("unit_id", unitIds)
@@ -137,7 +154,10 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
     city: property.city,
     state: property.state,
     postalCode: property.postal_code,
-    unitCount: unitRows.filter((unit) => unit.property_id === property.id).length
+    unitCount: unitRows.filter((unit) => unit.property_id === property.id).length,
+    ownerAccountId: property.owner_account_id,
+    ownerAccountName:
+      ownershipAccountNameById.get(property.owner_account_id) ?? "Ownership Account"
   }));
 
   const unitsWithProperty: UnitListItem[] = unitRows.map((unit) => ({

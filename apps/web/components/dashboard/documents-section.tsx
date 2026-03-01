@@ -14,6 +14,7 @@ import { FeatureWarning } from "@/components/shared/feature-warning";
 import type { ActionState } from "@/app/actions";
 import type { DocumentTemplateDTO, DocumentPacketDTO } from "@/lib/documents";
 import type { LeaseListItem } from "@/lib/portfolio";
+import type { OwnershipAccountDTO } from "@/lib/ownership";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -21,6 +22,7 @@ interface DocumentsSectionProps {
   templates: DocumentTemplateDTO[];
   packets: DocumentPacketDTO[];
   leases: LeaseListItem[];
+  ownershipAccounts: OwnershipAccountDTO[];
   onCreateTemplate: StatefulAction;
   onDeleteTemplate: StatefulAction;
   onCreatePacket: StatefulAction;
@@ -45,6 +47,7 @@ export function DocumentsSection({
   templates,
   packets,
   leases,
+  ownershipAccounts,
   onCreateTemplate,
   onDeleteTemplate,
   onCreatePacket,
@@ -86,6 +89,14 @@ export function DocumentsSection({
               <FormSuccess state={templateState} message="Template saved." />
               <Input name="name" placeholder="Template name" required />
               <Input name="category" placeholder="Category (Lease, Notice, Addendum)" required />
+              <Select name="ownerAccountId">
+                <option value="">Default ownership account</option>
+                {ownershipAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.displayName}
+                  </option>
+                ))}
+              </Select>
               <Textarea name="bodyMarkdown" placeholder="Template body (markdown/text)" rows={6} required />
               <SubmitButton className="w-full">Save Template</SubmitButton>
             </form>

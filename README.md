@@ -104,6 +104,32 @@ Run these migrations after Phase 5:
 - `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase7_invitations.sql`
 - `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase8_documents_notifications_maintenance.sql`
 
+## Phase 9 Update (LLC + Shared Operator Access)
+
+- Ownership account model for individual and LLC ownership
+- Co-owner membership support for equal-access LLC operators
+- Property-account linkage (`properties.owner_account_id`) with permission helpers:
+  - `can_administer_property(property_id)`
+  - `can_view_property(property_id)`
+  - compatibility alias: `can_access_property(property_id)`
+- Unified owner/manager operational authorization at property scope
+- Manager route upgraded to full operations parity with owner workflows:
+  - properties, units, leases, charges, maintenance, documents, vendors, invitations
+- Ownership dashboard section:
+  - create ownership account
+  - link property to ownership account
+  - invite co-owner
+- Critical-event notification fan-out to active owner members:
+  - new ticket
+  - ticket resolved/closed
+  - late rent
+  - payment recorded
+  - lease created/updated
+  - document sent/signed
+
+Run this migration after Phase 8:
+- `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase9_llc_and_shared_operator_access.sql`
+
 ## Automatic Rent Charge Generation
 
 - Scheduled endpoint: `/api/cron/generate-charges`
@@ -135,7 +161,7 @@ APP_URL=http://localhost:3000 CRON_SECRET=<secret> npm run smoke:web
 
 ## Next Build Steps
 
-1. Apply/verify Phase 8 migration and storage policies in live Supabase
+1. Apply/verify Phase 9 migration and storage policies in live Supabase
 2. Configure `RESEND_API_KEY` + `RESEND_FROM_EMAIL` in Vercel for email notifications
 3. Run pre-release checks and smoke tests:
    - `npm test --workspace @rental/web`

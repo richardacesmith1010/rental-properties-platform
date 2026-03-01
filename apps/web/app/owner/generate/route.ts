@@ -16,10 +16,11 @@ export async function GET(request: Request) {
   }
 
   const role = await getCurrentUserRole(user.id);
-  if (role !== "owner") {
+  if (role !== "owner" && role !== "manager") {
     return NextResponse.redirect(`${origin}/portal`);
   }
 
   const message = await generateMonthlyChargesForOwner(user.id);
-  return NextResponse.redirect(`${origin}/owner?generated=${encodeURIComponent(message)}`);
+  const destination = role === "manager" ? "/manager" : "/owner";
+  return NextResponse.redirect(`${origin}${destination}?generated=${encodeURIComponent(message)}`);
 }

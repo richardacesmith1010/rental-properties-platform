@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getAdministeredPropertyIds } from "@/lib/property-access";
 
 export interface MaintenanceTicket {
   id: string;
@@ -208,18 +210,17 @@ export async function getTenantMaintenanceData(
 export async function getOwnerMaintenanceTickets(
   userId: string
 ): Promise<MaintenanceTicket[]> {
-  const supabase = createClient();
-
-  const { data: properties } = await supabase
-    .from("properties")
-    .select("id, name")
-    .eq("owner_profile_id", userId);
-
-  const propertyIds = (properties ?? []).map((p) => p.id);
+  const supabase = createAdminClient();
+  const propertyIds = await getAdministeredPropertyIds(userId);
 
   if (propertyIds.length === 0) {
     return [];
   }
+
+  const { data: properties } = await supabase
+    .from("properties")
+    .select("id, name")
+    .in("id", propertyIds);
 
   const propertyById = new Map(
     (properties ?? []).map((p) => [p.id, p])
@@ -312,15 +313,8 @@ export async function getOwnerMaintenanceTickets(
 export async function getManagerMaintenanceTickets(
   userId: string
 ): Promise<MaintenanceTicket[]> {
-  const supabase = createClient();
-
-  const { data: assignments } = await supabase
-    .from("property_managers")
-    .select("property_id")
-    .eq("manager_profile_id", userId)
-    .eq("active", true);
-
-  const propertyIds = (assignments ?? []).map((a) => a.property_id);
+  const supabase = createAdminClient();
+  const propertyIds = await getAdministeredPropertyIds(userId);
 
   if (propertyIds.length === 0) {
     return [];

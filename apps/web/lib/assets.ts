@@ -1,5 +1,6 @@
 import type { AppRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { canUserAdministerProperty } from "@/lib/property-access";
 import {
   canAccessDocumentPacket,
   canAccessMaintenancePhoto,
@@ -75,7 +76,7 @@ export async function getSignedMaintenancePhotoAsset(
 
     const { data: property, error: propertyError } = await admin
       .from("properties")
-      .select("id, owner_profile_id")
+      .select("id")
       .eq("id", ticket.property_id)
       .single();
 
@@ -87,12 +88,13 @@ export async function getSignedMaintenancePhotoAsset(
       role === "manager"
         ? await isManagerAssignedToProperty(userId, property.id)
         : false;
+    const isPropertyAdmin = await canUserAdministerProperty(userId, property.id);
 
     if (
       !canAccessMaintenancePhoto({
         role,
         userId,
-        propertyOwnerId: property.owner_profile_id,
+        isPropertyAdmin,
         isManagerAssigned,
         ticketTenantId: ticket.tenant_profile_id,
       })
@@ -148,7 +150,7 @@ export async function getSignedDocumentPacketAsset(
 
     const { data: property, error: propertyError } = await admin
       .from("properties")
-      .select("id, owner_profile_id")
+      .select("id")
       .eq("id", packet.property_id)
       .single();
 
@@ -164,6 +166,7 @@ export async function getSignedDocumentPacketAsset(
       role === "manager"
         ? await isManagerAssignedToProperty(userId, property.id)
         : false;
+    const isPropertyAdmin = await canUserAdministerProperty(userId, property.id);
 
     let isSigner = false;
     if (role === "tenant") {
@@ -199,7 +202,7 @@ export async function getSignedDocumentPacketAsset(
       !canAccessDocumentPacket({
         role,
         userId,
-        propertyOwnerId: property.owner_profile_id,
+        isPropertyAdmin,
         isManagerAssigned,
         isSigner,
       })

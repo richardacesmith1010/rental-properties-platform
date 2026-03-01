@@ -6,6 +6,7 @@ import type { NotificationDTO } from "@/lib/notifications";
 import type { OwnerDocumentsData } from "@/lib/documents";
 import type { VendorDTO } from "@/lib/vendors";
 import type { FeatureCapabilitiesDTO } from "@/lib/feature-capabilities";
+import type { OwnershipAccountDTO } from "@/lib/ownership";
 import type { ActionState } from "@/app/actions";
 import { Badge } from "@/components/ui/badge";
 import { FeatureWarning } from "@/components/shared/feature-warning";
@@ -21,6 +22,7 @@ import { LeasesSection } from "./leases-section";
 import { NotificationsSection } from "./notifications-section";
 import { DocumentsSection } from "./documents-section";
 import { VendorsSection } from "./vendors-section";
+import { OwnershipSection } from "./ownership-section";
 
 type FormAction = (formData: FormData) => Promise<void>;
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
@@ -34,6 +36,7 @@ interface DashboardProps {
   documents?: OwnerDocumentsData;
   vendors?: VendorDTO[];
   capabilities?: FeatureCapabilitiesDTO;
+  ownershipAccounts?: OwnershipAccountDTO[];
   generatedMessage?: string | null;
   userEmail: string;
   onGenerateChargesHref?: string;
@@ -45,6 +48,7 @@ interface DashboardProps {
   onUpdateTicketStatus?: StatefulAction;
   onInviteTenant?: StatefulAction;
   onInviteManager?: StatefulAction;
+  onInviteOwner?: StatefulAction;
   onResendInvite?: StatefulAction;
   onMarkNotificationRead?: StatefulAction;
   onCreateDocumentTemplate?: StatefulAction;
@@ -54,6 +58,8 @@ interface DashboardProps {
   onCreateVendor?: StatefulAction;
   onAssignVendor?: StatefulAction;
   onUploadMaintenancePhoto?: StatefulAction;
+  onCreateOwnershipAccount?: StatefulAction;
+  onLinkPropertyToOwnershipAccount?: StatefulAction;
 }
 
 export function Dashboard({
@@ -65,6 +71,7 @@ export function Dashboard({
   documents,
   vendors,
   capabilities,
+  ownershipAccounts,
   generatedMessage,
   userEmail,
   onGenerateChargesHref,
@@ -76,6 +83,7 @@ export function Dashboard({
   onUpdateTicketStatus,
   onInviteTenant,
   onInviteManager,
+  onInviteOwner,
   onResendInvite,
   onMarkNotificationRead,
   onCreateDocumentTemplate,
@@ -84,7 +92,9 @@ export function Dashboard({
   onSendDocumentPacket,
   onCreateVendor,
   onAssignVendor,
-  onUploadMaintenancePhoto
+  onUploadMaintenancePhoto,
+  onCreateOwnershipAccount,
+  onLinkPropertyToOwnershipAccount
 }: DashboardProps) {
   const safePortfolio: PortfolioData = portfolio ?? {
     properties: [],
@@ -98,6 +108,7 @@ export function Dashboard({
   };
   const safeNotifications: NotificationDTO[] = notifications ?? [];
   const safeVendors: VendorDTO[] = vendors ?? [];
+  const safeOwnershipAccounts: OwnershipAccountDTO[] = ownershipAccounts ?? [];
   const safeCapabilities: FeatureCapabilitiesDTO = capabilities ?? {
     documentsEnabled: true,
     documentAssetAccessEnabled: true,
@@ -201,12 +212,30 @@ export function Dashboard({
             )
           )}
 
-          {onInviteTenant && onInviteManager && onResendInvite && (
+          {onCreateOwnershipAccount && onLinkPropertyToOwnershipAccount && (
+            <OwnershipSection
+              accounts={safeOwnershipAccounts}
+              properties={safePortfolio.properties.map((property) => ({
+                id: property.id,
+                name: property.name,
+                ownerAccountName: property.ownerAccountName
+              }))}
+              onCreateOwnershipAccount={onCreateOwnershipAccount}
+              onLinkPropertyToOwnershipAccount={onLinkPropertyToOwnershipAccount}
+            />
+          )}
+
+          {onInviteTenant && onInviteManager && onInviteOwner && onResendInvite && (
             <InvitationsSection
+              ownershipAccounts={safeOwnershipAccounts.map((account) => ({
+                id: account.id,
+                displayName: account.displayName
+              }))}
               properties={safePortfolio.properties}
               invitations={invitations ?? []}
               onInviteTenant={onInviteTenant}
               onInviteManager={onInviteManager}
+              onInviteOwner={onInviteOwner}
               onResendInvite={onResendInvite}
             />
           )}
@@ -219,6 +248,7 @@ export function Dashboard({
                 templates={safeDocuments.templates}
                 packets={safeDocuments.packets}
                 leases={safePortfolio.leases}
+                ownershipAccounts={safeOwnershipAccounts}
                 onCreateTemplate={onCreateDocumentTemplate}
                 onDeleteTemplate={onDeleteDocumentTemplate}
                 onCreatePacket={onCreateDocumentPacket}
@@ -238,6 +268,7 @@ export function Dashboard({
             safeCapabilities.vendorWorkflowEnabled ? (
               <VendorsSection
                 vendors={safeVendors}
+                ownershipAccounts={safeOwnershipAccounts}
                 onCreateVendor={onCreateVendor}
               />
             ) : (
@@ -253,6 +284,7 @@ export function Dashboard({
 
           <OperationsSection
             portfolio={safePortfolio}
+            ownershipAccounts={safeOwnershipAccounts}
             onCreateProperty={onCreateProperty}
             onCreateUnit={onCreateUnit}
             onCreateLease={onCreateLease}

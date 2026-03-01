@@ -8,6 +8,7 @@ import { getOwnerDocumentsData } from "@/lib/documents";
 import { getNotificationsForUser } from "@/lib/notifications";
 import { getOwnerVendors } from "@/lib/vendors";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
+import { getOwnershipAccountsForUser } from "@/lib/ownership";
 import {
   createCheckoutForCharge,
   createLease,
@@ -17,6 +18,7 @@ import {
   updateTicketStatus,
   inviteTenant,
   inviteManager,
+  inviteOwner,
   resendInvite,
   markNotificationRead,
   createDocumentTemplate,
@@ -26,6 +28,8 @@ import {
   createVendor,
   assignVendorToTicket,
   uploadMaintenancePhoto,
+  createOwnershipAccount,
+  linkPropertyToOwnershipAccount
 } from "@/app/actions";
 import { requireRole } from "@/lib/auth";
 
@@ -42,7 +46,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
   const capabilities = await getFeatureCapabilities();
   const generatedMessage = getGeneratedMessage(searchParams?.generated);
 
-  const [dashboard, portfolio, tickets, invitations, documents, notifications, vendors] = await Promise.all([
+  const [dashboard, portfolio, tickets, invitations, documents, notifications, vendors, ownershipAccounts] = await Promise.all([
     getDashboardData(user.id),
     getPortfolioData(user.id),
     getOwnerMaintenanceTickets(user.id),
@@ -55,7 +59,8 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       : Promise.resolve([]),
     capabilities.vendorWorkflowEnabled
       ? getOwnerVendors(user.id)
-      : Promise.resolve([])
+      : Promise.resolve([]),
+    getOwnershipAccountsForUser(user.id)
   ]);
 
   return (
@@ -67,6 +72,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       documents={documents}
       notifications={notifications}
       vendors={vendors}
+      ownershipAccounts={ownershipAccounts}
       capabilities={capabilities}
       userEmail={user.email ?? "unknown"}
       onSignOut={signOut}
@@ -79,6 +85,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       onUpdateTicketStatus={updateTicketStatus}
       onInviteTenant={inviteTenant}
       onInviteManager={inviteManager}
+      onInviteOwner={inviteOwner}
       onResendInvite={resendInvite}
       onMarkNotificationRead={markNotificationRead}
       onCreateDocumentTemplate={createDocumentTemplate}
@@ -88,6 +95,8 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       onCreateVendor={createVendor}
       onAssignVendor={assignVendorToTicket}
       onUploadMaintenancePhoto={uploadMaintenancePhoto}
+      onCreateOwnershipAccount={createOwnershipAccount}
+      onLinkPropertyToOwnershipAccount={linkPropertyToOwnershipAccount}
     />
   );
 }

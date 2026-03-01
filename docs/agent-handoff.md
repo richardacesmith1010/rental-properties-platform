@@ -20,6 +20,23 @@
   - `vendors`, `maintenance_assignments`, `maintenance_photos` integration
 - Added migration:
   - `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase8_documents_notifications_maintenance.sql`
+- Added migration:
+  - `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase9_llc_and_shared_operator_access.sql`
+- Added ownership + shared-operator app layer:
+  - `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/lib/property-access.ts`
+  - `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/lib/ownership.ts`
+  - Ownership account dashboard UI section + owner invite flow
+- Owner/manager permission model unified to property-admin checks across actions/libs.
+- Manager route upgraded to full operations parity using shared dashboard shell.
+- Critical owner-member notification fan-out wired for:
+  - `new_ticket`
+  - `ticket_resolved`
+  - `late_rent`
+  - `payment_recorded`
+  - `lease_updated`
+  - `document_sent`
+  - `document_signed`
+- Webhook and charge-generation flows updated for ownership-account + manager compatibility.
 - Upgraded mobile shell to tenant-first V1 workflow skeleton:
   - `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/mobile/app/index.tsx`
 - Added regression and schema validation coverage for new validation contracts.
@@ -45,11 +62,10 @@
   - `npx tsc -p apps/mobile/tsconfig.json --noEmit` passed
 
 ## In Progress (Codex)
-- Production deployment + live migration application verification.
-- Blocker: local `vercel --prod` failed with invalid token; Git push to `main` completed.
+- Production deployment + live migration application verification for Phase 9.
 
 ## Pending (Claude)
-- Apply and verify Phase 8 migration in live Supabase if not yet applied.
+- Apply and verify Phase 9 migration in live Supabase if not yet applied.
 - Validate storage bucket access strategy for private assets.
 - Confirm storage object-level policies for:
   - `lease-documents`

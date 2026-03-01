@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyWebhookSignature } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createNotificationWithDelivery, notifyOwnerMembersForProperty } from "@/lib/notifications";
 
 export async function POST(request: NextRequest) {
   const payload = await request.text();
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
 
   const { data: property } = await supabase
     .from("properties")
-    .select("id, owner_profile_id")
+    .select("id, owner_account_id")
     .eq("id", unit.property_id)
     .single();
 
@@ -83,11 +84,30 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Property not found." }, { status: 422 });
   }
 
-  // Verify the user is authorized (owner or tenant)
-  const isOwner = property.owner_profile_id === userId;
+  // Verify the user is authorized (owner member, assigned manager, or tenant).
+  const [{ data: ownerMembership }, { data: managerAssignment }] = await Promise.all([
+    supabase
+      .from("ownership_account_members")
+      .select("account_id")
+      .eq("account_id", property.owner_account_id)
+      .eq("profile_id", userId)
+      .eq("member_role", "owner")
+      .eq("active", true)
+      .maybeSingle(),
+    supabase
+      .from("property_managers")
+      .select("property_id")
+      .eq("property_id", property.id)
+      .eq("manager_profile_id", userId)
+      .eq("active", true)
+      .maybeSingle()
+  ]);
+
+  const isOwner = Boolean(ownerMembership?.account_id);
+  const isManager = Boolean(managerAssignment?.property_id);
   const isTenant = lease.tenant_profile_id === userId;
 
-  if (!isOwner && !isTenant) {
+  if (!isOwner && !isManager && !isTenant) {
     return NextResponse.json({ error: "Unauthorized user for this charge." }, { status: 403 });
   }
 
@@ -111,6 +131,33 @@ export async function POST(request: NextRequest) {
 
   // Mark charge as paid
   await supabase.from("rent_charges").update({ status: "paid" }).eq("id", charge.id);
+
+  const { data: tenantProfile } = await supabase
+    .from("profiles")
+    .select("id, email")
+    .eq("id", lease.tenant_profile_id)
+    .maybeSingle();
+
+  await notifyOwnerMembersForProperty({
+    propertyId: property.id,
+    type: "payment_recorded",
+    title: "Rent payment recorded",
+    body: `A rent payment was recorded for charge ${charge.id.slice(0, 8)}.`,
+    entityType: "rent_charge",
+    entityId: charge.id
+  });
+
+  if (tenantProfile?.id) {
+    await createNotificationWithDelivery({
+      recipientProfileId: tenantProfile.id,
+      recipientEmail: tenantProfile.email,
+      type: "payment_recorded",
+      title: "Payment received",
+      body: "Your rent payment has been recorded successfully.",
+      entityType: "rent_charge",
+      entityId: charge.id
+    });
+  }
 
   return NextResponse.json({ received: true, status: "payment_recorded" });
 }

@@ -22,10 +22,12 @@ interface PropertyOption {
 }
 
 interface InvitationsSectionProps {
+  ownershipAccounts: Array<{ id: string; displayName: string }>;
   properties: PropertyOption[];
   invitations: InvitationListItem[];
   onInviteTenant: StatefulAction;
   onInviteManager: StatefulAction;
+  onInviteOwner: StatefulAction;
   onResendInvite: StatefulAction;
 }
 
@@ -61,19 +63,22 @@ const statusVariant: Record<string, "warning" | "success" | "outline"> = {
 };
 
 export function InvitationsSection({
+  ownershipAccounts,
   properties,
   invitations,
   onInviteTenant,
   onInviteManager,
+  onInviteOwner,
   onResendInvite,
 }: InvitationsSectionProps) {
   const [tenantState, tenantAction] = useFormState(onInviteTenant, null);
   const [managerState, managerAction] = useFormState(onInviteManager, null);
+  const [ownerState, ownerAction] = useFormState(onInviteOwner, null);
 
   return (
     <div id="invitations">
       {/* Invite forms — 2-column grid */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 mb-4">
+      <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Invite Tenant */}
         <Card>
           <CardHeader>
@@ -116,6 +121,35 @@ export function InvitationsSection({
                 {properties.map((property) => (
                   <option key={property.id} value={property.id}>
                     {property.name}
+                  </option>
+                ))}
+              </Select>
+              <SubmitButton className="w-full">Send Invitation</SubmitButton>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Invite Co-owner */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Invite Co-owner</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form className="space-y-3" action={ownerAction}>
+              <FormError state={ownerState} />
+              <FormSuccess state={ownerState} />
+              <Input
+                name="email"
+                type="email"
+                placeholder="Co-owner email"
+                required
+              />
+              <Input name="fullName" placeholder="Full name" required />
+              <Select name="ownershipAccountId" required>
+                <option value="">Select ownership account</option>
+                {ownershipAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.displayName}
                   </option>
                 ))}
               </Select>
@@ -180,6 +214,9 @@ function InvitationRow({
           </Badge>
           {invitation.propertyName && (
             <Badge variant="outline">{invitation.propertyName}</Badge>
+          )}
+          {invitation.ownershipAccountName && (
+            <Badge variant="outline">{invitation.ownershipAccountName}</Badge>
           )}
         </div>
         <p className="mt-1 text-[11px] text-zinc-400">

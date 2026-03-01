@@ -7,12 +7,23 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserRole } from "@/lib/auth";
 import { createStripeCheckoutSession } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createNotificationWithDelivery } from "@/lib/notifications";
+import {
+  createNotificationWithDelivery,
+  notifyOwnerMembersForProperty
+} from "@/lib/notifications";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import {
   getVendorAssignmentPlan,
   shouldThrottleDocumentPacketSend
 } from "@/lib/idempotency";
+import {
+  canUserAdministerProperty,
+  getAdministeredOwnerAccountIds
+} from "@/lib/property-access";
+import {
+  canUserAdministerOwnershipAccount,
+  getOrCreateIndividualOwnershipAccount
+} from "@/lib/ownership";
 import {
   createPropertySchema,
   createUnitSchema,
@@ -23,6 +34,7 @@ import {
   updateTicketCostSchema,
   inviteTenantSchema,
   inviteManagerSchema,
+  inviteOwnerSchema,
   resendInviteSchema,
   createDocumentTemplateSchema,
   updateDocumentTemplateSchema,
@@ -34,6 +46,9 @@ import {
   createVendorSchema,
   assignVendorSchema,
   uploadMaintenancePhotoSchema,
+  createOwnershipAccountSchema,
+  addOwnershipMemberSchema,
+  linkPropertyToOwnershipAccountSchema,
   parseFormData,
 } from "@/lib/validations";
 
@@ -102,7 +117,7 @@ export async function createProperty(_prev: ActionState, formData: FormData): Pr
     redirect("/login");
   }
   const role = await getCurrentUserRole(user.id);
-  if (role !== "owner") {
+  if (role !== "owner" && role !== "manager") {
     redirect("/portal");
   }
 
@@ -111,23 +126,47 @@ export async function createProperty(_prev: ActionState, formData: FormData): Pr
     return parsed;
   }
 
-  const { name, addressLine1, city, state, postalCode } = parsed.data;
+  const { name, addressLine1, city, state, postalCode, ownerAccountId } = parsed.data;
+  let targetOwnerAccountId = ownerAccountId;
 
-  const { error } = await supabase.from("properties").insert({
+  if (!targetOwnerAccountId) {
+    targetOwnerAccountId = await getOrCreateIndividualOwnershipAccount(user.id);
+  } else {
+    const canUseAccount = await canUserAdministerOwnershipAccount(user.id, targetOwnerAccountId);
+    if (!canUseAccount) {
+      return { success: false, error: "You do not have access to that ownership account." };
+    }
+  }
+
+  const { data: property, error } = await supabase.from("properties").insert({
     owner_profile_id: user.id,
+    owner_account_id: targetOwnerAccountId,
     name,
     address_line1: addressLine1,
     city,
     state,
     postal_code: postalCode
-  });
+  }).select("id").single();
 
   if (error) {
     return { success: false, error: "Failed to create property. Please try again." };
   }
 
+  if (role === "manager" && property?.id) {
+    const admin = createAdminClient();
+    await admin.from("property_managers").upsert(
+      {
+        property_id: property.id,
+        manager_profile_id: user.id,
+        active: true
+      },
+      { onConflict: "property_id,manager_profile_id" }
+    );
+  }
+
   revalidatePath("/");
   revalidatePath("/owner");
+  revalidatePath("/manager");
   return { success: true };
 }
 
@@ -141,7 +180,7 @@ export async function createUnit(_prev: ActionState, formData: FormData): Promis
     redirect("/login");
   }
   const role = await getCurrentUserRole(user.id);
-  if (role !== "owner") {
+  if (role !== "owner" && role !== "manager") {
     redirect("/portal");
   }
 
@@ -151,6 +190,10 @@ export async function createUnit(_prev: ActionState, formData: FormData): Promis
   }
 
   const { propertyId, unitNumber, bedrooms, bathrooms, monthlyRentDollars } = parsed.data;
+  const canAdminister = await canUserAdministerProperty(user.id, propertyId);
+  if (!canAdminister) {
+    return { success: false, error: "You do not have access to this property." };
+  }
 
   const { error } = await supabase.from("units").insert({
     property_id: propertyId,
@@ -167,6 +210,7 @@ export async function createUnit(_prev: ActionState, formData: FormData): Promis
 
   revalidatePath("/");
   revalidatePath("/owner");
+  revalidatePath("/manager");
   return { success: true };
 }
 
@@ -180,7 +224,7 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
     redirect("/login");
   }
   const role = await getCurrentUserRole(user.id);
-  if (role !== "owner") {
+  if (role !== "owner" && role !== "manager") {
     redirect("/portal");
   }
 
@@ -191,6 +235,21 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
 
   const { unitId, tenantProfileId, startDate, endDate, dueDayOfMonth, monthlyRentDollars, depositDollars } =
     parsed.data;
+
+  const { data: unit } = await supabase
+    .from("units")
+    .select("id, property_id")
+    .eq("id", unitId)
+    .single();
+
+  if (!unit) {
+    return { success: false, error: "Unit not found." };
+  }
+
+  const canAdminister = await canUserAdministerProperty(user.id, unit.property_id);
+  if (!canAdminister) {
+    return { success: false, error: "You do not have access to this unit." };
+  }
 
   const { error } = await supabase.from("leases").insert({
     unit_id: unitId,
@@ -209,8 +268,36 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
 
   await supabase.from("units").update({ occupied: true }).eq("id", unitId);
 
+  const { data: tenantProfile } = await createAdminClient()
+    .from("profiles")
+    .select("id, email")
+    .eq("id", tenantProfileId)
+    .maybeSingle();
+
+  await notifyOwnerMembersForProperty({
+    propertyId: unit.property_id,
+    type: "lease_updated",
+    title: "Lease created",
+    body: "A new lease was created for one of your properties.",
+    entityType: "lease",
+    entityId: null
+  });
+
+  if (tenantProfile?.id) {
+    await createNotificationWithDelivery({
+      recipientProfileId: tenantProfile.id,
+      recipientEmail: tenantProfile.email,
+      type: "lease_updated",
+      title: "Lease created",
+      body: "A lease has been created or updated for your unit.",
+      entityType: "lease",
+      entityId: null
+    });
+  }
+
   revalidatePath("/");
   revalidatePath("/owner");
+  revalidatePath("/manager");
   return { success: true };
 }
 
@@ -232,7 +319,7 @@ export async function createCheckoutForCharge(formData: FormData) {
   const { chargeId } = parsed.data;
 
   const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "tenant") {
+  if (role !== "owner" && role !== "manager" && role !== "tenant") {
     redirect("/portal");
   }
 
@@ -268,7 +355,7 @@ export async function createCheckoutForCharge(formData: FormData) {
 
   const { data: property } = await supabase
     .from("properties")
-    .select("id, owner_profile_id")
+    .select("id")
     .eq("id", unit.property_id)
     .single();
 
@@ -276,9 +363,9 @@ export async function createCheckoutForCharge(formData: FormData) {
     return;
   }
 
-  const isOwner = property.owner_profile_id === user.id;
+  const isAdmin = await canUserAdministerProperty(user.id, property.id);
   const isTenant = lease.tenant_profile_id === user.id;
-  if (!isOwner && !isTenant) {
+  if (!isAdmin && !isTenant) {
     redirect("/portal");
   }
 
@@ -314,7 +401,7 @@ export async function createMaintenanceTicket(
   }
 
   const role = await getCurrentUserRole(user.id);
-  if (role !== "tenant" && role !== "owner") {
+  if (role !== "tenant" && role !== "owner" && role !== "manager") {
     redirect("/portal");
   }
 
@@ -336,12 +423,31 @@ export async function createMaintenanceTicket(
     return { success: false, error: "Unit not found." };
   }
 
+  if (role === "tenant") {
+    const { data: lease } = await supabase
+      .from("leases")
+      .select("id")
+      .eq("unit_id", unit.id)
+      .eq("tenant_profile_id", user.id)
+      .eq("active", true)
+      .maybeSingle();
+
+    if (!lease) {
+      return { success: false, error: "You can only submit tickets for your leased unit." };
+    }
+  } else {
+    const canAdminister = await canUserAdministerProperty(user.id, unit.property_id);
+    if (!canAdminister) {
+      return { success: false, error: "You do not have access to this unit." };
+    }
+  }
+
   const { data: ticket, error } = await supabase
     .from("maintenance_tickets")
     .insert({
       property_id: unit.property_id,
       unit_id: unitId,
-      tenant_profile_id: user.id,
+      tenant_profile_id: role === "tenant" ? user.id : null,
       title,
       description,
       priority
@@ -357,10 +463,10 @@ export async function createMaintenanceTicket(
   try {
     const admin = createAdminClient();
 
-    const [{ data: property }, { data: assignments }, { data: tenantProfile }] = await Promise.all([
+    const [{ data: property }, { data: assignments }, { data: actorProfile }] = await Promise.all([
       admin
         .from("properties")
-        .select("id, owner_profile_id, name")
+        .select("id, name")
         .eq("id", unit.property_id)
         .single(),
       admin
@@ -376,12 +482,23 @@ export async function createMaintenanceTicket(
     ]);
 
     const recipientIds = new Set<string>();
-    if (property?.owner_profile_id) {
-      recipientIds.add(property.owner_profile_id);
-    }
     for (const assignment of assignments ?? []) {
-      recipientIds.add(assignment.manager_profile_id);
+      if (assignment.manager_profile_id !== user.id) {
+        recipientIds.add(assignment.manager_profile_id);
+      }
     }
+
+    const fromActor = actorProfile?.email ?? "A user";
+    const propertyName = property?.name ?? "Property";
+    await notifyOwnerMembersForProperty({
+      propertyId: unit.property_id,
+      type: "new_ticket",
+      title: "New maintenance ticket",
+      body: `${fromActor} submitted "${title}" for ${propertyName}.`,
+      entityType: "maintenance_ticket",
+      entityId: ticket.id,
+      excludeProfileId: user.id
+    });
 
     if (recipientIds.size > 0) {
       const { data: recipients } = await admin
@@ -389,15 +506,13 @@ export async function createMaintenanceTicket(
         .select("id, email")
         .in("id", Array.from(recipientIds));
 
-      const fromTenant = tenantProfile?.email ?? "A tenant";
-      const propertyName = property?.name ?? "Property";
       for (const recipient of recipients ?? []) {
         await createNotificationWithDelivery({
           recipientProfileId: recipient.id,
           recipientEmail: recipient.email,
           type: "new_ticket",
           title: "New maintenance ticket",
-          body: `${fromTenant} submitted \"${title}\" for ${propertyName}.`,
+          body: `${fromActor} submitted "${title}" for ${propertyName}.`,
           entityType: "maintenance_ticket",
           entityId: ticket.id
         });
@@ -438,6 +553,21 @@ export async function updateTicketStatus(
 
   const { ticketId, status } = parsed.data;
 
+  const { data: ticket } = await supabase
+    .from("maintenance_tickets")
+    .select("id, property_id, title")
+    .eq("id", ticketId)
+    .single();
+
+  if (!ticket) {
+    return { success: false, error: "Ticket not found." };
+  }
+
+  const canAdminister = await canUserAdministerProperty(user.id, ticket.property_id);
+  if (!canAdminister) {
+    return { success: false, error: "You do not have access to this ticket." };
+  }
+
   const updateData: Record<string, unknown> = { status };
   if (status === "resolved") {
     updateData.resolved_at = new Date().toISOString();
@@ -450,6 +580,17 @@ export async function updateTicketStatus(
 
   if (error) {
     return { success: false, error: "Failed to update ticket status." };
+  }
+
+  if (status === "resolved" || status === "closed") {
+    await notifyOwnerMembersForProperty({
+      propertyId: ticket.property_id,
+      type: "ticket_resolved",
+      title: "Maintenance ticket resolved",
+      body: `"${ticket.title}" was marked ${status}.`,
+      entityType: "maintenance_ticket",
+      entityId: ticket.id
+    });
   }
 
   revalidatePath("/owner");
@@ -472,7 +613,7 @@ export async function updateTicketCost(
   }
 
   const role = await getCurrentUserRole(user.id);
-  if (role !== "owner") {
+  if (role !== "owner" && role !== "manager") {
     redirect("/portal");
   }
 
@@ -482,6 +623,21 @@ export async function updateTicketCost(
   }
 
   const { ticketId, actualCostDollars } = parsed.data;
+
+  const { data: ticket } = await supabase
+    .from("maintenance_tickets")
+    .select("id, property_id")
+    .eq("id", ticketId)
+    .single();
+
+  if (!ticket) {
+    return { success: false, error: "Ticket not found." };
+  }
+
+  const canAdminister = await canUserAdministerProperty(user.id, ticket.property_id);
+  if (!canAdminister) {
+    return { success: false, error: "You do not have access to this ticket." };
+  }
 
   const { error } = await supabase
     .from("maintenance_tickets")
@@ -512,7 +668,7 @@ export async function inviteTenant(
     redirect("/login");
   }
   const role = await getCurrentUserRole(user.id);
-  if (role !== "owner") {
+  if (role !== "owner" && role !== "manager") {
     redirect("/portal");
   }
 
@@ -589,6 +745,7 @@ export async function inviteTenant(
   }
 
   revalidatePath("/owner");
+  revalidatePath("/manager");
   return { success: true };
 }
 
@@ -605,7 +762,7 @@ export async function inviteManager(
     redirect("/login");
   }
   const role = await getCurrentUserRole(user.id);
-  if (role !== "owner") {
+  if (role !== "owner" && role !== "manager") {
     redirect("/portal");
   }
 
@@ -617,15 +774,14 @@ export async function inviteManager(
   const { email, fullName, propertyId } = parsed.data;
   const admin = createAdminClient();
 
-  // Verify owner actually owns this property
+  // Verify inviter can administer this property.
   const { data: property } = await supabase
     .from("properties")
     .select("id")
     .eq("id", propertyId)
-    .eq("owner_profile_id", user.id)
     .single();
 
-  if (!property) {
+  if (!property || !(await canUserAdministerProperty(user.id, property.id))) {
     return { success: false, error: "Property not found." };
   }
 
@@ -654,8 +810,9 @@ export async function inviteManager(
         return { success: false, error: "Failed to assign manager to property." };
       }
 
-      revalidatePath("/owner");
-      return { success: true };
+	      revalidatePath("/owner");
+        revalidatePath("/manager");
+	      return { success: true };
     }
     return {
       success: false,
@@ -699,6 +856,266 @@ export async function inviteManager(
   }
 
   revalidatePath("/owner");
+  revalidatePath("/manager");
+  return { success: true };
+}
+
+export async function inviteOwner(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" && role !== "manager") {
+    redirect("/portal");
+  }
+
+  const parsed = parseFormData(inviteOwnerSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { email, fullName, ownershipAccountId } = parsed.data;
+  const admin = createAdminClient();
+
+  if (!(await canUserAdministerOwnershipAccount(user.id, ownershipAccountId))) {
+    return { success: false, error: "You do not have access to that ownership account." };
+  }
+
+  const { data: existingProfile } = await admin
+    .from("profiles")
+    .select("id, role")
+    .eq("email", email.toLowerCase())
+    .maybeSingle();
+
+  if (existingProfile && existingProfile.role !== "owner") {
+    return {
+      success: false,
+      error: "This email already belongs to a non-owner profile."
+    };
+  }
+
+  if (existingProfile?.id) {
+    const { error } = await admin.from("ownership_account_members").upsert(
+      {
+        account_id: ownershipAccountId,
+        profile_id: existingProfile.id,
+        member_role: "owner",
+        can_receive_critical_alerts: true,
+        active: true
+      },
+      { onConflict: "account_id,profile_id" }
+    );
+
+    if (error) {
+      return { success: false, error: "Failed to add co-owner to this account." };
+    }
+
+    revalidatePath("/owner");
+    revalidatePath("/manager");
+    return { success: true };
+  }
+
+  const { data: existingInvite } = await admin
+    .from("invitations")
+    .select("id, status")
+    .eq("email", email.toLowerCase())
+    .eq("role", "owner")
+    .eq("ownership_account_id", ownershipAccountId)
+    .eq("status", "pending")
+    .maybeSingle();
+
+  if (existingInvite?.id) {
+    return { success: false, error: "An owner invitation is already pending for this account." };
+  }
+
+  const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
+    data: {
+      role: "owner",
+      full_name: fullName,
+      ownership_account_id: ownershipAccountId
+    }
+  });
+
+  if (inviteError) {
+    return { success: false, error: "Failed to send owner invitation." };
+  }
+
+  await admin.from("invitations").insert({
+    email: email.toLowerCase(),
+    full_name: fullName,
+    role: "owner",
+    invited_by: user.id,
+    ownership_account_id: ownershipAccountId,
+    status: "pending"
+  });
+
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  return { success: true };
+}
+
+export async function createOwnershipAccount(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" && role !== "manager") {
+    redirect("/portal");
+  }
+
+  const parsed = parseFormData(createOwnershipAccountSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const admin = createAdminClient();
+  const { accountType, displayName } = parsed.data;
+  const { data: account, error } = await admin
+    .from("ownership_accounts")
+    .insert({
+      account_type: accountType,
+      display_name: displayName,
+      created_by_profile_id: user.id
+    })
+    .select("id")
+    .single();
+
+  if (error || !account?.id) {
+    return { success: false, error: "Failed to create ownership account." };
+  }
+
+  const { error: memberError } = await admin.from("ownership_account_members").insert({
+    account_id: account.id,
+    profile_id: user.id,
+    member_role: "owner",
+    active: true,
+    can_receive_critical_alerts: true
+  });
+
+  if (memberError) {
+    return { success: false, error: "Account created, but failed to add owner membership." };
+  }
+
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  return { success: true };
+}
+
+export async function addOwnershipMember(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" && role !== "manager") {
+    redirect("/portal");
+  }
+
+  const parsed = parseFormData(addOwnershipMemberSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { accountId, profileId, canReceiveCriticalAlerts } = parsed.data;
+
+  if (!(await canUserAdministerOwnershipAccount(user.id, accountId))) {
+    return { success: false, error: "You do not have access to that ownership account." };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("ownership_account_members").upsert(
+    {
+      account_id: accountId,
+      profile_id: profileId,
+      member_role: "owner",
+      active: true,
+      can_receive_critical_alerts: canReceiveCriticalAlerts ?? true
+    },
+    { onConflict: "account_id,profile_id" }
+  );
+
+  if (error) {
+    return { success: false, error: "Failed to add ownership member." };
+  }
+
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  return { success: true };
+}
+
+export async function linkPropertyToOwnershipAccount(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" && role !== "manager") {
+    redirect("/portal");
+  }
+
+  const parsed = parseFormData(linkPropertyToOwnershipAccountSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { propertyId, ownershipAccountId } = parsed.data;
+  const [canAdministerProperty, canAdministerAccount] = await Promise.all([
+    canUserAdministerProperty(user.id, propertyId),
+    canUserAdministerOwnershipAccount(user.id, ownershipAccountId)
+  ]);
+
+  if (!canAdministerProperty) {
+    return { success: false, error: "You do not have access to this property." };
+  }
+  if (!canAdministerAccount) {
+    return { success: false, error: "You do not have access to this ownership account." };
+  }
+
+  const { error } = await supabase
+    .from("properties")
+    .update({ owner_account_id: ownershipAccountId })
+    .eq("id", propertyId);
+
+  if (error) {
+    return { success: false, error: "Failed to link property to ownership account." };
+  }
+
+  revalidatePath("/owner");
+  revalidatePath("/manager");
   return { success: true };
 }
 
@@ -715,7 +1132,7 @@ export async function resendInvite(
     redirect("/login");
   }
   const role = await getCurrentUserRole(user.id);
-  if (role !== "owner") {
+  if (role !== "owner" && role !== "manager") {
     redirect("/portal");
   }
 
@@ -730,7 +1147,7 @@ export async function resendInvite(
   // Fetch the invitation (owned by this user)
   const { data: invitation } = await admin
     .from("invitations")
-    .select("id, email, full_name, role, status")
+    .select("id, email, full_name, role, status, property_id, ownership_account_id")
     .eq("id", invitationId)
     .eq("invited_by", user.id)
     .single();
@@ -750,6 +1167,8 @@ export async function resendInvite(
       data: {
         role: invitation.role,
         full_name: invitation.full_name,
+        property_id: invitation.property_id,
+        ownership_account_id: invitation.ownership_account_id
       },
     }
   );
@@ -765,6 +1184,7 @@ export async function resendInvite(
     .eq("id", invitationId);
 
   revalidatePath("/owner");
+  revalidatePath("/manager");
   return { success: true };
 }
 
@@ -825,7 +1245,7 @@ export async function createDocumentTemplate(
     redirect("/login");
   }
   const role = await getCurrentUserRole(user.id);
-  if (role !== "owner") {
+  if (role !== "owner" && role !== "manager") {
     redirect("/portal");
   }
 
@@ -839,8 +1259,23 @@ export async function createDocumentTemplate(
     return parsed;
   }
 
-  const { name, category, bodyMarkdown } = parsed.data;
+  const { name, category, bodyMarkdown, ownerAccountId } = parsed.data;
+  const ownerAccountIds = await getAdministeredOwnerAccountIds(user.id);
+  const targetOwnerAccountId = ownerAccountId ?? ownerAccountIds[0];
+
+  if (!targetOwnerAccountId) {
+    return {
+      success: false,
+      error: "No ownership account is available. Create or link a property first."
+    };
+  }
+
+  if (!ownerAccountIds.includes(targetOwnerAccountId)) {
+    return { success: false, error: "You do not have access to that ownership account." };
+  }
+
   const { error } = await supabase.from("document_templates").insert({
+    owner_account_id: targetOwnerAccountId,
     owner_profile_id: user.id,
     name,
     category,
@@ -852,6 +1287,7 @@ export async function createDocumentTemplate(
   }
 
   revalidatePath("/owner");
+  revalidatePath("/manager");
   return { success: true };
 }
 
@@ -868,7 +1304,7 @@ export async function updateDocumentTemplate(
     redirect("/login");
   }
   const role = await getCurrentUserRole(user.id);
-  if (role !== "owner") {
+  if (role !== "owner" && role !== "manager") {
     redirect("/portal");
   }
 
@@ -890,14 +1326,14 @@ export async function updateDocumentTemplate(
       category,
       body_markdown: bodyMarkdown
     })
-    .eq("id", templateId)
-    .eq("owner_profile_id", user.id);
+    .eq("id", templateId);
 
   if (error) {
     return { success: false, error: "Failed to update document template." };
   }
 
   revalidatePath("/owner");
+  revalidatePath("/manager");
   return { success: true };
 }
 
@@ -914,7 +1350,7 @@ export async function deleteDocumentTemplate(
     redirect("/login");
   }
   const role = await getCurrentUserRole(user.id);
-  if (role !== "owner") {
+  if (role !== "owner" && role !== "manager") {
     redirect("/portal");
   }
 
@@ -932,14 +1368,14 @@ export async function deleteDocumentTemplate(
   const { error } = await supabase
     .from("document_templates")
     .delete()
-    .eq("id", templateId)
-    .eq("owner_profile_id", user.id);
+    .eq("id", templateId);
 
   if (error) {
     return { success: false, error: "Failed to delete document template." };
   }
 
   revalidatePath("/owner");
+  revalidatePath("/manager");
   return { success: true };
 }
 
@@ -956,7 +1392,7 @@ export async function createDocumentPacket(
     redirect("/login");
   }
   const role = await getCurrentUserRole(user.id);
-  if (role !== "owner") {
+  if (role !== "owner" && role !== "manager") {
     redirect("/portal");
   }
 
@@ -975,7 +1411,7 @@ export async function createDocumentPacket(
   const [{ data: template }, { data: lease }] = await Promise.all([
     supabase
       .from("document_templates")
-      .select("id, owner_profile_id")
+      .select("id, owner_account_id")
       .eq("id", templateId)
       .single(),
     supabase
@@ -985,7 +1421,7 @@ export async function createDocumentPacket(
       .single()
   ]);
 
-  if (!template || template.owner_profile_id !== user.id) {
+  if (!template) {
     return { success: false, error: "Template not found." };
   }
   if (!lease) {
@@ -1004,12 +1440,21 @@ export async function createDocumentPacket(
 
   const { data: property } = await supabase
     .from("properties")
-    .select("id, owner_profile_id")
+    .select("id, owner_account_id")
     .eq("id", unit.property_id)
     .single();
 
-  if (!property || property.owner_profile_id !== user.id) {
+  if (!property) {
     return { success: false, error: "Property not found for lease." };
+  }
+
+  const canAdminister = await canUserAdministerProperty(user.id, property.id);
+  if (!canAdminister) {
+    return { success: false, error: "You do not have access to this lease." };
+  }
+
+  if (template.owner_account_id !== property.owner_account_id) {
+    return { success: false, error: "Template account does not match this property account." };
   }
 
   const { error } = await supabase.from("document_packets").insert({
@@ -1026,6 +1471,7 @@ export async function createDocumentPacket(
   }
 
   revalidatePath("/owner");
+  revalidatePath("/manager");
   return { success: true };
 }
 
@@ -1042,7 +1488,7 @@ export async function sendDocumentPacket(
     redirect("/login");
   }
   const role = await getCurrentUserRole(user.id);
-  if (role !== "owner") {
+  if (role !== "owner" && role !== "manager") {
     redirect("/portal");
   }
 
@@ -1071,11 +1517,11 @@ export async function sendDocumentPacket(
 
   const { data: property } = await supabase
     .from("properties")
-    .select("id, owner_profile_id")
+    .select("id")
     .eq("id", packet.property_id)
     .single();
 
-  if (!property || property.owner_profile_id !== user.id) {
+  if (!property || !(await canUserAdministerProperty(user.id, property.id))) {
     return { success: false, error: "You do not have access to this packet." };
   }
 
@@ -1141,14 +1587,24 @@ export async function sendDocumentPacket(
   await createNotificationWithDelivery({
     recipientProfileId: tenantProfile.id,
     recipientEmail: tenantProfile.email,
-    type: "new_ticket",
+    type: "document_sent",
     title: "New document awaiting signature",
     body: "A lease-related document has been sent to you for signature.",
     entityType: "document_packet",
     entityId: packet.id
   });
+  await notifyOwnerMembersForProperty({
+    propertyId: packet.property_id,
+    type: "document_sent",
+    title: "Document packet sent",
+    body: "A document packet was sent to the tenant for signature.",
+    entityType: "document_packet",
+    entityId: packet.id,
+    excludeProfileId: user.id
+  });
 
   revalidatePath("/owner");
+  revalidatePath("/manager");
   revalidatePath("/tenant");
   return { success: true };
 }
@@ -1249,10 +1705,28 @@ export async function signDocumentPacket(
       .from("document_packets")
       .update({ status: "signed", signed_at: signedAt })
       .eq("id", packetId);
+
+    const { data: packet } = await admin
+      .from("document_packets")
+      .select("id, property_id")
+      .eq("id", packetId)
+      .single();
+
+    if (packet?.property_id) {
+      await notifyOwnerMembersForProperty({
+        propertyId: packet.property_id,
+        type: "document_signed",
+        title: "Document packet signed",
+        body: "A tenant completed a required document signature.",
+        entityType: "document_packet",
+        entityId: packet.id
+      });
+    }
   }
 
   revalidatePath("/tenant");
   revalidatePath("/owner");
+  revalidatePath("/manager");
   return { success: true };
 }
 
@@ -1272,7 +1746,7 @@ export async function createVendor(
   }
 
   const role = await getCurrentUserRole(user.id);
-  if (role !== "owner") {
+  if (role !== "owner" && role !== "manager") {
     redirect("/portal");
   }
 
@@ -1286,10 +1760,23 @@ export async function createVendor(
     return parsed;
   }
 
-  const { name, email, phone, trade } = parsed.data;
+  const { name, email, phone, trade, ownerAccountId } = parsed.data;
+  const ownerAccountIds = await getAdministeredOwnerAccountIds(user.id);
+  const targetOwnerAccountId = ownerAccountId ?? ownerAccountIds[0];
+  if (!targetOwnerAccountId) {
+    return {
+      success: false,
+      error: "No ownership account is available. Link or create a property first."
+    };
+  }
+
+  if (!ownerAccountIds.includes(targetOwnerAccountId)) {
+    return { success: false, error: "You do not have access to that ownership account." };
+  }
 
   const { error } = await supabase.from("vendors").insert({
     owner_profile_id: user.id,
+    owner_account_id: targetOwnerAccountId,
     name,
     email: email || null,
     phone: phone || null,
@@ -1302,6 +1789,7 @@ export async function createVendor(
   }
 
   revalidatePath("/owner");
+  revalidatePath("/manager");
   return { success: true };
 }
 
@@ -1348,7 +1836,7 @@ export async function assignVendorToTicket(
 
   const { data: property } = await admin
     .from("properties")
-    .select("id, owner_profile_id")
+    .select("id, owner_account_id")
     .eq("id", ticket.property_id)
     .single();
 
@@ -1356,31 +1844,18 @@ export async function assignVendorToTicket(
     return { success: false, error: "Property not found for ticket." };
   }
 
-  if (role === "owner" && property.owner_profile_id !== user.id) {
+  const canAdminister = await canUserAdministerProperty(user.id, property.id);
+  if (!canAdminister) {
     return { success: false, error: "You do not have access to this ticket." };
-  }
-
-  if (role === "manager") {
-    const { data: assignment } = await supabase
-      .from("property_managers")
-      .select("property_id")
-      .eq("property_id", property.id)
-      .eq("manager_profile_id", user.id)
-      .eq("active", true)
-      .single();
-
-    if (!assignment) {
-      return { success: false, error: "You are not assigned to this property." };
-    }
   }
 
   const { data: vendor } = await admin
     .from("vendors")
-    .select("id, owner_profile_id")
+    .select("id, owner_account_id")
     .eq("id", vendorId)
     .single();
 
-  if (!vendor || vendor.owner_profile_id !== property.owner_profile_id) {
+  if (!vendor || vendor.owner_account_id !== property.owner_account_id) {
     return { success: false, error: "Vendor is not valid for this property owner." };
   }
 
@@ -1468,7 +1943,7 @@ export async function uploadMaintenancePhoto(
 
   const { data: property } = await admin
     .from("properties")
-    .select("id, owner_profile_id")
+    .select("id")
     .eq("id", ticket.property_id)
     .single();
 
@@ -1476,22 +1951,9 @@ export async function uploadMaintenancePhoto(
     return { success: false, error: "Property not found for ticket." };
   }
 
-  if (role === "owner" && property.owner_profile_id !== user.id) {
+  const canAdminister = await canUserAdministerProperty(user.id, property.id);
+  if (!canAdminister) {
     return { success: false, error: "You do not have access to this ticket." };
-  }
-
-  if (role === "manager") {
-    const { data: assignment } = await supabase
-      .from("property_managers")
-      .select("property_id")
-      .eq("property_id", property.id)
-      .eq("manager_profile_id", user.id)
-      .eq("active", true)
-      .single();
-
-    if (!assignment) {
-      return { success: false, error: "You are not assigned to this property." };
-    }
   }
 
   const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";

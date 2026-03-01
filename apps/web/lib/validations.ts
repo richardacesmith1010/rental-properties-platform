@@ -9,6 +9,7 @@ export const createPropertySchema = z.object({
     .string()
     .min(1, "ZIP code is required.")
     .regex(/^\d{5}(-\d{4})?$/, "Enter a valid 5-digit ZIP code."),
+  ownerAccountId: z.string().uuid("Invalid ownership account.").optional()
 });
 
 export const createUnitSchema = z.object({
@@ -96,6 +97,18 @@ export const inviteManagerSchema = z.object({
   propertyId: z.string().uuid("Invalid property selection."),
 });
 
+export const inviteOwnerSchema = z.object({
+  email: z
+    .string()
+    .min(1, "Email is required.")
+    .email("Enter a valid email address."),
+  fullName: z
+    .string()
+    .min(1, "Full name is required.")
+    .max(100, "Name must be under 100 characters."),
+  ownershipAccountId: z.string().uuid("Invalid ownership account selection.")
+});
+
 export const resendInviteSchema = z.object({
   invitationId: z.string().uuid("Invalid invitation ID."),
 });
@@ -114,7 +127,8 @@ export const createDocumentTemplateSchema = z.object({
   bodyMarkdown: z
     .string()
     .min(1, "Template body is required.")
-    .max(20000, "Template body must be under 20,000 characters.")
+    .max(20000, "Template body must be under 20,000 characters."),
+  ownerAccountId: z.string().uuid("Invalid ownership account.").optional()
 });
 
 export const updateDocumentTemplateSchema = z.object({
@@ -171,7 +185,8 @@ export const createVendorSchema = z.object({
     .union([z.string().email("Enter a valid email address."), z.literal("")])
     .optional(),
   phone: z.string().max(30, "Phone must be under 30 characters.").optional(),
-  trade: z.string().max(80, "Trade must be under 80 characters.").optional()
+  trade: z.string().max(80, "Trade must be under 80 characters.").optional(),
+  ownerAccountId: z.string().uuid("Invalid ownership account.").optional()
 });
 
 export const assignVendorSchema = z.object({
@@ -182,6 +197,27 @@ export const assignVendorSchema = z.object({
 export const uploadMaintenancePhotoSchema = z.object({
   ticketId: z.string().uuid("Invalid ticket ID."),
   caption: z.string().max(300, "Caption must be under 300 characters.").optional()
+});
+
+/* ─── Ownership Accounts (LLC/Co-Owner) ─── */
+
+export const createOwnershipAccountSchema = z.object({
+  accountType: z.enum(["individual", "llc"], { message: "Select a valid account type." }),
+  displayName: z
+    .string()
+    .min(1, "Display name is required.")
+    .max(120, "Display name must be under 120 characters.")
+});
+
+export const addOwnershipMemberSchema = z.object({
+  accountId: z.string().uuid("Invalid ownership account."),
+  profileId: z.string().uuid("Invalid member profile."),
+  canReceiveCriticalAlerts: z.coerce.boolean().optional()
+});
+
+export const linkPropertyToOwnershipAccountSchema = z.object({
+  propertyId: z.string().uuid("Invalid property."),
+  ownershipAccountId: z.string().uuid("Invalid ownership account.")
 });
 
 /** Parse FormData against a Zod schema. Returns parsed data or a formatted error string. */

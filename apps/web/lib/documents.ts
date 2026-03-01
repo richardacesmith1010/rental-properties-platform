@@ -1,4 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
+import {
+  getAdministeredOwnerAccountIds,
+  getAdministeredPropertyIds
+} from "@/lib/property-access";
 
 export interface SignerDTO {
   email: string;
@@ -52,22 +56,35 @@ export interface TenantDocumentsData {
 
 export async function getOwnerDocumentsData(userId: string): Promise<OwnerDocumentsData> {
   const supabase = createClient();
+  const [ownerAccountIds, propertyIds] = await Promise.all([
+    getAdministeredOwnerAccountIds(userId),
+    getAdministeredPropertyIds(userId)
+  ]);
 
-  const { data: templates } = await supabase
-    .from("document_templates")
-    .select("id, name, category, body_markdown, created_at")
-    .eq("owner_profile_id", userId)
-    .order("created_at", { ascending: false });
+  const { data: templates } = ownerAccountIds.length
+    ? await supabase
+        .from("document_templates")
+        .select("id, name, category, body_markdown, created_at")
+        .in("owner_account_id", ownerAccountIds)
+        .order("created_at", { ascending: false })
+    : { data: [] as Array<{
+        id: string;
+        name: string;
+        category: string;
+        body_markdown: string;
+        created_at: string;
+      }> };
 
   const templateRows = templates ?? [];
 
-  const { data: properties } = await supabase
-    .from("properties")
-    .select("id, name")
-    .eq("owner_profile_id", userId);
+  const { data: properties } = propertyIds.length
+    ? await supabase
+        .from("properties")
+        .select("id, name")
+        .in("id", propertyIds)
+    : { data: [] as Array<{ id: string; name: string }> };
 
   const propertyRows = properties ?? [];
-  const propertyIds = propertyRows.map((p) => p.id);
 
   if (propertyIds.length === 0) {
     return {

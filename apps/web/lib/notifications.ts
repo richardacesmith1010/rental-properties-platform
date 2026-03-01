@@ -2,7 +2,14 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { shouldRecordSuccessfulDelivery } from "@/lib/idempotency";
 
-export type NotificationType = "new_ticket" | "late_rent";
+export type NotificationType =
+  | "new_ticket"
+  | "late_rent"
+  | "ticket_resolved"
+  | "payment_recorded"
+  | "lease_updated"
+  | "document_sent"
+  | "document_signed";
 
 export interface NotificationDTO {
   id: string;
@@ -114,6 +121,67 @@ export async function createNotificationWithDelivery(params: CreateNotificationP
     }
   } catch (error) {
     console.error("Failed to create notification delivery records:", error);
+  }
+}
+
+interface NotifyOwnerMembersParams {
+  propertyId: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  entityType: string;
+  entityId?: string | null;
+  excludeProfileId?: string | null;
+}
+
+export async function notifyOwnerMembersForProperty(params: NotifyOwnerMembersParams) {
+  try {
+    const admin = createAdminClient();
+
+    const { data: property } = await admin
+      .from("properties")
+      .select("owner_account_id")
+      .eq("id", params.propertyId)
+      .single();
+
+    if (!property?.owner_account_id) {
+      return;
+    }
+
+    const { data: members } = await admin
+      .from("ownership_account_members")
+      .select("profile_id, can_receive_critical_alerts")
+      .eq("account_id", property.owner_account_id)
+      .eq("member_role", "owner")
+      .eq("active", true);
+
+    const recipientIds = (members ?? [])
+      .filter((member) => member.can_receive_critical_alerts)
+      .map((member) => member.profile_id)
+      .filter((id) => id !== params.excludeProfileId);
+
+    if (recipientIds.length === 0) {
+      return;
+    }
+
+    const { data: profiles } = await admin
+      .from("profiles")
+      .select("id, email")
+      .in("id", recipientIds);
+
+    for (const profile of profiles ?? []) {
+      await createNotificationWithDelivery({
+        recipientProfileId: profile.id,
+        recipientEmail: profile.email,
+        type: params.type,
+        title: params.title,
+        body: params.body,
+        entityType: params.entityType,
+        entityId: params.entityId ?? null
+      });
+    }
+  } catch (error) {
+    console.error("Failed to notify owner members:", error);
   }
 }
 

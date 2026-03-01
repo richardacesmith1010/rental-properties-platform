@@ -35,6 +35,7 @@ const defaultNavItems: NavItem[] = [
   { id: "payments", label: "Payments", icon: CreditCard },
   { id: "maintenance", label: "Maintenance", icon: Wrench },
   { id: "notifications", label: "Notifications", icon: Bell },
+  { id: "ownership", label: "Ownership", icon: UserPlus },
   { id: "invitations", label: "Invitations", icon: UserPlus },
   { id: "documents", label: "Documents", icon: FileSignature },
   { id: "vendors", label: "Vendors", icon: BriefcaseBusiness },
