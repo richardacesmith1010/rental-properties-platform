@@ -7,6 +7,7 @@ import type { OwnerDocumentsData } from "@/lib/documents";
 import type { VendorDTO } from "@/lib/vendors";
 import type { FeatureCapabilitiesDTO } from "@/lib/feature-capabilities";
 import type { OwnershipAccountDTO } from "@/lib/ownership";
+import type { ExpenseDashboardData } from "@/lib/expenses";
 import type { ActionState } from "@/app/actions";
 import { Badge } from "@/components/ui/badge";
 import { FeatureWarning } from "@/components/shared/feature-warning";
@@ -18,10 +19,12 @@ import { MaintenanceSection } from "./maintenance-section";
 import { InvitationsSection } from "./invitations-section";
 import { OperationsSection } from "./operations-section";
 import { PortfolioSection } from "./portfolio-section";
+import { UnitsSection } from "./units-section";
 import { LeasesSection } from "./leases-section";
 import { NotificationsSection } from "./notifications-section";
 import { DocumentsSection } from "./documents-section";
 import { VendorsSection } from "./vendors-section";
+import { ExpensesSection } from "./expenses-section";
 import { OwnershipSection } from "./ownership-section";
 
 type FormAction = (formData: FormData) => Promise<void>;
@@ -35,15 +38,23 @@ interface DashboardProps {
   notifications?: NotificationDTO[];
   documents?: OwnerDocumentsData;
   vendors?: VendorDTO[];
+  expensesData?: ExpenseDashboardData;
   capabilities?: FeatureCapabilitiesDTO;
   ownershipAccounts?: OwnershipAccountDTO[];
   generatedMessage?: string | null;
   userEmail: string;
+  showTesterLink?: boolean;
   onGenerateChargesHref?: string;
   onSignOut: FormAction;
   onCreateProperty: StatefulAction;
   onCreateUnit: StatefulAction;
   onCreateLease: StatefulAction;
+  onUpdateProperty?: StatefulAction;
+  onDeleteProperty?: StatefulAction;
+  onUpdateUnit?: StatefulAction;
+  onDeleteUnit?: StatefulAction;
+  onUpdateLease?: StatefulAction;
+  onDeleteLease?: StatefulAction;
   onPayCharge: FormAction;
   onUpdateTicketStatus?: StatefulAction;
   onInviteTenant?: StatefulAction;
@@ -55,9 +66,16 @@ interface DashboardProps {
   onDeleteDocumentTemplate?: StatefulAction;
   onCreateDocumentPacket?: StatefulAction;
   onSendDocumentPacket?: StatefulAction;
+  onUploadPropertyFile?: StatefulAction;
+  onDeletePropertyFile?: StatefulAction;
+  onUpdateFileVisibility?: StatefulAction;
   onCreateVendor?: StatefulAction;
+  onUpdateVendor?: StatefulAction;
   onAssignVendor?: StatefulAction;
   onUploadMaintenancePhoto?: StatefulAction;
+  onCreateExpense?: StatefulAction;
+  onUpdateExpense?: StatefulAction;
+  onDeleteExpense?: StatefulAction;
   onCreateOwnershipAccount?: StatefulAction;
   onLinkPropertyToOwnershipAccount?: StatefulAction;
 }
@@ -70,15 +88,23 @@ export function Dashboard({
   notifications,
   documents,
   vendors,
+  expensesData,
   capabilities,
   ownershipAccounts,
   generatedMessage,
   userEmail,
+  showTesterLink = false,
   onGenerateChargesHref,
   onSignOut,
   onCreateProperty,
   onCreateUnit,
   onCreateLease,
+  onUpdateProperty,
+  onDeleteProperty,
+  onUpdateUnit,
+  onDeleteUnit,
+  onUpdateLease,
+  onDeleteLease,
   onPayCharge,
   onUpdateTicketStatus,
   onInviteTenant,
@@ -90,9 +116,16 @@ export function Dashboard({
   onDeleteDocumentTemplate,
   onCreateDocumentPacket,
   onSendDocumentPacket,
+  onUploadPropertyFile,
+  onDeletePropertyFile,
+  onUpdateFileVisibility,
   onCreateVendor,
+  onUpdateVendor,
   onAssignVendor,
   onUploadMaintenancePhoto,
+  onCreateExpense,
+  onUpdateExpense,
+  onDeleteExpense,
   onCreateOwnershipAccount,
   onLinkPropertyToOwnershipAccount
 }: DashboardProps) {
@@ -104,10 +137,22 @@ export function Dashboard({
   };
   const safeDocuments: OwnerDocumentsData = documents ?? {
     templates: [],
-    packets: []
+    packets: [],
+    propertyFiles: [],
+    propertyFilesEnabled: true,
+    propertyFilesWarning: null
   };
   const safeNotifications: NotificationDTO[] = notifications ?? [];
   const safeVendors: VendorDTO[] = vendors ?? [];
+  const safeExpenses: ExpenseDashboardData = expensesData ?? {
+    enabled: true,
+    warning: null,
+    properties: [],
+    expenses: [],
+    pnlByProperty: [],
+    monthlyByProperty: {},
+    categoryByProperty: {}
+  };
   const safeOwnershipAccounts: OwnershipAccountDTO[] = ownershipAccounts ?? [];
   const safeCapabilities: FeatureCapabilitiesDTO = capabilities ?? {
     documentsEnabled: true,
@@ -122,11 +167,18 @@ export function Dashboard({
     data.kpis.totalUnits > 0
       ? Math.round((data.kpis.occupiedUnits / data.kpis.totalUnits) * 100)
       : 0;
+  const canManagePortfolio = data.profileRole === "owner" || data.profileRole === "manager";
+  const sortedVendors = [...safeVendors].sort((left, right) => {
+    if (left.preferred !== right.preferred) {
+      return Number(right.preferred) - Number(left.preferred);
+    }
+    return left.name.localeCompare(right.name);
+  });
 
   return (
     <div className="app-surface flex min-h-screen flex-col lg:flex-row">
       {/* Mobile top bar */}
-      <MobileTopBar userEmail={userEmail} role={data.profileRole} onSignOut={onSignOut} />
+      <MobileTopBar userEmail={userEmail} role={data.profileRole} showTesterLink={showTesterLink} onSignOut={onSignOut} />
 
       {/* Desktop sidebar */}
       <SidebarNav
@@ -134,6 +186,7 @@ export function Dashboard({
         occupancy={occupancy}
         activeLeaseCount={data.kpis.activeLeaseCount}
         role={data.profileRole}
+        showTesterLink={showTesterLink}
         onSignOut={onSignOut}
       />
 
@@ -189,7 +242,7 @@ export function Dashboard({
             tickets={tickets ?? []}
             showControls={!!onUpdateTicketStatus}
             onUpdateStatus={onUpdateTicketStatus}
-            vendors={safeVendors}
+            vendors={sortedVendors}
             onAssignVendor={safeCapabilities.vendorWorkflowEnabled ? onAssignVendor : undefined}
             onUploadPhoto={safeCapabilities.photoWorkflowEnabled ? onUploadMaintenancePhoto : undefined}
             vendorWorkflowEnabled={safeCapabilities.vendorWorkflowEnabled}
@@ -258,14 +311,24 @@ export function Dashboard({
             onCreateDocumentPacket &&
             onSendDocumentPacket && (
               <DocumentsSection
+                properties={safePortfolio.properties.map((property) => ({
+                  id: property.id,
+                  name: property.name
+                }))}
                 templates={safeDocuments.templates}
                 packets={safeDocuments.packets}
+                propertyFiles={safeDocuments.propertyFiles}
                 leases={safePortfolio.leases}
                 ownershipAccounts={safeOwnershipAccounts}
                 onCreateTemplate={onCreateDocumentTemplate}
                 onDeleteTemplate={onDeleteDocumentTemplate}
                 onCreatePacket={onCreateDocumentPacket}
                 onSendPacket={onSendDocumentPacket}
+                onUploadPropertyFile={onUploadPropertyFile}
+                onDeletePropertyFile={onDeletePropertyFile}
+                onUpdateFileVisibility={onUpdateFileVisibility}
+                propertyFilesEnabled={safeDocuments.propertyFilesEnabled}
+                propertyFilesWarning={safeDocuments.propertyFilesWarning}
                 isFeatureReady={safeCapabilities.documentsEnabled}
                 featureWarning={safeCapabilities.warnings.documents}
                 assetAccessEnabled={safeCapabilities.documentAssetAccessEnabled}
@@ -283,6 +346,7 @@ export function Dashboard({
                 vendors={safeVendors}
                 ownershipAccounts={safeOwnershipAccounts}
                 onCreateVendor={onCreateVendor}
+                onUpdateVendor={onUpdateVendor}
               />
             ) : (
               <FeatureWarning
@@ -295,6 +359,20 @@ export function Dashboard({
             )
           )}
 
+          {data.profileRole === "owner" &&
+            onCreateExpense &&
+            onUpdateExpense &&
+            onDeleteExpense && (
+              <ExpensesSection
+                data={safeExpenses}
+                vendors={safeVendors}
+                propertyFiles={safeDocuments.propertyFiles}
+                onCreateExpense={onCreateExpense}
+                onUpdateExpense={onUpdateExpense}
+                onDeleteExpense={onDeleteExpense}
+              />
+            )}
+
           <OperationsSection
             portfolio={safePortfolio}
             ownershipAccounts={safeOwnershipAccounts}
@@ -303,9 +381,26 @@ export function Dashboard({
             onCreateLease={onCreateLease}
           />
 
-          <PortfolioSection properties={safePortfolio.properties} />
+          <PortfolioSection
+            properties={safePortfolio.properties}
+            showControls={canManagePortfolio}
+            onUpdateProperty={onUpdateProperty}
+            onDeleteProperty={onDeleteProperty}
+          />
 
-          <LeasesSection leases={safePortfolio.leases} />
+          <UnitsSection
+            units={safePortfolio.units}
+            showControls={canManagePortfolio}
+            onUpdateUnit={onUpdateUnit}
+            onDeleteUnit={onDeleteUnit}
+          />
+
+          <LeasesSection
+            leases={safePortfolio.leases}
+            showControls={canManagePortfolio}
+            onUpdateLease={onUpdateLease}
+            onDeleteLease={onDeleteLease}
+          />
         </div>
       </main>
     </div>

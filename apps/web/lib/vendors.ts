@@ -7,6 +7,8 @@ export interface VendorDTO {
   email: string | null;
   phone: string | null;
   trade: string | null;
+  tradeCategory: string | null;
+  preferred: boolean;
   active: boolean;
 }
 
@@ -34,7 +36,7 @@ export async function getOwnerVendors(userId: string): Promise<VendorDTO[]> {
   const modernQuery = ownerAccountIds.length
     ? await supabase
         .from("vendors")
-        .select("id, name, email, phone, trade, active")
+        .select("id, name, email, phone, trade, trade_category, preferred, active")
         .in("owner_account_id", ownerAccountIds)
         .eq("active", true)
         .order("name", { ascending: true })
@@ -47,6 +49,8 @@ export async function getOwnerVendors(userId: string): Promise<VendorDTO[]> {
       email: row.email,
       phone: row.phone,
       trade: row.trade,
+      tradeCategory: row.trade_category,
+      preferred: row.preferred ?? false,
       active: row.active
     }));
   }
@@ -66,6 +70,8 @@ export async function getOwnerVendors(userId: string): Promise<VendorDTO[]> {
       email: row.email,
       phone: row.phone,
       trade: row.trade,
+      tradeCategory: row.trade ?? null,
+      preferred: false,
       active: row.active
     }));
   }
@@ -84,6 +90,8 @@ export async function getOwnerVendors(userId: string): Promise<VendorDTO[]> {
       email: row.email,
       phone: row.phone,
       trade: row.trade,
+      tradeCategory: row.trade ?? null,
+      preferred: false,
       active: row.active
     }));
   }
@@ -94,6 +102,8 @@ export async function getOwnerVendors(userId: string): Promise<VendorDTO[]> {
     email: row.email,
     phone: row.phone,
     trade: row.trade,
+    tradeCategory: row.trade_category ?? row.trade ?? null,
+    preferred: row.preferred ?? false,
     active: row.active
   }));
 }

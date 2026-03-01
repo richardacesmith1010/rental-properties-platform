@@ -11,8 +11,14 @@ import { getOwnershipAccountsForUser } from "@/lib/ownership";
 import {
   createCheckoutForCharge,
   createLease,
+  updateLease,
+  deleteLease,
   createProperty,
+  updateProperty,
+  deleteProperty,
   createUnit,
+  updateUnit,
+  deleteUnit,
   signOut,
   updateTicketStatus,
   inviteTenant,
@@ -24,13 +30,17 @@ import {
   deleteDocumentTemplate,
   createDocumentPacket,
   sendDocumentPacket,
+  uploadPropertyFile,
+  deletePropertyFile,
+  updateFileVisibility,
   createVendor,
+  updateVendor,
   assignVendorToTicket,
   uploadMaintenancePhoto,
   createOwnershipAccount,
   linkPropertyToOwnershipAccount
 } from "@/app/actions";
-import { requireRole } from "@/lib/auth";
+import { isTester, requireRole } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +62,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
   const capabilities = await getFeatureCapabilities();
   const generatedMessage = getGeneratedMessage(searchParams?.generated);
 
-  const [dashboard, portfolio, tickets, invitations, documents, notifications, vendors, ownershipAccounts] =
+  const [dashboard, portfolio, tickets, invitations, documents, notifications, vendors, ownershipAccounts, testerAccess] =
     await Promise.all([
       getDashboardData(user.id),
       getPortfolioData(user.id),
@@ -60,7 +70,13 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       getOwnerInvitations(user.id),
       capabilities.documentsEnabled
         ? getOwnerDocumentsData(user.id)
-        : Promise.resolve({ templates: [], packets: [] }),
+        : Promise.resolve({
+            templates: [],
+            packets: [],
+            propertyFiles: [],
+            propertyFilesEnabled: false,
+            propertyFilesWarning: "Property file vault is not enabled yet."
+          }),
       capabilities.notificationsEnabled
         ? getNotificationsForUser(user.id)
         : Promise.resolve([]),
@@ -69,7 +85,8 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
         : Promise.resolve([]),
       capabilities.ownershipEnabled
         ? getOwnershipAccountsForUser(user.id)
-        : Promise.resolve([])
+        : Promise.resolve([]),
+      isTester(user.id)
     ]);
 
   return (
@@ -84,10 +101,17 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       ownershipAccounts={ownershipAccounts}
       capabilities={capabilities}
       userEmail={user.email ?? "unknown"}
+      showTesterLink={testerAccess}
       onSignOut={signOut}
       onCreateProperty={createProperty}
       onCreateUnit={createUnit}
       onCreateLease={createLease}
+      onUpdateProperty={updateProperty}
+      onDeleteProperty={deleteProperty}
+      onUpdateUnit={updateUnit}
+      onDeleteUnit={deleteUnit}
+      onUpdateLease={updateLease}
+      onDeleteLease={deleteLease}
       onPayCharge={createCheckoutForCharge}
       onGenerateChargesHref="/owner/generate"
       generatedMessage={generatedMessage}
@@ -101,7 +125,11 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       onDeleteDocumentTemplate={deleteDocumentTemplate}
       onCreateDocumentPacket={createDocumentPacket}
       onSendDocumentPacket={sendDocumentPacket}
+      onUploadPropertyFile={uploadPropertyFile}
+      onDeletePropertyFile={deletePropertyFile}
+      onUpdateFileVisibility={updateFileVisibility}
       onCreateVendor={createVendor}
+      onUpdateVendor={updateVendor}
       onAssignVendor={assignVendorToTicket}
       onUploadMaintenancePhoto={uploadMaintenancePhoto}
       onCreateOwnershipAccount={createOwnershipAccount}

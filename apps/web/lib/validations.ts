@@ -39,6 +39,50 @@ export const createLeaseSchema = z
     path: ["endDate"],
   });
 
+export const updateLeaseSchema = z.object({
+  leaseId: z.string().uuid("Invalid lease ID."),
+  endDate: z.string().min(1, "End date is required."),
+  dueDayOfMonth: z.coerce
+    .number()
+    .int()
+    .min(1, "Due day must be between 1 and 28.")
+    .max(28, "Due day must be between 1 and 28."),
+  monthlyRentDollars: z.coerce.number().positive("Monthly rent must be greater than $0."),
+  depositDollars: z.coerce.number().min(0, "Deposit cannot be negative."),
+});
+
+export const deleteLeaseSchema = z.object({
+  leaseId: z.string().uuid("Invalid lease ID."),
+});
+
+export const updatePropertySchema = z.object({
+  propertyId: z.string().uuid("Invalid property selection."),
+  name: z.string().min(1, "Property name is required."),
+  addressLine1: z.string().min(1, "Street address is required."),
+  city: z.string().min(1, "City is required."),
+  state: z.string().min(1, "State is required."),
+  postalCode: z
+    .string()
+    .min(1, "ZIP code is required.")
+    .regex(/^\d{5}(-\d{4})?$/, "Enter a valid 5-digit ZIP code."),
+});
+
+export const deletePropertySchema = z.object({
+  propertyId: z.string().uuid("Invalid property selection."),
+});
+
+export const updateUnitSchema = z.object({
+  unitId: z.string().uuid("Invalid unit selection."),
+  unitNumber: z.string().min(1, "Unit label is required."),
+  bedrooms: z.coerce.number().int().min(0, "Bedrooms must be 0 or more."),
+  bathrooms: z.coerce.number().min(0, "Bathrooms must be 0 or more."),
+  monthlyRentDollars: z.coerce.number().positive("Monthly rent must be greater than $0."),
+});
+
+export const deleteUnitSchema = z.object({
+  unitId: z.string().uuid("Invalid unit selection."),
+});
+
 export const payChargeSchema = z.object({
   chargeId: z.string().uuid("Invalid charge ID."),
 });
@@ -185,8 +229,51 @@ export const createVendorSchema = z.object({
     .union([z.string().email("Enter a valid email address."), z.literal("")])
     .optional(),
   phone: z.string().max(30, "Phone must be under 30 characters.").optional(),
-  trade: z.string().max(80, "Trade must be under 80 characters.").optional(),
+  tradeCategory: z.enum(
+    [
+      "plumbing",
+      "electrical",
+      "hvac",
+      "general",
+      "landscaping",
+      "cleaning",
+      "roofing",
+      "painting",
+      "appliance",
+      "other"
+    ],
+    { message: "Select a valid trade category." }
+  ),
+  preferred: z.preprocess((value) => value === "true" || value === "on" || value === true, z.boolean()),
   ownerAccountId: z.string().uuid("Invalid ownership account.").optional()
+});
+
+export const updateVendorSchema = z.object({
+  vendorId: z.string().uuid("Invalid vendor."),
+  name: z
+    .string()
+    .min(1, "Vendor name is required.")
+    .max(120, "Vendor name must be under 120 characters."),
+  email: z
+    .union([z.string().email("Enter a valid email address."), z.literal("")])
+    .optional(),
+  phone: z.string().max(30, "Phone must be under 30 characters.").optional(),
+  tradeCategory: z.enum(
+    [
+      "plumbing",
+      "electrical",
+      "hvac",
+      "general",
+      "landscaping",
+      "cleaning",
+      "roofing",
+      "painting",
+      "appliance",
+      "other"
+    ],
+    { message: "Select a valid trade category." }
+  ),
+  preferred: z.preprocess((value) => value === "true" || value === "on" || value === true, z.boolean())
 });
 
 export const assignVendorSchema = z.object({
@@ -197,6 +284,88 @@ export const assignVendorSchema = z.object({
 export const uploadMaintenancePhotoSchema = z.object({
   ticketId: z.string().uuid("Invalid ticket ID."),
   caption: z.string().max(300, "Caption must be under 300 characters.").optional()
+});
+
+export const uploadPropertyFileSchema = z.object({
+  propertyId: z.string().uuid("Invalid property."),
+  category: z.enum(
+    ["lease_agreement", "inspection", "insurance", "tax", "receipt", "other"],
+    { message: "Select a valid category." }
+  ),
+  visibility: z.enum(["owner_manager", "all"], { message: "Select a valid visibility option." }),
+  description: z.string().max(500, "Description must be under 500 characters.").optional()
+});
+
+export const deletePropertyFileSchema = z.object({
+  fileId: z.string().uuid("Invalid file.")
+});
+
+export const updateFileVisibilitySchema = z.object({
+  fileId: z.string().uuid("Invalid file."),
+  visibility: z.enum(["owner_manager", "all"], { message: "Select a valid visibility option." })
+});
+
+const expenseCategorySchema = z.enum(
+  [
+    "mortgage",
+    "insurance",
+    "property_tax",
+    "hoa",
+    "repair",
+    "maintenance",
+    "utility",
+    "management_fee",
+    "legal",
+    "other"
+  ],
+  { message: "Select a valid expense category." }
+);
+
+const recurringFrequencySchema = z.enum(["monthly", "quarterly", "annually"], {
+  message: "Select a valid recurring frequency."
+});
+
+const checkboxBooleanSchema = z.preprocess(
+  (value) => value === "true" || value === "on" || value === true,
+  z.boolean()
+);
+
+export const createExpenseSchema = z
+  .object({
+    propertyId: z.string().uuid("Invalid property."),
+    category: expenseCategorySchema,
+    description: z.string().max(500, "Description must be under 500 characters.").optional(),
+    amountDollars: z.coerce.number().positive("Amount must be greater than $0."),
+    expenseDate: z.string().min(1, "Expense date is required."),
+    recurring: checkboxBooleanSchema,
+    recurringFrequency: z.union([recurringFrequencySchema, z.literal("")]).optional(),
+    vendorId: z.union([z.string().uuid("Invalid vendor."), z.literal("")]).optional(),
+    receiptFileId: z.union([z.string().uuid("Invalid receipt file."), z.literal("")]).optional()
+  })
+  .refine((data) => !data.recurring || Boolean(data.recurringFrequency), {
+    message: "Recurring frequency is required for recurring expenses.",
+    path: ["recurringFrequency"]
+  });
+
+export const updateExpenseSchema = z
+  .object({
+    expenseId: z.string().uuid("Invalid expense."),
+    category: expenseCategorySchema,
+    description: z.string().max(500, "Description must be under 500 characters.").optional(),
+    amountDollars: z.coerce.number().positive("Amount must be greater than $0."),
+    expenseDate: z.string().min(1, "Expense date is required."),
+    recurring: checkboxBooleanSchema,
+    recurringFrequency: z.union([recurringFrequencySchema, z.literal("")]).optional(),
+    vendorId: z.union([z.string().uuid("Invalid vendor."), z.literal("")]).optional(),
+    receiptFileId: z.union([z.string().uuid("Invalid receipt file."), z.literal("")]).optional()
+  })
+  .refine((data) => !data.recurring || Boolean(data.recurringFrequency), {
+    message: "Recurring frequency is required for recurring expenses.",
+    path: ["recurringFrequency"]
+  });
+
+export const deleteExpenseSchema = z.object({
+  expenseId: z.string().uuid("Invalid expense.")
 });
 
 /* ─── Ownership Accounts (LLC/Co-Owner) ─── */

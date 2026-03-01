@@ -50,9 +50,34 @@ export interface DocumentPacketDTO {
   featureWarning?: string | null;
 }
 
+export interface PropertyFileDTO {
+  id: string;
+  propertyId: string;
+  propertyLabel: string;
+  fileName: string;
+  fileType: string;
+  category: "lease_agreement" | "inspection" | "insurance" | "tax" | "receipt" | "other";
+  visibility: "owner_manager" | "all";
+  description: string | null;
+  createdAt: string;
+}
+
+export interface TenantSharedFileDTO {
+  id: string;
+  propertyLabel: string;
+  fileName: string;
+  fileType: string;
+  category: "lease_agreement" | "inspection" | "insurance" | "tax" | "receipt" | "other";
+  description: string | null;
+  createdAt: string;
+}
+
 export interface OwnerDocumentsData {
   templates: DocumentTemplateDTO[];
   packets: DocumentPacketDTO[];
+  propertyFiles: PropertyFileDTO[];
+  propertyFilesEnabled: boolean;
+  propertyFilesWarning: string | null;
 }
 
 export interface TenantDocumentPacketDTO {
@@ -70,6 +95,9 @@ export interface TenantDocumentPacketDTO {
 
 export interface TenantDocumentsData {
   packets: TenantDocumentPacketDTO[];
+  files: TenantSharedFileDTO[];
+  propertyFilesEnabled: boolean;
+  propertyFilesWarning: string | null;
 }
 
 export async function getOwnerDocumentsData(userId: string): Promise<OwnerDocumentsData> {
@@ -135,7 +163,10 @@ export async function getOwnerDocumentsData(userId: string): Promise<OwnerDocume
         bodyMarkdown: template.body_markdown,
         createdAt: template.created_at
       })),
-      packets: []
+      packets: [],
+      propertyFiles: [],
+      propertyFilesEnabled: true,
+      propertyFilesWarning: null
     };
   }
 
@@ -171,6 +202,33 @@ export async function getOwnerDocumentsData(userId: string): Promise<OwnerDocume
     }
   }
 
+  let propertyFilesEnabled = true;
+  let propertyFilesWarning: string | null = null;
+  let propertyFileRows: Array<{
+    id: string;
+    property_id: string;
+    file_name: string;
+    file_type: string;
+    category: PropertyFileDTO["category"];
+    visibility: PropertyFileDTO["visibility"];
+    description: string | null;
+    created_at: string;
+  }> = [];
+
+  const { data: propertyFiles, error: propertyFilesError } = await supabase
+    .from("property_files")
+    .select("id, property_id, file_name, file_type, category, visibility, description, created_at")
+    .in("property_id", propertyIds)
+    .order("created_at", { ascending: false });
+
+  if (propertyFilesError && isMissingSchemaError(propertyFilesError)) {
+    propertyFilesEnabled = false;
+    propertyFilesWarning =
+      "Property file vault is not ready yet. Apply the Phase 3 migration to enable uploads and sharing.";
+  } else if (!propertyFilesError) {
+    propertyFileRows = propertyFiles ?? [];
+  }
+
   return {
     templates: templateRows.map((template) => ({
       id: template.id,
@@ -190,7 +248,20 @@ export async function getOwnerDocumentsData(userId: string): Promise<OwnerDocume
       signers: signerMap.get(packet.id) ?? [],
       isFeatureReady: true,
       featureWarning: null
-    }))
+    })),
+    propertyFiles: propertyFileRows.map((file) => ({
+      id: file.id,
+      propertyId: file.property_id,
+      propertyLabel: propertyById.get(file.property_id) ?? "Property",
+      fileName: file.file_name,
+      fileType: file.file_type,
+      category: file.category,
+      visibility: file.visibility,
+      description: file.description,
+      createdAt: file.created_at
+    })),
+    propertyFilesEnabled,
+    propertyFilesWarning
   };
 }
 
@@ -221,15 +292,21 @@ export async function getTenantDocumentsData(userId: string): Promise<TenantDocu
   const signerRows = [...(signersByProfile ?? []), ...(signersByEmail ?? [])];
   const packetIds = Array.from(new Set(signerRows.map((s) => s.packet_id)));
 
-  if (packetIds.length === 0) {
-    return { packets: [] };
-  }
-
-  const { data: packets } = await supabase
-    .from("document_packets")
-    .select("id, template_id, property_id, status, created_at, sent_at, signed_at")
-    .in("id", packetIds)
-    .order("created_at", { ascending: false });
+  const { data: packets } = packetIds.length > 0
+    ? await supabase
+        .from("document_packets")
+        .select("id, template_id, property_id, status, created_at, sent_at, signed_at")
+        .in("id", packetIds)
+        .order("created_at", { ascending: false })
+    : { data: [] as Array<{
+        id: string;
+        template_id: string;
+        property_id: string;
+        status: string;
+        created_at: string;
+        sent_at: string | null;
+        signed_at: string | null;
+      }> };
 
   const packetRows = packets ?? [];
   const templateIds = Array.from(new Set(packetRows.map((packet) => packet.template_id)));
@@ -254,6 +331,72 @@ export async function getTenantDocumentsData(userId: string): Promise<TenantDocu
   const propertyById = new Map((properties ?? []).map((property) => [property.id, property.name]));
   const signerStatusByPacket = new Map(signerRows.map((row) => [row.packet_id, row.status as "pending" | "signed"]));
 
+  const { data: activeLeases } = await supabase
+    .from("leases")
+    .select("unit_id")
+    .eq("tenant_profile_id", userId)
+    .eq("active", true);
+
+  const leaseUnitIds = (activeLeases ?? []).map((lease) => lease.unit_id);
+  const { data: leaseUnits } = leaseUnitIds.length > 0
+    ? await supabase
+        .from("units")
+        .select("id, property_id")
+        .in("id", leaseUnitIds)
+    : { data: [] as Array<{ id: string; property_id: string }> };
+
+  const leasePropertyIds = Array.from(
+    new Set((leaseUnits ?? []).map((unit) => unit.property_id))
+  );
+
+  let propertyFilesEnabled = true;
+  let propertyFilesWarning: string | null = null;
+  let tenantFileRows: Array<{
+    id: string;
+    property_id: string;
+    file_name: string;
+    file_type: string;
+    category: TenantSharedFileDTO["category"];
+    description: string | null;
+    created_at: string;
+  }> = [];
+
+  if (leasePropertyIds.length > 0) {
+    const { data: files, error: filesError } = await supabase
+      .from("property_files")
+      .select("id, property_id, file_name, file_type, category, description, created_at")
+      .in("property_id", leasePropertyIds)
+      .eq("visibility", "all")
+      .order("created_at", { ascending: false });
+
+    if (filesError && isMissingSchemaError(filesError)) {
+      propertyFilesEnabled = false;
+      propertyFilesWarning =
+        "Shared property files are not ready yet. Ask your admin to complete the Phase 3 migration.";
+    } else if (!filesError) {
+      tenantFileRows = files ?? [];
+    }
+  }
+
+  const combinedPropertyById = new Map<string, string>();
+  for (const [id, name] of propertyById) {
+    combinedPropertyById.set(id, name);
+  }
+  if (leasePropertyIds.length > 0) {
+    const knownPropertyIds = new Set(combinedPropertyById.keys());
+    const missingPropertyIds = leasePropertyIds.filter((id) => !knownPropertyIds.has(id));
+    if (missingPropertyIds.length > 0) {
+      const { data: extraProperties } = await supabase
+        .from("properties")
+        .select("id, name")
+        .in("id", missingPropertyIds);
+
+      for (const property of extraProperties ?? []) {
+        combinedPropertyById.set(property.id, property.name);
+      }
+    }
+  }
+
   return {
     packets: packetRows.map((packet) => ({
       id: packet.id,
@@ -266,6 +409,17 @@ export async function getTenantDocumentsData(userId: string): Promise<TenantDocu
       signedAt: packet.signed_at,
       isFeatureReady: true,
       featureWarning: null
-    }))
+    })),
+    files: tenantFileRows.map((file) => ({
+      id: file.id,
+      propertyLabel: combinedPropertyById.get(file.property_id) ?? "Property",
+      fileName: file.file_name,
+      fileType: file.file_type,
+      category: file.category,
+      description: file.description,
+      createdAt: file.created_at
+    })),
+    propertyFilesEnabled,
+    propertyFilesWarning
   };
 }

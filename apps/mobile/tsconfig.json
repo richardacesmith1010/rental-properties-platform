@@ -3,7 +3,7 @@
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "@rental/shared": ["../../packages/shared/src/index.ts"]
+      "@domus/shared": ["../../packages/shared/src/index.ts"]
     }
   },
   "extends": "expo/tsconfig.base"

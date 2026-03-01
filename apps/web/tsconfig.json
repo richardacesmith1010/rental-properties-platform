@@ -22,7 +22,7 @@
       "@/*": [
         "./*"
       ],
-      "@rental/shared": [
+      "@domus/shared": [
         "../../packages/shared/src/index.ts"
       ]
     },

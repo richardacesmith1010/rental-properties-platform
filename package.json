@@ -1,5 +1,5 @@
 {
-  "name": "rental-properties-platform",
+  "name": "domus-platform",
   "private": true,
   "version": "1.0.0",
   "workspaces": [
@@ -7,10 +7,10 @@
     "packages/*"
   ],
   "scripts": {
-    "dev:web": "npm run dev --workspace @rental/web",
-    "dev:mobile": "npm run start --workspace @rental/mobile",
-    "build:web": "npm run build --workspace @rental/web",
-    "lint:web": "npm run lint --workspace @rental/web",
+    "dev:web": "npm run dev --workspace @domus/web",
+    "dev:mobile": "npm run start --workspace @domus/mobile",
+    "build:web": "npm run build --workspace @domus/web",
+    "lint:web": "npm run lint --workspace @domus/web",
     "smoke:web": "bash scripts/smoke-web.sh",
     "verify:phase9-runtime": "node scripts/verify-phase9-runtime.mjs"
   }

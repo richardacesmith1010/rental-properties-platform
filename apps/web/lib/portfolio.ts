@@ -4,12 +4,14 @@ import { getAdministeredProperties } from "@/lib/property-access";
 export interface PropertyListItem {
   id: string;
   name: string;
+  addressLine1: string;
   city: string;
   state: string;
   postalCode: string;
   unitCount: number;
   ownerAccountId: string | null;
   ownerAccountName: string;
+  active: boolean;
 }
 
 export interface UnitListItem {
@@ -17,15 +19,22 @@ export interface UnitListItem {
   propertyId: string;
   propertyName: string;
   unitNumber: string;
+  bedrooms: number;
+  bathrooms: number;
   monthlyRentCents: number;
   occupied: boolean;
+  active: boolean;
 }
 
 export interface LeaseListItem {
   id: string;
+  unitId: string;
+  propertyId: string;
+  tenantProfileId: string;
   unitLabel: string;
   tenantEmail: string;
   monthlyRentCents: number;
+  depositCents: number;
   dueDayOfMonth: number;
   startDate: string;
   endDate: string;
@@ -106,15 +115,15 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
     };
   }
 
-  const [{ data: properties, error: propertiesError }, { data: units }, { data: tenants }] = await Promise.all([
+  const [{ data: properties, error: propertiesError }, { data: units, error: unitsError }, { data: tenants }] = await Promise.all([
     admin
       .from("properties")
-      .select("id, name, city, state, postal_code, owner_account_id")
+      .select("id, name, address_line1, city, state, postal_code, owner_account_id, active")
       .in("id", propertyIds)
       .order("created_at", { ascending: true }),
     admin
       .from("units")
-      .select("id, property_id, unit_number, monthly_rent_cents, occupied")
+      .select("id, property_id, unit_number, bedrooms, bathrooms, monthly_rent_cents, occupied, active")
       .in("property_id", propertyIds)
       .order("unit_number", { ascending: true }),
     admin
@@ -125,25 +134,83 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
       .limit(100)
   ]);
 
-  const legacyPropertiesQuery =
-    propertiesError && isMissingSchemaError(propertiesError)
-      ? await admin
-          .from("properties")
-          .select("id, name, city, state, postal_code")
-          .in("id", propertyIds)
-          .order("created_at", { ascending: true })
-      : null;
+  let propertyRows: Array<{
+    id: string;
+    name: string;
+    address_line1: string;
+    city: string;
+    state: string;
+    postal_code: string;
+    owner_account_id: string | null;
+    active: boolean;
+  }> = [];
 
-  const propertyRows = propertiesError && legacyPropertiesQuery
-    ? (legacyPropertiesQuery.data ?? []).map((property) => ({
-        ...property,
-        owner_account_id: null as string | null
-      }))
-    : (properties ?? []).map((property) => ({
-        ...property,
-        owner_account_id: property.owner_account_id as string | null
-      }));
-  const unitRows = units ?? [];
+  if (propertiesError && isMissingSchemaError(propertiesError)) {
+    const [{ data: ownerAwareRows, error: ownerAwareError }, { data: legacyRows }] = await Promise.all([
+      admin
+        .from("properties")
+        .select("id, name, address_line1, city, state, postal_code, owner_account_id")
+        .in("id", propertyIds)
+        .order("created_at", { ascending: true }),
+      admin
+        .from("properties")
+        .select("id, name, address_line1, city, state, postal_code")
+        .in("id", propertyIds)
+        .order("created_at", { ascending: true })
+    ]);
+
+    propertyRows = ownerAwareError && isMissingSchemaError(ownerAwareError)
+      ? (legacyRows ?? []).map((property) => ({
+          ...property,
+          owner_account_id: null as string | null,
+          active: true
+        }))
+      : (ownerAwareRows ?? []).map((property) => ({
+          ...property,
+          owner_account_id: property.owner_account_id as string | null,
+          active: true
+        }));
+  } else {
+    propertyRows = (properties ?? []).map((property) => ({
+      ...property,
+      owner_account_id: property.owner_account_id as string | null,
+      active: property.active ?? true
+    }));
+  }
+
+  propertyRows = propertyRows.filter((property) => property.active);
+
+  let unitRows: Array<{
+    id: string;
+    property_id: string;
+    unit_number: string;
+    bedrooms: number;
+    bathrooms: number;
+    monthly_rent_cents: number;
+    occupied: boolean;
+    active: boolean;
+  }> = [];
+
+  if (unitsError && isMissingSchemaError(unitsError)) {
+    const { data: legacyUnits } = await admin
+      .from("units")
+      .select("id, property_id, unit_number, bedrooms, bathrooms, monthly_rent_cents, occupied")
+      .in("property_id", propertyIds)
+      .order("unit_number", { ascending: true });
+
+    unitRows = (legacyUnits ?? []).map((unit) => ({
+      ...unit,
+      active: true
+    }));
+  } else {
+    unitRows = (units ?? []).map((unit) => ({
+      ...unit,
+      active: unit.active ?? true
+    }));
+  }
+
+  const activePropertyIds = new Set(propertyRows.map((property) => property.id));
+  unitRows = unitRows.filter((unit) => unit.active && activePropertyIds.has(unit.property_id));
   const unitIds = unitRows.map((unit) => unit.id);
 
   const ownerAccountIds = Array.from(
@@ -170,6 +237,7 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
     unit_id: string;
     tenant_profile_id: string;
     monthly_rent_cents: number;
+    deposit_cents: number;
     due_day_of_month: number;
     start_date: string;
     end_date: string;
@@ -179,11 +247,11 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
   if (unitIds.length > 0) {
     const { data: leaseRows } = await admin
       .from("leases")
-      .select("id, unit_id, tenant_profile_id, monthly_rent_cents, due_day_of_month, start_date, end_date, active")
+      .select("id, unit_id, tenant_profile_id, monthly_rent_cents, deposit_cents, due_day_of_month, start_date, end_date, active")
       .in("unit_id", unitIds)
       .order("start_date", { ascending: false });
 
-    leases = leaseRows ?? [];
+    leases = (leaseRows ?? []).filter((lease) => lease.active);
   }
 
   const propertyById = new Map(propertyRows.map((property) => [property.id, property]));
@@ -193,6 +261,7 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
   const propertiesWithCounts: PropertyListItem[] = propertyRows.map((property) => ({
     id: property.id,
     name: property.name,
+    addressLine1: property.address_line1,
     city: property.city,
     state: property.state,
     postalCode: property.postal_code,
@@ -201,7 +270,8 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
     ownerAccountName:
       property.owner_account_id
         ? ownershipAccountNameById.get(property.owner_account_id) ?? "Ownership Account"
-        : "Owner Account"
+        : "Owner Account",
+    active: property.active
   }));
 
   const unitsWithProperty: UnitListItem[] = unitRows.map((unit) => ({
@@ -209,8 +279,11 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
     propertyId: unit.property_id,
     propertyName: propertyById.get(unit.property_id)?.name ?? "Unknown Property",
     unitNumber: unit.unit_number,
+    bedrooms: unit.bedrooms,
+    bathrooms: unit.bathrooms,
     monthlyRentCents: unit.monthly_rent_cents,
-    occupied: unit.occupied
+    occupied: unit.occupied,
+    active: unit.active
   }));
 
   const leaseList: LeaseListItem[] = leases.map((lease) => {
@@ -220,9 +293,13 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
 
     return {
       id: lease.id,
+      unitId: lease.unit_id,
+      propertyId: unit?.property_id ?? "",
+      tenantProfileId: lease.tenant_profile_id,
       unitLabel: property && unit ? `${property.name} • Unit ${unit.unit_number}` : lease.unit_id,
       tenantEmail: tenant?.email ?? lease.tenant_profile_id,
       monthlyRentCents: lease.monthly_rent_cents,
+      depositCents: lease.deposit_cents,
       dueDayOfMonth: lease.due_day_of_month,
       startDate: lease.start_date,
       endDate: lease.end_date,

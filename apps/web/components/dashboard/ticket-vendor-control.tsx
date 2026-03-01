@@ -10,6 +10,7 @@ type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionS
 interface VendorOption {
   id: string;
   name: string;
+  preferred?: boolean;
 }
 
 interface TicketVendorControlProps {
@@ -32,7 +33,7 @@ export function TicketVendorControl({
         <option value="">Assign vendor</option>
         {vendors.map((vendor) => (
           <option key={vendor.id} value={vendor.id}>
-            {vendor.name}
+            {vendor.preferred ? `★ ${vendor.name}` : vendor.name}
           </option>
         ))}
       </Select>

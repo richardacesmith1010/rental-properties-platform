@@ -9,11 +9,18 @@ import { getNotificationsForUser } from "@/lib/notifications";
 import { getOwnerVendors } from "@/lib/vendors";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { getOwnershipAccountsForUser } from "@/lib/ownership";
+import { getOwnerExpenseData } from "@/lib/expenses";
 import {
   createCheckoutForCharge,
   createLease,
+  updateLease,
+  deleteLease,
   createProperty,
+  updateProperty,
+  deleteProperty,
   createUnit,
+  updateUnit,
+  deleteUnit,
   signOut,
   updateTicketStatus,
   inviteTenant,
@@ -25,13 +32,20 @@ import {
   deleteDocumentTemplate,
   createDocumentPacket,
   sendDocumentPacket,
+  uploadPropertyFile,
+  deletePropertyFile,
+  updateFileVisibility,
   createVendor,
+  updateVendor,
   assignVendorToTicket,
   uploadMaintenancePhoto,
+  createExpense,
+  updateExpense,
+  deleteExpense,
   createOwnershipAccount,
   linkPropertyToOwnershipAccount
 } from "@/app/actions";
-import { requireRole } from "@/lib/auth";
+import { isTester, requireRole } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -46,14 +60,20 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
   const capabilities = await getFeatureCapabilities();
   const generatedMessage = getGeneratedMessage(searchParams?.generated);
 
-  const [dashboard, portfolio, tickets, invitations, documents, notifications, vendors, ownershipAccounts] = await Promise.all([
+  const [dashboard, portfolio, tickets, invitations, documents, notifications, vendors, ownershipAccounts, expenses, testerAccess] = await Promise.all([
     getDashboardData(user.id),
     getPortfolioData(user.id),
     getOwnerMaintenanceTickets(user.id),
     getOwnerInvitations(user.id),
     capabilities.documentsEnabled
       ? getOwnerDocumentsData(user.id)
-      : Promise.resolve({ templates: [], packets: [] }),
+      : Promise.resolve({
+          templates: [],
+          packets: [],
+          propertyFiles: [],
+          propertyFilesEnabled: false,
+          propertyFilesWarning: "Property file vault is not enabled yet."
+        }),
     capabilities.notificationsEnabled
       ? getNotificationsForUser(user.id)
       : Promise.resolve([]),
@@ -62,7 +82,9 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       : Promise.resolve([]),
     capabilities.ownershipEnabled
       ? getOwnershipAccountsForUser(user.id)
-      : Promise.resolve([])
+      : Promise.resolve([]),
+    getOwnerExpenseData(user.id),
+    isTester(user.id)
   ]);
 
   return (
@@ -74,13 +96,21 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       documents={documents}
       notifications={notifications}
       vendors={vendors}
+      expensesData={expenses}
       ownershipAccounts={ownershipAccounts}
       capabilities={capabilities}
       userEmail={user.email ?? "unknown"}
+      showTesterLink={testerAccess}
       onSignOut={signOut}
       onCreateProperty={createProperty}
       onCreateUnit={createUnit}
       onCreateLease={createLease}
+      onUpdateProperty={updateProperty}
+      onDeleteProperty={deleteProperty}
+      onUpdateUnit={updateUnit}
+      onDeleteUnit={deleteUnit}
+      onUpdateLease={updateLease}
+      onDeleteLease={deleteLease}
       onPayCharge={createCheckoutForCharge}
       onGenerateChargesHref="/owner/generate"
       generatedMessage={generatedMessage}
@@ -94,9 +124,16 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       onDeleteDocumentTemplate={deleteDocumentTemplate}
       onCreateDocumentPacket={createDocumentPacket}
       onSendDocumentPacket={sendDocumentPacket}
+      onUploadPropertyFile={uploadPropertyFile}
+      onDeletePropertyFile={deletePropertyFile}
+      onUpdateFileVisibility={updateFileVisibility}
       onCreateVendor={createVendor}
+      onUpdateVendor={updateVendor}
       onAssignVendor={assignVendorToTicket}
       onUploadMaintenancePhoto={uploadMaintenancePhoto}
+      onCreateExpense={createExpense}
+      onUpdateExpense={updateExpense}
+      onDeleteExpense={deleteExpense}
       onCreateOwnershipAccount={createOwnershipAccount}
       onLinkPropertyToOwnershipAccount={linkPropertyToOwnershipAccount}
     />

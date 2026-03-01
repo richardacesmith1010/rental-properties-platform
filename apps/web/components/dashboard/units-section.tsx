@@ -7,7 +7,7 @@ import { SubmitButton } from "@/components/shared/submit-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { LeaseListItem } from "@/lib/portfolio";
+import type { UnitListItem } from "@/lib/portfolio";
 import type { ActionState } from "@/app/actions";
 
 type StatefulAction = (
@@ -15,16 +15,16 @@ type StatefulAction = (
   formData: FormData
 ) => Promise<ActionState>;
 
-interface LeasesSectionProps {
-  leases: LeaseListItem[];
+interface UnitsSectionProps {
+  units: UnitListItem[];
   showControls?: boolean;
-  onUpdateLease?: StatefulAction;
-  onDeleteLease?: StatefulAction;
+  onUpdateUnit?: StatefulAction;
+  onDeleteUnit?: StatefulAction;
 }
 
 const unavailableAction: StatefulAction = async () => ({
   success: false,
-  error: "Lease actions are unavailable."
+  error: "Unit actions are unavailable."
 });
 
 function dollars(cents: number) {
@@ -49,79 +49,75 @@ function FormSuccess({ state, message }: { state: ActionState; message: string }
   );
 }
 
-export function LeasesSection({
-  leases,
+export function UnitsSection({
+  units,
   showControls = false,
-  onUpdateLease,
-  onDeleteLease
-}: LeasesSectionProps) {
-  const [updateState, updateAction] = useFormState(onUpdateLease ?? unavailableAction, null);
-  const [deleteState, deleteAction] = useFormState(onDeleteLease ?? unavailableAction, null);
+  onUpdateUnit,
+  onDeleteUnit
+}: UnitsSectionProps) {
+  const [updateState, updateAction] = useFormState(onUpdateUnit ?? unavailableAction, null);
+  const [deleteState, deleteAction] = useFormState(onDeleteUnit ?? unavailableAction, null);
 
   return (
-    <Card id="leases">
+    <Card id="units">
       <CardHeader>
-        <CardTitle>Active Leases</CardTitle>
+        <CardTitle>Units</CardTitle>
       </CardHeader>
       <CardContent>
         {showControls && (
           <>
             <FormError state={updateState} />
             <FormError state={deleteState} />
-            <FormSuccess state={updateState} message="Lease updated." />
-            <FormSuccess state={deleteState} message="Lease archived." />
+            <FormSuccess state={updateState} message="Unit updated." />
+            <FormSuccess state={deleteState} message="Unit archived." />
           </>
         )}
 
-        {leases.length === 0 ? (
-          <EmptyState message="No leases created yet." />
+        {units.length === 0 ? (
+          <EmptyState message="No units yet. Add one in Operations." />
         ) : (
           <div>
-            {leases.map((lease, i) => (
-              <DataRow key={lease.id} last={i === leases.length - 1}>
+            {units.map((unit, i) => (
+              <DataRow key={unit.id} last={i === units.length - 1}>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-zinc-900">{lease.unitLabel}</p>
-                  <p className="mt-0.5 text-xs text-zinc-500">{lease.tenantEmail}</p>
+                  <p className="text-sm font-semibold text-zinc-900">
+                    {unit.propertyName} • Unit {unit.unitNumber}
+                  </p>
                   <p className="mt-0.5 text-xs text-zinc-500">
-                    Ends {lease.endDate}
+                    {unit.bedrooms} bd / {unit.bathrooms} ba • {unit.occupied ? "Occupied" : "Vacant"}
                   </p>
 
                   {showControls && (
                     <form action={updateAction} className="mt-3 grid gap-2 sm:grid-cols-2">
-                      <input type="hidden" name="leaseId" value={lease.id} />
+                      <input type="hidden" name="unitId" value={unit.id} />
+                      <Input name="unitNumber" defaultValue={unit.unitNumber} required />
+                      <Input
+                        name="bedrooms"
+                        type="number"
+                        min={0}
+                        step="1"
+                        defaultValue={unit.bedrooms}
+                        required
+                      />
+                      <Input
+                        name="bathrooms"
+                        type="number"
+                        min={0}
+                        step="0.5"
+                        defaultValue={unit.bathrooms}
+                        required
+                      />
                       <Input
                         name="monthlyRentDollars"
                         type="number"
                         min={1}
                         step="0.01"
-                        defaultValue={lease.monthlyRentCents / 100}
-                        required
-                      />
-                      <Input
-                        name="depositDollars"
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        defaultValue={lease.depositCents / 100}
-                        required
-                      />
-                      <Input
-                        name="dueDayOfMonth"
-                        type="number"
-                        min={1}
-                        max={28}
-                        defaultValue={lease.dueDayOfMonth}
-                        required
-                      />
-                      <Input
-                        name="endDate"
-                        type="date"
-                        defaultValue={lease.endDate}
+                        defaultValue={unit.monthlyRentCents / 100}
                         required
                       />
                       <div className="sm:col-span-2">
                         <SubmitButton size="sm" variant="outline">
-                          Save Lease Changes
+                          Save Unit Changes
                         </SubmitButton>
                       </div>
                     </form>
@@ -129,23 +125,17 @@ export function LeasesSection({
                 </div>
 
                 <div className="flex flex-col items-end gap-2">
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-zinc-900">
-                      {dollars(lease.monthlyRentCents)}
-                    </p>
-                    <p className="text-xs text-zinc-500">Due day {lease.dueDayOfMonth}</p>
-                  </div>
-
+                  <p className="text-xs text-zinc-500">{dollars(unit.monthlyRentCents)}</p>
                   {showControls && (
                     <form
                       action={deleteAction}
                       onSubmit={(event) => {
-                        if (!window.confirm("Are you sure? This will archive the lease.")) {
+                        if (!window.confirm("Are you sure? This will archive the unit.")) {
                           event.preventDefault();
                         }
                       }}
                     >
-                      <input type="hidden" name="leaseId" value={lease.id} />
+                      <input type="hidden" name="unitId" value={unit.id} />
                       <Button type="submit" size="sm" variant="destructive">
                         Archive
                       </Button>

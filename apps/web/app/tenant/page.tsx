@@ -5,7 +5,7 @@ import {
   markNotificationRead,
   signDocumentPacket
 } from "@/app/actions";
-import { requireRole } from "@/lib/auth";
+import { isTester, requireRole } from "@/lib/auth";
 import { getTenantPaymentData } from "@/lib/tenant-payments";
 import { getTenantMaintenanceData } from "@/lib/maintenance";
 import { getTenantDocumentsData } from "@/lib/documents";
@@ -50,15 +50,21 @@ export default async function TenantPage() {
   const { user } = await requireRole(["tenant"]);
   const capabilities = await getFeatureCapabilities();
 
-  const [paymentData, maintenanceData, documentsData, notifications] = await Promise.all([
+  const [paymentData, maintenanceData, documentsData, notifications, testerAccess] = await Promise.all([
     getTenantPaymentData(user.id),
     getTenantMaintenanceData(user.id),
     capabilities.documentsEnabled
       ? getTenantDocumentsData(user.id)
-      : Promise.resolve({ packets: [] }),
+      : Promise.resolve({
+          packets: [],
+          files: [],
+          propertyFilesEnabled: false,
+          propertyFilesWarning: "Shared property files are not enabled yet."
+        }),
     capabilities.notificationsEnabled
       ? getNotificationsForUser(user.id)
-      : Promise.resolve([])
+      : Promise.resolve([]),
+    isTester(user.id)
   ]);
 
   const outstandingCents = paymentData.charges.reduce(
@@ -76,13 +82,19 @@ export default async function TenantPage() {
 
   return (
     <div className="app-surface flex min-h-screen flex-col lg:flex-row">
-      <MobileTopBar userEmail={user.email ?? "unknown"} role="tenant" onSignOut={signOut} />
+      <MobileTopBar
+        userEmail={user.email ?? "unknown"}
+        role="tenant"
+        showTesterLink={testerAccess}
+        onSignOut={signOut}
+      />
 
       <SidebarNav
         userEmail={user.email ?? "unknown"}
         occupancy={0}
         activeLeaseCount={0}
         role="tenant"
+        showTesterLink={testerAccess}
         onSignOut={signOut}
         items={tenantNavItems}
         snapshot={{
@@ -194,9 +206,12 @@ export default async function TenantPage() {
           <div id="documents">
             <TenantDocumentsSection
               packets={documentsData.packets}
+              files={documentsData.files}
               onSignPacket={signDocumentPacket}
               isFeatureReady={capabilities.documentsEnabled}
               featureWarning={capabilities.warnings.documents}
+              propertyFilesEnabled={documentsData.propertyFilesEnabled}
+              propertyFilesWarning={documentsData.propertyFilesWarning}
               assetAccessEnabled={capabilities.documentAssetAccessEnabled}
               assetAccessWarning={
                 capabilities.documentsEnabled && !capabilities.documentAssetAccessEnabled

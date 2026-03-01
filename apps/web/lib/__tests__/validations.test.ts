@@ -16,8 +16,15 @@ import {
   signDocumentPacketSchema,
   markNotificationReadSchema,
   createVendorSchema,
+  updateVendorSchema,
   assignVendorSchema,
   uploadMaintenancePhotoSchema,
+  uploadPropertyFileSchema,
+  deletePropertyFileSchema,
+  updateFileVisibilitySchema,
+  createExpenseSchema,
+  updateExpenseSchema,
+  deleteExpenseSchema,
   parseFormData,
 } from "../validations";
 
@@ -543,7 +550,8 @@ describe("createVendorSchema", () => {
       name: "Rapid Plumbing",
       email: "ops@rapidplumbing.com",
       phone: "555-333-1111",
-      trade: "Plumbing"
+      tradeCategory: "plumbing",
+      preferred: "true"
     });
     expect(result.success).toBe(true);
   });
@@ -553,6 +561,20 @@ describe("createVendorSchema", () => {
       name: ""
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("updateVendorSchema", () => {
+  it("accepts valid vendor update payload", () => {
+    const result = updateVendorSchema.safeParse({
+      vendorId: "550e8400-e29b-41d4-a716-446655440000",
+      name: "Rapid Plumbing",
+      email: "ops@rapidplumbing.com",
+      phone: "555-333-1111",
+      tradeCategory: "plumbing",
+      preferred: "false"
+    });
+    expect(result.success).toBe(true);
   });
 });
 
@@ -571,6 +593,75 @@ describe("uploadMaintenancePhotoSchema", () => {
     const result = uploadMaintenancePhotoSchema.safeParse({
       ticketId: "550e8400-e29b-41d4-a716-446655440000",
       caption: "After repair"
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("property file schemas", () => {
+  it("accepts property file upload payload", () => {
+    const result = uploadPropertyFileSchema.safeParse({
+      propertyId: "550e8400-e29b-41d4-a716-446655440000",
+      category: "inspection",
+      visibility: "all",
+      description: "Move-in photo set"
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts property file delete payload", () => {
+    const result = deletePropertyFileSchema.safeParse({
+      fileId: "550e8400-e29b-41d4-a716-446655440000"
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts property file visibility payload", () => {
+    const result = updateFileVisibilitySchema.safeParse({
+      fileId: "550e8400-e29b-41d4-a716-446655440000",
+      visibility: "owner_manager"
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("expense schemas", () => {
+  const baseExpense = {
+    propertyId: "550e8400-e29b-41d4-a716-446655440000",
+    category: "maintenance",
+    amountDollars: "120.50",
+    expenseDate: "2026-03-01",
+    recurring: "false",
+    recurringFrequency: "",
+    vendorId: "",
+    receiptFileId: ""
+  };
+
+  it("accepts valid create expense payload", () => {
+    const result = createExpenseSchema.safeParse(baseExpense);
+    expect(result.success).toBe(true);
+  });
+
+  it("requires frequency for recurring expenses", () => {
+    const result = createExpenseSchema.safeParse({
+      ...baseExpense,
+      recurring: "true",
+      recurringFrequency: ""
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts valid update expense payload", () => {
+    const result = updateExpenseSchema.safeParse({
+      ...baseExpense,
+      expenseId: "550e8400-e29b-41d4-a716-446655440000"
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts valid delete expense payload", () => {
+    const result = deleteExpenseSchema.safeParse({
+      expenseId: "550e8400-e29b-41d4-a716-446655440000"
     });
     expect(result.success).toBe(true);
   });

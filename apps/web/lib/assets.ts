@@ -4,6 +4,7 @@ import { canUserAdministerProperty } from "@/lib/property-access";
 import {
   canAccessDocumentPacket,
   canAccessMaintenancePhoto,
+  canAccessPropertyFile,
 } from "@/lib/asset-authorization";
 
 const SIGNED_URL_TTL_SECONDS = 60 * 5;
@@ -262,6 +263,103 @@ export async function getSignedDocumentPacketAsset(
         error instanceof Error
           ? error.message
           : "Failed to access document packet files.",
+    };
+  }
+}
+
+export async function getSignedPropertyFileAsset(
+  userId: string,
+  role: AppRole,
+  fileId: string
+): Promise<SignedAssetResult> {
+  try {
+    const admin = createAdminClient();
+
+    const { data: propertyFile, error: fileError } = await admin
+      .from("property_files")
+      .select("id, property_id, storage_path, visibility")
+      .eq("id", fileId)
+      .single();
+
+    if (fileError || !propertyFile) {
+      return { ok: false, status: 404, error: "Property file not found." };
+    }
+
+    const { data: property, error: propertyError } = await admin
+      .from("properties")
+      .select("id")
+      .eq("id", propertyFile.property_id)
+      .single();
+
+    if (propertyError || !property) {
+      return { ok: false, status: 404, error: "Property not found for file." };
+    }
+
+    const isManagerAssigned =
+      role === "manager"
+        ? await isManagerAssignedToProperty(userId, property.id)
+        : false;
+    const isPropertyAdmin = await canUserAdministerProperty(userId, property.id);
+
+    let tenantHasLease = false;
+    if (role === "tenant") {
+      const { data: units } = await admin
+        .from("units")
+        .select("id")
+        .eq("property_id", property.id);
+
+      const unitIds = (units ?? []).map((unit) => unit.id);
+      if (unitIds.length > 0) {
+        const { data: tenantLease } = await admin
+          .from("leases")
+          .select("id")
+          .eq("tenant_profile_id", userId)
+          .eq("active", true)
+          .in("unit_id", unitIds)
+          .limit(1)
+          .maybeSingle();
+
+        tenantHasLease = Boolean(tenantLease?.id);
+      }
+    }
+
+    if (
+      !canAccessPropertyFile({
+        role,
+        userId,
+        isPropertyAdmin,
+        isManagerAssigned,
+        visibility: propertyFile.visibility as "owner_manager" | "all",
+        tenantHasLease
+      })
+    ) {
+      return { ok: false, status: 403, error: "Forbidden." };
+    }
+
+    const { data: signed, error: signError } = await admin.storage
+      .from("property-files")
+      .createSignedUrl(propertyFile.storage_path, SIGNED_URL_TTL_SECONDS);
+
+    if (signError || !signed?.signedUrl) {
+      return {
+        ok: false,
+        status: 500,
+        error: "Failed to create signed URL for property file."
+      };
+    }
+
+    return {
+      ok: true,
+      asset: buildSignedAsset(propertyFile.storage_path, signed.signedUrl)
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      status: 500,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to access property file."
     };
   }
 }
