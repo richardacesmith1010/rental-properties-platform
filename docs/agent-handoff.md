@@ -436,3 +436,26 @@ NEXT_ACTION=tag v1.0.0
   - `npx tsc -p apps/mobile/tsconfig.json --noEmit` -> PASS
   - `npx vercel deploy --prod --yes` -> PASS
   - `APP_URL=https://rental-properties-platform-web.vercel.app npm run smoke:web` -> PASS
+
+## V2 Settings Page + Tester Failure Prompt (Codex)
+
+- Timestamp (UTC): `2026-03-01T20:31:00Z`
+- Branch: `main`
+- HEAD: `b6e8d69`
+- Scope delivered:
+  - Replaced in-sidebar theme dropdown with a dedicated `/settings` page.
+  - Added persistent theme chooser cards on settings page with all options visible:
+    - `Atlas Light`
+    - `Noctis Neon`
+    - `Imperium Night`
+  - Sidebar/mobile `Settings` controls now route to `/settings`.
+  - Tester feature runner now emits copy-ready failure prompt text when a checkpoint fails.
+  - Added one-click `Copy Prompt` action for failure relay to Codex.
+  - Smoke guard expanded to include unauthenticated `/settings` route redirect.
+- Validation:
+  - `npm test --workspace @domus/web` -> PASS (106/106)
+  - `npm run lint:web` -> PASS
+  - `npm run build:web` -> PASS
+  - `npx tsc -p apps/mobile/tsconfig.json --noEmit` -> PASS
+  - `npx vercel deploy --prod --yes` -> PASS
+  - `APP_URL=https://rental-properties-platform-web.vercel.app npm run smoke:web` -> PASS
