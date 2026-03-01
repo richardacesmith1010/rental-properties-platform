@@ -83,7 +83,7 @@ function isNotFoundFunction(error) {
 async function probeTable(supabase, table) {
   const { error } = await supabase
     .from(table)
-    .select("id", { head: true, count: "exact" })
+    .select("*", { head: true, count: "exact" })
     .limit(1);
 
   return {
