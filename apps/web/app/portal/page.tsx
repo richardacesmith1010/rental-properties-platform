@@ -27,6 +27,38 @@ export default async function PortalPage() {
             You are signed in as <span className="font-semibold text-zinc-900">{user.email ?? "unknown"}</span>.
             Use this page to jump anywhere without signing in again.
           </p>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href={workspacePath}
+              className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+              title={`Open ${workspaceLabel}.`}
+            >
+              Workspace
+            </Link>
+            <Link
+              href="/settings"
+              className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+              title="Open settings page."
+            >
+              Settings
+            </Link>
+            <Link
+              href="/"
+              className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+              title="Open public app home page while staying signed in."
+            >
+              App Home
+            </Link>
+            {testerAccess && (
+              <Link
+                href="/tester"
+                className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                title="Open tester diagnostics mode."
+              >
+                Tester
+              </Link>
+            )}
+          </div>
         </header>
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2">

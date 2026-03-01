@@ -109,6 +109,13 @@ export default async function TesterPage() {
               Portal Home
             </Link>
             <Link
+              href="/settings"
+              className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+              title="Open settings page."
+            >
+              Settings
+            </Link>
+            <Link
               href="/"
               className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
               title="Open Domus home page. You remain signed in."
