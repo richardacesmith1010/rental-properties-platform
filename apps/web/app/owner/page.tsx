@@ -45,22 +45,42 @@ import {
   createOwnershipAccount,
   linkPropertyToOwnershipAccount
 } from "@/app/actions";
-import { isTester, requireRole } from "@/lib/auth";
+import {
+  getAuthenticatedUser,
+  getCurrentUserRole,
+  getRoleHomePath,
+  isTester
+} from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 interface OwnerPageProps {
   searchParams?: {
     generated?: string | string[];
+    testerPreview?: string | string[];
   };
 }
 
 export default async function OwnerPage({ searchParams }: OwnerPageProps) {
-  const { user } = await requireRole(["owner"]);
+  const user = await getAuthenticatedUser();
+  const testerPreview =
+    searchParams?.testerPreview === "true" ||
+    (Array.isArray(searchParams?.testerPreview) &&
+      searchParams?.testerPreview.includes("true"));
+  const [role, testerAccess] = await Promise.all([
+    getCurrentUserRole(user.id),
+    isTester(user.id)
+  ]);
+
+  if (role !== "owner" && !(testerPreview && testerAccess)) {
+    redirect(getRoleHomePath(role));
+  }
+
   const capabilities = await getFeatureCapabilities();
   const generatedMessage = getGeneratedMessage(searchParams?.generated);
 
-  const [dashboard, portfolio, tickets, invitations, documents, notifications, vendors, ownershipAccounts, expenses, testerAccess] = await Promise.all([
+  const [dashboard, portfolio, tickets, invitations, documents, notifications, vendors, ownershipAccounts, expenses] = await Promise.all([
     getDashboardData(user.id),
     getPortfolioData(user.id),
     getOwnerMaintenanceTickets(user.id),
@@ -83,8 +103,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
     capabilities.ownershipEnabled
       ? getOwnershipAccountsForUser(user.id)
       : Promise.resolve([]),
-    getOwnerExpenseData(user.id),
-    isTester(user.id)
+    getOwnerExpenseData(user.id)
   ]);
 
   return (

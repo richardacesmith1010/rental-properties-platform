@@ -5,7 +5,12 @@ import {
   markNotificationRead,
   signDocumentPacket
 } from "@/app/actions";
-import { isTester, requireRole } from "@/lib/auth";
+import {
+  getAuthenticatedUser,
+  getCurrentUserRole,
+  getRoleHomePath,
+  isTester
+} from "@/lib/auth";
 import { getTenantPaymentData } from "@/lib/tenant-payments";
 import { getTenantMaintenanceData } from "@/lib/maintenance";
 import { getTenantDocumentsData } from "@/lib/documents";
@@ -31,6 +36,7 @@ import {
   Receipt,
   Wrench
 } from "lucide-react";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -46,11 +52,30 @@ function dollars(cents: number) {
   return `$${(cents / 100).toLocaleString()}`;
 }
 
-export default async function TenantPage() {
-  const { user } = await requireRole(["tenant"]);
+interface TenantPageProps {
+  searchParams?: {
+    testerPreview?: string | string[];
+  };
+}
+
+export default async function TenantPage({ searchParams }: TenantPageProps) {
+  const user = await getAuthenticatedUser();
+  const testerPreview =
+    searchParams?.testerPreview === "true" ||
+    (Array.isArray(searchParams?.testerPreview) &&
+      searchParams?.testerPreview.includes("true"));
+  const [role, testerAccess] = await Promise.all([
+    getCurrentUserRole(user.id),
+    isTester(user.id)
+  ]);
+
+  if (role !== "tenant" && !(testerPreview && testerAccess)) {
+    redirect(getRoleHomePath(role));
+  }
+
   const capabilities = await getFeatureCapabilities();
 
-  const [paymentData, maintenanceData, documentsData, notifications, testerAccess] = await Promise.all([
+  const [paymentData, maintenanceData, documentsData, notifications] = await Promise.all([
     getTenantPaymentData(user.id),
     getTenantMaintenanceData(user.id),
     capabilities.documentsEnabled
@@ -63,8 +88,7 @@ export default async function TenantPage() {
         }),
     capabilities.notificationsEnabled
       ? getNotificationsForUser(user.id)
-      : Promise.resolve([]),
-    isTester(user.id)
+      : Promise.resolve([])
   ]);
 
   const outstandingCents = paymentData.charges.reduce(

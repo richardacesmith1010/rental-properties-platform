@@ -168,6 +168,7 @@ export function SidebarNav({
   onSelectItem,
   snapshot,
 }: SidebarNavProps) {
+  const [showSettings, setShowSettings] = useState(false);
   const [theme, setTheme] = useState<DomusTheme>("atlas-light");
 
   useEffect(() => {
@@ -216,6 +217,33 @@ export function SidebarNav({
       </div>
 
       <div className="space-y-2 px-3 pb-3">
+        <button
+          type="button"
+          className="block w-full rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-left text-xs font-semibold text-white/85 transition hover:bg-white/20"
+          onClick={() => setShowSettings((prev) => !prev)}
+          title="Open settings for appearance and workspace controls."
+        >
+          {showSettings ? "Close Settings" : "Settings"}
+        </button>
+        {showSettings && (
+          <div className="rounded-[10px] border border-white/15 bg-white/10 p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">
+              Interface Theme
+            </p>
+            <Select
+              value={theme}
+              onChange={(event) => applyTheme(event.target.value as DomusTheme)}
+              className="mt-2 h-9 border-white/20 bg-white/10 text-xs font-medium text-white focus:ring-indigo-300"
+              title="Choose how Domus looks. This saves on this device."
+            >
+              {domusThemeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
         <a
           href="/portal"
           className="block rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/20"
@@ -298,24 +326,6 @@ export function SidebarNav({
         <p className="text-xs text-white/50">{summary.note}</p>
       </div>
 
-      <div className="mx-4 mb-3 rounded-xl border border-white/15 bg-white/10 p-3.5">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">
-          Interface Theme
-        </p>
-        <Select
-          value={theme}
-          onChange={(event) => applyTheme(event.target.value as DomusTheme)}
-          className="mt-2 h-9 border-white/20 bg-white/10 text-xs font-medium text-white focus:ring-indigo-300"
-          title="Choose how Domus looks. This saves on this device."
-        >
-          {domusThemeOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </Select>
-      </div>
-
       <div className="border-t border-white/[0.12] px-5 py-4">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-violet-400 text-xs font-semibold text-white">
@@ -347,10 +357,25 @@ export function MobileTopBar({
   showTesterLink = false,
   onSignOut,
 }: Pick<SidebarNavProps, "userEmail" | "role" | "showTesterLink" | "onSignOut">) {
+  const [showSettings, setShowSettings] = useState(false);
+  const [theme, setTheme] = useState<DomusTheme>("atlas-light");
+  useEffect(() => {
+    const storedTheme = (localStorage.getItem(DOMUS_THEME_KEY) as DomusTheme | null) ?? "atlas-light";
+    document.documentElement.setAttribute("data-domus-theme", storedTheme);
+    setTheme(storedTheme);
+  }, []);
+
+  const applyTheme = (nextTheme: DomusTheme) => {
+    setTheme(nextTheme);
+    localStorage.setItem(DOMUS_THEME_KEY, nextTheme);
+    document.documentElement.setAttribute("data-domus-theme", nextTheme);
+  };
+
   const workspacePath = role === "owner" ? "/owner" : role === "manager" ? "/manager" : "/tenant";
 
   return (
-    <div className="gradient-sidebar flex items-center justify-between px-4 py-3 shadow-lg lg:hidden">
+    <div className="gradient-sidebar px-4 py-3 shadow-lg lg:hidden">
+      <div className="flex items-center justify-between">
       <div className="flex items-center gap-2.5">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-sm font-bold text-white">
           D
@@ -363,6 +388,14 @@ export function MobileTopBar({
         </div>
       </div>
       <div className="flex items-center gap-3">
+        <button
+          type="button"
+          className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-white/10"
+          title="Open settings to change theme."
+          onClick={() => setShowSettings((prev) => !prev)}
+        >
+          Settings
+        </button>
         <a
           href={workspacePath}
           className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-white/10"
@@ -397,6 +430,26 @@ export function MobileTopBar({
           </button>
         </form>
       </div>
+      </div>
+      {showSettings && (
+        <div className="mt-3 rounded-lg border border-white/10 bg-white/5 p-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-white/60">
+            Interface Theme
+          </p>
+          <Select
+            value={theme}
+            onChange={(event) => applyTheme(event.target.value as DomusTheme)}
+            className="mt-2 h-8 border-white/20 bg-white/10 text-[11px] text-white"
+            title="Choose how Domus looks. This saves on this device."
+          >
+            {domusThemeOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+      )}
     </div>
   );
 }

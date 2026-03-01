@@ -95,9 +95,9 @@ export default async function TesterPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Link
-              href="/owner"
+              href={getRoleHomePath(role)}
               className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
-              title="Exit tester mode and go directly to owner workspace."
+              title="Exit tester mode and go directly to your role workspace."
             >
               Exit Tester Mode
             </Link>

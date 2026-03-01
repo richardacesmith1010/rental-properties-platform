@@ -61,6 +61,13 @@ interface CheckpointResult {
   detail?: string;
 }
 
+interface CheckpointDefinition {
+  id: string;
+  label: string;
+  previewPath: string;
+  run: () => Promise<string>;
+}
+
 interface FeatureRunResult {
   status: "idle" | "running" | "pass" | "fail";
   checkpoints: CheckpointResult[];
@@ -189,6 +196,9 @@ export function TesterToolsSection({
   const [grantState, grantAction] = useFormState(onGrantTesterAccess, null);
   const [revokeState, revokeAction] = useFormState(onRevokeTesterAccess, null);
   const [previewRole, setPreviewRole] = useState<PreviewRole>("owner");
+  const [workspaceViewRole, setWorkspaceViewRole] = useState<PreviewRole>("owner");
+  const [workspacePreviewPath, setWorkspacePreviewPath] = useState("/owner?testerPreview=true");
+  const [activeTestTarget, setActiveTestTarget] = useState<string>("/tester");
   const [runningFeatureId, setRunningFeatureId] = useState<FeatureTestId | null>(null);
   const [featureRuns, setFeatureRuns] = useState<Record<FeatureTestId, FeatureRunResult>>(() =>
     featureTests.reduce((acc, item) => {
@@ -199,6 +209,8 @@ export function TesterToolsSection({
 
   const lastGenerateMessage = useRef<string | null>(null);
   const lastCleanupMessage = useRef<string | null>(null);
+
+  const workspacePathForRole = (role: PreviewRole) => `/${role}?testerPreview=true`;
 
   useEffect(() => {
     if (!generateState?.success) return;
@@ -215,6 +227,10 @@ export function TesterToolsSection({
     lastCleanupMessage.current = marker;
     router.refresh();
   }, [cleanupState, router]);
+
+  useEffect(() => {
+    setWorkspacePreviewPath(workspacePathForRole(workspaceViewRole));
+  }, [workspaceViewRole]);
 
   const healthLookup = useMemo(() => {
     const map = new Map<string, TesterHealthRow>();
@@ -253,23 +269,38 @@ export function TesterToolsSection({
     return `${successLabel} (HTTP ${response.status})`;
   };
 
-  const buildCheckpoints = (featureId: FeatureTestId) => {
+  const buildCheckpoints = (featureId: FeatureTestId): CheckpointDefinition[] => {
     if (featureId === "platform_access") {
       return [
         {
           id: "platform-home",
           label: "Marketing home page loads",
+          previewPath: "/",
           run: () => checkPageForText("/", "Domus")
         },
         {
           id: "platform-login",
           label: "Login page shows Domus branding",
+          previewPath: "/login",
           run: () => checkPageForText("/login", "Domus")
         },
         {
           id: "platform-tester",
           label: "Tester diagnostics page loads",
+          previewPath: "/tester",
           run: () => checkPageForText("/tester", "Tester Diagnostics")
+        },
+        {
+          id: "platform-manager-preview",
+          label: "Manager preview route loads in tester mode",
+          previewPath: "/manager?testerPreview=true",
+          run: () => checkPageForText("/manager?testerPreview=true", "Operations Dashboard")
+        },
+        {
+          id: "platform-tenant-preview",
+          label: "Tenant preview route loads in tester mode",
+          previewPath: "/tenant?testerPreview=true",
+          run: () => checkPageForText("/tenant?testerPreview=true", "Tenant Workspace")
         }
       ];
     }
@@ -279,16 +310,19 @@ export function TesterToolsSection({
         {
           id: "billing-rent-charges",
           label: "Rent charges table is healthy",
+          previewPath: "/owner?testerPreview=true",
           run: async () => readHealthStatus("rent_charges")
         },
         {
           id: "billing-owner-ui",
           label: "Owner workspace shows charges section",
-          run: () => checkPageForText("/owner", "Upcoming / Late Charges")
+          previewPath: "/owner?testerPreview=true",
+          run: () => checkPageForText("/owner?testerPreview=true", "Upcoming / Late Charges")
         },
         {
           id: "billing-payment-success-route",
           label: "Payment success page responds",
+          previewPath: "/payments/success",
           run: () => checkStatus("/payments/success", [200], "Payment success route is reachable")
         }
       ];
@@ -299,17 +333,20 @@ export function TesterToolsSection({
         {
           id: "maintenance-tickets-table",
           label: "Maintenance tickets table is healthy",
+          previewPath: "/owner?testerPreview=true",
           run: async () => readHealthStatus("maintenance_tickets")
         },
         {
           id: "maintenance-vendors-table",
           label: "Vendors table is healthy",
+          previewPath: "/owner?testerPreview=true",
           run: async () => readHealthStatus("vendors")
         },
         {
           id: "maintenance-owner-ui",
           label: "Owner workspace shows maintenance section",
-          run: () => checkPageForText("/owner", "Maintenance")
+          previewPath: "/owner?testerPreview=true",
+          run: () => checkPageForText("/owner?testerPreview=true", "Maintenance")
         }
       ];
     }
@@ -319,6 +356,7 @@ export function TesterToolsSection({
         {
           id: "documents-capability",
           label: "Documents capability is enabled",
+          previewPath: "/owner?testerPreview=true",
           run: async () => {
             if (!capabilities.documentsEnabled) {
               throw new Error("documentsEnabled is false.");
@@ -329,16 +367,19 @@ export function TesterToolsSection({
         {
           id: "documents-packets-table",
           label: "Document packets table is healthy",
+          previewPath: "/owner?testerPreview=true",
           run: async () => readHealthStatus("document_packets")
         },
         {
           id: "documents-files-table",
           label: "Property files table is healthy",
+          previewPath: "/owner?testerPreview=true",
           run: async () => readHealthStatus("property_files")
         },
         {
           id: "documents-files-endpoint",
           label: "Property-file asset endpoint is protected",
+          previewPath: "/api/assets/property-file/test-id",
           run: () =>
             checkStatus(
               "/api/assets/property-file/test-id",
@@ -354,11 +395,13 @@ export function TesterToolsSection({
         {
           id: "expenses-table",
           label: "Property expenses table is healthy",
+          previewPath: "/owner?testerPreview=true",
           run: async () => readHealthStatus("property_expenses")
         },
         {
           id: "ownership-capability",
           label: "Ownership capability is enabled",
+          previewPath: "/owner?testerPreview=true",
           run: async () => {
             if (!capabilities.ownershipEnabled) {
               throw new Error("ownershipEnabled is false.");
@@ -369,7 +412,8 @@ export function TesterToolsSection({
         {
           id: "expenses-owner-ui",
           label: "Owner workspace shows expenses section",
-          run: () => checkPageForText("/owner", "Expenses")
+          previewPath: "/owner?testerPreview=true",
+          run: () => checkPageForText("/owner?testerPreview=true", "Expenses")
         }
       ];
     }
@@ -378,21 +422,25 @@ export function TesterToolsSection({
       {
         id: "seed-properties",
         label: "Properties exist",
+        previewPath: "/owner?testerPreview=true",
         run: async () => readHealthStatus("properties")
       },
       {
         id: "seed-units",
         label: "Units exist",
+        previewPath: "/owner?testerPreview=true",
         run: async () => readHealthStatus("units")
       },
       {
         id: "seed-leases",
         label: "Leases exist",
+        previewPath: "/owner?testerPreview=true",
         run: async () => readHealthStatus("leases")
       },
       {
         id: "seed-rent-charges",
         label: "Rent charges exist",
+        previewPath: "/owner?testerPreview=true",
         run: async () => readHealthStatus("rent_charges")
       }
     ];
@@ -411,6 +459,7 @@ export function TesterToolsSection({
     }));
 
     setRunningFeatureId(featureId);
+    setActiveTestTarget("/tester");
     setFeatureRuns((prev) => ({
       ...prev,
       [featureId]: {
@@ -424,6 +473,19 @@ export function TesterToolsSection({
 
     for (let index = 0; index < checkpointDefs.length; index += 1) {
       const checkpoint = checkpointDefs[index];
+      setActiveTestTarget(checkpoint.previewPath);
+      if (!checkpoint.previewPath.startsWith("/api/")) {
+        setWorkspacePreviewPath(checkpoint.previewPath);
+      }
+      if (checkpoint.previewPath.startsWith("/owner")) {
+        setWorkspaceViewRole("owner");
+      }
+      if (checkpoint.previewPath.startsWith("/manager")) {
+        setWorkspaceViewRole("manager");
+      }
+      if (checkpoint.previewPath.startsWith("/tenant")) {
+        setWorkspaceViewRole("tenant");
+      }
       setFeatureRuns((prev) => {
         const next = [...prev[featureId].checkpoints];
         next[index] = { ...next[index], status: "running", detail: "Running..." };
@@ -469,6 +531,9 @@ export function TesterToolsSection({
         lastRunAt: new Date().toLocaleTimeString()
       }
     }));
+    if (checkpointDefs.length > 0) {
+      setActiveTestTarget(checkpointDefs[checkpointDefs.length - 1].previewPath);
+    }
     setRunningFeatureId(null);
   };
 
@@ -564,17 +629,79 @@ export function TesterToolsSection({
 
         <Card>
           <CardHeader>
-            <CardTitle>Role Preview</CardTitle>
+            <CardTitle>Workspace Switcher</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            <p className="text-sm text-zinc-600">
+              Stay in tester mode and switch the live preview between owner, manager, and tenant workspaces.
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={workspaceViewRole === "owner" ? "default" : "outline"}
+                onClick={() => {
+                  setWorkspaceViewRole("owner");
+                  setWorkspacePreviewPath("/owner?testerPreview=true");
+                  setActiveTestTarget("/owner?testerPreview=true");
+                }}
+                title="Show owner workspace preview while staying on tester page."
+              >
+                Owner
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={workspaceViewRole === "manager" ? "default" : "outline"}
+                onClick={() => {
+                  setWorkspaceViewRole("manager");
+                  setWorkspacePreviewPath("/manager?testerPreview=true");
+                  setActiveTestTarget("/manager?testerPreview=true");
+                }}
+                title="Show manager workspace preview while staying on tester page."
+              >
+                Manager
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={workspaceViewRole === "tenant" ? "default" : "outline"}
+                onClick={() => {
+                  setWorkspaceViewRole("tenant");
+                  setWorkspacePreviewPath("/tenant?testerPreview=true");
+                  setActiveTestTarget("/tenant?testerPreview=true");
+                }}
+                title="Show tenant workspace preview while staying on tester page."
+              >
+                Tenant
+              </Button>
+            </div>
+            <p className="text-xs text-zinc-500">
+              Current preview target: <span className="font-semibold text-zinc-700">{activeTestTarget}</span>
+            </p>
+            <div className="h-[360px] overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50">
+              <iframe
+                key={workspacePreviewPath}
+                src={workspacePreviewPath}
+                className="h-full w-full bg-white"
+                title="Live workspace preview"
+              />
+            </div>
+            <a
+              href={workspacePreviewPath}
+              className="inline-flex text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+              title="Open current preview in a full page tab."
+            >
+              Open current preview full page
+            </a>
             <Select
               value={previewRole}
               onChange={(event) => setPreviewRole(event.target.value as PreviewRole)}
               title="Select which role summary to preview."
             >
-              <option value="owner">Owner</option>
-              <option value="manager">Manager</option>
-              <option value="tenant">Tenant</option>
+              <option value="owner">Owner summary</option>
+              <option value="manager">Manager summary</option>
+              <option value="tenant">Tenant summary</option>
             </Select>
             <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
               Read-only preview checklist
