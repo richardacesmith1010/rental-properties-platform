@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   Circle,
+  Copy,
   Loader2,
   PlayCircle,
   XCircle
@@ -200,6 +201,8 @@ export function TesterToolsSection({
   const [workspacePreviewPath, setWorkspacePreviewPath] = useState("/owner?testerPreview=true");
   const [activeTestTarget, setActiveTestTarget] = useState<string>("/tester");
   const [runningFeatureId, setRunningFeatureId] = useState<FeatureTestId | null>(null);
+  const [failurePrompt, setFailurePrompt] = useState<string | null>(null);
+  const [failureCopyState, setFailureCopyState] = useState<"idle" | "copied" | "error">("idle");
   const [featureRuns, setFeatureRuns] = useState<Record<FeatureTestId, FeatureRunResult>>(() =>
     featureTests.reduce((acc, item) => {
       acc[item.id] = { status: "idle", checkpoints: [] };
@@ -446,6 +449,34 @@ export function TesterToolsSection({
     ];
   };
 
+  const buildFailurePrompt = (params: {
+    featureLabel: string;
+    checkpointLabel: string;
+    path: string;
+    detail: string;
+  }) => {
+    return [
+      "Tester failure report for Codex:",
+      `Feature: ${params.featureLabel}`,
+      `Checkpoint: ${params.checkpointLabel}`,
+      `Path under test: ${params.path}`,
+      `Error detail: ${params.detail}`,
+      `Timestamp (UTC): ${new Date().toISOString()}`,
+      "",
+      "Please diagnose this exact failure and patch it end-to-end."
+    ].join("\n");
+  };
+
+  const copyFailurePrompt = async () => {
+    if (!failurePrompt) return;
+    try {
+      await navigator.clipboard.writeText(failurePrompt);
+      setFailureCopyState("copied");
+    } catch {
+      setFailureCopyState("error");
+    }
+  };
+
   const runFeatureTest = async (featureId: FeatureTestId) => {
     if (runningFeatureId) {
       return;
@@ -459,6 +490,8 @@ export function TesterToolsSection({
     }));
 
     setRunningFeatureId(featureId);
+    setFailurePrompt(null);
+    setFailureCopyState("idle");
     setActiveTestTarget("/tester");
     setFeatureRuns((prev) => ({
       ...prev,
@@ -511,6 +544,15 @@ export function TesterToolsSection({
         hasFailure = true;
         const detail =
           error instanceof Error ? error.message : "Unknown checkpoint error.";
+        const featureLabel = featureTests.find((item) => item.id === featureId)?.label ?? featureId;
+        setFailurePrompt(
+          buildFailurePrompt({
+            featureLabel,
+            checkpointLabel: checkpoint.label,
+            path: checkpoint.previewPath,
+            detail
+          })
+        );
         setFeatureRuns((prev) => {
           const next = [...prev[featureId].checkpoints];
           next[index] = { ...next[index], status: "fail", detail };
@@ -881,6 +923,35 @@ export function TesterToolsSection({
               );
             })}
           </div>
+
+          {failurePrompt && (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm font-semibold text-red-800">
+                  A test failed. Copy this prompt and paste it to me for a direct fix.
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={copyFailurePrompt}
+                  title="Copy failure prompt to clipboard."
+                >
+                  <Copy className="mr-2 h-4 w-4" />
+                  {failureCopyState === "copied"
+                    ? "Copied"
+                    : failureCopyState === "error"
+                      ? "Copy failed"
+                      : "Copy Prompt"}
+                </Button>
+              </div>
+              <textarea
+                readOnly
+                value={failurePrompt}
+                className="mt-3 h-44 w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-xs text-zinc-800"
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

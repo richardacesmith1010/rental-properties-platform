@@ -34,7 +34,7 @@ fi
 rm -f "$PORTAL_HEADERS"
 
 echo "[smoke] Checking protected route guards"
-for path in /owner /manager /tenant /tester /owner/generate; do
+for path in /owner /manager /tenant /tester /owner/generate /settings; do
   HEADERS="$(mktemp)"
   STATUS="$(curl -s -D "$HEADERS" -o /dev/null -w "%{http_code}" "$APP_URL$path")"
   if [[ "$STATUS" != "307" && "$STATUS" != "302" ]]; then
