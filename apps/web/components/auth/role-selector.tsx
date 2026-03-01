@@ -62,6 +62,11 @@ export function RoleSelector() {
                 onClick={() => setSelectedRole(isSelected ? null : role.id)}
                 onMouseEnter={() => setHoveredRole(role.id)}
                 onMouseLeave={() => setHoveredRole(null)}
+                title={
+                  isSelected
+                    ? `Collapse ${role.label} login options.`
+                    : `Select ${role.label} and open its login options.`
+                }
                 className={`
                   group relative flex flex-col items-center rounded-2xl border bg-white p-6 text-center
                   transition-all duration-300 ease-out
@@ -126,6 +131,7 @@ export function RoleSelector() {
         <button
           type="button"
           onClick={() => setSelectedRole(null)}
+          title="Return to role selection cards."
           className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
         >
           <ArrowLeft className="h-4 w-4" />
