@@ -161,6 +161,12 @@ export function InvitationsSection({
         )}
       </div>
 
+      {!onInviteOwner && (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Co-owner invitations are unavailable until ownership accounts are enabled.
+        </div>
+      )}
+
       {/* Sent Invitations listing */}
       <Card>
         <CardHeader>

@@ -57,6 +57,7 @@ export function OperationsSection({
       <Card>
         <CardHeader>
           <CardTitle>Add Property</CardTitle>
+          <p className="text-xs text-zinc-500">Create the address and ownership anchor first.</p>
         </CardHeader>
         <CardContent>
           <form className="space-y-3" action={propertyAction}>
@@ -84,6 +85,7 @@ export function OperationsSection({
       <Card>
         <CardHeader>
           <CardTitle>Add Unit</CardTitle>
+          <p className="text-xs text-zinc-500">Attach a rentable unit to an existing property.</p>
         </CardHeader>
         <CardContent>
           <form className="space-y-3" action={unitAction}>
@@ -132,6 +134,7 @@ export function OperationsSection({
       <Card>
         <CardHeader>
           <CardTitle>Create Lease</CardTitle>
+          <p className="text-xs text-zinc-500">Link a tenant, dates, and billing terms.</p>
         </CardHeader>
         <CardContent>
           <form className="space-y-3" action={leaseAction}>

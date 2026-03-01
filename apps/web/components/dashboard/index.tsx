@@ -124,7 +124,7 @@ export function Dashboard({
       : 0;
 
   return (
-    <div className="flex min-h-screen flex-col lg:flex-row">
+    <div className="app-surface flex min-h-screen flex-col lg:flex-row">
       {/* Mobile top bar */}
       <MobileTopBar userEmail={userEmail} role={data.profileRole} onSignOut={onSignOut} />
 
@@ -138,12 +138,12 @@ export function Dashboard({
       />
 
       {/* Main content */}
-      <main className="flex-1 lg:ml-[260px]">
+      <main className="relative flex-1 lg:ml-[260px]">
         {/* Header */}
         <div className="flex flex-col gap-4 px-6 pt-6 sm:flex-row sm:items-start sm:justify-between lg:px-8 lg:pt-8">
           <div id="overview">
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Dashboard</h1>
-            <p className="mt-1 text-sm text-zinc-500">
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Operations Dashboard</h1>
+            <p className="mt-1 text-sm text-zinc-600">
               {new Date().toLocaleDateString("en-US", {
                 weekday: "long",
                 month: "short",
@@ -152,13 +152,15 @@ export function Dashboard({
               })}
             </p>
           </div>
-          <Badge className="self-start capitalize">{data.profileRole}</Badge>
+          <Badge className="self-start border border-indigo-200 bg-indigo-50 text-indigo-700 capitalize">
+            {data.profileRole}
+          </Badge>
         </div>
 
         {/* Content sections */}
         <div className="space-y-6 px-6 pb-8 pt-6 lg:px-8">
           {generatedMessage && (
-            <div className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
               {generatedMessage}
             </div>
           )}

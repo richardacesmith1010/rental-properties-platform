@@ -8,7 +8,7 @@
   }
 
   body {
-    @apply bg-[#fafafa] text-zinc-900 antialiased;
+    @apply bg-[#f4f6ff] text-zinc-900 antialiased;
   }
 
   h1, h2, h3, p {
@@ -17,8 +17,17 @@
 }
 
 @layer components {
+  .app-surface {
+    background:
+      radial-gradient(circle at 12% 10%, rgba(99, 102, 241, 0.17), transparent 34%),
+      radial-gradient(circle at 88% 82%, rgba(59, 130, 246, 0.12), transparent 38%),
+      linear-gradient(180deg, #f8faff 0%, #eef2ff 62%, #f4f6ff 100%);
+  }
+
   .gradient-sidebar {
-    background: linear-gradient(180deg, #1e1b4b, #312e81);
+    background:
+      radial-gradient(circle at 15% 15%, rgba(129, 140, 248, 0.3), transparent 40%),
+      linear-gradient(180deg, #0f172a, #1e1b4b 45%, #312e81 100%);
   }
 
   .gradient-btn {
