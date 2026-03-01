@@ -14,6 +14,12 @@ Set these values in Vercel project settings:
 - `RESEND_API_KEY`
 - `RESEND_FROM_EMAIL`
 
+Set these values for Expo/mobile environment:
+
+- `EXPO_PUBLIC_SUPABASE_URL`
+- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+- `EXPO_PUBLIC_APP_URL`
+
 ## 2) Database + Storage Validation
 
 Run/verify Supabase migrations in order:
@@ -33,14 +39,41 @@ Verify private buckets:
 - `lease-documents`
 - `maintenance-photos`
 
-## 3) Auth + Callback Validation
+## 3) Phase 8/9 Runtime Readiness (Before Removing Fallbacks)
+
+Confirm these objects exist in live Supabase:
+
+- Tables:
+  - `document_templates`
+  - `document_packets`
+  - `document_signers`
+  - `notifications`
+  - `notification_deliveries`
+  - `vendors`
+  - `maintenance_assignments`
+  - `maintenance_photos`
+  - `ownership_accounts`
+  - `ownership_account_members`
+- Columns:
+  - `properties.owner_account_id`
+  - `invitations.ownership_account_id`
+- Functions:
+  - `can_administer_property(uuid)`
+  - `can_view_property(uuid)`
+
+Then verify private storage behavior:
+
+- owner/manager/tenant authorized paths receive signed links
+- unauthenticated and unauthorized requests receive `401`/`403`
+
+## 4) Auth + Callback Validation
 
 Verify Supabase Auth redirect URLs include:
 
 - `http://localhost:3000/auth/callback`
 - `https://rental-properties-platform-web.vercel.app/auth/callback`
 
-## 4) Pre-Deploy Gate
+## 5) Pre-Deploy Gate
 
 From repo root:
 
@@ -51,7 +84,7 @@ npm run build:web
 npx tsc -p apps/mobile/tsconfig.json --noEmit
 ```
 
-## 5) Deployment + Smoke
+## 6) Deployment + Smoke
 
 Deploy main branch to Vercel, then run:
 
@@ -65,13 +98,13 @@ Optional authenticated cron check:
 APP_URL=https://rental-properties-platform-web.vercel.app CRON_SECRET=<secret> npm run smoke:web
 ```
 
-## 6) Role Smoke Paths
+## 7) Role Smoke Paths
 
 1. Owner: sign in, view dashboard KPIs, create property/unit/lease, assign vendor, upload maintenance photo.
 2. Tenant: sign in, view outstanding charge, open payment checkout, create maintenance ticket, sign a document packet.
 3. Manager: sign in, view assigned properties, update ticket status, assign vendor, open maintenance photo.
 
-## 7) Known External Blockers
+## 8) Known External Blockers
 
 - Live SQL/RLS/storage policy verification in Supabase must be completed if migration state is uncertain.
 - Email delivery requires valid Resend API key and sender domain configuration.

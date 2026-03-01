@@ -55,14 +55,35 @@
 - Added smoke/runbook guardrails:
   - `/Users/courtneysmith/Documents/Codex/Rental Properties/scripts/smoke-web.sh`
   - `/Users/courtneysmith/Documents/Codex/Rental Properties/docs/release-checklist.md`
+  - smoke script now validates redirect targets (must route unauthenticated protected paths to `/login`)
+- Removed accidental duplicate file:
+  - `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/lib/charges 2.ts`
+- V1 closeout UI polish pass applied:
+  - shared dashboard shell now uses upgraded app surface/background treatment
+  - sidebar snapshot can be role-specific via optional `snapshot` prop
+  - tenant route now uses the same sidebar/top-bar shell as owner/manager
+  - feature-unavailable states have clearer copy/styling in dashboard sections
+- Mobile tenant workflow replaced mock shell with Supabase-backed flows:
+  - `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/mobile/lib/supabase.ts`
+  - `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/mobile/lib/tenant-data.ts`
+  - `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/mobile/lib/types.ts`
+  - `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/mobile/app/index.tsx`
+  - mobile supports: session bootstrap, magic-link initiation, outstanding charges, ticket create/list, document status list
+- Mobile deep-link/auth bootstrap readiness:
+  - `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/mobile/app.json` now includes `scheme: \"rentflow\"`
+  - `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/mobile/.env.example` now includes `EXPO_PUBLIC_APP_URL`
+- Routing note for parallel work:
+  - local repo serves marketing at `/` via `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/app/page.tsx` + `components/marketing/*` (no local `app/(marketing)` route group directory)
 - Validation status:
-  - `npm test --workspace @rental/web` passed (92 tests)
+  - `npm test --workspace @rental/web` passed (93 tests)
   - `npm run lint:web` passed
   - `npm run build:web` passed
   - `npx tsc -p apps/mobile/tsconfig.json --noEmit` passed
+  - `APP_URL=https://rental-properties-platform-web.vercel.app npm run smoke:web` passed
 
 ## In Progress (Codex)
 - Production deployment + live migration application verification for Phase 9.
+- Vercel CLI deploy attempt from Codex is currently blocked by missing local credentials (`vercel login` or `--token` required).
 
 ## Stability Gate Snapshot (2026-02-28)
 - Baseline commit: `cdf4dad` on `main`.

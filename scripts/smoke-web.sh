@@ -12,19 +12,39 @@ echo "[smoke] Checking login page"
 curl -fsS "$APP_URL/login" >/dev/null
 
 echo "[smoke] Checking role portal redirect behavior"
-PORTAL_STATUS="$(curl -s -o /dev/null -w "%{http_code}" "$APP_URL/portal")"
+PORTAL_HEADERS="$(mktemp)"
+PORTAL_STATUS="$(curl -s -D "$PORTAL_HEADERS" -o /dev/null -w "%{http_code}" "$APP_URL/portal")"
 if [[ "$PORTAL_STATUS" != "307" && "$PORTAL_STATUS" != "302" && "$PORTAL_STATUS" != "200" ]]; then
   echo "[smoke] Unexpected /portal status: $PORTAL_STATUS"
+  rm -f "$PORTAL_HEADERS"
   exit 1
 fi
+if [[ "$PORTAL_STATUS" == "307" || "$PORTAL_STATUS" == "302" ]]; then
+  PORTAL_LOCATION="$(grep -i '^location:' "$PORTAL_HEADERS" | head -n1 | tr -d '\r' | awk '{print $2}')"
+  if [[ "$PORTAL_LOCATION" != *"/login"* ]]; then
+    echo "[smoke] Expected /portal redirect to /login for unauthenticated user, got: ${PORTAL_LOCATION:-<none>}"
+    rm -f "$PORTAL_HEADERS"
+    exit 1
+  fi
+fi
+rm -f "$PORTAL_HEADERS"
 
 echo "[smoke] Checking protected route guards"
 for path in /owner /manager /tenant; do
-  STATUS="$(curl -s -o /dev/null -w "%{http_code}" "$APP_URL$path")"
+  HEADERS="$(mktemp)"
+  STATUS="$(curl -s -D "$HEADERS" -o /dev/null -w "%{http_code}" "$APP_URL$path")"
   if [[ "$STATUS" != "307" && "$STATUS" != "302" ]]; then
     echo "[smoke] Expected redirect for unauthenticated $path, got $STATUS"
+    rm -f "$HEADERS"
     exit 1
   fi
+  LOCATION="$(grep -i '^location:' "$HEADERS" | head -n1 | tr -d '\r' | awk '{print $2}')"
+  if [[ "$LOCATION" != *"/login"* ]]; then
+    echo "[smoke] Expected redirect location to include /login for $path, got: ${LOCATION:-<none>}"
+    rm -f "$HEADERS"
+    exit 1
+  fi
+  rm -f "$HEADERS"
 done
 
 echo "[smoke] Checking private asset API auth guards"
