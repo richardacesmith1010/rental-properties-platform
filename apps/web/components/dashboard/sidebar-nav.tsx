@@ -235,7 +235,7 @@ export function SidebarNav({
   const workspacePath = role === "owner" ? "/owner" : role === "manager" ? "/manager" : "/tenant";
 
   return (
-    <aside className="gradient-sidebar hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-[260px] lg:flex-shrink-0 lg:flex-col">
+    <aside className="gradient-sidebar hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-[260px] lg:flex-shrink-0 lg:flex-col lg:overflow-y-auto">
       <div className="flex items-center gap-3 px-5 py-6">
         <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/15 text-lg font-bold text-white shadow-lg shadow-indigo-950/25 backdrop-blur-sm">
           D
@@ -279,7 +279,7 @@ export function SidebarNav({
         )}
       </div>
 
-      <nav className="flex-1 space-y-1 px-3 pb-4">
+      <nav className="flex-1 min-h-0 space-y-1 px-3 pb-4">
         {renderedNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeItemId === item.id;

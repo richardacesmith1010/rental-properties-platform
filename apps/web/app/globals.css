@@ -79,6 +79,16 @@
     background-color: rgba(15, 23, 42, 0.76) !important;
   }
 
+  html[data-domus-theme="noctis-neon"] .bg-white\/80,
+  html[data-domus-theme="imperium-night"] .bg-white\/80 {
+    background-color: rgba(15, 23, 42, 0.82) !important;
+  }
+
+  html[data-domus-theme="noctis-neon"] .bg-white\/90,
+  html[data-domus-theme="imperium-night"] .bg-white\/90 {
+    background-color: rgba(15, 23, 42, 0.88) !important;
+  }
+
   html[data-domus-theme="noctis-neon"] .bg-zinc-50,
   html[data-domus-theme="imperium-night"] .bg-zinc-50 {
     background-color: rgba(15, 23, 42, 0.55) !important;
@@ -95,11 +105,15 @@
     background-color: rgba(30, 41, 59, 0.72) !important;
   }
 
+  html[data-domus-theme="noctis-neon"] .text-zinc-950,
   html[data-domus-theme="noctis-neon"] .text-zinc-900,
+  html[data-domus-theme="imperium-night"] .text-zinc-950,
   html[data-domus-theme="imperium-night"] .text-zinc-900 {
     color: #e7edf8 !important;
   }
 
+  html[data-domus-theme="noctis-neon"] .text-zinc-800,
+  html[data-domus-theme="imperium-night"] .text-zinc-800,
   html[data-domus-theme="noctis-neon"] .text-zinc-700,
   html[data-domus-theme="imperium-night"] .text-zinc-700 {
     color: #cdd7ea !important;
@@ -115,20 +129,63 @@
     color: #91a0bd !important;
   }
 
+  html[data-domus-theme="noctis-neon"] .text-zinc-400,
+  html[data-domus-theme="imperium-night"] .text-zinc-400 {
+    color: #9baacc !important;
+  }
+
+  html[data-domus-theme="noctis-neon"] .text-indigo-900,
+  html[data-domus-theme="imperium-night"] .text-indigo-900,
+  html[data-domus-theme="noctis-neon"] .text-indigo-800,
+  html[data-domus-theme="imperium-night"] .text-indigo-800,
   html[data-domus-theme="noctis-neon"] .text-indigo-700,
   html[data-domus-theme="imperium-night"] .text-indigo-700,
+  html[data-domus-theme="noctis-neon"] .text-indigo-600,
+  html[data-domus-theme="imperium-night"] .text-indigo-600,
+  html[data-domus-theme="noctis-neon"] .text-indigo-900\/70,
+  html[data-domus-theme="imperium-night"] .text-indigo-900\/70,
+  html[data-domus-theme="noctis-neon"] .text-emerald-900,
+  html[data-domus-theme="imperium-night"] .text-emerald-900,
+  html[data-domus-theme="noctis-neon"] .text-emerald-800,
+  html[data-domus-theme="imperium-night"] .text-emerald-800,
   html[data-domus-theme="noctis-neon"] .text-emerald-700,
   html[data-domus-theme="imperium-night"] .text-emerald-700,
+  html[data-domus-theme="noctis-neon"] .text-emerald-600,
+  html[data-domus-theme="imperium-night"] .text-emerald-600,
+  html[data-domus-theme="noctis-neon"] .text-red-900,
+  html[data-domus-theme="imperium-night"] .text-red-900,
+  html[data-domus-theme="noctis-neon"] .text-red-800,
+  html[data-domus-theme="imperium-night"] .text-red-800,
   html[data-domus-theme="noctis-neon"] .text-red-700,
   html[data-domus-theme="imperium-night"] .text-red-700,
+  html[data-domus-theme="noctis-neon"] .text-red-600,
+  html[data-domus-theme="imperium-night"] .text-red-600,
+  html[data-domus-theme="noctis-neon"] .text-amber-900,
+  html[data-domus-theme="imperium-night"] .text-amber-900,
+  html[data-domus-theme="noctis-neon"] .text-amber-800,
+  html[data-domus-theme="imperium-night"] .text-amber-800,
   html[data-domus-theme="noctis-neon"] .text-amber-700,
-  html[data-domus-theme="imperium-night"] .text-amber-700 {
-    color: #e7edf8 !important;
+  html[data-domus-theme="imperium-night"] .text-amber-700,
+  html[data-domus-theme="noctis-neon"] .text-amber-600,
+  html[data-domus-theme="imperium-night"] .text-amber-600 {
+    color: #cbd5ff !important;
   }
 
   html[data-domus-theme="noctis-neon"] .border-zinc-200,
   html[data-domus-theme="imperium-night"] .border-zinc-200 {
     border-color: rgba(148, 163, 184, 0.38) !important;
+  }
+
+  html[data-domus-theme="noctis-neon"] .border-zinc-200\/80,
+  html[data-domus-theme="imperium-night"] .border-zinc-200\/80 {
+    border-color: rgba(148, 163, 184, 0.44) !important;
+  }
+
+  html[data-domus-theme="noctis-neon"] .border-indigo-100\/80,
+  html[data-domus-theme="imperium-night"] .border-indigo-100\/80,
+  html[data-domus-theme="noctis-neon"] .border-indigo-100\/70,
+  html[data-domus-theme="imperium-night"] .border-indigo-100\/70 {
+    border-color: rgba(129, 140, 248, 0.38) !important;
   }
 
   html[data-domus-theme="noctis-neon"] .shadow-sm,

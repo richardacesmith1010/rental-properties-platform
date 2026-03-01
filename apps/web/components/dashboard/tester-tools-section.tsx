@@ -81,6 +81,25 @@ interface FeatureTestDefinition {
   description: string;
 }
 
+interface FailureEntry {
+  featureLabel: string;
+  checkpointLabel: string;
+  path: string;
+  detail: string;
+}
+
+interface WalkthroughState {
+  status: "idle" | "running" | "pass" | "fail";
+  total: number;
+  completed: number;
+  passed: number;
+  failed: number;
+  currentFeatureLabel: string | null;
+  currentCheckpointLabel: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+}
+
 const rolePreviewCopy: Record<PreviewRole, string[]> = {
   owner: [
     "Full operations controls across properties, leases, documents, vendors, and expenses.",
@@ -203,6 +222,17 @@ export function TesterToolsSection({
   const [runningFeatureId, setRunningFeatureId] = useState<FeatureTestId | null>(null);
   const [failurePrompt, setFailurePrompt] = useState<string | null>(null);
   const [failureCopyState, setFailureCopyState] = useState<"idle" | "copied" | "error">("idle");
+  const [walkthroughState, setWalkthroughState] = useState<WalkthroughState>({
+    status: "idle",
+    total: featureTests.length,
+    completed: 0,
+    passed: 0,
+    failed: 0,
+    currentFeatureLabel: null,
+    currentCheckpointLabel: null,
+    startedAt: null,
+    finishedAt: null
+  });
   const [featureRuns, setFeatureRuns] = useState<Record<FeatureTestId, FeatureRunResult>>(() =>
     featureTests.reduce((acc, item) => {
       acc[item.id] = { status: "idle", checkpoints: [] };
@@ -471,6 +501,21 @@ export function TesterToolsSection({
     ].join("\n");
   };
 
+  const buildWalkthroughFailurePrompt = (failures: FailureEntry[]) => {
+    return [
+      "Tester failure report for Codex:",
+      "Feature: Full Walkthrough",
+      `Failure count: ${failures.length}`,
+      ...failures.map(
+        (failure, index) =>
+          `${index + 1}. ${failure.featureLabel} -> ${failure.checkpointLabel} @ ${failure.path}: ${failure.detail}`
+      ),
+      `Timestamp (UTC): ${new Date().toISOString()}`,
+      "",
+      "Please diagnose these exact failures and patch them end-to-end."
+    ].join("\n");
+  };
+
   const copyFailurePrompt = async () => {
     if (!failurePrompt) return;
     try {
@@ -481,9 +526,32 @@ export function TesterToolsSection({
     }
   };
 
-  const runFeatureTest = async (featureId: FeatureTestId) => {
+  const runFeatureTest = async (
+    featureId: FeatureTestId,
+    options?: { fromWalkthrough?: boolean }
+  ): Promise<{ passed: boolean; failure: FailureEntry | null }> => {
     if (runningFeatureId) {
-      return;
+      return { passed: false, failure: null };
+    }
+
+    const fromWalkthrough = options?.fromWalkthrough ?? false;
+    const featureLabel = featureTests.find((item) => item.id === featureId)?.label ?? featureId;
+
+    if (!fromWalkthrough) {
+      setFailurePrompt(null);
+      setFailureCopyState("idle");
+      setActiveTestTarget("/tester");
+      setWalkthroughState({
+        status: "idle",
+        total: featureTests.length,
+        completed: 0,
+        passed: 0,
+        failed: 0,
+        currentFeatureLabel: null,
+        currentCheckpointLabel: null,
+        startedAt: null,
+        finishedAt: null
+      });
     }
 
     const checkpointDefs = buildCheckpoints(featureId);
@@ -494,9 +562,6 @@ export function TesterToolsSection({
     }));
 
     setRunningFeatureId(featureId);
-    setFailurePrompt(null);
-    setFailureCopyState("idle");
-    setActiveTestTarget("/tester");
     setFeatureRuns((prev) => ({
       ...prev,
       [featureId]: {
@@ -506,7 +571,7 @@ export function TesterToolsSection({
       }
     }));
 
-    let hasFailure = false;
+    let failure: FailureEntry | null = null;
 
     for (let index = 0; index < checkpointDefs.length; index += 1) {
       const checkpoint = checkpointDefs[index];
@@ -522,6 +587,13 @@ export function TesterToolsSection({
       }
       if (checkpoint.previewPath.startsWith("/tenant")) {
         setWorkspaceViewRole("tenant");
+      }
+      if (fromWalkthrough) {
+        setWalkthroughState((prev) => ({
+          ...prev,
+          currentFeatureLabel: featureLabel,
+          currentCheckpointLabel: checkpoint.label
+        }));
       }
       setFeatureRuns((prev) => {
         const next = [...prev[featureId].checkpoints];
@@ -545,18 +617,17 @@ export function TesterToolsSection({
           };
         });
       } catch (error) {
-        hasFailure = true;
         const detail =
           error instanceof Error ? error.message : "Unknown checkpoint error.";
-        const featureLabel = featureTests.find((item) => item.id === featureId)?.label ?? featureId;
-        setFailurePrompt(
-          buildFailurePrompt({
-            featureLabel,
-            checkpointLabel: checkpoint.label,
-            path: checkpoint.previewPath,
-            detail
-          })
-        );
+        failure = {
+          featureLabel,
+          checkpointLabel: checkpoint.label,
+          path: checkpoint.previewPath,
+          detail
+        };
+        if (!fromWalkthrough) {
+          setFailurePrompt(buildFailurePrompt(failure));
+        }
         setFeatureRuns((prev) => {
           const next = [...prev[featureId].checkpoints];
           next[index] = { ...next[index], status: "fail", detail };
@@ -573,7 +644,7 @@ export function TesterToolsSection({
       ...prev,
       [featureId]: {
         ...prev[featureId],
-        status: hasFailure ? "fail" : "pass",
+        status: failure ? "fail" : "pass",
         lastRunAt: new Date().toLocaleTimeString()
       }
     }));
@@ -581,6 +652,69 @@ export function TesterToolsSection({
       setActiveTestTarget(checkpointDefs[checkpointDefs.length - 1].previewPath);
     }
     setRunningFeatureId(null);
+
+    return {
+      passed: failure === null,
+      failure
+    };
+  };
+
+  const runFullWalkthrough = async () => {
+    if (runningFeatureId || walkthroughState.status === "running") {
+      return;
+    }
+
+    setFailurePrompt(null);
+    setFailureCopyState("idle");
+    const startedAt = new Date().toLocaleTimeString();
+    setWalkthroughState({
+      status: "running",
+      total: featureTests.length,
+      completed: 0,
+      passed: 0,
+      failed: 0,
+      currentFeatureLabel: null,
+      currentCheckpointLabel: null,
+      startedAt,
+      finishedAt: null
+    });
+
+    const failures: FailureEntry[] = [];
+    let passed = 0;
+    let failed = 0;
+    let completed = 0;
+
+    for (const feature of featureTests) {
+      const result = await runFeatureTest(feature.id, { fromWalkthrough: true });
+      completed += 1;
+      if (result.passed) {
+        passed += 1;
+      } else {
+        failed += 1;
+        if (result.failure) {
+          failures.push(result.failure);
+        }
+      }
+      setWalkthroughState((prev) => ({
+        ...prev,
+        status: "running",
+        completed,
+        passed,
+        failed
+      }));
+      await delay(120);
+    }
+
+    const status = failures.length > 0 ? "fail" : "pass";
+    if (failures.length > 0) {
+      setFailurePrompt(buildWalkthroughFailurePrompt(failures));
+    }
+    setWalkthroughState((prev) => ({
+      ...prev,
+      status,
+      finishedAt: new Date().toLocaleTimeString(),
+      currentCheckpointLabel: null
+    }));
   };
 
   return (
@@ -854,8 +988,71 @@ export function TesterToolsSection({
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-zinc-600">
-            Run one feature test at a time and watch each checkpoint move through pass/fail in real time.
+            Run one feature test at a time, or run the full walkthrough to test everything in one click.
           </p>
+
+          <div className="rounded-xl border border-zinc-200 bg-white p-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-zinc-900">Full Walkthrough</p>
+                <p className="text-xs text-zinc-500">
+                  Runs all feature suites sequentially and updates the live preview target at each checkpoint.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant={runBadgeVariant(walkthroughState.status)}>
+                  {walkthroughState.status === "idle" ? "not run" : walkthroughState.status}
+                </Badge>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={runFullWalkthrough}
+                  disabled={Boolean(runningFeatureId) || walkthroughState.status === "running"}
+                  title="Run every tester feature automatically from start to finish."
+                >
+                  {walkthroughState.status === "running" ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Testing Everything
+                    </>
+                  ) : (
+                    <>
+                      <PlayCircle className="mr-2 h-4 w-4" />
+                      Test Everything
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+              <p className="rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1 text-zinc-600">
+                Progress: {walkthroughState.completed}/{walkthroughState.total}
+              </p>
+              <p className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-emerald-700">
+                Passed: {walkthroughState.passed}
+              </p>
+              <p className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-red-700">
+                Failed: {walkthroughState.failed}
+              </p>
+              <p className="rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1 text-zinc-600">
+                Started: {walkthroughState.startedAt ?? "n/a"}
+              </p>
+            </div>
+            {(walkthroughState.currentFeatureLabel || walkthroughState.currentCheckpointLabel) && (
+              <p className="mt-2 text-xs text-zinc-600">
+                Running now:{" "}
+                <span className="font-semibold text-zinc-800">
+                  {walkthroughState.currentFeatureLabel ?? "n/a"}
+                </span>
+                {walkthroughState.currentCheckpointLabel
+                  ? ` -> ${walkthroughState.currentCheckpointLabel}`
+                  : ""}
+              </p>
+            )}
+            {walkthroughState.finishedAt && walkthroughState.status !== "running" && (
+              <p className="mt-1 text-xs text-zinc-500">Finished: {walkthroughState.finishedAt}</p>
+            )}
+          </div>
 
           <div className="space-y-3">
             {featureTests.map((feature) => {
@@ -878,7 +1075,7 @@ export function TesterToolsSection({
                         size="sm"
                         variant="outline"
                         onClick={() => runFeatureTest(feature.id)}
-                        disabled={Boolean(runningFeatureId)}
+                        disabled={Boolean(runningFeatureId) || walkthroughState.status === "running"}
                         title={`Run ${feature.label} checkpoints now and display pass/fail evidence.`}
                       >
                         {isRunning ? (

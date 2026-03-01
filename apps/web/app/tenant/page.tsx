@@ -186,7 +186,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
           <div className="flex flex-col items-start justify-between gap-3 rounded-xl border border-zinc-200/80 bg-white/80 p-4 sm:flex-row sm:items-center">
             <div>
               <p className="text-xs uppercase tracking-wide text-zinc-500">Focused View</p>
-              <p className="text-sm font-semibold text-zinc-900">
+              <p className="mt-1 inline-flex items-center rounded-md bg-zinc-900 px-2 py-1 text-sm font-semibold text-white">
                 Showing section: {tenantSectionLabel[activeSection]}
               </p>
               <p className="text-xs text-zinc-500">

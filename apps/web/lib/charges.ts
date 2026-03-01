@@ -2,9 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createNotificationWithDelivery, notifyOwnerMembersForProperty } from "@/lib/notifications";
 import { getAdministeredPropertyIds } from "@/lib/property-access";
 
-type SupabaseLikeClient = {
-  from: (table: string) => any;
-};
+type SupabaseLikeClient = Pick<ReturnType<typeof createClient>, "from">;
 
 interface UnitRow {
   id: string;
