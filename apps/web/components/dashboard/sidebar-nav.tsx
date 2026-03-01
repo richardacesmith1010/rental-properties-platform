@@ -235,7 +235,7 @@ export function SidebarNav({
   const workspacePath = role === "owner" ? "/owner" : role === "manager" ? "/manager" : "/tenant";
 
   return (
-    <aside className="gradient-sidebar hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-[260px] lg:flex-shrink-0 lg:flex-col lg:overflow-y-auto">
+    <aside className="gradient-sidebar hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-[260px] lg:flex-shrink-0 lg:flex-col lg:overflow-hidden">
       <div className="flex items-center gap-3 px-5 py-6">
         <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/15 text-lg font-bold text-white shadow-lg shadow-indigo-950/25 backdrop-blur-sm">
           D
@@ -279,7 +279,7 @@ export function SidebarNav({
         )}
       </div>
 
-      <nav className="flex-1 min-h-0 space-y-1 px-3 pb-4">
+      <nav className="flex-1 min-h-0 space-y-1 overflow-y-auto px-3 pb-4">
         {renderedNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeItemId === item.id;
@@ -328,7 +328,7 @@ export function SidebarNav({
         })}
       </nav>
 
-      <div className="mx-4 mb-3 rounded-xl border border-white/15 bg-white/10 p-3.5">
+      <div className="mx-4 mb-3 shrink-0 rounded-xl border border-white/15 bg-white/10 p-3.5">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">
           {summary.label}
         </p>
@@ -336,7 +336,7 @@ export function SidebarNav({
         <p className="text-xs text-white/50">{summary.note}</p>
       </div>
 
-      <div className="border-t border-white/[0.12] px-5 py-4">
+      <div className="shrink-0 border-t border-white/[0.12] px-5 py-4">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-violet-400 text-xs font-semibold text-white">
             {userEmail.charAt(0).toUpperCase()}
