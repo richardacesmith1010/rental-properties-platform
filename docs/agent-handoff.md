@@ -459,3 +459,24 @@ NEXT_ACTION=tag v1.0.0
   - `npx tsc -p apps/mobile/tsconfig.json --noEmit` -> PASS
   - `npx vercel deploy --prod --yes` -> PASS
   - `APP_URL=https://rental-properties-platform-web.vercel.app npm run smoke:web` -> PASS
+
+## V2 Theme Contrast + Tester Failures Fixes (Codex)
+
+- Timestamp (UTC): `2026-03-01T20:44:00Z`
+- Branch: `main`
+- HEAD: `0bc92d1`
+- Fixes:
+  - Addressed tenant tester preview 500 by removing server-to-client function prop passing in tenant sidebar nav config.
+  - Stabilized tester billing checkpoint by supporting section-seeded owner/manager dashboard views (`?section=...`).
+  - Updated tester checks to use deterministic preview paths (`/owner?testerPreview=true&section=charges`).
+  - Improved dark-theme contrast:
+    - Added themed overrides for light semantic backgrounds (`indigo/emerald/red/amber` surfaces) and semantic text colors in dark themes.
+    - Updated settings theme cards for readable active/inactive states in all themes.
+  - Converted “Click to apply” copy into explicit action buttons (`Apply Theme` / `Active Theme`).
+- Validation:
+  - `npm test --workspace @domus/web` -> PASS (106/106)
+  - `npm run lint:web` -> PASS
+  - `npm run build:web` -> PASS
+  - `npx tsc -p apps/mobile/tsconfig.json --noEmit` -> PASS
+  - `npx vercel deploy --prod --yes` -> PASS
+  - `APP_URL=https://rental-properties-platform-web.vercel.app npm run smoke:web` -> PASS
