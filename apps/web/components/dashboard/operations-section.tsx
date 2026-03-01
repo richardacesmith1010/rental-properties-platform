@@ -76,7 +76,9 @@ export function OperationsSection({
                 </option>
               ))}
             </Select>
-            <SubmitButton className="w-full">Save Property</SubmitButton>
+            <SubmitButton className="w-full" title="Create this property in your workspace.">
+              Save Property
+            </SubmitButton>
           </form>
         </CardContent>
       </Card>
@@ -125,7 +127,9 @@ export function OperationsSection({
               placeholder="Monthly rent (USD)"
               required
             />
-            <SubmitButton className="w-full">Save Unit</SubmitButton>
+            <SubmitButton className="w-full" title="Create this unit under the selected property.">
+              Save Unit
+            </SubmitButton>
           </form>
         </CardContent>
       </Card>
@@ -183,7 +187,9 @@ export function OperationsSection({
               defaultValue={0}
               required
             />
-            <SubmitButton className="w-full">Save Lease</SubmitButton>
+            <SubmitButton className="w-full" title="Create this lease for the selected unit and tenant.">
+              Save Lease
+            </SubmitButton>
           </form>
         </CardContent>
       </Card>

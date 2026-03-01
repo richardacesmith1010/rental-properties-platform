@@ -91,7 +91,7 @@ export function PortfolioSection({
                       <Input name="state" defaultValue={property.state} required />
                       <Input name="postalCode" defaultValue={property.postalCode} required />
                       <div className="sm:col-span-2">
-                        <SubmitButton size="sm" variant="outline">
+                        <SubmitButton size="sm" variant="outline" title="Save updates to this property profile.">
                           Save Property Changes
                         </SubmitButton>
                       </div>
@@ -110,7 +110,7 @@ export function PortfolioSection({
                       }}
                     >
                       <input type="hidden" name="propertyId" value={property.id} />
-                      <Button type="submit" size="sm" variant="destructive">
+                      <Button type="submit" size="sm" variant="destructive" title="Archive this property.">
                         Archive
                       </Button>
                     </form>

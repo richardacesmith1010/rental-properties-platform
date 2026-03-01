@@ -32,7 +32,7 @@ export function TicketStatusControl({
         <option value="resolved">Resolved</option>
         <option value="closed">Closed</option>
       </Select>
-      <SubmitButton size="sm" variant="outline">
+      <SubmitButton size="sm" variant="outline" title="Save this updated ticket status.">
         Update
       </SubmitButton>
       {state && !state.success && (

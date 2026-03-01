@@ -210,7 +210,9 @@ export function ExpensesSection({
                 ))}
               </Select>
               <Input name="receiptFile" type="file" />
-              <SubmitButton className="w-full">Save Expense</SubmitButton>
+              <SubmitButton className="w-full" title="Create this expense record.">
+                Save Expense
+              </SubmitButton>
             </form>
           </CardContent>
         </Card>
@@ -407,7 +409,9 @@ function ExpenseRow({
           </Select>
           <Input name="receiptFile" type="file" className="sm:col-span-2" />
           <div className="sm:col-span-3 flex items-center gap-2">
-            <SubmitButton size="sm" variant="outline">Save Expense</SubmitButton>
+            <SubmitButton size="sm" variant="outline" title="Save updates to this expense.">
+              Save Expense
+            </SubmitButton>
             <Badge variant="outline">{dollars(expense.amountCents)}</Badge>
           </div>
           {updateState && !updateState.success && (
@@ -425,7 +429,7 @@ function ExpenseRow({
           }}
         >
           <input type="hidden" name="expenseId" value={expense.id} />
-          <Button type="submit" size="sm" variant="destructive">
+          <Button type="submit" size="sm" variant="destructive" title="Delete this expense record permanently.">
             Delete
           </Button>
           {deleteState && !deleteState.success && (

@@ -95,7 +95,9 @@ export function InvitationsSection({
                 required
               />
               <Input name="fullName" placeholder="Full name" required />
-              <SubmitButton className="w-full">Send Invitation</SubmitButton>
+              <SubmitButton className="w-full" title="Email an invitation link to this tenant.">
+                Send Invitation
+              </SubmitButton>
             </form>
           </CardContent>
         </Card>
@@ -124,7 +126,9 @@ export function InvitationsSection({
                   </option>
                 ))}
               </Select>
-              <SubmitButton className="w-full">Send Invitation</SubmitButton>
+              <SubmitButton className="w-full" title="Email an invitation and assign this manager to the selected property.">
+                Send Invitation
+              </SubmitButton>
             </form>
           </CardContent>
         </Card>
@@ -154,7 +158,9 @@ export function InvitationsSection({
                     </option>
                   ))}
                 </Select>
-                <SubmitButton className="w-full">Send Invitation</SubmitButton>
+                <SubmitButton className="w-full" title="Email an invitation to join this ownership account as a co-owner.">
+                  Send Invitation
+                </SubmitButton>
               </form>
             </CardContent>
           </Card>
@@ -253,7 +259,7 @@ function InvitationRow({
             />
             <FormError state={resendState} />
             <FormSuccess state={resendState} message="Resent!" />
-            <SubmitButton variant="outline" size="sm">
+            <SubmitButton variant="outline" size="sm" title="Resend this pending invitation email.">
               Resend
             </SubmitButton>
           </form>

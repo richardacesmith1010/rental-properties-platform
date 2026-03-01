@@ -120,7 +120,7 @@ export function LeasesSection({
                         required
                       />
                       <div className="sm:col-span-2">
-                        <SubmitButton size="sm" variant="outline">
+                        <SubmitButton size="sm" variant="outline" title="Save lease term updates for this tenant.">
                           Save Lease Changes
                         </SubmitButton>
                       </div>
@@ -146,7 +146,7 @@ export function LeasesSection({
                       }}
                     >
                       <input type="hidden" name="leaseId" value={lease.id} />
-                      <Button type="submit" size="sm" variant="destructive">
+                      <Button type="submit" size="sm" variant="destructive" title="Archive this lease and free the unit.">
                         Archive
                       </Button>
                     </form>

@@ -116,7 +116,7 @@ export function UnitsSection({
                         required
                       />
                       <div className="sm:col-span-2">
-                        <SubmitButton size="sm" variant="outline">
+                        <SubmitButton size="sm" variant="outline" title="Save updates for this unit.">
                           Save Unit Changes
                         </SubmitButton>
                       </div>
@@ -136,7 +136,7 @@ export function UnitsSection({
                       }}
                     >
                       <input type="hidden" name="unitId" value={unit.id} />
-                      <Button type="submit" size="sm" variant="destructive">
+                      <Button type="submit" size="sm" variant="destructive" title="Archive this unit.">
                         Archive
                       </Button>
                     </form>

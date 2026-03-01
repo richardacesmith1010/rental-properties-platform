@@ -119,7 +119,9 @@ export function DocumentsSection({
                 ))}
               </Select>
               <Textarea name="bodyMarkdown" placeholder="Template body (markdown/text)" rows={6} required />
-              <SubmitButton className="w-full">Save Template</SubmitButton>
+              <SubmitButton className="w-full" title="Save this document template for reuse.">
+                Save Template
+              </SubmitButton>
             </form>
           </CardContent>
         </Card>
@@ -148,7 +150,9 @@ export function DocumentsSection({
                   </option>
                 ))}
               </Select>
-              <SubmitButton className="w-full">Create Draft Packet</SubmitButton>
+              <SubmitButton className="w-full" title="Create a draft packet from the selected template and lease.">
+                Create Draft Packet
+              </SubmitButton>
             </form>
           </CardContent>
         </Card>
@@ -232,7 +236,9 @@ export function DocumentsSection({
                 </Select>
                 <Input name="description" placeholder="Description (optional)" />
                 <Input name="file" type="file" required />
-                <SubmitButton className="w-full">Upload File</SubmitButton>
+                <SubmitButton className="w-full" title="Upload this file to the property vault.">
+                  Upload File
+                </SubmitButton>
               </form>
             ) : (
               <EmptyState message="Property file vault is not enabled yet." />

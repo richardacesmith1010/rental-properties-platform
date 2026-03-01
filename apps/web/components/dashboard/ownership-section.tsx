@@ -71,7 +71,9 @@ export function OwnershipSection({
               <option value="individual">Individual</option>
             </Select>
             <Input name="displayName" placeholder="Display name (e.g., Smith Family LLC)" required />
-            <SubmitButton className="w-full">Create Account</SubmitButton>
+            <SubmitButton className="w-full" title="Create this ownership account for individual or LLC use.">
+              Create Account
+            </SubmitButton>
           </form>
         </CardContent>
       </Card>
@@ -100,7 +102,9 @@ export function OwnershipSection({
                 </option>
               ))}
             </Select>
-            <SubmitButton className="w-full">Link Property</SubmitButton>
+            <SubmitButton className="w-full" title="Attach the selected property to this ownership account.">
+              Link Property
+            </SubmitButton>
           </form>
         </CardContent>
       </Card>

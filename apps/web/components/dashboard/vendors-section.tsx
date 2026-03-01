@@ -100,7 +100,9 @@ export function VendorsSection({
             Mark as preferred vendor
           </label>
           <div className="md:col-span-5">
-            <SubmitButton size="sm">Add Vendor</SubmitButton>
+            <SubmitButton size="sm" title="Create this vendor record for future assignments.">
+              Add Vendor
+            </SubmitButton>
             {state && !state.success && (
               <p className="mt-1 text-xs text-red-500">{state.error}</p>
             )}
@@ -178,7 +180,9 @@ function VendorRow({
             Preferred vendor
           </label>
           <div className="sm:col-span-2">
-            <SubmitButton size="sm" variant="outline">Save Vendor</SubmitButton>
+            <SubmitButton size="sm" variant="outline" title="Save updates for this vendor.">
+              Save Vendor
+            </SubmitButton>
             {state && !state.success && <p className="mt-1 text-xs text-red-500">{state.error}</p>}
           </div>
         </form>

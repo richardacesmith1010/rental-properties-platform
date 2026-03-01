@@ -71,7 +71,9 @@ export function TicketForm({ units, onCreateTicket }: TicketFormProps) {
             <option value="high">High</option>
             <option value="urgent">Urgent</option>
           </Select>
-          <SubmitButton className="w-full">Submit Request</SubmitButton>
+          <SubmitButton className="w-full" title="Create this maintenance request.">
+            Submit Request
+          </SubmitButton>
         </form>
       </CardContent>
     </Card>

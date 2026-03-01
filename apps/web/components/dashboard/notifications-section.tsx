@@ -83,7 +83,9 @@ function NotificationRow({
       {!notification.readAt ? (
         <form action={action}>
           <input type="hidden" name="notificationId" value={notification.id} />
-          <SubmitButton size="sm" variant="outline">Mark read</SubmitButton>
+          <SubmitButton size="sm" variant="outline" title="Mark this notification as read.">
+            Mark read
+          </SubmitButton>
           {state && !state.success && <p className="mt-1 text-xs text-red-500">{state.error}</p>}
         </form>
       ) : (

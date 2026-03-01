@@ -23,7 +23,7 @@ export function TicketPhotoUpload({
       <input type="hidden" name="ticketId" value={ticketId} />
       <Input type="file" name="photo" accept="image/*" className="h-8 w-44 text-xs" required />
       <Input name="caption" placeholder="Caption" className="h-8 w-28 text-xs" />
-      <SubmitButton size="sm" variant="outline">
+      <SubmitButton size="sm" variant="outline" title="Upload this photo to the ticket history.">
         Upload
       </SubmitButton>
       {state && !state.success && (
