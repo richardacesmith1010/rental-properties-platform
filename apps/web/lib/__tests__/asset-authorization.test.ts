@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   canAccessDocumentPacket,
-  canAccessMaintenancePhoto
+  canAccessMaintenancePhoto,
+  canAccessPropertyFile
 } from "@/lib/asset-authorization";
 
 describe("canAccessMaintenancePhoto", () => {
@@ -127,6 +128,60 @@ describe("canAccessDocumentPacket", () => {
         propertyOwnerId: "owner-1",
         isManagerAssigned: false,
         isSigner: false
+      })
+    ).toBe(false);
+  });
+});
+
+describe("canAccessPropertyFile", () => {
+  it("allows owner and assigned manager", () => {
+    expect(
+      canAccessPropertyFile({
+        role: "owner",
+        userId: "owner-1",
+        propertyOwnerId: "owner-1",
+        isManagerAssigned: false,
+        isPropertyAdmin: true,
+        visibility: "owner_manager",
+        tenantHasLease: false
+      })
+    ).toBe(true);
+
+    expect(
+      canAccessPropertyFile({
+        role: "manager",
+        userId: "manager-1",
+        propertyOwnerId: "owner-1",
+        isManagerAssigned: true,
+        isPropertyAdmin: false,
+        visibility: "owner_manager",
+        tenantHasLease: false
+      })
+    ).toBe(true);
+  });
+
+  it("allows tenant only for shared files and active lease scope", () => {
+    expect(
+      canAccessPropertyFile({
+        role: "tenant",
+        userId: "tenant-1",
+        propertyOwnerId: "owner-1",
+        isManagerAssigned: false,
+        isPropertyAdmin: false,
+        visibility: "all",
+        tenantHasLease: true
+      })
+    ).toBe(true);
+
+    expect(
+      canAccessPropertyFile({
+        role: "tenant",
+        userId: "tenant-1",
+        propertyOwnerId: "owner-1",
+        isManagerAssigned: false,
+        isPropertyAdmin: false,
+        visibility: "owner_manager",
+        tenantHasLease: true
       })
     ).toBe(false);
   });

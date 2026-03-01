@@ -19,7 +19,7 @@ interface MaintenanceSectionProps {
   tickets: MaintenanceTicket[];
   showControls?: boolean;
   onUpdateStatus?: StatefulAction;
-  vendors?: Array<{ id: string; name: string }>;
+  vendors?: Array<{ id: string; name: string; preferred?: boolean }>;
   onAssignVendor?: StatefulAction;
   onUploadPhoto?: StatefulAction;
   vendorWorkflowEnabled?: boolean;

@@ -50,8 +50,12 @@ import {
   signDocumentPacketSchema,
   markNotificationReadSchema,
   createVendorSchema,
+  updateVendorSchema,
   assignVendorSchema,
   uploadMaintenancePhotoSchema,
+  uploadPropertyFileSchema,
+  deletePropertyFileSchema,
+  updateFileVisibilitySchema,
   createOwnershipAccountSchema,
   addOwnershipMemberSchema,
   linkPropertyToOwnershipAccountSchema,
@@ -2261,6 +2265,224 @@ export async function signDocumentPacket(
   return { success: true };
 }
 
+export async function uploadPropertyFile(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" && role !== "manager") {
+    redirect("/portal");
+  }
+
+  const capabilityError = await ensureCapabilityEnabled("documentsEnabled");
+  if (capabilityError) {
+    return capabilityError;
+  }
+
+  const parsed = parseFormData(uploadPropertyFileSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { success: false, error: "Please select a valid file." };
+  }
+  if (file.size > 20 * 1024 * 1024) {
+    return { success: false, error: "File must be under 20MB." };
+  }
+
+  const { propertyId, category, visibility, description } = parsed.data;
+  const canAdminister = await canUserAdministerProperty(user.id, propertyId);
+  if (!canAdminister) {
+    return { success: false, error: "You do not have access to this property." };
+  }
+
+  const extension = file.name.split(".").pop()?.toLowerCase() ?? "bin";
+  const storagePath = `${propertyId}/${crypto.randomUUID()}.${extension}`;
+  const admin = createAdminClient();
+  const fileType = file.type.startsWith("image/")
+    ? "image"
+    : file.type.includes("pdf")
+      ? "pdf"
+      : "document";
+
+  const { error: uploadError } = await admin.storage
+    .from("property-files")
+    .upload(storagePath, file, {
+      contentType: file.type || "application/octet-stream",
+      upsert: false
+    });
+
+  if (uploadError) {
+    return { success: false, error: "Failed to upload file to storage." };
+  }
+
+  const { error: insertError } = await admin.from("property_files").insert({
+    property_id: propertyId,
+    uploaded_by_profile_id: user.id,
+    file_name: file.name,
+    storage_path: storagePath,
+    file_type: fileType,
+    category,
+    visibility,
+    description: description || null
+  });
+
+  if (insertError && isMissingSchemaError(insertError)) {
+    await admin.storage.from("property-files").remove([storagePath]);
+    return {
+      success: false,
+      error: "Document vault is not available yet. Apply the property_files migration and retry."
+    };
+  }
+
+  if (insertError) {
+    await admin.storage.from("property-files").remove([storagePath]);
+    return { success: false, error: "Failed to save file metadata." };
+  }
+
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  revalidatePath("/tenant");
+  return { success: true };
+}
+
+export async function deletePropertyFile(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" && role !== "manager") {
+    redirect("/portal");
+  }
+
+  const parsed = parseFormData(deletePropertyFileSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { fileId } = parsed.data;
+  const admin = createAdminClient();
+  const { data: propertyFile, error: fileError } = await admin
+    .from("property_files")
+    .select("id, property_id, storage_path")
+    .eq("id", fileId)
+    .single();
+
+  if (fileError && isMissingSchemaError(fileError)) {
+    return {
+      success: false,
+      error: "Document vault is not available yet. Apply the property_files migration and retry."
+    };
+  }
+
+  if (!propertyFile) {
+    return { success: false, error: "File not found." };
+  }
+
+  const canAdminister = await canUserAdministerProperty(user.id, propertyFile.property_id);
+  if (!canAdminister) {
+    return { success: false, error: "You do not have access to this file." };
+  }
+
+  await admin.storage.from("property-files").remove([propertyFile.storage_path]);
+
+  const { error: deleteError } = await admin
+    .from("property_files")
+    .delete()
+    .eq("id", fileId);
+
+  if (deleteError) {
+    return { success: false, error: "Failed to delete file." };
+  }
+
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  revalidatePath("/tenant");
+  return { success: true };
+}
+
+export async function updateFileVisibility(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" && role !== "manager") {
+    redirect("/portal");
+  }
+
+  const parsed = parseFormData(updateFileVisibilitySchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { fileId, visibility } = parsed.data;
+  const admin = createAdminClient();
+  const { data: propertyFile, error: fileError } = await admin
+    .from("property_files")
+    .select("id, property_id")
+    .eq("id", fileId)
+    .single();
+
+  if (fileError && isMissingSchemaError(fileError)) {
+    return {
+      success: false,
+      error: "Document vault is not available yet. Apply the property_files migration and retry."
+    };
+  }
+
+  if (!propertyFile) {
+    return { success: false, error: "File not found." };
+  }
+
+  const canAdminister = await canUserAdministerProperty(user.id, propertyFile.property_id);
+  if (!canAdminister) {
+    return { success: false, error: "You do not have access to this file." };
+  }
+
+  const { error } = await admin
+    .from("property_files")
+    .update({ visibility })
+    .eq("id", fileId);
+
+  if (error) {
+    return { success: false, error: "Failed to update file visibility." };
+  }
+
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  revalidatePath("/tenant");
+  return { success: true };
+}
+
 /* ─── Vendors + Maintenance Completion ─── */
 
 export async function createVendor(
@@ -2292,7 +2514,7 @@ export async function createVendor(
   }
 
   const capabilities = await getFeatureCapabilities();
-  const { name, email, phone, trade, ownerAccountId } = parsed.data;
+  const { name, email, phone, tradeCategory, preferred, ownerAccountId } = parsed.data;
   let error: { message: string } | null = null;
 
   if (capabilities.ownershipEnabled) {
@@ -2315,7 +2537,9 @@ export async function createVendor(
       name,
       email: email || null,
       phone: phone || null,
-      trade: trade || null,
+      trade: tradeCategory,
+      trade_category: tradeCategory,
+      preferred,
       active: true
     });
     error = insertResult.error;
@@ -2325,14 +2549,97 @@ export async function createVendor(
       name,
       email: email || null,
       phone: phone || null,
-      trade: trade || null,
+      trade: tradeCategory,
+      trade_category: tradeCategory,
+      preferred,
       active: true
     });
     error = insertResult.error;
   }
 
+  if (error && isMissingSchemaError(error)) {
+    return {
+      success: false,
+      error: "Preferred-vendor fields are not available yet. Apply the latest vendor migration and retry."
+    };
+  }
+
   if (error) {
     return { success: false, error: "Failed to create vendor." };
+  }
+
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  return { success: true };
+}
+
+export async function updateVendor(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" && role !== "manager") {
+    redirect("/portal");
+  }
+
+  const capabilityError = await ensureCapabilityEnabled("vendorWorkflowEnabled");
+  if (capabilityError) {
+    return capabilityError;
+  }
+
+  const parsed = parseFormData(updateVendorSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { vendorId, name, email, phone, tradeCategory, preferred } = parsed.data;
+  const admin = createAdminClient();
+
+  const { data: vendor } = await admin
+    .from("vendors")
+    .select("id, owner_account_id")
+    .eq("id", vendorId)
+    .single();
+
+  if (!vendor) {
+    return { success: false, error: "Vendor not found." };
+  }
+
+  const ownerAccountIds = await getAdministeredOwnerAccountIds(user.id);
+  if (vendor.owner_account_id && !ownerAccountIds.includes(vendor.owner_account_id)) {
+    return { success: false, error: "You do not have access to this vendor." };
+  }
+
+  const { error } = await admin
+    .from("vendors")
+    .update({
+      name,
+      email: email || null,
+      phone: phone || null,
+      trade: tradeCategory,
+      trade_category: tradeCategory,
+      preferred
+    })
+    .eq("id", vendorId);
+
+  if (error && isMissingSchemaError(error)) {
+    return {
+      success: false,
+      error: "Preferred-vendor fields are not available yet. Apply the latest vendor migration and retry."
+    };
+  }
+
+  if (error) {
+    return { success: false, error: "Failed to update vendor." };
   }
 
   revalidatePath("/owner");

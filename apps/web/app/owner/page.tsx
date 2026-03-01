@@ -31,7 +31,11 @@ import {
   deleteDocumentTemplate,
   createDocumentPacket,
   sendDocumentPacket,
+  uploadPropertyFile,
+  deletePropertyFile,
+  updateFileVisibility,
   createVendor,
+  updateVendor,
   assignVendorToTicket,
   uploadMaintenancePhoto,
   createOwnershipAccount,
@@ -59,7 +63,13 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
     getOwnerInvitations(user.id),
     capabilities.documentsEnabled
       ? getOwnerDocumentsData(user.id)
-      : Promise.resolve({ templates: [], packets: [] }),
+      : Promise.resolve({
+          templates: [],
+          packets: [],
+          propertyFiles: [],
+          propertyFilesEnabled: false,
+          propertyFilesWarning: "Property file vault is not enabled yet."
+        }),
     capabilities.notificationsEnabled
       ? getNotificationsForUser(user.id)
       : Promise.resolve([]),
@@ -106,7 +116,11 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       onDeleteDocumentTemplate={deleteDocumentTemplate}
       onCreateDocumentPacket={createDocumentPacket}
       onSendDocumentPacket={sendDocumentPacket}
+      onUploadPropertyFile={uploadPropertyFile}
+      onDeletePropertyFile={deletePropertyFile}
+      onUpdateFileVisibility={updateFileVisibility}
       onCreateVendor={createVendor}
+      onUpdateVendor={updateVendor}
       onAssignVendor={assignVendorToTicket}
       onUploadMaintenancePhoto={uploadMaintenancePhoto}
       onCreateOwnershipAccount={createOwnershipAccount}

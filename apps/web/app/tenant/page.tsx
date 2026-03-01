@@ -55,7 +55,12 @@ export default async function TenantPage() {
     getTenantMaintenanceData(user.id),
     capabilities.documentsEnabled
       ? getTenantDocumentsData(user.id)
-      : Promise.resolve({ packets: [] }),
+      : Promise.resolve({
+          packets: [],
+          files: [],
+          propertyFilesEnabled: false,
+          propertyFilesWarning: "Shared property files are not enabled yet."
+        }),
     capabilities.notificationsEnabled
       ? getNotificationsForUser(user.id)
       : Promise.resolve([])
@@ -194,9 +199,12 @@ export default async function TenantPage() {
           <div id="documents">
             <TenantDocumentsSection
               packets={documentsData.packets}
+              files={documentsData.files}
               onSignPacket={signDocumentPacket}
               isFeatureReady={capabilities.documentsEnabled}
               featureWarning={capabilities.warnings.documents}
+              propertyFilesEnabled={documentsData.propertyFilesEnabled}
+              propertyFilesWarning={documentsData.propertyFilesWarning}
               assetAccessEnabled={capabilities.documentAssetAccessEnabled}
               assetAccessWarning={
                 capabilities.documentsEnabled && !capabilities.documentAssetAccessEnabled

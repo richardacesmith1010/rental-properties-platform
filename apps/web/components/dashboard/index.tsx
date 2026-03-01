@@ -62,7 +62,11 @@ interface DashboardProps {
   onDeleteDocumentTemplate?: StatefulAction;
   onCreateDocumentPacket?: StatefulAction;
   onSendDocumentPacket?: StatefulAction;
+  onUploadPropertyFile?: StatefulAction;
+  onDeletePropertyFile?: StatefulAction;
+  onUpdateFileVisibility?: StatefulAction;
   onCreateVendor?: StatefulAction;
+  onUpdateVendor?: StatefulAction;
   onAssignVendor?: StatefulAction;
   onUploadMaintenancePhoto?: StatefulAction;
   onCreateOwnershipAccount?: StatefulAction;
@@ -103,7 +107,11 @@ export function Dashboard({
   onDeleteDocumentTemplate,
   onCreateDocumentPacket,
   onSendDocumentPacket,
+  onUploadPropertyFile,
+  onDeletePropertyFile,
+  onUpdateFileVisibility,
   onCreateVendor,
+  onUpdateVendor,
   onAssignVendor,
   onUploadMaintenancePhoto,
   onCreateOwnershipAccount,
@@ -117,7 +125,10 @@ export function Dashboard({
   };
   const safeDocuments: OwnerDocumentsData = documents ?? {
     templates: [],
-    packets: []
+    packets: [],
+    propertyFiles: [],
+    propertyFilesEnabled: true,
+    propertyFilesWarning: null
   };
   const safeNotifications: NotificationDTO[] = notifications ?? [];
   const safeVendors: VendorDTO[] = vendors ?? [];
@@ -136,6 +147,12 @@ export function Dashboard({
       ? Math.round((data.kpis.occupiedUnits / data.kpis.totalUnits) * 100)
       : 0;
   const canManagePortfolio = data.profileRole === "owner" || data.profileRole === "manager";
+  const sortedVendors = [...safeVendors].sort((left, right) => {
+    if (left.preferred !== right.preferred) {
+      return Number(right.preferred) - Number(left.preferred);
+    }
+    return left.name.localeCompare(right.name);
+  });
 
   return (
     <div className="app-surface flex min-h-screen flex-col lg:flex-row">
@@ -203,7 +220,7 @@ export function Dashboard({
             tickets={tickets ?? []}
             showControls={!!onUpdateTicketStatus}
             onUpdateStatus={onUpdateTicketStatus}
-            vendors={safeVendors}
+            vendors={sortedVendors}
             onAssignVendor={safeCapabilities.vendorWorkflowEnabled ? onAssignVendor : undefined}
             onUploadPhoto={safeCapabilities.photoWorkflowEnabled ? onUploadMaintenancePhoto : undefined}
             vendorWorkflowEnabled={safeCapabilities.vendorWorkflowEnabled}
@@ -272,14 +289,24 @@ export function Dashboard({
             onCreateDocumentPacket &&
             onSendDocumentPacket && (
               <DocumentsSection
+                properties={safePortfolio.properties.map((property) => ({
+                  id: property.id,
+                  name: property.name
+                }))}
                 templates={safeDocuments.templates}
                 packets={safeDocuments.packets}
+                propertyFiles={safeDocuments.propertyFiles}
                 leases={safePortfolio.leases}
                 ownershipAccounts={safeOwnershipAccounts}
                 onCreateTemplate={onCreateDocumentTemplate}
                 onDeleteTemplate={onDeleteDocumentTemplate}
                 onCreatePacket={onCreateDocumentPacket}
                 onSendPacket={onSendDocumentPacket}
+                onUploadPropertyFile={onUploadPropertyFile}
+                onDeletePropertyFile={onDeletePropertyFile}
+                onUpdateFileVisibility={onUpdateFileVisibility}
+                propertyFilesEnabled={safeDocuments.propertyFilesEnabled}
+                propertyFilesWarning={safeDocuments.propertyFilesWarning}
                 isFeatureReady={safeCapabilities.documentsEnabled}
                 featureWarning={safeCapabilities.warnings.documents}
                 assetAccessEnabled={safeCapabilities.documentAssetAccessEnabled}
@@ -297,6 +324,7 @@ export function Dashboard({
                 vendors={safeVendors}
                 ownershipAccounts={safeOwnershipAccounts}
                 onCreateVendor={onCreateVendor}
+                onUpdateVendor={onUpdateVendor}
               />
             ) : (
               <FeatureWarning

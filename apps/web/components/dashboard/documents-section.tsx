@@ -12,21 +12,28 @@ import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/shared/empty-state";
 import { FeatureWarning } from "@/components/shared/feature-warning";
 import type { ActionState } from "@/app/actions";
-import type { DocumentTemplateDTO, DocumentPacketDTO } from "@/lib/documents";
+import type { DocumentTemplateDTO, DocumentPacketDTO, PropertyFileDTO } from "@/lib/documents";
 import type { LeaseListItem } from "@/lib/portfolio";
 import type { OwnershipAccountDTO } from "@/lib/ownership";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
 interface DocumentsSectionProps {
+  properties: Array<{ id: string; name: string }>;
   templates: DocumentTemplateDTO[];
   packets: DocumentPacketDTO[];
+  propertyFiles: PropertyFileDTO[];
   leases: LeaseListItem[];
   ownershipAccounts: OwnershipAccountDTO[];
   onCreateTemplate: StatefulAction;
   onDeleteTemplate: StatefulAction;
   onCreatePacket: StatefulAction;
   onSendPacket: StatefulAction;
+  onUploadPropertyFile?: StatefulAction;
+  onDeletePropertyFile?: StatefulAction;
+  onUpdateFileVisibility?: StatefulAction;
+  propertyFilesEnabled?: boolean;
+  propertyFilesWarning?: string | null;
   isFeatureReady?: boolean;
   featureWarning?: string | null;
   assetAccessEnabled?: boolean;
@@ -43,15 +50,27 @@ function FormSuccess({ state, message }: { state: ActionState; message: string }
   return <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-600">{message}</p>;
 }
 
+const unavailableAction: StatefulAction = async () => ({
+  success: false,
+  error: "Action unavailable."
+});
+
 export function DocumentsSection({
+  properties,
   templates,
   packets,
+  propertyFiles,
   leases,
   ownershipAccounts,
   onCreateTemplate,
   onDeleteTemplate,
   onCreatePacket,
   onSendPacket,
+  onUploadPropertyFile,
+  onDeletePropertyFile,
+  onUpdateFileVisibility,
+  propertyFilesEnabled = true,
+  propertyFilesWarning = null,
   isFeatureReady = true,
   featureWarning = null,
   assetAccessEnabled = true,
@@ -59,6 +78,7 @@ export function DocumentsSection({
 }: DocumentsSectionProps) {
   const [templateState, templateAction] = useFormState(onCreateTemplate, null);
   const [packetState, packetAction] = useFormState(onCreatePacket, null);
+  const [uploadState, uploadAction] = useFormState(onUploadPropertyFile ?? unavailableAction, null);
 
   if (!isFeatureReady) {
     return (
@@ -78,6 +98,7 @@ export function DocumentsSection({
     <div id="documents" className="space-y-4">
       {featureWarning && <FeatureWarning title="Documents Setup" message={featureWarning} />}
       {assetAccessWarning && <FeatureWarning title="File Access" message={assetAccessWarning} />}
+      {propertyFilesWarning && <FeatureWarning title="Property File Vault" message={propertyFilesWarning} />}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -177,6 +198,73 @@ export function DocumentsSection({
           )}
         </CardContent>
       </Card>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Upload Property File</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {propertyFilesEnabled ? (
+              <form className="space-y-3" action={uploadAction}>
+                <FormError state={uploadState} />
+                <FormSuccess state={uploadState} message="File uploaded." />
+                <Select name="propertyId" required>
+                  <option value="">Select property</option>
+                  {properties.map((property) => (
+                    <option key={property.id} value={property.id}>
+                      {property.name}
+                    </option>
+                  ))}
+                </Select>
+                <Select name="category" required>
+                  <option value="">Select category</option>
+                  <option value="lease_agreement">Lease Agreement</option>
+                  <option value="inspection">Inspection</option>
+                  <option value="insurance">Insurance</option>
+                  <option value="tax">Tax</option>
+                  <option value="receipt">Receipt</option>
+                  <option value="other">Other</option>
+                </Select>
+                <Select name="visibility" defaultValue="owner_manager" required>
+                  <option value="owner_manager">Owner + Manager only</option>
+                  <option value="all">Visible to tenant</option>
+                </Select>
+                <Input name="description" placeholder="Description (optional)" />
+                <Input name="file" type="file" required />
+                <SubmitButton className="w-full">Upload File</SubmitButton>
+              </form>
+            ) : (
+              <EmptyState message="Property file vault is not enabled yet." />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Property File Vault</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!propertyFilesEnabled ? (
+              <EmptyState message="Property file vault is unavailable." />
+            ) : propertyFiles.length === 0 ? (
+              <EmptyState message="No uploaded files yet." />
+            ) : (
+              <div>
+                {propertyFiles.map((file, i) => (
+                  <PropertyFileRow
+                    key={file.id}
+                    file={file}
+                    last={i === propertyFiles.length - 1}
+                    onDeletePropertyFile={onDeletePropertyFile ?? unavailableAction}
+                    onUpdateFileVisibility={onUpdateFileVisibility ?? unavailableAction}
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
@@ -255,6 +343,75 @@ function PacketRow({
           {state && !state.success && <p className="mt-1 text-xs text-red-500">{state.error}</p>}
         </form>
       )}
+    </DataRow>
+  );
+}
+
+function PropertyFileRow({
+  file,
+  last,
+  onDeletePropertyFile,
+  onUpdateFileVisibility
+}: {
+  file: PropertyFileDTO;
+  last: boolean;
+  onDeletePropertyFile: StatefulAction;
+  onUpdateFileVisibility: StatefulAction;
+}) {
+  const [visibilityState, visibilityAction] = useFormState(onUpdateFileVisibility, null);
+  const [deleteState, deleteAction] = useFormState(onDeletePropertyFile, null);
+  const nextVisibility = file.visibility === "all" ? "owner_manager" : "all";
+
+  return (
+    <DataRow last={last}>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-zinc-900">{file.fileName}</p>
+        <p className="mt-0.5 text-xs text-zinc-500">
+          {file.propertyLabel} • {file.category.replaceAll("_", " ")} • {file.fileType}
+        </p>
+        {file.description && <p className="mt-0.5 text-xs text-zinc-500">{file.description}</p>}
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          <Badge variant={file.visibility === "all" ? "success" : "outline"}>
+            {file.visibility === "all" ? "Tenant visible" : "Owner/Manager only"}
+          </Badge>
+          <Link
+            href={`/api/assets/property-file/${file.id}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center rounded-md border border-zinc-200 px-2 py-1 text-[11px] font-medium text-zinc-700 hover:bg-zinc-50"
+          >
+            Open File
+          </Link>
+        </div>
+      </div>
+
+      <div className="flex flex-col items-end gap-2">
+        <form action={visibilityAction}>
+          <input type="hidden" name="fileId" value={file.id} />
+          <input type="hidden" name="visibility" value={nextVisibility} />
+          <SubmitButton size="sm" variant="outline">
+            {file.visibility === "all" ? "Hide from tenant" : "Show to tenant"}
+          </SubmitButton>
+          {visibilityState && !visibilityState.success && (
+            <p className="mt-1 text-xs text-red-500">{visibilityState.error}</p>
+          )}
+        </form>
+
+        <form
+          action={deleteAction}
+          onSubmit={(event) => {
+            if (!window.confirm("Delete this file from the vault?")) {
+              event.preventDefault();
+            }
+          }}
+        >
+          <input type="hidden" name="fileId" value={file.id} />
+          <SubmitButton size="sm" variant="outline">Delete</SubmitButton>
+          {deleteState && !deleteState.success && (
+            <p className="mt-1 text-xs text-red-500">{deleteState.error}</p>
+          )}
+        </form>
+      </div>
     </DataRow>
   );
 }

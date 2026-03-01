@@ -229,8 +229,51 @@ export const createVendorSchema = z.object({
     .union([z.string().email("Enter a valid email address."), z.literal("")])
     .optional(),
   phone: z.string().max(30, "Phone must be under 30 characters.").optional(),
-  trade: z.string().max(80, "Trade must be under 80 characters.").optional(),
+  tradeCategory: z.enum(
+    [
+      "plumbing",
+      "electrical",
+      "hvac",
+      "general",
+      "landscaping",
+      "cleaning",
+      "roofing",
+      "painting",
+      "appliance",
+      "other"
+    ],
+    { message: "Select a valid trade category." }
+  ),
+  preferred: z.preprocess((value) => value === "true" || value === "on" || value === true, z.boolean()),
   ownerAccountId: z.string().uuid("Invalid ownership account.").optional()
+});
+
+export const updateVendorSchema = z.object({
+  vendorId: z.string().uuid("Invalid vendor."),
+  name: z
+    .string()
+    .min(1, "Vendor name is required.")
+    .max(120, "Vendor name must be under 120 characters."),
+  email: z
+    .union([z.string().email("Enter a valid email address."), z.literal("")])
+    .optional(),
+  phone: z.string().max(30, "Phone must be under 30 characters.").optional(),
+  tradeCategory: z.enum(
+    [
+      "plumbing",
+      "electrical",
+      "hvac",
+      "general",
+      "landscaping",
+      "cleaning",
+      "roofing",
+      "painting",
+      "appliance",
+      "other"
+    ],
+    { message: "Select a valid trade category." }
+  ),
+  preferred: z.preprocess((value) => value === "true" || value === "on" || value === true, z.boolean())
 });
 
 export const assignVendorSchema = z.object({
@@ -241,6 +284,25 @@ export const assignVendorSchema = z.object({
 export const uploadMaintenancePhotoSchema = z.object({
   ticketId: z.string().uuid("Invalid ticket ID."),
   caption: z.string().max(300, "Caption must be under 300 characters.").optional()
+});
+
+export const uploadPropertyFileSchema = z.object({
+  propertyId: z.string().uuid("Invalid property."),
+  category: z.enum(
+    ["lease_agreement", "inspection", "insurance", "tax", "receipt", "other"],
+    { message: "Select a valid category." }
+  ),
+  visibility: z.enum(["owner_manager", "all"], { message: "Select a valid visibility option." }),
+  description: z.string().max(500, "Description must be under 500 characters.").optional()
+});
+
+export const deletePropertyFileSchema = z.object({
+  fileId: z.string().uuid("Invalid file.")
+});
+
+export const updateFileVisibilitySchema = z.object({
+  fileId: z.string().uuid("Invalid file."),
+  visibility: z.enum(["owner_manager", "all"], { message: "Select a valid visibility option." })
 });
 
 /* ─── Ownership Accounts (LLC/Co-Owner) ─── */
