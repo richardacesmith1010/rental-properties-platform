@@ -370,3 +370,32 @@ NEXT_ACTION=tag v1.0.0
   - `npx tsc -p apps/mobile/tsconfig.json --noEmit` -> PASS
   - `npx vercel deploy --prod --yes` -> PASS
   - `APP_URL=https://rental-properties-platform-web.vercel.app npm run smoke:web` -> PASS
+
+## V2 Tester Access + Theme Controls (Codex)
+
+- Timestamp (UTC): `2026-03-01T20:00:00Z`
+- Branch: `main`
+- HEAD: `54260b1`
+- Scope delivered:
+  - Tester mode access controls:
+    - Added owner-only tester grant/revoke actions (`grantTesterAccess`, `revokeTesterAccess`).
+    - Added tester access schemas in validations and tests.
+    - Added tester account management UI in `/tester` (grant by email + revoke list).
+    - Prevents self-revoke from tester mode UI to avoid lockout.
+  - Mode-switch navigation:
+    - Added explicit quick links for `Portal Home`, role workspace, and `Tester Mode` in sidebar.
+    - Added explicit `Exit Tester Mode`, `Portal Home`, and `App Home` links on tester page.
+    - No browser back-button dependency required for common mode switches.
+  - Theme presets:
+    - Added persistent theme selector with 3 presets:
+      - `Atlas Light`
+      - `Noctis Neon` (dark + neon accents)
+      - `Imperium Night` (subtle Roman-futurist palette)
+    - Theme persists in localStorage (`domus-theme`) and applies at app boot.
+- Validation:
+  - `npm test --workspace @domus/web` -> PASS (106/106)
+  - `npm run lint:web` -> PASS
+  - `npm run build:web` -> PASS
+  - `npx tsc -p apps/mobile/tsconfig.json --noEmit` -> PASS
+  - `npx vercel deploy --prod --yes` -> PASS
+  - `APP_URL=https://rental-properties-platform-web.vercel.app npm run smoke:web` -> PASS
