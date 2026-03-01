@@ -543,6 +543,29 @@ export function TesterToolsSection({
     }
   };
 
+  const copySingleFailurePrompt = async (entry: FailureEntry) => {
+    try {
+      await navigator.clipboard.writeText(
+        buildFailurePrompt({
+          featureLabel: entry.featureLabel,
+          checkpointLabel: entry.checkpointLabel,
+          path: entry.path,
+          detail: entry.detail
+        })
+      );
+      setFailureCopyState("copied");
+    } catch {
+      setFailureCopyState("error");
+    }
+  };
+
+  const previewFailurePath = (path: string) => {
+    setActiveTestTarget(path);
+    if (!path.startsWith("/api/")) {
+      setWorkspacePreviewPath(path);
+    }
+  };
+
   const resetTesterRuns = () => {
     if (runningFeatureId || walkthroughState.status === "running") {
       return;
@@ -1234,12 +1257,46 @@ export function TesterToolsSection({
                   </p>
                   <ul className="mt-2 space-y-1.5 text-xs text-zinc-700">
                     {failureEntries.map((entry) => (
-                      <li key={`${entry.featureLabel}-${entry.checkpointLabel}-${entry.path}`}>
-                        <span className="font-semibold">{entry.featureLabel}</span>
-                        {" -> "}
-                        <span>{entry.checkpointLabel}</span>
-                        {" @ "}
-                        <span className="font-mono">{entry.path}</span>
+                      <li
+                        key={`${entry.featureLabel}-${entry.checkpointLabel}-${entry.path}`}
+                        className="rounded-md border border-red-100 bg-red-50/40 p-2"
+                      >
+                        <div>
+                          <span className="font-semibold">{entry.featureLabel}</span>
+                          {" -> "}
+                          <span>{entry.checkpointLabel}</span>
+                          {" @ "}
+                          <span className="font-mono">{entry.path}</span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => previewFailurePath(entry.path)}
+                            title="Load this failed route into the live tester preview."
+                          >
+                            Preview
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => copySingleFailurePrompt(entry)}
+                            title="Copy a prompt for this single failure."
+                          >
+                            Copy This Failure
+                          </Button>
+                          <a
+                            href={entry.path}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+                            title="Open this failed route in a new browser tab."
+                          >
+                            Open in New Tab
+                          </a>
+                        </div>
                       </li>
                     ))}
                   </ul>
