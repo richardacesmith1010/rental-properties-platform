@@ -84,6 +84,8 @@
 ## In Progress (Codex)
 - Production deployment + live migration application verification for Phase 9.
 - Vercel CLI deploy attempt from Codex is currently blocked by missing local credentials (`vercel login` or `--token` required).
+- Latest deploy check on `main` (post closeout merge) returned the same blocker:
+  - `npx vercel deploy --prod --yes` -> `No existing credentials found`
 
 ## Stability Gate Snapshot (2026-02-28)
 - Baseline commit: `cdf4dad` on `main`.
