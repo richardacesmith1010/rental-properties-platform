@@ -304,3 +304,28 @@ SECURITY_BLOCKERS=none
 READY_FOR_TAG=true
 NEXT_ACTION=tag v1.0.0
 ```
+
+
+## V2 Deploy Validation (Codex)
+
+- Timestamp (UTC): `2026-03-01T19:18:00Z`
+- Branch: `main`
+- HEAD: `31db9ad`
+- Runtime verification:
+  - `npm run verify:phase9-runtime` -> PASS (`ok: true`)
+  - V2 DB probes -> PASS (`property_files`, `property_expenses`, `vendors.preferred`, `vendors.trade_category`, `profiles.is_tester`, `properties.active`, `units.active`, bucket `property-files`)
+- Full gate:
+  - `npm test --workspace @domus/web` -> PASS (103/103)
+  - `npm run lint:web` -> PASS
+  - `npm run build:web` -> PASS
+  - `npx tsc -p apps/mobile/tsconfig.json --noEmit` -> PASS
+- Deployment:
+  - `npx vercel deploy --prod --yes` -> PASS
+  - Production alias confirmed: `https://rental-properties-platform-web.vercel.app`
+- Post-deploy smoke:
+  - `APP_URL=https://rental-properties-platform-web.vercel.app npm run smoke:web` -> PASS
+
+### Notes
+- Added and committed migration reference file: `supabase/migrations/20260301_v2_domus_schema.sql`.
+- Merged `codex/v2-domus` into `main` and pushed to origin.
+- Remaining optional manual check: authenticated cron smoke (`CRON_SECRET` set locally).
