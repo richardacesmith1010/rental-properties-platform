@@ -19,7 +19,7 @@ import { getNotificationsForUser } from "@/lib/notifications";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { SidebarNav, MobileTopBar, type NavItem } from "@/components/dashboard/sidebar-nav";
+import { SidebarNav, MobileTopBar } from "@/components/dashboard/sidebar-nav";
 import { KpiCard } from "@/components/shared/kpi-card";
 import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -30,14 +30,9 @@ import { MaintenanceSection } from "@/components/dashboard/maintenance-section";
 import { TenantDocumentsSection } from "@/components/dashboard/tenant-documents-section";
 import { NotificationsSection } from "@/components/dashboard/notifications-section";
 import {
-  Bell,
   ChevronLeft,
   ChevronRight,
-  CreditCard,
-  FileSignature,
-  LayoutDashboard,
-  Receipt,
-  Wrench
+  CreditCard
 } from "lucide-react";
 import { redirect } from "next/navigation";
 
@@ -149,14 +144,6 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
   ).length;
   const unreadNotificationCount = notifications.filter((notification) => !notification.readAt).length;
 
-  const tenantNavItems: NavItem[] = [
-    { id: "overview", label: "Overview", icon: LayoutDashboard, href: buildTenantHref("overview", testerPreview) },
-    { id: "charges", label: "Charges", icon: Receipt, href: buildTenantHref("charges", testerPreview) },
-    { id: "maintenance", label: "Maintenance", icon: Wrench, href: buildTenantHref("maintenance", testerPreview) },
-    { id: "documents", label: "Documents", icon: FileSignature, href: buildTenantHref("documents", testerPreview) },
-    { id: "notifications", label: "Notifications", icon: Bell, href: buildTenantHref("notifications", testerPreview) },
-  ];
-
   return (
     <div className="app-surface flex min-h-screen flex-col lg:flex-row">
       <MobileTopBar
@@ -171,9 +158,9 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
         occupancy={0}
         activeLeaseCount={0}
         role="tenant"
+        navPreset="tenant"
         showTesterLink={testerAccess}
         onSignOut={signOut}
-        items={tenantNavItems}
         activeItemId={activeSection}
         snapshot={{
           label: "Tenant Snapshot",

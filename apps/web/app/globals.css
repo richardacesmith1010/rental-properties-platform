@@ -84,6 +84,17 @@
     background-color: rgba(15, 23, 42, 0.55) !important;
   }
 
+  html[data-domus-theme="noctis-neon"] .bg-indigo-50,
+  html[data-domus-theme="imperium-night"] .bg-indigo-50,
+  html[data-domus-theme="noctis-neon"] .bg-emerald-50,
+  html[data-domus-theme="imperium-night"] .bg-emerald-50,
+  html[data-domus-theme="noctis-neon"] .bg-red-50,
+  html[data-domus-theme="imperium-night"] .bg-red-50,
+  html[data-domus-theme="noctis-neon"] .bg-amber-50,
+  html[data-domus-theme="imperium-night"] .bg-amber-50 {
+    background-color: rgba(30, 41, 59, 0.72) !important;
+  }
+
   html[data-domus-theme="noctis-neon"] .text-zinc-900,
   html[data-domus-theme="imperium-night"] .text-zinc-900 {
     color: #e7edf8 !important;
@@ -102,6 +113,17 @@
   html[data-domus-theme="noctis-neon"] .text-zinc-500,
   html[data-domus-theme="imperium-night"] .text-zinc-500 {
     color: #91a0bd !important;
+  }
+
+  html[data-domus-theme="noctis-neon"] .text-indigo-700,
+  html[data-domus-theme="imperium-night"] .text-indigo-700,
+  html[data-domus-theme="noctis-neon"] .text-emerald-700,
+  html[data-domus-theme="imperium-night"] .text-emerald-700,
+  html[data-domus-theme="noctis-neon"] .text-red-700,
+  html[data-domus-theme="imperium-night"] .text-red-700,
+  html[data-domus-theme="noctis-neon"] .text-amber-700,
+  html[data-domus-theme="imperium-night"] .text-amber-700 {
+    color: #e7edf8 !important;
   }
 
   html[data-domus-theme="noctis-neon"] .border-zinc-200,

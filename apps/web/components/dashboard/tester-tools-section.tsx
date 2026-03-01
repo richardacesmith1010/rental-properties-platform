@@ -319,8 +319,12 @@ export function TesterToolsSection({
         {
           id: "billing-owner-ui",
           label: "Owner workspace shows charges section",
-          previewPath: "/owner?testerPreview=true",
-          run: () => checkPageForText("/owner?testerPreview=true", "Upcoming / Late Charges")
+          previewPath: "/owner?testerPreview=true&section=charges",
+          run: () =>
+            checkPageForText(
+              "/owner?testerPreview=true&section=charges",
+              "Upcoming / Late Charges"
+            )
         },
         {
           id: "billing-payment-success-route",

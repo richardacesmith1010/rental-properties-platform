@@ -61,6 +61,7 @@ interface DashboardProps {
   capabilities?: FeatureCapabilitiesDTO;
   ownershipAccounts?: OwnershipAccountDTO[];
   generatedMessage?: string | null;
+  initialSectionId?: string | null;
   userEmail: string;
   showTesterLink?: boolean;
   onGenerateChargesHref?: string;
@@ -111,6 +112,7 @@ export function Dashboard({
   capabilities,
   ownershipAccounts,
   generatedMessage,
+  initialSectionId,
   userEmail,
   showTesterLink = false,
   onGenerateChargesHref,
@@ -341,7 +343,25 @@ export function Dashboard({
     hasVendorsSection
   ]);
 
-  const [activeSection, setActiveSection] = useState<string>("overview");
+  const getInitialSection = () => {
+    if (!initialSectionId) {
+      return "overview";
+    }
+    return sectionItems.some((item) => item.id === initialSectionId)
+      ? initialSectionId
+      : "overview";
+  };
+
+  const [activeSection, setActiveSection] = useState<string>(getInitialSection);
+
+  useEffect(() => {
+    if (!initialSectionId) {
+      return;
+    }
+    if (sectionItems.some((item) => item.id === initialSectionId)) {
+      setActiveSection(initialSectionId);
+    }
+  }, [initialSectionId, sectionItems]);
 
   useEffect(() => {
     if (!sectionItems.some((item) => item.id === activeSection)) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Receipt,
@@ -31,6 +32,7 @@ interface SidebarNavProps {
   occupancy: number;
   activeLeaseCount: number;
   role: string;
+  navPreset?: "default" | "tenant";
   showTesterLink?: boolean;
   onSignOut: (formData: FormData) => Promise<void>;
   items?: NavItem[];
@@ -149,6 +151,7 @@ export function SidebarNav({
   occupancy,
   activeLeaseCount,
   role,
+  navPreset = "default",
   showTesterLink = false,
   onSignOut,
   items,
@@ -156,7 +159,61 @@ export function SidebarNav({
   onSelectItem,
   snapshot,
 }: SidebarNavProps) {
-  const navItems = items ?? defaultNavItems;
+  const [tenantPreviewParam, setTenantPreviewParam] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("testerPreview") === "true") {
+      setTenantPreviewParam("&testerPreview=true");
+    }
+  }, []);
+
+  const navItems =
+    items ??
+    (navPreset === "tenant"
+      ? [
+          {
+            id: "overview",
+            label: "Overview",
+            icon: LayoutDashboard,
+            href: `/tenant?section=overview${tenantPreviewParam}`,
+            description: "Summary of rent, tickets, and alerts.",
+            clickHint: "open overview"
+          },
+          {
+            id: "charges",
+            label: "Charges",
+            icon: Receipt,
+            href: `/tenant?section=charges${tenantPreviewParam}`,
+            description: "Outstanding and late rent charges.",
+            clickHint: "open charges"
+          },
+          {
+            id: "maintenance",
+            label: "Maintenance",
+            icon: Wrench,
+            href: `/tenant?section=maintenance${tenantPreviewParam}`,
+            description: "Maintenance requests and status.",
+            clickHint: "open maintenance"
+          },
+          {
+            id: "documents",
+            label: "Documents",
+            icon: FileSignature,
+            href: `/tenant?section=documents${tenantPreviewParam}`,
+            description: "Lease packets and shared files.",
+            clickHint: "open documents"
+          },
+          {
+            id: "notifications",
+            label: "Notifications",
+            icon: Bell,
+            href: `/tenant?section=notifications${tenantPreviewParam}`,
+            description: "Unread and historical alerts.",
+            clickHint: "open notifications"
+          }
+        ]
+      : defaultNavItems);
   const renderedNavItems = showTesterLink
     ? [
         ...navItems,

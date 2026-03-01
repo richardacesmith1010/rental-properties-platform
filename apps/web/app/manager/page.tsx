@@ -54,6 +54,7 @@ interface ManagerPageProps {
   searchParams?: {
     generated?: string | string[];
     testerPreview?: string | string[];
+    section?: string | string[];
   };
 }
 
@@ -81,6 +82,12 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
 
   const capabilities = await getFeatureCapabilities();
   const generatedMessage = getGeneratedMessage(searchParams?.generated);
+  const initialSectionId =
+    typeof searchParams?.section === "string"
+      ? searchParams.section
+      : Array.isArray(searchParams?.section)
+        ? searchParams?.section[0] ?? null
+        : null;
 
   const [dashboard, portfolio, tickets, invitations, documents, notifications, vendors, ownershipAccounts] =
     await Promise.all([
@@ -119,6 +126,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       vendors={vendors}
       ownershipAccounts={ownershipAccounts}
       capabilities={capabilities}
+      initialSectionId={initialSectionId}
       userEmail={user.email ?? "unknown"}
       showTesterLink={testerAccess}
       onSignOut={signOut}
