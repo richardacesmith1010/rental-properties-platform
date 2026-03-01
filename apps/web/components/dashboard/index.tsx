@@ -43,6 +43,7 @@ interface DashboardProps {
   ownershipAccounts?: OwnershipAccountDTO[];
   generatedMessage?: string | null;
   userEmail: string;
+  showTesterLink?: boolean;
   onGenerateChargesHref?: string;
   onSignOut: FormAction;
   onCreateProperty: StatefulAction;
@@ -92,6 +93,7 @@ export function Dashboard({
   ownershipAccounts,
   generatedMessage,
   userEmail,
+  showTesterLink = false,
   onGenerateChargesHref,
   onSignOut,
   onCreateProperty,
@@ -176,7 +178,7 @@ export function Dashboard({
   return (
     <div className="app-surface flex min-h-screen flex-col lg:flex-row">
       {/* Mobile top bar */}
-      <MobileTopBar userEmail={userEmail} role={data.profileRole} onSignOut={onSignOut} />
+      <MobileTopBar userEmail={userEmail} role={data.profileRole} showTesterLink={showTesterLink} onSignOut={onSignOut} />
 
       {/* Desktop sidebar */}
       <SidebarNav
@@ -184,6 +186,7 @@ export function Dashboard({
         occupancy={occupancy}
         activeLeaseCount={data.kpis.activeLeaseCount}
         role={data.profileRole}
+        showTesterLink={showTesterLink}
         onSignOut={onSignOut}
       />
 

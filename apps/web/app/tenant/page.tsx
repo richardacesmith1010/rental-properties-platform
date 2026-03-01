@@ -5,7 +5,7 @@ import {
   markNotificationRead,
   signDocumentPacket
 } from "@/app/actions";
-import { requireRole } from "@/lib/auth";
+import { isTester, requireRole } from "@/lib/auth";
 import { getTenantPaymentData } from "@/lib/tenant-payments";
 import { getTenantMaintenanceData } from "@/lib/maintenance";
 import { getTenantDocumentsData } from "@/lib/documents";
@@ -50,7 +50,7 @@ export default async function TenantPage() {
   const { user } = await requireRole(["tenant"]);
   const capabilities = await getFeatureCapabilities();
 
-  const [paymentData, maintenanceData, documentsData, notifications] = await Promise.all([
+  const [paymentData, maintenanceData, documentsData, notifications, testerAccess] = await Promise.all([
     getTenantPaymentData(user.id),
     getTenantMaintenanceData(user.id),
     capabilities.documentsEnabled
@@ -63,7 +63,8 @@ export default async function TenantPage() {
         }),
     capabilities.notificationsEnabled
       ? getNotificationsForUser(user.id)
-      : Promise.resolve([])
+      : Promise.resolve([]),
+    isTester(user.id)
   ]);
 
   const outstandingCents = paymentData.charges.reduce(
@@ -81,13 +82,19 @@ export default async function TenantPage() {
 
   return (
     <div className="app-surface flex min-h-screen flex-col lg:flex-row">
-      <MobileTopBar userEmail={user.email ?? "unknown"} role="tenant" onSignOut={signOut} />
+      <MobileTopBar
+        userEmail={user.email ?? "unknown"}
+        role="tenant"
+        showTesterLink={testerAccess}
+        onSignOut={signOut}
+      />
 
       <SidebarNav
         userEmail={user.email ?? "unknown"}
         occupancy={0}
         activeLeaseCount={0}
         role="tenant"
+        showTesterLink={testerAccess}
         onSignOut={signOut}
         items={tenantNavItems}
         snapshot={{

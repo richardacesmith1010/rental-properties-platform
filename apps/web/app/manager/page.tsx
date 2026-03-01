@@ -40,7 +40,7 @@ import {
   createOwnershipAccount,
   linkPropertyToOwnershipAccount
 } from "@/app/actions";
-import { requireRole } from "@/lib/auth";
+import { isTester, requireRole } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +62,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
   const capabilities = await getFeatureCapabilities();
   const generatedMessage = getGeneratedMessage(searchParams?.generated);
 
-  const [dashboard, portfolio, tickets, invitations, documents, notifications, vendors, ownershipAccounts] =
+  const [dashboard, portfolio, tickets, invitations, documents, notifications, vendors, ownershipAccounts, testerAccess] =
     await Promise.all([
       getDashboardData(user.id),
       getPortfolioData(user.id),
@@ -85,7 +85,8 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
         : Promise.resolve([]),
       capabilities.ownershipEnabled
         ? getOwnershipAccountsForUser(user.id)
-        : Promise.resolve([])
+        : Promise.resolve([]),
+      isTester(user.id)
     ]);
 
   return (
@@ -100,6 +101,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       ownershipAccounts={ownershipAccounts}
       capabilities={capabilities}
       userEmail={user.email ?? "unknown"}
+      showTesterLink={testerAccess}
       onSignOut={signOut}
       onCreateProperty={createProperty}
       onCreateUnit={createUnit}

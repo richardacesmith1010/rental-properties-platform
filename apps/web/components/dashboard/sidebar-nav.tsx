@@ -11,6 +11,7 @@ import {
   FileSignature,
   BriefcaseBusiness,
   LogOut,
+  FlaskConical,
   type LucideIcon,
 } from "lucide-react";
 
@@ -18,6 +19,7 @@ export interface NavItem {
   id: string;
   label: string;
   icon: LucideIcon;
+  href?: string;
 }
 
 interface SidebarNavProps {
@@ -25,6 +27,7 @@ interface SidebarNavProps {
   occupancy: number;
   activeLeaseCount: number;
   role: string;
+  showTesterLink?: boolean;
   onSignOut: (formData: FormData) => Promise<void>;
   items?: NavItem[];
   snapshot?: {
@@ -54,11 +57,15 @@ export function SidebarNav({
   occupancy,
   activeLeaseCount,
   role,
+  showTesterLink = false,
   onSignOut,
   items,
   snapshot,
 }: SidebarNavProps) {
   const navItems = items ?? defaultNavItems;
+  const renderedNavItems = showTesterLink
+    ? [...navItems, { id: "tester", label: "Tester", icon: FlaskConical, href: "/tester" }]
+    : navItems;
   const summary = snapshot ?? {
     label: "Snapshot",
     value: `${occupancy}% occupied`,
@@ -80,12 +87,12 @@ export function SidebarNav({
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-3 pb-4">
-        {navItems.map((item) => {
+        {renderedNavItems.map((item) => {
           const Icon = item.icon;
           return (
             <a
               key={item.id}
-              href={`#${item.id}`}
+              href={item.href ?? `#${item.id}`}
               className="flex items-center gap-3 rounded-[10px] px-3.5 py-2.5 text-[13px] text-white/60 transition-all hover:bg-white/15 hover:text-white"
             >
               <Icon className="h-4 w-4" />
@@ -133,8 +140,9 @@ export function SidebarNav({
 export function MobileTopBar({
   userEmail,
   role,
+  showTesterLink = false,
   onSignOut,
-}: Pick<SidebarNavProps, "userEmail" | "role" | "onSignOut">) {
+}: Pick<SidebarNavProps, "userEmail" | "role" | "showTesterLink" | "onSignOut">) {
   return (
     <div className="gradient-sidebar flex items-center justify-between px-4 py-3 shadow-lg lg:hidden">
       <div className="flex items-center gap-2.5">
@@ -149,6 +157,14 @@ export function MobileTopBar({
         </div>
       </div>
       <div className="flex items-center gap-3">
+        {showTesterLink && (
+          <a
+            href="/tester"
+            className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-white/10"
+          >
+            Tester
+          </a>
+        )}
         <span className="max-w-[120px] truncate text-xs text-white/60">{userEmail}</span>
         <form action={onSignOut}>
           <button
