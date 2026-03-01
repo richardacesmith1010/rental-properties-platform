@@ -80,8 +80,14 @@ Verify Supabase Auth redirect URLs include:
 From repo root:
 
 ```bash
+npm run gate:web
+```
+
+Manual equivalent:
+
+```bash
 npm run verify:phase9-runtime
-npm test --workspace @rental/web
+npm test --workspace @domus/web
 npm run lint:web
 npm run build:web
 npx tsc -p apps/mobile/tsconfig.json --noEmit

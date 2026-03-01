@@ -9,7 +9,11 @@ echo "[smoke] Checking landing page"
 curl -fsS "$APP_URL/" >/dev/null
 
 echo "[smoke] Checking login page"
-curl -fsS "$APP_URL/login" >/dev/null
+LOGIN_HTML="$(curl -fsS "$APP_URL/login")"
+if ! printf "%s" "$LOGIN_HTML" | grep -qi "Domus"; then
+  echo "[smoke] Login page does not appear to be branded as Domus"
+  exit 1
+fi
 
 echo "[smoke] Checking role portal redirect behavior"
 PORTAL_HEADERS="$(mktemp)"
@@ -30,7 +34,7 @@ fi
 rm -f "$PORTAL_HEADERS"
 
 echo "[smoke] Checking protected route guards"
-for path in /owner /manager /tenant; do
+for path in /owner /manager /tenant /tester /owner/generate; do
   HEADERS="$(mktemp)"
   STATUS="$(curl -s -D "$HEADERS" -o /dev/null -w "%{http_code}" "$APP_URL$path")"
   if [[ "$STATUS" != "307" && "$STATUS" != "302" ]]; then
@@ -48,7 +52,7 @@ for path in /owner /manager /tenant; do
 done
 
 echo "[smoke] Checking private asset API auth guards"
-for path in /api/assets/maintenance-photo/test-id /api/assets/document-packet/test-id; do
+for path in /api/assets/maintenance-photo/test-id /api/assets/document-packet/test-id /api/assets/property-file/test-id; do
   STATUS="$(curl -s -o /dev/null -w "%{http_code}" "$APP_URL$path")"
   if [[ "$STATUS" != "401" ]]; then
     echo "[smoke] Expected 401 from unauthenticated $path, got $STATUS"

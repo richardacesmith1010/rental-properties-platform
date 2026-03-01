@@ -9,9 +9,12 @@
   "scripts": {
     "dev:web": "npm run dev --workspace @domus/web",
     "dev:mobile": "npm run start --workspace @domus/mobile",
+    "test:web": "npm run test --workspace @domus/web",
     "build:web": "npm run build --workspace @domus/web",
     "lint:web": "npm run lint --workspace @domus/web",
+    "typecheck:mobile": "npx tsc -p apps/mobile/tsconfig.json --noEmit",
     "smoke:web": "bash scripts/smoke-web.sh",
-    "verify:phase9-runtime": "node scripts/verify-phase9-runtime.mjs"
+    "verify:phase9-runtime": "node scripts/verify-phase9-runtime.mjs",
+    "gate:web": "bash scripts/gate-web.sh"
   }
 }
