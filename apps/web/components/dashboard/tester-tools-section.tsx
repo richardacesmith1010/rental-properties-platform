@@ -242,8 +242,22 @@ export function TesterToolsSection({
 
   const lastGenerateMessage = useRef<string | null>(null);
   const lastCleanupMessage = useRef<string | null>(null);
+  const featureCardRefs = useRef<Record<FeatureTestId, HTMLDivElement | null>>({
+    platform_access: null,
+    billing_payments: null,
+    maintenance_vendors: null,
+    documents_files: null,
+    expenses_ownership: null,
+    seed_data_presence: null
+  });
 
   const workspacePathForRole = (role: PreviewRole) => `/${role}?testerPreview=true`;
+
+  const focusFeatureCard = (featureId: FeatureTestId) => {
+    const card = featureCardRefs.current[featureId];
+    if (!card) return;
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
 
   useEffect(() => {
     if (!generateState?.success) return;
@@ -553,6 +567,8 @@ export function TesterToolsSection({
         finishedAt: null
       });
     }
+
+    focusFeatureCard(featureId);
 
     const checkpointDefs = buildCheckpoints(featureId);
     const initialCheckpoints: CheckpointResult[] = checkpointDefs.map((checkpoint) => ({
@@ -1022,6 +1038,15 @@ export function TesterToolsSection({
                     </>
                   )}
                 </Button>
+                {!activeTestTarget.startsWith("/api/") && (
+                  <a
+                    href={activeTestTarget}
+                    className="inline-flex items-center rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                    title="Open the route currently under test."
+                  >
+                    Open Running Target
+                  </a>
+                )}
               </div>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
@@ -1039,7 +1064,7 @@ export function TesterToolsSection({
               </p>
             </div>
             {(walkthroughState.currentFeatureLabel || walkthroughState.currentCheckpointLabel) && (
-              <p className="mt-2 text-xs text-zinc-600">
+              <p className="mt-2 text-xs text-zinc-600" aria-live="polite">
                 Running now:{" "}
                 <span className="font-semibold text-zinc-800">
                   {walkthroughState.currentFeatureLabel ?? "n/a"}
@@ -1058,9 +1083,24 @@ export function TesterToolsSection({
             {featureTests.map((feature) => {
               const run = featureRuns[feature.id];
               const isRunning = runningFeatureId === feature.id;
+              const isActiveInWalkthrough =
+                walkthroughState.status === "running" &&
+                walkthroughState.currentFeatureLabel === feature.label;
+              const featureCardClassName = [
+                "rounded-xl border bg-white p-3 transition-colors",
+                isRunning || isActiveInWalkthrough
+                  ? "border-indigo-300 ring-1 ring-indigo-200"
+                  : "border-zinc-200"
+              ].join(" ");
 
               return (
-                <div key={feature.id} className="rounded-xl border border-zinc-200 bg-white p-3">
+                <div
+                  key={feature.id}
+                  ref={(node) => {
+                    featureCardRefs.current[feature.id] = node;
+                  }}
+                  className={featureCardClassName}
+                >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm font-semibold text-zinc-900">{feature.label}</p>
