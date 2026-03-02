@@ -30,6 +30,9 @@ import { DocumentsSection } from "./documents-section";
 import { VendorsSection } from "./vendors-section";
 import { ExpensesSection } from "./expenses-section";
 import { OwnershipSection } from "./ownership-section";
+import { LeasingHubSection } from "./leasing-hub-section";
+import { InboxSection } from "./inbox-section";
+import { AutomationTemplatesSection } from "./automation-templates-section";
 import {
   Bell,
   BriefcaseBusiness,
@@ -121,7 +124,7 @@ const ownerWorkflowModeMeta: Record<
   daily_ops: {
     label: "Daily Operations Mode",
     description: "Daily owner runbook: revenue risk, payments, maintenance, and alerts.",
-    sections: ["overview", "charges", "payments", "maintenance", "notifications", "expenses"]
+    sections: ["overview", "charges", "payments", "maintenance", "inbox", "automations", "expenses"]
   },
   new_property: {
     label: "New Property Mode",
@@ -130,13 +133,13 @@ const ownerWorkflowModeMeta: Record<
   },
   new_tenant: {
     label: "New Tenant Mode",
-    description: "Focused flow to invite a tenant, create a lease, and verify first billing steps.",
-    sections: ["overview", "operations", "invitations", "leases", "charges", "documents", "notifications"]
+    description: "Focused flow for invitation, lease setup, signatures, and first billing visibility.",
+    sections: ["overview", "leasing", "invitations", "operations", "leases", "documents", "charges", "inbox"]
   },
   new_manager: {
     label: "New Manager Mode",
     description: "Focused flow to onboard a manager and verify maintenance/vendor operations.",
-    sections: ["overview", "invitations", "maintenance", "vendors", "notifications"]
+    sections: ["overview", "invitations", "vendors", "maintenance", "inbox"]
   },
   records: {
     label: "Records & Compliance Mode",
@@ -152,7 +155,7 @@ const managerWorkflowModeMeta: Record<
   daily_ops: {
     label: "Daily Operations Mode",
     description: "Daily manager runbook: maintenance queue, charges, and alerts.",
-    sections: ["overview", "maintenance", "charges", "notifications", "payments"]
+    sections: ["overview", "maintenance", "charges", "inbox", "automations", "payments"]
   },
   new_property: {
     label: "New Property Mode",
@@ -162,12 +165,12 @@ const managerWorkflowModeMeta: Record<
   new_tenant: {
     label: "New Tenant Mode",
     description: "Invite tenant, activate lease, and verify billing readiness.",
-    sections: ["overview", "invitations", "operations", "leases", "charges", "documents"]
+    sections: ["overview", "leasing", "invitations", "operations", "leases", "documents", "charges", "inbox"]
   },
   vendor_ops: {
     label: "Vendor Operations Mode",
     description: "Manage vendors and maintenance execution with minimal distractions.",
-    sections: ["overview", "vendors", "maintenance", "notifications"]
+    sections: ["overview", "vendors", "maintenance", "inbox", "automations"]
   }
 };
 
@@ -270,8 +273,11 @@ export function Dashboard({
   });
 
   const hasNotificationsSection = Boolean(onMarkNotificationRead);
+  const hasInboxSection = Boolean(onMarkNotificationRead);
+  const hasAutomationsSection = Boolean(data.profileRole === "owner" || data.profileRole === "manager");
   const hasOwnershipSection = Boolean(onCreateOwnershipAccount && onLinkPropertyToOwnershipAccount);
   const hasInvitationsSection = Boolean(onInviteTenant && onInviteManager && onResendInvite);
+  const hasLeasingSection = Boolean(canManagePortfolio && hasInvitationsSection);
   const hasDocumentsSection = Boolean(
     onCreateDocumentTemplate &&
       onDeleteDocumentTemplate &&
@@ -320,8 +326,39 @@ export function Dashboard({
         icon: Wrench,
         description: "Ticket queue and assignment controls.",
         clickHint: "open maintenance tickets"
-      }
+      },
+      
     ];
+
+    if (hasLeasingSection) {
+      items.push({
+        id: "leasing",
+        label: "Leasing Hub",
+        icon: Building2,
+        description: "Step-by-step leasing progression from invitation to billing live.",
+        clickHint: "open leasing workflow hub"
+      });
+    }
+
+    if (hasInboxSection) {
+      items.push({
+        id: "inbox",
+        label: "Inbox",
+        icon: Bell,
+        description: "Central event timeline for operational communication.",
+        clickHint: "open domus inbox"
+      });
+    }
+
+    if (hasAutomationsSection) {
+      items.push({
+        id: "automations",
+        label: "Domus Flows",
+        icon: Settings,
+        description: "Automation templates for recurring workflows.",
+        clickHint: "open automation templates"
+      });
+    }
 
     if (hasNotificationsSection) {
       items.push({
@@ -416,9 +453,12 @@ export function Dashboard({
 
     return items;
   }, [
+    hasAutomationsSection,
     hasDocumentsSection,
     hasExpensesSection,
+    hasInboxSection,
     hasInvitationsSection,
+    hasLeasingSection,
     hasNotificationsSection,
     hasOwnershipSection,
     hasVendorsSection
@@ -598,6 +638,10 @@ export function Dashboard({
     if (ownerWorkflowMode === "new_tenant") {
       const tenantInvites =
         (invitations ?? []).filter((invitation) => invitation.role === "tenant").length > 0;
+      const packetSent =
+        safeDocuments.packets.filter(
+          (packet) => packet.status === "sent" || packet.status === "signed"
+        ).length > 0;
 
       return [
         {
@@ -607,6 +651,10 @@ export function Dashboard({
         {
           label: "Create active lease",
           done: safePortfolio.leases.length > 0
+        },
+        {
+          label: "Send lease document packet",
+          done: packetSent
         },
         {
           label: "Verify first charge",
@@ -641,6 +689,7 @@ export function Dashboard({
     invitations,
     isOwnerRole,
     ownerWorkflowMode,
+    safeDocuments.packets,
     safePortfolio.leases.length,
     safePortfolio.properties.length,
     safePortfolio.units.length,
@@ -696,7 +745,7 @@ export function Dashboard({
       (isOwnerRole && ownerWorkflowMode === "new_tenant") ||
       (isManagerRole && managerWorkflowMode === "new_tenant")
     ) {
-      goToSectionIfVisible("charges");
+      goToSectionIfVisible("documents");
     }
   }, [goToSectionIfVisible, isManagerRole, isOwnerRole, managerWorkflowMode, ownerWorkflowMode]);
 
@@ -705,7 +754,7 @@ export function Dashboard({
       (isOwnerRole && ownerWorkflowMode === "new_tenant") ||
       (isManagerRole && managerWorkflowMode === "new_tenant")
     ) {
-      goToSectionIfVisible("operations");
+      goToSectionIfVisible("leasing");
     }
   }, [goToSectionIfVisible, isManagerRole, isOwnerRole, managerWorkflowMode, ownerWorkflowMode]);
 
@@ -783,6 +832,37 @@ export function Dashboard({
           photoWorkflowEnabled={safeCapabilities.photoWorkflowEnabled}
           vendorWorkflowWarning={safeCapabilities.warnings.vendorWorkflow}
           photoWorkflowWarning={safeCapabilities.warnings.photoWorkflow}
+        />
+      );
+    }
+
+    if (activeSection === "leasing" && hasLeasingSection) {
+      return (
+        <LeasingHubSection
+          portfolio={safePortfolio}
+          invitations={invitations ?? []}
+          documents={safeDocuments}
+          chargeCount={data.charges.length}
+          onOpenSection={goToSectionIfVisible}
+        />
+      );
+    }
+
+    if (activeSection === "inbox" && hasInboxSection) {
+      return (
+        <InboxSection
+          notifications={safeNotifications}
+          onMarkRead={onMarkNotificationRead!}
+          onOpenSection={goToSectionIfVisible}
+        />
+      );
+    }
+
+    if (activeSection === "automations" && hasAutomationsSection) {
+      return (
+        <AutomationTemplatesSection
+          role={data.profileRole === "manager" ? "manager" : "owner"}
+          onOpenSection={goToSectionIfVisible}
         />
       );
     }

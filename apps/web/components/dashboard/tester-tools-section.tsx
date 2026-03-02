@@ -476,6 +476,36 @@ export function TesterToolsSection({
             )
         },
         {
+          id: "leasing-hub-owner-ui",
+          label: "Owner workspace shows leasing hub section",
+          previewPath: "/owner?testerPreview=true&mode=new_tenant&section=leasing",
+          run: () =>
+            checkPageForText(
+              "/owner?testerPreview=true&mode=new_tenant&section=leasing",
+              "Leasing Hub"
+            )
+        },
+        {
+          id: "inbox-owner-ui",
+          label: "Owner workspace shows Domus Inbox section",
+          previewPath: "/owner?testerPreview=true&mode=daily_ops&section=inbox",
+          run: () =>
+            checkPageForText(
+              "/owner?testerPreview=true&mode=daily_ops&section=inbox",
+              "Domus Inbox"
+            )
+        },
+        {
+          id: "automations-owner-ui",
+          label: "Owner workspace shows Domus Flows section",
+          previewPath: "/owner?testerPreview=true&mode=daily_ops&section=automations",
+          run: () =>
+            checkPageForText(
+              "/owner?testerPreview=true&mode=daily_ops&section=automations",
+              "Domus Flows"
+            )
+        },
+        {
           id: "expenses-owner-ui",
           label: "Owner workspace shows expenses section",
           previewPath: "/owner?testerPreview=true&mode=daily_ops&section=expenses",
