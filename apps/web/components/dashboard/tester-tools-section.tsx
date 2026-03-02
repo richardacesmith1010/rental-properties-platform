@@ -27,6 +27,7 @@ type FeatureTestId =
   | "maintenance_vendors"
   | "documents_files"
   | "expenses_ownership"
+  | "phase_a_workflows"
   | "seed_data_presence";
 type CheckpointStatus = "idle" | "running" | "pass" | "fail";
 
@@ -124,6 +125,11 @@ const featureTests: FeatureTestDefinition[] = [
     id: "expenses_ownership",
     label: "Expenses & Ownership",
     description: "Checks owner finance and ownership account readiness."
+  },
+  {
+    id: "phase_a_workflows",
+    label: "Leasing, Inbox & Flows",
+    description: "Checks new Phase A workflow sections for owner and manager."
   },
   {
     id: "seed_data_presence",
@@ -476,36 +482,6 @@ export function TesterToolsSection({
             )
         },
         {
-          id: "leasing-hub-owner-ui",
-          label: "Owner workspace shows leasing hub section",
-          previewPath: "/owner?testerPreview=true&mode=new_tenant&section=leasing",
-          run: () =>
-            checkPageForText(
-              "/owner?testerPreview=true&mode=new_tenant&section=leasing",
-              "Leasing Hub"
-            )
-        },
-        {
-          id: "inbox-owner-ui",
-          label: "Owner workspace shows Domus Inbox section",
-          previewPath: "/owner?testerPreview=true&mode=daily_ops&section=inbox",
-          run: () =>
-            checkPageForText(
-              "/owner?testerPreview=true&mode=daily_ops&section=inbox",
-              "Domus Inbox"
-            )
-        },
-        {
-          id: "automations-owner-ui",
-          label: "Owner workspace shows Domus Flows section",
-          previewPath: "/owner?testerPreview=true&mode=daily_ops&section=automations",
-          run: () =>
-            checkPageForText(
-              "/owner?testerPreview=true&mode=daily_ops&section=automations",
-              "Domus Flows"
-            )
-        },
-        {
           id: "expenses-owner-ui",
           label: "Owner workspace shows expenses section",
           previewPath: "/owner?testerPreview=true&mode=daily_ops&section=expenses",
@@ -543,6 +519,71 @@ export function TesterToolsSection({
             checkPageForText(
               "/owner?testerPreview=true&mode=new_tenant&section=invitations",
               "Invitation Workflow"
+            )
+        }
+      ];
+    }
+
+    if (featureId === "phase_a_workflows") {
+      return [
+        {
+          id: "phasea-owner-leasing",
+          label: "Owner shows Leasing Hub",
+          previewPath: "/owner?testerPreview=true&mode=new_tenant&section=leasing",
+          run: () =>
+            checkPageForText(
+              "/owner?testerPreview=true&mode=new_tenant&section=leasing",
+              "Leasing Hub"
+            )
+        },
+        {
+          id: "phasea-owner-inbox",
+          label: "Owner shows Domus Inbox",
+          previewPath: "/owner?testerPreview=true&mode=daily_ops&section=inbox",
+          run: () =>
+            checkPageForText(
+              "/owner?testerPreview=true&mode=daily_ops&section=inbox",
+              "Domus Inbox"
+            )
+        },
+        {
+          id: "phasea-owner-flows",
+          label: "Owner shows Domus Flows",
+          previewPath: "/owner?testerPreview=true&mode=daily_ops&section=automations",
+          run: () =>
+            checkPageForText(
+              "/owner?testerPreview=true&mode=daily_ops&section=automations",
+              "Domus Flows"
+            )
+        },
+        {
+          id: "phasea-manager-leasing",
+          label: "Manager shows Leasing Hub",
+          previewPath: "/manager?testerPreview=true&mode=new_tenant&section=leasing",
+          run: () =>
+            checkPageForText(
+              "/manager?testerPreview=true&mode=new_tenant&section=leasing",
+              "Leasing Hub"
+            )
+        },
+        {
+          id: "phasea-manager-inbox",
+          label: "Manager shows Domus Inbox",
+          previewPath: "/manager?testerPreview=true&mode=daily_ops&section=inbox",
+          run: () =>
+            checkPageForText(
+              "/manager?testerPreview=true&mode=daily_ops&section=inbox",
+              "Domus Inbox"
+            )
+        },
+        {
+          id: "phasea-manager-flows",
+          label: "Manager shows Domus Flows",
+          previewPath: "/manager?testerPreview=true&mode=daily_ops&section=automations",
+          run: () =>
+            checkPageForText(
+              "/manager?testerPreview=true&mode=daily_ops&section=automations",
+              "Domus Flows"
             )
         }
       ];

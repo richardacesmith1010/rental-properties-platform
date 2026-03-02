@@ -118,6 +118,58 @@ export default async function PortalPage() {
               <ArrowRight className="ml-1 h-3.5 w-3.5" />
             </Link>
           </article>
+
+          {(role === "owner" || role === "manager") && (
+            <>
+              <article className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <Home className="h-4 w-4 text-indigo-600" />
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Leasing</h2>
+                </div>
+                <p className="mt-3 text-base font-semibold text-zinc-900">Leasing Hub</p>
+                <p className="mt-1 text-sm text-zinc-600">
+                  Track leasing progress from invitation to signed docs and billing live.
+                </p>
+                <Link
+                  href={`${workspacePath}?mode=new_tenant&section=leasing`}
+                  className="mt-4 inline-flex items-center rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+                  title="Open Leasing Hub in your workspace."
+                >
+                  Open Leasing Hub
+                  <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                </Link>
+              </article>
+
+              <article className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <Home className="h-4 w-4 text-indigo-600" />
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Operations</h2>
+                </div>
+                <p className="mt-3 text-base font-semibold text-zinc-900">Inbox + Flows</p>
+                <p className="mt-1 text-sm text-zinc-600">
+                  Open Domus Inbox and Domus Flows to monitor events and automation templates.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Link
+                    href={`${workspacePath}?mode=daily_ops&section=inbox`}
+                    className="inline-flex items-center rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+                    title="Open Domus Inbox."
+                  >
+                    Open Inbox
+                    <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                  </Link>
+                  <Link
+                    href={`${workspacePath}?mode=daily_ops&section=automations`}
+                    className="inline-flex items-center rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+                    title="Open Domus Flows."
+                  >
+                    Open Flows
+                    <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              </article>
+            </>
+          )}
         </section>
 
         {testerAccess && (
