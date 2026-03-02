@@ -8,12 +8,18 @@ export interface FeatureCapabilitiesDTO {
   vendorWorkflowEnabled: boolean;
   photoWorkflowEnabled: boolean;
   ownershipEnabled: boolean;
+  leasingPipelineEnabled: boolean;
+  inboxThreadsEnabled: boolean;
+  automationsEnabled: boolean;
   warnings: {
     documents?: string;
     notifications?: string;
     vendorWorkflow?: string;
     photoWorkflow?: string;
     ownership?: string;
+    leasingPipeline?: string;
+    inboxThreads?: string;
+    automations?: string;
   };
 }
 
@@ -28,6 +34,15 @@ interface FeatureCapabilityProbe {
   maintenancePhotosTable: boolean;
   ownershipAccountsTable: boolean;
   ownershipAccountMembersTable: boolean;
+  rentalApplicationsTable: boolean;
+  screeningReportsTable: boolean;
+  applicationEventsTable: boolean;
+  inboxThreadsTable: boolean;
+  inboxMessagesTable: boolean;
+  messageDeliveriesTable: boolean;
+  automationTemplatesTable: boolean;
+  automationRulesTable: boolean;
+  automationRunsTable: boolean;
   propertiesOwnerAccountColumn: boolean;
   invitationsOwnershipAccountColumn: boolean;
   leaseDocumentsBucket: boolean;
@@ -142,6 +157,18 @@ export function deriveFeatureCapabilities(probe: FeatureCapabilityProbe): Featur
     probe.ownershipAccountMembersTable &&
     probe.propertiesOwnerAccountColumn &&
     probe.invitationsOwnershipAccountColumn;
+  const leasingPipelineReady =
+    probe.rentalApplicationsTable &&
+    probe.screeningReportsTable &&
+    probe.applicationEventsTable;
+  const inboxThreadsReady =
+    probe.inboxThreadsTable &&
+    probe.inboxMessagesTable &&
+    probe.messageDeliveriesTable;
+  const automationsReady =
+    probe.automationTemplatesTable &&
+    probe.automationRulesTable &&
+    probe.automationRunsTable;
 
   const warnings: FeatureCapabilitiesDTO["warnings"] = {};
 
@@ -177,6 +204,21 @@ export function deriveFeatureCapabilities(probe: FeatureCapabilityProbe): Featur
       "LLC/shared ownership is not ready yet. Run the Phase 9 migration to enable ownership accounts and co-owner access.";
   }
 
+  if (!leasingPipelineReady) {
+    warnings.leasingPipeline =
+      "Leasing pipeline persistence is not ready yet. Run the V2 Phase A migration to enable listings, applications, and screening records.";
+  }
+
+  if (!inboxThreadsReady) {
+    warnings.inboxThreads =
+      "Threaded inbox persistence is not ready yet. Run the V2 Phase A migration to enable conversation threads and delivery tracking.";
+  }
+
+  if (!automationsReady) {
+    warnings.automations =
+      "Automation execution persistence is not ready yet. Run the V2 Phase A migration to enable server-side flow rules and run history.";
+  }
+
   return {
     documentsEnabled: documentsTablesReady,
     documentAssetAccessEnabled: documentsTablesReady && probe.leaseDocumentsBucket,
@@ -184,6 +226,9 @@ export function deriveFeatureCapabilities(probe: FeatureCapabilityProbe): Featur
     vendorWorkflowEnabled: vendorTablesReady,
     photoWorkflowEnabled: photoTablesReady && probe.maintenancePhotosBucket,
     ownershipEnabled: ownershipReady,
+    leasingPipelineEnabled: leasingPipelineReady,
+    inboxThreadsEnabled: inboxThreadsReady,
+    automationsEnabled: automationsReady,
     warnings
   };
 }
@@ -202,6 +247,15 @@ export async function getFeatureCapabilities(): Promise<FeatureCapabilitiesDTO> 
     maintenancePhotosTable,
     ownershipAccountsTable,
     ownershipAccountMembersTable,
+    rentalApplicationsTable,
+    screeningReportsTable,
+    applicationEventsTable,
+    inboxThreadsTable,
+    inboxMessagesTable,
+    messageDeliveriesTable,
+    automationTemplatesTable,
+    automationRulesTable,
+    automationRunsTable,
     propertiesOwnerAccountColumn,
     invitationsOwnershipAccountColumn,
     leaseDocumentsBucketProbe,
@@ -217,6 +271,15 @@ export async function getFeatureCapabilities(): Promise<FeatureCapabilitiesDTO> 
     probeTable(supabase, "maintenance_photos"),
     probeTable(supabase, "ownership_accounts"),
     probeTable(supabase, "ownership_account_members"),
+    probeTable(supabase, "rental_applications"),
+    probeTable(supabase, "screening_reports"),
+    probeTable(supabase, "application_events"),
+    probeTable(supabase, "inbox_threads"),
+    probeTable(supabase, "inbox_messages"),
+    probeTable(supabase, "message_deliveries"),
+    probeTable(supabase, "automation_templates"),
+    probeTable(supabase, "automation_rules"),
+    probeTable(supabase, "automation_runs"),
     probeColumn(supabase, "properties", "owner_account_id"),
     probeColumn(supabase, "invitations", "ownership_account_id"),
     probeBucket("lease-documents"),
@@ -234,6 +297,15 @@ export async function getFeatureCapabilities(): Promise<FeatureCapabilitiesDTO> 
     maintenancePhotosTable,
     ownershipAccountsTable,
     ownershipAccountMembersTable,
+    rentalApplicationsTable,
+    screeningReportsTable,
+    applicationEventsTable,
+    inboxThreadsTable,
+    inboxMessagesTable,
+    messageDeliveriesTable,
+    automationTemplatesTable,
+    automationRulesTable,
+    automationRunsTable,
     propertiesOwnerAccountColumn,
     invitationsOwnershipAccountColumn,
     leaseDocumentsBucket: leaseDocumentsBucketProbe.exists,

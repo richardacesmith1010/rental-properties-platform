@@ -61,6 +61,9 @@ export function ManagerDashboard({
     vendorWorkflowEnabled: true,
     photoWorkflowEnabled: true,
     ownershipEnabled: true,
+    leasingPipelineEnabled: true,
+    inboxThreadsEnabled: true,
+    automationsEnabled: true,
     warnings: {}
   };
 

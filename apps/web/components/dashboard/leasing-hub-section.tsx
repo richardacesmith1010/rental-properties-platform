@@ -12,6 +12,8 @@ interface LeasingHubSectionProps {
   invitations: InvitationListItem[];
   documents: OwnerDocumentsData;
   chargeCount: number;
+  pipelineReady?: boolean;
+  pipelineWarning?: string | null;
   onOpenSection?: (sectionId: string) => void;
 }
 
@@ -100,6 +102,8 @@ export function LeasingHubSection({
   invitations,
   documents,
   chargeCount,
+  pipelineReady = true,
+  pipelineWarning = null,
   onOpenSection
 }: LeasingHubSectionProps) {
   const stages = buildLeasingStages({
@@ -119,6 +123,11 @@ export function LeasingHubSection({
           <p className="text-sm text-zinc-600">
             Use this workflow to move from empty unit to signed lease and active billing with minimal context switching.
           </p>
+          {!pipelineReady && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              {pipelineWarning ?? "Pipeline persistence is not live yet. Workflow progress uses currently available records only."}
+            </div>
+          )}
           <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-semibold text-zinc-800">
             {currentStepLabel(stages)}
           </div>

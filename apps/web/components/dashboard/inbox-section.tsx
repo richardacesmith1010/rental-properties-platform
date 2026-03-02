@@ -19,6 +19,8 @@ type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionS
 interface InboxSectionProps {
   notifications: NotificationDTO[];
   onMarkRead: StatefulAction;
+  threadsReady?: boolean;
+  threadsWarning?: string | null;
   onOpenSection?: (sectionId: string) => void;
 }
 
@@ -37,7 +39,13 @@ function typeLabel(type: NotificationDTO["type"]) {
   return type.replaceAll("_", " ");
 }
 
-export function InboxSection({ notifications, onMarkRead, onOpenSection }: InboxSectionProps) {
+export function InboxSection({
+  notifications,
+  onMarkRead,
+  threadsReady = true,
+  threadsWarning = null,
+  onOpenSection
+}: InboxSectionProps) {
   const [query, setQuery] = useState("");
   const [readFilter, setReadFilter] = useState<ReadFilter>("all");
   const [typeFilter, setTypeFilter] = useState<NotificationFilter>("all");
@@ -70,6 +78,12 @@ export function InboxSection({ notifications, onMarkRead, onOpenSection }: Inbox
         <p className="text-sm text-zinc-600">
           Central communication timeline for rent, maintenance, lease, and document events.
         </p>
+        {!threadsReady && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            {threadsWarning ??
+              "Threaded conversation storage is not live yet. This inbox currently reflects event notifications only."}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <div className="relative sm:col-span-1">

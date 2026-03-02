@@ -258,6 +258,9 @@ export function Dashboard({
     vendorWorkflowEnabled: true,
     photoWorkflowEnabled: true,
     ownershipEnabled: true,
+    leasingPipelineEnabled: true,
+    inboxThreadsEnabled: true,
+    automationsEnabled: true,
     warnings: {}
   };
   const occupancy =
@@ -843,6 +846,8 @@ export function Dashboard({
           invitations={invitations ?? []}
           documents={safeDocuments}
           chargeCount={data.charges.length}
+          pipelineReady={safeCapabilities.leasingPipelineEnabled}
+          pipelineWarning={safeCapabilities.warnings.leasingPipeline}
           onOpenSection={goToSectionIfVisible}
         />
       );
@@ -853,6 +858,8 @@ export function Dashboard({
         <InboxSection
           notifications={safeNotifications}
           onMarkRead={onMarkNotificationRead!}
+          threadsReady={safeCapabilities.inboxThreadsEnabled}
+          threadsWarning={safeCapabilities.warnings.inboxThreads}
           onOpenSection={goToSectionIfVisible}
         />
       );
@@ -862,6 +869,8 @@ export function Dashboard({
       return (
         <AutomationTemplatesSection
           role={data.profileRole === "manager" ? "manager" : "owner"}
+          runtimeReady={safeCapabilities.automationsEnabled}
+          runtimeWarning={safeCapabilities.warnings.automations}
           onOpenSection={goToSectionIfVisible}
         />
       );

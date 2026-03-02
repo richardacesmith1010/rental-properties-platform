@@ -8,6 +8,8 @@ import { EmptyState } from "@/components/shared/empty-state";
 
 interface AutomationTemplatesSectionProps {
   role: "owner" | "manager";
+  runtimeReady?: boolean;
+  runtimeWarning?: string | null;
   onOpenSection?: (sectionId: string) => void;
 }
 
@@ -85,7 +87,12 @@ function storageKey(role: "owner" | "manager") {
   return `domus_flow_templates_${role}_v1`;
 }
 
-export function AutomationTemplatesSection({ role, onOpenSection }: AutomationTemplatesSectionProps) {
+export function AutomationTemplatesSection({
+  role,
+  runtimeReady = true,
+  runtimeWarning = null,
+  onOpenSection
+}: AutomationTemplatesSectionProps) {
   const templates = useMemo(() => (role === "owner" ? ownerTemplates : managerTemplates), [role]);
   const [enabledMap, setEnabledMap] = useState<Record<string, boolean>>({});
 
@@ -122,6 +129,12 @@ export function AutomationTemplatesSection({ role, onOpenSection }: AutomationTe
         <p className="text-sm text-zinc-600">
           Automation templates for repeatable operations. Current toggles are local to this browser until server-side flow execution is connected.
         </p>
+        {!runtimeReady && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            {runtimeWarning ??
+              "Server-side automation runtime is not live yet. Template toggles remain local to this browser."}
+          </div>
+        )}
 
         {templates.length === 0 ? (
           <EmptyState message="No automation templates available for this role yet." />

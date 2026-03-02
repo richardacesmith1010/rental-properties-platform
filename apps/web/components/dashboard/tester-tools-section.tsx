@@ -943,6 +943,15 @@ export function TesterToolsSection({
             <Badge variant={capabilities.ownershipEnabled ? "success" : "outline"}>
               Ownership: {capabilities.ownershipEnabled ? "ready" : "not ready"}
             </Badge>
+            <Badge variant={capabilities.leasingPipelineEnabled ? "success" : "outline"}>
+              Leasing Pipeline: {capabilities.leasingPipelineEnabled ? "ready" : "not ready"}
+            </Badge>
+            <Badge variant={capabilities.inboxThreadsEnabled ? "success" : "outline"}>
+              Inbox Threads: {capabilities.inboxThreadsEnabled ? "ready" : "not ready"}
+            </Badge>
+            <Badge variant={capabilities.automationsEnabled ? "success" : "outline"}>
+              Automations: {capabilities.automationsEnabled ? "ready" : "not ready"}
+            </Badge>
           </div>
         </CardContent>
       </Card>

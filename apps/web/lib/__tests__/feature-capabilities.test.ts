@@ -1,24 +1,35 @@
 import { describe, expect, it } from "vitest";
 import { deriveFeatureCapabilities } from "@/lib/feature-capabilities";
 
+const baseProbe = {
+  documentTemplatesTable: true,
+  documentPacketsTable: true,
+  documentSignersTable: true,
+  notificationsTable: true,
+  notificationDeliveriesTable: true,
+  vendorsTable: true,
+  maintenanceAssignmentsTable: true,
+  maintenancePhotosTable: true,
+  ownershipAccountsTable: true,
+  ownershipAccountMembersTable: true,
+  rentalApplicationsTable: true,
+  screeningReportsTable: true,
+  applicationEventsTable: true,
+  inboxThreadsTable: true,
+  inboxMessagesTable: true,
+  messageDeliveriesTable: true,
+  automationTemplatesTable: true,
+  automationRulesTable: true,
+  automationRunsTable: true,
+  propertiesOwnerAccountColumn: true,
+  invitationsOwnershipAccountColumn: true,
+  leaseDocumentsBucket: true,
+  maintenancePhotosBucket: true
+};
+
 describe("deriveFeatureCapabilities", () => {
-  it("enables all feature flags when tables and buckets are ready", () => {
-    const capabilities = deriveFeatureCapabilities({
-      documentTemplatesTable: true,
-      documentPacketsTable: true,
-      documentSignersTable: true,
-      notificationsTable: true,
-      notificationDeliveriesTable: true,
-      vendorsTable: true,
-      maintenanceAssignmentsTable: true,
-      maintenancePhotosTable: true,
-      ownershipAccountsTable: true,
-      ownershipAccountMembersTable: true,
-      propertiesOwnerAccountColumn: true,
-      invitationsOwnershipAccountColumn: true,
-      leaseDocumentsBucket: true,
-      maintenancePhotosBucket: true,
-    });
+  it("enables all feature flags when schema and buckets are ready", () => {
+    const capabilities = deriveFeatureCapabilities(baseProbe);
 
     expect(capabilities.documentsEnabled).toBe(true);
     expect(capabilities.documentAssetAccessEnabled).toBe(true);
@@ -26,25 +37,16 @@ describe("deriveFeatureCapabilities", () => {
     expect(capabilities.vendorWorkflowEnabled).toBe(true);
     expect(capabilities.photoWorkflowEnabled).toBe(true);
     expect(capabilities.ownershipEnabled).toBe(true);
+    expect(capabilities.leasingPipelineEnabled).toBe(true);
+    expect(capabilities.inboxThreadsEnabled).toBe(true);
+    expect(capabilities.automationsEnabled).toBe(true);
     expect(capabilities.warnings).toEqual({});
   });
 
   it("disables documents when required tables are missing", () => {
     const capabilities = deriveFeatureCapabilities({
-      documentTemplatesTable: true,
-      documentPacketsTable: false,
-      documentSignersTable: true,
-      notificationsTable: true,
-      notificationDeliveriesTable: true,
-      vendorsTable: true,
-      maintenanceAssignmentsTable: true,
-      maintenancePhotosTable: true,
-      ownershipAccountsTable: true,
-      ownershipAccountMembersTable: true,
-      propertiesOwnerAccountColumn: true,
-      invitationsOwnershipAccountColumn: true,
-      leaseDocumentsBucket: true,
-      maintenancePhotosBucket: true,
+      ...baseProbe,
+      documentPacketsTable: false
     });
 
     expect(capabilities.documentsEnabled).toBe(false);
@@ -54,20 +56,8 @@ describe("deriveFeatureCapabilities", () => {
 
   it("keeps document workflows enabled but disables file access when bucket is missing", () => {
     const capabilities = deriveFeatureCapabilities({
-      documentTemplatesTable: true,
-      documentPacketsTable: true,
-      documentSignersTable: true,
-      notificationsTable: true,
-      notificationDeliveriesTable: true,
-      vendorsTable: true,
-      maintenanceAssignmentsTable: true,
-      maintenancePhotosTable: true,
-      ownershipAccountsTable: true,
-      ownershipAccountMembersTable: true,
-      propertiesOwnerAccountColumn: true,
-      invitationsOwnershipAccountColumn: true,
+      ...baseProbe,
       leaseDocumentsBucket: false,
-      maintenancePhotosBucket: true,
       leaseDocumentsBucketReason: "bucket missing"
     });
 
@@ -78,19 +68,7 @@ describe("deriveFeatureCapabilities", () => {
 
   it("disables photo workflows when photo bucket is unavailable", () => {
     const capabilities = deriveFeatureCapabilities({
-      documentTemplatesTable: true,
-      documentPacketsTable: true,
-      documentSignersTable: true,
-      notificationsTable: true,
-      notificationDeliveriesTable: true,
-      vendorsTable: true,
-      maintenanceAssignmentsTable: true,
-      maintenancePhotosTable: true,
-      ownershipAccountsTable: true,
-      ownershipAccountMembersTable: true,
-      propertiesOwnerAccountColumn: true,
-      invitationsOwnershipAccountColumn: true,
-      leaseDocumentsBucket: true,
+      ...baseProbe,
       maintenancePhotosBucket: false,
       maintenancePhotosBucketReason: "photo bucket missing"
     });
@@ -101,23 +79,30 @@ describe("deriveFeatureCapabilities", () => {
 
   it("disables ownership workflows when phase 9 schema is missing", () => {
     const capabilities = deriveFeatureCapabilities({
-      documentTemplatesTable: true,
-      documentPacketsTable: true,
-      documentSignersTable: true,
-      notificationsTable: true,
-      notificationDeliveriesTable: true,
-      vendorsTable: true,
-      maintenanceAssignmentsTable: true,
-      maintenancePhotosTable: true,
+      ...baseProbe,
       ownershipAccountsTable: false,
       ownershipAccountMembersTable: false,
       propertiesOwnerAccountColumn: false,
-      invitationsOwnershipAccountColumn: false,
-      leaseDocumentsBucket: true,
-      maintenancePhotosBucket: true
+      invitationsOwnershipAccountColumn: false
     });
 
     expect(capabilities.ownershipEnabled).toBe(false);
     expect(capabilities.warnings.ownership).toContain("Phase 9");
+  });
+
+  it("disables phase A capabilities when v2 tables are missing", () => {
+    const capabilities = deriveFeatureCapabilities({
+      ...baseProbe,
+      rentalApplicationsTable: false,
+      inboxThreadsTable: false,
+      automationTemplatesTable: false
+    });
+
+    expect(capabilities.leasingPipelineEnabled).toBe(false);
+    expect(capabilities.inboxThreadsEnabled).toBe(false);
+    expect(capabilities.automationsEnabled).toBe(false);
+    expect(capabilities.warnings.leasingPipeline).toContain("V2 Phase A");
+    expect(capabilities.warnings.inboxThreads).toContain("V2 Phase A");
+    expect(capabilities.warnings.automations).toContain("V2 Phase A");
   });
 });
