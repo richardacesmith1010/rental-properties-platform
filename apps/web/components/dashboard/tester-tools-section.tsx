@@ -14,7 +14,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { DataRow } from "@/components/shared/data-row";
 import type { ActionState } from "@/app/actions";
@@ -99,24 +98,6 @@ interface WalkthroughState {
   startedAt: string | null;
   finishedAt: string | null;
 }
-
-const rolePreviewCopy: Record<PreviewRole, string[]> = {
-  owner: [
-    "Full operations controls across properties, leases, documents, vendors, and expenses.",
-    "Financial dashboard includes rent performance, expenses, and net cashflow.",
-    "All controls are read-only from this preview panel."
-  ],
-  manager: [
-    "Assigned-property operations and maintenance workflows with vendor tools.",
-    "No owner-only financial controls in standard manager mode.",
-    "All controls are read-only from this preview panel."
-  ],
-  tenant: [
-    "Rent charge list and payment entry points.",
-    "Maintenance request creation and document signing flow.",
-    "All controls are read-only from this preview panel."
-  ]
-};
 
 const featureTests: FeatureTestDefinition[] = [
   {
@@ -222,7 +203,6 @@ export function TesterToolsSection({
   const [cleanupState, cleanupAction] = useFormState(onCleanupTestData, null);
   const [grantState, grantAction] = useFormState(onGrantTesterAccess, null);
   const [revokeState, revokeAction] = useFormState(onRevokeTesterAccess, null);
-  const [previewRole, setPreviewRole] = useState<PreviewRole>("owner");
   const [workspaceViewRole, setWorkspaceViewRole] = useState<PreviewRole>("owner");
   const [workspacePreviewPath, setWorkspacePreviewPath] = useState("/owner?testerPreview=true");
   const [activeTestTarget, setActiveTestTarget] = useState<string>("/tester");
@@ -788,14 +768,14 @@ export function TesterToolsSection({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       {currentUserRole !== "owner" && (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
           You can run tests, but only owner accounts can grant or revoke tester access.
         </p>
       )}
 
-      <Card>
+      <Card className="order-first">
         <CardHeader>
           <CardTitle>Tester Access</CardTitle>
         </CardHeader>
@@ -823,236 +803,7 @@ export function TesterToolsSection({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>System Health</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {healthRows.map((row, index) => (
-            <DataRow key={row.table} last={index === healthRows.length - 1}>
-              <div>
-                <p className="text-sm font-semibold text-zinc-900">{row.table}</p>
-                <p className="text-xs text-zinc-500">
-                  {row.count == null ? "Unavailable" : `${row.count.toLocaleString()} rows`}
-                </p>
-              </div>
-              <Badge variant={row.status === "ok" ? "success" : row.status === "missing" ? "outline" : "destructive"}>
-                {row.status}
-              </Badge>
-            </DataRow>
-          ))}
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Test Data Generator</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-zinc-600">
-              Creates one synthetic property, unit, tenant profile, lease, and charges.
-            </p>
-            <form action={generateAction} className="space-y-2">
-              <FormError state={generateState} />
-              <FormSuccess state={generateState} message="Test data generated." />
-              <SubmitButton
-                className="w-full"
-                title="Creates one full test fixture so you can run through owner, manager, and tenant features."
-              >
-                Generate Test Data
-              </SubmitButton>
-            </form>
-            <form action={cleanupAction} className="space-y-2">
-              <FormError state={cleanupState} />
-              <FormSuccess state={cleanupState} message="Tester data archived." />
-              <SubmitButton
-                className="w-full"
-                variant="outline"
-                title="Archives all generated tester records for a clean test reset."
-              >
-                Clean Up Test Data
-              </SubmitButton>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Workspace Switcher</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-zinc-600">
-              Stay in tester mode and switch the live preview between owner, manager, and tenant workspaces.
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant={workspaceViewRole === "owner" ? "default" : "outline"}
-                onClick={() => {
-                  setWorkspaceViewRole("owner");
-                  setWorkspacePreviewPath("/owner?testerPreview=true");
-                  setActiveTestTarget("/owner?testerPreview=true");
-                }}
-                title="Show owner workspace preview while staying on tester page."
-              >
-                Owner
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={workspaceViewRole === "manager" ? "default" : "outline"}
-                onClick={() => {
-                  setWorkspaceViewRole("manager");
-                  setWorkspacePreviewPath("/manager?testerPreview=true");
-                  setActiveTestTarget("/manager?testerPreview=true");
-                }}
-                title="Show manager workspace preview while staying on tester page."
-              >
-                Manager
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={workspaceViewRole === "tenant" ? "default" : "outline"}
-                onClick={() => {
-                  setWorkspaceViewRole("tenant");
-                  setWorkspacePreviewPath("/tenant?testerPreview=true");
-                  setActiveTestTarget("/tenant?testerPreview=true");
-                }}
-                title="Show tenant workspace preview while staying on tester page."
-              >
-                Tenant
-              </Button>
-            </div>
-            <p className="text-xs text-zinc-500">
-              Current preview target: <span className="font-semibold text-zinc-700">{activeTestTarget}</span>
-            </p>
-            <div className="h-[360px] overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50">
-              <iframe
-                key={workspacePreviewPath}
-                src={workspacePreviewPath}
-                className="h-full w-full bg-white"
-                title="Live workspace preview"
-              />
-            </div>
-            <a
-              href={workspacePreviewPath}
-              className="inline-flex text-xs font-semibold text-indigo-600 hover:text-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
-              title="Open current preview in a full page tab."
-            >
-              Open current preview full page
-            </a>
-            <Select
-              value={previewRole}
-              onChange={(event) => setPreviewRole(event.target.value as PreviewRole)}
-              title="Select which role summary to preview."
-            >
-              <option value="owner">Owner summary</option>
-              <option value="manager">Manager summary</option>
-              <option value="tenant">Tenant summary</option>
-            </Select>
-            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-              Read-only preview checklist
-            </p>
-            <ul className="space-y-2 text-sm text-zinc-700">
-              {rolePreviewCopy[previewRole].map((line) => (
-                <li key={line}>• {line}</li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Tester Access Control</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-zinc-600">
-            Tester mode is restricted. Only users explicitly marked as tester can open this page.
-          </p>
-          <form action={grantAction} className="space-y-2">
-            <FormError state={grantState} />
-            <FormSuccess state={grantState} message="Tester access updated." />
-            <label className="block text-xs font-semibold uppercase tracking-wide text-zinc-500">
-              Grant tester access by email
-            </label>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <input
-                type="email"
-                name="email"
-                required
-                className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="teammate@example.com"
-                title="Enter an existing user email to grant tester mode."
-                disabled={currentUserRole !== "owner"}
-              />
-              <SubmitButton
-                className="sm:w-auto"
-                title="Grant tester diagnostics access to this user."
-                disabled={currentUserRole !== "owner"}
-              >
-                Grant Access
-              </SubmitButton>
-            </div>
-          </form>
-
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-              Current tester accounts
-            </p>
-            {testerProfiles.length === 0 ? (
-              <p className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600">
-                No tester accounts are currently enabled.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {testerProfiles.map((profile) => {
-                  const isCurrentUser = profile.id === currentUserId;
-                  return (
-                    <div
-                      key={profile.id}
-                      className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                      <div>
-                        <p className="text-sm font-semibold text-zinc-900">
-                          {profile.fullName ?? "Unnamed user"}{" "}
-                          {isCurrentUser ? "(you)" : ""}
-                        </p>
-                        <p className="text-xs text-zinc-500">
-                          {profile.email} • {profile.role}
-                        </p>
-                      </div>
-                      <form action={revokeAction}>
-                        <input type="hidden" name="profileId" value={profile.id} />
-                        <SubmitButton
-                          variant="outline"
-                          size="sm"
-                          disabled={currentUserRole !== "owner" || isCurrentUser}
-                          title={
-                            isCurrentUser
-                              ? "You cannot revoke your own tester access from this page."
-                              : "Remove tester diagnostics access for this account."
-                          }
-                          className="w-full sm:w-auto"
-                        >
-                          Revoke Access
-                        </SubmitButton>
-                      </form>
-                    </div>
-                  );
-                })}
-                <FormError state={revokeState} />
-                <FormSuccess state={revokeState} message="Tester access updated." />
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
+      <Card className="order-first">
         <CardHeader>
           <CardTitle>Feature Test Runner</CardTitle>
         </CardHeader>
@@ -1311,6 +1062,222 @@ export function TesterToolsSection({
           )}
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>System Health</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {healthRows.map((row, index) => (
+            <DataRow key={row.table} last={index === healthRows.length - 1}>
+              <div>
+                <p className="text-sm font-semibold text-zinc-900">{row.table}</p>
+                <p className="text-xs text-zinc-500">
+                  {row.count == null ? "Unavailable" : `${row.count.toLocaleString()} rows`}
+                </p>
+              </div>
+              <Badge variant={row.status === "ok" ? "success" : row.status === "missing" ? "outline" : "destructive"}>
+                {row.status}
+              </Badge>
+            </DataRow>
+          ))}
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Test Data Generator</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-zinc-600">
+              Creates one synthetic property, unit, tenant profile, lease, and charges.
+              This is required so feature tests have real records to validate.
+            </p>
+            <form action={generateAction} className="space-y-2">
+              <FormError state={generateState} />
+              <FormSuccess state={generateState} message="Test data generated." />
+              <SubmitButton
+                className="w-full"
+                title="Creates one full test fixture so you can run through owner, manager, and tenant features."
+              >
+                Generate Test Data
+              </SubmitButton>
+            </form>
+            <form action={cleanupAction} className="space-y-2">
+              <FormError state={cleanupState} />
+              <FormSuccess state={cleanupState} message="Tester data archived." />
+              <SubmitButton
+                className="w-full"
+                variant="outline"
+                title="Archives all generated tester records for a clean test reset."
+              >
+                Clean Up Test Data
+              </SubmitButton>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Workspace Switcher</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-zinc-600">
+              This preview is necessary because tests run across owner, manager, and tenant screens.
+              It shows exactly what each checkpoint is validating.
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={workspaceViewRole === "owner" ? "default" : "outline"}
+                onClick={() => {
+                  setWorkspaceViewRole("owner");
+                  setWorkspacePreviewPath("/owner?testerPreview=true");
+                  setActiveTestTarget("/owner?testerPreview=true");
+                }}
+                title="Show owner workspace preview while staying on tester page."
+              >
+                Owner
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={workspaceViewRole === "manager" ? "default" : "outline"}
+                onClick={() => {
+                  setWorkspaceViewRole("manager");
+                  setWorkspacePreviewPath("/manager?testerPreview=true");
+                  setActiveTestTarget("/manager?testerPreview=true");
+                }}
+                title="Show manager workspace preview while staying on tester page."
+              >
+                Manager
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={workspaceViewRole === "tenant" ? "default" : "outline"}
+                onClick={() => {
+                  setWorkspaceViewRole("tenant");
+                  setWorkspacePreviewPath("/tenant?testerPreview=true");
+                  setActiveTestTarget("/tenant?testerPreview=true");
+                }}
+                title="Show tenant workspace preview while staying on tester page."
+              >
+                Tenant
+              </Button>
+            </div>
+            <p className="text-xs text-zinc-500">
+              Current preview target: <span className="font-semibold text-zinc-700">{activeTestTarget}</span>
+            </p>
+            <div className="h-[360px] overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50">
+              <iframe
+                key={workspacePreviewPath}
+                src={workspacePreviewPath}
+                className="h-full w-full bg-white"
+                title="Live workspace preview"
+              />
+            </div>
+            <a
+              href={workspacePreviewPath}
+              className="inline-flex text-xs font-semibold text-indigo-600 hover:text-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+              title="Open current preview in a full page tab."
+            >
+              Open current preview full page
+            </a>
+          </CardContent>
+        </Card>
+      </div>
+
+      {currentUserRole === "owner" && (
+        <Card>
+        <CardHeader>
+          <CardTitle>Tester Access Control</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-zinc-600">
+            Tester mode is restricted. Only users explicitly marked as tester can open this page.
+          </p>
+          <form action={grantAction} className="space-y-2">
+            <FormError state={grantState} />
+            <FormSuccess state={grantState} message="Tester access updated." />
+            <label className="block text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              Grant tester access by email
+            </label>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                type="email"
+                name="email"
+                required
+                className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="teammate@example.com"
+                title="Enter an existing user email to grant tester mode."
+                disabled={currentUserRole !== "owner"}
+              />
+              <SubmitButton
+                className="sm:w-auto"
+                title="Grant tester diagnostics access to this user."
+                disabled={currentUserRole !== "owner"}
+              >
+                Grant Access
+              </SubmitButton>
+            </div>
+          </form>
+
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              Current tester accounts
+            </p>
+            {testerProfiles.length === 0 ? (
+              <p className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600">
+                No tester accounts are currently enabled.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {testerProfiles.map((profile) => {
+                  const isCurrentUser = profile.id === currentUserId;
+                  return (
+                    <div
+                      key={profile.id}
+                      className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div>
+                        <p className="text-sm font-semibold text-zinc-900">
+                          {profile.fullName ?? "Unnamed user"}{" "}
+                          {isCurrentUser ? "(you)" : ""}
+                        </p>
+                        <p className="text-xs text-zinc-500">
+                          {profile.email} • {profile.role}
+                        </p>
+                      </div>
+                      <form action={revokeAction}>
+                        <input type="hidden" name="profileId" value={profile.id} />
+                        <SubmitButton
+                          variant="outline"
+                          size="sm"
+                          disabled={currentUserRole !== "owner" || isCurrentUser}
+                          title={
+                            isCurrentUser
+                              ? "You cannot revoke your own tester access from this page."
+                              : "Remove tester diagnostics access for this account."
+                          }
+                          className="w-full sm:w-auto"
+                        >
+                          Revoke Access
+                        </SubmitButton>
+                      </form>
+                    </div>
+                  );
+                })}
+                <FormError state={revokeState} />
+                <FormSuccess state={revokeState} message="Tester access updated." />
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      )}
     </div>
   );
 }
