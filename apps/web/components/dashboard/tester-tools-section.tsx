@@ -383,6 +383,16 @@ export function TesterToolsSection({
               "/owner?testerPreview=true&mode=daily_ops&section=maintenance",
               "Maintenance Tickets"
             )
+        },
+        {
+          id: "vendors-guided-ui",
+          label: "Vendor workflow shows one-step guidance",
+          previewPath: "/owner?testerPreview=true&mode=new_manager&section=vendors",
+          run: () =>
+            checkPageForText(
+              "/owner?testerPreview=true&mode=new_manager&section=vendors",
+              "One field at a time. Press Enter or Next to continue."
+            )
         }
       ];
     }

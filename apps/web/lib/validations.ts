@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+const optionalOwnershipAccountIdSchema = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.string().uuid("Invalid ownership account.").optional()
+);
+
 export const createPropertySchema = z.object({
   name: z.string().min(1, "Property name is required."),
   addressLine1: z.string().min(1, "Street address is required."),
@@ -9,7 +14,7 @@ export const createPropertySchema = z.object({
     .string()
     .min(1, "ZIP code is required.")
     .regex(/^\d{5}(-\d{4})?$/, "Enter a valid 5-digit ZIP code."),
-  ownerAccountId: z.string().uuid("Invalid ownership account.").optional()
+  ownerAccountId: optionalOwnershipAccountIdSchema
 });
 
 export const createUnitSchema = z.object({
@@ -173,7 +178,7 @@ export const createDocumentTemplateSchema = z.object({
     .string()
     .min(1, "Template body is required.")
     .max(20000, "Template body must be under 20,000 characters."),
-  ownerAccountId: z.string().uuid("Invalid ownership account.").optional()
+  ownerAccountId: optionalOwnershipAccountIdSchema
 });
 
 export const updateDocumentTemplateSchema = z.object({
@@ -246,7 +251,7 @@ export const createVendorSchema = z.object({
     { message: "Select a valid trade category." }
   ),
   preferred: z.preprocess((value) => value === "true" || value === "on" || value === true, z.boolean()),
-  ownerAccountId: z.string().uuid("Invalid ownership account.").optional()
+  ownerAccountId: optionalOwnershipAccountIdSchema
 });
 
 export const updateVendorSchema = z.object({
