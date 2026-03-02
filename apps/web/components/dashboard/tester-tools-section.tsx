@@ -456,6 +456,16 @@ export function TesterToolsSection({
             )
         },
         {
+          id: "expenses-guided-ui",
+          label: "Expense workflow shows one-step guidance",
+          previewPath: "/owner?testerPreview=true&mode=daily_ops&section=expenses",
+          run: () =>
+            checkPageForText(
+              "/owner?testerPreview=true&mode=daily_ops&section=expenses",
+              "One field at a time. Press Enter or Next to continue."
+            )
+        },
+        {
           id: "operations-guided-ui",
           label: "Operations workflow shows one-step guidance",
           previewPath: "/owner?testerPreview=true&mode=new_property&section=operations",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { useFormState } from "react-dom";
 import { FeatureWarning } from "@/components/shared/feature-warning";
 import { SubmitButton } from "@/components/shared/submit-button";
@@ -42,6 +42,29 @@ const expenseCategories = [
 ];
 
 const recurringFrequencies = ["monthly", "quarterly", "annually"];
+const CREATE_EXPENSE_STEPS = [
+  "Property",
+  "Category",
+  "Amount",
+  "Date",
+  "Recurring",
+  "Vendor",
+  "Receipt",
+  "Description",
+  "Review & Save"
+] as const;
+
+interface ExpenseDraft {
+  propertyId: string;
+  category: string;
+  amountDollars: string;
+  expenseDate: string;
+  recurring: boolean;
+  recurringFrequency: string;
+  vendorId: string;
+  receiptFileId: string;
+  description: string;
+}
 
 function dollars(cents: number) {
   return `$${(cents / 100).toLocaleString()}`;
@@ -72,6 +95,39 @@ function FormSuccess({ state, message }: { state: ActionState; message: string }
   );
 }
 
+function StepPill({
+  label,
+  active,
+  done,
+  skipped
+}: {
+  label: string;
+  active: boolean;
+  done: boolean;
+  skipped: boolean;
+}) {
+  const className = active
+    ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+    : done
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : skipped
+        ? "border-amber-200 bg-amber-50 text-amber-700"
+        : "border-zinc-200 bg-zinc-50 text-zinc-500";
+
+  return <div className={`rounded-md border px-2 py-2 text-xs ${className}`}>{label}</div>;
+}
+
+function onEnterNext(
+  event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+  canAdvance: boolean,
+  advance: () => void
+) {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  if (!canAdvance) return;
+  advance();
+}
+
 export function ExpensesSection({
   data,
   vendors,
@@ -81,11 +137,23 @@ export function ExpensesSection({
   onDeleteExpense
 }: ExpensesSectionProps) {
   const [createState, createAction] = useFormState(onCreateExpense, null);
-  const [showCreateExpenseForm, setShowCreateExpenseForm] = useState(false);
+  const [createStep, setCreateStep] = useState(0);
+  const [skippedCreateSteps, setSkippedCreateSteps] = useState<number[]>([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState(data.properties[0]?.id ?? "");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [expenseDraft, setExpenseDraft] = useState<ExpenseDraft>({
+    propertyId: data.properties[0]?.id ?? "",
+    category: "maintenance",
+    amountDollars: "",
+    expenseDate: "",
+    recurring: false,
+    recurringFrequency: "",
+    vendorId: "",
+    receiptFileId: "",
+    description: ""
+  });
 
   const selectedSummary = useMemo(
     () => data.pnlByProperty.find((row) => row.propertyId === selectedPropertyId) ?? null,
@@ -123,11 +191,57 @@ export function ExpensesSection({
     [propertyFiles, selectedPropertyId]
   );
 
+  const availableCreateReceiptFiles = useMemo(
+    () =>
+      propertyFiles
+        .filter((file) => !expenseDraft.propertyId || file.propertyId === expenseDraft.propertyId)
+        .sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
+    [expenseDraft.propertyId, propertyFiles]
+  );
+
+  const createRequiredComplete = Boolean(
+    expenseDraft.propertyId &&
+      expenseDraft.category &&
+      Number(expenseDraft.amountDollars) > 0 &&
+      expenseDraft.expenseDate &&
+      (!expenseDraft.recurring || expenseDraft.recurringFrequency)
+  );
+
+  const createStepComplete = (step: number) => {
+    if (step === 0) return Boolean(expenseDraft.propertyId);
+    if (step === 1) return Boolean(expenseDraft.category);
+    if (step === 2) return Number(expenseDraft.amountDollars) > 0;
+    if (step === 3) return Boolean(expenseDraft.expenseDate);
+    if (step === 4) return !expenseDraft.recurring || Boolean(expenseDraft.recurringFrequency);
+    if (step === 5 || step === 6 || step === 7) return true;
+    return createRequiredComplete;
+  };
+
+  const markCreateStepSkipped = (step: number) => {
+    setSkippedCreateSteps((previous) =>
+      previous.includes(step) ? previous : [...previous, step]
+    );
+  };
+
+  const canSkipCreateStep = (step: number) => step >= 5 && step <= 7;
+
   useEffect(() => {
     if (createState?.success) {
-      setShowCreateExpenseForm(false);
+      setCreateStep(0);
+      setSkippedCreateSteps([]);
+      setExpenseDraft({
+        propertyId: data.properties[0]?.id ?? "",
+        category: "maintenance",
+        amountDollars: "",
+        expenseDate: "",
+        recurring: false,
+        recurringFrequency: "",
+        vendorId: "",
+        receiptFileId: "",
+        description: ""
+      });
     }
-  }, [createState]);
+  }, [createState, data.properties]);
 
   if (!data.enabled) {
     return (
@@ -148,29 +262,38 @@ export function ExpensesSection({
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between gap-2">
-              <CardTitle>Create Expense</CardTitle>
-              <Button
-                type="button"
-                size="sm"
-                variant={showCreateExpenseForm ? "default" : "outline"}
-                onClick={() => setShowCreateExpenseForm((current) => !current)}
-                title={showCreateExpenseForm ? "Hide expense creation form." : "Open expense creation form."}
-              >
-                {showCreateExpenseForm ? "Done" : "Add Expense"}
-              </Button>
-            </div>
+            <CardTitle>Create Expense</CardTitle>
           </CardHeader>
-          <CardContent>
-            {showCreateExpenseForm ? (
-              <form className="space-y-3" action={createAction}>
-                <FormError state={createState} />
-                <FormSuccess state={createState} message="Expense created." />
+          <CardContent className="space-y-4">
+            <p className="text-sm text-zinc-600">
+              One field at a time. Press Enter or Next to continue. Optional steps can be skipped.
+            </p>
+            <FormError state={createState} />
+            <FormSuccess state={createState} message="Expense created." />
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 xl:grid-cols-9">
+              {CREATE_EXPENSE_STEPS.map((label, index) => (
+                <StepPill
+                  key={label}
+                  label={label}
+                  active={createStep === index}
+                  done={createStepComplete(index)}
+                  skipped={skippedCreateSteps.includes(index)}
+                />
+              ))}
+            </div>
+
+            {createStep === 0 && (
+              <div className="space-y-3">
+                <p className="text-sm text-zinc-600">Step 1: Select the property this expense belongs to.</p>
                 <Select
-                  name="propertyId"
-                  value={selectedPropertyId}
-                  onChange={(event) => setSelectedPropertyId(event.target.value)}
-                  required
+                  value={expenseDraft.propertyId}
+                  onChange={(event) =>
+                    setExpenseDraft((current) => ({
+                      ...current,
+                      propertyId: event.target.value,
+                      receiptFileId: ""
+                    }))
+                  }
                 >
                   <option value="">Select property</option>
                   {data.properties.map((property) => (
@@ -179,32 +302,90 @@ export function ExpensesSection({
                     </option>
                   ))}
                 </Select>
-                <Select name="category" defaultValue="maintenance" required>
+              </div>
+            )}
+
+            {createStep === 1 && (
+              <div className="space-y-3">
+                <p className="text-sm text-zinc-600">Step 2: Choose the expense category.</p>
+                <Select
+                  value={expenseDraft.category}
+                  onChange={(event) =>
+                    setExpenseDraft((current) => ({ ...current, category: event.target.value }))
+                  }
+                >
                   {expenseCategories.map((category) => (
                     <option key={category} value={category}>
                       {formatCategory(category)}
                     </option>
                   ))}
                 </Select>
+              </div>
+            )}
+
+            {createStep === 2 && (
+              <div className="space-y-3">
+                <p className="text-sm text-zinc-600">Step 3: Enter amount in US dollars.</p>
                 <Input
-                  name="amountDollars"
+                  value={expenseDraft.amountDollars}
+                  onChange={(event) =>
+                    setExpenseDraft((current) => ({ ...current, amountDollars: event.target.value }))
+                  }
+                  onKeyDown={(event) =>
+                    onEnterNext(event, createStepComplete(createStep), () => setCreateStep(3))
+                  }
                   type="number"
                   min={0.01}
                   step="0.01"
                   placeholder="Amount (USD)"
                   required
                 />
-                <Input name="expenseDate" type="date" required />
-                <Textarea
-                  name="description"
-                  rows={2}
-                  placeholder="Description (optional)"
+              </div>
+            )}
+
+            {createStep === 3 && (
+              <div className="space-y-3">
+                <p className="text-sm text-zinc-600">Step 4: Select the date of the expense.</p>
+                <Input
+                  value={expenseDraft.expenseDate}
+                  onChange={(event) =>
+                    setExpenseDraft((current) => ({ ...current, expenseDate: event.target.value }))
+                  }
+                  type="date"
+                  required
                 />
+              </div>
+            )}
+
+            {createStep === 4 && (
+              <div className="space-y-3">
+                <p className="text-sm text-zinc-600">
+                  Step 5: Set recurring behavior. Frequency is required only if recurring is on.
+                </p>
                 <label className="flex items-center gap-2 text-xs text-zinc-600">
-                  <input type="checkbox" name="recurring" value="true" />
+                  <input
+                    type="checkbox"
+                    checked={expenseDraft.recurring}
+                    onChange={(event) =>
+                      setExpenseDraft((current) => ({
+                        ...current,
+                        recurring: event.target.checked,
+                        recurringFrequency: event.target.checked ? current.recurringFrequency : ""
+                      }))
+                    }
+                  />
                   Recurring expense
                 </label>
-                <Select name="recurringFrequency" defaultValue="">
+                <Select
+                  value={expenseDraft.recurringFrequency}
+                  onChange={(event) =>
+                    setExpenseDraft((current) => ({
+                      ...current,
+                      recurringFrequency: event.target.value
+                    }))
+                  }
+                  disabled={!expenseDraft.recurring}
+                >
                   <option value="">Not recurring</option>
                   {recurringFrequencies.map((frequency) => (
                     <option key={frequency} value={frequency}>
@@ -212,7 +393,18 @@ export function ExpensesSection({
                     </option>
                   ))}
                 </Select>
-                <Select name="vendorId" defaultValue="">
+              </div>
+            )}
+
+            {createStep === 5 && (
+              <div className="space-y-3">
+                <p className="text-sm text-zinc-600">Step 6: Link a vendor (optional).</p>
+                <Select
+                  value={expenseDraft.vendorId}
+                  onChange={(event) =>
+                    setExpenseDraft((current) => ({ ...current, vendorId: event.target.value }))
+                  }
+                >
                   <option value="">No vendor linked</option>
                   {availableVendors.map((vendor) => (
                     <option key={vendor.id} value={vendor.id}>
@@ -220,24 +412,146 @@ export function ExpensesSection({
                     </option>
                   ))}
                 </Select>
-                <Select name="receiptFileId" defaultValue="">
+              </div>
+            )}
+
+            {createStep === 6 && (
+              <div className="space-y-3">
+                <p className="text-sm text-zinc-600">
+                  Step 7: Link an existing receipt file (optional).
+                </p>
+                <Select
+                  value={expenseDraft.receiptFileId}
+                  onChange={(event) =>
+                    setExpenseDraft((current) => ({
+                      ...current,
+                      receiptFileId: event.target.value
+                    }))
+                  }
+                >
                   <option value="">No existing receipt file</option>
-                  {availableReceiptFiles.map((file) => (
+                  {availableCreateReceiptFiles.map((file) => (
                     <option key={file.id} value={file.id}>
                       {file.fileName}
                     </option>
                   ))}
                 </Select>
-                <Input name="receiptFile" type="file" />
-                <SubmitButton className="w-full" title="Create this expense record.">
-                  Save Expense
-                </SubmitButton>
-              </form>
-            ) : (
-              <p className="text-sm text-zinc-500">
-                Expense creation form hidden. Click Add Expense to create a new record.
-              </p>
+              </div>
             )}
+
+            {createStep === 7 && (
+              <div className="space-y-3">
+                <p className="text-sm text-zinc-600">Step 8: Add description (optional).</p>
+                <Textarea
+                  value={expenseDraft.description}
+                  onChange={(event) =>
+                    setExpenseDraft((current) => ({ ...current, description: event.target.value }))
+                  }
+                  rows={2}
+                  placeholder="Description (optional)"
+                />
+              </div>
+            )}
+
+            {createStep === 8 && (
+              <div className="space-y-3">
+                <p className="text-sm text-zinc-600">Final step: review details and save.</p>
+                <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-700">
+                  <p>
+                    <span className="font-semibold">Property:</span>{" "}
+                    {data.properties.find((property) => property.id === expenseDraft.propertyId)?.name ??
+                      "Not set"}
+                  </p>
+                  <p>
+                    <span className="font-semibold">Category:</span>{" "}
+                    {expenseDraft.category ? formatCategory(expenseDraft.category) : "Not set"}
+                  </p>
+                  <p>
+                    <span className="font-semibold">Amount:</span>{" "}
+                    {expenseDraft.amountDollars ? `$${expenseDraft.amountDollars}` : "Not set"}
+                  </p>
+                  <p>
+                    <span className="font-semibold">Date:</span> {expenseDraft.expenseDate || "Not set"}
+                  </p>
+                  <p>
+                    <span className="font-semibold">Recurring:</span>{" "}
+                    {expenseDraft.recurring
+                      ? `Yes (${expenseDraft.recurringFrequency || "frequency missing"})`
+                      : "No"}
+                  </p>
+                </div>
+                <form className="space-y-3" action={createAction}>
+                  <input type="hidden" name="propertyId" value={expenseDraft.propertyId} />
+                  <input type="hidden" name="category" value={expenseDraft.category} />
+                  <input type="hidden" name="amountDollars" value={expenseDraft.amountDollars} />
+                  <input type="hidden" name="expenseDate" value={expenseDraft.expenseDate} />
+                  <input
+                    type="hidden"
+                    name="recurring"
+                    value={expenseDraft.recurring ? "true" : "false"}
+                  />
+                  <input
+                    type="hidden"
+                    name="recurringFrequency"
+                    value={expenseDraft.recurring ? expenseDraft.recurringFrequency : ""}
+                  />
+                  <input type="hidden" name="vendorId" value={expenseDraft.vendorId} />
+                  <input type="hidden" name="receiptFileId" value={expenseDraft.receiptFileId} />
+                  <input type="hidden" name="description" value={expenseDraft.description} />
+                  <Input name="receiptFile" type="file" />
+                  <SubmitButton
+                    className="w-full"
+                    disabled={!createRequiredComplete}
+                    title="Create this expense record."
+                  >
+                    Save Expense
+                  </SubmitButton>
+                </form>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCreateStep((current) => Math.max(current - 1, 0))}
+                disabled={createStep === 0}
+                title="Go back one step."
+              >
+                Back
+              </Button>
+              <Button
+                type="button"
+                onClick={() => setCreateStep((current) => Math.min(current + 1, CREATE_EXPENSE_STEPS.length - 1))}
+                disabled={createStep >= CREATE_EXPENSE_STEPS.length - 1 || !createStepComplete(createStep)}
+                title="Complete this step and move to the next step."
+              >
+                Next
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  markCreateStepSkipped(createStep);
+                  setCreateStep((current) => Math.min(current + 1, CREATE_EXPENSE_STEPS.length - 1));
+                }}
+                disabled={!canSkipCreateStep(createStep)}
+                title="Skip this optional step for now and continue."
+              >
+                Skip for now
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setCreateStep(0);
+                  setSkippedCreateSteps([]);
+                }}
+                title="Restart expense entry from step one."
+              >
+                Restart
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
