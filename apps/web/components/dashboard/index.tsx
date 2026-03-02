@@ -869,6 +869,7 @@ export function Dashboard({
       return (
         <AutomationTemplatesSection
           role={data.profileRole === "manager" ? "manager" : "owner"}
+          userKey={userEmail}
           runtimeReady={safeCapabilities.automationsEnabled}
           runtimeWarning={safeCapabilities.warnings.automations}
           onOpenSection={goToSectionIfVisible}

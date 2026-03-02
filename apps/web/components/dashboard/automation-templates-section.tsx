@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 
 interface AutomationTemplatesSectionProps {
   role: "owner" | "manager";
+  userKey: string;
   runtimeReady?: boolean;
   runtimeWarning?: string | null;
   onOpenSection?: (sectionId: string) => void;
@@ -83,12 +84,13 @@ const managerTemplates: AutomationTemplate[] = [
   }
 ];
 
-function storageKey(role: "owner" | "manager") {
-  return `domus_flow_templates_${role}_v1`;
+function storageKey(role: "owner" | "manager", userKey: string) {
+  return `domus_flow_templates_${role}_${userKey}_v1`;
 }
 
 export function AutomationTemplatesSection({
   role,
+  userKey,
   runtimeReady = true,
   runtimeWarning = null,
   onOpenSection
@@ -98,19 +100,19 @@ export function AutomationTemplatesSection({
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(storageKey(role));
+      const raw = localStorage.getItem(storageKey(role, userKey));
       if (!raw) return;
       const parsed = JSON.parse(raw) as Record<string, boolean>;
       setEnabledMap(parsed);
     } catch {
       setEnabledMap({});
     }
-  }, [role]);
+  }, [role, userKey]);
 
   const toggleTemplate = (id: string) => {
     setEnabledMap((current) => {
       const next = { ...current, [id]: !current[id] };
-      localStorage.setItem(storageKey(role), JSON.stringify(next));
+      localStorage.setItem(storageKey(role, userKey), JSON.stringify(next));
       return next;
     });
   };
