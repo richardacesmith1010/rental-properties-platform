@@ -508,3 +508,59 @@ NEXT_ACTION=tag v1.0.0
   - `npm run build:web` -> PASS
   - `npx tsc -p apps/mobile/tsconfig.json --noEmit` -> PASS
   - `APP_URL=https://rental-properties-platform-web.vercel.app npm run smoke:web` -> PASS
+
+## V2 Phase A Slice 1 (Codex) — Leasing Hub + Inbox + Domus Flows
+
+- Timestamp (UTC): 2026-03-02T05:18:00Z
+- Branch/commit: `main` @ `9c32cb5`
+
+### What shipped
+
+1. Added **Leasing Hub** section for owner/manager dashboards:
+   - step-by-step leasing progression cards (property/unit ready -> tenant invited -> lease created -> docs sent -> billing live)
+   - each stage includes context + direct jump to the relevant section
+2. Added **Domus Inbox** section:
+   - centralized event timeline based on notifications
+   - search + status filter + type filter
+   - context jump actions (maintenance/charges/leases/documents)
+3. Added **Domus Flows** section:
+   - automation templates UI with enable/disable toggles (browser-local persistence for now)
+   - role-aware templates (owner vs manager)
+4. Wired these sections into owner/manager workflow modes and dashboard navigation.
+5. Added tester checks for all three new sections:
+   - leasing hub
+   - inbox
+   - domus flows
+
+### Files changed
+
+- `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/components/dashboard/index.tsx`
+- `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/components/dashboard/leasing-hub-section.tsx`
+- `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/components/dashboard/inbox-section.tsx`
+- `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/components/dashboard/automation-templates-section.tsx`
+- `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/components/dashboard/tester-tools-section.tsx`
+
+### Validation
+
+- `npm test --workspace @domus/web` ✅
+- `npm run lint:web` ✅
+- `npm run build:web` ✅
+- `npx tsc -p apps/mobile/tsconfig.json --noEmit` ✅
+
+### Claude DB track requested next
+
+1. Add durable Phase A tables for leasing pipeline:
+   - `rental_listings`
+   - `rental_applications`
+   - `screening_reports`
+   - `application_events`
+2. Add communications persistence:
+   - `inbox_threads`
+   - `inbox_messages`
+   - `message_deliveries` (email/sms/in_app)
+3. Add automation persistence:
+   - `automation_templates`
+   - `automation_rules`
+   - `automation_runs`
+4. Add capability probes in DB for these features so app can gate readiness cleanly.
+
