@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useFormState } from "react-dom";
 import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -57,6 +58,13 @@ export function LeasesSection({
 }: LeasesSectionProps) {
   const [updateState, updateAction] = useFormState(onUpdateLease ?? unavailableAction, null);
   const [deleteState, deleteAction] = useFormState(onDeleteLease ?? unavailableAction, null);
+  const [activeEditLeaseId, setActiveEditLeaseId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (updateState?.success || deleteState?.success) {
+      setActiveEditLeaseId(null);
+    }
+  }, [deleteState, updateState]);
 
   return (
     <Card id="leases">
@@ -86,7 +94,7 @@ export function LeasesSection({
                     Ends {lease.endDate}
                   </p>
 
-                  {showControls && (
+                  {showControls && activeEditLeaseId === lease.id && (
                     <form action={updateAction} className="mt-3 grid gap-2 sm:grid-cols-2">
                       <input type="hidden" name="leaseId" value={lease.id} />
                       <Input
@@ -137,19 +145,45 @@ export function LeasesSection({
                   </div>
 
                   {showControls && (
-                    <form
-                      action={deleteAction}
-                      onSubmit={(event) => {
-                        if (!window.confirm("Are you sure? This will archive the lease.")) {
-                          event.preventDefault();
+                    <>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={activeEditLeaseId === lease.id ? "default" : "outline"}
+                        onClick={() =>
+                          setActiveEditLeaseId((current) =>
+                            current === lease.id ? null : lease.id
+                          )
                         }
-                      }}
-                    >
-                      <input type="hidden" name="leaseId" value={lease.id} />
-                      <Button type="submit" size="sm" variant="destructive" title="Archive this lease and free the unit.">
-                        Archive
+                        title={
+                          activeEditLeaseId === lease.id
+                            ? "Hide lease edit controls."
+                            : "Open lease edit controls."
+                        }
+                      >
+                        {activeEditLeaseId === lease.id ? "Done" : "Manage"}
                       </Button>
-                    </form>
+                      {activeEditLeaseId === lease.id && (
+                        <form
+                          action={deleteAction}
+                          onSubmit={(event) => {
+                            if (!window.confirm("Are you sure? This will archive the lease.")) {
+                              event.preventDefault();
+                            }
+                          }}
+                        >
+                          <input type="hidden" name="leaseId" value={lease.id} />
+                          <Button
+                            type="submit"
+                            size="sm"
+                            variant="destructive"
+                            title="Archive this lease and free the unit."
+                          >
+                            Archive
+                          </Button>
+                        </form>
+                      )}
+                    </>
                   )}
                 </div>
               </DataRow>

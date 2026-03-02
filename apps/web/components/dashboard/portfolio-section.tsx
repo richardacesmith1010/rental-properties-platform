@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useFormState } from "react-dom";
 import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -53,6 +54,13 @@ export function PortfolioSection({
 }: PortfolioSectionProps) {
   const [updateState, updateAction] = useFormState(onUpdateProperty ?? unavailableAction, null);
   const [deleteState, deleteAction] = useFormState(onDeleteProperty ?? unavailableAction, null);
+  const [activeEditPropertyId, setActiveEditPropertyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (updateState?.success || deleteState?.success) {
+      setActiveEditPropertyId(null);
+    }
+  }, [deleteState, updateState]);
 
   return (
     <Card id="portfolio">
@@ -82,7 +90,7 @@ export function PortfolioSection({
                     {property.city}, {property.state} {property.postalCode}
                   </p>
                   <p className="mt-0.5 text-xs text-zinc-500">{property.ownerAccountName}</p>
-                  {showControls && (
+                  {showControls && activeEditPropertyId === property.id && (
                     <form action={updateAction} className="mt-3 grid gap-2 sm:grid-cols-2">
                       <input type="hidden" name="propertyId" value={property.id} />
                       <Input name="name" defaultValue={property.name} required />
@@ -101,19 +109,45 @@ export function PortfolioSection({
                 <div className="flex flex-col items-end gap-2">
                   <p className="text-xs text-zinc-500">{property.unitCount} units</p>
                   {showControls && (
-                    <form
-                      action={deleteAction}
-                      onSubmit={(event) => {
-                        if (!window.confirm("Are you sure? This will archive the property.")) {
-                          event.preventDefault();
+                    <>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={activeEditPropertyId === property.id ? "default" : "outline"}
+                        onClick={() =>
+                          setActiveEditPropertyId((current) =>
+                            current === property.id ? null : property.id
+                          )
                         }
-                      }}
-                    >
-                      <input type="hidden" name="propertyId" value={property.id} />
-                      <Button type="submit" size="sm" variant="destructive" title="Archive this property.">
-                        Archive
+                        title={
+                          activeEditPropertyId === property.id
+                            ? "Hide property edit controls."
+                            : "Open property edit controls."
+                        }
+                      >
+                        {activeEditPropertyId === property.id ? "Done" : "Manage"}
                       </Button>
-                    </form>
+                      {activeEditPropertyId === property.id && (
+                        <form
+                          action={deleteAction}
+                          onSubmit={(event) => {
+                            if (!window.confirm("Are you sure? This will archive the property.")) {
+                              event.preventDefault();
+                            }
+                          }}
+                        >
+                          <input type="hidden" name="propertyId" value={property.id} />
+                          <Button
+                            type="submit"
+                            size="sm"
+                            variant="destructive"
+                            title="Archive this property."
+                          >
+                            Archive
+                          </Button>
+                        </form>
+                      )}
+                    </>
                   )}
                 </div>
               </DataRow>

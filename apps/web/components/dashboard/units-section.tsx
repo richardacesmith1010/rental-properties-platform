@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useFormState } from "react-dom";
 import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -57,6 +58,13 @@ export function UnitsSection({
 }: UnitsSectionProps) {
   const [updateState, updateAction] = useFormState(onUpdateUnit ?? unavailableAction, null);
   const [deleteState, deleteAction] = useFormState(onDeleteUnit ?? unavailableAction, null);
+  const [activeEditUnitId, setActiveEditUnitId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (updateState?.success || deleteState?.success) {
+      setActiveEditUnitId(null);
+    }
+  }, [deleteState, updateState]);
 
   return (
     <Card id="units">
@@ -87,7 +95,7 @@ export function UnitsSection({
                     {unit.bedrooms} bd / {unit.bathrooms} ba • {unit.occupied ? "Occupied" : "Vacant"}
                   </p>
 
-                  {showControls && (
+                  {showControls && activeEditUnitId === unit.id && (
                     <form action={updateAction} className="mt-3 grid gap-2 sm:grid-cols-2">
                       <input type="hidden" name="unitId" value={unit.id} />
                       <Input name="unitNumber" defaultValue={unit.unitNumber} required />
@@ -127,19 +135,45 @@ export function UnitsSection({
                 <div className="flex flex-col items-end gap-2">
                   <p className="text-xs text-zinc-500">{dollars(unit.monthlyRentCents)}</p>
                   {showControls && (
-                    <form
-                      action={deleteAction}
-                      onSubmit={(event) => {
-                        if (!window.confirm("Are you sure? This will archive the unit.")) {
-                          event.preventDefault();
+                    <>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={activeEditUnitId === unit.id ? "default" : "outline"}
+                        onClick={() =>
+                          setActiveEditUnitId((current) =>
+                            current === unit.id ? null : unit.id
+                          )
                         }
-                      }}
-                    >
-                      <input type="hidden" name="unitId" value={unit.id} />
-                      <Button type="submit" size="sm" variant="destructive" title="Archive this unit.">
-                        Archive
+                        title={
+                          activeEditUnitId === unit.id
+                            ? "Hide unit edit controls."
+                            : "Open unit edit controls."
+                        }
+                      >
+                        {activeEditUnitId === unit.id ? "Done" : "Manage"}
                       </Button>
-                    </form>
+                      {activeEditUnitId === unit.id && (
+                        <form
+                          action={deleteAction}
+                          onSubmit={(event) => {
+                            if (!window.confirm("Are you sure? This will archive the unit.")) {
+                              event.preventDefault();
+                            }
+                          }}
+                        >
+                          <input type="hidden" name="unitId" value={unit.id} />
+                          <Button
+                            type="submit"
+                            size="sm"
+                            variant="destructive"
+                            title="Archive this unit."
+                          >
+                            Archive
+                          </Button>
+                        </form>
+                      )}
+                    </>
                   )}
                 </div>
               </DataRow>

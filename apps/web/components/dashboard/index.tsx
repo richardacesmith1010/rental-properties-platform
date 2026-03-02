@@ -48,6 +48,7 @@ import {
 
 type FormAction = (formData: FormData) => Promise<void>;
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
+type OwnerWorkflowMode = "normal" | "new_property" | "new_tenant" | "new_manager";
 
 interface DashboardProps {
   data: DashboardData;
@@ -99,6 +100,32 @@ interface DashboardProps {
   onCreateOwnershipAccount?: StatefulAction;
   onLinkPropertyToOwnershipAccount?: StatefulAction;
 }
+
+const ownerWorkflowModeMeta: Record<
+  OwnerWorkflowMode,
+  { label: string; description: string; sections: string[] }
+> = {
+  normal: {
+    label: "Normal Owner Mode",
+    description: "Standard owner workspace. Choose any section from the left navigation.",
+    sections: []
+  },
+  new_property: {
+    label: "New Property Mode",
+    description: "Step-by-step flow to add a property, add units, and finalize lease setup.",
+    sections: ["overview", "operations", "portfolio", "units", "leases"]
+  },
+  new_tenant: {
+    label: "New Tenant Mode",
+    description: "Focused flow to invite a tenant, create a lease, and verify first billing steps.",
+    sections: ["overview", "operations", "invitations", "leases", "charges", "documents", "notifications"]
+  },
+  new_manager: {
+    label: "New Manager Mode",
+    description: "Focused flow to onboard a manager and verify maintenance/vendor operations.",
+    sections: ["overview", "invitations", "maintenance", "vendors", "notifications"]
+  }
+};
 
 export function Dashboard({
   data,
@@ -209,8 +236,10 @@ export function Dashboard({
   const hasExpensesSection = Boolean(
     data.profileRole === "owner" && onCreateExpense && onUpdateExpense && onDeleteExpense
   );
+  const isOwnerRole = data.profileRole === "owner";
+  const [ownerWorkflowMode, setOwnerWorkflowMode] = useState<OwnerWorkflowMode>("normal");
 
-  const sectionItems = useMemo<NavItem[]>(() => {
+  const allSectionItems = useMemo<NavItem[]>(() => {
     const items: NavItem[] = [
       {
         id: "overview",
@@ -343,6 +372,16 @@ export function Dashboard({
     hasVendorsSection
   ]);
 
+  const sectionItems = useMemo<NavItem[]>(() => {
+    if (!isOwnerRole || ownerWorkflowMode === "normal") {
+      return allSectionItems;
+    }
+
+    const allowedSections = new Set(ownerWorkflowModeMeta[ownerWorkflowMode].sections);
+    const filtered = allSectionItems.filter((item) => allowedSections.has(item.id));
+    return filtered.length > 0 ? filtered : allSectionItems;
+  }, [allSectionItems, isOwnerRole, ownerWorkflowMode]);
+
   const getInitialSection = () => {
     if (!initialSectionId) {
       return "overview";
@@ -381,6 +420,86 @@ export function Dashboard({
   const goToNextSection = () => {
     if (activeSectionIndex < 0 || activeSectionIndex >= sectionItems.length - 1) return;
     setActiveSection(sectionItems[activeSectionIndex + 1].id);
+  };
+
+  const ownerWorkflowSteps = useMemo(() => {
+    if (!isOwnerRole) {
+      return [];
+    }
+
+    if (ownerWorkflowMode === "new_property") {
+      return [
+        {
+          label: "Create property record",
+          done: safePortfolio.properties.length > 0
+        },
+        {
+          label: "Add at least one unit",
+          done: safePortfolio.units.length > 0
+        },
+        {
+          label: "Finalize first lease",
+          done: safePortfolio.leases.length > 0
+        }
+      ];
+    }
+
+    if (ownerWorkflowMode === "new_tenant") {
+      const tenantInvites =
+        (invitations ?? []).filter((invitation) => invitation.role === "tenant").length > 0;
+
+      return [
+        {
+          label: "Send tenant invitation",
+          done: tenantInvites
+        },
+        {
+          label: "Create active lease",
+          done: safePortfolio.leases.length > 0
+        },
+        {
+          label: "Verify first charge",
+          done: data.charges.length > 0
+        }
+      ];
+    }
+
+    if (ownerWorkflowMode === "new_manager") {
+      const managerInvites =
+        (invitations ?? []).filter((invitation) => invitation.role === "manager").length > 0;
+
+      return [
+        {
+          label: "Send manager invitation",
+          done: managerInvites
+        },
+        {
+          label: "Set up preferred vendor",
+          done: safeVendors.length > 0
+        },
+        {
+          label: "Review maintenance queue",
+          done: (tickets ?? []).length > 0
+        }
+      ];
+    }
+
+    return [];
+  }, [
+    data.charges.length,
+    invitations,
+    isOwnerRole,
+    ownerWorkflowMode,
+    safePortfolio.leases.length,
+    safePortfolio.properties.length,
+    safePortfolio.units.length,
+    safeVendors.length,
+    tickets
+  ]);
+
+  const handleOwnerWorkflowModeChange = (mode: OwnerWorkflowMode) => {
+    if (!isOwnerRole) return;
+    setOwnerWorkflowMode(mode);
   };
 
   const renderActiveSection = () => {
@@ -654,6 +773,77 @@ export function Dashboard({
             </div>
           )}
 
+          {isOwnerRole && (
+            <div className="rounded-xl border border-zinc-200/80 bg-white/90 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-zinc-500">Workflow Mode</p>
+                  <p className="mt-1 text-base font-semibold text-zinc-900">
+                    {ownerWorkflowModeMeta[ownerWorkflowMode].label}
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-600">
+                    {ownerWorkflowModeMeta[ownerWorkflowMode].description}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={ownerWorkflowMode === "normal" ? "default" : "outline"}
+                    onClick={() => handleOwnerWorkflowModeChange("normal")}
+                    title="Show the full owner workspace."
+                  >
+                    Normal
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={ownerWorkflowMode === "new_property" ? "default" : "outline"}
+                    onClick={() => handleOwnerWorkflowModeChange("new_property")}
+                    title="Show only sections needed for onboarding a new property."
+                  >
+                    New Property
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={ownerWorkflowMode === "new_tenant" ? "default" : "outline"}
+                    onClick={() => handleOwnerWorkflowModeChange("new_tenant")}
+                    title="Show only sections needed for onboarding a new tenant."
+                  >
+                    New Tenant
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={ownerWorkflowMode === "new_manager" ? "default" : "outline"}
+                    onClick={() => handleOwnerWorkflowModeChange("new_manager")}
+                    title="Show only sections needed for onboarding a new property manager."
+                  >
+                    New Manager
+                  </Button>
+                </div>
+              </div>
+
+              {ownerWorkflowMode !== "normal" && ownerWorkflowSteps.length > 0 && (
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                  {ownerWorkflowSteps.map((step) => (
+                    <div
+                      key={step.label}
+                      className={`rounded-lg border px-3 py-2 text-xs ${
+                        step.done
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          : "border-zinc-200 bg-zinc-50 text-zinc-600"
+                      }`}
+                    >
+                      {step.done ? "Done" : "Pending"}: {step.label}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex flex-col items-start justify-between gap-3 rounded-xl border border-zinc-200/80 bg-white/80 p-4 sm:flex-row sm:items-center">
             <div>
               <p className="text-xs uppercase tracking-wide text-zinc-500">Focused View</p>
@@ -662,6 +852,9 @@ export function Dashboard({
               </p>
               <p className="text-xs text-zinc-500">
                 Click any left-side item to switch sections without scrolling through everything.
+                {isOwnerRole && ownerWorkflowMode !== "normal"
+                  ? ` Mode filter: ${ownerWorkflowModeMeta[ownerWorkflowMode].label}.`
+                  : ""}
               </p>
             </div>
             <div className="flex items-center gap-2">
