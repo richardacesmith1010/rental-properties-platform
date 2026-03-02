@@ -149,6 +149,14 @@ export function InvitationsSection({
                   required
                 />
                 <Input name="fullName" placeholder="Full name" required />
+                <Select name="propertyId" required>
+                  <option value="">Assign to property</option>
+                  {properties.map((property) => (
+                    <option key={property.id} value={property.id}>
+                      {property.name}
+                    </option>
+                  ))}
+                </Select>
                 <SubmitButton className="w-full" title="Email an invitation link to this tenant.">
                   Send Invitation
                 </SubmitButton>

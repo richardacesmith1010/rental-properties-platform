@@ -369,10 +369,13 @@ describe("updateTicketCostSchema", () => {
 
 /* ─── inviteTenantSchema ─── */
 describe("inviteTenantSchema", () => {
+  const validUUID = "550e8400-e29b-41d4-a716-446655440000";
+
   it("accepts valid tenant invite data", () => {
     const result = inviteTenantSchema.safeParse({
       email: "tenant@example.com",
       fullName: "John Doe",
+      propertyId: validUUID
     });
     expect(result.success).toBe(true);
   });
@@ -381,6 +384,7 @@ describe("inviteTenantSchema", () => {
     const result = inviteTenantSchema.safeParse({
       email: "",
       fullName: "John Doe",
+      propertyId: validUUID
     });
     expect(result.success).toBe(false);
   });
@@ -389,6 +393,7 @@ describe("inviteTenantSchema", () => {
     const result = inviteTenantSchema.safeParse({
       email: "not-an-email",
       fullName: "John Doe",
+      propertyId: validUUID
     });
     expect(result.success).toBe(false);
   });
@@ -397,6 +402,7 @@ describe("inviteTenantSchema", () => {
     const result = inviteTenantSchema.safeParse({
       email: "tenant@example.com",
       fullName: "",
+      propertyId: validUUID
     });
     expect(result.success).toBe(false);
   });
@@ -405,6 +411,15 @@ describe("inviteTenantSchema", () => {
     const result = inviteTenantSchema.safeParse({
       email: "tenant@example.com",
       fullName: "A".repeat(101),
+      propertyId: validUUID
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects missing property", () => {
+    const result = inviteTenantSchema.safeParse({
+      email: "tenant@example.com",
+      fullName: "John Doe"
     });
     expect(result.success).toBe(false);
   });

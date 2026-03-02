@@ -42,6 +42,7 @@ import {
   LayoutDashboard,
   Receipt,
   Settings,
+  ShieldCheck,
   UserPlus,
   Wrench
 } from "lucide-react";
@@ -415,6 +416,87 @@ export function Dashboard({
     hasVendorsSection
   ]);
 
+  const ownerModeNavItems = useMemo<NavItem[]>(() => {
+    if (!isOwnerRole) {
+      return [];
+    }
+
+    return [
+      {
+        id: "owner:daily_ops",
+        label: "Daily Ops",
+        icon: LayoutDashboard,
+        description: "Revenue, maintenance, and alerts for daily management.",
+        clickHint: "switch to owner daily operations mode"
+      },
+      {
+        id: "owner:new_property",
+        label: "New Property",
+        icon: Building2,
+        description: "Property to unit to lease onboarding flow.",
+        clickHint: "switch to owner new property mode"
+      },
+      {
+        id: "owner:new_tenant",
+        label: "New Tenant",
+        icon: UserPlus,
+        description: "Invite tenant, create lease, verify billing.",
+        clickHint: "switch to owner new tenant mode"
+      },
+      {
+        id: "owner:new_manager",
+        label: "New Manager",
+        icon: BriefcaseBusiness,
+        description: "Assign manager to property and verify vendor flow.",
+        clickHint: "switch to owner new manager mode"
+      },
+      {
+        id: "owner:records",
+        label: "Records",
+        icon: ShieldCheck,
+        description: "Documents, ownership, and portfolio records.",
+        clickHint: "switch to owner records mode"
+      }
+    ];
+  }, [isOwnerRole]);
+
+  const managerModeNavItems = useMemo<NavItem[]>(() => {
+    if (!isManagerRole) {
+      return [];
+    }
+
+    return [
+      {
+        id: "manager:daily_ops",
+        label: "Daily Ops",
+        icon: LayoutDashboard,
+        description: "Daily queue for maintenance, charges, and alerts.",
+        clickHint: "switch to manager daily operations mode"
+      },
+      {
+        id: "manager:new_property",
+        label: "New Property",
+        icon: Building2,
+        description: "Onboard property, units, and initial lease setup.",
+        clickHint: "switch to manager new property mode"
+      },
+      {
+        id: "manager:new_tenant",
+        label: "New Tenant",
+        icon: UserPlus,
+        description: "Tenant invitation and lease activation flow.",
+        clickHint: "switch to manager new tenant mode"
+      },
+      {
+        id: "manager:vendor_ops",
+        label: "Vendor Ops",
+        icon: BriefcaseBusiness,
+        description: "Vendor-first maintenance execution flow.",
+        clickHint: "switch to manager vendor operations mode"
+      }
+    ];
+  }, [isManagerRole]);
+
   const activeWorkflowMeta = useMemo(() => {
     if (isOwnerRole) {
       return ownerWorkflowModeMeta[ownerWorkflowMode];
@@ -561,11 +643,19 @@ export function Dashboard({
   const handleOwnerWorkflowModeChange = (mode: OwnerWorkflowMode) => {
     if (!isOwnerRole) return;
     setOwnerWorkflowMode(mode);
+    const nextSection = ownerWorkflowModeMeta[mode].sections[0];
+    if (nextSection) {
+      setActiveSection(nextSection);
+    }
   };
 
   const handleManagerWorkflowModeChange = (mode: ManagerWorkflowMode) => {
     if (!isManagerRole) return;
     setManagerWorkflowMode(mode);
+    const nextSection = managerWorkflowModeMeta[mode].sections[0];
+    if (nextSection) {
+      setActiveSection(nextSection);
+    }
   };
 
   const handlePropertyCreated = useCallback(() => {
@@ -871,6 +961,32 @@ export function Dashboard({
     );
   };
 
+  const sidebarItems = isOwnerRole
+    ? ownerModeNavItems
+    : isManagerRole
+      ? managerModeNavItems
+      : sectionItems;
+
+  const sidebarActiveItemId = isOwnerRole
+    ? `owner:${ownerWorkflowMode}`
+    : isManagerRole
+      ? `manager:${managerWorkflowMode}`
+      : activeSection;
+
+  const handleSidebarSelect = (itemId: string) => {
+    if (isOwnerRole && itemId.startsWith("owner:")) {
+      const mode = itemId.replace("owner:", "") as OwnerWorkflowMode;
+      handleOwnerWorkflowModeChange(mode);
+      return;
+    }
+    if (isManagerRole && itemId.startsWith("manager:")) {
+      const mode = itemId.replace("manager:", "") as ManagerWorkflowMode;
+      handleManagerWorkflowModeChange(mode);
+      return;
+    }
+    setActiveSection(itemId);
+  };
+
   return (
     <div className="app-surface flex min-h-screen flex-col lg:flex-row">
       <MobileTopBar userEmail={userEmail} role={data.profileRole} showTesterLink={showTesterLink} onSignOut={onSignOut} />
@@ -880,9 +996,9 @@ export function Dashboard({
         role={data.profileRole}
         showTesterLink={showTesterLink}
         onSignOut={onSignOut}
-        items={sectionItems}
-        activeItemId={activeSection}
-        onSelectItem={setActiveSection}
+        items={sidebarItems}
+        activeItemId={sidebarActiveItemId}
+        onSelectItem={handleSidebarSelect}
       />
 
       <main className="relative flex-1 lg:ml-[260px]">
@@ -922,96 +1038,8 @@ export function Dashboard({
                     {activeWorkflowMeta?.description ?? "Navigation is filtered to the active workflow."}
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {isOwnerRole && (
-                    <>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={ownerWorkflowMode === "daily_ops" ? "default" : "outline"}
-                        onClick={() => handleOwnerWorkflowModeChange("daily_ops")}
-                        title="Show only daily owner operations sections."
-                      >
-                        Daily Ops
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={ownerWorkflowMode === "new_property" ? "default" : "outline"}
-                        onClick={() => handleOwnerWorkflowModeChange("new_property")}
-                        title="Show only sections needed for onboarding a new property."
-                      >
-                        New Property
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={ownerWorkflowMode === "new_tenant" ? "default" : "outline"}
-                        onClick={() => handleOwnerWorkflowModeChange("new_tenant")}
-                        title="Show only sections needed for onboarding a new tenant."
-                      >
-                        New Tenant
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={ownerWorkflowMode === "new_manager" ? "default" : "outline"}
-                        onClick={() => handleOwnerWorkflowModeChange("new_manager")}
-                        title="Show only sections needed for onboarding a new property manager."
-                      >
-                        New Manager
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={ownerWorkflowMode === "records" ? "default" : "outline"}
-                        onClick={() => handleOwnerWorkflowModeChange("records")}
-                        title="Show document and compliance sections."
-                      >
-                        Records
-                      </Button>
-                    </>
-                  )}
-                  {isManagerRole && (
-                    <>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={managerWorkflowMode === "daily_ops" ? "default" : "outline"}
-                        onClick={() => handleManagerWorkflowModeChange("daily_ops")}
-                        title="Show only daily manager operations sections."
-                      >
-                        Daily Ops
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={managerWorkflowMode === "new_property" ? "default" : "outline"}
-                        onClick={() => handleManagerWorkflowModeChange("new_property")}
-                        title="Show only sections needed to onboard a property."
-                      >
-                        New Property
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={managerWorkflowMode === "new_tenant" ? "default" : "outline"}
-                        onClick={() => handleManagerWorkflowModeChange("new_tenant")}
-                        title="Show only sections needed to onboard a tenant."
-                      >
-                        New Tenant
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={managerWorkflowMode === "vendor_ops" ? "default" : "outline"}
-                        onClick={() => handleManagerWorkflowModeChange("vendor_ops")}
-                        title="Show vendor and maintenance execution sections."
-                      >
-                        Vendor Ops
-                      </Button>
-                    </>
-                  )}
+                <div className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-600">
+                  Use the left sidebar to switch modes.
                 </div>
               </div>
 
@@ -1041,8 +1069,10 @@ export function Dashboard({
                 Showing section: {activeSectionLabel}
               </p>
               <p className="text-xs text-zinc-500">
-                Click any left-side item to switch sections without scrolling through everything.
-                {activeWorkflowMeta ? ` Mode filter: ${activeWorkflowMeta.label}.` : ""}
+                {isOwnerRole || isManagerRole
+                  ? "Use left-side mode buttons, then move one section at a time with Previous/Next."
+                  : "Click any left-side item to switch sections without scrolling through everything."}
+                {activeWorkflowMeta ? ` Active mode: ${activeWorkflowMeta.label}.` : ""}
               </p>
             </div>
             <div className="flex items-center gap-2">

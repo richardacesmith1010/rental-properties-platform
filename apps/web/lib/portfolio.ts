@@ -45,6 +45,7 @@ export interface TenantOption {
   id: string;
   email: string;
   fullName: string;
+  propertyIds: string[];
 }
 
 export interface PortfolioData {
@@ -81,7 +82,11 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
     .eq("id", userId)
     .single();
 
-  function mergeTenantOptions(rows: Array<{ id: string; email: string; full_name: string }> | null) {
+  function mergeTenantOptions(
+    rows: Array<{ id: string; email: string; full_name: string }> | null,
+    propertyIdsByTenantId: Map<string, string[]>,
+    propertyIdsByEmail: Map<string, string[]>
+  ) {
     const byId = new Map<string, { id: string; email: string; fullName: string }>();
     for (const row of rows ?? []) {
       byId.set(row.id, { id: row.id, email: row.email, fullName: row.full_name });
@@ -93,7 +98,16 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
         fullName: `${selfProfile.full_name} (you)`
       });
     }
-    return Array.from(byId.values());
+    return Array.from(byId.values()).map((tenant) => {
+      const ids = new Set<string>([
+        ...(propertyIdsByTenantId.get(tenant.id) ?? []),
+        ...(propertyIdsByEmail.get(tenant.email.toLowerCase()) ?? [])
+      ]);
+      return {
+        ...tenant,
+        propertyIds: Array.from(ids)
+      };
+    });
   }
 
   const administeredProperties = await getAdministeredProperties(userId);
@@ -111,11 +125,11 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
       properties: [],
       units: [],
       leases: [],
-      tenants: mergeTenantOptions(tenants ?? null)
+      tenants: mergeTenantOptions(tenants ?? null, new Map(), new Map())
     };
   }
 
-  const [{ data: properties, error: propertiesError }, { data: units, error: unitsError }, { data: tenants }] = await Promise.all([
+  const [{ data: properties, error: propertiesError }, { data: units, error: unitsError }, { data: tenants }, { data: tenantInvitations }] = await Promise.all([
     admin
       .from("properties")
       .select("id, name, address_line1, city, state, postal_code, owner_account_id, active")
@@ -131,7 +145,13 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
       .select("id, email, full_name")
       .eq("role", "tenant")
       .order("email", { ascending: true })
-      .limit(100)
+      .limit(100),
+    admin
+      .from("invitations")
+      .select("email, property_id, role, status")
+      .eq("role", "tenant")
+      .in("property_id", propertyIds)
+      .in("status", ["pending", "accepted"])
   ]);
 
   let propertyRows: Array<{
@@ -307,10 +327,31 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
     };
   });
 
+  const propertyIdsByTenantId = new Map<string, string[]>();
+  for (const lease of leaseList) {
+    if (!lease.propertyId) continue;
+    const existing = propertyIdsByTenantId.get(lease.tenantProfileId) ?? [];
+    if (!existing.includes(lease.propertyId)) {
+      existing.push(lease.propertyId);
+      propertyIdsByTenantId.set(lease.tenantProfileId, existing);
+    }
+  }
+
+  const propertyIdsByEmail = new Map<string, string[]>();
+  for (const invitation of tenantInvitations ?? []) {
+    if (!invitation.property_id || !invitation.email) continue;
+    const normalizedEmail = invitation.email.toLowerCase();
+    const existing = propertyIdsByEmail.get(normalizedEmail) ?? [];
+    if (!existing.includes(invitation.property_id)) {
+      existing.push(invitation.property_id);
+      propertyIdsByEmail.set(normalizedEmail, existing);
+    }
+  }
+
   return {
     properties: propertiesWithCounts,
     units: unitsWithProperty,
     leases: leaseList,
-    tenants: mergeTenantOptions(tenants ?? null)
+    tenants: mergeTenantOptions(tenants ?? null, propertyIdsByTenantId, propertyIdsByEmail)
   };
 }

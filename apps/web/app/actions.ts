@@ -315,6 +315,59 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
     return { success: false, error: "You do not have access to this unit." };
   }
 
+  const admin = createAdminClient();
+  const { data: tenantProfile } = await admin
+    .from("profiles")
+    .select("id, email")
+    .eq("id", tenantProfileId)
+    .maybeSingle();
+
+  if (!tenantProfile?.id || !tenantProfile.email) {
+    return { success: false, error: "Tenant profile not found." };
+  }
+
+  const { data: propertyUnitRows } = await supabase
+    .from("units")
+    .select("id")
+    .eq("property_id", unit.property_id);
+
+  const propertyUnitIds = (propertyUnitRows ?? []).map((row) => row.id);
+  const hasExistingLeaseInProperty = propertyUnitIds.length
+    ? Boolean(
+        (
+          await supabase
+            .from("leases")
+            .select("id")
+            .eq("tenant_profile_id", tenantProfile.id)
+            .eq("active", true)
+            .in("unit_id", propertyUnitIds)
+            .limit(1)
+        ).data?.length
+      )
+    : false;
+
+  let hasTenantInvitationForProperty = false;
+  const invitationQuery = await admin
+    .from("invitations")
+    .select("id")
+    .eq("email", tenantProfile.email.toLowerCase())
+    .eq("role", "tenant")
+    .eq("property_id", unit.property_id)
+    .in("status", ["pending", "accepted"])
+    .limit(1);
+  if (!invitationQuery.error) {
+    hasTenantInvitationForProperty = Boolean(invitationQuery.data?.length);
+  } else if (!isMissingSchemaError(invitationQuery.error)) {
+    return { success: false, error: "Failed to validate tenant-property link." };
+  }
+
+  if (!hasExistingLeaseInProperty && !hasTenantInvitationForProperty) {
+    return {
+      success: false,
+      error: "Tenant is not linked to this property. Invite the tenant to this property first."
+    };
+  }
+
   const { error } = await supabase.from("leases").insert({
     unit_id: unitId,
     tenant_profile_id: tenantProfileId,
@@ -331,12 +384,6 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
   }
 
   await supabase.from("units").update({ occupied: true }).eq("id", unitId);
-
-  const { data: tenantProfile } = await createAdminClient()
-    .from("profiles")
-    .select("id, email")
-    .eq("id", tenantProfileId)
-    .maybeSingle();
 
   await notifyOwnerMembersForProperty({
     propertyId: unit.property_id,
@@ -1186,8 +1233,13 @@ export async function inviteTenant(
     return parsed;
   }
 
-  const { email, fullName } = parsed.data;
+  const { email, fullName, propertyId } = parsed.data;
   const admin = createAdminClient();
+
+  const canAdminister = await canUserAdministerProperty(user.id, propertyId);
+  if (!canAdminister) {
+    return { success: false, error: "You do not have access to this property." };
+  }
 
   // Check if user already exists in profiles
   const { data: existingProfile } = await admin
@@ -1198,7 +1250,30 @@ export async function inviteTenant(
 
   if (existingProfile) {
     if (existingProfile.role === "tenant") {
-      return { success: false, error: "This user is already a tenant." };
+      const { data: existingPropertyInvite } = await admin
+        .from("invitations")
+        .select("id, status")
+        .eq("email", email.toLowerCase())
+        .eq("role", "tenant")
+        .eq("property_id", propertyId)
+        .in("status", ["pending", "accepted"])
+        .maybeSingle();
+
+      if (!existingPropertyInvite) {
+        await admin.from("invitations").insert({
+          email: email.toLowerCase(),
+          full_name: fullName,
+          role: "tenant",
+          property_id: propertyId,
+          invited_by: user.id,
+          status: "accepted",
+          accepted_at: new Date().toISOString()
+        });
+      }
+
+      revalidatePath("/owner");
+      revalidatePath("/manager");
+      return { success: true, message: "Tenant linked to property. Continue to lease setup." };
     }
     return {
       success: false,
@@ -1212,7 +1287,7 @@ export async function inviteTenant(
     .select("id, status")
     .eq("email", email.toLowerCase())
     .eq("role", "tenant")
-    .eq("invited_by", user.id)
+    .eq("property_id", propertyId)
     .single();
 
   if (existingInvite && existingInvite.status === "pending") {
@@ -1229,6 +1304,7 @@ export async function inviteTenant(
       data: {
         role: "tenant",
         full_name: fullName,
+        property_id: propertyId
       },
     }
   );
@@ -1245,6 +1321,7 @@ export async function inviteTenant(
     email: email.toLowerCase(),
     full_name: fullName,
     role: "tenant",
+    property_id: propertyId,
     invited_by: user.id,
     status: "pending",
   });

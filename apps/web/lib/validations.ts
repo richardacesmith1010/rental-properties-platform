@@ -127,6 +127,7 @@ export const inviteTenantSchema = z.object({
     .string()
     .min(1, "Full name is required.")
     .max(100, "Name must be under 100 characters."),
+  propertyId: z.string().uuid("Select a property first.")
 });
 
 export const inviteManagerSchema = z.object({
