@@ -564,3 +564,64 @@ NEXT_ACTION=tag v1.0.0
    - `automation_runs`
 4. Add capability probes in DB for these features so app can gate readiness cleanly.
 
+
+## V2 Phase A Slice 2 (Codex) — Runtime Gating + QA Expansion
+
+- Timestamp (UTC): 2026-03-02T06:06:00Z
+- Branch/commit: `main` @ `ebad735`
+
+### App changes completed
+
+1. Added dedicated Phase A test suite in Tester:
+   - feature group: `Leasing, Inbox & Flows`
+   - owner + manager route checks for:
+     - leasing hub
+     - domus inbox
+     - domus flows
+2. Added Portal quick links for owner/manager to jump directly to:
+   - leasing hub
+   - inbox
+   - flows
+3. Added Phase A runtime capability detection in `feature-capabilities`:
+   - `leasingPipelineEnabled`
+   - `inboxThreadsEnabled`
+   - `automationsEnabled`
+   - corresponding warnings for missing V2 Phase A migrations
+4. Wired runtime readiness warnings into new sections:
+   - leasing hub
+   - inbox
+   - domus flows
+5. Hardened Domus Flows local state storage key to be user-scoped (not just role-scoped).
+
+### Files changed
+
+- `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/components/dashboard/tester-tools-section.tsx`
+- `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/app/portal/page.tsx`
+- `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/lib/feature-capabilities.ts`
+- `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/lib/__tests__/feature-capabilities.test.ts`
+- `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/components/dashboard/leasing-hub-section.tsx`
+- `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/components/dashboard/inbox-section.tsx`
+- `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/components/dashboard/automation-templates-section.tsx`
+- `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/components/dashboard/index.tsx`
+- `/Users/courtneysmith/Documents/Codex/Rental Properties/apps/web/components/dashboard/manager-dashboard.tsx`
+
+### Validation
+
+- `npm test --workspace @domus/web` ✅
+- `npm run lint:web` ✅
+- `npm run build:web` ✅
+- `npx tsc -p apps/mobile/tsconfig.json --noEmit` ✅
+- `APP_URL=https://rental-properties-platform-web.vercel.app npm run smoke:web` ✅
+
+### Claude next DB/runtime ask
+
+1. Apply V2 Phase A migrations for:
+   - leasing pipeline tables
+   - inbox thread/message tables
+   - automation tables
+2. Verify capability probes flip true:
+   - `leasingPipelineEnabled`
+   - `inboxThreadsEnabled`
+   - `automationsEnabled`
+3. Record verification output in handoff with exact SQL and query results.
+
