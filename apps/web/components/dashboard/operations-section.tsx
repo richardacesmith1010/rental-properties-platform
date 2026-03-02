@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useFormState } from "react-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,9 @@ interface OperationsSectionProps {
   onCreateProperty: StatefulAction;
   onCreateUnit: StatefulAction;
   onCreateLease: StatefulAction;
+  onPropertyCreated?: () => void;
+  onUnitCreated?: () => void;
+  onLeaseCreated?: () => void;
 }
 
 function FormError({ state }: { state: ActionState }) {
@@ -46,10 +50,37 @@ export function OperationsSection({
   onCreateProperty,
   onCreateUnit,
   onCreateLease,
+  onPropertyCreated,
+  onUnitCreated,
+  onLeaseCreated
 }: OperationsSectionProps) {
   const [propertyState, propertyAction] = useFormState(onCreateProperty, null);
   const [unitState, unitAction] = useFormState(onCreateUnit, null);
   const [leaseState, leaseAction] = useFormState(onCreateLease, null);
+  const handledPropertyStateRef = useRef<ActionState>(null);
+  const handledUnitStateRef = useRef<ActionState>(null);
+  const handledLeaseStateRef = useRef<ActionState>(null);
+
+  useEffect(() => {
+    if (!propertyState?.success || !onPropertyCreated) return;
+    if (handledPropertyStateRef.current === propertyState) return;
+    handledPropertyStateRef.current = propertyState;
+    onPropertyCreated();
+  }, [onPropertyCreated, propertyState]);
+
+  useEffect(() => {
+    if (!unitState?.success || !onUnitCreated) return;
+    if (handledUnitStateRef.current === unitState) return;
+    handledUnitStateRef.current = unitState;
+    onUnitCreated();
+  }, [onUnitCreated, unitState]);
+
+  useEffect(() => {
+    if (!leaseState?.success || !onLeaseCreated) return;
+    if (handledLeaseStateRef.current === leaseState) return;
+    handledLeaseStateRef.current = leaseState;
+    onLeaseCreated();
+  }, [leaseState, onLeaseCreated]);
 
   return (
     <div id="operations" className="grid grid-cols-1 gap-4 lg:grid-cols-3">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DashboardData } from "@/lib/dashboard";
 import type { PortfolioData } from "@/lib/portfolio";
 import type { MaintenanceTicket } from "@/lib/maintenance";
@@ -422,6 +422,15 @@ export function Dashboard({
     setActiveSection(sectionItems[activeSectionIndex + 1].id);
   };
 
+  const goToSectionIfVisible = useCallback(
+    (sectionId: string) => {
+      if (sectionItems.some((item) => item.id === sectionId)) {
+        setActiveSection(sectionId);
+      }
+    },
+    [sectionItems]
+  );
+
   const ownerWorkflowSteps = useMemo(() => {
     if (!isOwnerRole) {
       return [];
@@ -501,6 +510,52 @@ export function Dashboard({
     if (!isOwnerRole) return;
     setOwnerWorkflowMode(mode);
   };
+
+  const handlePropertyCreated = useCallback(() => {
+    if (ownerWorkflowMode === "new_property") {
+      goToSectionIfVisible("portfolio");
+    }
+  }, [goToSectionIfVisible, ownerWorkflowMode]);
+
+  const handleUnitCreated = useCallback(() => {
+    if (ownerWorkflowMode === "new_property") {
+      goToSectionIfVisible("units");
+    }
+  }, [goToSectionIfVisible, ownerWorkflowMode]);
+
+  const handleLeaseCreated = useCallback(() => {
+    if (ownerWorkflowMode === "new_property") {
+      goToSectionIfVisible("leases");
+      return;
+    }
+    if (ownerWorkflowMode === "new_tenant") {
+      goToSectionIfVisible("charges");
+    }
+  }, [goToSectionIfVisible, ownerWorkflowMode]);
+
+  const handleTenantInviteSuccess = useCallback(() => {
+    if (ownerWorkflowMode === "new_tenant") {
+      goToSectionIfVisible("operations");
+    }
+  }, [goToSectionIfVisible, ownerWorkflowMode]);
+
+  const handleManagerInviteSuccess = useCallback(() => {
+    if (ownerWorkflowMode === "new_manager") {
+      goToSectionIfVisible("vendors");
+    }
+  }, [goToSectionIfVisible, ownerWorkflowMode]);
+
+  const handleOwnerInviteSuccess = useCallback(() => {
+    if (ownerWorkflowMode === "normal") {
+      goToSectionIfVisible("ownership");
+    }
+  }, [goToSectionIfVisible, ownerWorkflowMode]);
+
+  const handleVendorCreatedSuccess = useCallback(() => {
+    if (ownerWorkflowMode === "new_manager") {
+      goToSectionIfVisible("maintenance");
+    }
+  }, [goToSectionIfVisible, ownerWorkflowMode]);
 
   const renderActiveSection = () => {
     if (activeSection === "overview") {
@@ -612,6 +667,9 @@ export function Dashboard({
           onInviteManager={onInviteManager!}
           onInviteOwner={safeCapabilities.ownershipEnabled ? onInviteOwner : undefined}
           onResendInvite={onResendInvite!}
+          onTenantInviteSuccess={handleTenantInviteSuccess}
+          onManagerInviteSuccess={handleManagerInviteSuccess}
+          onOwnerInviteSuccess={handleOwnerInviteSuccess}
         />
       );
     }
@@ -656,6 +714,7 @@ export function Dashboard({
           ownershipAccounts={safeOwnershipAccounts}
           onCreateVendor={onCreateVendor!}
           onUpdateVendor={onUpdateVendor}
+          onCreateVendorSuccess={handleVendorCreatedSuccess}
         />
       ) : (
         <FeatureWarning
@@ -689,6 +748,9 @@ export function Dashboard({
           onCreateProperty={onCreateProperty}
           onCreateUnit={onCreateUnit}
           onCreateLease={onCreateLease}
+          onPropertyCreated={handlePropertyCreated}
+          onUnitCreated={handleUnitCreated}
+          onLeaseCreated={handleLeaseCreated}
         />
       );
     }

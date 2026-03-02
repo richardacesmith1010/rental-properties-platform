@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useFormState } from "react-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/shared/empty-state";
+import { Button } from "@/components/ui/button";
 import type { ActionState } from "@/app/actions";
 import type { InvitationListItem } from "@/lib/invitations";
 
@@ -29,6 +31,9 @@ interface InvitationsSectionProps {
   onInviteManager: StatefulAction;
   onInviteOwner?: StatefulAction;
   onResendInvite: StatefulAction;
+  onTenantInviteSuccess?: () => void;
+  onManagerInviteSuccess?: () => void;
+  onOwnerInviteSuccess?: () => void;
 }
 
 /* Reuse the same feedback components from operations-section */
@@ -70,10 +75,41 @@ export function InvitationsSection({
   onInviteManager,
   onInviteOwner,
   onResendInvite,
+  onTenantInviteSuccess,
+  onManagerInviteSuccess,
+  onOwnerInviteSuccess
 }: InvitationsSectionProps) {
   const [tenantState, tenantAction] = useFormState(onInviteTenant, null);
   const [managerState, managerAction] = useFormState(onInviteManager, null);
   const [ownerState, ownerAction] = useFormState(onInviteOwner ?? onInviteManager, null);
+  const [activeInviteForm, setActiveInviteForm] = useState<"tenant" | "manager" | "owner" | null>(null);
+  const handledTenantStateRef = useRef<ActionState>(null);
+  const handledManagerStateRef = useRef<ActionState>(null);
+  const handledOwnerStateRef = useRef<ActionState>(null);
+
+  useEffect(() => {
+    if (!tenantState?.success || !onTenantInviteSuccess) return;
+    if (handledTenantStateRef.current === tenantState) return;
+    handledTenantStateRef.current = tenantState;
+    setActiveInviteForm(null);
+    onTenantInviteSuccess();
+  }, [onTenantInviteSuccess, tenantState]);
+
+  useEffect(() => {
+    if (!managerState?.success || !onManagerInviteSuccess) return;
+    if (handledManagerStateRef.current === managerState) return;
+    handledManagerStateRef.current = managerState;
+    setActiveInviteForm(null);
+    onManagerInviteSuccess();
+  }, [managerState, onManagerInviteSuccess]);
+
+  useEffect(() => {
+    if (!ownerState?.success || !onOwnerInviteSuccess) return;
+    if (handledOwnerStateRef.current === ownerState) return;
+    handledOwnerStateRef.current = ownerState;
+    setActiveInviteForm(null);
+    onOwnerInviteSuccess();
+  }, [onOwnerInviteSuccess, ownerState]);
 
   return (
     <div id="invitations">
@@ -82,54 +118,100 @@ export function InvitationsSection({
         {/* Invite Tenant */}
         <Card>
           <CardHeader>
-            <CardTitle>Invite Tenant</CardTitle>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle>Invite Tenant</CardTitle>
+              <Button
+                type="button"
+                size="sm"
+                variant={activeInviteForm === "tenant" ? "default" : "outline"}
+                onClick={() =>
+                  setActiveInviteForm((current) => (current === "tenant" ? null : "tenant"))
+                }
+                title={
+                  activeInviteForm === "tenant"
+                    ? "Hide tenant invitation form."
+                    : "Open tenant invitation form."
+                }
+              >
+                {activeInviteForm === "tenant" ? "Done" : "Manage"}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
-            <form className="space-y-3" action={tenantAction}>
-              <FormError state={tenantState} />
-              <FormSuccess state={tenantState} />
-              <Input
-                name="email"
-                type="email"
-                placeholder="Tenant email"
-                required
-              />
-              <Input name="fullName" placeholder="Full name" required />
-              <SubmitButton className="w-full" title="Email an invitation link to this tenant.">
-                Send Invitation
-              </SubmitButton>
-            </form>
+            {activeInviteForm === "tenant" ? (
+              <form className="space-y-3" action={tenantAction}>
+                <FormError state={tenantState} />
+                <FormSuccess state={tenantState} />
+                <Input
+                  name="email"
+                  type="email"
+                  placeholder="Tenant email"
+                  required
+                />
+                <Input name="fullName" placeholder="Full name" required />
+                <SubmitButton className="w-full" title="Email an invitation link to this tenant.">
+                  Send Invitation
+                </SubmitButton>
+              </form>
+            ) : (
+              <p className="text-sm text-zinc-500">
+                Invitation form hidden. Click Manage to send a tenant invite.
+              </p>
+            )}
           </CardContent>
         </Card>
 
         {/* Invite Manager */}
         <Card>
           <CardHeader>
-            <CardTitle>Invite Manager</CardTitle>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle>Invite Manager</CardTitle>
+              <Button
+                type="button"
+                size="sm"
+                variant={activeInviteForm === "manager" ? "default" : "outline"}
+                onClick={() =>
+                  setActiveInviteForm((current) => (current === "manager" ? null : "manager"))
+                }
+                title={
+                  activeInviteForm === "manager"
+                    ? "Hide manager invitation form."
+                    : "Open manager invitation form."
+                }
+              >
+                {activeInviteForm === "manager" ? "Done" : "Manage"}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
-            <form className="space-y-3" action={managerAction}>
-              <FormError state={managerState} />
-              <FormSuccess state={managerState} />
-              <Input
-                name="email"
-                type="email"
-                placeholder="Manager email"
-                required
-              />
-              <Input name="fullName" placeholder="Full name" required />
-              <Select name="propertyId" required>
-                <option value="">Assign to property</option>
-                {properties.map((property) => (
-                  <option key={property.id} value={property.id}>
-                    {property.name}
-                  </option>
-                ))}
-              </Select>
-              <SubmitButton className="w-full" title="Email an invitation and assign this manager to the selected property.">
-                Send Invitation
-              </SubmitButton>
-            </form>
+            {activeInviteForm === "manager" ? (
+              <form className="space-y-3" action={managerAction}>
+                <FormError state={managerState} />
+                <FormSuccess state={managerState} />
+                <Input
+                  name="email"
+                  type="email"
+                  placeholder="Manager email"
+                  required
+                />
+                <Input name="fullName" placeholder="Full name" required />
+                <Select name="propertyId" required>
+                  <option value="">Assign to property</option>
+                  {properties.map((property) => (
+                    <option key={property.id} value={property.id}>
+                      {property.name}
+                    </option>
+                  ))}
+                </Select>
+                <SubmitButton className="w-full" title="Email an invitation and assign this manager to the selected property.">
+                  Send Invitation
+                </SubmitButton>
+              </form>
+            ) : (
+              <p className="text-sm text-zinc-500">
+                Invitation form hidden. Click Manage to invite a manager.
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -137,31 +219,54 @@ export function InvitationsSection({
         {onInviteOwner && (
           <Card>
             <CardHeader>
-              <CardTitle>Invite Co-owner</CardTitle>
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle>Invite Co-owner</CardTitle>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={activeInviteForm === "owner" ? "default" : "outline"}
+                  onClick={() =>
+                    setActiveInviteForm((current) => (current === "owner" ? null : "owner"))
+                  }
+                  title={
+                    activeInviteForm === "owner"
+                      ? "Hide co-owner invitation form."
+                      : "Open co-owner invitation form."
+                  }
+                >
+                  {activeInviteForm === "owner" ? "Done" : "Manage"}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              <form className="space-y-3" action={ownerAction}>
-                <FormError state={ownerState} />
-                <FormSuccess state={ownerState} />
-                <Input
-                  name="email"
-                  type="email"
-                  placeholder="Co-owner email"
-                  required
-                />
-                <Input name="fullName" placeholder="Full name" required />
-                <Select name="ownershipAccountId" required>
-                  <option value="">Select ownership account</option>
-                  {ownershipAccounts.map((account) => (
-                    <option key={account.id} value={account.id}>
-                      {account.displayName}
-                    </option>
-                  ))}
-                </Select>
-                <SubmitButton className="w-full" title="Email an invitation to join this ownership account as a co-owner.">
-                  Send Invitation
-                </SubmitButton>
-              </form>
+              {activeInviteForm === "owner" ? (
+                <form className="space-y-3" action={ownerAction}>
+                  <FormError state={ownerState} />
+                  <FormSuccess state={ownerState} />
+                  <Input
+                    name="email"
+                    type="email"
+                    placeholder="Co-owner email"
+                    required
+                  />
+                  <Input name="fullName" placeholder="Full name" required />
+                  <Select name="ownershipAccountId" required>
+                    <option value="">Select ownership account</option>
+                    {ownershipAccounts.map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.displayName}
+                      </option>
+                    ))}
+                  </Select>
+                  <SubmitButton className="w-full" title="Email an invitation to join this ownership account as a co-owner.">
+                    Send Invitation
+                  </SubmitButton>
+                </form>
+              ) : (
+                <p className="text-sm text-zinc-500">
+                  Invitation form hidden. Click Manage to invite a co-owner.
+                </p>
+              )}
             </CardContent>
           </Card>
         )}

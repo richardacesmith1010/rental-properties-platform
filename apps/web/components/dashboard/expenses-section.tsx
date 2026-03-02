@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFormState } from "react-dom";
 import { FeatureWarning } from "@/components/shared/feature-warning";
 import { SubmitButton } from "@/components/shared/submit-button";
@@ -81,6 +81,7 @@ export function ExpensesSection({
   onDeleteExpense
 }: ExpensesSectionProps) {
   const [createState, createAction] = useFormState(onCreateExpense, null);
+  const [showCreateExpenseForm, setShowCreateExpenseForm] = useState(false);
   const [selectedPropertyId, setSelectedPropertyId] = useState(data.properties[0]?.id ?? "");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
@@ -122,6 +123,12 @@ export function ExpensesSection({
     [propertyFiles, selectedPropertyId]
   );
 
+  useEffect(() => {
+    if (createState?.success) {
+      setShowCreateExpenseForm(false);
+    }
+  }, [createState]);
+
   if (!data.enabled) {
     return (
       <div id="expenses">
@@ -141,79 +148,96 @@ export function ExpensesSection({
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Create Expense</CardTitle>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle>Create Expense</CardTitle>
+              <Button
+                type="button"
+                size="sm"
+                variant={showCreateExpenseForm ? "default" : "outline"}
+                onClick={() => setShowCreateExpenseForm((current) => !current)}
+                title={showCreateExpenseForm ? "Hide expense creation form." : "Open expense creation form."}
+              >
+                {showCreateExpenseForm ? "Done" : "Add Expense"}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
-            <form className="space-y-3" action={createAction}>
-              <FormError state={createState} />
-              <FormSuccess state={createState} message="Expense created." />
-              <Select
-                name="propertyId"
-                value={selectedPropertyId}
-                onChange={(event) => setSelectedPropertyId(event.target.value)}
-                required
-              >
-                <option value="">Select property</option>
-                {data.properties.map((property) => (
-                  <option key={property.id} value={property.id}>
-                    {property.name}
-                  </option>
-                ))}
-              </Select>
-              <Select name="category" defaultValue="maintenance" required>
-                {expenseCategories.map((category) => (
-                  <option key={category} value={category}>
-                    {formatCategory(category)}
-                  </option>
-                ))}
-              </Select>
-              <Input
-                name="amountDollars"
-                type="number"
-                min={0.01}
-                step="0.01"
-                placeholder="Amount (USD)"
-                required
-              />
-              <Input name="expenseDate" type="date" required />
-              <Textarea
-                name="description"
-                rows={2}
-                placeholder="Description (optional)"
-              />
-              <label className="flex items-center gap-2 text-xs text-zinc-600">
-                <input type="checkbox" name="recurring" value="true" />
-                Recurring expense
-              </label>
-              <Select name="recurringFrequency" defaultValue="">
-                <option value="">Not recurring</option>
-                {recurringFrequencies.map((frequency) => (
-                  <option key={frequency} value={frequency}>
-                    {formatCategory(frequency)}
-                  </option>
-                ))}
-              </Select>
-              <Select name="vendorId" defaultValue="">
-                <option value="">No vendor linked</option>
-                {availableVendors.map((vendor) => (
-                  <option key={vendor.id} value={vendor.id}>
-                    {vendor.name}
-                  </option>
-                ))}
-              </Select>
-              <Select name="receiptFileId" defaultValue="">
-                <option value="">No existing receipt file</option>
-                {availableReceiptFiles.map((file) => (
-                  <option key={file.id} value={file.id}>
-                    {file.fileName}
-                  </option>
-                ))}
-              </Select>
-              <Input name="receiptFile" type="file" />
-              <SubmitButton className="w-full" title="Create this expense record.">
-                Save Expense
-              </SubmitButton>
-            </form>
+            {showCreateExpenseForm ? (
+              <form className="space-y-3" action={createAction}>
+                <FormError state={createState} />
+                <FormSuccess state={createState} message="Expense created." />
+                <Select
+                  name="propertyId"
+                  value={selectedPropertyId}
+                  onChange={(event) => setSelectedPropertyId(event.target.value)}
+                  required
+                >
+                  <option value="">Select property</option>
+                  {data.properties.map((property) => (
+                    <option key={property.id} value={property.id}>
+                      {property.name}
+                    </option>
+                  ))}
+                </Select>
+                <Select name="category" defaultValue="maintenance" required>
+                  {expenseCategories.map((category) => (
+                    <option key={category} value={category}>
+                      {formatCategory(category)}
+                    </option>
+                  ))}
+                </Select>
+                <Input
+                  name="amountDollars"
+                  type="number"
+                  min={0.01}
+                  step="0.01"
+                  placeholder="Amount (USD)"
+                  required
+                />
+                <Input name="expenseDate" type="date" required />
+                <Textarea
+                  name="description"
+                  rows={2}
+                  placeholder="Description (optional)"
+                />
+                <label className="flex items-center gap-2 text-xs text-zinc-600">
+                  <input type="checkbox" name="recurring" value="true" />
+                  Recurring expense
+                </label>
+                <Select name="recurringFrequency" defaultValue="">
+                  <option value="">Not recurring</option>
+                  {recurringFrequencies.map((frequency) => (
+                    <option key={frequency} value={frequency}>
+                      {formatCategory(frequency)}
+                    </option>
+                  ))}
+                </Select>
+                <Select name="vendorId" defaultValue="">
+                  <option value="">No vendor linked</option>
+                  {availableVendors.map((vendor) => (
+                    <option key={vendor.id} value={vendor.id}>
+                      {vendor.name}
+                    </option>
+                  ))}
+                </Select>
+                <Select name="receiptFileId" defaultValue="">
+                  <option value="">No existing receipt file</option>
+                  {availableReceiptFiles.map((file) => (
+                    <option key={file.id} value={file.id}>
+                      {file.fileName}
+                    </option>
+                  ))}
+                </Select>
+                <Input name="receiptFile" type="file" />
+                <SubmitButton className="w-full" title="Create this expense record.">
+                  Save Expense
+                </SubmitButton>
+              </form>
+            ) : (
+              <p className="text-sm text-zinc-500">
+                Expense creation form hidden. Click Add Expense to create a new record.
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -338,6 +362,13 @@ function ExpenseRow({
 }) {
   const [updateState, updateAction] = useFormState(onUpdateExpense, null);
   const [deleteState, deleteAction] = useFormState(onDeleteExpense, null);
+  const [isManaging, setIsManaging] = useState(false);
+
+  useEffect(() => {
+    if (updateState?.success || deleteState?.success) {
+      setIsManaging(false);
+    }
+  }, [deleteState, updateState]);
 
   return (
     <DataRow last={last}>
@@ -354,88 +385,104 @@ function ExpenseRow({
           <p className="mt-0.5 text-xs text-zinc-500">{expense.description}</p>
         )}
 
-        <form action={updateAction} className="mt-3 grid gap-2 sm:grid-cols-3">
-          <input type="hidden" name="expenseId" value={expense.id} />
-          <Select name="category" defaultValue={expense.category}>
-            {expenseCategories.map((category) => (
-              <option key={category} value={category}>
-                {formatCategory(category)}
-              </option>
-            ))}
-          </Select>
-          <Input
-            name="amountDollars"
-            type="number"
-            min={0.01}
-            step="0.01"
-            defaultValue={expense.amountCents / 100}
-            required
-          />
-          <Input name="expenseDate" type="date" defaultValue={expense.expenseDate} required />
-          <Textarea
-            name="description"
-            rows={2}
-            defaultValue={expense.description ?? ""}
-            placeholder="Description"
-            className="sm:col-span-3"
-          />
-          <label className="flex items-center gap-2 text-xs text-zinc-600">
-            <input type="checkbox" name="recurring" value="true" defaultChecked={expense.recurring} />
-            Recurring
-          </label>
-          <Select name="recurringFrequency" defaultValue={expense.recurringFrequency ?? ""}>
-            <option value="">Not recurring</option>
-            {recurringFrequencies.map((frequency) => (
-              <option key={frequency} value={frequency}>
-                {formatCategory(frequency)}
-              </option>
-            ))}
-          </Select>
-          <Select name="vendorId" defaultValue={expense.vendorId ?? ""}>
-            <option value="">No vendor linked</option>
-            {vendors.map((vendor) => (
-              <option key={vendor.id} value={vendor.id}>
-                {vendor.name}
-              </option>
-            ))}
-          </Select>
-          <Select name="receiptFileId" defaultValue={expense.receiptFileId ?? ""}>
-            <option value="">No receipt file</option>
-            {receiptFiles.map((file) => (
-              <option key={file.id} value={file.id}>
-                {file.fileName}
-              </option>
-            ))}
-          </Select>
-          <Input name="receiptFile" type="file" className="sm:col-span-2" />
-          <div className="sm:col-span-3 flex items-center gap-2">
-            <SubmitButton size="sm" variant="outline" title="Save updates to this expense.">
-              Save Expense
-            </SubmitButton>
-            <Badge variant="outline">{dollars(expense.amountCents)}</Badge>
-          </div>
-          {updateState && !updateState.success && (
-            <p className="sm:col-span-3 text-xs text-red-500">{updateState.error}</p>
-          )}
-        </form>
+        {isManaging && (
+          <>
+            <form action={updateAction} className="mt-3 grid gap-2 sm:grid-cols-3">
+              <input type="hidden" name="expenseId" value={expense.id} />
+              <Select name="category" defaultValue={expense.category}>
+                {expenseCategories.map((category) => (
+                  <option key={category} value={category}>
+                    {formatCategory(category)}
+                  </option>
+                ))}
+              </Select>
+              <Input
+                name="amountDollars"
+                type="number"
+                min={0.01}
+                step="0.01"
+                defaultValue={expense.amountCents / 100}
+                required
+              />
+              <Input name="expenseDate" type="date" defaultValue={expense.expenseDate} required />
+              <Textarea
+                name="description"
+                rows={2}
+                defaultValue={expense.description ?? ""}
+                placeholder="Description"
+                className="sm:col-span-3"
+              />
+              <label className="flex items-center gap-2 text-xs text-zinc-600">
+                <input type="checkbox" name="recurring" value="true" defaultChecked={expense.recurring} />
+                Recurring
+              </label>
+              <Select name="recurringFrequency" defaultValue={expense.recurringFrequency ?? ""}>
+                <option value="">Not recurring</option>
+                {recurringFrequencies.map((frequency) => (
+                  <option key={frequency} value={frequency}>
+                    {formatCategory(frequency)}
+                  </option>
+                ))}
+              </Select>
+              <Select name="vendorId" defaultValue={expense.vendorId ?? ""}>
+                <option value="">No vendor linked</option>
+                {vendors.map((vendor) => (
+                  <option key={vendor.id} value={vendor.id}>
+                    {vendor.name}
+                  </option>
+                ))}
+              </Select>
+              <Select name="receiptFileId" defaultValue={expense.receiptFileId ?? ""}>
+                <option value="">No receipt file</option>
+                {receiptFiles.map((file) => (
+                  <option key={file.id} value={file.id}>
+                    {file.fileName}
+                  </option>
+                ))}
+              </Select>
+              <Input name="receiptFile" type="file" className="sm:col-span-2" />
+              <div className="sm:col-span-3 flex items-center gap-2">
+                <SubmitButton size="sm" variant="outline" title="Save updates to this expense.">
+                  Save Expense
+                </SubmitButton>
+                <Badge variant="outline">{dollars(expense.amountCents)}</Badge>
+              </div>
+              {updateState && !updateState.success && (
+                <p className="sm:col-span-3 text-xs text-red-500">{updateState.error}</p>
+              )}
+            </form>
 
-        <form
-          action={deleteAction}
-          className="mt-2"
-          onSubmit={(event) => {
-            if (!window.confirm("Delete this expense record?")) {
-              event.preventDefault();
-            }
-          }}
+            <form
+              action={deleteAction}
+              className="mt-2"
+              onSubmit={(event) => {
+                if (!window.confirm("Delete this expense record?")) {
+                  event.preventDefault();
+                }
+              }}
+            >
+              <input type="hidden" name="expenseId" value={expense.id} />
+              <Button type="submit" size="sm" variant="destructive" title="Delete this expense record permanently.">
+                Delete
+              </Button>
+              {deleteState && !deleteState.success && (
+                <p className="mt-1 text-xs text-red-500">{deleteState.error}</p>
+              )}
+            </form>
+          </>
+        )}
+      </div>
+
+      <div className="flex flex-col items-end gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant={isManaging ? "default" : "outline"}
+          onClick={() => setIsManaging((current) => !current)}
+          title={isManaging ? "Hide expense edit controls." : "Open expense edit controls."}
         >
-          <input type="hidden" name="expenseId" value={expense.id} />
-          <Button type="submit" size="sm" variant="destructive" title="Delete this expense record permanently.">
-            Delete
-          </Button>
-          {deleteState && !deleteState.success && (
-            <p className="mt-1 text-xs text-red-500">{deleteState.error}</p>
-          )}
-        </form>
+          {isManaging ? "Done" : "Manage"}
+        </Button>
       </div>
     </DataRow>
   );
