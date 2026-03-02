@@ -466,6 +466,16 @@ export function TesterToolsSection({
           }
         },
         {
+          id: "ownership-guided-ui",
+          label: "Ownership workflow shows one-step guidance",
+          previewPath: "/owner?testerPreview=true&mode=records&section=ownership",
+          run: () =>
+            checkPageForText(
+              "/owner?testerPreview=true&mode=records&section=ownership",
+              "Ownership Workflow"
+            )
+        },
+        {
           id: "expenses-owner-ui",
           label: "Owner workspace shows expenses section",
           previewPath: "/owner?testerPreview=true&mode=daily_ops&section=expenses",
