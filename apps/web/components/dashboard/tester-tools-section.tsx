@@ -225,21 +225,13 @@ export function TesterToolsSection({
 
   const lastGenerateMessage = useRef<string | null>(null);
   const lastCleanupMessage = useRef<string | null>(null);
-  const featureCardRefs = useRef<Record<FeatureTestId, HTMLDivElement | null>>({
-    platform_access: null,
-    billing_payments: null,
-    maintenance_vendors: null,
-    documents_files: null,
-    expenses_ownership: null,
-    seed_data_presence: null
-  });
+  const livePreviewCardRef = useRef<HTMLDivElement | null>(null);
 
   const workspacePathForRole = (role: PreviewRole) => `/${role}?testerPreview=true`;
 
-  const focusFeatureCard = (featureId: FeatureTestId) => {
-    const card = featureCardRefs.current[featureId];
-    if (!card) return;
-    card.scrollIntoView({ behavior: "smooth", block: "center" });
+  const focusLivePreview = () => {
+    if (!livePreviewCardRef.current) return;
+    livePreviewCardRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   useEffect(() => {
@@ -571,13 +563,14 @@ export function TesterToolsSection({
 
   const runFeatureTest = async (
     featureId: FeatureTestId,
-    options?: { fromWalkthrough?: boolean }
+    options?: { fromWalkthrough?: boolean; skipPreviewJump?: boolean }
   ): Promise<{ passed: boolean; failure: FailureEntry | null }> => {
     if (runningFeatureId) {
       return { passed: false, failure: null };
     }
 
     const fromWalkthrough = options?.fromWalkthrough ?? false;
+    const skipPreviewJump = options?.skipPreviewJump ?? false;
     const featureLabel = featureTests.find((item) => item.id === featureId)?.label ?? featureId;
 
     if (!fromWalkthrough) {
@@ -598,7 +591,9 @@ export function TesterToolsSection({
       });
     }
 
-    focusFeatureCard(featureId);
+    if (!skipPreviewJump) {
+      focusLivePreview();
+    }
 
     const checkpointDefs = buildCheckpoints(featureId);
     const initialCheckpoints: CheckpointResult[] = checkpointDefs.map((checkpoint) => ({
@@ -725,6 +720,7 @@ export function TesterToolsSection({
       startedAt,
       finishedAt: null
     });
+    focusLivePreview();
 
     const failures: FailureEntry[] = [];
     let passed = 0;
@@ -732,7 +728,10 @@ export function TesterToolsSection({
     let completed = 0;
 
     for (const feature of featureTests) {
-      const result = await runFeatureTest(feature.id, { fromWalkthrough: true });
+      const result = await runFeatureTest(feature.id, {
+        fromWalkthrough: true,
+        skipPreviewJump: true
+      });
       completed += 1;
       if (result.passed) {
         passed += 1;
@@ -909,13 +908,7 @@ export function TesterToolsSection({
               ].join(" ");
 
               return (
-                <div
-                  key={feature.id}
-                  ref={(node) => {
-                    featureCardRefs.current[feature.id] = node;
-                  }}
-                  className={featureCardClassName}
-                >
+                <div key={feature.id} className={featureCardClassName}>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm font-semibold text-zinc-900">{feature.label}</p>
@@ -1084,8 +1077,17 @@ export function TesterToolsSection({
         </CardContent>
       </Card>
 
+      <div>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+          Required Test Tools
+        </p>
+        <p className="mb-3 text-xs text-zinc-500">
+          Only the tools needed to prepare test records and watch live checkpoints are shown here.
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card>
+        <Card ref={livePreviewCardRef}>
           <CardHeader>
             <CardTitle>Test Data Generator</CardTitle>
           </CardHeader>
