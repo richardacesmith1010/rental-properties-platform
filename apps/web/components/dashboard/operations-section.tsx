@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useFormState } from "react-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -40,12 +40,48 @@ interface LeaseDraft {
   depositDollars: string;
 }
 
+interface PropertyDraft {
+  name: string;
+  addressLine1: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  ownerAccountId: string;
+}
+
+interface UnitDraft {
+  propertyId: string;
+  unitNumber: string;
+  bedrooms: string;
+  bathrooms: string;
+  monthlyRentDollars: string;
+}
+
 const LEASE_STEP_LABELS = [
   "Pick Property",
   "Pick Unit",
   "Pick Tenant",
   "Set Lease Dates",
   "Set Billing Terms",
+  "Review & Save"
+] as const;
+
+const PROPERTY_STEP_LABELS = [
+  "Property Name",
+  "Street Address",
+  "City",
+  "State",
+  "ZIP Code",
+  "Ownership Account",
+  "Review & Save"
+] as const;
+
+const UNIT_STEP_LABELS = [
+  "Pick Property",
+  "Unit Label",
+  "Bedrooms",
+  "Bathrooms",
+  "Default Rent",
   "Review & Save"
 ] as const;
 
@@ -84,8 +120,27 @@ export function OperationsSection({
   const handledUnitStateRef = useRef<ActionState>(null);
   const handledLeaseStateRef = useRef<ActionState>(null);
   const [activeTask, setActiveTask] = useState<OperationTask>("property");
+  const [propertyStepIndex, setPropertyStepIndex] = useState(0);
+  const [unitStepIndex, setUnitStepIndex] = useState(0);
   const [leaseStepIndex, setLeaseStepIndex] = useState(0);
+  const [skippedPropertySteps, setSkippedPropertySteps] = useState<number[]>([]);
+  const [skippedUnitSteps, setSkippedUnitSteps] = useState<number[]>([]);
   const [skippedLeaseSteps, setSkippedLeaseSteps] = useState<number[]>([]);
+  const [propertyDraft, setPropertyDraft] = useState<PropertyDraft>({
+    name: "",
+    addressLine1: "",
+    city: "",
+    state: "",
+    postalCode: "",
+    ownerAccountId: ""
+  });
+  const [unitDraft, setUnitDraft] = useState<UnitDraft>({
+    propertyId: "",
+    unitNumber: "",
+    bedrooms: "1",
+    bathrooms: "1",
+    monthlyRentDollars: ""
+  });
   const [leaseDraft, setLeaseDraft] = useState<LeaseDraft>({
     propertyId: "",
     unitId: "",
@@ -96,6 +151,85 @@ export function OperationsSection({
     monthlyRentDollars: "",
     depositDollars: "0"
   });
+
+  const propertyRequiredComplete = useMemo(() => {
+    return Boolean(
+      propertyDraft.name &&
+        propertyDraft.addressLine1 &&
+        propertyDraft.city &&
+        propertyDraft.state &&
+        propertyDraft.postalCode
+    );
+  }, [propertyDraft]);
+
+  const propertyStepComplete = (step: number) => {
+    if (step === 0) return Boolean(propertyDraft.name);
+    if (step === 1) return Boolean(propertyDraft.addressLine1);
+    if (step === 2) return Boolean(propertyDraft.city);
+    if (step === 3) return Boolean(propertyDraft.state);
+    if (step === 4) return Boolean(propertyDraft.postalCode);
+    if (step === 5) return true;
+    return propertyRequiredComplete;
+  };
+
+  const unitRequiredComplete = useMemo(() => {
+    return Boolean(
+      unitDraft.propertyId &&
+        unitDraft.unitNumber &&
+        unitDraft.bedrooms &&
+        unitDraft.bathrooms &&
+        unitDraft.monthlyRentDollars
+    );
+  }, [unitDraft]);
+
+  const unitStepComplete = (step: number) => {
+    if (step === 0) return Boolean(unitDraft.propertyId);
+    if (step === 1) return Boolean(unitDraft.unitNumber);
+    if (step === 2) return Boolean(unitDraft.bedrooms);
+    if (step === 3) return Boolean(unitDraft.bathrooms);
+    if (step === 4) return Boolean(unitDraft.monthlyRentDollars);
+    return unitRequiredComplete;
+  };
+
+  const markPropertyStepSkipped = (step: number) => {
+    setSkippedPropertySteps((previous) =>
+      previous.includes(step) ? previous : [...previous, step]
+    );
+  };
+
+  const markUnitStepSkipped = (step: number) => {
+    setSkippedUnitSteps((previous) =>
+      previous.includes(step) ? previous : [...previous, step]
+    );
+  };
+
+  const moveToNextPropertyStep = () => {
+    setPropertyStepIndex((current) => Math.min(current + 1, PROPERTY_STEP_LABELS.length - 1));
+  };
+
+  const moveToPreviousPropertyStep = () => {
+    setPropertyStepIndex((current) => Math.max(current - 1, 0));
+  };
+
+  const moveToNextUnitStep = () => {
+    setUnitStepIndex((current) => Math.min(current + 1, UNIT_STEP_LABELS.length - 1));
+  };
+
+  const moveToPreviousUnitStep = () => {
+    setUnitStepIndex((current) => Math.max(current - 1, 0));
+  };
+
+  const handleEnterAdvance = (
+    event: KeyboardEvent<HTMLInputElement | HTMLSelectElement>,
+    canAdvance: boolean,
+    moveNext: () => void
+  ) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    if (canAdvance) {
+      moveNext();
+    }
+  };
 
   const unitsForSelectedProperty = useMemo(
     () =>
@@ -150,23 +284,42 @@ export function OperationsSection({
   };
 
   useEffect(() => {
-    if (!propertyState?.success || !onPropertyCreated) return;
+    if (!propertyState?.success) return;
     if (handledPropertyStateRef.current === propertyState) return;
     handledPropertyStateRef.current = propertyState;
+    setPropertyStepIndex(0);
+    setSkippedPropertySteps([]);
+    setPropertyDraft({
+      name: "",
+      addressLine1: "",
+      city: "",
+      state: "",
+      postalCode: "",
+      ownerAccountId: ""
+    });
     setActiveTask("unit");
-    onPropertyCreated();
+    onPropertyCreated?.();
   }, [onPropertyCreated, propertyState]);
 
   useEffect(() => {
-    if (!unitState?.success || !onUnitCreated) return;
+    if (!unitState?.success) return;
     if (handledUnitStateRef.current === unitState) return;
     handledUnitStateRef.current = unitState;
+    setUnitStepIndex(0);
+    setSkippedUnitSteps([]);
+    setUnitDraft({
+      propertyId: "",
+      unitNumber: "",
+      bedrooms: "1",
+      bathrooms: "1",
+      monthlyRentDollars: ""
+    });
     setActiveTask("lease");
-    onUnitCreated();
+    onUnitCreated?.();
   }, [onUnitCreated, unitState]);
 
   useEffect(() => {
-    if (!leaseState?.success || !onLeaseCreated) return;
+    if (!leaseState?.success) return;
     if (handledLeaseStateRef.current === leaseState) return;
     handledLeaseStateRef.current = leaseState;
     setLeaseStepIndex(0);
@@ -181,8 +334,360 @@ export function OperationsSection({
       monthlyRentDollars: "",
       depositDollars: "0"
     });
-    onLeaseCreated();
+    onLeaseCreated?.();
   }, [leaseState, onLeaseCreated]);
+
+  const renderPropertyStep = () => {
+    if (propertyStepIndex === 0) {
+      return (
+        <div className="space-y-3">
+          <p className="text-sm text-zinc-600">
+            Step 1: Property name. This is the label owners/managers will see everywhere.
+          </p>
+          <Input
+            value={propertyDraft.name}
+            onChange={(event) =>
+              setPropertyDraft((current) => ({
+                ...current,
+                name: event.target.value
+              }))
+            }
+            onKeyDown={(event) =>
+              handleEnterAdvance(event, propertyStepComplete(propertyStepIndex), moveToNextPropertyStep)
+            }
+            placeholder="Example: Elm Street House"
+            required
+          />
+        </div>
+      );
+    }
+
+    if (propertyStepIndex === 1) {
+      return (
+        <div className="space-y-3">
+          <p className="text-sm text-zinc-600">
+            Step 2: Street address. This is the full street line for the property.
+          </p>
+          <Input
+            value={propertyDraft.addressLine1}
+            onChange={(event) =>
+              setPropertyDraft((current) => ({
+                ...current,
+                addressLine1: event.target.value
+              }))
+            }
+            onKeyDown={(event) =>
+              handleEnterAdvance(event, propertyStepComplete(propertyStepIndex), moveToNextPropertyStep)
+            }
+            placeholder="123 Main St"
+            required
+          />
+        </div>
+      );
+    }
+
+    if (propertyStepIndex === 2) {
+      return (
+        <div className="space-y-3">
+          <p className="text-sm text-zinc-600">
+            Step 3: City. This drives mailing, filtering, and local reporting.
+          </p>
+          <Input
+            value={propertyDraft.city}
+            onChange={(event) =>
+              setPropertyDraft((current) => ({
+                ...current,
+                city: event.target.value
+              }))
+            }
+            onKeyDown={(event) =>
+              handleEnterAdvance(event, propertyStepComplete(propertyStepIndex), moveToNextPropertyStep)
+            }
+            placeholder="City"
+            required
+          />
+        </div>
+      );
+    }
+
+    if (propertyStepIndex === 3) {
+      return (
+        <div className="space-y-3">
+          <p className="text-sm text-zinc-600">
+            Step 4: State abbreviation (for example, CO).
+          </p>
+          <Input
+            value={propertyDraft.state}
+            onChange={(event) =>
+              setPropertyDraft((current) => ({
+                ...current,
+                state: event.target.value.toUpperCase()
+              }))
+            }
+            onKeyDown={(event) =>
+              handleEnterAdvance(event, propertyStepComplete(propertyStepIndex), moveToNextPropertyStep)
+            }
+            placeholder="State"
+            maxLength={2}
+            required
+          />
+        </div>
+      );
+    }
+
+    if (propertyStepIndex === 4) {
+      return (
+        <div className="space-y-3">
+          <p className="text-sm text-zinc-600">
+            Step 5: ZIP code. This is required for property records.
+          </p>
+          <Input
+            value={propertyDraft.postalCode}
+            onChange={(event) =>
+              setPropertyDraft((current) => ({
+                ...current,
+                postalCode: event.target.value
+              }))
+            }
+            onKeyDown={(event) =>
+              handleEnterAdvance(event, propertyStepComplete(propertyStepIndex), moveToNextPropertyStep)
+            }
+            placeholder="ZIP code"
+            required
+          />
+        </div>
+      );
+    }
+
+    if (propertyStepIndex === 5) {
+      return (
+        <div className="space-y-3">
+          <p className="text-sm text-zinc-600">
+            Step 6: Ownership account (optional). Leave blank to use your default account.
+          </p>
+          <Select
+            value={propertyDraft.ownerAccountId}
+            onChange={(event) =>
+              setPropertyDraft((current) => ({
+                ...current,
+                ownerAccountId: event.target.value
+              }))
+            }
+            onKeyDown={(event) =>
+              handleEnterAdvance(event, true, moveToNextPropertyStep)
+            }
+          >
+            <option value="">Default ownership account</option>
+            {ownershipAccounts.map((account) => (
+              <option key={account.id} value={account.id}>
+                {account.displayName}
+              </option>
+            ))}
+          </Select>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-zinc-600">Final step: review and save the property.</p>
+        <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-700">
+          <p><span className="font-semibold">Name:</span> {propertyDraft.name || "Not set"}</p>
+          <p><span className="font-semibold">Address:</span> {propertyDraft.addressLine1 || "Not set"}</p>
+          <p><span className="font-semibold">City:</span> {propertyDraft.city || "Not set"}</p>
+          <p><span className="font-semibold">State:</span> {propertyDraft.state || "Not set"}</p>
+          <p><span className="font-semibold">ZIP:</span> {propertyDraft.postalCode || "Not set"}</p>
+          <p><span className="font-semibold">Ownership:</span> {ownershipAccounts.find((account) => account.id === propertyDraft.ownerAccountId)?.displayName ?? "Default ownership account"}</p>
+        </div>
+        {!propertyRequiredComplete && (
+          <p className="text-xs text-amber-700">
+            Required details are still missing. Complete all required steps before save.
+          </p>
+        )}
+        <form className="space-y-2" action={propertyAction}>
+          <input type="hidden" name="name" value={propertyDraft.name} />
+          <input type="hidden" name="addressLine1" value={propertyDraft.addressLine1} />
+          <input type="hidden" name="city" value={propertyDraft.city} />
+          <input type="hidden" name="state" value={propertyDraft.state} />
+          <input type="hidden" name="postalCode" value={propertyDraft.postalCode} />
+          <input type="hidden" name="ownerAccountId" value={propertyDraft.ownerAccountId} />
+          <SubmitButton
+            className="w-full"
+            title="Save this property."
+            disabled={!propertyRequiredComplete}
+          >
+            Save Property
+          </SubmitButton>
+        </form>
+      </div>
+    );
+  };
+
+  const renderUnitStep = () => {
+    if (unitStepIndex === 0) {
+      return (
+        <div className="space-y-3">
+          <p className="text-sm text-zinc-600">
+            Step 1: Pick the property this unit belongs to.
+          </p>
+          <Select
+            value={unitDraft.propertyId}
+            onChange={(event) =>
+              setUnitDraft((current) => ({
+                ...current,
+                propertyId: event.target.value
+              }))
+            }
+            onKeyDown={(event) =>
+              handleEnterAdvance(event, unitStepComplete(unitStepIndex), moveToNextUnitStep)
+            }
+            required
+          >
+            <option value="">Select property</option>
+            {portfolio.properties.map((property) => (
+              <option key={property.id} value={property.id}>
+                {property.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+      );
+    }
+
+    if (unitStepIndex === 1) {
+      return (
+        <div className="space-y-3">
+          <p className="text-sm text-zinc-600">
+            Step 2: Unit label. This is what tenants and staff will reference.
+          </p>
+          <Input
+            value={unitDraft.unitNumber}
+            onChange={(event) =>
+              setUnitDraft((current) => ({
+                ...current,
+                unitNumber: event.target.value
+              }))
+            }
+            onKeyDown={(event) =>
+              handleEnterAdvance(event, unitStepComplete(unitStepIndex), moveToNextUnitStep)
+            }
+            placeholder="Example: Unit 2B"
+            required
+          />
+        </div>
+      );
+    }
+
+    if (unitStepIndex === 2) {
+      return (
+        <div className="space-y-3">
+          <p className="text-sm text-zinc-600">
+            Step 3: Bedrooms count.
+          </p>
+          <Input
+            type="number"
+            min={0}
+            value={unitDraft.bedrooms}
+            onChange={(event) =>
+              setUnitDraft((current) => ({
+                ...current,
+                bedrooms: event.target.value
+              }))
+            }
+            onKeyDown={(event) =>
+              handleEnterAdvance(event, unitStepComplete(unitStepIndex), moveToNextUnitStep)
+            }
+            required
+          />
+        </div>
+      );
+    }
+
+    if (unitStepIndex === 3) {
+      return (
+        <div className="space-y-3">
+          <p className="text-sm text-zinc-600">
+            Step 4: Bathrooms count. Decimals are allowed (example: 1.5).
+          </p>
+          <Input
+            type="number"
+            min={0}
+            step="0.5"
+            value={unitDraft.bathrooms}
+            onChange={(event) =>
+              setUnitDraft((current) => ({
+                ...current,
+                bathrooms: event.target.value
+              }))
+            }
+            onKeyDown={(event) =>
+              handleEnterAdvance(event, unitStepComplete(unitStepIndex), moveToNextUnitStep)
+            }
+            required
+          />
+        </div>
+      );
+    }
+
+    if (unitStepIndex === 4) {
+      return (
+        <div className="space-y-3">
+          <p className="text-sm text-zinc-600">
+            Step 5: Default monthly rent for this unit.
+          </p>
+          <Input
+            type="number"
+            min={1}
+            step="0.01"
+            value={unitDraft.monthlyRentDollars}
+            onChange={(event) =>
+              setUnitDraft((current) => ({
+                ...current,
+                monthlyRentDollars: event.target.value
+              }))
+            }
+            onKeyDown={(event) =>
+              handleEnterAdvance(event, unitStepComplete(unitStepIndex), moveToNextUnitStep)
+            }
+            placeholder="Monthly rent (USD)"
+            required
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-zinc-600">Final step: review and save the unit.</p>
+        <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-700">
+          <p><span className="font-semibold">Property:</span> {portfolio.properties.find((property) => property.id === unitDraft.propertyId)?.name ?? "Not set"}</p>
+          <p><span className="font-semibold">Unit Label:</span> {unitDraft.unitNumber || "Not set"}</p>
+          <p><span className="font-semibold">Bedrooms:</span> {unitDraft.bedrooms || "Not set"}</p>
+          <p><span className="font-semibold">Bathrooms:</span> {unitDraft.bathrooms || "Not set"}</p>
+          <p><span className="font-semibold">Default Rent:</span> {unitDraft.monthlyRentDollars ? `$${unitDraft.monthlyRentDollars}` : "Not set"}</p>
+        </div>
+        {!unitRequiredComplete && (
+          <p className="text-xs text-amber-700">
+            Required details are still missing. Complete all required steps before save.
+          </p>
+        )}
+        <form className="space-y-2" action={unitAction}>
+          <input type="hidden" name="propertyId" value={unitDraft.propertyId} />
+          <input type="hidden" name="unitNumber" value={unitDraft.unitNumber} />
+          <input type="hidden" name="bedrooms" value={unitDraft.bedrooms} />
+          <input type="hidden" name="bathrooms" value={unitDraft.bathrooms} />
+          <input type="hidden" name="monthlyRentDollars" value={unitDraft.monthlyRentDollars} />
+          <SubmitButton
+            className="w-full"
+            title="Save this unit."
+            disabled={!unitRequiredComplete}
+          >
+            Save Unit
+          </SubmitButton>
+        </form>
+      </div>
+    );
+  };
 
   const renderLeaseStep = () => {
     if (leaseStepIndex === 0) {
@@ -439,29 +944,67 @@ export function OperationsSection({
         <Card className="mx-auto max-w-3xl">
           <CardHeader>
             <CardTitle>Add Property</CardTitle>
-            <p className="text-xs text-zinc-500">Create the property first. Units and leases depend on this.</p>
+            <p className="text-xs text-zinc-500">One field at a time. Press Enter or click Next.</p>
           </CardHeader>
-          <CardContent>
-            <form className="space-y-3" action={propertyAction}>
-              <FormError state={propertyState} />
-              <FormSuccess state={propertyState} />
-              <Input name="name" placeholder="Property name" required />
-              <Input name="addressLine1" placeholder="Street address" required />
-              <Input name="city" placeholder="City" required />
-              <Input name="state" placeholder="State" required />
-              <Input name="postalCode" placeholder="ZIP" required />
-              <Select name="ownerAccountId">
-                <option value="">Default ownership account</option>
-                {ownershipAccounts.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.displayName}
-                  </option>
-                ))}
-              </Select>
-              <SubmitButton className="w-full" title="Create this property in your workspace.">
-                Save Property
-              </SubmitButton>
-            </form>
+          <CardContent className="space-y-4">
+            <FormError state={propertyState} />
+            <FormSuccess state={propertyState} />
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {PROPERTY_STEP_LABELS.map((label, index) => (
+                <div
+                  key={label}
+                  className={`rounded-md border px-2 py-2 text-xs ${
+                    propertyStepIndex === index
+                      ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+                      : propertyStepComplete(index)
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : skippedPropertySteps.includes(index)
+                          ? "border-amber-200 bg-amber-50 text-amber-700"
+                          : "border-zinc-200 bg-zinc-50 text-zinc-500"
+                  }`}
+                >
+                  {label}
+                </div>
+              ))}
+            </div>
+
+            {renderPropertyStep()}
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={moveToPreviousPropertyStep}
+                disabled={propertyStepIndex === 0}
+                title="Go back one step."
+              >
+                Back
+              </Button>
+              <Button
+                type="button"
+                onClick={moveToNextPropertyStep}
+                disabled={
+                  propertyStepIndex >= PROPERTY_STEP_LABELS.length - 1 ||
+                  !propertyStepComplete(propertyStepIndex)
+                }
+                title="Complete this step and move to the next step."
+              >
+                Next
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  markPropertyStepSkipped(propertyStepIndex);
+                  moveToNextPropertyStep();
+                }}
+                disabled={propertyStepIndex >= PROPERTY_STEP_LABELS.length - 1}
+                title="Skip this step for now and continue."
+              >
+                Skip for now
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -470,50 +1013,67 @@ export function OperationsSection({
         <Card className="mx-auto max-w-3xl">
           <CardHeader>
             <CardTitle>Add Unit</CardTitle>
-            <p className="text-xs text-zinc-500">Add a unit under an existing property.</p>
+            <p className="text-xs text-zinc-500">One field at a time. Press Enter or click Next.</p>
           </CardHeader>
-          <CardContent>
-            <form className="space-y-3" action={unitAction}>
-              <FormError state={unitState} />
-              <FormSuccess state={unitState} />
-              <Select name="propertyId" required>
-                <option value="">Select property</option>
-                {portfolio.properties.map((property) => (
-                  <option key={property.id} value={property.id}>
-                    {property.name}
-                  </option>
-                ))}
-              </Select>
-              <Input name="unitNumber" placeholder="Unit number (ex: 2B)" required />
-              <Input
-                name="bedrooms"
-                type="number"
-                min={0}
-                placeholder="Bedrooms"
-                defaultValue={1}
-                required
-              />
-              <Input
-                name="bathrooms"
-                type="number"
-                min={0}
-                step="0.5"
-                placeholder="Bathrooms"
-                defaultValue={1}
-                required
-              />
-              <Input
-                name="monthlyRentDollars"
-                type="number"
-                min={1}
-                step="0.01"
-                placeholder="Monthly rent (USD)"
-                required
-              />
-              <SubmitButton className="w-full" title="Create this unit under the selected property.">
-                Save Unit
-              </SubmitButton>
-            </form>
+          <CardContent className="space-y-4">
+            <FormError state={unitState} />
+            <FormSuccess state={unitState} />
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {UNIT_STEP_LABELS.map((label, index) => (
+                <div
+                  key={label}
+                  className={`rounded-md border px-2 py-2 text-xs ${
+                    unitStepIndex === index
+                      ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+                      : unitStepComplete(index)
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : skippedUnitSteps.includes(index)
+                          ? "border-amber-200 bg-amber-50 text-amber-700"
+                          : "border-zinc-200 bg-zinc-50 text-zinc-500"
+                  }`}
+                >
+                  {label}
+                </div>
+              ))}
+            </div>
+
+            {renderUnitStep()}
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={moveToPreviousUnitStep}
+                disabled={unitStepIndex === 0}
+                title="Go back one step."
+              >
+                Back
+              </Button>
+              <Button
+                type="button"
+                onClick={moveToNextUnitStep}
+                disabled={
+                  unitStepIndex >= UNIT_STEP_LABELS.length - 1 ||
+                  !unitStepComplete(unitStepIndex)
+                }
+                title="Complete this step and move to the next step."
+              >
+                Next
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  markUnitStepSkipped(unitStepIndex);
+                  moveToNextUnitStep();
+                }}
+                disabled={unitStepIndex >= UNIT_STEP_LABELS.length - 1}
+                title="Skip this step for now and continue."
+              >
+                Skip for now
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
