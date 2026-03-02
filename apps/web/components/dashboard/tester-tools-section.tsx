@@ -393,6 +393,16 @@ export function TesterToolsSection({
               "/owner?testerPreview=true&mode=new_manager&section=vendors",
               "One field at a time. Press Enter or Next to continue."
             )
+        },
+        {
+          id: "tenant-maintenance-guided-ui",
+          label: "Tenant maintenance request workflow is guided",
+          previewPath: "/tenant?testerPreview=true",
+          run: () =>
+            checkPageForText(
+              "/tenant?testerPreview=true",
+              "One field at a time. Press Enter or Next to continue."
+            )
         }
       ];
     }
