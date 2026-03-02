@@ -74,6 +74,8 @@ interface DashboardProps {
   ownershipAccounts?: OwnershipAccountDTO[];
   generatedMessage?: string | null;
   initialSectionId?: string | null;
+  initialOwnerWorkflowMode?: OwnerWorkflowMode;
+  initialManagerWorkflowMode?: ManagerWorkflowMode;
   userEmail: string;
   showTesterLink?: boolean;
   onGenerateChargesHref?: string;
@@ -182,6 +184,8 @@ export function Dashboard({
   ownershipAccounts,
   generatedMessage,
   initialSectionId,
+  initialOwnerWorkflowMode,
+  initialManagerWorkflowMode,
   userEmail,
   showTesterLink = false,
   onGenerateChargesHref,
@@ -280,8 +284,12 @@ export function Dashboard({
   );
   const isOwnerRole = data.profileRole === "owner";
   const isManagerRole = data.profileRole === "manager";
-  const [ownerWorkflowMode, setOwnerWorkflowMode] = useState<OwnerWorkflowMode>("daily_ops");
-  const [managerWorkflowMode, setManagerWorkflowMode] = useState<ManagerWorkflowMode>("daily_ops");
+  const [ownerWorkflowMode, setOwnerWorkflowMode] = useState<OwnerWorkflowMode>(
+    initialOwnerWorkflowMode ?? "daily_ops"
+  );
+  const [managerWorkflowMode, setManagerWorkflowMode] = useState<ManagerWorkflowMode>(
+    initialManagerWorkflowMode ?? "daily_ops"
+  );
 
   const allSectionItems = useMemo<NavItem[]>(() => {
     const items: NavItem[] = [

@@ -60,6 +60,7 @@ interface OwnerPageProps {
     generated?: string | string[];
     testerPreview?: string | string[];
     section?: string | string[];
+    mode?: string | string[];
   };
 }
 
@@ -80,6 +81,20 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
 
   const capabilities = await getFeatureCapabilities();
   const generatedMessage = getGeneratedMessage(searchParams?.generated);
+  const ownerMode =
+    typeof searchParams?.mode === "string"
+      ? searchParams.mode
+      : Array.isArray(searchParams?.mode)
+        ? searchParams.mode[0] ?? null
+        : null;
+  const initialOwnerWorkflowMode =
+    ownerMode === "daily_ops" ||
+    ownerMode === "new_property" ||
+    ownerMode === "new_tenant" ||
+    ownerMode === "new_manager" ||
+    ownerMode === "records"
+      ? ownerMode
+      : undefined;
   const initialSectionId =
     typeof searchParams?.section === "string"
       ? searchParams.section
@@ -125,6 +140,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       expensesData={expenses}
       ownershipAccounts={ownershipAccounts}
       capabilities={capabilities}
+      initialOwnerWorkflowMode={initialOwnerWorkflowMode}
       initialSectionId={initialSectionId}
       userEmail={user.email ?? "unknown"}
       showTesterLink={testerAccess}

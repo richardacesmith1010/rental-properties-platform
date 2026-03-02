@@ -307,6 +307,12 @@ export function TesterToolsSection({
           run: () => checkPageForText("/login", "Domus")
         },
         {
+          id: "platform-marketing",
+          label: "Logged-in marketing page route loads",
+          previewPath: "/marketing",
+          run: () => checkPageForText("/marketing", "Launch Domus")
+        },
+        {
           id: "platform-tester",
           label: "Tester diagnostics page loads",
           previewPath: "/tester",
@@ -338,10 +344,10 @@ export function TesterToolsSection({
         {
           id: "billing-owner-ui",
           label: "Owner workspace shows charges section",
-          previewPath: "/owner?testerPreview=true&section=charges",
+          previewPath: "/owner?testerPreview=true&mode=daily_ops&section=charges",
           run: () =>
             checkPageForText(
-              "/owner?testerPreview=true&section=charges",
+              "/owner?testerPreview=true&mode=daily_ops&section=charges",
               "Upcoming / Late Charges"
             )
         },
@@ -371,8 +377,12 @@ export function TesterToolsSection({
         {
           id: "maintenance-owner-ui",
           label: "Owner workspace shows maintenance section",
-          previewPath: "/owner?testerPreview=true",
-          run: () => checkPageForText("/owner?testerPreview=true", "Maintenance")
+          previewPath: "/owner?testerPreview=true&mode=daily_ops&section=maintenance",
+          run: () =>
+            checkPageForText(
+              "/owner?testerPreview=true&mode=daily_ops&section=maintenance",
+              "Maintenance Tickets"
+            )
         }
       ];
     }
@@ -382,7 +392,7 @@ export function TesterToolsSection({
         {
           id: "documents-capability",
           label: "Documents capability is enabled",
-          previewPath: "/owner?testerPreview=true",
+          previewPath: "/owner?testerPreview=true&mode=records&section=documents",
           run: async () => {
             if (!capabilities.documentsEnabled) {
               throw new Error("documentsEnabled is false.");
@@ -393,13 +403,13 @@ export function TesterToolsSection({
         {
           id: "documents-packets-table",
           label: "Document packets table is healthy",
-          previewPath: "/owner?testerPreview=true",
+          previewPath: "/owner?testerPreview=true&mode=records&section=documents",
           run: async () => readHealthStatus("document_packets")
         },
         {
           id: "documents-files-table",
           label: "Property files table is healthy",
-          previewPath: "/owner?testerPreview=true",
+          previewPath: "/owner?testerPreview=true&mode=records&section=documents",
           run: async () => readHealthStatus("property_files")
         },
         {
@@ -438,8 +448,32 @@ export function TesterToolsSection({
         {
           id: "expenses-owner-ui",
           label: "Owner workspace shows expenses section",
-          previewPath: "/owner?testerPreview=true",
-          run: () => checkPageForText("/owner?testerPreview=true", "Expenses")
+          previewPath: "/owner?testerPreview=true&mode=daily_ops&section=expenses",
+          run: () =>
+            checkPageForText(
+              "/owner?testerPreview=true&mode=daily_ops&section=expenses",
+              "Expense Ledger"
+            )
+        },
+        {
+          id: "operations-guided-ui",
+          label: "Operations workflow shows one-step guidance",
+          previewPath: "/owner?testerPreview=true&mode=new_property&section=operations",
+          run: () =>
+            checkPageForText(
+              "/owner?testerPreview=true&mode=new_property&section=operations",
+              "One field at a time. Press Enter or click Next."
+            )
+        },
+        {
+          id: "invitations-guided-ui",
+          label: "Invitations workflow shows one-step guidance",
+          previewPath: "/owner?testerPreview=true&mode=new_tenant&section=invitations",
+          run: () =>
+            checkPageForText(
+              "/owner?testerPreview=true&mode=new_tenant&section=invitations",
+              "Invitation Workflow"
+            )
         }
       ];
     }

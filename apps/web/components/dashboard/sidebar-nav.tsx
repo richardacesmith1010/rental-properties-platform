@@ -247,6 +247,13 @@ export function SidebarNav({
           Portal Home
         </a>
         <a
+          href="/marketing"
+          className="block rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+          title="Open the public marketing page while staying signed in."
+        >
+          Marketing
+        </a>
+        <a
           href={workspacePath}
           className="block rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
           title="Return to your main workspace for this role."
@@ -386,6 +393,13 @@ export function MobileTopBar({
           title="Go to role home screen."
         >
           Home
+        </a>
+        <a
+          href="/marketing"
+          className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+          title="Open the public marketing page while staying signed in."
+        >
+          Marketing
         </a>
         {showTesterLink && (
           <a

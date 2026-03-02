@@ -55,6 +55,7 @@ interface ManagerPageProps {
     generated?: string | string[];
     testerPreview?: string | string[];
     section?: string | string[];
+    mode?: string | string[];
   };
 }
 
@@ -82,6 +83,19 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
 
   const capabilities = await getFeatureCapabilities();
   const generatedMessage = getGeneratedMessage(searchParams?.generated);
+  const managerMode =
+    typeof searchParams?.mode === "string"
+      ? searchParams.mode
+      : Array.isArray(searchParams?.mode)
+        ? searchParams.mode[0] ?? null
+        : null;
+  const initialManagerWorkflowMode =
+    managerMode === "daily_ops" ||
+    managerMode === "new_property" ||
+    managerMode === "new_tenant" ||
+    managerMode === "vendor_ops"
+      ? managerMode
+      : undefined;
   const initialSectionId =
     typeof searchParams?.section === "string"
       ? searchParams.section
@@ -126,6 +140,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       vendors={vendors}
       ownershipAccounts={ownershipAccounts}
       capabilities={capabilities}
+      initialManagerWorkflowMode={initialManagerWorkflowMode}
       initialSectionId={initialSectionId}
       userEmail={user.email ?? "unknown"}
       showTesterLink={testerAccess}
