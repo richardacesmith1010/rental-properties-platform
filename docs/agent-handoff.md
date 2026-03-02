@@ -625,3 +625,71 @@ NEXT_ACTION=tag v1.0.0
    - `automationsEnabled`
 3. Record verification output in handoff with exact SQL and query results.
 
+
+## V2 Phase A Runtime Packet (Codex)
+
+- Timestamp (UTC): `2026-03-02T13:33:53Z`
+- Branch: `main`
+- Base HEAD before this packet: `a3a7b46`
+
+### Codex updates completed
+
+1. Added local migration scaffold for V2 Phase A DB runtime:
+   - `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260302_phase10_leasing_inbox_automations.sql`
+2. Added runtime verifier:
+   - `/Users/courtneysmith/Documents/Codex/Rental Properties/scripts/verify-phase10-runtime.mjs`
+3. Added npm script:
+   - `verify:phase10-runtime`
+4. Hardened verifier accuracy:
+   - Updated `/Users/courtneysmith/Documents/Codex/Rental Properties/scripts/verify-phase9-runtime.mjs` to avoid false-positive table checks.
+5. Updated docs packet/checklist:
+   - `/Users/courtneysmith/Documents/Codex/Rental Properties/docs/claude-runtime-apply.md`
+   - `/Users/courtneysmith/Documents/Codex/Rental Properties/docs/release-checklist.md`
+
+### Validation run (Codex)
+
+1. `npm run verify:phase9-runtime` => `ok: true`
+2. `npm run verify:phase10-runtime` => `ok: false`
+   - failing checks: all Phase A tables not found in schema cache (`PGRST205`)
+   - failing seed check: `automation_templates` keys missing because table not present
+3. `npm run gate:web` => PASS
+4. `APP_URL=https://rental-properties-platform-web.vercel.app npm run smoke:web` => PASS
+
+### Interpretation
+
+- App code is release-stable and already gating Phase A features safely.
+- Live Supabase runtime has **not** applied V2 Phase A schema yet.
+- Next unblock is DB apply + runtime proof.
+
+### Next Claude Prompt (copy/paste)
+
+```text
+Continue V2 Phase A DB runtime apply + proof.
+
+Repo: /Users/courtneysmith/Documents/Codex/Rental Properties
+Branch: main
+
+1) Apply this migration to live Supabase SQL editor:
+/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260302_phase10_leasing_inbox_automations.sql
+
+2) From repo root run:
+npm run verify:phase10-runtime
+
+3) Append proof to:
+/Users/courtneysmith/Documents/Codex/Rental Properties/docs/agent-handoff.md
+
+Include:
+- UTC timestamp
+- migration execution status (executed now vs already present)
+- verify JSON summary fields:
+  - ok
+  - summary.tablesReady
+  - summary.phase9FunctionsReady
+  - summary.templateSeedsReady
+- failing check names + exact error text (if any)
+
+4) Stop if verify is false and return:
+DB_RUNTIME_OK=true|false
+BLOCKERS=<none or exact blocker>
+NEXT_ACTION=<single next action>
+```

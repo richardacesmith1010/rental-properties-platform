@@ -34,6 +34,7 @@ Run/verify Supabase migrations in order:
 8. `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase8_documents_notifications_maintenance.sql`
 9. `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260228_phase9_llc_and_shared_operator_access.sql`
 10. `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260301_phase9_owner_account_columns_delta.sql` (only required for partially-applied live Phase 9 states)
+11. `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260302_phase10_leasing_inbox_automations.sql` (required for V2 Phase A leasing/inbox/flows persistence)
 
 Verify private buckets:
 
@@ -87,10 +88,35 @@ Manual equivalent:
 
 ```bash
 npm run verify:phase9-runtime
+npm run verify:phase10-runtime
 npm test --workspace @domus/web
 npm run lint:web
 npm run build:web
 npx tsc -p apps/mobile/tsconfig.json --noEmit
+```
+
+## 9) V2 Phase A Runtime Readiness
+
+Confirm these objects exist in live Supabase:
+
+- Leasing tables:
+  - `rental_listings`
+  - `rental_applications`
+  - `screening_reports`
+  - `application_events`
+- Inbox tables:
+  - `inbox_threads`
+  - `inbox_messages`
+  - `message_deliveries`
+- Automation tables:
+  - `automation_templates`
+  - `automation_rules`
+  - `automation_runs`
+
+Verify runtime state:
+
+```bash
+npm run verify:phase10-runtime
 ```
 
 ## 6) Deployment + Smoke

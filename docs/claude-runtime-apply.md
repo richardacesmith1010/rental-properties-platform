@@ -1,4 +1,4 @@
-# Claude Runtime Apply Packet (Phase 9 Delta)
+# Claude Runtime Apply Packet (Phase 9 + V2 Phase A)
 
 ## Purpose
 Use this packet to finish live Phase 9 runtime rollout in Supabase when columns/functions are partially applied.
@@ -65,3 +65,55 @@ Record the following in `/Users/courtneysmith/Documents/Codex/Rental Properties/
 4. Function availability results.
 5. Bucket privacy results.
 6. Any mismatch or residual blocker.
+
+---
+
+## V2 Phase A Runtime Apply (Leasing + Inbox + Automations)
+
+### SQL To Execute
+Run this file in Supabase SQL editor (single execution):
+
+- `/Users/courtneysmith/Documents/Codex/Rental Properties/supabase/migrations/20260302_phase10_leasing_inbox_automations.sql`
+
+### Expected SQL Outcome
+1. New leasing tables exist:
+   1. `rental_listings`
+   2. `rental_applications`
+   3. `screening_reports`
+   4. `application_events`
+2. New inbox tables exist:
+   1. `inbox_threads`
+   2. `inbox_messages`
+   3. `message_deliveries`
+3. New automation tables exist:
+   1. `automation_templates`
+   2. `automation_rules`
+   3. `automation_runs`
+4. Automation templates are seeded:
+   1. `late_rent_sequence`
+   2. `lease_renewal_sequence`
+   3. `new_ticket_sla`
+   4. `move_in_sequence`
+   5. `move_out_sequence`
+   6. `manager_vendor_followup`
+
+### Post-Apply Verification Commands
+Run from repo root:
+
+```bash
+npm run verify:phase10-runtime
+```
+
+Expected high-level result in JSON:
+
+1. `ok: true`
+2. `summary.tablesReady: true`
+3. `summary.phase9FunctionsReady: true`
+4. `summary.templateSeedsReady: true`
+
+### Failure Handling
+1. If SQL execution fails, stop immediately.
+2. Capture exact SQL error text and statement section.
+3. Do not improvise schema edits in dashboard UI.
+4. Log failure details in `/Users/courtneysmith/Documents/Codex/Rental Properties/docs/agent-handoff.md`.
+5. Re-run only after the failing statement is corrected in migration SQL.

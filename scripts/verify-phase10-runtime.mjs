@@ -4,31 +4,33 @@ import fs from "fs";
 import path from "path";
 import { createClient } from "@supabase/supabase-js";
 
-const PHASE_TABLES = [
-  "document_templates",
-  "document_packets",
-  "document_signers",
-  "notifications",
-  "notification_deliveries",
-  "vendors",
-  "maintenance_assignments",
-  "maintenance_photos",
-  "ownership_accounts",
-  "ownership_account_members",
+const PHASE10_TABLES = [
+  "rental_listings",
+  "rental_applications",
+  "screening_reports",
+  "application_events",
+  "inbox_threads",
+  "inbox_messages",
+  "message_deliveries",
+  "automation_templates",
+  "automation_rules",
+  "automation_runs",
 ];
 
-const COLUMN_CHECKS = [
-  { table: "properties", column: "owner_account_id" },
-  { table: "invitations", column: "ownership_account_id" },
-];
-
-const FUNCTION_CHECKS = [
+const PHASE9_FUNCTION_CHECKS = [
   "can_administer_property",
   "can_view_property",
   "can_access_property",
 ];
 
-const BUCKET_CHECKS = ["lease-documents", "maintenance-photos"];
+const REQUIRED_AUTOMATION_TEMPLATE_KEYS = [
+  "late_rent_sequence",
+  "lease_renewal_sequence",
+  "new_ticket_sla",
+  "move_in_sequence",
+  "move_out_sequence",
+  "manager_vendor_followup",
+];
 
 function parseEnvFile(filePath) {
   const raw = fs.readFileSync(filePath, "utf8");
@@ -89,15 +91,6 @@ async function probeTable(supabase, table) {
   };
 }
 
-async function probeColumn(supabase, table, column) {
-  const { error } = await supabase.from(table).select(column).limit(1);
-
-  return {
-    ok: !error,
-    error: normalizeError(error),
-  };
-}
-
 async function probeFunction(supabase, fnName) {
   const { data, error } = await supabase.rpc(fnName, {
     target_property_id: "00000000-0000-0000-0000-000000000000",
@@ -113,41 +106,32 @@ async function probeFunction(supabase, fnName) {
   };
 }
 
-async function probeBucket(supabase, bucketName) {
-  const { data, error } = await supabase.storage.getBucket(bucketName);
+async function probeAutomationTemplateSeeds(supabase) {
+  const { data, error } = await supabase
+    .from("automation_templates")
+    .select("key")
+    .in("key", REQUIRED_AUTOMATION_TEMPLATE_KEYS)
+    .limit(REQUIRED_AUTOMATION_TEMPLATE_KEYS.length + 4);
 
-  return {
-    ok: Boolean(data?.id) && data.public === false && !error,
-    exists: Boolean(data?.id) && !error,
-    private: data?.public === false,
-    error: normalizeError(error),
-  };
-}
-
-async function probeOwnerAccountBackfill(supabase, ownerAccountColumnPresent) {
-  if (!ownerAccountColumnPresent) {
+  if (error) {
     return {
       ok: false,
-      skipped: true,
-      reason: "properties.owner_account_id column not present",
-      nullCount: null,
-      error: null,
+      foundKeys: [],
+      missingKeys: [...REQUIRED_AUTOMATION_TEMPLATE_KEYS],
+      error: normalizeError(error),
     };
   }
 
-  const { count, error } = await supabase
-    .from("properties")
-    .select("id", { head: true, count: "exact" })
-    .is("owner_account_id", null);
-
-  const nullCount = count ?? null;
+  const foundKeys = Array.from(new Set((data ?? []).map((entry) => entry.key))).sort();
+  const missingKeys = REQUIRED_AUTOMATION_TEMPLATE_KEYS.filter(
+    (key) => !foundKeys.includes(key)
+  );
 
   return {
-    ok: !error && nullCount === 0,
-    skipped: false,
-    reason: null,
-    nullCount,
-    error: normalizeError(error),
+    ok: missingKeys.length === 0,
+    foundKeys,
+    missingKeys,
+    error: null,
   };
 }
 
@@ -180,7 +164,8 @@ async function main() {
         {
           ok: false,
           timestamp: now,
-          error: "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in apps/web/.env.local",
+          error:
+            "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in apps/web/.env.local",
         },
         null,
         2
@@ -194,40 +179,21 @@ async function main() {
   });
 
   const tableResults = {};
-  for (const table of PHASE_TABLES) {
+  for (const table of PHASE10_TABLES) {
     tableResults[table] = await probeTable(supabase, table);
   }
 
-  const columnResults = {};
-  for (const check of COLUMN_CHECKS) {
-    columnResults[`${check.table}.${check.column}`] = await probeColumn(
-      supabase,
-      check.table,
-      check.column
-    );
-  }
-
   const functionResults = {};
-  for (const fnName of FUNCTION_CHECKS) {
+  for (const fnName of PHASE9_FUNCTION_CHECKS) {
     functionResults[fnName] = await probeFunction(supabase, fnName);
   }
 
-  const bucketResults = {};
-  for (const bucket of BUCKET_CHECKS) {
-    bucketResults[bucket] = await probeBucket(supabase, bucket);
-  }
-
-  const backfillResult = await probeOwnerAccountBackfill(
-    supabase,
-    Boolean(columnResults["properties.owner_account_id"]?.ok)
-  );
+  const seedResults = await probeAutomationTemplateSeeds(supabase);
 
   const summary = {
     tablesReady: Object.values(tableResults).every((entry) => entry.ok),
-    columnsReady: Object.values(columnResults).every((entry) => entry.ok),
-    functionsReady: Object.values(functionResults).every((entry) => entry.ok),
-    bucketsReady: Object.values(bucketResults).every((entry) => entry.ok),
-    ownerAccountBackfillReady: backfillResult.ok,
+    phase9FunctionsReady: Object.values(functionResults).every((entry) => entry.ok),
+    templateSeedsReady: seedResults.ok,
   };
 
   const report = {
@@ -236,10 +202,8 @@ async function main() {
     projectRef: getProjectRef(url),
     checks: {
       tables: tableResults,
-      columns: columnResults,
-      functions: functionResults,
-      buckets: bucketResults,
-      ownerAccountBackfill: backfillResult,
+      phase9Functions: functionResults,
+      templateSeeds: seedResults,
     },
     summary,
   };
