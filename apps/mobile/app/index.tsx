@@ -1,7 +1,6 @@
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Linking,
   Pressable,
   SafeAreaView,
@@ -9,326 +8,62 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View,
+  View
 } from "react-native";
-import type { Session, EmailOtpType } from "@supabase/supabase-js";
-import { fetchMobileTenantData, createTenantTicket } from "../lib/tenant-data";
-import { getSupabaseClient, hasSupabaseConfig } from "../lib/supabase";
-import type { MobileTenantData, MobileTicketDTO } from "../lib/types";
 
-type ProfileRole = "owner" | "manager" | "tenant";
-const WEB_APP_URL =
-  process.env.EXPO_PUBLIC_APP_URL ?? "https://rental-properties-platform-web.vercel.app";
-
-const EMPTY_DATA: MobileTenantData = {
-  charges: [],
-  tickets: [],
-  units: [],
-  documents: [],
-};
-
-function dollars(cents: number) {
-  return `$${(cents / 100).toLocaleString()}`;
-}
-
-function formatDate(value: string) {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
-  return parsed.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function parseRedirectParams(url: string) {
-  const hash = url.includes("#") ? url.split("#")[1] : "";
-  const query = url.includes("?") ? url.split("?")[1].split("#")[0] : "";
-  const combined = [query, hash].filter(Boolean).join("&");
-  return new URLSearchParams(combined);
-}
-
-async function applyAuthRedirect(url: string) {
-  const supabase = getSupabaseClient();
-  const params = parseRedirectParams(url);
-
-  const code = params.get("code");
-  if (code) {
-    await supabase.auth.exchangeCodeForSession(code);
-    return;
-  }
-
-  const accessToken = params.get("access_token");
-  const refreshToken = params.get("refresh_token");
-  if (accessToken && refreshToken) {
-    await supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken,
-    });
-    return;
-  }
-
-  const tokenHash = params.get("token_hash");
-  const type = params.get("type");
-  if (tokenHash && type) {
-    await supabase.auth.verifyOtp({
-      token_hash: tokenHash,
-      type: type as EmailOtpType,
-    });
-  }
-}
+type AppRole = "tenant" | "owner";
 
 export default function MobileHome() {
   const [email, setEmail] = useState("");
-  const [authMessage, setAuthMessage] = useState<string | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [profileRole, setProfileRole] = useState<ProfileRole | null>(null);
-  const [loadingSession, setLoadingSession] = useState(true);
-  const [loadingData, setLoadingData] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [data, setData] = useState<MobileTenantData>(EMPTY_DATA);
+  const [role, setRole] = useState<AppRole>("tenant");
   const [ticketTitle, setTicketTitle] = useState("");
-  const [ticketDescription, setTicketDescription] = useState("");
-  const [ticketPriority, setTicketPriority] = useState<MobileTicketDTO["priority"]>("medium");
-  const [selectedUnitId, setSelectedUnitId] = useState<string>("");
-  const [submittingTicket, setSubmittingTicket] = useState(false);
-
-  const configured = hasSupabaseConfig();
-
-  const outstandingCents = useMemo(
-    () => data.charges.reduce((sum, charge) => sum + charge.amountCents, 0),
-    [data.charges]
-  );
-
-  const pendingDocs = useMemo(
-    () => data.documents.filter((document) => document.signerStatus !== "signed").length,
-    [data.documents]
-  );
-
-  const openTickets = useMemo(
-    () =>
-      data.tickets.filter(
-        (ticket) => ticket.status === "open" || ticket.status === "in_progress"
-      ).length,
-    [data.tickets]
-  );
-
-  useEffect(() => {
-    if (!configured) {
-      setLoadingSession(false);
-      return;
-    }
-
-    const supabase = getSupabaseClient();
-
-    let mounted = true;
-
-    const bootstrap = async () => {
-      try {
-        const initialUrl = await Linking.getInitialURL();
-        if (initialUrl && initialUrl.includes("auth")) {
-          await applyAuthRedirect(initialUrl);
-        }
-      } catch {
-        // Ignore malformed deep-link state.
-      }
-
-      const {
-        data: { session: currentSession },
-      } = await supabase.auth.getSession();
-
-      if (mounted) {
-        setSession(currentSession);
-        setLoadingSession(false);
-      }
-    };
-
-    void bootstrap();
-
-    const authSubscription = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-    });
-
-    const linkSubscription = Linking.addEventListener("url", ({ url }) => {
-      void (async () => {
-        try {
-          await applyAuthRedirect(url);
-          setAuthMessage("Signed in. Loading your workspace.");
-        } catch {
-          setAuthMessage("Sign-in link opened, but session could not be verified.");
-        }
-      })();
-    });
-
-    return () => {
-      mounted = false;
-      authSubscription.data.subscription.unsubscribe();
-      linkSubscription.remove();
-    };
-  }, [configured]);
-
-  useEffect(() => {
-    if (!configured || !session?.user?.id) {
-      setProfileRole(null);
-      setData(EMPTY_DATA);
-      return;
-    }
-
-    const supabase = getSupabaseClient();
-
-    const load = async () => {
-      setLoadingData(true);
-      setErrorMessage(null);
-
-      try {
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", session.user.id)
-          .single();
-
-        if (profileError) {
-          throw profileError;
-        }
-
-        const role = (profile?.role ?? "tenant") as ProfileRole;
-        setProfileRole(role);
-
-        if (role !== "tenant") {
-          setData(EMPTY_DATA);
-          return;
-        }
-
-        const tenantData = await fetchMobileTenantData(session.user.id);
-        setData(tenantData);
-        setSelectedUnitId((prev) => {
-          if (prev && tenantData.units.some((unit) => unit.id === prev)) {
-            return prev;
-          }
-
-          return tenantData.units[0]?.id ?? "";
-        });
-      } catch (error) {
-        setErrorMessage(error instanceof Error ? error.message : "Unable to load mobile data.");
-      } finally {
-        setLoadingData(false);
-      }
-    };
-
-    void load();
-  }, [configured, session?.user?.id]);
-
-  const sendMagicLink = async () => {
-    if (!configured) {
-      setAuthMessage("Supabase mobile environment is not configured.");
-      return;
-    }
-
-    if (!email.trim()) {
-      setAuthMessage("Enter an email address first.");
-      return;
-    }
-
-    const supabase = getSupabaseClient();
-    const redirectTo = "domus://auth/callback";
-
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: {
-        emailRedirectTo: redirectTo,
-      },
-    });
-
-    if (error) {
-      setAuthMessage(error.message);
-      return;
-    }
-
-    setAuthMessage("Magic link sent. Open it on this device to complete mobile sign-in.");
-  };
-
-  const signOut = async () => {
-    if (!configured) {
-      return;
-    }
-
-    const supabase = getSupabaseClient();
-    await supabase.auth.signOut();
-    setSession(null);
-    setProfileRole(null);
-    setData(EMPTY_DATA);
-  };
-
-  const refreshData = async () => {
-    if (!configured || !session?.user?.id || profileRole !== "tenant") {
-      return;
-    }
-
-    setLoadingData(true);
-    setErrorMessage(null);
-
-    try {
-      const tenantData = await fetchMobileTenantData(session.user.id);
-      setData(tenantData);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to refresh data.");
-    } finally {
-      setLoadingData(false);
-    }
-  };
-
-  const submitTicket = async () => {
-    if (!configured || !session?.user?.id) {
-      setErrorMessage("Sign in first.");
-      return;
-    }
-
-    if (!selectedUnitId || !ticketTitle.trim() || !ticketDescription.trim()) {
-      setErrorMessage("Unit, title, and description are required.");
-      return;
-    }
-
-    setSubmittingTicket(true);
-    setErrorMessage(null);
-
-    try {
-      await createTenantTicket({
-        userId: session.user.id,
-        unitId: selectedUnitId,
-        title: ticketTitle.trim(),
-        description: ticketDescription.trim(),
-        priority: ticketPriority,
-      });
-
-      setTicketTitle("");
-      setTicketDescription("");
-      await refreshData();
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to create ticket.");
-    } finally {
-      setSubmittingTicket(false);
-    }
-  };
+  const [ticketDetail, setTicketDetail] = useState("");
+  const [tickets, setTickets] = useState([
+    { id: "1", title: "Kitchen faucet leak", status: "open" },
+    { id: "2", title: "Hallway light out", status: "in_progress" }
+  ]);
+  const [docs, setDocs] = useState([
+    { id: "d1", title: "Lease Addendum", status: "pending" as "pending" | "signed" },
+    { id: "d2", title: "Pet Policy", status: "signed" as "pending" | "signed" }
+  ]);
 
   const openWebLogin = () => {
-    void Linking.openURL(`${WEB_APP_URL}/login`);
+    void Linking.openURL("https://rental-properties-platform-web.vercel.app/login");
   };
 
-  const openTenantPayments = () => {
-    void Linking.openURL(`${WEB_APP_URL}/tenant`);
+  const payNow = () => {
+    void Linking.openURL("https://rental-properties-platform-web.vercel.app/tenant");
+  };
+
+  const submitTicket = () => {
+    if (!ticketTitle.trim()) return;
+    setTickets((prev) => [
+      { id: `${Date.now()}`, title: ticketTitle.trim(), status: "open" },
+      ...prev
+    ]);
+    setTicketTitle("");
+    setTicketDetail("");
+  };
+
+  const pendingCount = useMemo(
+    () => docs.filter((doc) => doc.status === "pending").length,
+    [docs]
+  );
+
+  const signDoc = (id: string) => {
+    setDocs((prev) =>
+      prev.map((doc) => (doc.id === id ? { ...doc, status: "signed" } : doc))
+    );
   };
 
   return (
     <SafeAreaView style={styles.root}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Domus Mobile</Text>
-        <Text style={styles.subtitle}>Tenant-first workspace with live account data.</Text>
+        <Text style={styles.title}>RentFlow Mobile</Text>
+        <Text style={styles.subtitle}>Tenant-first V1 workflow companion.</Text>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Sign In</Text>
+          <Text style={styles.cardTitle}>Auth Gateway</Text>
           <TextInput
             style={styles.input}
             placeholder="Email address"
@@ -337,107 +72,43 @@ export default function MobileHome() {
             value={email}
             onChangeText={setEmail}
           />
-          <Pressable style={styles.primaryBtn} onPress={sendMagicLink}>
-            <Text style={styles.primaryBtnText}>Send Mobile Magic Link</Text>
+          <Pressable style={styles.primaryBtn} onPress={openWebLogin}>
+            <Text style={styles.primaryBtnText}>Continue in Web Login</Text>
           </Pressable>
-          <Pressable style={styles.secondaryBtn} onPress={openWebLogin}>
-            <Text style={styles.secondaryBtnText}>Open Web Login Instead</Text>
-          </Pressable>
-          {authMessage ? <Text style={styles.infoText}>{authMessage}</Text> : null}
         </View>
 
-        {!configured ? (
-          <View style={styles.warningCard}>
-            <Text style={styles.warningTitle}>Mobile Environment Missing</Text>
-            <Text style={styles.warningText}>
-              Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to mobile env.
+        <View style={styles.roleRow}>
+          <Pressable
+            style={[styles.rolePill, role === "tenant" && styles.rolePillActive]}
+            onPress={() => setRole("tenant")}
+          >
+            <Text style={[styles.rolePillText, role === "tenant" && styles.rolePillTextActive]}>
+              Tenant
             </Text>
-          </View>
-        ) : null}
+          </Pressable>
+          <Pressable
+            style={[styles.rolePill, role === "owner" && styles.rolePillActive]}
+            onPress={() => setRole("owner")}
+          >
+            <Text style={[styles.rolePillText, role === "owner" && styles.rolePillTextActive]}>
+              Owner
+            </Text>
+          </Pressable>
+        </View>
 
-        {loadingSession ? (
-          <View style={styles.centerRow}>
-            <ActivityIndicator size="small" color="#7c3aed" />
-            <Text style={styles.centerText}>Loading session...</Text>
-          </View>
-        ) : null}
-
-        {session ? (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Session</Text>
-            <Text style={styles.metaText}>{session.user.email}</Text>
-            <Pressable style={styles.secondaryBtn} onPress={signOut}>
-              <Text style={styles.secondaryBtnText}>Sign Out</Text>
-            </Pressable>
-          </View>
-        ) : null}
-
-        {errorMessage ? (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{errorMessage}</Text>
-          </View>
-        ) : null}
-
-        {session && profileRole === "tenant" ? (
+        {role === "tenant" ? (
           <>
-            <View style={styles.kpiRow}>
-              <View style={styles.kpiCard}>
-                <Text style={styles.kpiLabel}>Outstanding</Text>
-                <Text style={styles.kpiValue}>{dollars(outstandingCents)}</Text>
-              </View>
-              <View style={styles.kpiCard}>
-                <Text style={styles.kpiLabel}>Open Tickets</Text>
-                <Text style={styles.kpiValue}>{openTickets}</Text>
-              </View>
-              <View style={styles.kpiCard}>
-                <Text style={styles.kpiLabel}>Pending Docs</Text>
-                <Text style={styles.kpiValue}>{pendingDocs}</Text>
-              </View>
-            </View>
-
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Outstanding Charges</Text>
-              {data.charges.length === 0 ? (
-                <Text style={styles.emptyText}>No pending or late charges.</Text>
-              ) : (
-                data.charges.map((charge) => (
-                  <View key={charge.id} style={styles.inlineRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.inlineTitle}>{charge.propertyLabel}</Text>
-                      <Text style={styles.inlineMeta}>Due {formatDate(charge.dueDate)}</Text>
-                    </View>
-                    <View style={styles.alignRight}>
-                      <Text style={styles.inlineAmount}>{dollars(charge.amountCents)}</Text>
-                      <Text style={styles.badgeText}>{charge.status.toUpperCase()}</Text>
-                    </View>
-                  </View>
-                ))
-              )}
-              <Pressable style={styles.primaryBtn} onPress={openTenantPayments}>
-                <Text style={styles.primaryBtnText}>Pay in Web Checkout</Text>
+              <Text style={styles.cardValue}>$1,350</Text>
+              <Text style={styles.cardNote}>Due Mar 1, 2026 • 1 late charge</Text>
+              <Pressable style={styles.primaryBtn} onPress={payNow}>
+                <Text style={styles.primaryBtnText}>Pay Now (Web Checkout)</Text>
               </Pressable>
             </View>
 
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>Create Maintenance Ticket</Text>
-              <Text style={styles.fieldLabel}>Unit</Text>
-              <View style={styles.choiceRow}>
-                {data.units.map((unit) => {
-                  const selected = unit.id === selectedUnitId;
-                  return (
-                    <Pressable
-                      key={unit.id}
-                      style={[styles.choicePill, selected && styles.choicePillActive]}
-                      onPress={() => setSelectedUnitId(unit.id)}
-                    >
-                      <Text style={[styles.choiceText, selected && styles.choiceTextActive]}>
-                        {unit.propertyName} • {unit.unitNumber}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
+              <Text style={styles.cardTitle}>Maintenance Requests</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Issue title"
@@ -447,92 +118,46 @@ export default function MobileHome() {
               <TextInput
                 style={[styles.input, styles.textarea]}
                 placeholder="Describe the issue"
-                value={ticketDescription}
-                onChangeText={setTicketDescription}
+                value={ticketDetail}
+                onChangeText={setTicketDetail}
                 multiline
               />
-
-              <Text style={styles.fieldLabel}>Priority</Text>
-              <View style={styles.choiceRow}>
-                {(["low", "medium", "high", "urgent"] as MobileTicketDTO["priority"][]).map((priority) => {
-                  const selected = priority === ticketPriority;
-                  return (
-                    <Pressable
-                      key={priority}
-                      style={[styles.choicePill, selected && styles.choicePillActive]}
-                      onPress={() => setTicketPriority(priority)}
-                    >
-                      <Text style={[styles.choiceText, selected && styles.choiceTextActive]}>
-                        {priority.toUpperCase()}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              <Pressable
-                style={[styles.primaryBtn, submittingTicket && styles.primaryBtnDisabled]}
-                onPress={submitTicket}
-                disabled={submittingTicket}
-              >
-                <Text style={styles.primaryBtnText}>
-                  {submittingTicket ? "Submitting..." : "Submit Ticket"}
-                </Text>
+              <Pressable style={styles.primaryBtn} onPress={submitTicket}>
+                <Text style={styles.primaryBtnText}>Submit Ticket</Text>
               </Pressable>
-            </View>
-
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>My Maintenance Tickets</Text>
-              {data.tickets.length === 0 ? (
-                <Text style={styles.emptyText}>No tickets yet.</Text>
-              ) : (
-                data.tickets.map((ticket) => (
-                  <View key={ticket.id} style={styles.inlineRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.inlineTitle}>{ticket.title}</Text>
-                      <Text style={styles.inlineMeta}>
-                        {ticket.propertyName}
-                        {ticket.unitNumber ? ` • Unit ${ticket.unitNumber}` : ""}
-                      </Text>
-                    </View>
-                    <Text style={styles.badgeText}>{ticket.status.toUpperCase()}</Text>
-                  </View>
-                ))
-              )}
+              {tickets.map((ticket) => (
+                <View key={ticket.id} style={styles.inlineRow}>
+                  <Text style={styles.inlineTitle}>{ticket.title}</Text>
+                  <Text style={styles.inlineBadge}>{ticket.status.toUpperCase()}</Text>
+                </View>
+              ))}
             </View>
 
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Documents</Text>
-              {data.documents.length === 0 ? (
-                <Text style={styles.emptyText}>No document packets yet.</Text>
-              ) : (
-                data.documents.map((document) => (
-                  <View key={document.id} style={styles.inlineRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.inlineTitle}>{document.templateName}</Text>
-                      <Text style={styles.inlineMeta}>{document.propertyLabel}</Text>
-                    </View>
-                    <Text style={styles.badgeText}>{document.signerStatus.toUpperCase()}</Text>
-                  </View>
-                ))
-              )}
+              <Text style={styles.cardNote}>{pendingCount} awaiting signature</Text>
+              {docs.map((doc) => (
+                <View key={doc.id} style={styles.inlineRow}>
+                  <Text style={styles.inlineTitle}>{doc.title}</Text>
+                  {doc.status === "pending" ? (
+                    <Pressable style={styles.secondaryBtn} onPress={() => signDoc(doc.id)}>
+                      <Text style={styles.secondaryBtnText}>Sign</Text>
+                    </Pressable>
+                  ) : (
+                    <Text style={styles.inlineBadge}>SIGNED</Text>
+                  )}
+                </View>
+              ))}
             </View>
-
-            <Pressable style={styles.secondaryBtn} onPress={refreshData}>
-              <Text style={styles.secondaryBtnText}>
-                {loadingData ? "Refreshing..." : "Refresh Data"}
-              </Text>
-            </Pressable>
           </>
-        ) : null}
-
-        {session && profileRole && profileRole !== "tenant" ? (
+        ) : (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Owner/Manager Snapshot (Read-only)</Text>
-            <Text style={styles.metaText}>Mobile V1 is tenant-first.</Text>
-            <Text style={styles.metaText}>Use web dashboard for full owner/manager operations.</Text>
+            <Text style={styles.cardTitle}>Owner Snapshot (Read-only)</Text>
+            <Text style={styles.cardValue}>$4,050 collected</Text>
+            <Text style={styles.cardNote}>2 open tickets • 1 pending signature</Text>
+            <Text style={styles.cardNote}>Use web dashboard for full operations controls.</Text>
           </View>
-        ) : null}
+        )}
       </ScrollView>
       <StatusBar style="dark" />
     </SafeAreaView>
@@ -542,152 +167,112 @@ export default function MobileHome() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#eef2ff",
+    backgroundColor: "#f3efe8"
   },
   container: {
     padding: 20,
     gap: 14,
-    paddingBottom: 42,
+    paddingBottom: 36
   },
   title: {
     fontSize: 30,
     fontWeight: "800",
-    color: "#111827",
+    color: "#1f2328"
   },
   subtitle: {
-    fontSize: 15,
-    color: "#4b5563",
-    marginBottom: 8,
+    fontSize: 16,
+    color: "#5f6b76",
+    marginBottom: 12
   },
   card: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#dbeafe",
-    padding: 16,
-  },
-  warningCard: {
-    backgroundColor: "#fef3c7",
+    backgroundColor: "#fffbf4",
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#fcd34d",
-    padding: 14,
+    borderColor: "#d9d0bf",
+    padding: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2
   },
-  warningTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#92400e",
+  roleRow: {
+    flexDirection: "row",
+    gap: 10
   },
-  warningText: {
-    marginTop: 4,
-    color: "#92400e",
-    fontSize: 13,
+  rolePill: {
+    flex: 1,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#d9d0bf",
+    backgroundColor: "#fffbf4",
+    paddingVertical: 8,
+    alignItems: "center"
+  },
+  rolePillActive: {
+    backgroundColor: "#0f766e",
+    borderColor: "#0f766e"
+  },
+  rolePillText: {
+    fontSize: 12,
+    color: "#1f2328",
+    fontWeight: "600"
+  },
+  rolePillTextActive: {
+    color: "#fff"
   },
   cardTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 8,
+    fontSize: 14,
+    color: "#5f6b76"
   },
-  metaText: {
-    fontSize: 13,
-    color: "#4b5563",
-    marginBottom: 6,
+  cardValue: {
+    marginTop: 4,
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#0f766e"
+  },
+  cardNote: {
+    marginTop: 4,
+    color: "#1f2328"
   },
   input: {
     marginTop: 8,
     borderWidth: 1,
-    borderColor: "#c7d2fe",
+    borderColor: "#d9d0bf",
     borderRadius: 10,
     paddingHorizontal: 10,
-    paddingVertical: 9,
+    paddingVertical: 8,
     backgroundColor: "#fff",
-    fontSize: 14,
+    fontSize: 14
   },
   textarea: {
-    minHeight: 78,
-    textAlignVertical: "top",
+    minHeight: 70,
+    textAlignVertical: "top"
   },
   primaryBtn: {
     marginTop: 10,
-    backgroundColor: "#4f46e5",
+    backgroundColor: "#0f766e",
     borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  primaryBtnDisabled: {
-    opacity: 0.7,
+    paddingVertical: 9,
+    alignItems: "center"
   },
   primaryBtnText: {
     color: "#fff",
     fontWeight: "700",
-    fontSize: 13,
+    fontSize: 13
   },
   secondaryBtn: {
-    marginTop: 8,
     borderWidth: 1,
-    borderColor: "#c7d2fe",
-    backgroundColor: "#eef2ff",
-    borderRadius: 10,
-    paddingVertical: 9,
-    alignItems: "center",
+    borderColor: "#d9d0bf",
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5
   },
   secondaryBtnText: {
-    color: "#3730a3",
-    fontWeight: "700",
-    fontSize: 12,
-  },
-  infoText: {
-    marginTop: 8,
-    fontSize: 12,
-    color: "#4b5563",
-  },
-  errorBox: {
-    borderWidth: 1,
-    borderColor: "#fecaca",
-    backgroundColor: "#fef2f2",
-    borderRadius: 12,
-    padding: 10,
-  },
-  errorText: {
-    color: "#b91c1c",
-    fontSize: 12,
-  },
-  centerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  centerText: {
-    color: "#4b5563",
-    fontSize: 13,
-  },
-  emptyText: {
-    fontSize: 13,
-    color: "#6b7280",
-  },
-  kpiRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  kpiCard: {
-    flex: 1,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#c7d2fe",
-    backgroundColor: "#f8faff",
-    padding: 10,
-  },
-  kpiLabel: {
-    fontSize: 11,
-    textTransform: "uppercase",
-    color: "#6366f1",
-  },
-  kpiValue: {
-    marginTop: 3,
-    fontSize: 17,
-    fontWeight: "800",
-    color: "#111827",
+    color: "#1f2328",
+    fontWeight: "600",
+    fontSize: 12
   },
   inlineRow: {
     marginTop: 8,
@@ -695,63 +280,17 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     borderTopWidth: 1,
-    borderTopColor: "#e0e7ff",
-    paddingTop: 8,
+    borderTopColor: "#ebe3d3",
+    paddingTop: 8
   },
   inlineTitle: {
-    color: "#111827",
+    color: "#1f2328",
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "600"
   },
-  inlineMeta: {
-    marginTop: 1,
-    color: "#6b7280",
+  inlineBadge: {
+    color: "#0f766e",
     fontSize: 12,
-  },
-  inlineAmount: {
-    color: "#111827",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  alignRight: {
-    alignItems: "flex-end",
-  },
-  badgeText: {
-    marginTop: 2,
-    color: "#4338ca",
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  fieldLabel: {
-    marginTop: 8,
-    marginBottom: 4,
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#4b5563",
-  },
-  choiceRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  choicePill: {
-    borderWidth: 1,
-    borderColor: "#c7d2fe",
-    borderRadius: 999,
-    backgroundColor: "#ffffff",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  choicePillActive: {
-    backgroundColor: "#4f46e5",
-    borderColor: "#4f46e5",
-  },
-  choiceText: {
-    color: "#3730a3",
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  choiceTextActive: {
-    color: "#ffffff",
-  },
+    fontWeight: "700"
+  }
 });

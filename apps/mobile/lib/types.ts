@@ -6,6 +6,13 @@ export interface MobileChargeDTO {
   status: "pending" | "late";
 }
 
+export interface MobilePaymentDTO {
+  id: string;
+  amountCents: number;
+  paidAt: string;
+  method: string;
+}
+
 export interface MobileTenantUnitDTO {
   id: string;
   propertyId: string;
@@ -36,7 +43,42 @@ export interface MobileDocumentDTO {
 
 export interface MobileTenantData {
   charges: MobileChargeDTO[];
+  payments: MobilePaymentDTO[];
   tickets: MobileTicketDTO[];
   units: MobileTenantUnitDTO[];
   documents: MobileDocumentDTO[];
+}
+
+export type ProfileRole = "owner" | "manager" | "tenant";
+
+export interface MobilePropertySummaryDTO {
+  id: string;
+  name: string;
+  addressLine1: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  unitCount: number;
+  occupiedUnitCount: number;
+}
+
+export interface MobileOwnerTicketDTO {
+  id: string;
+  title: string;
+  description: string;
+  status: MobileTicketDTO["status"];
+  priority: MobileTicketDTO["priority"];
+  createdAt: string;
+  propertyName: string;
+  unitNumber: string | null;
+  vendorName: string | null;
+}
+
+export interface MobileNotificationDTO {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  readAt: string | null;
+  createdAt: string;
 }

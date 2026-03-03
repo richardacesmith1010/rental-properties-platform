@@ -378,3 +378,42 @@ Every agent must treat mistakes as permanent lessons. This section is a living d
 **What happened:** During hardening, delete flows were briefly wired with plain `Button` components in `useFormState` forms, which removed visible pending/loading feedback from destructive submissions.
 **What was correct:** Every `useFormState` form must submit through `SubmitButton` so pending state is always visible to users.
 **Rule:** In any form powered by `useFormState`, use `SubmitButton` for the submit trigger (including delete/archive flows). If confirmation is required, intercept `onClick`, open confirm dialog, then call `form.requestSubmit()` on confirm.
+
+---
+
+## 13. Continuous Codebase Grooming
+
+Every sprint must leave the codebase cleaner than it was found. The codebase is optimized for AI agent readability and efficiency — not human readability.
+
+### Why This Matters
+
+Every file an AI agent reads costs tokens. Dead files, misleading names, god files, and stale docs waste tokens on every review cycle. Keeping the codebase tight directly makes Claude's reviews faster and Codex's execution cheaper.
+
+### Standing Rules
+
+1. **Delete dead code.** If nothing imports a file, delete it. Git preserves history. Never leave orphaned components, unused exports, or empty placeholder modules.
+
+2. **One purpose per file.** If a file does two unrelated things, split it. If a file has a misleading name (e.g., `owner.ts` that contains only a string formatter), rename or consolidate it.
+
+3. **No god files.** No single component file should exceed 30KB. If it does, split it into focused sub-components. The dashboard orchestrator (`index.tsx`) and tester tools are known offenders — chip away at them when touching nearby code.
+
+4. **Consolidate utilities.** Don't create a new `utils-2.ts` or `helpers.ts` when `utils.ts` or `format.ts` already exists. One utility file per concern.
+
+5. **Archive stale docs.** Docs describing completed phases (V1 scope, V1 UAT, old roadmaps) go in `docs/archive/`. Only current-state docs live in `docs/`.
+
+6. **Shared code earns its place.** `packages/shared/` must contain real exports used by 2+ workspaces. If it's empty or unused, flag it for deletion.
+
+7. **Consistent naming.** Follow these patterns exactly:
+   - Dashboard sections: `{name}-section.tsx`
+   - Lib modules: `{domain}.ts`
+   - Tests: `{domain}.test.ts` in `__tests__/`
+   - Components: `{name}.tsx` in appropriate folder
+
+### Per-Sprint Grooming Checklist
+
+Before reporting your sprint as complete, check:
+- [ ] No new orphaned files created
+- [ ] No new files >30KB without justification
+- [ ] Any touched file that was misnamed or redundant → cleaned up
+- [ ] If you created a utility function, it went in an existing utility file (not a new one)
+- [ ] Imports in modified files still resolve (no broken references after renames)

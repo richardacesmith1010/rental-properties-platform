@@ -1,10 +1,15 @@
 {
+  "main": "expo-router/entry",
   "expo": {
     "name": "Domus Mobile",
     "slug": "domus-mobile",
     "version": "1.0.0",
     "scheme": "domus",
     "orientation": "portrait",
-    "platforms": ["ios", "android", "web"]
+    "platforms": ["ios", "android", "web"],
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }

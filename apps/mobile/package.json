@@ -2,6 +2,7 @@
   "name": "@domus/mobile",
   "version": "0.1.0",
   "private": true,
+  "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
@@ -9,13 +10,20 @@
     "web": "expo start --web"
   },
   "dependencies": {
-    "@react-native-async-storage/async-storage": "^3.0.1",
     "@domus/shared": "0.1.0",
+    "@react-native-async-storage/async-storage": "^3.0.1",
     "@supabase/supabase-js": "^2.49.1",
     "expo": "~52.0.17",
+    "expo-constants": "^55.0.7",
+    "expo-linking": "^55.0.7",
+    "expo-router": "^55.0.3",
+    "expo-splash-screen": "^55.0.10",
     "expo-status-bar": "~2.0.1",
+    "lucide-react-native": "^0.576.0",
     "react": "18.3.1",
-    "react-native": "0.76.3"
+    "react-native": "0.76.3",
+    "react-native-safe-area-context": "^5.7.0",
+    "react-native-screens": "^4.24.0"
   },
   "devDependencies": {
     "@types/react": "18.3.12",

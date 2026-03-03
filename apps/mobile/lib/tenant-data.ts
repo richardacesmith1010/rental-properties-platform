@@ -2,12 +2,22 @@ import { getSupabaseClient } from "./supabase";
 import type {
   MobileChargeDTO,
   MobileDocumentDTO,
+  MobilePaymentDTO,
   MobileTenantData,
   MobileTenantUnitDTO,
   MobileTicketDTO,
 } from "./types";
 
-function isMissingSchemaError(error: unknown): boolean {
+interface LeaseContext {
+  leaseRows: Array<{ id: string; unit_id: string }>;
+  leaseIds: string[];
+  unitRows: Array<{ id: string; unit_number: string; property_id: string }>;
+  unitById: Map<string, { id: string; unit_number: string; property_id: string }>;
+  leaseById: Map<string, string>;
+  propertyById: Map<string, string>;
+}
+
+export function isMissingSchemaError(error: unknown): boolean {
   if (!error || typeof error !== "object") {
     return false;
   }
@@ -36,7 +46,7 @@ function formatPropertyLabel(propertyName: string | null, unitNumber: string | n
   return `${propertyName} • Unit ${unitNumber}`;
 }
 
-export async function fetchMobileTenantData(userId: string): Promise<MobileTenantData> {
+async function fetchActiveTenantLeaseContext(userId: string): Promise<LeaseContext> {
   const supabase = getSupabaseClient();
 
   const { data: leases, error: leaseError } = await supabase
@@ -55,35 +65,26 @@ export async function fetchMobileTenantData(userId: string): Promise<MobileTenan
 
   if (leaseIds.length === 0 || unitIds.length === 0) {
     return {
-      charges: [],
-      tickets: [],
-      units: [],
-      documents: [],
+      leaseRows,
+      leaseIds,
+      unitRows: [],
+      unitById: new Map(),
+      leaseById: new Map(),
+      propertyById: new Map()
     };
   }
 
-  const [{ data: units, error: unitError }, { data: charges, error: chargeError }] =
-    await Promise.all([
-      supabase
-        .from("units")
-        .select("id, unit_number, property_id")
-        .in("id", unitIds),
-      supabase
-        .from("rent_charges")
-        .select("id, lease_id, due_date, amount_cents, status")
-        .in("lease_id", leaseIds)
-        .in("status", ["pending", "late"])
-        .order("due_date", { ascending: true }),
-    ]);
+  const { data: units, error: unitError } = await supabase
+    .from("units")
+    .select("id, unit_number, property_id")
+    .in("id", unitIds);
 
   if (unitError) {
     throw unitError;
   }
-  if (chargeError) {
-    throw chargeError;
-  }
 
-  const propertyIds = Array.from(new Set((units ?? []).map((unit) => unit.property_id)));
+  const unitRows = units ?? [];
+  const propertyIds = Array.from(new Set(unitRows.map((unit) => unit.property_id)));
 
   const { data: properties, error: propertyError } = propertyIds.length
     ? await supabase.from("properties").select("id, name").in("id", propertyIds)
@@ -93,103 +94,155 @@ export async function fetchMobileTenantData(userId: string): Promise<MobileTenan
     throw propertyError;
   }
 
-  const propertyById = new Map((properties ?? []).map((property) => [property.id, property.name]));
-  const leaseById = new Map(leaseRows.map((lease) => [lease.id, lease.unit_id]));
-  const unitById = new Map((units ?? []).map((unit) => [unit.id, unit]));
+  return {
+    leaseRows,
+    leaseIds,
+    unitRows,
+    unitById: new Map(unitRows.map((unit) => [unit.id, unit])),
+    leaseById: new Map(leaseRows.map((lease) => [lease.id, lease.unit_id])),
+    propertyById: new Map((properties ?? []).map((property) => [property.id, property.name]))
+  };
+}
 
-  const mobileUnits: MobileTenantUnitDTO[] = (units ?? []).map((unit) => ({
+export async function fetchTenantUnits(userId: string): Promise<MobileTenantUnitDTO[]> {
+  const context = await fetchActiveTenantLeaseContext(userId);
+  return context.unitRows.map((unit) => ({
     id: unit.id,
     propertyId: unit.property_id,
-    propertyName: propertyById.get(unit.property_id) ?? "Property",
-    unitNumber: unit.unit_number,
+    propertyName: context.propertyById.get(unit.property_id) ?? "Property",
+    unitNumber: unit.unit_number
   }));
+}
 
-  const mobileCharges: MobileChargeDTO[] = (charges ?? []).map((charge) => {
-    const unitId = leaseById.get(charge.lease_id);
-    const unit = unitId ? unitById.get(unitId) : null;
-    const propertyName = unit ? propertyById.get(unit.property_id) ?? "Your Rental" : "Your Rental";
+export async function fetchTenantCharges(userId: string): Promise<MobileChargeDTO[]> {
+  const supabase = getSupabaseClient();
+  const context = await fetchActiveTenantLeaseContext(userId);
+
+  if (context.leaseIds.length === 0) {
+    return [];
+  }
+
+  const { data: charges, error: chargeError } = await supabase
+    .from("rent_charges")
+    .select("id, lease_id, due_date, amount_cents, status")
+    .in("lease_id", context.leaseIds)
+    .in("status", ["pending", "late"])
+    .order("due_date", { ascending: true });
+
+  if (chargeError) {
+    throw chargeError;
+  }
+
+  return (charges ?? []).map((charge) => {
+    const unitId = context.leaseById.get(charge.lease_id);
+    const unit = unitId ? context.unitById.get(unitId) : null;
+    const propertyName = unit ? context.propertyById.get(unit.property_id) ?? "Your Rental" : "Your Rental";
 
     return {
       id: charge.id,
       propertyLabel: formatPropertyLabel(propertyName, unit?.unit_number ?? null),
       dueDate: charge.due_date,
       amountCents: charge.amount_cents,
-      status: charge.status as "pending" | "late",
+      status: charge.status as "pending" | "late"
     };
   });
+}
 
-  const [{ data: tickets, error: ticketError }, documentsResult] = await Promise.all([
-    supabase
-      .from("maintenance_tickets")
-      .select("id, property_id, unit_id, title, description, status, priority, created_at")
-      .eq("tenant_profile_id", userId)
-      .order("created_at", { ascending: false }),
-    fetchTenantDocuments(userId),
-  ]);
+export async function fetchTenantPayments(userId: string): Promise<MobilePaymentDTO[]> {
+  const supabase = getSupabaseClient();
+  const context = await fetchActiveTenantLeaseContext(userId);
+
+  if (context.leaseIds.length === 0) {
+    return [];
+  }
+
+  const { data: charges, error: chargesError } = await supabase
+    .from("rent_charges")
+    .select("id")
+    .in("lease_id", context.leaseIds);
+
+  if (chargesError) {
+    if (isMissingSchemaError(chargesError)) {
+      return [];
+    }
+    throw chargesError;
+  }
+
+  const chargeIds = (charges ?? []).map((charge) => charge.id);
+  if (chargeIds.length === 0) {
+    return [];
+  }
+
+  const { data: payments, error: paymentsError } = await supabase
+    .from("payments")
+    .select("id, amount_cents, paid_at, method")
+    .in("rent_charge_id", chargeIds)
+    .order("paid_at", { ascending: false })
+    .limit(50);
+
+  if (paymentsError) {
+    if (isMissingSchemaError(paymentsError)) {
+      return [];
+    }
+    throw paymentsError;
+  }
+
+  return (payments ?? []).map((payment) => ({
+    id: payment.id,
+    amountCents: payment.amount_cents,
+    paidAt: payment.paid_at,
+    method: payment.method
+  }));
+}
+
+export async function fetchTenantTickets(userId: string): Promise<MobileTicketDTO[]> {
+  const supabase = getSupabaseClient();
+
+  const { data: tickets, error: ticketError } = await supabase
+    .from("maintenance_tickets")
+    .select("id, property_id, unit_id, title, description, status, priority, created_at")
+    .eq("tenant_profile_id", userId)
+    .order("created_at", { ascending: false });
 
   if (ticketError) {
     throw ticketError;
   }
 
-  const mobileTickets: MobileTicketDTO[] = (tickets ?? []).map((ticket) => {
-    const unit = ticket.unit_id ? unitById.get(ticket.unit_id) : null;
-    const propertyName = propertyById.get(ticket.property_id) ?? "Property";
-
-    return {
-      id: ticket.id,
-      title: ticket.title,
-      description: ticket.description,
-      status: ticket.status as MobileTicketDTO["status"],
-      priority: ticket.priority as MobileTicketDTO["priority"],
-      createdAt: ticket.created_at,
-      propertyName,
-      unitNumber: unit?.unit_number ?? null,
-    };
-  });
-
-  return {
-    charges: mobileCharges,
-    tickets: mobileTickets,
-    units: mobileUnits,
-    documents: documentsResult,
-  };
-}
-
-export async function createTenantTicket(input: {
-  userId: string;
-  unitId: string;
-  title: string;
-  description: string;
-  priority: MobileTicketDTO["priority"];
-}) {
-  const supabase = getSupabaseClient();
-
-  const { data: unit, error: unitError } = await supabase
-    .from("units")
-    .select("property_id")
-    .eq("id", input.unitId)
-    .single();
-
-  if (unitError || !unit) {
-    throw unitError ?? new Error("Unable to load selected unit.");
+  const ticketRows = tickets ?? [];
+  if (ticketRows.length === 0) {
+    return [];
   }
 
-  const { error } = await supabase.from("maintenance_tickets").insert({
-    property_id: unit.property_id,
-    unit_id: input.unitId,
-    tenant_profile_id: input.userId,
-    title: input.title,
-    description: input.description,
-    priority: input.priority,
-    status: "open",
-  });
+  const propertyIds = Array.from(new Set(ticketRows.map((ticket) => ticket.property_id)));
+  const unitIds = Array.from(
+    new Set(ticketRows.map((ticket) => ticket.unit_id).filter((unitId): unitId is string => Boolean(unitId)))
+  );
 
-  if (error) {
-    throw error;
-  }
+  const [{ data: properties }, { data: units }] = await Promise.all([
+    propertyIds.length
+      ? supabase.from("properties").select("id, name").in("id", propertyIds)
+      : Promise.resolve({ data: [] }),
+    unitIds.length
+      ? supabase.from("units").select("id, unit_number").in("id", unitIds)
+      : Promise.resolve({ data: [] })
+  ]);
+
+  const propertyById = new Map((properties ?? []).map((property) => [property.id, property.name]));
+  const unitById = new Map((units ?? []).map((unit) => [unit.id, unit.unit_number]));
+
+  return ticketRows.map((ticket) => ({
+    id: ticket.id,
+    title: ticket.title,
+    description: ticket.description,
+    status: ticket.status as MobileTicketDTO["status"],
+    priority: ticket.priority as MobileTicketDTO["priority"],
+    createdAt: ticket.created_at,
+    propertyName: propertyById.get(ticket.property_id) ?? "Property",
+    unitNumber: ticket.unit_id ? unitById.get(ticket.unit_id) ?? null : null
+  }));
 }
 
-async function fetchTenantDocuments(userId: string): Promise<MobileDocumentDTO[]> {
+export async function fetchTenantDocuments(userId: string): Promise<MobileDocumentDTO[]> {
   const supabase = getSupabaseClient();
 
   const { data: profile, error: profileError } = await supabase
@@ -279,4 +332,56 @@ async function fetchTenantDocuments(userId: string): Promise<MobileDocumentDTO[]
     createdAt: packet.created_at,
     signedAt: packet.signed_at,
   }));
+}
+
+export async function fetchMobileTenantData(userId: string): Promise<MobileTenantData> {
+  const [charges, payments, tickets, units, documents] = await Promise.all([
+    fetchTenantCharges(userId),
+    fetchTenantPayments(userId),
+    fetchTenantTickets(userId),
+    fetchTenantUnits(userId),
+    fetchTenantDocuments(userId)
+  ]);
+
+  return {
+    charges,
+    payments,
+    tickets,
+    units,
+    documents
+  };
+}
+
+export async function createTenantTicket(input: {
+  userId: string;
+  unitId: string;
+  title: string;
+  description: string;
+  priority: MobileTicketDTO["priority"];
+}) {
+  const supabase = getSupabaseClient();
+
+  const { data: unit, error: unitError } = await supabase
+    .from("units")
+    .select("property_id")
+    .eq("id", input.unitId)
+    .single();
+
+  if (unitError || !unit) {
+    throw unitError ?? new Error("Unable to load selected unit.");
+  }
+
+  const { error } = await supabase.from("maintenance_tickets").insert({
+    property_id: unit.property_id,
+    unit_id: input.unitId,
+    tenant_profile_id: input.userId,
+    title: input.title,
+    description: input.description,
+    priority: input.priority,
+    status: "open",
+  });
+
+  if (error) {
+    throw error;
+  }
 }

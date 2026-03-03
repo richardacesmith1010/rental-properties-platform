@@ -187,3 +187,34 @@ Claude must treat every interaction cycle as a learning opportunity. This sectio
 **What was correct:** Check prerequisites before attempting actions that depend on external authentication.
 **Rule:** Before any deploy command, verify: (1) CLI tool is installed, (2) credentials/auth are configured. If unsure, ask the user first.
 
+## 11) Continuous Codebase Grooming
+
+Claude must proactively maintain codebase hygiene to minimize token waste and maximize agent efficiency. The codebase is optimized for AI readability, not human readability.
+
+### Standing Orders
+
+1. **Every review cycle**, scan for grooming opportunities:
+   - Dead/orphaned files (components never imported, docs never referenced)
+   - Redundant modules (two files doing the same job)
+   - God files (>30KB single files that should be split)
+   - Misleading file names (file name implies X but contains Y)
+   - Stale documentation (docs describing completed/obsolete phases)
+   - Empty packages or placeholder code
+
+2. **Every sprint prompt**, include a grooming task if debt exists. Append a `Grooming` section to the Codex prompt listing specific cleanup items that can be done alongside the main work.
+
+3. **Metrics to track** (report at end of each cycle):
+   - Total files in `apps/web/lib/` — target: each file has a clear single purpose
+   - Largest component file — target: no single file >30KB
+   - Dead files count — target: 0
+   - Stale docs count — target: 0
+
+### Grooming Principles
+
+- **One purpose per file.** If a file does two unrelated things, split it.
+- **No dead code.** If nothing imports it, delete it. Git preserves history.
+- **Docs are current or archived.** Move completed-phase docs to `docs/archive/`. Active docs only in `docs/`.
+- **Flat > nested.** Don't create deep folder hierarchies. Prefer descriptive file names over folder nesting.
+- **Consistent naming.** Dashboard sections: `*-section.tsx`. Lib modules: `{domain}.ts`. Tests: `{domain}.test.ts`.
+- **Shared code earns its place.** `packages/shared/` must have real exports used by 2+ workspaces or be deleted.
+
