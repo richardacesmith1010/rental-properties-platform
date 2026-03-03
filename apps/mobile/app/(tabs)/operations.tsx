@@ -1,7 +1,13 @@
 import { useFocusEffect } from "expo-router";
 import { Wrench } from "lucide-react-native";
 import { useCallback, useState } from "react";
-import { SafeAreaView, ScrollView, StyleSheet, Text } from "react-native";
+import {
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+} from "react-native";
 import { TicketRow } from "../../components/ticket-row";
 import { EmptyState } from "../../components/ui/empty-state";
 import { LoadingSpinner } from "../../components/ui/loading-spinner";
@@ -13,19 +19,25 @@ import type { MobileOwnerTicketDTO } from "../../lib/types";
 export default function OperationsTab() {
   const { profileRole, user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tickets, setTickets] = useState<MobileOwnerTicketDTO[]>([]);
 
   const isAdmin = profileRole === "owner" || profileRole === "manager";
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (mode: "initial" | "refresh" = "initial") => {
     if (!user?.id || !isAdmin) {
       setLoading(false);
+      setRefreshing(false);
       setTickets([]);
       return;
     }
 
-    setLoading(true);
+    if (mode === "refresh") {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
 
     try {
@@ -35,6 +47,7 @@ export default function OperationsTab() {
       setError(loadError instanceof Error ? loadError.message : "Unable to load operations.");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [isAdmin, user?.id]);
 
@@ -44,9 +57,23 @@ export default function OperationsTab() {
     }, [load])
   );
 
+  const onRefresh = useCallback(() => {
+    void load("refresh");
+  }, [load]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={
+          <RefreshControl
+            colors={[colors.primary]}
+            onRefresh={onRefresh}
+            refreshing={refreshing}
+            tintColor={colors.primary}
+          />
+        }
+      >
         <Text style={styles.title}>Operations</Text>
         <Text style={styles.subtitle}>Maintenance activity across the properties you administer.</Text>
 

@@ -1,7 +1,14 @@
 import { useFocusEffect } from "expo-router";
 import { Bell, Building2, CreditCard, FileText, Wrench } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
-import { SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { KpiCard } from "../../components/kpi-card";
 import { EmptyState } from "../../components/ui/empty-state";
 import { LoadingSpinner } from "../../components/ui/loading-spinner";
@@ -33,6 +40,7 @@ function formatCurrency(cents: number) {
 export default function HomeTab() {
   const { profileRole, user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [tenantData, setTenantData] = useState<MobileTenantData>(EMPTY_TENANT_DATA);
@@ -41,13 +49,18 @@ export default function HomeTab() {
   const [adminOpenTickets, setAdminOpenTickets] = useState(0);
   const [adminPendingCharges, setAdminPendingCharges] = useState(0);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (mode: "initial" | "refresh" = "initial") => {
     if (!user?.id || !profileRole) {
       setLoading(false);
+      setRefreshing(false);
       return;
     }
 
-    setLoading(true);
+    if (mode === "refresh") {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
 
     try {
@@ -72,6 +85,7 @@ export default function HomeTab() {
       setError(loadError instanceof Error ? loadError.message : "Unable to load home dashboard.");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [profileRole, user?.id]);
 
@@ -80,6 +94,10 @@ export default function HomeTab() {
       void load();
     }, [load])
   );
+
+  const onRefresh = useCallback(() => {
+    void load("refresh");
+  }, [load]);
 
   const tenantOutstanding = useMemo(
     () => tenantData.charges.reduce((sum, charge) => sum + charge.amountCents, 0),
@@ -98,7 +116,17 @@ export default function HomeTab() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={
+          <RefreshControl
+            colors={[colors.primary]}
+            onRefresh={onRefresh}
+            refreshing={refreshing}
+            tintColor={colors.primary}
+          />
+        }
+      >
         <Text style={styles.title}>Overview</Text>
         <Text style={styles.subtitle}>Quick snapshot of the items that need attention.</Text>
 

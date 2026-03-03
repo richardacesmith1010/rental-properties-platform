@@ -1,3 +1,4 @@
+import { Camera } from "lucide-react-native";
 import { StyleSheet, Text, View } from "react-native";
 import type { MobileOwnerTicketDTO, MobileTicketDTO } from "../lib/types";
 import { Badge } from "./ui/badge";
@@ -47,7 +48,15 @@ export function TicketRow({ ticket }: { ticket: TicketLike }) {
       </Text>
       <Text style={styles.description}>{ticket.description}</Text>
       <View style={styles.footerRow}>
-        <Badge label={ticket.priority} variant={ticket.priority === "urgent" ? "danger" : "info"} />
+        <View style={styles.footerLeft}>
+          <Badge label={ticket.priority} variant={ticket.priority === "urgent" ? "danger" : "info"} />
+          {ticket.photoCount > 0 ? (
+            <View style={styles.photoIndicator}>
+              <Camera color={colors.primary} size={14} strokeWidth={2} />
+              <Text style={styles.photoText}>{ticket.photoCount}</Text>
+            </View>
+          ) : null}
+        </View>
         <Text style={styles.meta}>{formatDate(ticket.createdAt)}</Text>
       </View>
     </Card>
@@ -83,5 +92,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: spacing.md,
+  },
+  footerLeft: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
+  },
+  photoIndicator: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceBorder,
+    borderRadius: 999,
+    flexDirection: "row",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  photoText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.xs,
+    fontWeight: "700",
   },
 });

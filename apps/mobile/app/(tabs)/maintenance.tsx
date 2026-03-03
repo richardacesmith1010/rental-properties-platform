@@ -1,13 +1,20 @@
 import { useFocusEffect } from "expo-router";
 import { Wrench } from "lucide-react-native";
 import { useCallback, useState } from "react";
-import { SafeAreaView, ScrollView, StyleSheet, Text } from "react-native";
+import {
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+} from "react-native";
 import { TicketForm } from "../../components/ticket-form";
 import { TicketRow } from "../../components/ticket-row";
 import { EmptyState } from "../../components/ui/empty-state";
 import { LoadingSpinner } from "../../components/ui/loading-spinner";
 import { useAuth } from "../../lib/auth-context";
 import { fetchOwnerTickets } from "../../lib/owner-data";
+import { uploadTicketPhoto } from "../../lib/photo-upload";
 import {
   createTenantTicket,
   fetchTenantTickets,
@@ -19,19 +26,27 @@ import type { MobileOwnerTicketDTO, MobileTenantUnitDTO, MobileTicketDTO } from 
 export default function MaintenanceTab() {
   const { profileRole, user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [tenantUnits, setTenantUnits] = useState<MobileTenantUnitDTO[]>([]);
   const [tenantTickets, setTenantTickets] = useState<MobileTicketDTO[]>([]);
   const [adminTickets, setAdminTickets] = useState<MobileOwnerTicketDTO[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (mode: "initial" | "refresh" = "initial") => {
     if (!user?.id || !profileRole) {
       setLoading(false);
+      setRefreshing(false);
       return;
     }
 
-    setLoading(true);
+    if (mode === "refresh") {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
     setError(null);
 
     try {
@@ -51,6 +66,7 @@ export default function MaintenanceTab() {
       setError(loadError instanceof Error ? loadError.message : "Unable to load maintenance data.");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [profileRole, user?.id]);
 
@@ -60,11 +76,16 @@ export default function MaintenanceTab() {
     }, [load])
   );
 
+  const onRefresh = useCallback(() => {
+    void load("refresh");
+  }, [load]);
+
   const handleCreateTicket = async (payload: {
     unitId: string;
     title: string;
     description: string;
     priority: MobileTicketDTO["priority"];
+    photoUri: string | null;
   }) => {
     if (!user?.id) {
       return;
@@ -72,16 +93,36 @@ export default function MaintenanceTab() {
 
     setSubmitting(true);
     setError(null);
+    setSuccessMessage(null);
 
     try {
-      await createTenantTicket({
+      const createdTicketId = await createTenantTicket({
         userId: user.id,
         unitId: payload.unitId,
         title: payload.title,
         description: payload.description,
         priority: payload.priority,
       });
-      await load();
+
+      if (payload.photoUri) {
+        const uploadResult = await uploadTicketPhoto({
+          ticketId: createdTicketId,
+          userId: user.id,
+          photoUri: payload.photoUri,
+        });
+
+        if (!uploadResult.success) {
+          setError(uploadResult.error ?? "Ticket created, but photo upload failed.");
+        }
+      }
+
+      if (!payload.photoUri) {
+        setSuccessMessage("Maintenance ticket submitted.");
+      } else {
+        setSuccessMessage("Maintenance ticket submitted with photo.");
+      }
+
+      await load("refresh");
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Unable to submit ticket.");
     } finally {
@@ -91,9 +132,21 @@ export default function MaintenanceTab() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={
+          <RefreshControl
+            colors={[colors.primary]}
+            onRefresh={onRefresh}
+            refreshing={refreshing}
+            tintColor={colors.primary}
+          />
+        }
+      >
         <Text style={styles.title}>Maintenance</Text>
         <Text style={styles.subtitle}>Track open issues and submit new maintenance requests.</Text>
+
+        {successMessage ? <Text style={styles.success}>{successMessage}</Text> : null}
 
         {loading ? <LoadingSpinner label="Loading maintenance..." /> : null}
 
@@ -150,5 +203,10 @@ const styles = StyleSheet.create({
   subtitle: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
+  },
+  success: {
+    color: colors.success,
+    fontSize: fontSize.sm,
+    fontWeight: "700",
   },
 });

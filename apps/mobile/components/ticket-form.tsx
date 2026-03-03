@@ -1,5 +1,6 @@
+import * as ImagePicker from "expo-image-picker";
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import type { MobileTenantUnitDTO, MobileTicketDTO } from "../lib/types";
 import { borderRadius, colors, fontSize, spacing } from "../lib/theme";
 import { Button } from "./ui/button";
@@ -14,6 +15,7 @@ interface TicketFormProps {
     title: string;
     description: string;
     priority: MobileTicketDTO["priority"];
+    photoUri: string | null;
   }) => Promise<void> | void;
 }
 
@@ -24,6 +26,7 @@ export function TicketForm({ units, onSubmit, submitting = false }: TicketFormPr
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<MobileTicketDTO["priority"]>("medium");
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const unitOptions = useMemo(
@@ -35,6 +38,53 @@ export function TicketForm({ units, onSubmit, submitting = false }: TicketFormPr
     setTitle("");
     setDescription("");
     setPriority("medium");
+    setPhotoUri(null);
+  };
+
+  const chooseFromLibrary = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setError("Photo library permission is required to attach a photo.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      allowsEditing: true,
+    });
+
+    if (!result.canceled) {
+      setPhotoUri(result.assets[0]?.uri ?? null);
+      setError(null);
+    }
+  };
+
+  const takePhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      setError("Camera permission is required to capture a photo.");
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      allowsEditing: true,
+    });
+
+    if (!result.canceled) {
+      setPhotoUri(result.assets[0]?.uri ?? null);
+      setError(null);
+    }
+  };
+
+  const handleAttachPhoto = () => {
+    Alert.alert("Attach Photo", "Choose a source for the maintenance photo.", [
+      { text: "Take Photo", onPress: () => void takePhoto() },
+      { text: "Choose from Library", onPress: () => void chooseFromLibrary() },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
   const handleSubmit = async () => {
@@ -59,6 +109,7 @@ export function TicketForm({ units, onSubmit, submitting = false }: TicketFormPr
       title: title.trim(),
       description: description.trim(),
       priority,
+      photoUri,
     });
     reset();
   };
@@ -93,6 +144,20 @@ export function TicketForm({ units, onSubmit, submitting = false }: TicketFormPr
         textAlignVertical="top"
         value={description}
       />
+
+      <View style={styles.photoWrap}>
+        <Button onPress={handleAttachPhoto} variant="secondary">
+          {photoUri ? "Change Photo" : "Attach Photo"}
+        </Button>
+        {photoUri ? (
+          <View style={styles.photoPreviewWrap}>
+            <Image source={{ uri: photoUri }} style={styles.photoPreview} />
+            <Button onPress={() => setPhotoUri(null)} variant="destructive">
+              Remove Photo
+            </Button>
+          </View>
+        ) : null}
+      </View>
 
       <Text style={styles.label}>Priority</Text>
       <View style={styles.rowWrap}>
@@ -163,6 +228,20 @@ const styles = StyleSheet.create({
   },
   textarea: {
     minHeight: 96,
+  },
+  photoWrap: {
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  photoPreviewWrap: {
+    gap: spacing.sm,
+  },
+  photoPreview: {
+    borderColor: colors.surfaceBorder,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    height: 160,
+    width: "100%",
   },
   error: {
     color: colors.danger,

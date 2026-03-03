@@ -235,7 +235,7 @@ export async function fetchOwnerTickets(userId: string): Promise<MobileOwnerTick
 
   const unitIds = Array.from(new Set(tickets.map((ticket) => ticket.unit_id).filter((id): id is string => Boolean(id))));
 
-  const [propertyResult, unitsResult, assignmentsResult] = await Promise.all([
+  const [propertyResult, unitsResult, assignmentsResult, photosResult] = await Promise.all([
     supabase.from("properties").select("id, name").in("id", propertyIds),
     unitIds.length
       ? supabase.from("units").select("id, unit_number").in("id", unitIds)
@@ -245,6 +245,10 @@ export async function fetchOwnerTickets(userId: string): Promise<MobileOwnerTick
       .select("ticket_id, vendor_id, assigned_at")
       .in("ticket_id", tickets.map((ticket) => ticket.id))
       .order("assigned_at", { ascending: false }),
+    supabase
+      .from("maintenance_photos")
+      .select("id, ticket_id")
+      .in("ticket_id", tickets.map((ticket) => ticket.id)),
   ]);
 
   if (propertyResult.error && !isMissingSchemaError(propertyResult.error)) {
@@ -257,6 +261,9 @@ export async function fetchOwnerTickets(userId: string): Promise<MobileOwnerTick
 
   if (assignmentsResult.error && !isMissingSchemaError(assignmentsResult.error)) {
     throw assignmentsResult.error;
+  }
+  if (photosResult.error && !isMissingSchemaError(photosResult.error)) {
+    throw photosResult.error;
   }
 
   const latestAssignmentByTicketId = new Map<string, string>();
@@ -278,6 +285,11 @@ export async function fetchOwnerTickets(userId: string): Promise<MobileOwnerTick
   const propertyById = new Map((propertyResult.data ?? []).map((property) => [property.id, property.name]));
   const unitById = new Map((unitsResult.data ?? []).map((unit) => [unit.id, unit.unit_number]));
   const vendorById = new Map((vendorsResult.data ?? []).map((vendor) => [vendor.id, vendor.name]));
+  const photoCountByTicket = new Map<string, number>();
+
+  for (const photo of photosResult.data ?? []) {
+    photoCountByTicket.set(photo.ticket_id, (photoCountByTicket.get(photo.ticket_id) ?? 0) + 1);
+  }
 
   return tickets.map((ticket) => {
     const vendorId = latestAssignmentByTicketId.get(ticket.id);
@@ -291,6 +303,7 @@ export async function fetchOwnerTickets(userId: string): Promise<MobileOwnerTick
       propertyName: propertyById.get(ticket.property_id) ?? "Property",
       unitNumber: ticket.unit_id ? unitById.get(ticket.unit_id) ?? null : null,
       vendorName: vendorId ? vendorById.get(vendorId) ?? null : null,
+      photoCount: photoCountByTicket.get(ticket.id) ?? 0,
     };
   });
 }
@@ -432,6 +445,7 @@ export async function fetchOwnerDocuments(userId: string): Promise<MobileDocumen
     propertyLabel: propertyById.get(packet.property_id) ?? "Property",
     packetStatus: packet.status,
     signerStatus: packet.status === "signed" ? "signed" : "pending",
+    signerId: null,
     createdAt: packet.created_at,
     signedAt: packet.signed_at,
   }));

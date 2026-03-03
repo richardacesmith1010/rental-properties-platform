@@ -218,17 +218,33 @@ export async function fetchTenantTickets(userId: string): Promise<MobileTicketDT
     new Set(ticketRows.map((ticket) => ticket.unit_id).filter((unitId): unitId is string => Boolean(unitId)))
   );
 
-  const [{ data: properties }, { data: units }] = await Promise.all([
+  const [{ data: properties }, { data: units }, photosResult] = await Promise.all([
     propertyIds.length
       ? supabase.from("properties").select("id, name").in("id", propertyIds)
       : Promise.resolve({ data: [] }),
     unitIds.length
       ? supabase.from("units").select("id, unit_number").in("id", unitIds)
-      : Promise.resolve({ data: [] })
+      : Promise.resolve({ data: [] }),
+    supabase
+      .from("maintenance_photos")
+      .select("id, ticket_id")
+      .in("ticket_id", ticketRows.map((ticket) => ticket.id))
   ]);
 
   const propertyById = new Map((properties ?? []).map((property) => [property.id, property.name]));
   const unitById = new Map((units ?? []).map((unit) => [unit.id, unit.unit_number]));
+  const photoCountByTicketId = new Map<string, number>();
+
+  if (!photosResult.error) {
+    for (const photo of photosResult.data ?? []) {
+      photoCountByTicketId.set(
+        photo.ticket_id,
+        (photoCountByTicketId.get(photo.ticket_id) ?? 0) + 1
+      );
+    }
+  } else if (!isMissingSchemaError(photosResult.error)) {
+    throw photosResult.error;
+  }
 
   return ticketRows.map((ticket) => ({
     id: ticket.id,
@@ -238,7 +254,8 @@ export async function fetchTenantTickets(userId: string): Promise<MobileTicketDT
     priority: ticket.priority as MobileTicketDTO["priority"],
     createdAt: ticket.created_at,
     propertyName: propertyById.get(ticket.property_id) ?? "Property",
-    unitNumber: ticket.unit_id ? unitById.get(ticket.unit_id) ?? null : null
+    unitNumber: ticket.unit_id ? unitById.get(ticket.unit_id) ?? null : null,
+    photoCount: photoCountByTicketId.get(ticket.id) ?? 0
   }));
 }
 
@@ -261,12 +278,12 @@ export async function fetchTenantDocuments(userId: string): Promise<MobileDocume
     await Promise.all([
       supabase
         .from("document_signers")
-        .select("packet_id, status")
+        .select("id, packet_id, status")
         .eq("profile_id", userId),
       email
         ? supabase
             .from("document_signers")
-            .select("packet_id, status")
+            .select("id, packet_id, status")
             .eq("email", email)
         : Promise.resolve({ data: [], error: null }),
     ]);
@@ -319,16 +336,38 @@ export async function fetchTenantDocuments(userId: string): Promise<MobileDocume
 
   const templateById = new Map((templates ?? []).map((template) => [template.id, template.name]));
   const propertyById = new Map((properties ?? []).map((property) => [property.id, property.name]));
-  const signerStatusByPacket = new Map(
-    signerRows.map((row) => [row.packet_id, row.status as "pending" | "signed"])
-  );
+  const signerByPacketId = new Map<
+    string,
+    { id: string; status: "pending" | "signed" }
+  >();
+
+  for (const row of signerRows) {
+    const normalizedStatus = row.status as "pending" | "signed";
+    const existing = signerByPacketId.get(row.packet_id);
+
+    if (!existing) {
+      signerByPacketId.set(row.packet_id, {
+        id: row.id,
+        status: normalizedStatus
+      });
+      continue;
+    }
+
+    if (existing.status === "signed" && normalizedStatus === "pending") {
+      signerByPacketId.set(row.packet_id, {
+        id: row.id,
+        status: normalizedStatus
+      });
+    }
+  }
 
   return (packets ?? []).map((packet) => ({
     id: packet.id,
     templateName: templateById.get(packet.template_id) ?? "Document",
     propertyLabel: propertyById.get(packet.property_id) ?? "Property",
     packetStatus: packet.status as MobileDocumentDTO["packetStatus"],
-    signerStatus: signerStatusByPacket.get(packet.id) ?? "pending",
+    signerStatus: signerByPacketId.get(packet.id)?.status ?? "pending",
+    signerId: signerByPacketId.get(packet.id)?.id ?? null,
     createdAt: packet.created_at,
     signedAt: packet.signed_at,
   }));
@@ -358,7 +397,7 @@ export async function createTenantTicket(input: {
   title: string;
   description: string;
   priority: MobileTicketDTO["priority"];
-}) {
+}): Promise<string> {
   const supabase = getSupabaseClient();
 
   const { data: unit, error: unitError } = await supabase
@@ -371,17 +410,23 @@ export async function createTenantTicket(input: {
     throw unitError ?? new Error("Unable to load selected unit.");
   }
 
-  const { error } = await supabase.from("maintenance_tickets").insert({
-    property_id: unit.property_id,
-    unit_id: input.unitId,
-    tenant_profile_id: input.userId,
-    title: input.title,
-    description: input.description,
-    priority: input.priority,
-    status: "open",
-  });
+  const { data: insertedTicket, error } = await supabase
+    .from("maintenance_tickets")
+    .insert({
+      property_id: unit.property_id,
+      unit_id: input.unitId,
+      tenant_profile_id: input.userId,
+      title: input.title,
+      description: input.description,
+      priority: input.priority,
+      status: "open",
+    })
+    .select("id")
+    .single();
 
-  if (error) {
-    throw error;
+  if (error || !insertedTicket) {
+    throw error ?? new Error("Unable to create ticket.");
   }
+
+  return insertedTicket.id;
 }

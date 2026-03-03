@@ -29,6 +29,7 @@ export interface MobileTicketDTO {
   createdAt: string;
   propertyName: string;
   unitNumber: string | null;
+  photoCount: number;
 }
 
 export interface MobileDocumentDTO {
@@ -37,6 +38,7 @@ export interface MobileDocumentDTO {
   propertyLabel: string;
   packetStatus: "draft" | "sent" | "signed" | "void";
   signerStatus: "pending" | "signed";
+  signerId: string | null;
   createdAt: string;
   signedAt: string | null;
 }
@@ -72,6 +74,7 @@ export interface MobileOwnerTicketDTO {
   propertyName: string;
   unitNumber: string | null;
   vendorName: string | null;
+  photoCount: number;
 }
 
 export interface MobileNotificationDTO {

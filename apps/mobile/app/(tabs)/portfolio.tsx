@@ -1,7 +1,13 @@
 import { useFocusEffect } from "expo-router";
 import { FolderOpen } from "lucide-react-native";
 import { useCallback, useState } from "react";
-import { SafeAreaView, ScrollView, StyleSheet, Text } from "react-native";
+import {
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+} from "react-native";
 import { PropertyCard } from "../../components/property-card";
 import { EmptyState } from "../../components/ui/empty-state";
 import { LoadingSpinner } from "../../components/ui/loading-spinner";
@@ -13,19 +19,25 @@ import type { MobilePropertySummaryDTO } from "../../lib/types";
 export default function PortfolioTab() {
   const { profileRole, user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [properties, setProperties] = useState<MobilePropertySummaryDTO[]>([]);
 
   const isAdmin = profileRole === "owner" || profileRole === "manager";
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (mode: "initial" | "refresh" = "initial") => {
     if (!user?.id || !isAdmin) {
       setLoading(false);
+      setRefreshing(false);
       setProperties([]);
       return;
     }
 
-    setLoading(true);
+    if (mode === "refresh") {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
 
     try {
@@ -35,6 +47,7 @@ export default function PortfolioTab() {
       setError(loadError instanceof Error ? loadError.message : "Unable to load portfolio.");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [isAdmin, user?.id]);
 
@@ -44,9 +57,23 @@ export default function PortfolioTab() {
     }, [load])
   );
 
+  const onRefresh = useCallback(() => {
+    void load("refresh");
+  }, [load]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={
+          <RefreshControl
+            colors={[colors.primary]}
+            onRefresh={onRefresh}
+            refreshing={refreshing}
+            tintColor={colors.primary}
+          />
+        }
+      >
         <Text style={styles.title}>Portfolio</Text>
         <Text style={styles.subtitle}>Property and unit summaries for owned or managed assets.</Text>
 

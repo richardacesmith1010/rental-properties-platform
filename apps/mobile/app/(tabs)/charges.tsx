@@ -1,7 +1,15 @@
 import { useFocusEffect } from "expo-router";
 import { CreditCard } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
-import { Linking, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Linking,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { ChargeRow } from "../../components/charge-row";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
@@ -37,19 +45,26 @@ function formatDate(value: string) {
 export default function ChargesTab() {
   const { profileRole, user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [charges, setCharges] = useState<MobileChargeDTO[]>([]);
   const [payments, setPayments] = useState<MobilePaymentDTO[]>([]);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (mode: "initial" | "refresh" = "initial") => {
     if (!user?.id || profileRole !== "tenant") {
       setLoading(false);
+      setRefreshing(false);
       setCharges([]);
       setPayments([]);
       return;
     }
 
-    setLoading(true);
+    if (mode === "refresh") {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
     setError(null);
 
     try {
@@ -63,6 +78,7 @@ export default function ChargesTab() {
       setError(loadError instanceof Error ? loadError.message : "Unable to load charges.");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [profileRole, user?.id]);
 
@@ -72,17 +88,27 @@ export default function ChargesTab() {
     }, [load])
   );
 
+  const onRefresh = useCallback(() => {
+    void load("refresh");
+  }, [load]);
+
   const outstanding = useMemo(
     () => charges.reduce((sum, charge) => sum + charge.amountCents, 0),
     [charges]
   );
+
+  const openPayNow = (chargeId: string) => {
+    const mobileReturnTo = encodeURIComponent("domus://auth/callback");
+    const url = `${WEB_APP_URL}/tenant?charge=${chargeId}&mobileReturnTo=${mobileReturnTo}`;
+    void Linking.openURL(url);
+  };
 
   if (profileRole !== "tenant") {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
           <EmptyState
-            description="Charges are tenant-only in mobile Phase 1. Use Home, Portfolio, or Operations for admin workflows."
+            description="Charges are tenant-only in mobile Phase 2."
             icon={CreditCard}
             title="Tenant charges only"
           />
@@ -93,7 +119,17 @@ export default function ChargesTab() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={
+          <RefreshControl
+            colors={[colors.primary]}
+            onRefresh={onRefresh}
+            refreshing={refreshing}
+            tintColor={colors.primary}
+          />
+        }
+      >
         <Text style={styles.title}>Charges</Text>
         <Text style={styles.subtitle}>Outstanding rent charges and payment history.</Text>
 
@@ -111,7 +147,14 @@ export default function ChargesTab() {
         ) : null}
 
         {!loading && !error && charges.length > 0
-          ? charges.map((charge) => <ChargeRow key={charge.id} charge={charge} />)
+          ? charges.map((charge) => (
+              <View key={charge.id} style={styles.chargeItemWrap}>
+                <ChargeRow charge={charge} />
+                <Button onPress={() => openPayNow(charge.id)}>
+                  Pay Now
+                </Button>
+              </View>
+            ))
           : null}
 
         {!loading && !error && charges.length === 0 ? (
@@ -120,12 +163,6 @@ export default function ChargesTab() {
             icon={CreditCard}
             title="No outstanding charges"
           />
-        ) : null}
-
-        {!loading && !error ? (
-          <Button onPress={() => void Linking.openURL(`${WEB_APP_URL}/tenant`)}>
-            Pay via Web Checkout
-          </Button>
         ) : null}
 
         {!loading && !error ? (
@@ -172,6 +209,9 @@ const styles = StyleSheet.create({
   subtitle: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
+  },
+  chargeItemWrap: {
+    gap: spacing.sm,
   },
   kpiLabel: {
     color: colors.textSecondary,

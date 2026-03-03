@@ -10,6 +10,7 @@ export const colors = {
   warning: "#fbbf24",
   danger: "#f87171",
   info: "#60a5fa",
+  overlay: "rgba(0, 0, 0, 0.55)",
 };
 
 export const spacing = {
