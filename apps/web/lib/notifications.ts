@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { shouldRecordSuccessfulDelivery } from "@/lib/idempotency";
+import { ensureInboxThreadForEvent } from "@/lib/inbox";
 
 export type NotificationType =
   | "new_ticket"
@@ -52,6 +53,8 @@ interface CreateNotificationParams {
   body: string;
   entityType: string;
   entityId?: string | null;
+  propertyId?: string | null;
+  actorProfileId?: string | null;
 }
 
 export async function createNotificationWithDelivery(params: CreateNotificationParams) {
@@ -132,11 +135,27 @@ interface NotifyOwnerMembersParams {
   entityType: string;
   entityId?: string | null;
   excludeProfileId?: string | null;
+  actorProfileId?: string | null;
+}
+
+function shouldMirrorToInbox(type: NotificationType) {
+  return type === "new_ticket" || type === "ticket_resolved" || type === "lease_updated";
 }
 
 export async function notifyOwnerMembersForProperty(params: NotifyOwnerMembersParams) {
   try {
     const admin = createAdminClient();
+
+    if (shouldMirrorToInbox(params.type)) {
+      await ensureInboxThreadForEvent({
+        propertyId: params.propertyId,
+        entityType: params.entityType,
+        entityId: params.entityId ?? null,
+        subject: params.title,
+        messageBody: params.body,
+        actorProfileId: params.actorProfileId ?? null
+      });
+    }
 
     const { data: property } = await admin
       .from("properties")

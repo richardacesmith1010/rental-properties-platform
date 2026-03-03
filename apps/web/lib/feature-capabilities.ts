@@ -34,6 +34,7 @@ interface FeatureCapabilityProbe {
   maintenancePhotosTable: boolean;
   ownershipAccountsTable: boolean;
   ownershipAccountMembersTable: boolean;
+  rentalListingsTable: boolean;
   rentalApplicationsTable: boolean;
   screeningReportsTable: boolean;
   applicationEventsTable: boolean;
@@ -158,6 +159,7 @@ export function deriveFeatureCapabilities(probe: FeatureCapabilityProbe): Featur
     probe.propertiesOwnerAccountColumn &&
     probe.invitationsOwnershipAccountColumn;
   const leasingPipelineReady =
+    probe.rentalListingsTable &&
     probe.rentalApplicationsTable &&
     probe.screeningReportsTable &&
     probe.applicationEventsTable;
@@ -247,6 +249,7 @@ export async function getFeatureCapabilities(): Promise<FeatureCapabilitiesDTO> 
     maintenancePhotosTable,
     ownershipAccountsTable,
     ownershipAccountMembersTable,
+    rentalListingsTable,
     rentalApplicationsTable,
     screeningReportsTable,
     applicationEventsTable,
@@ -271,6 +274,7 @@ export async function getFeatureCapabilities(): Promise<FeatureCapabilitiesDTO> 
     probeTable(supabase, "maintenance_photos"),
     probeTable(supabase, "ownership_accounts"),
     probeTable(supabase, "ownership_account_members"),
+    probeTable(supabase, "rental_listings"),
     probeTable(supabase, "rental_applications"),
     probeTable(supabase, "screening_reports"),
     probeTable(supabase, "application_events"),
@@ -297,6 +301,7 @@ export async function getFeatureCapabilities(): Promise<FeatureCapabilitiesDTO> 
     maintenancePhotosTable,
     ownershipAccountsTable,
     ownershipAccountMembersTable,
+    rentalListingsTable,
     rentalApplicationsTable,
     screeningReportsTable,
     applicationEventsTable,

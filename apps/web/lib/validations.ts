@@ -224,6 +224,71 @@ export const markNotificationReadSchema = z.object({
   notificationId: z.string().uuid("Invalid notification ID.")
 });
 
+/* ─── Phase 10: Automations + Inbox + Leasing ─── */
+
+export const enableAutomationSchema = z.object({
+  propertyId: z.string().uuid("Invalid property selection."),
+  templateId: z.string().uuid("Invalid automation template.")
+});
+
+export const disableAutomationSchema = z.object({
+  propertyId: z.string().uuid("Invalid property selection."),
+  templateId: z.string().uuid("Invalid automation template.")
+});
+
+export const createInboxThreadSchema = z.object({
+  propertyId: z.string().uuid("Invalid property selection."),
+  subject: z
+    .string()
+    .min(1, "Thread subject is required.")
+    .max(180, "Thread subject must be under 180 characters."),
+  entityType: z
+    .string()
+    .min(1, "Entity type is required.")
+    .max(80, "Entity type must be under 80 characters."),
+  entityId: z
+    .union([z.string().uuid("Entity ID must be a valid UUID."), z.literal("")])
+    .optional()
+});
+
+export const sendInboxMessageSchema = z.object({
+  threadId: z.string().uuid("Invalid thread selection."),
+  body: z
+    .string()
+    .min(1, "Message body is required.")
+    .max(4000, "Message must be under 4,000 characters.")
+});
+
+const optionalListingNumberSchema = z.preprocess(
+  (value) => (value === "" || value === undefined || value === null ? undefined : value),
+  z.coerce.number().min(0, "Value must be 0 or greater.").max(50, "Value is too high.").optional()
+);
+
+export const createRentalListingSchema = z.object({
+  propertyId: z.string().uuid("Invalid property selection."),
+  headline: z
+    .string()
+    .min(1, "Listing headline is required.")
+    .max(200, "Headline must be under 200 characters."),
+  description: z
+    .string()
+    .max(4000, "Description must be under 4,000 characters.")
+    .optional(),
+  askingRentDollars: z.coerce.number().positive("Asking rent must be greater than $0."),
+  availableOn: z
+    .string()
+    .optional(),
+  bedroomCount: optionalListingNumberSchema,
+  bathroomCount: optionalListingNumberSchema
+});
+
+export const updateListingStatusSchema = z.object({
+  listingId: z.string().uuid("Invalid listing ID."),
+  status: z.enum(["draft", "published", "paused", "archived"], {
+    message: "Select a valid listing status."
+  })
+});
+
 /* ─── Vendors + Maintenance Completion ─── */
 
 export const createVendorSchema = z.object({

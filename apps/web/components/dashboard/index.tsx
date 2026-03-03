@@ -11,6 +11,9 @@ import type { VendorDTO } from "@/lib/vendors";
 import type { FeatureCapabilitiesDTO } from "@/lib/feature-capabilities";
 import type { OwnershipAccountDTO } from "@/lib/ownership";
 import type { ExpenseDashboardData } from "@/lib/expenses";
+import type { AutomationRuleDTO, AutomationTemplateDTO } from "@/lib/automations";
+import type { InboxThreadDTO } from "@/lib/inbox";
+import type { RentalListingDTO } from "@/lib/leasing";
 import type { ActionState } from "@/app/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,11 +73,15 @@ interface DashboardProps {
   tickets?: MaintenanceTicket[];
   invitations?: InvitationListItem[];
   notifications?: NotificationDTO[];
+  inboxThreads?: InboxThreadDTO[];
   documents?: OwnerDocumentsData;
+  automationTemplates?: AutomationTemplateDTO[];
+  automationRules?: AutomationRuleDTO[];
   vendors?: VendorDTO[];
   expensesData?: ExpenseDashboardData;
   capabilities?: FeatureCapabilitiesDTO;
   ownershipAccounts?: OwnershipAccountDTO[];
+  listings?: RentalListingDTO[];
   generatedMessage?: string | null;
   initialSectionId?: string | null;
   initialOwnerWorkflowMode?: OwnerWorkflowMode;
@@ -99,6 +106,12 @@ interface DashboardProps {
   onInviteOwner?: StatefulAction;
   onResendInvite?: StatefulAction;
   onMarkNotificationRead?: StatefulAction;
+  onCreateInboxThread?: StatefulAction;
+  onSendInboxMessage?: StatefulAction;
+  onEnableAutomation?: StatefulAction;
+  onDisableAutomation?: StatefulAction;
+  onCreateRentalListing?: StatefulAction;
+  onUpdateListingStatus?: StatefulAction;
   onCreateDocumentTemplate?: StatefulAction;
   onDeleteDocumentTemplate?: StatefulAction;
   onCreateDocumentPacket?: StatefulAction;
@@ -180,11 +193,15 @@ export function Dashboard({
   tickets,
   invitations,
   notifications,
+  inboxThreads,
   documents,
+  automationTemplates,
+  automationRules,
   vendors,
   expensesData,
   capabilities,
   ownershipAccounts,
+  listings,
   generatedMessage,
   initialSectionId,
   initialOwnerWorkflowMode,
@@ -209,6 +226,12 @@ export function Dashboard({
   onInviteOwner,
   onResendInvite,
   onMarkNotificationRead,
+  onCreateInboxThread,
+  onSendInboxMessage,
+  onEnableAutomation,
+  onDisableAutomation,
+  onCreateRentalListing,
+  onUpdateListingStatus,
   onCreateDocumentTemplate,
   onDeleteDocumentTemplate,
   onCreateDocumentPacket,
@@ -240,7 +263,11 @@ export function Dashboard({
     propertyFilesWarning: null
   };
   const safeNotifications: NotificationDTO[] = notifications ?? [];
+  const safeInboxThreads: InboxThreadDTO[] = inboxThreads ?? [];
   const safeVendors: VendorDTO[] = vendors ?? [];
+  const safeAutomationTemplates: AutomationTemplateDTO[] = automationTemplates ?? [];
+  const safeAutomationRules: AutomationRuleDTO[] = automationRules ?? [];
+  const safeListings: RentalListingDTO[] = listings ?? [];
   const safeExpenses: ExpenseDashboardData = expensesData ?? {
     enabled: true,
     warning: null,
@@ -845,10 +872,13 @@ export function Dashboard({
           portfolio={safePortfolio}
           invitations={invitations ?? []}
           documents={safeDocuments}
+          listings={safeListings}
           chargeCount={data.charges.length}
           pipelineReady={safeCapabilities.leasingPipelineEnabled}
           pipelineWarning={safeCapabilities.warnings.leasingPipeline}
           onOpenSection={goToSectionIfVisible}
+          onCreateListing={onCreateRentalListing}
+          onUpdateListingStatus={onUpdateListingStatus}
         />
       );
     }
@@ -857,7 +887,14 @@ export function Dashboard({
       return (
         <InboxSection
           notifications={safeNotifications}
+          threads={safeInboxThreads}
+          properties={safePortfolio.properties.map((property) => ({
+            id: property.id,
+            name: property.name
+          }))}
           onMarkRead={onMarkNotificationRead!}
+          onCreateThread={onCreateInboxThread}
+          onSendMessage={onSendInboxMessage}
           threadsReady={safeCapabilities.inboxThreadsEnabled}
           threadsWarning={safeCapabilities.warnings.inboxThreads}
           onOpenSection={goToSectionIfVisible}
@@ -869,10 +906,17 @@ export function Dashboard({
       return (
         <AutomationTemplatesSection
           role={data.profileRole === "manager" ? "manager" : "owner"}
-          userKey={userEmail}
+          templates={safeAutomationTemplates}
+          rules={safeAutomationRules}
+          properties={safePortfolio.properties.map((property) => ({
+            id: property.id,
+            name: property.name
+          }))}
           runtimeReady={safeCapabilities.automationsEnabled}
           runtimeWarning={safeCapabilities.warnings.automations}
           onOpenSection={goToSectionIfVisible}
+          onEnableAutomation={onEnableAutomation}
+          onDisableAutomation={onDisableAutomation}
         />
       );
     }

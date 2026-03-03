@@ -1,185 +1,217 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useFormState } from "react-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
+import { SubmitButton } from "@/components/shared/submit-button";
 import { EmptyState } from "@/components/shared/empty-state";
+import type { ActionState } from "@/app/actions";
+import type { AutomationRuleDTO, AutomationTemplateDTO } from "@/lib/automations";
+
+type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
 interface AutomationTemplatesSectionProps {
   role: "owner" | "manager";
-  userKey: string;
+  templates: AutomationTemplateDTO[];
+  rules: AutomationRuleDTO[];
+  properties: Array<{ id: string; name: string }>;
   runtimeReady?: boolean;
   runtimeWarning?: string | null;
   onOpenSection?: (sectionId: string) => void;
+  onEnableAutomation?: StatefulAction;
+  onDisableAutomation?: StatefulAction;
 }
 
-interface AutomationTemplate {
-  id: string;
-  name: string;
-  trigger: string;
-  actions: string;
-  targetSection: string;
+const unavailableAction: StatefulAction = async () => ({
+  success: false,
+  error: "Automation toggles are unavailable right now."
+});
+
+function triggerLabel(key: string) {
+  if (key === "late_rent_sequence") return "Charge becomes late";
+  if (key === "lease_renewal_sequence") return "Lease nears expiration";
+  if (key === "new_ticket_sla") return "New maintenance ticket is opened";
+  if (key === "move_in_sequence") return "Lease becomes active";
+  if (key === "move_out_sequence") return "Lease termination starts";
+  if (key === "manager_vendor_followup") return "Vendor response exceeds SLA";
+  return "Workflow trigger";
 }
 
-const ownerTemplates: AutomationTemplate[] = [
-  {
-    id: "late_rent_sequence",
-    name: "Late Rent Sequence",
-    trigger: "Charge becomes late",
-    actions: "Create inbox alert, email tenant, and queue follow-up reminder.",
-    targetSection: "charges"
-  },
-  {
-    id: "lease_renewal_sequence",
-    name: "Lease Renewal Sequence",
-    trigger: "60/30/14 days before lease end",
-    actions: "Create renewal task, notify tenant, and create draft document packet.",
-    targetSection: "documents"
-  },
-  {
-    id: "new_ticket_sla",
-    name: "Maintenance SLA Sequence",
-    trigger: "New maintenance ticket created",
-    actions: "Notify owner/manager, set SLA checkpoint, and escalate if unresolved.",
-    targetSection: "maintenance"
-  },
-  {
-    id: "move_in_sequence",
-    name: "Move-in Sequence",
-    trigger: "Lease becomes active",
-    actions: "Generate first charge, send onboarding checklist, and confirm packet status.",
-    targetSection: "leasing"
-  },
-  {
-    id: "move_out_sequence",
-    name: "Move-out Sequence",
-    trigger: "Lease termination initiated",
-    actions: "Create inspection checklist, reminder tasks, and closeout document packet.",
-    targetSection: "leases"
-  }
-];
+function targetSectionForTemplate(key: string) {
+  if (key === "late_rent_sequence") return "charges";
+  if (key === "lease_renewal_sequence") return "documents";
+  if (key === "new_ticket_sla") return "maintenance";
+  if (key === "move_in_sequence") return "leasing";
+  if (key === "move_out_sequence") return "leases";
+  if (key === "manager_vendor_followup") return "vendors";
+  return "overview";
+}
 
-const managerTemplates: AutomationTemplate[] = [
-  {
-    id: "manager_ticket_sla",
-    name: "Maintenance SLA Sequence",
-    trigger: "New maintenance ticket created",
-    actions: "Notify manager inbox, assign vendor path, and escalate if unresolved.",
-    targetSection: "maintenance"
-  },
-  {
-    id: "manager_move_in_sequence",
-    name: "Move-in Sequence",
-    trigger: "Lease becomes active",
-    actions: "Confirm tenant onboarding, first charge visibility, and document status.",
-    targetSection: "leasing"
-  },
-  {
-    id: "manager_vendor_followup",
-    name: "Vendor Follow-up Sequence",
-    trigger: "Ticket in_progress for 48+ hours",
-    actions: "Create manager reminder and queue follow-up communication.",
-    targetSection: "vendors"
-  }
-];
+function AutomationToggleRow({
+  template,
+  propertyId,
+  enabled,
+  runtimeReady,
+  onEnableAutomation,
+  onDisableAutomation,
+  onOpenSection
+}: {
+  template: AutomationTemplateDTO;
+  propertyId: string;
+  enabled: boolean;
+  runtimeReady: boolean;
+  onEnableAutomation?: StatefulAction;
+  onDisableAutomation?: StatefulAction;
+  onOpenSection?: (sectionId: string) => void;
+}) {
+  const action = enabled ? onDisableAutomation ?? unavailableAction : onEnableAutomation ?? unavailableAction;
+  const [state, formAction] = useFormState(action, null);
+  const targetSection = targetSectionForTemplate(template.key);
 
-function storageKey(role: "owner" | "manager", userKey: string) {
-  return `domus_flow_templates_${role}_${userKey}_v1`;
+  return (
+    <div className="rounded-lg border border-zinc-200 bg-white p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-semibold text-zinc-900">{template.name}</p>
+        <Badge variant={enabled ? "success" : "outline"}>{enabled ? "Enabled" : "Disabled"}</Badge>
+      </div>
+      <p className="mt-1 text-xs text-zinc-600">
+        <span className="font-semibold">Trigger:</span> {triggerLabel(template.key)}
+      </p>
+      <p className="mt-1 text-xs text-zinc-600">
+        <span className="font-semibold">Actions:</span> {template.description ?? "Execute configured flow actions."}
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <form action={formAction}>
+          <input type="hidden" name="propertyId" value={propertyId} />
+          <input type="hidden" name="templateId" value={template.id} />
+          <SubmitButton
+            size="sm"
+            variant={enabled ? "outline" : "default"}
+            disabled={!runtimeReady}
+            title={enabled ? "Disable this automation template for this property." : "Enable this automation template for this property."}
+          >
+            {enabled ? "Disable" : "Enable"}
+          </SubmitButton>
+        </form>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          title={`Open ${targetSection} section for this workflow.`}
+          onClick={() => onOpenSection?.(targetSection)}
+        >
+          Open workflow context
+        </Button>
+      </div>
+      {state && !state.success && (
+        <p className="mt-2 text-xs text-red-600">{state.error}</p>
+      )}
+    </div>
+  );
 }
 
 export function AutomationTemplatesSection({
   role,
-  userKey,
+  templates,
+  rules,
+  properties,
   runtimeReady = true,
   runtimeWarning = null,
-  onOpenSection
+  onOpenSection,
+  onEnableAutomation,
+  onDisableAutomation
 }: AutomationTemplatesSectionProps) {
-  const templates = useMemo(() => (role === "owner" ? ownerTemplates : managerTemplates), [role]);
-  const [enabledMap, setEnabledMap] = useState<Record<string, boolean>>({});
+  const filteredTemplates = useMemo(
+    () =>
+      templates.filter((template) =>
+        role === "owner"
+          ? template.roleScope === "owner" || template.roleScope === "both"
+          : template.roleScope === "manager" || template.roleScope === "both"
+      ),
+    [role, templates]
+  );
+
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>(properties[0]?.id ?? "");
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(storageKey(role, userKey));
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as Record<string, boolean>;
-      setEnabledMap(parsed);
-    } catch {
-      setEnabledMap({});
+    if (properties.length === 0) {
+      setSelectedPropertyId("");
+      return;
     }
-  }, [role, userKey]);
 
-  const toggleTemplate = (id: string) => {
-    setEnabledMap((current) => {
-      const next = { ...current, [id]: !current[id] };
-      localStorage.setItem(storageKey(role, userKey), JSON.stringify(next));
-      return next;
-    });
-  };
+    if (!selectedPropertyId || !properties.some((property) => property.id === selectedPropertyId)) {
+      setSelectedPropertyId(properties[0].id);
+    }
+  }, [properties, selectedPropertyId]);
 
-  const enabledCount = templates.filter((template) => enabledMap[template.id]).length;
+  const activeTemplateIds = useMemo(() => {
+    if (!selectedPropertyId) {
+      return new Set<string>();
+    }
+
+    return new Set(
+      rules
+        .filter((rule) => rule.propertyId === selectedPropertyId && rule.active)
+        .map((rule) => rule.templateId)
+    );
+  }, [rules, selectedPropertyId]);
+
+  const enabledCount = filteredTemplates.filter((template) => activeTemplateIds.has(template.id)).length;
 
   return (
     <Card id="automations">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Domus Flows</CardTitle>
-        <Badge variant={enabledCount > 0 ? "success" : "outline"}>
-          {enabledCount} enabled
-        </Badge>
+        <Badge variant={enabledCount > 0 ? "success" : "outline"}>{enabledCount} enabled</Badge>
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-zinc-600">
-          Automation templates for repeatable operations. Current toggles are local to this browser until server-side flow execution is connected.
+          Automation templates are now persisted per property. Toggle each workflow to create or update a live automation rule.
         </p>
         {!runtimeReady && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            {runtimeWarning ??
-              "Server-side automation runtime is not live yet. Template toggles remain local to this browser."}
+            {runtimeWarning ?? "Server-side automation runtime is not live yet."}
           </div>
         )}
 
-        {templates.length === 0 ? (
-          <EmptyState message="No automation templates available for this role yet." />
+        {properties.length === 0 ? (
+          <EmptyState message="No properties are available yet. Create a property to configure automation rules." />
         ) : (
           <div className="space-y-3">
-            {templates.map((template) => {
-              const enabled = Boolean(enabledMap[template.id]);
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Property scope</p>
+              <Select
+                value={selectedPropertyId}
+                onChange={(event) => setSelectedPropertyId(event.target.value)}
+                title="Choose which property these automations apply to."
+              >
+                {properties.map((property) => (
+                  <option key={property.id} value={property.id}>
+                    {property.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
 
-              return (
-                <div key={template.id} className="rounded-lg border border-zinc-200 bg-white p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-zinc-900">{template.name}</p>
-                    <Badge variant={enabled ? "success" : "outline"}>{enabled ? "Enabled" : "Disabled"}</Badge>
-                  </div>
-                  <p className="mt-1 text-xs text-zinc-600">
-                    <span className="font-semibold">Trigger:</span> {template.trigger}
-                  </p>
-                  <p className="mt-1 text-xs text-zinc-600">
-                    <span className="font-semibold">Actions:</span> {template.actions}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={enabled ? "outline" : "default"}
-                      title={enabled ? "Disable this automation template." : "Enable this automation template."}
-                      onClick={() => toggleTemplate(template.id)}
-                    >
-                      {enabled ? "Disable" : "Enable"}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      title={`Open ${template.targetSection} section for this workflow.`}
-                      onClick={() => onOpenSection?.(template.targetSection)}
-                    >
-                      Open workflow context
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
+            {filteredTemplates.length === 0 ? (
+              <EmptyState message="No automation templates are available for this role." />
+            ) : (
+              filteredTemplates.map((template) => (
+                <AutomationToggleRow
+                  key={template.id}
+                  template={template}
+                  propertyId={selectedPropertyId}
+                  enabled={activeTemplateIds.has(template.id)}
+                  runtimeReady={runtimeReady}
+                  onEnableAutomation={onEnableAutomation}
+                  onDisableAutomation={onDisableAutomation}
+                  onOpenSection={onOpenSection}
+                />
+              ))
+            )}
           </div>
         )}
       </CardContent>

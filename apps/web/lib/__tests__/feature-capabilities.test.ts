@@ -12,6 +12,7 @@ const baseProbe = {
   maintenancePhotosTable: true,
   ownershipAccountsTable: true,
   ownershipAccountMembersTable: true,
+  rentalListingsTable: true,
   rentalApplicationsTable: true,
   screeningReportsTable: true,
   applicationEventsTable: true,
@@ -93,6 +94,7 @@ describe("deriveFeatureCapabilities", () => {
   it("disables phase A capabilities when v2 tables are missing", () => {
     const capabilities = deriveFeatureCapabilities({
       ...baseProbe,
+      rentalListingsTable: false,
       rentalApplicationsTable: false,
       inboxThreadsTable: false,
       automationTemplatesTable: false

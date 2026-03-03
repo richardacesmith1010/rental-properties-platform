@@ -49,6 +49,12 @@ import {
   sendDocumentPacketSchema,
   signDocumentPacketSchema,
   markNotificationReadSchema,
+  enableAutomationSchema,
+  disableAutomationSchema,
+  createInboxThreadSchema,
+  sendInboxMessageSchema,
+  createRentalListingSchema,
+  updateListingStatusSchema,
   createVendorSchema,
   updateVendorSchema,
   assignVendorSchema,
@@ -77,7 +83,10 @@ type CapabilityKey =
   | "notificationsEnabled"
   | "vendorWorkflowEnabled"
   | "photoWorkflowEnabled"
-  | "ownershipEnabled";
+  | "ownershipEnabled"
+  | "leasingPipelineEnabled"
+  | "inboxThreadsEnabled"
+  | "automationsEnabled";
 
 function isMissingSchemaError(error: unknown): boolean {
   if (!error || typeof error !== "object") {
@@ -135,6 +144,33 @@ async function ensureCapabilityEnabled(capability: CapabilityKey): Promise<Actio
       error:
         capabilities.warnings.ownership ??
         "Ownership accounts are not available yet. Complete setup and retry."
+    };
+  }
+
+  if (capability === "leasingPipelineEnabled") {
+    return {
+      success: false,
+      error:
+        capabilities.warnings.leasingPipeline ??
+        "Leasing pipeline is not available yet. Complete setup and retry."
+    };
+  }
+
+  if (capability === "inboxThreadsEnabled") {
+    return {
+      success: false,
+      error:
+        capabilities.warnings.inboxThreads ??
+        "Inbox threads are not available yet. Complete setup and retry."
+    };
+  }
+
+  if (capability === "automationsEnabled") {
+    return {
+      success: false,
+      error:
+        capabilities.warnings.automations ??
+        "Automation rules are not available yet. Complete setup and retry."
     };
   }
 
@@ -368,7 +404,7 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
     };
   }
 
-  const { error } = await supabase.from("leases").insert({
+  const { data: createdLease, error } = await supabase.from("leases").insert({
     unit_id: unitId,
     tenant_profile_id: tenantProfileId,
     start_date: startDate,
@@ -377,9 +413,9 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
     monthly_rent_cents: Math.round(monthlyRentDollars * 100),
     deposit_cents: Math.round(depositDollars * 100),
     active: true
-  });
+  }).select("id").single();
 
-  if (error) {
+  if (error || !createdLease?.id) {
     return { success: false, error: "Failed to create lease. Please try again." };
   }
 
@@ -391,7 +427,8 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
     title: "Lease created",
     body: "A new lease was created for one of your properties.",
     entityType: "lease",
-    entityId: null
+    entityId: createdLease.id,
+    actorProfileId: user.id
   });
 
   if (tenantProfile?.id) {
@@ -402,7 +439,7 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
       title: "Lease created",
       body: "A lease has been created or updated for your unit.",
       entityType: "lease",
-      entityId: null
+      entityId: createdLease.id
     });
   }
 
@@ -479,7 +516,8 @@ export async function updateLease(_prev: ActionState, formData: FormData): Promi
     title: "Lease updated",
     body: "A lease was updated for one of your properties.",
     entityType: "lease",
-    entityId: leaseId
+    entityId: leaseId,
+    actorProfileId: user.id
   });
 
   if (lease.tenant_profile_id) {
@@ -580,7 +618,8 @@ export async function deleteLease(_prev: ActionState, formData: FormData): Promi
     title: "Lease archived",
     body: "A lease was archived for one of your properties.",
     entityType: "lease",
-    entityId: leaseId
+    entityId: leaseId,
+    actorProfileId: user.id
   });
 
   if (lease.tenant_profile_id) {
@@ -1053,7 +1092,8 @@ export async function createMaintenanceTicket(
       body: `${fromActor} submitted "${title}" for ${propertyName}.`,
       entityType: "maintenance_ticket",
       entityId: ticket.id,
-      excludeProfileId: user.id
+      excludeProfileId: user.id,
+      actorProfileId: user.id
     });
 
     if (recipientIds.size > 0) {
@@ -1145,7 +1185,8 @@ export async function updateTicketStatus(
       title: "Maintenance ticket resolved",
       body: `"${ticket.title}" was marked ${status}.`,
       entityType: "maintenance_ticket",
-      entityId: ticket.id
+      entityId: ticket.id,
+      actorProfileId: user.id
     });
   }
 
@@ -1832,6 +1873,349 @@ export async function markNotificationRead(
 
   revalidatePath("/owner");
   revalidatePath("/tenant");
+  revalidatePath("/manager");
+  return { success: true };
+}
+
+/* ─── Phase 10: Automations + Inbox + Leasing ─── */
+
+export async function enableAutomation(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" && role !== "manager") {
+    redirect("/portal");
+  }
+
+  const capabilityError = await ensureCapabilityEnabled("automationsEnabled");
+  if (capabilityError) {
+    return capabilityError;
+  }
+
+  const parsed = parseFormData(enableAutomationSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { propertyId, templateId } = parsed.data;
+  if (!(await canUserAdministerProperty(user.id, propertyId))) {
+    return { success: false, error: "You do not have access to this property." };
+  }
+
+  const { error } = await supabase.from("automation_rules").upsert(
+    {
+      property_id: propertyId,
+      template_id: templateId,
+      created_by_profile_id: user.id,
+      active: true,
+      updated_at: new Date().toISOString()
+    },
+    { onConflict: "property_id,template_id" }
+  );
+
+  if (error) {
+    return { success: false, error: "Failed to enable automation." };
+  }
+
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  return { success: true };
+}
+
+export async function disableAutomation(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" && role !== "manager") {
+    redirect("/portal");
+  }
+
+  const capabilityError = await ensureCapabilityEnabled("automationsEnabled");
+  if (capabilityError) {
+    return capabilityError;
+  }
+
+  const parsed = parseFormData(disableAutomationSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { propertyId, templateId } = parsed.data;
+  if (!(await canUserAdministerProperty(user.id, propertyId))) {
+    return { success: false, error: "You do not have access to this property." };
+  }
+
+  const { error } = await supabase.from("automation_rules").upsert(
+    {
+      property_id: propertyId,
+      template_id: templateId,
+      created_by_profile_id: user.id,
+      active: false,
+      updated_at: new Date().toISOString()
+    },
+    { onConflict: "property_id,template_id" }
+  );
+
+  if (error) {
+    return { success: false, error: "Failed to disable automation." };
+  }
+
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  return { success: true };
+}
+
+export async function createInboxThread(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" && role !== "manager") {
+    redirect("/portal");
+  }
+
+  const capabilityError = await ensureCapabilityEnabled("inboxThreadsEnabled");
+  if (capabilityError) {
+    return capabilityError;
+  }
+
+  const parsed = parseFormData(createInboxThreadSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { propertyId, subject, entityType, entityId } = parsed.data;
+  if (!(await canUserAdministerProperty(user.id, propertyId))) {
+    return { success: false, error: "You do not have access to this property." };
+  }
+
+  const { error } = await supabase.from("inbox_threads").insert({
+    property_id: propertyId,
+    entity_type: entityType,
+    entity_id: entityId || null,
+    subject,
+    created_by_profile_id: user.id
+  });
+
+  if (error) {
+    return { success: false, error: "Failed to create inbox thread." };
+  }
+
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  return { success: true };
+}
+
+export async function sendInboxMessage(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" && role !== "manager") {
+    redirect("/portal");
+  }
+
+  const capabilityError = await ensureCapabilityEnabled("inboxThreadsEnabled");
+  if (capabilityError) {
+    return capabilityError;
+  }
+
+  const parsed = parseFormData(sendInboxMessageSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { threadId, body } = parsed.data;
+  const { data: thread } = await supabase
+    .from("inbox_threads")
+    .select("id, property_id")
+    .eq("id", threadId)
+    .single();
+
+  if (!thread) {
+    return { success: false, error: "Thread not found." };
+  }
+
+  if (!(await canUserAdministerProperty(user.id, thread.property_id))) {
+    return { success: false, error: "You do not have access to this thread." };
+  }
+
+  const { error: messageError } = await supabase.from("inbox_messages").insert({
+    thread_id: threadId,
+    sender_profile_id: user.id,
+    sender_email: user.email ?? null,
+    body,
+    channel: "in_app",
+    direction: "outbound"
+  });
+
+  if (messageError) {
+    return { success: false, error: "Failed to send inbox message." };
+  }
+
+  await supabase
+    .from("inbox_threads")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", threadId);
+
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  return { success: true };
+}
+
+export async function createRentalListing(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" && role !== "manager") {
+    redirect("/portal");
+  }
+
+  const capabilityError = await ensureCapabilityEnabled("leasingPipelineEnabled");
+  if (capabilityError) {
+    return capabilityError;
+  }
+
+  const parsed = parseFormData(createRentalListingSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const {
+    propertyId,
+    headline,
+    description,
+    askingRentDollars,
+    availableOn,
+    bedroomCount,
+    bathroomCount
+  } = parsed.data;
+  if (!(await canUserAdministerProperty(user.id, propertyId))) {
+    return { success: false, error: "You do not have access to this property." };
+  }
+
+  const { error } = await supabase.from("rental_listings").insert({
+    property_id: propertyId,
+    created_by_profile_id: user.id,
+    status: "draft",
+    headline,
+    description: description || null,
+    asking_rent_cents: Math.round(askingRentDollars * 100),
+    available_on: availableOn ? availableOn : null,
+    bedroom_count: bedroomCount ?? null,
+    bathroom_count: bathroomCount ?? null
+  });
+
+  if (error) {
+    return { success: false, error: "Failed to create rental listing." };
+  }
+
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  return { success: true };
+}
+
+export async function updateListingStatus(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" && role !== "manager") {
+    redirect("/portal");
+  }
+
+  const capabilityError = await ensureCapabilityEnabled("leasingPipelineEnabled");
+  if (capabilityError) {
+    return capabilityError;
+  }
+
+  const parsed = parseFormData(updateListingStatusSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { listingId, status } = parsed.data;
+  const { data: listing } = await supabase
+    .from("rental_listings")
+    .select("id, property_id")
+    .eq("id", listingId)
+    .single();
+
+  if (!listing) {
+    return { success: false, error: "Listing not found." };
+  }
+
+  if (!(await canUserAdministerProperty(user.id, listing.property_id))) {
+    return { success: false, error: "You do not have access to this listing." };
+  }
+
+  const { error } = await supabase
+    .from("rental_listings")
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq("id", listingId);
+
+  if (error) {
+    return { success: false, error: "Failed to update listing status." };
+  }
+
+  revalidatePath("/owner");
   revalidatePath("/manager");
   return { success: true };
 }

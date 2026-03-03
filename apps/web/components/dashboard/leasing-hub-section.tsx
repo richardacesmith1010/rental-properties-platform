@@ -1,20 +1,33 @@
 "use client";
 
+import { useMemo } from "react";
+import { useFormState } from "react-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { SubmitButton } from "@/components/shared/submit-button";
+import { EmptyState } from "@/components/shared/empty-state";
+import type { ActionState } from "@/app/actions";
 import type { InvitationListItem } from "@/lib/invitations";
+import type { RentalListingDTO } from "@/lib/leasing";
 import type { OwnerDocumentsData } from "@/lib/documents";
 import type { PortfolioData } from "@/lib/portfolio";
+
+type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
 interface LeasingHubSectionProps {
   portfolio: PortfolioData;
   invitations: InvitationListItem[];
   documents: OwnerDocumentsData;
+  listings: RentalListingDTO[];
   chargeCount: number;
   pipelineReady?: boolean;
   pipelineWarning?: string | null;
   onOpenSection?: (sectionId: string) => void;
+  onCreateListing?: StatefulAction;
+  onUpdateListingStatus?: StatefulAction;
 }
 
 interface LeasingStage {
@@ -25,6 +38,24 @@ interface LeasingStage {
   metric: string;
   targetSection: string;
   actionLabel: string;
+}
+
+const listingStatuses: Array<RentalListingDTO["status"]> = ["draft", "published", "paused", "archived"];
+
+const unavailableAction: StatefulAction = async () => ({
+  success: false,
+  error: "Listing actions are unavailable right now."
+});
+
+function dollars(cents: number) {
+  return `$${(cents / 100).toLocaleString()}`;
+}
+
+function listingStatusBadgeVariant(status: RentalListingDTO["status"]) {
+  if (status === "published") return "success" as const;
+  if (status === "paused") return "warning" as const;
+  if (status === "archived") return "outline" as const;
+  return "outline" as const;
 }
 
 function buildLeasingStages(params: {
@@ -97,21 +128,89 @@ function currentStepLabel(stages: LeasingStage[]) {
   return `Next best action: ${pending.label}`;
 }
 
+function ListingRow({
+  listing,
+  onUpdateListingStatus
+}: {
+  listing: RentalListingDTO;
+  onUpdateListingStatus?: StatefulAction;
+}) {
+  const [state, action] = useFormState(onUpdateListingStatus ?? unavailableAction, null);
+
+  return (
+    <div className="rounded-lg border border-zinc-200 bg-white p-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="text-sm font-semibold text-zinc-900">{listing.headline}</p>
+          <p className="text-xs text-zinc-500">{listing.propertyName}</p>
+        </div>
+        <Badge variant={listingStatusBadgeVariant(listing.status)} className="uppercase">
+          {listing.status}
+        </Badge>
+      </div>
+      <p className="mt-1 text-xs text-zinc-600">{listing.description ?? "No description provided."}</p>
+      <p className="mt-1 text-xs text-zinc-600">
+        <span className="font-semibold">Rent:</span> {dollars(listing.askingRentCents)}
+        {listing.availableOn ? ` • Available ${listing.availableOn}` : ""}
+      </p>
+      <div className="mt-2 flex flex-wrap gap-2 text-xs text-zinc-600">
+        <span>{listing.bedroomCount ?? "?"} beds</span>
+        <span>{listing.bathroomCount ?? "?"} baths</span>
+      </div>
+      <form action={action} className="mt-3 flex flex-wrap items-center gap-2">
+        <input type="hidden" name="listingId" value={listing.id} />
+        <Select name="status" defaultValue={listing.status} className="w-[160px]">
+          {listingStatuses.map((status) => (
+            <option key={status} value={status}>
+              {status}
+            </option>
+          ))}
+        </Select>
+        <SubmitButton size="sm" variant="outline" title="Save listing status update.">
+          Update status
+        </SubmitButton>
+      </form>
+      {state && !state.success && <p className="mt-2 text-xs text-red-600">{state.error}</p>}
+    </div>
+  );
+}
+
 export function LeasingHubSection({
   portfolio,
   invitations,
   documents,
+  listings,
   chargeCount,
   pipelineReady = true,
   pipelineWarning = null,
-  onOpenSection
+  onOpenSection,
+  onCreateListing,
+  onUpdateListingStatus
 }: LeasingHubSectionProps) {
+  const [createListingState, createListingAction] = useFormState(
+    onCreateListing ?? unavailableAction,
+    null
+  );
+
   const stages = buildLeasingStages({
     portfolio,
     invitations,
     documents,
     chargeCount
   });
+
+  const listingCounts = useMemo(() => {
+    const counts: Record<RentalListingDTO["status"], number> = {
+      draft: 0,
+      published: 0,
+      paused: 0,
+      archived: 0
+    };
+    for (const listing of listings) {
+      counts[listing.status] += 1;
+    }
+    return counts;
+  }, [listings]);
 
   return (
     <div id="leasing" className="space-y-4">
@@ -157,6 +256,61 @@ export function LeasingHubSection({
           </Card>
         ))}
       </div>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Listings</CardTitle>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="outline">Draft {listingCounts.draft}</Badge>
+            <Badge variant="success">Published {listingCounts.published}</Badge>
+            <Badge variant="warning">Paused {listingCounts.paused}</Badge>
+            <Badge variant="outline">Archived {listingCounts.archived}</Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <form action={createListingAction} className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Create listing</p>
+            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <Select name="propertyId" required>
+                <option value="">Select property</option>
+                {portfolio.properties.map((property) => (
+                  <option key={property.id} value={property.id}>
+                    {property.name}
+                  </option>
+                ))}
+              </Select>
+              <Input name="headline" placeholder="Headline" required />
+              <Input name="askingRentDollars" placeholder="Asking rent (USD)" inputMode="decimal" required />
+              <Input name="availableOn" type="date" placeholder="Available date" />
+              <Input name="bedroomCount" placeholder="Bedrooms" inputMode="decimal" />
+              <Input name="bathroomCount" placeholder="Bathrooms" inputMode="decimal" />
+            </div>
+            <Input name="description" className="mt-2" placeholder="Description" />
+            <div className="mt-2 flex justify-end">
+              <SubmitButton size="sm" title="Create a new rental listing in draft status.">
+                Create listing
+              </SubmitButton>
+            </div>
+            {createListingState && !createListingState.success && (
+              <p className="mt-2 text-xs text-red-600">{createListingState.error}</p>
+            )}
+          </form>
+
+          {listings.length === 0 ? (
+            <EmptyState message="No listings yet. Create your first listing to start pipeline tracking." />
+          ) : (
+            <div className="space-y-2">
+              {listings.map((listing) => (
+                <ListingRow
+                  key={listing.id}
+                  listing={listing}
+                  onUpdateListingStatus={onUpdateListingStatus}
+                />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -6,6 +6,9 @@ import { getOwnerMaintenanceTickets } from "@/lib/maintenance";
 import { getOwnerInvitations } from "@/lib/invitations";
 import { getOwnerDocumentsData } from "@/lib/documents";
 import { getNotificationsForUser } from "@/lib/notifications";
+import { getAutomationRulesForUser, getAutomationTemplates } from "@/lib/automations";
+import { getInboxThreadsForUser } from "@/lib/inbox";
+import { getRentalListingsForUser } from "@/lib/leasing";
 import { getOwnerVendors } from "@/lib/vendors";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { getOwnershipAccountsForUser } from "@/lib/ownership";
@@ -28,6 +31,12 @@ import {
   inviteOwner,
   resendInvite,
   markNotificationRead,
+  createInboxThread,
+  sendInboxMessage,
+  enableAutomation,
+  disableAutomation,
+  createRentalListing,
+  updateListingStatus,
   createDocumentTemplate,
   deleteDocumentTemplate,
   createDocumentPacket,
@@ -102,7 +111,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         ? searchParams?.section[0] ?? null
         : null;
 
-  const [dashboard, portfolio, tickets, invitations, documents, notifications, vendors, ownershipAccounts, expenses] = await Promise.all([
+  const [dashboard, portfolio, tickets, invitations, documents, notifications, inboxThreads, automationTemplates, automationRules, listings, vendors, ownershipAccounts, expenses] = await Promise.all([
     getDashboardData(user.id),
     getPortfolioData(user.id),
     getOwnerMaintenanceTickets(user.id),
@@ -118,6 +127,18 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         }),
     capabilities.notificationsEnabled
       ? getNotificationsForUser(user.id)
+      : Promise.resolve([]),
+    capabilities.inboxThreadsEnabled
+      ? getInboxThreadsForUser(user.id)
+      : Promise.resolve([]),
+    capabilities.automationsEnabled
+      ? getAutomationTemplates()
+      : Promise.resolve([]),
+    capabilities.automationsEnabled
+      ? getAutomationRulesForUser(user.id)
+      : Promise.resolve([]),
+    capabilities.leasingPipelineEnabled
+      ? getRentalListingsForUser(user.id)
       : Promise.resolve([]),
     capabilities.vendorWorkflowEnabled
       ? getOwnerVendors(user.id)
@@ -136,6 +157,10 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       invitations={invitations}
       documents={documents}
       notifications={notifications}
+      inboxThreads={inboxThreads}
+      automationTemplates={automationTemplates}
+      automationRules={automationRules}
+      listings={listings}
       vendors={vendors}
       expensesData={expenses}
       ownershipAccounts={ownershipAccounts}
@@ -163,6 +188,12 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       onInviteOwner={inviteOwner}
       onResendInvite={resendInvite}
       onMarkNotificationRead={markNotificationRead}
+      onCreateInboxThread={createInboxThread}
+      onSendInboxMessage={sendInboxMessage}
+      onEnableAutomation={enableAutomation}
+      onDisableAutomation={disableAutomation}
+      onCreateRentalListing={createRentalListing}
+      onUpdateListingStatus={updateListingStatus}
       onCreateDocumentTemplate={createDocumentTemplate}
       onDeleteDocumentTemplate={deleteDocumentTemplate}
       onCreateDocumentPacket={createDocumentPacket}
