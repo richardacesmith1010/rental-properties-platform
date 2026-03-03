@@ -15,6 +15,12 @@ import {
   sendDocumentPacketSchema,
   signDocumentPacketSchema,
   markNotificationReadSchema,
+  enableAutomationSchema,
+  disableAutomationSchema,
+  createInboxThreadSchema,
+  sendInboxMessageSchema,
+  createRentalListingSchema,
+  updateListingStatusSchema,
   createVendorSchema,
   updateVendorSchema,
   assignVendorSchema,
@@ -557,6 +563,253 @@ describe("markNotificationReadSchema", () => {
       notificationId: "550e8400-e29b-41d4-a716-446655440000"
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe("enableAutomationSchema", () => {
+  const validUUID = "550e8400-e29b-41d4-a716-446655440000";
+
+  it("accepts valid automation enable payload", () => {
+    const result = enableAutomationSchema.safeParse({
+      propertyId: validUUID,
+      templateId: validUUID
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid property ID", () => {
+    const result = enableAutomationSchema.safeParse({
+      propertyId: "bad-id",
+      templateId: validUUID
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid template ID", () => {
+    const result = enableAutomationSchema.safeParse({
+      propertyId: validUUID,
+      templateId: "bad-id"
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("disableAutomationSchema", () => {
+  const validUUID = "550e8400-e29b-41d4-a716-446655440000";
+
+  it("accepts valid automation disable payload", () => {
+    const result = disableAutomationSchema.safeParse({
+      propertyId: validUUID,
+      templateId: validUUID
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid property ID", () => {
+    const result = disableAutomationSchema.safeParse({
+      propertyId: "bad-id",
+      templateId: validUUID
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid template ID", () => {
+    const result = disableAutomationSchema.safeParse({
+      propertyId: validUUID,
+      templateId: "bad-id"
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("createInboxThreadSchema", () => {
+  const validUUID = "550e8400-e29b-41d4-a716-446655440000";
+
+  it("accepts valid inbox thread payload", () => {
+    const result = createInboxThreadSchema.safeParse({
+      propertyId: validUUID,
+      subject: "Lease renewal follow-up",
+      entityType: "lease",
+      entityId: validUUID
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts empty entity ID", () => {
+    const result = createInboxThreadSchema.safeParse({
+      propertyId: validUUID,
+      subject: "General operations",
+      entityType: "general",
+      entityId: ""
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid property ID", () => {
+    const result = createInboxThreadSchema.safeParse({
+      propertyId: "bad-id",
+      subject: "General operations",
+      entityType: "general"
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty subject", () => {
+    const result = createInboxThreadSchema.safeParse({
+      propertyId: validUUID,
+      subject: "",
+      entityType: "general"
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects subject over 180 chars", () => {
+    const result = createInboxThreadSchema.safeParse({
+      propertyId: validUUID,
+      subject: "A".repeat(181),
+      entityType: "general"
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid entity ID", () => {
+    const result = createInboxThreadSchema.safeParse({
+      propertyId: validUUID,
+      subject: "Lease thread",
+      entityType: "lease",
+      entityId: "bad-id"
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("sendInboxMessageSchema", () => {
+  const validUUID = "550e8400-e29b-41d4-a716-446655440000";
+
+  it("accepts valid inbox message payload", () => {
+    const result = sendInboxMessageSchema.safeParse({
+      threadId: validUUID,
+      body: "Please confirm access for the vendor tomorrow morning."
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid thread ID", () => {
+    const result = sendInboxMessageSchema.safeParse({
+      threadId: "bad-id",
+      body: "Message"
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty message body", () => {
+    const result = sendInboxMessageSchema.safeParse({
+      threadId: validUUID,
+      body: ""
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects message over 4000 chars", () => {
+    const result = sendInboxMessageSchema.safeParse({
+      threadId: validUUID,
+      body: "B".repeat(4001)
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("createRentalListingSchema", () => {
+  const validUUID = "550e8400-e29b-41d4-a716-446655440000";
+
+  it("accepts valid rental listing payload", () => {
+    const result = createRentalListingSchema.safeParse({
+      propertyId: validUUID,
+      headline: "Updated 2BR with garage access",
+      description: "Fresh paint and in-unit laundry.",
+      askingRentDollars: "1895",
+      availableOn: "2026-04-01",
+      bedroomCount: "2",
+      bathroomCount: "1.5"
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid property ID", () => {
+    const result = createRentalListingSchema.safeParse({
+      propertyId: "bad-id",
+      headline: "Listing",
+      askingRentDollars: "1800"
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty headline", () => {
+    const result = createRentalListingSchema.safeParse({
+      propertyId: validUUID,
+      headline: "",
+      askingRentDollars: "1800"
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects non-positive asking rent", () => {
+    const result = createRentalListingSchema.safeParse({
+      propertyId: validUUID,
+      headline: "Listing",
+      askingRentDollars: "0"
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects bedroom count over max", () => {
+    const result = createRentalListingSchema.safeParse({
+      propertyId: validUUID,
+      headline: "Listing",
+      askingRentDollars: "1800",
+      bedroomCount: "51"
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects negative bathroom count", () => {
+    const result = createRentalListingSchema.safeParse({
+      propertyId: validUUID,
+      headline: "Listing",
+      askingRentDollars: "1800",
+      bathroomCount: "-1"
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("updateListingStatusSchema", () => {
+  const validUUID = "550e8400-e29b-41d4-a716-446655440000";
+
+  it("accepts all valid listing statuses", () => {
+    for (const status of ["draft", "published", "paused", "archived"]) {
+      const result = updateListingStatusSchema.safeParse({
+        listingId: validUUID,
+        status
+      });
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it("rejects invalid listing ID", () => {
+    const result = updateListingStatusSchema.safeParse({
+      listingId: "bad-id",
+      status: "draft"
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid listing status", () => {
+    const result = updateListingStatusSchema.safeParse({
+      listingId: validUUID,
+      status: "live"
+    });
+    expect(result.success).toBe(false);
   });
 });
 

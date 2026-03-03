@@ -109,6 +109,11 @@ function AutomationToggleRow({
       {state && !state.success && (
         <p className="mt-2 text-xs text-red-600">{state.error}</p>
       )}
+      {state && state.success && (
+        <p className="mt-2 text-xs text-emerald-600">
+          {enabled ? "Automation disabled." : "Automation enabled."}
+        </p>
+      )}
     </div>
   );
 }
@@ -178,7 +183,7 @@ export function AutomationTemplatesSection({
         )}
 
         {properties.length === 0 ? (
-          <EmptyState message="No properties are available yet. Create a property to configure automation rules." />
+          <EmptyState message="No properties yet. Create a property before configuring automation rules." />
         ) : (
           <div className="space-y-3">
             <div className="space-y-1">
@@ -197,7 +202,7 @@ export function AutomationTemplatesSection({
             </div>
 
             {filteredTemplates.length === 0 ? (
-              <EmptyState message="No automation templates are available for this role." />
+              <EmptyState message="No automation templates are available for this role right now." />
             ) : (
               filteredTemplates.map((template) => (
                 <AutomationToggleRow

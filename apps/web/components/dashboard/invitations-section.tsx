@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import type { ActionState } from "@/app/actions";
 import type { InvitationListItem } from "@/lib/invitations";
+import { formatDate } from "@/lib/format";
 
 type StatefulAction = (
   prev: ActionState,
@@ -714,7 +715,7 @@ export function InvitationsSection({
         </CardHeader>
         <CardContent>
           {invitations.length === 0 ? (
-            <EmptyState message="No invitations sent yet." />
+            <EmptyState message="No invitations yet. Send a tenant or manager invitation to start onboarding." />
           ) : (
             <div>
               {invitations.map((inv, i) => (
@@ -768,19 +769,9 @@ function InvitationRow({
           )}
         </div>
         <p className="mt-1 text-[11px] text-zinc-400">
-          Sent{" "}
-          {new Date(invitation.createdAt).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          })}
+          Sent {formatDate(invitation.createdAt)}
           {invitation.acceptedAt &&
-            ` · Accepted ${new Date(
-              invitation.acceptedAt
-            ).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            })}`}
+            ` · Accepted ${formatDate(invitation.acceptedAt)}`}
         </p>
       </div>
       {invitation.status === "pending" && (

@@ -11,6 +11,7 @@ interface SubmitButtonProps {
   size?: "default" | "sm" | "lg" | "icon";
   title?: string;
   disabled?: boolean;
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
 }
 
 export function SubmitButton({
@@ -19,7 +20,8 @@ export function SubmitButton({
   variant = "default",
   size = "default",
   title,
-  disabled = false
+  disabled = false,
+  onClick
 }: SubmitButtonProps) {
   const { pending } = useFormStatus();
   const resolvedTitle = title ?? "Click to submit this action.";
@@ -32,6 +34,7 @@ export function SubmitButton({
       size={size}
       className={className}
       title={resolvedTitle}
+      onClick={onClick}
     >
       {pending ? (
         <>

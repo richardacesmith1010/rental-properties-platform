@@ -334,3 +334,47 @@ Operational priority for Claude:
 3. Task-specific user instruction
 
 If these conflict, Claude must state the conflict explicitly and request user decision before proceeding.
+
+---
+
+## 12. Continuous Learning Protocol
+
+Every agent must treat mistakes as permanent lessons. This section is a living document — update it after every meaningful mistake, correction, or surprise.
+
+### How It Works
+
+1. **After every sprint**, if you made an incorrect assumption, delivered scaffolded work as "done," missed a pattern, or were corrected during review, append a new entry to the Lessons Learned log below.
+2. **Before every new task**, re-read this section and actively apply all accumulated lessons.
+3. **Lessons are permanent** — never delete a lesson. If a lesson becomes outdated, mark it `[SUPERSEDED]` with a reason, but keep it visible.
+4. **Each lesson must include**: date, category, what went wrong, what the correct behavior is, and a concrete rule to prevent recurrence.
+
+### Lesson Categories
+
+- `SCOPE` — Built something that wasn't asked for, or missed something that was
+- `WIRING` — Used localStorage/hardcoded data instead of real DB tables
+- `QUALITY` — Skipped error handling, swallowed errors, missed validation
+- `PATTERN` — Didn't follow the 7-step server action pattern or component architecture
+- `REPORTING` — Reported "done" when scaffolded, or hid problems in the status report
+- `PROCESS` — Didn't run the gate, committed broken code, or skipped a required step
+
+### Lessons Learned Log
+
+#### L-001 | 2026-03-02 | WIRING
+**What happened:** Initial Phase A implementation (automations, inbox, leasing) used localStorage and hardcoded template lists instead of querying the real `automation_templates`, `inbox_threads`, and `rental_listings` tables.
+**What was correct:** All persistent data MUST come from Supabase queries. localStorage is only for client-side preferences (theme, sidebar state).
+**Rule:** Before reporting any feature as WORKING, verify: does this feature read from AND write to a real Supabase table? If not, report SCAFFOLDED.
+
+#### L-002 | 2026-03-02 | QUALITY
+**What happened:** In `sendInboxMessage`, the secondary `inbox_threads.update()` call (to bump `updated_at`) didn't check for errors — the result was silently discarded.
+**What was correct:** Every Supabase mutation must have its error result captured and at minimum logged.
+**Rule:** For every `.insert()`, `.update()`, `.delete()` call, destructure `{ error }` and either return it to the user or `console.error()` it. Never use `await supabase.from(...).update(...)` without capturing the result.
+
+#### L-003 | 2026-03-02 | REPORTING
+**What happened:** Codex included "Claude prompt" and "recommended next steps for Claude" sections in handoff notes, which the user found unhelpful.
+**What was correct:** Claude owns planning. Codex should report compact status only and let Claude decide next steps.
+**Rule:** Never include "Claude prompt," "recommended next steps," or "what Claude should do" sections. Report compact status using the format in Section 5, then stop.
+
+#### L-004 | 2026-03-03 | PATTERN
+**What happened:** During hardening, delete flows were briefly wired with plain `Button` components in `useFormState` forms, which removed visible pending/loading feedback from destructive submissions.
+**What was correct:** Every `useFormState` form must submit through `SubmitButton` so pending state is always visible to users.
+**Rule:** In any form powered by `useFormState`, use `SubmitButton` for the submit trigger (including delete/archive flows). If confirmation is required, intercept `onClick`, open confirm dialog, then call `form.requestSubmit()` on confirm.

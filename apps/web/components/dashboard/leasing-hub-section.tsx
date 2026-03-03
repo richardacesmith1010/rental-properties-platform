@@ -14,6 +14,7 @@ import type { InvitationListItem } from "@/lib/invitations";
 import type { RentalListingDTO } from "@/lib/leasing";
 import type { OwnerDocumentsData } from "@/lib/documents";
 import type { PortfolioData } from "@/lib/portfolio";
+import { formatCurrency, formatDate } from "@/lib/format";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -46,10 +47,6 @@ const unavailableAction: StatefulAction = async () => ({
   success: false,
   error: "Listing actions are unavailable right now."
 });
-
-function dollars(cents: number) {
-  return `$${(cents / 100).toLocaleString()}`;
-}
 
 function listingStatusBadgeVariant(status: RentalListingDTO["status"]) {
   if (status === "published") return "success" as const;
@@ -150,8 +147,8 @@ function ListingRow({
       </div>
       <p className="mt-1 text-xs text-zinc-600">{listing.description ?? "No description provided."}</p>
       <p className="mt-1 text-xs text-zinc-600">
-        <span className="font-semibold">Rent:</span> {dollars(listing.askingRentCents)}
-        {listing.availableOn ? ` • Available ${listing.availableOn}` : ""}
+        <span className="font-semibold">Rent:</span> {formatCurrency(listing.askingRentCents)}
+        {listing.availableOn ? ` • Available ${formatDate(listing.availableOn)}` : ""}
       </p>
       <div className="mt-2 flex flex-wrap gap-2 text-xs text-zinc-600">
         <span>{listing.bedroomCount ?? "?"} beds</span>
@@ -171,6 +168,7 @@ function ListingRow({
         </SubmitButton>
       </form>
       {state && !state.success && <p className="mt-2 text-xs text-red-600">{state.error}</p>}
+      {state && state.success && <p className="mt-2 text-xs text-emerald-600">Listing status updated.</p>}
     </div>
   );
 }
@@ -291,13 +289,16 @@ export function LeasingHubSection({
                 Create listing
               </SubmitButton>
             </div>
-            {createListingState && !createListingState.success && (
-              <p className="mt-2 text-xs text-red-600">{createListingState.error}</p>
-            )}
-          </form>
+              {createListingState && !createListingState.success && (
+                <p className="mt-2 text-xs text-red-600">{createListingState.error}</p>
+              )}
+              {createListingState && createListingState.success && (
+                <p className="mt-2 text-xs text-emerald-600">Listing created in draft status.</p>
+              )}
+            </form>
 
           {listings.length === 0 ? (
-            <EmptyState message="No listings yet. Create your first listing to start pipeline tracking." />
+            <EmptyState message="No rental listings yet. Create a listing to start finding tenants." />
           ) : (
             <div className="space-y-2">
               {listings.map((listing) => (

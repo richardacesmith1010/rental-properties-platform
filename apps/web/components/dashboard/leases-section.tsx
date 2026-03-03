@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormState } from "react-dom";
 import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SubmitButton } from "@/components/shared/submit-button";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { LeaseListItem } from "@/lib/portfolio";
 import type { ActionState } from "@/app/actions";
+import { formatCurrency, formatDate } from "@/lib/format";
 
 type StatefulAction = (
   prev: ActionState,
@@ -27,10 +29,6 @@ const unavailableAction: StatefulAction = async () => ({
   success: false,
   error: "Lease actions are unavailable."
 });
-
-function dollars(cents: number) {
-  return `$${(cents / 100).toLocaleString()}`;
-}
 
 function FormError({ state }: { state: ActionState }) {
   if (!state || state.success) return null;
@@ -59,10 +57,13 @@ export function LeasesSection({
   const [updateState, updateAction] = useFormState(onUpdateLease ?? unavailableAction, null);
   const [deleteState, deleteAction] = useFormState(onDeleteLease ?? unavailableAction, null);
   const [activeEditLeaseId, setActiveEditLeaseId] = useState<string | null>(null);
+  const [confirmDeleteLeaseId, setConfirmDeleteLeaseId] = useState<string | null>(null);
+  const deleteFormRefs = useRef<Record<string, HTMLFormElement | null>>({});
 
   useEffect(() => {
     if (updateState?.success || deleteState?.success) {
       setActiveEditLeaseId(null);
+      setConfirmDeleteLeaseId(null);
     }
   }, [deleteState, updateState]);
 
@@ -82,7 +83,7 @@ export function LeasesSection({
         )}
 
         {leases.length === 0 ? (
-          <EmptyState message="No leases created yet." />
+          <EmptyState message="No leases yet. Create a lease in Operations after adding a property and unit." />
         ) : (
           <div>
             {leases.map((lease, i) => (
@@ -91,7 +92,7 @@ export function LeasesSection({
                   <p className="text-sm font-semibold text-zinc-900">{lease.unitLabel}</p>
                   <p className="mt-0.5 text-xs text-zinc-500">{lease.tenantEmail}</p>
                   <p className="mt-0.5 text-xs text-zinc-500">
-                    Ends {lease.endDate}
+                    Ends {formatDate(lease.endDate)}
                   </p>
 
                   {showControls && activeEditLeaseId === lease.id && (
@@ -139,7 +140,7 @@ export function LeasesSection({
                 <div className="flex flex-col items-end gap-2">
                   <div className="text-right">
                     <p className="text-sm font-semibold text-zinc-900">
-                      {dollars(lease.monthlyRentCents)}
+                      {formatCurrency(lease.monthlyRentCents)}
                     </p>
                     <p className="text-xs text-zinc-500">Due day {lease.dueDayOfMonth}</p>
                   </div>
@@ -166,21 +167,22 @@ export function LeasesSection({
                       {activeEditLeaseId === lease.id && (
                         <form
                           action={deleteAction}
-                          onSubmit={(event) => {
-                            if (!window.confirm("Are you sure? This will archive the lease.")) {
-                              event.preventDefault();
-                            }
+                          ref={(node) => {
+                            deleteFormRefs.current[lease.id] = node;
                           }}
                         >
                           <input type="hidden" name="leaseId" value={lease.id} />
-                          <Button
-                            type="submit"
+                          <SubmitButton
                             size="sm"
                             variant="destructive"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              setConfirmDeleteLeaseId(lease.id);
+                            }}
                             title="Archive this lease and free the unit."
                           >
                             Archive
-                          </Button>
+                          </SubmitButton>
                         </form>
                       )}
                     </>
@@ -191,6 +193,21 @@ export function LeasesSection({
           </div>
         )}
       </CardContent>
+      <ConfirmDialog
+        title="Archive Lease?"
+        description="Are you sure? This will archive the lease and mark the unit as no longer occupied."
+        confirmLabel="Archive Lease"
+        open={confirmDeleteLeaseId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmDeleteLeaseId(null);
+          }
+        }}
+        onConfirm={() => {
+          if (!confirmDeleteLeaseId) return;
+          deleteFormRefs.current[confirmDeleteLeaseId]?.requestSubmit();
+        }}
+      />
     </Card>
   );
 }

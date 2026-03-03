@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormState } from "react-dom";
 import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SubmitButton } from "@/components/shared/submit-button";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -55,10 +56,13 @@ export function PortfolioSection({
   const [updateState, updateAction] = useFormState(onUpdateProperty ?? unavailableAction, null);
   const [deleteState, deleteAction] = useFormState(onDeleteProperty ?? unavailableAction, null);
   const [activeEditPropertyId, setActiveEditPropertyId] = useState<string | null>(null);
+  const [confirmDeletePropertyId, setConfirmDeletePropertyId] = useState<string | null>(null);
+  const deleteFormRefs = useRef<Record<string, HTMLFormElement | null>>({});
 
   useEffect(() => {
     if (updateState?.success || deleteState?.success) {
       setActiveEditPropertyId(null);
+      setConfirmDeletePropertyId(null);
     }
   }, [deleteState, updateState]);
 
@@ -78,7 +82,7 @@ export function PortfolioSection({
         )}
 
         {properties.length === 0 ? (
-          <EmptyState message="Start by adding your first property." />
+          <EmptyState message="No properties yet. Add your first property in Operations to begin tracking." />
         ) : (
           <div>
             {properties.map((property, i) => (
@@ -130,21 +134,22 @@ export function PortfolioSection({
                       {activeEditPropertyId === property.id && (
                         <form
                           action={deleteAction}
-                          onSubmit={(event) => {
-                            if (!window.confirm("Are you sure? This will archive the property.")) {
-                              event.preventDefault();
-                            }
+                          ref={(node) => {
+                            deleteFormRefs.current[property.id] = node;
                           }}
                         >
                           <input type="hidden" name="propertyId" value={property.id} />
-                          <Button
-                            type="submit"
+                          <SubmitButton
                             size="sm"
                             variant="destructive"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              setConfirmDeletePropertyId(property.id);
+                            }}
                             title="Archive this property."
                           >
                             Archive
-                          </Button>
+                          </SubmitButton>
                         </form>
                       )}
                     </>
@@ -155,6 +160,21 @@ export function PortfolioSection({
           </div>
         )}
       </CardContent>
+      <ConfirmDialog
+        title="Archive Property?"
+        description="Are you sure? This will archive the property and remove it from active workflows."
+        confirmLabel="Archive Property"
+        open={confirmDeletePropertyId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmDeletePropertyId(null);
+          }
+        }}
+        onConfirm={() => {
+          if (!confirmDeletePropertyId) return;
+          deleteFormRefs.current[confirmDeletePropertyId]?.requestSubmit();
+        }}
+      />
     </Card>
   );
 }

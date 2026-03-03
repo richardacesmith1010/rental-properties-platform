@@ -14,6 +14,7 @@ import type { ExpenseDashboardData } from "@/lib/expenses";
 import type { AutomationRuleDTO, AutomationTemplateDTO } from "@/lib/automations";
 import type { InboxThreadDTO } from "@/lib/inbox";
 import type { RentalListingDTO } from "@/lib/leasing";
+import { formatDate } from "@/lib/format";
 import type { ActionState } from "@/app/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -264,6 +265,7 @@ export function Dashboard({
   };
   const safeNotifications: NotificationDTO[] = notifications ?? [];
   const safeInboxThreads: InboxThreadDTO[] = inboxThreads ?? [];
+  const safeTickets: MaintenanceTicket[] = tickets ?? [];
   const safeVendors: VendorDTO[] = vendors ?? [];
   const safeAutomationTemplates: AutomationTemplateDTO[] = automationTemplates ?? [];
   const safeAutomationRules: AutomationRuleDTO[] = automationRules ?? [];
@@ -320,6 +322,16 @@ export function Dashboard({
   );
   const isOwnerRole = data.profileRole === "owner";
   const isManagerRole = data.profileRole === "manager";
+  const chargeBadgeCount = data.charges.filter(
+    (charge) => charge.status === "pending" || charge.status === "late"
+  ).length;
+  const maintenanceBadgeCount = safeTickets.filter(
+    (ticket) => ticket.status === "open" || ticket.status === "in_progress"
+  ).length;
+  const inboxBadgeCount = safeInboxThreads.length;
+  const notificationBadgeCount = safeNotifications.filter(
+    (notification) => !notification.readAt
+  ).length;
   const [ownerWorkflowMode, setOwnerWorkflowMode] = useState<OwnerWorkflowMode>(
     initialOwnerWorkflowMode ?? "daily_ops"
   );
@@ -340,6 +352,7 @@ export function Dashboard({
         id: "charges",
         label: "Charges",
         icon: Receipt,
+        badgeCount: chargeBadgeCount,
         description: "Upcoming and late charges.",
         clickHint: "open billing charges"
       },
@@ -354,6 +367,7 @@ export function Dashboard({
         id: "maintenance",
         label: "Maintenance",
         icon: Wrench,
+        badgeCount: maintenanceBadgeCount,
         description: "Ticket queue and assignment controls.",
         clickHint: "open maintenance tickets"
       },
@@ -375,6 +389,7 @@ export function Dashboard({
         id: "inbox",
         label: "Inbox",
         icon: Bell,
+        badgeCount: inboxBadgeCount,
         description: "Central event timeline for operational communication.",
         clickHint: "open domus inbox"
       });
@@ -395,6 +410,7 @@ export function Dashboard({
         id: "notifications",
         label: "Notifications",
         icon: Bell,
+        badgeCount: notificationBadgeCount,
         description: "Unread and historical alerts.",
         clickHint: "open notification center"
       });
@@ -483,12 +499,16 @@ export function Dashboard({
 
     return items;
   }, [
+    chargeBadgeCount,
     hasAutomationsSection,
     hasDocumentsSection,
     hasExpensesSection,
     hasInboxSection,
     hasInvitationsSection,
     hasLeasingSection,
+    inboxBadgeCount,
+    maintenanceBadgeCount,
+    notificationBadgeCount,
     hasNotificationsSection,
     hasOwnershipSection,
     hasVendorsSection
@@ -1148,12 +1168,7 @@ export function Dashboard({
           <div id="overview">
             <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Operations Dashboard</h1>
             <p className="mt-1 text-sm text-zinc-600">
-              {new Date().toLocaleDateString("en-US", {
-                weekday: "long",
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
+              {formatDate(new Date())}
             </p>
           </div>
           <Badge className="self-start border border-indigo-200 bg-indigo-50 text-indigo-700 capitalize">

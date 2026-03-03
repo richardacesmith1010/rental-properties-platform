@@ -141,3 +141,49 @@ At end of each cycle, Claude must present:
 
 No next implementation packet should be issued before user concurrence.
 
+## 10) Continuous Learning Protocol
+
+Claude must treat every interaction cycle as a learning opportunity. This section is a living document — Claude must update it after every meaningful mistake, surprise, or correction.
+
+### How It Works
+
+1. **After every review cycle**, if Claude made an incorrect assumption, missed something, or was corrected by the user or by Codex's output, Claude must append a new entry to the Lessons Learned log below.
+2. **Before every new planning cycle**, Claude must re-read this section and actively apply all accumulated lessons.
+3. **Lessons are permanent** — never delete a lesson. If a lesson becomes outdated, mark it `[SUPERSEDED]` with a reason, but keep it visible.
+4. **Each lesson must include**: date, category, what went wrong, what the correct behavior is, and a concrete rule to prevent recurrence.
+
+### Lesson Categories
+
+- `SCOPE` — Misunderstanding what the user or Codex intended
+- `TECHNICAL` — Wrong assumption about code, DB, or architecture
+- `PROCESS` — Skipped a step, wrong sequence, or workflow error
+- `COMMUNICATION` — Failed to ask the right question or gave unclear instructions
+- `REVIEW` — Missed something during Codex code review
+
+### Lessons Learned Log
+
+#### L-001 | 2026-03-01 | SCOPE
+**What happened:** Claude flagged Codex's workflow modes, guided flows, and Phase A concept as "scope creep" and "off-plan."
+**What was correct:** The user had explicitly told Codex to create these features. Claude didn't have full context of user-Codex conversations.
+**Rule:** Never assume Codex went off-plan. If unexpected work appears, ask the user "Did you request this?" before labeling it as scope creep.
+
+#### L-002 | 2026-03-02 | REVIEW
+**What happened:** During code review of Codex's Phase A hardening sprint, found that `sendInboxMessage` had an unchecked error on the thread `updated_at` update. The error was silently swallowed.
+**What was correct:** Every Supabase mutation result should be checked. Non-critical errors should at minimum be logged.
+**Rule:** When reviewing Codex actions, verify that EVERY `.update()`, `.insert()`, `.delete()` call has its error result checked — even "secondary" operations after the main mutation.
+
+#### L-003 | 2026-03-01 | COMMUNICATION
+**What happened:** Claude included detailed "what Codex should do next" relay sections in handoff notes. The user said: "I want you to tell Codex to stop giving me a 'Claude prompt' because all I care about is what you recommend."
+**What was correct:** The user wants Claude to own the planning entirely. Codex should report status only, not suggest Claude's next moves.
+**Rule:** Codex prompts must include the constraint: "Do NOT include 'Claude prompt' or 'recommended next steps for Claude' sections. Report compact status only."
+
+#### L-004 | 2026-03-02 | TECHNICAL
+**What happened:** Attempted to query `rent_charges.stripe_payment_intent_id` during a SQL probe, but that column doesn't exist on the table.
+**What was correct:** Always verify column existence before writing queries against live DB. Use `information_schema.columns` or the table definition as source of truth.
+**Rule:** Before running SQL probes on live Supabase, verify the target columns exist. Never assume a column exists because it "should" — check the schema first.
+
+#### L-005 | 2026-03-01 | PROCESS
+**What happened:** Tried to deploy to Vercel before verifying the user had CLI credentials configured. Deploy failed with "No existing credentials found."
+**What was correct:** Check prerequisites before attempting actions that depend on external authentication.
+**Rule:** Before any deploy command, verify: (1) CLI tool is installed, (2) credentials/auth are configured. If unsure, ask the user first.
+

@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SubmitButton } from "@/components/shared/submit-button";
+import { formatCurrency, formatDate } from "@/lib/format";
 
 interface Charge {
   id: string;
@@ -17,10 +18,6 @@ interface ChargesSectionProps {
   charges: Charge[];
   onPayCharge: (formData: FormData) => Promise<void>;
   onGenerateChargesHref?: string;
-}
-
-function dollars(cents: number) {
-  return `$${(cents / 100).toLocaleString()}`;
 }
 
 export function ChargesSection({
@@ -44,19 +41,19 @@ export function ChargesSection({
       </CardHeader>
       <CardContent>
         {charges.length === 0 ? (
-          <EmptyState message="No pending or late rent charges yet." />
+          <EmptyState message="No charges yet. Charges are generated automatically when a lease is active." />
         ) : (
           <div>
             {charges.map((charge, i) => (
               <DataRow key={charge.id} last={i === charges.length - 1}>
                 <div>
                   <p className="text-sm font-semibold text-zinc-900">{charge.leaseId}</p>
-                  <p className="mt-0.5 text-xs text-zinc-500">Due {charge.dueDate}</p>
+                  <p className="mt-0.5 text-xs text-zinc-500">Due {formatDate(charge.dueDate)}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-right">
                     <p className="text-sm font-semibold text-zinc-900">
-                      {dollars(charge.amountCents)}
+                      {formatCurrency(charge.amountCents)}
                     </p>
                     <Badge
                       variant={charge.status === "late" ? "destructive" : "warning"}

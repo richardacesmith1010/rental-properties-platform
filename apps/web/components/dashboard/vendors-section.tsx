@@ -363,8 +363,12 @@ export function VendorsSection({
               Restart
             </Button>
           </div>
-          {state && !state.success && <p className="text-xs text-red-500">{state.error}</p>}
-          {state && state.success && <p className="text-xs text-emerald-600">Vendor added.</p>}
+          {state && !state.success && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-600">{state.error}</p>
+          )}
+          {state && state.success && (
+            <p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-600">Vendor added.</p>
+          )}
         </div>
 
         <div className="mb-3 flex items-center gap-2">
@@ -380,7 +384,13 @@ export function VendorsSection({
         </div>
 
         {filteredVendors.length === 0 ? (
-          <EmptyState message="No vendors match this filter." />
+          <EmptyState
+            message={
+              vendors.length === 0
+                ? "No vendors yet. Add your first vendor to track maintenance contractors."
+                : "No vendors match this filter."
+            }
+          />
         ) : (
           <div>
             {filteredVendors.map((vendor, i) => (
@@ -447,6 +457,7 @@ function VendorRow({
                 Save Vendor
               </SubmitButton>
               {state && !state.success && <p className="mt-1 text-xs text-red-500">{state.error}</p>}
+              {state && state.success && <p className="mt-1 text-xs text-emerald-600">Vendor updated.</p>}
             </div>
           </form>
         )}

@@ -9,6 +9,7 @@ import { TicketVendorControl } from "./ticket-vendor-control";
 import { TicketPhotoUpload } from "./ticket-photo-upload";
 import type { MaintenanceTicket } from "@/lib/maintenance";
 import type { ActionState } from "@/app/actions";
+import { formatCurrency, formatDate } from "@/lib/format";
 
 type StatefulAction = (
   prev: ActionState,
@@ -81,7 +82,7 @@ export function MaintenanceSection({
           </div>
         )}
         {tickets.length === 0 ? (
-          <EmptyState message="No maintenance tickets yet." />
+          <EmptyState message="No maintenance tickets yet. New tenant and team requests will appear here." />
         ) : (
           <div>
             {tickets.map((ticket, i) => (
@@ -108,18 +109,11 @@ export function MaintenanceSection({
                     </Badge>
                   </div>
                   <p className="mt-1 text-[11px] text-zinc-400">
-                    {new Date(ticket.createdAt).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
+                    {formatDate(ticket.createdAt)}
                     {ticket.resolvedAt &&
-                      ` \u2022 Resolved ${new Date(ticket.resolvedAt).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                      })}`}
+                      ` \u2022 Resolved ${formatDate(ticket.resolvedAt)}`}
                     {ticket.actualCostCents != null &&
-                      ` \u2022 Cost: $${(ticket.actualCostCents / 100).toLocaleString()}`}
+                      ` \u2022 Cost: ${formatCurrency(ticket.actualCostCents)}`}
                     {ticket.vendorName && ` \u2022 Vendor: ${ticket.vendorName}`}
                     {ticket.assignmentStatus &&
                       ` \u2022 ${statusLabel(ticket.assignmentStatus)}`}

@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { DataRow } from "@/components/shared/data-row";
 import type { ActionState } from "@/app/actions";
 import type { NotificationDTO } from "@/lib/notifications";
+import { formatDateTime } from "@/lib/format";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -36,7 +37,7 @@ export function NotificationsSection({
       </CardHeader>
       <CardContent>
         {notifications.length === 0 ? (
-          <EmptyState message="No notifications yet." />
+          <EmptyState message="No notifications yet. Alerts for rent, maintenance, and documents will appear here." />
         ) : (
           <div>
             {notifications.map((notification, i) => (
@@ -71,13 +72,7 @@ function NotificationRow({
         <p className="text-sm font-semibold text-zinc-900">{notification.title}</p>
         <p className="mt-0.5 text-xs text-zinc-500">{notification.body}</p>
         <p className="mt-1 text-[11px] text-zinc-400">
-          {new Date(notification.createdAt).toLocaleString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-            hour: "numeric",
-            minute: "2-digit"
-          })}
+          {formatDateTime(notification.createdAt)}
         </p>
       </div>
       {!notification.readAt ? (
@@ -87,6 +82,7 @@ function NotificationRow({
             Mark read
           </SubmitButton>
           {state && !state.success && <p className="mt-1 text-xs text-red-500">{state.error}</p>}
+          {state && state.success && <p className="mt-1 text-xs text-emerald-600">Marked read.</p>}
         </form>
       ) : (
         <Badge variant="outline">Read</Badge>

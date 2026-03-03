@@ -38,6 +38,9 @@ export function TicketStatusControl({
       {state && !state.success && (
         <span className="text-xs text-red-500">{state.error}</span>
       )}
+      {state && state.success && (
+        <span className="text-xs text-emerald-600">Saved.</span>
+      )}
     </form>
   );
 }

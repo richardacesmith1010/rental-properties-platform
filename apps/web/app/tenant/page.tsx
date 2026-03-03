@@ -29,6 +29,7 @@ import { TicketForm } from "@/components/dashboard/ticket-form";
 import { MaintenanceSection } from "@/components/dashboard/maintenance-section";
 import { TenantDocumentsSection } from "@/components/dashboard/tenant-documents-section";
 import { NotificationsSection } from "@/components/dashboard/notifications-section";
+import { formatCurrency, formatDate } from "@/lib/format";
 import {
   ChevronLeft,
   ChevronRight,
@@ -55,10 +56,6 @@ const tenantSectionLabel: Record<TenantSection, string> = {
   documents: "Documents",
   notifications: "Notifications"
 };
-
-function dollars(cents: number) {
-  return `$${(cents / 100).toLocaleString()}`;
-}
 
 function parseSearchParam(value: string | string[] | undefined): string | null {
   if (typeof value === "string") return value;
@@ -225,7 +222,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
               <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
                 <p className="text-xs uppercase tracking-wide text-zinc-500">Snapshot</p>
                 <p className="mt-1 text-xl font-bold text-zinc-900">
-                  {dollars(outstandingCents)} outstanding
+                  {formatCurrency(outstandingCents)} outstanding
                 </p>
                 <p className="text-sm text-zinc-600">
                   {paymentData.charges.length} open charge{paymentData.charges.length === 1 ? "" : "s"}
@@ -234,7 +231,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <KpiCard
                   label="Outstanding Rent"
-                  value={dollars(outstandingCents)}
+                  value={formatCurrency(outstandingCents)}
                   badge={`${paymentData.charges.length} open charge${paymentData.charges.length === 1 ? "" : "s"}`}
                   gradient="linear-gradient(135deg, #6366f1, #8b5cf6)"
                   alert={outstandingCents > 0}
@@ -269,7 +266,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
               </CardHeader>
               <CardContent>
                 {paymentData.charges.length === 0 ? (
-                  <EmptyState message="You currently have no pending rent charges." />
+                  <EmptyState message="No charges yet. Charges appear automatically when your lease is active." />
                 ) : (
                   <div>
                     {paymentData.charges.map((charge, i) => (
@@ -278,7 +275,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
                           <p className="text-sm font-semibold text-zinc-900">
                             {charge.propertyLabel}
                           </p>
-                          <p className="mt-0.5 text-xs text-zinc-500">Due {charge.dueDate}</p>
+                          <p className="mt-0.5 text-xs text-zinc-500">Due {formatDate(charge.dueDate)}</p>
                           <Badge
                             variant={charge.status === "late" ? "destructive" : "warning"}
                             className="mt-1"
@@ -288,7 +285,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
                         </div>
                         <div className="text-right">
                           <p className="text-sm font-semibold text-zinc-900">
-                            {dollars(charge.amountCents)}
+                            {formatCurrency(charge.amountCents)}
                           </p>
                           <form action={createCheckoutForCharge} className="mt-2">
                             <input type="hidden" name="chargeId" value={charge.id} />

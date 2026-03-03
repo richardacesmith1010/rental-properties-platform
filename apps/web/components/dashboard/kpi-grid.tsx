@@ -1,4 +1,5 @@
 import { KpiCard } from "@/components/shared/kpi-card";
+import { formatCurrency } from "@/lib/format";
 
 interface KpiGridProps {
   monthlyGrossRentCents: number;
@@ -10,10 +11,6 @@ interface KpiGridProps {
   highPriorityMaintenanceCount: number;
   lateRentCents: number;
   lateAccountCount: number;
-}
-
-function dollars(cents: number) {
-  return `$${(cents / 100).toLocaleString()}`;
 }
 
 export function KpiGrid({
@@ -31,7 +28,7 @@ export function KpiGrid({
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <KpiCard
         label="Monthly Gross Rent"
-        value={dollars(monthlyGrossRentCents)}
+        value={formatCurrency(monthlyGrossRentCents)}
         badge={`${activeLeaseCount} active leases`}
         gradient="linear-gradient(135deg, #6366f1, #8b5cf6)"
       />
@@ -49,7 +46,7 @@ export function KpiGrid({
       />
       <KpiCard
         label="Late Rent"
-        value={dollars(lateRentCents)}
+        value={formatCurrency(lateRentCents)}
         badge={`${lateAccountCount} accounts`}
         gradient="linear-gradient(135deg, #ec4899, #f43f5e)"
         alert

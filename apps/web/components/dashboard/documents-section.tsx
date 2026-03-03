@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type KeyboardEvent, useEffect, useState } from "react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { useFormState } from "react-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { SubmitButton } from "@/components/shared/submit-button";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -17,6 +18,7 @@ import type { ActionState } from "@/app/actions";
 import type { DocumentTemplateDTO, DocumentPacketDTO, PropertyFileDTO } from "@/lib/documents";
 import type { LeaseListItem } from "@/lib/portfolio";
 import type { OwnershipAccountDTO } from "@/lib/ownership";
+import { formatDate } from "@/lib/format";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -674,7 +676,7 @@ export function DocumentsSection({
         </CardHeader>
         <CardContent>
           {templates.length === 0 ? (
-            <EmptyState message="No templates yet." />
+            <EmptyState message="No templates yet. Create your first template to speed up lease paperwork." />
           ) : (
             <div>
               {templates.map((template, i) => (
@@ -696,7 +698,7 @@ export function DocumentsSection({
         </CardHeader>
         <CardContent>
           {packets.length === 0 ? (
-            <EmptyState message="No document packets yet." />
+            <EmptyState message="No document packets yet. Create a packet from a template to start e-sign workflow." />
           ) : (
             <div>
               {packets.map((packet, i) => (
@@ -719,9 +721,9 @@ export function DocumentsSection({
         </CardHeader>
         <CardContent>
           {!propertyFilesEnabled ? (
-            <EmptyState message="Property file vault is unavailable." />
+            <EmptyState message="Property file vault is unavailable. Complete setup to upload and share files." />
           ) : propertyFiles.length === 0 ? (
-            <EmptyState message="No uploaded files yet." />
+            <EmptyState message="No files uploaded yet. Add lease docs, inspections, and receipts here." />
           ) : (
             <div>
               {propertyFiles.map((file, i) => (
@@ -751,20 +753,40 @@ function TemplateRow({
   onDeleteTemplate: StatefulAction;
 }) {
   const [state, action] = useFormState(onDeleteTemplate, null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   return (
     <DataRow last={last}>
       <div>
         <p className="text-sm font-semibold text-zinc-900">{template.name}</p>
         <p className="mt-0.5 text-xs text-zinc-500">{template.category}</p>
+        <p className="mt-0.5 text-[11px] text-zinc-400">Created {formatDate(template.createdAt)}</p>
       </div>
-      <form action={action}>
+      <form action={action} ref={formRef}>
         <input type="hidden" name="templateId" value={template.id} />
-        <SubmitButton size="sm" variant="outline" title="Delete this template.">
+        <SubmitButton
+          size="sm"
+          variant="outline"
+          onClick={(event) => {
+            event.preventDefault();
+            setConfirmOpen(true);
+          }}
+          title="Delete this template."
+        >
           Delete
         </SubmitButton>
         {state && !state.success && <p className="mt-1 text-xs text-red-500">{state.error}</p>}
+        {state && state.success && <p className="mt-1 text-xs text-emerald-600">Template deleted.</p>}
       </form>
+      <ConfirmDialog
+        title="Delete Template?"
+        description="Are you sure? This permanently removes this document template."
+        confirmLabel="Delete Template"
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        onConfirm={() => formRef.current?.requestSubmit()}
+      />
     </DataRow>
   );
 }
@@ -787,6 +809,7 @@ function PacketRow({
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-zinc-900">{packet.templateName}</p>
         <p className="mt-0.5 text-xs text-zinc-500">{packet.propertyLabel}</p>
+        <p className="mt-0.5 text-[11px] text-zinc-400">Created {formatDate(packet.createdAt)}</p>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           <Badge variant={packet.status === "signed" ? "success" : packet.status === "sent" ? "warning" : "outline"}>
             {packet.status.toUpperCase()}
@@ -820,6 +843,11 @@ function PacketRow({
             {packet.status === "draft" ? "Send" : "Resend"}
           </SubmitButton>
           {state && !state.success && <p className="mt-1 text-xs text-red-500">{state.error}</p>}
+          {state && state.success && (
+            <p className="mt-1 text-xs text-emerald-600">
+              {packet.status === "draft" ? "Packet sent." : "Packet resent."}
+            </p>
+          )}
         </form>
       )}
     </DataRow>
@@ -840,6 +868,8 @@ function PropertyFileRow({
   const [visibilityState, visibilityAction] = useFormState(onUpdateFileVisibility, null);
   const [deleteState, deleteAction] = useFormState(onDeletePropertyFile, null);
   const nextVisibility = file.visibility === "all" ? "owner_manager" : "all";
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const deleteFormRef = useRef<HTMLFormElement | null>(null);
 
   return (
     <DataRow last={last}>
@@ -848,6 +878,7 @@ function PropertyFileRow({
         <p className="mt-0.5 text-xs text-zinc-500">
           {file.propertyLabel} • {file.category.replaceAll("_", " ")} • {file.fileType}
         </p>
+        <p className="mt-0.5 text-[11px] text-zinc-400">Uploaded {formatDate(file.createdAt)}</p>
         {file.description && <p className="mt-0.5 text-xs text-zinc-500">{file.description}</p>}
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           <Badge variant={file.visibility === "all" ? "success" : "outline"}>
@@ -883,25 +914,40 @@ function PropertyFileRow({
           {visibilityState && !visibilityState.success && (
             <p className="mt-1 text-xs text-red-500">{visibilityState.error}</p>
           )}
+          {visibilityState && visibilityState.success && (
+            <p className="mt-1 text-xs text-emerald-600">Visibility updated.</p>
+          )}
         </form>
 
-        <form
-          action={deleteAction}
-          onSubmit={(event) => {
-            if (!window.confirm("Delete this file from the vault?")) {
-              event.preventDefault();
-            }
-          }}
-        >
+        <form action={deleteAction} ref={deleteFormRef}>
           <input type="hidden" name="fileId" value={file.id} />
-          <SubmitButton size="sm" variant="outline" title="Delete this file from the vault.">
+          <SubmitButton
+            size="sm"
+            variant="outline"
+            onClick={(event) => {
+              event.preventDefault();
+              setConfirmDeleteOpen(true);
+            }}
+            title="Delete this file from the vault."
+          >
             Delete
           </SubmitButton>
           {deleteState && !deleteState.success && (
             <p className="mt-1 text-xs text-red-500">{deleteState.error}</p>
           )}
+          {deleteState && deleteState.success && (
+            <p className="mt-1 text-xs text-emerald-600">File deleted.</p>
+          )}
         </form>
       </div>
+      <ConfirmDialog
+        title="Delete File?"
+        description="Are you sure? This permanently removes the file from the property vault."
+        confirmLabel="Delete File"
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        onConfirm={() => deleteFormRef.current?.requestSubmit()}
+      />
     </DataRow>
   );
 }

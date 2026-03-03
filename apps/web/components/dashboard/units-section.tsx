@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormState } from "react-dom";
 import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SubmitButton } from "@/components/shared/submit-button";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { UnitListItem } from "@/lib/portfolio";
 import type { ActionState } from "@/app/actions";
+import { formatCurrency } from "@/lib/format";
 
 type StatefulAction = (
   prev: ActionState,
@@ -27,10 +29,6 @@ const unavailableAction: StatefulAction = async () => ({
   success: false,
   error: "Unit actions are unavailable."
 });
-
-function dollars(cents: number) {
-  return `$${(cents / 100).toLocaleString()}`;
-}
 
 function FormError({ state }: { state: ActionState }) {
   if (!state || state.success) return null;
@@ -59,10 +57,13 @@ export function UnitsSection({
   const [updateState, updateAction] = useFormState(onUpdateUnit ?? unavailableAction, null);
   const [deleteState, deleteAction] = useFormState(onDeleteUnit ?? unavailableAction, null);
   const [activeEditUnitId, setActiveEditUnitId] = useState<string | null>(null);
+  const [confirmDeleteUnitId, setConfirmDeleteUnitId] = useState<string | null>(null);
+  const deleteFormRefs = useRef<Record<string, HTMLFormElement | null>>({});
 
   useEffect(() => {
     if (updateState?.success || deleteState?.success) {
       setActiveEditUnitId(null);
+      setConfirmDeleteUnitId(null);
     }
   }, [deleteState, updateState]);
 
@@ -82,7 +83,7 @@ export function UnitsSection({
         )}
 
         {units.length === 0 ? (
-          <EmptyState message="No units yet. Add one in Operations." />
+          <EmptyState message="No units yet. Add your first unit in Operations to start lease setup." />
         ) : (
           <div>
             {units.map((unit, i) => (
@@ -133,7 +134,7 @@ export function UnitsSection({
                 </div>
 
                 <div className="flex flex-col items-end gap-2">
-                  <p className="text-xs text-zinc-500">{dollars(unit.monthlyRentCents)}</p>
+                  <p className="text-xs text-zinc-500">{formatCurrency(unit.monthlyRentCents)}</p>
                   {showControls && (
                     <>
                       <Button
@@ -156,21 +157,22 @@ export function UnitsSection({
                       {activeEditUnitId === unit.id && (
                         <form
                           action={deleteAction}
-                          onSubmit={(event) => {
-                            if (!window.confirm("Are you sure? This will archive the unit.")) {
-                              event.preventDefault();
-                            }
+                          ref={(node) => {
+                            deleteFormRefs.current[unit.id] = node;
                           }}
                         >
                           <input type="hidden" name="unitId" value={unit.id} />
-                          <Button
-                            type="submit"
+                          <SubmitButton
                             size="sm"
                             variant="destructive"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              setConfirmDeleteUnitId(unit.id);
+                            }}
                             title="Archive this unit."
                           >
                             Archive
-                          </Button>
+                          </SubmitButton>
                         </form>
                       )}
                     </>
@@ -181,6 +183,21 @@ export function UnitsSection({
           </div>
         )}
       </CardContent>
+      <ConfirmDialog
+        title="Archive Unit?"
+        description="Are you sure? This will archive the unit and remove it from active leasing options."
+        confirmLabel="Archive Unit"
+        open={confirmDeleteUnitId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmDeleteUnitId(null);
+          }
+        }}
+        onConfirm={() => {
+          if (!confirmDeleteUnitId) return;
+          deleteFormRefs.current[confirmDeleteUnitId]?.requestSubmit();
+        }}
+      />
     </Card>
   );
 }

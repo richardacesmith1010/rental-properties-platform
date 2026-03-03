@@ -9,6 +9,7 @@ import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SidebarNav, MobileTopBar, type NavItem } from "./sidebar-nav";
 import { MaintenanceSection } from "./maintenance-section";
+import { formatCurrency, formatDate } from "@/lib/format";
 import {
   LayoutDashboard,
   Building2,
@@ -39,10 +40,6 @@ const managerNavItems: NavItem[] = [
   { id: "maintenance", label: "Maintenance", icon: Wrench },
   { id: "rent-status", label: "Rent Status", icon: Receipt },
 ];
-
-function dollars(cents: number) {
-  return `$${(cents / 100).toLocaleString()}`;
-}
 
 export function ManagerDashboard({
   data,
@@ -94,12 +91,7 @@ export function ManagerDashboard({
               Manager Dashboard
             </h1>
             <p className="mt-1 text-sm text-zinc-500">
-              {new Date().toLocaleDateString("en-US", {
-                weekday: "long",
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
+              {formatDate(new Date())}
             </p>
           </div>
           <Badge className="self-start capitalize">manager</Badge>
@@ -134,7 +126,7 @@ export function ManagerDashboard({
             />
             <KpiCard
               label="Late Rent"
-              value={dollars(data.kpis.lateRentCents)}
+              value={formatCurrency(data.kpis.lateRentCents)}
               badge={
                 data.kpis.lateAccountCount > 0
                   ? `${data.kpis.lateAccountCount} account${data.kpis.lateAccountCount === 1 ? "" : "s"}`
@@ -213,12 +205,12 @@ export function ManagerDashboard({
                           {charge.leaseId.slice(0, 8)}...
                         </p>
                         <p className="mt-0.5 text-xs text-zinc-500">
-                          Due {charge.dueDate}
+                          Due {formatDate(charge.dueDate)}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-semibold text-zinc-900">
-                          {dollars(charge.amountCents)}
+                          {formatCurrency(charge.amountCents)}
                         </p>
                         <Badge
                           variant={

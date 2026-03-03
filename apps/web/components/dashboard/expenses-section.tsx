@@ -1,9 +1,10 @@
 "use client";
 
-import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
+import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useFormState } from "react-dom";
 import { FeatureWarning } from "@/components/shared/feature-warning";
 import { SubmitButton } from "@/components/shared/submit-button";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -16,6 +17,7 @@ import type { ActionState } from "@/app/actions";
 import type { ExpenseDashboardData } from "@/lib/expenses";
 import type { VendorDTO } from "@/lib/vendors";
 import type { PropertyFileDTO } from "@/lib/documents";
+import { formatCurrency, formatDate } from "@/lib/format";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -64,10 +66,6 @@ interface ExpenseDraft {
   vendorId: string;
   receiptFileId: string;
   description: string;
-}
-
-function dollars(cents: number) {
-  return `$${(cents / 100).toLocaleString()}`;
 }
 
 function formatCategory(category: string) {
@@ -565,15 +563,15 @@ export function ExpensesSection({
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                   <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
                     <p className="text-[11px] uppercase tracking-wide text-zinc-500">Income</p>
-                    <p className="text-lg font-semibold text-emerald-700">{dollars(selectedSummary.incomeCents)}</p>
+                    <p className="text-lg font-semibold text-emerald-700">{formatCurrency(selectedSummary.incomeCents)}</p>
                   </div>
                   <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
                     <p className="text-[11px] uppercase tracking-wide text-zinc-500">Expenses</p>
-                    <p className="text-lg font-semibold text-rose-700">{dollars(selectedSummary.expenseCents)}</p>
+                    <p className="text-lg font-semibold text-rose-700">{formatCurrency(selectedSummary.expenseCents)}</p>
                   </div>
                   <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
                     <p className="text-[11px] uppercase tracking-wide text-zinc-500">Net Cashflow</p>
-                    <p className="text-lg font-semibold text-indigo-700">{dollars(selectedSummary.netCents)}</p>
+                    <p className="text-lg font-semibold text-indigo-700">{formatCurrency(selectedSummary.netCents)}</p>
                   </div>
                 </div>
 
@@ -585,9 +583,9 @@ export function ExpensesSection({
                     {(data.monthlyByProperty[selectedPropertyId] ?? []).map((row) => (
                       <div key={row.month} className="flex items-center justify-between rounded-md border border-zinc-200 px-3 py-2 text-xs">
                         <span className="font-medium text-zinc-700">{row.month}</span>
-                        <span className="text-zinc-500">Income {dollars(row.incomeCents)}</span>
-                        <span className="text-zinc-500">Expense {dollars(row.expenseCents)}</span>
-                        <span className="font-semibold text-zinc-900">Net {dollars(row.netCents)}</span>
+                        <span className="text-zinc-500">Income {formatCurrency(row.incomeCents)}</span>
+                        <span className="text-zinc-500">Expense {formatCurrency(row.expenseCents)}</span>
+                        <span className="font-semibold text-zinc-900">Net {formatCurrency(row.netCents)}</span>
                       </div>
                     ))}
                   </div>
@@ -598,13 +596,13 @@ export function ExpensesSection({
                     Expense Categories
                   </p>
                   {(data.categoryByProperty[selectedPropertyId] ?? []).length === 0 ? (
-                    <EmptyState message="No expenses recorded for this property yet." />
+                    <EmptyState message="No expenses yet for this property. Add one to start category tracking." />
                   ) : (
                     <div className="space-y-1">
                       {(data.categoryByProperty[selectedPropertyId] ?? []).map((row) => (
                         <div key={row.category} className="flex items-center justify-between rounded-md border border-zinc-200 px-3 py-2 text-xs">
                           <span>{formatCategory(row.category)}</span>
-                          <span className="font-semibold">{dollars(row.totalCents)}</span>
+                          <span className="font-semibold">{formatCurrency(row.totalCents)}</span>
                         </div>
                       ))}
                     </div>
@@ -677,6 +675,8 @@ function ExpenseRow({
   const [updateState, updateAction] = useFormState(onUpdateExpense, null);
   const [deleteState, deleteAction] = useFormState(onDeleteExpense, null);
   const [isManaging, setIsManaging] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const deleteFormRef = useRef<HTMLFormElement | null>(null);
 
   useEffect(() => {
     if (updateState?.success || deleteState?.success) {
@@ -691,7 +691,7 @@ function ExpenseRow({
           {expense.propertyName} • {formatCategory(expense.category)}
         </p>
         <p className="mt-0.5 text-xs text-zinc-500">
-          {expense.expenseDate}
+          {formatDate(expense.expenseDate)}
           {expense.vendorName ? ` • ${expense.vendorName}` : ""}
           {expense.recurring ? ` • Recurs ${expense.recurringFrequency ?? "monthly"}` : ""}
         </p>
@@ -759,28 +759,38 @@ function ExpenseRow({
                 <SubmitButton size="sm" variant="outline" title="Save updates to this expense.">
                   Save Expense
                 </SubmitButton>
-                <Badge variant="outline">{dollars(expense.amountCents)}</Badge>
+                <Badge variant="outline">{formatCurrency(expense.amountCents)}</Badge>
               </div>
               {updateState && !updateState.success && (
                 <p className="sm:col-span-3 text-xs text-red-500">{updateState.error}</p>
+              )}
+              {updateState && updateState.success && (
+                <p className="sm:col-span-3 text-xs text-emerald-600">Expense updated.</p>
               )}
             </form>
 
             <form
               action={deleteAction}
               className="mt-2"
-              onSubmit={(event) => {
-                if (!window.confirm("Delete this expense record?")) {
-                  event.preventDefault();
-                }
-              }}
+              ref={deleteFormRef}
             >
               <input type="hidden" name="expenseId" value={expense.id} />
-              <Button type="submit" size="sm" variant="destructive" title="Delete this expense record permanently.">
+              <SubmitButton
+                size="sm"
+                variant="destructive"
+                onClick={(event) => {
+                  event.preventDefault();
+                  setConfirmDeleteOpen(true);
+                }}
+                title="Delete this expense record permanently."
+              >
                 Delete
-              </Button>
+              </SubmitButton>
               {deleteState && !deleteState.success && (
                 <p className="mt-1 text-xs text-red-500">{deleteState.error}</p>
+              )}
+              {deleteState && deleteState.success && (
+                <p className="mt-1 text-xs text-emerald-600">Expense deleted.</p>
               )}
             </form>
           </>
@@ -798,6 +808,14 @@ function ExpenseRow({
           {isManaging ? "Done" : "Manage"}
         </Button>
       </div>
+      <ConfirmDialog
+        title="Delete Expense?"
+        description="Are you sure? This will permanently delete this expense record."
+        confirmLabel="Delete Expense"
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        onConfirm={() => deleteFormRef.current?.requestSubmit()}
+      />
     </DataRow>
   );
 }

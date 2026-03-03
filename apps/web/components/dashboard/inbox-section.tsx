@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import type { ActionState } from "@/app/actions";
 import type { NotificationDTO } from "@/lib/notifications";
 import type { InboxThreadDTO } from "@/lib/inbox";
+import { formatDateTime } from "@/lib/format";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -59,13 +60,7 @@ function typeLabel(type: string) {
 }
 
 function formatTimestamp(value: string) {
-  return new Date(value).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  });
+  return formatDateTime(value);
 }
 
 function InboxNotificationRow({
@@ -103,6 +98,7 @@ function InboxNotificationRow({
               Mark read
             </SubmitButton>
             {state && !state.success && <p className="mt-1 text-xs text-red-500">{state.error}</p>}
+            {state && state.success && <p className="mt-1 text-xs text-emerald-600">Marked read.</p>}
           </form>
         )}
         <Button
@@ -268,7 +264,7 @@ export function InboxSection({
             </div>
 
             {filteredNotifications.length === 0 ? (
-              <EmptyState message="No inbox events match the current filters." />
+              <EmptyState message="No inbox events match these filters. Try clearing search or status filters." />
             ) : (
               <div>
                 {filteredNotifications.map((notification, index) => (
@@ -320,10 +316,13 @@ export function InboxSection({
               {createThreadState && !createThreadState.success && (
                 <p className="mt-2 text-xs text-red-600">{createThreadState.error}</p>
               )}
+              {createThreadState && createThreadState.success && (
+                <p className="mt-2 text-xs text-emerald-600">Thread created.</p>
+              )}
             </form>
 
             {threads.length === 0 ? (
-              <EmptyState message="No threads yet. Create one to start structured communication." />
+              <EmptyState message="No threads yet. Create one to start structured communication for a property." />
             ) : (
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                 <div className="space-y-2 rounded-lg border border-zinc-200 bg-white p-2">
@@ -396,6 +395,9 @@ export function InboxSection({
                         </div>
                         {sendMessageState && !sendMessageState.success && (
                           <p className="text-xs text-red-600">{sendMessageState.error}</p>
+                        )}
+                        {sendMessageState && sendMessageState.success && (
+                          <p className="text-xs text-emerald-600">Message sent.</p>
                         )}
                       </form>
                     </div>

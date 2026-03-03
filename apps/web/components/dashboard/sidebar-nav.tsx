@@ -17,11 +17,13 @@ import {
   FlaskConical,
   type LucideIcon,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export interface NavItem {
   id: string;
   label: string;
   icon: LucideIcon;
+  badgeCount?: number;
   href?: string;
   description?: string;
   clickHint?: string;
@@ -291,7 +293,15 @@ export function SidebarNav({
                 title={getNavTitle(item)}
               >
                 <Icon className="h-4 w-4" />
-                {item.label}
+                <span className="truncate">{item.label}</span>
+                {typeof item.badgeCount === "number" && item.badgeCount > 0 && (
+                  <Badge
+                    variant="warning"
+                    className="ml-auto min-w-[1.5rem] justify-center rounded-full px-1.5 py-0 text-[10px]"
+                  >
+                    {item.badgeCount}
+                  </Badge>
+                )}
               </a>
             );
           }
@@ -306,7 +316,15 @@ export function SidebarNav({
                 title={getNavTitle(item)}
               >
                 <Icon className="h-4 w-4" />
-                {item.label}
+                <span className="truncate">{item.label}</span>
+                {typeof item.badgeCount === "number" && item.badgeCount > 0 && (
+                  <Badge
+                    variant="warning"
+                    className="ml-auto min-w-[1.5rem] justify-center rounded-full px-1.5 py-0 text-[10px]"
+                  >
+                    {item.badgeCount}
+                  </Badge>
+                )}
               </button>
             );
           }
@@ -319,7 +337,15 @@ export function SidebarNav({
               title={getNavTitle(item)}
             >
               <Icon className="h-4 w-4" />
-              {item.label}
+              <span className="truncate">{item.label}</span>
+              {typeof item.badgeCount === "number" && item.badgeCount > 0 && (
+                <Badge
+                  variant="warning"
+                  className="ml-auto min-w-[1.5rem] justify-center rounded-full px-1.5 py-0 text-[10px]"
+                >
+                  {item.badgeCount}
+                </Badge>
+              )}
             </a>
           );
         })}
