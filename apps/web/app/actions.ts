@@ -2091,10 +2091,14 @@ export async function sendInboxMessage(
     return { success: false, error: "Failed to send inbox message." };
   }
 
-  await supabase
+  const { error: threadUpdateError } = await supabase
     .from("inbox_threads")
     .update({ updated_at: new Date().toISOString() })
     .eq("id", threadId);
+
+  if (threadUpdateError) {
+    console.error("Failed to update inbox thread timestamp:", threadUpdateError.message);
+  }
 
   revalidatePath("/owner");
   revalidatePath("/manager");

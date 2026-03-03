@@ -693,3 +693,66 @@ DB_RUNTIME_OK=true|false
 BLOCKERS=<none or exact blocker>
 NEXT_ACTION=<single next action>
 ```
+
+## V2 Phase A DB Runtime Apply + Proof (Claude)
+
+- Timestamp (UTC): `2026-03-03T03:34:55Z`
+- Branch: `main`
+- Migration source: `supabase/migrations/20260302_phase10_leasing_inbox_automations.sql`
+- Migration execution: **applied now** (4 batches via Supabase MCP apply_migration)
+
+### Applied batches
+1. `phase10_leasing_inbox_automations_tables` — 4 leasing pipeline tables + indexes + RLS enable
+2. `phase10_leasing_rls_policies` — 13 RLS policies for leasing pipeline
+3. `phase10_inbox_tables_and_rls` — 3 inbox tables + indexes + 7 RLS policies
+4. `phase10_automation_tables_rls_seeds` — 3 automation tables + indexes + 8 RLS policies + 6 template seeds
+
+### Verifier output (`npm run verify:phase10-runtime`)
+```
+ok: true
+summary.tablesReady: true
+summary.phase9FunctionsReady: true
+summary.templateSeedsReady: true
+```
+
+All 10 Phase A tables verified present:
+- `rental_listings`, `rental_applications`, `screening_reports`, `application_events`
+- `inbox_threads`, `inbox_messages`, `message_deliveries`
+- `automation_templates`, `automation_rules`, `automation_runs`
+
+All 3 Phase 9 functions callable: `can_administer_property`, `can_view_property`, `can_access_property`
+
+All 6 automation template seeds present: `late_rent_sequence`, `lease_renewal_sequence`, `new_ticket_sla`, `move_in_sequence`, `move_out_sequence`, `manager_vendor_followup`
+
+### Compact status
+```
+DB_RUNTIME_OK=true
+BLOCKERS=none
+NEXT_ACTION=wire scaffolded Phase A sections to live DB tables
+```
+
+## Claude V2 Code Review
+
+- Timestamp (UTC): `2026-03-03T03:35:00Z`
+- Scope: Full review of all Codex V2 work (commits 51fe983..feabd04)
+
+### Feature status matrix
+
+| Feature | Status | Notes |
+|---|---|---|
+| Rebrand to Domus | ✅ WORKING | All references updated, workspace names changed |
+| Server actions (13 new) | ✅ WORKING | All have auth + role + permission + schema validation |
+| Dashboard structure | ✅ WORKING | Clean modular design, 15+ sections, workflow modes |
+| Feature capability gating | ✅ WORKING | Runtime probes for 9 feature flags |
+| Expense tracking + P&L | ✅ WORKING | Full CRUD, receipt uploads, P&L calculations |
+| Document vault | ✅ WORKING | Upload/delete/visibility, atomic storage cleanup |
+| Email (Resend) | ✅ WORKING | Wired into notification delivery pipeline |
+| Preferred vendors | ✅ WORKING | trade_category + preferred flag in actions/UI |
+| CRUD completeness | ✅ WORKING | Edit + soft-delete for leases, properties, units |
+| Tester mode | ✅ WORKING | Health probes, test data gen, role preview, grant/revoke |
+| Theme system | ✅ WORKING | 3 themes, persistent, settings page |
+| Leasing Hub | 🟡 SCAFFOLDED | UI wired to existing data, not yet querying Phase A tables |
+| Inbox | 🟡 SCAFFOLDED | Displays notifications only, no threaded conversations |
+| Automations | 🟡 SCAFFOLDED | localStorage toggles only, no server-side persistence |
+| Code quality | ✅ CLEAN | 0 TODO/FIXME/HACK markers |
+| Test suite | ✅ PASS | 106/106 tests |
