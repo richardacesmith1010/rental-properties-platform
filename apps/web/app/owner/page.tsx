@@ -1,6 +1,6 @@
 import { Dashboard } from "@/components/dashboard";
 import { getDashboardData } from "@/lib/dashboard";
-import { getGeneratedMessage } from "@/lib/owner";
+import { getGeneratedMessage } from "@/lib/format";
 import { getPortfolioData } from "@/lib/portfolio";
 import { getOwnerMaintenanceTickets } from "@/lib/maintenance";
 import { getOwnerInvitations } from "@/lib/invitations";

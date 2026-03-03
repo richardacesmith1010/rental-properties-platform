@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getGeneratedMessage } from "@/lib/owner";
+import { getGeneratedMessage } from "@/lib/format";
 
 describe("getGeneratedMessage", () => {
   it("returns null when value is undefined", () => {

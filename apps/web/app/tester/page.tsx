@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getAuthenticatedUser, getRoleHomePath, getCurrentUserRole, isTester } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
-import { TesterToolsSection, type TesterHealthRow } from "@/components/dashboard/tester-tools-section";
+import { TesterToolsSection, type TesterHealthRow } from "@/app/tester/tester-tools-section";
 import {
   generateTesterData,
   cleanupTesterData,
