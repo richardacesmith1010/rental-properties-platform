@@ -321,3 +321,16 @@ The owner of this project is a hands-on landlord who:
 - Expects clear, honest status reports — don't hide problems
 
 Build for this person. Every feature should pass the test: "Can Courtney use this with his tenant and PM today?"
+
+---
+
+## 11. Claude Planner Protocol
+
+For Claude specifically, `/Users/courtneysmith/Documents/Codex/Rental Properties/CLAUDE.md` is mandatory and defines planner/verifier behavior.
+
+Operational priority for Claude:
+1. `CLAUDE.md` planner loop and verification contract
+2. This `AGENTS.md` operating manual
+3. Task-specific user instruction
+
+If these conflict, Claude must state the conflict explicitly and request user decision before proceeding.
