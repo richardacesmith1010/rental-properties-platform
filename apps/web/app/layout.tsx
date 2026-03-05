@@ -8,8 +8,31 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Domus",
-  description: "Property management dashboard for rental operations",
+  title: {
+    default: "Domus — Rental Property Management",
+    template: "%s | Domus",
+  },
+  description:
+    "Manage rental properties, collect rent with Stripe, handle maintenance tickets, and run operations for Owner, Manager, and Tenant roles — all in one platform.",
+  metadataBase: new URL("https://domusbase.com"),
+  openGraph: {
+    title: "Domus — Rental Property Management",
+    description:
+      "Run your rental portfolio with confidence. Properties, payments, maintenance, and documents in one platform.",
+    url: "https://domusbase.com",
+    siteName: "Domus",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Domus — Rental Property Management",
+    description: "Run your rental portfolio with confidence.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

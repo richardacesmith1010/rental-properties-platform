@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { RoleSelector } from "@/components/auth/role-selector";
 import { createClient } from "@/lib/supabase/server";
 
@@ -8,6 +9,11 @@ interface LoginPageProps {
     error_description?: string;
   };
 }
+
+export const metadata: Metadata = {
+  title: "Login",
+  description: "Sign in to Domus as Owner, Manager, or Tenant to access your rental workspace.",
+};
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const supabase = createClient();
@@ -23,7 +29,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#fafafa] px-4 py-12">
       <div className="mb-10 text-center">
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-xl font-bold text-white shadow-lg shadow-indigo-500/25">
-          R
+          D
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
           Welcome to Domus

@@ -44,23 +44,49 @@ const features = [
 
 const tiers = [
   {
+    name: "Free",
+    price: "$0",
+    detail: "forever",
+    points: [
+      "Up to 3 units",
+      "Owner dashboard",
+      "Maintenance tickets",
+      "Tenant portal"
+    ]
+  },
+  {
     name: "Starter",
-    price: "$49",
+    price: "$29",
     detail: "per month",
-    points: ["1-10 units", "Owner dashboard", "Stripe rent collection"]
+    points: [
+      "Up to 15 units",
+      "Stripe rent collection",
+      "Document signing",
+      "Full reporting"
+    ]
   },
   {
     name: "Growth",
-    price: "$149",
+    price: "$79",
     detail: "per month",
-    points: ["Up to 75 units", "Manager role access", "Advanced maintenance workflows"],
+    points: [
+      "Up to 75 units",
+      "Manager role access",
+      "Advanced maintenance workflows",
+      "Priority support"
+    ],
     featured: true
   },
   {
     name: "Scale",
     price: "Custom",
     detail: "annual contract",
-    points: ["Unlimited units", "Priority support", "Custom reporting + onboarding"]
+    points: [
+      "Unlimited units",
+      "Dedicated onboarding",
+      "API access",
+      "Custom reporting"
+    ]
   }
 ];
 
@@ -100,7 +126,13 @@ export function LandingPage() {
               Get started
               <ArrowRight className="h-4 w-4" />
             </Link>
-            <span className="text-sm text-slate-400">No setup friction. Role-based login included.</span>
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-2 rounded-xl border border-indigo-300/40 bg-transparent px-5 py-3 text-sm font-semibold text-indigo-100 transition hover:border-indigo-200/60 hover:bg-indigo-400/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+              title="Start free with no credit card."
+            >
+              Start free — no credit card
+            </Link>
           </div>
         </div>
 
@@ -160,7 +192,7 @@ export function LandingPage() {
           <h2 className="text-3xl font-semibold tracking-tight text-white">Simple pricing as you scale</h2>
           <p className="text-slate-300">Start with essentials, expand when your portfolio grows.</p>
         </div>
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {tiers.map((tier) => (
             <article
               key={tier.name}
@@ -203,7 +235,14 @@ export function LandingPage() {
       <footer className="border-t border-white/10 pt-8 text-sm text-slate-400">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} Domus. Rental management, simplified.</p>
-          <p>Owner • Manager • Tenant</p>
+          <div className="flex items-center gap-4">
+            <Link href="/terms" className="transition hover:text-white" title="Read Domus terms of service.">
+              Terms
+            </Link>
+            <Link href="/privacy" className="transition hover:text-white" title="Read Domus privacy policy.">
+              Privacy
+            </Link>
+          </div>
         </div>
       </footer>
     </main>
