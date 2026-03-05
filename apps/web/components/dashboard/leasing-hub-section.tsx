@@ -23,6 +23,8 @@ interface LeasingHubSectionProps {
   invitations: InvitationListItem[];
   documents: OwnerDocumentsData;
   listings: RentalListingDTO[];
+  applicationCount: number;
+  approvedApplicationCount: number;
   chargeCount: number;
   pipelineReady?: boolean;
   pipelineWarning?: string | null;
@@ -59,6 +61,8 @@ function buildLeasingStages(params: {
   portfolio: PortfolioData;
   invitations: InvitationListItem[];
   documents: OwnerDocumentsData;
+  applicationCount: number;
+  approvedApplicationCount: number;
   chargeCount: number;
 }): LeasingStage[] {
   const tenantInvites = params.invitations.filter((invite) => invite.role === "tenant");
@@ -86,6 +90,15 @@ function buildLeasingStages(params: {
       metric: `${tenantInvites.length} invites (${pendingTenantInvites.length} pending)`,
       targetSection: "invitations",
       actionLabel: "Invite tenant"
+    },
+    {
+      id: "applications_reviewed",
+      label: "Applications Reviewed",
+      description: "Review and approve tenant applications before creating the lease.",
+      done: params.approvedApplicationCount > 0,
+      metric: `${params.applicationCount} applications (${params.approvedApplicationCount} approved)`,
+      targetSection: "applications",
+      actionLabel: "Review applications"
     },
     {
       id: "lease_created",
@@ -178,6 +191,8 @@ export function LeasingHubSection({
   invitations,
   documents,
   listings,
+  applicationCount,
+  approvedApplicationCount,
   chargeCount,
   pipelineReady = true,
   pipelineWarning = null,
@@ -194,6 +209,8 @@ export function LeasingHubSection({
     portfolio,
     invitations,
     documents,
+    applicationCount,
+    approvedApplicationCount,
     chargeCount
   });
 

@@ -8,6 +8,7 @@ import { getNotificationsForUser } from "@/lib/notifications";
 import { getAutomationRulesForUser, getAutomationTemplates } from "@/lib/automations";
 import { getInboxThreadsForUser } from "@/lib/inbox";
 import { getRentalListingsForUser } from "@/lib/leasing";
+import { getApplicationsForUser, type ApplicationDTO } from "@/lib/applications";
 import { getManagerVendors } from "@/lib/vendors";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { getOwnershipAccountsForUser } from "@/lib/ownership";
@@ -35,6 +36,10 @@ import {
   disableAutomation,
   createRentalListing,
   updateListingStatus,
+  createApplication,
+  reviewApplication,
+  addApplicationNote,
+  recordScreeningScore,
   createDocumentTemplate,
   deleteDocumentTemplate,
   createDocumentPacket,
@@ -112,7 +117,21 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
         ? searchParams?.section[0] ?? null
         : null;
 
-  const [dashboard, portfolio, tickets, invitations, documents, notifications, inboxThreads, automationTemplates, automationRules, listings, vendors, ownershipAccounts] =
+  const [
+    dashboard,
+    portfolio,
+    tickets,
+    invitations,
+    documents,
+    notifications,
+    inboxThreads,
+    automationTemplates,
+    automationRules,
+    listings,
+    applications,
+    vendors,
+    ownershipAccounts
+  ] =
     await Promise.all([
       getDashboardData(user.id),
       getPortfolioData(user.id),
@@ -142,6 +161,9 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       capabilities.leasingPipelineEnabled
         ? getRentalListingsForUser(user.id)
         : Promise.resolve([]),
+      capabilities.leasingPipelineEnabled
+        ? getApplicationsForUser(user.id)
+        : Promise.resolve([] as ApplicationDTO[]),
       capabilities.vendorWorkflowEnabled
         ? getManagerVendors(user.id)
         : Promise.resolve([]),
@@ -149,6 +171,10 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
         ? getOwnershipAccountsForUser(user.id)
         : Promise.resolve([])
     ]);
+
+  const approvedApplicationCount = applications.filter(
+    (application) => application.status === "approved"
+  ).length;
 
   return (
     <Dashboard
@@ -162,6 +188,9 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       automationTemplates={automationTemplates}
       automationRules={automationRules}
       listings={listings}
+      applications={applications}
+      applicationCount={applications.length}
+      approvedApplicationCount={approvedApplicationCount}
       vendors={vendors}
       ownershipAccounts={ownershipAccounts}
       capabilities={capabilities}
@@ -194,6 +223,10 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       onDisableAutomation={disableAutomation}
       onCreateRentalListing={createRentalListing}
       onUpdateListingStatus={updateListingStatus}
+      onCreateApplication={createApplication}
+      onReviewApplication={reviewApplication}
+      onAddApplicationNote={addApplicationNote}
+      onRecordScreeningScore={recordScreeningScore}
       onCreateDocumentTemplate={createDocumentTemplate}
       onDeleteDocumentTemplate={deleteDocumentTemplate}
       onCreateDocumentPacket={createDocumentPacket}

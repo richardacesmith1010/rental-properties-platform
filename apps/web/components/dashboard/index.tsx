@@ -14,6 +14,7 @@ import type { ExpenseDashboardData } from "@/lib/expenses";
 import type { AutomationRuleDTO, AutomationTemplateDTO } from "@/lib/automations";
 import type { InboxThreadDTO } from "@/lib/inbox";
 import type { RentalListingDTO } from "@/lib/leasing";
+import type { ApplicationDTO } from "@/lib/applications";
 import { formatDate } from "@/lib/format";
 import type { ActionState } from "@/app/actions";
 import { Badge } from "@/components/ui/badge";
@@ -37,10 +38,12 @@ import { OwnershipSection } from "./ownership-section";
 import { LeasingHubSection } from "./leasing-hub-section";
 import { InboxSection } from "./inbox-section";
 import { AutomationTemplatesSection } from "./automation-templates-section";
+import { ApplicationsSection } from "./applications-section";
 import {
   Bell,
   BriefcaseBusiness,
   Building2,
+  ClipboardList,
   ChevronLeft,
   ChevronRight,
   CreditCard,
@@ -83,6 +86,9 @@ interface DashboardProps {
   capabilities?: FeatureCapabilitiesDTO;
   ownershipAccounts?: OwnershipAccountDTO[];
   listings?: RentalListingDTO[];
+  applications?: ApplicationDTO[];
+  applicationCount?: number;
+  approvedApplicationCount?: number;
   generatedMessage?: string | null;
   initialSectionId?: string | null;
   initialOwnerWorkflowMode?: OwnerWorkflowMode;
@@ -113,6 +119,10 @@ interface DashboardProps {
   onDisableAutomation?: StatefulAction;
   onCreateRentalListing?: StatefulAction;
   onUpdateListingStatus?: StatefulAction;
+  onCreateApplication?: StatefulAction;
+  onReviewApplication?: StatefulAction;
+  onAddApplicationNote?: StatefulAction;
+  onRecordScreeningScore?: StatefulAction;
   onCreateDocumentTemplate?: StatefulAction;
   onDeleteDocumentTemplate?: StatefulAction;
   onCreateDocumentPacket?: StatefulAction;
@@ -138,7 +148,16 @@ const ownerWorkflowModeMeta: Record<
   daily_ops: {
     label: "Daily Operations Mode",
     description: "Daily owner runbook: revenue risk, payments, maintenance, and alerts.",
-    sections: ["overview", "charges", "payments", "maintenance", "inbox", "automations", "expenses"]
+    sections: [
+      "overview",
+      "charges",
+      "payments",
+      "maintenance",
+      "applications",
+      "inbox",
+      "automations",
+      "expenses"
+    ]
   },
   new_property: {
     label: "New Property Mode",
@@ -148,7 +167,17 @@ const ownerWorkflowModeMeta: Record<
   new_tenant: {
     label: "New Tenant Mode",
     description: "Focused flow for invitation, lease setup, signatures, and first billing visibility.",
-    sections: ["overview", "leasing", "invitations", "operations", "leases", "documents", "charges", "inbox"]
+    sections: [
+      "overview",
+      "leasing",
+      "invitations",
+      "applications",
+      "operations",
+      "leases",
+      "documents",
+      "charges",
+      "inbox"
+    ]
   },
   new_manager: {
     label: "New Manager Mode",
@@ -169,7 +198,15 @@ const managerWorkflowModeMeta: Record<
   daily_ops: {
     label: "Daily Operations Mode",
     description: "Daily manager runbook: maintenance queue, charges, and alerts.",
-    sections: ["overview", "maintenance", "charges", "inbox", "automations", "payments"]
+    sections: [
+      "overview",
+      "maintenance",
+      "charges",
+      "applications",
+      "inbox",
+      "automations",
+      "payments"
+    ]
   },
   new_property: {
     label: "New Property Mode",
@@ -179,7 +216,17 @@ const managerWorkflowModeMeta: Record<
   new_tenant: {
     label: "New Tenant Mode",
     description: "Invite tenant, activate lease, and verify billing readiness.",
-    sections: ["overview", "leasing", "invitations", "operations", "leases", "documents", "charges", "inbox"]
+    sections: [
+      "overview",
+      "leasing",
+      "invitations",
+      "applications",
+      "operations",
+      "leases",
+      "documents",
+      "charges",
+      "inbox"
+    ]
   },
   vendor_ops: {
     label: "Vendor Operations Mode",
@@ -203,6 +250,9 @@ export function Dashboard({
   capabilities,
   ownershipAccounts,
   listings,
+  applications,
+  applicationCount,
+  approvedApplicationCount,
   generatedMessage,
   initialSectionId,
   initialOwnerWorkflowMode,
@@ -233,6 +283,10 @@ export function Dashboard({
   onDisableAutomation,
   onCreateRentalListing,
   onUpdateListingStatus,
+  onCreateApplication,
+  onReviewApplication,
+  onAddApplicationNote,
+  onRecordScreeningScore,
   onCreateDocumentTemplate,
   onDeleteDocumentTemplate,
   onCreateDocumentPacket,
@@ -270,6 +324,7 @@ export function Dashboard({
   const safeAutomationTemplates: AutomationTemplateDTO[] = automationTemplates ?? [];
   const safeAutomationRules: AutomationRuleDTO[] = automationRules ?? [];
   const safeListings: RentalListingDTO[] = listings ?? [];
+  const safeApplications: ApplicationDTO[] = applications ?? [];
   const safeExpenses: ExpenseDashboardData = expensesData ?? {
     enabled: true,
     warning: null,
@@ -310,6 +365,9 @@ export function Dashboard({
   const hasOwnershipSection = Boolean(onCreateOwnershipAccount && onLinkPropertyToOwnershipAccount);
   const hasInvitationsSection = Boolean(onInviteTenant && onInviteManager && onResendInvite);
   const hasLeasingSection = Boolean(canManagePortfolio && hasInvitationsSection);
+  const hasApplicationsSection = Boolean(
+    canManagePortfolio && safeCapabilities.leasingPipelineEnabled
+  );
   const hasDocumentsSection = Boolean(
     onCreateDocumentTemplate &&
       onDeleteDocumentTemplate &&
@@ -381,6 +439,16 @@ export function Dashboard({
         icon: Building2,
         description: "Step-by-step leasing progression from invitation to billing live.",
         clickHint: "open leasing workflow hub"
+      });
+    }
+
+    if (hasApplicationsSection) {
+      items.push({
+        id: "applications",
+        label: "Applications",
+        icon: ClipboardList,
+        description: "Review tenant applications, notes, and screening scores.",
+        clickHint: "open application review pipeline"
       });
     }
 
@@ -506,6 +574,7 @@ export function Dashboard({
     hasInboxSection,
     hasInvitationsSection,
     hasLeasingSection,
+    hasApplicationsSection,
     inboxBadgeCount,
     maintenanceBadgeCount,
     notificationBadgeCount,
@@ -893,12 +962,36 @@ export function Dashboard({
           invitations={invitations ?? []}
           documents={safeDocuments}
           listings={safeListings}
+          applicationCount={applicationCount ?? safeApplications.length}
+          approvedApplicationCount={
+            approvedApplicationCount ??
+            safeApplications.filter((application) => application.status === "approved").length
+          }
           chargeCount={data.charges.length}
           pipelineReady={safeCapabilities.leasingPipelineEnabled}
           pipelineWarning={safeCapabilities.warnings.leasingPipeline}
           onOpenSection={goToSectionIfVisible}
           onCreateListing={onCreateRentalListing}
           onUpdateListingStatus={onUpdateListingStatus}
+        />
+      );
+    }
+
+    if (activeSection === "applications" && hasApplicationsSection) {
+      return (
+        <ApplicationsSection
+          applications={safeApplications}
+          listings={safeListings}
+          properties={safePortfolio.properties.map((property) => ({
+            id: property.id,
+            name: property.name
+          }))}
+          pipelineReady={safeCapabilities.leasingPipelineEnabled}
+          pipelineWarning={safeCapabilities.warnings.leasingPipeline}
+          onCreateApplication={onCreateApplication}
+          onReviewApplication={onReviewApplication}
+          onAddApplicationNote={onAddApplicationNote}
+          onRecordScreeningScore={onRecordScreeningScore}
         />
       );
     }

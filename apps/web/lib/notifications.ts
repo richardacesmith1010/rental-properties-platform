@@ -10,7 +10,8 @@ export type NotificationType =
   | "payment_recorded"
   | "lease_updated"
   | "document_sent"
-  | "document_signed";
+  | "document_signed"
+  | "application_reviewed";
 
 export interface NotificationDTO {
   id: string;

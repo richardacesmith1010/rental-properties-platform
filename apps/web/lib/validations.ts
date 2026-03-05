@@ -289,6 +289,33 @@ export const updateListingStatusSchema = z.object({
   })
 });
 
+export const createApplicationSchema = z.object({
+  listingId: z.string().uuid("Select a listing."),
+  propertyId: z.string().uuid("Select a property."),
+  applicantEmail: z.string().email("Enter a valid email."),
+  applicantName: z.string().optional(),
+  applicantPhone: z.string().optional(),
+  source: z.string().optional(),
+  notes: z.string().optional()
+});
+
+export const reviewApplicationSchema = z.object({
+  applicationId: z.string().uuid(),
+  status: z.enum(["in_review", "approved", "rejected"]),
+  notes: z.string().optional()
+});
+
+export const addApplicationNoteSchema = z.object({
+  applicationId: z.string().uuid(),
+  message: z.string().min(1, "Note cannot be empty.")
+});
+
+export const recordScreeningScoreSchema = z.object({
+  applicationId: z.string().uuid(),
+  score: z.coerce.number().int().min(0).max(1000),
+  summary: z.string().optional()
+});
+
 /* ─── Vendors + Maintenance Completion ─── */
 
 export const createVendorSchema = z.object({

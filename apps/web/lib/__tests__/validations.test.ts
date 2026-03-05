@@ -21,6 +21,10 @@ import {
   sendInboxMessageSchema,
   createRentalListingSchema,
   updateListingStatusSchema,
+  createApplicationSchema,
+  reviewApplicationSchema,
+  addApplicationNoteSchema,
+  recordScreeningScoreSchema,
   createVendorSchema,
   updateVendorSchema,
   assignVendorSchema,
@@ -810,6 +814,149 @@ describe("updateListingStatusSchema", () => {
       status: "live"
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("Application schemas", () => {
+  const validUUID = "550e8400-e29b-41d4-a716-446655440000";
+
+  describe("createApplicationSchema", () => {
+    it("accepts valid input", () => {
+      const result = createApplicationSchema.safeParse({
+        listingId: validUUID,
+        propertyId: validUUID,
+        applicantEmail: "applicant@example.com",
+        applicantName: "Taylor Applicant",
+        applicantPhone: "555-111-2222",
+        source: "zillow",
+        notes: "Strong references"
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects missing applicant email", () => {
+      const result = createApplicationSchema.safeParse({
+        listingId: validUUID,
+        propertyId: validUUID,
+        applicantEmail: ""
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects invalid listing UUID", () => {
+      const result = createApplicationSchema.safeParse({
+        listingId: "bad-id",
+        propertyId: validUUID,
+        applicantEmail: "applicant@example.com"
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects invalid property UUID", () => {
+      const result = createApplicationSchema.safeParse({
+        listingId: validUUID,
+        propertyId: "bad-id",
+        applicantEmail: "applicant@example.com"
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects invalid applicant email", () => {
+      const result = createApplicationSchema.safeParse({
+        listingId: validUUID,
+        propertyId: validUUID,
+        applicantEmail: "not-an-email"
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe("reviewApplicationSchema", () => {
+    it("accepts valid review payload", () => {
+      const result = reviewApplicationSchema.safeParse({
+        applicationId: validUUID,
+        status: "approved",
+        notes: "All checks passed."
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects invalid status", () => {
+      const result = reviewApplicationSchema.safeParse({
+        applicationId: validUUID,
+        status: "pending"
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects invalid application ID", () => {
+      const result = reviewApplicationSchema.safeParse({
+        applicationId: "bad-id",
+        status: "in_review"
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe("addApplicationNoteSchema", () => {
+    it("accepts valid note payload", () => {
+      const result = addApplicationNoteSchema.safeParse({
+        applicationId: validUUID,
+        message: "Applicant requested move-in flexibility."
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects empty message", () => {
+      const result = addApplicationNoteSchema.safeParse({
+        applicationId: validUUID,
+        message: ""
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects invalid application ID", () => {
+      const result = addApplicationNoteSchema.safeParse({
+        applicationId: "bad-id",
+        message: "Hello"
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe("recordScreeningScoreSchema", () => {
+    it("accepts valid score payload", () => {
+      const result = recordScreeningScoreSchema.safeParse({
+        applicationId: validUUID,
+        score: "720",
+        summary: "No eviction history."
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects score above max", () => {
+      const result = recordScreeningScoreSchema.safeParse({
+        applicationId: validUUID,
+        score: "1001"
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects score below min", () => {
+      const result = recordScreeningScoreSchema.safeParse({
+        applicationId: validUUID,
+        score: "-1"
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects non-integer score", () => {
+      const result = recordScreeningScoreSchema.safeParse({
+        applicationId: validUUID,
+        score: "700.5"
+      });
+      expect(result.success).toBe(false);
+    });
   });
 });
 
