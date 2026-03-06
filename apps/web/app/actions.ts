@@ -2548,16 +2548,13 @@ export async function recordScreeningScore(
     return capabilityError;
   }
 
-  const { error: scoreError } = await supabase.from("screening_reports").upsert(
-    {
-      application_id: application.id,
-      provider: "manual",
-      status: "completed",
-      score,
-      summary: summary || null
-    },
-    { onConflict: "application_id" }
-  );
+  const { error: scoreError } = await supabase.from("screening_reports").insert({
+    application_id: application.id,
+    provider: "manual",
+    status: "completed",
+    score,
+    summary: summary || null
+  });
 
   if (scoreError) {
     return { success: false, error: "Failed to record screening score." };
