@@ -3,7 +3,9 @@ import {
   createPropertySchema,
   createUnitSchema,
   createLeaseSchema,
+  updateLeaseSchema,
   payChargeSchema,
+  recordManualPaymentSchema,
   createMaintenanceTicketSchema,
   updateTicketStatusSchema,
   updateTicketCostSchema,
@@ -213,6 +215,53 @@ describe("createLeaseSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("accepts grace period + late fee fields", () => {
+    const result = createLeaseSchema.safeParse({
+      ...validLease,
+      gracePeriodDays: "5",
+      lateFeeDollars: "50"
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts lease without grace/late fields", () => {
+    const result = createLeaseSchema.safeParse(validLease);
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects grace period above 30", () => {
+    const result = createLeaseSchema.safeParse({
+      ...validLease,
+      gracePeriodDays: "31"
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects negative late fee", () => {
+    const result = createLeaseSchema.safeParse({
+      ...validLease,
+      lateFeeDollars: "-5"
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("updateLeaseSchema", () => {
+  const validUUID = "550e8400-e29b-41d4-a716-446655440000";
+
+  it("accepts valid update payload with grace and late fee", () => {
+    const result = updateLeaseSchema.safeParse({
+      leaseId: validUUID,
+      endDate: "2026-01-01",
+      dueDayOfMonth: "1",
+      monthlyRentDollars: "1500",
+      depositDollars: "2000",
+      gracePeriodDays: "5",
+      lateFeeDollars: "50"
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 /* ─── payChargeSchema ─── */
@@ -229,6 +278,55 @@ describe("payChargeSchema", () => {
       chargeId: "abc-123",
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("recordManualPaymentSchema", () => {
+  const validUUID = "550e8400-e29b-41d4-a716-446655440000";
+
+  it("accepts valid manual payment payload", () => {
+    const result = recordManualPaymentSchema.safeParse({
+      chargeId: validUUID,
+      amountDollars: "1500",
+      method: "cash"
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects missing chargeId", () => {
+    const result = recordManualPaymentSchema.safeParse({
+      amountDollars: "1500",
+      method: "cash"
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects zero amount", () => {
+    const result = recordManualPaymentSchema.safeParse({
+      chargeId: validUUID,
+      amountDollars: "0",
+      method: "cash"
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid method", () => {
+    const result = recordManualPaymentSchema.safeParse({
+      chargeId: validUUID,
+      amountDollars: "1500",
+      method: "bitcoin"
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts optional reference note", () => {
+    const result = recordManualPaymentSchema.safeParse({
+      chargeId: validUUID,
+      amountDollars: "1500",
+      method: "check",
+      referenceNote: "Check #1042"
+    });
+    expect(result.success).toBe(true);
   });
 });
 

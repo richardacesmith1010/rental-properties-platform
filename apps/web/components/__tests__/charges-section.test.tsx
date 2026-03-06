@@ -1,6 +1,14 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ChargesSection } from "@/components/dashboard/charges-section";
+
+vi.mock("react-dom", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-dom")>();
+  return {
+    ...actual,
+    useFormState: () => [null, async () => null] as const
+  };
+});
 
 describe("ChargesSection", () => {
   it("shows the generate charges link when href is provided", () => {

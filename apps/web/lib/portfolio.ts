@@ -38,6 +38,9 @@ export interface LeaseListItem {
   dueDayOfMonth: number;
   startDate: string;
   endDate: string;
+  leaseStatus: "active" | "expiring_soon" | "expired" | "terminated" | "renewed";
+  gracePeriodDays: number;
+  lateFeeCents: number;
   active: boolean;
 }
 
@@ -261,13 +264,18 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
     due_day_of_month: number;
     start_date: string;
     end_date: string;
+    lease_status: "active" | "expiring_soon" | "expired" | "terminated" | "renewed" | null;
+    grace_period_days: number | null;
+    late_fee_cents: number | null;
     active: boolean;
   }> = [];
 
   if (unitIds.length > 0) {
     const { data: leaseRows } = await admin
       .from("leases")
-      .select("id, unit_id, tenant_profile_id, monthly_rent_cents, deposit_cents, due_day_of_month, start_date, end_date, active")
+      .select(
+        "id, unit_id, tenant_profile_id, monthly_rent_cents, deposit_cents, due_day_of_month, start_date, end_date, lease_status, grace_period_days, late_fee_cents, active"
+      )
       .in("unit_id", unitIds)
       .order("start_date", { ascending: false });
 
@@ -323,6 +331,9 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
       dueDayOfMonth: lease.due_day_of_month,
       startDate: lease.start_date,
       endDate: lease.end_date,
+      leaseStatus: lease.lease_status ?? "active",
+      gracePeriodDays: lease.grace_period_days ?? 5,
+      lateFeeCents: lease.late_fee_cents ?? 0,
       active: lease.active
     };
   });

@@ -18,6 +18,10 @@ interface DashboardCharge {
   dueDate: string;
   amountCents: number;
   status: "pending" | "paid" | "late";
+  propertyName: string;
+  unitNumber: string;
+  tenantName: string;
+  category: "rent" | "late_fee";
 }
 
 interface RecentPayment {
@@ -25,6 +29,9 @@ interface RecentPayment {
   amountCents: number;
   paidAt: string;
   method: string;
+  propertyName: string;
+  unitNumber: string;
+  chargeDueDate: string | null;
 }
 
 export interface DashboardData {
@@ -52,6 +59,10 @@ function emptyData(role: DashboardData["profileRole"]): DashboardData {
   };
 }
 
+function normalizeChargeCategory(value: string | null | undefined): "rent" | "late_fee" {
+  return value === "late_fee" ? "late_fee" : "rent";
+}
+
 export async function getDashboardData(userId: string): Promise<DashboardData> {
   const admin = createAdminClient();
 
@@ -72,13 +83,21 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     return emptyData(role);
   }
 
-  const { data: units } = await admin
-    .from("units")
-    .select("id, occupied")
-    .in("property_id", propertyIds);
+  const [{ data: propertyRows }, { data: units }] = await Promise.all([
+    admin
+      .from("properties")
+      .select("id, name")
+      .in("id", propertyIds),
+    admin
+      .from("units")
+      .select("id, occupied, property_id, unit_number")
+      .in("property_id", propertyIds)
+  ]);
 
-  const unitIds = (units ?? []).map((u) => u.id);
-  const occupiedUnits = (units ?? []).filter((u) => u.occupied).length;
+  const properties = propertyRows ?? [];
+  const unitsRows = units ?? [];
+  const unitIds = unitsRows.map((u) => u.id);
+  const occupiedUnits = unitsRows.filter((u) => u.occupied).length;
 
   if (unitIds.length === 0) {
     return {
@@ -91,13 +110,14 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     };
   }
 
-  const { data: leases } = await admin
+  const { data: leaseRows } = await admin
     .from("leases")
-    .select("id, monthly_rent_cents, active")
+    .select("id, monthly_rent_cents, active, unit_id, tenant_profile_id")
     .in("unit_id", unitIds);
 
-  const activeLeases = (leases ?? []).filter((l) => l.active);
-  const leaseIds = (leases ?? []).map((l) => l.id);
+  const leases = leaseRows ?? [];
+  const activeLeases = leases.filter((lease) => lease.active);
+  const leaseIds = leases.map((lease) => lease.id);
 
   const { data: maintenance } = await admin
     .from("maintenance_tickets")
@@ -105,23 +125,53 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     .in("property_id", propertyIds)
     .in("status", ["open", "in_progress"]);
 
+  const propertyNameById = new Map(properties.map((property) => [property.id, property.name]));
+  const unitById = new Map(unitsRows.map((unit) => [unit.id, unit]));
+  const leaseById = new Map(leases.map((lease) => [lease.id, lease]));
+
+  const tenantIds = Array.from(
+    new Set(
+      leases
+        .map((lease) => lease.tenant_profile_id)
+        .filter((id): id is string => Boolean(id))
+    )
+  );
+
+  const { data: tenantProfiles } = tenantIds.length
+    ? await admin
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", tenantIds)
+    : { data: [] as Array<{ id: string; full_name: string | null; email: string | null }> };
+
+  const tenantNameById = new Map(
+    (tenantProfiles ?? []).map((profile) => [profile.id, profile.full_name || profile.email || "Unknown tenant"])
+  );
+
   let charges: Array<{
     id: string;
     lease_id: string;
     due_date: string;
     amount_cents: number;
     status: "pending" | "paid" | "late";
+    category: "rent" | "late_fee";
   }> = [];
+
   let lateCharges: Array<{ amount_cents: number; lease_id: string }> = [];
+
   let recentPayments: Array<{
     id: string;
     amount_cents: number;
     paid_at: string;
     method: string;
+    rent_charge_id: string;
   }> = [];
 
   if (leaseIds.length > 0) {
-    const [{ data: lateChargeRows }, { data: chargeRows }, { data: paymentRows }] = await Promise.all([
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30);
+
+    const [lateChargeRows, pendingLateChargeRows, leaseChargeIdRows] = await Promise.all([
       admin
         .from("rent_charges")
         .select("amount_cents, lease_id")
@@ -129,21 +179,100 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
         .eq("status", "late"),
       admin
         .from("rent_charges")
-        .select("id, lease_id, due_date, amount_cents, status")
+        .select("id, lease_id, due_date, amount_cents, status, category")
         .in("lease_id", leaseIds)
         .in("status", ["pending", "late"])
         .order("due_date", { ascending: true })
-        .limit(8),
+        .limit(20),
       admin
-        .from("payments")
-        .select("id, amount_cents, paid_at, method")
-        .order("paid_at", { ascending: false })
-        .limit(8)
+        .from("rent_charges")
+        .select("id")
+        .in("lease_id", leaseIds)
     ]);
 
-    lateCharges = lateChargeRows ?? [];
-    charges = chargeRows ?? [];
-    recentPayments = paymentRows ?? [];
+    const chargeIdsForLease = (leaseChargeIdRows.data ?? []).map((row) => row.id);
+
+    const { data: recentPaymentRows } = chargeIdsForLease.length
+      ? await admin
+          .from("payments")
+          .select("id, amount_cents, paid_at, method, rent_charge_id")
+          .in("rent_charge_id", chargeIdsForLease)
+          .gte("paid_at", thirtyDaysAgo.toISOString())
+          .order("paid_at", { ascending: false })
+          .limit(10)
+      : { data: [] as Array<{ id: string; amount_cents: number; paid_at: string; method: string; rent_charge_id: string }> };
+
+    const paidChargeIds = (recentPaymentRows ?? []).map((payment) => payment.rent_charge_id);
+    const pendingLateRows = (pendingLateChargeRows.data ?? []) as Array<{
+      id: string;
+      lease_id: string;
+      due_date: string;
+      amount_cents: number;
+      status: "pending" | "paid" | "late";
+      category: string | null;
+    }>;
+
+    const uniqueChargeIds = Array.from(
+      new Set([...pendingLateRows.map((row) => row.id), ...paidChargeIds])
+    );
+
+    const { data: chargeDetails } = uniqueChargeIds.length
+      ? await admin
+          .from("rent_charges")
+          .select("id, lease_id, due_date, amount_cents, status, category")
+          .in("id", uniqueChargeIds)
+      : { data: [] as Array<{ id: string; lease_id: string; due_date: string; amount_cents: number; status: "pending" | "paid" | "late"; category: string | null }> };
+
+    const chargeById = new Map((chargeDetails ?? []).map((charge) => [charge.id, charge]));
+
+    const pendingLateCharges = pendingLateRows.map((charge) => ({
+      id: charge.id,
+      lease_id: charge.lease_id,
+      due_date: charge.due_date,
+      amount_cents: charge.amount_cents,
+      status: charge.status,
+      category: normalizeChargeCategory(charge.category)
+    }));
+
+    const paidChargeRows = (recentPaymentRows ?? [])
+      .map((payment) => chargeById.get(payment.rent_charge_id))
+      .filter(
+        (charge): charge is {
+          id: string;
+          lease_id: string;
+          due_date: string;
+          amount_cents: number;
+          status: "pending" | "paid" | "late";
+          category: string | null;
+        } => Boolean(charge)
+      )
+      .filter((charge) => charge.status === "paid")
+      .map((charge) => ({
+        id: charge.id,
+        lease_id: charge.lease_id,
+        due_date: charge.due_date,
+        amount_cents: charge.amount_cents,
+        status: charge.status,
+        category: normalizeChargeCategory(charge.category)
+      }));
+
+    const seenChargeIds = new Set<string>();
+    charges = [...pendingLateCharges, ...paidChargeRows].filter((charge) => {
+      if (seenChargeIds.has(charge.id)) {
+        return false;
+      }
+      seenChargeIds.add(charge.id);
+      return true;
+    });
+
+    lateCharges = (lateChargeRows.data ?? []) as Array<{ amount_cents: number; lease_id: string }>;
+    recentPayments = (recentPaymentRows ?? []) as Array<{
+      id: string;
+      amount_cents: number;
+      paid_at: string;
+      method: string;
+      rent_charge_id: string;
+    }>;
   }
 
   return {
@@ -155,26 +284,49 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
       ),
       activeLeaseCount: activeLeases.length,
       occupiedUnits,
-      totalUnits: units?.length ?? 0,
+      totalUnits: unitsRows.length,
       openMaintenanceCount: maintenance?.length ?? 0,
       highPriorityMaintenanceCount:
-        maintenance?.filter((m) => m.priority === "high" || m.priority === "urgent")
+        maintenance?.filter((item) => item.priority === "high" || item.priority === "urgent")
           .length ?? 0,
       lateRentCents: lateCharges.reduce((sum, charge) => sum + charge.amount_cents, 0),
-      lateAccountCount: new Set(lateCharges.map((c) => c.lease_id)).size
+      lateAccountCount: new Set(lateCharges.map((charge) => charge.lease_id)).size
     },
-    charges: charges.map((charge) => ({
-      id: charge.id,
-      leaseId: charge.lease_id,
-      dueDate: charge.due_date,
-      amountCents: charge.amount_cents,
-      status: charge.status
-    })),
-    recentPayments: recentPayments.map((payment) => ({
-      id: payment.id,
-      amountCents: payment.amount_cents,
-      paidAt: payment.paid_at,
-      method: payment.method
-    }))
+    charges: charges.map((charge) => {
+      const lease = leaseById.get(charge.lease_id);
+      const unit = lease ? unitById.get(lease.unit_id) : null;
+      const propertyName = unit ? propertyNameById.get(unit.property_id) ?? "Unknown Property" : "Unknown Property";
+      const unitNumber = unit?.unit_number ?? "-";
+      const tenantName = lease?.tenant_profile_id
+        ? tenantNameById.get(lease.tenant_profile_id) ?? "Unknown tenant"
+        : "No tenant";
+
+      return {
+        id: charge.id,
+        leaseId: charge.lease_id,
+        dueDate: charge.due_date,
+        amountCents: charge.amount_cents,
+        status: charge.status,
+        propertyName,
+        unitNumber,
+        tenantName,
+        category: charge.category
+      };
+    }),
+    recentPayments: recentPayments.map((payment) => {
+      const charge = charges.find((item) => item.id === payment.rent_charge_id);
+      const lease = charge ? leaseById.get(charge.lease_id) : null;
+      const unit = lease ? unitById.get(lease.unit_id) : null;
+
+      return {
+        id: payment.id,
+        amountCents: payment.amount_cents,
+        paidAt: payment.paid_at,
+        method: payment.method,
+        propertyName: unit ? propertyNameById.get(unit.property_id) ?? "Unknown Property" : "Unknown Property",
+        unitNumber: unit?.unit_number ?? "-",
+        chargeDueDate: charge?.due_date ?? null
+      };
+    })
   };
 }

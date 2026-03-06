@@ -2,13 +2,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/shared/empty-state";
-import { formatCurrency, formatDateTime } from "@/lib/format";
+import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 
 interface Payment {
   id: string;
   amountCents: number;
   paidAt: string;
   method: string;
+  propertyName: string;
+  unitNumber: string;
+  chargeDueDate: string | null;
 }
 
 interface PaymentsSectionProps {
@@ -32,9 +35,13 @@ export function PaymentsSection({ payments }: PaymentsSectionProps) {
                   <p className="text-sm font-semibold text-zinc-900">
                     {formatCurrency(payment.amountCents)}
                   </p>
+                  <p className="mt-0.5 text-xs text-zinc-500">{formatDateTime(payment.paidAt)}</p>
                   <p className="mt-0.5 text-xs text-zinc-500">
-                    {formatDateTime(payment.paidAt)}
+                    {payment.propertyName} • Unit {payment.unitNumber}
                   </p>
+                  {payment.chargeDueDate && (
+                    <p className="mt-0.5 text-xs text-zinc-500">Charge due {formatDate(payment.chargeDueDate)}</p>
+                  )}
                 </div>
                 <Badge variant="outline">{payment.method.toUpperCase()}</Badge>
               </DataRow>

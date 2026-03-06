@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { LeaseListItem } from "@/lib/portfolio";
@@ -46,6 +47,25 @@ function FormSuccess({ state, message }: { state: ActionState; message: string }
       {message}
     </p>
   );
+}
+
+function LeaseStatusBadge({ status }: { status: LeaseListItem["leaseStatus"] }) {
+  const normalized = status ?? "active";
+
+  if (normalized === "active") {
+    return <Badge variant="success">Active</Badge>;
+  }
+  if (normalized === "expiring_soon") {
+    return <Badge variant="warning">Expiring Soon</Badge>;
+  }
+  if (normalized === "expired") {
+    return <Badge variant="destructive">Expired</Badge>;
+  }
+  if (normalized === "renewed") {
+    return <Badge variant="default">Renewed</Badge>;
+  }
+
+  return <Badge variant="outline">Terminated</Badge>;
 }
 
 export function LeasesSection({
@@ -89,14 +109,18 @@ export function LeasesSection({
             {leases.map((lease, i) => (
               <DataRow key={lease.id} last={i === leases.length - 1}>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-zinc-900">{lease.unitLabel}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-semibold text-zinc-900">{lease.unitLabel}</p>
+                    <LeaseStatusBadge status={lease.leaseStatus} />
+                  </div>
                   <p className="mt-0.5 text-xs text-zinc-500">{lease.tenantEmail}</p>
+                  <p className="mt-0.5 text-xs text-zinc-500">Ends {formatDate(lease.endDate)}</p>
                   <p className="mt-0.5 text-xs text-zinc-500">
-                    Ends {formatDate(lease.endDate)}
+                    {lease.gracePeriodDays}-day grace • {formatCurrency(lease.lateFeeCents)} late fee
                   </p>
 
                   {showControls && activeEditLeaseId === lease.id && (
-                    <form action={updateAction} className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <form action={updateAction} className="mt-3 grid gap-2 sm:grid-cols-3">
                       <input type="hidden" name="leaseId" value={lease.id} />
                       <Input
                         name="monthlyRentDollars"
@@ -123,12 +147,28 @@ export function LeasesSection({
                         required
                       />
                       <Input
+                        name="gracePeriodDays"
+                        type="number"
+                        min={0}
+                        max={30}
+                        defaultValue={lease.gracePeriodDays}
+                        required
+                      />
+                      <Input
+                        name="lateFeeDollars"
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        defaultValue={lease.lateFeeCents / 100}
+                        required
+                      />
+                      <Input
                         name="endDate"
                         type="date"
                         defaultValue={lease.endDate}
                         required
                       />
-                      <div className="sm:col-span-2">
+                      <div className="sm:col-span-3">
                         <SubmitButton size="sm" variant="outline" title="Save lease term updates for this tenant.">
                           Save Lease Changes
                         </SubmitButton>
@@ -139,9 +179,7 @@ export function LeasesSection({
 
                 <div className="flex flex-col items-end gap-2">
                   <div className="text-right">
-                    <p className="text-sm font-semibold text-zinc-900">
-                      {formatCurrency(lease.monthlyRentCents)}
-                    </p>
+                    <p className="text-sm font-semibold text-zinc-900">{formatCurrency(lease.monthlyRentCents)}</p>
                     <p className="text-xs text-zinc-500">Due day {lease.dueDayOfMonth}</p>
                   </div>
 

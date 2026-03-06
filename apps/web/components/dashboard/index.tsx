@@ -67,6 +67,7 @@ export function Dashboard({
   onUpdateLease,
   onDeleteLease,
   onPayCharge,
+  onRecordManualPayment,
   onUpdateTicketStatus,
   onInviteTenant,
   onInviteManager,
@@ -539,6 +540,7 @@ export function Dashboard({
               approvedApplicationCount={approvedApplicationCount}
               onGenerateChargesHref={onGenerateChargesHref}
               onPayCharge={onPayCharge}
+              onRecordManualPayment={onRecordManualPayment}
               onUpdateTicketStatus={onUpdateTicketStatus}
               onInviteTenant={onInviteTenant}
               onInviteManager={onInviteManager}

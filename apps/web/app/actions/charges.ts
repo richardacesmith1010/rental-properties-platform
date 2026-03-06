@@ -1,11 +1,15 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createStripeCheckoutSession } from "@/lib/stripe";
 import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
-import { payChargeSchema, parseFormData } from "@/lib/validations";
+import { createNotificationWithDelivery, notifyOwnerMembersForProperty } from "@/lib/notifications";
+import { payChargeSchema, parseFormData, recordManualPaymentSchema } from "@/lib/validations";
+import type { ActionState } from "./shared";
 
 export async function createCheckoutForCharge(formData: FormData) {
   const supabase = createClient();
@@ -91,4 +95,137 @@ export async function createCheckoutForCharge(formData: FormData) {
   }
 }
 
-/* ─── Maintenance Actions ─── */
+export async function recordManualPayment(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  // 1) Authenticate
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  // 2) Validate
+  const parsed = parseFormData(recordManualPaymentSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { chargeId, amountDollars, method, referenceNote } = parsed.data;
+  const amountCents = Math.round(amountDollars * 100);
+  if (amountCents <= 0) {
+    return { success: false, error: "Amount must be greater than $0." };
+  }
+
+  // 3) Role check
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" && role !== "manager") {
+    return { success: false, error: "Unauthorized." };
+  }
+
+  // 4) Property-level permission
+  const admin = createAdminClient();
+  const { data: charge } = await admin
+    .from("rent_charges")
+    .select("id, lease_id, due_date, status")
+    .eq("id", chargeId)
+    .maybeSingle();
+
+  if (!charge) {
+    return { success: false, error: "Charge not found." };
+  }
+
+  if (charge.status === "paid") {
+    return { success: false, error: "This charge is already marked paid." };
+  }
+
+  const { data: lease } = await admin
+    .from("leases")
+    .select("id, tenant_profile_id, unit_id")
+    .eq("id", charge.lease_id)
+    .maybeSingle();
+
+  if (!lease) {
+    return { success: false, error: "Lease not found for this charge." };
+  }
+
+  const { data: unit } = await admin
+    .from("units")
+    .select("id, property_id")
+    .eq("id", lease.unit_id)
+    .maybeSingle();
+
+  if (!unit) {
+    return { success: false, error: "Unit not found for this lease." };
+  }
+
+  const canAdmin = await canUserAdministerProperty(user.id, unit.property_id);
+  if (!canAdmin) {
+    return { success: false, error: "Access denied." };
+  }
+
+  // 5) Mutations
+  const { error: paymentError } = await admin.from("payments").insert({
+    rent_charge_id: charge.id,
+    amount_cents: amountCents,
+    method,
+    reference_note: referenceNote || null,
+    paid_at: new Date().toISOString()
+  });
+
+  if (paymentError) {
+    if (paymentError.code === "23505") {
+      return { success: false, error: "Payment already recorded for this charge." };
+    }
+    return { success: false, error: "Failed to record manual payment." };
+  }
+
+  const { error: chargeUpdateError } = await admin
+    .from("rent_charges")
+    .update({ status: "paid" })
+    .eq("id", charge.id);
+
+  if (chargeUpdateError) {
+    return { success: false, error: "Payment recorded, but failed to mark charge as paid." };
+  }
+
+  const { data: tenantProfile } = lease.tenant_profile_id
+    ? await admin
+        .from("profiles")
+        .select("id, email")
+        .eq("id", lease.tenant_profile_id)
+        .maybeSingle()
+    : { data: null };
+
+  await notifyOwnerMembersForProperty({
+    propertyId: unit.property_id,
+    type: "payment_recorded",
+    title: "Rent payment recorded",
+    body: `A manual ${method.toUpperCase()} payment was recorded for charge due ${charge.due_date}.`,
+    entityType: "rent_charge",
+    entityId: charge.id,
+    actorProfileId: user.id
+  });
+
+  if (tenantProfile?.id) {
+    await createNotificationWithDelivery({
+      recipientProfileId: tenantProfile.id,
+      recipientEmail: tenantProfile.email,
+      type: "payment_recorded",
+      title: "Payment received",
+      body: "Your rent payment has been recorded successfully.",
+      entityType: "rent_charge",
+      entityId: charge.id
+    });
+  }
+
+  // 6) Revalidate
+  revalidatePath("/");
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  return { success: true, message: "Manual payment recorded." };
+}

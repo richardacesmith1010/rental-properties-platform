@@ -38,6 +38,8 @@ export const createLeaseSchema = z
       .max(28, "Due day must be between 1 and 28."),
     monthlyRentDollars: z.coerce.number().positive("Monthly rent must be greater than $0."),
     depositDollars: z.coerce.number().min(0, "Deposit cannot be negative."),
+    gracePeriodDays: z.coerce.number().int().min(0).max(30).optional(),
+    lateFeeDollars: z.coerce.number().min(0).optional()
   })
   .refine((data) => data.endDate > data.startDate, {
     message: "End date must be after start date.",
@@ -54,6 +56,8 @@ export const updateLeaseSchema = z.object({
     .max(28, "Due day must be between 1 and 28."),
   monthlyRentDollars: z.coerce.number().positive("Monthly rent must be greater than $0."),
   depositDollars: z.coerce.number().min(0, "Deposit cannot be negative."),
+  gracePeriodDays: z.coerce.number().int().min(0).max(30).optional(),
+  lateFeeDollars: z.coerce.number().min(0).optional()
 });
 
 export const deleteLeaseSchema = z.object({
@@ -90,6 +94,13 @@ export const deleteUnitSchema = z.object({
 
 export const payChargeSchema = z.object({
   chargeId: z.string().uuid("Invalid charge ID."),
+});
+
+export const recordManualPaymentSchema = z.object({
+  chargeId: z.string().uuid("Invalid charge ID."),
+  amountDollars: z.coerce.number().positive("Amount must be greater than $0."),
+  method: z.enum(["cash", "check", "ach", "other"]),
+  referenceNote: z.string().optional()
 });
 
 /* ─── Maintenance ─── */

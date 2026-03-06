@@ -37,7 +37,17 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
     return parsed;
   }
 
-  const { unitId, tenantProfileId, startDate, endDate, dueDayOfMonth, monthlyRentDollars, depositDollars } =
+  const {
+    unitId,
+    tenantProfileId,
+    startDate,
+    endDate,
+    dueDayOfMonth,
+    monthlyRentDollars,
+    depositDollars,
+    gracePeriodDays,
+    lateFeeDollars
+  } =
     parsed.data;
 
   const { data: unit } = await supabase
@@ -116,6 +126,8 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
     due_day_of_month: dueDayOfMonth,
     monthly_rent_cents: Math.round(monthlyRentDollars * 100),
     deposit_cents: Math.round(depositDollars * 100),
+    grace_period_days: typeof gracePeriodDays === "number" ? gracePeriodDays : 5,
+    late_fee_cents: typeof lateFeeDollars === "number" ? Math.round(lateFeeDollars * 100) : 0,
     active: true
   }).select("id").single();
 
@@ -173,7 +185,15 @@ export async function updateLease(_prev: ActionState, formData: FormData): Promi
     return parsed;
   }
 
-  const { leaseId, endDate, dueDayOfMonth, monthlyRentDollars, depositDollars } = parsed.data;
+  const {
+    leaseId,
+    endDate,
+    dueDayOfMonth,
+    monthlyRentDollars,
+    depositDollars,
+    gracePeriodDays,
+    lateFeeDollars
+  } = parsed.data;
 
   const { data: lease } = await supabase
     .from("leases")
@@ -200,14 +220,24 @@ export async function updateLease(_prev: ActionState, formData: FormData): Promi
     return { success: false, error: "You do not have access to this lease." };
   }
 
+  const updates: Record<string, unknown> = {
+    end_date: endDate,
+    due_day_of_month: dueDayOfMonth,
+    monthly_rent_cents: Math.round(monthlyRentDollars * 100),
+    deposit_cents: Math.round(depositDollars * 100)
+  };
+
+  if (typeof gracePeriodDays === "number") {
+    updates.grace_period_days = gracePeriodDays;
+  }
+
+  if (typeof lateFeeDollars === "number") {
+    updates.late_fee_cents = Math.round(lateFeeDollars * 100);
+  }
+
   const { error } = await supabase
     .from("leases")
-    .update({
-      end_date: endDate,
-      due_day_of_month: dueDayOfMonth,
-      monthly_rent_cents: Math.round(monthlyRentDollars * 100),
-      deposit_cents: Math.round(depositDollars * 100)
-    })
+    .update(updates)
     .eq("id", leaseId);
 
   if (error) {
@@ -352,4 +382,3 @@ export async function deleteLease(_prev: ActionState, formData: FormData): Promi
   revalidatePath("/tenant");
   return { success: true };
 }
-

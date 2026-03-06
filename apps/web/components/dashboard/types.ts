@@ -54,6 +54,7 @@ export interface DashboardProps {
   onUpdateLease?: StatefulAction;
   onDeleteLease?: StatefulAction;
   onPayCharge: FormAction;
+  onRecordManualPayment?: StatefulAction;
   onUpdateTicketStatus?: StatefulAction;
   onInviteTenant?: StatefulAction;
   onInviteManager?: StatefulAction;

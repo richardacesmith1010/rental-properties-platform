@@ -14,6 +14,7 @@ import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { getOwnershipAccountsForUser } from "@/lib/ownership";
 import {
   createCheckoutForCharge,
+  recordManualPayment,
   createLease,
   updateLease,
   deleteLease,
@@ -209,6 +210,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       onUpdateLease={updateLease}
       onDeleteLease={deleteLease}
       onPayCharge={createCheckoutForCharge}
+      onRecordManualPayment={recordManualPayment}
       onGenerateChargesHref="/owner/generate"
       generatedMessage={generatedMessage}
       onUpdateTicketStatus={updateTicketStatus}

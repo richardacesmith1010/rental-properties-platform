@@ -15,6 +15,7 @@ export { updateLease } from "./leases";
 export { deleteLease } from "./leases";
 
 export { createCheckoutForCharge } from "./charges";
+export { recordManualPayment } from "./charges";
 
 export { createMaintenanceTicket } from "./maintenance";
 export { updateTicketStatus } from "./maintenance";

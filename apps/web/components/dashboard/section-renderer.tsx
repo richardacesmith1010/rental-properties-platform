@@ -70,6 +70,7 @@ interface SectionRendererProps {
   approvedApplicationCount?: number;
   onGenerateChargesHref?: string;
   onPayCharge: FormAction;
+  onRecordManualPayment?: StatefulAction;
   onUpdateTicketStatus?: StatefulAction;
   onInviteTenant?: StatefulAction;
   onInviteManager?: StatefulAction;
@@ -155,6 +156,7 @@ export function SectionRenderer({
   approvedApplicationCount,
   onGenerateChargesHref,
   onPayCharge,
+  onRecordManualPayment,
   onUpdateTicketStatus,
   onInviteTenant,
   onInviteManager,
@@ -235,6 +237,8 @@ export function SectionRenderer({
       <ChargesSection
         charges={data.charges}
         onPayCharge={onPayCharge}
+        onRecordManualPayment={onRecordManualPayment}
+        showManualPayment={data.profileRole !== "tenant"}
         onGenerateChargesHref={onGenerateChargesHref}
       />
     );

@@ -1,30 +1,105 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useFormState } from "react-dom";
 import Link from "next/link";
+import type { ActionState } from "@/app/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SubmitButton } from "@/components/shared/submit-button";
+import { Input } from "@/components/ui/input";
 import { formatCurrency, formatDate } from "@/lib/format";
+
+type ChargeStatus = "pending" | "paid" | "late";
+type ChargeCategory = "rent" | "late_fee";
+type ChargeFilter = "all" | ChargeStatus;
+
+type StatefulAction = (
+  prev: ActionState,
+  formData: FormData
+) => Promise<ActionState>;
 
 interface Charge {
   id: string;
   leaseId: string;
   dueDate: string;
   amountCents: number;
-  status: "pending" | "paid" | "late";
+  status: ChargeStatus;
+  propertyName: string;
+  unitNumber: string;
+  tenantName: string;
+  category: ChargeCategory;
 }
 
 interface ChargesSectionProps {
   charges: Charge[];
   onPayCharge: (formData: FormData) => Promise<void>;
+  onRecordManualPayment?: StatefulAction;
   onGenerateChargesHref?: string;
+  showManualPayment?: boolean;
+}
+
+const unavailableManualPaymentAction: StatefulAction = async () => ({
+  success: false,
+  error: "Manual payment recording is unavailable."
+});
+
+function InlineAlert({ state }: { state: ActionState }) {
+  if (!state) return null;
+  if (state.success) {
+    return (
+      <p className="mb-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+        {state.message ?? "Payment recorded."}
+      </p>
+    );
+  }
+
+  return (
+    <p className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+      {state.error}
+    </p>
+  );
 }
 
 export function ChargesSection({
   charges,
   onPayCharge,
-  onGenerateChargesHref
+  onRecordManualPayment,
+  onGenerateChargesHref,
+  showManualPayment = false
 }: ChargesSectionProps) {
+  const [activeFilter, setActiveFilter] = useState<ChargeFilter>("all");
+  const [manualPaymentChargeId, setManualPaymentChargeId] = useState<string | null>(null);
+  const [manualPaymentState, recordManualPaymentAction] = useFormState(
+    onRecordManualPayment ?? unavailableManualPaymentAction,
+    null
+  );
+
+  useEffect(() => {
+    if (manualPaymentState?.success) {
+      setManualPaymentChargeId(null);
+    }
+  }, [manualPaymentState]);
+
+  const filteredCharges = useMemo(() => {
+    return charges.filter((charge) => activeFilter === "all" || charge.status === activeFilter);
+  }, [activeFilter, charges]);
+
+  const pendingCount = charges.filter((charge) => charge.status === "pending").length;
+  const lateCount = charges.filter((charge) => charge.status === "late").length;
+  const paidThisMonthCount = charges.filter((charge) => {
+    if (charge.status !== "paid") return false;
+    const dueDate = new Date(`${charge.dueDate}T00:00:00.000Z`);
+    const now = new Date();
+    return (
+      dueDate.getUTCMonth() === now.getUTCMonth() &&
+      dueDate.getUTCFullYear() === now.getUTCFullYear()
+    );
+  }).length;
+
   return (
     <Card id="charges">
       <CardHeader className="flex flex-row items-center justify-between gap-3">
@@ -40,37 +115,129 @@ export function ChargesSection({
         )}
       </CardHeader>
       <CardContent>
-        {charges.length === 0 ? (
-          <EmptyState message="No charges yet. Charges are generated automatically when a lease is active." />
+        <div className="mb-4 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm">
+          <span className="font-semibold text-amber-700">{pendingCount} pending</span>
+          <span className="mx-2 text-zinc-400">•</span>
+          <span className="font-semibold text-red-700">{lateCount} late</span>
+          <span className="mx-2 text-zinc-400">•</span>
+          <span className="font-semibold text-emerald-700">{paidThisMonthCount} paid this month</span>
+        </div>
+
+        <div className="mb-4 flex flex-wrap gap-2">
+          {([
+            ["all", "All"],
+            ["pending", "Pending"],
+            ["late", "Late"],
+            ["paid", "Paid"]
+          ] as Array<[ChargeFilter, string]>).map(([value, label]) => (
+            <Button
+              key={value}
+              type="button"
+              size="sm"
+              variant={activeFilter === value ? "default" : "outline"}
+              onClick={() => setActiveFilter(value)}
+              title={`Show ${label.toLowerCase()} charges.`}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
+
+        {showManualPayment && <InlineAlert state={manualPaymentState} />}
+
+        {filteredCharges.length === 0 ? (
+          <EmptyState message="No charges found for this filter." />
         ) : (
           <div>
-            {charges.map((charge, i) => (
-              <DataRow key={charge.id} last={i === charges.length - 1}>
-                <div>
-                  <p className="text-sm font-semibold text-zinc-900">{charge.leaseId}</p>
-                  <p className="mt-0.5 text-xs text-zinc-500">Due {formatDate(charge.dueDate)}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
+            {filteredCharges.map((charge, i) => {
+              const manualFormOpen = manualPaymentChargeId === charge.id;
+              return (
+                <DataRow key={charge.id} last={i === filteredCharges.length - 1}>
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-zinc-900">
-                      {formatCurrency(charge.amountCents)}
+                      {charge.propertyName} • Unit {charge.unitNumber}
                     </p>
-                    <Badge
-                      variant={charge.status === "late" ? "destructive" : "warning"}
-                      className="mt-0.5"
-                    >
-                      {charge.status.toUpperCase()}
-                    </Badge>
+                    <p className="mt-0.5 text-xs text-zinc-500">{charge.tenantName}</p>
+                    <p className="mt-0.5 text-xs text-zinc-500">Due {formatDate(charge.dueDate)}</p>
+
+                    {showManualPayment && manualFormOpen && charge.status !== "paid" && (
+                      <form action={recordManualPaymentAction} className="mt-3 grid gap-2 sm:grid-cols-4">
+                        <input type="hidden" name="chargeId" value={charge.id} />
+                        <Input
+                          name="amountDollars"
+                          type="number"
+                          min={0.01}
+                          step="0.01"
+                          defaultValue={(charge.amountCents / 100).toFixed(2)}
+                          required
+                        />
+                        <select
+                          name="method"
+                          className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm"
+                          defaultValue="cash"
+                          title="Select manual payment method."
+                        >
+                          <option value="cash">Cash</option>
+                          <option value="check">Check</option>
+                          <option value="ach">ACH</option>
+                          <option value="other">Other</option>
+                        </select>
+                        <Input
+                          name="referenceNote"
+                          placeholder="Reference (optional)"
+                        />
+                        <div>
+                          <SubmitButton size="sm" variant="outline" title="Record this manual payment.">
+                            Save Payment
+                          </SubmitButton>
+                        </div>
+                      </form>
+                    )}
                   </div>
-                  <form action={onPayCharge}>
-                    <input type="hidden" name="chargeId" value={charge.id} />
-                    <SubmitButton size="sm" title="Open secure checkout for this charge.">
-                      Pay now
-                    </SubmitButton>
-                  </form>
-                </div>
-              </DataRow>
-            ))}
+
+                  <div className="flex flex-col items-end gap-2">
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-zinc-900">
+                        {formatCurrency(charge.amountCents)}
+                      </p>
+                      <div className="mt-0.5 flex items-center justify-end gap-1">
+                        <Badge variant={charge.status === "late" ? "destructive" : charge.status === "paid" ? "success" : "warning"}>
+                          {charge.status.toUpperCase()}
+                        </Badge>
+                        {charge.category === "late_fee" && (
+                          <Badge variant="destructive">Late Fee</Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    {charge.status !== "paid" && (
+                      <form action={onPayCharge}>
+                        <input type="hidden" name="chargeId" value={charge.id} />
+                        <SubmitButton size="sm" title="Open secure checkout for this charge.">
+                          Pay now
+                        </SubmitButton>
+                      </form>
+                    )}
+
+                    {showManualPayment && charge.status !== "paid" && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={manualFormOpen ? "default" : "outline"}
+                        onClick={() =>
+                          setManualPaymentChargeId((current) =>
+                            current === charge.id ? null : charge.id
+                          )
+                        }
+                        title="Record a manual payment for this charge."
+                      >
+                        {manualFormOpen ? "Cancel" : "Record Payment"}
+                      </Button>
+                    )}
+                  </div>
+                </DataRow>
+              );
+            })}
           </div>
         )}
       </CardContent>

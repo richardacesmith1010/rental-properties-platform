@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import {
+  leaseSeeds,
   propertySeeds,
   tenantSeeds,
   unitsPerProperty,
@@ -235,9 +236,12 @@ export async function seed() {
     tenant_profile_id: tenantProfiles[index].id,
     start_date: toIsoDate(leaseStart),
     end_date: toIsoDate(leaseEnd),
-    due_day_of_month: 1,
-    monthly_rent_cents: [150000, 180000, 220000][index] ?? 150000,
-    deposit_cents: [150000, 180000, 220000][index] ?? 150000,
+    due_day_of_month: leaseSeeds[index]?.dueDayOfMonth ?? 1,
+    monthly_rent_cents: leaseSeeds[index]?.monthlyRentCents ?? 150000,
+    deposit_cents: leaseSeeds[index]?.depositCents ?? 150000,
+    grace_period_days: leaseSeeds[index]?.gracePeriodDays ?? 5,
+    late_fee_cents: leaseSeeds[index]?.lateFeeCents ?? 0,
+    lease_status: "active",
     active: true
   }));
 
@@ -258,7 +262,11 @@ export async function seed() {
   }
 
   const dueDates = [monthOffset(new Date(), -1), monthOffset(new Date(), 0), monthOffset(new Date(), 1)];
-  const chargeAmounts = [150000, 180000, 220000];
+  const chargeAmounts = [
+    leaseSeeds[0]?.monthlyRentCents ?? 150000,
+    leaseSeeds[1]?.monthlyRentCents ?? 180000,
+    leaseSeeds[2]?.monthlyRentCents ?? 220000
+  ];
   const chargeStatuses = ["paid", "pending", "pending"] as const;
 
   const chargeRows = leaseRows.flatMap((lease) =>
@@ -268,13 +276,51 @@ export async function seed() {
       due_date: toIsoDate(dueDate),
       amount_cents: chargeAmounts[index],
       status: chargeStatuses[index],
+      category: "rent",
+      parent_charge_id: null,
       created_at: new Date().toISOString()
     }))
   );
 
+  const lateFeeChargeRows = [
+    { leaseIndex: 0, dueDateIndex: 1 },
+    { leaseIndex: 2, dueDateIndex: 1 }
+  ]
+    .map(({ leaseIndex, dueDateIndex }) => {
+      const lease = leaseRows[leaseIndex];
+      if (!lease || (lease.late_fee_cents ?? 0) <= 0) {
+        return null;
+      }
+      const dueDateIso = toIsoDate(dueDates[dueDateIndex]);
+      const parentChargeId = deterministicUuid(`charge:${lease.id}:${dueDateIso}`);
+
+      return {
+        id: deterministicUuid(`late-fee:${parentChargeId}`),
+        lease_id: lease.id,
+        due_date: dueDateIso,
+        amount_cents: lease.late_fee_cents ?? 0,
+        status: "pending",
+        category: "late_fee",
+        parent_charge_id: parentChargeId,
+        created_at: new Date().toISOString()
+      };
+    })
+    .filter(
+      (charge): charge is {
+        id: string;
+        lease_id: string;
+        due_date: string;
+        amount_cents: number;
+        status: "pending";
+        category: "late_fee";
+        parent_charge_id: string;
+        created_at: string;
+      } => charge !== null
+    );
+
   const { error: chargeError } = await admin
     .from("rent_charges")
-    .upsert(chargeRows, { onConflict: "id" });
+    .upsert([...chargeRows, ...lateFeeChargeRows], { onConflict: "id" });
   if (chargeError) {
     throw new Error(`Failed to seed rent charges: ${chargeError.message}`);
   }
@@ -419,7 +465,7 @@ export async function seed() {
   }
 
   console.log(
-    "✅ Seeded: 3 properties, 6 units, 3 tenants, 3 leases, 9 charges, 4 tickets, 2 listings, 2 applications, 3 vendors."
+    "✅ Seeded: 3 properties, 6 units, 3 tenants, 3 leases, 11 charges (including 2 late fees), 4 tickets, 2 listings, 2 applications, 3 vendors."
   );
 }
 

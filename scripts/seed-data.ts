@@ -40,6 +40,15 @@ export interface VendorSeed {
   preferred: boolean;
 }
 
+export interface LeaseSeed {
+  key: string;
+  monthlyRentCents: number;
+  depositCents: number;
+  dueDayOfMonth: number;
+  gracePeriodDays: number;
+  lateFeeCents: number;
+}
+
 export const propertySeeds: PropertySeed[] = [
   {
     key: "sunset-ridge",
@@ -76,6 +85,33 @@ export const tenantSeeds: TenantSeed[] = [
   { key: "tenant-1", email: "tenant1@domus-test.local", fullName: "Taylor Rivera" },
   { key: "tenant-2", email: "tenant2@domus-test.local", fullName: "Jordan Lee" },
   { key: "tenant-3", email: "tenant3@domus-test.local", fullName: "Casey Morgan" }
+];
+
+export const leaseSeeds: LeaseSeed[] = [
+  {
+    key: "lease-1",
+    monthlyRentCents: 150000,
+    depositCents: 150000,
+    dueDayOfMonth: 1,
+    gracePeriodDays: 5,
+    lateFeeCents: 5000
+  },
+  {
+    key: "lease-2",
+    monthlyRentCents: 180000,
+    depositCents: 180000,
+    dueDayOfMonth: 1,
+    gracePeriodDays: 0,
+    lateFeeCents: 0
+  },
+  {
+    key: "lease-3",
+    monthlyRentCents: 220000,
+    depositCents: 220000,
+    dueDayOfMonth: 1,
+    gracePeriodDays: 3,
+    lateFeeCents: 7500
+  }
 ];
 
 export const vendorSeeds: VendorSeed[] = [
