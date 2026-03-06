@@ -16,6 +16,7 @@
     "smoke:web": "bash scripts/smoke-web.sh",
     "verify:phase9-runtime": "node scripts/verify-phase9-runtime.mjs",
     "verify:phase10-runtime": "node scripts/verify-phase10-runtime.mjs",
-    "gate:web": "bash scripts/gate-web.sh"
+    "gate:web": "bash scripts/gate-web.sh",
+    "seed": "npx tsx scripts/seed.ts"
   }
 }
