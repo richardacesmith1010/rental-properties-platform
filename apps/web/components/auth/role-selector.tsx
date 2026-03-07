@@ -46,6 +46,9 @@ export function RoleSelector() {
 
   return (
     <div className="w-full max-w-3xl">
+      <p className="mb-5 text-center text-sm text-zinc-500">
+        Choose your role to sign in or create an account.
+      </p>
       {/* Role cards */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
         {roles.map((role) => {

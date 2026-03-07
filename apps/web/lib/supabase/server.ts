@@ -1,10 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
-import type { CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
-
-type MutableCookieStore = {
-  set: (options: { name: string; value: string } & CookieOptions) => void;
-};
 
 export function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -15,25 +10,19 @@ export function createClient() {
   }
 
   const cookieStore = cookies();
-  const mutableCookieStore = cookieStore as unknown as MutableCookieStore;
 
   return createServerClient(url, anonKey, {
     cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value;
+      getAll() {
+        return cookieStore.getAll();
       },
-      set(name: string, value: string, options: CookieOptions) {
+      setAll(cookiesToSet) {
         try {
-          mutableCookieStore.set({ name, value, ...options });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          );
         } catch {
-          // Ignore writes from server components; route handlers/actions can write.
-        }
-      },
-      remove(name: string, options: CookieOptions) {
-        try {
-          mutableCookieStore.set({ name, value: "", ...options });
-        } catch {
-          // Ignore writes from server components; route handlers/actions can write.
+          // Ignore writes from Server Components; only Route Handlers/Actions can write.
         }
       }
     }
