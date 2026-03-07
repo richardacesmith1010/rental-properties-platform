@@ -7,6 +7,7 @@ interface LoginPageProps {
   searchParams?: {
     error?: string;
     error_description?: string;
+    confirmed?: string;
   };
 }
 
@@ -20,6 +21,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const { data } = await supabase.auth.getUser();
   const callbackError = searchParams?.error;
   const callbackErrorDescription = searchParams?.error_description;
+  const emailConfirmed = searchParams?.confirmed === "true";
 
   if (data.user) {
     redirect("/portal");
@@ -38,6 +40,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           Choose your role to get started.
         </p>
       </div>
+
+      {emailConfirmed && (
+        <div className="mb-6 w-full max-w-3xl rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          <p className="font-medium">Email confirmed!</p>
+          <p className="mt-1">Your account is ready. Sign in below with your email and password.</p>
+        </div>
+      )}
 
       {callbackError && (
         <div className="mb-6 w-full max-w-3xl rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

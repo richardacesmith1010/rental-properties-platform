@@ -31,6 +31,13 @@ export async function GET(request: Request) {
     if (code) {
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (error) {
+        // PKCE code_verifier missing — email was already confirmed by Supabase
+        // before the redirect, so treat this as a success and prompt sign-in.
+        if (error.message?.includes("code verifier")) {
+          return NextResponse.redirect(
+            `${origin}/login?confirmed=true&next=${encodeURIComponent(next)}`
+          );
+        }
         throw error;
       }
     } else if (tokenHash && (type === "email" || type === "recovery")) {
