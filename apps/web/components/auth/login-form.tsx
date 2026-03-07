@@ -4,13 +4,13 @@ import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Mail, Lock } from "lucide-react";
+import { Lock, CheckCircle } from "lucide-react";
 
 interface LoginFormProps {
   nextPath?: string;
 }
 
-type AuthMode = "signin" | "signup" | "magic-link";
+type AuthMode = "signin" | "signup";
 
 function mapAuthError(message: string) {
   if (message.includes("Invalid login credentials")) {
@@ -34,7 +34,7 @@ export function LoginForm({ nextPath = "/portal" }: LoginFormProps) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [signupComplete, setSignupComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const inputIdSuffix = useMemo(() => {
@@ -49,42 +49,9 @@ export function LoginForm({ nextPath = "/portal" }: LoginFormProps) {
     return `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
   }, [nextPath]);
 
-  async function handleMagicLink() {
-    setLoading(true);
-    setMessage(null);
-    setError(null);
-
-    try {
-      if (!email.trim()) {
-        setError("Enter your email address first.");
-        return;
-      }
-
-      const supabase = createClient();
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo
-        }
-      });
-
-      if (otpError) {
-        setError(mapAuthError(otpError.message));
-        return;
-      }
-
-      setMessage("Check your email for the secure sign-in link.");
-    } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : "Unable to send sign-in link.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
-    setMessage(null);
     setError(null);
 
     try {
@@ -92,7 +59,7 @@ export function LoginForm({ nextPath = "/portal" }: LoginFormProps) {
 
       if (mode === "signup") {
         if (password.length < 6) {
-          setError("Password should be at least 6 characters");
+          setError("Password should be at least 6 characters.");
           return;
         }
 
@@ -101,7 +68,7 @@ export function LoginForm({ nextPath = "/portal" }: LoginFormProps) {
           return;
         }
 
-        const { error: signUpError } = await supabase.auth.signUp({
+        const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -114,12 +81,14 @@ export function LoginForm({ nextPath = "/portal" }: LoginFormProps) {
           return;
         }
 
-        setMessage("Check your email to confirm your account.");
-        return;
-      }
+        // Detect repeated signup (user already exists) — Supabase returns
+        // an empty identities array without sending a confirmation email.
+        if (data.user && data.user.identities && data.user.identities.length === 0) {
+          setError("An account with this email already exists. Try signing in.");
+          return;
+        }
 
-      if (mode === "magic-link") {
-        await handleMagicLink();
+        setSignupComplete(true);
         return;
       }
 
@@ -141,6 +110,36 @@ export function LoginForm({ nextPath = "/portal" }: LoginFormProps) {
     }
   }
 
+  // Centered confirmation prompt after successful signup
+  if (signupComplete) {
+    return (
+      <div className="flex flex-col items-center py-4 text-center">
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
+          <CheckCircle className="h-7 w-7 text-emerald-600" />
+        </div>
+        <h3 className="text-lg font-semibold text-zinc-900">Check your email</h3>
+        <p className="mt-2 text-sm text-zinc-500">
+          We sent a confirmation link to <span className="font-medium text-zinc-700">{email}</span>.
+          Click the link in your email to activate your account.
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-6"
+          onClick={() => {
+            setSignupComplete(false);
+            setMode("signin");
+            setPassword("");
+            setConfirmPassword("");
+            setError(null);
+          }}
+        >
+          Back to sign in
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div>
@@ -160,25 +159,23 @@ export function LoginForm({ nextPath = "/portal" }: LoginFormProps) {
         />
       </div>
 
-      {mode !== "magic-link" && (
-        <div>
-          <label
-            htmlFor={`password-${inputIdSuffix}`}
-            className="mb-1.5 block text-sm font-medium text-zinc-700"
-          >
-            Password
-          </label>
-          <Input
-            id={`password-${inputIdSuffix}`}
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="Enter your password"
-            minLength={6}
-            required
-          />
-        </div>
-      )}
+      <div>
+        <label
+          htmlFor={`password-${inputIdSuffix}`}
+          className="mb-1.5 block text-sm font-medium text-zinc-700"
+        >
+          Password
+        </label>
+        <Input
+          id={`password-${inputIdSuffix}`}
+          type="password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          placeholder={mode === "signup" ? "Create a password (6+ characters)" : "Enter your password"}
+          minLength={6}
+          required
+        />
+      </div>
 
       {mode === "signup" && (
         <div>
@@ -201,59 +198,30 @@ export function LoginForm({ nextPath = "/portal" }: LoginFormProps) {
       )}
 
       <Button type="submit" disabled={loading} className="w-full">
-        {mode === "signup" ? (
-          <Lock className="mr-2 h-4 w-4" />
-        ) : (
-          <Mail className="mr-2 h-4 w-4" />
-        )}
+        <Lock className="mr-2 h-4 w-4" />
         {loading
           ? mode === "signup"
             ? "Creating account..."
-            : mode === "magic-link"
-              ? "Sending link..."
-              : "Signing in..."
+            : "Signing in..."
           : mode === "signup"
             ? "Create Account"
-            : mode === "magic-link"
-              ? "Send Magic Link"
-              : "Sign In"}
+            : "Sign In"}
       </Button>
 
       {mode === "signin" && (
-        <>
-          <div className="relative py-1 text-center text-xs text-zinc-500">
-            <span className="before:absolute before:left-0 before:top-1/2 before:h-px before:w-[44%] before:bg-zinc-200 after:absolute after:right-0 after:top-1/2 after:h-px after:w-[44%] after:bg-zinc-200">
-              or
-            </span>
-          </div>
-          <Button
+        <p className="text-center text-sm text-zinc-600">
+          Don&apos;t have an account?{" "}
+          <button
             type="button"
-            variant="outline"
-            className="w-full"
-            onClick={async () => {
-              setMode("magic-link");
-              setMessage(null);
+            className="font-semibold text-indigo-600 hover:text-indigo-500"
+            onClick={() => {
+              setMode("signup");
               setError(null);
-              await handleMagicLink();
             }}
           >
-            Send magic link
-          </Button>
-          <p className="text-center text-sm text-zinc-600">
-            Don&apos;t have an account?{" "}
-            <button
-              type="button"
-              className="font-semibold text-indigo-600 hover:text-indigo-500"
-              onClick={() => {
-                setMode("signup");
-                setMessage(null);
-                setError(null);
-              }}
-            >
-              Sign up
-            </button>
-          </p>
-        </>
+            Sign up
+          </button>
+        </p>
       )}
 
       {mode === "signup" && (
@@ -264,7 +232,6 @@ export function LoginForm({ nextPath = "/portal" }: LoginFormProps) {
             className="font-semibold text-indigo-600 hover:text-indigo-500"
             onClick={() => {
               setMode("signin");
-              setMessage(null);
               setError(null);
             }}
           >
@@ -273,28 +240,6 @@ export function LoginForm({ nextPath = "/portal" }: LoginFormProps) {
         </p>
       )}
 
-      {mode === "magic-link" && (
-        <p className="text-center text-sm text-zinc-600">
-          Prefer password sign-in?{" "}
-          <button
-            type="button"
-            className="font-semibold text-indigo-600 hover:text-indigo-500"
-            onClick={() => {
-              setMode("signin");
-              setMessage(null);
-              setError(null);
-            }}
-          >
-            Back to sign in
-          </button>
-        </p>
-      )}
-
-      {message && (
-        <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-          {message}
-        </p>
-      )}
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
