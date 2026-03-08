@@ -30,9 +30,10 @@ import {
   type ManagerWorkflowMode,
   type OwnerWorkflowMode
 } from "./dashboard-config";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Building2, ChevronLeft, ChevronRight } from "lucide-react";
 export function Dashboard({
   data,
+  isEmpty = false,
   portfolio,
   tickets,
   invitations,
@@ -402,6 +403,42 @@ export function Dashboard({
     }
     setActiveSection(itemId);
   };
+  if (isEmpty && isOwnerRole) {
+    return (
+      <div className="app-surface flex min-h-screen flex-col lg:flex-row">
+        <MobileTopBar userEmail={userEmail} role={data.profileRole} onSignOut={onSignOut} />
+        <SidebarNav
+          userEmail={userEmail}
+          role={data.profileRole}
+          onSignOut={onSignOut}
+          items={sidebarItems}
+          activeItemId={sidebarActiveItemId}
+          onSelectItem={handleSidebarSelect}
+        />
+        <main className="flex flex-1 flex-col items-center justify-center px-6 py-12 lg:ml-[260px]">
+          <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50">
+              <Building2 className="h-8 w-8 text-indigo-600" />
+            </div>
+            <h2 className="text-xl font-semibold text-zinc-900">Add your first property</h2>
+            <p className="mt-2 text-sm text-zinc-500">
+              Start by adding a property to your portfolio. You can add units, tenants, and leases after.
+            </p>
+            <Button
+              type="button"
+              className="mt-6"
+              title="Open the guided property setup flow."
+              onClick={() => {
+                window.location.href = "/owner?mode=new_property&section=operations";
+              }}
+            >
+              Add Property
+            </Button>
+          </div>
+        </main>
+      </div>
+    );
+  }
   return (
     <div className="app-surface flex min-h-screen flex-col lg:flex-row">
       <MobileTopBar userEmail={userEmail} role={data.profileRole} onSignOut={onSignOut} />

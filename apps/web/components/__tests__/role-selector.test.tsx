@@ -4,8 +4,16 @@ import userEvent from "@testing-library/user-event";
 
 // Mock LoginForm since it depends on Supabase client
 vi.mock("../auth/login-form", () => ({
-  LoginForm: ({ nextPath }: { nextPath: string }) => (
-    <div data-testid={`login-form-${nextPath}`}>Login form for {nextPath}</div>
+  LoginForm: ({
+    nextPath,
+    role
+  }: {
+    nextPath: string;
+    role?: "owner" | "manager" | "tenant";
+  }) => (
+    <div data-testid={`login-form-${nextPath}`} data-role={role}>
+      Login form for {nextPath}
+    </div>
   ),
 }));
 
@@ -45,6 +53,7 @@ describe("RoleSelector", () => {
 
     await user.click(screen.getByText("Owner"));
     expect(screen.getByTestId("login-form-/owner")).toBeInTheDocument();
+    expect(screen.getByTestId("login-form-/owner")).toHaveAttribute("data-role", "owner");
   });
 
   it("shows the 'Choose a different role' back button when a role is selected", async () => {

@@ -115,7 +115,7 @@ export function RoleSelector() {
               >
                 {isSelected && (
                   <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-                    <LoginForm nextPath={role.nextPath} />
+                    <LoginForm nextPath={role.nextPath} role={role.id} />
                   </div>
                 )}
               </div>

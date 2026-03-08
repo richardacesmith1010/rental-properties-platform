@@ -8,6 +8,7 @@ import { Lock, CheckCircle } from "lucide-react";
 
 interface LoginFormProps {
   nextPath?: string;
+  role?: "owner" | "manager" | "tenant";
 }
 
 type AuthMode = "signin" | "signup";
@@ -28,7 +29,7 @@ function mapAuthError(message: string) {
   return message;
 }
 
-export function LoginForm({ nextPath = "/" }: LoginFormProps) {
+export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
   const [mode, setMode] = useState<AuthMode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -72,7 +73,8 @@ export function LoginForm({ nextPath = "/" }: LoginFormProps) {
           email,
           password,
           options: {
-            emailRedirectTo
+            emailRedirectTo,
+            data: role ? { role } : undefined
           }
         });
 

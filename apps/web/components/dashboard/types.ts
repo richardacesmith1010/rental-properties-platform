@@ -20,6 +20,7 @@ export type StatefulAction = (prev: ActionState, formData: FormData) => Promise<
 
 export interface DashboardProps {
   data: DashboardData;
+  isEmpty?: boolean;
   portfolio?: PortfolioData;
   tickets?: MaintenanceTicket[];
   invitations?: InvitationListItem[];

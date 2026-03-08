@@ -168,11 +168,13 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
   const approvedApplicationCount = applications.filter(
     (application) => application.status === "approved"
   ).length;
+  const isEmpty = portfolio.properties.length === 0 && !initialOwnerWorkflowMode && !initialSectionId;
 
   return (
     <Dashboard
       data={dashboard}
       portfolio={portfolio}
+      isEmpty={isEmpty}
       tickets={tickets}
       invitations={invitations}
       documents={documents}
