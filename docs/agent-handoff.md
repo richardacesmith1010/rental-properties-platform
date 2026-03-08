@@ -1,12 +1,12 @@
 # Agent Handoff (Current State)
 
-Updated (UTC): 2026-03-03T17:35:50Z
+Updated (UTC): 2026-03-08T20:00:00Z
 
 ## Repository
 - Branch: `main`
-- HEAD (latest pushed): `e7b1817616fe3a98fe75f729e39ac843b9aa5d44`
+- HEAD (latest pushed): `7d081cb`
 - Remote: `origin/main`
-- Deploy URL: `https://rental-properties-platform-web.vercel.app`
+- Deploy URL: `https://domusbase.com`
 
 ## Runtime / Database State
 Latest runtime verifier status (`npm run verify:phase9-runtime` from gate run):
@@ -23,31 +23,37 @@ Phase 9 runtime checks currently passing:
 - Private buckets present: `lease-documents`, `maintenance-photos`
 
 ## Deployment State
-- Last known production host: `https://rental-properties-platform-web.vercel.app`
-- Vercel deploy requires authenticated CLI session (`vercel login` or token) when run from local terminal.
+- Production host: `https://domusbase.com`
+- Vercel deploy requires authenticated CLI session (`vercel login` or token).
 
 ## Feature Status Matrix
 | Area | Status | Notes |
 |---|---|---|
-| Auth + role routing (web) | LIVE | Owner/Manager/Tenant routes active |
+| Auth + role routing (web) | LIVE | Owner/Manager/Tenant routes + invite callback |
+| Owner onboarding wizard | LIVE | Individual / Create LLC / Join LLC with passcode |
 | Owner dashboard workflows | LIVE | Properties, units, leases, charges, invites |
 | Manager operations | LIVE | Assigned-property operations active |
 | Tenant dashboard | LIVE | Charges, tickets, documents, notifications |
-| Stripe checkout + webhook | LIVE | Checkout + webhook recording active |
+| Tenant invitation + password setup | LIVE | inviteUserByEmail → /complete-profile → password set |
+| Stripe checkout + webhook | LIVE | Checkout + webhook recording + auto-redirect |
 | Charge cron generation | LIVE | Active leases only, duplicate guard |
 | Documents + packets + signer flow | LIVE | Includes tenant status view |
 | Notifications (in-app + deliveries) | LIVE | DB-backed notifications and delivery logs |
 | Vendors + assignment + maintenance photos | LIVE | Vendor assignment and evidence support |
-| Ownership accounts (LLC/shared access) | LIVE | Account/member model and permission functions |
-| Marketing landing + auth-aware root | LIVE | Public root + logged-in portal path |
-| Tester diagnostics workspace | LIVE | Tester-only route and health/test tools |
-| Mobile app foundation | IN PROGRESS | Expo Router + role-aware tabs + real-data screens merged |
+| Ownership accounts (LLC/shared access) | LIVE | Account/member model + join codes |
+| Marketing landing + auth-aware root | LIVE | Public root + role-based workspace redirect |
+| Password management (settings) | LIVE | Change password in Settings → Security |
+| Mobile app foundation | IN PROGRESS | Expo Router + role-aware tabs (not published) |
+
+## Gate Status
+- `npm run gate:web` — 159/159 tests, lint clean, build clean
+- `npm run smoke:web` — all checks passed (landing, login, route guards, API guards, cron guard)
 
 ## Current Risks / Blockers
-- No functional runtime blockers currently identified from latest gate run.
-- Release/deploy actions from local terminal still require Vercel auth when performing new production deploys.
+- Mobile app not published to app stores yet.
+- User's test account is wiped — needs fresh signup to test.
 
 ## Immediate Focus
-- Keep this file current-state only.
-- Move completed milestone documentation to `docs/archive/`.
-- Keep historical detail in git history instead of appending long narrative logs here.
+- Owner is going live with real properties soon (1-3 properties).
+- Core flow to polish: Owner invites tenant → tenant signs up + sets password → tenant pays rent.
+- Mobile web deferred until native app is published.
