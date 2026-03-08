@@ -24,7 +24,6 @@ import {
   buildAllSectionItems,
   getManagerModeNavItems,
   getOwnerModeNavItems,
-  getOwnerWorkflowSteps,
   managerWorkflowModeMeta,
   ownerWorkflowModeMeta,
   type ManagerWorkflowMode,
@@ -293,20 +292,6 @@ export function Dashboard({
     },
     [sectionItems]
   );
-  const ownerWorkflowSteps = useMemo(
-    () =>
-      getOwnerWorkflowSteps({
-        isOwnerRole,
-        ownerWorkflowMode,
-        invitations,
-        safeDocuments,
-        safePortfolio,
-        safeVendors,
-        tickets,
-        chargeCount: data.charges.length
-      }),
-    [isOwnerRole, ownerWorkflowMode, invitations, safeDocuments, safePortfolio, safeVendors, tickets, data.charges.length]
-  );
   const handleOwnerWorkflowModeChange = (mode: OwnerWorkflowMode) => {
     if (!isOwnerRole) return;
     setOwnerWorkflowMode(mode);
@@ -468,53 +453,18 @@ export function Dashboard({
               {generatedMessage}
             </div>
           )}
-          {(isOwnerRole || isManagerRole) && (
-            <div className="rounded-xl border border-zinc-200/80 bg-white/90 p-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-zinc-500">Workflow Mode</p>
-                  <p className="mt-1 text-base font-semibold text-zinc-900">
-                    {activeWorkflowMeta?.label ?? "Focused Mode"}
-                  </p>
-                  <p className="mt-1 text-sm text-zinc-600">
-                    {activeWorkflowMeta?.description ?? "Navigation is filtered to the active workflow."}
-                  </p>
-                </div>
-                <div className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-600">
-                  Use the left sidebar to switch modes.
-                </div>
-              </div>
-              {isOwnerRole && ownerWorkflowSteps.length > 0 && (
-                <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                  {ownerWorkflowSteps.map((step) => (
-                    <div
-                      key={step.label}
-                      className={`rounded-lg border px-3 py-2 text-xs ${
-                        step.done
-                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                          : "border-zinc-200 bg-zinc-50 text-zinc-600"
-                      }`}
-                    >
-                      {step.done ? "Done" : "Pending"}: {step.label}
-                    </div>
-                  ))}
-                </div>
-              )}
+          {(isOwnerRole || isManagerRole) && activeWorkflowMeta && (
+            <div className="flex flex-col gap-1 rounded-xl border border-zinc-200/80 bg-white/90 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-semibold text-zinc-900">
+                {activeWorkflowMeta.label}
+              </p>
+              <p className="text-sm text-zinc-500">
+                {activeWorkflowMeta.description}
+              </p>
             </div>
           )}
-          <div className="flex flex-col items-start justify-between gap-3 rounded-xl border border-zinc-200/80 bg-white/80 p-4 sm:flex-row sm:items-center">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Focused View</p>
-              <p className="mt-1 inline-flex items-center rounded-md bg-zinc-900 px-2 py-1 text-sm font-semibold text-white">
-                Showing section: {activeSectionLabel}
-              </p>
-              <p className="text-xs text-zinc-500">
-                {isOwnerRole || isManagerRole
-                  ? "Use left-side mode buttons, then move one section at a time with Previous/Next."
-                  : "Click any left-side item to switch sections without scrolling through everything."}
-                {activeWorkflowMeta ? ` Active mode: ${activeWorkflowMeta.label}.` : ""}
-              </p>
-            </div>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-zinc-900">{activeSectionLabel}</h2>
             <div className="flex items-center gap-2">
               <Button
                 type="button"
@@ -522,10 +472,9 @@ export function Dashboard({
                 size="sm"
                 onClick={goToPreviousSection}
                 disabled={activeSectionIndex <= 0}
-                title="Go to the previous section in the sidebar order."
+                title="Previous section"
               >
-                <ChevronLeft className="mr-1 h-4 w-4" />
-                Previous
+                <ChevronLeft className="h-4 w-4" />
               </Button>
               <Button
                 type="button"
@@ -533,10 +482,9 @@ export function Dashboard({
                 size="sm"
                 onClick={goToNextSection}
                 disabled={activeSectionIndex < 0 || activeSectionIndex >= sectionItems.length - 1}
-                title="Go to the next section in the sidebar order."
+                title="Next section"
               >
-                Next
-                <ChevronRight className="ml-1 h-4 w-4" />
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </div>

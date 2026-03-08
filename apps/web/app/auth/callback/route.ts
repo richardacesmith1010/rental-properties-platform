@@ -3,9 +3,27 @@ import { createClient } from "@/lib/supabase/server";
 
 function getSafeNextPath(rawNext: string | null) {
   if (!rawNext || !rawNext.startsWith("/") || rawNext.startsWith("//")) {
-    return "/portal";
+    return "/";
   }
   return rawNext;
+}
+
+function hasInvitedSession(
+  type: string | null,
+  rawNext: string | null,
+  user: {
+    invited_at?: string | null;
+    user_metadata?: Record<string, unknown>;
+  } | null
+) {
+  if (type === "invite") {
+    return true;
+  }
+
+  const invitedAt = typeof user?.invited_at === "string" ? user.invited_at : null;
+  const role = typeof user?.user_metadata?.role === "string" ? user.user_metadata.role : null;
+
+  return Boolean(invitedAt && role && !rawNext);
 }
 
 export async function GET(request: Request) {
@@ -15,7 +33,8 @@ export async function GET(request: Request) {
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type");
-  const next = getSafeNextPath(searchParams.get("next"));
+  const rawNext = searchParams.get("next");
+  const next = getSafeNextPath(rawNext);
   const supabase = createClient();
 
   if (callbackError) {
@@ -40,13 +59,24 @@ export async function GET(request: Request) {
         }
         throw error;
       }
-    } else if (tokenHash && (type === "email" || type === "recovery")) {
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+
+      if (hasInvitedSession(type, rawNext, user)) {
+        return NextResponse.redirect(`${origin}/complete-profile`);
+      }
+    } else if (tokenHash && (type === "email" || type === "recovery" || type === "invite")) {
       const { error } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
         type
       });
       if (error) {
         throw error;
+      }
+
+      if (type === "invite") {
+        return NextResponse.redirect(`${origin}/complete-profile`);
       }
     }
   } catch (error) {

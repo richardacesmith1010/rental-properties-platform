@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getAuthenticatedUser, getCurrentUserRole, getRoleHomePath } from "@/lib/auth";
 import { ThemeSettingsPanel } from "@/components/settings/theme-settings-panel";
+import { PasswordSettings } from "@/components/settings/password-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,15 @@ export default async function SettingsPage() {
           </h2>
           <div className="mt-3">
             <ThemeSettingsPanel />
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            Security
+          </h2>
+          <div className="mt-3">
+            <PasswordSettings />
           </div>
         </section>
       </div>

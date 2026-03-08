@@ -159,45 +159,35 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
         </div>
 
         <div className="space-y-6 px-6 pb-8 pt-6 lg:px-8">
-          <div className="flex flex-col items-start justify-between gap-3 rounded-xl border border-zinc-200/80 bg-white/80 p-4 sm:flex-row sm:items-center">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Focused View</p>
-              <p className="mt-1 inline-flex items-center rounded-md bg-zinc-900 px-2 py-1 text-sm font-semibold text-white">
-                Showing section: {tenantSectionLabel[activeSection]}
-              </p>
-              <p className="text-xs text-zinc-500">
-                Switch sections from the left sidebar without scrolling through every block.
-              </p>
-            </div>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-zinc-900">
+              {tenantSectionLabel[activeSection]}
+            </h2>
             <div className="flex items-center gap-2">
               {previousSection ? (
                 <Link
                   href={buildTenantHref(previousSection)}
-                  className="inline-flex items-center rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
-                  title="Go to the previous section."
+                  className="inline-flex items-center justify-center rounded-md border border-zinc-200 p-2 text-zinc-700 hover:bg-zinc-50"
+                  title="Previous section"
                 >
-                  <ChevronLeft className="mr-1 h-4 w-4" />
-                  Previous
+                  <ChevronLeft className="h-4 w-4" />
                 </Link>
               ) : (
-                <span className="inline-flex items-center rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-400">
-                  <ChevronLeft className="mr-1 h-4 w-4" />
-                  Previous
+                <span className="inline-flex items-center justify-center rounded-md border border-zinc-200 p-2 text-zinc-300">
+                  <ChevronLeft className="h-4 w-4" />
                 </span>
               )}
               {nextSection ? (
                 <Link
                   href={buildTenantHref(nextSection)}
-                  className="inline-flex items-center rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
-                  title="Go to the next section."
+                  className="inline-flex items-center justify-center rounded-md border border-zinc-200 p-2 text-zinc-700 hover:bg-zinc-50"
+                  title="Next section"
                 >
-                  Next
-                  <ChevronRight className="ml-1 h-4 w-4" />
+                  <ChevronRight className="h-4 w-4" />
                 </Link>
               ) : (
-                <span className="inline-flex items-center rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-400">
-                  Next
-                  <ChevronRight className="ml-1 h-4 w-4" />
+                <span className="inline-flex items-center justify-center rounded-md border border-zinc-200 p-2 text-zinc-300">
+                  <ChevronRight className="h-4 w-4" />
                 </span>
               )}
             </div>

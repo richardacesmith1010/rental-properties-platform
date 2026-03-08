@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Script from "next/script";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,6 +20,8 @@ function StatusCard({
   title,
   body,
   buttonLabel,
+  redirectMessage,
+  redirectDelaySeconds = 5,
   buttonVariant = "default",
 }: {
   icon: React.ReactNode;
@@ -26,6 +29,8 @@ function StatusCard({
   title: string;
   body: string;
   buttonLabel?: string;
+  redirectMessage?: string;
+  redirectDelaySeconds?: number;
   buttonVariant?: "default" | "outline";
 }) {
   return (
@@ -37,9 +42,39 @@ function StatusCard({
           </div>
           <h1 className="text-lg font-bold text-zinc-900">{title}</h1>
           <p className="mt-2 text-sm text-zinc-500">{body}</p>
+          {redirectMessage && (
+            <>
+              <p id="payment-redirect-countdown" className="mt-4 text-sm text-zinc-500">
+                {redirectMessage.replace("{seconds}", String(redirectDelaySeconds))}
+              </p>
+              <Script id="payment-redirect-script" strategy="afterInteractive">
+                {`
+                  (function () {
+                    var remaining = ${redirectDelaySeconds};
+                    var target = document.getElementById("payment-redirect-countdown");
+                    function render() {
+                      if (target) {
+                        target.textContent = ${JSON.stringify(redirectMessage)}.replace("{seconds}", String(remaining));
+                      }
+                    }
+                    render();
+                    var interval = window.setInterval(function () {
+                      remaining -= 1;
+                      if (remaining <= 0) {
+                        window.clearInterval(interval);
+                        window.location.href = "/";
+                        return;
+                      }
+                      render();
+                    }, 1000);
+                  })();
+                `}
+              </Script>
+            </>
+          )}
           <Button asChild variant={buttonVariant} className="mt-6">
-            <Link href="/" title="Return to Domus home.">
-              {buttonLabel ?? "Return to home"}
+            <Link href="/" title="Return to your dashboard.">
+              {buttonLabel ?? "Return to Dashboard"}
             </Link>
           </Button>
         </CardContent>
@@ -59,6 +94,7 @@ export default async function PaymentSuccessPage({ searchParams }: SuccessPagePr
         iconBg="bg-red-50"
         title="Payment Session Missing"
         body="We could not verify your payment session."
+        redirectMessage="Returning to dashboard in {seconds} seconds..."
         buttonVariant="outline"
       />
     );
@@ -80,6 +116,7 @@ export default async function PaymentSuccessPage({ searchParams }: SuccessPagePr
         iconBg="bg-emerald-50"
         title="Payment Received"
         body="Your payment has been processed and recorded in your rental ledger."
+        redirectMessage="Returning to dashboard in {seconds} seconds..."
       />
     );
   }
@@ -91,7 +128,9 @@ export default async function PaymentSuccessPage({ searchParams }: SuccessPagePr
       iconBg="bg-amber-50"
       title="Payment Processing"
       body="Your payment is being confirmed. This usually takes a few seconds. Please check your dashboard shortly."
-      buttonLabel="Go to dashboard"
+      buttonLabel="Return to Dashboard"
+      redirectMessage="Checking payment status. Returning to dashboard in {seconds} seconds..."
+      redirectDelaySeconds={8}
     />
   );
 }
