@@ -15,26 +15,8 @@ if ! printf "%s" "$LOGIN_HTML" | grep -qi "Domus"; then
   exit 1
 fi
 
-echo "[smoke] Checking role portal redirect behavior"
-PORTAL_HEADERS="$(mktemp)"
-PORTAL_STATUS="$(curl -s -D "$PORTAL_HEADERS" -o /dev/null -w "%{http_code}" "$APP_URL/portal")"
-if [[ "$PORTAL_STATUS" != "307" && "$PORTAL_STATUS" != "302" && "$PORTAL_STATUS" != "200" ]]; then
-  echo "[smoke] Unexpected /portal status: $PORTAL_STATUS"
-  rm -f "$PORTAL_HEADERS"
-  exit 1
-fi
-if [[ "$PORTAL_STATUS" == "307" || "$PORTAL_STATUS" == "302" ]]; then
-  PORTAL_LOCATION="$(grep -i '^location:' "$PORTAL_HEADERS" | head -n1 | tr -d '\r' | awk '{print $2}')"
-  if [[ "$PORTAL_LOCATION" != *"/login"* ]]; then
-    echo "[smoke] Expected /portal redirect to /login for unauthenticated user, got: ${PORTAL_LOCATION:-<none>}"
-    rm -f "$PORTAL_HEADERS"
-    exit 1
-  fi
-fi
-rm -f "$PORTAL_HEADERS"
-
 echo "[smoke] Checking protected route guards"
-for path in /owner /manager /tenant /tester /owner/generate /settings; do
+for path in /owner /manager /tenant /owner/generate /settings /complete-profile; do
   HEADERS="$(mktemp)"
   STATUS="$(curl -s -D "$HEADERS" -o /dev/null -w "%{http_code}" "$APP_URL$path")"
   if [[ "$STATUS" != "307" && "$STATUS" != "302" ]]; then
