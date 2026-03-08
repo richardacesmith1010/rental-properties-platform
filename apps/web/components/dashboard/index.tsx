@@ -54,7 +54,6 @@ export function Dashboard({
   initialOwnerWorkflowMode,
   initialManagerWorkflowMode,
   userEmail,
-  showTesterLink = false,
   onGenerateChargesHref,
   onSignOut,
   onCreateProperty,
@@ -405,11 +404,10 @@ export function Dashboard({
   };
   return (
     <div className="app-surface flex min-h-screen flex-col lg:flex-row">
-      <MobileTopBar userEmail={userEmail} role={data.profileRole} showTesterLink={showTesterLink} onSignOut={onSignOut} />
+      <MobileTopBar userEmail={userEmail} role={data.profileRole} onSignOut={onSignOut} />
       <SidebarNav
         userEmail={userEmail}
         role={data.profileRole}
-        showTesterLink={showTesterLink}
         onSignOut={onSignOut}
         items={sidebarItems}
         activeItemId={sidebarActiveItemId}

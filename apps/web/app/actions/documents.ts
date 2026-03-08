@@ -44,7 +44,7 @@ export async function createDocumentTemplate(
   }
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const capabilityError = await ensureCapabilityEnabled("documentsEnabled");
@@ -117,7 +117,7 @@ export async function updateDocumentTemplate(
   }
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const capabilityError = await ensureCapabilityEnabled("documentsEnabled");
@@ -163,7 +163,7 @@ export async function deleteDocumentTemplate(
   }
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const capabilityError = await ensureCapabilityEnabled("documentsEnabled");
@@ -205,7 +205,7 @@ export async function createDocumentPacket(
   }
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const capabilityError = await ensureCapabilityEnabled("documentsEnabled");
@@ -301,7 +301,7 @@ export async function sendDocumentPacket(
   }
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const capabilityError = await ensureCapabilityEnabled("documentsEnabled");
@@ -557,7 +557,7 @@ export async function uploadPropertyFile(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const capabilityError = await ensureCapabilityEnabled("documentsEnabled");
@@ -649,7 +649,7 @@ export async function deletePropertyFile(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const parsed = parseFormData(deletePropertyFileSchema, formData);
@@ -713,7 +713,7 @@ export async function updateFileVisibility(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const parsed = parseFormData(updateFileVisibilitySchema, formData);

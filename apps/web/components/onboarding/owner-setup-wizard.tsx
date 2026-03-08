@@ -1,0 +1,310 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useFormState } from "react-dom";
+import { Building2, Copy, Loader2, User, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { SubmitButton } from "@/components/shared/submit-button";
+import type { ActionState } from "@/app/actions";
+
+interface OwnerSetupWizardProps {
+  onSetupIndividual: (prev: ActionState, formData: FormData) => Promise<ActionState>;
+  onSetupLlc: (prev: ActionState, formData: FormData) => Promise<ActionState>;
+  onJoinLlc: (prev: ActionState, formData: FormData) => Promise<ActionState>;
+}
+
+type SetupMode = "choose" | "individual" | "create_llc" | "join_llc" | "llc_created";
+
+function StatusMessage({ state }: { state: ActionState }) {
+  if (!state) {
+    return null;
+  }
+
+  if (state.success) {
+    return (
+      <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+        Setup saved successfully.
+      </p>
+    );
+  }
+
+  return (
+    <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+      {state.error}
+    </p>
+  );
+}
+
+function ChoiceCard({
+  icon,
+  title,
+  description,
+  onClick
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={`Choose ${title}.`}
+      className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-6 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+    >
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+        {icon}
+      </div>
+      <h2 className="text-base font-semibold text-zinc-900">{title}</h2>
+      <p className="mt-2 text-sm text-zinc-500">{description}</p>
+    </button>
+  );
+}
+
+export function OwnerSetupWizard({
+  onSetupIndividual,
+  onSetupLlc,
+  onJoinLlc
+}: OwnerSetupWizardProps) {
+  const [mode, setMode] = useState<SetupMode>("choose");
+  const [llcDisplayName, setLlcDisplayName] = useState("");
+  const [joinCodeInput, setJoinCodeInput] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [individualPending, setIndividualPending] = useState(false);
+  const [createdLlc, setCreatedLlc] = useState<{ joinCode: string; accountId: string } | null>(null);
+  const individualFormRef = useRef<HTMLFormElement>(null);
+  const [individualState, individualAction] = useFormState(onSetupIndividual, null);
+  const [llcState, llcAction] = useFormState(onSetupLlc, null);
+  const [joinState, joinAction] = useFormState(onJoinLlc, null);
+
+  useEffect(() => {
+    if (mode === "individual") {
+      setIndividualPending(true);
+      individualFormRef.current?.requestSubmit();
+    }
+  }, [mode]);
+
+  useEffect(() => {
+    if (!individualState) {
+      return;
+    }
+
+    if (individualState.success) {
+      window.location.href = "/owner";
+      return;
+    }
+
+    setIndividualPending(false);
+  }, [individualState]);
+
+  useEffect(() => {
+    if (llcState?.success && llcState.joinCode && llcState.accountId) {
+      setCreatedLlc({
+        joinCode: llcState.joinCode,
+        accountId: llcState.accountId
+      });
+      setMode("llc_created");
+    }
+  }, [llcState]);
+
+  useEffect(() => {
+    if (joinState?.success) {
+      window.location.href = "/owner";
+    }
+  }, [joinState]);
+
+  return (
+    <div className="w-full max-w-4xl">
+      {mode === "choose" && (
+        <div className="grid gap-4 md:grid-cols-3">
+          <ChoiceCard
+            icon={<User className="h-7 w-7" />}
+            title="Individual Landlord"
+            description="I manage properties on my own."
+            onClick={() => setMode("individual")}
+          />
+          <ChoiceCard
+            icon={<Building2 className="h-7 w-7" />}
+            title="Create LLC"
+            description="I'm setting up a shared ownership entity."
+            onClick={() => setMode("create_llc")}
+          />
+          <ChoiceCard
+            icon={<Users className="h-7 w-7" />}
+            title="Join Existing LLC"
+            description="Someone shared a join code with me."
+            onClick={() => setMode("join_llc")}
+          />
+        </div>
+      )}
+
+      {mode === "individual" && (
+        <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
+          <form ref={individualFormRef} action={individualAction}>
+            <div className="flex flex-col items-center text-center">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+                <Loader2 className={`h-7 w-7 ${individualPending ? "animate-spin" : ""}`} />
+              </div>
+              <h2 className="text-xl font-semibold text-zinc-900">Creating your individual account</h2>
+              <p className="mt-2 max-w-md text-sm text-zinc-500">
+                Domus is preparing your owner account now. This should only take a moment.
+              </p>
+              {individualState && !individualState.success && (
+                <div className="mt-4 w-full max-w-md">
+                  <StatusMessage state={individualState} />
+                </div>
+              )}
+              <div className="mt-6 flex gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setMode("choose");
+                    setIndividualPending(false);
+                  }}
+                  title="Return to the ownership setup options."
+                >
+                  Back
+                </Button>
+              </div>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {mode === "create_llc" && (
+        <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-zinc-900">Create your LLC</h2>
+            <p className="mt-2 text-sm text-zinc-500">
+              Give your ownership account a name that you and your co-owners will recognize.
+            </p>
+          </div>
+          <form action={llcAction} className="space-y-4">
+            <div>
+              <label htmlFor="llc-display-name" className="mb-1.5 block text-sm font-medium text-zinc-700">
+                LLC Display Name
+              </label>
+              <Input
+                id="llc-display-name"
+                name="displayName"
+                value={llcDisplayName}
+                onChange={(event) => setLlcDisplayName(event.target.value)}
+                placeholder="Example: Smith Family Holdings LLC"
+                required
+              />
+            </div>
+            <StatusMessage state={llcState} />
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setMode("choose")}
+                title="Return to the ownership setup options."
+              >
+                Back
+              </Button>
+              <SubmitButton title="Create this LLC account.">
+                Create LLC
+              </SubmitButton>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {mode === "join_llc" && (
+        <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-zinc-900">Join an existing LLC</h2>
+            <p className="mt-2 text-sm text-zinc-500">
+              Enter the 6-character join code that another LLC member shared with you.
+            </p>
+          </div>
+          <form action={joinAction} className="space-y-4">
+            <div>
+              <label htmlFor="llc-join-code" className="mb-1.5 block text-sm font-medium text-zinc-700">
+                Join Code
+              </label>
+              <Input
+                id="llc-join-code"
+                name="joinCode"
+                value={joinCodeInput}
+                onChange={(event) => setJoinCodeInput(event.target.value.toUpperCase())}
+                placeholder="ABC123"
+                maxLength={6}
+                required
+              />
+            </div>
+            <StatusMessage state={joinState} />
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setMode("choose")}
+                title="Return to the ownership setup options."
+              >
+                Back
+              </Button>
+              <SubmitButton title="Join this LLC account.">
+                Join LLC
+              </SubmitButton>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {mode === "llc_created" && createdLlc && (
+        <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-zinc-900">Your LLC is ready</h2>
+            <p className="mt-2 text-sm text-zinc-500">
+              Share this join code with your LLC members so they can join your account.
+            </p>
+          </div>
+          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-5">
+            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Join Code</p>
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-3xl font-bold tracking-[0.35em] text-zinc-900">
+                {createdLlc.joinCode}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(createdLlc.joinCode);
+                  setCopied(true);
+                }}
+                title="Copy this join code."
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                {copied ? "Copied" : "Copy"}
+              </Button>
+            </div>
+            <p className="mt-3 text-xs text-zinc-500">Account ID: {createdLlc.accountId}</p>
+          </div>
+          <div className="mt-6 flex gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setMode("choose")}
+              title="Go back to the setup options."
+            >
+              Back
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                window.location.href = "/owner";
+              }}
+              title="Continue into the owner dashboard."
+            >
+              Continue to Dashboard
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

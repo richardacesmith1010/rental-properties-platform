@@ -6,6 +6,7 @@ export interface OwnershipAccountDTO {
   accountType: "individual" | "llc";
   displayName: string;
   memberCount: number;
+  joinCode: string | null;
 }
 
 export interface OwnershipMemberDTO {
@@ -19,6 +20,13 @@ export interface OwnershipMemberDTO {
 
 function unique<T>(values: T[]): T[] {
   return Array.from(new Set(values));
+}
+
+export function generateJoinCode(): string {
+  const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  return Array.from({ length: 6 }, () =>
+    chars[Math.floor(Math.random() * chars.length)]
+  ).join("");
 }
 
 function isMissingSchemaError(error: unknown): boolean {
@@ -73,7 +81,7 @@ export async function getOwnershipAccountsForUser(userId: string): Promise<Owner
   const [{ data: accounts, error: accountsError }, { data: members, error: membersError }] = await Promise.all([
     admin
       .from("ownership_accounts")
-      .select("id, account_type, display_name")
+      .select("id, account_type, display_name, join_code")
       .in("id", accountIds)
       .order("created_at", { ascending: true }),
     admin
@@ -99,8 +107,29 @@ export async function getOwnershipAccountsForUser(userId: string): Promise<Owner
     id: account.id,
     accountType: account.account_type as "individual" | "llc",
     displayName: account.display_name,
-    memberCount: memberCountByAccount.get(account.id) ?? 0
+    memberCount: memberCountByAccount.get(account.id) ?? 0,
+    joinCode: account.join_code ?? null
   }));
+}
+
+export async function findAccountByJoinCode(
+  joinCode: string
+): Promise<{ id: string; displayName: string } | null> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("ownership_accounts")
+    .select("id, display_name")
+    .eq("join_code", joinCode)
+    .maybeSingle();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return {
+    id: data.id,
+    displayName: data.display_name
+  };
 }
 
 export async function getOwnershipMembersForAccount(

@@ -9,8 +9,7 @@ import {
 import {
   getAuthenticatedUser,
   getCurrentUserRole,
-  getRoleHomePath,
-  isTester
+  getRoleHomePath
 } from "@/lib/auth";
 import { getTenantPaymentData } from "@/lib/tenant-payments";
 import { getTenantMaintenanceData } from "@/lib/maintenance";
@@ -71,34 +70,23 @@ function isTenantSection(value: string | null): value is TenantSection {
     value === "notifications";
 }
 
-function buildTenantHref(section: TenantSection, testerPreview: boolean) {
+function buildTenantHref(section: TenantSection) {
   const params = new URLSearchParams();
   params.set("section", section);
-  if (testerPreview) {
-    params.set("testerPreview", "true");
-  }
   return `/tenant?${params.toString()}`;
 }
 
 interface TenantPageProps {
   searchParams?: {
-    testerPreview?: string | string[];
     section?: string | string[];
   };
 }
 
 export default async function TenantPage({ searchParams }: TenantPageProps) {
   const user = await getAuthenticatedUser();
-  const testerPreview =
-    searchParams?.testerPreview === "true" ||
-    (Array.isArray(searchParams?.testerPreview) &&
-      searchParams?.testerPreview.includes("true"));
-  const [role, testerAccess] = await Promise.all([
-    getCurrentUserRole(user.id),
-    isTester(user.id)
-  ]);
+  const role = await getCurrentUserRole(user.id);
 
-  if (role !== "tenant" && !(testerPreview && testerAccess)) {
+  if (role !== "tenant") {
     redirect(getRoleHomePath(role));
   }
 
@@ -146,7 +134,6 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
       <MobileTopBar
         userEmail={user.email ?? "unknown"}
         role="tenant"
-        showTesterLink={testerAccess}
         onSignOut={signOut}
       />
 
@@ -154,7 +141,6 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
         userEmail={user.email ?? "unknown"}
         role="tenant"
         navPreset="tenant"
-        showTesterLink={testerAccess}
         onSignOut={signOut}
         activeItemId={activeSection}
       />
@@ -186,7 +172,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
             <div className="flex items-center gap-2">
               {previousSection ? (
                 <Link
-                  href={buildTenantHref(previousSection, testerPreview)}
+                  href={buildTenantHref(previousSection)}
                   className="inline-flex items-center rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
                   title="Go to the previous section."
                 >
@@ -201,7 +187,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
               )}
               {nextSection ? (
                 <Link
-                  href={buildTenantHref(nextSection, testerPreview)}
+                  href={buildTenantHref(nextSection)}
                   className="inline-flex items-center rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
                   title="Go to the next section."
                 >

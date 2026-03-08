@@ -25,27 +25,6 @@ export default async function SettingsPage() {
             >
               Back to Workspace
             </Link>
-            <Link
-              href="/portal"
-              className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
-              title="Go to your role home screen."
-            >
-              Portal Home
-            </Link>
-            <Link
-              href="/"
-              className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
-              title="Go to Domus home page while staying logged in."
-            >
-              App Home
-            </Link>
-            <Link
-              href="/marketing"
-              className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
-              title="Open public marketing page while staying logged in."
-            >
-              Marketing
-            </Link>
           </div>
         </header>
 

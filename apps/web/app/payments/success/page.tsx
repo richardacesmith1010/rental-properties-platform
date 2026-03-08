@@ -38,8 +38,8 @@ function StatusCard({
           <h1 className="text-lg font-bold text-zinc-900">{title}</h1>
           <p className="mt-2 text-sm text-zinc-500">{body}</p>
           <Button asChild variant={buttonVariant} className="mt-6">
-            <Link href="/portal" title="Return to portal home.">
-              {buttonLabel ?? "Return to portal"}
+            <Link href="/" title="Return to Domus home.">
+              {buttonLabel ?? "Return to home"}
             </Link>
           </Button>
         </CardContent>

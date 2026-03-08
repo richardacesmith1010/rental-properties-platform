@@ -27,7 +27,7 @@ export async function enableAutomation(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const capabilityError = await ensureCapabilityEnabled("automationsEnabled");
@@ -80,7 +80,7 @@ export async function disableAutomation(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const capabilityError = await ensureCapabilityEnabled("automationsEnabled");

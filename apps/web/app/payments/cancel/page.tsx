@@ -16,7 +16,7 @@ export default function PaymentCancelPage() {
             No charge was applied. You can return and try payment again at any time.
           </p>
           <Button asChild variant="outline" className="mt-6">
-            <Link href="/portal" title="Return to portal home.">Return to portal</Link>
+            <Link href="/" title="Return to Domus home.">Return to home</Link>
           </Button>
         </CardContent>
       </Card>

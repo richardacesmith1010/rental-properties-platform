@@ -28,7 +28,7 @@ function mapAuthError(message: string) {
   return message;
 }
 
-export function LoginForm({ nextPath = "/portal" }: LoginFormProps) {
+export function LoginForm({ nextPath = "/" }: LoginFormProps) {
   const [mode, setMode] = useState<AuthMode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

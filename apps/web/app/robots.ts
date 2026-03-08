@@ -10,8 +10,6 @@ export default function robots(): MetadataRoute.Robots {
           "/owner",
           "/manager",
           "/tenant",
-          "/tester",
-          "/portal",
           "/settings",
           "/api/",
           "/auth/",

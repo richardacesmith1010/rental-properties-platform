@@ -30,7 +30,7 @@ export async function createProperty(_prev: ActionState, formData: FormData): Pr
   }
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const parsed = parseFormData(createPropertySchema, formData);
@@ -114,7 +114,7 @@ export async function updateProperty(_prev: ActionState, formData: FormData): Pr
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const parsed = parseFormData(updatePropertySchema, formData);
@@ -161,7 +161,7 @@ export async function deleteProperty(_prev: ActionState, formData: FormData): Pr
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const parsed = parseFormData(deletePropertySchema, formData);

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { RoleSelector } from "@/components/auth/role-selector";
+import { getCurrentUserRole, getRoleHomePath } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 interface LoginPageProps {
@@ -24,7 +25,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const emailConfirmed = searchParams?.confirmed === "true";
 
   if (data.user) {
-    redirect("/portal");
+    const role = await getCurrentUserRole(data.user.id);
+    redirect(getRoleHomePath(role));
   }
 
   return (
@@ -37,7 +39,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           Welcome to Domus
         </h1>
         <p className="mt-2 text-sm text-zinc-500">
-          Choose your role to get started.
+          Choose your role to sign in or create an account.
         </p>
       </div>
 

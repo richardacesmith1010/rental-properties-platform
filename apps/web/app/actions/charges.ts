@@ -30,7 +30,7 @@ export async function createCheckoutForCharge(formData: FormData) {
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager" && role !== "tenant") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const { data: charge } = await supabase
@@ -76,7 +76,7 @@ export async function createCheckoutForCharge(formData: FormData) {
   const isAdmin = await canUserAdministerProperty(user.id, property.id);
   const isTenant = lease.tenant_profile_id === user.id;
   if (!isAdmin && !isTenant) {
-    redirect("/portal");
+    redirect("/");
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";

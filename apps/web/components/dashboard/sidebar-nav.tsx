@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Receipt,
@@ -14,7 +13,6 @@ import {
   FileSignature,
   BriefcaseBusiness,
   LogOut,
-  FlaskConical,
   type LucideIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +31,6 @@ interface SidebarNavProps {
   userEmail: string;
   role: string;
   navPreset?: "default" | "tenant";
-  showTesterLink?: boolean;
   onSignOut: (formData: FormData) => Promise<void>;
   items?: NavItem[];
   activeItemId?: string;
@@ -145,21 +142,11 @@ export function SidebarNav({
   userEmail,
   role,
   navPreset = "default",
-  showTesterLink = false,
   onSignOut,
   items,
   activeItemId,
   onSelectItem,
 }: SidebarNavProps) {
-  const [tenantPreviewParam, setTenantPreviewParam] = useState("");
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("testerPreview") === "true") {
-      setTenantPreviewParam("&testerPreview=true");
-    }
-  }, []);
-
   const navItems =
     items ??
     (navPreset === "tenant"
@@ -168,7 +155,7 @@ export function SidebarNav({
             id: "overview",
             label: "Overview",
             icon: LayoutDashboard,
-            href: `/tenant?section=overview${tenantPreviewParam}`,
+            href: "/tenant?section=overview",
             description: "Summary of rent, tickets, and alerts.",
             clickHint: "open overview"
           },
@@ -176,7 +163,7 @@ export function SidebarNav({
             id: "charges",
             label: "Charges",
             icon: Receipt,
-            href: `/tenant?section=charges${tenantPreviewParam}`,
+            href: "/tenant?section=charges",
             description: "Outstanding and late rent charges.",
             clickHint: "open charges"
           },
@@ -184,7 +171,7 @@ export function SidebarNav({
             id: "maintenance",
             label: "Maintenance",
             icon: Wrench,
-            href: `/tenant?section=maintenance${tenantPreviewParam}`,
+            href: "/tenant?section=maintenance",
             description: "Maintenance requests and status.",
             clickHint: "open maintenance"
           },
@@ -192,7 +179,7 @@ export function SidebarNav({
             id: "documents",
             label: "Documents",
             icon: FileSignature,
-            href: `/tenant?section=documents${tenantPreviewParam}`,
+            href: "/tenant?section=documents",
             description: "Lease packets and shared files.",
             clickHint: "open documents"
           },
@@ -200,25 +187,12 @@ export function SidebarNav({
             id: "notifications",
             label: "Notifications",
             icon: Bell,
-            href: `/tenant?section=notifications${tenantPreviewParam}`,
+            href: "/tenant?section=notifications",
             description: "Unread and historical alerts.",
             clickHint: "open notifications"
           }
         ]
       : defaultNavItems);
-  const renderedNavItems = showTesterLink
-    ? [
-        ...navItems,
-        {
-          id: "tester",
-          label: "Tester",
-          icon: FlaskConical,
-          href: "/tester",
-          description: "Diagnostics workspace and feature checks.",
-          clickHint: "open tester tools"
-        }
-      ]
-    : navItems;
   const workspacePath = role === "owner" ? "/owner" : role === "manager" ? "/manager" : "/tenant";
 
   return (
@@ -242,39 +216,16 @@ export function SidebarNav({
           Settings
         </a>
         <a
-          href="/portal"
-          className="block rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-          title="Go to the role home screen while staying signed in."
-        >
-          Portal Home
-        </a>
-        <a
-          href="/marketing"
-          className="block rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-          title="Open the public marketing page while staying signed in."
-        >
-          Marketing
-        </a>
-        <a
           href={workspacePath}
           className="block rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
           title="Return to your main workspace for this role."
         >
           {role === "owner" ? "Owner Workspace" : role === "manager" ? "Manager Workspace" : "Tenant Workspace"}
         </a>
-        {showTesterLink && (
-          <a
-            href="/tester"
-            className="block rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-            title="Open tester diagnostics mode."
-          >
-            Tester Mode
-          </a>
-        )}
       </div>
 
       <nav className="flex-1 min-h-0 space-y-1 overflow-y-auto px-3 pb-4">
-        {renderedNavItems.map((item) => {
+        {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeItemId === item.id;
           const itemClassName = [
@@ -365,7 +316,7 @@ export function SidebarNav({
           <button
             type="submit"
             className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs font-medium text-white/70 transition-colors hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-            title="Sign out and return to login."
+            title="Sign out and return to home."
           >
             <LogOut className="h-3.5 w-3.5" />
             Sign out
@@ -379,9 +330,8 @@ export function SidebarNav({
 export function MobileTopBar({
   userEmail,
   role,
-  showTesterLink = false,
   onSignOut,
-}: Pick<SidebarNavProps, "userEmail" | "role" | "showTesterLink" | "onSignOut">) {
+}: Pick<SidebarNavProps, "userEmail" | "role" | "onSignOut">) {
   const workspacePath = role === "owner" ? "/owner" : role === "manager" ? "/manager" : "/tenant";
 
   return (
@@ -413,35 +363,12 @@ export function MobileTopBar({
         >
           Workspace
         </a>
-        <a
-          href="/portal"
-          className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-          title="Go to role home screen."
-        >
-          Home
-        </a>
-        <a
-          href="/marketing"
-          className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-          title="Open the public marketing page while staying signed in."
-        >
-          Marketing
-        </a>
-        {showTesterLink && (
-          <a
-            href="/tester"
-            className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-            title="Open tester diagnostics workspace."
-          >
-            Tester
-          </a>
-        )}
         <span className="max-w-[120px] truncate text-xs text-white/60">{userEmail}</span>
         <form action={onSignOut}>
           <button
             type="submit"
             className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/70 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-            title="Sign out and return to login."
+            title="Sign out and return to home."
             aria-label="Sign out"
           >
             <LogOut className="h-3.5 w-3.5" />

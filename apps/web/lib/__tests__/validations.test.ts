@@ -37,8 +37,8 @@ import {
   createExpenseSchema,
   updateExpenseSchema,
   deleteExpenseSchema,
-  grantTesterAccessSchema,
-  revokeTesterAccessSchema,
+  setupLlcAccountSchema,
+  joinLlcByCodeSchema,
   parseFormData,
 } from "../validations";
 
@@ -1182,26 +1182,33 @@ describe("expense schemas", () => {
   });
 });
 
-describe("tester access schemas", () => {
-  it("accepts valid tester grant payload", () => {
-    const result = grantTesterAccessSchema.safeParse({
-      email: "tester.user@example.com"
+describe("owner onboarding schemas", () => {
+  it("accepts valid LLC setup payload", () => {
+    const result = setupLlcAccountSchema.safeParse({
+      displayName: "Smith Family Holdings LLC"
     });
     expect(result.success).toBe(true);
   });
 
-  it("rejects invalid tester grant email", () => {
-    const result = grantTesterAccessSchema.safeParse({
-      email: "not-an-email"
+  it("rejects LLC names that are too short", () => {
+    const result = setupLlcAccountSchema.safeParse({
+      displayName: "A"
     });
     expect(result.success).toBe(false);
   });
 
-  it("accepts valid tester revoke payload", () => {
-    const result = revokeTesterAccessSchema.safeParse({
-      profileId: "550e8400-e29b-41d4-a716-446655440000"
+  it("accepts valid LLC join code payload", () => {
+    const result = joinLlcByCodeSchema.safeParse({
+      joinCode: "ABC123"
     });
     expect(result.success).toBe(true);
+  });
+
+  it("rejects LLC join codes that are not 6 characters", () => {
+    const result = joinLlcByCodeSchema.safeParse({
+      joinCode: "ABC12"
+    });
+    expect(result.success).toBe(false);
   });
 });
 

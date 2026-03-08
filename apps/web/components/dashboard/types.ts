@@ -41,7 +41,6 @@ export interface DashboardProps {
   initialOwnerWorkflowMode?: OwnerWorkflowMode;
   initialManagerWorkflowMode?: ManagerWorkflowMode;
   userEmail: string;
-  showTesterLink?: boolean;
   onGenerateChargesHref?: string;
   onSignOut: FormAction;
   onCreateProperty: StatefulAction;

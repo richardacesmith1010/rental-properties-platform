@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    return NextResponse.redirect(`${origin}/portal`);
+    return NextResponse.redirect(`${origin}/`);
   }
 
   const message = await generateMonthlyChargesForOwner(user.id);

@@ -24,7 +24,7 @@ export async function createUnit(_prev: ActionState, formData: FormData): Promis
   }
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const parsed = parseFormData(createUnitSchema, formData);
@@ -70,7 +70,7 @@ export async function updateUnit(_prev: ActionState, formData: FormData): Promis
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const parsed = parseFormData(updateUnitSchema, formData);
@@ -126,7 +126,7 @@ export async function deleteUnit(_prev: ActionState, formData: FormData): Promis
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const parsed = parseFormData(deleteUnitSchema, formData);

@@ -37,7 +37,7 @@ export async function createRentalListing(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const capabilityError = await ensureCapabilityEnabled("leasingPipelineEnabled");
@@ -99,7 +99,7 @@ export async function updateListingStatus(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const capabilityError = await ensureCapabilityEnabled("leasingPipelineEnabled");
@@ -161,7 +161,7 @@ export async function createApplication(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const { listingId, propertyId, applicantEmail, applicantName, applicantPhone, source, notes } =
@@ -251,7 +251,7 @@ export async function reviewApplication(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const { applicationId, status, notes } = parsed.data;
@@ -368,7 +368,7 @@ export async function addApplicationNote(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const { applicationId, message } = parsed.data;
@@ -433,7 +433,7 @@ export async function recordScreeningScore(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const { applicationId, score, summary } = parsed.data;

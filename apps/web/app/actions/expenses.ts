@@ -86,7 +86,7 @@ export async function createExpense(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const parsed = parseFormData(createExpenseSchema, formData);
@@ -165,7 +165,7 @@ export async function updateExpense(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const parsed = parseFormData(updateExpenseSchema, formData);
@@ -260,7 +260,7 @@ export async function deleteExpense(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const parsed = parseFormData(deleteExpenseSchema, formData);

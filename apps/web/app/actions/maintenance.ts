@@ -33,7 +33,7 @@ export async function createMaintenanceTicket(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "tenant" && role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const parsed = parseFormData(createMaintenanceTicketSchema, formData);
@@ -175,7 +175,7 @@ export async function updateTicketStatus(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const parsed = parseFormData(updateTicketStatusSchema, formData);
@@ -247,7 +247,7 @@ export async function updateTicketCost(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const parsed = parseFormData(updateTicketCostSchema, formData);

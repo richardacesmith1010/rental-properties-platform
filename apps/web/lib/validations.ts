@@ -498,17 +498,15 @@ export const linkPropertyToOwnershipAccountSchema = z.object({
   ownershipAccountId: z.string().uuid("Invalid ownership account.")
 });
 
-/* ─── Tester Access ─── */
-
-export const grantTesterAccessSchema = z.object({
-  email: z
+export const setupLlcAccountSchema = z.object({
+  displayName: z
     .string()
-    .min(1, "Email is required.")
-    .email("Enter a valid email address.")
+    .min(2, "LLC name must be at least 2 characters")
+    .max(100, "LLC name must be under 100 characters.")
 });
 
-export const revokeTesterAccessSchema = z.object({
-  profileId: z.string().uuid("Invalid tester profile.")
+export const joinLlcByCodeSchema = z.object({
+  joinCode: z.string().length(6, "Join code must be 6 characters")
 });
 
 /** Parse FormData against a Zod schema. Returns parsed data or a formatted error string. */

@@ -27,7 +27,7 @@ export async function createInboxThread(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const capabilityError = await ensureCapabilityEnabled("inboxThreadsEnabled");
@@ -77,7 +77,7 @@ export async function sendInboxMessage(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const capabilityError = await ensureCapabilityEnabled("inboxThreadsEnabled");

@@ -58,8 +58,7 @@ import {
 import {
   getAuthenticatedUser,
   getCurrentUserRole,
-  getRoleHomePath,
-  isTester
+  getRoleHomePath
 } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
@@ -68,7 +67,6 @@ export const dynamic = "force-dynamic";
 interface ManagerPageProps {
   searchParams?: {
     generated?: string | string[];
-    testerPreview?: string | string[];
     section?: string | string[];
     mode?: string | string[];
   };
@@ -83,16 +81,9 @@ function getGeneratedMessage(value: string | string[] | undefined) {
 
 export default async function ManagerPage({ searchParams }: ManagerPageProps) {
   const user = await getAuthenticatedUser();
-  const testerPreview =
-    searchParams?.testerPreview === "true" ||
-    (Array.isArray(searchParams?.testerPreview) &&
-      searchParams?.testerPreview.includes("true"));
-  const [role, testerAccess] = await Promise.all([
-    getCurrentUserRole(user.id),
-    isTester(user.id)
-  ]);
+  const role = await getCurrentUserRole(user.id);
 
-  if (role !== "manager" && !(testerPreview && testerAccess)) {
+  if (role !== "manager") {
     redirect(getRoleHomePath(role));
   }
 
@@ -198,7 +189,6 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       initialManagerWorkflowMode={initialManagerWorkflowMode}
       initialSectionId={initialSectionId}
       userEmail={user.email ?? "unknown"}
-      showTesterLink={testerAccess}
       onSignOut={signOut}
       onCreateProperty={createProperty}
       onCreateUnit={createUnit}

@@ -29,7 +29,7 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
   }
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const parsed = parseFormData(createLeaseSchema, formData);
@@ -177,7 +177,7 @@ export async function updateLease(_prev: ActionState, formData: FormData): Promi
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const parsed = parseFormData(updateLeaseSchema, formData);
@@ -293,7 +293,7 @@ export async function deleteLease(_prev: ActionState, formData: FormData): Promi
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const parsed = parseFormData(deleteLeaseSchema, formData);

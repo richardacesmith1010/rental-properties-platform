@@ -32,26 +32,6 @@ export async function getCurrentUserRole(userId: string): Promise<AppRole> {
   return "tenant";
 }
 
-export async function isTester(userId: string): Promise<boolean> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("is_tester")
-    .eq("id", userId)
-    .single();
-
-  if (error) {
-    const code = typeof error === "object" && error && "code" in error ? String(error.code ?? "") : "";
-    const message = typeof error === "object" && error && "message" in error ? String(error.message ?? "").toLowerCase() : "";
-    if (code === "42703" || (message.includes("column") && message.includes("does not exist"))) {
-      return false;
-    }
-    return false;
-  }
-
-  return Boolean(data?.is_tester);
-}
-
 export function getRoleHomePath(role: AppRole) {
   if (role === "owner") {
     return "/owner";

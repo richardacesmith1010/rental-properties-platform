@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserRole, getRoleHomePath } from "@/lib/auth";
 import { LandingShell } from "@/components/marketing/landing-shell";
 import { LandingPage } from "@/components/marketing/landing-page";
 
@@ -17,7 +18,8 @@ export default async function HomePage() {
   } = await supabase.auth.getUser();
 
   if (user) {
-    redirect("/portal");
+    const role = await getCurrentUserRole(user.id);
+    redirect(getRoleHomePath(role));
   }
 
   return (

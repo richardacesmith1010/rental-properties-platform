@@ -30,7 +30,7 @@ export async function inviteTenant(
   }
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const parsed = parseFormData(inviteTenantSchema, formData);
@@ -154,7 +154,7 @@ export async function inviteManager(
   }
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const parsed = parseFormData(inviteManagerSchema, formData);
@@ -266,7 +266,7 @@ export async function inviteOwner(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const capabilityError = await ensureCapabilityEnabled("ownershipEnabled");
@@ -374,7 +374,7 @@ export async function resendInvite(
   }
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const parsed = parseFormData(resendInviteSchema, formData);

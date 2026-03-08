@@ -29,6 +29,9 @@ export { resendInvite } from "./invitations";
 export { createOwnershipAccount } from "./ownership";
 export { addOwnershipMember } from "./ownership";
 export { linkPropertyToOwnershipAccount } from "./ownership";
+export { setupIndividualAccount } from "./onboarding";
+export { setupLlcAccount } from "./onboarding";
+export { joinLlcByCode } from "./onboarding";
 
 export { markNotificationRead } from "./notifications";
 
@@ -63,8 +66,3 @@ export { uploadMaintenancePhoto } from "./vendors";
 export { createExpense } from "./expenses";
 export { updateExpense } from "./expenses";
 export { deleteExpense } from "./expenses";
-
-export { generateTesterData } from "./tester";
-export { cleanupTesterData } from "./tester";
-export { grantTesterAccess } from "./tester";
-export { revokeTesterAccess } from "./tester";

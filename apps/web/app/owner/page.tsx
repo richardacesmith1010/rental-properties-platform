@@ -63,8 +63,7 @@ import {
 import {
   getAuthenticatedUser,
   getCurrentUserRole,
-  getRoleHomePath,
-  isTester
+  getRoleHomePath
 } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
@@ -73,7 +72,6 @@ export const dynamic = "force-dynamic";
 interface OwnerPageProps {
   searchParams?: {
     generated?: string | string[];
-    testerPreview?: string | string[];
     section?: string | string[];
     mode?: string | string[];
   };
@@ -81,17 +79,15 @@ interface OwnerPageProps {
 
 export default async function OwnerPage({ searchParams }: OwnerPageProps) {
   const user = await getAuthenticatedUser();
-  const testerPreview =
-    searchParams?.testerPreview === "true" ||
-    (Array.isArray(searchParams?.testerPreview) &&
-      searchParams?.testerPreview.includes("true"));
-  const [role, testerAccess] = await Promise.all([
-    getCurrentUserRole(user.id),
-    isTester(user.id)
-  ]);
+  const role = await getCurrentUserRole(user.id);
 
-  if (role !== "owner" && !(testerPreview && testerAccess)) {
+  if (role !== "owner") {
     redirect(getRoleHomePath(role));
+  }
+
+  const ownershipAccounts = await getOwnershipAccountsForUser(user.id);
+  if (ownershipAccounts.length === 0) {
+    redirect("/owner/setup");
   }
 
   const capabilities = await getFeatureCapabilities();
@@ -130,7 +126,6 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
     listings,
     applications,
     vendors,
-    ownershipAccounts,
     expenses
   ] = await Promise.all([
     getDashboardData(user.id),
@@ -167,9 +162,6 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
     capabilities.vendorWorkflowEnabled
       ? getOwnerVendors(user.id)
       : Promise.resolve([]),
-    capabilities.ownershipEnabled
-      ? getOwnershipAccountsForUser(user.id)
-      : Promise.resolve([]),
     getOwnerExpenseData(user.id)
   ]);
 
@@ -199,7 +191,6 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       initialOwnerWorkflowMode={initialOwnerWorkflowMode}
       initialSectionId={initialSectionId}
       userEmail={user.email ?? "unknown"}
-      showTesterLink={testerAccess}
       onSignOut={signOut}
       onCreateProperty={createProperty}
       onCreateUnit={createUnit}

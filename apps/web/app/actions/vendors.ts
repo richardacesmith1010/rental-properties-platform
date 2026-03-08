@@ -39,7 +39,7 @@ export async function createVendor(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const capabilityError = await ensureCapabilityEnabled("vendorWorkflowEnabled");
@@ -127,7 +127,7 @@ export async function updateVendor(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const capabilityError = await ensureCapabilityEnabled("vendorWorkflowEnabled");
@@ -201,7 +201,7 @@ export async function assignVendorToTicket(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const capabilityError = await ensureCapabilityEnabled("vendorWorkflowEnabled");
@@ -300,7 +300,7 @@ export async function uploadMaintenancePhoto(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const capabilityError = await ensureCapabilityEnabled("photoWorkflowEnabled");

@@ -30,7 +30,7 @@ export async function createOwnershipAccount(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const capabilityError = await ensureCapabilityEnabled("ownershipEnabled");
@@ -91,7 +91,7 @@ export async function addOwnershipMember(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const capabilityError = await ensureCapabilityEnabled("ownershipEnabled");
@@ -146,7 +146,7 @@ export async function linkPropertyToOwnershipAccount(
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
-    redirect("/portal");
+    redirect("/");
   }
 
   const capabilityError = await ensureCapabilityEnabled("ownershipEnabled");
