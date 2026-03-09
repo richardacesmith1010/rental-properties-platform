@@ -47,6 +47,20 @@ function statusLabel(status: string): string {
   return status.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+function ticketMeta(ticket: MaintenanceTicket) {
+  return {
+    created: formatDate(ticket.createdAt),
+    resolved: ticket.resolvedAt ? formatDate(ticket.resolvedAt) : "Not resolved",
+    cost: ticket.actualCostCents != null ? formatCurrency(ticket.actualCostCents) : "Not recorded",
+    vendor: ticket.vendorName ?? "Unassigned",
+    assignment: ticket.assignmentStatus ? statusLabel(ticket.assignmentStatus) : "Not assigned",
+    photos:
+      ticket.photoCount > 0
+        ? `${ticket.photoCount} photo${ticket.photoCount === 1 ? "" : "s"}`
+        : "No photos"
+  };
+}
+
 export function MaintenanceSection({
   tickets,
   showControls = false,
@@ -85,83 +99,96 @@ export function MaintenanceSection({
           <EmptyState message="No maintenance tickets yet. New tenant and team requests will appear here." />
         ) : (
           <div>
-            {tickets.map((ticket, i) => (
-              <DataRow key={ticket.id} last={i === tickets.length - 1}>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-zinc-900">
-                    {ticket.title}
-                  </p>
-                  <p className="mt-0.5 text-xs text-zinc-500">
-                    {ticket.propertyName}
-                    {ticket.unitNumber ? ` \u2022 Unit ${ticket.unitNumber}` : ""}
-                  </p>
-                  {ticket.tenantEmail && (
-                    <p className="mt-0.5 text-xs text-zinc-400">
-                      {ticket.tenantEmail}
+            {tickets.map((ticket, i) => {
+              const meta = ticketMeta(ticket);
+              return (
+                <DataRow key={ticket.id} last={i === tickets.length - 1}>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-zinc-900">
+                      {ticket.title}
                     </p>
-                  )}
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    <Badge variant={statusVariant[ticket.status] ?? "outline"}>
-                      {statusLabel(ticket.status)}
-                    </Badge>
-                    <Badge variant={priorityVariant[ticket.priority] ?? "outline"}>
-                      {ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
-                    </Badge>
+                    <p className="mt-0.5 text-xs text-zinc-500">
+                      {ticket.propertyName}
+                      {ticket.unitNumber ? ` \u2022 Unit ${ticket.unitNumber}` : ""}
+                    </p>
+                    {ticket.tenantEmail && (
+                      <p className="mt-0.5 text-xs text-zinc-400">
+                        {ticket.tenantEmail}
+                      </p>
+                    )}
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      <Badge variant={statusVariant[ticket.status] ?? "outline"}>
+                        {statusLabel(ticket.status)}
+                      </Badge>
+                      <Badge variant={priorityVariant[ticket.priority] ?? "outline"}>
+                        {ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
+                      </Badge>
+                    </div>
+                    <div className="mt-2 grid gap-2 text-[11px] text-zinc-500 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <p>
+                          <span className="font-medium text-zinc-700">Created:</span> {meta.created}
+                        </p>
+                        <p>
+                          <span className="font-medium text-zinc-700">Resolved:</span> {meta.resolved}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p>
+                          <span className="font-medium text-zinc-700">Cost:</span> {meta.cost}
+                        </p>
+                        <p>
+                          <span className="font-medium text-zinc-700">Vendor:</span> {meta.vendor}
+                        </p>
+                        <p>
+                          <span className="font-medium text-zinc-700">Assignment:</span> {meta.assignment}
+                        </p>
+                        <p>
+                          <span className="font-medium text-zinc-700">Photos:</span> {meta.photos}
+                          {ticket.photoCount > 0 && !photoWorkflowEnabled ? " (access unavailable)" : ""}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <p className="mt-1 text-[11px] text-zinc-400">
-                    {formatDate(ticket.createdAt)}
-                    {ticket.resolvedAt &&
-                      ` \u2022 Resolved ${formatDate(ticket.resolvedAt)}`}
-                    {ticket.actualCostCents != null &&
-                      ` \u2022 Cost: ${formatCurrency(ticket.actualCostCents)}`}
-                    {ticket.vendorName && ` \u2022 Vendor: ${ticket.vendorName}`}
-                    {ticket.assignmentStatus &&
-                      ` \u2022 ${statusLabel(ticket.assignmentStatus)}`}
-                    {ticket.photoCount > 0 &&
-                      ` \u2022 ${ticket.photoCount} photo${ticket.photoCount === 1 ? "" : "s"}`}
-                    {ticket.photoCount > 0 &&
-                      !photoWorkflowEnabled &&
-                      " \u2022 Photo access unavailable"}
-                  </p>
-                </div>
 
-                {(showControls || (photoWorkflowEnabled && ticket.latestPhotoId)) && (
-                  <div className="flex-shrink-0 space-y-2">
-                    {showControls && onUpdateStatus && (
-                      <TicketStatusControl
-                        ticketId={ticket.id}
-                        currentStatus={ticket.status}
-                        onUpdateStatus={onUpdateStatus}
-                      />
-                    )}
-                    {showControls && onAssignVendor && vendorWorkflowEnabled && vendors.length > 0 && (
-                      <TicketVendorControl
-                        ticketId={ticket.id}
-                        vendors={vendors}
-                        onAssignVendor={onAssignVendor}
-                      />
-                    )}
-                    {showControls && onUploadPhoto && photoWorkflowEnabled && (
-                      <TicketPhotoUpload
-                        ticketId={ticket.id}
-                        onUploadPhoto={onUploadPhoto}
-                      />
-                    )}
-                    {photoWorkflowEnabled && ticket.latestPhotoId && (
-                      <Link
-                        href={`/api/assets/maintenance-photo/${ticket.latestPhotoId}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex h-8 items-center justify-center rounded-md border border-zinc-200 px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
-                        title="Open the latest maintenance photo for this ticket."
-                      >
-                        View Photo
-                      </Link>
-                    )}
-                  </div>
-                )}
-              </DataRow>
-            ))}
+                  {(showControls || (photoWorkflowEnabled && ticket.latestPhotoId)) && (
+                    <div className="flex-shrink-0 space-y-2">
+                      {showControls && onUpdateStatus && (
+                        <TicketStatusControl
+                          ticketId={ticket.id}
+                          currentStatus={ticket.status}
+                          onUpdateStatus={onUpdateStatus}
+                        />
+                      )}
+                      {showControls && onAssignVendor && vendorWorkflowEnabled && vendors.length > 0 && (
+                        <TicketVendorControl
+                          ticketId={ticket.id}
+                          vendors={vendors}
+                          onAssignVendor={onAssignVendor}
+                        />
+                      )}
+                      {showControls && onUploadPhoto && photoWorkflowEnabled && (
+                        <TicketPhotoUpload
+                          ticketId={ticket.id}
+                          onUploadPhoto={onUploadPhoto}
+                        />
+                      )}
+                      {photoWorkflowEnabled && ticket.latestPhotoId && (
+                        <Link
+                          href={`/api/assets/maintenance-photo/${ticket.latestPhotoId}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex h-8 items-center justify-center rounded-md border border-zinc-200 px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                          title="Open the latest maintenance photo for this ticket."
+                        >
+                          View Photo
+                        </Link>
+                      )}
+                    </div>
+                  )}
+                </DataRow>
+              );
+            })}
           </div>
         )}
       </CardContent>

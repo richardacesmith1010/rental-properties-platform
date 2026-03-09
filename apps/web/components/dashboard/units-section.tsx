@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { UnitListItem } from "@/lib/portfolio";
@@ -92,9 +93,12 @@ export function UnitsSection({
                   <p className="text-sm font-semibold text-zinc-900">
                     {unit.propertyName} • Unit {unit.unitNumber}
                   </p>
-                  <p className="mt-0.5 text-xs text-zinc-500">
-                    {unit.bedrooms} bd / {unit.bathrooms} ba • {unit.occupied ? "Occupied" : "Vacant"}
-                  </p>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                    <span>{unit.bedrooms} bd / {unit.bathrooms} ba</span>
+                    <Badge variant={unit.occupied ? "success" : "outline"}>
+                      {unit.occupied ? "Occupied" : "Vacant"}
+                    </Badge>
+                  </div>
 
                   {showControls && activeEditUnitId === unit.id && (
                     <form action={updateAction} className="mt-3 grid gap-2 sm:grid-cols-2">

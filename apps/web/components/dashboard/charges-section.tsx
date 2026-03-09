@@ -134,7 +134,12 @@ export function ChargesSection({
               key={value}
               type="button"
               size="sm"
-              variant={activeFilter === value ? "default" : "outline"}
+              variant="outline"
+              className={
+                activeFilter === value
+                  ? "border-indigo-300 bg-indigo-50 font-semibold text-indigo-700 shadow-sm"
+                  : "font-medium"
+              }
               onClick={() => setActiveFilter(value)}
               title={`Show ${label.toLowerCase()} charges.`}
             >
@@ -146,7 +151,13 @@ export function ChargesSection({
         {showManualPayment && <InlineAlert state={manualPaymentState} />}
 
         {filteredCharges.length === 0 ? (
-          <EmptyState message="No charges found for this filter." />
+          <EmptyState
+            message={
+              charges.length === 0
+                ? "No charges yet. Charges are generated automatically when you have active leases. You can also generate them manually from the Operations section."
+                : "No charges match this filter right now."
+            }
+          />
         ) : (
           <div>
             {filteredCharges.map((charge, i) => {
@@ -161,31 +172,58 @@ export function ChargesSection({
                     <p className="mt-0.5 text-xs text-zinc-500">Due {formatDate(charge.dueDate)}</p>
 
                     {showManualPayment && manualFormOpen && charge.status !== "paid" && (
-                      <form action={recordManualPaymentAction} className="mt-3 grid gap-2 sm:grid-cols-4">
+                      <form action={recordManualPaymentAction} className="mt-3 grid gap-3 sm:grid-cols-4">
                         <input type="hidden" name="chargeId" value={charge.id} />
-                        <Input
-                          name="amountDollars"
-                          type="number"
-                          min={0.01}
-                          step="0.01"
-                          defaultValue={(charge.amountCents / 100).toFixed(2)}
-                          required
-                        />
-                        <select
-                          name="method"
-                          className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm"
-                          defaultValue="cash"
-                          title="Select manual payment method."
-                        >
-                          <option value="cash">Cash</option>
-                          <option value="check">Check</option>
-                          <option value="ach">ACH</option>
-                          <option value="other">Other</option>
-                        </select>
-                        <Input
-                          name="referenceNote"
-                          placeholder="Reference (optional)"
-                        />
+                        <div className="space-y-1">
+                          <label
+                            className="block text-xs font-medium text-zinc-600"
+                            htmlFor={`manual-payment-amount-${charge.id}`}
+                          >
+                            Amount
+                          </label>
+                          <Input
+                            id={`manual-payment-amount-${charge.id}`}
+                            name="amountDollars"
+                            type="number"
+                            min={0.01}
+                            step="0.01"
+                            defaultValue={(charge.amountCents / 100).toFixed(2)}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label
+                            className="block text-xs font-medium text-zinc-600"
+                            htmlFor={`manual-payment-method-${charge.id}`}
+                          >
+                            Method
+                          </label>
+                          <select
+                            id={`manual-payment-method-${charge.id}`}
+                            name="method"
+                            className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm"
+                            defaultValue="cash"
+                            title="Select manual payment method."
+                          >
+                            <option value="cash">Cash</option>
+                            <option value="check">Check</option>
+                            <option value="ach">ACH</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label
+                            className="block text-xs font-medium text-zinc-600"
+                            htmlFor={`manual-payment-reference-${charge.id}`}
+                          >
+                            Reference Note
+                          </label>
+                          <Input
+                            id={`manual-payment-reference-${charge.id}`}
+                            name="referenceNote"
+                            placeholder="Optional"
+                          />
+                        </div>
                         <div>
                           <SubmitButton size="sm" variant="outline" title="Record this manual payment.">
                             Save Payment

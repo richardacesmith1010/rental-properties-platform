@@ -29,6 +29,12 @@ interface TicketDraft {
 }
 
 const TICKET_STEPS = ["Unit", "Summary", "Details", "Priority", "Review & Submit"] as const;
+const PRIORITY_HELP: Record<TicketDraft["priority"], string> = {
+  low: "Minor inconvenience",
+  medium: "Affecting daily use",
+  high: "Significant disruption",
+  urgent: "Safety or emergency issue"
+};
 
 function FormError({ state }: { state: ActionState }) {
   if (!state || state.success) return null;
@@ -198,6 +204,12 @@ export function TicketForm({ units, onCreateTicket }: TicketFormProps) {
               <option value="high">High</option>
               <option value="urgent">Urgent</option>
             </Select>
+            <div className="space-y-1 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-xs text-zinc-600">
+              <p><span className="font-semibold text-zinc-800">Low:</span> {PRIORITY_HELP.low}</p>
+              <p><span className="font-semibold text-zinc-800">Medium:</span> {PRIORITY_HELP.medium}</p>
+              <p><span className="font-semibold text-zinc-800">High:</span> {PRIORITY_HELP.high}</p>
+              <p><span className="font-semibold text-zinc-800">Urgent:</span> {PRIORITY_HELP.urgent}</p>
+            </div>
           </div>
         )}
 
@@ -211,6 +223,9 @@ export function TicketForm({ units, onCreateTicket }: TicketFormProps) {
               </p>
               <p>
                 <span className="font-semibold">Summary:</span> {draft.title || "Not set"}
+              </p>
+              <p>
+                <span className="font-semibold">Description:</span> {draft.description || "Not set"}
               </p>
               <p>
                 <span className="font-semibold">Priority:</span>{" "}

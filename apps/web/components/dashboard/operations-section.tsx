@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useFormState } from "react-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -84,6 +84,23 @@ const UNIT_STEP_LABELS = [
   "Default Rent",
   "Review & Save"
 ] as const;
+
+function FieldLabel({
+  htmlFor,
+  children,
+  required = false
+}: {
+  htmlFor?: string;
+  children: ReactNode;
+  required?: boolean;
+}) {
+  return (
+    <label htmlFor={htmlFor} className="block text-sm font-medium text-zinc-700">
+      {children}
+      {required && <span className="ml-1 text-red-500">*</span>}
+    </label>
+  );
+}
 
 function FormError({ state }: { state: ActionState }) {
   if (!state || state.success) return null;
@@ -344,7 +361,11 @@ export function OperationsSection({
           <p className="text-sm text-zinc-600">
             Step 1: Property name. This is the label owners/managers will see everywhere.
           </p>
+          <FieldLabel htmlFor="property-name" required>
+            Property Name
+          </FieldLabel>
           <Input
+            id="property-name"
             value={propertyDraft.name}
             onChange={(event) =>
               setPropertyDraft((current) => ({
@@ -368,7 +389,11 @@ export function OperationsSection({
           <p className="text-sm text-zinc-600">
             Step 2: Street address. This is the full street line for the property.
           </p>
+          <FieldLabel htmlFor="property-address" required>
+            Street Address
+          </FieldLabel>
           <Input
+            id="property-address"
             value={propertyDraft.addressLine1}
             onChange={(event) =>
               setPropertyDraft((current) => ({
@@ -392,7 +417,11 @@ export function OperationsSection({
           <p className="text-sm text-zinc-600">
             Step 3: City. This drives mailing, filtering, and local reporting.
           </p>
+          <FieldLabel htmlFor="property-city" required>
+            City
+          </FieldLabel>
           <Input
+            id="property-city"
             value={propertyDraft.city}
             onChange={(event) =>
               setPropertyDraft((current) => ({
@@ -416,7 +445,11 @@ export function OperationsSection({
           <p className="text-sm text-zinc-600">
             Step 4: State abbreviation (for example, CO).
           </p>
+          <FieldLabel htmlFor="property-state" required>
+            State
+          </FieldLabel>
           <Input
+            id="property-state"
             value={propertyDraft.state}
             onChange={(event) =>
               setPropertyDraft((current) => ({
@@ -441,7 +474,11 @@ export function OperationsSection({
           <p className="text-sm text-zinc-600">
             Step 5: ZIP code. This is required for property records.
           </p>
+          <FieldLabel htmlFor="property-zip" required>
+            ZIP Code
+          </FieldLabel>
           <Input
+            id="property-zip"
             value={propertyDraft.postalCode}
             onChange={(event) =>
               setPropertyDraft((current) => ({
@@ -465,7 +502,11 @@ export function OperationsSection({
           <p className="text-sm text-zinc-600">
             Step 6: Ownership account (optional). Leave blank to use your default account.
           </p>
+          <FieldLabel htmlFor="property-owner-account">
+            Ownership Account
+          </FieldLabel>
           <Select
+            id="property-owner-account"
             value={propertyDraft.ownerAccountId}
             onChange={(event) =>
               setPropertyDraft((current) => ({
@@ -530,7 +571,11 @@ export function OperationsSection({
           <p className="text-sm text-zinc-600">
             Step 1: Pick the property this unit belongs to.
           </p>
+          <FieldLabel htmlFor="unit-property">
+            Property
+          </FieldLabel>
           <Select
+            id="unit-property"
             value={unitDraft.propertyId}
             onChange={(event) =>
               setUnitDraft((current) => ({
@@ -560,7 +605,11 @@ export function OperationsSection({
           <p className="text-sm text-zinc-600">
             Step 2: Unit label. This is what tenants and staff will reference.
           </p>
+          <FieldLabel htmlFor="unit-number" required>
+            Unit Number
+          </FieldLabel>
           <Input
+            id="unit-number"
             value={unitDraft.unitNumber}
             onChange={(event) =>
               setUnitDraft((current) => ({
@@ -584,7 +633,11 @@ export function OperationsSection({
           <p className="text-sm text-zinc-600">
             Step 3: Bedrooms count.
           </p>
+          <FieldLabel htmlFor="unit-bedrooms">
+            Bedrooms
+          </FieldLabel>
           <Input
+            id="unit-bedrooms"
             type="number"
             min={0}
             value={unitDraft.bedrooms}
@@ -609,7 +662,11 @@ export function OperationsSection({
           <p className="text-sm text-zinc-600">
             Step 4: Bathrooms count. Decimals are allowed (example: 1.5).
           </p>
+          <FieldLabel htmlFor="unit-bathrooms">
+            Bathrooms
+          </FieldLabel>
           <Input
+            id="unit-bathrooms"
             type="number"
             min={0}
             step="0.5"
@@ -635,7 +692,11 @@ export function OperationsSection({
           <p className="text-sm text-zinc-600">
             Step 5: Default monthly rent for this unit.
           </p>
+          <FieldLabel htmlFor="unit-rent">
+            Default Rent
+          </FieldLabel>
           <Input
+            id="unit-rent"
             type="number"
             min={1}
             step="0.01"
@@ -696,7 +757,11 @@ export function OperationsSection({
           <p className="text-sm text-zinc-600">
             Step 1: Select the property first. Everything else depends on this.
           </p>
+          <FieldLabel htmlFor="lease-property">
+            Property
+          </FieldLabel>
           <Select
+            id="lease-property"
             value={leaseDraft.propertyId}
             onChange={(event) =>
               setLeaseDraft((current) => ({
@@ -725,7 +790,11 @@ export function OperationsSection({
           <p className="text-sm text-zinc-600">
             Step 2: Select the unit for this lease.
           </p>
+          <FieldLabel htmlFor="lease-unit" required>
+            Unit
+          </FieldLabel>
           <Select
+            id="lease-unit"
             value={leaseDraft.unitId}
             onChange={(event) =>
               setLeaseDraft((current) => ({
@@ -758,7 +827,11 @@ export function OperationsSection({
           <p className="text-sm text-zinc-600">
             Step 3: Select a tenant linked to this property.
           </p>
+          <FieldLabel htmlFor="lease-tenant" required>
+            Tenant
+          </FieldLabel>
           <Select
+            id="lease-tenant"
             value={leaseDraft.tenantProfileId}
             onChange={(event) =>
               setLeaseDraft((current) => ({
@@ -791,7 +864,11 @@ export function OperationsSection({
           <p className="text-sm text-zinc-600">
             Step 4: Enter lease start and end dates.
           </p>
+          <FieldLabel htmlFor="lease-start-date" required>
+            Start Date
+          </FieldLabel>
           <Input
+            id="lease-start-date"
             type="date"
             value={leaseDraft.startDate}
             onChange={(event) =>
@@ -802,7 +879,11 @@ export function OperationsSection({
             }
             required
           />
+          <FieldLabel htmlFor="lease-end-date" required>
+            End Date
+          </FieldLabel>
           <Input
+            id="lease-end-date"
             type="date"
             value={leaseDraft.endDate}
             onChange={(event) =>
@@ -823,7 +904,11 @@ export function OperationsSection({
           <p className="text-sm text-zinc-600">
             Step 5: Enter billing terms.
           </p>
+          <FieldLabel htmlFor="lease-due-day">
+            Due Day of Month
+          </FieldLabel>
           <Input
+            id="lease-due-day"
             type="number"
             min={1}
             max={28}
@@ -837,7 +922,11 @@ export function OperationsSection({
             required
             placeholder="Due day of month"
           />
+          <FieldLabel htmlFor="lease-rent" required>
+            Monthly Rent
+          </FieldLabel>
           <Input
+            id="lease-rent"
             type="number"
             min={1}
             step="0.01"
@@ -851,7 +940,11 @@ export function OperationsSection({
             required
             placeholder="Monthly rent (USD)"
           />
+          <FieldLabel htmlFor="lease-deposit">
+            Deposit
+          </FieldLabel>
           <Input
+            id="lease-deposit"
             type="number"
             min={0}
             step="0.01"
