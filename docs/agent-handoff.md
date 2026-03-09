@@ -1,10 +1,10 @@
 # Agent Handoff (Current State)
 
-Updated (UTC): 2026-03-08T20:00:00Z
+Updated (UTC): 2026-03-09T03:15:00Z
 
 ## Repository
 - Branch: `main`
-- HEAD (latest pushed): `7d081cb`
+- HEAD (latest pushed): `e0071b8`
 - Remote: `origin/main`
 - Deploy URL: `https://domusbase.com`
 
@@ -17,10 +17,11 @@ Latest runtime verifier status (`npm run verify:phase9-runtime` from gate run):
 - `summary.bucketsReady: true`
 - `summary.ownerAccountBackfillReady: true`
 
-Phase 9 runtime checks currently passing:
-- Columns present: `properties.owner_account_id`, `invitations.ownership_account_id`
-- Permission functions callable: `can_administer_property`, `can_view_property`, `can_access_property`
-- Private buckets present: `lease-documents`, `maintenance-photos`
+Gamification DB (applied via Supabase MCP, Sprint 7):
+- Tables: `user_gamification`, `xp_events`, `achievements`, `user_achievements`
+- Functions: `award_xp()`, `update_streak()`
+- 12 seeded achievements across payment, streak, property, maintenance categories
+- RLS policies active (users see own data, achievements public)
 
 ## Deployment State
 - Production host: `https://domusbase.com`
@@ -43,6 +44,11 @@ Phase 9 runtime checks currently passing:
 | Ownership accounts (LLC/shared access) | LIVE | Account/member model + join codes |
 | Marketing landing + auth-aware root | LIVE | Public root + role-based workspace redirect |
 | Password management (settings) | LIVE | Change password in Settings → Security |
+| Palette: Violet + Emerald + Gold | LIVE | Sprint 7 — replaces old indigo palette |
+| Dom the Key mascot | LIVE | Sprint 7 — 5 expressions, login/sidebar/empty states |
+| Gamification UI (XP, streaks, levels) | LIVE | Sprint 7 — hardcoded defaults, wiring in Sprint 8 |
+| Gamification DB | LIVE | Sprint 7 — 4 tables, 2 functions, 12 achievements |
+| Playwright E2E tests | LIVE | Sprint 6 — auth, owner-setup, tenant, navigation |
 | Mobile app foundation | IN PROGRESS | Expo Router + role-aware tabs (not published) |
 
 ## Gate Status
@@ -52,8 +58,9 @@ Phase 9 runtime checks currently passing:
 ## Current Risks / Blockers
 - Mobile app not published to app stores yet.
 - User's test account is wiped — needs fresh signup to test.
+- Gamification UI shows hardcoded defaults — needs wiring to real DB data in Sprint 8.
 
 ## Immediate Focus
 - Owner is going live with real properties soon (1-3 properties).
 - Core flow to polish: Owner invites tenant → tenant signs up + sets password → tenant pays rent.
-- Mobile web deferred until native app is published.
+- Sprint 8: Wire gamification to server actions, confetti/celebrations, achievement unlock flow.
