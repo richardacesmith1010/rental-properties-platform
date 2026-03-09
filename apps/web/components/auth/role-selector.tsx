@@ -11,10 +11,10 @@ const roles = [
     description: "Portfolio control, rent operations, and full reporting.",
     icon: Building2,
     nextPath: "/owner",
-    gradient: "from-indigo-500 to-violet-500",
-    glowColor: "ring-indigo-500/30 shadow-indigo-500/20",
-    bgLight: "bg-indigo-50",
-    iconColor: "text-indigo-600",
+    gradient: "from-violet-500 to-purple-600",
+    glowColor: "ring-violet-500/30 shadow-violet-500/20",
+    bgLight: "bg-violet-50",
+    iconColor: "text-violet-600",
   },
   {
     id: "manager" as const,
@@ -22,10 +22,10 @@ const roles = [
     description: "Property operations for assigned portfolios.",
     icon: Briefcase,
     nextPath: "/manager",
-    gradient: "from-cyan-500 to-blue-500",
-    glowColor: "ring-cyan-500/30 shadow-cyan-500/20",
-    bgLight: "bg-cyan-50",
-    iconColor: "text-cyan-600",
+    gradient: "from-emerald-500 to-teal-500",
+    glowColor: "ring-emerald-500/30 shadow-emerald-500/20",
+    bgLight: "bg-emerald-50",
+    iconColor: "text-emerald-600",
   },
   {
     id: "tenant" as const,
@@ -33,7 +33,7 @@ const roles = [
     description: "Rent payments, maintenance requests, and documents.",
     icon: Home,
     nextPath: "/tenant",
-    gradient: "from-amber-500 to-orange-500",
+    gradient: "from-amber-400 to-rose-500",
     glowColor: "ring-amber-500/30 shadow-amber-500/20",
     bgLight: "bg-amber-50",
     iconColor: "text-amber-600",
@@ -73,7 +73,7 @@ export function RoleSelector() {
                 className={`
                   group relative flex flex-col items-center rounded-2xl border bg-white p-6 text-center
                   transition-all duration-300 ease-out
-                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2
                   ${isSelected
                     ? `ring-2 ${role.glowColor} shadow-lg border-transparent scale-[1.02]`
                     : isOther

@@ -137,7 +137,7 @@ export function ChargesSection({
               variant="outline"
               className={
                 activeFilter === value
-                  ? "border-indigo-300 bg-indigo-50 font-semibold text-indigo-700 shadow-sm"
+                  ? "border-violet-300 bg-violet-50 font-semibold text-violet-700 shadow-sm"
                   : "font-medium"
               }
               onClick={() => setActiveFilter(value)}

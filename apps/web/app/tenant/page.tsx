@@ -28,6 +28,7 @@ import { TicketForm } from "@/components/dashboard/ticket-form";
 import { MaintenanceSection } from "@/components/dashboard/maintenance-section";
 import { TenantDocumentsSection } from "@/components/dashboard/tenant-documents-section";
 import { NotificationsSection } from "@/components/dashboard/notifications-section";
+import { GamificationSummary } from "@/components/gamification/gamification-summary";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
   ChevronLeft,
@@ -153,9 +154,18 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
               Manage rent, tickets, documents, and alerts in one place.
             </p>
           </div>
-          <Badge className="self-start border border-indigo-200 bg-indigo-50 text-indigo-700 capitalize">
-            tenant
-          </Badge>
+          <div className="flex w-full flex-col gap-3 sm:max-w-md sm:items-end">
+            <GamificationSummary
+              totalXp={0}
+              currentLevel={1}
+              streakCount={0}
+              role="tenant"
+              className="w-full"
+            />
+            <Badge className="self-start border border-violet-200 bg-violet-50 text-violet-700 capitalize sm:self-end">
+              tenant
+            </Badge>
+          </div>
         </div>
 
         <div className="space-y-6 px-6 pb-8 pt-6 lg:px-8">
@@ -209,7 +219,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
                   label="Outstanding Rent"
                   value={formatCurrency(outstandingCents)}
                   badge={`${paymentData.charges.length} open charge${paymentData.charges.length === 1 ? "" : "s"}`}
-                  gradient="linear-gradient(135deg, #6366f1, #8b5cf6)"
+                  gradient="linear-gradient(135deg, #7c3aed, #10b981)"
                   alert={outstandingCents > 0}
                 />
                 <KpiCard
@@ -242,7 +252,10 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
               </CardHeader>
               <CardContent>
                 {paymentData.charges.length === 0 ? (
-                  <EmptyState message="No charges yet. Charges appear automatically when your lease is active." />
+                  <EmptyState
+                    message="No charges yet. Charges appear automatically when your lease is active."
+                    showDom
+                  />
                 ) : (
                   <div>
                     {paymentData.charges.map((charge, i) => (

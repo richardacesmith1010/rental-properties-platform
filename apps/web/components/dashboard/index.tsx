@@ -17,6 +17,8 @@ import type { ApplicationDTO } from "@/lib/applications";
 import { formatDate } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DomMascot } from "@/components/gamification/dom-mascot";
+import { GamificationSummary } from "@/components/gamification/gamification-summary";
 import { SidebarNav, MobileTopBar, type NavItem } from "./sidebar-nav";
 import { SectionRenderer } from "./section-renderer";
 import type { DashboardProps } from "./types";
@@ -29,7 +31,7 @@ import {
   type ManagerWorkflowMode,
   type OwnerWorkflowMode
 } from "./dashboard-config";
-import { Building2, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 export function Dashboard({
   data,
   isEmpty = false,
@@ -402,8 +404,8 @@ export function Dashboard({
         />
         <main className="flex flex-1 flex-col items-center justify-center px-6 py-12 lg:ml-[260px]">
           <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50">
-              <Building2 className="h-8 w-8 text-indigo-600" />
+            <div className="mx-auto mb-4 flex w-fit items-center justify-center rounded-3xl bg-violet-50/80 px-4 py-3">
+              <DomMascot expression="thinking" size="lg" className="text-violet-600" />
             </div>
             <h2 className="text-xl font-semibold text-zinc-900">Add your first property</h2>
             <p className="mt-2 text-sm text-zinc-500">
@@ -443,9 +445,18 @@ export function Dashboard({
               {formatDate(new Date())}
             </p>
           </div>
-          <Badge className="self-start border border-indigo-200 bg-indigo-50 text-indigo-700 capitalize">
-            {data.profileRole}
-          </Badge>
+          <div className="flex w-full flex-col gap-3 sm:max-w-md sm:items-end">
+            <GamificationSummary
+              totalXp={0}
+              currentLevel={1}
+              streakCount={0}
+              role={data.profileRole}
+              className="w-full"
+            />
+            <Badge className="self-start border border-violet-200 bg-violet-50 text-violet-700 capitalize sm:self-end">
+              {data.profileRole}
+            </Badge>
+          </div>
         </div>
         <div className="space-y-6 px-6 pb-8 pt-6 lg:px-8">
           {generatedMessage && (

@@ -105,7 +105,7 @@ export function ManagerDashboard({
               label="Assigned Properties"
               value={data.kpis.assignedPropertyCount.toString()}
               badge={`${data.kpis.assignedPropertyCount} managed`}
-              gradient="linear-gradient(135deg, #6366f1, #8b5cf6)"
+              gradient="linear-gradient(135deg, #7c3aed, #10b981)"
             />
             <KpiCard
               label="Occupancy"

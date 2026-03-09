@@ -94,10 +94,10 @@ export function LandingPage() {
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-20 px-6 pb-16 pt-10 md:px-10">
       <header className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-5 py-3 backdrop-blur">
-        <div className="text-lg font-semibold tracking-tight text-indigo-100">Domus</div>
+        <div className="text-lg font-semibold tracking-tight text-violet-100">Domus</div>
         <Link
           href="/login"
-          className="inline-flex items-center gap-2 rounded-lg border border-indigo-300/30 bg-indigo-500/20 px-4 py-2 text-sm font-medium text-indigo-100 transition hover:bg-indigo-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+          className="inline-flex items-center gap-2 rounded-lg border border-violet-300/30 bg-violet-500/20 px-4 py-2 text-sm font-medium text-violet-100 transition hover:bg-violet-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
           title="Open role-based sign in."
         >
           Sign in
@@ -107,7 +107,7 @@ export function LandingPage() {
 
       <section className="grid items-center gap-10 lg:grid-cols-2">
         <div className="space-y-6">
-          <p className="inline-flex rounded-full border border-indigo-300/30 bg-indigo-400/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-indigo-200">
+          <p className="inline-flex rounded-full border border-violet-300/30 bg-violet-400/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-violet-200">
             Rental Operations SaaS
           </p>
           <h1 className="text-4xl font-semibold leading-tight tracking-tight text-white sm:text-5xl">
@@ -120,7 +120,7 @@ export function LandingPage() {
           <div className="flex flex-wrap items-center gap-3">
             <Link
               href="/login"
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+              className="inline-flex items-center gap-2 rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
               title="Open role-based sign in."
             >
               Get started
@@ -128,7 +128,7 @@ export function LandingPage() {
             </Link>
             <Link
               href="/login"
-              className="inline-flex items-center gap-2 rounded-xl border border-indigo-300/40 bg-transparent px-5 py-3 text-sm font-semibold text-indigo-100 transition hover:border-indigo-200/60 hover:bg-indigo-400/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+              className="inline-flex items-center gap-2 rounded-xl border border-violet-300/40 bg-transparent px-5 py-3 text-sm font-semibold text-violet-100 transition hover:border-violet-200/60 hover:bg-violet-400/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
               title="Start free with no credit card."
             >
               Start free — no credit card
@@ -136,7 +136,7 @@ export function LandingPage() {
           </div>
         </div>
 
-        <div className="rounded-3xl border border-indigo-300/20 bg-gradient-to-br from-indigo-500/20 via-purple-500/10 to-slate-900 p-6 shadow-2xl shadow-indigo-900/30">
+        <div className="rounded-3xl border border-violet-300/20 bg-gradient-to-br from-violet-500/20 via-purple-500/10 to-slate-900 p-6 shadow-2xl shadow-violet-900/30">
           <div className="space-y-4 rounded-2xl border border-white/10 bg-slate-950/60 p-5">
             <div className="text-sm text-slate-400">Live Operational Snapshot</div>
             <div className="grid grid-cols-2 gap-3">
@@ -174,10 +174,10 @@ export function LandingPage() {
             return (
               <article
                 key={feature.title}
-                className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition hover:border-indigo-300/30 hover:bg-indigo-400/5"
+                className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition hover:border-violet-300/30 hover:bg-violet-400/5"
               >
-                <div className="mb-3 inline-flex rounded-lg border border-indigo-300/30 bg-indigo-400/10 p-2">
-                  <Icon className="h-5 w-5 text-indigo-200" />
+                <div className="mb-3 inline-flex rounded-lg border border-violet-300/30 bg-violet-400/10 p-2">
+                  <Icon className="h-5 w-5 text-violet-200" />
                 </div>
                 <h3 className="text-lg font-semibold text-white">{feature.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-slate-300">{feature.description}</p>
@@ -198,12 +198,12 @@ export function LandingPage() {
               key={tier.name}
               className={`rounded-2xl border p-6 ${
                 tier.featured
-                  ? "border-indigo-300/40 bg-indigo-500/10"
+                  ? "border-violet-300/40 bg-violet-500/10"
                   : "border-white/10 bg-white/[0.03]"
               }`}
             >
               <h3 className="text-xl font-semibold text-white">{tier.name}</h3>
-              <p className="mt-3 text-3xl font-bold text-indigo-200">{tier.price}</p>
+              <p className="mt-3 text-3xl font-bold text-violet-200">{tier.price}</p>
               <p className="text-sm text-slate-400">{tier.detail}</p>
               <ul className="mt-5 space-y-2 text-sm text-slate-300">
                 {tier.points.map((point) => (
@@ -215,7 +215,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-indigo-300/30 bg-gradient-to-r from-indigo-500/20 via-purple-500/10 to-indigo-500/20 p-8 text-center">
+      <section className="rounded-3xl border border-violet-300/30 bg-gradient-to-r from-violet-500/20 via-purple-500/10 to-violet-500/20 p-8 text-center">
         <h2 className="text-3xl font-semibold tracking-tight text-white">Ready to run operations in Domus?</h2>
         <p className="mx-auto mt-3 max-w-2xl text-slate-300">
           Sign in with your role and start managing properties, payments, and tickets from one platform.
@@ -223,7 +223,7 @@ export function LandingPage() {
         <div className="mt-6">
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 rounded-xl bg-indigo-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+            className="inline-flex items-center gap-2 rounded-xl bg-violet-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-violet-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
             title="Open role-based sign in."
           >
             Launch Domus

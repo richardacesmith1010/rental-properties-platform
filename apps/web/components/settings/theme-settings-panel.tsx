@@ -24,7 +24,7 @@ const themeOptions: Array<{
   {
     value: "imperium-night",
     label: "Imperium Night",
-    description: "Dark bronze-red, subtle Roman futurist tone."
+    description: "Dark violet-gold, subtle Roman futurist tone."
   }
 ];
 
@@ -51,11 +51,13 @@ export function ThemeSettingsPanel() {
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         {themeOptions.map((option) => {
           const selected = option.value === theme;
-          const isLightTheme = theme === "atlas-light";
+          const isLightTheme = option.value === "atlas-light";
           const containerClass = selected
             ? isLightTheme
-              ? "border-indigo-400 bg-indigo-50 shadow-sm"
-              : "border-cyan-400 bg-slate-900/80 shadow-sm"
+              ? "border-violet-400 bg-violet-50 shadow-sm"
+              : option.value === "noctis-neon"
+                ? "border-emerald-400 bg-slate-900/80 shadow-sm"
+                : "border-amber-400 bg-slate-950/80 shadow-sm"
             : "border-zinc-200 bg-white hover:border-zinc-300";
           const headingClass = selected && !isLightTheme ? "text-white" : "text-zinc-900";
           const copyClass = selected && !isLightTheme ? "text-slate-200" : "text-zinc-600";
@@ -76,7 +78,7 @@ export function ThemeSettingsPanel() {
                   "mt-3 inline-flex rounded-md border px-3 py-1 text-[11px] font-semibold uppercase tracking-wide transition",
                   selected
                     ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                    : "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                    : "border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100"
                 ].join(" ")}
                 title={`Apply ${option.label} theme.`}
               >

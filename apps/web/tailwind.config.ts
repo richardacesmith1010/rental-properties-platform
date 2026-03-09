@@ -13,12 +13,15 @@ const config: Config = {
       },
       colors: {
         sidebar: {
-          from: "#1e1b4b",
-          to: "#312e81",
+          from: "#7c3aed",
+          to: "#064e3b",
         },
-        accent: {
-          indigo: "#6366f1",
-          violet: "#8b5cf6",
+        domus: {
+          primary: "#7C3AED",
+          "primary-light": "#A78BFA",
+          secondary: "#10B981",
+          accent: "#F59E0B",
+          danger: "#F43F5E",
         },
       },
       borderRadius: {

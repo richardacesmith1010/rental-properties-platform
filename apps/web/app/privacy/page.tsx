@@ -71,7 +71,7 @@ export default function PrivacyPage() {
             <h2 className="text-base font-semibold text-white">Contact Information</h2>
             <p>
               Questions about this policy can be sent to
-              {" "}<a className="text-indigo-200 underline-offset-4 hover:underline" href="mailto:privacy@domusbase.com">privacy@domusbase.com</a>.
+              {" "}<a className="text-violet-200 underline-offset-4 hover:underline" href="mailto:privacy@domusbase.com">privacy@domusbase.com</a>.
             </p>
           </article>
         </section>

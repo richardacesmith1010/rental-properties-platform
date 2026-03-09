@@ -30,13 +30,13 @@ export function KpiGrid({
         label="Monthly Gross Rent"
         value={formatCurrency(monthlyGrossRentCents)}
         badge={`${activeLeaseCount} active leases`}
-        gradient="linear-gradient(135deg, #6366f1, #8b5cf6)"
+        gradient="linear-gradient(135deg, #7c3aed, #10b981)"
       />
       <KpiCard
         label="Occupancy"
         value={`${occupancy}%`}
         badge={`${occupiedUnits} of ${totalUnits} units`}
-        gradient="linear-gradient(135deg, #06b6d4, #3b82f6)"
+        gradient="linear-gradient(135deg, #10b981, #34d399)"
       />
       <KpiCard
         label="Open Maintenance"

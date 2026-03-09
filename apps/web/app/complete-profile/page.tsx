@@ -10,7 +10,7 @@ export default async function CompleteProfilePage() {
     <main className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
       <div className="w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-xl font-bold text-white shadow-lg shadow-indigo-500/25">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-emerald-500 text-xl font-bold text-white shadow-lg shadow-violet-500/25">
             D
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Welcome to Domus!</h1>

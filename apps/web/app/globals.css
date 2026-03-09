@@ -4,39 +4,42 @@
 
 @layer base {
   :root {
-    --domus-body-bg: #f4f6ff;
+    --domus-primary: #7c3aed;
+    --domus-primary-light: #a78bfa;
+    --domus-secondary: #10b981;
+    --domus-accent: #f59e0b;
+    --domus-danger: #f43f5e;
+    --domus-body-bg:
+      linear-gradient(135deg, #f5f3ff 0%, #ecfdf5 50%, #f5f3ff 100%);
     --domus-body-text: #18181b;
-    --domus-surface-bg:
-      radial-gradient(circle at 12% 10%, rgba(99, 102, 241, 0.17), transparent 34%),
-      radial-gradient(circle at 88% 82%, rgba(59, 130, 246, 0.12), transparent 38%),
-      linear-gradient(180deg, #f8faff 0%, #eef2ff 62%, #f4f6ff 100%);
+    --domus-surface-bg: rgba(255, 255, 255, 0.92);
     --domus-sidebar-bg:
-      radial-gradient(circle at 15% 15%, rgba(129, 140, 248, 0.3), transparent 40%),
-      linear-gradient(180deg, #0f172a, #1e1b4b 45%, #312e81 100%);
+      radial-gradient(circle at 18% 16%, rgba(167, 139, 250, 0.3), transparent 34%),
+      linear-gradient(180deg, #7c3aed 0%, #5b21b6 40%, #064e3b 100%);
   }
 
   html[data-domus-theme="noctis-neon"] {
     --domus-body-bg: #060914;
     --domus-body-text: #e6eefc;
     --domus-surface-bg:
-      radial-gradient(circle at 14% 8%, rgba(34, 211, 238, 0.18), transparent 28%),
-      radial-gradient(circle at 82% 84%, rgba(129, 140, 248, 0.2), transparent 32%),
-      linear-gradient(180deg, #050912 0%, #0a1426 56%, #071121 100%);
+      radial-gradient(circle at 14% 8%, rgba(124, 58, 237, 0.18), transparent 28%),
+      radial-gradient(circle at 82% 84%, rgba(16, 185, 129, 0.16), transparent 32%),
+      linear-gradient(180deg, #050912 0%, #0c1020 56%, #071121 100%);
     --domus-sidebar-bg:
-      radial-gradient(circle at 18% 14%, rgba(56, 189, 248, 0.35), transparent 38%),
-      linear-gradient(180deg, #04070f, #0d1a31 46%, #11193e 100%);
+      radial-gradient(circle at 18% 14%, rgba(124, 58, 237, 0.35), transparent 38%),
+      linear-gradient(180deg, #140c28, #1d1540 46%, #063829 100%);
   }
 
   html[data-domus-theme="imperium-night"] {
-    --domus-body-bg: #0d0a0a;
-    --domus-body-text: #efe8dc;
+    --domus-body-bg: #0f0a16;
+    --domus-body-text: #f2ecff;
     --domus-surface-bg:
-      radial-gradient(circle at 18% 12%, rgba(220, 38, 38, 0.2), transparent 32%),
-      radial-gradient(circle at 86% 76%, rgba(245, 158, 11, 0.14), transparent 36%),
-      linear-gradient(180deg, #130d0d 0%, #1f1414 52%, #120d0d 100%);
+      radial-gradient(circle at 18% 12%, rgba(124, 58, 237, 0.24), transparent 32%),
+      radial-gradient(circle at 86% 76%, rgba(245, 158, 11, 0.12), transparent 36%),
+      linear-gradient(180deg, #110d1f 0%, #191329 52%, #100d1d 100%);
     --domus-sidebar-bg:
-      radial-gradient(circle at 18% 16%, rgba(239, 68, 68, 0.3), transparent 40%),
-      linear-gradient(180deg, #170f0f, #291717 46%, #3a1f17 100%);
+      radial-gradient(circle at 18% 16%, rgba(245, 158, 11, 0.2), transparent 40%),
+      linear-gradient(180deg, #251641, #1b1331 46%, #073b2b 100%);
   }
 
   * {
@@ -44,7 +47,7 @@
   }
 
   body {
-    background-color: var(--domus-body-bg);
+    background: var(--domus-body-bg);
     color: var(--domus-body-text);
     @apply antialiased;
   }
@@ -64,12 +67,12 @@
   }
 
   .gradient-btn {
-    @apply bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-semibold shadow-md;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    @apply bg-gradient-to-r from-violet-500 to-purple-600 text-white font-semibold shadow-md;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.32);
   }
 
   .gradient-btn:hover {
-    @apply from-indigo-600 to-violet-600;
+    @apply from-violet-600 to-purple-700;
   }
 }
 
@@ -94,8 +97,12 @@
     background-color: rgba(15, 23, 42, 0.55) !important;
   }
 
-  html[data-domus-theme="noctis-neon"] .bg-indigo-50,
-  html[data-domus-theme="imperium-night"] .bg-indigo-50,
+  html[data-domus-theme="noctis-neon"] .bg-violet-50,
+  html[data-domus-theme="imperium-night"] .bg-violet-50,
+  html[data-domus-theme="noctis-neon"] .bg-violet-100,
+  html[data-domus-theme="imperium-night"] .bg-violet-100,
+  html[data-domus-theme="noctis-neon"] .bg-violet-100\/80,
+  html[data-domus-theme="imperium-night"] .bg-violet-100\/80,
   html[data-domus-theme="noctis-neon"] .bg-emerald-50,
   html[data-domus-theme="imperium-night"] .bg-emerald-50,
   html[data-domus-theme="noctis-neon"] .bg-red-50,
@@ -134,16 +141,16 @@
     color: #9baacc !important;
   }
 
-  html[data-domus-theme="noctis-neon"] .text-indigo-900,
-  html[data-domus-theme="imperium-night"] .text-indigo-900,
-  html[data-domus-theme="noctis-neon"] .text-indigo-800,
-  html[data-domus-theme="imperium-night"] .text-indigo-800,
-  html[data-domus-theme="noctis-neon"] .text-indigo-700,
-  html[data-domus-theme="imperium-night"] .text-indigo-700,
-  html[data-domus-theme="noctis-neon"] .text-indigo-600,
-  html[data-domus-theme="imperium-night"] .text-indigo-600,
-  html[data-domus-theme="noctis-neon"] .text-indigo-900\/70,
-  html[data-domus-theme="imperium-night"] .text-indigo-900\/70,
+  html[data-domus-theme="noctis-neon"] .text-violet-900,
+  html[data-domus-theme="imperium-night"] .text-violet-900,
+  html[data-domus-theme="noctis-neon"] .text-violet-800,
+  html[data-domus-theme="imperium-night"] .text-violet-800,
+  html[data-domus-theme="noctis-neon"] .text-violet-700,
+  html[data-domus-theme="imperium-night"] .text-violet-700,
+  html[data-domus-theme="noctis-neon"] .text-violet-600,
+  html[data-domus-theme="imperium-night"] .text-violet-600,
+  html[data-domus-theme="noctis-neon"] .text-violet-900\/70,
+  html[data-domus-theme="imperium-night"] .text-violet-900\/70,
   html[data-domus-theme="noctis-neon"] .text-emerald-900,
   html[data-domus-theme="imperium-night"] .text-emerald-900,
   html[data-domus-theme="noctis-neon"] .text-emerald-800,
@@ -168,7 +175,7 @@
   html[data-domus-theme="imperium-night"] .text-amber-700,
   html[data-domus-theme="noctis-neon"] .text-amber-600,
   html[data-domus-theme="imperium-night"] .text-amber-600 {
-    color: #cbd5ff !important;
+    color: #ddd6fe !important;
   }
 
   html[data-domus-theme="noctis-neon"] .border-zinc-200,
@@ -181,11 +188,15 @@
     border-color: rgba(148, 163, 184, 0.44) !important;
   }
 
-  html[data-domus-theme="noctis-neon"] .border-indigo-100\/80,
-  html[data-domus-theme="imperium-night"] .border-indigo-100\/80,
-  html[data-domus-theme="noctis-neon"] .border-indigo-100\/70,
-  html[data-domus-theme="imperium-night"] .border-indigo-100\/70 {
-    border-color: rgba(129, 140, 248, 0.38) !important;
+  html[data-domus-theme="noctis-neon"] .border-violet-100\/80,
+  html[data-domus-theme="imperium-night"] .border-violet-100\/80,
+  html[data-domus-theme="noctis-neon"] .border-violet-100\/70,
+  html[data-domus-theme="imperium-night"] .border-violet-100\/70,
+  html[data-domus-theme="noctis-neon"] .border-violet-200,
+  html[data-domus-theme="imperium-night"] .border-violet-200,
+  html[data-domus-theme="noctis-neon"] .border-violet-300,
+  html[data-domus-theme="imperium-night"] .border-violet-300 {
+    border-color: rgba(167, 139, 250, 0.38) !important;
   }
 
   html[data-domus-theme="noctis-neon"] .shadow-sm,

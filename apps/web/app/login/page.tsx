@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { RoleSelector } from "@/components/auth/role-selector";
+import { DomMascot } from "@/components/gamification/dom-mascot";
 import { getCurrentUserRole, getRoleHomePath } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -30,16 +31,16 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#fafafa] px-4 py-12">
+    <div className="app-surface flex min-h-screen flex-col items-center justify-center px-4 py-12">
       <div className="mb-10 text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-xl font-bold text-white shadow-lg shadow-indigo-500/25">
-          D
+        <div className="mx-auto mb-4 flex w-fit items-center justify-center rounded-3xl bg-white/80 px-4 py-3 shadow-lg shadow-violet-500/10">
+          <DomMascot expression="happy" size="lg" className="text-violet-600" />
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
           Welcome to Domus
         </h1>
         <p className="mt-2 text-sm text-zinc-500">
-          Choose your role to sign in or create an account.
+          Sign in, level up, and keep your rental world moving.
         </p>
       </div>
 

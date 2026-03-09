@@ -52,9 +52,9 @@ function ChoiceCard({
       type="button"
       onClick={onClick}
       title={`Choose ${title}.`}
-      className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-6 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+      className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-6 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2"
     >
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50 text-violet-600">
         {icon}
       </div>
       <h2 className="text-base font-semibold text-zinc-900">{title}</h2>
@@ -144,7 +144,7 @@ export function OwnerSetupWizard({
         <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
           <form ref={individualFormRef} action={individualAction}>
             <div className="flex flex-col items-center text-center">
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-violet-50 text-violet-600">
                 <Loader2 className={`h-7 w-7 ${individualPending ? "animate-spin" : ""}`} />
               </div>
               <h2 className="text-xl font-semibold text-zinc-900">Creating your individual account</h2>

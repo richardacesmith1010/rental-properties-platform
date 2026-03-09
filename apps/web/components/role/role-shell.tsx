@@ -30,7 +30,7 @@ export function RoleShell({ title, subtitle, bullets, onSignOut }: RoleShellProp
           <div className="mt-6 space-y-3">
             {bullets.map((bullet) => (
               <div key={bullet} className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-indigo-500" />
+                <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-violet-500" />
                 <p className="text-sm text-zinc-700">{bullet}</p>
               </div>
             ))}

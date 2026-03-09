@@ -74,7 +74,7 @@ function StepPill({
   done: boolean;
 }) {
   const className = active
-    ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+    ? "border-violet-300 bg-violet-50 text-violet-700"
     : done
       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
       : "border-zinc-200 bg-zinc-50 text-zinc-500";

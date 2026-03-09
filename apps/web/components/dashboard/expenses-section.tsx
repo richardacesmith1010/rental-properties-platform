@@ -105,7 +105,7 @@ function StepPill({
   skipped: boolean;
 }) {
   const className = active
-    ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+    ? "border-violet-300 bg-violet-50 text-violet-700"
     : done
       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
       : skipped
@@ -571,7 +571,7 @@ export function ExpensesSection({
                   </div>
                   <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
                     <p className="text-[11px] uppercase tracking-wide text-zinc-500">Net Cashflow</p>
-                    <p className="text-lg font-semibold text-indigo-700">{formatCurrency(selectedSummary.netCents)}</p>
+                    <p className="text-lg font-semibold text-violet-700">{formatCurrency(selectedSummary.netCents)}</p>
                   </div>
                 </div>
 

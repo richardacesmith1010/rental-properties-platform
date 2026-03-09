@@ -1049,7 +1049,7 @@ export function OperationsSection({
                   key={label}
                   className={`rounded-md border px-2 py-2 text-xs ${
                     propertyStepIndex === index
-                      ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+                      ? "border-violet-300 bg-violet-50 text-violet-700"
                       : propertyStepComplete(index)
                         ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                         : skippedPropertySteps.includes(index)
@@ -1118,7 +1118,7 @@ export function OperationsSection({
                   key={label}
                   className={`rounded-md border px-2 py-2 text-xs ${
                     unitStepIndex === index
-                      ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+                      ? "border-violet-300 bg-violet-50 text-violet-700"
                       : unitStepComplete(index)
                         ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                         : skippedUnitSteps.includes(index)
@@ -1189,7 +1189,7 @@ export function OperationsSection({
                   key={label}
                   className={`rounded-md border px-2 py-2 text-xs ${
                     leaseStepIndex === index
-                      ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+                      ? "border-violet-300 bg-violet-50 text-violet-700"
                       : leaseStepComplete(index)
                         ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                         : skippedLeaseSteps.includes(index)

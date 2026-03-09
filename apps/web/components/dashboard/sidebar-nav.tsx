@@ -16,6 +16,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { DomMascot } from "@/components/gamification/dom-mascot";
 
 export interface NavItem {
   id: string;
@@ -198,12 +199,12 @@ export function SidebarNav({
   return (
     <aside className="gradient-sidebar hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-[260px] lg:flex-shrink-0 lg:flex-col lg:overflow-hidden">
       <div className="flex items-center gap-3 px-5 py-6">
-        <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/15 text-lg font-bold text-white shadow-lg shadow-indigo-950/25 backdrop-blur-sm">
+        <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/15 text-lg font-bold text-white shadow-lg shadow-violet-950/25 backdrop-blur-sm">
           D
         </div>
         <div>
           <div className="text-base font-bold text-white">Domus</div>
-          <div className="text-[11px] text-white/60">Property Management</div>
+          <div className="text-[11px] text-white/60">Playful rental operations</div>
         </div>
       </div>
 
@@ -304,11 +305,14 @@ export function SidebarNav({
 
       <div className="shrink-0 border-t border-white/[0.12] px-5 py-4">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-violet-400 text-xs font-semibold text-white">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-emerald-400 text-xs font-semibold text-white">
             {userEmail.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-medium text-white">{userEmail}</p>
+            <div className="flex items-center gap-1.5">
+              <DomMascot expression="happy" size="sm" className="text-violet-200" />
+              <p className="truncate text-[13px] font-medium text-white">{userEmail}</p>
+            </div>
             <p className="text-[11px] text-white/40 capitalize">{role}</p>
           </div>
         </div>

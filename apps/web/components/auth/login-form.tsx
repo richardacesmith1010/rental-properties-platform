@@ -215,7 +215,7 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
           Don&apos;t have an account?{" "}
           <button
             type="button"
-            className="font-semibold text-indigo-600 hover:text-indigo-500"
+            className="font-semibold text-violet-600 hover:text-violet-500"
             onClick={() => {
               setMode("signup");
               setError(null);
@@ -231,7 +231,7 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
           Already have an account?{" "}
           <button
             type="button"
-            className="font-semibold text-indigo-600 hover:text-indigo-500"
+            className="font-semibold text-violet-600 hover:text-violet-500"
             onClick={() => {
               setMode("signin");
               setError(null);

@@ -71,7 +71,7 @@ export default function TermsPage() {
             <h2 className="text-base font-semibold text-white">Contact Information</h2>
             <p>
               Questions about these terms can be sent to
-              {" "}<a className="text-indigo-200 underline-offset-4 hover:underline" href="mailto:support@domusbase.com">support@domusbase.com</a>.
+              {" "}<a className="text-violet-200 underline-offset-4 hover:underline" href="mailto:support@domusbase.com">support@domusbase.com</a>.
             </p>
           </article>
         </section>
