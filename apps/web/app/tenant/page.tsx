@@ -29,7 +29,9 @@ import { MaintenanceSection } from "@/components/dashboard/maintenance-section";
 import { TenantDocumentsSection } from "@/components/dashboard/tenant-documents-section";
 import { NotificationsSection } from "@/components/dashboard/notifications-section";
 import { GamificationSummary } from "@/components/gamification/gamification-summary";
+import { AchievementChecker } from "@/components/gamification/achievement-checker";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { getUserGamification } from "@/lib/gamification";
 import {
   ChevronLeft,
   ChevronRight,
@@ -101,7 +103,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
 
   const capabilities = await getFeatureCapabilities();
 
-  const [paymentData, maintenanceData, documentsData, notifications] = await Promise.all([
+  const [paymentData, maintenanceData, documentsData, notifications, gamification] = await Promise.all([
     getTenantPaymentData(user.id),
     getTenantMaintenanceData(user.id),
     capabilities.documentsEnabled
@@ -114,7 +116,8 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
         }),
     capabilities.notificationsEnabled
       ? getNotificationsForUser(user.id)
-      : Promise.resolve([])
+      : Promise.resolve([]),
+    getUserGamification(user.id)
   ]);
 
   const outstandingCents = paymentData.charges.reduce(
@@ -147,6 +150,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
       />
 
       <main className="relative flex-1 lg:ml-[260px]">
+        <AchievementChecker currentLevel={gamification.currentLevel} />
         <div className="flex flex-col gap-4 px-6 pt-6 sm:flex-row sm:items-start sm:justify-between lg:px-8 lg:pt-8">
           <div id="overview">
             <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Tenant Workspace</h1>
@@ -156,9 +160,9 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
           </div>
           <div className="flex w-full flex-col gap-3 sm:max-w-md sm:items-end">
             <GamificationSummary
-              totalXp={0}
-              currentLevel={1}
-              streakCount={0}
+              totalXp={gamification.totalXp}
+              currentLevel={gamification.currentLevel}
+              streakCount={gamification.streakCount}
               role="tenant"
               className="w-full"
             />

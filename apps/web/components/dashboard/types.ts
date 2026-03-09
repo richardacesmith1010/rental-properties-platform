@@ -12,6 +12,7 @@ import type { AutomationRuleDTO, AutomationTemplateDTO } from "@/lib/automations
 import type { InboxThreadDTO } from "@/lib/inbox";
 import type { RentalListingDTO } from "@/lib/leasing";
 import type { ApplicationDTO } from "@/lib/applications";
+import type { UserGamificationData } from "@/lib/gamification";
 import type { ActionState } from "@/app/actions";
 import type { ManagerWorkflowMode, OwnerWorkflowMode } from "./dashboard-config";
 
@@ -37,6 +38,7 @@ export interface DashboardProps {
   applications?: ApplicationDTO[];
   applicationCount?: number;
   approvedApplicationCount?: number;
+  gamification?: UserGamificationData;
   generatedMessage?: string | null;
   initialSectionId?: string | null;
   initialOwnerWorkflowMode?: OwnerWorkflowMode;

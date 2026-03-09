@@ -11,7 +11,7 @@ export function EmptyState({ message, showDom = false }: EmptyStateProps) {
     <div className="rounded-2xl border border-dashed border-violet-200 bg-violet-50/40 px-4 py-8 text-center">
       {showDom ? (
         <div className="mx-auto mb-3 flex w-fit items-center justify-center rounded-2xl bg-white/70 px-3 py-2 shadow-sm">
-          <DomMascot expression="thinking" size="md" className="text-violet-600" />
+          <DomMascot size="md" />
         </div>
       ) : (
         <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-violet-100/80">

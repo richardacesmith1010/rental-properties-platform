@@ -18,6 +18,7 @@ import { formatDate } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DomMascot } from "@/components/gamification/dom-mascot";
+import { AchievementChecker } from "@/components/gamification/achievement-checker";
 import { GamificationSummary } from "@/components/gamification/gamification-summary";
 import { SidebarNav, MobileTopBar, type NavItem } from "./sidebar-nav";
 import { SectionRenderer } from "./section-renderer";
@@ -51,6 +52,7 @@ export function Dashboard({
   applications,
   applicationCount,
   approvedApplicationCount,
+  gamification,
   generatedMessage,
   initialSectionId,
   initialOwnerWorkflowMode,
@@ -102,6 +104,12 @@ export function Dashboard({
   onCreateOwnershipAccount,
   onLinkPropertyToOwnershipAccount
 }: DashboardProps) {
+  const resolvedGamification = gamification ?? {
+    totalXp: 0,
+    currentLevel: 1,
+    streakCount: 0,
+    streakLastDate: null
+  };
   const safePortfolio: PortfolioData = portfolio ?? {
     properties: [],
     units: [],
@@ -403,9 +411,10 @@ export function Dashboard({
           onSelectItem={handleSidebarSelect}
         />
         <main className="flex flex-1 flex-col items-center justify-center px-6 py-12 lg:ml-[260px]">
+          <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
           <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
             <div className="mx-auto mb-4 flex w-fit items-center justify-center rounded-3xl bg-violet-50/80 px-4 py-3">
-              <DomMascot expression="thinking" size="lg" className="text-violet-600" />
+              <DomMascot size="lg" />
             </div>
             <h2 className="text-xl font-semibold text-zinc-900">Add your first property</h2>
             <p className="mt-2 text-sm text-zinc-500">
@@ -438,6 +447,7 @@ export function Dashboard({
         onSelectItem={handleSidebarSelect}
       />
       <main className="relative flex-1 lg:ml-[260px]">
+        <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
         <div className="flex flex-col gap-4 px-6 pt-6 sm:flex-row sm:items-start sm:justify-between lg:px-8 lg:pt-8">
           <div id="overview">
             <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Operations Dashboard</h1>
@@ -447,9 +457,9 @@ export function Dashboard({
           </div>
           <div className="flex w-full flex-col gap-3 sm:max-w-md sm:items-end">
             <GamificationSummary
-              totalXp={0}
-              currentLevel={1}
-              streakCount={0}
+              totalXp={resolvedGamification.totalXp}
+              currentLevel={resolvedGamification.currentLevel}
+              streakCount={resolvedGamification.streakCount}
               role={data.profileRole}
               className="w-full"
             />

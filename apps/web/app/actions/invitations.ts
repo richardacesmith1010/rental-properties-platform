@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { canUserAdministerOwnershipAccount } from "@/lib/ownership";
+import { awardXp, XP_VALUES } from "@/lib/gamification";
 import {
   inviteTenantSchema,
   inviteManagerSchema,
@@ -74,6 +75,14 @@ export async function inviteTenant(
           status: "accepted",
           accepted_at: new Date().toISOString()
         });
+
+        void awardXp(
+          user.id,
+          "tenant_invited",
+          XP_VALUES.tenant_invited,
+          "Tenant linked to property.",
+          { property_id: propertyId, tenant_profile_id: existingProfile.id }
+        ).catch(() => {});
       }
 
       revalidatePath("/owner");
@@ -134,6 +143,14 @@ export async function inviteTenant(
   if (insertError) {
     console.error("Failed to track invitation:", insertError);
   }
+
+  void awardXp(
+    user.id,
+    "tenant_invited",
+    XP_VALUES.tenant_invited,
+    "Tenant invitation sent.",
+    { property_id: propertyId, email: email.toLowerCase() }
+  ).catch(() => {});
 
   revalidatePath("/owner");
   revalidatePath("/manager");
@@ -430,4 +447,3 @@ export async function resendInvite(
 }
 
 /* ─── Notifications ─── */
-

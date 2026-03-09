@@ -11,6 +11,7 @@ import {
   canUserAdministerOwnershipAccount,
   getOrCreateIndividualOwnershipAccount
 } from "@/lib/ownership";
+import { awardXp, XP_VALUES } from "@/lib/gamification";
 import {
   createPropertySchema,
   updatePropertySchema,
@@ -93,6 +94,16 @@ export async function createProperty(_prev: ActionState, formData: FormData): Pr
       },
       { onConflict: "property_id,manager_profile_id" }
     );
+  }
+
+  if (property?.id) {
+    void awardXp(
+      user.id,
+      "property_added",
+      XP_VALUES.property_added,
+      "Property added to portfolio.",
+      { property_id: property.id }
+    ).catch(() => {});
   }
 
   revalidatePath("/");

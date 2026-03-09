@@ -10,6 +10,7 @@ import {
   createNotificationWithDelivery,
   notifyOwnerMembersForProperty
 } from "@/lib/notifications";
+import { awardXp, XP_VALUES } from "@/lib/gamification";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { shouldThrottleDocumentPacketSend } from "@/lib/idempotency";
 import {
@@ -535,6 +536,17 @@ export async function signDocumentPacket(
       });
     }
   }
+
+  void awardXp(
+    user.id,
+    "document_signed",
+    XP_VALUES.document_signed,
+    "Document signed successfully.",
+    {
+      packet_id: packetId,
+      signer_id: signer.id
+    }
+  ).catch(() => {});
 
   revalidatePath("/tenant");
   revalidatePath("/owner");

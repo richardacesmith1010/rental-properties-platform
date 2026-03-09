@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { updateUserStreak } from "@/lib/gamification";
 
 function getSafeNextPath(rawNext: string | null) {
   if (!rawNext || !rawNext.startsWith("/") || rawNext.startsWith("//")) {
@@ -63,6 +64,10 @@ export async function GET(request: Request) {
         data: { user }
       } = await supabase.auth.getUser();
 
+      if (user?.id) {
+        void updateUserStreak(user.id, "increment").catch(() => {});
+      }
+
       if (hasInvitedSession(type, rawNext, user)) {
         return NextResponse.redirect(`${origin}/complete-profile`);
       }
@@ -73,6 +78,14 @@ export async function GET(request: Request) {
       });
       if (error) {
         throw error;
+      }
+
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+
+      if (user?.id) {
+        void updateUserStreak(user.id, "increment").catch(() => {});
       }
 
       if (type === "invite") {

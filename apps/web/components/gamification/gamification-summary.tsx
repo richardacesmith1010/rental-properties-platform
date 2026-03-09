@@ -19,13 +19,11 @@ export function GamificationSummary({
   role,
   className
 }: GamificationSummaryProps) {
-  const expression = streakCount >= 3 ? "cool" : totalXp > 0 ? "excited" : "happy";
-
   return (
     <div className={cn("w-full rounded-2xl border border-violet-100/80 bg-white/90 px-4 py-3 shadow-sm backdrop-blur-sm", className)}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="flex items-center gap-3">
-          <DomMascot expression={expression} size="sm" className="shrink-0 text-violet-600" />
+          <DomMascot size="sm" className="shrink-0" />
           <div className="flex flex-col gap-1">
             <LevelBadge level={currentLevel} role={role} size="sm" />
             <StreakDisplay count={streakCount} />

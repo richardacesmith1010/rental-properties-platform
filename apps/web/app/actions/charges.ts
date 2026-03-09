@@ -8,6 +8,7 @@ import { createStripeCheckoutSession } from "@/lib/stripe";
 import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { createNotificationWithDelivery, notifyOwnerMembersForProperty } from "@/lib/notifications";
+import { awardXp, XP_VALUES } from "@/lib/gamification";
 import { payChargeSchema, parseFormData, recordManualPaymentSchema } from "@/lib/validations";
 import type { ActionState } from "./shared";
 
@@ -117,6 +118,7 @@ export async function recordManualPayment(
 
   const { chargeId, amountDollars, method, referenceNote } = parsed.data;
   const amountCents = Math.round(amountDollars * 100);
+  const paidAt = new Date().toISOString();
   if (amountCents <= 0) {
     return { success: false, error: "Amount must be greater than $0." };
   }
@@ -174,7 +176,7 @@ export async function recordManualPayment(
     amount_cents: amountCents,
     method,
     reference_note: referenceNote || null,
-    paid_at: new Date().toISOString()
+    paid_at: paidAt
   });
 
   if (paymentError) {
@@ -221,6 +223,19 @@ export async function recordManualPayment(
       entityType: "rent_charge",
       entityId: charge.id
     });
+
+    const isOnTime = paidAt.slice(0, 10) <= charge.due_date;
+    void awardXp(
+      tenantProfile.id,
+      isOnTime ? "rent_paid_on_time" : "rent_paid_late",
+      isOnTime ? XP_VALUES.rent_paid_on_time : XP_VALUES.rent_paid_late,
+      isOnTime ? "Rent payment recorded on time." : "Rent payment recorded after the due date.",
+      {
+        charge_id: charge.id,
+        recorded_by: user.id,
+        method
+      }
+    ).catch(() => {});
   }
 
   // 6) Revalidate

@@ -12,6 +12,7 @@ import { getApplicationsForUser, type ApplicationDTO } from "@/lib/applications"
 import { getManagerVendors } from "@/lib/vendors";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { getOwnershipAccountsForUser } from "@/lib/ownership";
+import { getUserGamification } from "@/lib/gamification";
 import {
   createCheckoutForCharge,
   recordManualPayment,
@@ -122,7 +123,8 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
     listings,
     applications,
     vendors,
-    ownershipAccounts
+    ownershipAccounts,
+    gamification
   ] =
     await Promise.all([
       getDashboardData(user.id),
@@ -161,7 +163,8 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
         : Promise.resolve([]),
       capabilities.ownershipEnabled
         ? getOwnershipAccountsForUser(user.id)
-        : Promise.resolve([])
+        : Promise.resolve([]),
+      getUserGamification(user.id)
     ]);
 
   const approvedApplicationCount = applications.filter(
@@ -183,6 +186,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       applications={applications}
       applicationCount={applications.length}
       approvedApplicationCount={approvedApplicationCount}
+      gamification={gamification}
       vendors={vendors}
       ownershipAccounts={ownershipAccounts}
       capabilities={capabilities}

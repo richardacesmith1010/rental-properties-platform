@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
+import { awardXp, XP_VALUES } from "@/lib/gamification";
 import {
   createUnitSchema,
   updateUnitSchema,
@@ -38,17 +39,27 @@ export async function createUnit(_prev: ActionState, formData: FormData): Promis
     return { success: false, error: "You do not have access to this property." };
   }
 
-  const { error } = await supabase.from("units").insert({
+  const { data: createdUnit, error } = await supabase.from("units").insert({
     property_id: propertyId,
     unit_number: unitNumber,
     bedrooms,
     bathrooms,
     monthly_rent_cents: Math.round(monthlyRentDollars * 100),
     occupied: false
-  });
+  }).select("id").single();
 
   if (error) {
     return { success: false, error: "Failed to create unit. Please try again." };
+  }
+
+  if (createdUnit?.id) {
+    void awardXp(
+      user.id,
+      "unit_added",
+      XP_VALUES.unit_added,
+      "Unit added to property.",
+      { unit_id: createdUnit.id, property_id: propertyId }
+    ).catch(() => {});
   }
 
   revalidatePath("/");

@@ -310,7 +310,7 @@ export function SidebarNav({
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <DomMascot expression="happy" size="sm" className="text-violet-200" />
+              <DomMascot size="sm" />
               <p className="truncate text-[13px] font-medium text-white">{userEmail}</p>
             </div>
             <p className="text-[11px] text-white/40 capitalize">{role}</p>

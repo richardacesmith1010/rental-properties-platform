@@ -10,6 +10,7 @@ import {
   createNotificationWithDelivery,
   notifyOwnerMembersForProperty
 } from "@/lib/notifications";
+import { awardXp, XP_VALUES } from "@/lib/gamification";
 import {
   createMaintenanceTicketSchema,
   updateTicketStatusSchema,
@@ -154,6 +155,18 @@ export async function createMaintenanceTicket(
     console.error("Failed to create new-ticket notifications:", notificationError);
   }
 
+  void awardXp(
+    user.id,
+    "ticket_submitted",
+    XP_VALUES.ticket_submitted,
+    "Maintenance ticket submitted.",
+    {
+      ticket_id: ticket.id,
+      property_id: unit.property_id,
+      unit_id: unit.id
+    }
+  ).catch(() => {});
+
   revalidatePath("/tenant");
   revalidatePath("/owner");
   revalidatePath("/manager");
@@ -187,7 +200,7 @@ export async function updateTicketStatus(
 
   const { data: ticket } = await supabase
     .from("maintenance_tickets")
-    .select("id, property_id, title")
+    .select("id, property_id, title, status")
     .eq("id", ticketId)
     .single();
 
@@ -224,6 +237,19 @@ export async function updateTicketStatus(
       entityId: ticket.id,
       actorProfileId: user.id
     });
+  }
+
+  if (status === "resolved" && ticket.status !== "resolved") {
+    void awardXp(
+      user.id,
+      "ticket_resolved",
+      XP_VALUES.ticket_resolved,
+      "Maintenance ticket resolved.",
+      {
+        ticket_id: ticket.id,
+        property_id: ticket.property_id
+      }
+    ).catch(() => {});
   }
 
   revalidatePath("/owner");
@@ -285,4 +311,3 @@ export async function updateTicketCost(
   revalidatePath("/manager");
   return { success: true };
 }
-

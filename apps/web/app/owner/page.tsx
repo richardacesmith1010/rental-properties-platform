@@ -14,6 +14,7 @@ import { getOwnerVendors } from "@/lib/vendors";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { getOwnershipAccountsForUser } from "@/lib/ownership";
 import { getOwnerExpenseData } from "@/lib/expenses";
+import { getUserGamification } from "@/lib/gamification";
 import {
   createCheckoutForCharge,
   recordManualPayment,
@@ -126,7 +127,8 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
     listings,
     applications,
     vendors,
-    expenses
+    expenses,
+    gamification
   ] = await Promise.all([
     getDashboardData(user.id),
     getPortfolioData(user.id),
@@ -162,7 +164,8 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
     capabilities.vendorWorkflowEnabled
       ? getOwnerVendors(user.id)
       : Promise.resolve([]),
-    getOwnerExpenseData(user.id)
+    getOwnerExpenseData(user.id),
+    getUserGamification(user.id)
   ]);
 
   const approvedApplicationCount = applications.filter(
@@ -186,6 +189,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       applications={applications}
       applicationCount={applications.length}
       approvedApplicationCount={approvedApplicationCount}
+      gamification={gamification}
       vendors={vendors}
       expensesData={expenses}
       ownershipAccounts={ownershipAccounts}
