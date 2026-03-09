@@ -51,7 +51,16 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </div>
       )}
 
-      {callbackError && (
+      {callbackError === "invite_expired" && (
+        <div className="mb-6 w-full max-w-sm rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <p className="font-semibold">Invitation link expired</p>
+          <p className="mt-1">
+            This invite link is no longer valid. Please ask your landlord or property manager to resend the invitation.
+          </p>
+        </div>
+      )}
+
+      {callbackError && callbackError !== "invite_expired" && (
         <div className="mb-6 w-full max-w-3xl rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           <p className="font-medium">Sign-in link failed.</p>
           <p className="mt-1">

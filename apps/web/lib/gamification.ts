@@ -65,7 +65,7 @@ interface AchievementStats {
   hasSixMonthsWithoutLateFees: boolean;
 }
 
-function normalizeRole(role: string | null | undefined): GamificationRole {
+export function normalizeRole(role: string | null | undefined): GamificationRole {
   return role === "owner" || role === "manager" || role === "tenant" ? role : "tenant";
 }
 
@@ -355,7 +355,7 @@ async function getAchievementStats(userId: string, role: GamificationRole): Prom
   };
 }
 
-function meetsAchievement(achievement: AchievementDTO, stats: AchievementStats) {
+export function meetsAchievement(achievement: AchievementDTO, stats: AchievementStats) {
   switch (achievement.slug) {
     case "first_payment":
       return stats.paymentCount >= achievement.thresholdValue;

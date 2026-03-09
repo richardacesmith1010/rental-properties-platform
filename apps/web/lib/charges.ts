@@ -549,18 +549,23 @@ export async function generateMonthlyChargesForAllOwnersWithClient(supabase: Sup
   let processedCount = 0;
 
   for (const userId of userIds) {
-    const propertyIds = await getPropertyIdsForUserWithClient(supabase, userId);
-    if (propertyIds.length === 0) {
-      continue;
-    }
+    try {
+      const propertyIds = await getPropertyIdsForUserWithClient(supabase, userId);
+      if (propertyIds.length === 0) {
+        continue;
+      }
 
-    processedCount += 1;
-    const message = await generateMonthlyChargesForPropertyIdsWithClient(supabase, propertyIds);
-    if (message.startsWith("Generated")) {
-      generatedCount += 1;
-    } else if (message.startsWith("No new charges generated")) {
-      unchangedCount += 1;
-    } else {
+      processedCount += 1;
+      const message = await generateMonthlyChargesForPropertyIdsWithClient(supabase, propertyIds);
+      if (message.startsWith("Generated")) {
+        generatedCount += 1;
+      } else if (message.startsWith("No new charges generated")) {
+        unchangedCount += 1;
+      } else {
+        skippedCount += 1;
+      }
+    } catch (error) {
+      console.error(`[charges] Charge generation failed for user ${userId}:`, error);
       skippedCount += 1;
     }
   }

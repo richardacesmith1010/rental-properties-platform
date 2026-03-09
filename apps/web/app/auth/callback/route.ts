@@ -94,10 +94,21 @@ export async function GET(request: Request) {
     }
   } catch (error) {
     const params = new URLSearchParams();
-    params.set("error", "auth_callback_failed");
-    if (error instanceof Error && error.message) {
-      params.set("error_description", error.message);
+    const message = error instanceof Error ? error.message : "";
+
+    if (message.toLowerCase().includes("expired") || message.includes("otp_expired")) {
+      params.set("error", "invite_expired");
+      params.set(
+        "error_description",
+        "This invitation link has expired. Please ask your landlord to resend the invite."
+      );
+    } else {
+      params.set("error", "auth_callback_failed");
+      if (message) {
+        params.set("error_description", message);
+      }
     }
+
     return NextResponse.redirect(`${origin}/login?${params.toString()}`);
   }
 

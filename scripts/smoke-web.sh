@@ -60,4 +60,18 @@ else
   echo "[smoke] CRON_SECRET not set; skipping authenticated cron check"
 fi
 
+echo "[smoke] Checking health endpoint"
+HEALTH_STATUS="$(curl -s -o /dev/null -w "%{http_code}" "$APP_URL/api/health")"
+if [[ "$HEALTH_STATUS" != "200" ]]; then
+  echo "[smoke] Expected 200 from /api/health, got $HEALTH_STATUS"
+  exit 1
+fi
+
+echo "[smoke] Checking gamification API auth guard"
+GAMIFICATION_STATUS="$(curl -s -o /dev/null -w "%{http_code}" -X POST "$APP_URL/api/gamification/check")"
+if [[ "$GAMIFICATION_STATUS" != "401" ]]; then
+  echo "[smoke] Expected 401 from unauthenticated /api/gamification/check, got $GAMIFICATION_STATUS"
+  exit 1
+fi
+
 echo "[smoke] Smoke checks passed"
