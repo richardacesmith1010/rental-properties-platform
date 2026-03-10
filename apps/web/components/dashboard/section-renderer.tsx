@@ -77,6 +77,7 @@ interface SectionRendererProps {
   onInviteOwner?: StatefulAction;
   onResendInvite?: StatefulAction;
   onMarkNotificationRead?: StatefulAction;
+  onMarkAllNotificationsRead?: StatefulAction;
   onCreateInboxThread?: StatefulAction;
   onSendInboxMessage?: StatefulAction;
   onEnableAutomation?: StatefulAction;
@@ -163,6 +164,7 @@ export function SectionRenderer({
   onInviteOwner,
   onResendInvite,
   onMarkNotificationRead,
+  onMarkAllNotificationsRead,
   onCreateInboxThread,
   onSendInboxMessage,
   onEnableAutomation,
@@ -349,6 +351,7 @@ export function SectionRenderer({
       <NotificationsSection
         notifications={safeNotifications}
         onMarkRead={onMarkNotificationRead!}
+        onMarkAllRead={onMarkAllNotificationsRead}
       />
     ) : (
       <FeatureWarning

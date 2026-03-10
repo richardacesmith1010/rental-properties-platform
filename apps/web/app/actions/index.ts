@@ -34,6 +34,7 @@ export { setupLlcAccount } from "./onboarding";
 export { joinLlcByCode } from "./onboarding";
 
 export { markNotificationRead } from "./notifications";
+export { markAllNotificationsRead } from "./notifications";
 
 export { enableAutomation } from "./automations";
 export { disableAutomation } from "./automations";

@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { generateMonthlyChargesForAllOwnersWithClient } from "@/lib/charges";
+import {
+  generateMonthlyChargesForAllOwnersWithClient,
+  sendRentDueReminders
+} from "@/lib/charges";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 function getBearerToken(authHeader: string | null) {
@@ -20,7 +23,16 @@ export async function GET(request: Request) {
   try {
     const adminClient = createAdminClient();
     const summary = await generateMonthlyChargesForAllOwnersWithClient(adminClient);
-    return NextResponse.json({ ok: true, summary });
+    let reminderSummary = "Reminders skipped";
+
+    try {
+      reminderSummary = await sendRentDueReminders(adminClient);
+    } catch (error) {
+      console.error("Rent due reminders failed:", error);
+      reminderSummary = "Reminders failed";
+    }
+
+    return NextResponse.json({ ok: true, summary, reminderSummary });
   } catch (error) {
     return NextResponse.json(
       {

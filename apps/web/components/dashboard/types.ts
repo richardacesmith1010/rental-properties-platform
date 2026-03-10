@@ -63,6 +63,7 @@ export interface DashboardProps {
   onInviteOwner?: StatefulAction;
   onResendInvite?: StatefulAction;
   onMarkNotificationRead?: StatefulAction;
+  onMarkAllNotificationsRead?: StatefulAction;
   onCreateInboxThread?: StatefulAction;
   onSendInboxMessage?: StatefulAction;
   onEnableAutomation?: StatefulAction;

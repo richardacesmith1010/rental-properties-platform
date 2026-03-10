@@ -36,6 +36,7 @@ interface SidebarNavProps {
   items?: NavItem[];
   activeItemId?: string;
   onSelectItem?: (id: string) => void;
+  unreadNotificationCount?: number;
 }
 
 const defaultNavItems: NavItem[] = [
@@ -147,6 +148,7 @@ export function SidebarNav({
   items,
   activeItemId,
   onSelectItem,
+  unreadNotificationCount = 0
 }: SidebarNavProps) {
   const navItems =
     items ??
@@ -195,6 +197,38 @@ export function SidebarNav({
         ]
       : defaultNavItems);
   const workspacePath = role === "owner" ? "/owner" : role === "manager" ? "/manager" : "/tenant";
+  const notificationHref = role === "tenant" ? "/tenant?section=notifications" : `${workspacePath}#notifications`;
+
+  const notificationButton = onSelectItem ? (
+    <button
+      type="button"
+      onClick={() => onSelectItem("notifications")}
+      className="relative flex items-center justify-center rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-white/85 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+      title="Open notifications."
+      aria-label="Open notifications"
+    >
+      <Bell className="h-4 w-4" />
+      {unreadNotificationCount > 0 ? (
+        <span className="absolute -right-1 -top-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white">
+          {unreadNotificationCount}
+        </span>
+      ) : null}
+    </button>
+  ) : (
+    <a
+      href={notificationHref}
+      className="relative flex items-center justify-center rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-white/85 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+      title="Open notifications."
+      aria-label="Open notifications"
+    >
+      <Bell className="h-4 w-4" />
+      {unreadNotificationCount > 0 ? (
+        <span className="absolute -right-1 -top-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white">
+          {unreadNotificationCount}
+        </span>
+      ) : null}
+    </a>
+  );
 
   return (
     <aside className="gradient-sidebar hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-[260px] lg:flex-shrink-0 lg:flex-col lg:overflow-hidden">
@@ -223,6 +257,9 @@ export function SidebarNav({
         >
           {role === "owner" ? "Owner Workspace" : role === "manager" ? "Manager Workspace" : "Tenant Workspace"}
         </a>
+        <div className="flex justify-end">
+          {notificationButton}
+        </div>
       </div>
 
       <nav className="flex-1 min-h-0 space-y-1 overflow-y-auto px-3 pb-4">
@@ -335,8 +372,14 @@ export function MobileTopBar({
   userEmail,
   role,
   onSignOut,
-}: Pick<SidebarNavProps, "userEmail" | "role" | "onSignOut">) {
+  onSelectItem,
+  unreadNotificationCount = 0
+}: Pick<
+  SidebarNavProps,
+  "userEmail" | "role" | "onSignOut" | "onSelectItem" | "unreadNotificationCount"
+>) {
   const workspacePath = role === "owner" ? "/owner" : role === "manager" ? "/manager" : "/tenant";
+  const notificationHref = role === "tenant" ? "/tenant?section=notifications" : `${workspacePath}#notifications`;
 
   return (
     <div className="gradient-sidebar px-4 py-3 shadow-lg lg:hidden">
@@ -367,6 +410,36 @@ export function MobileTopBar({
         >
           Workspace
         </a>
+        {onSelectItem ? (
+          <button
+            type="button"
+            onClick={() => onSelectItem("notifications")}
+            className="relative rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-white/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+            title="Open notifications."
+            aria-label="Open notifications"
+          >
+            <Bell className="h-3.5 w-3.5" />
+            {unreadNotificationCount > 0 ? (
+              <span className="absolute -right-1 -top-1 inline-flex min-w-[1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-semibold text-white">
+                {unreadNotificationCount}
+              </span>
+            ) : null}
+          </button>
+        ) : (
+          <a
+            href={notificationHref}
+            className="relative rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-white/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+            title="Open notifications."
+            aria-label="Open notifications"
+          >
+            <Bell className="h-3.5 w-3.5" />
+            {unreadNotificationCount > 0 ? (
+              <span className="absolute -right-1 -top-1 inline-flex min-w-[1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-semibold text-white">
+                {unreadNotificationCount}
+              </span>
+            ) : null}
+          </a>
+        )}
         <span className="max-w-[120px] truncate text-xs text-white/60">{userEmail}</span>
         <form action={onSignOut}>
           <button

@@ -34,6 +34,7 @@ import {
   inviteOwner,
   resendInvite,
   markNotificationRead,
+  markAllNotificationsRead,
   createInboxThread,
   sendInboxMessage,
   enableAutomation,
@@ -217,6 +218,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       onInviteOwner={inviteOwner}
       onResendInvite={resendInvite}
       onMarkNotificationRead={markNotificationRead}
+      onMarkAllNotificationsRead={markAllNotificationsRead}
       onCreateInboxThread={createInboxThread}
       onSendInboxMessage={sendInboxMessage}
       onEnableAutomation={enableAutomation}

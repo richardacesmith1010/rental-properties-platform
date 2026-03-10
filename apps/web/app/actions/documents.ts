@@ -320,7 +320,7 @@ export async function sendDocumentPacket(
 
   const { data: packet } = await supabase
     .from("document_packets")
-    .select("id, lease_id, property_id, status, sent_at")
+    .select("id, lease_id, property_id, status, sent_at, template_id")
     .eq("id", packetId)
     .single();
 
@@ -370,6 +370,16 @@ export async function sendDocumentPacket(
     return { success: false, error: "Tenant email is missing for this lease." };
   }
 
+  const { data: template } = packet.template_id
+    ? await admin
+        .from("document_templates")
+        .select("name")
+        .eq("id", packet.template_id)
+        .maybeSingle()
+    : { data: null };
+
+  const packetTitle = template?.name ?? "Lease document";
+
   const { error: signerError } = await admin.from("document_signers").upsert(
     {
       packet_id: packet.id,
@@ -397,24 +407,24 @@ export async function sendDocumentPacket(
     return { success: false, error: "Failed to send packet." };
   }
 
-  await createNotificationWithDelivery({
+  void createNotificationWithDelivery({
     recipientProfileId: tenantProfile.id,
     recipientEmail: tenantProfile.email,
     type: "document_sent",
-    title: "New document awaiting signature",
-    body: "A lease-related document has been sent to you for signature.",
+    title: "Document Ready for Signature",
+    body: `You have a new document "${packetTitle}" to review and sign.`,
     entityType: "document_packet",
     entityId: packet.id
-  });
-  await notifyOwnerMembersForProperty({
+  }).catch(() => {});
+  void notifyOwnerMembersForProperty({
     propertyId: packet.property_id,
     type: "document_sent",
     title: "Document packet sent",
-    body: "A document packet was sent to the tenant for signature.",
+    body: `"${packetTitle}" was sent to the tenant for signature.`,
     entityType: "document_packet",
     entityId: packet.id,
     excludeProfileId: user.id
-  });
+  }).catch(() => {});
 
   revalidatePath("/owner");
   revalidatePath("/manager");
@@ -521,19 +531,27 @@ export async function signDocumentPacket(
 
     const { data: packet } = await admin
       .from("document_packets")
-      .select("id, property_id")
+      .select("id, property_id, template_id")
       .eq("id", packetId)
       .single();
 
     if (packet?.property_id) {
-      await notifyOwnerMembersForProperty({
+      const { data: template } = packet.template_id
+        ? await admin
+            .from("document_templates")
+            .select("name")
+            .eq("id", packet.template_id)
+            .maybeSingle()
+        : { data: null };
+
+      void notifyOwnerMembersForProperty({
         propertyId: packet.property_id,
         type: "document_signed",
-        title: "Document packet signed",
-        body: "A tenant completed a required document signature.",
+        title: "Document Signed",
+        body: `"${template?.name ?? "Lease document"}" has been signed.`,
         entityType: "document_packet",
         entityId: packet.id
-      });
+      }).catch(() => {});
     }
   }
 

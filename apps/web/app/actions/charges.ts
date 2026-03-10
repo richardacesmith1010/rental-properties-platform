@@ -9,6 +9,7 @@ import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { createNotificationWithDelivery, notifyOwnerMembersForProperty } from "@/lib/notifications";
 import { awardXp, XP_VALUES } from "@/lib/gamification";
+import { formatCurrency } from "@/lib/format";
 import { payChargeSchema, parseFormData, recordManualPaymentSchema } from "@/lib/validations";
 import type { ActionState } from "./shared";
 
@@ -157,7 +158,7 @@ export async function recordManualPayment(
 
   const { data: unit } = await admin
     .from("units")
-    .select("id, property_id")
+    .select("id, property_id, unit_number")
     .eq("id", lease.unit_id)
     .maybeSingle();
 
@@ -203,26 +204,26 @@ export async function recordManualPayment(
         .maybeSingle()
     : { data: null };
 
-  await notifyOwnerMembersForProperty({
+  void notifyOwnerMembersForProperty({
     propertyId: unit.property_id,
     type: "payment_recorded",
-    title: "Rent payment recorded",
-    body: `A manual ${method.toUpperCase()} payment was recorded for charge due ${charge.due_date}.`,
+    title: "Rent Payment Received",
+    body: `A payment of ${formatCurrency(amountCents)} was recorded for Unit ${unit.unit_number}.`,
     entityType: "rent_charge",
     entityId: charge.id,
     actorProfileId: user.id
-  });
+  }).catch(() => {});
 
   if (tenantProfile?.id) {
-    await createNotificationWithDelivery({
+    void createNotificationWithDelivery({
       recipientProfileId: tenantProfile.id,
       recipientEmail: tenantProfile.email,
       type: "payment_recorded",
-      title: "Payment received",
-      body: "Your rent payment has been recorded successfully.",
+      title: "Payment Received",
+      body: `Your payment of ${formatCurrency(amountCents)} has been recorded. Thank you!`,
       entityType: "rent_charge",
       entityId: charge.id
-    });
+    }).catch(() => {});
 
     const isOnTime = paidAt.slice(0, 10) <= charge.due_date;
     void awardXp(

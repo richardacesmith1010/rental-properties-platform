@@ -8,6 +8,7 @@ import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { canUserAdministerOwnershipAccount } from "@/lib/ownership";
 import { awardXp, XP_VALUES } from "@/lib/gamification";
+import { notifyOwnerMembersOfAcceptedTenantInvite } from "@/lib/notifications";
 import {
   inviteTenantSchema,
   inviteManagerSchema,
@@ -72,10 +73,12 @@ export async function inviteTenant(
           role: "tenant",
           property_id: propertyId,
           invited_by: user.id,
+          invited_profile_id: existingProfile.id,
           status: "accepted",
           accepted_at: new Date().toISOString()
         });
 
+        void notifyOwnerMembersOfAcceptedTenantInvite(existingProfile.id).catch(() => {});
         void awardXp(
           user.id,
           "tenant_invited",

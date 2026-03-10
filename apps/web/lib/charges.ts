@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createNotificationWithDelivery, notifyOwnerMembersForProperty } from "@/lib/notifications";
 import { getAdministeredPropertyIds } from "@/lib/property-access";
+import { formatCurrency, formatDate } from "@/lib/format";
 
 type SupabaseLikeClient = Pick<ReturnType<typeof createClient>, "from">;
 
@@ -530,6 +531,90 @@ export async function generateMonthlyChargesForOwner(ownerUserId: string): Promi
 export async function generateMonthlyChargesForAllOwners(): Promise<string> {
   const supabase = createClient();
   return generateMonthlyChargesForAllOwnersWithClient(supabase);
+}
+
+export async function sendRentDueReminders(supabase: SupabaseLikeClient): Promise<string> {
+  const targetDate = new Date();
+  targetDate.setUTCDate(targetDate.getUTCDate() + 3);
+  const targetDueDateIso = targetDate.toISOString().slice(0, 10);
+
+  const { data: charges } = await supabase
+    .from("rent_charges")
+    .select("id, lease_id, due_date, amount_cents")
+    .eq("status", "pending")
+    .eq("category", "rent")
+    .eq("due_date", targetDueDateIso);
+
+  const pendingCharges = (charges ?? []) as Array<{
+    id: string;
+    lease_id: string;
+    due_date: string;
+    amount_cents: number;
+  }>;
+
+  if (pendingCharges.length === 0) {
+    return "Reminders sent: 0.";
+  }
+
+  const leaseIds = Array.from(new Set(pendingCharges.map((charge) => charge.lease_id)));
+  const { data: leases } = await supabase
+    .from("leases")
+    .select("id, tenant_profile_id")
+    .in("id", leaseIds);
+
+  const leaseById = new Map(
+    ((leases ?? []) as Array<{ id: string; tenant_profile_id: string | null }>).map((lease) => [
+      lease.id,
+      lease
+    ])
+  );
+
+  const tenantIds = Array.from(
+    new Set(
+      Array.from(leaseById.values())
+        .map((lease) => lease.tenant_profile_id)
+        .filter((id): id is string => Boolean(id))
+    )
+  );
+
+  let profileById = new Map<string, { id: string; email: string | null }>();
+  if (tenantIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, email")
+      .in("id", tenantIds);
+
+    profileById = new Map(
+      ((profiles ?? []) as Array<{ id: string; email: string | null }>).map((profile) => [
+        profile.id,
+        profile
+      ])
+    );
+  }
+
+  let reminderCount = 0;
+
+  for (const charge of pendingCharges) {
+    const lease = leaseById.get(charge.lease_id);
+    const tenantId = lease?.tenant_profile_id ?? null;
+    if (!tenantId) {
+      continue;
+    }
+
+    const profile = profileById.get(tenantId);
+    await createNotificationWithDelivery({
+      recipientProfileId: tenantId,
+      recipientEmail: profile?.email ?? null,
+      type: "rent_due_reminder",
+      title: "Rent Due Soon",
+      body: `Your rent of ${formatCurrency(charge.amount_cents)} is due on ${formatDate(charge.due_date)}. Pay now to keep your streak going!`,
+      entityType: "rent_charge",
+      entityId: charge.id
+    });
+    reminderCount += 1;
+  }
+
+  return `Reminders sent: ${reminderCount}.`;
 }
 
 export async function generateMonthlyChargesForAllOwnersWithClient(supabase: SupabaseLikeClient): Promise<string> {

@@ -46,5 +46,38 @@ export async function markNotificationRead(
   return { success: true };
 }
 
-/* ─── Phase 10: Automations + Inbox + Leasing ─── */
+export async function markAllNotificationsRead(
+  _prev: ActionState,
+  _formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
 
+  if (!user) {
+    redirect("/login");
+  }
+
+  const capabilityError = await ensureCapabilityEnabled("notificationsEnabled");
+  if (capabilityError) {
+    return capabilityError;
+  }
+
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("recipient_profile_id", user.id)
+    .is("read_at", null);
+
+  if (error) {
+    return { success: false, error: "Failed to mark notifications as read." };
+  }
+
+  revalidatePath("/owner");
+  revalidatePath("/tenant");
+  revalidatePath("/manager");
+  return { success: true, message: "All notifications marked read." };
+}
+
+/* ─── Phase 10: Automations + Inbox + Leasing ─── */

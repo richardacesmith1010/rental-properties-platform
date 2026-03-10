@@ -4,6 +4,7 @@ import {
   createMaintenanceTicket,
   signOut,
   markNotificationRead,
+  markAllNotificationsRead,
   signDocumentPacket
 } from "@/app/actions";
 import {
@@ -139,6 +140,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
         userEmail={user.email ?? "unknown"}
         role="tenant"
         onSignOut={signOut}
+        unreadNotificationCount={unreadNotificationCount}
       />
 
       <SidebarNav
@@ -147,6 +149,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
         navPreset="tenant"
         onSignOut={signOut}
         activeItemId={activeSection}
+        unreadNotificationCount={unreadNotificationCount}
       />
 
       <main className="relative flex-1 lg:ml-[260px]">
@@ -338,6 +341,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
               <NotificationsSection
                 notifications={notifications}
                 onMarkRead={markNotificationRead}
+                onMarkAllRead={markAllNotificationsRead}
               />
             ) : (
               <FeatureWarning

@@ -13,16 +13,21 @@ import { formatDateTime } from "@/lib/format";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
+const noopStatefulAction: StatefulAction = async () => null;
+
 interface NotificationsSectionProps {
   notifications: NotificationDTO[];
   onMarkRead: StatefulAction;
+  onMarkAllRead?: StatefulAction;
 }
 
 export function NotificationsSection({
   notifications,
-  onMarkRead
+  onMarkRead,
+  onMarkAllRead
 }: NotificationsSectionProps) {
   const unreadCount = notifications.filter((notification) => !notification.readAt).length;
+  const [markAllState, markAllAction] = useFormState(onMarkAllRead ?? noopStatefulAction, null);
 
   return (
     <Card id="notifications">
@@ -31,11 +36,31 @@ export function NotificationsSection({
           <Bell className="h-4 w-4" />
           Notifications
         </CardTitle>
-        <Badge variant={unreadCount > 0 ? "warning" : "outline"}>
-          {unreadCount} unread
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant={unreadCount > 0 ? "warning" : "outline"}>
+            {unreadCount} unread
+          </Badge>
+          {onMarkAllRead ? (
+            <form action={markAllAction}>
+              <SubmitButton
+                size="sm"
+                variant="outline"
+                disabled={unreadCount === 0}
+                title="Mark every unread notification as read."
+              >
+                Mark all as read
+              </SubmitButton>
+            </form>
+          ) : null}
+        </div>
       </CardHeader>
       <CardContent>
+        {markAllState && !markAllState.success && (
+          <p className="mb-3 text-sm text-red-600">{markAllState.error}</p>
+        )}
+        {markAllState && markAllState.success && markAllState.message && (
+          <p className="mb-3 text-sm text-emerald-600">{markAllState.message}</p>
+        )}
         {notifications.length === 0 ? (
           <EmptyState message="No notifications yet. Alerts for rent, maintenance, and documents will appear here." />
         ) : (

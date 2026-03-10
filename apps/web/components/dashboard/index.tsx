@@ -77,6 +77,7 @@ export function Dashboard({
   onInviteOwner,
   onResendInvite,
   onMarkNotificationRead,
+  onMarkAllNotificationsRead,
   onCreateInboxThread,
   onSendInboxMessage,
   onEnableAutomation,
@@ -386,6 +387,16 @@ export function Dashboard({
       ? `manager:${managerWorkflowMode}`
       : activeSection;
   const handleSidebarSelect = (itemId: string) => {
+    if (itemId === "notifications") {
+      if (isOwnerRole) {
+        setOwnerWorkflowMode("daily_ops");
+      }
+      if (isManagerRole) {
+        setManagerWorkflowMode("daily_ops");
+      }
+      setActiveSection("notifications");
+      return;
+    }
     if (isOwnerRole && itemId.startsWith("owner:")) {
       const mode = itemId.replace("owner:", "") as OwnerWorkflowMode;
       handleOwnerWorkflowModeChange(mode);
@@ -401,7 +412,13 @@ export function Dashboard({
   if (isEmpty && isOwnerRole) {
     return (
       <div className="app-surface flex min-h-screen flex-col lg:flex-row">
-        <MobileTopBar userEmail={userEmail} role={data.profileRole} onSignOut={onSignOut} />
+        <MobileTopBar
+          userEmail={userEmail}
+          role={data.profileRole}
+          onSignOut={onSignOut}
+          onSelectItem={handleSidebarSelect}
+          unreadNotificationCount={notificationBadgeCount}
+        />
         <SidebarNav
           userEmail={userEmail}
           role={data.profileRole}
@@ -409,6 +426,7 @@ export function Dashboard({
           items={sidebarItems}
           activeItemId={sidebarActiveItemId}
           onSelectItem={handleSidebarSelect}
+          unreadNotificationCount={notificationBadgeCount}
         />
         <main className="flex flex-1 flex-col items-center justify-center px-6 py-12 lg:ml-[260px]">
           <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
@@ -437,7 +455,13 @@ export function Dashboard({
   }
   return (
     <div className="app-surface flex min-h-screen flex-col lg:flex-row">
-      <MobileTopBar userEmail={userEmail} role={data.profileRole} onSignOut={onSignOut} />
+      <MobileTopBar
+        userEmail={userEmail}
+        role={data.profileRole}
+        onSignOut={onSignOut}
+        onSelectItem={handleSidebarSelect}
+        unreadNotificationCount={notificationBadgeCount}
+      />
       <SidebarNav
         userEmail={userEmail}
         role={data.profileRole}
@@ -445,6 +469,7 @@ export function Dashboard({
         items={sidebarItems}
         activeItemId={sidebarActiveItemId}
         onSelectItem={handleSidebarSelect}
+        unreadNotificationCount={notificationBadgeCount}
       />
       <main className="relative flex-1 lg:ml-[260px]">
         <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
@@ -551,6 +576,7 @@ export function Dashboard({
               onInviteOwner={onInviteOwner}
               onResendInvite={onResendInvite}
               onMarkNotificationRead={onMarkNotificationRead}
+              onMarkAllNotificationsRead={onMarkAllNotificationsRead}
               onCreateInboxThread={onCreateInboxThread}
               onSendInboxMessage={onSendInboxMessage}
               onEnableAutomation={onEnableAutomation}

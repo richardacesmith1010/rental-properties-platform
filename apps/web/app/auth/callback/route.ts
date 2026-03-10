@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { updateUserStreak } from "@/lib/gamification";
+import { notifyOwnerMembersOfAcceptedTenantInvite } from "@/lib/notifications";
 
 function getSafeNextPath(rawNext: string | null) {
   if (!rawNext || !rawNext.startsWith("/") || rawNext.startsWith("//")) {
@@ -66,6 +67,7 @@ export async function GET(request: Request) {
 
       if (user?.id) {
         void updateUserStreak(user.id, "increment").catch(() => {});
+        void notifyOwnerMembersOfAcceptedTenantInvite(user.id).catch(() => {});
       }
 
       if (hasInvitedSession(type, rawNext, user)) {
@@ -86,6 +88,7 @@ export async function GET(request: Request) {
 
       if (user?.id) {
         void updateUserStreak(user.id, "increment").catch(() => {});
+        void notifyOwnerMembersOfAcceptedTenantInvite(user.id).catch(() => {});
       }
 
       if (type === "invite") {

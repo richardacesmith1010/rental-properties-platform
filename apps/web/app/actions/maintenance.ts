@@ -122,7 +122,7 @@ export async function createMaintenanceTicket(
 
     const fromActor = actorProfile?.email ?? "A user";
     const propertyName = property?.name ?? "Property";
-    await notifyOwnerMembersForProperty({
+    void notifyOwnerMembersForProperty({
       propertyId: unit.property_id,
       type: "new_ticket",
       title: "New maintenance ticket",
@@ -131,7 +131,7 @@ export async function createMaintenanceTicket(
       entityId: ticket.id,
       excludeProfileId: user.id,
       actorProfileId: user.id
-    });
+    }).catch(() => {});
 
     if (recipientIds.size > 0) {
       const { data: recipients } = await admin
@@ -140,7 +140,7 @@ export async function createMaintenanceTicket(
         .in("id", Array.from(recipientIds));
 
       for (const recipient of recipients ?? []) {
-        await createNotificationWithDelivery({
+        void createNotificationWithDelivery({
           recipientProfileId: recipient.id,
           recipientEmail: recipient.email,
           type: "new_ticket",
@@ -148,7 +148,7 @@ export async function createMaintenanceTicket(
           body: `${fromActor} submitted "${title}" for ${propertyName}.`,
           entityType: "maintenance_ticket",
           entityId: ticket.id
-        });
+        }).catch(() => {});
       }
     }
   } catch (notificationError) {
@@ -200,7 +200,7 @@ export async function updateTicketStatus(
 
   const { data: ticket } = await supabase
     .from("maintenance_tickets")
-    .select("id, property_id, title, status")
+    .select("id, property_id, tenant_profile_id, title, status")
     .eq("id", ticketId)
     .single();
 
@@ -228,7 +228,7 @@ export async function updateTicketStatus(
   }
 
   if (status === "resolved" || status === "closed") {
-    await notifyOwnerMembersForProperty({
+    void notifyOwnerMembersForProperty({
       propertyId: ticket.property_id,
       type: "ticket_resolved",
       title: "Maintenance ticket resolved",
@@ -236,7 +236,28 @@ export async function updateTicketStatus(
       entityType: "maintenance_ticket",
       entityId: ticket.id,
       actorProfileId: user.id
-    });
+    }).catch(() => {});
+  }
+
+  if (status === "resolved" && ticket.tenant_profile_id) {
+    const admin = createAdminClient();
+    const { data: tenantProfile } = await admin
+      .from("profiles")
+      .select("id, email")
+      .eq("id", ticket.tenant_profile_id)
+      .maybeSingle();
+
+    if (tenantProfile?.id) {
+      void createNotificationWithDelivery({
+        recipientProfileId: tenantProfile.id,
+        recipientEmail: tenantProfile.email,
+        type: "ticket_resolved",
+        title: "Maintenance Request Resolved",
+        body: `Your maintenance request "${ticket.title}" has been resolved.`,
+        entityType: "maintenance_ticket",
+        entityId: ticket.id
+      }).catch(() => {});
+    }
   }
 
   if (status === "resolved" && ticket.status !== "resolved") {

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { buildNotificationEmail } from "@/lib/email-templates";
 import { shouldRecordSuccessfulDelivery } from "@/lib/idempotency";
 import { ensureInboxThreadForEvent } from "@/lib/inbox";
 
@@ -11,7 +12,10 @@ export type NotificationType =
   | "lease_updated"
   | "document_sent"
   | "document_signed"
-  | "application_reviewed";
+  | "application_reviewed"
+  | "rent_due_reminder"
+  | "invite_accepted"
+  | "achievement_unlocked";
 
 export interface NotificationDTO {
   id: string;
@@ -56,6 +60,28 @@ interface CreateNotificationParams {
   entityId?: string | null;
   propertyId?: string | null;
   actorProfileId?: string | null;
+}
+
+function getNotificationCta(type: NotificationType) {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com";
+
+  switch (type) {
+    case "rent_due_reminder":
+    case "late_rent":
+      return { text: "Pay Now", url: `${baseUrl}/tenant` };
+    case "payment_recorded":
+      return { text: "View Dashboard", url: `${baseUrl}/tenant` };
+    case "new_ticket":
+    case "document_signed":
+    case "invite_accepted":
+      return { text: "View Dashboard", url: `${baseUrl}/owner` };
+    case "ticket_resolved":
+      return { text: "View Details", url: `${baseUrl}/tenant` };
+    case "document_sent":
+      return { text: "Review Document", url: `${baseUrl}/tenant` };
+    default:
+      return { text: "Open Domus", url: baseUrl };
+  }
 }
 
 export async function createNotificationWithDelivery(params: CreateNotificationParams) {
@@ -107,10 +133,17 @@ export async function createNotificationWithDelivery(params: CreateNotificationP
     } | null = null;
 
     if (shouldRecordSuccessfulDelivery(deliveryRows, "email")) {
+      const cta = getNotificationCta(params.type);
       emailResult = await sendNotificationEmail({
         to: params.recipientEmail,
         subject: params.title,
-        text: params.body
+        text: params.body,
+        html: buildNotificationEmail({
+          title: params.title,
+          body: params.body,
+          ctaText: cta.text,
+          ctaUrl: cta.url
+        })
       });
     }
 
@@ -205,13 +238,50 @@ export async function notifyOwnerMembersForProperty(params: NotifyOwnerMembersPa
   }
 }
 
+export async function notifyOwnerMembersOfAcceptedTenantInvite(profileId: string) {
+  try {
+    const admin = createAdminClient();
+    const { data: invitations } = await admin
+      .from("invitations")
+      .select("id, property_id, email, full_name")
+      .eq("role", "tenant")
+      .eq("status", "accepted")
+      .eq("invited_profile_id", profileId)
+      .not("property_id", "is", null);
+
+    for (const invitation of invitations ?? []) {
+      if (!invitation.property_id) {
+        continue;
+      }
+
+      await notifyOwnerMembersForProperty({
+        propertyId: invitation.property_id,
+        type: "invite_accepted",
+        title: "Tenant invite accepted",
+        body: `${invitation.full_name || invitation.email} accepted the invitation and can now access Domus.`,
+        entityType: "invitation",
+        entityId: invitation.id,
+        actorProfileId: profileId
+      });
+    }
+  } catch (error) {
+    console.error("Failed to notify owner members of accepted tenant invite:", error);
+  }
+}
+
 interface SendNotificationEmailParams {
   to?: string | null;
   subject: string;
   text: string;
+  html?: string;
 }
 
-async function sendNotificationEmail({ to, subject, text }: SendNotificationEmailParams): Promise<{
+async function sendNotificationEmail({
+  to,
+  subject,
+  text,
+  html
+}: SendNotificationEmailParams): Promise<{
   status: "sent" | "failed";
   providerRef: string | null;
   errorMessage: string | null;
@@ -242,7 +312,8 @@ async function sendNotificationEmail({ to, subject, text }: SendNotificationEmai
         from,
         to: [to],
         subject,
-        text
+        text,
+        html
       }),
       cache: "no-store"
     });
