@@ -58,6 +58,9 @@ export function Dashboard({
   initialOwnerWorkflowMode,
   initialManagerWorkflowMode,
   userEmail,
+  fullName,
+  nickname,
+  avatarUrl,
   onGenerateChargesHref,
   onSignOut,
   onCreateProperty,
@@ -415,6 +418,9 @@ export function Dashboard({
         <MobileTopBar
           userEmail={userEmail}
           role={data.profileRole}
+          fullName={fullName}
+          nickname={nickname}
+          avatarUrl={avatarUrl}
           onSignOut={onSignOut}
           onSelectItem={handleSidebarSelect}
           unreadNotificationCount={notificationBadgeCount}
@@ -422,6 +428,9 @@ export function Dashboard({
         <SidebarNav
           userEmail={userEmail}
           role={data.profileRole}
+          fullName={fullName}
+          nickname={nickname}
+          avatarUrl={avatarUrl}
           onSignOut={onSignOut}
           items={sidebarItems}
           activeItemId={sidebarActiveItemId}
@@ -458,6 +467,9 @@ export function Dashboard({
       <MobileTopBar
         userEmail={userEmail}
         role={data.profileRole}
+        fullName={fullName}
+        nickname={nickname}
+        avatarUrl={avatarUrl}
         onSignOut={onSignOut}
         onSelectItem={handleSidebarSelect}
         unreadNotificationCount={notificationBadgeCount}
@@ -465,6 +477,9 @@ export function Dashboard({
       <SidebarNav
         userEmail={userEmail}
         role={data.profileRole}
+        fullName={fullName}
+        nickname={nickname}
+        avatarUrl={avatarUrl}
         onSignOut={onSignOut}
         items={sidebarItems}
         activeItemId={sidebarActiveItemId}

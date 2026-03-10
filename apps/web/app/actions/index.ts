@@ -1,6 +1,9 @@
 export type { ActionState } from "./shared";
 
 export { signOut } from "./auth";
+export { completeOnboarding } from "./profile";
+export { updateProfile } from "./profile";
+export { uploadAvatar } from "./profile";
 
 export { createProperty } from "./properties";
 export { updateProperty } from "./properties";

@@ -3,6 +3,14 @@ import { createClient } from "@/lib/supabase/server";
 
 export type AppRole = "owner" | "manager" | "tenant";
 
+export interface UserProfileSummary {
+  fullName: string | null;
+  nickname: string | null;
+  avatarPath: string | null;
+  avatarUrl: string | null;
+  onboardingCompletedAt: string | null;
+}
+
 export async function getAuthenticatedUser() {
   const supabase = createClient();
   const {
@@ -51,4 +59,36 @@ export async function requireRole(allowed: AppRole[]) {
   }
 
   return { user, role };
+}
+
+export async function getUserProfileSummary(userId: string): Promise<UserProfileSummary> {
+  const supabase = createClient();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, nickname, avatar_url, onboarding_completed_at")
+    .eq("id", userId)
+    .maybeSingle();
+
+  const avatarPath =
+    typeof profile?.avatar_url === "string" && profile.avatar_url.length > 0
+      ? profile.avatar_url
+      : null;
+  const avatarStoragePath = avatarPath
+    ? avatarPath.startsWith("profile-avatars/")
+      ? avatarPath.replace(/^profile-avatars\//, "")
+      : avatarPath
+    : null;
+  const avatarUrl = avatarPath
+    ? avatarPath.startsWith("http")
+      ? avatarPath
+      : supabase.storage.from("profile-avatars").getPublicUrl(avatarStoragePath ?? avatarPath).data.publicUrl
+    : null;
+
+  return {
+    fullName: profile?.full_name ?? null,
+    nickname: profile?.nickname ?? null,
+    avatarPath,
+    avatarUrl,
+    onboardingCompletedAt: profile?.onboarding_completed_at ?? null
+  };
 }

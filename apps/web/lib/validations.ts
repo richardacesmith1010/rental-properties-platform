@@ -5,15 +5,35 @@ const optionalOwnershipAccountIdSchema = z.preprocess(
   z.string().uuid("Invalid ownership account.").optional()
 );
 
+const avatarFileSchema = z.preprocess(
+  (value) => {
+    if (!(value instanceof File) || value.size === 0) {
+      return undefined;
+    }
+
+    return value;
+  },
+  z
+    .custom<File>((value) => value instanceof File, {
+      message: "Select a valid image file."
+    })
+    .refine((file) => file.size <= 5 * 1024 * 1024, "Profile photo must be 5MB or smaller.")
+    .refine(
+      (file) => ["image/jpeg", "image/png", "image/webp"].includes(file.type),
+      "Profile photo must be a JPG, PNG, or WebP image."
+    )
+    .optional()
+);
+
 export const createPropertySchema = z.object({
   name: z.string().min(1, "Property name is required."),
-  addressLine1: z.string().min(1, "Street address is required."),
-  city: z.string().min(1, "City is required."),
-  state: z.string().min(1, "State is required."),
-  postalCode: z
-    .string()
-    .min(1, "ZIP code is required.")
-    .regex(/^\d{5}(-\d{4})?$/, "Enter a valid 5-digit ZIP code."),
+  addressLine1: z.string().optional().default(""),
+  city: z.string().optional().default(""),
+  state: z.string().optional().default(""),
+  postalCode: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().regex(/^\d{5}(-\d{4})?$/, "Enter a valid 5-digit ZIP code.").optional()
+  ),
   ownerAccountId: optionalOwnershipAccountIdSchema
 });
 
@@ -234,6 +254,29 @@ export const signDocumentPacketSchema = z.object({
 export const markNotificationReadSchema = z.object({
   notificationId: z.string().uuid("Invalid notification ID.")
 });
+
+export const completeOnboardingSchema = z.object({
+  firstName: z.string().min(1, "First name is required.").max(80, "First name is too long."),
+  lastName: z.string().min(1, "Last name is required.").max(80, "Last name is too long."),
+  nickname: z.string().max(80, "Nickname must be 80 characters or fewer.").optional(),
+  avatarFile: avatarFileSchema
+});
+
+export const updateProfileSchema = z.object({
+  firstName: z.string().min(1, "First name is required.").max(80, "First name is too long."),
+  lastName: z.string().min(1, "Last name is required.").max(80, "Last name is too long."),
+  nickname: z.string().max(80, "Nickname must be 80 characters or fewer.").optional(),
+  avatarFile: avatarFileSchema
+});
+
+export const uploadAvatarSchema = z
+  .object({
+    avatarFile: avatarFileSchema
+  })
+  .refine((data) => Boolean(data.avatarFile), {
+    path: ["avatarFile"],
+    message: "Profile photo is required."
+  });
 
 /* ─── Phase 10: Automations + Inbox + Leasing ─── */
 

@@ -68,10 +68,10 @@ const LEASE_STEP_LABELS = [
 
 const PROPERTY_STEP_LABELS = [
   "Property Name",
-  "Street Address",
-  "City",
-  "State",
-  "ZIP Code",
+  "Street Address (optional)",
+  "City (optional)",
+  "State (optional)",
+  "ZIP Code (optional)",
   "Ownership Account",
   "Review & Save"
 ] as const;
@@ -170,21 +170,12 @@ export function OperationsSection({
   });
 
   const propertyRequiredComplete = useMemo(() => {
-    return Boolean(
-      propertyDraft.name &&
-        propertyDraft.addressLine1 &&
-        propertyDraft.city &&
-        propertyDraft.state &&
-        propertyDraft.postalCode
-    );
+    return Boolean(propertyDraft.name);
   }, [propertyDraft]);
 
   const propertyStepComplete = (step: number) => {
     if (step === 0) return Boolean(propertyDraft.name);
-    if (step === 1) return Boolean(propertyDraft.addressLine1);
-    if (step === 2) return Boolean(propertyDraft.city);
-    if (step === 3) return Boolean(propertyDraft.state);
-    if (step === 4) return Boolean(propertyDraft.postalCode);
+    if (step >= 1 && step <= 5) return true;
     if (step === 5) return true;
     return propertyRequiredComplete;
   };
@@ -387,9 +378,9 @@ export function OperationsSection({
       return (
         <div className="space-y-3">
           <p className="text-sm text-zinc-600">
-            Step 2: Street address. This is the full street line for the property.
+            Step 2: Street address (optional). Add it now if you have it, or come back later.
           </p>
-          <FieldLabel htmlFor="property-address" required>
+          <FieldLabel htmlFor="property-address">
             Street Address
           </FieldLabel>
           <Input
@@ -405,7 +396,6 @@ export function OperationsSection({
               handleEnterAdvance(event, propertyStepComplete(propertyStepIndex), moveToNextPropertyStep)
             }
             placeholder="123 Main St"
-            required
           />
         </div>
       );
@@ -415,9 +405,9 @@ export function OperationsSection({
       return (
         <div className="space-y-3">
           <p className="text-sm text-zinc-600">
-            Step 3: City. This drives mailing, filtering, and local reporting.
+            Step 3: City (optional). This helps with mailing, filtering, and local reporting.
           </p>
-          <FieldLabel htmlFor="property-city" required>
+          <FieldLabel htmlFor="property-city">
             City
           </FieldLabel>
           <Input
@@ -433,7 +423,6 @@ export function OperationsSection({
               handleEnterAdvance(event, propertyStepComplete(propertyStepIndex), moveToNextPropertyStep)
             }
             placeholder="City"
-            required
           />
         </div>
       );
@@ -443,9 +432,9 @@ export function OperationsSection({
       return (
         <div className="space-y-3">
           <p className="text-sm text-zinc-600">
-            Step 4: State abbreviation (for example, CO).
+            Step 4: State abbreviation (optional), for example CO.
           </p>
-          <FieldLabel htmlFor="property-state" required>
+          <FieldLabel htmlFor="property-state">
             State
           </FieldLabel>
           <Input
@@ -462,7 +451,6 @@ export function OperationsSection({
             }
             placeholder="State"
             maxLength={2}
-            required
           />
         </div>
       );
@@ -472,9 +460,9 @@ export function OperationsSection({
       return (
         <div className="space-y-3">
           <p className="text-sm text-zinc-600">
-            Step 5: ZIP code. This is required for property records.
+            Step 5: ZIP code (optional). Add it now if you want mailing details on the property.
           </p>
-          <FieldLabel htmlFor="property-zip" required>
+          <FieldLabel htmlFor="property-zip">
             ZIP Code
           </FieldLabel>
           <Input
@@ -490,7 +478,6 @@ export function OperationsSection({
               handleEnterAdvance(event, propertyStepComplete(propertyStepIndex), moveToNextPropertyStep)
             }
             placeholder="ZIP code"
-            required
           />
         </div>
       );
@@ -540,9 +527,61 @@ export function OperationsSection({
           <p><span className="font-semibold">ZIP:</span> {propertyDraft.postalCode || "Not set"}</p>
           <p><span className="font-semibold">Ownership:</span> {ownershipAccounts.find((account) => account.id === propertyDraft.ownerAccountId)?.displayName ?? "Default ownership account"}</p>
         </div>
+        {!propertyDraft.addressLine1 && (
+          <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+            <span>Street address not set</span>
+            <button
+              type="button"
+              onClick={() => setPropertyStepIndex(1)}
+              className="font-medium text-amber-800 underline"
+              title="Jump back to add the street address."
+            >
+              Add now
+            </button>
+          </div>
+        )}
+        {!propertyDraft.city && (
+          <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+            <span>City not set</span>
+            <button
+              type="button"
+              onClick={() => setPropertyStepIndex(2)}
+              className="font-medium text-amber-800 underline"
+              title="Jump back to add the city."
+            >
+              Add now
+            </button>
+          </div>
+        )}
+        {!propertyDraft.state && (
+          <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+            <span>State not set</span>
+            <button
+              type="button"
+              onClick={() => setPropertyStepIndex(3)}
+              className="font-medium text-amber-800 underline"
+              title="Jump back to add the state."
+            >
+              Add now
+            </button>
+          </div>
+        )}
+        {!propertyDraft.postalCode && (
+          <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+            <span>ZIP code not set</span>
+            <button
+              type="button"
+              onClick={() => setPropertyStepIndex(4)}
+              className="font-medium text-amber-800 underline"
+              title="Jump back to add the ZIP code."
+            >
+              Add now
+            </button>
+          </div>
+        )}
         {!propertyRequiredComplete && (
           <p className="text-xs text-amber-700">
-            Required details are still missing. Complete all required steps before save.
+            Property name is still required before save.
           </p>
         )}
         <form className="space-y-2" action={propertyAction}>

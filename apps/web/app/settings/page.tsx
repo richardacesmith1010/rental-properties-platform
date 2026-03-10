@@ -1,7 +1,15 @@
 import Link from "next/link";
-import { getAuthenticatedUser, getCurrentUserRole, getRoleHomePath } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import {
+  getAuthenticatedUser,
+  getCurrentUserRole,
+  getRoleHomePath,
+  getUserProfileSummary
+} from "@/lib/auth";
+import { updateProfile } from "@/app/actions";
 import { ThemeSettingsPanel } from "@/components/settings/theme-settings-panel";
 import { PasswordSettings } from "@/components/settings/password-settings";
+import { ProfileSettings } from "@/components/settings/profile-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +17,11 @@ export default async function SettingsPage() {
   const user = await getAuthenticatedUser();
   const role = await getCurrentUserRole(user.id);
   const workspacePath = getRoleHomePath(role);
+  const profile = await getUserProfileSummary(user.id);
+
+  if (!profile.onboardingCompletedAt) {
+    redirect("/onboarding");
+  }
 
   return (
     <main className="app-surface min-h-screen px-6 py-6 lg:px-8">
@@ -28,6 +41,21 @@ export default async function SettingsPage() {
             </Link>
           </div>
         </header>
+
+        <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            Profile
+          </h2>
+          <div className="mt-3">
+            <ProfileSettings
+              email={user.email ?? "unknown"}
+              fullName={profile.fullName}
+              nickname={profile.nickname}
+              avatarUrl={profile.avatarUrl}
+              onUpdateProfile={updateProfile}
+            />
+          </div>
+        </section>
 
         <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">

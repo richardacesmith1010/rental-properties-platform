@@ -60,7 +60,8 @@ import {
 import {
   getAuthenticatedUser,
   getCurrentUserRole,
-  getRoleHomePath
+  getRoleHomePath,
+  getUserProfileSummary
 } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
@@ -87,6 +88,11 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
 
   if (role !== "manager") {
     redirect(getRoleHomePath(role));
+  }
+
+  const profile = await getUserProfileSummary(user.id);
+  if (!profile.onboardingCompletedAt) {
+    redirect("/onboarding");
   }
 
   const capabilities = await getFeatureCapabilities();
@@ -194,6 +200,9 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       initialManagerWorkflowMode={initialManagerWorkflowMode}
       initialSectionId={initialSectionId}
       userEmail={user.email ?? "unknown"}
+      fullName={profile.fullName}
+      nickname={profile.nickname}
+      avatarUrl={profile.avatarUrl}
       onSignOut={signOut}
       onCreateProperty={createProperty}
       onCreateUnit={createUnit}

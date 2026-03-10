@@ -65,7 +65,8 @@ import {
 import {
   getAuthenticatedUser,
   getCurrentUserRole,
-  getRoleHomePath
+  getRoleHomePath,
+  getUserProfileSummary
 } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
@@ -85,6 +86,11 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
 
   if (role !== "owner") {
     redirect(getRoleHomePath(role));
+  }
+
+  const profile = await getUserProfileSummary(user.id);
+  if (!profile.onboardingCompletedAt) {
+    redirect("/onboarding");
   }
 
   const ownershipAccounts = await getOwnershipAccountsForUser(user.id);
@@ -198,6 +204,9 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       initialOwnerWorkflowMode={initialOwnerWorkflowMode}
       initialSectionId={initialSectionId}
       userEmail={user.email ?? "unknown"}
+      fullName={profile.fullName}
+      nickname={profile.nickname}
+      avatarUrl={profile.avatarUrl}
       onSignOut={signOut}
       onCreateProperty={createProperty}
       onCreateUnit={createUnit}

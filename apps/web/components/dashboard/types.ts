@@ -44,6 +44,9 @@ export interface DashboardProps {
   initialOwnerWorkflowMode?: OwnerWorkflowMode;
   initialManagerWorkflowMode?: ManagerWorkflowMode;
   userEmail: string;
+  fullName?: string | null;
+  nickname?: string | null;
+  avatarUrl?: string | null;
   onGenerateChargesHref?: string;
   onSignOut: FormAction;
   onCreateProperty: StatefulAction;

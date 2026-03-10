@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Receipt,
@@ -12,11 +14,10 @@ import {
   FileText,
   FileSignature,
   BriefcaseBusiness,
-  LogOut,
   type LucideIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { DomMascot } from "@/components/gamification/dom-mascot";
+import { UserMenuPopover } from "@/components/dashboard/user-menu-popover";
 
 export interface NavItem {
   id: string;
@@ -31,6 +32,9 @@ export interface NavItem {
 interface SidebarNavProps {
   userEmail: string;
   role: string;
+  fullName?: string | null;
+  nickname?: string | null;
+  avatarUrl?: string | null;
   navPreset?: "default" | "tenant";
   onSignOut: (formData: FormData) => Promise<void>;
   items?: NavItem[];
@@ -140,16 +144,41 @@ function getNavTitle(item: NavItem) {
   return `${description} Click to ${clickHint}`;
 }
 
+function getDisplayName({
+  nickname,
+  fullName,
+  userEmail
+}: {
+  nickname?: string | null;
+  fullName?: string | null;
+  userEmail: string;
+}) {
+  const trimmedNickname = nickname?.trim();
+  if (trimmedNickname) {
+    return trimmedNickname;
+  }
+
+  const firstName = fullName?.trim().split(/\s+/)[0];
+  if (firstName) {
+    return firstName;
+  }
+
+  return userEmail;
+}
+
 export function SidebarNav({
   userEmail,
   role,
+  fullName,
+  nickname,
+  avatarUrl,
   navPreset = "default",
-  onSignOut,
   items,
   activeItemId,
   onSelectItem,
   unreadNotificationCount = 0
 }: SidebarNavProps) {
+  const pathname = usePathname();
   const navItems =
     items ??
     (navPreset === "tenant"
@@ -197,6 +226,8 @@ export function SidebarNav({
         ]
       : defaultNavItems);
   const workspacePath = role === "owner" ? "/owner" : role === "manager" ? "/manager" : "/tenant";
+  const displayName = getDisplayName({ nickname, fullName, userEmail });
+  const showWorkspaceButton = pathname !== workspacePath;
   const notificationHref = role === "tenant" ? "/tenant?section=notifications" : `${workspacePath}#notifications`;
 
   const notificationButton = onSelectItem ? (
@@ -238,25 +269,26 @@ export function SidebarNav({
         </div>
         <div>
           <div className="text-base font-bold text-white">Domus</div>
-          <div className="text-[11px] text-white/60">Playful rental operations</div>
         </div>
       </div>
 
       <div className="space-y-2 px-3 pb-3">
-        <a
+        <Link
           href="/settings"
           className="block rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
           title="Open full settings page."
         >
           Settings
-        </a>
-        <a
-          href={workspacePath}
-          className="block rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-          title="Return to your main workspace for this role."
-        >
-          {role === "owner" ? "Owner Workspace" : role === "manager" ? "Manager Workspace" : "Tenant Workspace"}
-        </a>
+        </Link>
+        {showWorkspaceButton ? (
+          <Link
+            href={workspacePath}
+            className="block rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+            title="Return to your main workspace for this role."
+          >
+            {role === "owner" ? "Owner Workspace" : role === "manager" ? "Manager Workspace" : "Tenant Workspace"}
+          </Link>
+        ) : null}
         <div className="flex justify-end">
           {notificationButton}
         </div>
@@ -341,28 +373,13 @@ export function SidebarNav({
       </nav>
 
       <div className="shrink-0 border-t border-white/[0.12] px-5 py-4">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-emerald-400 text-xs font-semibold text-white">
-            {userEmail.charAt(0).toUpperCase()}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <DomMascot size="sm" />
-              <p className="truncate text-[13px] font-medium text-white">{userEmail}</p>
-            </div>
-            <p className="text-[11px] text-white/40 capitalize">{role}</p>
-          </div>
-        </div>
-        <form action={onSignOut} className="mt-3">
-          <button
-            type="submit"
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs font-medium text-white/70 transition-colors hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-            title="Sign out and return to home."
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            Sign out
-          </button>
-        </form>
+        <UserMenuPopover
+          displayName={displayName}
+          role={role}
+          userEmail={userEmail}
+          avatarUrl={avatarUrl}
+          placement="top"
+        />
       </div>
     </aside>
   );
@@ -371,14 +388,26 @@ export function SidebarNav({
 export function MobileTopBar({
   userEmail,
   role,
-  onSignOut,
+  fullName,
+  nickname,
+  avatarUrl,
   onSelectItem,
   unreadNotificationCount = 0
 }: Pick<
   SidebarNavProps,
-  "userEmail" | "role" | "onSignOut" | "onSelectItem" | "unreadNotificationCount"
+  | "userEmail"
+  | "role"
+  | "fullName"
+  | "nickname"
+  | "avatarUrl"
+  | "onSignOut"
+  | "onSelectItem"
+  | "unreadNotificationCount"
 >) {
+  const pathname = usePathname();
   const workspacePath = role === "owner" ? "/owner" : role === "manager" ? "/manager" : "/tenant";
+  const displayName = getDisplayName({ nickname, fullName, userEmail });
+  const showWorkspaceButton = pathname !== workspacePath;
   const notificationHref = role === "tenant" ? "/tenant?section=notifications" : `${workspacePath}#notifications`;
 
   return (
@@ -396,20 +425,22 @@ export function MobileTopBar({
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <a
+        <Link
           href="/settings"
           className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
           title="Open full settings page."
         >
           Settings
-        </a>
-        <a
-          href={workspacePath}
-          className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-          title="Open your role workspace."
-        >
-          Workspace
-        </a>
+        </Link>
+        {showWorkspaceButton ? (
+          <Link
+            href={workspacePath}
+            className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+            title="Open your role workspace."
+          >
+            Workspace
+          </Link>
+        ) : null}
         {onSelectItem ? (
           <button
             type="button"
@@ -440,17 +471,14 @@ export function MobileTopBar({
             ) : null}
           </a>
         )}
-        <span className="max-w-[120px] truncate text-xs text-white/60">{userEmail}</span>
-        <form action={onSignOut}>
-          <button
-            type="submit"
-            className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/70 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-            title="Sign out and return to home."
-            aria-label="Sign out"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-          </button>
-        </form>
+        <UserMenuPopover
+          displayName={displayName}
+          role={role}
+          userEmail={userEmail}
+          avatarUrl={avatarUrl}
+          placement="bottom"
+          compact
+        />
       </div>
       </div>
     </div>

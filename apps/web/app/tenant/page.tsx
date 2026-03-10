@@ -10,7 +10,8 @@ import {
 import {
   getAuthenticatedUser,
   getCurrentUserRole,
-  getRoleHomePath
+  getRoleHomePath,
+  getUserProfileSummary
 } from "@/lib/auth";
 import { getTenantPaymentData } from "@/lib/tenant-payments";
 import { getTenantMaintenanceData } from "@/lib/maintenance";
@@ -94,6 +95,11 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
     redirect(getRoleHomePath(role));
   }
 
+  const profile = await getUserProfileSummary(user.id);
+  if (!profile.onboardingCompletedAt) {
+    redirect("/onboarding");
+  }
+
   const sectionValue = parseSearchParam(searchParams?.section);
   const activeSection: TenantSection = isTenantSection(sectionValue) ? sectionValue : "overview";
   const activeSectionIndex = tenantSectionOrder.indexOf(activeSection);
@@ -139,6 +145,9 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
       <MobileTopBar
         userEmail={user.email ?? "unknown"}
         role="tenant"
+        fullName={profile.fullName}
+        nickname={profile.nickname}
+        avatarUrl={profile.avatarUrl}
         onSignOut={signOut}
         unreadNotificationCount={unreadNotificationCount}
       />
@@ -146,6 +155,9 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
       <SidebarNav
         userEmail={user.email ?? "unknown"}
         role="tenant"
+        fullName={profile.fullName}
+        nickname={profile.nickname}
+        avatarUrl={profile.avatarUrl}
         navPreset="tenant"
         onSignOut={signOut}
         activeItemId={activeSection}

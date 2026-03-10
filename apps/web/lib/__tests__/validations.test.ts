@@ -17,6 +17,9 @@ import {
   sendDocumentPacketSchema,
   signDocumentPacketSchema,
   markNotificationReadSchema,
+  completeOnboardingSchema,
+  updateProfileSchema,
+  uploadAvatarSchema,
   enableAutomationSchema,
   disableAutomationSchema,
   createInboxThreadSchema,
@@ -92,7 +95,18 @@ describe("createPropertySchema", () => {
     const result = createPropertySchema.safeParse({
       name: "Sunset Apartments",
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts blank optional address fields", () => {
+    const result = createPropertySchema.safeParse({
+      name: "Sunset Apartments",
+      addressLine1: "",
+      city: "",
+      state: "",
+      postalCode: ""
+    });
+    expect(result.success).toBe(true);
   });
 });
 
@@ -663,6 +677,79 @@ describe("markNotificationReadSchema", () => {
   it("accepts valid notification ID", () => {
     const result = markNotificationReadSchema.safeParse({
       notificationId: "550e8400-e29b-41d4-a716-446655440000"
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("profile schemas", () => {
+  const validAvatar = new File(["avatar"], "avatar.png", { type: "image/png" });
+  const oversizedAvatar = new File([new Uint8Array(5 * 1024 * 1024 + 1)], "big.png", {
+    type: "image/png"
+  });
+  const invalidAvatar = new File(["avatar"], "avatar.gif", { type: "image/gif" });
+
+  it("accepts complete onboarding fields with optional avatar", () => {
+    const result = completeOnboardingSchema.safeParse({
+      firstName: "Courtney",
+      lastName: "Smith",
+      nickname: "Court",
+      avatarFile: validAvatar
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects onboarding without first name", () => {
+    const result = completeOnboardingSchema.safeParse({
+      firstName: "",
+      lastName: "Smith"
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects oversized onboarding avatar", () => {
+    const result = completeOnboardingSchema.safeParse({
+      firstName: "Courtney",
+      lastName: "Smith",
+      avatarFile: oversizedAvatar
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects unsupported onboarding avatar format", () => {
+    const result = completeOnboardingSchema.safeParse({
+      firstName: "Courtney",
+      lastName: "Smith",
+      avatarFile: invalidAvatar
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts profile updates without nickname or avatar", () => {
+    const result = updateProfileSchema.safeParse({
+      firstName: "Courtney",
+      lastName: "Smith",
+      nickname: ""
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects profile update without last name", () => {
+    const result = updateProfileSchema.safeParse({
+      firstName: "Courtney",
+      lastName: ""
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("requires an avatar for uploadAvatarSchema", () => {
+    const result = uploadAvatarSchema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts a valid avatar upload", () => {
+    const result = uploadAvatarSchema.safeParse({
+      avatarFile: validAvatar
     });
     expect(result.success).toBe(true);
   });

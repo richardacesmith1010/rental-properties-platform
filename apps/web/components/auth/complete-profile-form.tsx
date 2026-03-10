@@ -10,12 +10,6 @@ interface CompleteProfileFormProps {
   email: string;
 }
 
-const rolePaths: Record<string, string> = {
-  owner: "/owner",
-  manager: "/manager",
-  tenant: "/tenant"
-};
-
 export function CompleteProfileForm({ email }: CompleteProfileFormProps) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -48,11 +42,12 @@ export function CompleteProfileForm({ email }: CompleteProfileFormProps) {
       const {
         data: { user }
       } = await supabase.auth.getUser();
+      if (!user) {
+        setError("Your session expired. Please sign in again.");
+        return;
+      }
 
-      const role =
-        typeof user?.user_metadata?.role === "string" ? user.user_metadata.role : "tenant";
-
-      window.location.href = rolePaths[role] ?? "/tenant";
+      window.location.href = "/onboarding";
     } catch (caughtError) {
       setError(
         caughtError instanceof Error ? caughtError.message : "Unable to complete profile setup."

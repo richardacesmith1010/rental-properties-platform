@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getRoleHomePath } from "@/lib/auth";
 import { updateUserStreak } from "@/lib/gamification";
 import { notifyOwnerMembersOfAcceptedTenantInvite } from "@/lib/notifications";
 
@@ -49,6 +50,8 @@ export async function GET(request: Request) {
   }
 
   try {
+    let authenticatedUserId: string | null = null;
+
     if (code) {
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (error) {
@@ -66,6 +69,7 @@ export async function GET(request: Request) {
       } = await supabase.auth.getUser();
 
       if (user?.id) {
+        authenticatedUserId = user.id;
         void updateUserStreak(user.id, "increment").catch(() => {});
         void notifyOwnerMembersOfAcceptedTenantInvite(user.id).catch(() => {});
       }
@@ -87,12 +91,34 @@ export async function GET(request: Request) {
       } = await supabase.auth.getUser();
 
       if (user?.id) {
+        authenticatedUserId = user.id;
         void updateUserStreak(user.id, "increment").catch(() => {});
         void notifyOwnerMembersOfAcceptedTenantInvite(user.id).catch(() => {});
       }
 
       if (type === "invite") {
         return NextResponse.redirect(`${origin}/complete-profile`);
+      }
+    }
+
+    if (authenticatedUserId) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role, onboarding_completed_at")
+        .eq("id", authenticatedUserId)
+        .maybeSingle();
+
+      if (!profile?.onboarding_completed_at) {
+        return NextResponse.redirect(`${origin}/onboarding`);
+      }
+
+      const role =
+        profile?.role === "owner" || profile?.role === "manager" || profile?.role === "tenant"
+          ? profile.role
+          : "tenant";
+      const roleHomePath = getRoleHomePath(role);
+      if (next === "/" || next === roleHomePath) {
+        return NextResponse.redirect(`${origin}${roleHomePath}`);
       }
     }
   } catch (error) {
