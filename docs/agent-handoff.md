@@ -1,10 +1,10 @@
 # Agent Handoff (Current State)
 
-Updated (UTC): 2026-03-10T02:55:00Z
+Updated (UTC): 2026-03-10T06:30:00Z
 
 ## Repository
 - Branch: `main`
-- HEAD (latest pushed): `d63e7cd`
+- HEAD (latest pushed): `2912db6`
 - Remote: `origin/main`
 - Deploy URL: `https://domusbase.com`
 
@@ -26,6 +26,15 @@ RLS Helper Functions (Sprint 10 hotfix):
 - `is_member_of_account()`, `is_owner_member_of_account()`, `is_creator_of_account()`, `is_manager_of_account()`
 - SECURITY DEFINER — break circular RLS dependency between ownership_accounts and ownership_account_members
 
+Profile Onboarding DB (Sprint 11):
+- `profiles` columns: `nickname` (text), `avatar_url` (text), `onboarding_completed_at` (timestamptz)
+- Storage bucket: `profile-avatars` with per-user folder policies + public read
+
+Stripe Connect DB (Sprint 12, applied):
+- `profiles` columns: `stripe_account_id` (text), `stripe_onboarding_complete` (boolean, default false)
+- `payments` columns: `stripe_transfer_id` (text), `manager_transfer_id` (text), `platform_fee_cents` (integer, default 0)
+- `properties` columns: `management_fee_cents` (integer, default 0)
+
 ## Deployment State
 - Production host: `https://domusbase.com`
 - Vercel deploy requires authenticated CLI session
@@ -35,6 +44,7 @@ RLS Helper Functions (Sprint 10 hotfix):
 |---|---|---|
 | Auth + role routing | LIVE | Owner/Manager/Tenant routes + invite callback |
 | Owner onboarding wizard | LIVE | Individual / Create LLC / Join LLC with passcode |
+| Profile onboarding | LIVE | Sprint 11 — name, nickname, photo upload, onboarding gate |
 | Owner dashboard workflows | LIVE | Properties, units, leases, charges, invites |
 | Manager operations | LIVE | Assigned-property operations active |
 | Tenant dashboard | LIVE | Charges, tickets, documents, notifications |
@@ -46,6 +56,9 @@ RLS Helper Functions (Sprint 10 hotfix):
 | Notification triggers | LIVE | Sprint 10 — payments, maintenance, documents, invites |
 | Rent due reminders | LIVE | Sprint 10 — cron sends 3 days before due date |
 | HTML email templates | LIVE | Sprint 10 — Domus violet branding + Dom mascot |
+| Sidebar overhaul | LIVE | Sprint 11 — nickname, avatar, tagline removed, workspace button fixed |
+| Settings popover menu | LIVE | Sprint 11 — Settings, Language, Upgrade Plan, Help/Support, Sign Out |
+| Property form (partial saves) | LIVE | Sprint 11 — only name required, amber warnings for empty optional fields |
 | Vendors + assignment + maintenance photos | LIVE | Vendor assignment and evidence support |
 | Ownership accounts (LLC/shared access) | LIVE | Account/member model + join codes |
 | Marketing landing + auth-aware root | LIVE | Public root + role-based workspace redirect |
@@ -66,7 +79,7 @@ RLS Helper Functions (Sprint 10 hotfix):
 | Mobile app foundation | IN PROGRESS | Expo Router + role-aware tabs (not published) |
 
 ## Gate Status
-- `npm run gate:web` — 216/216 tests (8 suites), lint clean, build clean
+- `npm run gate:web` — 225/225 tests (9 suites), lint clean, build clean
 - `npm run smoke:web` — all checks passed (+ health endpoint + gamification auth guard)
 
 ## Current Risks / Blockers
@@ -74,17 +87,16 @@ RLS Helper Functions (Sprint 10 hotfix):
 - User's test account is wiped — needs fresh signup to test.
 - Role-specific loading.tsx removed (Next.js Suspense conflicts with server-side auth redirects).
 - Resend email not configured — in-app notifications work, email activates when RESEND_API_KEY + RESEND_FROM_EMAIL set.
-- Property creation form requires all fields — user wants partial saves (Sprint 11).
+- Stripe Connect requires user to add `account.updated` event type in Stripe Dashboard webhook settings.
 
-## Sprint 11 Plan (Approved Scope)
-Core UX overhaul based on user feedback:
-- Part A: Profile onboarding wizard (name, nickname, photo upload)
-- Part B: Sidebar overhaul (nickname display, profile pic, remove tagline, fix workspace button)
-- Part C: Settings popover menu (Settings, Language, Upgrade Plan, Help/Support, Sign Out)
-- Part D: Property form fix (only name required, partial saves, field highlighting)
-- DB: add `nickname`, `avatar_url` to profiles table
+## Sprint 12 (In Progress — Codex Prompt Written)
+Stripe Connect + Payment Routing:
+- Part A: Stripe Connect Express account creation + onboarding flow
+- Part B: Connect status UI (banners, settings section, disable Pay Now)
+- Part C: Payment routing via transfers after checkout completion
+- Part D: Management fee configuration per property
+- DB: `stripe_account_id`, `stripe_onboarding_complete` on profiles; `stripe_transfer_id`, `manager_transfer_id`, `platform_fee_cents` on payments; `management_fee_cents` on properties (all applied)
 
 ## Future Sprints
-- Sprint 12: Pricing tiers + Stripe Billing (Free $0 / Starter $4.99 / Pro $12.99)
-- Sprint 13: Payments via Stripe Connect (rent collection, manager payments)
-- Future: Dom animations, language i18n, tax prep tools, analytics
+- Sprint 13: Pricing tiers + Stripe Billing (Free $0 / Starter $4.99 / Pro $12.99)
+- Future: Dom animations, language i18n, tax prep tools, analytics, Stripe Connect payouts management
