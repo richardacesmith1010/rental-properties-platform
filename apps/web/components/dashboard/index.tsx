@@ -14,6 +14,7 @@ import type { AutomationRuleDTO, AutomationTemplateDTO } from "@/lib/automations
 import type { InboxThreadDTO } from "@/lib/inbox";
 import type { RentalListingDTO } from "@/lib/leasing";
 import type { ApplicationDTO } from "@/lib/applications";
+import type { AnalyticsDashboardData } from "@/lib/analytics";
 import { formatDate } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,7 @@ export function Dashboard({
   applicationCount,
   approvedApplicationCount,
   gamification,
+  analyticsData,
   generatedMessage,
   initialSectionId,
   initialOwnerWorkflowMode,
@@ -149,6 +151,21 @@ export function Dashboard({
     categoryByProperty: {}
   };
   const safeOwnershipAccounts: OwnershipAccountDTO[] = ownershipAccounts ?? [];
+  const safeAnalytics: AnalyticsDashboardData = analyticsData ?? {
+    enabled: false,
+    rentMetrics: [],
+    expenseCategories: [],
+    occupancyMetrics: [],
+    maintenanceMetrics: [],
+    summaryKpis: {
+      collectionRate: 0,
+      avgDaysToPayment: 0,
+      totalIncomeCentsYtd: 0,
+      totalExpenseCentsYtd: 0,
+      netIncomeCentsYtd: 0,
+      maintenanceCostCentsYtd: 0
+    }
+  };
   const safeCapabilities: FeatureCapabilitiesDTO = capabilities ?? {
     documentsEnabled: true,
     documentAssetAccessEnabled: true,
@@ -191,6 +208,7 @@ export function Dashboard({
   const hasExpensesSection = Boolean(
     data.profileRole === "owner" && onCreateExpense && onUpdateExpense && onDeleteExpense
   );
+  const hasAnalyticsSection = Boolean(data.profileRole === "owner" && safeAnalytics.enabled);
   const isOwnerRole = data.profileRole === "owner";
   const isManagerRole = data.profileRole === "manager";
   const chargeBadgeCount = data.charges.filter(
@@ -216,6 +234,7 @@ export function Dashboard({
         maintenanceBadgeCount,
         inboxBadgeCount,
         notificationBadgeCount,
+        hasAnalyticsSection,
         hasLeasingSection,
         hasApplicationsSection,
         hasInboxSection,
@@ -232,6 +251,7 @@ export function Dashboard({
       maintenanceBadgeCount,
       inboxBadgeCount,
       notificationBadgeCount,
+      hasAnalyticsSection,
       hasLeasingSection,
       hasApplicationsSection,
       hasInboxSection,
@@ -245,8 +265,8 @@ export function Dashboard({
     ]
   );
   const ownerModeNavItems = useMemo<NavItem[]>(
-    () => (isOwnerRole ? getOwnerModeNavItems() : []),
-    [isOwnerRole]
+    () => (isOwnerRole ? getOwnerModeNavItems({ hasAnalyticsSection }) : []),
+    [hasAnalyticsSection, isOwnerRole]
   );
   const managerModeNavItems = useMemo<NavItem[]>(
     () => (isManagerRole ? getManagerModeNavItems() : []),
@@ -389,11 +409,18 @@ export function Dashboard({
       ? managerModeNavItems
       : sectionItems;
   const sidebarActiveItemId = isOwnerRole
-    ? `owner:${ownerWorkflowMode}`
+    ? activeSection === "analytics"
+      ? "analytics"
+      : `owner:${ownerWorkflowMode}`
     : isManagerRole
       ? `manager:${managerWorkflowMode}`
       : activeSection;
   const handleSidebarSelect = (itemId: string) => {
+    if (itemId === "analytics" && isOwnerRole) {
+      setOwnerWorkflowMode("daily_ops");
+      setActiveSection("analytics");
+      return;
+    }
     if (itemId === "notifications") {
       if (isOwnerRole) {
         setOwnerWorkflowMode("daily_ops");
@@ -580,6 +607,7 @@ export function Dashboard({
               safeApplications={safeApplications}
               safeVendors={safeVendors}
               safeExpenses={safeExpenses}
+              safeAnalytics={safeAnalytics}
               safeOwnershipAccounts={safeOwnershipAccounts}
               safeCapabilities={safeCapabilities}
               sortedVendors={sortedVendors}
@@ -593,6 +621,7 @@ export function Dashboard({
               hasDocumentsSection={hasDocumentsSection}
               hasVendorsSection={hasVendorsSection}
               hasExpensesSection={hasExpensesSection}
+              hasAnalyticsSection={hasAnalyticsSection}
               applicationCount={applicationCount}
               approvedApplicationCount={approvedApplicationCount}
               stripeConnected={stripeConnected}

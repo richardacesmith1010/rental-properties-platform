@@ -3,6 +3,7 @@ import type { OwnerDocumentsData } from "@/lib/documents";
 import type { VendorDTO } from "@/lib/vendors";
 import type { MaintenanceTicket } from "@/lib/maintenance";
 import {
+  BarChart3,
   Bell,
   BriefcaseBusiness,
   Building2,
@@ -48,7 +49,8 @@ export const ownerWorkflowModeMeta: Record<
       "applications",
       "inbox",
       "automations",
-      "expenses"
+      "expenses",
+      "analytics"
     ]
   },
   new_property: {
@@ -133,6 +135,7 @@ interface BuildAllSectionItemsParams {
   maintenanceBadgeCount: number;
   inboxBadgeCount: number;
   notificationBadgeCount: number;
+  hasAnalyticsSection: boolean;
   hasLeasingSection: boolean;
   hasApplicationsSection: boolean;
   hasInboxSection: boolean;
@@ -281,6 +284,16 @@ export function buildAllSectionItems(params: BuildAllSectionItemsParams): NavIte
     });
   }
 
+  if (params.hasAnalyticsSection) {
+    items.push({
+      id: "analytics",
+      label: "Analytics",
+      icon: BarChart3,
+      description: "Financial and occupancy analytics.",
+      clickHint: "open analytics dashboard"
+    });
+  }
+
   items.push(
     {
       id: "operations",
@@ -315,8 +328,8 @@ export function buildAllSectionItems(params: BuildAllSectionItemsParams): NavIte
   return items;
 }
 
-export function getOwnerModeNavItems(): NavItem[] {
-  return [
+export function getOwnerModeNavItems(params?: { hasAnalyticsSection?: boolean }): NavItem[] {
+  const items: NavItem[] = [
     {
       id: "owner:daily_ops",
       label: "Daily Ops",
@@ -353,6 +366,18 @@ export function getOwnerModeNavItems(): NavItem[] {
       clickHint: "switch to owner records mode"
     }
   ];
+
+  if (params?.hasAnalyticsSection) {
+    items.push({
+      id: "analytics",
+      label: "Analytics",
+      icon: BarChart3,
+      description: "Portfolio performance, collection, and maintenance trends.",
+      clickHint: "open owner analytics"
+    });
+  }
+
+  return items;
 }
 
 export function getManagerModeNavItems(): NavItem[] {

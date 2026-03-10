@@ -15,6 +15,7 @@ import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { getOwnershipAccountsForUser } from "@/lib/ownership";
 import { getOwnerExpenseData } from "@/lib/expenses";
 import { getUserGamification } from "@/lib/gamification";
+import { getOwnerAnalyticsData } from "@/lib/analytics";
 import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
 import {
   createCheckoutForCharge,
@@ -137,7 +138,8 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
     applications,
     vendors,
     expenses,
-    gamification
+    gamification,
+    analytics
   ] = await Promise.all([
     getDashboardData(user.id),
     getPortfolioData(user.id),
@@ -174,7 +176,8 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       ? getOwnerVendors(user.id)
       : Promise.resolve([]),
     getOwnerExpenseData(user.id),
-    getUserGamification(user.id)
+    getUserGamification(user.id),
+    getOwnerAnalyticsData(user.id)
   ]);
 
   const approvedApplicationCount = applications.filter(
@@ -202,6 +205,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       applicationCount={applications.length}
       approvedApplicationCount={approvedApplicationCount}
       gamification={gamification}
+      analyticsData={analytics}
       vendors={vendors}
       expensesData={expenses}
       ownershipAccounts={ownershipAccounts}

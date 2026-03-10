@@ -1,3 +1,4 @@
+import dynamic from "next/dynamic";
 import type { DashboardData } from "@/lib/dashboard";
 import type { PortfolioData } from "@/lib/portfolio";
 import type { MaintenanceTicket } from "@/lib/maintenance";
@@ -12,6 +13,7 @@ import type { AutomationRuleDTO, AutomationTemplateDTO } from "@/lib/automations
 import type { InboxThreadDTO } from "@/lib/inbox";
 import type { RentalListingDTO } from "@/lib/leasing";
 import type { ApplicationDTO } from "@/lib/applications";
+import type { AnalyticsDashboardData } from "@/lib/analytics";
 import type { ActionState } from "@/app/actions";
 import { FeatureWarning } from "@/components/shared/feature-warning";
 import { KpiGrid } from "./kpi-grid";
@@ -36,6 +38,18 @@ import { ApplicationsSection } from "./applications-section";
 type FormAction = (formData: FormData) => Promise<void>;
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
+const AnalyticsSection = dynamic(
+  () => import("./analytics-section").then((module) => module.AnalyticsSection),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="rounded-xl border border-zinc-200 bg-white p-5 text-sm text-zinc-500 shadow-sm">
+        Loading analytics...
+      </div>
+    )
+  }
+);
+
 interface SectionRendererProps {
   activeSection: string;
   occupancy: number;
@@ -53,6 +67,7 @@ interface SectionRendererProps {
   safeApplications: ApplicationDTO[];
   safeVendors: VendorDTO[];
   safeExpenses: ExpenseDashboardData;
+  safeAnalytics: AnalyticsDashboardData;
   safeOwnershipAccounts: OwnershipAccountDTO[];
   safeCapabilities: FeatureCapabilitiesDTO;
   sortedVendors: VendorDTO[];
@@ -66,6 +81,7 @@ interface SectionRendererProps {
   hasDocumentsSection: boolean;
   hasVendorsSection: boolean;
   hasExpensesSection: boolean;
+  hasAnalyticsSection: boolean;
   applicationCount?: number;
   approvedApplicationCount?: number;
   stripeConnected?: boolean;
@@ -143,6 +159,7 @@ export function SectionRenderer({
   safeApplications,
   safeVendors,
   safeExpenses,
+  safeAnalytics,
   safeOwnershipAccounts,
   safeCapabilities,
   sortedVendors,
@@ -156,6 +173,7 @@ export function SectionRenderer({
   hasDocumentsSection,
   hasVendorsSection,
   hasExpensesSection,
+  hasAnalyticsSection,
   applicationCount,
   approvedApplicationCount,
   stripeConnected,
@@ -479,6 +497,10 @@ export function SectionRenderer({
         onDeleteExpense={onDeleteExpense!}
       />
     );
+  }
+
+  if (activeSection === "analytics" && hasAnalyticsSection) {
+    return <AnalyticsSection data={safeAnalytics} />;
   }
 
   if (activeSection === "operations") {

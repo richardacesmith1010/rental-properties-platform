@@ -13,6 +13,7 @@ import type { InboxThreadDTO } from "@/lib/inbox";
 import type { RentalListingDTO } from "@/lib/leasing";
 import type { ApplicationDTO } from "@/lib/applications";
 import type { UserGamificationData } from "@/lib/gamification";
+import type { AnalyticsDashboardData } from "@/lib/analytics";
 import type { ActionState } from "@/app/actions";
 import type { ManagerWorkflowMode, OwnerWorkflowMode } from "./dashboard-config";
 
@@ -39,6 +40,7 @@ export interface DashboardProps {
   applicationCount?: number;
   approvedApplicationCount?: number;
   gamification?: UserGamificationData;
+  analyticsData?: AnalyticsDashboardData;
   generatedMessage?: string | null;
   initialSectionId?: string | null;
   initialOwnerWorkflowMode?: OwnerWorkflowMode;
