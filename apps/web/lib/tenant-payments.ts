@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export interface TenantCharge {
   id: string;
+  propertyId: string;
   propertyLabel: string;
   dueDate: string;
   amountCents: number;
@@ -63,6 +64,7 @@ export async function getTenantPaymentData(userId: string): Promise<TenantPaymen
 
       return {
         id: charge.id,
+        propertyId: unit?.property_id ?? "",
         propertyLabel,
         dueDate: charge.due_date,
         amountCents: charge.amount_cents,

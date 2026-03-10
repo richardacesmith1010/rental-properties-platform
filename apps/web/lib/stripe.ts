@@ -11,7 +11,7 @@ export interface StripeWebhookEvent {
   id: string;
   type: string;
   data: {
-    object: StripeCheckoutSession;
+    object: Record<string, unknown>;
   };
 }
 
@@ -70,7 +70,7 @@ export async function verifyWebhookSignature(
   return JSON.parse(payload) as StripeWebhookEvent;
 }
 
-function getStripeSecretKey() {
+export function getStripeSecretKey() {
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) {
     throw new Error("Missing STRIPE_SECRET_KEY environment variable.");
@@ -83,6 +83,7 @@ export async function createStripeCheckoutSession(params: {
   successUrl: string;
   cancelUrl: string;
   metadata: Record<string, string>;
+  transferGroup?: string;
 }) {
   const secretKey = getStripeSecretKey();
 
@@ -98,6 +99,9 @@ export async function createStripeCheckoutSession(params: {
   Object.entries(params.metadata).forEach(([key, value]) => {
     body.set(`metadata[${key}]`, value);
   });
+  if (params.transferGroup) {
+    body.set("payment_intent_data[transfer_group]", params.transferGroup);
+  }
 
   const response = await fetch("https://api.stripe.com/v1/checkout/sessions", {
     method: "POST",
@@ -134,4 +138,40 @@ export async function retrieveStripeCheckoutSession(sessionId: string) {
 
   const session = (await response.json()) as StripeCheckoutSession;
   return session;
+}
+
+export async function createStripeTransfer(params: {
+  amountCents: number;
+  destination: string;
+  transferGroup?: string;
+  description?: string;
+}): Promise<{ id: string; amount: number }> {
+  const secretKey = getStripeSecretKey();
+  const body = new URLSearchParams();
+  body.set("amount", String(params.amountCents));
+  body.set("currency", "usd");
+  body.set("destination", params.destination);
+  if (params.transferGroup) {
+    body.set("transfer_group", params.transferGroup);
+  }
+  if (params.description) {
+    body.set("description", params.description);
+  }
+
+  const response = await fetch("https://api.stripe.com/v1/transfers", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${secretKey}`,
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: body.toString(),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Stripe create transfer failed: ${response.status} - ${errorBody}`);
+  }
+
+  return (await response.json()) as { id: string; amount: number };
 }

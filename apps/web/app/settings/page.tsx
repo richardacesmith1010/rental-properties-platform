@@ -6,18 +6,31 @@ import {
   getRoleHomePath,
   getUserProfileSummary
 } from "@/lib/auth";
-import { updateProfile } from "@/app/actions";
+import { getExpressDashboardUrl, updateProfile } from "@/app/actions";
+import { BankSettings } from "@/components/settings/bank-settings";
 import { ThemeSettingsPanel } from "@/components/settings/theme-settings-panel";
 import { PasswordSettings } from "@/components/settings/password-settings";
 import { ProfileSettings } from "@/components/settings/profile-settings";
 
 export const dynamic = "force-dynamic";
 
-export default async function SettingsPage() {
+interface SettingsPageProps {
+  searchParams?: {
+    connect?: string | string[];
+  };
+}
+
+export default async function SettingsPage({ searchParams }: SettingsPageProps) {
   const user = await getAuthenticatedUser();
   const role = await getCurrentUserRole(user.id);
   const workspacePath = getRoleHomePath(role);
   const profile = await getUserProfileSummary(user.id);
+  const connectMessage =
+    typeof searchParams?.connect === "string"
+      ? searchParams.connect
+      : Array.isArray(searchParams?.connect)
+        ? searchParams.connect[0] ?? null
+        : null;
 
   if (!profile.onboardingCompletedAt) {
     redirect("/onboarding");
@@ -42,6 +55,12 @@ export default async function SettingsPage() {
           </div>
         </header>
 
+        {connectMessage === "ready" ? (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            Your bank account is already connected and ready to receive payouts.
+          </div>
+        ) : null}
+
         <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
             Profile
@@ -56,6 +75,22 @@ export default async function SettingsPage() {
             />
           </div>
         </section>
+
+        {role === "owner" || role === "manager" ? (
+          <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+              Bank Account
+            </h2>
+            <div className="mt-3">
+              <BankSettings
+                stripeConnected={profile.stripeOnboardingComplete}
+                stripeAccountId={profile.stripeAccountId}
+                role={role}
+                onGetExpressDashboardUrl={getExpressDashboardUrl}
+              />
+            </div>
+          </section>
+        ) : null}
 
         <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">

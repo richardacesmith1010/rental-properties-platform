@@ -25,6 +25,7 @@ type StatefulAction = (
 interface Charge {
   id: string;
   leaseId: string;
+  propertyId: string;
   dueDate: string;
   amountCents: number;
   status: ChargeStatus;
@@ -40,6 +41,8 @@ interface ChargesSectionProps {
   onRecordManualPayment?: StatefulAction;
   onGenerateChargesHref?: string;
   showManualPayment?: boolean;
+  ownerConnectedMap?: Map<string, boolean>;
+  stripeConnected?: boolean;
 }
 
 const unavailableManualPaymentAction: StatefulAction = async () => ({
@@ -69,7 +72,9 @@ export function ChargesSection({
   onPayCharge,
   onRecordManualPayment,
   onGenerateChargesHref,
-  showManualPayment = false
+  showManualPayment = false,
+  ownerConnectedMap,
+  stripeConnected
 }: ChargesSectionProps) {
   const [activeFilter, setActiveFilter] = useState<ChargeFilter>("all");
   const [manualPaymentChargeId, setManualPaymentChargeId] = useState<string | null>(null);
@@ -162,6 +167,10 @@ export function ChargesSection({
           <div>
             {filteredCharges.map((charge, i) => {
               const manualFormOpen = manualPaymentChargeId === charge.id;
+              const ownerConnected =
+                ownerConnectedMap?.get(charge.propertyId) ??
+                stripeConnected ??
+                true;
               return (
                 <DataRow key={charge.id} last={i === filteredCharges.length - 1}>
                   <div className="min-w-0 flex-1">
@@ -248,14 +257,24 @@ export function ChargesSection({
                       </div>
                     </div>
 
-                    {charge.status !== "paid" && (
+                    {charge.status !== "paid" ? ownerConnected ? (
                       <form action={onPayCharge}>
                         <input type="hidden" name="chargeId" value={charge.id} />
                         <SubmitButton size="sm" title="Open secure checkout for this charge.">
                           Pay now
                         </SubmitButton>
                       </form>
-                    )}
+                    ) : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled
+                        title="Online payment unavailable - property owner hasn't connected their bank account."
+                      >
+                        Pay now
+                      </Button>
+                    ) : null}
 
                     {showManualPayment && charge.status !== "paid" && (
                       <Button

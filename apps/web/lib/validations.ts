@@ -123,6 +123,11 @@ export const recordManualPaymentSchema = z.object({
   referenceNote: z.string().optional()
 });
 
+export const updateManagementFeeSchema = z.object({
+  propertyId: z.string().uuid("Invalid property."),
+  managementFeeDollars: z.coerce.number().min(0, "Management fee cannot be negative.")
+});
+
 /* ─── Maintenance ─── */
 
 export const createMaintenanceTicketSchema = z.object({

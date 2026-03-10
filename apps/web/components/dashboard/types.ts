@@ -47,6 +47,8 @@ export interface DashboardProps {
   fullName?: string | null;
   nickname?: string | null;
   avatarUrl?: string | null;
+  stripeConnected?: boolean;
+  ownerConnectedMap?: Map<string, boolean>;
   onGenerateChargesHref?: string;
   onSignOut: FormAction;
   onCreateProperty: StatefulAction;
@@ -93,4 +95,5 @@ export interface DashboardProps {
   onDeleteExpense?: StatefulAction;
   onCreateOwnershipAccount?: StatefulAction;
   onLinkPropertyToOwnershipAccount?: StatefulAction;
+  onUpdateManagementFee?: StatefulAction;
 }

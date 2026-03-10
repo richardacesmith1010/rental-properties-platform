@@ -9,6 +9,8 @@ export interface UserProfileSummary {
   avatarPath: string | null;
   avatarUrl: string | null;
   onboardingCompletedAt: string | null;
+  stripeAccountId: string | null;
+  stripeOnboardingComplete: boolean;
 }
 
 export async function getAuthenticatedUser() {
@@ -65,7 +67,9 @@ export async function getUserProfileSummary(userId: string): Promise<UserProfile
   const supabase = createClient();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, nickname, avatar_url, onboarding_completed_at")
+    .select(
+      "full_name, nickname, avatar_url, onboarding_completed_at, stripe_account_id, stripe_onboarding_complete"
+    )
     .eq("id", userId)
     .maybeSingle();
 
@@ -89,6 +93,8 @@ export async function getUserProfileSummary(userId: string): Promise<UserProfile
     nickname: profile?.nickname ?? null,
     avatarPath,
     avatarUrl,
-    onboardingCompletedAt: profile?.onboarding_completed_at ?? null
+    onboardingCompletedAt: profile?.onboarding_completed_at ?? null,
+    stripeAccountId: profile?.stripe_account_id ?? null,
+    stripeOnboardingComplete: profile?.stripe_onboarding_complete === true
   };
 }

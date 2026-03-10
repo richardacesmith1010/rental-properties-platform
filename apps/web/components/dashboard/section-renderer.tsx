@@ -68,6 +68,8 @@ interface SectionRendererProps {
   hasExpensesSection: boolean;
   applicationCount?: number;
   approvedApplicationCount?: number;
+  stripeConnected?: boolean;
+  ownerConnectedMap?: Map<string, boolean>;
   onGenerateChargesHref?: string;
   onPayCharge: FormAction;
   onRecordManualPayment?: StatefulAction;
@@ -104,6 +106,7 @@ interface SectionRendererProps {
   onDeleteExpense?: StatefulAction;
   onCreateOwnershipAccount?: StatefulAction;
   onLinkPropertyToOwnershipAccount?: StatefulAction;
+  onUpdateManagementFee?: StatefulAction;
   onCreateProperty: StatefulAction;
   onCreateUnit: StatefulAction;
   onCreateLease: StatefulAction;
@@ -155,6 +158,8 @@ export function SectionRenderer({
   hasExpensesSection,
   applicationCount,
   approvedApplicationCount,
+  stripeConnected,
+  ownerConnectedMap,
   onGenerateChargesHref,
   onPayCharge,
   onRecordManualPayment,
@@ -191,6 +196,7 @@ export function SectionRenderer({
   onDeleteExpense,
   onCreateOwnershipAccount,
   onLinkPropertyToOwnershipAccount,
+  onUpdateManagementFee,
   onCreateProperty,
   onCreateUnit,
   onCreateLease,
@@ -242,6 +248,8 @@ export function SectionRenderer({
         onRecordManualPayment={onRecordManualPayment}
         showManualPayment={data.profileRole !== "tenant"}
         onGenerateChargesHref={onGenerateChargesHref}
+        ownerConnectedMap={ownerConnectedMap}
+        stripeConnected={stripeConnected}
       />
     );
   }
@@ -495,6 +503,7 @@ export function SectionRenderer({
         showControls={canManagePortfolio}
         onUpdateProperty={onUpdateProperty}
         onDeleteProperty={onDeleteProperty}
+        onUpdateManagementFee={data.profileRole === "owner" ? onUpdateManagementFee : undefined}
       />
     );
   }

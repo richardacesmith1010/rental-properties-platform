@@ -13,6 +13,7 @@ import { getManagerVendors } from "@/lib/vendors";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { getOwnershipAccountsForUser } from "@/lib/ownership";
 import { getUserGamification } from "@/lib/gamification";
+import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
 import {
   createCheckoutForCharge,
   recordManualPayment,
@@ -177,6 +178,9 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
   const approvedApplicationCount = applications.filter(
     (application) => application.status === "approved"
   ).length;
+  const ownerConnectedMap = await arePropertyOwnersConnected(
+    portfolio.properties.map((property) => property.id)
+  );
 
   return (
     <Dashboard
@@ -203,6 +207,8 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       fullName={profile.fullName}
       nickname={profile.nickname}
       avatarUrl={profile.avatarUrl}
+      stripeConnected={profile.stripeOnboardingComplete}
+      ownerConnectedMap={ownerConnectedMap}
       onSignOut={signOut}
       onCreateProperty={createProperty}
       onCreateUnit={createUnit}

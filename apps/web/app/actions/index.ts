@@ -1,6 +1,12 @@
 export type { ActionState } from "./shared";
 
 export { signOut } from "./auth";
+export {
+  initiateStripeConnect,
+  checkConnectStatus,
+  getExpressDashboardUrl,
+  updateManagementFee
+} from "./connect";
 export { completeOnboarding } from "./profile";
 export { updateProfile } from "./profile";
 export { uploadAvatar } from "./profile";

@@ -22,6 +22,7 @@ interface PortfolioSectionProps {
   showControls?: boolean;
   onUpdateProperty?: StatefulAction;
   onDeleteProperty?: StatefulAction;
+  onUpdateManagementFee?: StatefulAction;
 }
 
 const unavailableAction: StatefulAction = async () => ({
@@ -51,20 +52,25 @@ export function PortfolioSection({
   properties,
   showControls = false,
   onUpdateProperty,
-  onDeleteProperty
+  onDeleteProperty,
+  onUpdateManagementFee
 }: PortfolioSectionProps) {
   const [updateState, updateAction] = useFormState(onUpdateProperty ?? unavailableAction, null);
   const [deleteState, deleteAction] = useFormState(onDeleteProperty ?? unavailableAction, null);
+  const [managementFeeState, managementFeeAction] = useFormState(
+    onUpdateManagementFee ?? unavailableAction,
+    null
+  );
   const [activeEditPropertyId, setActiveEditPropertyId] = useState<string | null>(null);
   const [confirmDeletePropertyId, setConfirmDeletePropertyId] = useState<string | null>(null);
   const deleteFormRefs = useRef<Record<string, HTMLFormElement | null>>({});
 
   useEffect(() => {
-    if (updateState?.success || deleteState?.success) {
+    if (updateState?.success || deleteState?.success || managementFeeState?.success) {
       setActiveEditPropertyId(null);
       setConfirmDeletePropertyId(null);
     }
-  }, [deleteState, updateState]);
+  }, [deleteState, managementFeeState, updateState]);
 
   return (
     <Card id="portfolio">
@@ -76,8 +82,10 @@ export function PortfolioSection({
           <>
             <FormError state={updateState} />
             <FormError state={deleteState} />
+            <FormError state={managementFeeState} />
             <FormSuccess state={updateState} message="Property updated." />
             <FormSuccess state={deleteState} message="Property archived." />
+            <FormSuccess state={managementFeeState} message="Management fee updated." />
           </>
         )}
 
@@ -94,20 +102,50 @@ export function PortfolioSection({
                     {property.city}, {property.state} {property.postalCode}
                   </p>
                   <p className="mt-0.5 text-xs text-zinc-500">{property.ownerAccountName}</p>
+                  <p className="mt-0.5 text-xs text-zinc-500">
+                    Management fee: ${(property.managementFeeCents / 100).toFixed(2)}
+                  </p>
                   {showControls && activeEditPropertyId === property.id && (
-                    <form action={updateAction} className="mt-3 grid gap-2 sm:grid-cols-2">
-                      <input type="hidden" name="propertyId" value={property.id} />
-                      <Input name="name" defaultValue={property.name} required />
-                      <Input name="addressLine1" defaultValue={property.addressLine1} required />
-                      <Input name="city" defaultValue={property.city} required />
-                      <Input name="state" defaultValue={property.state} required />
-                      <Input name="postalCode" defaultValue={property.postalCode} required />
-                      <div className="sm:col-span-2">
-                        <SubmitButton size="sm" variant="outline" title="Save updates to this property profile.">
-                          Save Property Changes
-                        </SubmitButton>
-                      </div>
-                    </form>
+                    <div className="mt-3 space-y-3">
+                      <form action={updateAction} className="grid gap-2 sm:grid-cols-2">
+                        <input type="hidden" name="propertyId" value={property.id} />
+                        <Input name="name" defaultValue={property.name} required />
+                        <Input name="addressLine1" defaultValue={property.addressLine1} required />
+                        <Input name="city" defaultValue={property.city} required />
+                        <Input name="state" defaultValue={property.state} required />
+                        <Input name="postalCode" defaultValue={property.postalCode} required />
+                        <div className="sm:col-span-2">
+                          <SubmitButton size="sm" variant="outline" title="Save updates to this property profile.">
+                            Save Property Changes
+                          </SubmitButton>
+                        </div>
+                      </form>
+                      {onUpdateManagementFee ? (
+                        <form action={managementFeeAction} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                          <input type="hidden" name="propertyId" value={property.id} />
+                          <div className="space-y-1">
+                            <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500">
+                              Management fee (USD)
+                            </label>
+                            <Input
+                              name="managementFeeDollars"
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              defaultValue={(property.managementFeeCents / 100).toFixed(2)}
+                              title="Set the management fee that routes to the assigned manager on each online payment."
+                            />
+                          </div>
+                          <SubmitButton
+                            size="sm"
+                            variant="outline"
+                            title="Save the management fee split for this property."
+                          >
+                            Save Fee
+                          </SubmitButton>
+                        </form>
+                      ) : null}
+                    </div>
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-2">

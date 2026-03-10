@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createStripeCheckoutSession } from "@/lib/stripe";
+import { getOwnerStripeAccountForProperty } from "@/lib/stripe-connect";
 import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { createNotificationWithDelivery, notifyOwnerMembersForProperty } from "@/lib/notifications";
@@ -81,6 +82,10 @@ export async function createCheckoutForCharge(formData: FormData) {
     redirect("/");
   }
 
+  if (!(await getOwnerStripeAccountForProperty(property.id))) {
+    return;
+  }
+
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const session = await createStripeCheckoutSession({
     amountCents: charge.amount_cents,
@@ -89,7 +94,8 @@ export async function createCheckoutForCharge(formData: FormData) {
       user_id: user.id
     },
     successUrl: `${appUrl}/payments/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancelUrl: `${appUrl}/payments/cancel`
+    cancelUrl: `${appUrl}/payments/cancel`,
+    transferGroup: `charge_${charge.id}`
   });
 
   if (session.url) {

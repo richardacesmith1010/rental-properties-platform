@@ -3,7 +3,16 @@
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 
 export type ActionState =
-  | { success: true; message?: string; joinCode?: string; accountId?: string; avatarUrl?: string }
+  | {
+      success: true;
+      message?: string;
+      joinCode?: string;
+      accountId?: string;
+      avatarUrl?: string;
+      url?: string;
+      connected?: boolean;
+      detailsSubmitted?: boolean;
+    }
   | { success: false; error: string }
   | null;
 

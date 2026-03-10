@@ -15,6 +15,7 @@ interface DashboardKpis {
 interface DashboardCharge {
   id: string;
   leaseId: string;
+  propertyId: string;
   dueDate: string;
   amountCents: number;
   status: "pending" | "paid" | "late";
@@ -304,6 +305,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
       return {
         id: charge.id,
         leaseId: charge.lease_id,
+        propertyId: unit?.property_id ?? "",
         dueDate: charge.due_date,
         amountCents: charge.amount_cents,
         status: charge.status,

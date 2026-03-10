@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyWebhookSignature } from "@/lib/stripe";
+import {
+  createStripeTransfer,
+  type StripeCheckoutSession,
+  verifyWebhookSignature
+} from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  getManagerStripeAccountForProperty,
+  getOwnerStripeAccountForProperty
+} from "@/lib/stripe-connect";
 import { createNotificationWithDelivery, notifyOwnerMembersForProperty } from "@/lib/notifications";
 
 export async function POST(request: NextRequest) {
@@ -18,15 +26,34 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid webhook signature." }, { status: 400 });
   }
 
+  // Add `account.updated` to the Stripe webhook endpoint after deploying Connect.
+  if (event.type === "account.updated") {
+    const account = event.data.object;
+    const accountId = typeof account.id === "string" ? account.id : null;
+    const chargesEnabled = account.charges_enabled === true;
+    const payoutsEnabled = account.payouts_enabled === true;
+
+    if (accountId && chargesEnabled && payoutsEnabled) {
+      const supabase = createAdminClient();
+      await supabase
+        .from("profiles")
+        .update({ stripe_onboarding_complete: true })
+        .eq("stripe_account_id", accountId);
+    }
+
+    return NextResponse.json({ received: true });
+  }
+
   if (event.type !== "checkout.session.completed") {
     return NextResponse.json({ received: true });
   }
 
-  const session = event.data.object;
+  const session = event.data.object as unknown as StripeCheckoutSession;
   const chargeId = session.metadata?.charge_id;
   const userId = session.metadata?.user_id;
+  const amountTotal = typeof session.amount_total === "number" ? session.amount_total : null;
 
-  if (!chargeId || !userId || session.payment_status !== "paid" || !session.amount_total) {
+  if (!chargeId || !userId || session.payment_status !== "paid" || !amountTotal) {
     return NextResponse.json({ received: true });
   }
 
@@ -114,7 +141,7 @@ export async function POST(request: NextRequest) {
   // Record the payment
   const { error: insertError } = await supabase.from("payments").insert({
     rent_charge_id: charge.id,
-    amount_cents: session.amount_total,
+    amount_cents: amountTotal,
     method: "card",
     reference_note: "Stripe Checkout",
     stripe_checkout_session_id: session.id,
@@ -131,6 +158,46 @@ export async function POST(request: NextRequest) {
 
   // Mark charge as paid
   await supabase.from("rent_charges").update({ status: "paid" }).eq("id", charge.id);
+
+  try {
+    const ownerStripeAccount = await getOwnerStripeAccountForProperty(property.id);
+    if (ownerStripeAccount) {
+      const managerInfo = await getManagerStripeAccountForProperty(property.id);
+      const managementFee = managerInfo?.feeCents ?? 0;
+      const platformFee = 0;
+      const ownerAmount = amountTotal - managementFee - platformFee;
+      const paymentUpdate: Record<string, string | number> = {
+        platform_fee_cents: platformFee
+      };
+
+      if (ownerAmount > 0) {
+        const ownerTransfer = await createStripeTransfer({
+          amountCents: ownerAmount,
+          destination: ownerStripeAccount,
+          transferGroup: `charge_${chargeId}`,
+          description: `Rent payment for charge ${chargeId.slice(0, 8)}`
+        });
+        paymentUpdate.stripe_transfer_id = ownerTransfer.id;
+      }
+
+      if (managerInfo && managementFee > 0) {
+        const managerTransfer = await createStripeTransfer({
+          amountCents: managementFee,
+          destination: managerInfo.accountId,
+          transferGroup: `charge_${chargeId}`,
+          description: `Management fee for charge ${chargeId.slice(0, 8)}`
+        });
+        paymentUpdate.manager_transfer_id = managerTransfer.id;
+      }
+
+      await supabase
+        .from("payments")
+        .update(paymentUpdate)
+        .eq("stripe_checkout_session_id", session.id);
+    }
+  } catch (transferError) {
+    console.error("[stripe-webhook] Transfer creation failed:", transferError);
+  }
 
   const { data: tenantProfile } = await supabase
     .from("profiles")

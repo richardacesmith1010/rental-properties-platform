@@ -6,6 +6,7 @@ import {
   updateLeaseSchema,
   payChargeSchema,
   recordManualPaymentSchema,
+  updateManagementFeeSchema,
   createMaintenanceTicketSchema,
   updateTicketStatusSchema,
   updateTicketCostSchema,
@@ -341,6 +342,32 @@ describe("recordManualPaymentSchema", () => {
       referenceNote: "Check #1042"
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe("updateManagementFeeSchema", () => {
+  it("accepts valid management fee data", () => {
+    const result = updateManagementFeeSchema.safeParse({
+      propertyId: "550e8400-e29b-41d4-a716-446655440000",
+      managementFeeDollars: "125.50"
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid property IDs", () => {
+    const result = updateManagementFeeSchema.safeParse({
+      propertyId: "bad-id",
+      managementFeeDollars: "125"
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects negative management fees", () => {
+    const result = updateManagementFeeSchema.safeParse({
+      propertyId: "550e8400-e29b-41d4-a716-446655440000",
+      managementFeeDollars: "-1"
+    });
+    expect(result.success).toBe(false);
   });
 });
 

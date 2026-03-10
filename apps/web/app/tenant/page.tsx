@@ -20,6 +20,7 @@ import { getNotificationsForUser } from "@/lib/notifications";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { SidebarNav, MobileTopBar } from "@/components/dashboard/sidebar-nav";
 import { KpiCard } from "@/components/shared/kpi-card";
 import { DataRow } from "@/components/shared/data-row";
@@ -34,6 +35,7 @@ import { GamificationSummary } from "@/components/gamification/gamification-summ
 import { AchievementChecker } from "@/components/gamification/achievement-checker";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { getUserGamification } from "@/lib/gamification";
+import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
 import {
   ChevronLeft,
   ChevronRight,
@@ -139,6 +141,9 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
     (packet) => packet.signerStatus !== "signed"
   ).length;
   const unreadNotificationCount = notifications.filter((notification) => !notification.readAt).length;
+  const ownerConnectedMap = await arePropertyOwnersConnected(
+    paymentData.charges.map((charge) => charge.propertyId)
+  );
 
   return (
     <div className="app-surface flex min-h-screen flex-col lg:flex-row">
@@ -295,16 +300,30 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
                           <p className="text-sm font-semibold text-zinc-900">
                             {formatCurrency(charge.amountCents)}
                           </p>
-                          <form action={createCheckoutForCharge} className="mt-2">
-                            <input type="hidden" name="chargeId" value={charge.id} />
-                            <SubmitButton
+                          {ownerConnectedMap.get(charge.propertyId) === false ? (
+                            <Button
+                              type="button"
                               size="sm"
-                              title="Open secure checkout to pay this charge."
+                              variant="outline"
+                              disabled
+                              className="mt-2"
+                              title="Online payment unavailable - property owner hasn't connected their bank account"
                             >
                               <CreditCard className="mr-2 h-3.5 w-3.5" />
                               Pay with Card
-                            </SubmitButton>
-                          </form>
+                            </Button>
+                          ) : (
+                            <form action={createCheckoutForCharge} className="mt-2">
+                              <input type="hidden" name="chargeId" value={charge.id} />
+                              <SubmitButton
+                                size="sm"
+                                title="Open secure checkout to pay this charge."
+                              >
+                                <CreditCard className="mr-2 h-3.5 w-3.5" />
+                                Pay with Card
+                              </SubmitButton>
+                            </form>
+                          )}
                         </div>
                       </DataRow>
                     ))}

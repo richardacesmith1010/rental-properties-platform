@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { DomMascot } from "@/components/gamification/dom-mascot";
 import { AchievementChecker } from "@/components/gamification/achievement-checker";
 import { GamificationSummary } from "@/components/gamification/gamification-summary";
+import { ConnectBanner } from "@/components/dashboard/connect-banner";
 import { SidebarNav, MobileTopBar, type NavItem } from "./sidebar-nav";
 import { SectionRenderer } from "./section-renderer";
 import type { DashboardProps } from "./types";
@@ -61,6 +62,8 @@ export function Dashboard({
   fullName,
   nickname,
   avatarUrl,
+  stripeConnected,
+  ownerConnectedMap,
   onGenerateChargesHref,
   onSignOut,
   onCreateProperty,
@@ -106,7 +109,8 @@ export function Dashboard({
   onUpdateExpense,
   onDeleteExpense,
   onCreateOwnershipAccount,
-  onLinkPropertyToOwnershipAccount
+  onLinkPropertyToOwnershipAccount,
+  onUpdateManagementFee
 }: DashboardProps) {
   const resolvedGamification = gamification ?? {
     totalXp: 0,
@@ -439,7 +443,9 @@ export function Dashboard({
         />
         <main className="flex flex-1 flex-col items-center justify-center px-6 py-12 lg:ml-[260px]">
           <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
-          <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
+          <div className="w-full max-w-md space-y-4">
+            <ConnectBanner connected={stripeConnected === true} role="owner" />
+            <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
             <div className="mx-auto mb-4 flex w-fit items-center justify-center rounded-3xl bg-violet-50/80 px-4 py-3">
               <DomMascot size="lg" />
             </div>
@@ -457,6 +463,7 @@ export function Dashboard({
             >
               Add Property
             </Button>
+          </div>
           </div>
         </main>
       </div>
@@ -514,6 +521,12 @@ export function Dashboard({
               {generatedMessage}
             </div>
           )}
+          {(isOwnerRole || isManagerRole) && typeof stripeConnected === "boolean" ? (
+            <ConnectBanner
+              connected={stripeConnected}
+              role={isOwnerRole ? "owner" : "manager"}
+            />
+          ) : null}
           {(isOwnerRole || isManagerRole) && activeWorkflowMeta && (
             <div className="flex flex-col gap-1 rounded-xl border border-zinc-200/80 bg-white/90 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm font-semibold text-zinc-900">
@@ -582,6 +595,8 @@ export function Dashboard({
               hasExpensesSection={hasExpensesSection}
               applicationCount={applicationCount}
               approvedApplicationCount={approvedApplicationCount}
+              stripeConnected={stripeConnected}
+              ownerConnectedMap={ownerConnectedMap}
               onGenerateChargesHref={onGenerateChargesHref}
               onPayCharge={onPayCharge}
               onRecordManualPayment={onRecordManualPayment}
@@ -618,6 +633,7 @@ export function Dashboard({
               onDeleteExpense={onDeleteExpense}
               onCreateOwnershipAccount={onCreateOwnershipAccount}
               onLinkPropertyToOwnershipAccount={onLinkPropertyToOwnershipAccount}
+              onUpdateManagementFee={onUpdateManagementFee}
               onCreateProperty={onCreateProperty}
               onCreateUnit={onCreateUnit}
               onCreateLease={onCreateLease}

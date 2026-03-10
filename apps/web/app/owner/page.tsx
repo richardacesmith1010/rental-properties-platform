@@ -15,6 +15,7 @@ import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { getOwnershipAccountsForUser } from "@/lib/ownership";
 import { getOwnerExpenseData } from "@/lib/expenses";
 import { getUserGamification } from "@/lib/gamification";
+import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
 import {
   createCheckoutForCharge,
   recordManualPayment,
@@ -60,7 +61,8 @@ import {
   updateExpense,
   deleteExpense,
   createOwnershipAccount,
-  linkPropertyToOwnershipAccount
+  linkPropertyToOwnershipAccount,
+  updateManagementFee
 } from "@/app/actions";
 import {
   getAuthenticatedUser,
@@ -178,6 +180,9 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
   const approvedApplicationCount = applications.filter(
     (application) => application.status === "approved"
   ).length;
+  const ownerConnectedMap = await arePropertyOwnersConnected(
+    portfolio.properties.map((property) => property.id)
+  );
   const isEmpty = portfolio.properties.length === 0 && !initialOwnerWorkflowMode && !initialSectionId;
 
   return (
@@ -207,6 +212,8 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       fullName={profile.fullName}
       nickname={profile.nickname}
       avatarUrl={profile.avatarUrl}
+      stripeConnected={profile.stripeOnboardingComplete}
+      ownerConnectedMap={ownerConnectedMap}
       onSignOut={signOut}
       onCreateProperty={createProperty}
       onCreateUnit={createUnit}
@@ -254,6 +261,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       onDeleteExpense={deleteExpense}
       onCreateOwnershipAccount={createOwnershipAccount}
       onLinkPropertyToOwnershipAccount={linkPropertyToOwnershipAccount}
+      onUpdateManagementFee={updateManagementFee}
     />
   );
 }
