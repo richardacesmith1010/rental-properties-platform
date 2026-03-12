@@ -1,10 +1,10 @@
 # Agent Handoff (Current State)
 
-Updated (UTC): 2026-03-10T06:30:00Z
+Updated (UTC): 2026-03-12T00:25:00Z
 
 ## Repository
 - Branch: `main`
-- HEAD (latest pushed): `2912db6`
+- HEAD (latest pushed): `0e87c0a`
 - Remote: `origin/main`
 - Deploy URL: `https://domusbase.com`
 
@@ -75,28 +75,26 @@ Stripe Connect DB (Sprint 12, applied):
 | Expired invite token handling | LIVE | Sprint 9 — amber banner on login page |
 | Health endpoint | LIVE | Sprint 9 — /api/health with env status |
 | Gamification unit tests | LIVE | Sprint 9 — 57 tests covering all 12 achievements |
+| Stripe Connect + payment routing | LIVE | Sprint 12 — Express accounts, transfer routing, management fee split |
+| Connect status UI | LIVE | Sprint 12 — banners, settings bank section, disabled Pay Now when unconnected |
+| Analytics dashboard | LIVE | Sprint 13 — recharts, 4 chart panels, CSV export, owner-only |
 | Playwright E2E tests | LIVE | Sprint 6 — auth, owner-setup, tenant, navigation |
 | Mobile app foundation | IN PROGRESS | Expo Router + role-aware tabs (not published) |
 
 ## Gate Status
-- `npm run gate:web` — 225/225 tests (9 suites), lint clean, build clean
+- `npm run gate:web` — 228/228 tests (8 suites), lint clean, build clean
 - `npm run smoke:web` — all checks passed (+ health endpoint + gamification auth guard)
 
 ## Current Risks / Blockers
 - Mobile app not published to app stores yet.
 - User's test account is wiped — needs fresh signup to test.
-- Role-specific loading.tsx removed (Next.js Suspense conflicts with server-side auth redirects).
 - Resend email not configured — in-app notifications work, email activates when RESEND_API_KEY + RESEND_FROM_EMAIL set.
-- Stripe Connect requires user to add `account.updated` event type in Stripe Dashboard webhook settings.
+- Stripe Connect requires user to enable Connect in Stripe Dashboard + add `account.updated` webhook event.
 
-## Sprint 12 (In Progress — Codex Prompt Written)
-Stripe Connect + Payment Routing:
-- Part A: Stripe Connect Express account creation + onboarding flow
-- Part B: Connect status UI (banners, settings section, disable Pay Now)
-- Part C: Payment routing via transfers after checkout completion
-- Part D: Management fee configuration per property
-- DB: `stripe_account_id`, `stripe_onboarding_complete` on profiles; `stripe_transfer_id`, `manager_transfer_id`, `platform_fee_cents` on payments; `management_fee_cents` on properties (all applied)
+## Shelved (Needs User Input)
+- Stripe Connect Dashboard setup (enable Connect, add webhook events)
+- Live test of Connect onboarding flow
 
 ## Future Sprints
-- Sprint 13: Pricing tiers + Stripe Billing (Free $0 / Starter $4.99 / Pro $12.99)
-- Future: Dom animations, language i18n, tax prep tools, analytics, Stripe Connect payouts management
+- Sprint 14: Pricing tiers + Stripe Billing (Free $0 / Starter $4.99 / Pro $12.99)
+- Future: Dom animations, language i18n, tax prep tools, manager analytics, Stripe Connect payouts management
