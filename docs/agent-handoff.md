@@ -1,10 +1,10 @@
 # Agent Handoff (Current State)
 
-Updated (UTC): 2026-03-12T00:25:00Z
+Updated (UTC): 2026-03-12T01:30:00Z
 
 ## Repository
 - Branch: `main`
-- HEAD (latest pushed): `0e87c0a`
+- HEAD (latest pushed): `3658627`
 - Remote: `origin/main`
 - Deploy URL: `https://domusbase.com`
 
@@ -35,9 +35,21 @@ Stripe Connect DB (Sprint 12, applied):
 - `payments` columns: `stripe_transfer_id` (text), `manager_transfer_id` (text), `platform_fee_cents` (integer, default 0)
 - `properties` columns: `management_fee_cents` (integer, default 0)
 
+Autopay DB (Sprint 14, applied):
+- `profiles` columns: `stripe_customer_id` (text)
+- Table: `autopay_enrollments` (id, lease_id UNIQUE, tenant_profile_id, stripe_payment_method_id, payment_method_type, last4, brand, enabled, retry_count, last_failed_at, created_at, updated_at)
+- RLS: tenant own-row + service_role full access
+
 ## Deployment State
 - Production host: `https://domusbase.com`
 - Vercel deploy requires authenticated CLI session
+
+## Stripe Infrastructure
+- Webhook endpoint: `https://domusbase.com/api/webhooks/stripe`
+- Webhook destinations: "energetic-glow" (original) + "whimsical-inspiration" (autopay events)
+- Events: `checkout.session.completed`, `account.updated`, `payment_intent.succeeded`, `payment_intent.payment_failed`
+- `STRIPE_WEBHOOK_SECRET` set in Vercel (verified via /api/health)
+- Stripe Connect enabled in sandbox/test mode (Express, platform type)
 
 ## Feature Status Matrix
 | Area | Status | Notes |
@@ -78,23 +90,27 @@ Stripe Connect DB (Sprint 12, applied):
 | Stripe Connect + payment routing | LIVE | Sprint 12 — Express accounts, transfer routing, management fee split |
 | Connect status UI | LIVE | Sprint 12 — banners, settings bank section, disabled Pay Now when unconnected |
 | Analytics dashboard | LIVE | Sprint 13 — recharts, 4 chart panels, CSV export, owner-only |
+| Tenant autopay | LIVE | Sprint 14 — saved payment methods, off-session charging, retry logic, autopay card UI |
+| Autopay cron processing | LIVE | Sprint 14 — processes due charges for enrolled tenants on cron |
+| Autopay webhook handlers | LIVE | Sprint 14 — payment_intent.succeeded + payment_intent.payment_failed |
+| Tenant payment settings | LIVE | Sprint 14 — Payment Methods section in settings for tenants |
 | Playwright E2E tests | LIVE | Sprint 6 — auth, owner-setup, tenant, navigation |
 | Mobile app foundation | IN PROGRESS | Expo Router + role-aware tabs (not published) |
 
 ## Gate Status
-- `npm run gate:web` — 228/228 tests (8 suites), lint clean, build clean
+- `npm run gate:web` — 232/232 tests (8 suites), lint clean, build clean
 - `npm run smoke:web` — all checks passed (+ health endpoint + gamification auth guard)
 
 ## Current Risks / Blockers
 - Mobile app not published to app stores yet.
 - User's test account is wiped — needs fresh signup to test.
 - Resend email not configured — in-app notifications work, email activates when RESEND_API_KEY + RESEND_FROM_EMAIL set.
-- Stripe Connect requires user to enable Connect in Stripe Dashboard + add `account.updated` webhook event.
 
 ## Shelved (Needs User Input)
-- Stripe Connect Dashboard setup (enable Connect, add webhook events)
-- Live test of Connect onboarding flow
+- Live end-to-end test of Connect onboarding + autopay flow
+- Switch Stripe from sandbox to live mode for real payments
 
 ## Future Sprints
-- Sprint 14: Pricing tiers + Stripe Billing (Free $0 / Starter $4.99 / Pro $12.99)
+- Sprint 15: Go-Live Hardening (switch Stripe to live, configure Resend, end-to-end smoke test)
+- Sprint 16: Pricing tiers + Stripe Billing (Free $0 / Starter $4.99 / Pro $12.99)
 - Future: Dom animations, language i18n, tax prep tools, manager analytics, Stripe Connect payouts management
