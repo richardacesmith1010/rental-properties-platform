@@ -25,6 +25,8 @@ export { deleteLease } from "./leases";
 
 export { createCheckoutForCharge } from "./charges";
 export { recordManualPayment } from "./charges";
+export { setupAutopay } from "./autopay";
+export { disableAutopay } from "./autopay";
 
 export { createMaintenanceTicket } from "./maintenance";
 export { updateTicketStatus } from "./maintenance";

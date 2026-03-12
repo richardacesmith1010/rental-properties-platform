@@ -2,11 +2,14 @@ import Link from "next/link";
 import {
   createCheckoutForCharge,
   createMaintenanceTicket,
-  signOut,
-  markNotificationRead,
+  disableAutopay,
   markAllNotificationsRead,
-  signDocumentPacket
+  markNotificationRead,
+  signDocumentPacket,
+  signOut,
+  setupAutopay
 } from "@/app/actions";
+import { getAutopayEnrollments } from "@/app/actions/autopay";
 import {
   getAuthenticatedUser,
   getCurrentUserRole,
@@ -18,14 +21,10 @@ import { getTenantMaintenanceData } from "@/lib/maintenance";
 import { getTenantDocumentsData } from "@/lib/documents";
 import { getNotificationsForUser } from "@/lib/notifications";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { SidebarNav, MobileTopBar } from "@/components/dashboard/sidebar-nav";
+import { ChargesSection } from "@/components/dashboard/charges-section";
 import { KpiCard } from "@/components/shared/kpi-card";
-import { DataRow } from "@/components/shared/data-row";
-import { EmptyState } from "@/components/shared/empty-state";
-import { SubmitButton } from "@/components/shared/submit-button";
 import { FeatureWarning } from "@/components/shared/feature-warning";
 import { TicketForm } from "@/components/dashboard/ticket-form";
 import { MaintenanceSection } from "@/components/dashboard/maintenance-section";
@@ -33,14 +32,10 @@ import { TenantDocumentsSection } from "@/components/dashboard/tenant-documents-
 import { NotificationsSection } from "@/components/dashboard/notifications-section";
 import { GamificationSummary } from "@/components/gamification/gamification-summary";
 import { AchievementChecker } from "@/components/gamification/achievement-checker";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency } from "@/lib/format";
 import { getUserGamification } from "@/lib/gamification";
 import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
-import {
-  ChevronLeft,
-  ChevronRight,
-  CreditCard
-} from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -112,7 +107,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
 
   const capabilities = await getFeatureCapabilities();
 
-  const [paymentData, maintenanceData, documentsData, notifications, gamification] = await Promise.all([
+  const [paymentData, maintenanceData, documentsData, notifications, gamification, autopayEnrollments] = await Promise.all([
     getTenantPaymentData(user.id),
     getTenantMaintenanceData(user.id),
     capabilities.documentsEnabled
@@ -126,7 +121,8 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
     capabilities.notificationsEnabled
       ? getNotificationsForUser(user.id)
       : Promise.resolve([]),
-    getUserGamification(user.id)
+    getUserGamification(user.id),
+    getAutopayEnrollments(user.id)
   ]);
 
   const outstandingCents = paymentData.charges.reduce(
@@ -270,67 +266,15 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
           )}
 
           {activeSection === "charges" && (
-            <Card id="charges">
-              <CardHeader>
-                <CardTitle>Outstanding Rent Charges</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {paymentData.charges.length === 0 ? (
-                  <EmptyState
-                    message="No charges yet. Charges appear automatically when your lease is active."
-                    showDom
-                  />
-                ) : (
-                  <div>
-                    {paymentData.charges.map((charge, i) => (
-                      <DataRow key={charge.id} last={i === paymentData.charges.length - 1}>
-                        <div>
-                          <p className="text-sm font-semibold text-zinc-900">
-                            {charge.propertyLabel}
-                          </p>
-                          <p className="mt-0.5 text-xs text-zinc-500">Due {formatDate(charge.dueDate)}</p>
-                          <Badge
-                            variant={charge.status === "late" ? "destructive" : "warning"}
-                            className="mt-1"
-                          >
-                            {charge.status.toUpperCase()}
-                          </Badge>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold text-zinc-900">
-                            {formatCurrency(charge.amountCents)}
-                          </p>
-                          {ownerConnectedMap.get(charge.propertyId) === false ? (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              disabled
-                              className="mt-2"
-                              title="Online payment unavailable - property owner hasn't connected their bank account"
-                            >
-                              <CreditCard className="mr-2 h-3.5 w-3.5" />
-                              Pay with Card
-                            </Button>
-                          ) : (
-                            <form action={createCheckoutForCharge} className="mt-2">
-                              <input type="hidden" name="chargeId" value={charge.id} />
-                              <SubmitButton
-                                size="sm"
-                                title="Open secure checkout to pay this charge."
-                              >
-                                <CreditCard className="mr-2 h-3.5 w-3.5" />
-                                Pay with Card
-                              </SubmitButton>
-                            </form>
-                          )}
-                        </div>
-                      </DataRow>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <ChargesSection
+              charges={paymentData.charges}
+              onPayCharge={createCheckoutForCharge}
+              ownerConnectedMap={ownerConnectedMap}
+              isTenantView
+              autopayEnrollments={autopayEnrollments}
+              onSetupAutopay={setupAutopay}
+              onDisableAutopay={disableAutopay}
+            />
           )}
 
           {activeSection === "maintenance" && (

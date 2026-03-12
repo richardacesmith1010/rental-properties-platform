@@ -2,8 +2,11 @@ import { createClient } from "@/lib/supabase/server";
 
 export interface TenantCharge {
   id: string;
+  leaseId: string;
   propertyId: string;
   propertyLabel: string;
+  propertyName: string;
+  unitNumber: string;
   dueDate: string;
   amountCents: number;
   status: "pending" | "late";
@@ -64,8 +67,11 @@ export async function getTenantPaymentData(userId: string): Promise<TenantPaymen
 
       return {
         id: charge.id,
+        leaseId: charge.lease_id,
         propertyId: unit?.property_id ?? "",
         propertyLabel,
+        propertyName: property?.name ?? "Your Rental",
+        unitNumber: unit?.unit_number ?? "?",
         dueDate: charge.due_date,
         amountCents: charge.amount_cents,
         status: charge.status as "pending" | "late"

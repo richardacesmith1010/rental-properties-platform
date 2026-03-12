@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   generateMonthlyChargesForAllOwnersWithClient,
+  processAutopayCharges,
   sendRentDueReminders
 } from "@/lib/charges";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -23,7 +24,15 @@ export async function GET(request: Request) {
   try {
     const adminClient = createAdminClient();
     const summary = await generateMonthlyChargesForAllOwnersWithClient(adminClient);
+    let autopaySummary: string | { processed: number; succeeded: number; failed: number; skipped: number } = "Autopay skipped";
     let reminderSummary = "Reminders skipped";
+
+    try {
+      autopaySummary = await processAutopayCharges(adminClient);
+    } catch (error) {
+      console.error("Autopay processing failed:", error);
+      autopaySummary = "Autopay failed";
+    }
 
     try {
       reminderSummary = await sendRentDueReminders(adminClient);
@@ -32,7 +41,7 @@ export async function GET(request: Request) {
       reminderSummary = "Reminders failed";
     }
 
-    return NextResponse.json({ ok: true, summary, reminderSummary });
+    return NextResponse.json({ ok: true, summary, autopaySummary, reminderSummary });
   } catch (error) {
     return NextResponse.json(
       {

@@ -6,6 +6,8 @@ import {
   updateLeaseSchema,
   payChargeSchema,
   recordManualPaymentSchema,
+  setupAutopaySchema,
+  disableAutopaySchema,
   updateManagementFeeSchema,
   createMaintenanceTicketSchema,
   updateTicketStatusSchema,
@@ -342,6 +344,38 @@ describe("recordManualPaymentSchema", () => {
       referenceNote: "Check #1042"
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe("setupAutopaySchema", () => {
+  it("accepts a valid lease ID", () => {
+    const result = setupAutopaySchema.safeParse({
+      leaseId: "550e8400-e29b-41d4-a716-446655440000"
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid lease IDs", () => {
+    const result = setupAutopaySchema.safeParse({
+      leaseId: "not-a-uuid"
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("disableAutopaySchema", () => {
+  it("accepts a valid enrollment ID", () => {
+    const result = disableAutopaySchema.safeParse({
+      enrollmentId: "550e8400-e29b-41d4-a716-446655440000"
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid enrollment IDs", () => {
+    const result = disableAutopaySchema.safeParse({
+      enrollmentId: "not-a-uuid"
+    });
+    expect(result.success).toBe(false);
   });
 });
 

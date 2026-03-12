@@ -6,7 +6,9 @@ import {
   getRoleHomePath,
   getUserProfileSummary
 } from "@/lib/auth";
-import { getExpressDashboardUrl, updateProfile } from "@/app/actions";
+import { disableAutopay, getExpressDashboardUrl, setupAutopay, updateProfile } from "@/app/actions";
+import { getAutopayEnrollments } from "@/app/actions/autopay";
+import { AutopayCard } from "@/components/dashboard/autopay-card";
 import { BankSettings } from "@/components/settings/bank-settings";
 import { ThemeSettingsPanel } from "@/components/settings/theme-settings-panel";
 import { PasswordSettings } from "@/components/settings/password-settings";
@@ -25,6 +27,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const role = await getCurrentUserRole(user.id);
   const workspacePath = getRoleHomePath(role);
   const profile = await getUserProfileSummary(user.id);
+  const enrollments = role === "tenant" ? await getAutopayEnrollments(user.id) : [];
   const connectMessage =
     typeof searchParams?.connect === "string"
       ? searchParams.connect
@@ -75,6 +78,31 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             />
           </div>
         </section>
+
+        {role === "tenant" ? (
+          <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+              Payment Methods
+            </h2>
+            <div className="mt-3 space-y-3">
+              {enrollments.map((enrollment) => (
+                <AutopayCard
+                  key={enrollment.id}
+                  leaseId={enrollment.leaseId}
+                  propertyLabel={enrollment.propertyLabel}
+                  enrollment={enrollment}
+                  onSetupAutopay={setupAutopay}
+                  onDisableAutopay={disableAutopay}
+                />
+              ))}
+              {enrollments.length === 0 ? (
+                <p className="text-sm text-zinc-500">
+                  No autopay enrollments yet. Enable autopay from your Charges section.
+                </p>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
 
         {role === "owner" || role === "manager" ? (
           <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">

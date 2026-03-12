@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createNotificationWithDelivery, notifyOwnerMembersForProperty } from "@/lib/notifications";
 import { getAdministeredPropertyIds } from "@/lib/property-access";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { createOffSessionPaymentIntent } from "@/lib/autopay";
+import { getOwnerStripeAccountForProperty } from "@/lib/stripe-connect";
 
 type SupabaseLikeClient = Pick<ReturnType<typeof createClient>, "from">;
 
@@ -66,6 +68,15 @@ interface OwnershipMembershipRow {
 
 interface ProfileIdRow {
   id: string;
+}
+
+interface AutopayEnrollmentRow {
+  id: string;
+  lease_id: string;
+  tenant_profile_id: string;
+  stripe_payment_method_id: string;
+  retry_count: number;
+  last_failed_at: string | null;
 }
 
 function getCandidateMonths() {
@@ -615,6 +626,139 @@ export async function sendRentDueReminders(supabase: SupabaseLikeClient): Promis
   }
 
   return `Reminders sent: ${reminderCount}.`;
+}
+
+function retryWindowOpen(lastFailedAt: string | null) {
+  if (!lastFailedAt) {
+    return true;
+  }
+
+  const retryAt = new Date(lastFailedAt);
+  retryAt.setUTCDate(retryAt.getUTCDate() + 3);
+  return retryAt.getTime() <= Date.now();
+}
+
+export async function processAutopayCharges(
+  supabase: SupabaseLikeClient
+): Promise<{ processed: number; succeeded: number; failed: number; skipped: number }> {
+  const { data: enrollments } = await supabase
+    .from("autopay_enrollments")
+    .select("id, lease_id, tenant_profile_id, stripe_payment_method_id, retry_count, last_failed_at")
+    .eq("enabled", true);
+
+  const enrollmentRows = (enrollments ?? []) as AutopayEnrollmentRow[];
+  const todayIso = new Date().toISOString().slice(0, 10);
+  let processed = 0;
+  let succeeded = 0;
+  let failed = 0;
+  let skipped = 0;
+
+  for (const enrollment of enrollmentRows) {
+    try {
+      if (enrollment.retry_count > 0 && !retryWindowOpen(enrollment.last_failed_at)) {
+        skipped += 1;
+        continue;
+      }
+
+      const { data: charges } = await supabase
+        .from("rent_charges")
+        .select("id, lease_id, due_date, amount_cents, status")
+        .eq("lease_id", enrollment.lease_id)
+        .eq("category", "rent")
+        .in("status", ["pending", "late"])
+        .lte("due_date", todayIso)
+        .order("due_date", { ascending: true });
+
+      const dueCharges = (charges ?? []) as Array<{
+        id: string;
+        lease_id: string;
+        due_date: string;
+        amount_cents: number;
+        status: "pending" | "late";
+      }>;
+
+      if (dueCharges.length === 0) {
+        continue;
+      }
+
+      const [{ data: profile }, { data: lease }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("stripe_customer_id")
+          .eq("id", enrollment.tenant_profile_id)
+          .maybeSingle(),
+        supabase
+          .from("leases")
+          .select("id, unit_id")
+          .eq("id", enrollment.lease_id)
+          .maybeSingle()
+      ]);
+
+      if (!profile?.stripe_customer_id || !lease?.unit_id) {
+        skipped += dueCharges.length;
+        continue;
+      }
+
+      const { data: unit } = await supabase
+        .from("units")
+        .select("property_id")
+        .eq("id", lease.unit_id)
+        .maybeSingle();
+
+      if (!unit?.property_id) {
+        skipped += dueCharges.length;
+        continue;
+      }
+
+      const ownerStripeAccount = await getOwnerStripeAccountForProperty(unit.property_id);
+      if (!ownerStripeAccount) {
+        skipped += dueCharges.length;
+        continue;
+      }
+
+      for (const charge of dueCharges) {
+        try {
+          const { data: existingPayment } = await supabase
+            .from("payments")
+            .select("id")
+            .eq("rent_charge_id", charge.id)
+            .maybeSingle();
+
+          if (existingPayment) {
+            skipped += 1;
+            continue;
+          }
+
+          processed += 1;
+          const paymentIntent = await createOffSessionPaymentIntent({
+            customerId: profile.stripe_customer_id,
+            paymentMethodId: enrollment.stripe_payment_method_id,
+            amountCents: charge.amount_cents,
+            metadata: {
+              charge_id: charge.id,
+              user_id: enrollment.tenant_profile_id,
+              lease_id: enrollment.lease_id,
+              autopay: "true"
+            },
+            transferGroup: `charge_${charge.id}`
+          });
+
+          if (paymentIntent.status === "succeeded") {
+            succeeded += 1;
+          }
+        } catch (chargeError) {
+          console.error(`[autopay] Failed to process charge ${charge.id}:`, chargeError);
+          failed += 1;
+          break;
+        }
+      }
+    } catch (enrollmentError) {
+      console.error(`[autopay] Failed to process enrollment ${enrollment.id}:`, enrollmentError);
+      failed += 1;
+    }
+  }
+
+  return { processed, succeeded, failed, skipped };
 }
 
 export async function generateMonthlyChargesForAllOwnersWithClient(supabase: SupabaseLikeClient): Promise<string> {

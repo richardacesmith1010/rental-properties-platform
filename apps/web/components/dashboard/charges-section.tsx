@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useFormState } from "react-dom";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import type { ActionState } from "@/app/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,7 @@ import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Input } from "@/components/ui/input";
+import { AutopayCard } from "./autopay-card";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 type ChargeStatus = "pending" | "paid" | "late";
@@ -24,15 +26,27 @@ type StatefulAction = (
 
 interface Charge {
   id: string;
-  leaseId: string;
+  leaseId?: string;
   propertyId: string;
   dueDate: string;
   amountCents: number;
   status: ChargeStatus;
-  propertyName: string;
-  unitNumber: string;
-  tenantName: string;
-  category: ChargeCategory;
+  propertyName?: string;
+  propertyLabel?: string;
+  unitNumber?: string;
+  tenantName?: string;
+  category?: ChargeCategory;
+}
+
+interface AutopayEnrollmentView {
+  id: string;
+  leaseId: string;
+  propertyLabel: string;
+  last4: string;
+  brand: string | null;
+  paymentMethodType: string;
+  enabled: boolean;
+  retryCount: number;
 }
 
 interface ChargesSectionProps {
@@ -43,11 +57,20 @@ interface ChargesSectionProps {
   showManualPayment?: boolean;
   ownerConnectedMap?: Map<string, boolean>;
   stripeConnected?: boolean;
+  isTenantView?: boolean;
+  autopayEnrollments?: AutopayEnrollmentView[];
+  onSetupAutopay?: StatefulAction;
+  onDisableAutopay?: StatefulAction;
 }
 
 const unavailableManualPaymentAction: StatefulAction = async () => ({
   success: false,
   error: "Manual payment recording is unavailable."
+});
+
+const unavailableAutopayAction: StatefulAction = async () => ({
+  success: false,
+  error: "Autopay management is unavailable."
 });
 
 function InlineAlert({ state }: { state: ActionState }) {
@@ -67,6 +90,16 @@ function InlineAlert({ state }: { state: ActionState }) {
   );
 }
 
+function getChargeLabel(charge: Charge) {
+  if (charge.propertyLabel) {
+    return charge.propertyLabel;
+  }
+
+  const propertyName = charge.propertyName ?? "Unknown Property";
+  const unitNumber = charge.unitNumber ?? "-";
+  return `${propertyName} • Unit ${unitNumber}`;
+}
+
 export function ChargesSection({
   charges,
   onPayCharge,
@@ -74,8 +107,13 @@ export function ChargesSection({
   onGenerateChargesHref,
   showManualPayment = false,
   ownerConnectedMap,
-  stripeConnected
+  stripeConnected,
+  isTenantView = false,
+  autopayEnrollments = [],
+  onSetupAutopay,
+  onDisableAutopay
 }: ChargesSectionProps) {
+  const searchParams = useSearchParams();
   const [activeFilter, setActiveFilter] = useState<ChargeFilter>("all");
   const [manualPaymentChargeId, setManualPaymentChargeId] = useState<string | null>(null);
   const [manualPaymentState, recordManualPaymentAction] = useFormState(
@@ -105,11 +143,32 @@ export function ChargesSection({
     );
   }).length;
 
+  const uniqueLeaseCards = useMemo(() => {
+    if (!isTenantView) {
+      return [] as Array<{ leaseId: string; propertyLabel: string }>;
+    }
+
+    const cards = new Map<string, string>();
+    for (const charge of charges) {
+      if (!charge.leaseId || cards.has(charge.leaseId)) {
+        continue;
+      }
+      cards.set(charge.leaseId, getChargeLabel(charge));
+    }
+
+    return Array.from(cards.entries()).map(([leaseId, propertyLabel]) => ({
+      leaseId,
+      propertyLabel
+    }));
+  }, [charges, isTenantView]);
+
+  const autopayStatus = searchParams?.get("autopay") ?? null;
+
   return (
     <Card id="charges">
       <CardHeader className="flex flex-row items-center justify-between gap-3">
-        <CardTitle>Upcoming / Late Charges</CardTitle>
-        {onGenerateChargesHref && (
+        <CardTitle>{isTenantView ? "Outstanding Rent Charges" : "Upcoming / Late Charges"}</CardTitle>
+        {onGenerateChargesHref ? (
           <Link
             href={onGenerateChargesHref}
             className="rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
@@ -117,9 +176,39 @@ export function ChargesSection({
           >
             Generate This Month Charges
           </Link>
-        )}
+        ) : null}
       </CardHeader>
       <CardContent>
+        {isTenantView && autopayStatus === "enrolled" ? (
+          <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            Autopay enabled. Your rent will be charged automatically on the due date.
+          </div>
+        ) : null}
+
+        {isTenantView && autopayStatus === "error" ? (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            We couldn&apos;t finish your autopay setup. Please try again.
+          </div>
+        ) : null}
+
+        {isTenantView && uniqueLeaseCards.length > 0 ? (
+          <div className="mb-4 space-y-3">
+            {uniqueLeaseCards.map(({ leaseId, propertyLabel }) => {
+              const enrollment = autopayEnrollments.find((item) => item.leaseId === leaseId) ?? null;
+              return (
+                <AutopayCard
+                  key={leaseId}
+                  leaseId={leaseId}
+                  propertyLabel={enrollment?.propertyLabel ?? propertyLabel}
+                  enrollment={enrollment}
+                  onSetupAutopay={onSetupAutopay ?? unavailableAutopayAction}
+                  onDisableAutopay={onDisableAutopay ?? unavailableAutopayAction}
+                />
+              );
+            })}
+          </div>
+        ) : null}
+
         <div className="mb-4 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm">
           <span className="font-semibold text-amber-700">{pendingCount} pending</span>
           <span className="mx-2 text-zinc-400">•</span>
@@ -153,15 +242,18 @@ export function ChargesSection({
           ))}
         </div>
 
-        {showManualPayment && <InlineAlert state={manualPaymentState} />}
+        {showManualPayment ? <InlineAlert state={manualPaymentState} /> : null}
 
         {filteredCharges.length === 0 ? (
           <EmptyState
             message={
               charges.length === 0
-                ? "No charges yet. Charges are generated automatically when you have active leases. You can also generate them manually from the Operations section."
+                ? isTenantView
+                  ? "No charges yet. Charges appear automatically when your lease is active."
+                  : "No charges yet. Charges are generated automatically when you have active leases. You can also generate them manually from the Operations section."
                 : "No charges match this filter right now."
             }
+            showDom={isTenantView}
           />
         ) : (
           <div>
@@ -171,16 +263,18 @@ export function ChargesSection({
                 ownerConnectedMap?.get(charge.propertyId) ??
                 stripeConnected ??
                 true;
+              const category = charge.category ?? "rent";
+
               return (
                 <DataRow key={charge.id} last={i === filteredCharges.length - 1}>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-zinc-900">
-                      {charge.propertyName} • Unit {charge.unitNumber}
-                    </p>
-                    <p className="mt-0.5 text-xs text-zinc-500">{charge.tenantName}</p>
+                    <p className="text-sm font-semibold text-zinc-900">{getChargeLabel(charge)}</p>
+                    {!isTenantView && charge.tenantName ? (
+                      <p className="mt-0.5 text-xs text-zinc-500">{charge.tenantName}</p>
+                    ) : null}
                     <p className="mt-0.5 text-xs text-zinc-500">Due {formatDate(charge.dueDate)}</p>
 
-                    {showManualPayment && manualFormOpen && charge.status !== "paid" && (
+                    {showManualPayment && manualFormOpen && charge.status !== "paid" ? (
                       <form action={recordManualPaymentAction} className="mt-3 grid gap-3 sm:grid-cols-4">
                         <input type="hidden" name="chargeId" value={charge.id} />
                         <div className="space-y-1">
@@ -239,7 +333,7 @@ export function ChargesSection({
                           </SubmitButton>
                         </div>
                       </form>
-                    )}
+                    ) : null}
                   </div>
 
                   <div className="flex flex-col items-end gap-2">
@@ -251,17 +345,20 @@ export function ChargesSection({
                         <Badge variant={charge.status === "late" ? "destructive" : charge.status === "paid" ? "success" : "warning"}>
                           {charge.status.toUpperCase()}
                         </Badge>
-                        {charge.category === "late_fee" && (
+                        {category === "late_fee" ? (
                           <Badge variant="destructive">Late Fee</Badge>
-                        )}
+                        ) : null}
                       </div>
                     </div>
 
                     {charge.status !== "paid" ? ownerConnected ? (
                       <form action={onPayCharge}>
                         <input type="hidden" name="chargeId" value={charge.id} />
-                        <SubmitButton size="sm" title="Open secure checkout for this charge.">
-                          Pay now
+                        <SubmitButton
+                          size="sm"
+                          title={isTenantView ? "Open secure checkout to pay this charge." : "Open secure checkout for this charge."}
+                        >
+                          {isTenantView ? "Pay with Card" : "Pay now"}
                         </SubmitButton>
                       </form>
                     ) : (
@@ -272,11 +369,11 @@ export function ChargesSection({
                         disabled
                         title="Online payment unavailable - property owner hasn't connected their bank account."
                       >
-                        Pay now
+                        {isTenantView ? "Pay with Card" : "Pay now"}
                       </Button>
                     ) : null}
 
-                    {showManualPayment && charge.status !== "paid" && (
+                    {showManualPayment && charge.status !== "paid" ? (
                       <Button
                         type="button"
                         size="sm"
@@ -290,7 +387,7 @@ export function ChargesSection({
                       >
                         {manualFormOpen ? "Cancel" : "Record Payment"}
                       </Button>
-                    )}
+                    ) : null}
                   </div>
                 </DataRow>
               );

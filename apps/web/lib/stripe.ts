@@ -4,6 +4,16 @@ export interface StripeCheckoutSession {
   payment_status: string;
   amount_total: number | null;
   payment_intent: string | null;
+  setup_intent?: string | null;
+  metadata?: Record<string, string>;
+}
+
+export interface StripePaymentIntent {
+  id: string;
+  status: string;
+  amount_received?: number | null;
+  amount?: number | null;
+  transfer_group?: string | null;
   metadata?: Record<string, string>;
 }
 

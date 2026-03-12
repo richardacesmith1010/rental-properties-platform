@@ -128,6 +128,14 @@ export const updateManagementFeeSchema = z.object({
   managementFeeDollars: z.coerce.number().min(0, "Management fee cannot be negative.")
 });
 
+export const setupAutopaySchema = z.object({
+  leaseId: z.string().uuid("Invalid lease selection.")
+});
+
+export const disableAutopaySchema = z.object({
+  enrollmentId: z.string().uuid("Invalid autopay enrollment.")
+});
+
 /* ─── Maintenance ─── */
 
 export const createMaintenanceTicketSchema = z.object({
