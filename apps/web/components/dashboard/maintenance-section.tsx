@@ -9,6 +9,7 @@ import { TicketVendorControl } from "./ticket-vendor-control";
 import { TicketPhotoUpload } from "./ticket-photo-upload";
 import { EmptyState } from "./empty-state";
 import { MaintenanceCommentThread } from "./maintenance-comment-thread";
+import { MaintenanceTracker } from "./maintenance-tracker";
 import type { MaintenanceTicket } from "@/lib/maintenance";
 import type { ActionState } from "@/app/actions";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -171,6 +172,13 @@ export function MaintenanceSection({
                           </span>
                         </summary>
                         <div className="border-t border-zinc-200 px-4 py-4">
+                          <div className="mb-4">
+                            <MaintenanceTracker
+                              currentStatus={ticket.status}
+                              timeline={ticket.timeline}
+                              ticketCreatedAt={ticket.createdAt}
+                            />
+                          </div>
                           {onAddComment ? (
                             <MaintenanceCommentThread
                               ticketId={ticket.id}

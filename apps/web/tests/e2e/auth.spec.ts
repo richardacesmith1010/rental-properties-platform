@@ -55,7 +55,7 @@ test.describe.serial("Authentication", () => {
     await page.getByRole("button", { name: "Sign In" }).click();
 
     await expect(page).toHaveURL(/\/tenant/, { timeout: 10000 });
-    await expect(page.getByRole("heading", { name: "Tenant Workspace" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Welcome home/ })).toBeVisible();
   });
 
   test("unauthenticated user is redirected from protected routes", async ({ page }) => {

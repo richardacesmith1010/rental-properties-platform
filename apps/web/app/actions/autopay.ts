@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createStripeCustomer, createSetupCheckoutSession } from "@/lib/autopay";
 import { getCurrentUserRole } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   disableAutopaySchema,
   parseFormData,
@@ -51,6 +52,11 @@ export async function setupAutopay(
   formData: FormData
 ): Promise<ActionState> {
   const { supabase, user } = await requireTenantUser();
+  const autopayRate = checkRateLimit(`autopay:${user.id}`, 5, 60 * 60 * 1000);
+  if (!autopayRate.allowed) {
+    return { success: false, error: "Too many autopay setup attempts. Please try again later." };
+  }
+
   const parsed = parseFormData(setupAutopaySchema, formData);
   if (!parsed.success) {
     return parsed;

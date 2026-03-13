@@ -4,17 +4,20 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/format";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-xl text-sm font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]",
   {
     variants: {
       variant: {
         default:
-          "bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-md shadow-violet-500/20 hover:from-violet-600 hover:to-purple-700",
+          "gradient-btn hover:shadow-lg",
+        gradient:
+          "bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/20 hover:-translate-y-0.5 hover:from-violet-600 hover:to-purple-700",
         outline:
-          "border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900",
-        ghost: "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900",
+          "border border-zinc-200 bg-white/80 text-zinc-700 shadow-none hover:bg-zinc-50 hover:text-zinc-900",
+        ghost:
+          "bg-transparent text-zinc-600 shadow-none hover:bg-zinc-100/70 hover:text-zinc-900",
         destructive:
-          "bg-red-500 text-white shadow-sm hover:bg-red-600",
+          "bg-red-500 text-white shadow-sm hover:bg-red-600 hover:shadow-md",
         link: "text-violet-600 underline-offset-4 hover:underline",
       },
       size: {

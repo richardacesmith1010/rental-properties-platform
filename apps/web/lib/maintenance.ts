@@ -15,6 +15,17 @@ export interface MaintenanceComment {
   createdAt: string;
 }
 
+export interface StatusHistoryEntry {
+  id: string;
+  ticketId: string;
+  fromStatus: string | null;
+  toStatus: string;
+  changedBy: string | null;
+  changedByName: string;
+  notes: string | null;
+  createdAt: string;
+}
+
 export interface MaintenanceTicket {
   id: string;
   propertyName: string;
@@ -33,6 +44,7 @@ export interface MaintenanceTicket {
   tenantEmail: string | null;
   commentCount: number;
   comments: MaintenanceComment[];
+  timeline: StatusHistoryEntry[];
   isFeatureReady?: boolean;
   featureWarning?: string | null;
 }
@@ -158,10 +170,133 @@ async function buildCommentMaps(
   };
 }
 
+async function buildTimelineMaps(
+  supabase: SupabaseLikeClient,
+  ticketIds: string[]
+) {
+  const timelineByTicketId = new Map<string, StatusHistoryEntry[]>();
+
+  if (ticketIds.length === 0) {
+    return { timelineByTicketId };
+  }
+
+  const { data: history, error } = await supabase
+    .from("maintenance_status_history")
+    .select("id, ticket_id, from_status, to_status, changed_by, notes, created_at")
+    .in("ticket_id", ticketIds)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    if (isMissingSchemaError(error)) {
+      return { timelineByTicketId };
+    }
+
+    throw error;
+  }
+
+  const historyRows =
+    (history ?? []) as Array<{
+      id: string;
+      ticket_id: string;
+      from_status: string | null;
+      to_status: string;
+      changed_by: string | null;
+      notes: string | null;
+      created_at: string;
+    }>;
+
+  const authorIds = Array.from(
+    new Set(
+      historyRows
+        .map((row) => row.changed_by)
+        .filter((authorId): authorId is string => Boolean(authorId))
+    )
+  );
+
+  let authorById = new Map<
+    string,
+    {
+      full_name: string | null;
+      nickname: string | null;
+      email: string | null;
+    }
+  >();
+
+  if (authorIds.length > 0) {
+    const admin = createAdminClient();
+    const { data: authors } = await admin
+      .from("profiles")
+      .select("id, full_name, nickname, email")
+      .in("id", authorIds);
+
+    authorById = new Map(
+      (authors ?? []).map((author) => [
+        author.id,
+        {
+          full_name: author.full_name,
+          nickname: author.nickname,
+          email: author.email
+        }
+      ])
+    );
+  }
+
+  for (const row of historyRows) {
+    const current = timelineByTicketId.get(row.ticket_id) ?? [];
+    const author = row.changed_by ? authorById.get(row.changed_by) : null;
+    current.push({
+      id: row.id,
+      ticketId: row.ticket_id,
+      fromStatus: row.from_status,
+      toStatus: row.to_status,
+      changedBy: row.changed_by,
+      changedByName:
+        author?.nickname?.trim() ||
+        author?.full_name?.trim() ||
+        author?.email ||
+        "Domus",
+      notes: row.notes,
+      createdAt: row.created_at
+    });
+    timelineByTicketId.set(row.ticket_id, current);
+  }
+
+  return { timelineByTicketId };
+}
+
 export async function getTicketComments(ticketId: string): Promise<MaintenanceComment[]> {
   const supabase = createClient();
   const { commentsByTicketId } = await buildCommentMaps(supabase, [ticketId]);
   return commentsByTicketId.get(ticketId) ?? [];
+}
+
+export async function getMaintenanceTimeline(
+  supabase: SupabaseLikeClient,
+  ticketId: string
+): Promise<StatusHistoryEntry[]> {
+  const { timelineByTicketId } = await buildTimelineMaps(supabase, [ticketId]);
+  return timelineByTicketId.get(ticketId) ?? [];
+}
+
+export async function logMaintenanceStatusChange(
+  supabase: SupabaseLikeClient,
+  ticketId: string,
+  fromStatus: string | null,
+  toStatus: string,
+  changedBy: string,
+  notes?: string
+): Promise<void> {
+  const { error } = await supabase.from("maintenance_status_history").insert({
+    ticket_id: ticketId,
+    from_status: fromStatus,
+    to_status: toStatus,
+    changed_by: changedBy,
+    notes: notes ?? null
+  });
+
+  if (error && !isMissingSchemaError(error)) {
+    console.error("Failed to log maintenance status change:", error);
+  }
 }
 
 async function buildTicketEnhancementMaps(
@@ -312,6 +447,10 @@ export async function getTenantMaintenanceData(
     supabase,
     ticketRows.map((ticket) => ticket.id)
   );
+  const { timelineByTicketId } = await buildTimelineMaps(
+    supabase,
+    ticketRows.map((ticket) => ticket.id)
+  );
 
   return {
     units: tenantUnits,
@@ -338,6 +477,7 @@ export async function getTenantMaintenanceData(
         tenantEmail: null,
         commentCount: commentCountByTicketId.get(ticket.id) ?? 0,
         comments: commentsByTicketId.get(ticket.id) ?? [],
+        timeline: timelineByTicketId.get(ticket.id) ?? [],
         isFeatureReady: true,
         featureWarning: null
       };
@@ -424,6 +564,10 @@ export async function getOwnerMaintenanceTickets(
     supabase,
     ticketRows.map((ticket) => ticket.id)
   );
+  const { timelineByTicketId } = await buildTimelineMaps(
+    supabase,
+    ticketRows.map((ticket) => ticket.id)
+  );
 
   return ticketRows.map((ticket) => {
     const property = propertyById.get(ticket.property_id);
@@ -451,6 +595,7 @@ export async function getOwnerMaintenanceTickets(
       tenantEmail: tenant?.email ?? null,
       commentCount: commentCountByTicketId.get(ticket.id) ?? 0,
       comments: commentsByTicketId.get(ticket.id) ?? [],
+      timeline: timelineByTicketId.get(ticket.id) ?? [],
       isFeatureReady: true,
       featureWarning: null
     };
@@ -533,6 +678,10 @@ export async function getManagerMaintenanceTickets(
     supabase,
     ticketRows.map((ticket) => ticket.id)
   );
+  const { timelineByTicketId } = await buildTimelineMaps(
+    supabase,
+    ticketRows.map((ticket) => ticket.id)
+  );
 
   return ticketRows.map((ticket) => {
     const property = propertyById.get(ticket.property_id);
@@ -560,6 +709,7 @@ export async function getManagerMaintenanceTickets(
       tenantEmail: tenant?.email ?? null,
       commentCount: commentCountByTicketId.get(ticket.id) ?? 0,
       comments: commentsByTicketId.get(ticket.id) ?? [],
+      timeline: timelineByTicketId.get(ticket.id) ?? [],
       isFeatureReady: true,
       featureWarning: null
     };

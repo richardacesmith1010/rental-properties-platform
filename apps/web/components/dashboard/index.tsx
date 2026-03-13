@@ -24,6 +24,7 @@ import { DomMascot } from "@/components/gamification/dom-mascot";
 import { AchievementChecker } from "@/components/gamification/achievement-checker";
 import { GamificationSummary } from "@/components/gamification/gamification-summary";
 import { ConnectBanner } from "@/components/dashboard/connect-banner";
+import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { SidebarNav, MobileTopBar, type NavItem } from "./sidebar-nav";
 import type { GlobalSearchItem } from "./global-search";
 import { SectionRenderer } from "./section-renderer";
@@ -633,25 +634,25 @@ export function Dashboard({
       />
       <main className="relative flex-1 lg:ml-[260px]">
         <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
-        <div className="flex flex-col gap-4 px-6 pt-6 sm:flex-row sm:items-start sm:justify-between lg:px-8 lg:pt-8">
-          <div id="overview">
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Operations Dashboard</h1>
-            <p className="mt-1 text-sm text-zinc-600">
-              {formatDate(new Date())}
-            </p>
-          </div>
-          <div className="flex w-full flex-col gap-3 sm:max-w-md sm:items-end">
-            <GamificationSummary
-              totalXp={resolvedGamification.totalXp}
-              currentLevel={resolvedGamification.currentLevel}
-              streakCount={resolvedGamification.streakCount}
-              role={data.profileRole}
-              className="w-full"
-            />
-            <Badge className="self-start border border-violet-200 bg-violet-50 text-violet-700 capitalize sm:self-end">
-              {data.profileRole}
-            </Badge>
-          </div>
+        <div className="px-6 pt-6 lg:px-8 lg:pt-8" id="overview">
+          <DashboardHeader
+            role={data.profileRole}
+            kpis={data.kpis}
+            occupancy={occupancy}
+            propertyCount={safePortfolio.properties.length}
+            userEmail={userEmail}
+            nickname={nickname}
+            fullName={fullName}
+            gamificationSummary={
+              <GamificationSummary
+                totalXp={resolvedGamification.totalXp}
+                currentLevel={resolvedGamification.currentLevel}
+                streakCount={resolvedGamification.streakCount}
+                role={data.profileRole}
+                className="w-full"
+              />
+            }
+          />
         </div>
         <div className="space-y-6 px-6 pb-8 pt-6 lg:px-8">
           {generatedMessage && (
@@ -666,7 +667,7 @@ export function Dashboard({
             />
           ) : null}
           {(isOwnerRole || isManagerRole) && activeWorkflowMeta && (
-            <div className="flex flex-col gap-1 rounded-xl border border-zinc-200/80 bg-white/90 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="domus-glass flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm font-semibold text-zinc-900">
                 {activeWorkflowMeta.label}
               </p>

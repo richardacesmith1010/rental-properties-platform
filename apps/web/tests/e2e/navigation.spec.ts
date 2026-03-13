@@ -40,7 +40,7 @@ test.describe.serial("Owner navigation", () => {
     await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
 
     await page.getByRole("button", { name: "Next section" }).click();
-    await expect(page.getByRole("heading", { name: "Operations" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Charges", exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: "Previous section" }).click();
     await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();

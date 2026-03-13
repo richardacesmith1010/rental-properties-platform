@@ -46,10 +46,18 @@ export function RentCollectionChart({ metrics }: RentCollectionChartProps) {
     <div className="h-[300px] w-full">
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={chartData} margin={{ left: 8, right: 12, top: 8, bottom: 0 }}>
-          <CartesianGrid stroke="#e4e4e7" strokeDasharray="3 3" />
-          <XAxis dataKey="month" tick={{ fill: "#71717a", fontSize: 12 }} />
-          <YAxis tickFormatter={(value) => `$${value}`} tick={{ fill: "#71717a", fontSize: 12 }} />
+          <CartesianGrid stroke="var(--domus-divider)" strokeDasharray="3 3" />
+          <XAxis dataKey="month" tick={{ fill: "var(--domus-muted-text)", fontSize: 12 }} />
+          <YAxis tickFormatter={(value) => `$${value}`} tick={{ fill: "var(--domus-muted-text)", fontSize: 12 }} />
           <Tooltip
+            contentStyle={{
+              background: "var(--domus-card-bg)",
+              border: "1px solid var(--domus-card-border)",
+              color: "var(--domus-heading-text)",
+              borderRadius: "16px",
+              boxShadow: "var(--domus-shadow-md)"
+            }}
+            labelStyle={{ color: "var(--domus-heading-text)" }}
             formatter={(value, name) => [formatDollars(toNumber(value)), name]}
             labelFormatter={(label) => `Month: ${label}`}
           />

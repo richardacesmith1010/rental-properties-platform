@@ -12,6 +12,7 @@ import { createNotificationWithDelivery, notifyOwnerMembersForProperty } from "@
 import { logAudit } from "@/lib/audit";
 import { awardXp, XP_VALUES } from "@/lib/gamification";
 import { formatCurrency } from "@/lib/format";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { payChargeSchema, parseFormData, recordManualPaymentSchema } from "@/lib/validations";
 import type { ActionState } from "./shared";
 
@@ -116,6 +117,11 @@ export async function recordManualPayment(
 
   if (!user) {
     redirect("/login");
+  }
+
+  const paymentRate = checkRateLimit(`manual-payment:${user.id}`, 20, 60 * 60 * 1000);
+  if (!paymentRate.allowed) {
+    return { success: false, error: "Too many payment attempts. Please try again later." };
   }
 
   // 2) Validate

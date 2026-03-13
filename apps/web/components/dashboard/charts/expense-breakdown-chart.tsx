@@ -55,8 +55,18 @@ export function ExpenseBreakdownChart({ categories }: ExpenseBreakdownChartProps
               <Cell key={`${entry.name}-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
-          <Tooltip formatter={(value) => formatCurrency(Math.round(toNumber(value) * 100))} />
-          <Legend />
+          <Tooltip
+            contentStyle={{
+              background: "var(--domus-card-bg)",
+              border: "1px solid var(--domus-card-border)",
+              color: "var(--domus-heading-text)",
+              borderRadius: "16px",
+              boxShadow: "var(--domus-shadow-md)"
+            }}
+            labelStyle={{ color: "var(--domus-heading-text)" }}
+            formatter={(value) => formatCurrency(Math.round(toNumber(value) * 100))}
+          />
+          <Legend wrapperStyle={{ color: "var(--domus-muted-text)", fontSize: 12 }} />
         </PieChart>
       </ResponsiveContainer>
       <p className="mt-2 text-center text-xs font-medium text-zinc-500">Total: {formatCurrency(total)}</p>

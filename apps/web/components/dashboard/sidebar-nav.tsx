@@ -313,7 +313,10 @@ export function SidebarNav({
         </div>
       </div>
 
-      <nav className="flex-1 min-h-0 space-y-1 overflow-y-auto px-3 pb-4">
+      <nav
+        aria-label="Main navigation"
+        className="flex-1 min-h-0 space-y-1 overflow-y-auto px-3 pb-4"
+      >
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeItemId === item.id;

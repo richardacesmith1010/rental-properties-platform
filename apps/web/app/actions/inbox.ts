@@ -118,17 +118,30 @@ export async function sendInboxMessage(
     return { success: false, error: "Failed to send inbox message." };
   }
 
-  const { error: threadUpdateError } = await supabase
+  const updatedAt = new Date().toISOString();
+  let { error: threadUpdateError } = await supabase
     .from("inbox_threads")
-    .update({ updated_at: new Date().toISOString() })
+    .update({ updated_at: updatedAt })
     .eq("id", threadId);
 
   if (threadUpdateError) {
-    console.error("Failed to update inbox thread timestamp:", threadUpdateError.message);
+    console.error("Failed to update inbox thread timestamp, retrying once:", threadUpdateError.message);
+    const retryResult = await supabase
+      .from("inbox_threads")
+      .update({ updated_at: updatedAt })
+      .eq("id", threadId);
+    threadUpdateError = retryResult.error;
   }
 
   revalidatePath("/owner");
   revalidatePath("/manager");
+  if (threadUpdateError) {
+    console.error("Failed to update inbox thread timestamp after retry:", threadUpdateError.message);
+    return {
+      success: true,
+      message: "Message sent, but the thread activity timestamp is catching up."
+    };
+  }
+
   return { success: true };
 }
-

@@ -16,7 +16,6 @@ import { ReceivablesReport } from "@/components/reports/receivables-report";
 import { RentRollReport } from "@/components/reports/rent-roll-report";
 import { TaxSummaryReport } from "@/components/reports/tax-summary-report";
 import { TenantLedgerReport } from "@/components/reports/tenant-ledger-report";
-import { BarChart3, CreditCard, FileBarChart2, Landmark, Receipt, Wallet } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -98,12 +97,12 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         </header>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <ReportCard id="rent-roll" icon={BarChart3} title="Rent Roll" description="Current tenant roster with rent amounts and balances." />
-          <ReportCard id="delinquency-aging" icon={Receipt} title="Delinquency Aging" description="Outstanding balances by 30/60/90+ day aging." />
-          <ReportCard id="tenant-ledger" icon={FileBarChart2} title="Tenant Ledger" description="Complete charge and payment history per tenant." />
-          <ReportCard id="monthly-pnl" icon={Wallet} title="Monthly P&L" description="Revenue versus expenses by property by month." />
-          <ReportCard id="tax-summary" icon={Landmark} title="Tax Summary" description="Annual rental income and deductions in a Schedule E style format." />
-          <ReportCard id="accounts-receivable" icon={CreditCard} title="Accounts Receivable" description="All outstanding balances grouped by tenant." />
+          <ReportCard id="rent-roll" icon="bar-chart-3" title="Rent Roll" description="Current tenant roster with rent amounts and balances." />
+          <ReportCard id="delinquency-aging" icon="receipt" title="Delinquency Aging" description="Outstanding balances by 30/60/90+ day aging." />
+          <ReportCard id="tenant-ledger" icon="file-bar-chart-2" title="Tenant Ledger" description="Complete charge and payment history per tenant." />
+          <ReportCard id="monthly-pnl" icon="wallet" title="Monthly P&L" description="Revenue versus expenses by property by month." />
+          <ReportCard id="tax-summary" icon="landmark" title="Tax Summary" description="Annual rental income and deductions in a Schedule E style format." />
+          <ReportCard id="accounts-receivable" icon="credit-card" title="Accounts Receivable" description="All outstanding balances grouped by tenant." />
         </section>
 
         <div className="space-y-6">

@@ -16,9 +16,9 @@ export function OccupancyChart({ metrics }: OccupancyChartProps) {
     <div className="h-[250px] w-full">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={metrics} margin={{ left: 8, right: 12, top: 8, bottom: 0 }}>
-          <CartesianGrid stroke="#e4e4e7" strokeDasharray="3 3" />
-          <XAxis dataKey="month" tick={{ fill: "#71717a", fontSize: 12 }} />
-          <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} tick={{ fill: "#71717a", fontSize: 12 }} />
+          <CartesianGrid stroke="var(--domus-divider)" strokeDasharray="3 3" />
+          <XAxis dataKey="month" tick={{ fill: "var(--domus-muted-text)", fontSize: 12 }} />
+          <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} tick={{ fill: "var(--domus-muted-text)", fontSize: 12 }} />
           <Tooltip
             content={({ active, payload, label }) => {
               if (!active || !payload?.length) {
@@ -27,9 +27,17 @@ export function OccupancyChart({ metrics }: OccupancyChartProps) {
 
               const metric = payload[0]?.payload as OccupancyMetric;
               return (
-                <div className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm shadow-lg">
-                  <p className="font-medium text-zinc-900">{label}</p>
-                  <p className="text-zinc-600">
+                <div
+                  className="rounded-lg px-3 py-2 text-sm"
+                  style={{
+                    background: "var(--domus-card-bg)",
+                    border: "1px solid var(--domus-card-border)",
+                    color: "var(--domus-heading-text)",
+                    boxShadow: "var(--domus-shadow-md)"
+                  }}
+                >
+                  <p className="font-medium domus-heading">{label}</p>
+                  <p className="domus-muted">
                     {metric.occupiedUnits} of {metric.totalUnits} units ({metric.rate.toFixed(0)}%)
                   </p>
                 </div>

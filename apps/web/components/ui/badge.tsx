@@ -3,15 +3,15 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/format";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold transition-colors",
+  "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors",
   {
     variants: {
       variant: {
-        default: "border border-violet-200 bg-violet-100 text-violet-800",
-        success: "bg-emerald-50 text-emerald-700",
-        warning: "bg-amber-50 text-amber-700",
-        destructive: "bg-red-50 text-red-700",
-        outline: "border border-zinc-200 text-zinc-600",
+        default: "domus-badge border border-violet-200",
+        success: "domus-badge domus-badge-success border border-emerald-200",
+        warning: "domus-badge domus-badge-warning border border-amber-200",
+        destructive: "domus-badge domus-badge-danger border border-red-200",
+        outline: "border border-zinc-200 bg-transparent text-zinc-600",
       },
     },
     defaultVariants: {

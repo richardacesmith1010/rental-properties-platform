@@ -10,6 +10,7 @@ import { canUserAdministerOwnershipAccount } from "@/lib/ownership";
 import { logAudit } from "@/lib/audit";
 import { awardXp, XP_VALUES } from "@/lib/gamification";
 import { notifyOwnerMembersOfAcceptedTenantInvite } from "@/lib/notifications";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   inviteTenantSchema,
   inviteManagerSchema,
@@ -34,6 +35,11 @@ export async function inviteTenant(
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
     redirect("/");
+  }
+
+  const inviteRate = checkRateLimit(`invite:${user.id}`, 10, 60 * 60 * 1000);
+  if (!inviteRate.allowed) {
+    return { success: false, error: "Too many invitations sent. Please try again later." };
   }
 
   const parsed = parseFormData(inviteTenantSchema, formData);
@@ -202,6 +208,11 @@ export async function inviteManager(
     redirect("/");
   }
 
+  const inviteRate = checkRateLimit(`invite:${user.id}`, 10, 60 * 60 * 1000);
+  if (!inviteRate.allowed) {
+    return { success: false, error: "Too many invitations sent. Please try again later." };
+  }
+
   const parsed = parseFormData(inviteManagerSchema, formData);
   if (!parsed.success) {
     return parsed;
@@ -341,6 +352,11 @@ export async function inviteOwner(
   const role = await getCurrentUserRole(user.id);
   if (role !== "owner" && role !== "manager") {
     redirect("/");
+  }
+
+  const inviteRate = checkRateLimit(`invite:${user.id}`, 10, 60 * 60 * 1000);
+  if (!inviteRate.allowed) {
+    return { success: false, error: "Too many invitations sent. Please try again later." };
   }
 
   const capabilityError = await ensureCapabilityEnabled("ownershipEnabled");

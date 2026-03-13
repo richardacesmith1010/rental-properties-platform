@@ -1,12 +1,21 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Download, ArrowUpDown } from "lucide-react";
+import {
+  ArrowUpDown,
+  BarChart3,
+  CreditCard,
+  Download,
+  FileBarChart2,
+  Landmark,
+  Receipt,
+  Wallet
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/dashboard/empty-state";
-import type { LucideIcon } from "lucide-react";
 
 type SortDirection = "asc" | "desc";
+type ReportCardIcon = "bar-chart-3" | "receipt" | "file-bar-chart-2" | "wallet" | "landmark" | "credit-card";
 
 export interface ReportColumn<T> {
   key: string;
@@ -33,21 +42,31 @@ interface ReportSectionProps<T> {
 
 export interface ReportCardProps {
   id: string;
-  icon: LucideIcon;
+  icon: ReportCardIcon;
   title: string;
   description: string;
 }
 
 export function ReportCard({ id, icon: Icon, title, description }: ReportCardProps) {
+  const iconMap = {
+    "bar-chart-3": BarChart3,
+    receipt: Receipt,
+    "file-bar-chart-2": FileBarChart2,
+    wallet: Wallet,
+    landmark: Landmark,
+    "credit-card": CreditCard
+  } as const;
+  const ResolvedIcon = iconMap[Icon];
+
   return (
     <a
       href={`#${id}`}
-      className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:border-violet-200 hover:shadow-md"
+      className="domus-card block p-5 transition hover:border-violet-200 hover:shadow-md"
       title={`Jump to the ${title} report.`}
     >
       <div className="flex items-start gap-3">
         <div className="rounded-lg bg-violet-50 p-2 text-violet-700">
-          <Icon className="h-5 w-5" />
+          <ResolvedIcon className="h-5 w-5" />
         </div>
         <div>
           <h2 className="text-base font-semibold text-zinc-900">{title}</h2>
@@ -110,7 +129,7 @@ export function ReportSection<T>({
   }
 
   return (
-    <section id={id} className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm scroll-mt-24">
+      <section id={id} className="domus-card scroll-mt-24 p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 className="text-lg font-semibold text-zinc-900">{title}</h3>
@@ -157,7 +176,7 @@ export function ReportSection<T>({
             </thead>
             <tbody className="divide-y divide-zinc-100">
               {sortedRows.map((row, index) => (
-                <tr key={index} className="align-top">
+                <tr key={index} className="domus-table-row align-top">
                   {columns.map((column) => (
                     <td key={column.key} className={`px-3 py-2 text-zinc-700 ${column.className ?? ""}`}>
                       {column.render(row)}

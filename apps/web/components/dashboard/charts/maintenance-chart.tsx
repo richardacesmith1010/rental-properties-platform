@@ -36,13 +36,23 @@ export function MaintenanceChart({ metrics }: MaintenanceChartProps) {
     <div className="h-[250px] w-full">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 24, top: 8, bottom: 0 }}>
-          <CartesianGrid stroke="#e4e4e7" strokeDasharray="3 3" />
-          <XAxis type="number" tick={{ fill: "#71717a", fontSize: 12 }} />
-          <YAxis type="category" dataKey="priority" tick={{ fill: "#71717a", fontSize: 12 }} width={60} />
-          <Tooltip formatter={(value, name) => [Number(Array.isArray(value) ? value[0] ?? 0 : value ?? 0), name]} />
+          <CartesianGrid stroke="var(--domus-divider)" strokeDasharray="3 3" />
+          <XAxis type="number" tick={{ fill: "var(--domus-muted-text)", fontSize: 12 }} />
+          <YAxis type="category" dataKey="priority" tick={{ fill: "var(--domus-muted-text)", fontSize: 12 }} width={60} />
+          <Tooltip
+            contentStyle={{
+              background: "var(--domus-card-bg)",
+              border: "1px solid var(--domus-card-border)",
+              color: "var(--domus-heading-text)",
+              borderRadius: "16px",
+              boxShadow: "var(--domus-shadow-md)"
+            }}
+            labelStyle={{ color: "var(--domus-heading-text)" }}
+            formatter={(value, name) => [Number(Array.isArray(value) ? value[0] ?? 0 : value ?? 0), name]}
+          />
           <Bar dataKey="resolved" stackId="tickets" fill="#059669" name="Resolved" radius={[0, 4, 4, 0]} />
           <Bar dataKey="unresolved" stackId="tickets" fill="#71717a" name="Unresolved" radius={[0, 4, 4, 0]}>
-            <LabelList dataKey="avgResolutionLabel" position="right" fill="#52525b" fontSize={12} />
+            <LabelList dataKey="avgResolutionLabel" position="right" fill="var(--domus-muted-text)" fontSize={12} />
           </Bar>
         </BarChart>
       </ResponsiveContainer>

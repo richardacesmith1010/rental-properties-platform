@@ -55,10 +55,10 @@ test.describe.serial("Tenant dashboard", () => {
     await page.getByRole("button", { name: "Sign In" }).click();
 
     await expect(page).toHaveURL(/\/tenant/, { timeout: 10000 });
-    await page.getByRole("link", { name: "Charges" }).click();
+    await page.goto("/tenant?section=charges");
 
-    await expect(page.getByRole("heading", { name: "Outstanding Rent Charges" })).toBeVisible();
-    await expect(page.getByText(/E2E Test Property/)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Rent Payments" })).toBeVisible();
+    await expect(page.getByText(/E2E Test Property/).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Pay with Card" })).toBeVisible();
   });
 });

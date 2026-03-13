@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { logAudit } from "@/lib/audit";
+import { logMaintenanceStatusChange } from "@/lib/maintenance";
 import {
   createNotificationWithDelivery,
   notifyOwnerMembersForProperty
@@ -92,6 +93,8 @@ export async function createMaintenanceTicket(
   if (error || !ticket) {
     return { success: false, error: "Failed to create maintenance request. Please try again." };
   }
+
+  void logMaintenanceStatusChange(supabase, ticket.id, null, "submitted", user.id).catch(() => {});
 
   // Trigger required notification: new ticket (owner + assigned managers).
   try {
@@ -240,6 +243,13 @@ export async function updateTicketStatus(
   if (error) {
     return { success: false, error: "Failed to update ticket status." };
   }
+
+  void (async () => {
+    if (ticket.status === "open" && status !== "open") {
+      await logMaintenanceStatusChange(supabase, ticket.id, "open", "reviewed", user.id);
+    }
+    await logMaintenanceStatusChange(supabase, ticket.id, ticket.status, status, user.id);
+  })().catch(() => {});
 
   if (status === "resolved" || status === "closed") {
     void notifyOwnerMembersForProperty({

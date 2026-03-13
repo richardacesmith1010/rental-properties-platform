@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 const inter = Inter({
@@ -37,21 +38,25 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-domus-theme="atlas-light">
-      <body className={`${inter.variable} font-sans`}>
+    <html lang="en" suppressHydrationWarning>
+      <head>
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              (function() {
-                try {
-                  var theme = localStorage.getItem('domus-theme') || 'atlas-light';
-                  document.documentElement.setAttribute('data-domus-theme', theme);
-                } catch (e) {}
-              })();
+              try {
+                const t = localStorage.getItem('domus-theme');
+                if (t && t !== 'atlas-light') {
+                  document.documentElement.setAttribute('data-domus-theme', t);
+                } else {
+                  document.documentElement.removeAttribute('data-domus-theme');
+                }
+              } catch (e) {}
             `
           }}
         />
-        {children}
+      </head>
+      <body className={`${inter.variable} font-sans`}>
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );

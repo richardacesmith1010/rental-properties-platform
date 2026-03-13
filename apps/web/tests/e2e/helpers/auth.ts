@@ -33,10 +33,12 @@ export async function createTestUser(options: {
   password: string;
   role: "owner" | "manager" | "tenant";
   fullName?: string;
+  onboardingCompleted?: boolean;
 }) {
   const admin = getAdminClient();
   const normalizedEmail = options.email.toLowerCase();
   const fullName = options.fullName ?? "E2E Test User";
+  const onboardingCompleted = options.onboardingCompleted ?? true;
 
   const { data, error } = await admin.auth.admin.createUser({
     email: normalizedEmail,
@@ -61,7 +63,8 @@ export async function createTestUser(options: {
       id: data.user.id,
       email: normalizedEmail,
       full_name: fullName,
-      role: options.role
+      role: options.role,
+      onboarding_completed_at: onboardingCompleted ? new Date().toISOString() : null
     },
     { onConflict: "id" }
   );

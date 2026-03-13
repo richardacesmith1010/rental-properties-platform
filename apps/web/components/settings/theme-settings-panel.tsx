@@ -1,10 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-type DomusTheme = "atlas-light" | "noctis-neon" | "imperium-night";
-
-const DOMUS_THEME_KEY = "domus-theme";
+import { useDomusTheme } from "@/components/theme-provider";
+import type { DomusTheme } from "@/lib/theme";
 
 const themeOptions: Array<{
   value: DomusTheme;
@@ -29,19 +26,7 @@ const themeOptions: Array<{
 ];
 
 export function ThemeSettingsPanel() {
-  const [theme, setTheme] = useState<DomusTheme>("atlas-light");
-
-  useEffect(() => {
-    const storedTheme = (localStorage.getItem(DOMUS_THEME_KEY) as DomusTheme | null) ?? "atlas-light";
-    document.documentElement.setAttribute("data-domus-theme", storedTheme);
-    setTheme(storedTheme);
-  }, []);
-
-  const applyTheme = (nextTheme: DomusTheme) => {
-    setTheme(nextTheme);
-    localStorage.setItem(DOMUS_THEME_KEY, nextTheme);
-    document.documentElement.setAttribute("data-domus-theme", nextTheme);
-  };
+  const { theme, setTheme } = useDomusTheme();
 
   return (
     <div className="space-y-3">
@@ -73,7 +58,7 @@ export function ThemeSettingsPanel() {
               <p className={`mt-1 text-xs ${copyClass}`}>{option.description}</p>
               <button
                 type="button"
-                onClick={() => applyTheme(option.value)}
+                onClick={() => setTheme(option.value)}
                 className={[
                   "mt-3 inline-flex rounded-md border px-3 py-1 text-[11px] font-semibold uppercase tracking-wide transition",
                   selected

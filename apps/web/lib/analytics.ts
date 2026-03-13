@@ -154,7 +154,10 @@ export async function getOwnerAnalyticsData(userId: string): Promise<AnalyticsDa
 
     if (unitsQuery.error) {
       if (isMissingSchemaError(unitsQuery.error)) {
-        return EMPTY_ANALYTICS;
+        return {
+          ...EMPTY_ANALYTICS,
+          enabled: true
+        };
       }
       throw unitsQuery.error;
     }
@@ -172,7 +175,31 @@ export async function getOwnerAnalyticsData(userId: string): Promise<AnalyticsDa
 
     if (leasesQuery.error) {
       if (isMissingSchemaError(leasesQuery.error)) {
-        return EMPTY_ANALYTICS;
+        const emptyOccupancyMetrics: OccupancyMetric[] = lastTwelveMonths.map((month) => ({
+          month: month.label,
+          occupiedUnits: 0,
+          totalUnits,
+          rate: 0
+        }));
+
+        return {
+          enabled: true,
+          rentMetrics: lastTwelveMonths.map((month) => ({
+            month: month.label,
+            dueCents: 0,
+            collectedCents: 0,
+            lateCents: 0
+          })),
+          expenseCategories: [],
+          occupancyMetrics: emptyOccupancyMetrics,
+          maintenanceMetrics: ["low", "medium", "high", "urgent"].map((priority) => ({
+            priority,
+            totalTickets: 0,
+            resolvedTickets: 0,
+            avgResolutionDays: 0
+          })),
+          summaryKpis: { ...EMPTY_ANALYTICS.summaryKpis }
+        };
       }
       throw leasesQuery.error;
     }
@@ -201,9 +228,20 @@ export async function getOwnerAnalyticsData(userId: string): Promise<AnalyticsDa
 
     if (chargesQuery.error) {
       if (isMissingSchemaError(chargesQuery.error)) {
-        return EMPTY_ANALYTICS;
+        const chargesFallback = {
+          data: [] as Array<{
+            id: string;
+            lease_id: string;
+            due_date: string;
+            amount_cents: number;
+            status: "pending" | "paid" | "late";
+            category: string | null;
+          }>
+        };
+        Object.assign(chargesQuery, chargesFallback);
+      } else {
+        throw chargesQuery.error;
       }
-      throw chargesQuery.error;
     }
 
     const expenseQuery = await admin
@@ -214,9 +252,17 @@ export async function getOwnerAnalyticsData(userId: string): Promise<AnalyticsDa
 
     if (expenseQuery.error) {
       if (isMissingSchemaError(expenseQuery.error)) {
-        return EMPTY_ANALYTICS;
+        Object.assign(expenseQuery, {
+          data: [] as Array<{
+            property_id: string;
+            category: string;
+            amount_cents: number;
+            expense_date: string;
+          }>
+        });
+      } else {
+        throw expenseQuery.error;
       }
-      throw expenseQuery.error;
     }
 
     const maintenanceQuery = await admin
@@ -226,9 +272,19 @@ export async function getOwnerAnalyticsData(userId: string): Promise<AnalyticsDa
 
     if (maintenanceQuery.error) {
       if (isMissingSchemaError(maintenanceQuery.error)) {
-        return EMPTY_ANALYTICS;
+        Object.assign(maintenanceQuery, {
+          data: [] as Array<{
+            priority: string | null;
+            status: string | null;
+            created_at: string;
+            resolved_at: string | null;
+            updated_at: string | null;
+            actual_cost_cents: number | null;
+          }>
+        });
+      } else {
+        throw maintenanceQuery.error;
       }
-      throw maintenanceQuery.error;
     }
 
     const chargeRows = chargesQuery.data ?? [];
@@ -245,9 +301,12 @@ export async function getOwnerAnalyticsData(userId: string): Promise<AnalyticsDa
 
     if (paymentQuery.error) {
       if (isMissingSchemaError(paymentQuery.error)) {
-        return EMPTY_ANALYTICS;
+        Object.assign(paymentQuery, {
+          data: [] as Array<{ rent_charge_id: string; paid_at: string }>
+        });
+      } else {
+        throw paymentQuery.error;
       }
-      throw paymentQuery.error;
     }
 
     const rentMetricMap = new Map<string, MonthlyRentMetric>(
