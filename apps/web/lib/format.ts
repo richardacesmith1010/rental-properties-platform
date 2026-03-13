@@ -1,7 +1,14 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
-const currencyFormatter = new Intl.NumberFormat("en-US", {
+const currencyFormatterNoCents = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0
+});
+
+const currencyFormatterWithCents = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
   minimumFractionDigits: 2,
@@ -31,7 +38,9 @@ function normalizeDate(value: string | Date): Date | null {
 }
 
 export function formatCurrency(cents: number): string {
-  return currencyFormatter.format(cents / 100);
+  const hasCents = cents % 100 !== 0;
+  const formatter = hasCents ? currencyFormatterWithCents : currencyFormatterNoCents;
+  return formatter.format(cents / 100);
 }
 
 export function formatDate(value: string | Date): string {

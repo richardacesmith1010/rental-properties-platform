@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Lock, CheckCircle } from "lucide-react";
+import { Lock, Loader2, CheckCircle } from "lucide-react";
 
 interface LoginFormProps {
   nextPath?: string;
@@ -61,11 +61,13 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
       if (mode === "signup") {
         if (password.length < 6) {
           setError("Password should be at least 6 characters.");
+          setLoading(false);
           return;
         }
 
         if (password !== confirmPassword) {
           setError("Passwords do not match.");
+          setLoading(false);
           return;
         }
 
@@ -80,6 +82,7 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
 
         if (signUpError) {
           setError(mapAuthError(signUpError.message));
+          setLoading(false);
           return;
         }
 
@@ -87,10 +90,12 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
         // an empty identities array without sending a confirmation email.
         if (data.user && data.user.identities && data.user.identities.length === 0) {
           setError("An account with this email already exists. Try signing in.");
+          setLoading(false);
           return;
         }
 
         setSignupComplete(true);
+        setLoading(false);
         return;
       }
 
@@ -101,13 +106,14 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
 
       if (signInError) {
         setError(mapAuthError(signInError.message));
+        setLoading(false);
         return;
       }
 
+      // Keep loading=true — do NOT re-enable the button until navigation completes
       window.location.href = nextPath;
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unable to complete authentication.");
-    } finally {
       setLoading(false);
     }
   }
@@ -199,8 +205,17 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
         </div>
       )}
 
-      <Button type="submit" disabled={loading} className="w-full">
-        <Lock className="mr-2 h-4 w-4" />
+      <Button
+        type="submit"
+        disabled={loading}
+        aria-disabled={loading}
+        className={`w-full ${loading ? "pointer-events-none opacity-60" : ""}`}
+      >
+        {loading ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <Lock className="mr-2 h-4 w-4" />
+        )}
         {loading
           ? mode === "signup"
             ? "Creating account..."

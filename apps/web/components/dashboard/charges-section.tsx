@@ -167,7 +167,7 @@ export function ChargesSection({
   return (
     <Card id="charges">
       <CardHeader className="flex flex-row items-center justify-between gap-3">
-        <CardTitle>{isTenantView ? "Outstanding Rent Charges" : "Upcoming / Late Charges"}</CardTitle>
+        <CardTitle>{isTenantView ? "Rent Payments" : "Upcoming / Late Charges"}</CardTitle>
         {onGenerateChargesHref ? (
           <Link
             href={onGenerateChargesHref}

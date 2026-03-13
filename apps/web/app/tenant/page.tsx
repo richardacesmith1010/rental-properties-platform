@@ -21,10 +21,8 @@ import { getTenantMaintenanceData } from "@/lib/maintenance";
 import { getTenantDocumentsData } from "@/lib/documents";
 import { getNotificationsForUser } from "@/lib/notifications";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
-import { Badge } from "@/components/ui/badge";
 import { SidebarNav, MobileTopBar } from "@/components/dashboard/sidebar-nav";
 import { ChargesSection } from "@/components/dashboard/charges-section";
-import { KpiCard } from "@/components/shared/kpi-card";
 import { FeatureWarning } from "@/components/shared/feature-warning";
 import { TicketForm } from "@/components/dashboard/ticket-form";
 import { MaintenanceSection } from "@/components/dashboard/maintenance-section";
@@ -35,7 +33,7 @@ import { AchievementChecker } from "@/components/gamification/achievement-checke
 import { formatCurrency } from "@/lib/format";
 import { getUserGamification } from "@/lib/gamification";
 import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, CreditCard, Wrench, FileText, Mail, CheckCircle2 } from "lucide-react";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -169,10 +167,14 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
         <AchievementChecker currentLevel={gamification.currentLevel} />
         <div className="flex flex-col gap-4 px-6 pt-6 sm:flex-row sm:items-start sm:justify-between lg:px-8 lg:pt-8">
           <div id="overview">
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Tenant Workspace</h1>
-            <p className="mt-1 text-sm text-zinc-600">
-              Manage rent, tickets, documents, and alerts in one place.
-            </p>
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
+              Welcome home{profile.nickname ? `, ${profile.nickname}` : ""}
+            </h1>
+            {maintenanceData.units.length > 0 && (
+              <p className="mt-1 text-sm text-zinc-500">
+                {maintenanceData.units[0].propertyName} &middot; Unit {maintenanceData.units[0].unitNumber}
+              </p>
+            )}
           </div>
           <div className="flex w-full flex-col gap-3 sm:max-w-md sm:items-end">
             <GamificationSummary
@@ -182,9 +184,6 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
               role="tenant"
               className="w-full"
             />
-            <Badge className="self-start border border-violet-200 bg-violet-50 text-violet-700 capitalize sm:self-end">
-              tenant
-            </Badge>
           </div>
         </div>
 
@@ -224,43 +223,99 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
           </div>
 
           {activeSection === "overview" && (
-            <div className="space-y-4">
-              <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-                <p className="text-xs uppercase tracking-wide text-zinc-500">Snapshot</p>
-                <p className="mt-1 text-xl font-bold text-zinc-900">
-                  {formatCurrency(outstandingCents)} outstanding
-                </p>
-                <p className="text-sm text-zinc-600">
-                  {paymentData.charges.length} open charge{paymentData.charges.length === 1 ? "" : "s"}
-                </p>
+            <div className="space-y-5">
+              {/* Quick Status Card */}
+              <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+                {outstandingCents === 0 ? (
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                    </div>
+                    <div>
+                      <p className="text-base font-semibold text-emerald-700">You&apos;re all set!</p>
+                      <p className="text-sm text-zinc-500">No payments due right now.</p>
+                    </div>
+                  </div>
+                ) : lateChargeCount > 0 ? (
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
+                      <CreditCard className="h-5 w-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-base font-semibold text-amber-700">
+                        Payment of {formatCurrency(outstandingCents)} was due
+                      </p>
+                      <p className="text-sm text-zinc-500">
+                        {lateChargeCount} overdue payment{lateChargeCount === 1 ? "" : "s"}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-violet-100">
+                      <CreditCard className="h-5 w-5 text-violet-600" />
+                    </div>
+                    <div>
+                      <p className="text-base font-semibold text-zinc-900">
+                        Next payment: {formatCurrency(outstandingCents)}
+                      </p>
+                      <p className="text-sm text-zinc-500">
+                        {paymentData.charges.length} upcoming payment{paymentData.charges.length === 1 ? "" : "s"}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <KpiCard
-                  label="Outstanding Rent"
-                  value={formatCurrency(outstandingCents)}
-                  badge={`${paymentData.charges.length} open charge${paymentData.charges.length === 1 ? "" : "s"}`}
-                  gradient="linear-gradient(135deg, #7c3aed, #10b981)"
-                  alert={outstandingCents > 0}
-                />
-                <KpiCard
-                  label="Late Charges"
-                  value={lateChargeCount.toString()}
-                  badge={lateChargeCount > 0 ? "Needs payment" : "All current"}
-                  gradient="linear-gradient(135deg, #f59e0b, #ef4444)"
-                  alert={lateChargeCount > 0}
-                />
-                <KpiCard
-                  label="Open Tickets"
-                  value={openTicketCount.toString()}
-                  badge={`${maintenanceData.tickets.length} total`}
-                  gradient="linear-gradient(135deg, #06b6d4, #3b82f6)"
-                />
-                <KpiCard
-                  label="Pending Signatures"
-                  value={pendingDocumentCount.toString()}
-                  badge={`${unreadNotificationCount} unread alerts`}
-                  gradient="linear-gradient(135deg, #10b981, #14b8a6)"
-                />
+
+              {/* Action Cards */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <Link
+                  href={buildTenantHref("charges")}
+                  className="flex flex-col items-center gap-2 rounded-xl border border-violet-200 bg-violet-50/50 p-4 text-center transition-colors hover:bg-violet-100/60"
+                >
+                  <CreditCard className="h-6 w-6 text-violet-600" />
+                  <span className="text-xs font-semibold text-violet-700">Make a Payment</span>
+                </Link>
+                <Link
+                  href={buildTenantHref("maintenance")}
+                  className="flex flex-col items-center gap-2 rounded-xl border border-zinc-200 bg-white p-4 text-center transition-colors hover:bg-zinc-50"
+                >
+                  <Wrench className="h-6 w-6 text-zinc-600" />
+                  <span className="text-xs font-semibold text-zinc-700">Submit a Request</span>
+                </Link>
+                <Link
+                  href={buildTenantHref("documents")}
+                  className="flex flex-col items-center gap-2 rounded-xl border border-zinc-200 bg-white p-4 text-center transition-colors hover:bg-zinc-50"
+                >
+                  <FileText className="h-6 w-6 text-zinc-600" />
+                  <span className="text-xs font-semibold text-zinc-700">My Documents</span>
+                </Link>
+                <Link
+                  href={buildTenantHref("notifications")}
+                  className="flex flex-col items-center gap-2 rounded-xl border border-zinc-200 bg-white p-4 text-center transition-colors hover:bg-zinc-50"
+                >
+                  <Mail className="h-6 w-6 text-zinc-600" />
+                  <span className="text-xs font-semibold text-zinc-700">Messages</span>
+                </Link>
+              </div>
+
+              {/* Activity Summary */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+                  <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">Open Tickets</p>
+                  <p className="mt-1 text-2xl font-bold text-zinc-900">{openTicketCount}</p>
+                  <p className="text-xs text-zinc-500">{maintenanceData.tickets.length} total</p>
+                </div>
+                <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+                  <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">Documents</p>
+                  <p className="mt-1 text-2xl font-bold text-zinc-900">{pendingDocumentCount}</p>
+                  <p className="text-xs text-zinc-500">pending signature{pendingDocumentCount === 1 ? "" : "s"}</p>
+                </div>
+                <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+                  <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">Alerts</p>
+                  <p className="mt-1 text-2xl font-bold text-zinc-900">{unreadNotificationCount}</p>
+                  <p className="text-xs text-zinc-500">unread</p>
+                </div>
               </div>
             </div>
           )}

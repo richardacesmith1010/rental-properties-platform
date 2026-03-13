@@ -162,6 +162,22 @@ export async function getOwnerStripeAccountForProperty(propertyId: string): Prom
     }
   }
 
+  // Fallback: check owner_profile_id directly if ownership chain didn't yield a result
+  if (property.owner_profile_id) {
+    const alreadyChecked = orderedProfileIds.includes(property.owner_profile_id);
+    if (!alreadyChecked) {
+      const [directProfile] = await getConnectedStripeProfile([property.owner_profile_id]);
+      if (directProfile?.stripe_account_id && directProfile.stripe_onboarding_complete) {
+        return directProfile.stripe_account_id;
+      }
+    }
+    if (process.env.NODE_ENV === "development") {
+      console.warn(
+        `[stripe-connect] Owner Stripe account not found for property ${propertyId} via ownership chain or direct profile.`
+      );
+    }
+  }
+
   return null;
 }
 

@@ -34,6 +34,7 @@ import {
   type ManagerWorkflowMode,
   type OwnerWorkflowMode
 } from "./dashboard-config";
+import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 export function Dashboard({
   data,
@@ -684,6 +685,17 @@ export function Dashboard({
           </section>
         </div>
       </main>
+      {isOwnerRole && portfolio && portfolio.properties.length > 0 && portfolio.units.length === 0 && onInviteTenant && (
+        <OnboardingWizard
+          propertyId={portfolio.properties[0].id}
+          propertyName={portfolio.properties[0].name}
+          stripeConnected={stripeConnected === true}
+          unitCount={portfolio.units.length}
+          onCreateUnit={onCreateUnit}
+          onCreateLease={onCreateLease}
+          onInviteTenant={onInviteTenant}
+        />
+      )}
     </div>
   );
 }
