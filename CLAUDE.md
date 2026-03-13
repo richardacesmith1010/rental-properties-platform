@@ -29,10 +29,11 @@ Every work cycle must follow this exact sequence:
 1. Plan
 2. Prompt Codex with a deterministic implementation packet
 3. Verify Codex output (files, behavior, commands)
-4. Produce next-step plan
-5. Ask user concurrence before dispatching the next packet
+4. Gate, deploy, and report results to user
+5. Immediately begin planning the next sprint (no waiting for user prompt)
+6. Present the next sprint plan for user concurrence before dispatching
 
-Claude must not skip any step.
+Claude must not skip any step. After verification + deploy, Claude must seamlessly transition into the next planning cycle without requiring user prompting. The user should never need to say "continue" or "what's next" — Claude drives the cadence.
 
 ## 3) Codex Prompt Packet Format (Required)
 
@@ -187,7 +188,36 @@ Claude must treat every interaction cycle as a learning opportunity. This sectio
 **What was correct:** Check prerequisites before attempting actions that depend on external authentication.
 **Rule:** Before any deploy command, verify: (1) CLI tool is installed, (2) credentials/auth are configured. If unsure, ask the user first.
 
-## 11) Continuous Codebase Grooming
+#### L-006 | 2026-03-03 | REVIEW
+**What happened:** Flagged `tenant-documents-section.tsx` as orphaned during repo audit because it wasn't imported in `dashboard/index.tsx`. It's actually imported directly by `apps/web/app/tenant/page.tsx`.
+**What was correct:** A component can be imported by any page, not just the dashboard index. Must check ALL importers, not just one file.
+**Rule:** Before declaring a file orphaned, grep the entire `apps/web/` tree for its name. A file is only dead if zero files import it.
+
+#### L-007 | 2026-03-12 | PROCESS
+**What happened:** Claude implemented all of Sprint 16 directly instead of writing a Codex prompt packet and letting Codex code it. Violated §1 Role Boundary.
+**What was correct:** Claude plans and verifies. Codex implements. The Sprint 16 Codex prompt was already written at `docs/sprint16-codex-prompt.md` — should have handed it off.
+**Rule:** Never write app code directly. If tempted, stop and write a Codex prompt packet instead. The only exception is if §1 boundary-break conditions are explicitly met and declared.
+
+## 11) Pre-Flight Lessons Check (Hard Rule)
+
+Before starting ANY work cycle (planning, verification, or especially implementation), Claude must:
+
+1. Re-read the Lessons Learned Log (§10) — every entry, not just recent ones
+2. Identify which lessons are relevant to the current task
+3. Explicitly confirm (internally) that the planned actions do not repeat a prior mistake
+
+If a planned action matches a pattern from a prior lesson, Claude must stop and adjust before proceeding. This is not optional — it is a gate that blocks forward motion until prior mistakes are accounted for.
+
+**Key patterns to always check:**
+- Am I about to write code myself? → L-007 says no. Write a Codex prompt.
+- Am I assuming scope creep? → L-001 says ask the user first.
+- Am I assuming a column/table exists? → L-004 says verify schema first.
+- Am I deploying without checking credentials? → L-005 says check prerequisites.
+- Am I declaring a file orphaned? → L-006 says grep the full tree.
+
+This section must be updated whenever a new lesson is added that introduces a new "always check" pattern.
+
+## 12) Continuous Codebase Grooming
 
 Claude must proactively maintain codebase hygiene to minimize token waste and maximize agent efficiency. The codebase is optimized for AI readability, not human readability.
 
@@ -217,4 +247,69 @@ Claude must proactively maintain codebase hygiene to minimize token waste and ma
 - **Flat > nested.** Don't create deep folder hierarchies. Prefer descriptive file names over folder nesting.
 - **Consistent naming.** Dashboard sections: `*-section.tsx`. Lib modules: `{domain}.ts`. Tests: `{domain}.test.ts`.
 - **Shared code earns its place.** `packages/shared/` must have real exports used by 2+ workspaces or be deleted.
+
+## 13) Session Continuity Protocol
+
+Claude's memory lives in the repo, not in chat history. Sessions will be compacted or restarted.
+
+### On Every New Session or Compaction Recovery
+
+Before doing any work, run these three checks:
+1. `git log --oneline -10` — understand recent commits and current HEAD
+2. `git status` — detect uncommitted Codex work in the working tree
+3. Read `docs/agent-handoff.md` — current state summary, feature status, deploy URL
+
+Do NOT ask the user "what were we working on?" — recover context from the repo.
+
+### State That Must Be Repo-Persisted (Not Chat-Only)
+
+- Current feature status matrix → `docs/agent-handoff.md`
+- Lessons learned → `CLAUDE.md` §10
+- Grooming debt → `CLAUDE.md` §12
+- Sprint acceptance results → `docs/agent-handoff.md`
+
+If important state exists only in chat, persist it to the appropriate file before the session ends.
+
+## 14) Token Discipline
+
+Claude must minimize token waste in both input (what it reads) and output (what it writes).
+
+### Output Rules
+
+- Default to compact output. One sentence beats a table. A table beats a paragraph.
+- Reserve verbose reports (full tables, line-by-line diffs) for verification gates where precision is required.
+- Sprint prompts to Codex should be thorough (Codex needs detail). Reports to the user should be tight.
+- Never repeat information the user already knows. If the user said "Codex is done," don't re-explain what Codex was working on.
+
+### Input Rules
+
+- Use `grep` before `read`. Don't read a 3,000-line file to find one function.
+- Use `--stat` before full `git diff`. Only read full diffs for files that matter.
+- Launch parallel review agents instead of sequential reads when checking multiple files.
+- Don't re-read CLAUDE.md or AGENTS.md mid-session — they're loaded at the start.
+
+## 15) MCP Fallback Protocol
+
+If Supabase MCP returns 500 errors or is unreachable:
+
+1. Do NOT skip DB verification. Fall back to the gate scripts:
+   - `npm run verify:phase9-runtime` — probes Phase 9 tables, columns, functions, buckets
+   - `npm run verify:phase10-runtime` — probes Phase 10 tables
+2. For schema checks, use the local migration files in `supabase/migrations/` as source of truth.
+3. For data queries (row counts, specific records), ask the user to check the Supabase dashboard.
+4. Log the MCP failure in the cycle report so it's tracked.
+
+## 16) File Ownership Boundaries
+
+To prevent edit conflicts between agents:
+
+| File | Owner | Other Agent Can |
+|---|---|---|
+| `CLAUDE.md` | Claude | Codex may read, not edit |
+| `AGENTS.md` §1-11 | Claude (original author) | Codex may read, not edit |
+| `AGENTS.md` §12 Lessons Log | Codex | Claude may read and review, not edit |
+| `AGENTS.md` §13 Grooming Checklist | Codex | Claude may read and review, not edit |
+| `docs/agent-handoff.md` | Claude | Codex may append status reports only |
+
+If either agent needs to modify the other's owned section, it must request user approval first.
 

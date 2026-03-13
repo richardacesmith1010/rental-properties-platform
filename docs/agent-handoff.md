@@ -1,10 +1,10 @@
 # Agent Handoff (Current State)
 
-Updated (UTC): 2026-03-12T01:30:00Z
+Updated (UTC): 2026-03-13T04:00:00Z
 
 ## Repository
 - Branch: `main`
-- HEAD (latest pushed): `3658627`
+- HEAD (latest pushed): `d57f0d1`
 - Remote: `origin/main`
 - Deploy URL: `https://domusbase.com`
 
@@ -94,11 +94,17 @@ Autopay DB (Sprint 14, applied):
 | Autopay cron processing | LIVE | Sprint 14 — processes due charges for enrolled tenants on cron |
 | Autopay webhook handlers | LIVE | Sprint 14 — payment_intent.succeeded + payment_intent.payment_failed |
 | Tenant payment settings | LIVE | Sprint 14 — Payment Methods section in settings for tenants |
+| Modal overlay system | LIVE | Sprint 16 — reusable blurred backdrop, escape/click-outside |
+| Guided owner onboarding wizard | LIVE | Sprint 16 — 5-step flow (unit → lease → invite → bank → done) |
+| Tenant dashboard UX overhaul | LIVE | Sprint 16 — welcome header, quick status, action cards |
+| Smart currency formatting | LIVE | Sprint 16 — no decimals for whole dollars, 7 tests |
+| Sign-in button hardening | LIVE | Sprint 16 — spinner, disabled state, no double-submit |
+| Pay button owner lookup fix | LIVE | Sprint 16 — fallback direct owner_profile_id check |
 | Playwright E2E tests | LIVE | Sprint 6 — auth, owner-setup, tenant, navigation |
 | Mobile app foundation | IN PROGRESS | Expo Router + role-aware tabs (not published) |
 
 ## Gate Status
-- `npm run gate:web` — 232/232 tests (8 suites), lint clean, build clean
+- `npm run gate:web` — 239/239 tests (9 suites), lint clean, build clean
 - `npm run smoke:web` — all checks passed (+ health endpoint + gamification auth guard)
 
 ## Current Risks / Blockers
@@ -111,6 +117,5 @@ Autopay DB (Sprint 14, applied):
 - Switch Stripe from sandbox to live mode for real payments
 
 ## Future Sprints
-- Sprint 15: Go-Live Hardening (switch Stripe to live, configure Resend, end-to-end smoke test)
-- Sprint 16: Pricing tiers + Stripe Billing (Free $0 / Starter $4.99 / Pro $12.99)
-- Future: Dom animations, language i18n, tax prep tools, manager analytics, Stripe Connect payouts management
+- Sprint 17: TBD — awaiting user decision
+- Future: Pricing tiers + Stripe Billing, Dom animations, language i18n, tax prep tools, manager analytics, Stripe Connect payouts management
