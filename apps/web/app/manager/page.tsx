@@ -10,6 +10,8 @@ import { getInboxThreadsForUser } from "@/lib/inbox";
 import { getRentalListingsForUser } from "@/lib/leasing";
 import { getApplicationsForUser, type ApplicationDTO } from "@/lib/applications";
 import { getManagerVendors } from "@/lib/vendors";
+import { getOwnerExpenseData } from "@/lib/expenses";
+import { getOwnerAnalyticsData } from "@/lib/analytics";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { getOwnershipAccountsForUser } from "@/lib/ownership";
 import { getUserGamification } from "@/lib/gamification";
@@ -51,6 +53,9 @@ import {
   uploadPropertyFile,
   deletePropertyFile,
   updateFileVisibility,
+  createExpense,
+  updateExpense,
+  deleteExpense,
   createVendor,
   updateVendor,
   assignVendorToTicket,
@@ -132,7 +137,9 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
     applications,
     vendors,
     ownershipAccounts,
-    gamification
+    gamification,
+    expenses,
+    analytics
   ] =
     await Promise.all([
       getDashboardData(user.id),
@@ -172,7 +179,9 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       capabilities.ownershipEnabled
         ? getOwnershipAccountsForUser(user.id)
         : Promise.resolve([]),
-      getUserGamification(user.id)
+      getUserGamification(user.id),
+      getOwnerExpenseData(user.id),
+      getOwnerAnalyticsData(user.id)
     ]);
 
   const approvedApplicationCount = applications.filter(
@@ -200,6 +209,8 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       gamification={gamification}
       vendors={vendors}
       ownershipAccounts={ownershipAccounts}
+      expensesData={expenses}
+      analyticsData={analytics}
       capabilities={capabilities}
       initialManagerWorkflowMode={initialManagerWorkflowMode}
       initialSectionId={initialSectionId}
@@ -253,6 +264,9 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       onUploadMaintenancePhoto={uploadMaintenancePhoto}
       onCreateOwnershipAccount={createOwnershipAccount}
       onLinkPropertyToOwnershipAccount={linkPropertyToOwnershipAccount}
+      onCreateExpense={createExpense}
+      onUpdateExpense={updateExpense}
+      onDeleteExpense={deleteExpense}
     />
   );
 }

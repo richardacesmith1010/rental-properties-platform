@@ -207,9 +207,14 @@ export function Dashboard({
   );
   const hasVendorsSection = Boolean(onCreateVendor);
   const hasExpensesSection = Boolean(
-    data.profileRole === "owner" && onCreateExpense && onUpdateExpense && onDeleteExpense
+    (data.profileRole === "owner" || data.profileRole === "manager") &&
+      onCreateExpense &&
+      onUpdateExpense &&
+      onDeleteExpense
   );
-  const hasAnalyticsSection = Boolean(data.profileRole === "owner" && safeAnalytics.enabled);
+  const hasAnalyticsSection = Boolean(
+    (data.profileRole === "owner" || data.profileRole === "manager") && safeAnalytics.enabled
+  );
   const isOwnerRole = data.profileRole === "owner";
   const isManagerRole = data.profileRole === "manager";
   const chargeBadgeCount = data.charges.filter(

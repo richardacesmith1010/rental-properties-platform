@@ -100,6 +100,8 @@ export const managerWorkflowModeMeta: Record<
       "applications",
       "inbox",
       "automations",
+      "expenses",
+      "analytics",
       "payments"
     ]
   },
