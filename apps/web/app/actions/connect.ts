@@ -81,10 +81,12 @@ export async function initiateStripeConnect(): Promise<ActionState> {
       success: true,
       url: accountLink.url
     };
-  } catch {
+  } catch (err) {
+    console.error("initiateStripeConnect error:", err);
+    const detail = err instanceof Error ? err.message : String(err);
     return {
       success: false,
-      error: "Unable to start Stripe onboarding right now. Please try again."
+      error: `Unable to start Stripe onboarding right now. (${detail})`
     };
   }
 }

@@ -39,6 +39,7 @@ export async function createProperty(_prev: ActionState, formData: FormData): Pr
     return parsed;
   }
 
+  const admin = createAdminClient();
   const capabilities = await getFeatureCapabilities();
   const { name, addressLine1, city, state, postalCode, ownerAccountId } = parsed.data;
   let property: { id: string } | null = null;
@@ -56,7 +57,7 @@ export async function createProperty(_prev: ActionState, formData: FormData): Pr
       }
     }
 
-    const insertResult = await supabase.from("properties").insert({
+    const insertResult = await admin.from("properties").insert({
       owner_profile_id: user.id,
       owner_account_id: targetOwnerAccountId,
       name,
@@ -68,7 +69,7 @@ export async function createProperty(_prev: ActionState, formData: FormData): Pr
     property = insertResult.data;
     error = insertResult.error;
   } else {
-    const insertResult = await supabase.from("properties").insert({
+    const insertResult = await admin.from("properties").insert({
       owner_profile_id: user.id,
       name,
       address_line1: addressLine1,
@@ -81,7 +82,8 @@ export async function createProperty(_prev: ActionState, formData: FormData): Pr
   }
 
   if (error) {
-    return { success: false, error: "Failed to create property. Please try again." };
+    console.error("createProperty insert error:", JSON.stringify(error));
+    return { success: false, error: `Failed to create property. (${error.message})` };
   }
 
   if (role === "manager" && property?.id) {

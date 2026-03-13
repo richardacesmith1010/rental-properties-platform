@@ -35,6 +35,8 @@ export async function createExpressAccount(email: string): Promise<{ id: string 
   body.set("country", "US");
   body.set("capabilities[card_payments][requested]", "true");
   body.set("capabilities[transfers][requested]", "true");
+  body.set("business_profile[mcc]", "6513");
+  body.set("business_profile[url]", "https://domusbase.com");
 
   const account = await stripeConnectRequest<{ id: string }>("/accounts", {
     method: "POST",
