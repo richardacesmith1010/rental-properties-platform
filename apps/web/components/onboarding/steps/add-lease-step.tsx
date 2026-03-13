@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useFormState } from "react-dom";
 import type { ActionState } from "@/app/actions";
 import { Input } from "@/components/ui/input";
 import { SubmitButton } from "@/components/shared/submit-button";
@@ -27,7 +27,7 @@ function defaultEndDate() {
 }
 
 export function AddLeaseStep({ unitId, monthlyRentDollars, onCreateLease, onComplete, onSkip }: AddLeaseStepProps) {
-  const [state, formAction] = useActionState(async (prev: ActionState, formData: FormData) => {
+  const [state, formAction] = useFormState(async (prev: ActionState, formData: FormData) => {
     const result = await onCreateLease(prev, formData);
     if (result?.success) {
       onComplete();

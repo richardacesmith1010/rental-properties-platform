@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useFormState } from "react-dom";
 import type { ActionState } from "@/app/actions";
 import { Input } from "@/components/ui/input";
 import { SubmitButton } from "@/components/shared/submit-button";
@@ -15,7 +15,7 @@ interface InviteTenantStepProps {
 }
 
 export function InviteTenantStep({ propertyId, onInviteTenant, onComplete, onSkip }: InviteTenantStepProps) {
-  const [state, formAction] = useActionState(async (prev: ActionState, formData: FormData) => {
+  const [state, formAction] = useFormState(async (prev: ActionState, formData: FormData) => {
     const result = await onInviteTenant(prev, formData);
     if (result?.success) {
       onComplete();

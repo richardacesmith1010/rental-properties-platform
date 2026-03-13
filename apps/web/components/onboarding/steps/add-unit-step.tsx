@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useFormState } from "react-dom";
 import type { ActionState } from "@/app/actions";
 import { Input } from "@/components/ui/input";
 import { SubmitButton } from "@/components/shared/submit-button";
@@ -16,7 +16,7 @@ interface AddUnitStepProps {
 }
 
 export function AddUnitStep({ propertyId, propertyName, onCreateUnit, onComplete, onSkip }: AddUnitStepProps) {
-  const [state, formAction] = useActionState(async (prev: ActionState, formData: FormData) => {
+  const [state, formAction] = useFormState(async (prev: ActionState, formData: FormData) => {
     const result = await onCreateUnit(prev, formData);
     if (result?.success) {
       onComplete();
