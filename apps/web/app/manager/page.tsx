@@ -22,6 +22,8 @@ import {
   createLease,
   updateLease,
   deleteLease,
+  renewLease,
+  terminateLease,
   createProperty,
   updateProperty,
   deleteProperty,
@@ -30,6 +32,7 @@ import {
   deleteUnit,
   signOut,
   updateTicketStatus,
+  addTicketComment,
   inviteTenant,
   inviteManager,
   inviteOwner,
@@ -230,11 +233,14 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       onDeleteUnit={deleteUnit}
       onUpdateLease={updateLease}
       onDeleteLease={deleteLease}
+      onRenewLease={renewLease}
+      onTerminateLease={terminateLease}
       onPayCharge={createCheckoutForCharge}
       onRecordManualPayment={recordManualPayment}
       onGenerateChargesHref="/owner/generate"
       generatedMessage={generatedMessage}
       onUpdateTicketStatus={updateTicketStatus}
+      onAddTicketComment={addTicketComment}
       onInviteTenant={inviteTenant}
       onInviteManager={inviteManager}
       onInviteOwner={inviteOwner}

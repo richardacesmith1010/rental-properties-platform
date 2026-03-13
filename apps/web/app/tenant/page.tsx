@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  addTicketComment,
   createCheckoutForCharge,
   createMaintenanceTicket,
   disableAutopay,
@@ -17,6 +18,8 @@ import {
   getUserProfileSummary
 } from "@/lib/auth";
 import { getTenantPaymentData } from "@/lib/tenant-payments";
+import { getTenantPaymentHistory } from "@/lib/payment-history";
+import { getTenantLeaseDetails } from "@/lib/leases";
 import { getTenantMaintenanceData } from "@/lib/maintenance";
 import { getTenantDocumentsData } from "@/lib/documents";
 import { getNotificationsForUser } from "@/lib/notifications";
@@ -28,12 +31,16 @@ import { TicketForm } from "@/components/dashboard/ticket-form";
 import { MaintenanceSection } from "@/components/dashboard/maintenance-section";
 import { TenantDocumentsSection } from "@/components/dashboard/tenant-documents-section";
 import { NotificationsSection } from "@/components/dashboard/notifications-section";
+import { TenantLeaseDetails } from "@/components/dashboard/tenant-lease-details";
+import { EmptyState as DashboardEmptyState } from "@/components/dashboard/empty-state";
 import { GamificationSummary } from "@/components/gamification/gamification-summary";
 import { AchievementChecker } from "@/components/gamification/achievement-checker";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import { getUserGamification } from "@/lib/gamification";
 import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
 import { ChevronLeft, ChevronRight, CreditCard, Wrench, FileText, Mail, CheckCircle2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -105,8 +112,19 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
 
   const capabilities = await getFeatureCapabilities();
 
-  const [paymentData, maintenanceData, documentsData, notifications, gamification, autopayEnrollments] = await Promise.all([
+  const [
+    paymentData,
+    paymentHistory,
+    leaseDetails,
+    maintenanceData,
+    documentsData,
+    notifications,
+    gamification,
+    autopayEnrollments
+  ] = await Promise.all([
     getTenantPaymentData(user.id),
+    getTenantPaymentHistory(user.id),
+    getTenantLeaseDetails(user.id),
     getTenantMaintenanceData(user.id),
     capabilities.documentsEnabled
       ? getTenantDocumentsData(user.id)
@@ -321,15 +339,71 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
           )}
 
           {activeSection === "charges" && (
-            <ChargesSection
-              charges={paymentData.charges}
-              onPayCharge={createCheckoutForCharge}
-              ownerConnectedMap={ownerConnectedMap}
-              isTenantView
-              autopayEnrollments={autopayEnrollments}
-              onSetupAutopay={setupAutopay}
-              onDisableAutopay={disableAutopay}
-            />
+            <div className="space-y-6">
+              <TenantLeaseDetails leases={leaseDetails} />
+              <ChargesSection
+                charges={paymentData.charges}
+                onPayCharge={createCheckoutForCharge}
+                ownerConnectedMap={ownerConnectedMap}
+                isTenantView
+                autopayEnrollments={autopayEnrollments}
+                onSetupAutopay={setupAutopay}
+                onDisableAutopay={disableAutopay}
+              />
+              <Card>
+                <CardHeader>
+                  <CardTitle>Payment History</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {paymentHistory.length === 0 ? (
+                    <DashboardEmptyState
+                      icon={CreditCard}
+                      title="No payments yet"
+                      description="No payments yet. Your payment history will appear here."
+                    />
+                  ) : (
+                    <div className="space-y-3">
+                      {paymentHistory.map((payment) => (
+                        <div
+                          key={payment.paymentId}
+                          className="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-sm font-semibold text-zinc-900">
+                                {formatCurrency(payment.amountCents)}
+                              </p>
+                              <Badge variant="outline">
+                                {payment.category === "late_fee" ? "Late Fee" : "Rent"}
+                              </Badge>
+                              <Badge variant="outline">{payment.method.toUpperCase()}</Badge>
+                            </div>
+                            <p className="mt-1 text-xs text-zinc-500">
+                              {payment.propertyName} • Unit {payment.unitNumber}
+                            </p>
+                            <p className="mt-1 text-xs text-zinc-500">
+                              Paid {formatDateTime(payment.paidAt)} • Due {formatDate(payment.dueDate)}
+                            </p>
+                            {payment.referenceNote ? (
+                              <p className="mt-1 text-xs text-zinc-500">
+                                Reference: {payment.referenceNote}
+                              </p>
+                            ) : null}
+                          </div>
+                          <Link
+                            href={`/payments/receipt/${payment.chargeId}`}
+                            className="inline-flex items-center justify-center rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                            title="Open a printable payment receipt."
+                          >
+                            View Receipt
+                          </Link>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {activeSection === "maintenance" && (
@@ -342,6 +416,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
               <MaintenanceSection
                 tickets={maintenanceData.tickets}
                 showControls={false}
+                onAddComment={addTicketComment}
                 photoWorkflowEnabled={capabilities.photoWorkflowEnabled}
                 photoWorkflowWarning={capabilities.warnings.photoWorkflow}
               />

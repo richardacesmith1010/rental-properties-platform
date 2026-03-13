@@ -38,6 +38,8 @@ interface LeaseDraft {
   dueDayOfMonth: string;
   monthlyRentDollars: string;
   depositDollars: string;
+  gracePeriodDays: string;
+  lateFeeDollars: string;
 }
 
 interface PropertyDraft {
@@ -166,8 +168,11 @@ export function OperationsSection({
     endDate: "",
     dueDayOfMonth: "1",
     monthlyRentDollars: "",
-    depositDollars: "0"
+    depositDollars: "0",
+    gracePeriodDays: "5",
+    lateFeeDollars: ""
   });
+  const [leaseLateFeeTouched, setLeaseLateFeeTouched] = useState(false);
 
   const propertyRequiredComplete = useMemo(() => {
     return Boolean(propertyDraft.name);
@@ -340,10 +345,26 @@ export function OperationsSection({
       endDate: "",
       dueDayOfMonth: "1",
       monthlyRentDollars: "",
-      depositDollars: "0"
+      depositDollars: "0",
+      gracePeriodDays: "5",
+      lateFeeDollars: ""
     });
+    setLeaseLateFeeTouched(false);
     onLeaseCreated?.();
   }, [leaseState, onLeaseCreated]);
+
+  const suggestedLateFeeDollars = useMemo(() => {
+    const monthlyRent = Number(leaseDraft.monthlyRentDollars);
+    if (!Number.isFinite(monthlyRent) || monthlyRent <= 0) {
+      return "0.00";
+    }
+
+    return (monthlyRent * 0.05).toFixed(2);
+  }, [leaseDraft.monthlyRentDollars]);
+
+  const effectiveLateFeeDollars = leaseLateFeeTouched
+    ? leaseDraft.lateFeeDollars
+    : suggestedLateFeeDollars;
 
   const renderPropertyStep = () => {
     if (propertyStepIndex === 0) {
@@ -996,6 +1017,41 @@ export function OperationsSection({
             }
             placeholder="Deposit (USD)"
           />
+          <FieldLabel htmlFor="lease-late-fee">
+            Late Fee ($)
+          </FieldLabel>
+          <Input
+            id="lease-late-fee"
+            type="number"
+            min={0}
+            step="0.01"
+            value={effectiveLateFeeDollars}
+            onChange={(event) => {
+              setLeaseLateFeeTouched(true);
+              setLeaseDraft((current) => ({
+                ...current,
+                lateFeeDollars: event.target.value
+              }));
+            }}
+            placeholder="Suggested at 5% of monthly rent"
+          />
+          <FieldLabel htmlFor="lease-grace-period">
+            Grace Period (days)
+          </FieldLabel>
+          <Input
+            id="lease-grace-period"
+            type="number"
+            min={0}
+            max={30}
+            value={leaseDraft.gracePeriodDays}
+            onChange={(event) =>
+              setLeaseDraft((current) => ({
+                ...current,
+                gracePeriodDays: event.target.value
+              }))
+            }
+            placeholder="Days before the late fee applies"
+          />
         </div>
       );
     }
@@ -1011,6 +1067,8 @@ export function OperationsSection({
           <p><span className="font-semibold">Tenant:</span> {portfolio.tenants.find((tenant) => tenant.id === leaseDraft.tenantProfileId)?.email ?? "Not set"}</p>
           <p><span className="font-semibold">Dates:</span> {leaseDraft.startDate || "?"} → {leaseDraft.endDate || "?"}</p>
           <p><span className="font-semibold">Billing:</span> day {leaseDraft.dueDayOfMonth || "?"}, ${leaseDraft.monthlyRentDollars || "?"}/month</p>
+          <p><span className="font-semibold">Late Fee:</span> ${effectiveLateFeeDollars || "0.00"}</p>
+          <p><span className="font-semibold">Grace Period:</span> {leaseDraft.gracePeriodDays || "5"} days</p>
         </div>
         {!leaseRequiredComplete && (
           <p className="text-xs text-amber-700">
@@ -1025,6 +1083,8 @@ export function OperationsSection({
           <input type="hidden" name="dueDayOfMonth" value={leaseDraft.dueDayOfMonth} />
           <input type="hidden" name="monthlyRentDollars" value={leaseDraft.monthlyRentDollars} />
           <input type="hidden" name="depositDollars" value={leaseDraft.depositDollars} />
+          <input type="hidden" name="lateFeeDollars" value={effectiveLateFeeDollars} />
+          <input type="hidden" name="gracePeriodDays" value={leaseDraft.gracePeriodDays} />
           <SubmitButton
             className="w-full"
             title="Save this lease with the details above."

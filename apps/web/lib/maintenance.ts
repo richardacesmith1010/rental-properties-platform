@@ -2,6 +2,19 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdministeredPropertyIds } from "@/lib/property-access";
 
+type SupabaseLikeClient = Pick<ReturnType<typeof createClient>, "from">;
+
+export interface MaintenanceComment {
+  id: string;
+  ticketId: string;
+  authorId: string;
+  authorName: string;
+  authorRole: string;
+  body: string;
+  isInternal: boolean;
+  createdAt: string;
+}
+
 export interface MaintenanceTicket {
   id: string;
   propertyName: string;
@@ -18,6 +31,8 @@ export interface MaintenanceTicket {
   createdAt: string;
   resolvedAt: string | null;
   tenantEmail: string | null;
+  commentCount: number;
+  comments: MaintenanceComment[];
   isFeatureReady?: boolean;
   featureWarning?: string | null;
 }
@@ -31,6 +46,122 @@ export interface TenantUnit {
 export interface TenantMaintenanceData {
   tickets: MaintenanceTicket[];
   units: TenantUnit[];
+}
+
+function isMissingSchemaError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const code = "code" in error ? String(error.code ?? "") : "";
+  const message = "message" in error ? String(error.message ?? "").toLowerCase() : "";
+
+  return (
+    code === "42P01" ||
+    code === "42703" ||
+    code === "PGRST205" ||
+    message.includes("does not exist") ||
+    (message.includes("column") && message.includes("does not exist"))
+  );
+}
+
+async function buildCommentMaps(
+  supabase: SupabaseLikeClient,
+  ticketIds: string[]
+) {
+  const commentCountByTicketId = new Map<string, number>();
+  const commentsByTicketId = new Map<string, MaintenanceComment[]>();
+
+  if (ticketIds.length === 0) {
+    return {
+      commentCountByTicketId,
+      commentsByTicketId
+    };
+  }
+
+  const { data: comments, error } = await supabase
+    .from("maintenance_comments")
+    .select("id, ticket_id, author_id, body, is_internal, created_at")
+    .in("ticket_id", ticketIds)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    if (isMissingSchemaError(error)) {
+      return {
+        commentCountByTicketId,
+        commentsByTicketId
+      };
+    }
+
+    throw error;
+  }
+
+  const commentRows =
+    (comments ?? []) as Array<{
+      id: string;
+      ticket_id: string;
+      author_id: string;
+      body: string;
+      is_internal: boolean | null;
+      created_at: string;
+    }>;
+  const authorIds = Array.from(new Set(commentRows.map((comment) => comment.author_id)));
+
+  let authorById = new Map<
+    string,
+    {
+      full_name: string | null;
+      email: string | null;
+      role: string | null;
+    }
+  >();
+
+  if (authorIds.length > 0) {
+    const admin = createAdminClient();
+    const { data: authors } = await admin
+      .from("profiles")
+      .select("id, full_name, email, role")
+      .in("id", authorIds);
+
+    authorById = new Map(
+      (authors ?? []).map((author) => [
+        author.id,
+        {
+          full_name: author.full_name,
+          email: author.email,
+          role: author.role
+        }
+      ])
+    );
+  }
+
+  for (const comment of commentRows) {
+    const existing = commentsByTicketId.get(comment.ticket_id) ?? [];
+    const author = authorById.get(comment.author_id);
+    existing.push({
+      id: comment.id,
+      ticketId: comment.ticket_id,
+      authorId: comment.author_id,
+      authorName: author?.full_name?.trim() || author?.email || "Domus User",
+      authorRole: author?.role ?? "team",
+      body: comment.body,
+      isInternal: comment.is_internal === true,
+      createdAt: comment.created_at
+    });
+    commentsByTicketId.set(comment.ticket_id, existing);
+    commentCountByTicketId.set(comment.ticket_id, existing.length);
+  }
+
+  return {
+    commentCountByTicketId,
+    commentsByTicketId
+  };
+}
+
+export async function getTicketComments(ticketId: string): Promise<MaintenanceComment[]> {
+  const supabase = createClient();
+  const { commentsByTicketId } = await buildCommentMaps(supabase, [ticketId]);
+  return commentsByTicketId.get(ticketId) ?? [];
 }
 
 async function buildTicketEnhancementMaps(
@@ -174,6 +305,13 @@ export async function getTenantMaintenanceData(
       supabase,
       ticketRows.map((ticket) => ticket.id)
     );
+  const {
+    commentCountByTicketId,
+    commentsByTicketId
+  } = await buildCommentMaps(
+    supabase,
+    ticketRows.map((ticket) => ticket.id)
+  );
 
   return {
     units: tenantUnits,
@@ -198,6 +336,8 @@ export async function getTenantMaintenanceData(
         createdAt: ticket.created_at,
         resolvedAt: ticket.resolved_at,
         tenantEmail: null,
+        commentCount: commentCountByTicketId.get(ticket.id) ?? 0,
+        comments: commentsByTicketId.get(ticket.id) ?? [],
         isFeatureReady: true,
         featureWarning: null
       };
@@ -277,6 +417,13 @@ export async function getOwnerMaintenanceTickets(
       supabase,
       ticketRows.map((ticket) => ticket.id)
     );
+  const {
+    commentCountByTicketId,
+    commentsByTicketId
+  } = await buildCommentMaps(
+    supabase,
+    ticketRows.map((ticket) => ticket.id)
+  );
 
   return ticketRows.map((ticket) => {
     const property = propertyById.get(ticket.property_id);
@@ -302,6 +449,8 @@ export async function getOwnerMaintenanceTickets(
       createdAt: ticket.created_at,
       resolvedAt: ticket.resolved_at,
       tenantEmail: tenant?.email ?? null,
+      commentCount: commentCountByTicketId.get(ticket.id) ?? 0,
+      comments: commentsByTicketId.get(ticket.id) ?? [],
       isFeatureReady: true,
       featureWarning: null
     };
@@ -377,6 +526,13 @@ export async function getManagerMaintenanceTickets(
       supabase,
       ticketRows.map((ticket) => ticket.id)
     );
+  const {
+    commentCountByTicketId,
+    commentsByTicketId
+  } = await buildCommentMaps(
+    supabase,
+    ticketRows.map((ticket) => ticket.id)
+  );
 
   return ticketRows.map((ticket) => {
     const property = propertyById.get(ticket.property_id);
@@ -402,6 +558,8 @@ export async function getManagerMaintenanceTickets(
       createdAt: ticket.created_at,
       resolvedAt: ticket.resolved_at,
       tenantEmail: tenant?.email ?? null,
+      commentCount: commentCountByTicketId.get(ticket.id) ?? 0,
+      comments: commentsByTicketId.get(ticket.id) ?? [],
       isFeatureReady: true,
       featureWarning: null
     };

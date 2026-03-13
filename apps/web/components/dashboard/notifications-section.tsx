@@ -5,7 +5,7 @@ import { Bell } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SubmitButton } from "@/components/shared/submit-button";
-import { EmptyState } from "@/components/shared/empty-state";
+import { EmptyState } from "./empty-state";
 import { DataRow } from "@/components/shared/data-row";
 import type { ActionState } from "@/app/actions";
 import type { NotificationDTO } from "@/lib/notifications";
@@ -62,7 +62,11 @@ export function NotificationsSection({
           <p className="mb-3 text-sm text-emerald-600">{markAllState.message}</p>
         )}
         {notifications.length === 0 ? (
-          <EmptyState message="No notifications yet. Alerts for rent, maintenance, and documents will appear here." />
+          <EmptyState
+            icon={Bell}
+            title="No notifications yet"
+            description="Alerts for rent, maintenance, and documents will appear here."
+          />
         ) : (
           <div>
             {notifications.map((notification, i) => (

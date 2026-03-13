@@ -15,7 +15,9 @@ export type NotificationType =
   | "application_reviewed"
   | "rent_due_reminder"
   | "invite_accepted"
-  | "achievement_unlocked";
+  | "achievement_unlocked"
+  | "lease_expiring_soon"
+  | "lease_expired";
 
 export interface NotificationDTO {
   id: string;
@@ -79,6 +81,9 @@ function getNotificationCta(type: NotificationType) {
       return { text: "View Details", url: `${baseUrl}/tenant` };
     case "document_sent":
       return { text: "Review Document", url: `${baseUrl}/tenant` };
+    case "lease_expiring_soon":
+    case "lease_expired":
+      return { text: "View Lease", url: `${baseUrl}/tenant` };
     default:
       return { text: "Open Domus", url: baseUrl };
   }

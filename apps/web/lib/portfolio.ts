@@ -284,7 +284,7 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
       .in("unit_id", unitIds)
       .order("start_date", { ascending: false });
 
-    leases = (leaseRows ?? []).filter((lease) => lease.active);
+    leases = leaseRows ?? [];
   }
 
   const propertyById = new Map(propertyRows.map((property) => [property.id, property]));
@@ -345,7 +345,7 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
   });
 
   const propertyIdsByTenantId = new Map<string, string[]>();
-  for (const lease of leaseList) {
+  for (const lease of leaseList.filter((item) => item.active)) {
     if (!lease.propertyId) continue;
     const existing = propertyIdsByTenantId.get(lease.tenantProfileId) ?? [];
     if (!existing.includes(lease.propertyId)) {

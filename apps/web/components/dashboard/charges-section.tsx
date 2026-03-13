@@ -4,12 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useFormState } from "react-dom";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { CreditCard } from "lucide-react";
 import type { ActionState } from "@/app/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataRow } from "@/components/shared/data-row";
-import { EmptyState } from "@/components/shared/empty-state";
+import { EmptyState } from "./empty-state";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Input } from "@/components/ui/input";
 import { AutopayCard } from "./autopay-card";
@@ -246,14 +247,15 @@ export function ChargesSection({
 
         {filteredCharges.length === 0 ? (
           <EmptyState
-            message={
+            icon={CreditCard}
+            title={charges.length === 0 ? "No charges yet" : "No matching charges"}
+            description={
               charges.length === 0
                 ? isTenantView
-                  ? "No charges yet. Charges appear automatically when your lease is active."
+                  ? "No charges yet. Charges are generated automatically on the 1st of each month."
                   : "No charges yet. Charges are generated automatically when you have active leases. You can also generate them manually from the Operations section."
                 : "No charges match this filter right now."
             }
-            showDom={isTenantView}
           />
         ) : (
           <div>

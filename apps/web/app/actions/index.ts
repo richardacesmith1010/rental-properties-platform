@@ -22,6 +22,8 @@ export { deleteUnit } from "./units";
 export { createLease } from "./leases";
 export { updateLease } from "./leases";
 export { deleteLease } from "./leases";
+export { renewLease } from "./leases";
+export { terminateLease } from "./leases";
 
 export { createCheckoutForCharge } from "./charges";
 export { recordManualPayment } from "./charges";
@@ -31,6 +33,7 @@ export { disableAutopay } from "./autopay";
 export { createMaintenanceTicket } from "./maintenance";
 export { updateTicketStatus } from "./maintenance";
 export { updateTicketCost } from "./maintenance";
+export { addTicketComment } from "./maintenance";
 
 export { inviteTenant } from "./invitations";
 export { inviteManager } from "./invitations";

@@ -65,7 +65,7 @@ export async function createUnit(_prev: ActionState, formData: FormData): Promis
   revalidatePath("/");
   revalidatePath("/owner");
   revalidatePath("/manager");
-  return { success: true };
+  return { success: true, unitId: createdUnit.id };
 }
 
 

@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import {
+  detectExpiredLeases,
   generateMonthlyChargesForAllOwnersWithClient,
   processAutopayCharges,
+  sendLeaseExpirationWarnings,
   sendRentDueReminders
 } from "@/lib/charges";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -25,6 +27,8 @@ export async function GET(request: Request) {
     const adminClient = createAdminClient();
     const summary = await generateMonthlyChargesForAllOwnersWithClient(adminClient);
     let autopaySummary: string | { processed: number; succeeded: number; failed: number; skipped: number } = "Autopay skipped";
+    let expirationSummary = "Expired lease check skipped";
+    let warningSummary = "Expiration warnings skipped";
     let reminderSummary = "Reminders skipped";
 
     try {
@@ -35,13 +39,34 @@ export async function GET(request: Request) {
     }
 
     try {
+      expirationSummary = await detectExpiredLeases(adminClient);
+    } catch (error) {
+      console.error("Lease expiration detection failed:", error);
+      expirationSummary = "Expired lease check failed";
+    }
+
+    try {
+      warningSummary = await sendLeaseExpirationWarnings(adminClient);
+    } catch (error) {
+      console.error("Lease expiration warnings failed:", error);
+      warningSummary = "Expiration warnings failed";
+    }
+
+    try {
       reminderSummary = await sendRentDueReminders(adminClient);
     } catch (error) {
       console.error("Rent due reminders failed:", error);
       reminderSummary = "Reminders failed";
     }
 
-    return NextResponse.json({ ok: true, summary, autopaySummary, reminderSummary });
+    return NextResponse.json({
+      ok: true,
+      summary,
+      autopaySummary,
+      expirationSummary,
+      warningSummary,
+      reminderSummary
+    });
   } catch (error) {
     return NextResponse.json(
       {

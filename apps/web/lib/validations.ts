@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+const isoDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a valid date.")
+  .refine((value) => {
+    const parsed = new Date(`${value}T00:00:00.000Z`);
+    return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+  }, "Enter a valid date.");
+
 const optionalOwnershipAccountIdSchema = z.preprocess(
   (value) => (value === "" ? undefined : value),
   z.string().uuid("Invalid ownership account.").optional()
@@ -49,8 +57,8 @@ export const createLeaseSchema = z
   .object({
     unitId: z.string().uuid("Invalid unit selection."),
     tenantProfileId: z.string().uuid("Invalid tenant selection."),
-    startDate: z.string().min(1, "Start date is required."),
-    endDate: z.string().min(1, "End date is required."),
+    startDate: isoDateSchema,
+    endDate: isoDateSchema,
     dueDayOfMonth: z.coerce
       .number()
       .int()
@@ -58,8 +66,8 @@ export const createLeaseSchema = z
       .max(28, "Due day must be between 1 and 28."),
     monthlyRentDollars: z.coerce.number().positive("Monthly rent must be greater than $0."),
     depositDollars: z.coerce.number().min(0, "Deposit cannot be negative."),
-    gracePeriodDays: z.coerce.number().int().min(0).max(30).optional(),
-    lateFeeDollars: z.coerce.number().min(0).optional()
+    gracePeriodDays: z.coerce.number().int().min(0).max(30).optional().default(5),
+    lateFeeDollars: z.coerce.number().min(0).optional().default(0)
   })
   .refine((data) => data.endDate > data.startDate, {
     message: "End date must be after start date.",
@@ -68,7 +76,7 @@ export const createLeaseSchema = z
 
 export const updateLeaseSchema = z.object({
   leaseId: z.string().uuid("Invalid lease ID."),
-  endDate: z.string().min(1, "End date is required."),
+  endDate: isoDateSchema,
   dueDayOfMonth: z.coerce
     .number()
     .int()
@@ -76,12 +84,36 @@ export const updateLeaseSchema = z.object({
     .max(28, "Due day must be between 1 and 28."),
   monthlyRentDollars: z.coerce.number().positive("Monthly rent must be greater than $0."),
   depositDollars: z.coerce.number().min(0, "Deposit cannot be negative."),
-  gracePeriodDays: z.coerce.number().int().min(0).max(30).optional(),
-  lateFeeDollars: z.coerce.number().min(0).optional()
+  gracePeriodDays: z.coerce.number().int().min(0).max(30).optional().default(5),
+  lateFeeDollars: z.coerce.number().min(0).optional().default(0)
 });
 
 export const deleteLeaseSchema = z.object({
   leaseId: z.string().uuid("Invalid lease ID."),
+});
+
+export const renewLeaseSchema = z
+  .object({
+    leaseId: z.string().uuid("Invalid lease ID."),
+    newStartDate: isoDateSchema,
+    newEndDate: isoDateSchema,
+    newMonthlyRentDollars: z.coerce.number().min(0.01, "Rent must be positive."),
+    newDueDayOfMonth: z.coerce.number().int().min(1).max(28, "Due day must be 1-28."),
+  })
+  .refine((data) => data.newEndDate > data.newStartDate, {
+    message: "End date must be after start date.",
+    path: ["newEndDate"],
+  });
+
+export const terminateLeaseSchema = z.object({
+  leaseId: z.string().uuid("Invalid lease ID."),
+  terminationReason: z.string().min(1, "Reason is required.").max(500),
+});
+
+export const updateLateFeeSchema = z.object({
+  leaseId: z.string().uuid("Invalid lease ID."),
+  lateFeeDollars: z.coerce.number().min(0, "Cannot be negative."),
+  gracePeriodDays: z.coerce.number().int().min(0).max(30, "Must be 0-30 days."),
 });
 
 export const updatePropertySchema = z.object({
@@ -163,6 +195,12 @@ export const updateTicketStatusSchema = z.object({
 export const updateTicketCostSchema = z.object({
   ticketId: z.string().uuid("Invalid ticket ID."),
   actualCostDollars: z.coerce.number().min(0, "Cost cannot be negative."),
+});
+
+export const addTicketCommentSchema = z.object({
+  ticketId: z.string().uuid("Invalid ticket ID."),
+  body: z.string().min(1, "Comment cannot be empty.").max(2000),
+  isInternal: z.enum(["true", "false"]).optional().default("false"),
 });
 
 /* ─── Invitations ─── */

@@ -82,6 +82,9 @@ export function OnboardingWizard({
     async (prev, formData) => {
       const result = await onCreateUnit(prev, formData);
       if (result?.success) {
+        if (result.unitId) {
+          setCreatedUnitId(result.unitId);
+        }
         // Store the rent value for pre-filling the lease step
         const rentVal = formData.get("monthlyRentDollars");
         if (rentVal) {

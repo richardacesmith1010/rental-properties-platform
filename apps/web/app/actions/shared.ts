@@ -8,6 +8,7 @@ export type ActionState =
       message?: string;
       joinCode?: string;
       accountId?: string;
+      unitId?: string;
       avatarUrl?: string;
       url?: string;
       connected?: boolean;

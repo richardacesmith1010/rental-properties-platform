@@ -1,7 +1,8 @@
+import { CreditCard } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DataRow } from "@/components/shared/data-row";
-import { EmptyState } from "@/components/shared/empty-state";
+import { EmptyState } from "./empty-state";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 
 interface Payment {
@@ -26,7 +27,11 @@ export function PaymentsSection({ payments }: PaymentsSectionProps) {
       </CardHeader>
       <CardContent>
         {payments.length === 0 ? (
-          <EmptyState message="No payments yet. Completed rent payments will appear here." />
+          <EmptyState
+            icon={CreditCard}
+            title="No payments recorded yet"
+            description="No payments recorded yet."
+          />
         ) : (
           <div>
             {payments.map((payment, i) => (

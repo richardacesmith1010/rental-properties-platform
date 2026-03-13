@@ -1,12 +1,14 @@
 import Link from "next/link";
+import { MessageSquareText, Wrench } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DataRow } from "@/components/shared/data-row";
-import { EmptyState } from "@/components/shared/empty-state";
 import { FeatureWarning } from "@/components/shared/feature-warning";
 import { TicketStatusControl } from "./ticket-status-control";
 import { TicketVendorControl } from "./ticket-vendor-control";
 import { TicketPhotoUpload } from "./ticket-photo-upload";
+import { EmptyState } from "./empty-state";
+import { MaintenanceCommentThread } from "./maintenance-comment-thread";
 import type { MaintenanceTicket } from "@/lib/maintenance";
 import type { ActionState } from "@/app/actions";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -23,6 +25,7 @@ interface MaintenanceSectionProps {
   vendors?: Array<{ id: string; name: string; preferred?: boolean }>;
   onAssignVendor?: StatefulAction;
   onUploadPhoto?: StatefulAction;
+  onAddComment?: StatefulAction;
   vendorWorkflowEnabled?: boolean;
   photoWorkflowEnabled?: boolean;
   vendorWorkflowWarning?: string | null;
@@ -68,6 +71,7 @@ export function MaintenanceSection({
   vendors = [],
   onAssignVendor,
   onUploadPhoto,
+  onAddComment,
   vendorWorkflowEnabled = true,
   photoWorkflowEnabled = true,
   vendorWorkflowWarning = null,
@@ -81,22 +85,26 @@ export function MaintenanceSection({
       <CardContent>
         {(vendorWorkflowWarning || photoWorkflowWarning) && (
           <div className="mb-4 space-y-2">
-            {vendorWorkflowWarning && (
+            {vendorWorkflowWarning ? (
               <FeatureWarning
                 title="Vendor Workflow Unavailable"
                 message={vendorWorkflowWarning}
               />
-            )}
-            {photoWorkflowWarning && (
+            ) : null}
+            {photoWorkflowWarning ? (
               <FeatureWarning
                 title="Photo Workflow Unavailable"
                 message={photoWorkflowWarning}
               />
-            )}
+            ) : null}
           </div>
         )}
         {tickets.length === 0 ? (
-          <EmptyState message="No maintenance tickets yet. New tenant and team requests will appear here." />
+          <EmptyState
+            icon={Wrench}
+            title="No maintenance tickets"
+            description="No maintenance tickets. Your properties are in great shape!"
+          />
         ) : (
           <div>
             {tickets.map((ticket, i) => {
@@ -109,19 +117,22 @@ export function MaintenanceSection({
                     </p>
                     <p className="mt-0.5 text-xs text-zinc-500">
                       {ticket.propertyName}
-                      {ticket.unitNumber ? ` \u2022 Unit ${ticket.unitNumber}` : ""}
+                      {ticket.unitNumber ? ` • Unit ${ticket.unitNumber}` : ""}
                     </p>
-                    {ticket.tenantEmail && (
+                    {ticket.tenantEmail ? (
                       <p className="mt-0.5 text-xs text-zinc-400">
                         {ticket.tenantEmail}
                       </p>
-                    )}
+                    ) : null}
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
                       <Badge variant={statusVariant[ticket.status] ?? "outline"}>
                         {statusLabel(ticket.status)}
                       </Badge>
                       <Badge variant={priorityVariant[ticket.priority] ?? "outline"}>
                         {ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
+                      </Badge>
+                      <Badge variant="outline">
+                        {ticket.commentCount} comment{ticket.commentCount === 1 ? "" : "s"}
                       </Badge>
                     </div>
                     <div className="mt-2 grid gap-2 text-[11px] text-zinc-500 sm:grid-cols-2">
@@ -149,31 +160,59 @@ export function MaintenanceSection({
                         </p>
                       </div>
                     </div>
+
+                    {(ticket.commentCount > 0 || onAddComment) ? (
+                      <details className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50/70">
+                        <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-zinc-700">
+                          <span className="inline-flex items-center gap-2">
+                            <MessageSquareText className="h-4 w-4 text-zinc-400" />
+                            Conversation
+                            <span className="text-zinc-400">({ticket.commentCount})</span>
+                          </span>
+                        </summary>
+                        <div className="border-t border-zinc-200 px-4 py-4">
+                          {onAddComment ? (
+                            <MaintenanceCommentThread
+                              ticketId={ticket.id}
+                              comments={ticket.comments}
+                              onAddComment={onAddComment}
+                              canAddInternal={showControls}
+                            />
+                          ) : (
+                            <EmptyState
+                              icon={MessageSquareText}
+                              title="Comments unavailable"
+                              description="Conversation tools are not available for this ticket right now."
+                            />
+                          )}
+                        </div>
+                      </details>
+                    ) : null}
                   </div>
 
-                  {(showControls || (photoWorkflowEnabled && ticket.latestPhotoId)) && (
+                  {(showControls || (photoWorkflowEnabled && ticket.latestPhotoId)) ? (
                     <div className="flex-shrink-0 space-y-2">
-                      {showControls && onUpdateStatus && (
+                      {showControls && onUpdateStatus ? (
                         <TicketStatusControl
                           ticketId={ticket.id}
                           currentStatus={ticket.status}
                           onUpdateStatus={onUpdateStatus}
                         />
-                      )}
-                      {showControls && onAssignVendor && vendorWorkflowEnabled && vendors.length > 0 && (
+                      ) : null}
+                      {showControls && onAssignVendor && vendorWorkflowEnabled && vendors.length > 0 ? (
                         <TicketVendorControl
                           ticketId={ticket.id}
                           vendors={vendors}
                           onAssignVendor={onAssignVendor}
                         />
-                      )}
-                      {showControls && onUploadPhoto && photoWorkflowEnabled && (
+                      ) : null}
+                      {showControls && onUploadPhoto && photoWorkflowEnabled ? (
                         <TicketPhotoUpload
                           ticketId={ticket.id}
                           onUploadPhoto={onUploadPhoto}
                         />
-                      )}
-                      {photoWorkflowEnabled && ticket.latestPhotoId && (
+                      ) : null}
+                      {photoWorkflowEnabled && ticket.latestPhotoId ? (
                         <Link
                           href={`/api/assets/maintenance-photo/${ticket.latestPhotoId}`}
                           target="_blank"
@@ -183,9 +222,9 @@ export function MaintenanceSection({
                         >
                           View Photo
                         </Link>
-                      )}
+                      ) : null}
                     </div>
-                  )}
+                  ) : null}
                 </DataRow>
               );
             })}

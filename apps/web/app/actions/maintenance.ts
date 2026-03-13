@@ -15,9 +15,10 @@ import {
   createMaintenanceTicketSchema,
   updateTicketStatusSchema,
   updateTicketCostSchema,
+  addTicketCommentSchema,
   parseFormData
 } from "@/lib/validations";
-import type { ActionState } from "./shared";
+import { isMissingSchemaError, type ActionState } from "./shared";
 
 export async function createMaintenanceTicket(
   _prev: ActionState,
@@ -331,4 +332,110 @@ export async function updateTicketCost(
   revalidatePath("/owner");
   revalidatePath("/manager");
   return { success: true };
+}
+
+export async function addTicketComment(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRole(user.id);
+  if (role !== "owner" && role !== "manager" && role !== "tenant") {
+    redirect("/");
+  }
+
+  const parsed = parseFormData(addTicketCommentSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { ticketId, body, isInternal } = parsed.data;
+  const internalNote = isInternal === "true";
+
+  const admin = createAdminClient();
+  const { data: ticket } = await admin
+    .from("maintenance_tickets")
+    .select("id, property_id, tenant_profile_id, title")
+    .eq("id", ticketId)
+    .maybeSingle();
+
+  if (!ticket) {
+    return { success: false, error: "Ticket not found." };
+  }
+
+  if (role === "tenant") {
+    if (ticket.tenant_profile_id !== user.id) {
+      return { success: false, error: "You do not have access to this ticket." };
+    }
+    if (internalNote) {
+      return { success: false, error: "Internal notes are only available to owners and managers." };
+    }
+  } else {
+    const canAdminister = await canUserAdministerProperty(user.id, ticket.property_id);
+    if (!canAdminister) {
+      return { success: false, error: "You do not have access to this ticket." };
+    }
+  }
+
+  const { error: insertError } = await admin
+    .from("maintenance_comments")
+    .insert({
+      ticket_id: ticket.id,
+      author_id: user.id,
+      body,
+      is_internal: internalNote
+    });
+
+  if (insertError) {
+    const missingSchema = await isMissingSchemaError(insertError);
+    return {
+      success: false,
+      error: missingSchema
+        ? "This feature requires a database update."
+        : "Failed to add comment. Please try again."
+    };
+  }
+
+  if (role === "tenant") {
+    void notifyOwnerMembersForProperty({
+      propertyId: ticket.property_id,
+      type: "new_ticket",
+      title: "New maintenance comment",
+      body: `Tenant added a comment on: ${ticket.title}`,
+      entityType: "maintenance_ticket",
+      entityId: ticket.id,
+      actorProfileId: user.id
+    }).catch(() => {});
+  } else if (ticket.tenant_profile_id) {
+    const { data: tenantProfile } = await admin
+      .from("profiles")
+      .select("id, email")
+      .eq("id", ticket.tenant_profile_id)
+      .maybeSingle();
+
+    if (tenantProfile?.id) {
+      void createNotificationWithDelivery({
+        recipientProfileId: tenantProfile.id,
+        recipientEmail: tenantProfile.email,
+        type: "new_ticket",
+        title: "Maintenance request updated",
+        body: `New update on your maintenance request: ${ticket.title}`,
+        entityType: "maintenance_ticket",
+        entityId: ticket.id
+      }).catch(() => {});
+    }
+  }
+
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  revalidatePath("/tenant");
+  return { success: true, message: "Comment added." };
 }

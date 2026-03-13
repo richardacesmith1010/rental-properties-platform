@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { useFormState } from "react-dom";
+import { FileArchive, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -12,7 +13,7 @@ import { SubmitButton } from "@/components/shared/submit-button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { DataRow } from "@/components/shared/data-row";
-import { EmptyState } from "@/components/shared/empty-state";
+import { EmptyState } from "./empty-state";
 import { FeatureWarning } from "@/components/shared/feature-warning";
 import type { ActionState } from "@/app/actions";
 import type { DocumentTemplateDTO, DocumentPacketDTO, PropertyFileDTO } from "@/lib/documents";
@@ -170,6 +171,7 @@ export function DocumentsSection({
     visibility: "owner_manager",
     description: ""
   });
+  const activeLeases = leases.filter((lease) => lease.active);
 
   const templateRequiredComplete = Boolean(
     templateDraft.name && templateDraft.category && templateDraft.bodyMarkdown
@@ -467,7 +469,7 @@ export function DocumentsSection({
                     }
                   >
                     <option value="">Select lease</option>
-                    {leases.map((lease) => (
+                    {activeLeases.map((lease) => (
                       <option key={lease.id} value={lease.id}>
                         {lease.unitLabel} • {lease.tenantEmail}
                       </option>
@@ -480,7 +482,7 @@ export function DocumentsSection({
                   <p className="text-sm text-zinc-600">Final step: review and create draft packet.</p>
                   <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-700">
                     <p><span className="font-semibold">Template:</span> {templates.find((template) => template.id === packetDraft.templateId)?.name ?? "Not set"}</p>
-                    <p><span className="font-semibold">Lease:</span> {leases.find((lease) => lease.id === packetDraft.leaseId)?.unitLabel ?? "Not set"}</p>
+                    <p><span className="font-semibold">Lease:</span> {activeLeases.find((lease) => lease.id === packetDraft.leaseId)?.unitLabel ?? "Not set"}</p>
                   </div>
                   <form className="space-y-2" action={packetAction}>
                     <input type="hidden" name="templateId" value={packetDraft.templateId} />
@@ -628,7 +630,11 @@ export function DocumentsSection({
                       </SubmitButton>
                     </form>
                   ) : (
-                    <EmptyState message="Property file vault is not enabled yet." />
+                    <EmptyState
+                      icon={FileArchive}
+                      title="Property file vault unavailable"
+                      description="Property file vault is not enabled yet."
+                    />
                   )}
                 </div>
               )}
@@ -676,7 +682,11 @@ export function DocumentsSection({
         </CardHeader>
         <CardContent>
           {templates.length === 0 ? (
-            <EmptyState message="No templates yet. Create your first template to speed up lease paperwork." />
+            <EmptyState
+              icon={FileText}
+              title="No templates yet"
+              description="No documents yet."
+            />
           ) : (
             <div>
               {templates.map((template, i) => (
@@ -698,7 +708,11 @@ export function DocumentsSection({
         </CardHeader>
         <CardContent>
           {packets.length === 0 ? (
-            <EmptyState message="No document packets yet. Create a packet from a template to start e-sign workflow." />
+            <EmptyState
+              icon={FileText}
+              title="No document packets yet"
+              description="No documents yet."
+            />
           ) : (
             <div>
               {packets.map((packet, i) => (
@@ -721,9 +735,17 @@ export function DocumentsSection({
         </CardHeader>
         <CardContent>
           {!propertyFilesEnabled ? (
-            <EmptyState message="Property file vault is unavailable. Complete setup to upload and share files." />
+            <EmptyState
+              icon={FileArchive}
+              title="Property file vault unavailable"
+              description="Property file vault is unavailable. Complete setup to upload and share files."
+            />
           ) : propertyFiles.length === 0 ? (
-            <EmptyState message="No files uploaded yet. Add lease docs, inspections, and receipts here." />
+            <EmptyState
+              icon={FileArchive}
+              title="No files uploaded yet"
+              description="No documents yet."
+            />
           ) : (
             <div>
               {propertyFiles.map((file, i) => (

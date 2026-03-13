@@ -132,6 +132,9 @@ interface SectionRendererProps {
   onDeleteUnit?: StatefulAction;
   onUpdateLease?: StatefulAction;
   onDeleteLease?: StatefulAction;
+  onRenewLease?: StatefulAction;
+  onTerminateLease?: StatefulAction;
+  onAddTicketComment?: StatefulAction;
   goToSectionIfVisible: (sectionId: string) => void;
   handleTenantInviteSuccess: () => void;
   handleManagerInviteSuccess: () => void;
@@ -224,6 +227,9 @@ export function SectionRenderer({
   onDeleteUnit,
   onUpdateLease,
   onDeleteLease,
+  onRenewLease,
+  onTerminateLease,
+  onAddTicketComment,
   goToSectionIfVisible,
   handleTenantInviteSuccess,
   handleManagerInviteSuccess,
@@ -282,6 +288,7 @@ export function SectionRenderer({
         tickets={tickets ?? []}
         showControls={!!onUpdateTicketStatus}
         onUpdateStatus={onUpdateTicketStatus}
+        onAddComment={onAddTicketComment}
         vendors={sortedVendors}
         onAssignVendor={safeCapabilities.vendorWorkflowEnabled ? onAssignVendor : undefined}
         onUploadPhoto={safeCapabilities.photoWorkflowEnabled ? onUploadMaintenancePhoto : undefined}
@@ -548,6 +555,8 @@ export function SectionRenderer({
         showControls={canManagePortfolio}
         onUpdateLease={onUpdateLease}
         onDeleteLease={onDeleteLease}
+        onRenewLease={onRenewLease}
+        onTerminateLease={onTerminateLease}
       />
     );
   }

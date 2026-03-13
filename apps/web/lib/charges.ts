@@ -167,8 +167,8 @@ async function updateLeaseStatuses(
   }
 
   const today = startOfUtcDay(new Date());
-  const sixtyDaysFromNow = new Date(today);
-  sixtyDaysFromNow.setUTCDate(sixtyDaysFromNow.getUTCDate() + 60);
+  const thirtyDaysFromNow = new Date(today);
+  thirtyDaysFromNow.setUTCDate(thirtyDaysFromNow.getUTCDate() + 30);
 
   const { data: propertyUnits } = await supabase
     .from("units")
@@ -215,26 +215,32 @@ async function updateLeaseStatuses(
     if (
       status === "active" &&
       endDate.getTime() >= today.getTime() &&
-      endDate.getTime() <= sixtyDaysFromNow.getTime()
+      endDate.getTime() <= thirtyDaysFromNow.getTime()
     ) {
       expiringSoonLeaseIds.push(lease.id);
     }
   }
 
   if (expiringSoonLeaseIds.length > 0) {
-    await supabase
+    const { error } = await supabase
       .from("leases")
       .update({ lease_status: "expiring_soon" })
       .in("id", expiringSoonLeaseIds)
       .eq("active", true);
+    if (error) {
+      throw error;
+    }
   }
 
   if (expiredLeaseIds.length > 0) {
-    await supabase
+    const { error } = await supabase
       .from("leases")
       .update({ lease_status: "expired", active: false })
       .in("id", expiredLeaseIds)
       .eq("active", true);
+    if (error) {
+      throw error;
+    }
   }
 }
 
@@ -322,7 +328,10 @@ async function generateMonthlyChargesForPropertyIdsWithClient(
   });
 
   if (inserts.length > 0) {
-    await supabase.from("rent_charges").insert(inserts);
+    const { error } = await supabase.from("rent_charges").insert(inserts);
+    if (error) {
+      throw error;
+    }
   }
 
   const { data: lateCandidates } = await supabase
@@ -358,10 +367,13 @@ async function generateMonthlyChargesForPropertyIdsWithClient(
 
     const lateChargeIds = lateChargeRows.map((charge) => charge.id);
     if (lateChargeIds.length > 0) {
-      await supabase
+      const { error: lateUpdateError } = await supabase
         .from("rent_charges")
         .update({ status: "late" })
         .in("id", lateChargeIds);
+      if (lateUpdateError) {
+        throw lateUpdateError;
+      }
 
       const lateFeesByParentChargeId = new Map<string, string>();
       const { data: existingLateFeeCharges } = await supabase
@@ -411,7 +423,10 @@ async function generateMonthlyChargesForPropertyIdsWithClient(
         );
 
       if (lateFeeInserts.length > 0) {
-        await supabase.from("rent_charges").insert(lateFeeInserts);
+        const { error: lateFeeInsertError } = await supabase.from("rent_charges").insert(lateFeeInserts);
+        if (lateFeeInsertError) {
+          throw lateFeeInsertError;
+        }
       }
     }
 
@@ -542,6 +557,272 @@ export async function generateMonthlyChargesForOwner(ownerUserId: string): Promi
 export async function generateMonthlyChargesForAllOwners(): Promise<string> {
   const supabase = createClient();
   return generateMonthlyChargesForAllOwnersWithClient(supabase);
+}
+
+export async function detectExpiredLeases(supabase: SupabaseLikeClient): Promise<string> {
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const { data: leases, error: leaseError } = await supabase
+    .from("leases")
+    .select("id, unit_id, tenant_profile_id, end_date, lease_status, active")
+    .lt("end_date", todayIso);
+
+  if (leaseError) {
+    throw leaseError;
+  }
+
+  const candidates = ((leases ?? []) as Array<{
+    id: string;
+    unit_id: string;
+    tenant_profile_id: string | null;
+    end_date: string;
+    lease_status: string | null;
+    active: boolean;
+  }>).filter((lease) => {
+    const status = lease.lease_status ?? "active";
+    return status !== "terminated" && status !== "renewed";
+  });
+
+  if (candidates.length === 0) {
+    return "Expired leases detected: 0.";
+  }
+
+  const leaseIdsToExpire = candidates
+    .filter((lease) => lease.active || (lease.lease_status ?? "active") !== "expired")
+    .map((lease) => lease.id);
+
+  if (leaseIdsToExpire.length > 0) {
+    const { error: expireError } = await supabase
+      .from("leases")
+      .update({ lease_status: "expired", active: false })
+      .in("id", leaseIdsToExpire);
+
+    if (expireError) {
+      throw expireError;
+    }
+  }
+
+  const unitIds = Array.from(new Set(candidates.map((lease) => lease.unit_id)));
+  const { data: units, error: unitsError } = await supabase
+    .from("units")
+    .select("id, property_id, unit_number")
+    .in("id", unitIds);
+
+  if (unitsError) {
+    throw unitsError;
+  }
+
+  const unitRows = (units ?? []) as Array<{
+    id: string;
+    property_id: string;
+    unit_number: string;
+  }>;
+  const propertyIds = Array.from(new Set(unitRows.map((unit) => unit.property_id)));
+  const { data: properties, error: propertiesError } = await supabase
+    .from("properties")
+    .select("id, name")
+    .in("id", propertyIds);
+
+  if (propertiesError) {
+    throw propertiesError;
+  }
+
+  const tenantIds = Array.from(
+    new Set(
+      candidates
+        .map((lease) => lease.tenant_profile_id)
+        .filter((id): id is string => Boolean(id))
+    )
+  );
+  const { data: profiles, error: profilesError } = tenantIds.length
+    ? await supabase
+        .from("profiles")
+        .select("id, email")
+        .in("id", tenantIds)
+    : { data: [] as Array<{ id: string; email: string | null }>, error: null };
+
+  if (profilesError) {
+    throw profilesError;
+  }
+
+  const unitById = new Map(unitRows.map((unit) => [unit.id, unit]));
+  const propertyById = new Map((properties ?? []).map((property) => [property.id, property]));
+  const profileById = new Map(
+    ((profiles ?? []) as Array<{ id: string; email: string | null }>).map((profile) => [
+      profile.id,
+      profile
+    ])
+  );
+
+  for (const lease of candidates) {
+    const unit = unitById.get(lease.unit_id);
+    const property = unit ? propertyById.get(unit.property_id) : null;
+    const tenantProfile = lease.tenant_profile_id ? profileById.get(lease.tenant_profile_id) ?? null : null;
+
+    if (lease.tenant_profile_id) {
+      try {
+        await createNotificationWithDelivery({
+          recipientProfileId: lease.tenant_profile_id,
+          recipientEmail: tenantProfile?.email ?? null,
+          type: "lease_expired",
+          title: "Lease Expired",
+          body: `Your lease for Unit ${unit?.unit_number ?? "?"} at ${property?.name ?? "your property"} has expired.`,
+          entityType: "lease",
+          entityId: lease.id
+        });
+      } catch (error) {
+        console.error("[charges] Failed to notify tenant about expired lease:", error);
+      }
+    }
+
+    if (unit?.property_id) {
+      try {
+        await notifyOwnerMembersForProperty({
+          propertyId: unit.property_id,
+          type: "lease_expired",
+          title: "Lease Expired",
+          body: `Lease for ${tenantProfile?.email ?? "tenant"} at Unit ${unit.unit_number} has expired.`,
+          entityType: "lease",
+          entityId: lease.id
+        });
+      } catch (error) {
+        console.error("[charges] Failed to notify property admins about expired lease:", error);
+      }
+    }
+  }
+
+  return `Expired leases detected: ${candidates.length}.`;
+}
+
+export async function sendLeaseExpirationWarnings(supabase: SupabaseLikeClient): Promise<string> {
+  const today = new Date();
+  const todayIso = today.toISOString().slice(0, 10);
+  const warningDate = new Date(today);
+  warningDate.setUTCDate(warningDate.getUTCDate() + 30);
+  const warningIso = warningDate.toISOString().slice(0, 10);
+  const recentThreshold = new Date(today);
+  recentThreshold.setUTCDate(recentThreshold.getUTCDate() - 30);
+
+  const { data: leases, error: leaseError } = await supabase
+    .from("leases")
+    .select("id, unit_id, tenant_profile_id, end_date, lease_status, active")
+    .eq("active", true)
+    .gte("end_date", todayIso)
+    .lte("end_date", warningIso);
+
+  if (leaseError) {
+    throw leaseError;
+  }
+
+  const candidates = ((leases ?? []) as Array<{
+    id: string;
+    unit_id: string;
+    tenant_profile_id: string | null;
+    end_date: string;
+    lease_status: string | null;
+    active: boolean;
+  }>).filter((lease) => {
+    const status = lease.lease_status ?? "active";
+    return status !== "terminated" && status !== "renewed" && status !== "expired";
+  });
+
+  if (candidates.length === 0) {
+    return "Expiration warnings sent: 0.";
+  }
+
+  const candidateIds = candidates.map((lease) => lease.id);
+  const { data: existingWarnings, error: existingWarningsError } = await supabase
+    .from("notifications")
+    .select("entity_id")
+    .eq("type", "lease_expiring_soon")
+    .eq("entity_type", "lease")
+    .in("entity_id", candidateIds)
+    .gte("created_at", recentThreshold.toISOString());
+
+  if (existingWarningsError) {
+    throw existingWarningsError;
+  }
+
+  const alreadyWarned = new Set(
+    ((existingWarnings ?? []) as Array<{ entity_id: string | null }>).map((row) => row.entity_id).filter(
+      (entityId): entityId is string => Boolean(entityId)
+    )
+  );
+
+  const unitIds = Array.from(new Set(candidates.map((lease) => lease.unit_id)));
+  const { data: units, error: unitsError } = await supabase
+    .from("units")
+    .select("id, property_id, unit_number")
+    .in("id", unitIds);
+
+  if (unitsError) {
+    throw unitsError;
+  }
+
+  const unitRows = (units ?? []) as Array<{ id: string; property_id: string; unit_number: string }>;
+  const propertyIds = Array.from(new Set(unitRows.map((unit) => unit.property_id)));
+  const { data: properties, error: propertiesError } = await supabase
+    .from("properties")
+    .select("id, name")
+    .in("id", propertyIds);
+
+  if (propertiesError) {
+    throw propertiesError;
+  }
+
+  const tenantIds = Array.from(
+    new Set(
+      candidates
+        .map((lease) => lease.tenant_profile_id)
+        .filter((id): id is string => Boolean(id))
+    )
+  );
+  const { data: profiles, error: profilesError } = tenantIds.length
+    ? await supabase
+        .from("profiles")
+        .select("id, email")
+        .in("id", tenantIds)
+    : { data: [] as Array<{ id: string; email: string | null }>, error: null };
+
+  if (profilesError) {
+    throw profilesError;
+  }
+
+  const unitById = new Map(unitRows.map((unit) => [unit.id, unit]));
+  const propertyById = new Map((properties ?? []).map((property) => [property.id, property]));
+  const profileById = new Map(
+    ((profiles ?? []) as Array<{ id: string; email: string | null }>).map((profile) => [
+      profile.id,
+      profile
+    ])
+  );
+
+  let warningCount = 0;
+  for (const lease of candidates) {
+    if (!lease.tenant_profile_id || alreadyWarned.has(lease.id)) {
+      continue;
+    }
+
+    const unit = unitById.get(lease.unit_id);
+    const property = unit ? propertyById.get(unit.property_id) : null;
+    const tenantProfile = profileById.get(lease.tenant_profile_id);
+
+    try {
+      await createNotificationWithDelivery({
+        recipientProfileId: lease.tenant_profile_id,
+        recipientEmail: tenantProfile?.email ?? null,
+        type: "lease_expiring_soon",
+        title: "Lease Expiring Soon",
+        body: `Your lease for Unit ${unit?.unit_number ?? "?"} at ${property?.name ?? "your property"} expires on ${lease.end_date}. Contact your landlord about renewal.`,
+        entityType: "lease",
+        entityId: lease.id
+      });
+      warningCount += 1;
+    } catch (error) {
+      console.error("[charges] Failed to send lease expiration warning:", error);
+    }
+  }
+
+  return `Expiration warnings sent: ${warningCount}.`;
 }
 
 export async function sendRentDueReminders(supabase: SupabaseLikeClient): Promise<string> {

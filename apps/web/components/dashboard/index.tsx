@@ -78,9 +78,12 @@ export function Dashboard({
   onDeleteUnit,
   onUpdateLease,
   onDeleteLease,
+  onRenewLease,
+  onTerminateLease,
   onPayCharge,
   onRecordManualPayment,
   onUpdateTicketStatus,
+  onAddTicketComment,
   onInviteTenant,
   onInviteManager,
   onInviteOwner,
@@ -678,6 +681,9 @@ export function Dashboard({
               onDeleteUnit={onDeleteUnit}
               onUpdateLease={onUpdateLease}
               onDeleteLease={onDeleteLease}
+              onRenewLease={onRenewLease}
+              onTerminateLease={onTerminateLease}
+              onAddTicketComment={onAddTicketComment}
               goToSectionIfVisible={goToSectionIfVisible}
               handleTenantInviteSuccess={handleTenantInviteSuccess}
               handleManagerInviteSuccess={handleManagerInviteSuccess}
