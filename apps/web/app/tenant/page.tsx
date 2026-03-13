@@ -25,6 +25,7 @@ import { getTenantDocumentsData } from "@/lib/documents";
 import { getNotificationsForUser } from "@/lib/notifications";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { SidebarNav, MobileTopBar } from "@/components/dashboard/sidebar-nav";
+import type { GlobalSearchItem } from "@/components/dashboard/global-search";
 import { ChargesSection } from "@/components/dashboard/charges-section";
 import { FeatureWarning } from "@/components/shared/feature-warning";
 import { TicketForm } from "@/components/dashboard/ticket-form";
@@ -156,6 +157,48 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
   const ownerConnectedMap = await arePropertyOwnersConnected(
     paymentData.charges.map((charge) => charge.propertyId)
   );
+  const searchItems: GlobalSearchItem[] = [
+    ...paymentData.charges.map((charge) => ({
+      id: `charge:${charge.id}`,
+      label: `${charge.propertyName} • Unit ${charge.unitNumber}`,
+      category: "Charges",
+      href: "/tenant?section=charges",
+      description: `${charge.status} • ${formatCurrency(charge.amountCents)}`,
+      keywords: [charge.propertyName, charge.unitNumber, charge.status, charge.dueDate]
+    })),
+    ...leaseDetails.map((lease) => ({
+      id: `lease:${lease.leaseId}`,
+      label: `${lease.propertyName} • Unit ${lease.unitNumber}`,
+      category: "Lease",
+      href: "/tenant?section=overview",
+      description: `${formatDate(lease.startDate)} to ${formatDate(lease.endDate)}`,
+      keywords: [lease.propertyName, lease.unitNumber, lease.leaseStatus]
+    })),
+    ...maintenanceData.tickets.map((ticket) => ({
+      id: `ticket:${ticket.id}`,
+      label: ticket.title,
+      category: "Maintenance",
+      href: "/tenant?section=maintenance",
+      description: `${ticket.propertyName}${ticket.unitNumber ? ` • Unit ${ticket.unitNumber}` : ""}`,
+      keywords: [ticket.title, ticket.description, ticket.propertyName, ticket.unitNumber ?? ""]
+    })),
+    ...documentsData.packets.map((packet) => ({
+      id: `document:${packet.id}`,
+      label: packet.templateName,
+      category: "Documents",
+      href: "/tenant?section=documents",
+      description: packet.signerStatus,
+      keywords: [packet.templateName, packet.signerStatus]
+    })),
+    ...notifications.map((notification) => ({
+      id: `notification:${notification.id}`,
+      label: notification.title,
+      category: "Notifications",
+      href: "/tenant?section=notifications",
+      description: notification.body,
+      keywords: [notification.title, notification.body, notification.type]
+    }))
+  ];
 
   return (
     <div className="app-surface flex min-h-screen flex-col lg:flex-row">
@@ -167,6 +210,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
         avatarUrl={profile.avatarUrl}
         onSignOut={signOut}
         unreadNotificationCount={unreadNotificationCount}
+        searchItems={searchItems}
       />
 
       <SidebarNav
@@ -179,6 +223,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
         onSignOut={signOut}
         activeItemId={activeSection}
         unreadNotificationCount={unreadNotificationCount}
+        searchItems={searchItems}
       />
 
       <main className="relative flex-1 lg:ml-[260px]">

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
+import { logAudit } from "@/lib/audit";
 import {
   createExpenseSchema,
   updateExpenseSchema,
@@ -122,18 +123,22 @@ export async function createExpense(
     resolvedReceiptFileId = uploadResult.receiptFileId;
   }
 
-  const { error } = await admin.from("property_expenses").insert({
-    property_id: propertyId,
-    created_by_profile_id: user.id,
-    category,
-    description: description || null,
-    amount_cents: Math.round(amountDollars * 100),
-    expense_date: expenseDate,
-    recurring,
-    recurring_frequency: recurring ? recurringFrequency || null : null,
-    vendor_id: vendorId || null,
-    receipt_file_id: resolvedReceiptFileId
-  });
+  const { data: createdExpense, error } = await admin
+    .from("property_expenses")
+    .insert({
+      property_id: propertyId,
+      created_by_profile_id: user.id,
+      category,
+      description: description || null,
+      amount_cents: Math.round(amountDollars * 100),
+      expense_date: expenseDate,
+      recurring,
+      recurring_frequency: recurring ? recurringFrequency || null : null,
+      vendor_id: vendorId || null,
+      receipt_file_id: resolvedReceiptFileId
+    })
+    .select("id")
+    .single();
 
   if (error && await isMissingSchemaError(error)) {
     return {
@@ -145,6 +150,18 @@ export async function createExpense(
   if (error) {
     return { success: false, error: "Failed to create expense." };
   }
+
+  void logAudit({
+    userId: user.id,
+    action: "create_expense",
+    entityType: "expense",
+    entityId: createdExpense?.id,
+    metadata: {
+      propertyId,
+      category,
+      amountCents: Math.round(amountDollars * 100)
+    }
+  }).catch(() => {});
 
   revalidatePath("/owner");
   return { success: true };
@@ -241,6 +258,18 @@ export async function updateExpense(
     return { success: false, error: "Failed to update expense." };
   }
 
+  void logAudit({
+    userId: user.id,
+    action: "update_expense",
+    entityType: "expense",
+    entityId: expenseId,
+    metadata: {
+      propertyId: existingExpense.property_id,
+      category,
+      amountCents: Math.round(amountDollars * 100)
+    }
+  }).catch(() => {});
+
   revalidatePath("/owner");
   return { success: true };
 }
@@ -300,6 +329,16 @@ export async function deleteExpense(
   if (error) {
     return { success: false, error: "Failed to delete expense." };
   }
+
+  void logAudit({
+    userId: user.id,
+    action: "delete_expense",
+    entityType: "expense",
+    entityId: expenseId,
+    metadata: {
+      propertyId: expense.property_id
+    }
+  }).catch(() => {});
 
   revalidatePath("/owner");
   return { success: true };

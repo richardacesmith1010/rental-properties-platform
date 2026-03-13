@@ -6,13 +6,24 @@ import {
   getRoleHomePath,
   getUserProfileSummary
 } from "@/lib/auth";
-import { disableAutopay, getExpressDashboardUrl, setupAutopay, updateProfile } from "@/app/actions";
+import {
+  disableAutopay,
+  getExpressDashboardUrl,
+  saveNotificationPreference,
+  setupAutopay,
+  updateProfile
+} from "@/app/actions";
 import { getAutopayEnrollments } from "@/app/actions/autopay";
 import { AutopayCard } from "@/components/dashboard/autopay-card";
 import { BankSettings } from "@/components/settings/bank-settings";
+import { NotificationPreferences } from "@/components/settings/notification-preferences";
 import { ThemeSettingsPanel } from "@/components/settings/theme-settings-panel";
 import { PasswordSettings } from "@/components/settings/password-settings";
 import { ProfileSettings } from "@/components/settings/profile-settings";
+import {
+  getUserNotificationPreferences,
+  NOTIFICATION_PREFERENCE_OPTIONS
+} from "@/lib/notification-preferences";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +38,10 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const role = await getCurrentUserRole(user.id);
   const workspacePath = getRoleHomePath(role);
   const profile = await getUserProfileSummary(user.id);
-  const enrollments = role === "tenant" ? await getAutopayEnrollments(user.id) : [];
+  const [enrollments, notificationPreferences] = await Promise.all([
+    role === "tenant" ? getAutopayEnrollments(user.id) : Promise.resolve([]),
+    getUserNotificationPreferences(user.id)
+  ]);
   const connectMessage =
     typeof searchParams?.connect === "string"
       ? searchParams.connect
@@ -119,6 +133,19 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             </div>
           </section>
         ) : null}
+
+        <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            Notification Preferences
+          </h2>
+          <div className="mt-3">
+            <NotificationPreferences
+              options={NOTIFICATION_PREFERENCE_OPTIONS}
+              preferences={notificationPreferences}
+              onUpdatePreference={saveNotificationPreference}
+            />
+          </div>
+        </section>
 
         <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">

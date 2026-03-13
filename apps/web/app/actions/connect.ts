@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
+import { logAudit } from "@/lib/audit";
 import {
   createAccountLink,
   createExpressAccount,
@@ -205,6 +206,17 @@ export async function updateManagementFee(
   if (error) {
     return { success: false, error: "Failed to update management fee." };
   }
+
+  void logAudit({
+    userId: user.id,
+    action: "update_management_fee",
+    entityType: "property",
+    entityId: propertyId,
+    metadata: {
+      propertyId,
+      managementFeeCents
+    }
+  }).catch(() => {});
 
   revalidatePath("/owner");
   revalidatePath("/manager");

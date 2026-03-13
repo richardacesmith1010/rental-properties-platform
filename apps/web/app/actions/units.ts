@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
+import { logAudit } from "@/lib/audit";
 import { awardXp, XP_VALUES } from "@/lib/gamification";
 import {
   createUnitSchema,
@@ -60,6 +61,17 @@ export async function createUnit(_prev: ActionState, formData: FormData): Promis
       "Unit added to property.",
       { unit_id: createdUnit.id, property_id: propertyId }
     ).catch(() => {});
+
+    void logAudit({
+      userId: user.id,
+      action: "create_unit",
+      entityType: "unit",
+      entityId: createdUnit.id,
+      metadata: {
+        propertyId,
+        unitNumber
+      }
+    }).catch(() => {});
   }
 
   revalidatePath("/");
@@ -118,6 +130,17 @@ export async function updateUnit(_prev: ActionState, formData: FormData): Promis
   if (error) {
     return { success: false, error: "Failed to update unit. Please try again." };
   }
+
+  void logAudit({
+    userId: user.id,
+    action: "update_unit",
+    entityType: "unit",
+    entityId: unitId,
+    metadata: {
+      propertyId: unit.property_id,
+      unitNumber
+    }
+  }).catch(() => {});
 
   revalidatePath("/");
   revalidatePath("/owner");
@@ -191,6 +214,16 @@ export async function deleteUnit(_prev: ActionState, formData: FormData): Promis
   if (error) {
     return { success: false, error: "Failed to archive unit. Please try again." };
   }
+
+  void logAudit({
+    userId: user.id,
+    action: "delete_unit",
+    entityType: "unit",
+    entityId: unitId,
+    metadata: {
+      propertyId: unit.property_id
+    }
+  }).catch(() => {});
 
   revalidatePath("/");
   revalidatePath("/owner");

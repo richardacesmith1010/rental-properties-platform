@@ -9,6 +9,7 @@ import { getOwnerStripeAccountForProperty } from "@/lib/stripe-connect";
 import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { createNotificationWithDelivery, notifyOwnerMembersForProperty } from "@/lib/notifications";
+import { logAudit } from "@/lib/audit";
 import { awardXp, XP_VALUES } from "@/lib/gamification";
 import { formatCurrency } from "@/lib/format";
 import { payChargeSchema, parseFormData, recordManualPaymentSchema } from "@/lib/validations";
@@ -244,6 +245,20 @@ export async function recordManualPayment(
       }
     ).catch(() => {});
   }
+
+  void logAudit({
+    userId: user.id,
+    action: "record_payment",
+    entityType: "payment",
+    entityId: charge.id,
+    metadata: {
+      propertyId: unit.property_id,
+      unitNumber: unit.unit_number,
+      tenantProfileId: lease.tenant_profile_id,
+      amountCents,
+      method
+    }
+  }).catch(() => {});
 
   // 6) Revalidate
   revalidatePath("/");

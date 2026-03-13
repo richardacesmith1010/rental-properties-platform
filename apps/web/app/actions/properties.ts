@@ -11,6 +11,7 @@ import {
   canUserAdministerOwnershipAccount,
   getOrCreateIndividualOwnershipAccount
 } from "@/lib/ownership";
+import { logAudit } from "@/lib/audit";
 import { awardXp, XP_VALUES } from "@/lib/gamification";
 import {
   createPropertySchema,
@@ -88,7 +89,7 @@ export async function createProperty(_prev: ActionState, formData: FormData): Pr
 
   if (role === "manager" && property?.id) {
     const admin = createAdminClient();
-    await admin.from("property_managers").upsert(
+    const { error: managerAssignmentError } = await admin.from("property_managers").upsert(
       {
         property_id: property.id,
         manager_profile_id: user.id,
@@ -96,6 +97,10 @@ export async function createProperty(_prev: ActionState, formData: FormData): Pr
       },
       { onConflict: "property_id,manager_profile_id" }
     );
+
+    if (managerAssignmentError) {
+      console.error("createProperty manager assignment error:", managerAssignmentError);
+    }
   }
 
   if (property?.id) {
@@ -106,6 +111,17 @@ export async function createProperty(_prev: ActionState, formData: FormData): Pr
       "Property added to portfolio.",
       { property_id: property.id }
     ).catch(() => {});
+
+    void logAudit({
+      userId: user.id,
+      action: "create_property",
+      entityType: "property",
+      entityId: property.id,
+      metadata: {
+        propertyId: property.id,
+        propertyName: name
+      }
+    }).catch(() => {});
   }
 
   revalidatePath("/");
@@ -155,6 +171,17 @@ export async function updateProperty(_prev: ActionState, formData: FormData): Pr
   if (error) {
     return { success: false, error: "Failed to update property. Please try again." };
   }
+
+  void logAudit({
+    userId: user.id,
+    action: "update_property",
+    entityType: "property",
+    entityId: propertyId,
+    metadata: {
+      propertyId,
+      propertyName: name
+    }
+  }).catch(() => {});
 
   revalidatePath("/");
   revalidatePath("/owner");
@@ -226,6 +253,16 @@ export async function deleteProperty(_prev: ActionState, formData: FormData): Pr
   if (error) {
     return { success: false, error: "Failed to archive property. Please try again." };
   }
+
+  void logAudit({
+    userId: user.id,
+    action: "delete_property",
+    entityType: "property",
+    entityId: propertyId,
+    metadata: {
+      propertyId
+    }
+  }).catch(() => {});
 
   revalidatePath("/");
   revalidatePath("/owner");

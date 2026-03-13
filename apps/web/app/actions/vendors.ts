@@ -23,6 +23,7 @@ import {
   isMissingSchemaError,
   type ActionState
 } from "./shared";
+import { logAudit } from "@/lib/audit";
 
 export async function createVendor(
   _prev: ActionState,
@@ -54,6 +55,7 @@ export async function createVendor(
 
   const capabilities = await getFeatureCapabilities();
   const { name, email, phone, tradeCategory, preferred, ownerAccountId } = parsed.data;
+  let createdVendorId: string | null = null;
   let error: { message: string } | null = null;
 
   if (capabilities.ownershipEnabled) {
@@ -80,7 +82,8 @@ export async function createVendor(
       trade_category: tradeCategory,
       preferred,
       active: true
-    });
+    }).select("id").single();
+    createdVendorId = insertResult.data?.id ?? null;
     error = insertResult.error;
   } else {
     const insertResult = await supabase.from("vendors").insert({
@@ -92,7 +95,8 @@ export async function createVendor(
       trade_category: tradeCategory,
       preferred,
       active: true
-    });
+    }).select("id").single();
+    createdVendorId = insertResult.data?.id ?? null;
     error = insertResult.error;
   }
 
@@ -106,6 +110,17 @@ export async function createVendor(
   if (error) {
     return { success: false, error: "Failed to create vendor." };
   }
+
+  void logAudit({
+    userId: user.id,
+    action: "create_vendor",
+    entityType: "vendor",
+    entityId: createdVendorId ?? undefined,
+    metadata: {
+      vendorName: name,
+      tradeCategory
+    }
+  }).catch(() => {});
 
   revalidatePath("/owner");
   revalidatePath("/manager");
@@ -280,6 +295,18 @@ export async function assignVendorToTicket(
     return { success: false, error: "Failed to assign vendor." };
   }
 
+  void logAudit({
+    userId: user.id,
+    action: "assign_vendor",
+    entityType: "maintenance_ticket",
+    entityId: ticketId,
+    metadata: {
+      propertyId: property.id,
+      vendorId,
+      ticketId
+    }
+  }).catch(() => {});
+
   revalidatePath("/owner");
   revalidatePath("/manager");
   return { success: true };
@@ -436,4 +463,3 @@ async function uploadExpenseReceiptFile(
 
   return { receiptFileId: propertyFile.id };
 }
-

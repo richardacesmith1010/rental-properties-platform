@@ -11,6 +11,7 @@ import {
   CreditCard,
   FileSignature,
   FileText,
+  History,
   LayoutDashboard,
   Receipt,
   Settings,
@@ -46,6 +47,7 @@ export const ownerWorkflowModeMeta: Record<
       "payments",
       "maintenance",
       "notifications",
+      "activity",
       "applications",
       "inbox",
       "automations",
@@ -97,6 +99,7 @@ export const managerWorkflowModeMeta: Record<
       "maintenance",
       "charges",
       "notifications",
+      "activity",
       "applications",
       "inbox",
       "automations",
@@ -138,6 +141,7 @@ interface BuildAllSectionItemsParams {
   inboxBadgeCount: number;
   notificationBadgeCount: number;
   hasAnalyticsSection: boolean;
+  hasActivitySection: boolean;
   hasLeasingSection: boolean;
   hasApplicationsSection: boolean;
   hasInboxSection: boolean;
@@ -233,6 +237,16 @@ export function buildAllSectionItems(params: BuildAllSectionItemsParams): NavIte
       badgeCount: params.notificationBadgeCount,
       description: "Unread and historical alerts.",
       clickHint: "open notification center"
+    });
+  }
+
+  if (params.hasActivitySection) {
+    items.push({
+      id: "activity",
+      label: "Activity",
+      icon: History,
+      description: "Recent operational changes across your portfolio.",
+      clickHint: "open recent activity"
     });
   }
 

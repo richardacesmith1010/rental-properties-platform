@@ -14,9 +14,12 @@ import type { InboxThreadDTO } from "@/lib/inbox";
 import type { RentalListingDTO } from "@/lib/leasing";
 import type { ApplicationDTO } from "@/lib/applications";
 import type { AnalyticsDashboardData } from "@/lib/analytics";
+import type { AuditLogEntry } from "@/lib/audit";
+import type { RentIncreaseEntry } from "@/lib/rent-increases";
 import type { ActionState } from "@/app/actions";
 import { FeatureWarning } from "@/components/shared/feature-warning";
 import { KpiGrid } from "./kpi-grid";
+import { ActivityFeed } from "./activity-feed";
 import { ChargesSection } from "./charges-section";
 import { PaymentsSection } from "./payments-section";
 import { MaintenanceSection } from "./maintenance-section";
@@ -68,6 +71,8 @@ interface SectionRendererProps {
   safeVendors: VendorDTO[];
   safeExpenses: ExpenseDashboardData;
   safeAnalytics: AnalyticsDashboardData;
+  auditLogs: AuditLogEntry[];
+  rentIncreaseHistory: RentIncreaseEntry[];
   safeOwnershipAccounts: OwnershipAccountDTO[];
   safeCapabilities: FeatureCapabilitiesDTO;
   sortedVendors: VendorDTO[];
@@ -82,6 +87,7 @@ interface SectionRendererProps {
   hasVendorsSection: boolean;
   hasExpensesSection: boolean;
   hasAnalyticsSection: boolean;
+  hasActivitySection: boolean;
   applicationCount?: number;
   approvedApplicationCount?: number;
   stripeConnected?: boolean;
@@ -163,6 +169,8 @@ export function SectionRenderer({
   safeVendors,
   safeExpenses,
   safeAnalytics,
+  auditLogs,
+  rentIncreaseHistory,
   safeOwnershipAccounts,
   safeCapabilities,
   sortedVendors,
@@ -177,6 +185,7 @@ export function SectionRenderer({
   hasVendorsSection,
   hasExpensesSection,
   hasAnalyticsSection,
+  hasActivitySection,
   applicationCount,
   approvedApplicationCount,
   stripeConnected,
@@ -397,6 +406,10 @@ export function SectionRenderer({
     );
   }
 
+  if (activeSection === "activity" && hasActivitySection) {
+    return <ActivityFeed logs={auditLogs} />;
+  }
+
   if (activeSection === "ownership" && hasOwnershipSection) {
     return safeCapabilities.ownershipEnabled ? (
       <OwnershipSection
@@ -552,6 +565,7 @@ export function SectionRenderer({
     return (
       <LeasesSection
         leases={safePortfolio.leases}
+        rentIncreaseHistory={rentIncreaseHistory}
         showControls={canManagePortfolio}
         onUpdateLease={onUpdateLease}
         onDeleteLease={onDeleteLease}

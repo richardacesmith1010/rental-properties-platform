@@ -14,6 +14,8 @@ import type { RentalListingDTO } from "@/lib/leasing";
 import type { ApplicationDTO } from "@/lib/applications";
 import type { UserGamificationData } from "@/lib/gamification";
 import type { AnalyticsDashboardData } from "@/lib/analytics";
+import type { AuditLogEntry } from "@/lib/audit";
+import type { RentIncreaseEntry } from "@/lib/rent-increases";
 import type { ActionState } from "@/app/actions";
 import type { ManagerWorkflowMode, OwnerWorkflowMode } from "./dashboard-config";
 
@@ -41,6 +43,8 @@ export interface DashboardProps {
   approvedApplicationCount?: number;
   gamification?: UserGamificationData;
   analyticsData?: AnalyticsDashboardData;
+  auditLogs?: AuditLogEntry[];
+  rentIncreaseHistory?: RentIncreaseEntry[];
   generatedMessage?: string | null;
   initialSectionId?: string | null;
   initialOwnerWorkflowMode?: OwnerWorkflowMode;

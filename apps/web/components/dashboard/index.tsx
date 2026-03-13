@@ -15,6 +15,8 @@ import type { InboxThreadDTO } from "@/lib/inbox";
 import type { RentalListingDTO } from "@/lib/leasing";
 import type { ApplicationDTO } from "@/lib/applications";
 import type { AnalyticsDashboardData } from "@/lib/analytics";
+import type { AuditLogEntry } from "@/lib/audit";
+import type { RentIncreaseEntry } from "@/lib/rent-increases";
 import { formatDate } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +25,7 @@ import { AchievementChecker } from "@/components/gamification/achievement-checke
 import { GamificationSummary } from "@/components/gamification/gamification-summary";
 import { ConnectBanner } from "@/components/dashboard/connect-banner";
 import { SidebarNav, MobileTopBar, type NavItem } from "./sidebar-nav";
+import type { GlobalSearchItem } from "./global-search";
 import { SectionRenderer } from "./section-renderer";
 import type { DashboardProps } from "./types";
 import {
@@ -36,6 +39,11 @@ import {
 } from "./dashboard-config";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+
+const EMPTY_TICKETS: MaintenanceTicket[] = [];
+const EMPTY_AUDIT_LOGS: AuditLogEntry[] = [];
+const EMPTY_RENT_INCREASE_HISTORY: RentIncreaseEntry[] = [];
+
 export function Dashboard({
   data,
   isEmpty = false,
@@ -57,6 +65,8 @@ export function Dashboard({
   approvedApplicationCount,
   gamification,
   analyticsData,
+  auditLogs,
+  rentIncreaseHistory,
   generatedMessage,
   initialSectionId,
   initialOwnerWorkflowMode,
@@ -139,7 +149,7 @@ export function Dashboard({
   };
   const safeNotifications: NotificationDTO[] = notifications ?? [];
   const safeInboxThreads: InboxThreadDTO[] = inboxThreads ?? [];
-  const safeTickets: MaintenanceTicket[] = tickets ?? [];
+  const safeTickets = useMemo(() => tickets ?? EMPTY_TICKETS, [tickets]);
   const safeVendors: VendorDTO[] = vendors ?? [];
   const safeAutomationTemplates: AutomationTemplateDTO[] = automationTemplates ?? [];
   const safeAutomationRules: AutomationRuleDTO[] = automationRules ?? [];
@@ -155,6 +165,11 @@ export function Dashboard({
     categoryByProperty: {}
   };
   const safeOwnershipAccounts: OwnershipAccountDTO[] = ownershipAccounts ?? [];
+  const safeAuditLogs = useMemo(() => auditLogs ?? EMPTY_AUDIT_LOGS, [auditLogs]);
+  const safeRentIncreaseHistory = useMemo(
+    () => rentIncreaseHistory ?? EMPTY_RENT_INCREASE_HISTORY,
+    [rentIncreaseHistory]
+  );
   const safeAnalytics: AnalyticsDashboardData = analyticsData ?? {
     enabled: false,
     rentMetrics: [],
@@ -194,6 +209,7 @@ export function Dashboard({
     return left.name.localeCompare(right.name);
   });
   const hasNotificationsSection = Boolean(onMarkNotificationRead);
+  const hasActivitySection = data.profileRole === "owner" || data.profileRole === "manager";
   const hasInboxSection = Boolean(onMarkNotificationRead);
   const hasAutomationsSection = Boolean(data.profileRole === "owner" || data.profileRole === "manager");
   const hasOwnershipSection = Boolean(onCreateOwnershipAccount && onLinkPropertyToOwnershipAccount);
@@ -243,6 +259,7 @@ export function Dashboard({
         maintenanceBadgeCount,
         inboxBadgeCount,
         notificationBadgeCount,
+        hasActivitySection,
         hasAnalyticsSection,
         hasLeasingSection,
         hasApplicationsSection,
@@ -260,6 +277,7 @@ export function Dashboard({
       maintenanceBadgeCount,
       inboxBadgeCount,
       notificationBadgeCount,
+      hasActivitySection,
       hasAnalyticsSection,
       hasLeasingSection,
       hasApplicationsSection,
@@ -424,6 +442,82 @@ export function Dashboard({
     : isManagerRole
       ? `manager:${managerWorkflowMode}`
       : activeSection;
+  const reportsHref = isOwnerRole || isManagerRole ? "/owner/reports" : null;
+  const searchItems = useMemo<GlobalSearchItem[]>(() => {
+    const basePath = isOwnerRole ? "/owner" : isManagerRole ? "/manager" : null;
+    if (!basePath) {
+      return [];
+    }
+
+    return [
+      ...safePortfolio.properties.map((property) => ({
+        id: `property:${property.id}`,
+        label: property.name,
+        category: "Properties",
+        href: `${basePath}?section=portfolio`,
+        description: [property.addressLine1, property.city, property.state].filter(Boolean).join(", "),
+        keywords: [property.name, property.addressLine1, property.city, property.state]
+      })),
+      ...safePortfolio.units.map((unit) => ({
+        id: `unit:${unit.id}`,
+        label: `Unit ${unit.unitNumber}`,
+        category: "Units",
+        href: `${basePath}?section=units`,
+        description: unit.propertyName,
+        keywords: [unit.unitNumber, unit.propertyName]
+      })),
+      ...safePortfolio.leases.map((lease) => ({
+        id: `lease:${lease.id}`,
+        label: lease.tenantEmail,
+        category: "Leases",
+        href: `${basePath}?section=leases`,
+        description: `${lease.unitLabel} • ${formatDate(lease.endDate)}`,
+        keywords: [lease.tenantEmail, lease.unitLabel, lease.leaseStatus]
+      })),
+      ...safePortfolio.tenants.map((tenant) => ({
+        id: `tenant:${tenant.id}`,
+        label: tenant.fullName || tenant.email,
+        category: "Tenants",
+        href: `${basePath}?section=leases`,
+        description: tenant.email,
+        keywords: [tenant.fullName, tenant.email]
+      })),
+      ...safeTickets.map((ticket) => ({
+        id: `ticket:${ticket.id}`,
+        label: ticket.title,
+        category: "Maintenance",
+        href: `${basePath}?section=maintenance`,
+        description: `${ticket.propertyName}${ticket.unitNumber ? ` • Unit ${ticket.unitNumber}` : ""}`,
+        keywords: [ticket.title, ticket.description, ticket.propertyName, ticket.unitNumber ?? ""]
+      })),
+      ...data.charges.map((charge) => ({
+        id: `charge:${charge.id}`,
+        label: `${charge.propertyName} • Unit ${charge.unitNumber}`,
+        category: "Charges",
+        href: `${basePath}?section=charges`,
+        description: `${charge.tenantName} • ${charge.status} • ${formatDate(charge.dueDate)}`,
+        keywords: [charge.propertyName, charge.unitNumber, charge.tenantName, charge.status]
+      })),
+      ...safeAuditLogs.map((log) => ({
+        id: `activity:${log.id}`,
+        label: log.action.replace(/_/g, " "),
+        category: "Activity",
+        href: `${basePath}?section=activity`,
+        description: log.userName,
+        keywords: [log.action, log.entityType, log.userName]
+      }))
+    ];
+  }, [
+    data.charges,
+    isManagerRole,
+    isOwnerRole,
+    safeAuditLogs,
+    safePortfolio.leases,
+    safePortfolio.properties,
+    safePortfolio.tenants,
+    safePortfolio.units,
+    safeTickets
+  ]);
   const handleSidebarSelect = (itemId: string) => {
     if (itemId === "analytics" && isOwnerRole) {
       setOwnerWorkflowMode("daily_ops");
@@ -464,6 +558,8 @@ export function Dashboard({
           onSignOut={onSignOut}
           onSelectItem={handleSidebarSelect}
           unreadNotificationCount={notificationBadgeCount}
+          searchItems={searchItems}
+          reportsHref={reportsHref}
         />
         <SidebarNav
           userEmail={userEmail}
@@ -476,6 +572,8 @@ export function Dashboard({
           activeItemId={sidebarActiveItemId}
           onSelectItem={handleSidebarSelect}
           unreadNotificationCount={notificationBadgeCount}
+          searchItems={searchItems}
+          reportsHref={reportsHref}
         />
         <main className="flex flex-1 flex-col items-center justify-center px-6 py-12 lg:ml-[260px]">
           <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
@@ -516,6 +614,8 @@ export function Dashboard({
         onSignOut={onSignOut}
         onSelectItem={handleSidebarSelect}
         unreadNotificationCount={notificationBadgeCount}
+        searchItems={searchItems}
+        reportsHref={reportsHref}
       />
       <SidebarNav
         userEmail={userEmail}
@@ -528,6 +628,8 @@ export function Dashboard({
         activeItemId={sidebarActiveItemId}
         onSelectItem={handleSidebarSelect}
         unreadNotificationCount={notificationBadgeCount}
+        searchItems={searchItems}
+        reportsHref={reportsHref}
       />
       <main className="relative flex-1 lg:ml-[260px]">
         <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
@@ -617,6 +719,8 @@ export function Dashboard({
               safeVendors={safeVendors}
               safeExpenses={safeExpenses}
               safeAnalytics={safeAnalytics}
+              auditLogs={safeAuditLogs}
+              rentIncreaseHistory={safeRentIncreaseHistory}
               safeOwnershipAccounts={safeOwnershipAccounts}
               safeCapabilities={safeCapabilities}
               sortedVendors={sortedVendors}
@@ -631,6 +735,7 @@ export function Dashboard({
               hasVendorsSection={hasVendorsSection}
               hasExpensesSection={hasExpensesSection}
               hasAnalyticsSection={hasAnalyticsSection}
+              hasActivitySection={hasActivitySection}
               applicationCount={applicationCount}
               approvedApplicationCount={approvedApplicationCount}
               stripeConnected={stripeConnected}

@@ -533,6 +533,27 @@ const checkboxBooleanSchema = z.preprocess(
   z.boolean()
 );
 
+export const updateNotificationPreferenceSchema = z.object({
+  notificationType: z.enum([
+    "new_ticket",
+    "late_rent",
+    "ticket_resolved",
+    "payment_recorded",
+    "lease_updated",
+    "document_sent",
+    "document_signed",
+    "application_reviewed",
+    "rent_due_reminder",
+    "invite_accepted",
+    "achievement_unlocked",
+    "lease_expiring_soon",
+    "lease_expired",
+    "delinquency_escalation"
+  ]),
+  emailEnabled: checkboxBooleanSchema.optional().default(false),
+  inAppEnabled: checkboxBooleanSchema.optional().default(false)
+});
+
 export const createExpenseSchema = z
   .object({
     propertyId: z.string().uuid("Invalid property."),

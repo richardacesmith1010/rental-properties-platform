@@ -3,7 +3,12 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { markNotificationReadSchema, parseFormData } from "@/lib/validations";
+import { updateNotificationPreference } from "@/lib/notification-preferences";
+import {
+  markNotificationReadSchema,
+  parseFormData,
+  updateNotificationPreferenceSchema
+} from "@/lib/validations";
 import { ensureCapabilityEnabled, type ActionState } from "./shared";
 
 export async function markNotificationRead(
@@ -78,6 +83,39 @@ export async function markAllNotificationsRead(
   revalidatePath("/tenant");
   revalidatePath("/manager");
   return { success: true, message: "All notifications marked read." };
+}
+
+export async function saveNotificationPreference(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const parsed = parseFormData(updateNotificationPreferenceSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  try {
+    await updateNotificationPreference(
+      user.id,
+      parsed.data.notificationType,
+      parsed.data.emailEnabled ?? false,
+      parsed.data.inAppEnabled ?? false
+    );
+  } catch {
+    return { success: false, error: "Failed to update notification preference." };
+  }
+
+  revalidatePath("/settings");
+  return { success: true, message: "Preference updated." };
 }
 
 /* ─── Phase 10: Automations + Inbox + Leasing ─── */

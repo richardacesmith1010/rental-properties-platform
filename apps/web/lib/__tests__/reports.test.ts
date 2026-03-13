@@ -1,0 +1,189 @@
+import { describe, expect, it } from "vitest";
+import {
+  bucketDelinquencyDays,
+  mapExpenseCategoryToTaxField
+} from "../reports";
+import {
+  delinquencyToCsv,
+  monthlyPnlToCsv,
+  receivablesToCsv,
+  rentRollToCsv,
+  taxSummaryToCsv,
+  tenantLedgerToCsv
+} from "../csv-export-reports";
+
+describe("bucketDelinquencyDays", () => {
+  it("uses current for 0-30 day balances", () => {
+    expect(bucketDelinquencyDays(0)).toBe("current");
+    expect(bucketDelinquencyDays(30)).toBe("current");
+  });
+
+  it("uses thirtyDay for 31-60 day balances", () => {
+    expect(bucketDelinquencyDays(31)).toBe("thirtyDay");
+    expect(bucketDelinquencyDays(60)).toBe("thirtyDay");
+  });
+
+  it("uses sixtyDay for 61-90 day balances", () => {
+    expect(bucketDelinquencyDays(61)).toBe("sixtyDay");
+    expect(bucketDelinquencyDays(90)).toBe("sixtyDay");
+  });
+
+  it("uses ninetyPlus for 91+ day balances", () => {
+    expect(bucketDelinquencyDays(91)).toBe("ninetyPlus");
+  });
+});
+
+describe("mapExpenseCategoryToTaxField", () => {
+  it("maps mortgage expenses", () => {
+    expect(mapExpenseCategoryToTaxField("mortgage")).toBe("mortgageInterest");
+  });
+
+  it("maps insurance expenses", () => {
+    expect(mapExpenseCategoryToTaxField("insurance")).toBe("insurance");
+  });
+
+  it("maps management fees", () => {
+    expect(mapExpenseCategoryToTaxField("management_fee")).toBe("managementFees");
+  });
+
+  it("maps property taxes", () => {
+    expect(mapExpenseCategoryToTaxField("property_tax")).toBe("taxes");
+  });
+
+  it("maps maintenance to cleaning and maintenance", () => {
+    expect(mapExpenseCategoryToTaxField("maintenance")).toBe("cleaningAndMaintenance");
+  });
+
+  it("falls back unknown categories to other expenses", () => {
+    expect(mapExpenseCategoryToTaxField("hoa")).toBe("otherExpenses");
+  });
+});
+
+describe("report csv exporters", () => {
+  it("builds rent roll csv", () => {
+    const csv = rentRollToCsv([
+      {
+        propertyName: "Atlas",
+        unitNumber: "101",
+        tenantName: "Maya",
+        tenantEmail: "maya@example.com",
+        monthlyRentCents: 150000,
+        leaseStart: "2026-01-01",
+        leaseEnd: "2026-12-31",
+        leaseStatus: "active",
+        currentBalance: 5000,
+        lastPaymentDate: "2026-02-01"
+      }
+    ]);
+
+    expect(csv).toContain('"Property"');
+    expect(csv).toContain('"Atlas"');
+    expect(csv).toContain('"1500.00"');
+  });
+
+  it("builds delinquency csv", () => {
+    const csv = delinquencyToCsv([
+      {
+        tenantName: "Maya",
+        tenantEmail: "maya@example.com",
+        propertyName: "Atlas",
+        unitNumber: "101",
+        current: 1000,
+        thirtyDay: 2000,
+        sixtyDay: 3000,
+        ninetyPlus: 4000,
+        totalOwed: 10000
+      }
+    ]);
+
+    expect(csv).toContain('"0-30 ($)"');
+    expect(csv).toContain('"100.00"');
+  });
+
+  it("builds tenant ledger csv", () => {
+    const csv = tenantLedgerToCsv([
+      {
+        tenantName: "Maya",
+        tenantEmail: "maya@example.com",
+        totalCharges: 10000,
+        totalPayments: 5000,
+        currentBalance: 5000,
+        entries: [
+          {
+            date: "2026-01-01",
+            type: "charge",
+            description: "Rent charge posted",
+            amount: 10000,
+            balance: 10000,
+            propertyName: "Atlas",
+            unitNumber: "101"
+          }
+        ]
+      }
+    ]);
+
+    expect(csv).toContain('"Rent charge posted"');
+    expect(csv).toContain('"100.00"');
+  });
+
+  it("builds monthly pnl csv", () => {
+    const csv = monthlyPnlToCsv([
+      {
+        month: "2026-01",
+        propertyName: "Atlas",
+        rentalIncome: 100000,
+        lateFeeIncome: 5000,
+        totalIncome: 105000,
+        expenses: 40000,
+        netIncome: 65000
+      }
+    ]);
+
+    expect(csv).toContain('"Month"');
+    expect(csv).toContain('"1050.00"');
+  });
+
+  it("builds tax summary csv", () => {
+    const csv = taxSummaryToCsv([
+      {
+        propertyName: "Atlas",
+        propertyAddress: "123 Main",
+        totalRentalIncome: 120000,
+        advertisingExpenses: 0,
+        autoAndTravel: 0,
+        cleaningAndMaintenance: 1000,
+        commissions: 0,
+        insurance: 2000,
+        legalAndProfessional: 3000,
+        managementFees: 4000,
+        mortgageInterest: 5000,
+        repairs: 6000,
+        supplies: 0,
+        taxes: 7000,
+        utilities: 8000,
+        otherExpenses: 9000,
+        totalExpenses: 45000,
+        netIncome: 75000
+      }
+    ]);
+
+    expect(csv).toContain('"123 Main"');
+    expect(csv).toContain('"750.00"');
+  });
+
+  it("builds receivables csv", () => {
+    const csv = receivablesToCsv([
+      {
+        tenantName: "Maya",
+        tenantEmail: "maya@example.com",
+        propertyName: "Atlas",
+        chargeCount: 2,
+        totalOwedCents: 25000,
+        oldestDueDate: "2026-01-01"
+      }
+    ]);
+
+    expect(csv).toContain('"Charge Count"');
+    expect(csv).toContain('"250.00"');
+  });
+});

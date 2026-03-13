@@ -3,6 +3,7 @@ import {
   detectExpiredLeases,
   generateMonthlyChargesForAllOwnersWithClient,
   processAutopayCharges,
+  sendDelinquencyEscalations,
   sendLeaseExpirationWarnings,
   sendRentDueReminders
 } from "@/lib/charges";
@@ -29,6 +30,7 @@ export async function GET(request: Request) {
     let autopaySummary: string | { processed: number; succeeded: number; failed: number; skipped: number } = "Autopay skipped";
     let expirationSummary = "Expired lease check skipped";
     let warningSummary = "Expiration warnings skipped";
+    let delinquencySummary = "Delinquency escalations skipped";
     let reminderSummary = "Reminders skipped";
 
     try {
@@ -53,6 +55,13 @@ export async function GET(request: Request) {
     }
 
     try {
+      delinquencySummary = await sendDelinquencyEscalations(adminClient);
+    } catch (error) {
+      console.error("Delinquency escalations failed:", error);
+      delinquencySummary = "Delinquency escalations failed";
+    }
+
+    try {
       reminderSummary = await sendRentDueReminders(adminClient);
     } catch (error) {
       console.error("Rent due reminders failed:", error);
@@ -65,6 +74,7 @@ export async function GET(request: Request) {
       autopaySummary,
       expirationSummary,
       warningSummary,
+      delinquencySummary,
       reminderSummary
     });
   } catch (error) {

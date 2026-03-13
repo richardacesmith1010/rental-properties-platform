@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { canUserAdministerOwnershipAccount } from "@/lib/ownership";
+import { logAudit } from "@/lib/audit";
 import { awardXp, XP_VALUES } from "@/lib/gamification";
 import { notifyOwnerMembersOfAcceptedTenantInvite } from "@/lib/notifications";
 import {
@@ -67,7 +68,7 @@ export async function inviteTenant(
         .maybeSingle();
 
       if (!existingPropertyInvite) {
-        await admin.from("invitations").insert({
+        const { error: linkInviteError } = await admin.from("invitations").insert({
           email: email.toLowerCase(),
           full_name: fullName,
           role: "tenant",
@@ -78,6 +79,10 @@ export async function inviteTenant(
           accepted_at: new Date().toISOString()
         });
 
+        if (linkInviteError) {
+          return { success: false, error: "Failed to link tenant to the property." };
+        }
+
         void notifyOwnerMembersOfAcceptedTenantInvite(existingProfile.id).catch(() => {});
         void awardXp(
           user.id,
@@ -86,6 +91,16 @@ export async function inviteTenant(
           "Tenant linked to property.",
           { property_id: propertyId, tenant_profile_id: existingProfile.id }
         ).catch(() => {});
+        void logAudit({
+          userId: user.id,
+          action: "invite_tenant",
+          entityType: "invitation",
+          metadata: {
+            propertyId,
+            tenantProfileId: existingProfile.id,
+            tenantEmail: email.toLowerCase()
+          }
+        }).catch(() => {});
       }
 
       revalidatePath("/owner");
@@ -146,6 +161,16 @@ export async function inviteTenant(
   if (insertError) {
     console.error("Failed to track invitation:", insertError);
   }
+
+  void logAudit({
+    userId: user.id,
+    action: "invite_tenant",
+    entityType: "invitation",
+    metadata: {
+      propertyId,
+      tenantEmail: email.toLowerCase()
+    }
+  }).catch(() => {});
 
   void awardXp(
     user.id,
@@ -221,6 +246,17 @@ export async function inviteManager(
         return { success: false, error: "Failed to assign manager to property." };
       }
 
+      void logAudit({
+        userId: user.id,
+        action: "invite_manager",
+        entityType: "invitation",
+        metadata: {
+          propertyId,
+          tenantEmail: email.toLowerCase(),
+          managerProfileId: existingProfile.id
+        }
+      }).catch(() => {});
+
 	      revalidatePath("/owner");
         revalidatePath("/manager");
 	      return { success: true };
@@ -245,7 +281,7 @@ export async function inviteManager(
   }
 
   // Track invitation with property_id
-  await admin.from("invitations").insert({
+  const { error: trackInviteError } = await admin.from("invitations").insert({
     email: email.toLowerCase(),
     full_name: fullName,
     role: "manager",
@@ -254,9 +290,13 @@ export async function inviteManager(
     status: "pending",
   });
 
+  if (trackInviteError) {
+    console.error("Failed to track manager invitation:", trackInviteError);
+  }
+
   // Pre-assign manager to property (inviteUserByEmail creates the auth user immediately)
   if (inviteData?.user?.id) {
-    await admin.from("property_managers").upsert(
+    const { error: managerAssignmentError } = await admin.from("property_managers").upsert(
       {
         property_id: propertyId,
         manager_profile_id: inviteData.user.id,
@@ -264,7 +304,21 @@ export async function inviteManager(
       },
       { onConflict: "property_id,manager_profile_id" }
     );
+
+    if (managerAssignmentError) {
+      return { success: false, error: "Manager invited, but property assignment failed." };
+    }
   }
+
+  void logAudit({
+    userId: user.id,
+    action: "invite_manager",
+    entityType: "invitation",
+    metadata: {
+      propertyId,
+      tenantEmail: email.toLowerCase()
+    }
+  }).catch(() => {});
 
   revalidatePath("/owner");
   revalidatePath("/manager");
@@ -335,6 +389,17 @@ export async function inviteOwner(
       return { success: false, error: "Failed to add co-owner to this account." };
     }
 
+    void logAudit({
+      userId: user.id,
+      action: "invite_owner",
+      entityType: "invitation",
+      metadata: {
+        ownershipAccountId,
+        tenantEmail: email.toLowerCase(),
+        ownerProfileId: existingProfile.id
+      }
+    }).catch(() => {});
+
     revalidatePath("/owner");
     revalidatePath("/manager");
     return { success: true };
@@ -365,7 +430,7 @@ export async function inviteOwner(
     return { success: false, error: "Failed to send owner invitation." };
   }
 
-  await admin.from("invitations").insert({
+  const { error: ownerInviteInsertError } = await admin.from("invitations").insert({
     email: email.toLowerCase(),
     full_name: fullName,
     role: "owner",
@@ -373,6 +438,20 @@ export async function inviteOwner(
     ownership_account_id: ownershipAccountId,
     status: "pending"
   });
+
+  if (ownerInviteInsertError) {
+    console.error("Failed to track owner invitation:", ownerInviteInsertError);
+  }
+
+  void logAudit({
+    userId: user.id,
+    action: "invite_owner",
+    entityType: "invitation",
+    metadata: {
+      ownershipAccountId,
+      tenantEmail: email.toLowerCase()
+    }
+  }).catch(() => {});
 
   revalidatePath("/owner");
   revalidatePath("/manager");
@@ -439,10 +518,14 @@ export async function resendInvite(
   }
 
   // Update the invitation timestamp
-  await admin
+  const { error: resendUpdateError } = await admin
     .from("invitations")
     .update({ created_at: new Date().toISOString() })
     .eq("id", invitationId);
+
+  if (resendUpdateError) {
+    console.error("Failed to update invitation resend timestamp:", resendUpdateError);
+  }
 
   revalidatePath("/owner");
   revalidatePath("/manager");

@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "./empty-state";
 import type { LeaseListItem } from "@/lib/portfolio";
+import type { RentIncreaseEntry } from "@/lib/rent-increases";
 import type { ActionState } from "@/app/actions";
 import { formatCurrency, formatDate } from "@/lib/format";
 
@@ -23,6 +24,7 @@ type StatefulAction = (
 
 interface LeasesSectionProps {
   leases: LeaseListItem[];
+  rentIncreaseHistory?: RentIncreaseEntry[];
   showControls?: boolean;
   onUpdateLease?: StatefulAction;
   onDeleteLease?: StatefulAction;
@@ -96,6 +98,7 @@ function addYears(dateIso: string, years: number) {
 
 export function LeasesSection({
   leases,
+  rentIncreaseHistory = [],
   showControls = false,
   onUpdateLease,
   onDeleteLease,
@@ -147,7 +150,7 @@ export function LeasesSection({
             description="No leases yet. Create a lease to start collecting rent."
           />
         ) : (
-          <div>
+          <div className="space-y-6">
             {leases.map((lease, i) => {
               const isActiveLease = (lease.leaseStatus ?? "active") === "active";
               return (
@@ -367,6 +370,51 @@ export function LeasesSection({
                 </DataRow>
               );
             })}
+
+            {rentIncreaseHistory.length > 0 ? (
+              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-zinc-900">Rent Increase History</p>
+                    <p className="text-xs text-zinc-500">
+                      Recent renewal-driven rent changes across your portfolio.
+                    </p>
+                  </div>
+                  <Badge variant="outline">{rentIncreaseHistory.length}</Badge>
+                </div>
+                <div className="space-y-3">
+                  {rentIncreaseHistory.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="grid gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_auto]"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium text-zinc-900">
+                          {entry.tenantName} • {entry.propertyName} • Unit {entry.unitNumber}
+                        </p>
+                        <p className="mt-1 text-xs text-zinc-500">
+                          Effective {formatDate(entry.effectiveDate)}
+                          {entry.reason ? ` • ${entry.reason}` : ""}
+                        </p>
+                      </div>
+                      <div className="text-left sm:text-right">
+                        <p className="font-semibold text-zinc-900">
+                          {formatCurrency(entry.previousRentCents)} → {formatCurrency(entry.newRentCents)}
+                        </p>
+                        <p
+                          className={`text-xs font-medium ${
+                            entry.changePercent >= 0 ? "text-emerald-600" : "text-rose-600"
+                          }`}
+                        >
+                          {entry.changePercent >= 0 ? "+" : ""}
+                          {entry.changePercent.toFixed(1)}%
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         )}
       </CardContent>

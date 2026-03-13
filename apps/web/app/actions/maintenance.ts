@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
+import { logAudit } from "@/lib/audit";
 import {
   createNotificationWithDelivery,
   notifyOwnerMembersForProperty
@@ -168,6 +169,18 @@ export async function createMaintenanceTicket(
     }
   ).catch(() => {});
 
+  void logAudit({
+    userId: user.id,
+    action: "create_ticket",
+    entityType: "maintenance_ticket",
+    entityId: ticket.id,
+    metadata: {
+      propertyId: unit.property_id,
+      unitId: unit.id,
+      title
+    }
+  }).catch(() => {});
+
   revalidatePath("/tenant");
   revalidatePath("/owner");
   revalidatePath("/manager");
@@ -273,6 +286,18 @@ export async function updateTicketStatus(
       }
     ).catch(() => {});
   }
+
+  void logAudit({
+    userId: user.id,
+    action: "update_ticket_status",
+    entityType: "maintenance_ticket",
+    entityId: ticket.id,
+    metadata: {
+      propertyId: ticket.property_id,
+      title: ticket.title,
+      status
+    }
+  }).catch(() => {});
 
   revalidatePath("/owner");
   revalidatePath("/manager");
@@ -433,6 +458,18 @@ export async function addTicketComment(
       }).catch(() => {});
     }
   }
+
+  void logAudit({
+    userId: user.id,
+    action: "add_ticket_comment",
+    entityType: "maintenance_ticket",
+    entityId: ticket.id,
+    metadata: {
+      propertyId: ticket.property_id,
+      title: ticket.title,
+      isInternal: internalNote
+    }
+  }).catch(() => {});
 
   revalidatePath("/owner");
   revalidatePath("/manager");

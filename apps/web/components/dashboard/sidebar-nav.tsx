@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BarChart3,
   LayoutDashboard,
   Receipt,
   CreditCard,
@@ -18,6 +19,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { UserMenuPopover } from "@/components/dashboard/user-menu-popover";
+import { GlobalSearch, type GlobalSearchItem } from "@/components/dashboard/global-search";
 
 export interface NavItem {
   id: string;
@@ -41,6 +43,8 @@ interface SidebarNavProps {
   activeItemId?: string;
   onSelectItem?: (id: string) => void;
   unreadNotificationCount?: number;
+  searchItems?: GlobalSearchItem[];
+  reportsHref?: string | null;
 }
 
 const defaultNavItems: NavItem[] = [
@@ -176,7 +180,9 @@ export function SidebarNav({
   items,
   activeItemId,
   onSelectItem,
-  unreadNotificationCount = 0
+  unreadNotificationCount = 0,
+  searchItems = [],
+  reportsHref = null
 }: SidebarNavProps) {
   const pathname = usePathname();
   const navItems =
@@ -262,7 +268,7 @@ export function SidebarNav({
   );
 
   return (
-    <aside className="gradient-sidebar hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-[260px] lg:flex-shrink-0 lg:flex-col lg:overflow-hidden">
+    <aside className="gradient-sidebar hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-[260px] lg:flex-shrink-0 lg:flex-col">
       <div className="flex items-center gap-3 px-5 py-6">
         <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/15 text-lg font-bold text-white shadow-lg shadow-violet-950/25 backdrop-blur-sm">
           D
@@ -273,6 +279,9 @@ export function SidebarNav({
       </div>
 
       <div className="space-y-2 px-3 pb-3">
+        {searchItems.length > 0 ? (
+          <GlobalSearch items={searchItems} />
+        ) : null}
         <Link
           href="/settings"
           className="block rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
@@ -280,6 +289,16 @@ export function SidebarNav({
         >
           Settings
         </Link>
+        {reportsHref ? (
+          <Link
+            href={reportsHref}
+            className="flex items-center gap-2 rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+            title="Open financial reports."
+          >
+            <BarChart3 className="h-3.5 w-3.5" />
+            Reports
+          </Link>
+        ) : null}
         {showWorkspaceButton ? (
           <Link
             href={workspacePath}
@@ -392,7 +411,9 @@ export function MobileTopBar({
   nickname,
   avatarUrl,
   onSelectItem,
-  unreadNotificationCount = 0
+  unreadNotificationCount = 0,
+  searchItems = [],
+  reportsHref = null
 }: Pick<
   SidebarNavProps,
   | "userEmail"
@@ -403,6 +424,8 @@ export function MobileTopBar({
   | "onSignOut"
   | "onSelectItem"
   | "unreadNotificationCount"
+  | "searchItems"
+  | "reportsHref"
 >) {
   const pathname = usePathname();
   const workspacePath = role === "owner" ? "/owner" : role === "manager" ? "/manager" : "/tenant";
@@ -412,74 +435,86 @@ export function MobileTopBar({
 
   return (
     <div className="gradient-sidebar px-4 py-3 shadow-lg lg:hidden">
-      <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2.5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-sm font-bold text-white">
-          D
-        </div>
-        <div>
-          <span className="block text-sm font-bold text-white">Domus</span>
-          <span className="block text-[10px] uppercase tracking-wide text-white/60">
-            {role}
-          </span>
-        </div>
-      </div>
-      <div className="flex items-center gap-3">
-        <Link
-          href="/settings"
-          className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-          title="Open full settings page."
-        >
-          Settings
-        </Link>
-        {showWorkspaceButton ? (
-          <Link
-            href={workspacePath}
-            className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-            title="Open your role workspace."
-          >
-            Workspace
-          </Link>
-        ) : null}
-        {onSelectItem ? (
-          <button
-            type="button"
-            onClick={() => onSelectItem("notifications")}
-            className="relative rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-white/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-            title="Open notifications."
-            aria-label="Open notifications"
-          >
-            <Bell className="h-3.5 w-3.5" />
-            {unreadNotificationCount > 0 ? (
-              <span className="absolute -right-1 -top-1 inline-flex min-w-[1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-semibold text-white">
-                {unreadNotificationCount}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-sm font-bold text-white">
+              D
+            </div>
+            <div>
+              <span className="block text-sm font-bold text-white">Domus</span>
+              <span className="block text-[10px] uppercase tracking-wide text-white/60">
+                {role}
               </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/settings"
+              className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+              title="Open full settings page."
+            >
+              Settings
+            </Link>
+            {reportsHref ? (
+              <Link
+                href={reportsHref}
+                className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                title="Open financial reports."
+              >
+                Reports
+              </Link>
             ) : null}
-          </button>
-        ) : (
-          <a
-            href={notificationHref}
-            className="relative rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-white/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-            title="Open notifications."
-            aria-label="Open notifications"
-          >
-            <Bell className="h-3.5 w-3.5" />
-            {unreadNotificationCount > 0 ? (
-              <span className="absolute -right-1 -top-1 inline-flex min-w-[1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-semibold text-white">
-                {unreadNotificationCount}
-              </span>
+            {showWorkspaceButton ? (
+              <Link
+                href={workspacePath}
+                className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                title="Open your role workspace."
+              >
+                Workspace
+              </Link>
             ) : null}
-          </a>
-        )}
-        <UserMenuPopover
-          displayName={displayName}
-          role={role}
-          userEmail={userEmail}
-          avatarUrl={avatarUrl}
-          placement="bottom"
-          compact
-        />
-      </div>
+            {onSelectItem ? (
+              <button
+                type="button"
+                onClick={() => onSelectItem("notifications")}
+                className="relative rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-white/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                title="Open notifications."
+                aria-label="Open notifications"
+              >
+                <Bell className="h-3.5 w-3.5" />
+                {unreadNotificationCount > 0 ? (
+                  <span className="absolute -right-1 -top-1 inline-flex min-w-[1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-semibold text-white">
+                    {unreadNotificationCount}
+                  </span>
+                ) : null}
+              </button>
+            ) : (
+              <a
+                href={notificationHref}
+                className="relative rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-white/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                title="Open notifications."
+                aria-label="Open notifications"
+              >
+                <Bell className="h-3.5 w-3.5" />
+                {unreadNotificationCount > 0 ? (
+                  <span className="absolute -right-1 -top-1 inline-flex min-w-[1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-semibold text-white">
+                    {unreadNotificationCount}
+                  </span>
+                ) : null}
+              </a>
+            )}
+            <UserMenuPopover
+              displayName={displayName}
+              role={role}
+              userEmail={userEmail}
+              avatarUrl={avatarUrl}
+              placement="bottom"
+              compact
+            />
+          </div>
+        </div>
+        {searchItems.length > 0 ? <GlobalSearch items={searchItems} /> : null}
       </div>
     </div>
   );

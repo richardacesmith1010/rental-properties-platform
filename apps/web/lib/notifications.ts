@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { buildNotificationEmail } from "@/lib/email-templates";
 import { shouldRecordSuccessfulDelivery } from "@/lib/idempotency";
 import { ensureInboxThreadForEvent } from "@/lib/inbox";
+import { getNotificationPreference } from "@/lib/notification-preferences";
 
 export type NotificationType =
   | "new_ticket"
@@ -17,7 +18,8 @@ export type NotificationType =
   | "invite_accepted"
   | "achievement_unlocked"
   | "lease_expiring_soon"
-  | "lease_expired";
+  | "lease_expired"
+  | "delinquency_escalation";
 
 export interface NotificationDTO {
   id: string;
@@ -84,6 +86,8 @@ function getNotificationCta(type: NotificationType) {
     case "lease_expiring_soon":
     case "lease_expired":
       return { text: "View Lease", url: `${baseUrl}/tenant` };
+    case "delinquency_escalation":
+      return { text: "Resolve Balance", url: `${baseUrl}/tenant` };
     default:
       return { text: "Open Domus", url: baseUrl };
   }
@@ -92,43 +96,61 @@ function getNotificationCta(type: NotificationType) {
 export async function createNotificationWithDelivery(params: CreateNotificationParams) {
   try {
     const admin = createAdminClient();
+    const preference = await getNotificationPreference(params.recipientProfileId, params.type);
+    const shouldCreateInApp = preference.inAppEnabled;
+    const shouldSendEmail = preference.emailEnabled;
 
-    const { data: notification, error } = await admin
-      .from("notifications")
-      .upsert(
-        {
-          recipient_profile_id: params.recipientProfileId,
-          type: params.type,
-          title: params.title,
-          body: params.body,
-          entity_type: params.entityType,
-          entity_id: params.entityId ?? null
-        },
-        { onConflict: "recipient_profile_id,type,entity_type,entity_id" }
-      )
-      .select("id")
-      .single();
-
-    if (error || !notification) {
+    if (!shouldCreateInApp && !shouldSendEmail) {
       return;
     }
 
-    const { data: existingDeliveries } = await admin
-      .from("notification_deliveries")
-      .select("channel, status")
-      .eq("notification_id", notification.id);
+    const cta = getNotificationCta(params.type);
+    let notificationId: string | null = null;
+    let deliveryRows: Array<{
+      channel: "in_app" | "email";
+      status: "pending" | "sent" | "failed";
+    }> = [];
 
-    const deliveryRows = (existingDeliveries ?? []).map((row) => ({
-      channel: row.channel as "in_app" | "email",
-      status: row.status as "pending" | "sent" | "failed"
-    }));
+    if (shouldCreateInApp) {
+      const { data: notification, error } = await admin
+        .from("notifications")
+        .upsert(
+          {
+            recipient_profile_id: params.recipientProfileId,
+            type: params.type,
+            title: params.title,
+            body: params.body,
+            entity_type: params.entityType,
+            entity_id: params.entityId ?? null
+          },
+          { onConflict: "recipient_profile_id,type,entity_type,entity_id" }
+        )
+        .select("id")
+        .single();
 
-    if (shouldRecordSuccessfulDelivery(deliveryRows, "in_app")) {
-      await insertDeliveryRecord(admin, {
-        notification_id: notification.id,
-        channel: "in_app",
-        status: "sent"
-      });
+      if (error || !notification) {
+        return;
+      }
+
+      notificationId = notification.id;
+
+      const { data: existingDeliveries } = await admin
+        .from("notification_deliveries")
+        .select("channel, status")
+        .eq("notification_id", notification.id);
+
+      deliveryRows = (existingDeliveries ?? []).map((row) => ({
+        channel: row.channel as "in_app" | "email",
+        status: row.status as "pending" | "sent" | "failed"
+      }));
+
+      if (shouldRecordSuccessfulDelivery(deliveryRows, "in_app")) {
+        await insertDeliveryRecord(admin, {
+          notification_id: notification.id,
+          channel: "in_app",
+          status: "sent"
+        });
+      }
     }
 
     let emailResult: {
@@ -137,8 +159,7 @@ export async function createNotificationWithDelivery(params: CreateNotificationP
       errorMessage: string | null;
     } | null = null;
 
-    if (shouldRecordSuccessfulDelivery(deliveryRows, "email")) {
-      const cta = getNotificationCta(params.type);
+    if (shouldSendEmail && shouldRecordSuccessfulDelivery(deliveryRows, "email")) {
       emailResult = await sendNotificationEmail({
         to: params.recipientEmail,
         subject: params.title,
@@ -152,9 +173,9 @@ export async function createNotificationWithDelivery(params: CreateNotificationP
       });
     }
 
-    if (emailResult) {
+    if (emailResult && notificationId) {
       await insertDeliveryRecord(admin, {
-        notification_id: notification.id,
+        notification_id: notificationId,
         channel: "email",
         status: emailResult.status,
         provider_ref: emailResult.providerRef,

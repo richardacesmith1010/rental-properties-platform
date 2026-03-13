@@ -152,6 +152,12 @@ function startOfUtcDay(value: Date) {
   return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
 }
 
+function differenceInDays(fromDate: string, toDate: string) {
+  const from = new Date(`${fromDate}T00:00:00.000Z`);
+  const to = new Date(`${toDate}T00:00:00.000Z`);
+  return Math.floor((to.getTime() - from.getTime()) / 86400000);
+}
+
 function isPastGraceWindow(dueDateIso: string, gracePeriodDays: number, today: Date) {
   const dueDate = new Date(`${dueDateIso}T00:00:00.000Z`);
   dueDate.setUTCDate(dueDate.getUTCDate() + gracePeriodDays);
@@ -823,6 +829,196 @@ export async function sendLeaseExpirationWarnings(supabase: SupabaseLikeClient):
   }
 
   return `Expiration warnings sent: ${warningCount}.`;
+}
+
+export async function sendDelinquencyEscalations(supabase: SupabaseLikeClient): Promise<string> {
+  const today = new Date();
+  const todayIso = today.toISOString().slice(0, 10);
+  const recentThreshold = new Date(today);
+  recentThreshold.setUTCDate(recentThreshold.getUTCDate() - 30);
+
+  const { data: charges, error: chargesError } = await supabase
+    .from("rent_charges")
+    .select("id, lease_id, due_date, amount_cents, status")
+    .in("status", ["pending", "late"])
+    .lte("due_date", todayIso);
+
+  if (chargesError) {
+    throw chargesError;
+  }
+
+  const delinquentCharges = (charges ?? []) as Array<{
+    id: string;
+    lease_id: string;
+    due_date: string;
+    amount_cents: number;
+    status: string;
+  }>;
+
+  const candidates = delinquentCharges
+    .map((charge) => ({
+      ...charge,
+      daysPastDue: differenceInDays(charge.due_date, todayIso)
+    }))
+    .filter((charge) => charge.daysPastDue >= 30);
+
+  if (candidates.length === 0) {
+    return "Delinquency escalations sent: 0.";
+  }
+
+  const { data: existingNotifications, error: existingError } = await supabase
+    .from("notifications")
+    .select("entity_id")
+    .eq("type", "delinquency_escalation")
+    .eq("entity_type", "rent_charge")
+    .in("entity_id", candidates.map((charge) => charge.id))
+    .gte("created_at", recentThreshold.toISOString());
+
+  if (existingError) {
+    throw existingError;
+  }
+
+  const alreadySent = new Set(
+    ((existingNotifications ?? []) as Array<{ entity_id: string | null }>)
+      .map((row) => row.entity_id)
+      .filter((entityId): entityId is string => Boolean(entityId))
+  );
+
+  const leaseIds = Array.from(new Set(candidates.map((charge) => charge.lease_id)));
+  const { data: leases, error: leasesError } = await supabase
+    .from("leases")
+    .select("id, unit_id, tenant_profile_id")
+    .in("id", leaseIds);
+
+  if (leasesError) {
+    throw leasesError;
+  }
+
+  const leaseById = new Map(
+    ((leases ?? []) as Array<{ id: string; unit_id: string; tenant_profile_id: string | null }>).map((lease) => [
+      lease.id,
+      lease
+    ])
+  );
+
+  const unitIds = Array.from(new Set((leases ?? []).map((lease) => lease.unit_id)));
+  const { data: units, error: unitsError } = await supabase
+    .from("units")
+    .select("id, property_id, unit_number")
+    .in("id", unitIds);
+
+  if (unitsError) {
+    throw unitsError;
+  }
+
+  const unitById = new Map(
+    ((units ?? []) as Array<{ id: string; property_id: string; unit_number: string }>).map((unit) => [
+      unit.id,
+      unit
+    ])
+  );
+
+  const propertyIds = Array.from(new Set((units ?? []).map((unit) => unit.property_id)));
+  const { data: properties, error: propertiesError } = await supabase
+    .from("properties")
+    .select("id, name")
+    .in("id", propertyIds);
+
+  if (propertiesError) {
+    throw propertiesError;
+  }
+
+  const propertyById = new Map(
+    ((properties ?? []) as Array<{ id: string; name: string }>).map((property) => [property.id, property])
+  );
+
+  const tenantIds = Array.from(
+    new Set(
+      (leases ?? [])
+        .map((lease) => lease.tenant_profile_id)
+        .filter((id): id is string => Boolean(id))
+    )
+  );
+  const { data: profiles, error: profilesError } = tenantIds.length
+    ? await supabase.from("profiles").select("id, email").in("id", tenantIds)
+    : { data: [], error: null };
+
+  if (profilesError) {
+    throw profilesError;
+  }
+
+  const profileById = new Map(
+    ((profiles ?? []) as Array<{ id: string; email: string | null }>).map((profile) => [profile.id, profile])
+  );
+
+  let sentCount = 0;
+
+  for (const charge of candidates) {
+    if (alreadySent.has(charge.id)) {
+      continue;
+    }
+
+    const lease = leaseById.get(charge.lease_id);
+    const unit = lease ? unitById.get(lease.unit_id) : null;
+    const property = unit ? propertyById.get(unit.property_id) : null;
+    const tenantProfile = lease?.tenant_profile_id ? profileById.get(lease.tenant_profile_id) ?? null : null;
+
+    if (!lease?.tenant_profile_id || !unit || !property) {
+      continue;
+    }
+
+    const stage =
+      charge.daysPastDue >= 90
+        ? "final"
+        : charge.daysPastDue >= 60
+          ? "urgent"
+          : "friendly";
+    const title =
+      stage === "final"
+        ? "Final Delinquency Notice"
+        : stage === "urgent"
+          ? "Urgent Rent Delinquency Notice"
+          : "Friendly Rent Reminder";
+    const body =
+      stage === "final"
+        ? `Your balance of ${formatCurrency(charge.amount_cents)} for Unit ${unit.unit_number} is more than 90 days overdue. Please resolve it immediately.`
+        : stage === "urgent"
+          ? `Your balance of ${formatCurrency(charge.amount_cents)} for Unit ${unit.unit_number} is now more than 60 days overdue. Please pay as soon as possible.`
+          : `Your balance of ${formatCurrency(charge.amount_cents)} for Unit ${unit.unit_number} is now 30 days overdue. Please pay when you can to avoid further escalation.`;
+
+    try {
+      await createNotificationWithDelivery({
+        recipientProfileId: lease.tenant_profile_id,
+        recipientEmail: tenantProfile?.email ?? null,
+        type: "delinquency_escalation",
+        title,
+        body,
+        entityType: "rent_charge",
+        entityId: charge.id,
+        propertyId: unit.property_id
+      });
+      sentCount += 1;
+    } catch (error) {
+      console.error("[charges] Failed to send delinquency escalation:", error);
+    }
+
+    if (stage === "final") {
+      try {
+        await notifyOwnerMembersForProperty({
+          propertyId: unit.property_id,
+          type: "delinquency_escalation",
+          title: "Final Delinquency Notice Sent",
+          body: `Unit ${unit.unit_number} at ${property.name} is more than 90 days delinquent.`,
+          entityType: "rent_charge",
+          entityId: charge.id
+        });
+      } catch (error) {
+        console.error("[charges] Failed to notify owners about delinquency escalation:", error);
+      }
+    }
+  }
+
+  return `Delinquency escalations sent: ${sentCount}.`;
 }
 
 export async function sendRentDueReminders(supabase: SupabaseLikeClient): Promise<string> {

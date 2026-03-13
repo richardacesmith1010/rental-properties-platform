@@ -49,6 +49,7 @@ export { joinLlcByCode } from "./onboarding";
 
 export { markNotificationRead } from "./notifications";
 export { markAllNotificationsRead } from "./notifications";
+export { saveNotificationPreference } from "./notifications";
 
 export { enableAutomation } from "./automations";
 export { disableAutomation } from "./automations";

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUserRole } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
 import {
   createNotificationWithDelivery,
   notifyOwnerMembersForProperty
@@ -214,6 +215,19 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
     }
   ).catch(() => {});
 
+  void logAudit({
+    userId: user.id,
+    action: "create_lease",
+    entityType: "lease",
+    entityId: createdLease.id,
+    metadata: {
+      propertyId: unit.property_id,
+      unitId,
+      tenantProfileId,
+      tenantEmail: tenantProfile.email
+    }
+  }).catch(() => {});
+
   revalidatePath("/");
   revalidatePath("/owner");
   revalidatePath("/manager");
@@ -329,6 +343,17 @@ export async function updateLease(_prev: ActionState, formData: FormData): Promi
     }
   }
 
+  void logAudit({
+    userId: user.id,
+    action: "update_lease",
+    entityType: "lease",
+    entityId: leaseId,
+    metadata: {
+      propertyId: unit.property_id,
+      tenantProfileId: lease.tenant_profile_id
+    }
+  }).catch(() => {});
+
   revalidatePath("/");
   revalidatePath("/owner");
   revalidatePath("/manager");
@@ -374,6 +399,8 @@ export async function renewLease(_prev: ActionState, formData: FormData): Promis
     return { success: false, error: "Only active leases can be renewed." };
   }
 
+  const newMonthlyRentCents = Math.round(newMonthlyRentDollars * 100);
+
   const { data: newLease, error: insertError } = await supabase
     .from("leases")
     .insert({
@@ -382,7 +409,7 @@ export async function renewLease(_prev: ActionState, formData: FormData): Promis
       start_date: newStartDate,
       end_date: newEndDate,
       due_day_of_month: newDueDayOfMonth,
-      monthly_rent_cents: Math.round(newMonthlyRentDollars * 100),
+      monthly_rent_cents: newMonthlyRentCents,
       deposit_cents: lease.deposit_cents,
       grace_period_days: lease.grace_period_days ?? 5,
       late_fee_cents: lease.late_fee_cents ?? 0,
@@ -412,6 +439,21 @@ export async function renewLease(_prev: ActionState, formData: FormData): Promis
     return { success: false, error: "New lease created, but the prior lease could not be closed." };
   }
 
+  if (newMonthlyRentCents !== (lease.monthly_rent_cents ?? 0)) {
+    const { error: rentIncreaseError } = await supabase.from("rent_increase_history").insert({
+      lease_id: newLease.id,
+      previous_rent_cents: lease.monthly_rent_cents ?? 0,
+      new_rent_cents: newMonthlyRentCents,
+      effective_date: newStartDate,
+      reason: "Lease renewal",
+      created_by: user.id
+    });
+
+    if (rentIncreaseError && !await isMissingSchemaError(rentIncreaseError)) {
+      console.error("[leases] Failed to record rent increase history:", rentIncreaseError);
+    }
+  }
+
   if (lease.tenant_profile_id) {
     const { data: tenantProfile } = await createAdminClient()
       .from("profiles")
@@ -431,6 +473,18 @@ export async function renewLease(_prev: ActionState, formData: FormData): Promis
       }).catch(() => {});
     }
   }
+
+  void logAudit({
+    userId: user.id,
+    action: "renew_lease",
+    entityType: "lease",
+    entityId: newLease.id,
+    metadata: {
+      propertyId: unit.property_id,
+      tenantProfileId: lease.tenant_profile_id,
+      previousLeaseId: lease.id
+    }
+  }).catch(() => {});
 
   revalidatePath("/");
   revalidatePath("/owner");
@@ -526,6 +580,18 @@ export async function terminateLease(_prev: ActionState, formData: FormData): Pr
       }).catch(() => {});
     }
   }
+
+  void logAudit({
+    userId: user.id,
+    action: "terminate_lease",
+    entityType: "lease",
+    entityId: lease.id,
+    metadata: {
+      propertyId: unit.property_id,
+      tenantProfileId: lease.tenant_profile_id,
+      terminationReason
+    }
+  }).catch(() => {});
 
   revalidatePath("/");
   revalidatePath("/owner");
@@ -628,6 +694,17 @@ export async function deleteLease(_prev: ActionState, formData: FormData): Promi
       });
     }
   }
+
+  void logAudit({
+    userId: user.id,
+    action: "delete_lease",
+    entityType: "lease",
+    entityId: leaseId,
+    metadata: {
+      propertyId: unit.property_id,
+      tenantProfileId: lease.tenant_profile_id
+    }
+  }).catch(() => {});
 
   revalidatePath("/");
   revalidatePath("/owner");

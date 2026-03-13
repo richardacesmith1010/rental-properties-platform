@@ -15,6 +15,8 @@ import { getOwnerAnalyticsData } from "@/lib/analytics";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { getOwnershipAccountsForUser } from "@/lib/ownership";
 import { getUserGamification } from "@/lib/gamification";
+import { getRecentAuditLogs } from "@/lib/audit";
+import { getRentIncreaseHistory } from "@/lib/rent-increases";
 import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
 import {
   createCheckoutForCharge,
@@ -142,7 +144,9 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
     ownershipAccounts,
     gamification,
     expenses,
-    analytics
+    analytics,
+    auditLogs,
+    rentIncreaseHistory
   ] =
     await Promise.all([
       getDashboardData(user.id),
@@ -184,7 +188,9 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
         : Promise.resolve([]),
       getUserGamification(user.id),
       getOwnerExpenseData(user.id),
-      getOwnerAnalyticsData(user.id)
+      getOwnerAnalyticsData(user.id),
+      getRecentAuditLogs(user.id),
+      getRentIncreaseHistory(user.id)
     ]);
 
   const approvedApplicationCount = applications.filter(
@@ -214,6 +220,8 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       ownershipAccounts={ownershipAccounts}
       expensesData={expenses}
       analyticsData={analytics}
+      auditLogs={auditLogs}
+      rentIncreaseHistory={rentIncreaseHistory}
       capabilities={capabilities}
       initialManagerWorkflowMode={initialManagerWorkflowMode}
       initialSectionId={initialSectionId}
