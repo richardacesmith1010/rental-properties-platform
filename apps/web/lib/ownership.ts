@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdministeredOwnerAccountIds } from "@/lib/property-access";
+import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 export interface OwnershipAccountDTO {
   id: string;
@@ -27,24 +28,6 @@ export function generateJoinCode(): string {
   return Array.from({ length: 6 }, () =>
     chars[Math.floor(Math.random() * chars.length)]
   ).join("");
-}
-
-function isMissingSchemaError(error: unknown): boolean {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-
-  const code = "code" in error ? String(error.code ?? "") : "";
-  const message = "message" in error ? String(error.message ?? "").toLowerCase() : "";
-
-  return (
-    code === "42P01" ||
-    code === "42703" ||
-    code === "PGRST205" ||
-    message.includes("does not exist") ||
-    message.includes("could not find the table") ||
-    message.includes("column") && message.includes("does not exist")
-  );
 }
 
 export async function getOwnershipAccountsForUser(userId: string): Promise<OwnershipAccountDTO[]> {

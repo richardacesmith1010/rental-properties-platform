@@ -42,6 +42,7 @@ export function checkRateLimit(
   };
 }
 
+/** @internal test-only */
 export function resetRateLimitState() {
   rateLimitMap.clear();
 }

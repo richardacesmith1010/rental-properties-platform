@@ -1,10 +1,8 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getCurrentUserRole, getRoleHomePath } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   findAccountByJoinCode,
   generateJoinCode,
@@ -15,25 +13,8 @@ import {
   parseFormData,
   setupLlcAccountSchema
 } from "@/lib/validations";
+import { requireAuth } from "./auth-helpers";
 import { ensureCapabilityEnabled, type ActionState } from "./shared";
-
-async function requireOwnerUser() {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner") {
-    redirect(getRoleHomePath(role));
-  }
-
-  return user;
-}
 
 async function getUniqueJoinCode(): Promise<string | null> {
   for (let attempt = 0; attempt < 10; attempt += 1) {
@@ -51,7 +32,11 @@ export async function setupIndividualAccount(
   _prev: ActionState,
   _formData: FormData
 ): Promise<ActionState> {
-  const user = await requireOwnerUser();
+  const { user } = await requireAuth("owner");
+  const rateLimited = checkRateLimit(`setupIndividualAccount:${user.id}`, 10, 60_000);
+  if (!rateLimited.allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
+  }
 
   const capabilityError = await ensureCapabilityEnabled("ownershipEnabled");
   if (capabilityError) {
@@ -76,7 +61,11 @@ export async function setupLlcAccount(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const user = await requireOwnerUser();
+  const { user } = await requireAuth("owner");
+  const rateLimited = checkRateLimit(`setupLlcAccount:${user.id}`, 10, 60_000);
+  if (!rateLimited.allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
+  }
 
   const capabilityError = await ensureCapabilityEnabled("ownershipEnabled");
   if (capabilityError) {
@@ -137,7 +126,11 @@ export async function joinLlcByCode(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const user = await requireOwnerUser();
+  const { user } = await requireAuth("owner");
+  const rateLimited = checkRateLimit(`joinLlcByCode:${user.id}`, 20, 60_000);
+  if (!rateLimited.allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
+  }
 
   const capabilityError = await ensureCapabilityEnabled("ownershipEnabled");
   if (capabilityError) {

@@ -110,12 +110,6 @@ export const terminateLeaseSchema = z.object({
   terminationReason: z.string().min(1, "Reason is required.").max(500),
 });
 
-export const updateLateFeeSchema = z.object({
-  leaseId: z.string().uuid("Invalid lease ID."),
-  lateFeeDollars: z.coerce.number().min(0, "Cannot be negative."),
-  gracePeriodDays: z.coerce.number().int().min(0).max(30, "Must be 0-30 days."),
-});
-
 export const updatePropertySchema = z.object({
   propertyId: z.string().uuid("Invalid property selection."),
   name: z.string().min(1, "Property name is required."),

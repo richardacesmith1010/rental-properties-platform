@@ -1,4 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isMissingSchemaError } from "@/lib/supabase-errors";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface AdministeredProperty {
   id: string;
@@ -15,26 +17,11 @@ function unique<T>(values: T[]): T[] {
   return Array.from(new Set(values));
 }
 
-function isMissingSchemaError(error: unknown): boolean {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-
-  const code = "code" in error ? String(error.code ?? "") : "";
-  const message = "message" in error ? String(error.message ?? "").toLowerCase() : "";
-
-  return (
-    code === "42P01" ||
-    code === "42703" ||
-    code === "PGRST205" ||
-    message.includes("does not exist") ||
-    message.includes("could not find the table") ||
-    message.includes("column") && message.includes("does not exist")
-  );
-}
-
-async function getLegacyAdministeredProperties(userId: string): Promise<AdministeredProperty[]> {
-  const admin = createAdminClient();
+async function getLegacyAdministeredProperties(
+  userId: string,
+  adminClient?: PropertyAccessClient
+): Promise<AdministeredProperty[]> {
+  const admin = adminClient ?? createAdminClient();
 
   const [{ data: ownedRows, error: ownedError }, { data: managerAssignments }] = await Promise.all([
     admin
@@ -89,8 +76,13 @@ async function getLegacyAdministeredProperties(userId: string): Promise<Administ
   return Array.from(byPropertyId.values());
 }
 
-export async function getAdministeredProperties(userId: string): Promise<AdministeredProperty[]> {
-  const admin = createAdminClient();
+type PropertyAccessClient = Pick<SupabaseClient, "from">;
+
+export async function getAdministeredProperties(
+  userId: string,
+  adminClient?: PropertyAccessClient
+): Promise<AdministeredProperty[]> {
+  const admin = adminClient ?? createAdminClient();
 
   const [{ data: memberAccounts, error: memberError }, { data: managerAssignments }] = await Promise.all([
     admin
@@ -107,7 +99,7 @@ export async function getAdministeredProperties(userId: string): Promise<Adminis
   ]);
 
   if (memberError && isMissingSchemaError(memberError)) {
-    return getLegacyAdministeredProperties(userId);
+    return getLegacyAdministeredProperties(userId, admin);
   }
 
   const ownerAccountIds = unique((memberAccounts ?? []).map((row) => row.account_id));
@@ -129,7 +121,7 @@ export async function getAdministeredProperties(userId: string): Promise<Adminis
       : { data: [] as Array<{ id: string; owner_account_id: string }>, error: null };
 
     if (fallbackOwnerQuery.error && isMissingSchemaError(fallbackOwnerQuery.error)) {
-      return getLegacyAdministeredProperties(userId);
+      return getLegacyAdministeredProperties(userId, admin);
     }
 
     ownerProperties = (fallbackOwnerQuery.data ?? []).map((property) => ({
@@ -163,7 +155,7 @@ export async function getAdministeredProperties(userId: string): Promise<Adminis
       : { data: [] as Array<{ id: string; owner_account_id: string }>, error: null };
 
     if (fallbackManagerQuery.error && isMissingSchemaError(fallbackManagerQuery.error)) {
-      return getLegacyAdministeredProperties(userId);
+      return getLegacyAdministeredProperties(userId, admin);
     }
 
     managerProperties = (fallbackManagerQuery.data ?? []).map((property) => ({
@@ -187,8 +179,11 @@ export async function getAdministeredProperties(userId: string): Promise<Adminis
   return Array.from(byPropertyId.values());
 }
 
-export async function getAdministeredPropertyIds(userId: string): Promise<string[]> {
-  const properties = await getAdministeredProperties(userId);
+export async function getAdministeredPropertyIds(
+  userId: string,
+  adminClient?: PropertyAccessClient
+): Promise<string[]> {
+  const properties = await getAdministeredProperties(userId, adminClient);
   return properties.map((property) => property.id);
 }
 

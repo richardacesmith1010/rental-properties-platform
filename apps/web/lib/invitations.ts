@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 export interface InvitationListItem {
   id: string;
@@ -10,24 +11,6 @@ export interface InvitationListItem {
   status: "pending" | "accepted" | "expired";
   createdAt: string;
   acceptedAt: string | null;
-}
-
-function isMissingSchemaError(error: unknown): boolean {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-
-  const code = "code" in error ? String(error.code ?? "") : "";
-  const message = "message" in error ? String(error.message ?? "").toLowerCase() : "";
-
-  return (
-    code === "42P01" ||
-    code === "42703" ||
-    code === "PGRST205" ||
-    message.includes("does not exist") ||
-    message.includes("could not find the table") ||
-    message.includes("column") && message.includes("does not exist")
-  );
 }
 
 export async function getOwnerInvitations(

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdministeredPropertyIds } from "@/lib/property-access";
+import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 type SupabaseLikeClient = Pick<ReturnType<typeof createClient>, "from">;
 
@@ -58,23 +59,6 @@ export interface TenantUnit {
 export interface TenantMaintenanceData {
   tickets: MaintenanceTicket[];
   units: TenantUnit[];
-}
-
-function isMissingSchemaError(error: unknown): boolean {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-
-  const code = "code" in error ? String(error.code ?? "") : "";
-  const message = "message" in error ? String(error.message ?? "").toLowerCase() : "";
-
-  return (
-    code === "42P01" ||
-    code === "42703" ||
-    code === "PGRST205" ||
-    message.includes("does not exist") ||
-    (message.includes("column") && message.includes("does not exist"))
-  );
 }
 
 async function buildCommentMaps(

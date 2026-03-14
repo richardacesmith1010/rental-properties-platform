@@ -1,10 +1,7 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { canUserAdministerOwnershipAccount } from "@/lib/ownership";
 import { logAudit } from "@/lib/audit";
@@ -19,24 +16,14 @@ import {
   resendInviteSchema,
   parseFormData
 } from "@/lib/validations";
+import { requireAuth } from "./auth-helpers";
 import { ensureCapabilityEnabled, type ActionState } from "./shared";
 
 export async function inviteTenant(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
-  }
+  const { user } = await requireAuth("owner", "manager");
 
   const inviteRate = checkRateLimit(`invite:${user.id}`, 10, 60 * 60 * 1000);
   if (!inviteRate.allowed) {
@@ -226,18 +213,7 @@ export async function inviteManager(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
-  }
+  const { supabase, user } = await requireAuth("owner", "manager");
 
   const inviteRate = checkRateLimit(`invite:${user.id}`, 10, 60 * 60 * 1000);
   if (!inviteRate.allowed) {
@@ -383,19 +359,7 @@ export async function inviteOwner(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
-  }
+  const { user } = await requireAuth("owner", "manager");
 
   const inviteRate = checkRateLimit(`invite:${user.id}`, 10, 60 * 60 * 1000);
   if (!inviteRate.allowed) {
@@ -534,17 +498,10 @@ export async function resendInvite(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
+  const { user } = await requireAuth("owner", "manager");
+  const inviteRate = checkRateLimit(`invite:resend:${user.id}`, 20, 60 * 60 * 1000);
+  if (!inviteRate.allowed) {
+    return { success: false, error: "Too many invitations sent. Please try again later." };
   }
 
   const parsed = parseFormData(resendInviteSchema, formData);

@@ -1,9 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { DashboardData } from "@/lib/dashboard";
 import type { PortfolioData } from "@/lib/portfolio";
 import type { MaintenanceTicket } from "@/lib/maintenance";
-import type { InvitationListItem } from "@/lib/invitations";
 import type { NotificationDTO } from "@/lib/notifications";
 import type { OwnerDocumentsData } from "@/lib/documents";
 import type { VendorDTO } from "@/lib/vendors";
@@ -18,7 +16,6 @@ import type { AnalyticsDashboardData } from "@/lib/analytics";
 import type { AuditLogEntry } from "@/lib/audit";
 import type { RentIncreaseEntry } from "@/lib/rent-increases";
 import { formatDate } from "@/lib/format";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DomMascot } from "@/components/gamification/dom-mascot";
 import { AchievementChecker } from "@/components/gamification/achievement-checker";

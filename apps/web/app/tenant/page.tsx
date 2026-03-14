@@ -33,7 +33,7 @@ import { MaintenanceSection } from "@/components/dashboard/maintenance-section";
 import { TenantDocumentsSection } from "@/components/dashboard/tenant-documents-section";
 import { NotificationsSection } from "@/components/dashboard/notifications-section";
 import { TenantLeaseDetails } from "@/components/dashboard/tenant-lease-details";
-import { EmptyState as DashboardEmptyState } from "@/components/dashboard/empty-state";
+import { EmptyState as DashboardEmptyState } from "@/components/shared/empty-state";
 import { GamificationSummary } from "@/components/gamification/gamification-summary";
 import { AchievementChecker } from "@/components/gamification/achievement-checker";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
@@ -154,6 +154,9 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
     (packet) => packet.signerStatus !== "signed"
   ).length;
   const unreadNotificationCount = notifications.filter((notification) => !notification.readAt).length;
+  const payChargeAction = async (formData: FormData) => {
+    await createCheckoutForCharge(formData);
+  };
   const ownerConnectedMap = await arePropertyOwnersConnected(
     paymentData.charges.map((charge) => charge.propertyId)
   );
@@ -390,7 +393,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
               <TenantLeaseDetails leases={leaseDetails} />
               <ChargesSection
                 charges={paymentData.charges}
-                onPayCharge={createCheckoutForCharge}
+                onPayCharge={payChargeAction}
                 ownerConnectedMap={ownerConnectedMap}
                 isTenantView
                 autopayEnrollments={autopayEnrollments}

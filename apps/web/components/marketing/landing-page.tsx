@@ -9,7 +9,6 @@ import {
   CreditCard,
   FileStack,
   LineChart,
-  ShieldCheck,
   Sparkles,
   Star,
   Ticket,

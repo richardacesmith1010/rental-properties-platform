@@ -9,7 +9,7 @@ import { formatDateTime } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { SubmitButton } from "@/components/shared/submit-button";
-import { EmptyState } from "./empty-state";
+import { EmptyState } from "@/components/shared/empty-state";
 
 type StatefulAction = (
   prev: ActionState,

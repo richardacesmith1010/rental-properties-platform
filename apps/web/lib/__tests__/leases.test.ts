@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   renewLeaseSchema,
   terminateLeaseSchema,
-  updateLateFeeSchema
+  updateLeaseSchema
 } from "../validations";
 
 const validUuid = "550e8400-e29b-41d4-a716-446655440000";
@@ -98,10 +98,14 @@ describe("terminateLeaseSchema", () => {
   });
 });
 
-describe("updateLateFeeSchema", () => {
+describe("updateLeaseSchema late fee fields", () => {
   it("accepts valid late fee settings", () => {
-    const result = updateLateFeeSchema.safeParse({
+    const result = updateLeaseSchema.safeParse({
       leaseId: validUuid,
+      endDate: "2027-03-31",
+      dueDayOfMonth: "1",
+      monthlyRentDollars: "1650",
+      depositDollars: "500",
       lateFeeDollars: "75",
       gracePeriodDays: "5"
     });
@@ -110,8 +114,12 @@ describe("updateLateFeeSchema", () => {
   });
 
   it("rejects negative late fees", () => {
-    const result = updateLateFeeSchema.safeParse({
+    const result = updateLeaseSchema.safeParse({
       leaseId: validUuid,
+      endDate: "2027-03-31",
+      dueDayOfMonth: "1",
+      monthlyRentDollars: "1650",
+      depositDollars: "500",
       lateFeeDollars: "-1",
       gracePeriodDays: "5"
     });
@@ -120,8 +128,12 @@ describe("updateLateFeeSchema", () => {
   });
 
   it("rejects grace periods above 30 days", () => {
-    const result = updateLateFeeSchema.safeParse({
+    const result = updateLeaseSchema.safeParse({
       leaseId: validUuid,
+      endDate: "2027-03-31",
+      dueDayOfMonth: "1",
+      monthlyRentDollars: "1650",
+      depositDollars: "500",
       lateFeeDollars: "75",
       gracePeriodDays: "31"
     });

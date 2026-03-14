@@ -3,9 +3,6 @@
   "compilerOptions": {
     "strict": true,
     "baseUrl": ".",
-    "paths": {
-      "@domus/shared": ["../../packages/shared/src/index.ts"]
-    },
     "types": ["expo-router/types"]
   },
   "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]

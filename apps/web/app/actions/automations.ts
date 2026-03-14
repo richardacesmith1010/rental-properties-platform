@@ -1,33 +1,23 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
-import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   enableAutomationSchema,
   disableAutomationSchema,
   parseFormData
 } from "@/lib/validations";
+import { requireAuth } from "./auth-helpers";
 import { ensureCapabilityEnabled, type ActionState } from "./shared";
 
 export async function enableAutomation(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
+  const { user, supabase } = await requireAuth("owner", "manager");
+  if (!checkRateLimit(`enableAutomation:${user.id}`, 30, 60_000).allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const capabilityError = await ensureCapabilityEnabled("automationsEnabled");
@@ -69,18 +59,9 @@ export async function disableAutomation(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
+  const { user, supabase } = await requireAuth("owner", "manager");
+  if (!checkRateLimit(`disableAutomation:${user.id}`, 30, 60_000).allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const capabilityError = await ensureCapabilityEnabled("automationsEnabled");
@@ -117,4 +98,3 @@ export async function disableAutomation(
   revalidatePath("/manager");
   return { success: true };
 }
-

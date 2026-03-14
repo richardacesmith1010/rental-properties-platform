@@ -10,6 +10,9 @@ npm test --workspace @domus/web
 echo "[gate] Running web lint"
 npm run lint:web
 
+echo "[gate] Running web typecheck"
+npx tsc -p apps/web/tsconfig.json --noEmit
+
 echo "[gate] Running production build"
 npm run build:web
 

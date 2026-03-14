@@ -3,7 +3,7 @@ import type { TenantLeaseDetails as TenantLeaseDetailsItem } from "@/lib/leases"
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { EmptyState } from "./empty-state";
+import { EmptyState } from "@/components/shared/empty-state";
 
 interface TenantLeaseDetailsProps {
   leases: TenantLeaseDetailsItem[];

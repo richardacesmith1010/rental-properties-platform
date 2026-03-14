@@ -3,8 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "apps/*"
   ],
   "scripts": {
     "dev:web": "npm run dev --workspace @domus/web",
@@ -18,5 +17,9 @@
     "verify:phase10-runtime": "node scripts/verify-phase10-runtime.mjs",
     "gate:web": "bash scripts/gate-web.sh",
     "seed": "npx tsx scripts/seed.ts"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.2.0",
+    "@typescript-eslint/parser": "^7.2.0"
   }
 }

@@ -1,34 +1,25 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
-import { getCurrentUserRole } from "@/lib/auth";
 import { logFailedSideEffect } from "@/lib/logger";
 import { canUserAdministerProperty } from "@/lib/property-access";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   createInboxThreadSchema,
   sendInboxMessageSchema,
   parseFormData
 } from "@/lib/validations";
+import { requireAuth } from "./auth-helpers";
 import { ensureCapabilityEnabled, type ActionState } from "./shared";
 
 export async function createInboxThread(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
+  const { supabase, user } = await requireAuth("owner", "manager");
+  const rateLimited = checkRateLimit(`createInboxThread:${user.id}`, 20, 60_000);
+  if (!rateLimited.allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const capabilityError = await ensureCapabilityEnabled("inboxThreadsEnabled");
@@ -67,18 +58,10 @@ export async function sendInboxMessage(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
+  const { supabase, user } = await requireAuth("owner", "manager");
+  const rateLimited = checkRateLimit(`sendInboxMessage:${user.id}`, 60, 60_000);
+  if (!rateLimited.allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const capabilityError = await ensureCapabilityEnabled("inboxThreadsEnabled");

@@ -23,11 +23,8 @@ export { createUnit } from "./units";
 export { updateUnit } from "./units";
 export { deleteUnit } from "./units";
 
-export { createLease } from "./leases";
-export { updateLease } from "./leases";
-export { deleteLease } from "./leases";
-export { renewLease } from "./leases";
-export { terminateLease } from "./leases";
+export { createLease, updateLease, deleteLease } from "./lease-mutations";
+export { renewLease, terminateLease } from "./lease-lifecycle-actions";
 
 export { createCheckoutForCharge } from "./charges";
 export { recordManualPayment } from "./charges";
@@ -68,15 +65,21 @@ export { reviewApplication } from "./leasing";
 export { addApplicationNote } from "./leasing";
 export { recordScreeningScore } from "./leasing";
 
-export { createDocumentTemplate } from "./documents";
-export { updateDocumentTemplate } from "./documents";
-export { deleteDocumentTemplate } from "./documents";
-export { createDocumentPacket } from "./documents";
-export { sendDocumentPacket } from "./documents";
-export { signDocumentPacket } from "./documents";
-export { uploadPropertyFile } from "./documents";
-export { deletePropertyFile } from "./documents";
-export { updateFileVisibility } from "./documents";
+export {
+  createDocumentTemplate,
+  updateDocumentTemplate,
+  deleteDocumentTemplate
+} from "./document-templates";
+export {
+  createDocumentPacket,
+  sendDocumentPacket,
+  signDocumentPacket
+} from "./document-packets";
+export {
+  uploadPropertyFile,
+  deletePropertyFile,
+  updateFileVisibility
+} from "./document-templates";
 
 export { createVendor } from "./vendors";
 export { updateVendor } from "./vendors";

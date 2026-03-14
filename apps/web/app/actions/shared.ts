@@ -1,6 +1,5 @@
-"use server";
-
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
+export { isMissingSchemaError } from "@/lib/supabase-errors";
 
 export type ActionState =
   | {
@@ -27,22 +26,19 @@ export type CapabilityKey =
   | "inboxThreadsEnabled"
   | "automationsEnabled";
 
-export async function isMissingSchemaError(error: unknown): Promise<boolean> {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-
-  const code = "code" in error ? String(error.code ?? "") : "";
-  const message = "message" in error ? String(error.message ?? "").toLowerCase() : "";
-
-  return (
-    code === "42P01" ||
-    code === "42703" ||
-    code === "PGRST205" ||
-    message.includes("does not exist") ||
-    (message.includes("column") && message.includes("does not exist"))
-  );
-}
+const capabilityWarningMap: Record<
+  CapabilityKey,
+  keyof Awaited<ReturnType<typeof getFeatureCapabilities>>["warnings"]
+> = {
+  documentsEnabled: "documents",
+  notificationsEnabled: "notifications",
+  vendorWorkflowEnabled: "vendorWorkflow",
+  photoWorkflowEnabled: "photoWorkflow",
+  ownershipEnabled: "ownership",
+  leasingPipelineEnabled: "leasingPipeline",
+  inboxThreadsEnabled: "inboxThreads",
+  automationsEnabled: "automations"
+};
 
 export async function ensureCapabilityEnabled(capability: CapabilityKey): Promise<ActionState> {
   const capabilities = await getFeatureCapabilities();
@@ -50,73 +46,10 @@ export async function ensureCapabilityEnabled(capability: CapabilityKey): Promis
     return null;
   }
 
-  if (capability === "documentsEnabled") {
-    return {
-      success: false,
-      error:
-        capabilities.warnings.documents ??
-        "Documents are not available yet. Complete setup and retry."
-    };
-  }
-
-  if (capability === "notificationsEnabled") {
-    return {
-      success: false,
-      error:
-        capabilities.warnings.notifications ??
-        "Notifications are not available yet. Complete setup and retry."
-    };
-  }
-
-  if (capability === "vendorWorkflowEnabled") {
-    return {
-      success: false,
-      error:
-        capabilities.warnings.vendorWorkflow ??
-        "Vendor workflow is not available yet. Complete setup and retry."
-    };
-  }
-
-  if (capability === "ownershipEnabled") {
-    return {
-      success: false,
-      error:
-        capabilities.warnings.ownership ??
-        "Ownership accounts are not available yet. Complete setup and retry."
-    };
-  }
-
-  if (capability === "leasingPipelineEnabled") {
-    return {
-      success: false,
-      error:
-        capabilities.warnings.leasingPipeline ??
-        "Leasing pipeline is not available yet. Complete setup and retry."
-    };
-  }
-
-  if (capability === "inboxThreadsEnabled") {
-    return {
-      success: false,
-      error:
-        capabilities.warnings.inboxThreads ??
-        "Inbox threads are not available yet. Complete setup and retry."
-    };
-  }
-
-  if (capability === "automationsEnabled") {
-    return {
-      success: false,
-      error:
-        capabilities.warnings.automations ??
-        "Automation rules are not available yet. Complete setup and retry."
-    };
-  }
-
+  const warningKey = capabilityWarningMap[capability];
   return {
     success: false,
     error:
-      capabilities.warnings.photoWorkflow ??
-      "Photo workflow is not available yet. Complete setup and retry."
+      capabilities.warnings[warningKey] ?? `${warningKey} is not available yet. Complete setup and retry.`
   };
 }

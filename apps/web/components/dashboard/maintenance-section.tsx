@@ -7,7 +7,7 @@ import { FeatureWarning } from "@/components/shared/feature-warning";
 import { TicketStatusControl } from "./ticket-status-control";
 import { TicketVendorControl } from "./ticket-vendor-control";
 import { TicketPhotoUpload } from "./ticket-photo-upload";
-import { EmptyState } from "./empty-state";
+import { EmptyState } from "@/components/shared/empty-state";
 import { MaintenanceCommentThread } from "./maintenance-comment-thread";
 import { MaintenanceTracker } from "./maintenance-tracker";
 import { AnimatedList } from "@/components/ui/animated-list";

@@ -1,13 +1,11 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { logAudit } from "@/lib/audit";
 import { sideEffectError } from "@/lib/logger";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   createAccountLink,
   createExpressAccount,
@@ -15,6 +13,7 @@ import {
   getAccount
 } from "@/lib/stripe-connect";
 import { parseFormData, updateManagementFeeSchema } from "@/lib/validations";
+import { requireAuth } from "./auth-helpers";
 import type { ActionState } from "./shared";
 
 function getAppUrl() {
@@ -22,26 +21,15 @@ function getAppUrl() {
 }
 
 async function requireConnectedRole() {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
-  }
-
-  return { user, role };
+  return requireAuth("owner", "manager");
 }
 
 export async function initiateStripeConnect(): Promise<ActionState> {
   try {
     const { user } = await requireConnectedRole();
+    if (!checkRateLimit(`initiateStripeConnect:${user.id}`, 5, 60 * 60 * 1000).allowed) {
+      return { success: false, error: "Too many requests. Please try again later." };
+    }
     const admin = createAdminClient();
 
     const { data: profile } = await admin
@@ -96,6 +84,9 @@ export async function initiateStripeConnect(): Promise<ActionState> {
 export async function checkConnectStatus(): Promise<ActionState> {
   try {
     const { user } = await requireConnectedRole();
+    if (!checkRateLimit(`checkConnectStatus:${user.id}`, 30, 60_000).allowed) {
+      return { success: false, error: "Too many requests. Please try again later." };
+    }
     const admin = createAdminClient();
 
     const { data: profile } = await admin
@@ -143,6 +134,9 @@ export async function getExpressDashboardUrl(
 ): Promise<ActionState> {
   try {
     const { user } = await requireConnectedRole();
+    if (!checkRateLimit(`getExpressDashboardUrl:${user.id}`, 30, 60_000).allowed) {
+      return { success: false, error: "Too many requests. Please try again later." };
+    }
     const admin = createAdminClient();
 
     const { data: profile } = await admin
@@ -173,18 +167,9 @@ export async function updateManagementFee(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner") {
-    return { success: false, error: "Unauthorized." };
+  const { user, supabase } = await requireAuth("owner");
+  if (!checkRateLimit(`updateManagementFee:${user.id}`, 20, 60_000).allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const parsed = parseFormData(updateManagementFeeSchema, formData);

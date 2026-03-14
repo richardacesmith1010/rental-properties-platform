@@ -12,7 +12,7 @@ import {
   Wallet
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/dashboard/empty-state";
+import { EmptyState } from "@/components/shared/empty-state";
 
 type SortDirection = "asc" | "desc";
 type ReportCardIcon = "bar-chart-3" | "receipt" | "file-bar-chart-2" | "wallet" | "landmark" | "credit-card";

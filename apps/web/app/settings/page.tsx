@@ -20,6 +20,7 @@ import { NotificationPreferences } from "@/components/settings/notification-pref
 import { ThemeSettingsPanel } from "@/components/settings/theme-settings-panel";
 import { PasswordSettings } from "@/components/settings/password-settings";
 import { ProfileSettings } from "@/components/settings/profile-settings";
+import { SettingsLayout } from "@/components/settings/settings-layout";
 import {
   getUserNotificationPreferences,
   NOTIFICATION_PREFERENCE_OPTIONS
@@ -78,92 +79,78 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           </div>
         ) : null}
 
-        <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            Profile
-          </h2>
-          <div className="mt-3">
-            <ProfileSettings
-              email={user.email ?? "unknown"}
-              fullName={profile.fullName}
-              nickname={profile.nickname}
-              avatarUrl={profile.avatarUrl}
-              onUpdateProfile={updateProfile}
-            />
-          </div>
-        </section>
-
-        {role === "tenant" ? (
-          <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-              Payment Methods
-            </h2>
-            <div className="mt-3 space-y-3">
-              {enrollments.map((enrollment) => (
-                <AutopayCard
-                  key={enrollment.id}
-                  leaseId={enrollment.leaseId}
-                  propertyLabel={enrollment.propertyLabel}
-                  enrollment={enrollment}
-                  onSetupAutopay={setupAutopay}
-                  onDisableAutopay={disableAutopay}
+        <SettingsLayout
+          role={role}
+          sections={{
+            profile: {
+              title: "Profile",
+              description: "Update how your name and photo appear throughout Domus.",
+              content: (
+                <ProfileSettings
+                  email={user.email ?? "unknown"}
+                  fullName={profile.fullName}
+                  nickname={profile.nickname}
+                  avatarUrl={profile.avatarUrl}
+                  onUpdateProfile={updateProfile}
                 />
-              ))}
-              {enrollments.length === 0 ? (
-                <p className="text-sm text-zinc-500">
-                  No autopay enrollments yet. Enable autopay from your Charges section.
-                </p>
-              ) : null}
-            </div>
-          </section>
-        ) : null}
-
-        {role === "owner" || role === "manager" ? (
-          <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-              Bank Account
-            </h2>
-            <div className="mt-3">
-              <BankSettings
-                stripeConnected={profile.stripeOnboardingComplete}
-                stripeAccountId={profile.stripeAccountId}
-                role={role}
-                onGetExpressDashboardUrl={getExpressDashboardUrl}
-              />
-            </div>
-          </section>
-        ) : null}
-
-        <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            Notification Preferences
-          </h2>
-          <div className="mt-3">
-            <NotificationPreferences
-              options={NOTIFICATION_PREFERENCE_OPTIONS}
-              preferences={notificationPreferences}
-              onUpdatePreference={saveNotificationPreference}
-            />
-          </div>
-        </section>
-
-        <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            Appearance
-          </h2>
-          <div className="mt-3">
-            <ThemeSettingsPanel />
-          </div>
-        </section>
-
-        <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            Security
-          </h2>
-          <div className="mt-3">
-            <PasswordSettings />
-          </div>
-        </section>
+              )
+            },
+            payment: {
+              title: "Payment Methods",
+              description: "Manage autopay enrollments tied to your active leases.",
+              content: (
+                <div className="space-y-3">
+                  {enrollments.map((enrollment) => (
+                    <AutopayCard
+                      key={enrollment.id}
+                      leaseId={enrollment.leaseId}
+                      propertyLabel={enrollment.propertyLabel}
+                      enrollment={enrollment}
+                      onSetupAutopay={setupAutopay}
+                      onDisableAutopay={disableAutopay}
+                    />
+                  ))}
+                  {enrollments.length === 0 ? (
+                    <p className="text-sm domus-muted">
+                      No autopay enrollments yet. Enable autopay from your Charges section.
+                    </p>
+                  ) : null}
+                </div>
+              )
+            },
+            bank: {
+              title: "Bank Account",
+              description: "Manage where your Stripe payouts are delivered.",
+              content: (
+                <BankSettings
+                  stripeConnected={profile.stripeOnboardingComplete}
+                  stripeAccountId={profile.stripeAccountId}
+                  role={role === "tenant" ? "owner" : role}
+                  onGetExpressDashboardUrl={getExpressDashboardUrl}
+                />
+              )
+            },
+            notifications: {
+              title: "Notifications",
+              description: "Choose how you want Domus to contact you.",
+              content: (
+                <NotificationPreferences
+                  options={NOTIFICATION_PREFERENCE_OPTIONS}
+                  preferences={notificationPreferences}
+                  onUpdatePreference={saveNotificationPreference}
+                />
+              )
+            },
+            appearance: {
+              title: "Appearance",
+              content: <ThemeSettingsPanel />
+            },
+            security: {
+              title: "Security",
+              content: <PasswordSettings />
+            }
+          }}
+        />
       </div>
     </main>
   );

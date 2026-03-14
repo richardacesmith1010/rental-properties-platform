@@ -1,10 +1,7 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { logAudit } from "@/lib/audit";
 import { sideEffectError } from "@/lib/logger";
@@ -21,24 +18,18 @@ import {
   addTicketCommentSchema,
   parseFormData
 } from "@/lib/validations";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { requireAuth } from "./auth-helpers";
 import { isMissingSchemaError, type ActionState } from "./shared";
 
 export async function createMaintenanceTicket(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "tenant" && role !== "owner" && role !== "manager") {
-    redirect("/");
+  const { supabase, user, role } = await requireAuth("tenant", "owner", "manager");
+  const rateLimited = checkRateLimit(`createMaintenanceTicket:${user.id}`, 30, 60_000);
+  if (!rateLimited.allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const parsed = parseFormData(createMaintenanceTicketSchema, formData);
@@ -225,18 +216,10 @@ export async function updateTicketStatus(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
+  const { supabase, user } = await requireAuth("owner", "manager");
+  const rateLimited = checkRateLimit(`updateTicketStatus:${user.id}`, 60, 60_000);
+  if (!rateLimited.allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const parsed = parseFormData(updateTicketStatusSchema, formData);
@@ -380,18 +363,10 @@ export async function updateTicketCost(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
+  const { supabase, user } = await requireAuth("owner", "manager");
+  const rateLimited = checkRateLimit(`updateTicketCost:${user.id}`, 30, 60_000);
+  if (!rateLimited.allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const parsed = parseFormData(updateTicketCostSchema, formData);
@@ -434,18 +409,10 @@ export async function addTicketComment(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager" && role !== "tenant") {
-    redirect("/");
+  const { user, role } = await requireAuth("owner", "manager", "tenant");
+  const rateLimited = checkRateLimit(`addTicketComment:${user.id}`, 60, 60_000);
+  if (!rateLimited.allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const parsed = parseFormData(addTicketCommentSchema, formData);

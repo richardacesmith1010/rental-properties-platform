@@ -1,36 +1,27 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { canUserAdministerOwnershipAccount } from "@/lib/ownership";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   createOwnershipAccountSchema,
   addOwnershipMemberSchema,
   linkPropertyToOwnershipAccountSchema,
   parseFormData
 } from "@/lib/validations";
+import { requireAuth } from "./auth-helpers";
 import { ensureCapabilityEnabled, type ActionState } from "./shared";
 
 export async function createOwnershipAccount(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
+  const { user } = await requireAuth("owner", "manager");
+  const rateLimited = checkRateLimit(`createOwnershipAccount:${user.id}`, 20, 60_000);
+  if (!rateLimited.allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const capabilityError = await ensureCapabilityEnabled("ownershipEnabled");
@@ -80,18 +71,10 @@ export async function addOwnershipMember(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
+  const { user } = await requireAuth("owner", "manager");
+  const rateLimited = checkRateLimit(`addOwnershipMember:${user.id}`, 20, 60_000);
+  if (!rateLimited.allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const capabilityError = await ensureCapabilityEnabled("ownershipEnabled");
@@ -135,18 +118,10 @@ export async function linkPropertyToOwnershipAccount(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
+  const { supabase, user } = await requireAuth("owner", "manager");
+  const rateLimited = checkRateLimit(`linkPropertyToOwnershipAccount:${user.id}`, 20, 60_000);
+  if (!rateLimited.allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const capabilityError = await ensureCapabilityEnabled("ownershipEnabled");

@@ -1,94 +1,29 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { logAudit } from "@/lib/audit";
 import { sideEffectError } from "@/lib/logger";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { isMissingSchemaError } from "@/lib/supabase-errors";
+import { uploadExpenseReceiptFile } from "@/lib/uploads";
 import {
   createExpenseSchema,
   updateExpenseSchema,
   deleteExpenseSchema,
   parseFormData
 } from "@/lib/validations";
-import { isMissingSchemaError, type ActionState } from "./shared";
-
-async function uploadExpenseReceiptFile(
-  admin: ReturnType<typeof createAdminClient>,
-  propertyId: string,
-  userId: string,
-  file: File
-): Promise<{ receiptFileId: string } | { error: string }> {
-  if (file.size > 20 * 1024 * 1024) {
-    return { error: "Receipt file must be under 20MB." };
-  }
-
-  const extension = file.name.split(".").pop()?.toLowerCase() ?? "bin";
-  const storagePath = `${propertyId}/receipts/${crypto.randomUUID()}.${extension}`;
-  const fileType = file.type.startsWith("image/")
-    ? "image"
-    : file.type.includes("pdf")
-      ? "pdf"
-      : "document";
-
-  const { error: uploadError } = await admin.storage
-    .from("property-files")
-    .upload(storagePath, file, {
-      contentType: file.type || "application/octet-stream",
-      upsert: false
-    });
-
-  if (uploadError) {
-    return { error: "Failed to upload receipt file." };
-  }
-
-  const { data: propertyFile, error: insertError } = await admin
-    .from("property_files")
-    .insert({
-      property_id: propertyId,
-      uploaded_by_profile_id: userId,
-      file_name: file.name,
-      storage_path: storagePath,
-      file_type: fileType,
-      category: "receipt",
-      visibility: "owner_manager",
-      description: "Expense receipt upload"
-    })
-    .select("id")
-    .single();
-
-  if (insertError && await isMissingSchemaError(insertError)) {
-    await admin.storage.from("property-files").remove([storagePath]);
-    return { error: "Receipt upload requires the property file vault migration." };
-  }
-
-  if (insertError || !propertyFile) {
-    await admin.storage.from("property-files").remove([storagePath]);
-    return { error: "Receipt uploaded, but metadata save failed." };
-  }
-
-  return { receiptFileId: propertyFile.id };
-}
+import { requireAuth } from "./auth-helpers";
+import type { ActionState } from "./shared";
 
 export async function createExpense(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner") {
-    redirect("/");
+  const { user } = await requireAuth("owner");
+  if (!checkRateLimit(`createExpense:${user.id}`, 30, 60_000).allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const parsed = parseFormData(createExpenseSchema, formData);
@@ -178,18 +113,9 @@ export async function updateExpense(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner") {
-    redirect("/");
+  const { user } = await requireAuth("owner");
+  if (!checkRateLimit(`updateExpense:${user.id}`, 30, 60_000).allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const parsed = parseFormData(updateExpenseSchema, formData);
@@ -291,18 +217,9 @@ export async function deleteExpense(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner") {
-    redirect("/");
+  const { user } = await requireAuth("owner");
+  if (!checkRateLimit(`deleteExpense:${user.id}`, 20, 60_000).allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const parsed = parseFormData(deleteExpenseSchema, formData);

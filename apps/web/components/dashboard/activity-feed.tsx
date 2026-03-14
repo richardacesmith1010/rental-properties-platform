@@ -3,7 +3,7 @@
 import { Activity, Building2, CreditCard, Receipt, UserPlus, Wrench } from "lucide-react";
 import type { AuditLogEntry } from "@/lib/audit";
 import { formatAuditAction, formatAuditTimestamp } from "@/lib/audit";
-import { EmptyState } from "@/components/dashboard/empty-state";
+import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface ActivityFeedProps {

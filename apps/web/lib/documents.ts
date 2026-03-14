@@ -1,26 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
+import { isMissingSchemaError } from "@/lib/supabase-errors";
 import {
   getAdministeredOwnerAccountIds,
   getAdministeredPropertyIds
 } from "@/lib/property-access";
-
-function isMissingSchemaError(error: unknown): boolean {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-
-  const code = "code" in error ? String(error.code ?? "") : "";
-  const message = "message" in error ? String(error.message ?? "").toLowerCase() : "";
-
-  return (
-    code === "42P01" ||
-    code === "42703" ||
-    code === "PGRST205" ||
-    message.includes("does not exist") ||
-    message.includes("could not find the table") ||
-    message.includes("column") && message.includes("does not exist")
-  );
-}
 
 export interface SignerDTO {
   email: string;

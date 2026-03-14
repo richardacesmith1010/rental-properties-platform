@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { NotificationType } from "@/lib/notifications";
+import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 export interface NotificationPreference {
   notificationType: NotificationType;
@@ -85,24 +86,6 @@ export const NOTIFICATION_PREFERENCE_OPTIONS: NotificationPreferenceOption[] = [
     description: "30, 60, and 90 day past-due escalation notices."
   }
 ];
-
-function isMissingSchemaError(error: unknown): boolean {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-
-  const code = "code" in error ? String(error.code ?? "") : "";
-  const message = "message" in error ? String(error.message ?? "").toLowerCase() : "";
-
-  return (
-    code === "42P01" ||
-    code === "42703" ||
-    code === "PGRST205" ||
-    message.includes("does not exist") ||
-    message.includes("could not find the table") ||
-    (message.includes("column") && message.includes("does not exist"))
-  );
-}
 
 export async function getUserNotificationPreferences(
   userId: string

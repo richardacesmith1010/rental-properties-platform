@@ -1,12 +1,10 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getCurrentUserRole } from "@/lib/auth";
 import { createNotificationWithDelivery } from "@/lib/notifications";
 import { canUserAdministerProperty } from "@/lib/property-access";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   createRentalListingSchema,
   updateListingStatusSchema,
@@ -21,23 +19,16 @@ import {
   isMissingSchemaError,
   type ActionState
 } from "./shared";
+import { requireAuth } from "./auth-helpers";
 
 export async function createRentalListing(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
+  const { supabase, user } = await requireAuth("owner", "manager");
+  const rateLimited = checkRateLimit(`createRentalListing:${user.id}`, 20, 60_000);
+  if (!rateLimited.allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const capabilityError = await ensureCapabilityEnabled("leasingPipelineEnabled");
@@ -88,18 +79,10 @@ export async function updateListingStatus(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
+  const { supabase, user } = await requireAuth("owner", "manager");
+  const rateLimited = checkRateLimit(`updateListingStatus:${user.id}`, 30, 60_000);
+  if (!rateLimited.allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const capabilityError = await ensureCapabilityEnabled("leasingPipelineEnabled");
@@ -145,23 +128,15 @@ export async function createApplication(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
+  const { supabase, user } = await requireAuth("owner", "manager");
+  const rateLimited = checkRateLimit(`createApplication:${user.id}`, 20, 60_000);
+  if (!rateLimited.allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const parsed = parseFormData(createApplicationSchema, formData);
   if (!parsed.success) {
     return parsed;
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
   }
 
   const { listingId, propertyId, applicantEmail, applicantName, applicantPhone, source, notes } =
@@ -235,23 +210,15 @@ export async function reviewApplication(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
+  const { supabase, user } = await requireAuth("owner", "manager");
+  const rateLimited = checkRateLimit(`reviewApplication:${user.id}`, 30, 60_000);
+  if (!rateLimited.allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const parsed = parseFormData(reviewApplicationSchema, formData);
   if (!parsed.success) {
     return parsed;
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
   }
 
   const { applicationId, status, notes } = parsed.data;
@@ -352,23 +319,15 @@ export async function addApplicationNote(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
+  const { supabase, user } = await requireAuth("owner", "manager");
+  const rateLimited = checkRateLimit(`addApplicationNote:${user.id}`, 30, 60_000);
+  if (!rateLimited.allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const parsed = parseFormData(addApplicationNoteSchema, formData);
   if (!parsed.success) {
     return parsed;
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
   }
 
   const { applicationId, message } = parsed.data;
@@ -417,23 +376,15 @@ export async function recordScreeningScore(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
+  const { supabase, user } = await requireAuth("owner", "manager");
+  const rateLimited = checkRateLimit(`recordScreeningScore:${user.id}`, 30, 60_000);
+  if (!rateLimited.allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const parsed = parseFormData(recordScreeningScoreSchema, formData);
   if (!parsed.success) {
     return parsed;
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
   }
 
   const { applicationId, score, summary } = parsed.data;
@@ -491,4 +442,3 @@ export async function recordScreeningScore(
 }
 
 /* ─── Documents + E-sign ─── */
-

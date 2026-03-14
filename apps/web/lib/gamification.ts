@@ -1,6 +1,7 @@
 import { getAdministeredPropertyIds } from "@/lib/property-access";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 export type GamificationRole = "owner" | "manager" | "tenant";
 
@@ -67,15 +68,6 @@ interface AchievementStats {
 
 export function normalizeRole(role: string | null | undefined): GamificationRole {
   return role === "owner" || role === "manager" || role === "tenant" ? role : "tenant";
-}
-
-function isMissingSchemaError(error: unknown) {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-
-  const code = "code" in error ? String(error.code ?? "") : "";
-  return code === "42P01" || code === "42703" || code === "PGRST205";
 }
 
 function emptyGamification(): UserGamificationData {

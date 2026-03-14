@@ -1,142 +1,220 @@
-import { getStripeSecretKey } from "@/lib/stripe";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/server";
+import { generateMonthlyChargesForPropertyIdsWithClient } from "@/lib/charge-generation";
+import { getAdministeredPropertyIds } from "@/lib/property-access";
+import { getOwnerStripeAccountForProperty } from "@/lib/stripe-connect";
+import { createOffSessionPaymentIntent } from "@/lib/stripe-autopay";
 
-interface StripeSetupIntentResponse {
+export {
+  createOffSessionPaymentIntent,
+  createStripeCustomer,
+  createSetupCheckoutSession,
+  retrieveSetupIntent,
+  getPaymentMethod
+} from "@/lib/stripe-autopay";
+
+interface AutopayEnrollmentRow {
   id: string;
-  payment_method: string | null;
-  status: string;
+  lease_id: string;
+  tenant_profile_id: string;
+  stripe_payment_method_id: string;
+  retry_count: number;
+  last_failed_at: string | null;
 }
 
-interface StripePaymentMethodResponse {
-  id: string;
-  type: string;
-  card?: {
-    last4: string;
-    brand: string;
-  };
+function retryWindowOpen(lastFailedAt: string | null) {
+  if (!lastFailedAt) {
+    return true;
+  }
+
+  const retryAt = new Date(lastFailedAt);
+  retryAt.setUTCDate(retryAt.getUTCDate() + 3);
+  return retryAt.getTime() <= Date.now();
 }
 
-async function stripeAutopayRequest<T>(
-  path: string,
-  options?: { method?: "GET" | "POST"; body?: URLSearchParams }
-): Promise<T> {
-  const secretKey = getStripeSecretKey();
-  const response = await fetch(`https://api.stripe.com/v1${path}`, {
-    method: options?.method ?? "POST",
-    headers: {
-      Authorization: `Bearer ${secretKey}`,
-      ...(options?.body ? { "Content-Type": "application/x-www-form-urlencoded" } : {})
+async function processInBatches<T>(items: T[], fn: (item: T) => Promise<void>, concurrency = 5) {
+  for (let i = 0; i < items.length; i += concurrency) {
+    await Promise.all(items.slice(i, i + concurrency).map(fn));
+  }
+}
+
+export async function processAutopayCharges(
+  supabase: SupabaseClient
+): Promise<{ processed: number; succeeded: number; failed: number; skipped: number }> {
+  const { data: enrollments, error: enrollmentError } = await supabase
+    .from("autopay_enrollments")
+    .select("id, lease_id, tenant_profile_id, stripe_payment_method_id, retry_count, last_failed_at")
+    .eq("enabled", true);
+  if (enrollmentError) {
+    throw enrollmentError;
+  }
+
+  const enrollmentRows = (enrollments ?? []) as AutopayEnrollmentRow[];
+  if (enrollmentRows.length === 0) {
+    return { processed: 0, succeeded: 0, failed: 0, skipped: 0 };
+  }
+
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const leaseIds = Array.from(new Set(enrollmentRows.map((row) => row.lease_id)));
+  const userIds = Array.from(new Set(enrollmentRows.map((row) => row.tenant_profile_id)));
+
+  const [chargesResult, profilesResult, leasesResult, paymentsResult] = await Promise.all([
+    supabase
+      .from("rent_charges")
+      .select("id, lease_id, due_date, amount_cents, status")
+      .in("lease_id", leaseIds)
+      .eq("category", "rent")
+      .in("status", ["pending", "late"])
+      .lte("due_date", todayIso)
+      .order("due_date", { ascending: true }),
+    supabase.from("profiles").select("id, stripe_customer_id").in("id", userIds),
+    supabase.from("leases").select("id, unit_id").in("id", leaseIds),
+    supabase.from("payments").select("id, rent_charge_id")
+  ]);
+
+  if (chargesResult.error) throw chargesResult.error;
+  if (profilesResult.error) throw profilesResult.error;
+  if (leasesResult.error) throw leasesResult.error;
+  if (paymentsResult.error) throw paymentsResult.error;
+
+  const leaseUnitIds = Array.from(new Set((leasesResult.data ?? []).map((lease) => lease.unit_id)));
+  const { data: units, error: unitsError } = leaseUnitIds.length
+    ? await supabase.from("units").select("id, property_id").in("id", leaseUnitIds)
+    : { data: [] as Array<{ id: string; property_id: string }>, error: null };
+  if (unitsError) {
+    throw unitsError;
+  }
+
+  const existingPaymentChargeIds = new Set((paymentsResult.data ?? []).map((payment) => payment.rent_charge_id));
+  const chargesByLease = new Map<string, Array<{ id: string; amount_cents: number }>>();
+  for (const charge of chargesResult.data ?? []) {
+    if (existingPaymentChargeIds.has(charge.id)) {
+      continue;
+    }
+    const current = chargesByLease.get(charge.lease_id) ?? [];
+    current.push({ id: charge.id, amount_cents: charge.amount_cents });
+    chargesByLease.set(charge.lease_id, current);
+  }
+
+  const profileMap = new Map((profilesResult.data ?? []).map((profile) => [profile.id, profile]));
+  const leaseMap = new Map((leasesResult.data ?? []).map((lease) => [lease.id, lease]));
+  const unitMap = new Map(((units ?? []) as Array<{ id: string; property_id: string }>).map((unit) => [unit.id, unit]));
+
+  const ownerStripeAccountByProperty = new Map<string, string | null>();
+  await processInBatches(
+    Array.from(new Set((units ?? []).map((unit) => unit.property_id))),
+    async (propertyId) => {
+      ownerStripeAccountByProperty.set(propertyId, await getOwnerStripeAccountForProperty(propertyId));
     },
-    body: options?.body?.toString(),
-    cache: "no-store"
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Stripe autopay request failed: ${response.status} - ${errorBody}`);
-  }
-
-  return (await response.json()) as T;
-}
-
-export async function createStripeCustomer(
-  email: string,
-  name: string
-): Promise<{ id: string }> {
-  const body = new URLSearchParams();
-  body.set("email", email);
-  body.set("name", name);
-
-  const customer = await stripeAutopayRequest<{ id: string }>("/customers", {
-    method: "POST",
-    body
-  });
-
-  return { id: customer.id };
-}
-
-export async function createSetupCheckoutSession(params: {
-  customerId: string;
-  successUrl: string;
-  cancelUrl: string;
-  metadata: Record<string, string>;
-}): Promise<{ id: string; url: string | null }> {
-  const body = new URLSearchParams();
-  body.set("mode", "setup");
-  body.set("customer", params.customerId);
-  body.set("success_url", params.successUrl);
-  body.set("cancel_url", params.cancelUrl);
-  body.set("payment_method_types[0]", "card");
-
-  Object.entries(params.metadata).forEach(([key, value]) => {
-    body.set(`metadata[${key}]`, value);
-  });
-
-  return stripeAutopayRequest<{ id: string; url: string | null }>("/checkout/sessions", {
-    method: "POST",
-    body
-  });
-}
-
-export async function retrieveSetupIntent(
-  setupIntentId: string
-): Promise<{ id: string; payment_method: string; status: string }> {
-  const setupIntent = await stripeAutopayRequest<StripeSetupIntentResponse>(
-    `/setup_intents/${setupIntentId}`,
-    {
-      method: "GET"
-    }
+    5
   );
 
-  if (!setupIntent.payment_method) {
-    throw new Error("Stripe setup intent is missing a payment method.");
+  let processed = 0;
+  let succeeded = 0;
+  let failed = 0;
+  let skipped = 0;
+
+  for (const enrollment of enrollmentRows) {
+    try {
+      if (enrollment.retry_count > 0 && !retryWindowOpen(enrollment.last_failed_at)) {
+        skipped += 1;
+        continue;
+      }
+
+      const dueCharges = chargesByLease.get(enrollment.lease_id) ?? [];
+      if (dueCharges.length === 0) {
+        continue;
+      }
+
+      const profile = profileMap.get(enrollment.tenant_profile_id);
+      const lease = leaseMap.get(enrollment.lease_id);
+      const unit = lease ? unitMap.get(lease.unit_id) : null;
+      const ownerStripeAccount = unit ? ownerStripeAccountByProperty.get(unit.property_id) : null;
+
+      if (!profile?.stripe_customer_id || !lease?.unit_id || !unit?.property_id || !ownerStripeAccount) {
+        skipped += dueCharges.length;
+        continue;
+      }
+
+      for (const charge of dueCharges) {
+        try {
+          processed += 1;
+          const paymentIntent = await createOffSessionPaymentIntent({
+            customerId: profile.stripe_customer_id,
+            paymentMethodId: enrollment.stripe_payment_method_id,
+            amountCents: charge.amount_cents,
+            metadata: {
+              charge_id: charge.id,
+              user_id: enrollment.tenant_profile_id,
+              lease_id: enrollment.lease_id,
+              autopay: "true"
+            },
+            transferGroup: `charge_${charge.id}`
+          });
+
+          if (paymentIntent.status === "succeeded") {
+            succeeded += 1;
+          }
+        } catch (chargeError) {
+          console.error(`[autopay] Failed to process charge ${charge.id}:`, chargeError);
+          failed += 1;
+          break;
+        }
+      }
+    } catch (enrollmentError) {
+      console.error(`[autopay] Failed to process enrollment ${enrollment.id}:`, enrollmentError);
+      failed += 1;
+    }
   }
 
-  return {
-    id: setupIntent.id,
-    payment_method: setupIntent.payment_method,
-    status: setupIntent.status
-  };
+  return { processed, succeeded, failed, skipped };
 }
 
-export async function getPaymentMethod(
-  paymentMethodId: string
-): Promise<{ id: string; type: string; card?: { last4: string; brand: string } }> {
-  const paymentMethod = await stripeAutopayRequest<StripePaymentMethodResponse>(
-    `/payment_methods/${paymentMethodId}`,
-    {
-      method: "GET"
-    }
+export async function generateMonthlyChargesForAllOwnersWithClient(supabase: SupabaseClient): Promise<string> {
+  const { data: profiles, error } = await supabase.from("profiles").select("id").in("role", ["owner", "manager"]);
+  if (error) {
+    throw error;
+  }
+
+  const propertyIds = new Set<string>();
+  await Promise.all(
+    ((profiles ?? []) as Array<{ id: string }>).map(async (profile) => {
+      const ids = await getAdministeredPropertyIds(profile.id, supabase);
+      ids.forEach((propertyId) => propertyIds.add(propertyId));
+    })
   );
 
-  return {
-    id: paymentMethod.id,
-    type: paymentMethod.type,
-    card: paymentMethod.card
-  };
+  if (propertyIds.size === 0) {
+    return "No operators found.";
+  }
+
+  let generatedCount = 0;
+  let unchangedCount = 0;
+  let skippedCount = 0;
+
+  await processInBatches(
+    Array.from(propertyIds),
+    async (propertyId) => {
+      try {
+        const message = await generateMonthlyChargesForPropertyIdsWithClient(supabase, [propertyId]);
+        if (message.startsWith("Generated")) {
+          generatedCount += 1;
+        } else if (message.startsWith("No new charges generated")) {
+          unchangedCount += 1;
+        } else {
+          skippedCount += 1;
+        }
+      } catch (generationError) {
+        console.error(`[charges] Charge generation failed for property ${propertyId}:`, generationError);
+        skippedCount += 1;
+      }
+    },
+    5
+  );
+
+  return `Properties processed: ${propertyIds.size}. Generated: ${generatedCount}. Unchanged: ${unchangedCount}. Skipped: ${skippedCount}.`;
 }
 
-export async function createOffSessionPaymentIntent(params: {
-  customerId: string;
-  paymentMethodId: string;
-  amountCents: number;
-  metadata: Record<string, string>;
-  transferGroup: string;
-}): Promise<{ id: string; status: string }> {
-  const body = new URLSearchParams();
-  body.set("amount", String(params.amountCents));
-  body.set("currency", "usd");
-  body.set("customer", params.customerId);
-  body.set("payment_method", params.paymentMethodId);
-  body.set("off_session", "true");
-  body.set("confirm", "true");
-  body.set("transfer_group", params.transferGroup);
-
-  Object.entries(params.metadata).forEach(([key, value]) => {
-    body.set(`metadata[${key}]`, value);
-  });
-
-  return stripeAutopayRequest<{ id: string; status: string }>("/payment_intents", {
-    method: "POST",
-    body
-  });
+export async function generateMonthlyChargesForAllOwners(): Promise<string> {
+  return generateMonthlyChargesForAllOwnersWithClient(createClient());
 }

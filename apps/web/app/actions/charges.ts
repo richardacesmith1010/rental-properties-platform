@@ -2,11 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createStripeCheckoutSession } from "@/lib/stripe";
 import { getOwnerStripeAccountForProperty } from "@/lib/stripe-connect";
-import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { createNotificationWithDelivery, notifyOwnerMembersForProperty } from "@/lib/notifications";
 import { logAudit } from "@/lib/audit";
@@ -15,29 +13,21 @@ import { formatCurrency } from "@/lib/format";
 import { sideEffectError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { payChargeSchema, parseFormData, recordManualPaymentSchema } from "@/lib/validations";
+import { requireAuth } from "./auth-helpers";
 import type { ActionState } from "./shared";
 
-export async function createCheckoutForCharge(formData: FormData) {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
+export async function createCheckoutForCharge(formData: FormData): Promise<ActionState | void> {
+  const { user, supabase } = await requireAuth("owner", "manager", "tenant");
+  if (!checkRateLimit(`createCheckoutForCharge:${user.id}`, 20, 60_000).allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const parsed = parseFormData(payChargeSchema, formData);
   if (!parsed.success) {
-    return;
+    return parsed;
   }
 
   const { chargeId } = parsed.data;
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager" && role !== "tenant") {
-    redirect("/");
-  }
 
   const { data: charge } = await supabase
     .from("rent_charges")
@@ -45,8 +35,11 @@ export async function createCheckoutForCharge(formData: FormData) {
     .eq("id", chargeId)
     .single();
 
-  if (!charge || charge.status === "paid") {
-    return;
+  if (!charge) {
+    return { success: false, error: "Charge not found." };
+  }
+  if (charge.status === "paid") {
+    return { success: false, error: "This charge has already been paid." };
   }
 
   const { data: lease } = await supabase
@@ -56,7 +49,7 @@ export async function createCheckoutForCharge(formData: FormData) {
     .single();
 
   if (!lease) {
-    return;
+    return { success: false, error: "Lease not found for this charge." };
   }
 
   const { data: unit } = await supabase
@@ -66,7 +59,7 @@ export async function createCheckoutForCharge(formData: FormData) {
     .single();
 
   if (!unit) {
-    return;
+    return { success: false, error: "Unit not found for this lease." };
   }
 
   const { data: property } = await supabase
@@ -76,7 +69,7 @@ export async function createCheckoutForCharge(formData: FormData) {
     .single();
 
   if (!property) {
-    return;
+    return { success: false, error: "Property not found for this charge." };
   }
 
   const isAdmin = await canUserAdministerProperty(user.id, property.id);
@@ -86,7 +79,7 @@ export async function createCheckoutForCharge(formData: FormData) {
   }
 
   if (!(await getOwnerStripeAccountForProperty(property.id))) {
-    return;
+    return { success: false, error: "This property is not ready to accept online payments yet." };
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -104,21 +97,15 @@ export async function createCheckoutForCharge(formData: FormData) {
   if (session.url) {
     redirect(session.url);
   }
+
+  return { success: false, error: "Unable to start checkout right now." };
 }
 
 export async function recordManualPayment(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  // 1) Authenticate
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
+  const { user } = await requireAuth("owner", "manager");
 
   const paymentRate = checkRateLimit(`manual-payment:${user.id}`, 20, 60 * 60 * 1000);
   if (!paymentRate.allowed) {
@@ -138,13 +125,6 @@ export async function recordManualPayment(
     return { success: false, error: "Amount must be greater than $0." };
   }
 
-  // 3) Role check
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    return { success: false, error: "Unauthorized." };
-  }
-
-  // 4) Property-level permission
   const admin = createAdminClient();
   const { data: charge } = await admin
     .from("rent_charges")

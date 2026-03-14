@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getAdministeredOwnerAccountIds } from "@/lib/property-access";
+import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 export interface VendorDTO {
   id: string;
@@ -10,24 +11,6 @@ export interface VendorDTO {
   tradeCategory: string | null;
   preferred: boolean;
   active: boolean;
-}
-
-function isMissingSchemaError(error: unknown): boolean {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-
-  const code = "code" in error ? String(error.code ?? "") : "";
-  const message = "message" in error ? String(error.message ?? "").toLowerCase() : "";
-
-  return (
-    code === "42P01" ||
-    code === "42703" ||
-    code === "PGRST205" ||
-    message.includes("does not exist") ||
-    message.includes("could not find the table") ||
-    message.includes("column") && message.includes("does not exist")
-  );
 }
 
 export async function getOwnerVendors(userId: string): Promise<VendorDTO[]> {

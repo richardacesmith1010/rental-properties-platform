@@ -2,7 +2,7 @@ import { CreditCard } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DataRow } from "@/components/shared/data-row";
-import { EmptyState } from "./empty-state";
+import { EmptyState } from "@/components/shared/empty-state";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 
 interface Payment {

@@ -6,7 +6,6 @@ import {
   updateLeaseSchema,
   renewLeaseSchema,
   terminateLeaseSchema,
-  updateLateFeeSchema,
   payChargeSchema,
   recordManualPaymentSchema,
   setupAutopaySchema,
@@ -1589,8 +1588,12 @@ describe("lease validation edge cases", () => {
   });
 
   it("accepts valid late fee updates", () => {
-    const result = updateLateFeeSchema.safeParse({
+    const result = updateLeaseSchema.safeParse({
       leaseId: validUUID,
+      endDate: "2027-05-31",
+      dueDayOfMonth: "1",
+      monthlyRentDollars: "1600",
+      depositDollars: "500",
       lateFeeDollars: "75",
       gracePeriodDays: "5"
     });
@@ -1599,8 +1602,12 @@ describe("lease validation edge cases", () => {
   });
 
   it("rejects late fee updates above the grace period bounds", () => {
-    const result = updateLateFeeSchema.safeParse({
+    const result = updateLeaseSchema.safeParse({
       leaseId: validUUID,
+      endDate: "2027-05-31",
+      dueDayOfMonth: "1",
+      monthlyRentDollars: "1600",
+      depositDollars: "500",
       lateFeeDollars: "75",
       gracePeriodDays: "31"
     });

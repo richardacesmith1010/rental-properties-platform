@@ -1,10 +1,7 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getCurrentUserRole } from "@/lib/auth";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import {
@@ -14,26 +11,20 @@ import {
 import { logAudit } from "@/lib/audit";
 import { awardXp, XP_VALUES } from "@/lib/gamification";
 import { sideEffectError } from "@/lib/logger";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   createPropertySchema,
   updatePropertySchema,
   deletePropertySchema,
   parseFormData
 } from "@/lib/validations";
+import { requireAuth } from "./auth-helpers";
 import { isMissingSchemaError, type ActionState } from "./shared";
 
 export async function createProperty(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
+  const { user, role } = await requireAuth("owner", "manager");
+  if (!checkRateLimit(`createProperty:${user.id}`, 30, 60_000).allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const parsed = parseFormData(createPropertySchema, formData);
@@ -145,18 +136,9 @@ export async function createProperty(_prev: ActionState, formData: FormData): Pr
 
 
 export async function updateProperty(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
+  const { user, supabase } = await requireAuth("owner", "manager");
+  if (!checkRateLimit(`updateProperty:${user.id}`, 30, 60_000).allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const parsed = parseFormData(updatePropertySchema, formData);
@@ -209,18 +191,9 @@ export async function updateProperty(_prev: ActionState, formData: FormData): Pr
 }
 
 export async function deleteProperty(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
+  const { user, supabase } = await requireAuth("owner", "manager");
+  if (!checkRateLimit(`deleteProperty:${user.id}`, 20, 60_000).allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const parsed = parseFormData(deletePropertySchema, formData);

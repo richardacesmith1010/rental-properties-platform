@@ -1,33 +1,24 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
-import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { logAudit } from "@/lib/audit";
 import { awardXp, XP_VALUES } from "@/lib/gamification";
 import { sideEffectError } from "@/lib/logger";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   createUnitSchema,
   updateUnitSchema,
   deleteUnitSchema,
   parseFormData
 } from "@/lib/validations";
+import { requireAuth } from "./auth-helpers";
 import { isMissingSchemaError, type ActionState } from "./shared";
 
 export async function createUnit(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
+  const { user, supabase } = await requireAuth("owner", "manager");
+  if (!checkRateLimit(`createUnit:${user.id}`, 30, 60_000).allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const parsed = parseFormData(createUnitSchema, formData);
@@ -95,18 +86,9 @@ export async function createUnit(_prev: ActionState, formData: FormData): Promis
 
 
 export async function updateUnit(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
+  const { user, supabase } = await requireAuth("owner", "manager");
+  if (!checkRateLimit(`updateUnit:${user.id}`, 30, 60_000).allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const parsed = parseFormData(updateUnitSchema, formData);
@@ -168,18 +150,9 @@ export async function updateUnit(_prev: ActionState, formData: FormData): Promis
 }
 
 export async function deleteUnit(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "owner" && role !== "manager") {
-    redirect("/");
+  const { user, supabase } = await requireAuth("owner", "manager");
+  if (!checkRateLimit(`deleteUnit:${user.id}`, 20, 60_000).allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const parsed = parseFormData(deleteUnitSchema, formData);

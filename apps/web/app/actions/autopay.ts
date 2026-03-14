@@ -2,16 +2,16 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { createStripeCustomer, createSetupCheckoutSession } from "@/lib/autopay";
-import { getCurrentUserRole } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
   disableAutopaySchema,
   parseFormData,
   setupAutopaySchema
 } from "@/lib/validations";
+import { requireAuth } from "./auth-helpers";
 import type { ActionState } from "./shared";
 
 export interface AutopayEnrollment {
@@ -29,29 +29,11 @@ function getAppUrl() {
   return process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com";
 }
 
-async function requireTenantUser() {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getCurrentUserRole(user.id);
-  if (role !== "tenant") {
-    redirect("/");
-  }
-
-  return { supabase, user };
-}
-
 export async function setupAutopay(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const { supabase, user } = await requireTenantUser();
+  const { supabase, user } = await requireAuth("tenant");
   const autopayRate = checkRateLimit(`autopay:${user.id}`, 5, 60 * 60 * 1000);
   if (!autopayRate.allowed) {
     return { success: false, error: "Too many autopay setup attempts. Please try again later." };
@@ -123,7 +105,12 @@ export async function disableAutopay(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const { user } = await requireTenantUser();
+  const { user } = await requireAuth("tenant");
+  const autopayRate = checkRateLimit(`autopay:disable:${user.id}`, 10, 60 * 60 * 1000);
+  if (!autopayRate.allowed) {
+    return { success: false, error: "Too many autopay changes. Please try again later." };
+  }
+
   const parsed = parseFormData(disableAutopaySchema, formData);
   if (!parsed.success) {
     return parsed;
@@ -193,26 +180,29 @@ export async function getAutopayEnrollments(userId: string): Promise<AutopayEnro
     .from("leases")
     .select("id, unit_id")
     .in("id", leaseIds);
+  const leaseRows = (leases ?? []) as Array<{ id: string; unit_id: string }>;
 
-  const unitIds = Array.from(new Set((leases ?? []).map((lease) => lease.unit_id)));
+  const unitIds = Array.from(new Set(leaseRows.map((lease) => lease.unit_id)));
   const { data: units } = unitIds.length
     ? await supabase
         .from("units")
         .select("id, unit_number, property_id")
         .in("id", unitIds)
     : { data: [] as Array<{ id: string; unit_number: string; property_id: string }> };
+  const unitRows = (units ?? []) as Array<{ id: string; unit_number: string; property_id: string }>;
 
-  const propertyIds = Array.from(new Set((units ?? []).map((unit) => unit.property_id)));
+  const propertyIds = Array.from(new Set(unitRows.map((unit) => unit.property_id)));
   const { data: properties } = propertyIds.length
     ? await supabase
         .from("properties")
         .select("id, name")
         .in("id", propertyIds)
     : { data: [] as Array<{ id: string; name: string }> };
+  const propertyRows = (properties ?? []) as Array<{ id: string; name: string }>;
 
-  const leaseById = new Map((leases ?? []).map((lease) => [lease.id, lease]));
-  const unitById = new Map((units ?? []).map((unit) => [unit.id, unit]));
-  const propertyById = new Map((properties ?? []).map((property) => [property.id, property]));
+  const leaseById = new Map(leaseRows.map((lease) => [lease.id, lease]));
+  const unitById = new Map(unitRows.map((unit) => [unit.id, unit]));
+  const propertyById = new Map(propertyRows.map((property) => [property.id, property]));
 
   return enrollmentRows.map((enrollment) => {
     const lease = leaseById.get(enrollment.lease_id);

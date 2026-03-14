@@ -1,27 +1,23 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
 import { updateNotificationPreference } from "@/lib/notification-preferences";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   markNotificationReadSchema,
   parseFormData,
   updateNotificationPreferenceSchema
 } from "@/lib/validations";
+import { requireAuth } from "./auth-helpers";
 import { ensureCapabilityEnabled, type ActionState } from "./shared";
 
 export async function markNotificationRead(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
+  const { user, supabase } = await requireAuth("owner", "manager", "tenant");
+  if (!checkRateLimit(`markNotificationRead:${user.id}`, 60, 60_000).allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const capabilityError = await ensureCapabilityEnabled("notificationsEnabled");
@@ -55,13 +51,9 @@ export async function markAllNotificationsRead(
   _prev: ActionState,
   _formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
+  const { user, supabase } = await requireAuth("owner", "manager", "tenant");
+  if (!checkRateLimit(`markAllNotificationsRead:${user.id}`, 20, 60_000).allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const capabilityError = await ensureCapabilityEnabled("notificationsEnabled");
@@ -89,13 +81,9 @@ export async function saveNotificationPreference(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
+  const { user } = await requireAuth("owner", "manager", "tenant");
+  if (!checkRateLimit(`saveNotificationPreference:${user.id}`, 30, 60_000).allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   const parsed = parseFormData(updateNotificationPreferenceSchema, formData);

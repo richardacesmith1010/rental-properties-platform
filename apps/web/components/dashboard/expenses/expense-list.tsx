@@ -55,7 +55,15 @@ export function ExpenseList({
 
   return (
     <div>
-      <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-4">
+        <Select value={selectedPropertyId} onChange={(event) => setSelectedPropertyId(event.target.value)}>
+          <option value="">All properties</option>
+          {data.properties.map((property) => (
+            <option key={property.id} value={property.id}>
+              {property.name}
+            </option>
+          ))}
+        </Select>
         <Select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
           <option value="all">All categories</option>
           {expenseCategories.map((category) => <option key={category} value={category}>{formatCategory(category)}</option>)}
