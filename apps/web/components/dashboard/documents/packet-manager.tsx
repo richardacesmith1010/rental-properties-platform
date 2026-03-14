@@ -9,8 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/shared/submit-button";
-
-type ActionState = Awaited<ReturnType<StatefulAction>>;
+import { FormError, FormSuccess } from "@/components/dashboard/forms";
 
 export interface PacketManagerProps {
   templates: DocumentTemplateDTO[];
@@ -36,16 +35,6 @@ function StepPill({ label, active, done, skipped }: { label: string; active: boo
         : "border-zinc-200 bg-zinc-50 text-zinc-500";
 
   return <div className={`rounded-md border px-2 py-2 text-xs ${className}`}>{label}</div>;
-}
-
-function FormError({ state }: { state: ActionState }) {
-  if (!state || state.success) return null;
-  return <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600">{state.error}</p>;
-}
-
-function FormSuccess({ state }: { state: ActionState }) {
-  if (!state || !state.success) return null;
-  return <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-600">Packet created as draft.</p>;
 }
 
 export function PacketManager({ templates, leases, onCreatePacket, onCancel }: PacketManagerProps) {
@@ -79,7 +68,7 @@ export function PacketManager({ templates, leases, onCreatePacket, onCancel }: P
       <CardContent className="space-y-4">
         <p className="text-sm text-zinc-600">One step at a time. Press Enter or Next to continue. Skip is available when it makes sense.</p>
         <FormError state={state} />
-        <FormSuccess state={state} />
+        <FormSuccess state={state} message="Packet created as draft." />
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {PACKET_STEPS.map((label, index) => (
             <StepPill key={label} label={label} active={step === index} done={stepComplete(index)} skipped={skippedSteps.includes(index)} />

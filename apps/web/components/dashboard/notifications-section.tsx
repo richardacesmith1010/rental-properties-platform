@@ -10,6 +10,7 @@ import { DataRow } from "@/components/shared/data-row";
 import type { ActionState } from "@/app/actions";
 import type { NotificationDTO } from "@/lib/notifications";
 import { formatDateTime } from "@/lib/format";
+import { AnimatedList } from "@/components/ui/animated-list";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -68,7 +69,7 @@ export function NotificationsSection({
             description="Alerts for rent, maintenance, and documents will appear here."
           />
         ) : (
-          <div>
+          <AnimatedList>
             {notifications.map((notification, i) => (
               <NotificationRow
                 key={notification.id}
@@ -77,7 +78,7 @@ export function NotificationsSection({
                 last={i === notifications.length - 1}
               />
             ))}
-          </div>
+          </AnimatedList>
         )}
       </CardContent>
     </Card>

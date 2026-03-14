@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CelebrationToast, triggerConfetti } from "./celebration";
+import { CelebrationToast } from "./celebration";
 
 interface AchievementCheckerProps {
   currentLevel: number;
@@ -66,7 +66,6 @@ export function AchievementChecker({ currentLevel }: AchievementCheckerProps) {
         }
 
         if (nextToasts.length > 0) {
-          triggerConfetti();
           setToasts((current) => [...current, ...nextToasts]);
         }
 

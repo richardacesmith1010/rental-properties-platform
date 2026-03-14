@@ -12,6 +12,7 @@ describe("canAccessMaintenancePhoto", () => {
         role: "owner",
         userId: "owner-1",
         propertyOwnerId: "owner-1",
+        isPropertyAdmin: true,
         isManagerAssigned: false,
         ticketTenantId: "tenant-1"
       })
@@ -24,6 +25,7 @@ describe("canAccessMaintenancePhoto", () => {
         role: "owner",
         userId: "owner-2",
         propertyOwnerId: "owner-1",
+        isPropertyAdmin: false,
         isManagerAssigned: false,
         ticketTenantId: "tenant-1"
       })
@@ -36,6 +38,7 @@ describe("canAccessMaintenancePhoto", () => {
         role: "manager",
         userId: "manager-1",
         propertyOwnerId: "owner-1",
+        isPropertyAdmin: false,
         isManagerAssigned: true,
         ticketTenantId: "tenant-1"
       })
@@ -46,6 +49,7 @@ describe("canAccessMaintenancePhoto", () => {
         role: "manager",
         userId: "manager-1",
         propertyOwnerId: "owner-1",
+        isPropertyAdmin: false,
         isManagerAssigned: false,
         ticketTenantId: "tenant-1"
       })
@@ -58,6 +62,7 @@ describe("canAccessMaintenancePhoto", () => {
         role: "tenant",
         userId: "tenant-1",
         propertyOwnerId: "owner-1",
+        isPropertyAdmin: false,
         isManagerAssigned: false,
         ticketTenantId: "tenant-1"
       })
@@ -68,6 +73,7 @@ describe("canAccessMaintenancePhoto", () => {
         role: "tenant",
         userId: "tenant-2",
         propertyOwnerId: "owner-1",
+        isPropertyAdmin: false,
         isManagerAssigned: false,
         ticketTenantId: "tenant-1"
       })
@@ -82,6 +88,7 @@ describe("canAccessDocumentPacket", () => {
         role: "owner",
         userId: "owner-1",
         propertyOwnerId: "owner-1",
+        isPropertyAdmin: true,
         isManagerAssigned: false,
         isSigner: false
       })
@@ -94,6 +101,7 @@ describe("canAccessDocumentPacket", () => {
         role: "manager",
         userId: "manager-1",
         propertyOwnerId: "owner-1",
+        isPropertyAdmin: false,
         isManagerAssigned: true,
         isSigner: false
       })
@@ -104,6 +112,7 @@ describe("canAccessDocumentPacket", () => {
         role: "manager",
         userId: "manager-1",
         propertyOwnerId: "owner-1",
+        isPropertyAdmin: false,
         isManagerAssigned: false,
         isSigner: false
       })
@@ -116,6 +125,7 @@ describe("canAccessDocumentPacket", () => {
         role: "tenant",
         userId: "tenant-1",
         propertyOwnerId: "owner-1",
+        isPropertyAdmin: false,
         isManagerAssigned: false,
         isSigner: true
       })
@@ -126,6 +136,7 @@ describe("canAccessDocumentPacket", () => {
         role: "tenant",
         userId: "tenant-1",
         propertyOwnerId: "owner-1",
+        isPropertyAdmin: false,
         isManagerAssigned: false,
         isSigner: false
       })

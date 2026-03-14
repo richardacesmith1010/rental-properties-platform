@@ -10,6 +10,7 @@ import { TicketPhotoUpload } from "./ticket-photo-upload";
 import { EmptyState } from "./empty-state";
 import { MaintenanceCommentThread } from "./maintenance-comment-thread";
 import { MaintenanceTracker } from "./maintenance-tracker";
+import { AnimatedList } from "@/components/ui/animated-list";
 import type { MaintenanceTicket } from "@/lib/maintenance";
 import type { ActionState } from "@/app/actions";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -107,7 +108,7 @@ export function MaintenanceSection({
             description="No maintenance tickets. Your properties are in great shape!"
           />
         ) : (
-          <div>
+          <AnimatedList>
             {tickets.map((ticket, i) => {
               const meta = ticketMeta(ticket);
               return (
@@ -236,7 +237,7 @@ export function MaintenanceSection({
                 </DataRow>
               );
             })}
-          </div>
+          </AnimatedList>
         )}
       </CardContent>
     </Card>

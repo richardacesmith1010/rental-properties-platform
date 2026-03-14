@@ -9,6 +9,7 @@ import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Button } from "@/components/ui/button";
+import { AnimatedList } from "@/components/ui/animated-list";
 import type { ActionState } from "@/app/actions";
 import type { VendorDTO } from "@/lib/vendors";
 import type { OwnershipAccountDTO } from "@/lib/ownership";
@@ -392,7 +393,7 @@ export function VendorsSection({
             }
           />
         ) : (
-          <div>
+          <AnimatedList>
             {filteredVendors.map((vendor, i) => (
               <VendorRow
                 key={vendor.id}
@@ -401,7 +402,7 @@ export function VendorsSection({
                 last={i === filteredVendors.length - 1}
               />
             ))}
-          </div>
+          </AnimatedList>
         )}
       </CardContent>
     </Card>

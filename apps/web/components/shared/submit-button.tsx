@@ -2,12 +2,11 @@
 
 import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
 
 interface SubmitButtonProps {
   children: React.ReactNode;
   className?: string;
-  variant?: "default" | "outline" | "ghost" | "destructive" | "link";
+  variant?: "default" | "gradient" | "outline" | "ghost" | "destructive" | "link";
   size?: "default" | "sm" | "lg" | "icon";
   title?: string;
   disabled?: boolean;
@@ -21,7 +20,7 @@ export function SubmitButton({
   size = "default",
   title,
   disabled = false,
-  onClick
+  onClick,
 }: SubmitButtonProps) {
   const { pending } = useFormStatus();
   const resolvedTitle = title ?? "Click to submit this action.";
@@ -30,20 +29,14 @@ export function SubmitButton({
     <Button
       type="submit"
       disabled={pending || disabled}
+      loading={pending}
       variant={variant}
       size={size}
       className={className}
       title={resolvedTitle}
       onClick={onClick}
     >
-      {pending ? (
-        <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Working...
-        </>
-      ) : (
-        children
-      )}
+      {children}
     </Button>
   );
 }

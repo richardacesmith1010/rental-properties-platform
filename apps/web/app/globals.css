@@ -18,6 +18,7 @@
     --domus-card-bg: rgba(255, 255, 255, 0.95);
     --domus-card-border: rgba(228, 228, 231, 0.8);
     --domus-card-hover: rgba(250, 250, 250, 1);
+    --domus-primary-glow: hsl(263 70% 58% / 0.3);
     --domus-input-bg: #ffffff;
     --domus-input-border: #d4d4d8;
     --domus-muted-text: #71717a;
@@ -54,6 +55,7 @@
     --domus-card-bg: rgba(15, 23, 42, 0.76);
     --domus-card-border: rgba(148, 163, 184, 0.25);
     --domus-card-hover: rgba(20, 30, 55, 0.85);
+    --domus-primary-glow: hsl(263 70% 58% / 0.4);
     --domus-input-bg: rgba(15, 23, 42, 0.6);
     --domus-input-border: rgba(148, 163, 184, 0.35);
     --domus-muted-text: #91a0bd;
@@ -90,6 +92,7 @@
     --domus-card-bg: rgba(17, 13, 31, 0.85);
     --domus-card-border: rgba(167, 139, 250, 0.2);
     --domus-card-hover: rgba(25, 19, 41, 0.9);
+    --domus-primary-glow: hsl(263 70% 58% / 0.35);
     --domus-input-bg: rgba(17, 13, 31, 0.6);
     --domus-input-border: rgba(167, 139, 250, 0.25);
     --domus-muted-text: #a8a0c0;
@@ -168,6 +171,7 @@
   }
 
   .domus-card:hover {
+    border-color: var(--domus-primary-glow);
     background: var(--domus-card-hover);
   }
 
@@ -231,7 +235,23 @@
 
   .domus-skeleton {
     background: var(--domus-skeleton);
-    @apply animate-pulse rounded;
+    position: relative;
+    overflow: hidden;
+    @apply rounded;
+  }
+
+  .domus-skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent 25%,
+      hsl(0 0% 100% / 0.08) 50%,
+      transparent 75%
+    );
+    animation: shimmer 1.5s ease-in-out infinite;
   }
 
   .domus-glass {
@@ -602,6 +622,76 @@
     --tw-ring-color: rgba(226, 232, 240, 0.35) !important;
   }
 }
+
+/* ─── Shimmer skeleton ─── */
+.domus-skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  background: var(--domus-skeleton-bg, hsl(240 5% 92%));
+  border-radius: 0.5rem;
+}
+
+.domus-skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 25%,
+    hsl(0 0% 100% / 0.08) 50%,
+    transparent 75%
+  );
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Dark theme shimmer */
+[data-domus-theme="noctis-neon"] .domus-skeleton-shimmer,
+[data-domus-theme="imperium-night"] .domus-skeleton-shimmer {
+  background: hsl(240 5% 18%);
+}
+
+[data-domus-theme="noctis-neon"] .domus-skeleton-shimmer::after,
+[data-domus-theme="imperium-night"] .domus-skeleton-shimmer::after,
+[data-domus-theme="noctis-neon"] .domus-skeleton::after,
+[data-domus-theme="imperium-night"] .domus-skeleton::after {
+  background: linear-gradient(
+    90deg,
+    transparent 25%,
+    hsl(0 0% 100% / 0.04) 50%,
+    transparent 75%
+  );
+}
+
+/* ─── Error shake ─── */
+.domus-shake {
+  animation: shake 400ms ease-in-out;
+}
+
+/* ─── Form error reveal ─── */
+.domus-error-reveal {
+  overflow: hidden;
+  transition: max-height 200ms ease, opacity 200ms ease;
+  max-height: 0;
+  opacity: 0;
+}
+
+.domus-error-reveal[data-visible="true"] {
+  max-height: 2rem;
+  opacity: 1;
+}
+
+/* ─── Stagger delay utilities ─── */
+.stagger-1 { animation-delay: 50ms; }
+.stagger-2 { animation-delay: 100ms; }
+.stagger-3 { animation-delay: 150ms; }
+.stagger-4 { animation-delay: 200ms; }
+.stagger-5 { animation-delay: 250ms; }
+.stagger-6 { animation-delay: 300ms; }
+.stagger-7 { animation-delay: 350ms; }
+.stagger-8 { animation-delay: 400ms; }
+.stagger-9 { animation-delay: 450ms; }
+.stagger-10 { animation-delay: 500ms; }
 
 @keyframes domus-bob {
   0%,

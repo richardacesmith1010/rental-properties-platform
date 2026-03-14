@@ -9,6 +9,7 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { AnimatedList } from "@/components/ui/animated-list";
 import type { PropertyListItem } from "@/lib/portfolio";
 import type { ActionState } from "@/app/actions";
 
@@ -92,7 +93,7 @@ export function PortfolioSection({
         {properties.length === 0 ? (
           <EmptyState message="No properties yet. Add your first property in Operations to begin tracking." />
         ) : (
-          <div>
+          <AnimatedList>
             {properties.map((property, i) => (
               <DataRow key={property.id} last={i === properties.length - 1}>
                 <div className="min-w-0 flex-1">
@@ -195,7 +196,7 @@ export function PortfolioSection({
                 </div>
               </DataRow>
             ))}
-          </div>
+          </AnimatedList>
         )}
       </CardContent>
       <ConfirmDialog

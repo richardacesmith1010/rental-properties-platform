@@ -208,6 +208,8 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
         fullName={profile.fullName}
         nickname={profile.nickname}
         avatarUrl={profile.avatarUrl}
+        navPreset="tenant"
+        activeItemId={activeSection}
         onSignOut={signOut}
         unreadNotificationCount={unreadNotificationCount}
         searchItems={searchItems}

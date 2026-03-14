@@ -5,7 +5,7 @@ import { getAuthenticatedUser, getCurrentUserRole, getRoleHomePath } from "@/lib
 import {
   getRecentXpEvents,
   getUserAchievements,
-  getUserGamification
+  getUserGamification,
 } from "@/lib/gamification";
 import { AchievementCard } from "@/components/gamification/achievement-card";
 import { DomMascot } from "@/components/gamification/dom-mascot";
@@ -13,6 +13,8 @@ import { StreakHeatmap } from "@/components/gamification/streak-heatmap";
 import { XpBar } from "@/components/gamification/xp-bar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AnimatedList } from "@/components/ui/animated-list";
+import { CountUp } from "@/components/ui/count-up";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +24,7 @@ const categoryLabels: Record<string, string> = {
   documents: "Documents",
   property: "Property",
   operations: "Operations",
-  general: "General"
+  general: "General",
 };
 
 function domMessage(count: number, total: number) {
@@ -49,7 +51,7 @@ export default async function AchievementsPage() {
   const [gamification, achievements, events] = await Promise.all([
     getUserGamification(user.id),
     getUserAchievements(user.id, role),
-    getRecentXpEvents(user.id, 400)
+    getRecentXpEvents(user.id, 400),
   ]);
 
   const earnedCount = achievements.filter((achievement) => achievement.earned).length;
@@ -70,14 +72,14 @@ export default async function AchievementsPage() {
             <div>
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <Badge variant="warning">Achievements</Badge>
-                <Badge variant="outline" className="capitalize">{role}</Badge>
+                <Badge variant="outline" className="capitalize">
+                  {role}
+                </Badge>
               </div>
               <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Achievement gallery</h1>
-              <p className="mt-2 max-w-2xl text-sm text-zinc-600">
-                {domMessage(earnedCount, achievements.length)}
-              </p>
+              <p className="mt-2 max-w-2xl text-sm text-zinc-600">{domMessage(earnedCount, achievements.length)}</p>
               <p className="mt-3 text-sm font-medium text-zinc-700">
-                {earnedCount}/{achievements.length} achievements unlocked
+                <CountUp target={earnedCount} />/<CountUp target={achievements.length} /> achievements unlocked
               </p>
             </div>
           </div>
@@ -85,7 +87,9 @@ export default async function AchievementsPage() {
             <XpBar currentXp={gamification.totalXp} currentLevel={gamification.currentLevel} />
             <div className="mt-3 flex items-center justify-between text-xs text-zinc-500">
               <span>Current streak</span>
-              <span>{gamification.streakCount} days</span>
+              <span>
+                <CountUp target={gamification.streakCount} /> days
+              </span>
             </div>
             <div className="mt-4">
               <Link
@@ -108,7 +112,7 @@ export default async function AchievementsPage() {
           </CardContent>
         </Card>
 
-        <div className="flex flex-wrap gap-2">
+        <AnimatedList className="flex flex-wrap gap-2">
           {Object.keys(grouped).map((category) => (
             <a
               key={category}
@@ -118,19 +122,17 @@ export default async function AchievementsPage() {
               {categoryLabels[category] ?? category}
             </a>
           ))}
-        </div>
+        </AnimatedList>
 
         {Object.entries(grouped).map(([category, items]) => (
           <section key={category} id={`category-${category}`} className="space-y-3">
             <div>
-              <h2 className="text-lg font-semibold text-zinc-900">
-                {categoryLabels[category] ?? category}
-              </h2>
+              <h2 className="text-lg font-semibold text-zinc-900">{categoryLabels[category] ?? category}</h2>
               <p className="text-sm text-zinc-500">
-                {items.filter((item) => item.earned).length}/{items.length} unlocked
+                <CountUp target={items.filter((item) => item.earned).length} />/<CountUp target={items.length} /> unlocked
               </p>
             </div>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <AnimatedList className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {items.map((achievement) => (
                 <AchievementCard
                   key={achievement.id}
@@ -142,7 +144,7 @@ export default async function AchievementsPage() {
                   earnedAt={achievement.earnedAt ?? undefined}
                 />
               ))}
-            </div>
+            </AnimatedList>
           </section>
         ))}
       </div>

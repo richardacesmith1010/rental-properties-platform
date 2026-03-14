@@ -5,6 +5,7 @@ import type { StatefulAction } from "@/app/actions";
 import type { PortfolioData } from "@/lib/portfolio";
 import type { OwnershipAccountDTO } from "@/lib/ownership";
 import { Button } from "@/components/ui/button";
+import { AnimatedList } from "@/components/ui/animated-list";
 import { PropertyForm, UnitForm, LeaseForm } from "./forms";
 
 export interface OperationsSectionProps {
@@ -86,7 +87,7 @@ export function OperationsSection({
       </div>
 
       {task === null ? (
-        <div className="grid gap-4 md:grid-cols-3">
+        <AnimatedList className="grid gap-4 md:grid-cols-3">
           {tasks.map((item) => (
             <button
               key={item.id}
@@ -99,7 +100,7 @@ export function OperationsSection({
               <p className="mt-2 text-sm text-zinc-600">{item.description}</p>
             </button>
           ))}
-        </div>
+        </AnimatedList>
       ) : null}
 
       {task === "property" ? (

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "./empty-state";
+import { AnimatedList } from "@/components/ui/animated-list";
 import type { LeaseListItem } from "@/lib/portfolio";
 import type { RentIncreaseEntry } from "@/lib/rent-increases";
 import type { ActionState } from "@/app/actions";
@@ -151,6 +152,7 @@ export function LeasesSection({
           />
         ) : (
           <div className="space-y-6">
+            <AnimatedList className="space-y-6">
             {leases.map((lease, i) => {
               const isActiveLease = (lease.leaseStatus ?? "active") === "active";
               return (
@@ -370,6 +372,7 @@ export function LeasesSection({
                 </DataRow>
               );
             })}
+            </AnimatedList>
 
             {rentIncreaseHistory.length > 0 ? (
               <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
@@ -382,7 +385,7 @@ export function LeasesSection({
                   </div>
                   <Badge variant="outline">{rentIncreaseHistory.length}</Badge>
                 </div>
-                <div className="space-y-3">
+                <AnimatedList className="space-y-3">
                   {rentIncreaseHistory.map((entry) => (
                     <div
                       key={entry.id}
@@ -412,7 +415,7 @@ export function LeasesSection({
                       </div>
                     </div>
                   ))}
-                </div>
+                </AnimatedList>
               </div>
             ) : null}
           </div>

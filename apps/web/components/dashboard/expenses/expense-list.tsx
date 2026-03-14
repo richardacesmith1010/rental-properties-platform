@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Textarea } from "@/components/ui/textarea";
+import { AnimatedList } from "@/components/ui/animated-list";
 import { expenseCategories, formatCategory } from "./expense-form";
 
 const recurringFrequencies = ["monthly", "quarterly", "annually"];
@@ -65,11 +66,11 @@ export function ExpenseList({
       {filteredExpenses.length === 0 ? (
         <EmptyState message="No expenses match the selected filters." />
       ) : (
-        <div>
+        <AnimatedList>
           {filteredExpenses.map((expense, index) => (
             <ExpenseRow key={expense.id} expense={expense} vendors={availableVendors} receiptFiles={availableReceiptFiles} onUpdateExpense={onUpdateExpense} onDeleteExpense={onDeleteExpense} last={index === filteredExpenses.length - 1} />
           ))}
-        </div>
+        </AnimatedList>
       )}
     </div>
   );

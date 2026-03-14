@@ -20,6 +20,7 @@ import {
   Wrench
 } from "lucide-react";
 import { AnimateOnScroll } from "./animate-on-scroll";
+import { AnimatedTabs } from "@/components/ui/animated-tabs";
 
 const problemCards = [
   {
@@ -398,23 +399,19 @@ export function LandingPage() {
             <h2 className="text-4xl font-semibold tracking-tight text-white">One platform, five critical workflows.</h2>
             <p className="max-w-3xl text-slate-300">Domus replaces the disconnected tools landlords usually stitch together when their portfolio grows beyond memory.</p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {featureTabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${activeTab === tab.id ? "bg-violet-500/20 text-violet-100 ring-1 ring-violet-300/40" : "bg-white/5 text-slate-300 hover:bg-white/10"}`}
-                  title={`View the ${tab.label} feature preview.`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
+          <AnimatedTabs
+            tabs={featureTabs.map((tab) => ({
+              id: tab.id,
+              label: tab.label,
+              icon: <tab.icon className="h-4 w-4" />,
+            }))}
+            activeTab={activeTab}
+            onTabChange={(tabId) => setActiveTab(tabId as (typeof featureTabs)[number]["id"])}
+            className="border-b border-white/10 pb-2"
+            activeClassName="text-violet-100"
+            inactiveClassName="text-slate-300 hover:text-white"
+            indicatorClassName="bg-violet-300"
+          />
           <div className="grid gap-6 rounded-[32px] border border-white/10 bg-white/[0.03] p-6 lg:grid-cols-[0.95fr_1.05fr]">
             <div className="space-y-5">
               <div>

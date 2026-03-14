@@ -1,4 +1,5 @@
 import { cn } from "@/lib/format";
+import { CountUp } from "@/components/ui/count-up";
 
 interface XpBarProps {
   currentXp: number;
@@ -15,9 +16,6 @@ export function XpBar({ currentXp, currentLevel, className }: XpBarProps) {
   const progress = isMaxLevel
     ? 100
     : Math.max(0, Math.min(100, ((currentXp - currentFloor) / (nextThreshold - currentFloor)) * 100));
-  const progressLabel = isMaxLevel
-    ? `${currentXp.toLocaleString()} XP`
-    : `${currentXp.toLocaleString()} / ${nextThreshold.toLocaleString()} XP`;
   const xpToNextLevel = isMaxLevel ? 0 : Math.max(nextThreshold - currentXp, 0);
   const nearLevelUp = !isMaxLevel && progress >= 90;
 
@@ -25,7 +23,10 @@ export function XpBar({ currentXp, currentLevel, className }: XpBarProps) {
     <div className={cn("w-full min-w-0 space-y-2", className)}>
       <div className="flex items-center justify-between gap-3 text-[11px] font-medium text-zinc-600">
         <span>Level {currentLevel}</span>
-        <span>{progressLabel}</span>
+        <span className="text-tabular">
+          <CountUp target={currentXp} duration={1200} />
+          {isMaxLevel ? " XP" : ` / ${nextThreshold.toLocaleString()} XP`}
+        </span>
       </div>
       <div className="relative h-2 rounded-full bg-violet-100">
         {[25, 50, 75].map((marker) => (
@@ -38,10 +39,13 @@ export function XpBar({ currentXp, currentLevel, className }: XpBarProps) {
         ))}
         <div
           className={cn(
-            "h-2 rounded-full bg-gradient-to-r from-violet-500 to-emerald-500 transition-all duration-700 ease-out",
-            nearLevelUp ? "shadow-[0_0_16px_rgba(124,58,237,0.35)] animate-pulse" : ""
+            "h-2 rounded-full bg-gradient-to-r from-violet-500 to-emerald-500 transition-all duration-500",
+            nearLevelUp ? "animate-pulse shadow-[0_0_16px_rgba(124,58,237,0.35)]" : ""
           )}
-          style={{ width: `${progress}%` }}
+          style={{
+            width: `${progress}%`,
+            transitionTimingFunction: "cubic-bezier(0.65, 0, 0.35, 1)",
+          }}
           aria-valuemax={isMaxLevel ? currentXp : nextThreshold}
           aria-valuemin={currentFloor}
           aria-valuenow={currentXp}
@@ -49,7 +53,9 @@ export function XpBar({ currentXp, currentLevel, className }: XpBarProps) {
         />
       </div>
       {!isMaxLevel ? (
-        <p className="text-[11px] text-zinc-500">{xpToNextLevel.toLocaleString()} XP to next level</p>
+        <p className="text-[11px] text-zinc-500">
+          <CountUp target={xpToNextLevel} duration={1000} /> XP to next level
+        </p>
       ) : (
         <p className="text-[11px] text-zinc-500">Max level reached</p>
       )}

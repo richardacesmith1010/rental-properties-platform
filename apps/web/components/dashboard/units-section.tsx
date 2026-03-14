@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AnimatedList } from "@/components/ui/animated-list";
 import type { UnitListItem } from "@/lib/portfolio";
 import type { ActionState } from "@/app/actions";
 import { formatCurrency } from "@/lib/format";
@@ -86,7 +87,7 @@ export function UnitsSection({
         {units.length === 0 ? (
           <EmptyState message="No units yet. Add your first unit in Operations to start lease setup." />
         ) : (
-          <div>
+          <AnimatedList>
             {units.map((unit, i) => (
               <DataRow key={unit.id} last={i === units.length - 1}>
                 <div className="min-w-0 flex-1">
@@ -184,7 +185,7 @@ export function UnitsSection({
                 </div>
               </DataRow>
             ))}
-          </div>
+          </AnimatedList>
         )}
       </CardContent>
       <ConfirmDialog

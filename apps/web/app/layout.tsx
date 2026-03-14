@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { SonnerProvider } from "@/components/ui/sonner-provider";
 import "./globals.css";
 
 const inter = Inter({
@@ -56,7 +57,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className={`${inter.variable} font-sans`}>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {children}
+          <SonnerProvider />
+        </ThemeProvider>
       </body>
     </html>
   );

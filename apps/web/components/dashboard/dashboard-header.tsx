@@ -6,11 +6,11 @@ import {
   CreditCard,
   Home,
   Sparkles,
-  Wrench
+  Wrench,
 } from "lucide-react";
 import type { DashboardData } from "@/lib/dashboard";
-import { formatCurrency } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
+import { CountUp } from "@/components/ui/count-up";
 
 interface DashboardHeaderProps {
   role: DashboardData["profileRole"];
@@ -26,7 +26,7 @@ interface DashboardHeaderProps {
 function getDisplayName({
   nickname,
   fullName,
-  userEmail
+  userEmail,
 }: Pick<DashboardHeaderProps, "nickname" | "fullName" | "userEmail">) {
   const trimmedNickname = nickname?.trim();
   if (trimmedNickname) {
@@ -57,18 +57,24 @@ function formatHeaderDate(date = new Date()) {
     weekday: "long",
     month: "long",
     day: "numeric",
-    year: "numeric"
+    year: "numeric",
   }).format(date);
 }
 
 function HeaderStat({
   icon: Icon,
   label,
-  value
+  target,
+  prefix,
+  suffix,
+  decimals = 0,
 }: {
   icon: typeof Sparkles;
   label: string;
-  value: string;
+  target: number;
+  prefix?: string;
+  suffix?: string;
+  decimals?: number;
 }) {
   return (
     <div className="domus-kpi-pill flex min-w-[150px] flex-1 items-start gap-3">
@@ -76,7 +82,14 @@ function HeaderStat({
         <Icon className="h-4 w-4" />
       </div>
       <div className="min-w-0">
-        <p className="text-tabular text-base font-bold domus-heading">{value}</p>
+        <CountUp
+          target={target}
+          prefix={prefix}
+          suffix={suffix}
+          decimals={decimals}
+          duration={1200}
+          className="text-tabular domus-heading text-base font-bold"
+        />
         <p className="mt-1 text-xs uppercase tracking-[0.16em] domus-muted">{label}</p>
       </div>
     </div>
@@ -91,7 +104,7 @@ export function DashboardHeader({
   userEmail,
   nickname,
   fullName,
-  gamificationSummary
+  gamificationSummary,
 }: DashboardHeaderProps) {
   const displayName = getDisplayName({ nickname, fullName, userEmail });
   const now = new Date();
@@ -102,45 +115,47 @@ export function DashboardHeader({
           {
             icon: Building2,
             label: "Properties managed",
-            value: propertyCount.toLocaleString()
+            target: propertyCount,
           },
           {
             icon: Wrench,
             label: "Open tickets",
-            value: kpis.openMaintenanceCount.toLocaleString()
+            target: kpis.openMaintenanceCount,
           },
           {
             icon: AlertTriangle,
             label: "High priority",
-            value: kpis.highPriorityMaintenanceCount.toLocaleString()
+            target: kpis.highPriorityMaintenanceCount,
           },
           {
             icon: CreditCard,
             label: "Late accounts",
-            value: kpis.lateAccountCount.toLocaleString()
-          }
+            target: kpis.lateAccountCount,
+          },
         ]
       : [
           {
             icon: Sparkles,
             label: "Monthly revenue",
-            value: formatCurrency(kpis.monthlyGrossRentCents)
+            target: kpis.monthlyGrossRentCents / 100,
+            prefix: "$",
           },
           {
             icon: Home,
             label: "Occupancy",
-            value: `${occupancy}%`
+            target: occupancy,
+            suffix: "%",
           },
           {
             icon: Wrench,
             label: "Open tickets",
-            value: kpis.openMaintenanceCount.toLocaleString()
+            target: kpis.openMaintenanceCount,
           },
           {
             icon: AlertTriangle,
             label: "Overdue charges",
-            value: kpis.lateAccountCount.toLocaleString()
-          }
+            target: kpis.lateAccountCount,
+          },
         ];
 
   return (
@@ -163,14 +178,12 @@ export function DashboardHeader({
             Keep revenue, maintenance, and resident activity moving without leaving the dashboard.
           </p>
         </div>
-        {gamificationSummary ? (
-          <div className="w-full xl:max-w-md">{gamificationSummary}</div>
-        ) : null}
+        {gamificationSummary ? <div className="w-full xl:max-w-md">{gamificationSummary}</div> : null}
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
         {stats.map((stat) => (
-          <HeaderStat key={stat.label} icon={stat.icon} label={stat.label} value={stat.value} />
+          <HeaderStat key={stat.label} {...stat} />
         ))}
       </div>
     </div>

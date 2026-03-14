@@ -28,15 +28,11 @@ export function ModalOverlay({ open, onClose, children }: ModalOverlayProps) {
       "textarea:not([disabled])",
       "input:not([disabled])",
       "select:not([disabled])",
-      "[tabindex]:not([tabindex='-1'])"
+      "[tabindex]:not([tabindex='-1'])",
     ].join(",");
-    const previousActiveElement = document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : null;
+    const previousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
-    const focusableElements = Array.from(
-      containerRef.current?.querySelectorAll<HTMLElement>(focusableSelector) ?? []
-    );
+    const focusableElements = Array.from(containerRef.current?.querySelectorAll<HTMLElement>(focusableSelector) ?? []);
     (focusableElements[0] ?? containerRef.current)?.focus();
 
     function handleKeyDown(event: KeyboardEvent) {
@@ -46,9 +42,7 @@ export function ModalOverlay({ open, onClose, children }: ModalOverlayProps) {
         return;
       }
 
-      const currentFocusable = Array.from(
-        containerRef.current?.querySelectorAll<HTMLElement>(focusableSelector) ?? []
-      );
+      const currentFocusable = Array.from(containerRef.current?.querySelectorAll<HTMLElement>(focusableSelector) ?? []);
       if (currentFocusable.length === 0) {
         event.preventDefault();
         containerRef.current?.focus();
@@ -80,21 +74,9 @@ export function ModalOverlay({ open, onClose, children }: ModalOverlayProps) {
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-200 ease-out"
-      role="dialog"
-      aria-modal="true"
-    >
-      <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-      <div
-        ref={containerRef}
-        className="relative z-10 w-full max-w-lg animate-in fade-in zoom-in-95 duration-200"
-        tabIndex={-1}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-200" onClick={onClose} aria-hidden="true" />
+      <div ref={containerRef} className="relative z-10 w-full max-w-lg animate-scale-in" tabIndex={-1}>
         {children}
       </div>
     </div>

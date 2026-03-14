@@ -16,6 +16,7 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { DataRow } from "@/components/shared/data-row";
 import { FeatureWarning } from "@/components/shared/feature-warning";
 import { SubmitButton } from "@/components/shared/submit-button";
+import { AnimatedList } from "@/components/ui/animated-list";
 import { EmptyState } from "./empty-state";
 import { PacketManager } from "./documents/packet-manager";
 import { SignerFlow } from "./documents/signer-flow";
@@ -106,14 +107,14 @@ export function DocumentsSection({
       <Card>
         <CardHeader><CardTitle>Templates</CardTitle></CardHeader>
         <CardContent>
-          {templates.length === 0 ? <EmptyState icon={FileText} title="No templates yet" description="No documents yet." /> : <div>{templates.map((template, index) => <TemplateRow key={template.id} template={template} last={index === templates.length - 1} onDeleteTemplate={onDeleteTemplate} />)}</div>}
+          {templates.length === 0 ? <EmptyState icon={FileText} title="No templates yet" description="No documents yet." /> : <AnimatedList>{templates.map((template, index) => <TemplateRow key={template.id} template={template} last={index === templates.length - 1} onDeleteTemplate={onDeleteTemplate} />)}</AnimatedList>}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader><CardTitle>Document Packets</CardTitle></CardHeader>
         <CardContent>
-          {packets.length === 0 ? <EmptyState icon={FileText} title="No document packets yet" description="No documents yet." /> : <div>{packets.map((packet, index) => <PacketRow key={packet.id} packet={packet} last={index === packets.length - 1} onSendPacket={onSendPacket} assetAccessEnabled={assetAccessEnabled} />)}</div>}
+          {packets.length === 0 ? <EmptyState icon={FileText} title="No document packets yet" description="No documents yet." /> : <AnimatedList>{packets.map((packet, index) => <PacketRow key={packet.id} packet={packet} last={index === packets.length - 1} onSendPacket={onSendPacket} assetAccessEnabled={assetAccessEnabled} />)}</AnimatedList>}
         </CardContent>
       </Card>
 
@@ -125,7 +126,7 @@ export function DocumentsSection({
           ) : propertyFiles.length === 0 ? (
             <EmptyState icon={FileArchive} title="No files uploaded yet" description="No documents yet." />
           ) : (
-            <div>
+            <AnimatedList>
               {propertyFiles.map((file, index) => (
                 <PropertyFileRow
                   key={file.id}
@@ -135,7 +136,7 @@ export function DocumentsSection({
                   onUpdateFileVisibility={onUpdateFileVisibility ?? unavailableAction}
                 />
               ))}
-            </div>
+            </AnimatedList>
           )}
         </CardContent>
       </Card>

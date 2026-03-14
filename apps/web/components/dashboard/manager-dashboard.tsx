@@ -72,7 +72,7 @@ export function ManagerDashboard({
   return (
     <div className="flex min-h-screen flex-col lg:flex-row">
       {/* Mobile top bar */}
-      <MobileTopBar userEmail={userEmail} role="manager" onSignOut={onSignOut} />
+      <MobileTopBar userEmail={userEmail} role="manager" items={managerNavItems} activeItemId="overview" onSignOut={onSignOut} />
 
       {/* Desktop sidebar */}
       <SidebarNav

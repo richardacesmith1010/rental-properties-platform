@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/shared/submit-button";
+import { FormError, FormSuccess } from "@/components/dashboard/forms";
 
 const MANAGER_STEPS = ["Pick Property", "Manager Email", "Manager Name", "Review & Send"] as const;
 
@@ -14,16 +15,6 @@ interface ManagerInviteDraft {
   propertyId: string;
   email: string;
   fullName: string;
-}
-
-function FormError({ state }: { state: ActionState }) {
-  if (!state || state.success) return null;
-  return <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600">{state.error}</p>;
-}
-
-function FormSuccess({ state }: { state: ActionState }) {
-  if (!state || !state.success) return null;
-  return <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-600">Invitation sent!</p>;
 }
 
 function StepPill({ label, active, done, skipped }: { label: string; active: boolean; done: boolean; skipped: boolean }) {
@@ -63,9 +54,9 @@ export function InviteManagerForm({ properties, onInviteManager, onSuccess }: { 
   };
 
   return (
-    <div className="space-y-4">
+      <div className="space-y-4">
       <FormError state={state} />
-      <FormSuccess state={state} />
+      <FormSuccess state={state} message="Invitation sent!" />
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{MANAGER_STEPS.map((label, index) => <StepPill key={label} label={label} active={step === index} done={stepComplete(index)} skipped={skippedSteps.includes(index)} />)}</div>
       {step === 0 ? <div className="space-y-3"><p className="text-sm text-zinc-600">Step 1: Pick property for manager assignment.</p><Select value={draft.propertyId} onChange={(event) => setDraft((current) => ({ ...current, propertyId: event.target.value }))} onKeyDown={(event) => onEnterNext(event, stepComplete(step), 1)} required><option value="">Assign to property</option>{properties.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}</Select></div> : null}
       {step === 1 ? <div className="space-y-3"><p className="text-sm text-zinc-600">Step 2: Enter manager email address.</p><Input type="email" value={draft.email} onChange={(event) => setDraft((current) => ({ ...current, email: event.target.value }))} onKeyDown={(event) => onEnterNext(event, stepComplete(step), 2)} placeholder="manager@email.com" required /></div> : null}

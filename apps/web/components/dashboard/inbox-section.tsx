@@ -11,6 +11,8 @@ import { SubmitButton } from "@/components/shared/submit-button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { DataRow } from "@/components/shared/data-row";
 import { Button } from "@/components/ui/button";
+import { AnimatedList } from "@/components/ui/animated-list";
+import { AnimatedTabs } from "@/components/ui/animated-tabs";
 import type { ActionState } from "@/app/actions";
 import type { NotificationDTO } from "@/lib/notifications";
 import type { InboxThreadDTO } from "@/lib/inbox";
@@ -201,28 +203,19 @@ export function InboxSection({
           Central communication timeline for rent, maintenance, lease, and document events.
         </p>
 
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant={activeTab === "timeline" ? "default" : "outline"}
-            title="View timeline events and alerts."
-            onClick={() => setActiveTab("timeline")}
-          >
-            Timeline
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={activeTab === "threads" ? "default" : "outline"}
-            disabled={!threadsReady}
-            title="View and manage threaded conversations."
-            onClick={() => setActiveTab("threads")}
-          >
-            <MessageSquare className="mr-1 h-4 w-4" />
-            Threads
-          </Button>
-        </div>
+        <AnimatedTabs
+          tabs={[
+            { id: "timeline", label: "Timeline" },
+            { id: "threads", label: "Threads", icon: <MessageSquare className="h-4 w-4" /> },
+          ]}
+          activeTab={activeTab}
+          onTabChange={(tabId) => {
+            if (tabId === "threads" && !threadsReady) {
+              return;
+            }
+            setActiveTab(tabId as InboxTab);
+          }}
+        />
 
         {!threadsReady && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
@@ -266,7 +259,7 @@ export function InboxSection({
             {filteredNotifications.length === 0 ? (
               <EmptyState message="No inbox events match these filters. Try clearing search or status filters." />
             ) : (
-              <div>
+              <AnimatedList>
                 {filteredNotifications.map((notification, index) => (
                   <InboxNotificationRow
                     key={notification.id}
@@ -276,7 +269,7 @@ export function InboxSection({
                     last={index === filteredNotifications.length - 1}
                   />
                 ))}
-              </div>
+              </AnimatedList>
             )}
           </>
         ) : (
@@ -325,7 +318,8 @@ export function InboxSection({
               <EmptyState message="No threads yet. Create one to start structured communication for a property." />
             ) : (
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                <div className="space-y-2 rounded-lg border border-zinc-200 bg-white p-2">
+                <div className="rounded-lg border border-zinc-200 bg-white p-2">
+                  <AnimatedList className="space-y-2">
                   {threads.map((thread) => (
                     <button
                       key={thread.id}
@@ -348,6 +342,7 @@ export function InboxSection({
                       </p>
                     </button>
                   ))}
+                  </AnimatedList>
                 </div>
 
                 <div className="rounded-lg border border-zinc-200 bg-white p-3">
@@ -370,18 +365,20 @@ export function InboxSection({
                         </div>
                       </div>
 
-                      <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+                      <div className="max-h-64 overflow-y-auto pr-1">
                         {selectedThread.messages.length === 0 ? (
                           <EmptyState message="No messages in this thread yet." />
                         ) : (
-                          selectedThread.messages.map((message) => (
+                          <AnimatedList className="space-y-2">
+                          {selectedThread.messages.map((message) => (
                             <div key={message.id} className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2">
                               <p className="text-xs text-zinc-500">
                                 {message.senderEmail ?? "System"} • {formatTimestamp(message.createdAt)}
                               </p>
                               <p className="mt-1 text-sm text-zinc-800">{message.body}</p>
                             </div>
-                          ))
+                          ))}
+                          </AnimatedList>
                         )}
                       </div>
 

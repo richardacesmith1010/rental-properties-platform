@@ -14,6 +14,7 @@ import { EmptyState } from "./empty-state";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Input } from "@/components/ui/input";
 import { AutopayCard } from "./autopay-card";
+import { AnimatedList } from "@/components/ui/animated-list";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 type ChargeStatus = "pending" | "paid" | "late";
@@ -193,7 +194,7 @@ export function ChargesSection({
         ) : null}
 
         {isTenantView && uniqueLeaseCards.length > 0 ? (
-          <div className="mb-4 space-y-3">
+          <AnimatedList className="mb-4 space-y-3">
             {uniqueLeaseCards.map(({ leaseId, propertyLabel }) => {
               const enrollment = autopayEnrollments.find((item) => item.leaseId === leaseId) ?? null;
               return (
@@ -207,7 +208,7 @@ export function ChargesSection({
                 />
               );
             })}
-          </div>
+          </AnimatedList>
         ) : null}
 
         <div className="mb-4 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm">
@@ -258,7 +259,7 @@ export function ChargesSection({
             }
           />
         ) : (
-          <div>
+          <AnimatedList>
             {filteredCharges.map((charge, i) => {
               const manualFormOpen = manualPaymentChargeId === charge.id;
               const ownerConnected =
@@ -394,7 +395,7 @@ export function ChargesSection({
                 </DataRow>
               );
             })}
-          </div>
+          </AnimatedList>
         )}
       </CardContent>
     </Card>

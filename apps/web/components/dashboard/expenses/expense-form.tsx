@@ -12,8 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { SubmitButton } from "@/components/shared/submit-button";
-
-type ActionState = Awaited<ReturnType<StatefulAction>>;
+import { FormError, FormSuccess } from "@/components/dashboard/forms";
 
 const expenseCategories = ["mortgage", "insurance", "property_tax", "hoa", "repair", "maintenance", "utility", "management_fee", "legal", "other"];
 const recurringFrequencies = ["monthly", "quarterly", "annually"];
@@ -44,16 +43,6 @@ function StepPill({ label, active, done, skipped }: { label: string; active: boo
         ? "border-amber-200 bg-amber-50 text-amber-700"
         : "border-zinc-200 bg-zinc-50 text-zinc-500";
   return <div className={`rounded-md border px-2 py-2 text-xs ${className}`}>{label}</div>;
-}
-
-function FormError({ state }: { state: ActionState }) {
-  if (!state || state.success) return null;
-  return <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600">{state.error}</p>;
-}
-
-function FormSuccess({ state }: { state: ActionState }) {
-  if (!state || !state.success) return null;
-  return <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-600">Expense created.</p>;
 }
 
 export function ExpenseForm({ data, vendors, propertyFiles, onCreateExpense }: { data: ExpenseDashboardData; vendors: VendorDTO[]; propertyFiles: PropertyFileDTO[]; onCreateExpense: StatefulAction }) {
@@ -104,7 +93,7 @@ export function ExpenseForm({ data, vendors, propertyFiles, onCreateExpense }: {
       <CardContent className="space-y-4">
         <p className="text-sm text-zinc-600">One field at a time. Press Enter or Next to continue. Optional steps can be skipped.</p>
         <FormError state={state} />
-        <FormSuccess state={state} />
+        <FormSuccess state={state} message="Expense created." />
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 xl:grid-cols-9">
           {CREATE_EXPENSE_STEPS.map((label, index) => <StepPill key={label} label={label} active={step === index} done={stepComplete(index)} skipped={skippedSteps.includes(index)} />)}
         </div>

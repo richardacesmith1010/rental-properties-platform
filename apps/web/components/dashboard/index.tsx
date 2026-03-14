@@ -556,6 +556,8 @@ export function Dashboard({
           fullName={fullName}
           nickname={nickname}
           avatarUrl={avatarUrl}
+          items={sidebarItems}
+          activeItemId={sidebarActiveItemId}
           onSignOut={onSignOut}
           onSelectItem={handleSidebarSelect}
           unreadNotificationCount={notificationBadgeCount}
@@ -612,6 +614,8 @@ export function Dashboard({
         fullName={fullName}
         nickname={nickname}
         avatarUrl={avatarUrl}
+        items={sidebarItems}
+        activeItemId={sidebarActiveItemId}
         onSignOut={onSignOut}
         onSelectItem={handleSidebarSelect}
         unreadNotificationCount={notificationBadgeCount}
