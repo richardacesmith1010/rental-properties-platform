@@ -337,15 +337,31 @@ export function Dashboard({
       setActiveSection(sectionItems[0]?.id ?? "overview");
     }
   }, [activeSection, sectionItems]);
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [activeSection]);
   const activeSectionIndex = sectionItems.findIndex((item) => item.id === activeSection);
   const activeSectionLabel =
     sectionItems.find((item) => item.id === activeSection)?.label ?? "Overview";
   const goToPreviousSection = () => {
-    if (activeSectionIndex <= 0) return;
+    if (activeSectionIndex <= 0) {
+      if (isOwnerRole && ownerWorkflowMode === "records") {
+        setOwnerWorkflowMode("daily_ops");
+        setActiveSection("analytics");
+      }
+      return;
+    }
     setActiveSection(sectionItems[activeSectionIndex - 1].id);
   };
   const goToNextSection = () => {
-    if (activeSectionIndex < 0 || activeSectionIndex >= sectionItems.length - 1) return;
+    if (activeSectionIndex < 0) return;
+    if (activeSectionIndex >= sectionItems.length - 1) {
+      if (isOwnerRole && ownerWorkflowMode === "daily_ops") {
+        setOwnerWorkflowMode("records");
+        setActiveSection("documents");
+      }
+      return;
+    }
     setActiveSection(sectionItems[activeSectionIndex + 1].id);
   };
   const goToSectionIfVisible = useCallback(
@@ -665,7 +681,7 @@ export function Dashboard({
               role={isOwnerRole ? "owner" : "manager"}
             />
           ) : null}
-          {(isOwnerRole || isManagerRole) && activeWorkflowMeta && (
+          {(isOwnerRole || isManagerRole) && activeWorkflowMeta && activeSection === "overview" && (
             <div className="domus-glass flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm font-semibold text-zinc-900">
                 {activeWorkflowMeta.label}
@@ -683,7 +699,7 @@ export function Dashboard({
                 variant="outline"
                 size="sm"
                 onClick={goToPreviousSection}
-                disabled={activeSectionIndex <= 0}
+                disabled={activeSectionIndex <= 0 && !(isOwnerRole && ownerWorkflowMode === "records")}
                 title="Previous section"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -693,7 +709,11 @@ export function Dashboard({
                 variant="outline"
                 size="sm"
                 onClick={goToNextSection}
-                disabled={activeSectionIndex < 0 || activeSectionIndex >= sectionItems.length - 1}
+                disabled={
+                  activeSectionIndex < 0 ||
+                  (activeSectionIndex >= sectionItems.length - 1 &&
+                    !(isOwnerRole && ownerWorkflowMode === "daily_ops"))
+                }
                 title="Next section"
               >
                 <ChevronRight className="h-4 w-4" />
