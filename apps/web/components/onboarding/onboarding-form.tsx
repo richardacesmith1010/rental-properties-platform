@@ -178,6 +178,7 @@ export function OnboardingForm({
                 alt="Avatar preview"
                 width={80}
                 height={80}
+                sizes="80px"
                 className="h-full w-full object-cover"
                 unoptimized
               />

@@ -291,7 +291,13 @@ function NavList({ navItems, activeItemId, onSelectItem, mobile = false }: NavLi
 
         if (item.href) {
           const content = (
-            <a key={item.id} href={item.href} className={className} title={getNavTitle(item)}>
+            <a
+              key={item.id}
+              href={item.href}
+              className={className}
+              title={getNavTitle(item)}
+              aria-current={isActive ? "page" : undefined}
+            >
               <Icon className="h-4 w-4" />
               <span className="truncate">{item.label}</span>
               {typeof item.badgeCount === "number" && item.badgeCount > 0 ? (
@@ -312,6 +318,7 @@ function NavList({ navItems, activeItemId, onSelectItem, mobile = false }: NavLi
               onClick={() => onSelectItem(item.id)}
               className={className}
               title={getNavTitle(item)}
+              aria-current={isActive ? "page" : undefined}
             >
               <Icon className="h-4 w-4" />
               <span className="truncate">{item.label}</span>
@@ -326,7 +333,13 @@ function NavList({ navItems, activeItemId, onSelectItem, mobile = false }: NavLi
         }
 
         const content = (
-          <a key={item.id} href={`#${item.id}`} className={className} title={getNavTitle(item)}>
+          <a
+            key={item.id}
+            href={`#${item.id}`}
+            className={className}
+            title={getNavTitle(item)}
+            aria-current={isActive ? "page" : undefined}
+          >
             <Icon className="h-4 w-4" />
             <span className="truncate">{item.label}</span>
             {typeof item.badgeCount === "number" && item.badgeCount > 0 ? (

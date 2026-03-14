@@ -24,6 +24,7 @@ export function GlobalSearch({ items, placeholder = "Search properties, units, t
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const showResults = open && debouncedQuery.length > 0;
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedQuery(query.trim().toLowerCase()), 300);
@@ -78,40 +79,46 @@ export function GlobalSearch({ items, placeholder = "Search properties, units, t
           onFocus={() => setOpen(true)}
           placeholder={placeholder}
           className="pl-9"
+          role="combobox"
+          aria-expanded={showResults}
+          aria-controls="search-results"
+          aria-autocomplete="list"
+          aria-haspopup="listbox"
         />
       </div>
 
-      {open && debouncedQuery ? (
+      {showResults ? (
         <div className="absolute z-50 mt-2 max-h-96 w-full overflow-y-auto rounded-xl border border-zinc-200 bg-white p-2 shadow-xl">
-          {groupedItems.length === 0 ? (
-            <p className="px-3 py-2 text-sm text-zinc-500">No matching results.</p>
-          ) : (
-            <div className="space-y-3">
-              {groupedItems.map(([category, group]) => (
-                <div key={category}>
+          <ul id="search-results" role="listbox" aria-label="Search results" className="space-y-3">
+            {groupedItems.length === 0 ? (
+              <li className="px-3 py-2 text-sm text-zinc-500">No matching results.</li>
+            ) : (
+              groupedItems.map(([category, group]) => (
+                <li key={category} role="presentation">
                   <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
                     {category}
                   </p>
-                  <div className="space-y-1">
+                  <ul className="space-y-1">
                     {group.map((item) => (
-                      <Link
-                        key={item.id}
-                        href={item.href}
-                        className="block rounded-lg px-3 py-2 hover:bg-violet-50"
-                        onClick={() => setOpen(false)}
-                        title={`Open ${item.label}.`}
-                      >
-                        <p className="text-sm font-medium text-zinc-900">{item.label}</p>
-                        {item.description ? (
-                          <p className="text-xs text-zinc-500">{item.description}</p>
-                        ) : null}
-                      </Link>
+                      <li key={item.id} role="option" aria-selected="false">
+                        <Link
+                          href={item.href}
+                          className="block rounded-lg px-3 py-2 hover:bg-violet-50"
+                          onClick={() => setOpen(false)}
+                          title={`Open ${item.label}.`}
+                        >
+                          <p className="text-sm font-medium text-zinc-900">{item.label}</p>
+                          {item.description ? (
+                            <p className="text-xs text-zinc-500">{item.description}</p>
+                          ) : null}
+                        </Link>
+                      </li>
                     ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                  </ul>
+                </li>
+              ))
+            )}
+          </ul>
         </div>
       ) : null}
     </div>

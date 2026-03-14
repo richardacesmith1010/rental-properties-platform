@@ -32,8 +32,8 @@ function Avatar({
         alt="Profile"
         width={32}
         height={32}
+        sizes="32px"
         className={cn("h-8 w-8 rounded-full object-cover", className)}
-        unoptimized
       />
     );
   }

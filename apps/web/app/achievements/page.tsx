@@ -62,7 +62,7 @@ export default async function AchievementsPage() {
   }, {});
 
   return (
-    <main className="app-surface min-h-screen px-6 py-8 lg:px-10">
+    <main id="main-content" className="app-surface min-h-screen px-6 py-8 lg:px-10">
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-4">

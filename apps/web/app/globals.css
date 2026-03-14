@@ -693,6 +693,16 @@
 .stagger-9 { animation-delay: 450ms; }
 .stagger-10 { animation-delay: 500ms; }
 
+:focus-visible {
+  outline: 2px solid #7c3aed;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
 @keyframes domus-bob {
   0%,
   100% {

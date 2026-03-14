@@ -55,7 +55,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   }
 
   return (
-    <main className="app-surface min-h-screen px-6 py-6 lg:px-8">
+    <main id="main-content" className="app-surface min-h-screen px-6 py-6 lg:px-8">
       <div className="mx-auto max-w-4xl space-y-6">
         <header className="space-y-2">
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Settings</h1>

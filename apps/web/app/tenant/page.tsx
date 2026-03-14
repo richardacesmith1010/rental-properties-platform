@@ -228,7 +228,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
         searchItems={searchItems}
       />
 
-      <main className="relative flex-1 lg:ml-[260px]">
+      <main id="main-content" className="relative flex-1 lg:ml-[260px]">
         <AchievementChecker currentLevel={gamification.currentLevel} />
         <div className="flex flex-col gap-4 px-6 pt-6 sm:flex-row sm:items-start sm:justify-between lg:px-8 lg:pt-8">
           <div id="overview">

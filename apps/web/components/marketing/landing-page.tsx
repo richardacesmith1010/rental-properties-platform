@@ -130,7 +130,7 @@ const featureTabs = [
           <div key={title} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
             <div>
               <p className="text-sm font-medium text-white">{title}</p>
-              <p className="text-xs text-slate-400">Ready for tenant workflow</p>
+              <p className="text-xs text-slate-300">Ready for tenant workflow</p>
             </div>
             <span className="rounded-full bg-violet-500/20 px-3 py-1 text-xs text-violet-100">{status}</span>
           </div>
@@ -278,7 +278,7 @@ export function LandingPage() {
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-20 px-6 pb-20 pt-10 md:px-10">
+    <main id="main-content" className="mx-auto flex w-full max-w-7xl flex-col gap-20 px-6 pb-20 pt-10 md:px-10">
       <AnimateOnScroll>
         <header className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-5 py-3 backdrop-blur">
           <div>
@@ -314,7 +314,7 @@ export function LandingPage() {
               See how it works
             </a>
           </div>
-          <p className="text-sm text-slate-400">Trusted by 500+ landlords managing 2,000+ units</p>
+          <p className="text-sm text-slate-300">Trusted by 500+ landlords managing 2,000+ units</p>
         </section>
 
         <section className="relative">
@@ -362,7 +362,7 @@ export function LandingPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-medium text-white">{name}</p>
-                        <p className="mt-1 text-xs text-slate-400">{detail}</p>
+                        <p className="mt-1 text-xs text-slate-300">{detail}</p>
                       </div>
                       <span className="rounded-full bg-violet-500/20 px-3 py-1 text-[11px] text-violet-100">{badge}</span>
                     </div>
@@ -494,7 +494,7 @@ export function LandingPage() {
                 {tier.featured ? <span className="absolute right-4 top-4 rounded-full bg-violet-500 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white">Most Popular</span> : null}
                 <h3 className="text-2xl font-semibold text-white">{tier.name}</h3>
                 <p className="mt-4 text-4xl font-semibold text-violet-100">{tier.price}</p>
-                <p className="mt-1 text-sm text-slate-400">{tier.detail}</p>
+                <p className="mt-1 text-sm text-slate-300">{tier.detail}</p>
                 <ul className="mt-6 space-y-3 text-sm text-slate-200">
                   {tier.points.map((point) => (
                     <li key={point} className="flex items-start gap-3">
@@ -509,7 +509,7 @@ export function LandingPage() {
               </article>
             ))}
           </div>
-          <p className="text-center text-sm text-slate-400">All plans include unlimited tenants, SSL encryption, and 99.9% uptime.</p>
+          <p className="text-center text-sm text-slate-300">All plans include unlimited tenants, SSL encryption, and 99.9% uptime.</p>
         </section>
       </AnimateOnScroll>
 
@@ -545,7 +545,7 @@ export function LandingPage() {
         </section>
       </AnimateOnScroll>
 
-      <footer className="border-t border-white/10 pt-8 text-sm text-slate-400">
+      <footer className="border-t border-white/10 pt-8 text-sm text-slate-300">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-base font-semibold text-violet-100">Domus</p>

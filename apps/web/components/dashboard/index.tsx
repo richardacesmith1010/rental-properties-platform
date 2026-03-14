@@ -575,7 +575,7 @@ export function Dashboard({
           searchItems={searchItems}
           reportsHref={reportsHref}
         />
-        <main className="flex flex-1 flex-col items-center justify-center px-6 py-12 lg:ml-[260px]">
+        <main id="main-content" className="flex flex-1 flex-col items-center justify-center px-6 py-12 lg:ml-[260px]">
           <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
           <div className="w-full max-w-md space-y-4">
             <ConnectBanner connected={stripeConnected === true} role="owner" />
@@ -626,7 +626,7 @@ export function Dashboard({
         searchItems={searchItems}
         reportsHref={reportsHref}
       />
-      <main className="relative flex-1 lg:ml-[260px]">
+      <main id="main-content" className="relative flex-1 lg:ml-[260px]">
         <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
         <div className="px-6 pt-6 lg:px-8 lg:pt-8" id="overview">
           <DashboardHeader

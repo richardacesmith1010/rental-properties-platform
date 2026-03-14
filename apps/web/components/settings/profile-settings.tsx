@@ -123,6 +123,7 @@ export function ProfileSettings({
               alt="Profile preview"
               width={80}
               height={80}
+              sizes="80px"
               className="h-full w-full object-cover"
               unoptimized
             />

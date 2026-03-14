@@ -57,7 +57,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const tenantCount = tenantLedger.length;
 
   return (
-    <main className="app-surface min-h-screen px-6 py-6 lg:px-8">
+    <main id="main-content" className="app-surface min-h-screen px-6 py-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-6">
         <header className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
