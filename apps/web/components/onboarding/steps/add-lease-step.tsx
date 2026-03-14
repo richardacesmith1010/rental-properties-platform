@@ -5,6 +5,7 @@ import { useFormState } from "react-dom";
 import type { ActionState } from "@/app/actions";
 import { Input } from "@/components/ui/input";
 import { SubmitButton } from "@/components/shared/submit-button";
+import { Alert } from "@/components/ui/alert";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -54,13 +55,13 @@ export function AddLeaseStep({ unitId, monthlyRentDollars, onCreateLease, onComp
       </div>
 
       {state && !state.success && state.error && (
-        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>
+        <Alert variant="error">{state.error}</Alert>
       )}
 
       {missingUnit && (
-        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+        <Alert variant="warning">
           Add a unit first before creating a lease in onboarding.
-        </p>
+        </Alert>
       )}
 
       <form action={formAction} className="space-y-3">

@@ -13,6 +13,7 @@ import { SubmitButton } from "@/components/shared/submit-button";
 import { Button } from "@/components/ui/button";
 import type { ActionState } from "@/app/actions";
 import type { OwnershipAccountDTO } from "@/lib/ownership";
+import { Alert } from "@/components/ui/alert";
 
 type StatefulAction = (
   prev: ActionState,
@@ -50,18 +51,18 @@ const LINK_PROPERTY_STEPS = ["Select Property", "Select Account", "Review & Save
 function FormError({ state }: { state: ActionState }) {
   if (!state || state.success) return null;
   return (
-    <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600">
+    <Alert variant="error">
       {state.error}
-    </p>
+    </Alert>
   );
 }
 
 function FormSuccess({ state, message }: { state: ActionState; message: string }) {
   if (!state || !state.success) return null;
   return (
-    <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-600">
+    <Alert variant="success">
       {message}
-    </p>
+    </Alert>
   );
 }
 

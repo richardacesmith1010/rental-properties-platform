@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useFormState } from "react-dom";
 import { SubmitButton } from "@/components/shared/submit-button";
 import type { ActionState } from "@/app/actions";
+import { Alert } from "@/components/ui/alert";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -36,7 +37,7 @@ export function BankSettings({
   if (stripeConnected) {
     return (
       <div className="space-y-4">
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+        <Alert variant="success" className="rounded-xl px-4 py-3">
           <p className="text-sm font-semibold text-emerald-900">Bank Account Connected ✓</p>
           <p className="mt-1 text-sm text-emerald-700">
             Your Stripe Express account is ready to receive {role === "owner" ? "rent payments" : "management fee payments"}.
@@ -44,23 +45,23 @@ export function BankSettings({
           {stripeAccountId ? (
             <p className="mt-2 text-xs text-emerald-800">Account ID: {stripeAccountId}</p>
           ) : null}
-        </div>
+        </Alert>
         <form action={action}>
           <SubmitButton title="Open your Stripe Express dashboard in a new tab.">
             Manage on Stripe
           </SubmitButton>
         </form>
         {state && !state.success ? (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <Alert variant="error">
             {state.error}
-          </p>
+          </Alert>
         ) : null}
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4">
+    <Alert variant="warning" className="rounded-xl px-4 py-4">
       <p className="text-sm font-semibold text-amber-900">Connect your bank account to receive payments</p>
       <p className="mt-1 text-sm text-amber-700">
         {role === "owner"
@@ -73,6 +74,6 @@ export function BankSettings({
       >
         Connect Bank Account
       </a>
-    </div>
+    </Alert>
   );
 }

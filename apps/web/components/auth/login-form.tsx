@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Lock, Loader2, CheckCircle } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
 
 interface LoginFormProps {
   nextPath?: string;
@@ -258,9 +259,9 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
       )}
 
       {error && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+        <Alert variant="error">
           {error}
-        </p>
+        </Alert>
       )}
     </form>
   );

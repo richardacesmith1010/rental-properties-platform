@@ -10,6 +10,7 @@ import { SubmitButton } from "@/components/shared/submit-button";
 import { EmptyState } from "@/components/shared/empty-state";
 import type { ActionState } from "@/app/actions";
 import type { AutomationRuleDTO, AutomationTemplateDTO } from "@/lib/automations";
+import { Alert } from "@/components/ui/alert";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -177,9 +178,9 @@ export function AutomationTemplatesSection({
           Automation templates are now persisted per property. Toggle each workflow to create or update a live automation rule.
         </p>
         {!runtimeReady && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <Alert variant="warning" className="text-xs font-normal">
             {runtimeWarning ?? "Server-side automation runtime is not live yet."}
-          </div>
+          </Alert>
         )}
 
         {properties.length === 0 ? (

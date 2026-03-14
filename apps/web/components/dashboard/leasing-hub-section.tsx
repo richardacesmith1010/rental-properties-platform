@@ -15,6 +15,7 @@ import type { RentalListingDTO } from "@/lib/leasing";
 import type { OwnerDocumentsData } from "@/lib/documents";
 import type { PortfolioData } from "@/lib/portfolio";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { Alert } from "@/components/ui/alert";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -238,9 +239,9 @@ export function LeasingHubSection({
             Use this workflow to move from empty unit to signed lease and active billing with minimal context switching.
           </p>
           {!pipelineReady && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            <Alert variant="warning" className="text-xs font-normal">
               {pipelineWarning ?? "Pipeline persistence is not live yet. Workflow progress uses currently available records only."}
-            </div>
+            </Alert>
           )}
           <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-semibold text-zinc-800">
             {currentStepLabel(stages)}

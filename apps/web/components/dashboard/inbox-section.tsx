@@ -17,6 +17,7 @@ import type { ActionState } from "@/app/actions";
 import type { NotificationDTO } from "@/lib/notifications";
 import type { InboxThreadDTO } from "@/lib/inbox";
 import { formatDateTime } from "@/lib/format";
+import { Alert } from "@/components/ui/alert";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -218,10 +219,10 @@ export function InboxSection({
         />
 
         {!threadsReady && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <Alert variant="warning" className="text-xs font-normal">
             {threadsWarning ??
               "Threaded conversation storage is not live yet. This inbox currently reflects event notifications only."}
-          </div>
+          </Alert>
         )}
 
         {activeTab === "timeline" ? (

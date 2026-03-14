@@ -16,6 +16,7 @@ import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { InviteManagerForm } from "./invitations/invite-manager-form";
 import { InviteTenantForm } from "./invitations/invite-tenant-form";
+import { Alert } from "@/components/ui/alert";
 
 type InvitationFlow = "tenant" | "manager" | "owner";
 
@@ -48,12 +49,12 @@ const OWNER_STEPS = ["Pick Account", "Owner Email", "Owner Name", "Review & Send
 
 function FormError({ state }: { state: ActionState }) {
   if (!state || state.success) return null;
-  return <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600">{state.error}</p>;
+  return <Alert variant="error">{state.error}</Alert>;
 }
 
 function FormSuccess({ state, message = "Invitation sent!" }: { state: ActionState; message?: string }) {
   if (!state || !state.success) return null;
-  return <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-600">{message}</p>;
+  return <Alert variant="success">{message}</Alert>;
 }
 
 function StepPill({ label, active, done, skipped }: { label: string; active: boolean; done: boolean; skipped: boolean }) {
@@ -135,7 +136,7 @@ export function InvitationsSection({ ownershipAccounts, properties, invitations,
       </Card>
       ) : null}
 
-      {!onInviteOwner ? <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">Co-owner invitations are unavailable until ownership accounts are enabled.</div> : null}
+      {!onInviteOwner ? <Alert variant="warning" className="rounded-xl px-4 py-3">Co-owner invitations are unavailable until ownership accounts are enabled.</Alert> : null}
 
       {invitations.length > 0 ? (
         <Card>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { toast } from "sonner";
 import type { ActionState } from "@/app/actions";
+import { Alert } from "@/components/ui/alert";
 
 export function FieldLabel({
   htmlFor,
@@ -34,7 +35,7 @@ export function FormError({ state }: { state: ActionState }) {
   return (
     <div className="domus-error-reveal" data-visible={Boolean(state && !state.success && state.error)}>
       {state && !state.success && state.error ? (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600">{state.error}</p>
+        <Alert variant="error">{state.error}</Alert>
       ) : null}
     </div>
   );
@@ -53,9 +54,7 @@ export function FormSuccess({ state, message = "Saved successfully!" }: { state:
   return (
     <div className="domus-error-reveal" data-visible={Boolean(state?.success)}>
       {state?.success ? (
-        <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-600">
-          {state.message ?? message}
-        </p>
+        <Alert variant="success">{state.message ?? message}</Alert>
       ) : null}
     </div>
   );

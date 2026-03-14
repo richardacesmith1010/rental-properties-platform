@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { AutopayCard } from "./autopay-card";
 import { AnimatedList } from "@/components/ui/animated-list";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { Alert } from "@/components/ui/alert";
 
 type ChargeStatus = "pending" | "paid" | "late";
 type ChargeCategory = "rent" | "late_fee";
@@ -79,16 +80,16 @@ function InlineAlert({ state }: { state: ActionState }) {
   if (!state) return null;
   if (state.success) {
     return (
-      <p className="mb-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+      <Alert variant="success" className="mb-3">
         {state.message ?? "Payment recorded."}
-      </p>
+      </Alert>
     );
   }
 
   return (
-    <p className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+    <Alert variant="error" className="mb-3">
       {state.error}
-    </p>
+    </Alert>
   );
 }
 
@@ -182,15 +183,15 @@ export function ChargesSection({
       </CardHeader>
       <CardContent>
         {isTenantView && autopayStatus === "enrolled" ? (
-          <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <Alert variant="success" className="mb-4 px-4 py-3">
             Autopay enabled. Your rent will be charged automatically on the due date.
-          </div>
+          </Alert>
         ) : null}
 
         {isTenantView && autopayStatus === "error" ? (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <Alert variant="error" className="mb-4 px-4 py-3">
             We couldn&apos;t finish your autopay setup. Please try again.
-          </div>
+          </Alert>
         ) : null}
 
         {isTenantView && uniqueLeaseCards.length > 0 ? (

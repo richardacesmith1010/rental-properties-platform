@@ -7,6 +7,7 @@ import { BriefcaseBusiness, Home, Upload, User, UserCircle2, X } from "lucide-re
 import { Input } from "@/components/ui/input";
 import { SubmitButton } from "@/components/shared/submit-button";
 import type { ActionState } from "@/app/actions";
+import { Alert } from "@/components/ui/alert";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -228,9 +229,9 @@ export function OnboardingForm({
       </div>
 
       {state && !state.success ? (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <Alert variant="error">
           {state.error}
-        </p>
+        </Alert>
       ) : null}
 
       <SubmitButton

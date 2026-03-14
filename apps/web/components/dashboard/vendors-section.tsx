@@ -15,6 +15,7 @@ import type { ActionState } from "@/app/actions";
 import type { VendorDTO } from "@/lib/vendors";
 import type { OwnershipAccountDTO } from "@/lib/ownership";
 import { Select } from "@/components/ui/select";
+import { Alert } from "@/components/ui/alert";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -369,10 +370,10 @@ export function VendorsSection({
             </Button>
           </div>
           {state && !state.success && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-600">{state.error}</p>
+            <Alert variant="error" className="text-xs font-normal">{state.error}</Alert>
           )}
           {state && state.success && (
-            <p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-600">Vendor added.</p>
+            <Alert variant="success" className="text-xs font-normal">Vendor added.</Alert>
           )}
           </div>
         ) : null}

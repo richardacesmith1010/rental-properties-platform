@@ -8,6 +8,7 @@ import { UserCircle2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { SubmitButton } from "@/components/shared/submit-button";
 import type { ActionState } from "@/app/actions";
+import { Alert } from "@/components/ui/alert";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -201,15 +202,15 @@ export function ProfileSettings({
       </div>
 
       {state && !state.success ? (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <Alert variant="error">
           {state.error}
-        </p>
+        </Alert>
       ) : null}
 
       {state?.success && state.message ? (
-        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+        <Alert variant="success">
           {state.message}
-        </p>
+        </Alert>
       ) : null}
 
       <SubmitButton title="Save your profile details.">

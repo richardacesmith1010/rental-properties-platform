@@ -37,6 +37,7 @@ import {
 } from "./dashboard-config";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
 
 const EMPTY_TICKETS: MaintenanceTicket[] = [];
 const EMPTY_AUDIT_LOGS: AuditLogEntry[] = [];
@@ -654,9 +655,9 @@ export function Dashboard({
         </div>
         <div className="space-y-6 px-6 pb-8 pt-6 lg:px-8">
           {generatedMessage && (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
+            <Alert variant="success" className="rounded-xl px-4 py-3">
               {generatedMessage}
-            </div>
+            </Alert>
           )}
           {(isOwnerRole || isManagerRole) && stripeConnected === false ? (
             <ConnectBanner

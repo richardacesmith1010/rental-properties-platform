@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Lock } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
 
 export function PasswordSettings() {
   const [newPassword, setNewPassword] = useState("");
@@ -86,15 +87,15 @@ export function PasswordSettings() {
       </div>
 
       {success && (
-        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+        <Alert variant="success">
           {success}
-        </p>
+        </Alert>
       )}
 
       {error && (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <Alert variant="error">
           {error}
-        </p>
+        </Alert>
       )}
 
       <Button type="submit" disabled={loading} title="Update your account password.">

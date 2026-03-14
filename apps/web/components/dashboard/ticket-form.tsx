@@ -10,6 +10,7 @@ import { SubmitButton } from "@/components/shared/submit-button";
 import { Button } from "@/components/ui/button";
 import type { ActionState } from "@/app/actions";
 import type { TenantUnit } from "@/lib/maintenance";
+import { Alert } from "@/components/ui/alert";
 
 type StatefulAction = (
   prev: ActionState,
@@ -39,18 +40,18 @@ const PRIORITY_HELP: Record<TicketDraft["priority"], string> = {
 function FormError({ state }: { state: ActionState }) {
   if (!state || state.success) return null;
   return (
-    <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600">
+    <Alert variant="error">
       {state.error}
-    </p>
+    </Alert>
   );
 }
 
 function FormSuccess({ state }: { state: ActionState }) {
   if (!state || !state.success) return null;
   return (
-    <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-600">
+    <Alert variant="success">
       Maintenance request submitted!
-    </p>
+    </Alert>
   );
 }
 

@@ -15,6 +15,7 @@ import { AnimatedList } from "@/components/ui/animated-list";
 import type { UnitListItem } from "@/lib/portfolio";
 import type { ActionState } from "@/app/actions";
 import { formatCurrency } from "@/lib/format";
+import { Alert } from "@/components/ui/alert";
 
 type StatefulAction = (
   prev: ActionState,
@@ -37,18 +38,18 @@ const unavailableAction: StatefulAction = async () => ({
 function FormError({ state }: { state: ActionState }) {
   if (!state || state.success) return null;
   return (
-    <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600">
+    <Alert variant="error" className="mb-3">
       {state.error}
-    </p>
+    </Alert>
   );
 }
 
 function FormSuccess({ state, message }: { state: ActionState; message: string }) {
   if (!state || !state.success) return null;
   return (
-    <p className="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-600">
+    <Alert variant="success" className="mb-3">
       {message}
-    </p>
+    </Alert>
   );
 }
 

@@ -15,6 +15,7 @@ import type { ActionState } from "@/app/actions";
 import type { ApplicationDTO } from "@/lib/applications";
 import type { RentalListingDTO } from "@/lib/leasing";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { Alert } from "@/components/ui/alert";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -381,9 +382,9 @@ export function ApplicationsSection({
             Review tenant applications, track screening outcomes, and document decisions before lease creation.
           </p>
           {!pipelineReady && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            <Alert variant="warning" className="text-xs font-normal">
               {pipelineWarning ?? "Application pipeline requires a database update before it can be used."}
-            </div>
+            </Alert>
           )}
           <form action={createAction} className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Create application</p>

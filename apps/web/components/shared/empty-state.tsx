@@ -28,7 +28,7 @@ export function EmptyState({
   const body = message ?? description ?? "";
 
   return (
-    <div className={cn("domus-card border-dashed px-6 py-10 text-center", className)}>
+    <div className={cn("domus-card px-6 py-10 text-center opacity-90", className)}>
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-violet-100/80">
         {showDom ? (
           <DomMascot size="sm" className="animate-domus-bob" />

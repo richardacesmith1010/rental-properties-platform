@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Lock } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
 
 interface CompleteProfileFormProps {
   email: string;
@@ -90,9 +91,9 @@ export function CompleteProfileForm({ email }: CompleteProfileFormProps) {
       </div>
 
       {error && (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <Alert variant="error">
           {error}
-        </p>
+        </Alert>
       )}
 
       <Button type="submit" disabled={loading} className="w-full" title={`Set a password for ${email}.`}>

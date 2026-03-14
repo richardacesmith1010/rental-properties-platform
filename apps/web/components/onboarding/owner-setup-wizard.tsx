@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SubmitButton } from "@/components/shared/submit-button";
 import type { ActionState } from "@/app/actions";
+import { Alert } from "@/components/ui/alert";
 
 interface OwnerSetupWizardProps {
   onSetupIndividual: (prev: ActionState, formData: FormData) => Promise<ActionState>;
@@ -23,16 +24,16 @@ function StatusMessage({ state }: { state: ActionState }) {
 
   if (state.success) {
     return (
-      <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+      <Alert variant="success">
         Setup saved successfully.
-      </p>
+      </Alert>
     );
   }
 
   return (
-    <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+    <Alert variant="error">
       {state.error}
-    </p>
+    </Alert>
   );
 }
 

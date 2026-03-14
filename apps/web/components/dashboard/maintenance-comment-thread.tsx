@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { EmptyState } from "@/components/shared/empty-state";
+import { Alert } from "@/components/ui/alert";
 
 type StatefulAction = (
   prev: ActionState,
@@ -27,16 +28,16 @@ function CommentState({ state }: { state: ActionState }) {
   if (!state) return null;
   if (state.success) {
     return (
-      <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+      <Alert variant="success">
         {state.message ?? "Comment added."}
-      </p>
+      </Alert>
     );
   }
 
   return (
-    <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+    <Alert variant="error">
       {state.error}
-    </p>
+    </Alert>
   );
 }
 

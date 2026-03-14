@@ -4,6 +4,7 @@ import { useFormState } from "react-dom";
 import type { ActionState } from "@/app/actions";
 import { Input } from "@/components/ui/input";
 import { SubmitButton } from "@/components/shared/submit-button";
+import { Alert } from "@/components/ui/alert";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -33,7 +34,7 @@ export function InviteTenantStep({ propertyId, onInviteTenant, onComplete, onSki
       </div>
 
       {state && !state.success && state.error && (
-        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>
+        <Alert variant="error">{state.error}</Alert>
       )}
 
       <form action={formAction} className="space-y-3">

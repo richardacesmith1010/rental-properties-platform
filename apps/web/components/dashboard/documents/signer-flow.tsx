@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SubmitButton } from "@/components/shared/submit-button";
+import { Alert } from "@/components/ui/alert";
 
 type ActionState = Awaited<ReturnType<StatefulAction>>;
 
@@ -45,12 +46,12 @@ function StepPill({ label, active, done, skipped }: { label: string; active: boo
 
 function FormError({ state }: { state: ActionState }) {
   if (!state || state.success) return null;
-  return <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600">{state.error}</p>;
+  return <Alert variant="error">{state.error}</Alert>;
 }
 
 function FormSuccess({ state }: { state: ActionState }) {
   if (!state || !state.success) return null;
-  return <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-600">File uploaded.</p>;
+  return <Alert variant="success">File uploaded.</Alert>;
 }
 
 export function SignerFlow({ properties, propertyFilesEnabled = true, onUploadPropertyFile, onCancel }: SignerFlowProps) {
