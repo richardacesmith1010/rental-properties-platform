@@ -108,9 +108,6 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
 
   const capabilities = await getFeatureCapabilities();
   const generatedMessage = getGeneratedMessage(searchParams?.generated);
-  const payChargeAction = async (formData: FormData) => {
-    await createCheckoutForCharge(formData);
-  };
   const ownerMode =
     typeof searchParams?.mode === "string"
       ? searchParams.mode
@@ -244,7 +241,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       onDeleteLease={deleteLease}
       onRenewLease={renewLease}
       onTerminateLease={terminateLease}
-      onPayCharge={payChargeAction}
+      onPayCharge={createCheckoutForCharge as (formData: FormData) => Promise<void>}
       onRecordManualPayment={recordManualPayment}
       onGenerateChargesHref="/owner/generate"
       generatedMessage={generatedMessage}

@@ -154,9 +154,6 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
     (packet) => packet.signerStatus !== "signed"
   ).length;
   const unreadNotificationCount = notifications.filter((notification) => !notification.readAt).length;
-  const payChargeAction = async (formData: FormData) => {
-    await createCheckoutForCharge(formData);
-  };
   const ownerConnectedMap = await arePropertyOwnersConnected(
     paymentData.charges.map((charge) => charge.propertyId)
   );
@@ -393,7 +390,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
               <TenantLeaseDetails leases={leaseDetails} />
               <ChargesSection
                 charges={paymentData.charges}
-                onPayCharge={payChargeAction}
+                onPayCharge={createCheckoutForCharge as (formData: FormData) => Promise<void>}
                 ownerConnectedMap={ownerConnectedMap}
                 isTenantView
                 autopayEnrollments={autopayEnrollments}
