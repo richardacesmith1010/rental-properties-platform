@@ -17,11 +17,11 @@ import type { AuditLogEntry } from "@/lib/audit";
 import type { RentIncreaseEntry } from "@/lib/rent-increases";
 import { formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
-import { DomMascot } from "@/components/gamification/dom-mascot";
 import { AchievementChecker } from "@/components/gamification/achievement-checker";
 import { GamificationSummary } from "@/components/gamification/gamification-summary";
 import { ConnectBanner } from "@/components/dashboard/connect-banner";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { WelcomeCard } from "@/components/dashboard/welcome-card";
 import { SidebarNav, MobileTopBar, type NavItem } from "./sidebar-nav";
 import type { GlobalSearchItem } from "./global-search";
 import { SectionRenderer } from "./section-renderer";
@@ -579,25 +579,18 @@ export function Dashboard({
           <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
           <div className="w-full max-w-md space-y-4">
             <ConnectBanner connected={stripeConnected === true} role="owner" />
-            <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
-            <div className="mx-auto mb-4 flex w-fit items-center justify-center rounded-3xl bg-violet-50/80 px-4 py-3">
-              <DomMascot size="lg" />
-            </div>
-            <h2 className="text-xl font-semibold text-zinc-900">Add your first property</h2>
-            <p className="mt-2 text-sm text-zinc-500">
-              Start by adding a property to your portfolio. You can add units, tenants, and leases after.
-            </p>
-            <Button
-              type="button"
-              className="mt-6"
-              title="Open the guided property setup flow."
-              onClick={() => {
+            <WelcomeCard
+              fullName={fullName}
+              nickname={nickname}
+              role={data.profileRole}
+              stripeConnected={stripeConnected === true}
+              hasProperty={safePortfolio.properties.length > 0}
+              hasUnit={safePortfolio.units.length > 0}
+              hasLease={safePortfolio.leases.length > 0}
+              onAddProperty={() => {
                 window.location.href = "/owner?mode=new_property&section=operations";
               }}
-            >
-              Add Property
-            </Button>
-          </div>
+            />
           </div>
         </main>
       </div>

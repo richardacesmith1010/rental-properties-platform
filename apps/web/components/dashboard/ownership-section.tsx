@@ -2,6 +2,7 @@
 
 import { type KeyboardEvent, useEffect, useState } from "react";
 import { useFormState } from "react-dom";
+import { Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -424,7 +425,11 @@ export function OwnershipSection({
         </CardHeader>
         <CardContent>
           {accounts.length === 0 ? (
-            <EmptyState message="No ownership accounts yet." />
+            <EmptyState
+              icon={Users}
+              title="No ownership accounts"
+              description="Create an ownership account to organize your properties."
+            />
           ) : (
             <div>
               {accounts.map((account, index) => (

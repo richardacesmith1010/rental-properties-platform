@@ -10,6 +10,8 @@ import type { ActionState } from "@/app/actions";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
+const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024;
+
 interface OnboardingFormProps {
   email: string;
   fullName: string | null;
@@ -63,6 +65,7 @@ export function OnboardingForm({
   const [lastName, setLastName] = useState(initialName.lastName);
   const [nickname, setNickname] = useState("");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [state, formAction] = useFormState(onCompleteOnboarding, null);
   const roleMeta = getRoleMeta(role);
@@ -81,9 +84,18 @@ export function OnboardingForm({
   function handleAvatarChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) {
+      setAvatarError(null);
       setPreviewUrl(null);
       return;
     }
+
+    if (file.size > MAX_AVATAR_SIZE_BYTES) {
+      setAvatarError("Image must be under 5 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    setAvatarError(null);
 
     setPreviewUrl((current) => {
       if (current) {
@@ -94,6 +106,7 @@ export function OnboardingForm({
   }
 
   function clearAvatar() {
+    setAvatarError(null);
     setPreviewUrl((current) => {
       if (current) {
         URL.revokeObjectURL(current);
@@ -182,7 +195,10 @@ export function OnboardingForm({
               onChange={handleAvatarChange}
               className="block text-sm text-zinc-600 file:mr-3 file:rounded-md file:border-0 file:bg-violet-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-violet-700 hover:file:bg-violet-100"
             />
-            <p className="text-xs text-zinc-500">Optional. JPG, PNG, or WebP up to 5MB.</p>
+            <p className="mt-1 text-xs domus-muted">JPG, PNG, or WebP. Max 5 MB.</p>
+            {avatarError ? (
+              <p className="mt-1 text-xs text-red-600">{avatarError}</p>
+            ) : null}
             {previewUrl ? (
               <button
                 type="button"

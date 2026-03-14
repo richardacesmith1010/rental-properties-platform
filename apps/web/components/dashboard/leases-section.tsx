@@ -31,6 +31,7 @@ interface LeasesSectionProps {
   onDeleteLease?: StatefulAction;
   onRenewLease?: StatefulAction;
   onTerminateLease?: StatefulAction;
+  onGoToOperations?: () => void;
 }
 
 const unavailableAction: StatefulAction = async () => ({
@@ -104,7 +105,8 @@ export function LeasesSection({
   onUpdateLease,
   onDeleteLease,
   onRenewLease,
-  onTerminateLease
+  onTerminateLease,
+  onGoToOperations
 }: LeasesSectionProps) {
   const [updateState, updateAction] = useFormState(onUpdateLease ?? unavailableAction, null);
   const [deleteState, deleteAction] = useFormState(onDeleteLease ?? unavailableAction, null);
@@ -148,7 +150,9 @@ export function LeasesSection({
           <EmptyState
             icon={FileText}
             title="No leases yet"
-            description="No leases yet. Create a lease to start collecting rent."
+            description="Create a lease to start collecting rent."
+            actionLabel={onGoToOperations ? "Go to Operations" : undefined}
+            onAction={onGoToOperations}
           />
         ) : (
           <div className="space-y-6">

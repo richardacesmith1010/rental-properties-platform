@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useFormState } from "react-dom";
+import { DoorOpen } from "lucide-react";
 import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SubmitButton } from "@/components/shared/submit-button";
@@ -25,6 +26,7 @@ interface UnitsSectionProps {
   showControls?: boolean;
   onUpdateUnit?: StatefulAction;
   onDeleteUnit?: StatefulAction;
+  onGoToOperations?: () => void;
 }
 
 const unavailableAction: StatefulAction = async () => ({
@@ -54,7 +56,8 @@ export function UnitsSection({
   units,
   showControls = false,
   onUpdateUnit,
-  onDeleteUnit
+  onDeleteUnit,
+  onGoToOperations
 }: UnitsSectionProps) {
   const [updateState, updateAction] = useFormState(onUpdateUnit ?? unavailableAction, null);
   const [deleteState, deleteAction] = useFormState(onDeleteUnit ?? unavailableAction, null);
@@ -85,7 +88,13 @@ export function UnitsSection({
         )}
 
         {units.length === 0 ? (
-          <EmptyState message="No units yet. Add your first unit in Operations to start lease setup." />
+          <EmptyState
+            icon={DoorOpen}
+            title="No units yet"
+            description="Add units to your properties to start creating leases."
+            actionLabel={onGoToOperations ? "Go to Operations" : undefined}
+            onAction={onGoToOperations}
+          />
         ) : (
           <AnimatedList>
             {units.map((unit, i) => (

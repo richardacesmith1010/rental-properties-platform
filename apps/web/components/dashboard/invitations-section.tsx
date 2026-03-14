@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useFormState } from "react-dom";
+import { UserPlus } from "lucide-react";
 import type { StatefulAction, ActionState } from "@/app/actions";
 import type { InvitationListItem } from "@/lib/invitations";
 import { formatDate } from "@/lib/format";
@@ -69,6 +70,7 @@ function StepPill({ label, active, done, skipped }: { label: string; active: boo
 export function InvitationsSection({ ownershipAccounts, properties, invitations, onInviteTenant, onInviteManager, onInviteOwner, onResendInvite, onTenantInviteSuccess, onManagerInviteSuccess, onOwnerInviteSuccess }: InvitationsSectionProps) {
   const [ownerState, ownerAction] = useFormState(onInviteOwner ?? onInviteManager, null);
   const [activeFlow, setActiveFlow] = useState<InvitationFlow>("tenant");
+  const [showInviteForm, setShowInviteForm] = useState(false);
   const [ownerStep, setOwnerStep] = useState(0);
   const [skippedOwnerSteps, setSkippedOwnerSteps] = useState<number[]>([]);
   const [ownerDraft, setOwnerDraft] = useState<OwnerInviteDraft>({ ownershipAccountId: "", email: "", fullName: "" });
@@ -108,6 +110,7 @@ export function InvitationsSection({ ownershipAccounts, properties, invitations,
 
   return (
     <div id="invitations" className="space-y-4">
+      {invitations.length > 0 || showInviteForm ? (
       <Card>
         <CardHeader><CardTitle>Invitation Workflow</CardTitle></CardHeader>
         <CardContent className="space-y-4">
@@ -130,15 +133,31 @@ export function InvitationsSection({ ownershipAccounts, properties, invitations,
           ) : null}
         </CardContent>
       </Card>
+      ) : null}
 
       {!onInviteOwner ? <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">Co-owner invitations are unavailable until ownership accounts are enabled.</div> : null}
 
-      <Card>
-        <CardHeader><CardTitle>Sent Invitations</CardTitle></CardHeader>
-        <CardContent>
-          {invitations.length === 0 ? <EmptyState message="No invitations yet. Send a tenant or manager invitation to start onboarding." /> : <div>{invitations.map((invitation, index) => <InvitationRow key={invitation.id} invitation={invitation} last={index === invitations.length - 1} onResendInvite={onResendInvite} />)}</div>}
-        </CardContent>
-      </Card>
+      {invitations.length > 0 ? (
+        <Card>
+          <CardHeader><CardTitle>Sent Invitations</CardTitle></CardHeader>
+          <CardContent>
+            <div>{invitations.map((invitation, index) => <InvitationRow key={invitation.id} invitation={invitation} last={index === invitations.length - 1} onResendInvite={onResendInvite} />)}</div>
+          </CardContent>
+        </Card>
+      ) : !showInviteForm ? (
+        <Card>
+          <CardHeader><CardTitle>Sent Invitations</CardTitle></CardHeader>
+          <CardContent>
+            <EmptyState
+              icon={UserPlus}
+              title="No invitations yet"
+              description="Invite tenants or managers to start building your team."
+              actionLabel="Send Invitation"
+              onAction={() => setShowInviteForm(true)}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

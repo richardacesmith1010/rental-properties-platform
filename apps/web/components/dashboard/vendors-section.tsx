@@ -2,6 +2,7 @@
 
 import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { useFormState } from "react-dom";
+import { HardHat } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -108,6 +109,7 @@ export function VendorsSection({
   const [createStep, setCreateStep] = useState(0);
   const [skippedCreateSteps, setSkippedCreateSteps] = useState<number[]>([]);
   const [tradeFilter, setTradeFilter] = useState("all");
+  const [showCreateWhenEmpty, setShowCreateWhenEmpty] = useState(false);
   const [vendorDraft, setVendorDraft] = useState<VendorDraft>({
     name: "",
     email: "",
@@ -149,6 +151,7 @@ export function VendorsSection({
   }, [handledCreateState, onCreateVendorSuccess, state]);
 
   const createRequiredComplete = Boolean(vendorDraft.name && vendorDraft.tradeCategory);
+  const showCreateWorkflow = vendors.length > 0 || showCreateWhenEmpty;
 
   const createStepComplete = (step: number) => {
     if (step === 0) return Boolean(vendorDraft.name);
@@ -165,7 +168,8 @@ export function VendorsSection({
         <CardTitle>Vendors</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="mb-4 space-y-4">
+        {showCreateWorkflow ? (
+          <div className="mb-4 space-y-4">
           <p className="text-sm text-zinc-600">
             One field at a time. Press Enter or Next to continue. Optional steps can be skipped.
           </p>
@@ -370,27 +374,36 @@ export function VendorsSection({
           {state && state.success && (
             <p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-600">Vendor added.</p>
           )}
-        </div>
+          </div>
+        ) : null}
 
-        <div className="mb-3 flex items-center gap-2">
-          <span className="text-xs font-medium text-zinc-500">Filter by trade:</span>
-          <Select value={tradeFilter} onChange={(event) => setTradeFilter(event.target.value)} className="h-8 w-44 text-xs">
-            <option value="all">All trades</option>
-            {tradeOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </Select>
-        </div>
+        {vendors.length > 0 ? (
+          <div className="mb-3 flex items-center gap-2">
+            <span className="text-xs font-medium text-zinc-500">Filter by trade:</span>
+            <Select value={tradeFilter} onChange={(event) => setTradeFilter(event.target.value)} className="h-8 w-44 text-xs">
+              <option value="all">All trades</option>
+              {tradeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+        ) : null}
 
-        {filteredVendors.length === 0 ? (
+        {vendors.length === 0 && !showCreateWhenEmpty ? (
           <EmptyState
-            message={
-              vendors.length === 0
-                ? "No vendors yet. Add your first vendor to track maintenance contractors."
-                : "No vendors match this filter."
-            }
+            icon={HardHat}
+            title="No vendors yet"
+            description="Add your first vendor to track maintenance contractors."
+            actionLabel="Add Vendor"
+            onAction={() => setShowCreateWhenEmpty(true)}
+          />
+        ) : filteredVendors.length === 0 ? (
+          <EmptyState
+            icon={HardHat}
+            title="No vendors match this filter"
+            description="Adjust the trade filter to see more vendor records."
           />
         ) : (
           <AnimatedList>

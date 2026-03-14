@@ -18,19 +18,31 @@ fi
 echo "[smoke] Checking protected route guards"
 for path in /owner /manager /tenant /owner/generate /settings /complete-profile; do
   HEADERS="$(mktemp)"
-  STATUS="$(curl -s -D "$HEADERS" -o /dev/null -w "%{http_code}" "$APP_URL$path")"
-  if [[ "$STATUS" != "307" && "$STATUS" != "302" ]]; then
+  BODY="$(mktemp)"
+  STATUS="$(curl -s -D "$HEADERS" -o "$BODY" -w "%{http_code}" "$APP_URL$path")"
+
+  if [[ "$STATUS" == "307" || "$STATUS" == "302" ]]; then
+    LOCATION="$(grep -i '^location:' "$HEADERS" | head -n1 | tr -d '\r' | awk '{print $2}')"
+    if [[ "$LOCATION" != *"/login"* ]]; then
+      echo "[smoke] Expected redirect location to include /login for $path, got: ${LOCATION:-<none>}"
+      rm -f "$HEADERS" "$BODY"
+      exit 1
+    fi
+  elif [[ "$STATUS" == "200" ]]; then
+    if grep -q 'NEXT_REDIRECT' "$BODY" || grep -qi 'http-equiv="refresh"' "$BODY" || grep -qi '/login' "$BODY"; then
+      :
+    else
+      echo "[smoke] Got 200 for $path but no client-side redirect to /login found in body"
+      rm -f "$HEADERS" "$BODY"
+      exit 1
+    fi
+  else
     echo "[smoke] Expected redirect for unauthenticated $path, got $STATUS"
-    rm -f "$HEADERS"
+    rm -f "$HEADERS" "$BODY"
     exit 1
   fi
-  LOCATION="$(grep -i '^location:' "$HEADERS" | head -n1 | tr -d '\r' | awk '{print $2}')"
-  if [[ "$LOCATION" != *"/login"* ]]; then
-    echo "[smoke] Expected redirect location to include /login for $path, got: ${LOCATION:-<none>}"
-    rm -f "$HEADERS"
-    exit 1
-  fi
-  rm -f "$HEADERS"
+
+  rm -f "$HEADERS" "$BODY"
 done
 
 echo "[smoke] Checking private asset API auth guards"

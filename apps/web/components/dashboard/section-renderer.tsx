@@ -573,6 +573,7 @@ export function SectionRenderer({
         onUpdateProperty={onUpdateProperty}
         onDeleteProperty={onDeleteProperty}
         onUpdateManagementFee={data.profileRole === "owner" ? onUpdateManagementFee : undefined}
+        onGoToOperations={() => goToSectionIfVisible("operations")}
       />
     );
   }
@@ -585,6 +586,7 @@ export function SectionRenderer({
         showControls={canManagePortfolio}
         onUpdateUnit={onUpdateUnit}
         onDeleteUnit={onDeleteUnit}
+        onGoToOperations={() => goToSectionIfVisible("operations")}
       />
     );
   }
@@ -600,6 +602,7 @@ export function SectionRenderer({
         onDeleteLease={onDeleteLease}
         onRenewLease={onRenewLease}
         onTerminateLease={onTerminateLease}
+        onGoToOperations={() => goToSectionIfVisible("operations")}
       />
     );
   }

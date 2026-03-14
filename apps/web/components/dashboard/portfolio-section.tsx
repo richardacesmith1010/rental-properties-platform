@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useFormState } from "react-dom";
+import { Building2 } from "lucide-react";
 import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SubmitButton } from "@/components/shared/submit-button";
@@ -24,6 +25,7 @@ interface PortfolioSectionProps {
   onUpdateProperty?: StatefulAction;
   onDeleteProperty?: StatefulAction;
   onUpdateManagementFee?: StatefulAction;
+  onGoToOperations?: () => void;
 }
 
 const unavailableAction: StatefulAction = async () => ({
@@ -54,7 +56,8 @@ export function PortfolioSection({
   showControls = false,
   onUpdateProperty,
   onDeleteProperty,
-  onUpdateManagementFee
+  onUpdateManagementFee,
+  onGoToOperations
 }: PortfolioSectionProps) {
   const [updateState, updateAction] = useFormState(onUpdateProperty ?? unavailableAction, null);
   const [deleteState, deleteAction] = useFormState(onDeleteProperty ?? unavailableAction, null);
@@ -91,7 +94,13 @@ export function PortfolioSection({
         )}
 
         {properties.length === 0 ? (
-          <EmptyState message="No properties yet. Add your first property in Operations to begin tracking." />
+          <EmptyState
+            icon={Building2}
+            title="No properties yet"
+            description="Create your first property to start managing your portfolio."
+            actionLabel={onGoToOperations ? "Go to Operations" : undefined}
+            onAction={onGoToOperations}
+          />
         ) : (
           <AnimatedList>
             {properties.map((property, i) => (

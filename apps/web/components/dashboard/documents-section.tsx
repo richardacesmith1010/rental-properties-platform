@@ -107,7 +107,7 @@ export function DocumentsSection({
       <Card>
         <CardHeader><CardTitle>Templates</CardTitle></CardHeader>
         <CardContent>
-          {templates.length === 0 ? <EmptyState icon={FileText} title="No templates yet" description="No documents yet." /> : <AnimatedList>{templates.map((template, index) => <TemplateRow key={template.id} template={template} last={index === templates.length - 1} onDeleteTemplate={onDeleteTemplate} />)}</AnimatedList>}
+          {templates.length === 0 ? <EmptyState icon={FileText} title="No templates yet" description="Create a document template to start sending packets." /> : <AnimatedList>{templates.map((template, index) => <TemplateRow key={template.id} template={template} last={index === templates.length - 1} onDeleteTemplate={onDeleteTemplate} />)}</AnimatedList>}
         </CardContent>
       </Card>
 
