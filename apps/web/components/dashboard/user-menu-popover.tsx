@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpCircle, Globe, LifeBuoy, LogOut, Settings } from "lucide-react";
+import { LifeBuoy, LogOut, Settings } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/format";
 
@@ -12,6 +12,7 @@ interface UserMenuPopoverProps {
   role: string;
   userEmail: string;
   avatarUrl?: string | null;
+  stripeConnected?: boolean;
   placement?: "top" | "bottom";
   compact?: boolean;
 }
@@ -55,6 +56,7 @@ export function UserMenuPopover({
   role,
   userEmail,
   avatarUrl,
+  stripeConnected,
   placement = "top",
   compact = false
 }: UserMenuPopoverProps) {
@@ -117,8 +119,19 @@ export function UserMenuPopover({
       >
         <Avatar avatarUrl={avatarUrl} displayName={displayName} />
         <div className="min-w-0 flex-1">
-          <p className={cn("truncate font-medium", compact ? "text-xs text-white" : "text-[13px] text-white")}>
-            {displayName}
+          <p className={cn("font-medium", compact ? "text-xs text-white" : "text-[13px] text-white")}>
+            <span className="flex items-center gap-1.5">
+              <span className="truncate">{displayName}</span>
+              {typeof stripeConnected === "boolean" ? (
+                <span
+                  className={cn(
+                    "h-2 w-2 shrink-0 rounded-full",
+                    stripeConnected ? "bg-emerald-400" : "bg-rose-400"
+                  )}
+                  title={stripeConnected ? "Bank connected" : "Bank not connected"}
+                />
+              ) : null}
+            </span>
           </p>
           <p
             className={cn(
@@ -126,7 +139,7 @@ export function UserMenuPopover({
               compact ? "text-[10px] text-white/60" : "text-[11px] text-white/45"
             )}
           >
-            {compact ? role : `${role} · ${userEmail}`}
+            {role}
           </p>
         </div>
       </button>
@@ -153,26 +166,6 @@ export function UserMenuPopover({
               <Settings className="h-4 w-4" />
               Settings
             </Link>
-
-            <button
-              type="button"
-              disabled
-              className="flex w-full cursor-not-allowed items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-400"
-              title="Language controls are coming soon."
-            >
-              <Globe className="h-4 w-4" />
-              Language (Coming Soon)
-            </button>
-
-            <button
-              type="button"
-              disabled
-              className="flex w-full cursor-not-allowed items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-400"
-              title="Plan upgrades are not available yet."
-            >
-              <ArrowUpCircle className="h-4 w-4" />
-              Upgrade Plan
-            </button>
 
             <a
               href="mailto:support@domusbase.com"

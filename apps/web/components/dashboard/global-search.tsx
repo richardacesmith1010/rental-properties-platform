@@ -19,7 +19,7 @@ interface GlobalSearchProps {
   placeholder?: string;
 }
 
-export function GlobalSearch({ items, placeholder = "Search properties, units, tenants..." }: GlobalSearchProps) {
+export function GlobalSearch({ items, placeholder = "Search..." }: GlobalSearchProps) {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [open, setOpen] = useState(false);

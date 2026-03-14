@@ -553,6 +553,7 @@ export function Dashboard({
           fullName={fullName}
           nickname={nickname}
           avatarUrl={avatarUrl}
+          stripeConnected={stripeConnected}
           items={sidebarItems}
           activeItemId={sidebarActiveItemId}
           onSignOut={onSignOut}
@@ -567,6 +568,7 @@ export function Dashboard({
           fullName={fullName}
           nickname={nickname}
           avatarUrl={avatarUrl}
+          stripeConnected={stripeConnected}
           onSignOut={onSignOut}
           items={sidebarItems}
           activeItemId={sidebarActiveItemId}
@@ -578,7 +580,7 @@ export function Dashboard({
         <main id="main-content" className="flex flex-1 flex-col items-center justify-center px-6 py-12 lg:ml-[260px]">
           <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
           <div className="w-full max-w-md space-y-4">
-            <ConnectBanner connected={stripeConnected === true} role="owner" />
+            {stripeConnected === false ? <ConnectBanner connected={false} role="owner" /> : null}
             <WelcomeCard
               fullName={fullName}
               nickname={nickname}
@@ -604,6 +606,7 @@ export function Dashboard({
         fullName={fullName}
         nickname={nickname}
         avatarUrl={avatarUrl}
+        stripeConnected={stripeConnected}
         items={sidebarItems}
         activeItemId={sidebarActiveItemId}
         onSignOut={onSignOut}
@@ -618,6 +621,7 @@ export function Dashboard({
         fullName={fullName}
         nickname={nickname}
         avatarUrl={avatarUrl}
+        stripeConnected={stripeConnected}
         onSignOut={onSignOut}
         items={sidebarItems}
         activeItemId={sidebarActiveItemId}
@@ -654,9 +658,9 @@ export function Dashboard({
               {generatedMessage}
             </div>
           )}
-          {(isOwnerRole || isManagerRole) && typeof stripeConnected === "boolean" ? (
+          {(isOwnerRole || isManagerRole) && stripeConnected === false ? (
             <ConnectBanner
-              connected={stripeConnected}
+              connected={false}
               role={isOwnerRole ? "owner" : "manager"}
             />
           ) : null}

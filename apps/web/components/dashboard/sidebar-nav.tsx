@@ -46,6 +46,7 @@ interface SidebarNavProps {
   fullName?: string | null;
   nickname?: string | null;
   avatarUrl?: string | null;
+  stripeConnected?: boolean;
   navPreset?: "default" | "tenant";
   onSignOut: (formData: FormData) => Promise<void>;
   items?: NavItem[];
@@ -231,6 +232,24 @@ function resolveNavItems(items: NavItem[] | undefined, navPreset: "default" | "t
   return items ?? (navPreset === "tenant" ? tenantNavItems : defaultNavItems);
 }
 
+function injectReportsNavItem(navItems: NavItem[], reportsHref: string | null): NavItem[] {
+  if (!reportsHref) {
+    return navItems;
+  }
+
+  return [
+    ...navItems,
+    {
+      id: "reports",
+      label: "Reports",
+      icon: BarChart3,
+      href: reportsHref,
+      description: "Financial reports and analytics.",
+      clickHint: "open financial reports",
+    },
+  ];
+}
+
 function navButtonClasses(isActive: boolean, mobile = false) {
   return [
     "flex w-full items-center gap-3 rounded-[10px] px-3.5 py-2.5 text-[13px] transition-all",
@@ -361,6 +380,7 @@ export function SidebarNav({
   fullName,
   nickname,
   avatarUrl,
+  stripeConnected,
   navPreset = "default",
   items,
   activeItemId,
@@ -370,7 +390,7 @@ export function SidebarNav({
   reportsHref = null,
 }: SidebarNavProps) {
   const pathname = usePathname();
-  const navItems = resolveNavItems(items, navPreset);
+  const navItems = injectReportsNavItem(resolveNavItems(items, navPreset), reportsHref);
   const workspacePath = role === "owner" ? "/owner" : role === "manager" ? "/manager" : "/tenant";
   const displayName = getDisplayName({ nickname, fullName, userEmail });
   const showWorkspaceButton = pathname !== workspacePath;
@@ -380,11 +400,11 @@ export function SidebarNav({
     <button
       type="button"
       onClick={() => onSelectItem("notifications")}
-      className="relative flex items-center justify-center rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-white/85 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+      className="relative flex items-center justify-center rounded-[10px] border border-white/15 bg-white/10 px-2 py-1.5 text-white/85 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
       title="Open notifications."
       aria-label="Open notifications"
     >
-      <Bell className="h-4 w-4" />
+      <Bell className="h-3.5 w-3.5" />
       {unreadNotificationCount > 0 ? (
         <span className="absolute -right-1 -top-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white">
           {unreadNotificationCount}
@@ -394,11 +414,11 @@ export function SidebarNav({
   ) : (
     <a
       href={notificationHref}
-      className="relative flex items-center justify-center rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-white/85 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+      className="relative flex items-center justify-center rounded-[10px] border border-white/15 bg-white/10 px-2 py-1.5 text-white/85 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
       title="Open notifications."
       aria-label="Open notifications"
     >
-      <Bell className="h-4 w-4" />
+      <Bell className="h-3.5 w-3.5" />
       {unreadNotificationCount > 0 ? (
         <span className="absolute -right-1 -top-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white">
           {unreadNotificationCount}
@@ -409,34 +429,20 @@ export function SidebarNav({
 
   return (
     <aside className="gradient-sidebar hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-[260px] lg:flex-shrink-0 lg:flex-col">
-      <div className="flex items-center gap-3 px-5 py-6">
-        <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/15 text-lg font-bold text-white shadow-lg shadow-violet-950/25 backdrop-blur-sm">
-          D
+      <div className="flex items-center justify-between gap-3 px-5 py-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/15 text-lg font-bold text-white shadow-lg shadow-violet-950/25 backdrop-blur-sm">
+            D
+          </div>
+          <div>
+            <div className="text-base font-bold text-white">Domus</div>
+          </div>
         </div>
-        <div>
-          <div className="text-base font-bold text-white">Domus</div>
-        </div>
+        {notificationButton}
       </div>
 
       <div className="space-y-2 px-3 pb-3">
         {searchItems.length > 0 ? <GlobalSearch items={searchItems} /> : null}
-        <Link
-          href="/settings"
-          className="block rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-          title="Open full settings page."
-        >
-          Settings
-        </Link>
-        {reportsHref ? (
-          <Link
-            href={reportsHref}
-            className="flex items-center gap-2 rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-            title="Open financial reports."
-          >
-            <BarChart3 className="h-3.5 w-3.5" />
-            Reports
-          </Link>
-        ) : null}
         {showWorkspaceButton ? (
           <Link
             href={workspacePath}
@@ -446,7 +452,6 @@ export function SidebarNav({
             {role === "owner" ? "Owner Workspace" : role === "manager" ? "Manager Workspace" : "Tenant Workspace"}
           </Link>
         ) : null}
-        <div className="flex justify-end">{notificationButton}</div>
       </div>
 
       <nav aria-label="Main navigation" className="flex-1 min-h-0 space-y-1 overflow-y-auto px-3 pb-4">
@@ -459,6 +464,7 @@ export function SidebarNav({
           role={role}
           userEmail={userEmail}
           avatarUrl={avatarUrl}
+          stripeConnected={stripeConnected}
           placement="top"
         />
       </div>
@@ -472,6 +478,7 @@ export function MobileTopBar({
   fullName,
   nickname,
   avatarUrl,
+  stripeConnected,
   navPreset = "default",
   items,
   activeItemId,
@@ -487,6 +494,7 @@ export function MobileTopBar({
   | "fullName"
   | "nickname"
   | "avatarUrl"
+  | "stripeConnected"
   | "navPreset"
   | "items"
   | "activeItemId"
@@ -497,7 +505,7 @@ export function MobileTopBar({
   | "reportsHref"
 >) {
   const pathname = usePathname();
-  const navItems = resolveNavItems(items, navPreset);
+  const navItems = injectReportsNavItem(resolveNavItems(items, navPreset), reportsHref);
   const workspacePath = role === "owner" ? "/owner" : role === "manager" ? "/manager" : "/tenant";
   const displayName = getDisplayName({ nickname, fullName, userEmail });
   const showWorkspaceButton = pathname !== workspacePath;
@@ -551,6 +559,7 @@ export function MobileTopBar({
             role={role}
             userEmail={userEmail}
             avatarUrl={avatarUrl}
+            stripeConnected={stripeConnected}
             placement="bottom"
             compact
           />
@@ -582,27 +591,6 @@ export function MobileTopBar({
               {searchItems.length > 0 ? <GlobalSearch items={searchItems} /> : null}
 
               <div className="grid grid-cols-1 gap-2">
-                <Drawer.Close asChild>
-                  <Link
-                    href="/settings"
-                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-white/80 transition hover:bg-white/10"
-                    title="Open full settings page."
-                  >
-                    Settings
-                  </Link>
-                </Drawer.Close>
-                {reportsHref ? (
-                  <Drawer.Close asChild>
-                    <Link
-                      href={reportsHref}
-                      className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-white/80 transition hover:bg-white/10"
-                      title="Open financial reports."
-                    >
-                      <BarChart3 className="h-4 w-4" />
-                      Reports
-                    </Link>
-                  </Drawer.Close>
-                ) : null}
                 {showWorkspaceButton ? (
                   <Drawer.Close asChild>
                     <Link
