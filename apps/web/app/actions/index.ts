@@ -1,4 +1,8 @@
 export type { ActionState } from "./shared";
+export type StatefulAction = (
+  prev: import("./shared").ActionState,
+  formData: FormData
+) => Promise<import("./shared").ActionState>;
 
 export { signOut } from "./auth";
 export {

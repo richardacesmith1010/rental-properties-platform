@@ -1,4 +1,5 @@
 import dynamic from "next/dynamic";
+import type { ReactNode } from "react";
 import type { DashboardData } from "@/lib/dashboard";
 import type { PortfolioData } from "@/lib/portfolio";
 import type { MaintenanceTicket } from "@/lib/maintenance";
@@ -37,6 +38,7 @@ import { LeasingHubSection } from "./leasing-hub-section";
 import { InboxSection } from "./inbox-section";
 import { AutomationTemplatesSection } from "./automation-templates-section";
 import { ApplicationsSection } from "./applications-section";
+import { SectionErrorBoundary } from "./section-error-boundary";
 
 type FormAction = (formData: FormData) => Promise<void>;
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
@@ -248,8 +250,13 @@ export function SectionRenderer({
   handleUnitCreated,
   handleLeaseCreated
 }: SectionRendererProps) {
+  const renderSection = (sectionName: string, content: ReactNode) => (
+    <SectionErrorBoundary sectionName={sectionName}>{content}</SectionErrorBoundary>
+  );
+
   if (activeSection === "overview") {
-    return (
+    return renderSection(
+      "Overview",
       <>
         <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
           <p className="text-xs uppercase tracking-wide text-zinc-500">Snapshot</p>
@@ -274,7 +281,8 @@ export function SectionRenderer({
   }
 
   if (activeSection === "charges") {
-    return (
+    return renderSection(
+      "Charges",
       <ChargesSection
         charges={data.charges}
         onPayCharge={onPayCharge}
@@ -288,11 +296,12 @@ export function SectionRenderer({
   }
 
   if (activeSection === "payments") {
-    return <PaymentsSection payments={data.recentPayments} />;
+    return renderSection("Payments", <PaymentsSection payments={data.recentPayments} />);
   }
 
   if (activeSection === "maintenance") {
-    return (
+    return renderSection(
+      "Maintenance",
       <MaintenanceSection
         tickets={tickets ?? []}
         showControls={!!onUpdateTicketStatus}
@@ -310,7 +319,8 @@ export function SectionRenderer({
   }
 
   if (activeSection === "leasing" && hasLeasingSection) {
-    return (
+    return renderSection(
+      "Leasing",
       <LeasingHubSection
         portfolio={safePortfolio}
         invitations={invitations ?? []}
@@ -332,7 +342,8 @@ export function SectionRenderer({
   }
 
   if (activeSection === "applications" && hasApplicationsSection) {
-    return (
+    return renderSection(
+      "Applications",
       <ApplicationsSection
         applications={safeApplications}
         listings={safeListings}
@@ -351,7 +362,8 @@ export function SectionRenderer({
   }
 
   if (activeSection === "inbox" && hasInboxSection) {
-    return (
+    return renderSection(
+      "Inbox",
       <InboxSection
         notifications={safeNotifications}
         threads={safeInboxThreads}
@@ -370,7 +382,8 @@ export function SectionRenderer({
   }
 
   if (activeSection === "automations" && hasAutomationsSection) {
-    return (
+    return renderSection(
+      "Automations",
       <AutomationTemplatesSection
         role={data.profileRole === "manager" ? "manager" : "owner"}
         templates={safeAutomationTemplates}
@@ -389,52 +402,59 @@ export function SectionRenderer({
   }
 
   if (activeSection === "notifications" && hasNotificationsSection) {
-    return safeCapabilities.notificationsEnabled ? (
-      <NotificationsSection
-        notifications={safeNotifications}
-        onMarkRead={onMarkNotificationRead!}
-        onMarkAllRead={onMarkAllNotificationsRead}
-      />
-    ) : (
-      <FeatureWarning
-        title="Notifications Unavailable"
-        message={
-          safeCapabilities.warnings.notifications ??
-          "Notifications are not ready yet. Complete setup and reload."
-        }
-      />
+    return renderSection(
+      "Notifications",
+      safeCapabilities.notificationsEnabled ? (
+        <NotificationsSection
+          notifications={safeNotifications}
+          onMarkRead={onMarkNotificationRead!}
+          onMarkAllRead={onMarkAllNotificationsRead}
+        />
+      ) : (
+        <FeatureWarning
+          title="Notifications Unavailable"
+          message={
+            safeCapabilities.warnings.notifications ??
+            "Notifications are not ready yet. Complete setup and reload."
+          }
+        />
+      )
     );
   }
 
   if (activeSection === "activity" && hasActivitySection) {
-    return <ActivityFeed logs={auditLogs} />;
+    return renderSection("Activity", <ActivityFeed logs={auditLogs} />);
   }
 
   if (activeSection === "ownership" && hasOwnershipSection) {
-    return safeCapabilities.ownershipEnabled ? (
-      <OwnershipSection
-        accounts={safeOwnershipAccounts}
-        properties={safePortfolio.properties.map((property) => ({
-          id: property.id,
-          name: property.name,
-          ownerAccountName: property.ownerAccountName
-        }))}
-        onCreateOwnershipAccount={onCreateOwnershipAccount!}
-        onLinkPropertyToOwnershipAccount={onLinkPropertyToOwnershipAccount!}
-      />
-    ) : (
-      <FeatureWarning
-        title="Ownership Accounts Unavailable"
-        message={
-          safeCapabilities.warnings.ownership ??
-          "LLC/shared ownership is not ready yet. Complete Phase 9 setup and reload."
-        }
-      />
+    return renderSection(
+      "Ownership",
+      safeCapabilities.ownershipEnabled ? (
+        <OwnershipSection
+          accounts={safeOwnershipAccounts}
+          properties={safePortfolio.properties.map((property) => ({
+            id: property.id,
+            name: property.name,
+            ownerAccountName: property.ownerAccountName
+          }))}
+          onCreateOwnershipAccount={onCreateOwnershipAccount!}
+          onLinkPropertyToOwnershipAccount={onLinkPropertyToOwnershipAccount!}
+        />
+      ) : (
+        <FeatureWarning
+          title="Ownership Accounts Unavailable"
+          message={
+            safeCapabilities.warnings.ownership ??
+            "LLC/shared ownership is not ready yet. Complete Phase 9 setup and reload."
+          }
+        />
+      )
     );
   }
 
   if (activeSection === "invitations" && hasInvitationsSection) {
-    return (
+    return renderSection(
+      "Invitations",
       <InvitationsSection
         ownershipAccounts={safeOwnershipAccounts.map((account) => ({
           id: account.id,
@@ -454,7 +474,8 @@ export function SectionRenderer({
   }
 
   if (activeSection === "documents" && hasDocumentsSection) {
-    return (
+    return renderSection(
+      "Documents",
       <DocumentsSection
         properties={safePortfolio.properties.map((property) => ({
           id: property.id,
@@ -487,27 +508,31 @@ export function SectionRenderer({
   }
 
   if (activeSection === "vendors" && hasVendorsSection) {
-    return safeCapabilities.vendorWorkflowEnabled ? (
-      <VendorsSection
-        vendors={safeVendors}
-        ownershipAccounts={safeOwnershipAccounts}
-        onCreateVendor={onCreateVendor!}
-        onUpdateVendor={onUpdateVendor}
-        onCreateVendorSuccess={handleVendorCreatedSuccess}
-      />
-    ) : (
-      <FeatureWarning
-        title="Vendors Unavailable"
-        message={
-          safeCapabilities.warnings.vendorWorkflow ??
-          "Vendor workflows are not ready yet. Complete setup and reload."
-        }
-      />
+    return renderSection(
+      "Vendors",
+      safeCapabilities.vendorWorkflowEnabled ? (
+        <VendorsSection
+          vendors={safeVendors}
+          ownershipAccounts={safeOwnershipAccounts}
+          onCreateVendor={onCreateVendor!}
+          onUpdateVendor={onUpdateVendor}
+          onCreateVendorSuccess={handleVendorCreatedSuccess}
+        />
+      ) : (
+        <FeatureWarning
+          title="Vendors Unavailable"
+          message={
+            safeCapabilities.warnings.vendorWorkflow ??
+            "Vendor workflows are not ready yet. Complete setup and reload."
+          }
+        />
+      )
     );
   }
 
   if (activeSection === "expenses" && hasExpensesSection) {
-    return (
+    return renderSection(
+      "Expenses",
       <ExpensesSection
         data={safeExpenses}
         vendors={safeVendors}
@@ -520,11 +545,12 @@ export function SectionRenderer({
   }
 
   if (activeSection === "analytics" && hasAnalyticsSection) {
-    return <AnalyticsSection data={safeAnalytics} />;
+    return renderSection("Analytics", <AnalyticsSection data={safeAnalytics} />);
   }
 
   if (activeSection === "operations") {
-    return (
+    return renderSection(
+      "Operations",
       <OperationsSection
         portfolio={safePortfolio}
         ownershipAccounts={safeOwnershipAccounts}
@@ -539,7 +565,8 @@ export function SectionRenderer({
   }
 
   if (activeSection === "portfolio") {
-    return (
+    return renderSection(
+      "Portfolio",
       <PortfolioSection
         properties={safePortfolio.properties}
         showControls={canManagePortfolio}
@@ -551,7 +578,8 @@ export function SectionRenderer({
   }
 
   if (activeSection === "units") {
-    return (
+    return renderSection(
+      "Units",
       <UnitsSection
         units={safePortfolio.units}
         showControls={canManagePortfolio}
@@ -562,7 +590,8 @@ export function SectionRenderer({
   }
 
   if (activeSection === "leases") {
-    return (
+    return renderSection(
+      "Leases",
       <LeasesSection
         leases={safePortfolio.leases}
         rentIncreaseHistory={rentIncreaseHistory}
@@ -575,7 +604,8 @@ export function SectionRenderer({
     );
   }
 
-  return (
+  return renderSection(
+    "Unavailable section",
     <FeatureWarning
       title="Section Unavailable"
       message="This section is not currently available for your role."

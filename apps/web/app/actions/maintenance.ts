@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { logAudit } from "@/lib/audit";
+import { sideEffectError } from "@/lib/logger";
 import { logMaintenanceStatusChange } from "@/lib/maintenance";
 import {
   createNotificationWithDelivery,
@@ -94,7 +95,13 @@ export async function createMaintenanceTicket(
     return { success: false, error: "Failed to create maintenance request. Please try again." };
   }
 
-  void logMaintenanceStatusChange(supabase, ticket.id, null, "submitted", user.id).catch(() => {});
+  void logMaintenanceStatusChange(supabase, ticket.id, null, "submitted", user.id).catch(
+    sideEffectError("createMaintenanceTicket", "log_status_history", {
+      userId: user.id,
+      entityType: "ticket",
+      entityId: ticket.id
+    })
+  );
 
   // Trigger required notification: new ticket (owner + assigned managers).
   try {
@@ -136,7 +143,13 @@ export async function createMaintenanceTicket(
       entityId: ticket.id,
       excludeProfileId: user.id,
       actorProfileId: user.id
-    }).catch(() => {});
+    }).catch(
+      sideEffectError("createMaintenanceTicket", "notify_property_admin", {
+        userId: user.id,
+        entityType: "ticket",
+        entityId: ticket.id
+      })
+    );
 
     if (recipientIds.size > 0) {
       const { data: recipients } = await admin
@@ -153,7 +166,13 @@ export async function createMaintenanceTicket(
           body: `${fromActor} submitted "${title}" for ${propertyName}.`,
           entityType: "maintenance_ticket",
           entityId: ticket.id
-        }).catch(() => {});
+        }).catch(
+          sideEffectError("createMaintenanceTicket", "notify_property_admin", {
+            userId: user.id,
+            entityType: "ticket",
+            entityId: ticket.id
+          })
+        );
       }
     }
   } catch (notificationError) {
@@ -170,7 +189,13 @@ export async function createMaintenanceTicket(
       property_id: unit.property_id,
       unit_id: unit.id
     }
-  ).catch(() => {});
+  ).catch(
+    sideEffectError("createMaintenanceTicket", "award_xp", {
+      userId: user.id,
+      entityType: "xp_event",
+      entityId: ticket.id
+    })
+  );
 
   void logAudit({
     userId: user.id,
@@ -182,7 +207,13 @@ export async function createMaintenanceTicket(
       unitId: unit.id,
       title
     }
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("createMaintenanceTicket", "log_audit", {
+      userId: user.id,
+      entityType: "ticket",
+      entityId: ticket.id
+    })
+  );
 
   revalidatePath("/tenant");
   revalidatePath("/owner");
@@ -249,7 +280,13 @@ export async function updateTicketStatus(
       await logMaintenanceStatusChange(supabase, ticket.id, "open", "reviewed", user.id);
     }
     await logMaintenanceStatusChange(supabase, ticket.id, ticket.status, status, user.id);
-  })().catch(() => {});
+  })().catch(
+    sideEffectError("updateTicketStatus", "log_status_history", {
+      userId: user.id,
+      entityType: "ticket",
+      entityId: ticket.id
+    })
+  );
 
   if (status === "resolved" || status === "closed") {
     void notifyOwnerMembersForProperty({
@@ -260,7 +297,13 @@ export async function updateTicketStatus(
       entityType: "maintenance_ticket",
       entityId: ticket.id,
       actorProfileId: user.id
-    }).catch(() => {});
+    }).catch(
+      sideEffectError("updateTicketStatus", "notify_owner", {
+        userId: user.id,
+        entityType: "ticket",
+        entityId: ticket.id
+      })
+    );
   }
 
   if (status === "resolved" && ticket.tenant_profile_id) {
@@ -280,7 +323,13 @@ export async function updateTicketStatus(
         body: `Your maintenance request "${ticket.title}" has been resolved.`,
         entityType: "maintenance_ticket",
         entityId: ticket.id
-      }).catch(() => {});
+      }).catch(
+        sideEffectError("updateTicketStatus", "notify_tenant", {
+          userId: user.id,
+          entityType: "ticket",
+          entityId: ticket.id
+        })
+      );
     }
   }
 
@@ -294,7 +343,13 @@ export async function updateTicketStatus(
         ticket_id: ticket.id,
         property_id: ticket.property_id
       }
-    ).catch(() => {});
+    ).catch(
+      sideEffectError("updateTicketStatus", "award_xp", {
+        userId: user.id,
+        entityType: "xp_event",
+        entityId: ticket.id
+      })
+    );
   }
 
   void logAudit({
@@ -307,7 +362,13 @@ export async function updateTicketStatus(
       title: ticket.title,
       status
     }
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("updateTicketStatus", "log_audit", {
+      userId: user.id,
+      entityType: "ticket",
+      entityId: ticket.id
+    })
+  );
 
   revalidatePath("/owner");
   revalidatePath("/manager");
@@ -448,7 +509,13 @@ export async function addTicketComment(
       entityType: "maintenance_ticket",
       entityId: ticket.id,
       actorProfileId: user.id
-    }).catch(() => {});
+    }).catch(
+      sideEffectError("addTicketComment", "notify_participants", {
+        userId: user.id,
+        entityType: "ticket",
+        entityId: ticket.id
+      })
+    );
   } else if (ticket.tenant_profile_id) {
     const { data: tenantProfile } = await admin
       .from("profiles")
@@ -465,7 +532,13 @@ export async function addTicketComment(
         body: `New update on your maintenance request: ${ticket.title}`,
         entityType: "maintenance_ticket",
         entityId: ticket.id
-      }).catch(() => {});
+      }).catch(
+        sideEffectError("addTicketComment", "notify_participants", {
+          userId: user.id,
+          entityType: "ticket",
+          entityId: ticket.id
+        })
+      );
     }
   }
 
@@ -479,7 +552,13 @@ export async function addTicketComment(
       title: ticket.title,
       isInternal: internalNote
     }
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("addTicketComment", "log_audit", {
+      userId: user.id,
+      entityType: "ticket",
+      entityId: ticket.id
+    })
+  );
 
   revalidatePath("/owner");
   revalidatePath("/manager");

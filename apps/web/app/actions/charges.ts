@@ -12,6 +12,7 @@ import { createNotificationWithDelivery, notifyOwnerMembersForProperty } from "@
 import { logAudit } from "@/lib/audit";
 import { awardXp, XP_VALUES } from "@/lib/gamification";
 import { formatCurrency } from "@/lib/format";
+import { sideEffectError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { payChargeSchema, parseFormData, recordManualPaymentSchema } from "@/lib/validations";
 import type { ActionState } from "./shared";
@@ -225,7 +226,13 @@ export async function recordManualPayment(
     entityType: "rent_charge",
     entityId: charge.id,
     actorProfileId: user.id
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("recordManualPayment", "notify_tenant", {
+      userId: user.id,
+      entityType: "rent_charge",
+      entityId: charge.id
+    })
+  );
 
   if (tenantProfile?.id) {
     void createNotificationWithDelivery({
@@ -236,7 +243,13 @@ export async function recordManualPayment(
       body: `Your payment of ${formatCurrency(amountCents)} has been recorded. Thank you!`,
       entityType: "rent_charge",
       entityId: charge.id
-    }).catch(() => {});
+    }).catch(
+      sideEffectError("recordManualPayment", "notify_tenant", {
+        userId: user.id,
+        entityType: "rent_charge",
+        entityId: charge.id
+      })
+    );
 
     const isOnTime = paidAt.slice(0, 10) <= charge.due_date;
     void awardXp(
@@ -249,7 +262,13 @@ export async function recordManualPayment(
         recorded_by: user.id,
         method
       }
-    ).catch(() => {});
+    ).catch(
+      sideEffectError("recordManualPayment", "award_xp", {
+        userId: user.id,
+        entityType: "xp_event",
+        entityId: charge.id
+      })
+    );
   }
 
   void logAudit({
@@ -264,7 +283,13 @@ export async function recordManualPayment(
       amountCents,
       method
     }
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("recordManualPayment", "log_audit", {
+      userId: user.id,
+      entityType: "rent_charge",
+      entityId: charge.id
+    })
+  );
 
   // 6) Revalidate
   revalidatePath("/");

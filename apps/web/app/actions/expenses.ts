@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { logAudit } from "@/lib/audit";
+import { sideEffectError } from "@/lib/logger";
 import {
   createExpenseSchema,
   updateExpenseSchema,
@@ -161,7 +162,13 @@ export async function createExpense(
       category,
       amountCents: Math.round(amountDollars * 100)
     }
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("createExpense", "log_audit", {
+      userId: user.id,
+      entityType: "expense",
+      entityId: createdExpense?.id
+    })
+  );
 
   revalidatePath("/owner");
   return { success: true };
@@ -268,7 +275,13 @@ export async function updateExpense(
       category,
       amountCents: Math.round(amountDollars * 100)
     }
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("updateExpense", "log_audit", {
+      userId: user.id,
+      entityType: "expense",
+      entityId: expenseId
+    })
+  );
 
   revalidatePath("/owner");
   return { success: true };
@@ -338,7 +351,13 @@ export async function deleteExpense(
     metadata: {
       propertyId: expense.property_id
     }
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("deleteExpense", "log_audit", {
+      userId: user.id,
+      entityType: "expense",
+      entityId: expenseId
+    })
+  );
 
   revalidatePath("/owner");
   return { success: true };

@@ -485,9 +485,7 @@ export async function getTenantMaintenanceData(
   };
 }
 
-/* ─── Owner: all tickets across owned properties ─── */
-
-export async function getOwnerMaintenanceTickets(
+export async function getAdminMaintenanceTickets(
   userId: string
 ): Promise<MaintenanceTicket[]> {
   const supabase = createAdminClient();
@@ -526,120 +524,6 @@ export async function getOwnerMaintenanceTickets(
     .order("created_at", { ascending: false });
 
   // Fetch tenant emails for context
-  const tenantIds = Array.from(
-    new Set(
-      (tickets ?? [])
-        .map((t) => t.tenant_profile_id)
-        .filter((id): id is string => id !== null)
-    )
-  );
-
-  let profileById = new Map<string, { email: string }>();
-  if (tenantIds.length > 0) {
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, email")
-      .in("id", tenantIds);
-
-    profileById = new Map(
-      (profiles ?? []).map((p) => [p.id, p])
-    );
-  }
-
-  const ticketRows = tickets ?? [];
-  const {
-    assignmentByTicketId,
-    vendorNameById,
-    photoCountByTicketId,
-    latestPhotoIdByTicketId
-  } =
-    await buildTicketEnhancementMaps(
-      supabase,
-      ticketRows.map((ticket) => ticket.id)
-    );
-  const {
-    commentCountByTicketId,
-    commentsByTicketId
-  } = await buildCommentMaps(
-    supabase,
-    ticketRows.map((ticket) => ticket.id)
-  );
-  const { timelineByTicketId } = await buildTimelineMaps(
-    supabase,
-    ticketRows.map((ticket) => ticket.id)
-  );
-
-  return ticketRows.map((ticket) => {
-    const property = propertyById.get(ticket.property_id);
-    const unit = ticket.unit_id ? unitById.get(ticket.unit_id) : null;
-    const tenant = ticket.tenant_profile_id
-      ? profileById.get(ticket.tenant_profile_id)
-      : null;
-    const assignment = assignmentByTicketId.get(ticket.id);
-
-    return {
-      id: ticket.id,
-      propertyName: property?.name ?? "Unknown Property",
-      unitNumber: unit?.unit_number ?? null,
-      title: ticket.title,
-      description: ticket.description,
-      status: ticket.status as MaintenanceTicket["status"],
-      priority: ticket.priority as MaintenanceTicket["priority"],
-      actualCostCents: ticket.actual_cost_cents,
-      vendorName: assignment ? vendorNameById.get(assignment.vendorId) ?? null : null,
-      assignmentStatus: assignment?.status ?? null,
-      photoCount: photoCountByTicketId.get(ticket.id) ?? 0,
-      latestPhotoId: latestPhotoIdByTicketId.get(ticket.id) ?? null,
-      createdAt: ticket.created_at,
-      resolvedAt: ticket.resolved_at,
-      tenantEmail: tenant?.email ?? null,
-      commentCount: commentCountByTicketId.get(ticket.id) ?? 0,
-      comments: commentsByTicketId.get(ticket.id) ?? [],
-      timeline: timelineByTicketId.get(ticket.id) ?? [],
-      isFeatureReady: true,
-      featureWarning: null
-    };
-  });
-}
-
-/* ─── Manager: tickets for assigned properties ─── */
-
-export async function getManagerMaintenanceTickets(
-  userId: string
-): Promise<MaintenanceTicket[]> {
-  const supabase = createAdminClient();
-  const propertyIds = await getAdministeredPropertyIds(userId);
-
-  if (propertyIds.length === 0) {
-    return [];
-  }
-
-  const { data: properties } = await supabase
-    .from("properties")
-    .select("id, name")
-    .in("id", propertyIds);
-
-  const propertyById = new Map(
-    (properties ?? []).map((p) => [p.id, p])
-  );
-
-  const { data: units } = await supabase
-    .from("units")
-    .select("id, unit_number")
-    .in("property_id", propertyIds);
-
-  const unitById = new Map(
-    (units ?? []).map((u) => [u.id, u])
-  );
-
-  const { data: tickets } = await supabase
-    .from("maintenance_tickets")
-    .select(
-      "id, property_id, unit_id, tenant_profile_id, title, description, status, priority, actual_cost_cents, created_at, resolved_at"
-    )
-    .in("property_id", propertyIds)
-    .order("created_at", { ascending: false });
-
   const tenantIds = Array.from(
     new Set(
       (tickets ?? [])

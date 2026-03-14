@@ -5,6 +5,15 @@ export function checkRateLimit(
   maxRequests = 100,
   windowMs = 60_000
 ): { allowed: boolean; remaining: number } {
+  const normalizedMaxRequests = Math.max(0, Math.floor(maxRequests));
+
+  if (normalizedMaxRequests === 0) {
+    return {
+      allowed: false,
+      remaining: 0
+    };
+  }
+
   const now = Date.now();
   const entry = rateLimitMap.get(key);
 
@@ -15,12 +24,12 @@ export function checkRateLimit(
     });
     return {
       allowed: true,
-      remaining: maxRequests - 1
+      remaining: normalizedMaxRequests - 1
     };
   }
 
   entry.count += 1;
-  if (entry.count > maxRequests) {
+  if (entry.count > normalizedMaxRequests) {
     return {
       allowed: false,
       remaining: 0
@@ -29,7 +38,7 @@ export function checkRateLimit(
 
   return {
     allowed: true,
-    remaining: Math.max(0, maxRequests - entry.count)
+    remaining: Math.max(0, normalizedMaxRequests - entry.count)
   };
 }
 

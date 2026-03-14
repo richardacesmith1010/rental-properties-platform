@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUserRole } from "@/lib/auth";
+import { sideEffectError } from "@/lib/logger";
 import {
   createNotificationWithDelivery,
   notifyOwnerMembersForProperty
@@ -415,7 +416,13 @@ export async function sendDocumentPacket(
     body: `You have a new document "${packetTitle}" to review and sign.`,
     entityType: "document_packet",
     entityId: packet.id
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("sendDocumentPacket", "notify_signer", {
+      userId: user.id,
+      entityType: "document_packet",
+      entityId: packet.id
+    })
+  );
   void notifyOwnerMembersForProperty({
     propertyId: packet.property_id,
     type: "document_sent",
@@ -424,7 +431,13 @@ export async function sendDocumentPacket(
     entityType: "document_packet",
     entityId: packet.id,
     excludeProfileId: user.id
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("sendDocumentPacket", "notify_signer", {
+      userId: user.id,
+      entityType: "document_packet",
+      entityId: packet.id
+    })
+  );
 
   revalidatePath("/owner");
   revalidatePath("/manager");
@@ -551,7 +564,13 @@ export async function signDocumentPacket(
         body: `"${template?.name ?? "Lease document"}" has been signed.`,
         entityType: "document_packet",
         entityId: packet.id
-      }).catch(() => {});
+      }).catch(
+        sideEffectError("signDocumentPacket", "notify_signer", {
+          userId: user.id,
+          entityType: "document_packet",
+          entityId: packet.id
+        })
+      );
     }
   }
 
@@ -564,7 +583,13 @@ export async function signDocumentPacket(
       packet_id: packetId,
       signer_id: signer.id
     }
-  ).catch(() => {});
+  ).catch(
+    sideEffectError("signDocumentPacket", "award_xp", {
+      userId: user.id,
+      entityType: "xp_event",
+      entityId: packetId
+    })
+  );
 
   revalidatePath("/tenant");
   revalidatePath("/owner");

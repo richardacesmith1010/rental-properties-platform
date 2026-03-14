@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getRoleHomePath } from "@/lib/auth";
 import { updateUserStreak } from "@/lib/gamification";
+import { sideEffectError } from "@/lib/logger";
 import { notifyOwnerMembersOfAcceptedTenantInvite } from "@/lib/notifications";
 
 function getSafeNextPath(rawNext: string | null) {
@@ -70,8 +71,20 @@ export async function GET(request: Request) {
 
       if (user?.id) {
         authenticatedUserId = user.id;
-        void updateUserStreak(user.id, "increment").catch(() => {});
-        void notifyOwnerMembersOfAcceptedTenantInvite(user.id).catch(() => {});
+        void updateUserStreak(user.id, "increment").catch(
+          sideEffectError("authCallback", "update_streak", {
+            userId: user.id,
+            entityType: "profile",
+            entityId: user.id
+          })
+        );
+        void notifyOwnerMembersOfAcceptedTenantInvite(user.id).catch(
+          sideEffectError("authCallback", "create_notification", {
+            userId: user.id,
+            entityType: "profile",
+            entityId: user.id
+          })
+        );
       }
 
       if (hasInvitedSession(type, rawNext, user)) {
@@ -92,8 +105,20 @@ export async function GET(request: Request) {
 
       if (user?.id) {
         authenticatedUserId = user.id;
-        void updateUserStreak(user.id, "increment").catch(() => {});
-        void notifyOwnerMembersOfAcceptedTenantInvite(user.id).catch(() => {});
+        void updateUserStreak(user.id, "increment").catch(
+          sideEffectError("authCallback", "update_streak", {
+            userId: user.id,
+            entityType: "profile",
+            entityId: user.id
+          })
+        );
+        void notifyOwnerMembersOfAcceptedTenantInvite(user.id).catch(
+          sideEffectError("authCallback", "create_notification", {
+            userId: user.id,
+            entityType: "profile",
+            entityId: user.id
+          })
+        );
       }
 
       if (type === "invite") {

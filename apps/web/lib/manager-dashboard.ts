@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getManagerMaintenanceTickets, type MaintenanceTicket } from "@/lib/maintenance";
+import { getAdminMaintenanceTickets, type MaintenanceTicket } from "@/lib/maintenance";
 
 interface ManagerProperty {
   id: string;
@@ -117,7 +117,7 @@ export async function getManagerDashboardData(
     .in("property_id", propertyIds)
     .in("status", ["open", "in_progress"]);
 
-  const tickets: MaintenanceTicket[] = await getManagerMaintenanceTickets(userId);
+  const tickets: MaintenanceTicket[] = await getAdminMaintenanceTickets(userId);
 
   // Fetch charges
   let charges: ManagerCharge[] = [];

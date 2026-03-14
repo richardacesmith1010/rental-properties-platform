@@ -29,7 +29,11 @@ const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit"
 });
 
-function normalizeDate(value: string | Date): Date | null {
+function normalizeDate(value: string | Date | null | undefined): Date | null {
+  if (value == null) {
+    return null;
+  }
+
   const parsed = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(parsed.getTime())) {
     return null;
@@ -43,7 +47,7 @@ export function formatCurrency(cents: number): string {
   return formatter.format(cents / 100);
 }
 
-export function formatDate(value: string | Date): string {
+export function formatDate(value: string | Date | null | undefined): string {
   const parsed = normalizeDate(value);
   if (!parsed) {
     return typeof value === "string" ? value : "";
@@ -51,12 +55,59 @@ export function formatDate(value: string | Date): string {
   return dateFormatter.format(parsed);
 }
 
-export function formatDateTime(value: string | Date): string {
+export function formatDateTime(value: string | Date | null | undefined): string {
   const parsed = normalizeDate(value);
   if (!parsed) {
     return typeof value === "string" ? value : "";
   }
   return dateTimeFormatter.format(parsed);
+}
+
+export function formatRelativeTime(
+  value: string | Date | null | undefined,
+  nowValue: string | Date = new Date()
+): string {
+  const parsed = normalizeDate(value);
+  const now = normalizeDate(nowValue);
+
+  if (!parsed) {
+    return typeof value === "string" ? value : "";
+  }
+
+  if (!now) {
+    return formatDateTime(parsed);
+  }
+
+  const diffMs = now.getTime() - parsed.getTime();
+  const diffSeconds = Math.floor(diffMs / 1000);
+  const absSeconds = Math.abs(diffSeconds);
+
+  if (absSeconds < 60) {
+    return diffSeconds >= 0 ? "just now" : "in a few seconds";
+  }
+
+  const diffMinutes = Math.floor(absSeconds / 60);
+  if (diffMinutes < 60) {
+    return diffSeconds >= 0
+      ? `${diffMinutes} minute${diffMinutes === 1 ? "" : "s"} ago`
+      : `in ${diffMinutes} minute${diffMinutes === 1 ? "" : "s"}`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) {
+    return diffSeconds >= 0
+      ? `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`
+      : `in ${diffHours} hour${diffHours === 1 ? "" : "s"}`;
+  }
+
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) {
+    return diffSeconds >= 0
+      ? `${diffDays} day${diffDays === 1 ? "" : "s"} ago`
+      : `in ${diffDays} day${diffDays === 1 ? "" : "s"}`;
+  }
+
+  return formatDate(parsed);
 }
 
 export function getGeneratedMessage(value: string | string[] | undefined) {

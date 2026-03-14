@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserRole } from "@/lib/auth";
+import { logFailedSideEffect } from "@/lib/logger";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import {
   createInboxThreadSchema,
@@ -125,7 +126,16 @@ export async function sendInboxMessage(
     .eq("id", threadId);
 
   if (threadUpdateError) {
-    console.error("Failed to update inbox thread timestamp, retrying once:", threadUpdateError.message);
+    logFailedSideEffect(
+      {
+        action: "sendInboxMessage",
+        operation: "update_thread_timestamp",
+        userId: user.id,
+        entityType: "inbox_thread",
+        entityId: threadId
+      },
+      threadUpdateError
+    );
     const retryResult = await supabase
       .from("inbox_threads")
       .update({ updated_at: updatedAt })
@@ -136,7 +146,16 @@ export async function sendInboxMessage(
   revalidatePath("/owner");
   revalidatePath("/manager");
   if (threadUpdateError) {
-    console.error("Failed to update inbox thread timestamp after retry:", threadUpdateError.message);
+    logFailedSideEffect(
+      {
+        action: "sendInboxMessage",
+        operation: "update_thread_timestamp_retry",
+        userId: user.id,
+        entityType: "inbox_thread",
+        entityId: threadId
+      },
+      threadUpdateError
+    );
     return {
       success: true,
       message: "Message sent, but the thread activity timestamp is catching up."

@@ -24,6 +24,7 @@ import {
   type ActionState
 } from "./shared";
 import { logAudit } from "@/lib/audit";
+import { sideEffectError } from "@/lib/logger";
 
 export async function createVendor(
   _prev: ActionState,
@@ -120,7 +121,13 @@ export async function createVendor(
       vendorName: name,
       tradeCategory
     }
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("createVendor", "log_audit", {
+      userId: user.id,
+      entityType: "vendor",
+      entityId: createdVendorId ?? undefined
+    })
+  );
 
   revalidatePath("/owner");
   revalidatePath("/manager");
@@ -305,7 +312,13 @@ export async function assignVendorToTicket(
       vendorId,
       ticketId
     }
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("assignVendorToTicket", "log_audit", {
+      userId: user.id,
+      entityType: "maintenance_ticket",
+      entityId: ticketId
+    })
+  );
 
   revalidatePath("/owner");
   revalidatePath("/manager");

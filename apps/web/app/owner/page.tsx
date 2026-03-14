@@ -2,7 +2,7 @@ import { Dashboard } from "@/components/dashboard";
 import { getDashboardData } from "@/lib/dashboard";
 import { getGeneratedMessage } from "@/lib/format";
 import { getPortfolioData } from "@/lib/portfolio";
-import { getOwnerMaintenanceTickets } from "@/lib/maintenance";
+import { getAdminMaintenanceTickets } from "@/lib/maintenance";
 import { getOwnerInvitations } from "@/lib/invitations";
 import { getOwnerDocumentsData } from "@/lib/documents";
 import { getNotificationsForUser } from "@/lib/notifications";
@@ -150,7 +150,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
   ] = await Promise.all([
     getDashboardData(user.id),
     getPortfolioData(user.id),
-    getOwnerMaintenanceTickets(user.id),
+    getAdminMaintenanceTickets(user.id),
     getOwnerInvitations(user.id),
     capabilities.documentsEnabled
       ? getOwnerDocumentsData(user.id)

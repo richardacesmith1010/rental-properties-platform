@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { awardXp, XP_VALUES } from "@/lib/gamification";
 import { formatCurrency } from "@/lib/format";
+import { sideEffectError } from "@/lib/logger";
 import {
   createStripeTransfer,
   type StripeCheckoutSession,
@@ -263,7 +264,13 @@ function queuePaymentNotifications(context: ChargeContext, amountCents: number) 
     body: `A payment of ${formatCurrency(amountCents)} was recorded for Unit ${context.unit.unit_number}.`,
     entityType: "rent_charge",
     entityId: context.charge.id
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("handlePaymentSucceeded", "notify_owner", {
+      userId: context.tenantProfile?.id ?? "system",
+      entityType: "rent_charge",
+      entityId: context.charge.id
+    })
+  );
 
   if (context.tenantProfile?.id) {
     void createNotificationWithDelivery({
@@ -274,7 +281,13 @@ function queuePaymentNotifications(context: ChargeContext, amountCents: number) 
       body: `Your payment of ${formatCurrency(amountCents)} has been recorded. Thank you!`,
       entityType: "rent_charge",
       entityId: context.charge.id
-    }).catch(() => {});
+    }).catch(
+      sideEffectError("handlePaymentSucceeded", "notify_tenant", {
+        userId: context.tenantProfile.id,
+        entityType: "rent_charge",
+        entityId: context.charge.id
+      })
+    );
   }
 }
 
@@ -291,7 +304,13 @@ function queuePaymentXp(context: ChargeContext, userId: string, method: string) 
       charge_id: context.charge.id,
       method
     }
-  ).catch(() => {});
+  ).catch(
+    sideEffectError("handlePaymentSucceeded", "award_xp", {
+      userId,
+      entityType: "xp_event",
+      entityId: context.charge.id
+    })
+  );
 }
 
 function queueAutopayFailureNotifications(
@@ -310,7 +329,13 @@ function queueAutopayFailureNotifications(
         : "We'll retry your payment in 3 days. Ensure your payment method is up to date.",
       entityType: "rent_charge",
       entityId: context?.charge.id
-    }).catch(() => {});
+    }).catch(
+      sideEffectError("handlePaymentFailed", "notify_tenant", {
+        userId: tenantProfile.id,
+        entityType: "rent_charge",
+        entityId: context?.charge.id
+      })
+    );
   }
 
   if (context?.property.id) {
@@ -321,7 +346,13 @@ function queueAutopayFailureNotifications(
       body: `Automatic payment failed for Unit ${context.unit.unit_number}.`,
       entityType: "rent_charge",
       entityId: context.charge.id
-    }).catch(() => {});
+    }).catch(
+      sideEffectError("handlePaymentFailed", "notify_owner", {
+        userId: tenantProfile?.id ?? "system",
+        entityType: "rent_charge",
+        entityId: context.charge.id
+      })
+    );
   }
 }
 

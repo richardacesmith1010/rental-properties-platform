@@ -18,7 +18,41 @@ describe("theme utilities", () => {
     expect(normalizeTheme("mystery-theme")).toBe("atlas-light");
   });
 
+  it("normalizes an empty string to atlas-light", () => {
+    expect(normalizeTheme("")).toBe("atlas-light");
+  });
+
+  it("normalizes null values to atlas-light", () => {
+    expect(normalizeTheme(null)).toBe("atlas-light");
+  });
+
+  it("normalizes undefined values to atlas-light", () => {
+    expect(normalizeTheme(undefined)).toBe("atlas-light");
+  });
+
+  it("accepts atlas-light as a valid theme", () => {
+    expect(normalizeTheme("atlas-light")).toBe("atlas-light");
+  });
+
+  it("accepts noctis-neon as a valid theme", () => {
+    expect(normalizeTheme("noctis-neon")).toBe("noctis-neon");
+  });
+
+  it("accepts imperium-night as a valid theme", () => {
+    expect(normalizeTheme("imperium-night")).toBe("imperium-night");
+  });
+
   it("returns atlas-light when no stored theme exists", () => {
+    expect(getStoredTheme()).toBe("atlas-light");
+  });
+
+  it("reads the stored theme from localStorage", () => {
+    window.localStorage.setItem(DOMUS_THEME_KEY, "noctis-neon");
+    expect(getStoredTheme()).toBe("noctis-neon");
+  });
+
+  it("normalizes invalid stored themes to atlas-light", () => {
+    window.localStorage.setItem(DOMUS_THEME_KEY, "garbage");
     expect(getStoredTheme()).toBe("atlas-light");
   });
 
@@ -42,7 +76,7 @@ describe("theme utilities", () => {
   it("clears the document attribute for atlas-light", () => {
     document.documentElement.setAttribute("data-domus-theme", "imperium-night");
     applyTheme("atlas-light");
-    expect(document.documentElement.hasAttribute("data-domus-theme")).toBe(false);
+    expect(document.documentElement.getAttribute("data-domus-theme")).toBeNull();
   });
 
   it("persists and applies the selected theme", () => {

@@ -4,6 +4,9 @@ import {
   createUnitSchema,
   createLeaseSchema,
   updateLeaseSchema,
+  renewLeaseSchema,
+  terminateLeaseSchema,
+  updateLateFeeSchema,
   payChargeSchema,
   recordManualPaymentSchema,
   setupAutopaySchema,
@@ -1442,5 +1445,341 @@ describe("parseFormData", () => {
       expect(result.data.bathrooms).toBe(1.5);
       expect(result.data.monthlyRentDollars).toBe(1200);
     }
+  });
+});
+
+describe("lease validation edge cases", () => {
+  const validUUID = "550e8400-e29b-41d4-a716-446655440000";
+
+  it("rejects zero rent amount on createLeaseSchema", () => {
+    const result = createLeaseSchema.safeParse({
+      unitId: validUUID,
+      tenantProfileId: validUUID,
+      startDate: "2026-01-01",
+      endDate: "2026-02-01",
+      dueDayOfMonth: "5",
+      monthlyRentDollars: "0",
+      depositDollars: "500"
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts a minimum one-month lease term", () => {
+    const result = createLeaseSchema.safeParse({
+      unitId: validUUID,
+      tenantProfileId: validUUID,
+      startDate: "2026-01-01",
+      endDate: "2026-02-01",
+      dueDayOfMonth: "1",
+      monthlyRentDollars: "1200",
+      depositDollars: "0"
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("applies default grace period and late fee values", () => {
+    const result = createLeaseSchema.safeParse({
+      unitId: validUUID,
+      tenantProfileId: validUUID,
+      startDate: "2026-01-01",
+      endDate: "2026-03-01",
+      dueDayOfMonth: "10",
+      monthlyRentDollars: "1500",
+      depositDollars: "1000"
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.gracePeriodDays).toBe(5);
+      expect(result.data.lateFeeDollars).toBe(0);
+    }
+  });
+
+  it("accepts zero grace period days", () => {
+    const result = createLeaseSchema.safeParse({
+      unitId: validUUID,
+      tenantProfileId: validUUID,
+      startDate: "2026-01-01",
+      endDate: "2026-03-01",
+      dueDayOfMonth: "10",
+      monthlyRentDollars: "1500",
+      depositDollars: "1000",
+      gracePeriodDays: "0"
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts zero late fee dollars", () => {
+    const result = createLeaseSchema.safeParse({
+      unitId: validUUID,
+      tenantProfileId: validUUID,
+      startDate: "2026-01-01",
+      endDate: "2026-03-01",
+      dueDayOfMonth: "10",
+      monthlyRentDollars: "1500",
+      depositDollars: "1000",
+      lateFeeDollars: "0"
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects zero monthly rent on updateLeaseSchema", () => {
+    const result = updateLeaseSchema.safeParse({
+      leaseId: validUUID,
+      endDate: "2026-12-31",
+      dueDayOfMonth: "1",
+      monthlyRentDollars: "0",
+      depositDollars: "500"
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("applies default late fee values on updateLeaseSchema", () => {
+    const result = updateLeaseSchema.safeParse({
+      leaseId: validUUID,
+      endDate: "2026-12-31",
+      dueDayOfMonth: "1",
+      monthlyRentDollars: "1500",
+      depositDollars: "500"
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.gracePeriodDays).toBe(5);
+      expect(result.data.lateFeeDollars).toBe(0);
+    }
+  });
+
+  it("rejects renewals where the end date precedes the new start date", () => {
+    const result = renewLeaseSchema.safeParse({
+      leaseId: validUUID,
+      newStartDate: "2026-06-01",
+      newEndDate: "2026-05-31",
+      newMonthlyRentDollars: "1600",
+      newDueDayOfMonth: "1"
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts valid lease renewal payloads", () => {
+    const result = renewLeaseSchema.safeParse({
+      leaseId: validUUID,
+      newStartDate: "2026-06-01",
+      newEndDate: "2027-05-31",
+      newMonthlyRentDollars: "1600",
+      newDueDayOfMonth: "1"
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects termination reasons longer than 500 characters", () => {
+    const result = terminateLeaseSchema.safeParse({
+      leaseId: validUUID,
+      terminationReason: "x".repeat(501)
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts valid late fee updates", () => {
+    const result = updateLateFeeSchema.safeParse({
+      leaseId: validUUID,
+      lateFeeDollars: "75",
+      gracePeriodDays: "5"
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects late fee updates above the grace period bounds", () => {
+    const result = updateLateFeeSchema.safeParse({
+      leaseId: validUUID,
+      lateFeeDollars: "75",
+      gracePeriodDays: "31"
+    });
+
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("property validation edge cases", () => {
+  const validUUID = "550e8400-e29b-41d4-a716-446655440000";
+
+  it("accepts property records with only a name", () => {
+    const result = createPropertySchema.safeParse({ name: "Atlas" });
+    expect(result.success).toBe(true);
+  });
+
+  it("normalizes blank postal codes to undefined", () => {
+    const result = createPropertySchema.safeParse({
+      name: "Atlas",
+      postalCode: ""
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.postalCode).toBeUndefined();
+    }
+  });
+
+  it("rejects postal codes with special characters", () => {
+    const result = createPropertySchema.safeParse({
+      name: "Atlas",
+      postalCode: "6270!"
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts a valid owner account id", () => {
+    const result = createPropertySchema.safeParse({
+      name: "Atlas",
+      ownerAccountId: validUUID
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an invalid owner account id", () => {
+    const result = createPropertySchema.safeParse({
+      name: "Atlas",
+      ownerAccountId: "not-a-uuid"
+    });
+
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("unit and expense validation edge cases", () => {
+  const validUUID = "550e8400-e29b-41d4-a716-446655440000";
+
+  it("rejects empty unit numbers", () => {
+    const result = createUnitSchema.safeParse({
+      propertyId: validUUID,
+      unitNumber: "",
+      bedrooms: "1",
+      bathrooms: "1",
+      monthlyRentDollars: "1000"
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts alphanumeric unit numbers", () => {
+    const result = createUnitSchema.safeParse({
+      propertyId: validUUID,
+      unitNumber: "PH-2B",
+      bedrooms: "2",
+      bathrooms: "1.5",
+      monthlyRentDollars: "2200"
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects negative bathroom counts", () => {
+    const result = createUnitSchema.safeParse({
+      propertyId: validUUID,
+      unitNumber: "2B",
+      bedrooms: "2",
+      bathrooms: "-1",
+      monthlyRentDollars: "1500"
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts studio units with zero bedrooms", () => {
+    const result = createUnitSchema.safeParse({
+      propertyId: validUUID,
+      unitNumber: "Studio",
+      bedrooms: "0",
+      bathrooms: "1",
+      monthlyRentDollars: "900"
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects expense payloads with zero amounts", () => {
+    const result = createExpenseSchema.safeParse({
+      propertyId: validUUID,
+      category: "maintenance",
+      amountDollars: "0",
+      expenseDate: "2026-03-01",
+      recurring: "false"
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects expense payloads without a category", () => {
+    const result = createExpenseSchema.safeParse({
+      propertyId: validUUID,
+      amountDollars: "100",
+      expenseDate: "2026-03-01",
+      recurring: "false"
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid recurring frequencies", () => {
+    const result = createExpenseSchema.safeParse({
+      propertyId: validUUID,
+      category: "maintenance",
+      amountDollars: "100",
+      expenseDate: "2026-03-01",
+      recurring: "true",
+      recurringFrequency: "weekly"
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts recurring expenses with a valid frequency", () => {
+    const result = createExpenseSchema.safeParse({
+      propertyId: validUUID,
+      category: "maintenance",
+      amountDollars: "100",
+      expenseDate: "2026-03-01",
+      recurring: "true",
+      recurringFrequency: "monthly"
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid vendor ids on updateExpenseSchema", () => {
+    const result = updateExpenseSchema.safeParse({
+      expenseId: validUUID,
+      category: "maintenance",
+      amountDollars: "100",
+      expenseDate: "2026-03-01",
+      recurring: "false",
+      vendorId: "nope"
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid receipt file ids on updateExpenseSchema", () => {
+    const result = updateExpenseSchema.safeParse({
+      expenseId: validUUID,
+      category: "maintenance",
+      amountDollars: "100",
+      expenseDate: "2026-03-01",
+      recurring: "false",
+      receiptFileId: "bad-id"
+    });
+
+    expect(result.success).toBe(false);
   });
 });

@@ -59,11 +59,43 @@ const EMPTY_ANALYTICS: AnalyticsDashboardData = {
   }
 };
 
-interface MonthWindow {
+export interface MonthWindow {
   key: string;
   label: string;
   startIso: string;
   endIso: string;
+}
+
+export interface AnalyticsChargeRow {
+  id: string;
+  lease_id: string;
+  due_date: string;
+  amount_cents: number;
+  status: "pending" | "paid" | "late";
+  category: string | null;
+}
+
+export interface AnalyticsExpenseRow {
+  property_id: string;
+  category: string;
+  amount_cents: number;
+  expense_date: string;
+}
+
+export interface AnalyticsLeaseRow {
+  id: string;
+  unit_id: string;
+  start_date: string;
+  end_date: string;
+}
+
+export interface AnalyticsTicketRow {
+  priority: string | null;
+  status: string | null;
+  created_at: string;
+  resolved_at: string | null;
+  updated_at: string | null;
+  actual_cost_cents: number | null;
 }
 
 function isMissingSchemaError(error: unknown): boolean {
@@ -84,7 +116,7 @@ function isMissingSchemaError(error: unknown): boolean {
   );
 }
 
-function buildLastTwelveMonths(): MonthWindow[] {
+export function buildLastTwelveMonths(): MonthWindow[] {
   const now = new Date();
   const months: MonthWindow[] = [];
 
@@ -106,7 +138,7 @@ function buildLastTwelveMonths(): MonthWindow[] {
   return months;
 }
 
-function monthKey(value: string): string | null {
+export function monthKey(value: string): string | null {
   const parsed = new Date(`${value}T00:00:00.000Z`);
   if (Number.isNaN(parsed.getTime())) {
     return null;
@@ -121,15 +153,178 @@ function startOfCurrentYearIso(): string {
   return new Date(Date.UTC(now.getUTCFullYear(), 0, 1)).toISOString().slice(0, 10);
 }
 
-function average(values: number[]): number {
+export function average(values: number[]): number {
   if (values.length === 0) {
     return 0;
   }
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
-function overlapMonth(startDate: string, endDate: string, month: MonthWindow): boolean {
+export function overlapMonth(startDate: string, endDate: string, month: MonthWindow): boolean {
   return startDate <= month.endIso && endDate >= month.startIso;
+}
+
+export function calculateOccupancyRate(occupiedUnits: number, totalUnits: number): number {
+  if (totalUnits <= 0) {
+    return 0;
+  }
+
+  return (occupiedUnits / totalUnits) * 100;
+}
+
+export function buildRentMetrics(
+  charges: AnalyticsChargeRow[],
+  months: MonthWindow[],
+  currentYearStart: string,
+  currentMonthKey: string | null
+): {
+  rentMetrics: MonthlyRentMetric[];
+  totalIncomeCentsYtd: number;
+  collectionRate: number;
+} {
+  const rentMetricMap = new Map<string, MonthlyRentMetric>(
+    months.map((month) => [
+      month.key,
+      { month: month.label, dueCents: 0, collectedCents: 0, lateCents: 0 }
+    ])
+  );
+
+  let totalIncomeCentsYtd = 0;
+  for (const charge of charges) {
+    const key = monthKey(charge.due_date);
+    if (!key || !rentMetricMap.has(key)) {
+      continue;
+    }
+
+    const metric = rentMetricMap.get(key)!;
+    const category = charge.category ?? "rent";
+    if (category === "rent") {
+      metric.dueCents += charge.amount_cents;
+      if (charge.status === "paid") {
+        metric.collectedCents += charge.amount_cents;
+      }
+      if (charge.status === "late") {
+        metric.lateCents += charge.amount_cents;
+      }
+    }
+
+    if (charge.status === "paid" && charge.due_date >= currentYearStart) {
+      totalIncomeCentsYtd += charge.amount_cents;
+    }
+  }
+
+  const currentMonthMetrics = currentMonthKey ? rentMetricMap.get(currentMonthKey) : undefined;
+
+  return {
+    rentMetrics: months.map((month) => rentMetricMap.get(month.key)!),
+    totalIncomeCentsYtd,
+    collectionRate:
+      currentMonthMetrics && currentMonthMetrics.dueCents > 0
+        ? (currentMonthMetrics.collectedCents / currentMonthMetrics.dueCents) * 100
+        : 0
+  };
+}
+
+export function buildExpenseCategoryMetrics(expenses: AnalyticsExpenseRow[]): {
+  expenseCategories: ExpenseCategoryMetric[];
+  totalExpenseCentsYtd: number;
+} {
+  const expenseTotals = new Map<string, number>();
+  let totalExpenseCentsYtd = 0;
+
+  for (const expense of expenses) {
+    totalExpenseCentsYtd += expense.amount_cents;
+    expenseTotals.set(
+      expense.category,
+      (expenseTotals.get(expense.category) ?? 0) + expense.amount_cents
+    );
+  }
+
+  return {
+    expenseCategories: Array.from(expenseTotals.entries())
+      .map(([category, totalCents]) => ({ category, totalCents }))
+      .sort((left, right) => right.totalCents - left.totalCents),
+    totalExpenseCentsYtd
+  };
+}
+
+export function buildOccupancyMetrics(
+  months: MonthWindow[],
+  leases: AnalyticsLeaseRow[],
+  totalUnits: number
+): OccupancyMetric[] {
+  return months.map((month) => {
+    const occupiedUnitIds = new Set<string>();
+    for (const lease of leases) {
+      if (overlapMonth(lease.start_date, lease.end_date, month)) {
+        occupiedUnitIds.add(lease.unit_id);
+      }
+    }
+
+    const occupiedUnits = occupiedUnitIds.size;
+    return {
+      month: month.label,
+      occupiedUnits,
+      totalUnits,
+      rate: calculateOccupancyRate(occupiedUnits, totalUnits)
+    };
+  });
+}
+
+export function buildMaintenanceMetrics(
+  tickets: AnalyticsTicketRow[],
+  currentYearStart: string
+): {
+  maintenanceMetrics: MaintenanceMetric[];
+  maintenanceCostCentsYtd: number;
+} {
+  const maintenanceAccumulator = new Map<
+    string,
+    { totalTickets: number; resolvedTickets: number; resolutionDays: number[] }
+  >([
+    ["low", { totalTickets: 0, resolvedTickets: 0, resolutionDays: [] }],
+    ["medium", { totalTickets: 0, resolvedTickets: 0, resolutionDays: [] }],
+    ["high", { totalTickets: 0, resolvedTickets: 0, resolutionDays: [] }],
+    ["urgent", { totalTickets: 0, resolvedTickets: 0, resolutionDays: [] }]
+  ]);
+
+  let maintenanceCostCentsYtd = 0;
+  for (const ticket of tickets) {
+    const priority =
+      typeof ticket.priority === "string" &&
+      ["low", "medium", "high", "urgent"].includes(ticket.priority)
+        ? ticket.priority
+        : "low";
+    const bucket = maintenanceAccumulator.get(priority)!;
+    bucket.totalTickets += 1;
+
+    if (ticket.created_at >= currentYearStart) {
+      maintenanceCostCentsYtd += ticket.actual_cost_cents ?? 0;
+    }
+
+    if (ticket.status === "resolved" || ticket.status === "closed") {
+      bucket.resolvedTickets += 1;
+      const resolvedAt = ticket.resolved_at ?? ticket.updated_at;
+      const createdAt = new Date(ticket.created_at).getTime();
+      const resolvedTime = resolvedAt ? new Date(resolvedAt).getTime() : Number.NaN;
+      if (!Number.isNaN(createdAt) && !Number.isNaN(resolvedTime) && resolvedTime >= createdAt) {
+        bucket.resolutionDays.push((resolvedTime - createdAt) / (1000 * 60 * 60 * 24));
+      }
+    }
+  }
+
+  return {
+    maintenanceMetrics: ["low", "medium", "high", "urgent"].map((priority) => {
+      const bucket = maintenanceAccumulator.get(priority)!;
+      return {
+        priority,
+        totalTickets: bucket.totalTickets,
+        resolvedTickets: bucket.resolvedTickets,
+        avgResolutionDays: average(bucket.resolutionDays)
+      };
+    }),
+    maintenanceCostCentsYtd
+  };
 }
 
 export async function getOwnerAnalyticsData(userId: string): Promise<AnalyticsDashboardData> {
@@ -215,28 +410,14 @@ export async function getOwnerAnalyticsData(userId: string): Promise<AnalyticsDa
           .gte("due_date", analyticsStartDate)
           .lte("due_date", analyticsEndDate)
       : {
-          data: [] as Array<{
-            id: string;
-            lease_id: string;
-            due_date: string;
-            amount_cents: number;
-            status: "pending" | "paid" | "late";
-            category: string | null;
-          }>,
+          data: [] as AnalyticsChargeRow[],
           error: null
         };
 
     if (chargesQuery.error) {
       if (isMissingSchemaError(chargesQuery.error)) {
         const chargesFallback = {
-          data: [] as Array<{
-            id: string;
-            lease_id: string;
-            due_date: string;
-            amount_cents: number;
-            status: "pending" | "paid" | "late";
-            category: string | null;
-          }>
+          data: [] as AnalyticsChargeRow[]
         };
         Object.assign(chargesQuery, chargesFallback);
       } else {
@@ -253,12 +434,7 @@ export async function getOwnerAnalyticsData(userId: string): Promise<AnalyticsDa
     if (expenseQuery.error) {
       if (isMissingSchemaError(expenseQuery.error)) {
         Object.assign(expenseQuery, {
-          data: [] as Array<{
-            property_id: string;
-            category: string;
-            amount_cents: number;
-            expense_date: string;
-          }>
+          data: [] as AnalyticsExpenseRow[]
         });
       } else {
         throw expenseQuery.error;
@@ -273,14 +449,7 @@ export async function getOwnerAnalyticsData(userId: string): Promise<AnalyticsDa
     if (maintenanceQuery.error) {
       if (isMissingSchemaError(maintenanceQuery.error)) {
         Object.assign(maintenanceQuery, {
-          data: [] as Array<{
-            priority: string | null;
-            status: string | null;
-            created_at: string;
-            resolved_at: string | null;
-            updated_at: string | null;
-            actual_cost_cents: number | null;
-          }>
+          data: [] as AnalyticsTicketRow[]
         });
       } else {
         throw maintenanceQuery.error;
@@ -309,36 +478,11 @@ export async function getOwnerAnalyticsData(userId: string): Promise<AnalyticsDa
       }
     }
 
-    const rentMetricMap = new Map<string, MonthlyRentMetric>(
-      lastTwelveMonths.map((month) => [
-        month.key,
-        { month: month.label, dueCents: 0, collectedCents: 0, lateCents: 0 }
-      ])
-    );
-
-    let totalIncomeCentsYtd = 0;
-    for (const charge of chargeRows) {
-      const key = monthKey(charge.due_date);
-      if (!key || !rentMetricMap.has(key)) {
-        continue;
-      }
-
-      const metric = rentMetricMap.get(key)!;
-      const category = charge.category ?? "rent";
-      if (category === "rent") {
-        metric.dueCents += charge.amount_cents;
-        if (charge.status === "paid") {
-          metric.collectedCents += charge.amount_cents;
-        }
-        if (charge.status === "late") {
-          metric.lateCents += charge.amount_cents;
-        }
-      }
-
-      if (charge.status === "paid" && charge.due_date >= currentYearStart) {
-        totalIncomeCentsYtd += charge.amount_cents;
-      }
-    }
+    const {
+      rentMetrics,
+      totalIncomeCentsYtd,
+      collectionRate
+    } = buildRentMetrics(chargeRows, lastTwelveMonths, currentYearStart, currentMonthKey);
 
     const paymentsByChargeId = new Map<string, { rent_charge_id: string; paid_at: string }>();
     for (const payment of paymentQuery.data ?? []) {
@@ -368,86 +512,14 @@ export async function getOwnerAnalyticsData(userId: string): Promise<AnalyticsDa
       paymentDayDiffs.push((paidAt - dueDate) / (1000 * 60 * 60 * 24));
     }
 
-    const expenseTotals = new Map<string, number>();
-    let totalExpenseCentsYtd = 0;
-    for (const expense of expenseQuery.data ?? []) {
-      totalExpenseCentsYtd += expense.amount_cents;
-      expenseTotals.set(expense.category, (expenseTotals.get(expense.category) ?? 0) + expense.amount_cents);
-    }
-
-    const expenseCategories: ExpenseCategoryMetric[] = Array.from(expenseTotals.entries())
-      .map(([category, totalCents]) => ({ category, totalCents }))
-      .sort((left, right) => right.totalCents - left.totalCents);
-
-    const occupancyMetrics: OccupancyMetric[] = lastTwelveMonths.map((month) => {
-      const occupiedUnitIds = new Set<string>();
-      for (const lease of leaseRows) {
-        if (overlapMonth(lease.start_date, lease.end_date, month)) {
-          occupiedUnitIds.add(lease.unit_id);
-        }
-      }
-
-      const occupiedUnits = occupiedUnitIds.size;
-      const rate = totalUnits > 0 ? (occupiedUnits / totalUnits) * 100 : 0;
-      return {
-        month: month.label,
-        occupiedUnits,
-        totalUnits,
-        rate
-      };
-    });
-
-    const maintenanceAccumulator = new Map<
-      string,
-      { totalTickets: number; resolvedTickets: number; resolutionDays: number[] }
-    >([
-      ["low", { totalTickets: 0, resolvedTickets: 0, resolutionDays: [] }],
-      ["medium", { totalTickets: 0, resolvedTickets: 0, resolutionDays: [] }],
-      ["high", { totalTickets: 0, resolvedTickets: 0, resolutionDays: [] }],
-      ["urgent", { totalTickets: 0, resolvedTickets: 0, resolutionDays: [] }]
-    ]);
-
-    let maintenanceCostCentsYtd = 0;
-    for (const ticket of maintenanceQuery.data ?? []) {
-      const priority = typeof ticket.priority === "string" && ["low", "medium", "high", "urgent"].includes(ticket.priority)
-        ? ticket.priority
-        : "low";
-      const bucket = maintenanceAccumulator.get(priority)!;
-      bucket.totalTickets += 1;
-
-      if (ticket.created_at >= currentYearStart) {
-        maintenanceCostCentsYtd += ticket.actual_cost_cents ?? 0;
-      }
-
-      if (ticket.status === "resolved" || ticket.status === "closed") {
-        bucket.resolvedTickets += 1;
-        const resolvedAt = ticket.resolved_at ?? ticket.updated_at;
-        const createdAt = new Date(ticket.created_at).getTime();
-        const resolvedTime = resolvedAt ? new Date(resolvedAt).getTime() : Number.NaN;
-        if (!Number.isNaN(createdAt) && !Number.isNaN(resolvedTime) && resolvedTime >= createdAt) {
-          bucket.resolutionDays.push((resolvedTime - createdAt) / (1000 * 60 * 60 * 24));
-        }
-      }
-    }
-
-    const maintenanceMetrics: MaintenanceMetric[] = ["low", "medium", "high", "urgent"].map((priority) => {
-      const bucket = maintenanceAccumulator.get(priority)!;
-      return {
-        priority,
-        totalTickets: bucket.totalTickets,
-        resolvedTickets: bucket.resolvedTickets,
-        avgResolutionDays: average(bucket.resolutionDays)
-      };
-    });
-
-    const rentMetrics = lastTwelveMonths
-      .map((month) => rentMetricMap.get(month.key)!)
-      .filter(Boolean);
-
-    const currentMonthMetrics = currentMonthKey ? rentMetricMap.get(currentMonthKey) : undefined;
-    const collectionRate = currentMonthMetrics && currentMonthMetrics.dueCents > 0
-      ? (currentMonthMetrics.collectedCents / currentMonthMetrics.dueCents) * 100
-      : 0;
+    const { expenseCategories, totalExpenseCentsYtd } = buildExpenseCategoryMetrics(
+      expenseQuery.data ?? []
+    );
+    const occupancyMetrics = buildOccupancyMetrics(lastTwelveMonths, leaseRows, totalUnits);
+    const { maintenanceMetrics, maintenanceCostCentsYtd } = buildMaintenanceMetrics(
+      maintenanceQuery.data ?? [],
+      currentYearStart
+    );
 
     return {
       enabled: true,

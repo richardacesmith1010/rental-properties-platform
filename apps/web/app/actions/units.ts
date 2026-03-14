@@ -7,6 +7,7 @@ import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { logAudit } from "@/lib/audit";
 import { awardXp, XP_VALUES } from "@/lib/gamification";
+import { sideEffectError } from "@/lib/logger";
 import {
   createUnitSchema,
   updateUnitSchema,
@@ -60,7 +61,13 @@ export async function createUnit(_prev: ActionState, formData: FormData): Promis
       XP_VALUES.unit_added,
       "Unit added to property.",
       { unit_id: createdUnit.id, property_id: propertyId }
-    ).catch(() => {});
+    ).catch(
+      sideEffectError("createUnit", "award_xp", {
+        userId: user.id,
+        entityType: "xp_event",
+        entityId: createdUnit.id
+      })
+    );
 
     void logAudit({
       userId: user.id,
@@ -71,7 +78,13 @@ export async function createUnit(_prev: ActionState, formData: FormData): Promis
         propertyId,
         unitNumber
       }
-    }).catch(() => {});
+    }).catch(
+      sideEffectError("createUnit", "log_audit", {
+        userId: user.id,
+        entityType: "unit",
+        entityId: createdUnit.id
+      })
+    );
   }
 
   revalidatePath("/");
@@ -140,7 +153,13 @@ export async function updateUnit(_prev: ActionState, formData: FormData): Promis
       propertyId: unit.property_id,
       unitNumber
     }
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("updateUnit", "log_audit", {
+      userId: user.id,
+      entityType: "unit",
+      entityId: unitId
+    })
+  );
 
   revalidatePath("/");
   revalidatePath("/owner");
@@ -223,7 +242,13 @@ export async function deleteUnit(_prev: ActionState, formData: FormData): Promis
     metadata: {
       propertyId: unit.property_id
     }
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("deleteUnit", "log_audit", {
+      userId: user.id,
+      entityType: "unit",
+      entityId: unitId
+    })
+  );
 
   revalidatePath("/");
   revalidatePath("/owner");

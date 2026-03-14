@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUserRole } from "@/lib/auth";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { logAudit } from "@/lib/audit";
+import { sideEffectError } from "@/lib/logger";
 import {
   createAccountLink,
   createExpressAccount,
@@ -216,7 +217,13 @@ export async function updateManagementFee(
       propertyId,
       managementFeeCents
     }
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("updateManagementFee", "log_audit", {
+      userId: user.id,
+      entityType: "property",
+      entityId: propertyId
+    })
+  );
 
   revalidatePath("/owner");
   revalidatePath("/manager");

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUserRole } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
+import { sideEffectError } from "@/lib/logger";
 import {
   createNotificationWithDelivery,
   notifyOwnerMembersForProperty
@@ -213,7 +214,13 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
       property_id: unit.property_id,
       tenant_profile_id: tenantProfile.id
     }
-  ).catch(() => {});
+  ).catch(
+    sideEffectError("createLease", "award_xp", {
+      userId: user.id,
+      entityType: "xp_event",
+      entityId: createdLease.id
+    })
+  );
 
   void logAudit({
     userId: user.id,
@@ -226,7 +233,13 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
       tenantProfileId,
       tenantEmail: tenantProfile.email
     }
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("createLease", "log_audit", {
+      userId: user.id,
+      entityType: "lease",
+      entityId: createdLease.id
+    })
+  );
 
   revalidatePath("/");
   revalidatePath("/owner");
@@ -352,7 +365,13 @@ export async function updateLease(_prev: ActionState, formData: FormData): Promi
       propertyId: unit.property_id,
       tenantProfileId: lease.tenant_profile_id
     }
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("updateLease", "log_audit", {
+      userId: user.id,
+      entityType: "lease",
+      entityId: leaseId
+    })
+  );
 
   revalidatePath("/");
   revalidatePath("/owner");
@@ -470,7 +489,13 @@ export async function renewLease(_prev: ActionState, formData: FormData): Promis
         body: "Your lease has been renewed.",
         entityType: "lease",
         entityId: newLease.id
-      }).catch(() => {});
+      }).catch(
+        sideEffectError("renewLease", "notify_tenant", {
+          userId: user.id,
+          entityType: "lease",
+          entityId: newLease.id
+        })
+      );
     }
   }
 
@@ -484,7 +509,13 @@ export async function renewLease(_prev: ActionState, formData: FormData): Promis
       tenantProfileId: lease.tenant_profile_id,
       previousLeaseId: lease.id
     }
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("renewLease", "log_audit", {
+      userId: user.id,
+      entityType: "lease",
+      entityId: newLease.id
+    })
+  );
 
   revalidatePath("/");
   revalidatePath("/owner");
@@ -577,7 +608,13 @@ export async function terminateLease(_prev: ActionState, formData: FormData): Pr
         body: "Your lease has been terminated.",
         entityType: "lease",
         entityId: lease.id
-      }).catch(() => {});
+      }).catch(
+        sideEffectError("terminateLease", "notify_tenant", {
+          userId: user.id,
+          entityType: "lease",
+          entityId: lease.id
+        })
+      );
     }
   }
 
@@ -591,7 +628,13 @@ export async function terminateLease(_prev: ActionState, formData: FormData): Pr
       tenantProfileId: lease.tenant_profile_id,
       terminationReason
     }
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("terminateLease", "log_audit", {
+      userId: user.id,
+      entityType: "lease",
+      entityId: lease.id
+    })
+  );
 
   revalidatePath("/");
   revalidatePath("/owner");
@@ -704,7 +747,13 @@ export async function deleteLease(_prev: ActionState, formData: FormData): Promi
       propertyId: unit.property_id,
       tenantProfileId: lease.tenant_profile_id
     }
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("deleteLease", "log_audit", {
+      userId: user.id,
+      entityType: "lease",
+      entityId: leaseId
+    })
+  );
 
   revalidatePath("/");
   revalidatePath("/owner");

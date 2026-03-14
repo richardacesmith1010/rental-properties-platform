@@ -13,6 +13,7 @@ import {
 } from "@/lib/ownership";
 import { logAudit } from "@/lib/audit";
 import { awardXp, XP_VALUES } from "@/lib/gamification";
+import { sideEffectError } from "@/lib/logger";
 import {
   createPropertySchema,
   updatePropertySchema,
@@ -110,7 +111,13 @@ export async function createProperty(_prev: ActionState, formData: FormData): Pr
       XP_VALUES.property_added,
       "Property added to portfolio.",
       { property_id: property.id }
-    ).catch(() => {});
+    ).catch(
+      sideEffectError("createProperty", "award_xp", {
+        userId: user.id,
+        entityType: "xp_event",
+        entityId: property.id
+      })
+    );
 
     void logAudit({
       userId: user.id,
@@ -121,7 +128,13 @@ export async function createProperty(_prev: ActionState, formData: FormData): Pr
         propertyId: property.id,
         propertyName: name
       }
-    }).catch(() => {});
+    }).catch(
+      sideEffectError("createProperty", "log_audit", {
+        userId: user.id,
+        entityType: "property",
+        entityId: property.id
+      })
+    );
   }
 
   revalidatePath("/");
@@ -181,7 +194,13 @@ export async function updateProperty(_prev: ActionState, formData: FormData): Pr
       propertyId,
       propertyName: name
     }
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("updateProperty", "log_audit", {
+      userId: user.id,
+      entityType: "property",
+      entityId: propertyId
+    })
+  );
 
   revalidatePath("/");
   revalidatePath("/owner");
@@ -262,7 +281,13 @@ export async function deleteProperty(_prev: ActionState, formData: FormData): Pr
     metadata: {
       propertyId
     }
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("deleteProperty", "log_audit", {
+      userId: user.id,
+      entityType: "property",
+      entityId: propertyId
+    })
+  );
 
   revalidatePath("/");
   revalidatePath("/owner");

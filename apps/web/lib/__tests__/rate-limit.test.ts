@@ -50,4 +50,63 @@ describe("checkRateLimit", () => {
       remaining: 0
     });
   });
+
+  it("returns the remaining count accurately", () => {
+    const first = checkRateLimit("leases:1", 5, 60_000);
+    const second = checkRateLimit("leases:1", 5, 60_000);
+
+    expect(first.remaining).toBe(4);
+    expect(second.remaining).toBe(3);
+  });
+
+  it("allows requests exactly at the limit", () => {
+    expect(checkRateLimit("edge:1", 3, 60_000).allowed).toBe(true);
+    expect(checkRateLimit("edge:1", 3, 60_000).allowed).toBe(true);
+    expect(checkRateLimit("edge:1", 3, 60_000).allowed).toBe(true);
+    expect(checkRateLimit("edge:1", 3, 60_000).allowed).toBe(false);
+  });
+
+  it("blocks immediately when maxRequests is zero", () => {
+    expect(checkRateLimit("zero", 0, 60_000)).toEqual({
+      allowed: false,
+      remaining: 0
+    });
+  });
+
+  it("does not let different keys interfere with each other", () => {
+    for (let index = 0; index < 6; index += 1) {
+      checkRateLimit("key-a", 5, 60_000);
+    }
+
+    expect(checkRateLimit("key-a", 5, 60_000)).toEqual({
+      allowed: false,
+      remaining: 0
+    });
+    expect(checkRateLimit("key-b", 5, 60_000)).toEqual({
+      allowed: true,
+      remaining: 4
+    });
+  });
+
+  it("resets correctly for very short windows", () => {
+    checkRateLimit("short-window", 1, 100);
+    expect(checkRateLimit("short-window", 1, 100)).toEqual({
+      allowed: false,
+      remaining: 0
+    });
+
+    vi.advanceTimersByTime(101);
+
+    expect(checkRateLimit("short-window", 1, 100)).toEqual({
+      allowed: true,
+      remaining: 0
+    });
+  });
+
+  it("treats negative maxRequests as zero", () => {
+    expect(checkRateLimit("negative", -1, 60_000)).toEqual({
+      allowed: false,
+      remaining: 0
+    });
+  });
 });

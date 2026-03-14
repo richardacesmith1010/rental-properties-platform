@@ -9,6 +9,7 @@ import { canUserAdministerProperty } from "@/lib/property-access";
 import { canUserAdministerOwnershipAccount } from "@/lib/ownership";
 import { logAudit } from "@/lib/audit";
 import { awardXp, XP_VALUES } from "@/lib/gamification";
+import { sideEffectError } from "@/lib/logger";
 import { notifyOwnerMembersOfAcceptedTenantInvite } from "@/lib/notifications";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
@@ -89,14 +90,26 @@ export async function inviteTenant(
           return { success: false, error: "Failed to link tenant to the property." };
         }
 
-        void notifyOwnerMembersOfAcceptedTenantInvite(existingProfile.id).catch(() => {});
+        void notifyOwnerMembersOfAcceptedTenantInvite(existingProfile.id).catch(
+          sideEffectError("inviteTenant", "create_notification", {
+            userId: user.id,
+            entityType: "invitation",
+            entityId: existingProfile.id
+          })
+        );
         void awardXp(
           user.id,
           "tenant_invited",
           XP_VALUES.tenant_invited,
           "Tenant linked to property.",
           { property_id: propertyId, tenant_profile_id: existingProfile.id }
-        ).catch(() => {});
+        ).catch(
+          sideEffectError("inviteTenant", "award_xp", {
+            userId: user.id,
+            entityType: "xp_event",
+            entityId: existingProfile.id
+          })
+        );
         void logAudit({
           userId: user.id,
           action: "invite_tenant",
@@ -106,7 +119,13 @@ export async function inviteTenant(
             tenantProfileId: existingProfile.id,
             tenantEmail: email.toLowerCase()
           }
-        }).catch(() => {});
+        }).catch(
+          sideEffectError("inviteTenant", "log_audit", {
+            userId: user.id,
+            entityType: "invitation",
+            entityId: existingProfile.id
+          })
+        );
       }
 
       revalidatePath("/owner");
@@ -176,7 +195,13 @@ export async function inviteTenant(
       propertyId,
       tenantEmail: email.toLowerCase()
     }
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("inviteTenant", "log_audit", {
+      userId: user.id,
+      entityType: "invitation",
+      entityId: propertyId
+    })
+  );
 
   void awardXp(
     user.id,
@@ -184,7 +209,13 @@ export async function inviteTenant(
     XP_VALUES.tenant_invited,
     "Tenant invitation sent.",
     { property_id: propertyId, email: email.toLowerCase() }
-  ).catch(() => {});
+  ).catch(
+    sideEffectError("inviteTenant", "award_xp", {
+      userId: user.id,
+      entityType: "xp_event",
+      entityId: propertyId
+    })
+  );
 
   revalidatePath("/owner");
   revalidatePath("/manager");
@@ -266,7 +297,13 @@ export async function inviteManager(
           tenantEmail: email.toLowerCase(),
           managerProfileId: existingProfile.id
         }
-      }).catch(() => {});
+      }).catch(
+        sideEffectError("inviteManager", "log_audit", {
+          userId: user.id,
+          entityType: "invitation",
+          entityId: existingProfile.id
+        })
+      );
 
 	      revalidatePath("/owner");
         revalidatePath("/manager");
@@ -329,7 +366,13 @@ export async function inviteManager(
       propertyId,
       tenantEmail: email.toLowerCase()
     }
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("inviteManager", "log_audit", {
+      userId: user.id,
+      entityType: "invitation",
+      entityId: propertyId
+    })
+  );
 
   revalidatePath("/owner");
   revalidatePath("/manager");
@@ -414,7 +457,13 @@ export async function inviteOwner(
         tenantEmail: email.toLowerCase(),
         ownerProfileId: existingProfile.id
       }
-    }).catch(() => {});
+    }).catch(
+      sideEffectError("inviteOwner", "log_audit", {
+        userId: user.id,
+        entityType: "invitation",
+        entityId: existingProfile.id
+      })
+    );
 
     revalidatePath("/owner");
     revalidatePath("/manager");
@@ -467,7 +516,13 @@ export async function inviteOwner(
       ownershipAccountId,
       tenantEmail: email.toLowerCase()
     }
-  }).catch(() => {});
+  }).catch(
+    sideEffectError("inviteOwner", "log_audit", {
+      userId: user.id,
+      entityType: "invitation",
+      entityId: ownershipAccountId
+    })
+  );
 
   revalidatePath("/owner");
   revalidatePath("/manager");
