@@ -649,26 +649,28 @@ export function Dashboard({
       />
       <main id="main-content" className="relative flex-1 lg:ml-[260px]">
         <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
-        <div className="px-6 pt-6 lg:px-8 lg:pt-8" id="overview">
-          <DashboardHeader
-            role={data.profileRole}
-            kpis={data.kpis}
-            occupancy={occupancy}
-            propertyCount={safePortfolio.properties.length}
-            userEmail={userEmail}
-            nickname={nickname}
-            fullName={fullName}
-            gamificationSummary={
-              <GamificationSummary
-                totalXp={resolvedGamification.totalXp}
-                currentLevel={resolvedGamification.currentLevel}
-                streakCount={resolvedGamification.streakCount}
-                role={data.profileRole}
-                className="w-full"
-              />
-            }
-          />
-        </div>
+        {activeSection === "overview" && (
+          <div className="px-6 pt-6 lg:px-8 lg:pt-8" id="overview">
+            <DashboardHeader
+              role={data.profileRole}
+              kpis={data.kpis}
+              occupancy={occupancy}
+              propertyCount={safePortfolio.properties.length}
+              userEmail={userEmail}
+              nickname={nickname}
+              fullName={fullName}
+              gamificationSummary={
+                <GamificationSummary
+                  totalXp={resolvedGamification.totalXp}
+                  currentLevel={resolvedGamification.currentLevel}
+                  streakCount={resolvedGamification.streakCount}
+                  role={data.profileRole}
+                  className="w-full"
+                />
+              }
+            />
+          </div>
+        )}
         <div className="space-y-6 px-6 pb-8 pt-6 lg:px-8">
           {generatedMessage && (
             <Alert variant="success" className="rounded-xl px-4 py-3">
