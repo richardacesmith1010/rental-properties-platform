@@ -140,6 +140,11 @@ export function Dashboard({
   onInitiateMemberPayoutConnect,
   onSubmitWithdrawalRequest,
   onVoteOnWithdrawal,
+  onInitiatePlaidLink,
+  onCompletePlaidLink,
+  onRefreshPlaidBalance,
+  onDisconnectPlaid,
+  onExecuteApprovedWithdrawal,
   onUpdateManagementFee
 }: DashboardProps) {
   const resolvedGamification = gamification ?? {
@@ -866,6 +871,11 @@ export function Dashboard({
               onInitiateMemberPayoutConnect={onInitiateMemberPayoutConnect}
               onSubmitWithdrawalRequest={onSubmitWithdrawalRequest}
               onVoteOnWithdrawal={onVoteOnWithdrawal}
+              onInitiatePlaidLink={onInitiatePlaidLink}
+              onCompletePlaidLink={onCompletePlaidLink}
+              onRefreshPlaidBalance={onRefreshPlaidBalance}
+              onDisconnectPlaid={onDisconnectPlaid}
+              onExecuteApprovedWithdrawal={onExecuteApprovedWithdrawal}
               onUpdateManagementFee={onUpdateManagementFee}
               onCreateProperty={onCreateProperty}
               onCreateUnit={onCreateUnit}

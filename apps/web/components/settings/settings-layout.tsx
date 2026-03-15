@@ -31,7 +31,7 @@ const settingsNav: SettingsNavItem[] = [
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "security", label: "Security", icon: Shield },
-  { id: "account", label: "Account & Data", icon: Trash2 }
+  { id: "account", label: "Account & Data", icon: Trash2, roles: ["owner"] }
 ];
 
 export function SettingsLayout({ role, sections }: SettingsLayoutProps) {

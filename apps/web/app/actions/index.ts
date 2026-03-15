@@ -20,8 +20,15 @@ export {
 } from "./distribution-approvals";
 export {
   submitWithdrawalRequest,
-  voteOnWithdrawal
+  voteOnWithdrawal,
+  executeApprovedWithdrawal
 } from "./withdrawals";
+export {
+  initiatePlaidLink,
+  completePlaidLink,
+  refreshPlaidBalance,
+  disconnectPlaid
+} from "./plaid";
 export {
   deleteAllProperties,
   deleteAllTenants,

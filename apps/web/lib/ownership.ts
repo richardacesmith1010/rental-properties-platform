@@ -11,6 +11,11 @@ export interface OwnershipAccountDTO {
   stripeConnected: boolean;
   distributionMode: string;
   stripeAccountId?: string | null;
+  plaidConnected: boolean;
+  bankName: string | null;
+  bankMask: string | null;
+  balanceCents: number | null;
+  balanceUpdatedAt: string | null;
 }
 
 export interface OwnershipMemberDTO {
@@ -22,6 +27,21 @@ export interface OwnershipMemberDTO {
   canReceiveCriticalAlerts: boolean;
   distributionPct: number | null;
   payoutStripeConnected: boolean;
+}
+
+interface OwnershipAccountRow {
+  id: string;
+  account_type: string;
+  display_name: string;
+  join_code: string | null;
+  stripe_account_id: string | null;
+  stripe_onboarding_complete: boolean | null;
+  distribution_mode: string | null;
+  plaid_account_id: string | null;
+  plaid_bank_name: string | null;
+  plaid_bank_mask: string | null;
+  plaid_balance_cents: number | null;
+  plaid_balance_updated_at: string | null;
 }
 
 function unique<T>(values: T[]): T[] {
@@ -69,7 +89,9 @@ export async function getOwnershipAccountsForUser(userId: string): Promise<Owner
   const [{ data: accounts, error: accountsError }, { data: members, error: membersError }] = await Promise.all([
     admin
       .from("ownership_accounts")
-      .select("id, account_type, display_name, join_code, stripe_account_id, stripe_onboarding_complete, distribution_mode")
+      .select(
+        "id, account_type, display_name, join_code, stripe_account_id, stripe_onboarding_complete, distribution_mode, plaid_account_id, plaid_bank_name, plaid_bank_mask, plaid_balance_cents, plaid_balance_updated_at"
+      )
       .in("id", accountIds)
       .order("created_at", { ascending: true }),
     admin
@@ -83,21 +105,28 @@ export async function getOwnershipAccountsForUser(userId: string): Promise<Owner
     return [];
   }
 
-  const accountRows =
+  const accountRows: OwnershipAccountRow[] =
     accountsError && isMissingSchemaError(accountsError)
       ? (
           await admin
             .from("ownership_accounts")
-            .select("id, account_type, display_name, join_code")
+            .select(
+              "id, account_type, display_name, join_code, stripe_account_id, stripe_onboarding_complete, distribution_mode"
+            )
             .in("id", accountIds)
             .order("created_at", { ascending: true })
         ).data?.map((account) => ({
           ...account,
-          stripe_account_id: null,
-          stripe_onboarding_complete: false,
-          distribution_mode: "retain"
+          stripe_account_id: account.stripe_account_id ?? null,
+          stripe_onboarding_complete: account.stripe_onboarding_complete ?? false,
+          distribution_mode: account.distribution_mode ?? "retain",
+          plaid_account_id: null,
+          plaid_bank_name: null,
+          plaid_bank_mask: null,
+          plaid_balance_cents: null,
+          plaid_balance_updated_at: null
         })) ?? []
-      : (accounts ?? []);
+      : ((accounts ?? []) as OwnershipAccountRow[]);
 
   const memberCountByAccount = new Map<string, number>();
   for (const row of members ?? []) {
@@ -115,7 +144,12 @@ export async function getOwnershipAccountsForUser(userId: string): Promise<Owner
     joinCode: account.join_code ?? null,
     stripeConnected: account.stripe_onboarding_complete === true,
     distributionMode: account.distribution_mode ?? "retain",
-    stripeAccountId: account.stripe_account_id ?? null
+    stripeAccountId: account.stripe_account_id ?? null,
+    plaidConnected: Boolean(account.plaid_account_id),
+    bankName: account.plaid_bank_name ?? null,
+    bankMask: account.plaid_bank_mask ?? null,
+    balanceCents: account.plaid_balance_cents ?? null,
+    balanceUpdatedAt: account.plaid_balance_updated_at ?? null
   }));
 }
 

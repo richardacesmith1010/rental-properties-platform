@@ -22,6 +22,8 @@ import { DistributionHistory } from "./distribution-history";
 import { DistributionApprovalCard } from "./distribution-approval-card";
 import { WithdrawalRequestCard } from "./withdrawal-request-card";
 import { FinancialActivityFeed } from "./financial-activity-feed";
+import { BankBalanceCard } from "./bank-balance-card";
+import { PlaidLinkButton } from "./plaid-link-button";
 
 type StatefulAction = (
   prev: ActionState,
@@ -53,6 +55,11 @@ interface OwnershipSectionProps {
   onInitiateMemberPayoutConnect?: StatefulAction;
   onSubmitWithdrawalRequest?: StatefulAction;
   onVoteOnWithdrawal?: StatefulAction;
+  onInitiatePlaidLink?: StatefulAction;
+  onCompletePlaidLink?: StatefulAction;
+  onRefreshPlaidBalance?: StatefulAction;
+  onDisconnectPlaid?: StatefulAction;
+  onExecuteApprovedWithdrawal?: StatefulAction;
 }
 
 type OwnershipFlow = "create_account" | "link_property";
@@ -255,7 +262,12 @@ export function OwnershipSection({
   onVoteOnDistributionChange,
   onInitiateMemberPayoutConnect,
   onSubmitWithdrawalRequest,
-  onVoteOnWithdrawal
+  onVoteOnWithdrawal,
+  onInitiatePlaidLink,
+  onCompletePlaidLink,
+  onRefreshPlaidBalance,
+  onDisconnectPlaid,
+  onExecuteApprovedWithdrawal
 }: OwnershipSectionProps) {
   const [createState, createAction] = useFormState(onCreateOwnershipAccount, null);
   const [linkState, linkAction] = useFormState(onLinkPropertyToOwnershipAccount, null);
@@ -315,6 +327,15 @@ export function OwnershipSection({
 
   const activeAccount = accounts.find((account) => account.id === activeAccountId);
   const isActiveLlcAccount = activeAccount?.accountType === "llc";
+  const isActiveAccountAdmin = Boolean(
+    currentUserId &&
+      members?.some(
+        (member) =>
+          member.profileId === currentUserId &&
+          member.active &&
+          (member.memberRole === "admin" || member.memberRole === "owner")
+      )
+  );
 
   return (
     <div id="ownership" className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -613,10 +634,24 @@ export function OwnershipSection({
                     account.id === activeAccountId &&
                     Boolean(onSubmitWithdrawalRequest);
                   const showDistributionPanel = distributionAccountId === account.id;
+                  const showPlaidTools =
+                    account.accountType === "llc" &&
+                    ((account.plaidConnected &&
+                      Boolean(onRefreshPlaidBalance) &&
+                      Boolean(onDisconnectPlaid)) ||
+                      (!account.plaidConnected &&
+                        Boolean(onInitiatePlaidLink) &&
+                        Boolean(onCompletePlaidLink)));
 
                   return (
                     <Fragment key={account.id}>
-                      <DataRow last={index === accounts.length - 1 && !showDistributionPanel}>
+                      <DataRow
+                        last={
+                          index === accounts.length - 1 &&
+                          !showDistributionPanel &&
+                          !showPlaidTools
+                        }
+                      >
                         <div>
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-semibold text-zinc-900">{account.displayName}</p>
@@ -633,8 +668,8 @@ export function OwnershipSection({
                         <div className="flex flex-col items-end gap-2">
                           <OwnershipAccountStripeControl
                             account={account}
-                            onInitiateAccountStripeConnect={onInitiateAccountStripeConnect}
-                          />
+                          onInitiateAccountStripeConnect={onInitiateAccountStripeConnect}
+                        />
                           {canConfigureDistribution ? (
                             <div className="flex flex-wrap justify-end gap-2">
                               <Button
@@ -667,6 +702,25 @@ export function OwnershipSection({
                           ) : null}
                         </div>
                       </DataRow>
+                      {showPlaidTools ? (
+                        account.plaidConnected && onRefreshPlaidBalance && onDisconnectPlaid ? (
+                          <BankBalanceCard
+                            accountId={account.id}
+                            bankName={account.bankName}
+                            bankMask={account.bankMask}
+                            balanceCents={account.balanceCents}
+                            balanceUpdatedAt={account.balanceUpdatedAt}
+                            onRefreshBalance={onRefreshPlaidBalance}
+                            onDisconnect={onDisconnectPlaid}
+                          />
+                        ) : onInitiatePlaidLink && onCompletePlaidLink ? (
+                          <PlaidLinkButton
+                            accountId={account.id}
+                            onInitiatePlaidLink={onInitiatePlaidLink}
+                            onCompletePlaidLink={onCompletePlaidLink}
+                          />
+                        ) : null
+                      ) : null}
                       {showDistributionPanel && members && onUpdateDistributionConfig ? (
                         <DistributionConfigPanel
                           accountId={account.id}
@@ -711,6 +765,8 @@ export function OwnershipSection({
                 request={request}
                 currentUserId={currentUserId}
                 onVote={onVoteOnWithdrawal}
+                isAdmin={isActiveAccountAdmin}
+                onExecuteApprovedWithdrawal={onExecuteApprovedWithdrawal}
               />
             ))}
           </div>

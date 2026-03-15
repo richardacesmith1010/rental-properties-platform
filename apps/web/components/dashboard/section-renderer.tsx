@@ -147,6 +147,11 @@ interface SectionRendererProps {
   onInitiateMemberPayoutConnect?: StatefulAction;
   onSubmitWithdrawalRequest?: StatefulAction;
   onVoteOnWithdrawal?: StatefulAction;
+  onInitiatePlaidLink?: StatefulAction;
+  onCompletePlaidLink?: StatefulAction;
+  onRefreshPlaidBalance?: StatefulAction;
+  onDisconnectPlaid?: StatefulAction;
+  onExecuteApprovedWithdrawal?: StatefulAction;
   onUpdateManagementFee?: StatefulAction;
   onCreateProperty: StatefulAction;
   onCreateUnit: StatefulAction;
@@ -259,6 +264,11 @@ export function SectionRenderer({
   onInitiateMemberPayoutConnect,
   onSubmitWithdrawalRequest,
   onVoteOnWithdrawal,
+  onInitiatePlaidLink,
+  onCompletePlaidLink,
+  onRefreshPlaidBalance,
+  onDisconnectPlaid,
+  onExecuteApprovedWithdrawal,
   onUpdateManagementFee,
   onCreateProperty,
   onCreateUnit,
@@ -484,6 +494,11 @@ export function SectionRenderer({
           onInitiateMemberPayoutConnect={onInitiateMemberPayoutConnect}
           onSubmitWithdrawalRequest={onSubmitWithdrawalRequest}
           onVoteOnWithdrawal={onVoteOnWithdrawal}
+          onInitiatePlaidLink={onInitiatePlaidLink}
+          onCompletePlaidLink={onCompletePlaidLink}
+          onRefreshPlaidBalance={onRefreshPlaidBalance}
+          onDisconnectPlaid={onDisconnectPlaid}
+          onExecuteApprovedWithdrawal={onExecuteApprovedWithdrawal}
         />
       ) : (
         <FeatureWarning

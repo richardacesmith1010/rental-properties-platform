@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useFormState } from "react-dom";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/shared/submit-button";
+import { formatCurrency } from "@/lib/format";
 import type { ActionState } from "@/app/actions";
 import type { WithdrawalRequestDTO } from "@/lib/withdrawals";
 
@@ -14,13 +17,8 @@ interface WithdrawalRequestCardProps {
   request: WithdrawalRequestDTO;
   currentUserId: string;
   onVote: StatefulAction;
-}
-
-function formatCurrency(amountCents: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD"
-  }).format(amountCents / 100);
+  onExecuteApprovedWithdrawal?: StatefulAction;
+  isAdmin?: boolean;
 }
 
 function formatTimestamp(value: string) {
@@ -82,10 +80,79 @@ function VoteActionForm({
   );
 }
 
+function ExecuteWithdrawalForm({
+  request,
+  onExecuteApprovedWithdrawal
+}: {
+  request: WithdrawalRequestDTO;
+  onExecuteApprovedWithdrawal: StatefulAction;
+}) {
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [state, formAction] = useFormState(onExecuteApprovedWithdrawal, null);
+
+  return (
+    <div className="space-y-2">
+      {!showConfirm ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="destructive"
+          className="bg-emerald-600 hover:bg-emerald-700"
+          onClick={() => setShowConfirm(true)}
+          title={`Execute a live Stripe payout of ${formatCurrency(request.amountCents)}.`}
+        >
+          Execute Payout - {formatCurrency(request.amountCents)}
+        </Button>
+      ) : (
+        <div className="space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/50 px-4 py-3">
+          <p className="text-sm text-emerald-900">
+            Are you sure? This will transfer {formatCurrency(request.amountCents)} to{" "}
+            {request.requestedByName ?? "the requester"}.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <form action={formAction}>
+              <input type="hidden" name="withdrawalId" value={request.id} />
+              <SubmitButton
+                size="sm"
+                variant="destructive"
+                className="bg-emerald-600 hover:bg-emerald-700"
+                title={`Confirm the live payout for ${request.requestedByName ?? "this member"}.`}
+              >
+                Confirm Payout
+              </SubmitButton>
+            </form>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setShowConfirm(false)}
+              title="Cancel this payout."
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+      {state && !state.success ? (
+        <Alert variant="error" className="text-xs font-normal">
+          {state.error}
+        </Alert>
+      ) : null}
+      {state?.success && state.message ? (
+        <Alert variant="success" className="text-xs font-normal">
+          {state.message}
+        </Alert>
+      ) : null}
+    </div>
+  );
+}
+
 export function WithdrawalRequestCard({
   request,
   currentUserId,
-  onVote
+  onVote,
+  onExecuteApprovedWithdrawal,
+  isAdmin = false
 }: WithdrawalRequestCardProps) {
   const currentUserVote = request.votes.find((vote) => vote.voterId === currentUserId);
 
@@ -135,6 +202,11 @@ export function WithdrawalRequestCard({
             <VoteActionForm requestId={request.id} vote="approve" onVote={onVote} />
             <VoteActionForm requestId={request.id} vote="reject" onVote={onVote} />
           </div>
+        ) : request.status === "approved" && isAdmin && onExecuteApprovedWithdrawal ? (
+          <ExecuteWithdrawalForm
+            request={request}
+            onExecuteApprovedWithdrawal={onExecuteApprovedWithdrawal}
+          />
         ) : currentUserVote ? (
           <Alert variant="info" className="text-xs font-normal">
             You already voted {currentUserVote.vote} on this withdrawal.

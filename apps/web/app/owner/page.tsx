@@ -23,8 +23,13 @@ import { getPendingChangeRequests } from "@/lib/distribution-approvals";
 import { getPendingWithdrawals } from "@/lib/withdrawals";
 import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
 import {
+  completePlaidLink,
+  disconnectPlaid,
+  executeApprovedWithdrawal,
   initiateAccountStripeConnect,
+  initiatePlaidLink,
   initiateMemberPayoutConnect,
+  refreshPlaidBalance,
   submitDistributionChangeRequest,
   submitWithdrawalRequest,
   createCheckoutForCharge,
@@ -332,6 +337,11 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       onInitiateMemberPayoutConnect={initiateMemberPayoutConnect}
       onSubmitWithdrawalRequest={submitWithdrawalRequest}
       onVoteOnWithdrawal={voteOnWithdrawal}
+      onInitiatePlaidLink={initiatePlaidLink}
+      onCompletePlaidLink={completePlaidLink}
+      onRefreshPlaidBalance={refreshPlaidBalance}
+      onDisconnectPlaid={disconnectPlaid}
+      onExecuteApprovedWithdrawal={executeApprovedWithdrawal}
       onUpdateManagementFee={updateManagementFee}
     />
   );

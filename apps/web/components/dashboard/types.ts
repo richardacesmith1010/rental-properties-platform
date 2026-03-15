@@ -121,5 +121,10 @@ export interface DashboardProps {
   onInitiateMemberPayoutConnect?: StatefulAction;
   onSubmitWithdrawalRequest?: StatefulAction;
   onVoteOnWithdrawal?: StatefulAction;
+  onInitiatePlaidLink?: StatefulAction;
+  onCompletePlaidLink?: StatefulAction;
+  onRefreshPlaidBalance?: StatefulAction;
+  onDisconnectPlaid?: StatefulAction;
+  onExecuteApprovedWithdrawal?: StatefulAction;
   onUpdateManagementFee?: StatefulAction;
 }
