@@ -579,22 +579,31 @@ export async function fullAccountWipe(
     await deleteLeasingPipeline(scope);
     await deleteAutomation(scope);
     await deleteByIds("vendors", "property_id", scope.propertyIds, "Delete vendors");
+    if (scope.propertyIds.length > 0) {
+      await executeMutation(
+        admin.from("invitations").delete().in("property_id", scope.propertyIds),
+        "Delete invitations by property"
+      );
+    }
+    if (scope.accountIds.length > 0) {
+      await executeMutation(
+        admin.from("invitations").delete().in("ownership_account_id", scope.accountIds),
+        "Delete invitations by account"
+      );
+    }
+    if (auth.email) {
+      await executeMutation(
+        admin.from("invitations").delete().eq("email", auth.email.toLowerCase()),
+        "Delete invitations by email"
+      );
+    }
     await executeMutation(
-      admin
-        .from("invitations")
-        .delete()
-        .or(
-          [
-            scope.propertyIds.length > 0 ? `property_id.in.(${scope.propertyIds.join(",")})` : null,
-            scope.accountIds.length > 0 ? `ownership_account_id.in.(${scope.accountIds.join(",")})` : null,
-            auth.email ? `email.eq.${auth.email.toLowerCase()}` : null,
-            `invited_by.eq.${auth.userId}`,
-            `invited_profile_id.eq.${auth.userId}`
-          ]
-            .filter(Boolean)
-            .join(",")
-        ),
-      "Delete invitations"
+      admin.from("invitations").delete().eq("invited_by", auth.userId),
+      "Delete invitations by inviter"
+    );
+    await executeMutation(
+      admin.from("invitations").delete().eq("invited_profile_id", auth.userId),
+      "Delete invitations by invitee"
     );
     await deleteByIds("leases", "id", scope.leaseIds, "Delete leases");
     await deleteByIds("units", "id", scope.unitIds, "Delete units");

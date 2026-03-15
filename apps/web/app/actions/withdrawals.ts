@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { formatCurrency } from "@/lib/format";
+import { getActiveMembers } from "@/lib/ownership-members";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notifyAccountMembers } from "@/lib/notifications";
 import { canUserAdministerOwnershipAccount } from "@/lib/ownership";
@@ -15,25 +16,30 @@ import type { ActionState } from "./shared";
 const SCHEMA_ERROR_MESSAGE =
   "Withdrawal requests require a database update before they can be used.";
 
-async function getActiveMemberCount(
-  accountId: string
-): Promise<{ count: number } | { error: string }> {
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("ownership_account_members")
-    .select("profile_id")
-    .eq("account_id", accountId)
-    .eq("active", true);
-
-  if (error) {
-    if (isMissingSchemaError(error)) {
-      return { error: SCHEMA_ERROR_MESSAGE } as const;
-    }
-    console.error("getActiveMemberCount error:", error);
-    return { error: "Unable to load account members right now." } as const;
+function isSchemaConstraintError(error: { code?: string; message?: string } | null | undefined) {
+  if (!error) {
+    return false;
   }
 
-  return { count: (data ?? []).length } as const;
+  return (
+    error.code === "23514" ||
+    error.message?.toLowerCase().includes("check constraint") === true
+  );
+}
+
+function isWithdrawalSchemaDriftError(error: { code?: string; message?: string } | null | undefined) {
+  return isMissingSchemaError(error) || isSchemaConstraintError(error);
+}
+
+async function restoreWithdrawalStatus(
+  admin: ReturnType<typeof createAdminClient>,
+  withdrawalId: string,
+  status: "approved" | "failed"
+) {
+  const { error } = await admin.from("withdrawal_requests").update({ status }).eq("id", withdrawalId);
+  if (error && !isWithdrawalSchemaDriftError(error)) {
+    console.error("restoreWithdrawalStatus error:", error);
+  }
 }
 
 function parseAmountCents(formData: FormData) {
@@ -80,12 +86,18 @@ export async function submitWithdrawalRequest(
     return { success: false, error: "Access denied." };
   }
 
-  const countResult = await getActiveMemberCount(accountId);
-  if ("error" in countResult) {
-    return { success: false, error: countResult.error };
+  const memberResult = await getActiveMembers(accountId);
+  if ("error" in memberResult) {
+    return {
+      success: false,
+      error:
+        memberResult.error === "This feature requires a database update. Please try again later."
+          ? SCHEMA_ERROR_MESSAGE
+          : memberResult.error
+    };
   }
 
-  const votesRequired = Math.ceil(Math.max(1, countResult.count) / 2);
+  const votesRequired = Math.ceil(Math.max(1, memberResult.members.length) / 2);
   const admin = createAdminClient();
   const { data: request, error: requestError } = await admin
     .from("withdrawal_requests")
@@ -289,101 +301,163 @@ export async function executeApprovedWithdrawal(
       return { success: false, error: "Withdrawal request not found." };
     }
 
-    if (withdrawal.status !== "approved") {
-      return { success: false, error: "Only approved withdrawals can be executed." };
+    if (withdrawal.status !== "approved" && withdrawal.status !== "failed") {
+      return { success: false, error: "Only approved or failed withdrawals can be executed." };
     }
 
-    const canAdmin = await canUserAdministerOwnershipAccount(user.id, withdrawal.ownership_account_id);
-    if (!canAdmin) {
-      return { success: false, error: "Access denied." };
-    }
-
-    const { data: ownershipAccount, error: accountError } = await admin
-      .from("ownership_accounts")
-      .select("display_name, stripe_account_id")
-      .eq("id", withdrawal.ownership_account_id)
+    const previousStatus = withdrawal.status as "approved" | "failed";
+    const { data: claimed, error: claimError } = await admin
+      .from("withdrawal_requests")
+      .update({ status: "executing" })
+      .eq("id", withdrawalId)
+      .in("status", ["approved", "failed"])
+      .select("id")
       .maybeSingle();
 
-    if (accountError) {
-      if (isMissingSchemaError(accountError)) {
+    if (claimError) {
+      if (isWithdrawalSchemaDriftError(claimError)) {
         return { success: false, error: SCHEMA_ERROR_MESSAGE };
       }
-      console.error("executeApprovedWithdrawal account error:", accountError);
-      return { success: false, error: "Unable to load the LLC payout account." };
+      console.error("executeApprovedWithdrawal claim error:", claimError);
+      return { success: false, error: "Unable to process this withdrawal." };
     }
 
-    if (!ownershipAccount?.stripe_account_id) {
-      return { success: false, error: "This LLC does not have a connected Stripe account." };
-    }
-
-    const { data: membership, error: membershipError } = await admin
-      .from("ownership_account_members")
-      .select("payout_stripe_account_id")
-      .eq("account_id", withdrawal.ownership_account_id)
-      .eq("profile_id", withdrawal.requested_by)
-      .eq("active", true)
-      .maybeSingle();
-
-    if (membershipError) {
-      if (isMissingSchemaError(membershipError)) {
-        return { success: false, error: SCHEMA_ERROR_MESSAGE };
-      }
-      console.error("executeApprovedWithdrawal membership error:", membershipError);
-      return { success: false, error: "Unable to load the recipient payout account." };
-    }
-
-    if (!membership?.payout_stripe_account_id) {
+    if (!claimed) {
       return {
         success: false,
-        error: "The requester must connect a payout account before this withdrawal can be executed."
+        error: "This withdrawal is already being processed by another admin."
       };
     }
 
-    const transfer = await createStripeTransfer({
-      amountCents: withdrawal.amount_cents,
-      destination: membership.payout_stripe_account_id,
-      transferGroup: `withdrawal:${withdrawal.id}`,
-      description: `Withdrawal payout for ${ownershipAccount.display_name ?? "ownership account"}`
-    });
+    const [canAdmin, accountResult, membershipResult] = await Promise.all([
+      canUserAdministerOwnershipAccount(user.id, withdrawal.ownership_account_id),
+      admin
+        .from("ownership_accounts")
+        .select("display_name, stripe_account_id")
+        .eq("id", withdrawal.ownership_account_id)
+        .maybeSingle(),
+      admin
+        .from("ownership_account_members")
+        .select("payout_stripe_account_id")
+        .eq("account_id", withdrawal.ownership_account_id)
+        .eq("profile_id", withdrawal.requested_by)
+        .eq("active", true)
+        .maybeSingle()
+    ]);
 
-    const { error: updateError } = await admin
-      .from("withdrawal_requests")
-      .update({
-        status: "completed",
-        resolved_at: new Date().toISOString()
-      })
-      .eq("id", withdrawalId);
-
-    if (updateError) {
-      if (isMissingSchemaError(updateError)) {
-        return { success: false, error: SCHEMA_ERROR_MESSAGE };
-      }
-      console.error("executeApprovedWithdrawal update error:", updateError);
-      return { success: false, error: "Payout sent, but the request status could not be updated." };
+    if (!canAdmin) {
+      await restoreWithdrawalStatus(admin, withdrawalId, previousStatus);
+      return { success: false, error: "Access denied." };
     }
 
-    await notifyAccountMembers({
-      accountId: withdrawal.ownership_account_id,
-      type: "withdrawal_completed",
-      title: "Withdrawal completed",
-      body: `${formatCurrency(withdrawal.amount_cents)} was paid out to the approved member.`,
-      entityType: "withdrawal_request",
-      entityId: withdrawal.id
-    });
+    if (accountResult.error) {
+      await restoreWithdrawalStatus(admin, withdrawalId, previousStatus);
+      if (isWithdrawalSchemaDriftError(accountResult.error)) {
+        return { success: false, error: SCHEMA_ERROR_MESSAGE };
+      }
+      console.error("executeApprovedWithdrawal account error:", accountResult.error);
+      return { success: false, error: "Unable to load the LLC payout account." };
+    }
 
-    revalidatePath("/owner");
-    return {
-      success: true,
-      message: `Payout executed (${transfer.id}).`
-    };
+    if (membershipResult.error) {
+      await restoreWithdrawalStatus(admin, withdrawalId, previousStatus);
+      if (isWithdrawalSchemaDriftError(membershipResult.error)) {
+        return { success: false, error: SCHEMA_ERROR_MESSAGE };
+      }
+      console.error("executeApprovedWithdrawal membership error:", membershipResult.error);
+      return { success: false, error: "Unable to load the recipient payout account." };
+    }
+
+    const ownershipAccount = accountResult.data;
+    const membership = membershipResult.data;
+
+    if (!ownershipAccount?.stripe_account_id) {
+      await restoreWithdrawalStatus(admin, withdrawalId, previousStatus);
+      return { success: false, error: "This LLC does not have a connected Stripe account." };
+    }
+
+    if (!membership?.payout_stripe_account_id) {
+      await restoreWithdrawalStatus(admin, withdrawalId, previousStatus);
+      return {
+        success: false,
+        error: "The requester must connect a payout account first."
+      };
+    }
+
+    try {
+      const transfer = await createStripeTransfer({
+        amountCents: withdrawal.amount_cents,
+        destination: membership.payout_stripe_account_id,
+        transferGroup: `withdrawal:${withdrawal.id}`,
+        description: `Withdrawal payout for ${ownershipAccount.display_name ?? "ownership account"}`,
+        idempotencyKey: `withdrawal:${withdrawalId}`
+      });
+
+      let completeError:
+        | { code?: string; message?: string }
+        | null = null;
+      ({ error: completeError } = await admin
+        .from("withdrawal_requests")
+        .update({
+          status: "completed",
+          stripe_transfer_id: transfer.id,
+          resolved_at: new Date().toISOString()
+        })
+        .eq("id", withdrawalId));
+
+      if (completeError && isMissingSchemaError(completeError)) {
+        ({ error: completeError } = await admin
+          .from("withdrawal_requests")
+          .update({
+            status: "completed",
+            resolved_at: new Date().toISOString()
+          })
+          .eq("id", withdrawalId));
+      }
+
+      if (completeError) {
+        if (isWithdrawalSchemaDriftError(completeError)) {
+          return { success: false, error: SCHEMA_ERROR_MESSAGE };
+        }
+        console.error("executeApprovedWithdrawal complete error:", completeError);
+        return { success: false, error: "Payout sent, but status could not be updated." };
+      }
+
+      await notifyAccountMembers({
+        accountId: withdrawal.ownership_account_id,
+        type: "withdrawal_completed",
+        title: "Withdrawal completed",
+        body: `${formatCurrency(withdrawal.amount_cents)} was paid out to the approved member.`,
+        entityType: "withdrawal_request",
+        entityId: withdrawal.id
+      });
+
+      revalidatePath("/owner");
+      return { success: true, message: `Payout executed (${transfer.id}).` };
+    } catch (stripeError) {
+      const { error: failedError } = await admin
+        .from("withdrawal_requests")
+        .update({ status: "failed" })
+        .eq("id", withdrawalId);
+
+      if (failedError && !isWithdrawalSchemaDriftError(failedError)) {
+        console.error("executeApprovedWithdrawal failed status error:", failedError);
+      }
+
+      console.error("executeApprovedWithdrawal stripe error:", stripeError);
+      return {
+        success: false,
+        error:
+          stripeError instanceof Error
+            ? `Transfer failed: ${stripeError.message}. The withdrawal has been marked as failed.`
+            : "Transfer failed. The withdrawal has been marked as failed for review."
+      };
+    }
   } catch (error) {
     console.error("executeApprovedWithdrawal error:", error);
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? `Unable to execute the payout. (${error.message})`
-          : "Unable to execute the payout."
+      error: error instanceof Error ? error.message : "Unable to execute the payout."
     };
   }
 }

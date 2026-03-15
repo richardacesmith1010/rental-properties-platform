@@ -35,7 +35,10 @@ function statusVariant(status: WithdrawalRequestDTO["status"]) {
     case "approved":
     case "completed":
       return "success" as const;
+    case "executing":
+      return "warning" as const;
     case "rejected":
+    case "failed":
       return "destructive" as const;
     case "cancelled":
       return "outline" as const;
@@ -207,6 +210,20 @@ export function WithdrawalRequestCard({
             request={request}
             onExecuteApprovedWithdrawal={onExecuteApprovedWithdrawal}
           />
+        ) : request.status === "failed" && isAdmin && onExecuteApprovedWithdrawal ? (
+          <div className="space-y-2">
+            <Alert variant="error" className="text-xs font-normal">
+              The previous payout attempt failed. You can retry the payout.
+            </Alert>
+            <ExecuteWithdrawalForm
+              request={request}
+              onExecuteApprovedWithdrawal={onExecuteApprovedWithdrawal}
+            />
+          </div>
+        ) : request.status === "executing" ? (
+          <Alert variant="info" className="text-xs font-normal">
+            Payout is currently being processed...
+          </Alert>
         ) : currentUserVote ? (
           <Alert variant="info" className="text-xs font-normal">
             You already voted {currentUserVote.vote} on this withdrawal.

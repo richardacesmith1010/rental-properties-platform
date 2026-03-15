@@ -93,29 +93,98 @@ async function getProfiles(profileIds: string[]) {
   }
 
   return new Map(
-    (data ?? []).map((profile) => [
-      profile.id,
-      { full_name: profile.full_name, email: profile.email }
-    ])
+    (data ?? []).map((profile) => [profile.id, { full_name: profile.full_name, email: profile.email }])
   );
 }
 
-export async function getVotesForRequest(requestId: string): Promise<DistributionChangeRequestDTO["votes"]> {
+async function getVotesForRequestRows(requestIds: string[]) {
   const admin = createAdminClient();
+  if (requestIds.length === 0) {
+    return [] as VoteRow[];
+  }
+
   const { data, error } = await admin
     .from("distribution_change_votes")
     .select("request_id, voter_id, vote")
-    .eq("request_id", requestId)
+    .in("request_id", requestIds)
     .order("created_at", { ascending: true });
 
   if (error) {
     if (!isMissingSchemaError(error)) {
-      console.error("getVotesForRequest error:", error);
+      console.error("getVotesForRequestRows error:", error);
     }
     return [];
   }
 
-  const votes = (data ?? []) as VoteRow[];
+  return (data ?? []) as VoteRow[];
+}
+
+function buildRequestDtos(
+  rows: RequestRow[],
+  votes: VoteRow[],
+  profileMap: Map<string, { full_name: string | null; email: string | null }>
+): DistributionChangeRequestDTO[] {
+  const votesByRequestId = new Map<string, DistributionChangeRequestDTO["votes"]>();
+
+  for (const vote of votes) {
+    const existing = votesByRequestId.get(vote.request_id) ?? [];
+    existing.push({
+      voterId: vote.voter_id,
+      voterName: profileMap.get(vote.voter_id)?.full_name ?? null,
+      vote: vote.vote
+    });
+    votesByRequestId.set(vote.request_id, existing);
+  }
+
+  return rows.map((row) => ({
+    id: row.id,
+    ownershipAccountId: row.ownership_account_id,
+    requestedBy: row.requested_by,
+    requestedByName: profileMap.get(row.requested_by)?.full_name ?? null,
+    currentConfig: parseDistributionConfig(row.current_config),
+    proposedConfig: parseDistributionConfig(row.proposed_config),
+    status: row.status,
+    votesRequired: row.votes_required,
+    votesReceived: row.votes_received,
+    votes: votesByRequestId.get(row.id) ?? [],
+    createdAt: row.created_at,
+    resolvedAt: row.resolved_at
+  }));
+}
+
+async function buildDistributionRequestDtos(rows: RequestRow[]) {
+  if (rows.length === 0) {
+    return [] as DistributionChangeRequestDTO[];
+  }
+
+  const votes = await getVotesForRequestRows(rows.map((row) => row.id));
+  const profileIds = Array.from(new Set([...rows.map((row) => row.requested_by), ...votes.map((vote) => vote.voter_id)]));
+  const profileMap = await getProfiles(profileIds);
+  return buildRequestDtos(rows, votes, profileMap);
+}
+
+async function selectRequestById(requestId: string): Promise<RequestRow | null> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("distribution_change_requests")
+    .select(
+      "id, ownership_account_id, requested_by, current_config, proposed_config, status, votes_required, votes_received, created_at, resolved_at"
+    )
+    .eq("id", requestId)
+    .maybeSingle();
+
+  if (error) {
+    if (!isMissingSchemaError(error)) {
+      console.error("selectRequestById error:", error);
+    }
+    return null;
+  }
+
+  return (data as RequestRow | null) ?? null;
+}
+
+export async function getVotesForRequest(requestId: string): Promise<DistributionChangeRequestDTO["votes"]> {
+  const votes = await getVotesForRequestRows([requestId]);
   const profileMap = await getProfiles(Array.from(new Set(votes.map((vote) => vote.voter_id))));
 
   return votes.map((vote) => ({
@@ -146,97 +215,26 @@ export async function getPendingChangeRequests(
     return [];
   }
 
-  const rows = (data ?? []) as RequestRow[];
-  if (rows.length === 0) {
-    return [];
-  }
-
-  const requestIds = rows.map((row) => row.id);
-  const voterQuery = await admin
-    .from("distribution_change_votes")
-    .select("request_id, voter_id, vote")
-    .in("request_id", requestIds)
-    .order("created_at", { ascending: true });
-
-  if (voterQuery.error && !isMissingSchemaError(voterQuery.error)) {
-    console.error("getPendingChangeRequests votes error:", voterQuery.error);
-  }
-
-  const votes = (voterQuery.data ?? []) as VoteRow[];
-  const profileIds = Array.from(
-    new Set([
-      ...rows.map((row) => row.requested_by),
-      ...votes.map((vote) => vote.voter_id)
-    ])
-  );
-  const profileMap = await getProfiles(profileIds);
-  const votesByRequestId = new Map<string, DistributionChangeRequestDTO["votes"]>();
-
-  for (const vote of votes) {
-    const existing = votesByRequestId.get(vote.request_id) ?? [];
-    existing.push({
-      voterId: vote.voter_id,
-      voterName: profileMap.get(vote.voter_id)?.full_name ?? null,
-      vote: vote.vote
-    });
-    votesByRequestId.set(vote.request_id, existing);
-  }
-
-  return rows.map((row) => ({
-    id: row.id,
-    ownershipAccountId: row.ownership_account_id,
-    requestedBy: row.requested_by,
-    requestedByName: profileMap.get(row.requested_by)?.full_name ?? null,
-    currentConfig: parseDistributionConfig(row.current_config),
-    proposedConfig: parseDistributionConfig(row.proposed_config),
-    status: row.status,
-    votesRequired: row.votes_required,
-    votesReceived: row.votes_received,
-    votes: votesByRequestId.get(row.id) ?? [],
-    createdAt: row.created_at,
-    resolvedAt: row.resolved_at
-  }));
+  return buildDistributionRequestDtos((data ?? []) as RequestRow[]);
 }
 
 export async function resolveRequest(
   requestId: string
 ): Promise<DistributionChangeRequestDTO | null> {
   const admin = createAdminClient();
-  const { data: request, error: requestError } = await admin
-    .from("distribution_change_requests")
-    .select(
-      "id, ownership_account_id, requested_by, current_config, proposed_config, status, votes_required, votes_received, created_at, resolved_at"
-    )
-    .eq("id", requestId)
-    .maybeSingle();
+  const requestRow = await selectRequestById(requestId);
 
-  if (requestError) {
-    if (!isMissingSchemaError(requestError)) {
-      console.error("resolveRequest request error:", requestError);
-    }
+  if (!requestRow) {
     return null;
   }
 
-  if (!request) {
-    return null;
-  }
-
-  const requestRow = request as RequestRow;
-  const votes = await getVotesForRequest(requestId);
+  const votes = await getVotesForRequestRows([requestId]);
+  const profileMap = await getProfiles(Array.from(new Set([requestRow.requested_by, ...votes.map((vote) => vote.voter_id)])));
   const approveCount = votes.filter((vote) => vote.vote === "approve").length;
   const rejectCount = votes.filter((vote) => vote.vote === "reject").length;
-  const profileMap = await getProfiles([requestRow.requested_by]);
 
   let nextStatus = requestRow.status;
   if (requestRow.status === "pending" && approveCount >= requestRow.votes_required) {
-    const applyResult = await applyDistributionConfig(
-      requestRow.ownership_account_id,
-      parseDistributionConfig(requestRow.proposed_config)
-    );
-    if (!applyResult.success) {
-      console.error("resolveRequest applyDistributionConfig error:", applyResult.error);
-      return null;
-    }
     nextStatus = "approved";
   } else if (requestRow.status === "pending" && rejectCount >= requestRow.votes_required) {
     nextStatus = "rejected";
@@ -245,10 +243,13 @@ export async function resolveRequest(
   let resolvedAt = requestRow.resolved_at;
   if (nextStatus !== requestRow.status) {
     resolvedAt = new Date().toISOString();
-    const { error: updateError } = await admin
+    const { data: updated, error: updateError } = await admin
       .from("distribution_change_requests")
       .update({ status: nextStatus, resolved_at: resolvedAt, votes_received: votes.length })
-      .eq("id", requestId);
+      .eq("id", requestId)
+      .eq("status", "pending")
+      .select("id")
+      .maybeSingle();
 
     if (updateError) {
       if (!isMissingSchemaError(updateError)) {
@@ -257,11 +258,36 @@ export async function resolveRequest(
       return null;
     }
 
+    if (!updated) {
+      const current = await selectRequestById(requestId);
+      if (!current) {
+        return null;
+      }
+      return (await buildDistributionRequestDtos([{ ...current, votes_received: votes.length }]))[0] ?? null;
+    }
+
+    if (nextStatus === "approved") {
+      const applyResult = await applyDistributionConfig(
+        requestRow.ownership_account_id,
+        parseDistributionConfig(requestRow.proposed_config)
+      );
+
+      if (!applyResult.success) {
+        const { error: rollbackError } = await admin
+          .from("distribution_change_requests")
+          .update({ status: "pending", resolved_at: null })
+          .eq("id", requestId);
+
+        if (rollbackError && !isMissingSchemaError(rollbackError)) {
+          console.error("resolveRequest rollback error:", rollbackError);
+        }
+        console.error("resolveRequest applyDistributionConfig error:", applyResult.error);
+        return null;
+      }
+    }
+
     const requestorName = profileMap.get(requestRow.requested_by)?.full_name ?? "A member";
-    const title =
-      nextStatus === "approved"
-        ? "Distribution change approved"
-        : "Distribution change rejected";
+    const title = nextStatus === "approved" ? "Distribution change approved" : "Distribution change rejected";
     const body =
       nextStatus === "approved"
         ? `${requestorName}'s distribution update has been approved and applied.`
@@ -269,10 +295,7 @@ export async function resolveRequest(
 
     await notifyAccountMembers({
       accountId: requestRow.ownership_account_id,
-      type:
-        nextStatus === "approved"
-          ? "distribution_change_approved"
-          : "distribution_change_rejected",
+      type: nextStatus === "approved" ? "distribution_change_approved" : "distribution_change_rejected",
       title,
       body,
       entityType: "distribution_change_request",
@@ -280,20 +303,20 @@ export async function resolveRequest(
     });
   }
 
-  return {
-    id: requestRow.id,
-    ownershipAccountId: requestRow.ownership_account_id,
-    requestedBy: requestRow.requested_by,
-    requestedByName: profileMap.get(requestRow.requested_by)?.full_name ?? null,
-    currentConfig: parseDistributionConfig(requestRow.current_config),
-    proposedConfig: parseDistributionConfig(requestRow.proposed_config),
-    status: nextStatus,
-    votesRequired: requestRow.votes_required,
-    votesReceived: votes.length,
-    votes,
-    createdAt: requestRow.created_at,
-    resolvedAt
-  };
+  return (
+    buildRequestDtos(
+      [
+        {
+          ...requestRow,
+          status: nextStatus,
+          votes_received: votes.length,
+          resolved_at: resolvedAt
+        }
+      ],
+      votes,
+      profileMap
+    )[0] ?? null
+  );
 }
 
 export async function getCurrentDistributionConfigForAccount(

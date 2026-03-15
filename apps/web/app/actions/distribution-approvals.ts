@@ -9,6 +9,7 @@ import {
 } from "@/lib/distributions";
 import { resolveRequest } from "@/lib/distribution-approvals";
 import { notifyAccountMembers } from "@/lib/notifications";
+import { getActiveMembers } from "@/lib/ownership-members";
 import { canUserAdministerOwnershipAccount } from "@/lib/ownership";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
@@ -41,32 +42,6 @@ function describeMode(mode: string) {
   return mode.replace(/_/g, " ");
 }
 
-async function getActiveMemberIds(
-  accountId: string
-): Promise<{ profileIds: string[] } | { error: string }> {
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("ownership_account_members")
-    .select("profile_id")
-    .eq("account_id", accountId)
-    .eq("active", true)
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    if (isMissingSchemaError(error)) {
-      return { error: SCHEMA_ERROR_MESSAGE } as const;
-    }
-    console.error("getActiveMemberIds error:", error);
-    return { error: "Unable to load account members right now." } as const;
-  }
-
-  return {
-    profileIds: (data ?? [])
-      .map((member) => member.profile_id)
-      .filter((profileId): profileId is string => typeof profileId === "string" && profileId.length > 0)
-  } as const;
-}
-
 export async function submitDistributionChangeRequest(
   _prev: ActionState,
   formData: FormData
@@ -93,12 +68,18 @@ export async function submitDistributionChangeRequest(
     return { success: false, error: "Access denied." };
   }
 
-  const memberResult = await getActiveMemberIds(accountId);
+  const memberResult = await getActiveMembers(accountId);
   if ("error" in memberResult) {
-    return { success: false, error: memberResult.error };
+    return {
+      success: false,
+      error:
+        memberResult.error === "This feature requires a database update. Please try again later."
+          ? SCHEMA_ERROR_MESSAGE
+          : memberResult.error
+    };
   }
 
-  const activeMemberIds = memberResult.profileIds;
+  const activeMemberIds = memberResult.members.map((member) => member.profileId);
   if (activeMemberIds.length === 0) {
     return { success: false, error: "No active members to distribute funds to." };
   }

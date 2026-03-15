@@ -155,6 +155,7 @@ export async function createStripeTransfer(params: {
   destination: string;
   transferGroup?: string;
   description?: string;
+  idempotencyKey?: string;
 }): Promise<{ id: string; amount: number }> {
   const secretKey = getStripeSecretKey();
   const body = new URLSearchParams();
@@ -172,7 +173,8 @@ export async function createStripeTransfer(params: {
     method: "POST",
     headers: {
       Authorization: `Bearer ${secretKey}`,
-      "Content-Type": "application/x-www-form-urlencoded"
+      "Content-Type": "application/x-www-form-urlencoded",
+      ...(params.idempotencyKey ? { "Idempotency-Key": params.idempotencyKey } : {})
     },
     body: body.toString(),
     cache: "no-store"

@@ -34,6 +34,13 @@ export interface DistributionMemberRow {
   payoutStripeAccountId: string | null;
 }
 
+export interface PlannedDistributionShare {
+  profileId: string;
+  amountCents: number;
+  distributionPct: number | null;
+  destination: string;
+}
+
 export interface FinancialActivityEvent {
   id: string;
   type: "distribution" | "config_change" | "withdrawal" | "expense";
@@ -52,6 +59,108 @@ interface ProfileRow {
 
 function roundPct(value: number) {
   return Math.round(value * 100) / 100;
+}
+
+export function planEqualDistributionTransfers(
+  ownerAmount: number,
+  members: DistributionMemberRow[]
+) {
+  if (members.length === 0) {
+    return { memberShares: [] as PlannedDistributionShare[], llcFallbackAmount: ownerAmount };
+  }
+
+  const baseAmount = Math.floor(ownerAmount / members.length);
+  const memberShares: PlannedDistributionShare[] = [];
+  let llcFallbackAmount = 0;
+
+  for (let index = 0; index < members.length; index += 1) {
+    const member = members[index];
+    const amountCents = baseAmount + (index === 0 ? ownerAmount - baseAmount * members.length : 0);
+    if (amountCents <= 0) {
+      continue;
+    }
+    if (!member.payoutStripeAccountId) {
+      llcFallbackAmount += amountCents;
+      continue;
+    }
+    memberShares.push({
+      profileId: member.profileId,
+      amountCents,
+      distributionPct: roundPct(100 / members.length),
+      destination: member.payoutStripeAccountId
+    });
+  }
+
+  return { memberShares, llcFallbackAmount };
+}
+
+export function planCustomDistributionTransfers(
+  ownerAmount: number,
+  members: DistributionMemberRow[]
+) {
+  const normalizedMembers = members.map((member) => ({
+    ...member,
+    distributionPct: member.distributionPct ?? 0
+  }));
+  const totalPct = normalizedMembers.reduce((sum, member) => sum + member.distributionPct, 0);
+  if (totalPct <= 0) {
+    return { memberShares: [] as PlannedDistributionShare[], llcFallbackAmount: ownerAmount };
+  }
+
+  const floorAmounts = normalizedMembers.map((member) =>
+    Math.floor(ownerAmount * (member.distributionPct / totalPct))
+  );
+  const remainder = ownerAmount - floorAmounts.reduce((sum, amount) => sum + amount, 0);
+  const memberShares: PlannedDistributionShare[] = [];
+  let llcFallbackAmount = 0;
+
+  for (let index = 0; index < normalizedMembers.length; index += 1) {
+    const member = normalizedMembers[index];
+    const amountCents = floorAmounts[index] + (index === 0 ? remainder : 0);
+    if (amountCents <= 0) {
+      continue;
+    }
+    if (!member.payoutStripeAccountId) {
+      llcFallbackAmount += amountCents;
+      continue;
+    }
+    memberShares.push({
+      profileId: member.profileId,
+      amountCents,
+      distributionPct: member.distributionPct,
+      destination: member.payoutStripeAccountId
+    });
+  }
+
+  return { memberShares, llcFallbackAmount };
+}
+
+export async function recordPaymentDistribution(params: {
+  paymentId: string | null;
+  accountId: string;
+  profileId: string;
+  amountCents: number;
+  distributionPct: number | null;
+  stripeTransferId: string | null;
+  status: DistributionStatus;
+}) {
+  if (!params.paymentId) {
+    return;
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("payment_distributions").insert({
+    payment_id: params.paymentId,
+    account_id: params.accountId,
+    member_profile_id: params.profileId,
+    amount_cents: params.amountCents,
+    distribution_pct: params.distributionPct,
+    stripe_transfer_id: params.stripeTransferId,
+    status: params.status
+  });
+  if (error) {
+    console.error("recordPaymentDistribution error:", error);
+  }
 }
 
 function toNumber(value: number | string | null | undefined): number | null {

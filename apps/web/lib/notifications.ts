@@ -96,6 +96,15 @@ function getNotificationCta(type: NotificationType) {
       return { text: "View Lease", url: `${baseUrl}/tenant` };
     case "delinquency_escalation":
       return { text: "Resolve Balance", url: `${baseUrl}/tenant` };
+    case "distribution_change_requested":
+    case "distribution_change_approved":
+    case "distribution_change_rejected":
+      return { text: "View Account", url: `${baseUrl}/owner` };
+    case "withdrawal_requested":
+    case "withdrawal_approved":
+    case "withdrawal_rejected":
+    case "withdrawal_completed":
+      return { text: "View Account", url: `${baseUrl}/owner` };
     default:
       return { text: "Open Domus", url: baseUrl };
   }
