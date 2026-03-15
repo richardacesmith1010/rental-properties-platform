@@ -130,6 +130,7 @@ interface SectionRendererProps {
   onDeleteExpense?: StatefulAction;
   onCreateOwnershipAccount?: StatefulAction;
   onLinkPropertyToOwnershipAccount?: StatefulAction;
+  onInitiateAccountStripeConnect?: StatefulAction;
   onUpdateManagementFee?: StatefulAction;
   onCreateProperty: StatefulAction;
   onCreateUnit: StatefulAction;
@@ -228,6 +229,7 @@ export function SectionRenderer({
   onDeleteExpense,
   onCreateOwnershipAccount,
   onLinkPropertyToOwnershipAccount,
+  onInitiateAccountStripeConnect,
   onUpdateManagementFee,
   onCreateProperty,
   onCreateUnit,
@@ -439,6 +441,7 @@ export function SectionRenderer({
           }))}
           onCreateOwnershipAccount={onCreateOwnershipAccount!}
           onLinkPropertyToOwnershipAccount={onLinkPropertyToOwnershipAccount!}
+          onInitiateAccountStripeConnect={onInitiateAccountStripeConnect}
         />
       ) : (
         <FeatureWarning

@@ -1,5 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
-import { getAdministeredPropertyIds } from "@/lib/property-access";
+import {
+  getAdministeredPropertyIds,
+  getAdministeredPropertyIdsForAccount
+} from "@/lib/property-access";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 export type ListingStatus = "draft" | "published" | "paused" | "archived";
@@ -19,9 +22,14 @@ export interface RentalListingDTO {
   updatedAt: string;
 }
 
-export async function getRentalListingsForUser(userId: string): Promise<RentalListingDTO[]> {
+export async function getRentalListingsForUser(
+  userId: string,
+  accountId?: string | null
+): Promise<RentalListingDTO[]> {
   const supabase = createClient();
-  const propertyIds = await getAdministeredPropertyIds(userId);
+  const propertyIds = accountId
+    ? await getAdministeredPropertyIdsForAccount(userId, accountId)
+    : await getAdministeredPropertyIds(userId);
   if (propertyIds.length === 0) {
     return [];
   }

@@ -1,5 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAdministeredProperties } from "@/lib/property-access";
+import {
+  getAdministeredProperties,
+  getAdministeredPropertyIdsForAccount
+} from "@/lib/property-access";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 export interface PropertyListItem {
@@ -60,7 +63,10 @@ export interface PortfolioData {
   tenants: TenantOption[];
 }
 
-export async function getPortfolioData(userId: string): Promise<PortfolioData> {
+export async function getPortfolioData(
+  userId: string,
+  accountId?: string | null
+): Promise<PortfolioData> {
   const admin = createAdminClient();
 
   const { data: selfProfile } = await admin
@@ -97,7 +103,12 @@ export async function getPortfolioData(userId: string): Promise<PortfolioData> {
     });
   }
 
-  const administeredProperties = await getAdministeredProperties(userId);
+  const scopedPropertyIds = accountId
+    ? await getAdministeredPropertyIdsForAccount(userId, accountId)
+    : null;
+  const administeredProperties = (await getAdministeredProperties(userId)).filter((property) =>
+    scopedPropertyIds ? scopedPropertyIds.includes(property.id) : true
+  );
   const propertyIds = administeredProperties.map((property) => property.id);
 
   if (propertyIds.length === 0) {

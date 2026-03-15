@@ -1,23 +1,41 @@
 import { redirect } from "next/navigation";
-import { initiateStripeConnect } from "@/app/actions";
+import { initiateAccountStripeConnect, initiateStripeConnect } from "@/app/actions";
 import { getAuthenticatedUser, getCurrentUserRole, getRoleHomePath, getUserProfileSummary } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-export default async function ConnectOnboardPage() {
+interface ConnectOnboardPageProps {
+  searchParams?: {
+    accountId?: string | string[];
+  };
+}
+
+export default async function ConnectOnboardPage({ searchParams }: ConnectOnboardPageProps) {
   const user = await getAuthenticatedUser();
   const role = await getCurrentUserRole(user.id);
+  const accountId =
+    typeof searchParams?.accountId === "string"
+      ? searchParams.accountId
+      : Array.isArray(searchParams?.accountId)
+        ? searchParams.accountId[0] ?? null
+        : null;
 
   if (role !== "owner" && role !== "manager") {
     redirect(getRoleHomePath(role));
   }
 
   const profile = await getUserProfileSummary(user.id);
-  if (profile.stripeOnboardingComplete) {
+  if (!accountId && profile.stripeOnboardingComplete) {
     redirect("/settings?connect=ready");
   }
 
-  const result = await initiateStripeConnect();
+  const result = accountId
+    ? await (async () => {
+        const formData = new FormData();
+        formData.set("accountId", accountId);
+        return initiateAccountStripeConnect(null, formData);
+      })()
+    : await initiateStripeConnect();
   if (result?.success && result.url) {
     redirect(result.url);
   }

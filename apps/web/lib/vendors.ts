@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getAdministeredOwnerAccountIds } from "@/lib/property-access";
+import { canUserAdministerOwnershipAccount } from "@/lib/ownership";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 export interface VendorDTO {
@@ -13,9 +14,21 @@ export interface VendorDTO {
   active: boolean;
 }
 
-export async function getOwnerVendors(userId: string): Promise<VendorDTO[]> {
+export async function getOwnerVendors(
+  userId: string,
+  accountId?: string | null
+): Promise<VendorDTO[]> {
   const supabase = createClient();
-  const ownerAccountIds = await getAdministeredOwnerAccountIds(userId);
+  const canAccessScopedAccount =
+    accountId ? await canUserAdministerOwnershipAccount(userId, accountId) : true;
+  if (accountId && !canAccessScopedAccount) {
+    return [];
+  }
+  const ownerAccountIds = accountId
+    ? canAccessScopedAccount
+      ? [accountId]
+      : []
+    : await getAdministeredOwnerAccountIds(userId);
   if (ownerAccountIds.length === 0) {
     // Legacy fallback for pre-Phase-9 installations.
     const { data: legacyData } = await supabase
@@ -80,6 +93,9 @@ export async function getOwnerVendors(userId: string): Promise<VendorDTO[]> {
   return [];
 }
 
-export async function getManagerVendors(userId: string): Promise<VendorDTO[]> {
-  return getOwnerVendors(userId);
+export async function getManagerVendors(
+  userId: string,
+  accountId?: string | null
+): Promise<VendorDTO[]> {
+  return getOwnerVendors(userId, accountId);
 }

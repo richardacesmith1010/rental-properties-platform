@@ -1,5 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAdministeredPropertyIds } from "@/lib/property-access";
+import {
+  getAdministeredPropertyIds,
+  getAdministeredPropertyIdsForAccount
+} from "@/lib/property-access";
 
 interface DashboardKpis {
   monthlyGrossRentCents: number;
@@ -64,7 +67,10 @@ function normalizeChargeCategory(value: string | null | undefined): "rent" | "la
   return value === "late_fee" ? "late_fee" : "rent";
 }
 
-export async function getDashboardData(userId: string): Promise<DashboardData> {
+export async function getDashboardData(
+  userId: string,
+  accountId?: string | null
+): Promise<DashboardData> {
   const admin = createAdminClient();
 
   const { data: profile } = await admin
@@ -79,7 +85,9 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     return emptyData(role);
   }
 
-  const propertyIds = await getAdministeredPropertyIds(userId);
+  const propertyIds = accountId
+    ? await getAdministeredPropertyIdsForAccount(userId, accountId)
+    : await getAdministeredPropertyIds(userId);
   if (propertyIds.length === 0) {
     return emptyData(role);
   }

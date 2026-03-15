@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { getAdministeredPropertyIdsForAccount } from "@/lib/property-access";
+import { canUserAdministerOwnershipAccount } from "@/lib/ownership";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 export interface InvitationListItem {
@@ -14,9 +16,18 @@ export interface InvitationListItem {
 }
 
 export async function getOwnerInvitations(
-  userId: string
+  userId: string,
+  accountId?: string | null
 ): Promise<InvitationListItem[]> {
   const supabase = createClient();
+  const scopedPropertyIds =
+    accountId ? await getAdministeredPropertyIdsForAccount(userId, accountId) : null;
+  const canAccessScopedAccount =
+    accountId ? await canUserAdministerOwnershipAccount(userId, accountId) : true;
+
+  if (accountId && !canAccessScopedAccount) {
+    return [];
+  }
 
   const query = await supabase
     .from("invitations")
@@ -38,6 +49,20 @@ export async function getOwnerInvitations(
       ...row,
       ownership_account_id: null
     }));
+  }
+
+  if (!invitations || invitations.length === 0) {
+    return [];
+  }
+
+  if (accountId) {
+    const scopedPropertyIdSet = new Set(scopedPropertyIds ?? []);
+    invitations = invitations.filter(
+      (invitation) =>
+        invitation.ownership_account_id === accountId ||
+        (typeof invitation.property_id === "string" &&
+          scopedPropertyIdSet.has(invitation.property_id))
+    );
   }
 
   if (!invitations || invitations.length === 0) {

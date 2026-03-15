@@ -25,6 +25,7 @@ export type StatefulAction = (prev: ActionState, formData: FormData) => Promise<
 export interface DashboardProps {
   data: DashboardData;
   isEmpty?: boolean;
+  activeAccountId?: string | null;
   portfolio?: PortfolioData;
   tickets?: MaintenanceTicket[];
   invitations?: InvitationListItem[];
@@ -104,5 +105,6 @@ export interface DashboardProps {
   onDeleteExpense?: StatefulAction;
   onCreateOwnershipAccount?: StatefulAction;
   onLinkPropertyToOwnershipAccount?: StatefulAction;
+  onInitiateAccountStripeConnect?: StatefulAction;
   onUpdateManagementFee?: StatefulAction;
 }

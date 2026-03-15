@@ -2,8 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 import {
   getAdministeredOwnerAccountIds,
-  getAdministeredPropertyIds
+  getAdministeredPropertyIds,
+  getAdministeredPropertyIdsForAccount
 } from "@/lib/property-access";
+import { canUserAdministerOwnershipAccount } from "@/lib/ownership";
 
 export interface SignerDTO {
   email: string;
@@ -83,12 +85,30 @@ export interface TenantDocumentsData {
   propertyFilesWarning: string | null;
 }
 
-export async function getOwnerDocumentsData(userId: string): Promise<OwnerDocumentsData> {
+export async function getOwnerDocumentsData(
+  userId: string,
+  accountId?: string | null
+): Promise<OwnerDocumentsData> {
   const supabase = createClient();
-  const [ownerAccountIds, propertyIds] = await Promise.all([
-    getAdministeredOwnerAccountIds(userId),
-    getAdministeredPropertyIds(userId)
+  const [canAccessScopedAccount, propertyIds, ownerAccountIds] = await Promise.all([
+    accountId ? canUserAdministerOwnershipAccount(userId, accountId) : Promise.resolve(true),
+    accountId
+      ? getAdministeredPropertyIdsForAccount(userId, accountId)
+      : getAdministeredPropertyIds(userId),
+    accountId
+      ? Promise.resolve([accountId])
+      : getAdministeredOwnerAccountIds(userId)
   ]);
+
+  if (accountId && !canAccessScopedAccount) {
+    return {
+      templates: [],
+      packets: [],
+      propertyFiles: [],
+      propertyFilesEnabled: true,
+      propertyFilesWarning: null
+    };
+  }
 
   const modernTemplatesQuery = ownerAccountIds.length
     ? await supabase

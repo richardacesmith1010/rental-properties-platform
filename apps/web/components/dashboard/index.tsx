@@ -22,6 +22,7 @@ import { GamificationSummary } from "@/components/gamification/gamification-summ
 import { ConnectBanner } from "@/components/dashboard/connect-banner";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { WelcomeCard } from "@/components/dashboard/welcome-card";
+import { AccountSwitcher } from "@/components/dashboard/account-switcher";
 import { SidebarNav, MobileTopBar, type NavItem } from "./sidebar-nav";
 import type { GlobalSearchItem } from "./global-search";
 import { SectionRenderer } from "./section-renderer";
@@ -46,6 +47,7 @@ const EMPTY_RENT_INCREASE_HISTORY: RentIncreaseEntry[] = [];
 export function Dashboard({
   data,
   isEmpty = false,
+  activeAccountId,
   portfolio,
   tickets,
   invitations,
@@ -125,6 +127,7 @@ export function Dashboard({
   onDeleteExpense,
   onCreateOwnershipAccount,
   onLinkPropertyToOwnershipAccount,
+  onInitiateAccountStripeConnect,
   onUpdateManagementFee
 }: DashboardProps) {
   const resolvedGamification = gamification ?? {
@@ -457,19 +460,35 @@ export function Dashboard({
     : isManagerRole
       ? `manager:${managerWorkflowMode}`
       : activeSection;
-  const reportsHref = isOwnerRole || isManagerRole ? "/owner/reports" : null;
+  const reportsHref = isOwnerRole
+    ? activeAccountId
+      ? `/owner/reports?account=${encodeURIComponent(activeAccountId)}`
+      : "/owner/reports"
+    : isManagerRole
+      ? "/owner/reports"
+      : null;
+  const renderAccountSwitcher = () =>
+    isOwnerRole && activeAccountId && safeOwnershipAccounts.length > 0 ? (
+      <AccountSwitcher
+        accounts={safeOwnershipAccounts}
+        activeAccountId={activeAccountId}
+      />
+    ) : null;
   const searchItems = useMemo<GlobalSearchItem[]>(() => {
     const basePath = isOwnerRole ? "/owner" : isManagerRole ? "/manager" : null;
     if (!basePath) {
       return [];
     }
+    const accountQuery =
+      isOwnerRole && activeAccountId ? `&account=${encodeURIComponent(activeAccountId)}` : "";
+    const sectionHref = (section: string) => `${basePath}?section=${section}${accountQuery}`;
 
     return [
       ...safePortfolio.properties.map((property) => ({
         id: `property:${property.id}`,
         label: property.name,
         category: "Properties",
-        href: `${basePath}?section=portfolio`,
+        href: sectionHref("portfolio"),
         description: [property.addressLine1, property.city, property.state].filter(Boolean).join(", "),
         keywords: [property.name, property.addressLine1, property.city, property.state]
       })),
@@ -477,7 +496,7 @@ export function Dashboard({
         id: `unit:${unit.id}`,
         label: `Unit ${unit.unitNumber}`,
         category: "Units",
-        href: `${basePath}?section=units`,
+        href: sectionHref("units"),
         description: unit.propertyName,
         keywords: [unit.unitNumber, unit.propertyName]
       })),
@@ -485,7 +504,7 @@ export function Dashboard({
         id: `lease:${lease.id}`,
         label: lease.tenantEmail,
         category: "Leases",
-        href: `${basePath}?section=leases`,
+        href: sectionHref("leases"),
         description: `${lease.unitLabel} • ${formatDate(lease.endDate)}`,
         keywords: [lease.tenantEmail, lease.unitLabel, lease.leaseStatus]
       })),
@@ -493,7 +512,7 @@ export function Dashboard({
         id: `tenant:${tenant.id}`,
         label: tenant.fullName || tenant.email,
         category: "Tenants",
-        href: `${basePath}?section=leases`,
+        href: sectionHref("leases"),
         description: tenant.email,
         keywords: [tenant.fullName, tenant.email]
       })),
@@ -501,7 +520,7 @@ export function Dashboard({
         id: `ticket:${ticket.id}`,
         label: ticket.title,
         category: "Maintenance",
-        href: `${basePath}?section=maintenance`,
+        href: sectionHref("maintenance"),
         description: `${ticket.propertyName}${ticket.unitNumber ? ` • Unit ${ticket.unitNumber}` : ""}`,
         keywords: [ticket.title, ticket.description, ticket.propertyName, ticket.unitNumber ?? ""]
       })),
@@ -509,7 +528,7 @@ export function Dashboard({
         id: `charge:${charge.id}`,
         label: `${charge.propertyName} • Unit ${charge.unitNumber}`,
         category: "Charges",
-        href: `${basePath}?section=charges`,
+        href: sectionHref("charges"),
         description: `${charge.tenantName} • ${charge.status} • ${formatDate(charge.dueDate)}`,
         keywords: [charge.propertyName, charge.unitNumber, charge.tenantName, charge.status]
       })),
@@ -517,12 +536,13 @@ export function Dashboard({
         id: `activity:${log.id}`,
         label: log.action.replace(/_/g, " "),
         category: "Activity",
-        href: `${basePath}?section=activity`,
+        href: sectionHref("activity"),
         description: log.userName,
         keywords: [log.action, log.entityType, log.userName]
       }))
     ];
   }, [
+    activeAccountId,
     data.charges,
     isManagerRole,
     isOwnerRole,
@@ -578,6 +598,7 @@ export function Dashboard({
           unreadNotificationCount={notificationBadgeCount}
           searchItems={searchItems}
           reportsHref={reportsHref}
+          accountSwitcher={renderAccountSwitcher()}
         />
         <SidebarNav
           userEmail={userEmail}
@@ -593,6 +614,7 @@ export function Dashboard({
           unreadNotificationCount={notificationBadgeCount}
           searchItems={searchItems}
           reportsHref={reportsHref}
+          accountSwitcher={renderAccountSwitcher()}
         />
         <main id="main-content" className="flex flex-1 flex-col items-center justify-center px-6 py-12 lg:ml-[260px]">
           <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
@@ -607,7 +629,9 @@ export function Dashboard({
               hasUnit={safePortfolio.units.length > 0}
               hasLease={safePortfolio.leases.length > 0}
               onAddProperty={() => {
-                window.location.href = "/owner?mode=new_property&section=operations";
+                window.location.href = `/owner?mode=new_property&section=operations${
+                  activeAccountId ? `&account=${encodeURIComponent(activeAccountId)}` : ""
+                }`;
               }}
             />
           </div>
@@ -631,6 +655,7 @@ export function Dashboard({
         unreadNotificationCount={notificationBadgeCount}
         searchItems={searchItems}
         reportsHref={reportsHref}
+        accountSwitcher={renderAccountSwitcher()}
       />
       <SidebarNav
         userEmail={userEmail}
@@ -646,6 +671,7 @@ export function Dashboard({
         unreadNotificationCount={notificationBadgeCount}
         searchItems={searchItems}
         reportsHref={reportsHref}
+        accountSwitcher={renderAccountSwitcher()}
       />
       <main id="main-content" className="relative flex-1 lg:ml-[260px]">
         <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
@@ -798,6 +824,7 @@ export function Dashboard({
               onDeleteExpense={onDeleteExpense}
               onCreateOwnershipAccount={onCreateOwnershipAccount}
               onLinkPropertyToOwnershipAccount={onLinkPropertyToOwnershipAccount}
+              onInitiateAccountStripeConnect={onInitiateAccountStripeConnect}
               onUpdateManagementFee={onUpdateManagementFee}
               onCreateProperty={onCreateProperty}
               onCreateUnit={onCreateUnit}

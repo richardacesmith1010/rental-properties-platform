@@ -20,6 +20,7 @@ import { getRecentAuditLogs } from "@/lib/audit";
 import { getRentIncreaseHistory } from "@/lib/rent-increases";
 import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
 import {
+  initiateAccountStripeConnect,
   createCheckoutForCharge,
   recordManualPayment,
   createLease,
@@ -85,6 +86,7 @@ interface OwnerPageProps {
     generated?: string | string[];
     section?: string | string[];
     mode?: string | string[];
+    account?: string | string[];
   };
 }
 
@@ -105,6 +107,15 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
   if (ownershipAccounts.length === 0) {
     redirect("/owner/setup");
   }
+  const accountParam =
+    typeof searchParams?.account === "string"
+      ? searchParams.account
+      : Array.isArray(searchParams?.account)
+        ? searchParams.account[0] ?? null
+        : null;
+  const activeAccountId = ownershipAccounts.some((account) => account.id === accountParam)
+    ? accountParam!
+    : ownershipAccounts[0]?.id ?? null;
 
   const capabilities = await getFeatureCapabilities();
   const generatedMessage = getGeneratedMessage(searchParams?.generated);
@@ -148,12 +159,12 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
     auditLogs,
     rentIncreaseHistory
   ] = await Promise.all([
-    getDashboardData(user.id),
-    getPortfolioData(user.id),
-    getAdminMaintenanceTickets(user.id),
-    getOwnerInvitations(user.id),
+    getDashboardData(user.id, activeAccountId),
+    getPortfolioData(user.id, activeAccountId),
+    getAdminMaintenanceTickets(user.id, activeAccountId),
+    getOwnerInvitations(user.id, activeAccountId),
     capabilities.documentsEnabled
-      ? getOwnerDocumentsData(user.id)
+      ? getOwnerDocumentsData(user.id, activeAccountId)
       : Promise.resolve({
           templates: [],
           packets: [],
@@ -174,19 +185,19 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       ? getAutomationRulesForUser(user.id)
       : Promise.resolve([]),
     capabilities.leasingPipelineEnabled
-      ? getRentalListingsForUser(user.id)
+      ? getRentalListingsForUser(user.id, activeAccountId)
       : Promise.resolve([]),
     capabilities.leasingPipelineEnabled
-      ? getApplicationsForUser(user.id)
+      ? getApplicationsForUser(user.id, activeAccountId)
       : Promise.resolve([] as ApplicationDTO[]),
     capabilities.vendorWorkflowEnabled
-      ? getOwnerVendors(user.id)
+      ? getOwnerVendors(user.id, activeAccountId)
       : Promise.resolve([]),
-    getOwnerExpenseData(user.id),
+    getOwnerExpenseData(user.id, activeAccountId),
     getUserGamification(user.id),
-    getOwnerAnalyticsData(user.id),
-    getRecentAuditLogs(user.id),
-    getRentIncreaseHistory(user.id)
+    getOwnerAnalyticsData(user.id, activeAccountId),
+    getRecentAuditLogs(user.id, activeAccountId),
+    getRentIncreaseHistory(user.id, activeAccountId)
   ]);
 
   const approvedApplicationCount = applications.filter(
@@ -220,6 +231,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       vendors={vendors}
       expensesData={expenses}
       ownershipAccounts={ownershipAccounts}
+      activeAccountId={activeAccountId}
       capabilities={capabilities}
       initialOwnerWorkflowMode={initialOwnerWorkflowMode}
       initialSectionId={initialSectionId}
@@ -279,6 +291,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       onDeleteExpense={deleteExpense}
       onCreateOwnershipAccount={createOwnershipAccount}
       onLinkPropertyToOwnershipAccount={linkPropertyToOwnershipAccount}
+      onInitiateAccountStripeConnect={initiateAccountStripeConnect}
       onUpdateManagementFee={updateManagementFee}
     />
   );

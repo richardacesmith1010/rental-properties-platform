@@ -5,6 +5,12 @@ import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
+interface ConnectReturnPageProps {
+  searchParams?: {
+    accountId?: string | string[];
+  };
+}
+
 function StatusCard({
   tone,
   title,
@@ -40,16 +46,29 @@ function StatusCard({
   );
 }
 
-export default async function ConnectReturnPage() {
+export default async function ConnectReturnPage({ searchParams }: ConnectReturnPageProps) {
   const user = await getAuthenticatedUser();
   const role = await getCurrentUserRole(user.id);
+  const accountId =
+    typeof searchParams?.accountId === "string"
+      ? searchParams.accountId
+      : Array.isArray(searchParams?.accountId)
+        ? searchParams.accountId[0] ?? null
+        : null;
 
   if (role !== "owner" && role !== "manager") {
     redirect(getRoleHomePath(role));
   }
 
-  const dashboardPath = getRoleHomePath(role);
-  const result = await checkConnectStatus();
+  const dashboardPath = accountId
+    ? role === "owner"
+      ? `/owner?section=ownership&account=${encodeURIComponent(accountId)}`
+      : "/manager?section=ownership"
+    : getRoleHomePath(role);
+  const retryPath = accountId
+    ? `/connect/onboard?accountId=${encodeURIComponent(accountId)}`
+    : "/connect/onboard";
+  const result = await checkConnectStatus(accountId);
 
   if (!result || !result.success) {
     return (
@@ -57,7 +76,7 @@ export default async function ConnectReturnPage() {
         tone="zinc"
         title="Unable to verify bank connection"
         description={result && !result.success ? result.error : "Please try again from settings."}
-        href="/settings"
+        href={accountId ? dashboardPath : "/settings"}
         ctaLabel="Back to Settings"
       />
     );
@@ -92,7 +111,7 @@ export default async function ConnectReturnPage() {
       tone="zinc"
       title="Onboarding Incomplete"
       description="Your Stripe onboarding was not finished. Start again to complete your bank connection."
-      href="/connect/onboard"
+      href={retryPath}
       ctaLabel="Try Again"
     />
   );

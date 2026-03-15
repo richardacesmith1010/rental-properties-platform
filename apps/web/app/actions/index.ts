@@ -7,6 +7,7 @@ export type StatefulAction = (
 export { signOut } from "./auth";
 export {
   initiateStripeConnect,
+  initiateAccountStripeConnect,
   checkConnectStatus,
   getExpressDashboardUrl,
   updateManagementFee

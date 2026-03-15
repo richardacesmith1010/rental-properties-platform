@@ -81,13 +81,124 @@ export async function initiateStripeConnect(): Promise<ActionState> {
   }
 }
 
-export async function checkConnectStatus(): Promise<ActionState> {
+export async function initiateAccountStripeConnect(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
   try {
     const { user } = await requireConnectedRole();
-    if (!checkRateLimit(`checkConnectStatus:${user.id}`, 30, 60_000).allowed) {
+    const accountId = formData.get("accountId");
+    if (typeof accountId !== "string" || accountId.length === 0) {
+      return { success: false, error: "Missing account ID." };
+    }
+    if (!checkRateLimit(`initiateAccountStripeConnect:${user.id}`, 5, 60 * 60 * 1000).allowed) {
+      return { success: false, error: "Too many requests. Please try again later." };
+    }
+
+    const { canUserAdministerOwnershipAccount } = await import("@/lib/ownership");
+    const canAdministerAccount = await canUserAdministerOwnershipAccount(user.id, accountId);
+    if (!canAdministerAccount) {
+      return { success: false, error: "Access denied." };
+    }
+
+    const admin = createAdminClient();
+    const { data: account } = await admin
+      .from("ownership_accounts")
+      .select("stripe_account_id, display_name")
+      .eq("id", accountId)
+      .maybeSingle();
+
+    if (!account) {
+      return { success: false, error: "Account not found." };
+    }
+
+    let stripeAccountId = account.stripe_account_id ?? null;
+    if (!stripeAccountId) {
+      if (!user.email) {
+        return { success: false, error: "Your account is missing an email address." };
+      }
+
+      const stripeAccount = await createExpressAccount(user.email);
+      stripeAccountId = stripeAccount.id;
+
+      const { error } = await admin
+        .from("ownership_accounts")
+        .update({
+          stripe_account_id: stripeAccountId,
+          stripe_onboarding_complete: false
+        })
+        .eq("id", accountId);
+
+      if (error) {
+        return { success: false, error: "Failed to save Stripe account." };
+      }
+    }
+
+    const appUrl = getAppUrl();
+    const accountLink = await createAccountLink(
+      stripeAccountId,
+      `${appUrl}/connect/refresh?accountId=${encodeURIComponent(accountId)}`,
+      `${appUrl}/connect/return?accountId=${encodeURIComponent(accountId)}`
+    );
+
+    return { success: true, url: accountLink.url };
+  } catch (err) {
+    console.error("initiateAccountStripeConnect error:", err);
+    const detail = err instanceof Error ? err.message : String(err);
+    return {
+      success: false,
+      error: `Unable to start Stripe onboarding. (${detail})`
+    };
+  }
+}
+
+export async function checkConnectStatus(accountId?: string | null): Promise<ActionState> {
+  try {
+    const { user } = await requireConnectedRole();
+    if (!checkRateLimit(`checkConnectStatus:${user.id}:${accountId ?? "profile"}`, 30, 60_000).allowed) {
       return { success: false, error: "Too many requests. Please try again later." };
     }
     const admin = createAdminClient();
+
+    if (accountId) {
+      const { canUserAdministerOwnershipAccount } = await import("@/lib/ownership");
+      const canAdministerAccount = await canUserAdministerOwnershipAccount(user.id, accountId);
+      if (!canAdministerAccount) {
+        return { success: false, error: "Access denied." };
+      }
+
+      const { data: ownershipAccount } = await admin
+        .from("ownership_accounts")
+        .select("stripe_account_id")
+        .eq("id", accountId)
+        .maybeSingle();
+
+      if (!ownershipAccount?.stripe_account_id) {
+        return { success: true, connected: false, detailsSubmitted: false };
+      }
+
+      const account = await getAccount(ownershipAccount.stripe_account_id);
+      const connected = Boolean(account.charges_enabled && account.payouts_enabled);
+
+      const { error } = await admin
+        .from("ownership_accounts")
+        .update({ stripe_onboarding_complete: connected })
+        .eq("id", accountId);
+
+      if (error) {
+        return { success: false, error: "Failed to update account bank connection status." };
+      }
+
+      revalidatePath("/settings");
+      revalidatePath("/owner");
+      revalidatePath("/manager");
+
+      return {
+        success: true,
+        connected,
+        detailsSubmitted: account.details_submitted
+      };
+    }
 
     const { data: profile } = await admin
       .from("profiles")

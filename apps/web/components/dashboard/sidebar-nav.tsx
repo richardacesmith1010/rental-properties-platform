@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { ReactNode } from "react";
 import { Drawer } from "vaul";
 import {
   BarChart3,
@@ -55,6 +56,7 @@ interface SidebarNavProps {
   unreadNotificationCount?: number;
   searchItems?: GlobalSearchItem[];
   reportsHref?: string | null;
+  accountSwitcher?: ReactNode;
 }
 
 const defaultNavItems: NavItem[] = [
@@ -388,6 +390,7 @@ export function SidebarNav({
   unreadNotificationCount = 0,
   searchItems = [],
   reportsHref = null,
+  accountSwitcher,
 }: SidebarNavProps) {
   const pathname = usePathname();
   const navItems = injectReportsNavItem(resolveNavItems(items, navPreset), reportsHref);
@@ -443,6 +446,7 @@ export function SidebarNav({
 
       <div className="space-y-2 px-3 pb-3">
         {searchItems.length > 0 ? <GlobalSearch items={searchItems} /> : null}
+        {accountSwitcher}
         {showWorkspaceButton ? (
           <Link
             href={workspacePath}
@@ -487,6 +491,7 @@ export function MobileTopBar({
   unreadNotificationCount = 0,
   searchItems = [],
   reportsHref = null,
+  accountSwitcher,
 }: Pick<
   SidebarNavProps,
   | "userEmail"
@@ -503,6 +508,7 @@ export function MobileTopBar({
   | "unreadNotificationCount"
   | "searchItems"
   | "reportsHref"
+  | "accountSwitcher"
 >) {
   const pathname = usePathname();
   const navItems = injectReportsNavItem(resolveNavItems(items, navPreset), reportsHref);
@@ -589,6 +595,7 @@ export function MobileTopBar({
               </div>
 
               {searchItems.length > 0 ? <GlobalSearch items={searchItems} /> : null}
+              {accountSwitcher}
 
               <div className="grid grid-cols-1 gap-2">
                 {showWorkspaceButton ? (

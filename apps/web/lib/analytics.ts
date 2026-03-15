@@ -1,5 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAdministeredPropertyIds } from "@/lib/property-access";
+import {
+  getAdministeredPropertyIds,
+  getAdministeredPropertyIdsForAccount
+} from "@/lib/property-access";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 export interface MonthlyRentMetric {
@@ -310,9 +313,14 @@ export function buildMaintenanceMetrics(
   };
 }
 
-export async function getOwnerAnalyticsData(userId: string): Promise<AnalyticsDashboardData> {
+export async function getOwnerAnalyticsData(
+  userId: string,
+  accountId?: string | null
+): Promise<AnalyticsDashboardData> {
   const admin = createAdminClient();
-  const propertyIds = await getAdministeredPropertyIds(userId);
+  const propertyIds = accountId
+    ? await getAdministeredPropertyIdsForAccount(userId, accountId)
+    : await getAdministeredPropertyIds(userId);
 
   if (propertyIds.length === 0) {
     return EMPTY_ANALYTICS;

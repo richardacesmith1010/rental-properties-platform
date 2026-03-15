@@ -187,6 +187,34 @@ export async function getAdministeredPropertyIds(
   return properties.map((property) => property.id);
 }
 
+export async function getAdministeredPropertyIdsForAccount(
+  userId: string,
+  accountId: string,
+  adminClient?: PropertyAccessClient
+): Promise<string[]> {
+  const admin = adminClient ?? createAdminClient();
+  const { data: membership, error: membershipError } = await admin
+    .from("ownership_account_members")
+    .select("account_id")
+    .eq("account_id", accountId)
+    .eq("profile_id", userId)
+    .eq("active", true)
+    .maybeSingle();
+
+  if (membershipError && isMissingSchemaError(membershipError)) {
+    return [];
+  }
+
+  if (membershipError || !membership) {
+    return [];
+  }
+
+  const properties = await getAdministeredProperties(userId, admin);
+  return properties
+    .filter((property) => property.ownerAccountId === accountId)
+    .map((property) => property.id);
+}
+
 export async function getAdministeredOwnerAccountIds(userId: string): Promise<string[]> {
   const admin = createAdminClient();
   const [properties, membershipQuery] = await Promise.all([

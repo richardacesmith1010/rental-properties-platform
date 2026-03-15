@@ -1,5 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAdministeredPropertyIds } from "@/lib/property-access";
+import {
+  getAdministeredPropertyIds,
+  getAdministeredPropertyIdsForAccount
+} from "@/lib/property-access";
 import { formatDateTime } from "@/lib/format";
 
 export interface AuditLogEntry {
@@ -154,10 +157,16 @@ export async function logAudit(params: {
   }
 }
 
-export async function getRecentAuditLogs(userId: string, limit = 50): Promise<AuditLogEntry[]> {
+export async function getRecentAuditLogs(
+  userId: string,
+  accountId?: string | null,
+  limit = 50
+): Promise<AuditLogEntry[]> {
   try {
     const admin = createAdminClient();
-    const propertyIds = await getAdministeredPropertyIds(userId);
+    const propertyIds = accountId
+      ? await getAdministeredPropertyIdsForAccount(userId, accountId)
+      : await getAdministeredPropertyIds(userId);
 
     const { data: logs, error } = await admin
       .from("audit_logs")

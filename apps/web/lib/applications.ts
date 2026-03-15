@@ -1,4 +1,7 @@
-import { getAdministeredPropertyIds } from "@/lib/property-access";
+import {
+  getAdministeredPropertyIds,
+  getAdministeredPropertyIdsForAccount
+} from "@/lib/property-access";
 import { createClient } from "@/lib/supabase/server";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 
@@ -34,9 +37,14 @@ function unique(values: string[]) {
   return Array.from(new Set(values));
 }
 
-export async function getApplicationsForUser(userId: string): Promise<ApplicationDTO[]> {
+export async function getApplicationsForUser(
+  userId: string,
+  accountId?: string | null
+): Promise<ApplicationDTO[]> {
   const supabase = createClient();
-  const propertyIds = await getAdministeredPropertyIds(userId);
+  const propertyIds = accountId
+    ? await getAdministeredPropertyIdsForAccount(userId, accountId)
+    : await getAdministeredPropertyIds(userId);
 
   if (propertyIds.length === 0) {
     return [];

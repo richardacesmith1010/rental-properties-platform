@@ -131,6 +131,20 @@ export async function getOwnerStripeAccountForProperty(propertyId: string): Prom
     return profile?.stripe_account_id && profile.stripe_onboarding_complete ? profile.stripe_account_id : null;
   }
 
+  const { data: accountStripe, error: accountStripeError } = await admin
+    .from("ownership_accounts")
+    .select("stripe_account_id, stripe_onboarding_complete")
+    .eq("id", property.owner_account_id)
+    .maybeSingle();
+
+  if (
+    !accountStripeError &&
+    accountStripe?.stripe_account_id &&
+    accountStripe.stripe_onboarding_complete
+  ) {
+    return accountStripe.stripe_account_id;
+  }
+
   const [{ data: account }, { data: members }] = await Promise.all([
     admin
       .from("ownership_accounts")

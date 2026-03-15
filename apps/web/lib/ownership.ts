@@ -8,15 +8,20 @@ export interface OwnershipAccountDTO {
   displayName: string;
   memberCount: number;
   joinCode: string | null;
+  stripeConnected: boolean;
+  distributionMode: string;
+  stripeAccountId?: string | null;
 }
 
 export interface OwnershipMemberDTO {
   profileId: string;
   email: string;
   fullName: string;
-  memberRole: "owner";
+  memberRole: "admin" | "owner" | "member" | "viewer";
   active: boolean;
   canReceiveCriticalAlerts: boolean;
+  distributionPct: number | null;
+  payoutStripeConnected: boolean;
 }
 
 function unique<T>(values: T[]): T[] {
@@ -64,7 +69,7 @@ export async function getOwnershipAccountsForUser(userId: string): Promise<Owner
   const [{ data: accounts, error: accountsError }, { data: members, error: membersError }] = await Promise.all([
     admin
       .from("ownership_accounts")
-      .select("id, account_type, display_name, join_code")
+      .select("id, account_type, display_name, join_code, stripe_account_id, stripe_onboarding_complete, distribution_mode")
       .in("id", accountIds)
       .order("created_at", { ascending: true }),
     admin
@@ -74,9 +79,25 @@ export async function getOwnershipAccountsForUser(userId: string): Promise<Owner
       .eq("active", true)
   ]);
 
-  if ((accountsError && isMissingSchemaError(accountsError)) || (membersError && isMissingSchemaError(membersError))) {
+  if (membersError && isMissingSchemaError(membersError)) {
     return [];
   }
+
+  const accountRows =
+    accountsError && isMissingSchemaError(accountsError)
+      ? (
+          await admin
+            .from("ownership_accounts")
+            .select("id, account_type, display_name, join_code")
+            .in("id", accountIds)
+            .order("created_at", { ascending: true })
+        ).data?.map((account) => ({
+          ...account,
+          stripe_account_id: null,
+          stripe_onboarding_complete: false,
+          distribution_mode: "retain"
+        })) ?? []
+      : (accounts ?? []);
 
   const memberCountByAccount = new Map<string, number>();
   for (const row of members ?? []) {
@@ -86,12 +107,15 @@ export async function getOwnershipAccountsForUser(userId: string): Promise<Owner
     );
   }
 
-  return (accounts ?? []).map((account) => ({
+  return accountRows.map((account) => ({
     id: account.id,
     accountType: account.account_type as "individual" | "llc",
     displayName: account.display_name,
     memberCount: memberCountByAccount.get(account.id) ?? 0,
-    joinCode: account.join_code ?? null
+    joinCode: account.join_code ?? null,
+    stripeConnected: account.stripe_onboarding_complete === true,
+    distributionMode: account.distribution_mode ?? "retain",
+    stripeAccountId: account.stripe_account_id ?? null
   }));
 }
 
@@ -119,17 +143,32 @@ export async function getOwnershipMembersForAccount(
   userId: string,
   accountId: string
 ): Promise<OwnershipMemberDTO[]> {
-  const accountIds = await getAdministeredOwnerAccountIds(userId);
-  if (!accountIds.includes(accountId)) {
+  const canAccessAccount = await canUserAdministerOwnershipAccount(userId, accountId);
+  if (!canAccessAccount) {
     return [];
   }
 
   const admin = createAdminClient();
-  const { data: members } = await admin
+  const membersQuery = await admin
     .from("ownership_account_members")
-    .select("profile_id, member_role, active, can_receive_critical_alerts")
+    .select("profile_id, member_role, active, can_receive_critical_alerts, distribution_pct, payout_stripe_account_id")
     .eq("account_id", accountId)
     .order("created_at", { ascending: true });
+
+  const members =
+    membersQuery.error && isMissingSchemaError(membersQuery.error)
+      ? (
+          await admin
+            .from("ownership_account_members")
+            .select("profile_id, member_role, active, can_receive_critical_alerts")
+            .eq("account_id", accountId)
+            .order("created_at", { ascending: true })
+        ).data?.map((member) => ({
+          ...member,
+          distribution_pct: null,
+          payout_stripe_account_id: null
+        })) ?? []
+      : (membersQuery.data ?? []);
 
   if (!members) {
     return [];
@@ -153,9 +192,14 @@ export async function getOwnershipMembersForAccount(
       profileId: member.profile_id,
       email: profile?.email ?? "unknown",
       fullName: profile?.full_name ?? "Unknown",
-      memberRole: member.member_role as "owner",
+      memberRole: member.member_role as OwnershipMemberDTO["memberRole"],
       active: member.active,
-      canReceiveCriticalAlerts: member.can_receive_critical_alerts
+      canReceiveCriticalAlerts: member.can_receive_critical_alerts,
+      distributionPct:
+        member.distribution_pct === null || member.distribution_pct === undefined
+          ? null
+          : Number(member.distribution_pct),
+      payoutStripeConnected: Boolean(member.payout_stripe_account_id)
     };
   });
 }

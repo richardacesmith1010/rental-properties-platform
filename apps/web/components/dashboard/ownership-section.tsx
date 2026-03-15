@@ -31,6 +31,7 @@ interface OwnershipSectionProps {
   properties: PropertyOption[];
   onCreateOwnershipAccount: StatefulAction;
   onLinkPropertyToOwnershipAccount: StatefulAction;
+  onInitiateAccountStripeConnect?: StatefulAction;
 }
 
 type OwnershipFlow = "create_account" | "link_property";
@@ -94,11 +95,66 @@ function onEnterNext(
   advance();
 }
 
+const unavailableConnectAction: StatefulAction = async () => ({
+  success: false,
+  error: "Bank connection is unavailable for this account."
+});
+
+function OwnershipAccountStripeControl({
+  account,
+  onInitiateAccountStripeConnect
+}: {
+  account: OwnershipAccountDTO;
+  onInitiateAccountStripeConnect?: StatefulAction;
+}) {
+  const [connectState, connectAction] = useFormState(
+    onInitiateAccountStripeConnect ?? unavailableConnectAction,
+    null
+  );
+
+  useEffect(() => {
+    if (connectState?.success && connectState.url) {
+      window.location.assign(connectState.url);
+    }
+  }, [connectState]);
+
+  if (account.stripeConnected) {
+    return <Badge variant="success">Bank Connected</Badge>;
+  }
+
+  if (account.stripeAccountId) {
+    return <Badge variant="warning">Pending</Badge>;
+  }
+
+  if (!onInitiateAccountStripeConnect) {
+    return null;
+  }
+
+  return (
+    <form action={connectAction} className="space-y-2">
+      <input type="hidden" name="accountId" value={account.id} />
+      <SubmitButton
+        size="sm"
+        variant="outline"
+        title={`Connect a bank account for ${account.displayName}.`}
+      >
+        Connect Bank Account
+      </SubmitButton>
+      {connectState && !connectState.success ? (
+        <Alert variant="error" className="text-xs font-normal">
+          {connectState.error}
+        </Alert>
+      ) : null}
+    </form>
+  );
+}
+
 export function OwnershipSection({
   accounts,
   properties,
   onCreateOwnershipAccount,
-  onLinkPropertyToOwnershipAccount
+  onLinkPropertyToOwnershipAccount,
+  onInitiateAccountStripeConnect
 }: OwnershipSectionProps) {
   const [createState, createAction] = useFormState(onCreateOwnershipAccount, null);
   const [linkState, linkAction] = useFormState(onLinkPropertyToOwnershipAccount, null);
@@ -436,14 +492,21 @@ export function OwnershipSection({
               {accounts.map((account, index) => (
                 <DataRow key={account.id} last={index === accounts.length - 1}>
                   <div>
-                    <p className="text-sm font-semibold text-zinc-900">{account.displayName}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-zinc-900">{account.displayName}</p>
+                      <Badge variant="outline" className="capitalize">
+                        {account.accountType}
+                      </Badge>
+                    </div>
                     <p className="mt-0.5 text-xs text-zinc-500 capitalize">
-                      {account.accountType} account
+                      {account.memberCount} member{account.memberCount === 1 ? "" : "s"} • distribution{" "}
+                      {account.distributionMode.replace(/_/g, " ")}
                     </p>
                   </div>
-                  <Badge variant="outline">
-                    {account.memberCount} owner{account.memberCount === 1 ? "" : "s"}
-                  </Badge>
+                  <OwnershipAccountStripeControl
+                    account={account}
+                    onInitiateAccountStripeConnect={onInitiateAccountStripeConnect}
+                  />
                 </DataRow>
               ))}
             </div>

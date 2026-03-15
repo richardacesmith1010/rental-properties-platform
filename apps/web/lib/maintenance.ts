@@ -1,6 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAdministeredPropertyIds } from "@/lib/property-access";
+import {
+  getAdministeredPropertyIds,
+  getAdministeredPropertyIdsForAccount
+} from "@/lib/property-access";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 type SupabaseLikeClient = Pick<ReturnType<typeof createClient>, "from">;
@@ -470,10 +473,13 @@ export async function getTenantMaintenanceData(
 }
 
 export async function getAdminMaintenanceTickets(
-  userId: string
+  userId: string,
+  accountId?: string | null
 ): Promise<MaintenanceTicket[]> {
   const supabase = createAdminClient();
-  const propertyIds = await getAdministeredPropertyIds(userId);
+  const propertyIds = accountId
+    ? await getAdministeredPropertyIdsForAccount(userId, accountId)
+    : await getAdministeredPropertyIds(userId);
 
   if (propertyIds.length === 0) {
     return [];

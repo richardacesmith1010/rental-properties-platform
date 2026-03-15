@@ -1,5 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAdministeredPropertyIds } from "@/lib/property-access";
+import {
+  getAdministeredPropertyIds,
+  getAdministeredPropertyIdsForAccount
+} from "@/lib/property-access";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 type ExpenseCategory =
@@ -106,9 +109,14 @@ function initMonthlyMap(monthKeys: string[]): Record<string, { incomeCents: numb
   return map;
 }
 
-export async function getOwnerExpenseData(userId: string): Promise<ExpenseDashboardData> {
+export async function getOwnerExpenseData(
+  userId: string,
+  accountId?: string | null
+): Promise<ExpenseDashboardData> {
   const admin = createAdminClient();
-  const propertyIds = await getAdministeredPropertyIds(userId);
+  const propertyIds = accountId
+    ? await getAdministeredPropertyIdsForAccount(userId, accountId)
+    : await getAdministeredPropertyIds(userId);
 
   if (propertyIds.length === 0) {
     return EMPTY_DASHBOARD;

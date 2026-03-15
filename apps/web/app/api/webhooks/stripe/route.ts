@@ -381,10 +381,23 @@ export async function POST(request: NextRequest) {
     const payoutsEnabled = account.payouts_enabled === true;
 
     if (accountId && chargesEnabled && payoutsEnabled) {
-      await supabase
-        .from("profiles")
-        .update({ stripe_onboarding_complete: true })
-        .eq("stripe_account_id", accountId);
+      const [profileUpdate, ownershipUpdate] = await Promise.all([
+        supabase
+          .from("profiles")
+          .update({ stripe_onboarding_complete: true })
+          .eq("stripe_account_id", accountId),
+        supabase
+          .from("ownership_accounts")
+          .update({ stripe_onboarding_complete: true })
+          .eq("stripe_account_id", accountId)
+      ]);
+
+      if (profileUpdate.error) {
+        console.error("Failed to update profile Stripe onboarding status:", profileUpdate.error);
+      }
+      if (ownershipUpdate.error) {
+        console.error("Failed to update ownership account Stripe onboarding status:", ownershipUpdate.error);
+      }
     }
 
     return NextResponse.json({ received: true });
