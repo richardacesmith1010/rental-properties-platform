@@ -1,11 +1,21 @@
-interface EmailTemplateParams {
+export interface EmailTemplateParams {
   title: string;
   body: string;
   ctaText?: string;
   ctaUrl?: string;
+  preheaderText?: string;
 }
 
-function escapeHtml(value: string) {
+interface BrandedEmailShellParams {
+  titleHtml: string;
+  bodyHtml: string;
+  ctaText: string;
+  ctaUrl: string;
+  preheaderText?: string;
+  footerPreferencesUrl?: string;
+}
+
+export function escapeHtml(value: string) {
   return value
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -14,21 +24,27 @@ function escapeHtml(value: string) {
     .replaceAll("'", "&#39;");
 }
 
-export function buildNotificationEmail({
-  title,
-  body,
-  ctaText = "Open Domus",
-  ctaUrl = "https://domusbase.com"
-}: EmailTemplateParams) {
-  const safeTitle = escapeHtml(title);
-  const safeBody = escapeHtml(body).replaceAll("\n", "<br />");
+export function buildBrandedEmailShell({
+  titleHtml,
+  bodyHtml,
+  ctaText,
+  ctaUrl,
+  preheaderText,
+  footerPreferencesUrl,
+}: BrandedEmailShellParams) {
   const safeCtaText = escapeHtml(ctaText);
   const safeCtaUrl = escapeHtml(ctaUrl);
+  const safePreferencesUrl = footerPreferencesUrl ? escapeHtml(footerPreferencesUrl) : null;
+  const safePreheaderText = preheaderText ? escapeHtml(preheaderText) : null;
 
   return `
 <!DOCTYPE html>
 <html lang="en">
   <body style="margin:0;padding:24px;background-color:#f5f3ff;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+    ${safePreheaderText ? `
+    <span style="display:none;font-size:1px;color:#f5f3ff;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+      ${safePreheaderText}
+    </span>` : ""}
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
       <tr>
         <td align="center">
@@ -58,9 +74,9 @@ export function buildNotificationEmail({
             </tr>
             <tr>
               <td style="padding:32px 24px;background-color:#ffffff;border-left:1px solid #ddd6fe;border-right:1px solid #ddd6fe;">
-                <div style="font-size:24px;font-weight:700;line-height:1.3;color:#111827;">${safeTitle}</div>
+                <div style="font-size:24px;font-weight:700;line-height:1.3;color:#111827;">${titleHtml}</div>
                 <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#475569;">
-                  ${safeBody}
+                  ${bodyHtml}
                 </div>
                 <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:24px;border-collapse:collapse;">
                   <tr>
@@ -82,6 +98,12 @@ export function buildNotificationEmail({
                   Domus - Rental Property Management<br />
                   Manage rent, maintenance, documents, and notifications in one place.
                 </div>
+                ${safePreferencesUrl ? `
+                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#64748b;">
+                  <a href="${safePreferencesUrl}" style="color:#7C3AED;text-decoration:underline;">
+                    Manage notification preferences
+                  </a>
+                </div>` : ""}
               </td>
             </tr>
           </table>
@@ -90,4 +112,25 @@ export function buildNotificationEmail({
     </table>
   </body>
 </html>`.trim();
+}
+
+export function buildNotificationEmail({
+  title,
+  body,
+  ctaText = "Open Domus",
+  ctaUrl = "https://domusbase.com",
+  preheaderText,
+}: EmailTemplateParams) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com";
+  const safeTitle = escapeHtml(title);
+  const safeBody = escapeHtml(body).replaceAll("\n", "<br />");
+
+  return buildBrandedEmailShell({
+    titleHtml: safeTitle,
+    bodyHtml: safeBody,
+    ctaText,
+    ctaUrl,
+    preheaderText,
+    footerPreferencesUrl: `${appUrl}/settings`,
+  });
 }

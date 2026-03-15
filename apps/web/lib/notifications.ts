@@ -110,6 +110,25 @@ function getNotificationCta(type: NotificationType) {
   }
 }
 
+function buildNotificationPlainText(params: {
+  title: string;
+  body: string;
+  ctaText: string;
+  ctaUrl: string;
+}) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com";
+
+  return [
+    params.title,
+    "",
+    params.body,
+    "",
+    `${params.ctaText}: ${params.ctaUrl}`,
+    "",
+    `Manage notification preferences: ${appUrl}/settings`
+  ].join("\n");
+}
+
 export async function createNotificationWithDelivery(params: CreateNotificationParams) {
   try {
     const admin = createAdminClient();
@@ -180,12 +199,18 @@ export async function createNotificationWithDelivery(params: CreateNotificationP
       emailResult = await sendNotificationEmail({
         to: params.recipientEmail,
         subject: params.title,
-        text: params.body,
-        html: buildNotificationEmail({
+        text: buildNotificationPlainText({
           title: params.title,
           body: params.body,
           ctaText: cta.text,
           ctaUrl: cta.url
+        }),
+        html: buildNotificationEmail({
+          title: params.title,
+          body: params.body,
+          ctaText: cta.text,
+          ctaUrl: cta.url,
+          preheaderText: params.title
         })
       });
     }
