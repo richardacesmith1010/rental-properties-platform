@@ -6,6 +6,7 @@ import {
   getAdministeredOwnerAccountIds,
   getAdministeredPropertyIds
 } from "@/lib/property-access";
+import { sideEffectError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 import { requireAuth } from "./auth-helpers";
@@ -122,16 +123,34 @@ async function removeStorageObjects(bucket: string, paths: string[]) {
   const admin = createAdminClient();
   const { error } = await admin.storage.from(bucket).remove(paths);
   if (error) {
-    console.error(`Failed to remove ${bucket} storage objects:`, error);
+    sideEffectError("accountWipe", "remove_storage_objects", {
+      entityType: bucket
+    })(error);
   }
 }
 
 async function loadDeletionScope(userId: string): Promise<DeletionScope> {
   const admin = createAdminClient();
-  const [accountIds, propertyIds] = await Promise.all([
+  const [accountIdsSettled, propertyIdsSettled] = await Promise.allSettled([
     getAdministeredOwnerAccountIds(userId),
     getAdministeredPropertyIds(userId)
   ]);
+
+  if (
+    accountIdsSettled.status === "rejected" ||
+    propertyIdsSettled.status === "rejected"
+  ) {
+    if (accountIdsSettled.status === "rejected") {
+      console.error("loadDeletionScope accountIds error:", accountIdsSettled.reason);
+    }
+    if (propertyIdsSettled.status === "rejected") {
+      console.error("loadDeletionScope propertyIds error:", propertyIdsSettled.reason);
+    }
+    throw new Error("Unable to load the account wipe scope.");
+  }
+
+  const accountIds = accountIdsSettled.value;
+  const propertyIds = propertyIdsSettled.value;
 
   const unitRows = await selectRows<{ id: string }>(
     propertyIds.length
@@ -219,7 +238,7 @@ async function loadDeletionScope(userId: string): Promise<DeletionScope> {
   );
   const notificationIds = notificationRows.map((notification) => notification.id);
 
-  const [propertyThreads, ownedThreads] = await Promise.all([
+  const [propertyThreadsSettled, ownedThreadsSettled] = await Promise.allSettled([
     selectRows<{ id: string }>(
       propertyIds.length
         ? admin.from("inbox_threads").select("id").in("property_id", propertyIds)
@@ -231,6 +250,20 @@ async function loadDeletionScope(userId: string): Promise<DeletionScope> {
       "load owned inbox threads"
     )
   ]);
+  if (
+    propertyThreadsSettled.status === "rejected" ||
+    ownedThreadsSettled.status === "rejected"
+  ) {
+    if (propertyThreadsSettled.status === "rejected") {
+      console.error("loadDeletionScope propertyThreads error:", propertyThreadsSettled.reason);
+    }
+    if (ownedThreadsSettled.status === "rejected") {
+      console.error("loadDeletionScope ownedThreads error:", ownedThreadsSettled.reason);
+    }
+    throw new Error("Unable to load the inbox cleanup scope.");
+  }
+  const propertyThreads = propertyThreadsSettled.value;
+  const ownedThreads = ownedThreadsSettled.value;
   const threadIds = unique([
     ...propertyThreads.map((thread) => thread.id),
     ...ownedThreads.map((thread) => thread.id)

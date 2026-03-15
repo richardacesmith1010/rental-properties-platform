@@ -1,3 +1,4 @@
+import { sideEffectError } from "@/lib/logger";
 import { notifyAccountMembers } from "@/lib/notifications";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
@@ -291,7 +292,7 @@ export async function resolveWithdrawal(requestId: string): Promise<WithdrawalRe
     }
 
     const requestorName = profileMap.get(requestRow.requested_by)?.full_name ?? "A member";
-    await notifyAccountMembers({
+    void notifyAccountMembers({
       accountId: requestRow.ownership_account_id,
       type: nextStatus === "approved" ? "withdrawal_approved" : "withdrawal_rejected",
       title: nextStatus === "approved" ? "Withdrawal approved" : "Withdrawal rejected",
@@ -301,7 +302,12 @@ export async function resolveWithdrawal(requestId: string): Promise<WithdrawalRe
           : `${requestorName}'s withdrawal request was rejected.`,
       entityType: "withdrawal_request",
       entityId: requestId
-    });
+    }).catch(
+      sideEffectError("resolveWithdrawal", "notify_account_members", {
+        entityType: "withdrawal_request",
+        entityId: requestId
+      })
+    );
   }
 
   return (

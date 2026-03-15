@@ -116,6 +116,7 @@ export function ChargesSection({
   onSetupAutopay,
   onDisableAutopay
 }: ChargesSectionProps) {
+  const stripeConfigured = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
   const searchParams = useSearchParams();
   const [activeFilter, setActiveFilter] = useState<ChargeFilter>("all");
   const [manualPaymentChargeId, setManualPaymentChargeId] = useState<string | null>(null);
@@ -194,6 +195,12 @@ export function ChargesSection({
           </Alert>
         ) : null}
 
+        {!stripeConfigured ? (
+          <Alert variant="warning" className="mb-4 px-4 py-3">
+            Payment processing is temporarily unavailable. Please try again later.
+          </Alert>
+        ) : null}
+
         {isTenantView && uniqueLeaseCards.length > 0 ? (
           <AnimatedList className="mb-4 space-y-3">
             {uniqueLeaseCards.map(({ leaseId, propertyLabel }) => {
@@ -267,6 +274,7 @@ export function ChargesSection({
                 ownerConnectedMap?.get(charge.propertyId) ??
                 stripeConnected ??
                 true;
+              const paymentsAvailable = stripeConfigured && ownerConnected;
               const category = charge.category ?? "rent";
 
               return (
@@ -355,7 +363,7 @@ export function ChargesSection({
                       </div>
                     </div>
 
-                    {charge.status !== "paid" ? ownerConnected ? (
+                    {charge.status !== "paid" ? paymentsAvailable ? (
                       <form action={onPayCharge}>
                         <input type="hidden" name="chargeId" value={charge.id} />
                         <SubmitButton
@@ -371,7 +379,11 @@ export function ChargesSection({
                         size="sm"
                         variant="outline"
                         disabled
-                        title="Online payment unavailable - property owner hasn't connected their bank account."
+                        title={
+                          stripeConfigured
+                            ? "Online payment unavailable - property owner hasn't connected their bank account."
+                            : "Online payment unavailable - Stripe is not configured."
+                        }
                       >
                         {isTenantView ? "Pay with Card" : "Pay now"}
                       </Button>

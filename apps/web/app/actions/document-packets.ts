@@ -38,10 +38,26 @@ export async function createDocumentPacket(_prev: ActionState, formData: FormDat
   if (!parsed.success) return parsed;
 
   const { templateId, leaseId } = parsed.data;
-  const [{ data: template }, { data: lease }] = await Promise.all([
-    supabase.from("document_templates").select("id, owner_account_id").eq("id", templateId).single(),
-    supabase.from("leases").select("id, unit_id").eq("id", leaseId).single()
+  const [templateSettled, leaseSettled] = await Promise.allSettled([
+    supabase
+      .from("document_templates")
+      .select("id, owner_account_id")
+      .eq("id", templateId)
+      .maybeSingle(),
+    supabase.from("leases").select("id, unit_id").eq("id", leaseId).maybeSingle()
   ]);
+
+  if (templateSettled.status === "rejected") {
+    console.error("createDocumentPacket template query error:", templateSettled.reason);
+    return { success: false, error: "Unable to load the document template right now." };
+  }
+  if (leaseSettled.status === "rejected") {
+    console.error("createDocumentPacket lease query error:", leaseSettled.reason);
+    return { success: false, error: "Unable to load the lease right now." };
+  }
+
+  const template = templateSettled.value.data;
+  const lease = leaseSettled.value.data;
 
   if (!template) return { success: false, error: "Template not found." };
   if (!lease) return { success: false, error: "Lease not found." };
@@ -160,15 +176,41 @@ export async function signDocumentPacket(_prev: ActionState, formData: FormData)
   const requestHeaders = headers();
   const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? requestHeaders.get("x-real-ip") ?? null;
   const userAgent = requestHeaders.get("user-agent");
+  const emptySignerLookup = Promise.resolve({ data: null, error: null } as const);
 
-  const [{ data: signerByProfile }, { data: signerByEmail }] = await Promise.all([
+  const [signerByProfileSettled, signerByEmailSettled] = await Promise.allSettled([
     admin.from("document_signers").select("id, status").eq("packet_id", packetId).eq("profile_id", user.id).maybeSingle(),
     email
       ? admin.from("document_signers").select("id, status").eq("packet_id", packetId).eq("email", email).maybeSingle()
-      : Promise.resolve({ data: null })
+      : emptySignerLookup
   ]);
 
+  const signerByProfile =
+    signerByProfileSettled.status === "fulfilled" && !signerByProfileSettled.value.error
+      ? signerByProfileSettled.value.data
+      : null;
+  const signerByEmail =
+    signerByEmailSettled.status === "fulfilled" && !signerByEmailSettled.value.error
+      ? signerByEmailSettled.value.data
+      : null;
+
+  if (signerByProfileSettled.status === "rejected") {
+    console.error("signDocumentPacket signer-by-profile error:", signerByProfileSettled.reason);
+  }
+  if (signerByEmailSettled.status === "rejected") {
+    console.error("signDocumentPacket signer-by-email error:", signerByEmailSettled.reason);
+  }
+
+  const signerLookupFailed =
+    signerByProfileSettled.status === "rejected" ||
+    signerByEmailSettled.status === "rejected" ||
+    (signerByProfileSettled.status === "fulfilled" && Boolean(signerByProfileSettled.value.error)) ||
+    (signerByEmailSettled.status === "fulfilled" && Boolean(signerByEmailSettled.value.error));
+
   const signer = signerByProfile ?? signerByEmail;
+  if (!signer && signerLookupFailed) {
+    return { success: false, error: "Unable to verify the signer right now." };
+  }
   if (!signer) return { success: false, error: "Signer record not found for this document." };
   if (signer.status === "signed") return { success: false, error: "This document is already signed." };
 

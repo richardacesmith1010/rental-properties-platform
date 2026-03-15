@@ -135,10 +135,29 @@ export async function linkPropertyToOwnershipAccount(
   }
 
   const { propertyId, ownershipAccountId } = parsed.data;
-  const [canAdministerProperty, canAdministerAccount] = await Promise.all([
+  const [propertyPermissionResult, accountPermissionResult] = await Promise.allSettled([
     canUserAdministerProperty(user.id, propertyId),
     canUserAdministerOwnershipAccount(user.id, ownershipAccountId)
   ]);
+
+  if (
+    propertyPermissionResult.status === "rejected" ||
+    accountPermissionResult.status === "rejected"
+  ) {
+    if (propertyPermissionResult.status === "rejected") {
+      console.error("linkPropertyToOwnershipAccount property permission error:", propertyPermissionResult.reason);
+    }
+    if (accountPermissionResult.status === "rejected") {
+      console.error("linkPropertyToOwnershipAccount account permission error:", accountPermissionResult.reason);
+    }
+    return {
+      success: false,
+      error: "Unable to validate property and ownership account access right now."
+    };
+  }
+
+  const canAdministerProperty = propertyPermissionResult.value;
+  const canAdministerAccount = accountPermissionResult.value;
 
   if (!canAdministerProperty) {
     return { success: false, error: "You do not have access to this property." };

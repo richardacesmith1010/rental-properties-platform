@@ -10,11 +10,24 @@ import { createNotificationWithDelivery, notifyOwnerMembersForProperty } from "@
 import { logAudit } from "@/lib/audit";
 import { awardXp, XP_VALUES } from "@/lib/gamification";
 import { formatCurrency } from "@/lib/format";
+import { isStripeConfigured } from "@/lib/env";
 import { sideEffectError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { withRetry } from "@/lib/retry";
 import { payChargeSchema, parseFormData, recordManualPaymentSchema } from "@/lib/validations";
 import { requireAuth } from "./auth-helpers";
 import type { ActionState } from "./shared";
+
+const PAYMENTS_UNAVAILABLE_MESSAGE =
+  "Payment processing is temporarily unavailable. Please try again later.";
+
+function isRetryableStripeError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    /fetch failed|network|timeout|timed out|ecconn|socket/i.test(message) ||
+    /Stripe .* failed: 5\d\d/i.test(message)
+  );
+}
 
 export async function createCheckoutForCharge(formData: FormData): Promise<ActionState | void> {
   const { user, supabase } = await requireAuth("owner", "manager", "tenant");
@@ -78,27 +91,49 @@ export async function createCheckoutForCharge(formData: FormData): Promise<Actio
     redirect("/");
   }
 
+  if (!isStripeConfigured()) {
+    return { success: false, error: PAYMENTS_UNAVAILABLE_MESSAGE };
+  }
+
   if (!(await getOwnerStripeAccountForProperty(property.id))) {
     return { success: false, error: "This property is not ready to accept online payments yet." };
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const session = await createStripeCheckoutSession({
-    amountCents: charge.amount_cents,
-    metadata: {
-      charge_id: charge.id,
-      user_id: user.id
-    },
-    successUrl: `${appUrl}/payments/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancelUrl: `${appUrl}/payments/cancel`,
-    transferGroup: `charge_${charge.id}`
-  });
+  let session;
+  try {
+    session = await withRetry(
+      () =>
+        createStripeCheckoutSession({
+          amountCents: charge.amount_cents,
+          metadata: {
+            charge_id: charge.id,
+            user_id: user.id
+          },
+          successUrl: `${appUrl}/payments/success?session_id={CHECKOUT_SESSION_ID}`,
+          cancelUrl: `${appUrl}/payments/cancel`,
+          transferGroup: `charge_${charge.id}`
+        }),
+      {
+        maxAttempts: 2,
+        baseDelayMs: 250,
+        retryIf: isRetryableStripeError
+      }
+    );
+  } catch (error) {
+    sideEffectError("createCheckoutForCharge", "start_stripe_checkout", {
+      userId: user.id,
+      entityType: "rent_charge",
+      entityId: charge.id
+    })(error);
+    return { success: false, error: PAYMENTS_UNAVAILABLE_MESSAGE };
+  }
 
   if (session.url) {
     redirect(session.url);
   }
 
-  return { success: false, error: "Unable to start checkout right now." };
+  return { success: false, error: PAYMENTS_UNAVAILABLE_MESSAGE };
 }
 
 export async function recordManualPayment(

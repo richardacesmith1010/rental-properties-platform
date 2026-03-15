@@ -11,6 +11,7 @@ import { resolveRequest } from "@/lib/distribution-approvals";
 import { notifyAccountMembers } from "@/lib/notifications";
 import { getActiveMembers } from "@/lib/ownership-members";
 import { canUserAdministerOwnershipAccount } from "@/lib/ownership";
+import { sideEffectError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 import { requireAuth } from "./auth-helpers";
@@ -149,7 +150,7 @@ export async function submitDistributionChangeRequest(
     return { success: true, message: "Distribution request created." };
   }
 
-  await notifyAccountMembers({
+  void notifyAccountMembers({
     accountId,
     type: "distribution_change_requested",
     title: "Distribution change requested",
@@ -157,7 +158,13 @@ export async function submitDistributionChangeRequest(
     entityType: "distribution_change_request",
     entityId: request.id,
     excludeProfileId: user.id
-  });
+  }).catch(
+    sideEffectError("submitDistributionChangeRequest", "notify_account_members", {
+      userId: user.id,
+      entityType: "distribution_change_request",
+      entityId: request.id
+    })
+  );
 
   revalidatePath("/owner");
   return { success: true, message: "Distribution approval request created." };

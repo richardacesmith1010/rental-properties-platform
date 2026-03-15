@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createNotificationWithDelivery } from "@/lib/notifications";
 import { canUserAdministerProperty } from "@/lib/property-access";
+import { sideEffectError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
   createRentalListingSchema,
@@ -283,7 +284,7 @@ export async function reviewApplication(
 
   if (status === "approved" || status === "rejected") {
     const admin = createAdminClient();
-    const [{ data: applicantProfile }, { data: listing }] = await Promise.all([
+    const [applicantProfileSettled, listingSettled] = await Promise.allSettled([
       admin
         .from("profiles")
         .select("id, email")
@@ -296,8 +297,45 @@ export async function reviewApplication(
         .maybeSingle()
     ]);
 
+    const applicantProfile =
+      applicantProfileSettled.status === "fulfilled" && !applicantProfileSettled.value.error
+        ? applicantProfileSettled.value.data
+        : null;
+    const listing =
+      listingSettled.status === "fulfilled" && !listingSettled.value.error
+        ? listingSettled.value.data
+        : null;
+
+    if (applicantProfileSettled.status === "rejected") {
+      sideEffectError("reviewApplication", "load_applicant_profile", {
+        userId: user.id,
+        entityType: "rental_application",
+        entityId: application.id
+      })(applicantProfileSettled.reason);
+    } else if (applicantProfileSettled.value.error) {
+      sideEffectError("reviewApplication", "load_applicant_profile", {
+        userId: user.id,
+        entityType: "rental_application",
+        entityId: application.id
+      })(applicantProfileSettled.value.error);
+    }
+
+    if (listingSettled.status === "rejected") {
+      sideEffectError("reviewApplication", "load_listing", {
+        userId: user.id,
+        entityType: "rental_application",
+        entityId: application.id
+      })(listingSettled.reason);
+    } else if (listingSettled.value.error) {
+      sideEffectError("reviewApplication", "load_listing", {
+        userId: user.id,
+        entityType: "rental_application",
+        entityId: application.id
+      })(listingSettled.value.error);
+    }
+
     if (applicantProfile?.id) {
-      await createNotificationWithDelivery({
+      void createNotificationWithDelivery({
         recipientProfileId: applicantProfile.id,
         recipientEmail: applicantProfile.email,
         type: "application_reviewed",
@@ -305,7 +343,13 @@ export async function reviewApplication(
         body: `Your application for \"${listing?.headline ?? "the listing"}\" has been ${status}.`,
         entityType: "rental_application",
         entityId: application.id
-      });
+      }).catch(
+        sideEffectError("reviewApplication", "notify_applicant", {
+          userId: user.id,
+          entityType: "rental_application",
+          entityId: application.id
+        })
+      );
     }
   }
 

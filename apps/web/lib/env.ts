@@ -15,6 +15,13 @@ export function getEnvStatus() {
   };
 }
 
+export function isStripeConfigured(): boolean {
+  return Boolean(
+    process.env.STRIPE_SECRET_KEY &&
+      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  );
+}
+
 export interface EnvSummaryGroup {
   configured: boolean;
   vars: Record<string, boolean>;

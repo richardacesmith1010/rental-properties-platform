@@ -5,7 +5,10 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { createStripeCustomer, createSetupCheckoutSession } from "@/lib/autopay";
+import { isStripeConfigured } from "@/lib/env";
+import { sideEffectError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { withRetry } from "@/lib/retry";
 import {
   disableAutopaySchema,
   parseFormData,
@@ -29,6 +32,17 @@ function getAppUrl() {
   return process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com";
 }
 
+const PAYMENTS_UNAVAILABLE_MESSAGE =
+  "Payment processing is temporarily unavailable. Please try again later.";
+
+function isRetryableStripeError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    /fetch failed|network|timeout|timed out|ecconn|socket/i.test(message) ||
+    /Stripe .* failed: 5\d\d/i.test(message)
+  );
+}
+
 export async function setupAutopay(
   _prev: ActionState,
   formData: FormData
@@ -37,6 +51,10 @@ export async function setupAutopay(
   const autopayRate = checkRateLimit(`autopay:${user.id}`, 5, 60 * 60 * 1000);
   if (!autopayRate.allowed) {
     return { success: false, error: "Too many autopay setup attempts. Please try again later." };
+  }
+
+  if (!isStripeConfigured()) {
+    return { success: false, error: PAYMENTS_UNAVAILABLE_MESSAGE };
   }
 
   const parsed = parseFormData(setupAutopaySchema, formData);
@@ -67,10 +85,28 @@ export async function setupAutopay(
   if (!user.email) {
     return { success: false, error: "Your account is missing an email address." };
   }
+  const userEmail = user.email;
 
   let stripeCustomerId = profile?.stripe_customer_id ?? null;
   if (!stripeCustomerId) {
-    const customer = await createStripeCustomer(user.email, profile?.full_name ?? user.email);
+    let customer;
+    try {
+      customer = await withRetry(
+        () => createStripeCustomer(userEmail, profile?.full_name ?? userEmail),
+        {
+          maxAttempts: 2,
+          baseDelayMs: 250,
+          retryIf: isRetryableStripeError
+        }
+      );
+    } catch (error) {
+      sideEffectError("setupAutopay", "create_stripe_customer", {
+        userId: user.id,
+        entityType: "profile",
+        entityId: user.id
+      })(error);
+      return { success: false, error: PAYMENTS_UNAVAILABLE_MESSAGE };
+    }
     stripeCustomerId = customer.id;
 
     const { error: updateError } = await admin
@@ -84,18 +120,36 @@ export async function setupAutopay(
   }
 
   const appUrl = getAppUrl();
-  const session = await createSetupCheckoutSession({
-    customerId: stripeCustomerId,
-    successUrl: `${appUrl}/autopay/return?session_id={CHECKOUT_SESSION_ID}&lease_id=${leaseId}`,
-    cancelUrl: `${appUrl}/tenant?section=charges&autopay=cancelled`,
-    metadata: {
-      lease_id: leaseId,
-      user_id: user.id
-    }
-  });
+  let session;
+  try {
+    session = await withRetry(
+      () =>
+        createSetupCheckoutSession({
+          customerId: stripeCustomerId,
+          successUrl: `${appUrl}/autopay/return?session_id={CHECKOUT_SESSION_ID}&lease_id=${leaseId}`,
+          cancelUrl: `${appUrl}/tenant?section=charges&autopay=cancelled`,
+          metadata: {
+            lease_id: leaseId,
+            user_id: user.id
+          }
+        }),
+      {
+        maxAttempts: 2,
+        baseDelayMs: 250,
+        retryIf: isRetryableStripeError
+      }
+    );
+  } catch (error) {
+    sideEffectError("setupAutopay", "create_setup_checkout_session", {
+      userId: user.id,
+      entityType: "lease",
+      entityId: leaseId
+    })(error);
+    return { success: false, error: PAYMENTS_UNAVAILABLE_MESSAGE };
+  }
 
   if (!session.url) {
-    return { success: false, error: "Unable to start autopay setup right now." };
+    return { success: false, error: PAYMENTS_UNAVAILABLE_MESSAGE };
   }
 
   redirect(session.url);

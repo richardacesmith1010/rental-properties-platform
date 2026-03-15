@@ -6,6 +6,7 @@ import { getActiveMembers } from "@/lib/ownership-members";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notifyAccountMembers } from "@/lib/notifications";
 import { canUserAdministerOwnershipAccount } from "@/lib/ownership";
+import { sideEffectError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createStripeTransfer } from "@/lib/stripe";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
@@ -144,7 +145,7 @@ export async function submitWithdrawalRequest(
     return { success: true, message: "Withdrawal request created." };
   }
 
-  await notifyAccountMembers({
+  void notifyAccountMembers({
     accountId,
     type: "withdrawal_requested",
     title: "Withdrawal requested",
@@ -155,7 +156,13 @@ export async function submitWithdrawalRequest(
     entityType: "withdrawal_request",
     entityId: request.id,
     excludeProfileId: user.id
-  });
+  }).catch(
+    sideEffectError("submitWithdrawalRequest", "notify_account_members", {
+      userId: user.id,
+      entityType: "withdrawal_request",
+      entityId: request.id
+    })
+  );
 
   revalidatePath("/owner");
   return { success: true, message: "Withdrawal request submitted for approval." };
@@ -329,7 +336,7 @@ export async function executeApprovedWithdrawal(
       };
     }
 
-    const [canAdmin, accountResult, membershipResult] = await Promise.all([
+    const [canAdminSettled, accountSettled, membershipSettled] = await Promise.allSettled([
       canUserAdministerOwnershipAccount(user.id, withdrawal.ownership_account_id),
       admin
         .from("ownership_accounts")
@@ -344,6 +351,33 @@ export async function executeApprovedWithdrawal(
         .eq("active", true)
         .maybeSingle()
     ]);
+
+    if (
+      canAdminSettled.status === "rejected" ||
+      accountSettled.status === "rejected" ||
+      membershipSettled.status === "rejected"
+    ) {
+      await restoreWithdrawalStatus(admin, withdrawalId, previousStatus);
+
+      if (canAdminSettled.status === "rejected") {
+        console.error("executeApprovedWithdrawal permission error:", canAdminSettled.reason);
+      }
+      if (accountSettled.status === "rejected") {
+        console.error("executeApprovedWithdrawal account query rejection:", accountSettled.reason);
+      }
+      if (membershipSettled.status === "rejected") {
+        console.error(
+          "executeApprovedWithdrawal membership query rejection:",
+          membershipSettled.reason
+        );
+      }
+
+      return { success: false, error: "Unable to load withdrawal execution details right now." };
+    }
+
+    const canAdmin = canAdminSettled.value;
+    const accountResult = accountSettled.value;
+    const membershipResult = membershipSettled.value;
 
     if (!canAdmin) {
       await restoreWithdrawalStatus(admin, withdrawalId, previousStatus);
@@ -423,14 +457,20 @@ export async function executeApprovedWithdrawal(
         return { success: false, error: "Payout sent, but status could not be updated." };
       }
 
-      await notifyAccountMembers({
+      void notifyAccountMembers({
         accountId: withdrawal.ownership_account_id,
         type: "withdrawal_completed",
         title: "Withdrawal completed",
         body: `${formatCurrency(withdrawal.amount_cents)} was paid out to the approved member.`,
         entityType: "withdrawal_request",
         entityId: withdrawal.id
-      });
+      }).catch(
+        sideEffectError("executeApprovedWithdrawal", "notify_account_members", {
+          userId: user.id,
+          entityType: "withdrawal_request",
+          entityId: withdrawal.id
+        })
+      );
 
       revalidatePath("/owner");
       return { success: true, message: `Payout executed (${transfer.id}).` };

@@ -98,12 +98,12 @@ export async function createMaintenanceTicket(
   try {
     const admin = createAdminClient();
 
-    const [{ data: property }, { data: assignments }, { data: actorProfile }] = await Promise.all([
+    const [propertySettled, assignmentsSettled, actorProfileSettled] = await Promise.allSettled([
       admin
         .from("properties")
         .select("id, name")
         .eq("id", unit.property_id)
-        .single(),
+        .maybeSingle(),
       admin
         .from("property_managers")
         .select("manager_profile_id")
@@ -113,8 +113,66 @@ export async function createMaintenanceTicket(
         .from("profiles")
         .select("email")
         .eq("id", user.id)
-        .single()
+        .maybeSingle()
     ]);
+
+    const property =
+      propertySettled.status === "fulfilled" && !propertySettled.value.error
+        ? propertySettled.value.data
+        : null;
+    if (propertySettled.status === "rejected") {
+      sideEffectError("createMaintenanceTicket", "load_property", {
+        userId: user.id,
+        entityType: "ticket",
+        entityId: ticket.id
+      })(propertySettled.reason);
+    } else if (propertySettled.value.error) {
+      sideEffectError("createMaintenanceTicket", "load_property", {
+        userId: user.id,
+        entityType: "ticket",
+        entityId: ticket.id
+      })(propertySettled.value.error);
+    }
+
+    const assignments =
+      assignmentsSettled.status === "fulfilled" && !assignmentsSettled.value.error
+        ? assignmentsSettled.value.data ?? []
+        : [];
+    if (assignmentsSettled.status === "rejected") {
+      sideEffectError("createMaintenanceTicket", "load_property_managers", {
+        userId: user.id,
+        entityType: "ticket",
+        entityId: ticket.id
+      })(assignmentsSettled.reason);
+    } else if (assignmentsSettled.value.error) {
+      sideEffectError("createMaintenanceTicket", "load_property_managers", {
+        userId: user.id,
+        entityType: "ticket",
+        entityId: ticket.id
+      })(assignmentsSettled.value.error);
+    }
+
+    const actorProfile =
+      actorProfileSettled.status === "fulfilled" && !actorProfileSettled.value.error
+        ? actorProfileSettled.value.data
+        : null;
+    if (actorProfileSettled.status === "rejected") {
+      sideEffectError("createMaintenanceTicket", "load_actor_profile", {
+        userId: user.id,
+        entityType: "ticket",
+        entityId: ticket.id
+      })(actorProfileSettled.reason);
+    } else if (actorProfileSettled.value.error) {
+      sideEffectError("createMaintenanceTicket", "load_actor_profile", {
+        userId: user.id,
+        entityType: "ticket",
+        entityId: ticket.id
+      })(actorProfileSettled.value.error);
+    }
+
+    if (!property) {
+      throw new Error("Property not found for maintenance notification dispatch.");
+    }
 
     const recipientIds = new Set<string>();
     for (const assignment of assignments ?? []) {

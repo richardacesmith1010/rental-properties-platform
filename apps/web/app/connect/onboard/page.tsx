@@ -5,6 +5,7 @@ import {
   initiateStripeConnect
 } from "@/app/actions";
 import { getAuthenticatedUser, getCurrentUserRole, getRoleHomePath, getUserProfileSummary } from "@/lib/auth";
+import { isStripeConfigured } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,21 @@ export default async function ConnectOnboardPage({ searchParams }: ConnectOnboar
 
   if (role !== "owner" && role !== "manager") {
     redirect(getRoleHomePath(role));
+  }
+
+  if (!isStripeConfigured()) {
+    return (
+      <main className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
+        <div className="w-full max-w-lg rounded-2xl border border-amber-200 bg-white p-8 shadow-sm">
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
+            Stripe onboarding unavailable
+          </h1>
+          <p className="mt-2 text-sm text-zinc-600">
+            Payment processing is temporarily unavailable. Please try again later.
+          </p>
+        </div>
+      </main>
+    );
   }
 
   const profile = await getUserProfileSummary(user.id);

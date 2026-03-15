@@ -72,7 +72,7 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
   const { error: unitUpdateError } = await supabase.from("units").update({ occupied: true }).eq("id", unitId);
   if (unitUpdateError) return { success: false, error: "Lease created, but unit occupancy could not be updated." };
 
-  await notifyOwnerMembersForProperty({
+  void notifyOwnerMembersForProperty({
     propertyId: unit.property_id,
     type: "lease_updated",
     title: "Lease created",
@@ -80,9 +80,15 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
     entityType: "lease",
     entityId: createdLease.id,
     actorProfileId: user.id
-  });
+  }).catch(
+    sideEffectError("createLease", "notify_owner_members", {
+      userId: user.id,
+      entityType: "lease",
+      entityId: createdLease.id
+    })
+  );
 
-  await createNotificationWithDelivery({
+  void createNotificationWithDelivery({
     recipientProfileId: tenantProfile.id,
     recipientEmail: tenantProfile.email,
     type: "lease_updated",
@@ -90,7 +96,13 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
     body: "A lease has been created or updated for your unit.",
     entityType: "lease",
     entityId: createdLease.id
-  });
+  }).catch(
+    sideEffectError("createLease", "notify_tenant", {
+      userId: user.id,
+      entityType: "lease",
+      entityId: createdLease.id
+    })
+  );
 
   void awardXp(user.id, "lease_created", XP_VALUES.lease_created, "Lease created for a unit.", {
     lease_id: createdLease.id,
@@ -141,7 +153,7 @@ export async function updateLease(_prev: ActionState, formData: FormData): Promi
   const { error } = await supabase.from("leases").update(updates).eq("id", leaseId);
   if (error) return { success: false, error: "Failed to update lease. Please try again." };
 
-  await notifyOwnerMembersForProperty({
+  void notifyOwnerMembersForProperty({
     propertyId: unit.property_id,
     type: "lease_updated",
     title: "Lease updated",
@@ -149,12 +161,18 @@ export async function updateLease(_prev: ActionState, formData: FormData): Promi
     entityType: "lease",
     entityId: leaseId,
     actorProfileId: user.id
-  });
+  }).catch(
+    sideEffectError("updateLease", "notify_owner_members", {
+      userId: user.id,
+      entityType: "lease",
+      entityId: leaseId
+    })
+  );
 
   if (lease.tenant_profile_id) {
     const { data: tenantProfile } = await createAdminClient().from("profiles").select("id, email").eq("id", lease.tenant_profile_id).maybeSingle();
     if (tenantProfile?.id) {
-      await createNotificationWithDelivery({
+      void createNotificationWithDelivery({
         recipientProfileId: tenantProfile.id,
         recipientEmail: tenantProfile.email,
         type: "lease_updated",
@@ -162,7 +180,13 @@ export async function updateLease(_prev: ActionState, formData: FormData): Promi
         body: "Your lease terms were updated.",
         entityType: "lease",
         entityId: leaseId
-      });
+      }).catch(
+        sideEffectError("updateLease", "notify_tenant", {
+          userId: user.id,
+          entityType: "lease",
+          entityId: leaseId
+        })
+      );
     }
   }
 
@@ -203,7 +227,7 @@ export async function deleteLease(_prev: ActionState, formData: FormData): Promi
   const { error: unitError } = await supabase.from("units").update({ occupied: false }).eq("id", lease.unit_id);
   if (unitError) return { success: false, error: "Lease archived, but unit occupancy could not be updated." };
 
-  await notifyOwnerMembersForProperty({
+  void notifyOwnerMembersForProperty({
     propertyId: unit.property_id,
     type: "lease_updated",
     title: "Lease archived",
@@ -211,12 +235,18 @@ export async function deleteLease(_prev: ActionState, formData: FormData): Promi
     entityType: "lease",
     entityId: parsed.data.leaseId,
     actorProfileId: user.id
-  });
+  }).catch(
+    sideEffectError("deleteLease", "notify_owner_members", {
+      userId: user.id,
+      entityType: "lease",
+      entityId: parsed.data.leaseId
+    })
+  );
 
   if (lease.tenant_profile_id) {
     const { data: tenantProfile } = await createAdminClient().from("profiles").select("id, email").eq("id", lease.tenant_profile_id).maybeSingle();
     if (tenantProfile?.id) {
-      await createNotificationWithDelivery({
+      void createNotificationWithDelivery({
         recipientProfileId: tenantProfile.id,
         recipientEmail: tenantProfile.email,
         type: "lease_updated",
@@ -224,7 +254,13 @@ export async function deleteLease(_prev: ActionState, formData: FormData): Promi
         body: "Your lease has been archived by management.",
         entityType: "lease",
         entityId: parsed.data.leaseId
-      });
+      }).catch(
+        sideEffectError("deleteLease", "notify_tenant", {
+          userId: user.id,
+          entityType: "lease",
+          entityId: parsed.data.leaseId
+        })
+      );
     }
   }
 

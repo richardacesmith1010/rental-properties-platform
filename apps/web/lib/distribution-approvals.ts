@@ -3,6 +3,7 @@ import {
   type DistributionConfigSnapshot,
   getDistributionConfigSnapshot
 } from "@/lib/distributions";
+import { sideEffectError } from "@/lib/logger";
 import { notifyAccountMembers } from "@/lib/notifications";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
@@ -293,14 +294,19 @@ export async function resolveRequest(
         ? `${requestorName}'s distribution update has been approved and applied.`
         : `${requestorName}'s distribution update was rejected.`;
 
-    await notifyAccountMembers({
+    void notifyAccountMembers({
       accountId: requestRow.ownership_account_id,
       type: nextStatus === "approved" ? "distribution_change_approved" : "distribution_change_rejected",
       title,
       body,
       entityType: "distribution_change_request",
       entityId: requestId
-    });
+    }).catch(
+      sideEffectError("resolveRequest", "notify_account_members", {
+        entityType: "distribution_change_request",
+        entityId: requestId
+      })
+    );
   }
 
   return (
