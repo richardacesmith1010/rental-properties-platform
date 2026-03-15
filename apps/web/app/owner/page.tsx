@@ -13,7 +13,12 @@ import { getRentalListingsForUser } from "@/lib/leasing";
 import { getApplicationsForUser, type ApplicationDTO } from "@/lib/applications";
 import { getOwnerVendors } from "@/lib/vendors";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
-import { getOwnershipAccountsForUser, getOwnershipMembersForAccount } from "@/lib/ownership";
+import {
+  getOwnershipAccountsForUser,
+  getOwnershipMembersForAccount,
+  getPendingAccountDeleteRequests,
+  getPendingAccountRenameRequests
+} from "@/lib/ownership";
 import { getOwnerExpenseData } from "@/lib/expenses";
 import { getUserGamification } from "@/lib/gamification";
 import { getOwnerAnalyticsData } from "@/lib/analytics";
@@ -81,6 +86,10 @@ import {
   deleteExpense,
   createOwnershipAccount,
   linkPropertyToOwnershipAccount,
+  renameOwnershipAccount,
+  voteOnAccountRename,
+  requestDeleteLLC,
+  voteOnDeleteLLC,
   updateDistributionConfig,
   voteOnDistributionChange,
   voteOnWithdrawal,
@@ -220,7 +229,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
   ).length;
   const activeAccount = ownershipAccounts.find((account) => account.id === activeAccountId);
   const isLlcAccount = activeAccount?.accountType === "llc";
-  const [ownershipMembers, distributionHistory, pendingChangeRequests, pendingWithdrawals, financialActivityFeed] = await Promise.all([
+  const [ownershipMembers, distributionHistory, pendingChangeRequests, pendingWithdrawals, financialActivityFeed, pendingAccountRenameRequests, pendingAccountDeleteRequests] = await Promise.all([
     isLlcAccount && activeAccountId
       ? getOwnershipMembersForAccount(user.id, activeAccountId)
       : Promise.resolve([]),
@@ -235,6 +244,12 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       : Promise.resolve([]),
     isLlcAccount && activeAccountId
       ? getFinancialActivityFeed(activeAccountId)
+      : Promise.resolve([]),
+    ownershipAccounts.length > 0
+      ? getPendingAccountRenameRequests(ownershipAccounts.map((account) => account.id))
+      : Promise.resolve([]),
+    ownershipAccounts.length > 0
+      ? getPendingAccountDeleteRequests(ownershipAccounts.map((account) => account.id))
       : Promise.resolve([])
   ]);
   const ownerConnectedMap = await arePropertyOwnersConnected(
@@ -268,6 +283,8 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         expensesData={expenses}
         ownershipAccounts={ownershipAccounts}
         ownershipMembers={ownershipMembers}
+        pendingAccountRenameRequests={pendingAccountRenameRequests}
+        pendingAccountDeleteRequests={pendingAccountDeleteRequests}
         distributionHistory={distributionHistory}
         pendingChangeRequests={pendingChangeRequests}
         pendingWithdrawals={pendingWithdrawals}
@@ -333,6 +350,10 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         onDeleteExpense={deleteExpense}
         onCreateOwnershipAccount={createOwnershipAccount}
         onLinkPropertyToOwnershipAccount={linkPropertyToOwnershipAccount}
+        onRenameOwnershipAccount={renameOwnershipAccount}
+        onVoteOnAccountRename={voteOnAccountRename}
+        onRequestDeleteLLC={requestDeleteLLC}
+        onVoteOnDeleteLLC={voteOnDeleteLLC}
         onInitiateAccountStripeConnect={initiateAccountStripeConnect}
         onUpdateDistributionConfig={updateDistributionConfig}
         onSubmitDistributionChangeRequest={submitDistributionChangeRequest}

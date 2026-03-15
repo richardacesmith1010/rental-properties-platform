@@ -616,6 +616,32 @@ export const linkPropertyToOwnershipAccountSchema = z.object({
   ownershipAccountId: z.string().uuid("Invalid ownership account.")
 });
 
+const accountGovernanceVoteSchema = z.object({
+  requestId: z.string().uuid("Invalid request."),
+  vote: z.enum(["approve", "reject"], {
+    message: "Select a valid vote."
+  })
+});
+
+export const renameOwnershipAccountSchema = z.object({
+  accountId: z.string().uuid("Invalid ownership account."),
+  newName: z
+    .string()
+    .min(1, "Account name is required.")
+    .max(100, "Account name must be under 100 characters.")
+});
+
+export const requestDeleteLlcSchema = z.object({
+  accountId: z.string().uuid("Invalid ownership account."),
+  reason: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().max(500, "Reason must be under 500 characters.").optional()
+  )
+});
+
+export const voteOnAccountRenameSchema = accountGovernanceVoteSchema;
+export const voteOnDeleteLlcSchema = accountGovernanceVoteSchema;
+
 export const setupLlcAccountSchema = z.object({
   displayName: z
     .string()

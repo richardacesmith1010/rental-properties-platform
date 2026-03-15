@@ -8,7 +8,12 @@ import type { NotificationDTO } from "@/lib/notifications";
 import type { OwnerDocumentsData } from "@/lib/documents";
 import type { VendorDTO } from "@/lib/vendors";
 import type { FeatureCapabilitiesDTO } from "@/lib/feature-capabilities";
-import type { OwnershipAccountDTO, OwnershipMemberDTO } from "@/lib/ownership";
+import type {
+  AccountDeleteRequestDTO,
+  AccountRenameRequestDTO,
+  OwnershipAccountDTO,
+  OwnershipMemberDTO
+} from "@/lib/ownership";
 import type { ExpenseDashboardData } from "@/lib/expenses";
 import type { AutomationRuleDTO, AutomationTemplateDTO } from "@/lib/automations";
 import type { InboxThreadDTO } from "@/lib/inbox";
@@ -80,6 +85,8 @@ interface SectionRendererProps {
   rentIncreaseHistory: RentIncreaseEntry[];
   safeOwnershipAccounts: OwnershipAccountDTO[];
   ownershipMembers?: OwnershipMemberDTO[];
+  pendingAccountRenameRequests?: AccountRenameRequestDTO[];
+  pendingAccountDeleteRequests?: AccountDeleteRequestDTO[];
   distributionHistory?: DistributionHistoryEntry[];
   pendingChangeRequests?: DistributionChangeRequestDTO[];
   pendingWithdrawals?: WithdrawalRequestDTO[];
@@ -140,6 +147,10 @@ interface SectionRendererProps {
   onDeleteExpense?: StatefulAction;
   onCreateOwnershipAccount?: StatefulAction;
   onLinkPropertyToOwnershipAccount?: StatefulAction;
+  onRenameOwnershipAccount?: StatefulAction;
+  onVoteOnAccountRename?: StatefulAction;
+  onRequestDeleteLLC?: StatefulAction;
+  onVoteOnDeleteLLC?: StatefulAction;
   onInitiateAccountStripeConnect?: StatefulAction;
   onUpdateDistributionConfig?: StatefulAction;
   onSubmitDistributionChangeRequest?: StatefulAction;
@@ -197,6 +208,8 @@ export function SectionRenderer({
   rentIncreaseHistory,
   safeOwnershipAccounts,
   ownershipMembers,
+  pendingAccountRenameRequests,
+  pendingAccountDeleteRequests,
   distributionHistory,
   pendingChangeRequests,
   pendingWithdrawals,
@@ -257,6 +270,10 @@ export function SectionRenderer({
   onDeleteExpense,
   onCreateOwnershipAccount,
   onLinkPropertyToOwnershipAccount,
+  onRenameOwnershipAccount,
+  onVoteOnAccountRename,
+  onRequestDeleteLLC,
+  onVoteOnDeleteLLC,
   onInitiateAccountStripeConnect,
   onUpdateDistributionConfig,
   onSubmitDistributionChangeRequest,
@@ -480,6 +497,8 @@ export function SectionRenderer({
             ownerAccountName: property.ownerAccountName
           }))}
           members={ownershipMembers}
+          pendingAccountRenameRequests={pendingAccountRenameRequests}
+          pendingAccountDeleteRequests={pendingAccountDeleteRequests}
           distributionHistory={distributionHistory}
           pendingChangeRequests={pendingChangeRequests}
           pendingWithdrawals={pendingWithdrawals}
@@ -487,6 +506,10 @@ export function SectionRenderer({
           currentUserId={currentUserId}
           onCreateOwnershipAccount={onCreateOwnershipAccount!}
           onLinkPropertyToOwnershipAccount={onLinkPropertyToOwnershipAccount!}
+          onRenameOwnershipAccount={onRenameOwnershipAccount}
+          onVoteOnAccountRename={onVoteOnAccountRename}
+          onRequestDeleteLLC={onRequestDeleteLLC}
+          onVoteOnDeleteLLC={onVoteOnDeleteLLC}
           onInitiateAccountStripeConnect={onInitiateAccountStripeConnect}
           onUpdateDistributionConfig={onUpdateDistributionConfig}
           onSubmitDistributionChangeRequest={onSubmitDistributionChangeRequest}

@@ -47,6 +47,10 @@ import {
   deleteExpenseSchema,
   setupLlcAccountSchema,
   joinLlcByCodeSchema,
+  renameOwnershipAccountSchema,
+  requestDeleteLlcSchema,
+  voteOnAccountRenameSchema,
+  voteOnDeleteLlcSchema,
   parseFormData,
 } from "../validations";
 
@@ -112,6 +116,47 @@ describe("createPropertySchema", () => {
       postalCode: ""
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe("account governance schemas", () => {
+  it("accepts a valid ownership account rename", () => {
+    const result = renameOwnershipAccountSchema.safeParse({
+      accountId: "550e8400-e29b-41d4-a716-446655440000",
+      newName: "Atlas Family LLC"
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an empty rename target", () => {
+    const result = renameOwnershipAccountSchema.safeParse({
+      accountId: "550e8400-e29b-41d4-a716-446655440000",
+      newName: ""
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts an LLC delete request with an optional reason", () => {
+    const result = requestDeleteLlcSchema.safeParse({
+      accountId: "550e8400-e29b-41d4-a716-446655440000",
+      reason: "Wind down the entity"
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts approve and reject governance votes", () => {
+    expect(
+      voteOnAccountRenameSchema.safeParse({
+        requestId: "550e8400-e29b-41d4-a716-446655440000",
+        vote: "approve"
+      }).success
+    ).toBe(true);
+    expect(
+      voteOnDeleteLlcSchema.safeParse({
+        requestId: "550e8400-e29b-41d4-a716-446655440000",
+        vote: "reject"
+      }).success
+    ).toBe(true);
   });
 });
 

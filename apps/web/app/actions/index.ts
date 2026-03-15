@@ -71,6 +71,12 @@ export { resendInvite } from "./invitations";
 export { createOwnershipAccount } from "./ownership";
 export { addOwnershipMember } from "./ownership";
 export { linkPropertyToOwnershipAccount } from "./ownership";
+export {
+  renameOwnershipAccount,
+  voteOnAccountRename,
+  requestDeleteLLC,
+  voteOnDeleteLLC
+} from "./account-governance";
 export { setupIndividualAccount } from "./onboarding";
 export { setupLlcAccount } from "./onboarding";
 export { joinLlcByCode } from "./onboarding";

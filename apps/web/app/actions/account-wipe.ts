@@ -656,6 +656,20 @@ export async function fullAccountWipe(
       "Load distribution change requests"
     ).then((rows) => rows.map((row) => row.id)), "Delete distribution change votes");
     await deleteByIds("distribution_change_requests", "ownership_account_id", scope.accountIds, "Delete distribution change requests");
+    await deleteByIds("account_rename_votes", "request_id", await selectRows<{ id: string }>(
+      scope.accountIds.length
+        ? admin.from("account_rename_requests").select("id").in("ownership_account_id", scope.accountIds)
+        : Promise.resolve({ data: [], error: null }),
+      "Load account rename requests"
+    ).then((rows) => rows.map((row) => row.id)), "Delete account rename votes");
+    await deleteByIds("account_rename_requests", "ownership_account_id", scope.accountIds, "Delete account rename requests");
+    await deleteByIds("account_delete_votes", "request_id", await selectRows<{ id: string }>(
+      scope.accountIds.length
+        ? admin.from("account_delete_requests").select("id").in("ownership_account_id", scope.accountIds)
+        : Promise.resolve({ data: [], error: null }),
+      "Load account delete requests"
+    ).then((rows) => rows.map((row) => row.id)), "Delete account delete votes");
+    await deleteByIds("account_delete_requests", "ownership_account_id", scope.accountIds, "Delete account delete requests");
     await deleteByIds("ownership_account_members", "account_id", scope.accountIds, "Delete ownership account members");
     await executeMutation(
       admin.from("ownership_account_members").delete().eq("profile_id", auth.userId),

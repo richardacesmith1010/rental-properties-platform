@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, type KeyboardEvent, useEffect, useState } from "react";
+import { Fragment, type KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { useFormState } from "react-dom";
 import { Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,12 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Button } from "@/components/ui/button";
 import type { ActionState } from "@/app/actions";
-import type { OwnershipAccountDTO, OwnershipMemberDTO } from "@/lib/ownership";
+import type {
+  AccountDeleteRequestDTO,
+  AccountRenameRequestDTO,
+  OwnershipAccountDTO,
+  OwnershipMemberDTO
+} from "@/lib/ownership";
 import type { DistributionHistoryEntry, FinancialActivityEvent } from "@/lib/distributions";
 import type { DistributionChangeRequestDTO } from "@/lib/distribution-approvals";
 import type { WithdrawalRequestDTO } from "@/lib/withdrawals";
@@ -42,12 +47,18 @@ interface OwnershipSectionProps {
   accounts: OwnershipAccountDTO[];
   properties: PropertyOption[];
   members?: OwnershipMemberDTO[];
+  pendingAccountRenameRequests?: AccountRenameRequestDTO[];
+  pendingAccountDeleteRequests?: AccountDeleteRequestDTO[];
   distributionHistory?: DistributionHistoryEntry[];
   pendingChangeRequests?: DistributionChangeRequestDTO[];
   pendingWithdrawals?: WithdrawalRequestDTO[];
   financialActivityFeed?: FinancialActivityEvent[];
   onCreateOwnershipAccount: StatefulAction;
   onLinkPropertyToOwnershipAccount: StatefulAction;
+  onRenameOwnershipAccount?: StatefulAction;
+  onVoteOnAccountRename?: StatefulAction;
+  onRequestDeleteLLC?: StatefulAction;
+  onVoteOnDeleteLLC?: StatefulAction;
   onInitiateAccountStripeConnect?: StatefulAction;
   onUpdateDistributionConfig?: StatefulAction;
   onSubmitDistributionChangeRequest?: StatefulAction;
@@ -244,18 +255,298 @@ function WithdrawalRequestForm({
   );
 }
 
+function GovernanceVoteForm({
+  requestId,
+  vote,
+  onVote,
+  title
+}: {
+  requestId: string;
+  vote: "approve" | "reject";
+  onVote: StatefulAction;
+  title: string;
+}) {
+  const [state, formAction] = useFormState(onVote, null);
+
+  return (
+    <form action={formAction} className="space-y-2">
+      <input type="hidden" name="requestId" value={requestId} />
+      <input type="hidden" name="vote" value={vote} />
+      <SubmitButton
+        size="sm"
+        variant={vote === "approve" ? "outline" : "destructive"}
+        title={title}
+      >
+        {vote === "approve" ? "Approve" : "Reject"}
+      </SubmitButton>
+      {state && !state.success ? (
+        <Alert variant="error" className="text-xs font-normal">
+          {state.error}
+        </Alert>
+      ) : null}
+      {state?.success && state.message ? (
+        <Alert variant="success" className="text-xs font-normal">
+          {state.message}
+        </Alert>
+      ) : null}
+    </form>
+  );
+}
+
+function RenameRequestBanner({
+  request,
+  currentUserId,
+  onVote
+}: {
+  request: AccountRenameRequestDTO;
+  currentUserId?: string;
+  onVote?: StatefulAction;
+}) {
+  const currentUserVote = request.votes.find((vote) => vote.voterId === currentUserId);
+
+  return (
+    <Card className="mt-3 border-amber-200/80 bg-amber-50/20">
+      <CardContent className="space-y-3 pt-4">
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-zinc-900">
+            Rename to &quot;{request.proposedName}&quot;
+          </p>
+          <p className="text-xs text-zinc-600">
+            Requested by {request.requestedByName} • {request.votesReceived}/{request.votesRequired} votes
+          </p>
+        </div>
+        <Alert variant="warning" className="text-xs font-normal">
+          This LLC rename is waiting for member approval. The current name remains &quot;{request.currentName}&quot; until the vote passes.
+        </Alert>
+        {request.status === "pending" && onVote && !currentUserVote ? (
+          <div className="flex flex-wrap gap-2">
+            <GovernanceVoteForm
+              requestId={request.id}
+              vote="approve"
+              onVote={onVote}
+              title="Approve this LLC rename request."
+            />
+            <GovernanceVoteForm
+              requestId={request.id}
+              vote="reject"
+              onVote={onVote}
+              title="Reject this LLC rename request."
+            />
+          </div>
+        ) : currentUserVote ? (
+          <Alert variant="info" className="text-xs font-normal">
+            You already voted {currentUserVote.vote} on this rename request.
+          </Alert>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function DeleteRequestBanner({
+  request,
+  currentUserId,
+  onVote
+}: {
+  request: AccountDeleteRequestDTO;
+  currentUserId?: string;
+  onVote?: StatefulAction;
+}) {
+  const currentUserVote = request.votes.find((vote) => vote.voterId === currentUserId);
+
+  return (
+    <Card className="mt-3 border-amber-200/80 bg-amber-50/20">
+      <CardContent className="space-y-3 pt-4">
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-zinc-900">LLC deletion requested</p>
+          <p className="text-xs text-zinc-600">
+            Requested by {request.requestedByName} • {request.votesReceived}/{request.votesRequired} votes
+          </p>
+        </div>
+        <Alert variant="warning" className="text-xs font-normal">
+          Approving this request will unlink all properties from the LLC account and permanently delete it.
+        </Alert>
+        {request.reason ? (
+          <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700">
+            {request.reason}
+          </div>
+        ) : null}
+        {request.status === "pending" && onVote && !currentUserVote ? (
+          <div className="flex flex-wrap gap-2">
+            <GovernanceVoteForm
+              requestId={request.id}
+              vote="approve"
+              onVote={onVote}
+              title="Approve this LLC deletion request."
+            />
+            <GovernanceVoteForm
+              requestId={request.id}
+              vote="reject"
+              onVote={onVote}
+              title="Reject this LLC deletion request."
+            />
+          </div>
+        ) : currentUserVote ? (
+          <Alert variant="info" className="text-xs font-normal">
+            You already voted {currentUserVote.vote} on this delete request.
+          </Alert>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function RenameAccountForm({
+  account,
+  onRenameOwnershipAccount,
+  onCancel
+}: {
+  account: OwnershipAccountDTO;
+  onRenameOwnershipAccount: StatefulAction;
+  onCancel: () => void;
+}) {
+  const [state, formAction] = useFormState(onRenameOwnershipAccount, null);
+  const [newName, setNewName] = useState(account.displayName);
+  const disableSubmit = newName.trim().length === 0 || newName.trim() === account.displayName;
+
+  useEffect(() => {
+    setNewName(account.displayName);
+  }, [account.displayName, account.id]);
+
+  useEffect(() => {
+    if (state?.success) {
+      onCancel();
+    }
+  }, [onCancel, state]);
+
+  return (
+    <Card className="mt-3 border-violet-200/80 bg-violet-50/20">
+      <CardContent className="space-y-4 pt-4">
+        {state && !state.success ? <Alert variant="error">{state.error}</Alert> : null}
+        {state?.success ? <Alert variant="success">{state.message ?? "Account updated."}</Alert> : null}
+        <form action={formAction} className="space-y-4">
+          <input type="hidden" name="accountId" value={account.id} />
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-zinc-700">Account name</label>
+            <Input
+              name="newName"
+              value={newName}
+              onChange={(event) => setNewName(event.target.value)}
+              placeholder="Enter a new account name"
+              title={`Rename ${account.displayName}.`}
+            />
+          </div>
+          {account.accountType === "llc" ? (
+            <Alert variant="info" className="text-xs font-normal">
+              Multi-member LLC renames require a member vote before the new name is applied.
+            </Alert>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <SubmitButton
+              disabled={disableSubmit}
+              title={`Save a new display name for ${account.displayName}.`}
+            >
+              Save Name
+            </SubmitButton>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              title="Cancel renaming this account."
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function DeleteLlcRequestForm({
+  account,
+  onRequestDeleteLLC,
+  onCancel
+}: {
+  account: OwnershipAccountDTO;
+  onRequestDeleteLLC: StatefulAction;
+  onCancel: () => void;
+}) {
+  const [state, formAction] = useFormState(onRequestDeleteLLC, null);
+  const [reason, setReason] = useState("");
+
+  useEffect(() => {
+    if (state?.success) {
+      setReason("");
+      onCancel();
+    }
+  }, [onCancel, state]);
+
+  return (
+    <Card className="mt-3 border-red-200/80 bg-red-50/30">
+      <CardContent className="space-y-4 pt-4">
+        <Alert variant="error" className="text-sm font-normal">
+          This will unlink all properties and permanently delete {account.displayName}. This cannot be undone.
+        </Alert>
+        {state && !state.success ? <Alert variant="error">{state.error}</Alert> : null}
+        {state?.success ? <Alert variant="success">{state.message ?? "Delete request submitted."}</Alert> : null}
+        <form action={formAction} className="space-y-4">
+          <input type="hidden" name="accountId" value={account.id} />
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-zinc-700">Reason</label>
+            <textarea
+              name="reason"
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              rows={3}
+              className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm transition-all duration-150 placeholder:text-zinc-400 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+              placeholder="Optional context for other members."
+              title={`Explain why ${account.displayName} should be deleted.`}
+            />
+          </div>
+          <Alert variant="warning" className="text-xs font-normal">
+            All active members of this LLC must approve the deletion request before it can proceed.
+          </Alert>
+          <div className="flex flex-wrap gap-2">
+            <SubmitButton
+              variant="destructive"
+              title={`Request deletion of ${account.displayName}.`}
+            >
+              Confirm Delete Request
+            </SubmitButton>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              title="Cancel LLC deletion."
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function OwnershipSection({
   activeAccountId,
   currentUserId,
   accounts,
   properties,
   members,
+  pendingAccountRenameRequests,
+  pendingAccountDeleteRequests,
   distributionHistory,
   pendingChangeRequests,
   pendingWithdrawals,
   financialActivityFeed,
   onCreateOwnershipAccount,
   onLinkPropertyToOwnershipAccount,
+  onRenameOwnershipAccount,
+  onVoteOnAccountRename,
+  onRequestDeleteLLC,
+  onVoteOnDeleteLLC,
   onInitiateAccountStripeConnect,
   onUpdateDistributionConfig,
   onSubmitDistributionChangeRequest,
@@ -275,6 +566,8 @@ export function OwnershipSection({
   const [createStep, setCreateStep] = useState(0);
   const [linkStep, setLinkStep] = useState(0);
   const [distributionAccountId, setDistributionAccountId] = useState<string | null>(null);
+  const [renameAccountId, setRenameAccountId] = useState<string | null>(null);
+  const [deleteAccountId, setDeleteAccountId] = useState<string | null>(null);
   const [showWithdrawalForm, setShowWithdrawalForm] = useState(false);
   const [activityView, setActivityView] = useState<"history" | "activity">("history");
   const [createDraft, setCreateDraft] = useState<CreateAccountDraft>({
@@ -324,6 +617,26 @@ export function OwnershipSection({
     setShowWithdrawalForm(false);
     setActivityView("history");
   }, [activeAccountId]);
+
+  const pendingRenameRequestByAccount = useMemo(() => {
+    const map = new Map<string, AccountRenameRequestDTO>();
+    for (const request of pendingAccountRenameRequests ?? []) {
+      if (!map.has(request.ownershipAccountId)) {
+        map.set(request.ownershipAccountId, request);
+      }
+    }
+    return map;
+  }, [pendingAccountRenameRequests]);
+
+  const pendingDeleteRequestByAccount = useMemo(() => {
+    const map = new Map<string, AccountDeleteRequestDTO>();
+    for (const request of pendingAccountDeleteRequests ?? []) {
+      if (!map.has(request.ownershipAccountId)) {
+        map.set(request.ownershipAccountId, request);
+      }
+    }
+    return map;
+  }, [pendingAccountDeleteRequests]);
 
   const activeAccount = accounts.find((account) => account.id === activeAccountId);
   const isActiveLlcAccount = activeAccount?.accountType === "llc";
@@ -642,14 +955,25 @@ export function OwnershipSection({
                       (!account.plaidConnected &&
                         Boolean(onInitiatePlaidLink) &&
                         Boolean(onCompletePlaidLink)));
+                  const pendingRenameRequest = pendingRenameRequestByAccount.get(account.id);
+                  const pendingDeleteRequest = pendingDeleteRequestByAccount.get(account.id);
+                  const isRenaming = renameAccountId === account.id;
+                  const isDeleteConfirming = deleteAccountId === account.id;
+                  const hasExpandedContent = Boolean(
+                    pendingRenameRequest ||
+                      pendingDeleteRequest ||
+                      isRenaming ||
+                      isDeleteConfirming ||
+                      showDistributionPanel ||
+                      showPlaidTools
+                  );
 
                   return (
                     <Fragment key={account.id}>
                       <DataRow
                         last={
                           index === accounts.length - 1 &&
-                          !showDistributionPanel &&
-                          !showPlaidTools
+                          !hasExpandedContent
                         }
                       >
                         <div>
@@ -668,8 +992,44 @@ export function OwnershipSection({
                         <div className="flex flex-col items-end gap-2">
                           <OwnershipAccountStripeControl
                             account={account}
-                          onInitiateAccountStripeConnect={onInitiateAccountStripeConnect}
-                        />
+                            onInitiateAccountStripeConnect={onInitiateAccountStripeConnect}
+                          />
+                          <div className="flex flex-wrap justify-end gap-2">
+                            {onRenameOwnershipAccount ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setDeleteAccountId(null);
+                                  setRenameAccountId((current) => (current === account.id ? null : account.id));
+                                }}
+                                disabled={Boolean(pendingRenameRequest)}
+                                title={`Rename ${account.displayName}.`}
+                              >
+                                {pendingRenameRequest ? "Rename Pending" : isRenaming ? "Hide Rename" : "Rename"}
+                              </Button>
+                            ) : null}
+                            {account.accountType === "llc" && onRequestDeleteLLC ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => {
+                                  setRenameAccountId(null);
+                                  setDeleteAccountId((current) => (current === account.id ? null : account.id));
+                                }}
+                                disabled={Boolean(pendingDeleteRequest)}
+                                title={`Delete ${account.displayName} after member approval.`}
+                              >
+                                {pendingDeleteRequest
+                                  ? "Delete Pending"
+                                  : isDeleteConfirming
+                                    ? "Hide Delete"
+                                    : "Delete LLC"}
+                              </Button>
+                            ) : null}
+                          </div>
                           {canConfigureDistribution ? (
                             <div className="flex flex-wrap justify-end gap-2">
                               <Button
@@ -702,6 +1062,34 @@ export function OwnershipSection({
                           ) : null}
                         </div>
                       </DataRow>
+                      {isRenaming && onRenameOwnershipAccount ? (
+                        <RenameAccountForm
+                          account={account}
+                          onRenameOwnershipAccount={onRenameOwnershipAccount}
+                          onCancel={() => setRenameAccountId(null)}
+                        />
+                      ) : null}
+                      {pendingRenameRequest ? (
+                        <RenameRequestBanner
+                          request={pendingRenameRequest}
+                          currentUserId={currentUserId}
+                          onVote={onVoteOnAccountRename}
+                        />
+                      ) : null}
+                      {isDeleteConfirming && account.accountType === "llc" && onRequestDeleteLLC ? (
+                        <DeleteLlcRequestForm
+                          account={account}
+                          onRequestDeleteLLC={onRequestDeleteLLC}
+                          onCancel={() => setDeleteAccountId(null)}
+                        />
+                      ) : null}
+                      {pendingDeleteRequest ? (
+                        <DeleteRequestBanner
+                          request={pendingDeleteRequest}
+                          currentUserId={currentUserId}
+                          onVote={onVoteOnDeleteLLC}
+                        />
+                      ) : null}
                       {showPlaidTools ? (
                         account.plaidConnected && onRefreshPlaidBalance && onDisconnectPlaid ? (
                           <BankBalanceCard

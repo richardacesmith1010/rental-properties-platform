@@ -6,7 +6,12 @@ import type { NotificationDTO } from "@/lib/notifications";
 import type { OwnerDocumentsData } from "@/lib/documents";
 import type { VendorDTO } from "@/lib/vendors";
 import type { FeatureCapabilitiesDTO } from "@/lib/feature-capabilities";
-import type { OwnershipAccountDTO, OwnershipMemberDTO } from "@/lib/ownership";
+import type {
+  AccountDeleteRequestDTO,
+  AccountRenameRequestDTO,
+  OwnershipAccountDTO,
+  OwnershipMemberDTO
+} from "@/lib/ownership";
 import type { ExpenseDashboardData } from "@/lib/expenses";
 import type { AutomationRuleDTO, AutomationTemplateDTO } from "@/lib/automations";
 import type { InboxThreadDTO } from "@/lib/inbox";
@@ -43,6 +48,8 @@ export interface DashboardProps {
   capabilities?: FeatureCapabilitiesDTO;
   ownershipAccounts?: OwnershipAccountDTO[];
   ownershipMembers?: OwnershipMemberDTO[];
+  pendingAccountRenameRequests?: AccountRenameRequestDTO[];
+  pendingAccountDeleteRequests?: AccountDeleteRequestDTO[];
   distributionHistory?: DistributionHistoryEntry[];
   pendingChangeRequests?: DistributionChangeRequestDTO[];
   pendingWithdrawals?: WithdrawalRequestDTO[];
@@ -114,6 +121,10 @@ export interface DashboardProps {
   onDeleteExpense?: StatefulAction;
   onCreateOwnershipAccount?: StatefulAction;
   onLinkPropertyToOwnershipAccount?: StatefulAction;
+  onRenameOwnershipAccount?: StatefulAction;
+  onVoteOnAccountRename?: StatefulAction;
+  onRequestDeleteLLC?: StatefulAction;
+  onVoteOnDeleteLLC?: StatefulAction;
   onInitiateAccountStripeConnect?: StatefulAction;
   onUpdateDistributionConfig?: StatefulAction;
   onSubmitDistributionChangeRequest?: StatefulAction;
