@@ -167,7 +167,7 @@
     background: var(--domus-card-bg);
     border: 1px solid var(--domus-card-border);
     box-shadow: var(--domus-shadow-sm);
-    @apply rounded-2xl backdrop-blur-sm transition-all duration-200;
+    @apply rounded-2xl backdrop-blur-sm transition-all duration-150;
   }
 
   .domus-card:hover {
@@ -215,6 +215,7 @@
 
   .domus-heading {
     color: var(--domus-heading-text);
+    font-weight: 600;
   }
 
   .domus-muted {

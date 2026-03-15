@@ -21,6 +21,7 @@ import { ThemeSettingsPanel } from "@/components/settings/theme-settings-panel";
 import { PasswordSettings } from "@/components/settings/password-settings";
 import { ProfileSettings } from "@/components/settings/profile-settings";
 import { SettingsLayout } from "@/components/settings/settings-layout";
+import { Alert } from "@/components/ui/alert";
 import {
   getUserNotificationPreferences,
   NOTIFICATION_PREFERENCE_OPTIONS
@@ -74,9 +75,9 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         </header>
 
         {connectMessage === "ready" ? (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <Alert variant="success" className="rounded-xl px-4 py-3">
             Your bank account is already connected and ready to receive payouts.
-          </div>
+          </Alert>
         ) : null}
 
         <SettingsLayout

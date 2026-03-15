@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserRole } from "@/lib/auth";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert } from "@/components/ui/alert";
 import { PrintButton } from "./print-button";
 
 interface ReceiptPageProps {
@@ -136,12 +137,12 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
               </div>
             </div>
 
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <Alert variant="success" className="rounded-xl p-4">
               <p className="text-sm font-semibold text-emerald-800">Thank you for your payment.</p>
               <p className="mt-1 text-sm text-emerald-700">
                 Paid {formatCurrency(payment.amount_cents)} on {formatDate(payment.paid_at)}.
               </p>
-            </div>
+            </Alert>
           </CardContent>
         </Card>
       </div>

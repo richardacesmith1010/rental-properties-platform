@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { RoleSelector } from "@/components/auth/role-selector";
 import { DomMascot } from "@/components/gamification/dom-mascot";
+import { Alert } from "@/components/ui/alert";
 import { getCurrentUserRole, getRoleHomePath } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -45,28 +46,28 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       </div>
 
       {emailConfirmed && (
-        <div className="mb-6 w-full max-w-3xl rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <Alert variant="success" className="mb-6 w-full max-w-3xl px-4 py-3">
           <p className="font-medium">Email confirmed!</p>
           <p className="mt-1">Your account is ready. Sign in below with your email and password.</p>
-        </div>
+        </Alert>
       )}
 
       {callbackError === "invite_expired" && (
-        <div className="mb-6 w-full max-w-sm rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <Alert variant="warning" className="mb-6 w-full max-w-sm px-4 py-3">
           <p className="font-semibold">Invitation link expired</p>
           <p className="mt-1">
             This invite link is no longer valid. Please ask your landlord or property manager to resend the invitation.
           </p>
-        </div>
+        </Alert>
       )}
 
       {callbackError && callbackError !== "invite_expired" && (
-        <div className="mb-6 w-full max-w-3xl rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <Alert variant="error" className="mb-6 w-full max-w-3xl px-4 py-3">
           <p className="font-medium">Sign-in link failed.</p>
           <p className="mt-1">
             {callbackErrorDescription ?? "Please request a new sign-in link and try again."}
           </p>
-        </div>
+        </Alert>
       )}
 
       <RoleSelector />
