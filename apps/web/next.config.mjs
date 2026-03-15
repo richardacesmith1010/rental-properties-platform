@@ -10,6 +10,22 @@ const securityHeaders = [
   {
     key: "Permissions-Policy",
     value: "camera=(), microphone=(), geolocation=()"
+  },
+  {
+    key: "Content-Security-Policy",
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com https://cdn.plaid.com",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https://vawqdqkaguhdgfhdebqw.supabase.co https://*.supabase.co https://*.stripe.com https://cdn.plaid.com",
+      "font-src 'self' data:",
+      "connect-src 'self' https://vawqdqkaguhdgfhdebqw.supabase.co https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.stripe.com https://m.stripe.network https://cdn.plaid.com https://*.plaid.com",
+      "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://cdn.plaid.com https://*.plaid.com",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'"
+    ].join('; ')
   }
 ];
 
