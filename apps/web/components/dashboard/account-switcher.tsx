@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Building2 } from "lucide-react";
+import { Building2, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { OwnershipAccountDTO } from "@/lib/ownership";
 
@@ -31,6 +31,14 @@ export function AccountSwitcher({ accounts, activeAccountId }: AccountSwitcherPr
     router.push(query ? `${pathname}?${query}` : pathname);
   };
 
+  const handleCreateAccount = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("mode", "records");
+    params.set("section", "ownership");
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  };
+
   if (accounts.length <= 1) {
     return (
       <div className="rounded-[10px] border border-white/15 bg-white/10 px-3 py-3 text-white">
@@ -46,6 +54,15 @@ export function AccountSwitcher({ accounts, activeAccountId }: AccountSwitcherPr
             {activeAccount.memberCount} member{activeAccount.memberCount === 1 ? "" : "s"}
           </span>
         </div>
+        <button
+          type="button"
+          onClick={handleCreateAccount}
+          className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-white/15 bg-white/5 px-3 py-2 text-xs text-white/60 transition hover:bg-white/10 hover:text-white/80"
+          title="Create a new ownership account."
+        >
+          <Plus className="h-3 w-3" />
+          New Account
+        </button>
       </div>
     );
   }
@@ -78,6 +95,15 @@ export function AccountSwitcher({ accounts, activeAccountId }: AccountSwitcherPr
           </option>
         ))}
       </select>
+      <button
+        type="button"
+        onClick={handleCreateAccount}
+        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-white/15 bg-white/5 px-3 py-2 text-xs text-white/60 transition hover:bg-white/10 hover:text-white/80"
+        title="Create a new ownership account."
+      >
+        <Plus className="h-3 w-3" />
+        New Account
+      </button>
     </div>
   );
 }

@@ -8,10 +8,12 @@ export { signOut } from "./auth";
 export {
   initiateStripeConnect,
   initiateAccountStripeConnect,
+  initiateMemberPayoutConnect,
   checkConnectStatus,
   getExpressDashboardUrl,
   updateManagementFee
 } from "./connect";
+export { updateDistributionConfig } from "./distributions";
 export { completeOnboarding } from "./profile";
 export { updateProfile } from "./profile";
 export { uploadAvatar } from "./profile";

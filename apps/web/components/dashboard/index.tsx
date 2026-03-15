@@ -60,6 +60,8 @@ export function Dashboard({
   expensesData,
   capabilities,
   ownershipAccounts,
+  ownershipMembers,
+  distributionHistory,
   listings,
   applications,
   applicationCount,
@@ -128,6 +130,8 @@ export function Dashboard({
   onCreateOwnershipAccount,
   onLinkPropertyToOwnershipAccount,
   onInitiateAccountStripeConnect,
+  onUpdateDistributionConfig,
+  onInitiateMemberPayoutConnect,
   onUpdateManagementFee
 }: DashboardProps) {
   const resolvedGamification = gamification ?? {
@@ -825,6 +829,11 @@ export function Dashboard({
               onCreateOwnershipAccount={onCreateOwnershipAccount}
               onLinkPropertyToOwnershipAccount={onLinkPropertyToOwnershipAccount}
               onInitiateAccountStripeConnect={onInitiateAccountStripeConnect}
+              ownershipMembers={ownershipMembers}
+              distributionHistory={distributionHistory}
+              activeAccountId={activeAccountId}
+              onUpdateDistributionConfig={onUpdateDistributionConfig}
+              onInitiateMemberPayoutConnect={onInitiateMemberPayoutConnect}
               onUpdateManagementFee={onUpdateManagementFee}
               onCreateProperty={onCreateProperty}
               onCreateUnit={onCreateUnit}

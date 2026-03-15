@@ -12,15 +12,17 @@ import { getRentalListingsForUser } from "@/lib/leasing";
 import { getApplicationsForUser, type ApplicationDTO } from "@/lib/applications";
 import { getOwnerVendors } from "@/lib/vendors";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
-import { getOwnershipAccountsForUser } from "@/lib/ownership";
+import { getOwnershipAccountsForUser, getOwnershipMembersForAccount } from "@/lib/ownership";
 import { getOwnerExpenseData } from "@/lib/expenses";
 import { getUserGamification } from "@/lib/gamification";
 import { getOwnerAnalyticsData } from "@/lib/analytics";
 import { getRecentAuditLogs } from "@/lib/audit";
 import { getRentIncreaseHistory } from "@/lib/rent-increases";
+import { getDistributionHistory } from "@/lib/distributions";
 import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
 import {
   initiateAccountStripeConnect,
+  initiateMemberPayoutConnect,
   createCheckoutForCharge,
   recordManualPayment,
   createLease,
@@ -69,6 +71,7 @@ import {
   deleteExpense,
   createOwnershipAccount,
   linkPropertyToOwnershipAccount,
+  updateDistributionConfig,
   updateManagementFee
 } from "@/app/actions";
 import {
@@ -203,6 +206,16 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
   const approvedApplicationCount = applications.filter(
     (application) => application.status === "approved"
   ).length;
+  const activeAccount = ownershipAccounts.find((account) => account.id === activeAccountId);
+  const isLlcAccount = activeAccount?.accountType === "llc";
+  const [ownershipMembers, distributionHistory] = await Promise.all([
+    isLlcAccount && activeAccountId
+      ? getOwnershipMembersForAccount(user.id, activeAccountId)
+      : Promise.resolve([]),
+    isLlcAccount && activeAccountId
+      ? getDistributionHistory(activeAccountId)
+      : Promise.resolve([])
+  ]);
   const ownerConnectedMap = await arePropertyOwnersConnected(
     portfolio.properties.map((property) => property.id)
   );
@@ -231,6 +244,8 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       vendors={vendors}
       expensesData={expenses}
       ownershipAccounts={ownershipAccounts}
+      ownershipMembers={ownershipMembers}
+      distributionHistory={distributionHistory}
       activeAccountId={activeAccountId}
       capabilities={capabilities}
       initialOwnerWorkflowMode={initialOwnerWorkflowMode}
@@ -292,6 +307,8 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       onCreateOwnershipAccount={createOwnershipAccount}
       onLinkPropertyToOwnershipAccount={linkPropertyToOwnershipAccount}
       onInitiateAccountStripeConnect={initiateAccountStripeConnect}
+      onUpdateDistributionConfig={updateDistributionConfig}
+      onInitiateMemberPayoutConnect={initiateMemberPayoutConnect}
       onUpdateManagementFee={updateManagementFee}
     />
   );

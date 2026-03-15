@@ -1,6 +1,6 @@
 "use client";
 
-import { type KeyboardEvent, useEffect, useState } from "react";
+import { Fragment, type KeyboardEvent, useEffect, useState } from "react";
 import { useFormState } from "react-dom";
 import { Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,8 +12,11 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Button } from "@/components/ui/button";
 import type { ActionState } from "@/app/actions";
-import type { OwnershipAccountDTO } from "@/lib/ownership";
+import type { OwnershipAccountDTO, OwnershipMemberDTO } from "@/lib/ownership";
+import type { DistributionHistoryEntry } from "@/lib/distributions";
 import { Alert } from "@/components/ui/alert";
+import { DistributionConfigPanel } from "./distribution-config-panel";
+import { DistributionHistory } from "./distribution-history";
 
 type StatefulAction = (
   prev: ActionState,
@@ -27,11 +30,16 @@ interface PropertyOption {
 }
 
 interface OwnershipSectionProps {
+  activeAccountId?: string | null;
   accounts: OwnershipAccountDTO[];
   properties: PropertyOption[];
+  members?: OwnershipMemberDTO[];
+  distributionHistory?: DistributionHistoryEntry[];
   onCreateOwnershipAccount: StatefulAction;
   onLinkPropertyToOwnershipAccount: StatefulAction;
   onInitiateAccountStripeConnect?: StatefulAction;
+  onUpdateDistributionConfig?: StatefulAction;
+  onInitiateMemberPayoutConnect?: StatefulAction;
 }
 
 type OwnershipFlow = "create_account" | "link_property";
@@ -150,17 +158,23 @@ function OwnershipAccountStripeControl({
 }
 
 export function OwnershipSection({
+  activeAccountId,
   accounts,
   properties,
+  members,
+  distributionHistory,
   onCreateOwnershipAccount,
   onLinkPropertyToOwnershipAccount,
-  onInitiateAccountStripeConnect
+  onInitiateAccountStripeConnect,
+  onUpdateDistributionConfig,
+  onInitiateMemberPayoutConnect
 }: OwnershipSectionProps) {
   const [createState, createAction] = useFormState(onCreateOwnershipAccount, null);
   const [linkState, linkAction] = useFormState(onLinkPropertyToOwnershipAccount, null);
   const [activeFlow, setActiveFlow] = useState<OwnershipFlow>("create_account");
   const [createStep, setCreateStep] = useState(0);
   const [linkStep, setLinkStep] = useState(0);
+  const [distributionAccountId, setDistributionAccountId] = useState<string | null>(null);
   const [createDraft, setCreateDraft] = useState<CreateAccountDraft>({
     accountType: "llc",
     displayName: ""
@@ -202,6 +216,10 @@ export function OwnershipSection({
       ownershipAccountId: ""
     });
   }, [linkState]);
+
+  useEffect(() => {
+    setDistributionAccountId((current) => (current === activeAccountId ? current : null));
+  }, [activeAccountId]);
 
   return (
     <div id="ownership" className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -476,43 +494,90 @@ export function OwnershipSection({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Ownership Accounts</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {accounts.length === 0 ? (
-            <EmptyState
-              icon={Users}
-              title="No ownership accounts"
-              description="Create an ownership account to organize your properties."
-            />
-          ) : (
-            <div>
-              {accounts.map((account, index) => (
-                <DataRow key={account.id} last={index === accounts.length - 1}>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-zinc-900">{account.displayName}</p>
-                      <Badge variant="outline" className="capitalize">
-                        {account.accountType}
-                      </Badge>
-                    </div>
-                    <p className="mt-0.5 text-xs text-zinc-500 capitalize">
-                      {account.memberCount} member{account.memberCount === 1 ? "" : "s"} • distribution{" "}
-                      {account.distributionMode.replace(/_/g, " ")}
-                    </p>
-                  </div>
-                  <OwnershipAccountStripeControl
-                    account={account}
-                    onInitiateAccountStripeConnect={onInitiateAccountStripeConnect}
-                  />
-                </DataRow>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Ownership Accounts</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {accounts.length === 0 ? (
+              <EmptyState
+                icon={Users}
+                title="No ownership accounts"
+                description="Create an ownership account to organize your properties."
+              />
+            ) : (
+              <div>
+                {accounts.map((account, index) => {
+                  const canConfigureDistribution =
+                    account.accountType === "llc" &&
+                    account.id === activeAccountId &&
+                    Boolean(onUpdateDistributionConfig);
+                  const showDistributionPanel = distributionAccountId === account.id;
+
+                  return (
+                    <Fragment key={account.id}>
+                      <DataRow last={index === accounts.length - 1 && !showDistributionPanel}>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold text-zinc-900">{account.displayName}</p>
+                            <Badge variant="outline" className="capitalize">
+                              {account.accountType}
+                            </Badge>
+                            {account.id === activeAccountId ? <Badge variant="default">Active</Badge> : null}
+                          </div>
+                          <p className="mt-0.5 text-xs text-zinc-500 capitalize">
+                            {account.memberCount} member{account.memberCount === 1 ? "" : "s"} • distribution{" "}
+                            {account.distributionMode.replace(/_/g, " ")}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <OwnershipAccountStripeControl
+                            account={account}
+                            onInitiateAccountStripeConnect={onInitiateAccountStripeConnect}
+                          />
+                          {canConfigureDistribution ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                setDistributionAccountId(
+                                  distributionAccountId === account.id ? null : account.id
+                                )
+                              }
+                              title={`Configure how rent payments are distributed for ${account.displayName}.`}
+                            >
+                              {distributionAccountId === account.id
+                                ? "Hide Distribution"
+                                : "Configure Distribution"}
+                            </Button>
+                          ) : null}
+                        </div>
+                      </DataRow>
+                      {showDistributionPanel && members && onUpdateDistributionConfig ? (
+                        <DistributionConfigPanel
+                          accountId={account.id}
+                          accountDisplayName={account.displayName}
+                          currentMode={account.distributionMode}
+                          members={members.filter((member) => member.active)}
+                          onUpdateDistributionConfig={onUpdateDistributionConfig}
+                          onInitiateMemberPayoutConnect={onInitiateMemberPayoutConnect}
+                        />
+                      ) : null}
+                    </Fragment>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        {activeAccountId &&
+        accounts.some((account) => account.id === activeAccountId && account.accountType === "llc") &&
+        distributionHistory ? (
+          <DistributionHistory entries={distributionHistory} />
+        ) : null}
+      </div>
     </div>
   );
 }

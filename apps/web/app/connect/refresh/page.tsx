@@ -1,18 +1,61 @@
 import { redirect } from "next/navigation";
-import { initiateStripeConnect } from "@/app/actions";
+import {
+  initiateAccountStripeConnect,
+  initiateMemberPayoutConnect,
+  initiateStripeConnect
+} from "@/app/actions";
 import { getAuthenticatedUser, getCurrentUserRole, getRoleHomePath } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-export default async function ConnectRefreshPage() {
+interface ConnectRefreshPageProps {
+  searchParams?: {
+    accountId?: string | string[];
+    memberPayout?: string | string[];
+    profileId?: string | string[];
+  };
+}
+
+export default async function ConnectRefreshPage({ searchParams }: ConnectRefreshPageProps) {
   const user = await getAuthenticatedUser();
   const role = await getCurrentUserRole(user.id);
+  const accountId =
+    typeof searchParams?.accountId === "string"
+      ? searchParams.accountId
+      : Array.isArray(searchParams?.accountId)
+        ? searchParams.accountId[0] ?? null
+        : null;
+  const memberPayout =
+    (typeof searchParams?.memberPayout === "string" && searchParams.memberPayout === "true") ||
+    (Array.isArray(searchParams?.memberPayout) && searchParams.memberPayout[0] === "true");
+  const profileId =
+    typeof searchParams?.profileId === "string"
+      ? searchParams.profileId
+      : Array.isArray(searchParams?.profileId)
+        ? searchParams.profileId[0] ?? null
+        : null;
 
   if (role !== "owner" && role !== "manager") {
     redirect(getRoleHomePath(role));
   }
 
-  const result = await initiateStripeConnect();
+  const result = memberPayout
+    ? await (async () => {
+        if (!accountId || !profileId) {
+          return { success: false, error: "Missing payout onboarding details." } as const;
+        }
+        const formData = new FormData();
+        formData.set("accountId", accountId);
+        formData.set("profileId", profileId);
+        return initiateMemberPayoutConnect(null, formData);
+      })()
+    : accountId
+      ? await (async () => {
+          const formData = new FormData();
+          formData.set("accountId", accountId);
+          return initiateAccountStripeConnect(null, formData);
+        })()
+      : await initiateStripeConnect();
   if (result?.success && result.url) {
     redirect(result.url);
   }

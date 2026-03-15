@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { checkConnectStatus } from "@/app/actions";
+import { getAccount } from "@/lib/stripe-connect";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthenticatedUser, getCurrentUserRole, getRoleHomePath } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
@@ -8,7 +10,38 @@ export const dynamic = "force-dynamic";
 interface ConnectReturnPageProps {
   searchParams?: {
     accountId?: string | string[];
+    memberPayout?: string | string[];
+    profileId?: string | string[];
   };
+}
+
+async function checkMemberPayoutStatus(accountId: string, profileId: string) {
+  try {
+    const admin = createAdminClient();
+    const { data: membership } = await admin
+      .from("ownership_account_members")
+      .select("payout_stripe_account_id")
+      .eq("account_id", accountId)
+      .eq("profile_id", profileId)
+      .maybeSingle();
+
+    if (!membership?.payout_stripe_account_id) {
+      return { success: true, connected: false, detailsSubmitted: false } as const;
+    }
+
+    const account = await getAccount(membership.payout_stripe_account_id);
+    return {
+      success: true,
+      connected: Boolean(account.charges_enabled && account.payouts_enabled),
+      detailsSubmitted: account.details_submitted
+    } as const;
+  } catch (error) {
+    console.error("checkMemberPayoutStatus error:", error);
+    return {
+      success: false,
+      error: "Unable to verify the payout connection right now. Please try again."
+    } as const;
+  }
 }
 
 function StatusCard({
@@ -55,6 +88,15 @@ export default async function ConnectReturnPage({ searchParams }: ConnectReturnP
       : Array.isArray(searchParams?.accountId)
         ? searchParams.accountId[0] ?? null
         : null;
+  const memberPayout =
+    (typeof searchParams?.memberPayout === "string" && searchParams.memberPayout === "true") ||
+    (Array.isArray(searchParams?.memberPayout) && searchParams.memberPayout[0] === "true");
+  const profileId =
+    typeof searchParams?.profileId === "string"
+      ? searchParams.profileId
+      : Array.isArray(searchParams?.profileId)
+        ? searchParams.profileId[0] ?? null
+        : null;
 
   if (role !== "owner" && role !== "manager") {
     redirect(getRoleHomePath(role));
@@ -65,16 +107,36 @@ export default async function ConnectReturnPage({ searchParams }: ConnectReturnP
       ? `/owner?section=ownership&account=${encodeURIComponent(accountId)}`
       : "/manager?section=ownership"
     : getRoleHomePath(role);
-  const retryPath = accountId
-    ? `/connect/onboard?accountId=${encodeURIComponent(accountId)}`
-    : "/connect/onboard";
-  const result = await checkConnectStatus(accountId);
+  const retryPath =
+    accountId && memberPayout && profileId
+      ? `/connect/onboard?accountId=${encodeURIComponent(accountId)}&memberPayout=true&profileId=${encodeURIComponent(profileId)}`
+      : accountId
+        ? `/connect/onboard?accountId=${encodeURIComponent(accountId)}`
+        : "/connect/onboard";
+  const result =
+    memberPayout && accountId && profileId
+      ? await checkMemberPayoutStatus(accountId, profileId)
+      : await checkConnectStatus(accountId);
+  const unableToVerifyTitle = memberPayout
+    ? "Unable to verify payout connection"
+    : "Unable to verify bank connection";
+  const connectedTitle = memberPayout ? "Payout Account Connected" : "Bank Account Connected";
+  const connectedDescription = memberPayout
+    ? "This member can now receive LLC distribution transfers."
+    : "You'll now receive rent payments directly to your bank account.";
+  const almostThereDescription = memberPayout
+    ? "Stripe is reviewing this payout account. This usually takes a few minutes."
+    : "Stripe is reviewing your information. This usually takes a few minutes.";
+  const incompleteTitle = memberPayout ? "Payout Onboarding Incomplete" : "Onboarding Incomplete";
+  const incompleteDescription = memberPayout
+    ? "This payout onboarding was not finished. Start again to complete the member payout account."
+    : "Your Stripe onboarding was not finished. Start again to complete your bank connection.";
 
   if (!result || !result.success) {
     return (
       <StatusCard
         tone="zinc"
-        title="Unable to verify bank connection"
+        title={unableToVerifyTitle}
         description={result && !result.success ? result.error : "Please try again from settings."}
         href={accountId ? dashboardPath : "/settings"}
         ctaLabel="Back to Settings"
@@ -86,8 +148,8 @@ export default async function ConnectReturnPage({ searchParams }: ConnectReturnP
     return (
       <StatusCard
         tone="emerald"
-        title="Bank Account Connected"
-        description="You'll now receive rent payments directly to your bank account."
+        title={connectedTitle}
+        description={connectedDescription}
         href={dashboardPath}
         ctaLabel="Go to Dashboard"
       />
@@ -99,7 +161,7 @@ export default async function ConnectReturnPage({ searchParams }: ConnectReturnP
       <StatusCard
         tone="amber"
         title="Almost There"
-        description="Stripe is reviewing your information. This usually takes a few minutes."
+        description={almostThereDescription}
         href={dashboardPath}
         ctaLabel="Go to Dashboard"
       />
@@ -109,8 +171,8 @@ export default async function ConnectReturnPage({ searchParams }: ConnectReturnP
   return (
     <StatusCard
       tone="zinc"
-      title="Onboarding Incomplete"
-      description="Your Stripe onboarding was not finished. Start again to complete your bank connection."
+      title={incompleteTitle}
+      description={incompleteDescription}
       href={retryPath}
       ctaLabel="Try Again"
     />

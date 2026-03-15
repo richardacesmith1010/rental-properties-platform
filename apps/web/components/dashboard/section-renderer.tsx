@@ -8,7 +8,7 @@ import type { NotificationDTO } from "@/lib/notifications";
 import type { OwnerDocumentsData } from "@/lib/documents";
 import type { VendorDTO } from "@/lib/vendors";
 import type { FeatureCapabilitiesDTO } from "@/lib/feature-capabilities";
-import type { OwnershipAccountDTO } from "@/lib/ownership";
+import type { OwnershipAccountDTO, OwnershipMemberDTO } from "@/lib/ownership";
 import type { ExpenseDashboardData } from "@/lib/expenses";
 import type { AutomationRuleDTO, AutomationTemplateDTO } from "@/lib/automations";
 import type { InboxThreadDTO } from "@/lib/inbox";
@@ -17,6 +17,7 @@ import type { ApplicationDTO } from "@/lib/applications";
 import type { AnalyticsDashboardData } from "@/lib/analytics";
 import type { AuditLogEntry } from "@/lib/audit";
 import type { RentIncreaseEntry } from "@/lib/rent-increases";
+import type { DistributionHistoryEntry } from "@/lib/distributions";
 import type { ActionState } from "@/app/actions";
 import { FeatureWarning } from "@/components/shared/feature-warning";
 import { KpiGrid } from "./kpi-grid";
@@ -76,6 +77,9 @@ interface SectionRendererProps {
   auditLogs: AuditLogEntry[];
   rentIncreaseHistory: RentIncreaseEntry[];
   safeOwnershipAccounts: OwnershipAccountDTO[];
+  ownershipMembers?: OwnershipMemberDTO[];
+  distributionHistory?: DistributionHistoryEntry[];
+  activeAccountId?: string | null;
   safeCapabilities: FeatureCapabilitiesDTO;
   sortedVendors: VendorDTO[];
   hasLeasingSection: boolean;
@@ -131,6 +135,8 @@ interface SectionRendererProps {
   onCreateOwnershipAccount?: StatefulAction;
   onLinkPropertyToOwnershipAccount?: StatefulAction;
   onInitiateAccountStripeConnect?: StatefulAction;
+  onUpdateDistributionConfig?: StatefulAction;
+  onInitiateMemberPayoutConnect?: StatefulAction;
   onUpdateManagementFee?: StatefulAction;
   onCreateProperty: StatefulAction;
   onCreateUnit: StatefulAction;
@@ -175,6 +181,9 @@ export function SectionRenderer({
   auditLogs,
   rentIncreaseHistory,
   safeOwnershipAccounts,
+  ownershipMembers,
+  distributionHistory,
+  activeAccountId,
   safeCapabilities,
   sortedVendors,
   hasLeasingSection,
@@ -230,6 +239,8 @@ export function SectionRenderer({
   onCreateOwnershipAccount,
   onLinkPropertyToOwnershipAccount,
   onInitiateAccountStripeConnect,
+  onUpdateDistributionConfig,
+  onInitiateMemberPayoutConnect,
   onUpdateManagementFee,
   onCreateProperty,
   onCreateUnit,
@@ -433,15 +444,20 @@ export function SectionRenderer({
       "Ownership",
       safeCapabilities.ownershipEnabled ? (
         <OwnershipSection
+          activeAccountId={activeAccountId}
           accounts={safeOwnershipAccounts}
           properties={safePortfolio.properties.map((property) => ({
             id: property.id,
             name: property.name,
             ownerAccountName: property.ownerAccountName
           }))}
+          members={ownershipMembers}
+          distributionHistory={distributionHistory}
           onCreateOwnershipAccount={onCreateOwnershipAccount!}
           onLinkPropertyToOwnershipAccount={onLinkPropertyToOwnershipAccount!}
           onInitiateAccountStripeConnect={onInitiateAccountStripeConnect}
+          onUpdateDistributionConfig={onUpdateDistributionConfig}
+          onInitiateMemberPayoutConnect={onInitiateMemberPayoutConnect}
         />
       ) : (
         <FeatureWarning

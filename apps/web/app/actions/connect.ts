@@ -152,6 +152,90 @@ export async function initiateAccountStripeConnect(
   }
 }
 
+export async function initiateMemberPayoutConnect(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    const { user } = await requireConnectedRole();
+    const accountId = formData.get("accountId");
+    const profileId = formData.get("profileId");
+
+    if (typeof accountId !== "string" || accountId.length === 0) {
+      return { success: false, error: "Missing account ID." };
+    }
+    if (typeof profileId !== "string" || profileId.length === 0) {
+      return { success: false, error: "Missing member profile ID." };
+    }
+    if (!checkRateLimit(`initiateMemberPayoutConnect:${user.id}`, 5, 60 * 60 * 1000).allowed) {
+      return { success: false, error: "Too many requests. Please try again later." };
+    }
+
+    const { canUserAdministerOwnershipAccount } = await import("@/lib/ownership");
+    const canAdmin = await canUserAdministerOwnershipAccount(user.id, accountId);
+    if (!canAdmin) {
+      return { success: false, error: "Access denied." };
+    }
+
+    const admin = createAdminClient();
+    const { data: membership } = await admin
+      .from("ownership_account_members")
+      .select("profile_id, payout_stripe_account_id")
+      .eq("account_id", accountId)
+      .eq("profile_id", profileId)
+      .eq("active", true)
+      .maybeSingle();
+
+    if (!membership) {
+      return { success: false, error: "Member not found in this account." };
+    }
+
+    let stripeAccountId = membership.payout_stripe_account_id ?? null;
+    if (!stripeAccountId) {
+      const { data: profile } = await admin
+        .from("profiles")
+        .select("email")
+        .eq("id", profileId)
+        .maybeSingle();
+
+      if (!profile?.email) {
+        return { success: false, error: "Member has no email address on file." };
+      }
+
+      const stripeAccount = await createExpressAccount(profile.email);
+      stripeAccountId = stripeAccount.id;
+
+      const { error } = await admin
+        .from("ownership_account_members")
+        .update({ payout_stripe_account_id: stripeAccountId })
+        .eq("account_id", accountId)
+        .eq("profile_id", profileId);
+
+      if (error) {
+        return { success: false, error: "Failed to save payout account." };
+      }
+    }
+
+    const appUrl = getAppUrl();
+    const encodedAccountId = encodeURIComponent(accountId);
+    const encodedProfileId = encodeURIComponent(profileId);
+    const accountLink = await createAccountLink(
+      stripeAccountId,
+      `${appUrl}/connect/refresh?accountId=${encodedAccountId}&memberPayout=true&profileId=${encodedProfileId}`,
+      `${appUrl}/connect/return?accountId=${encodedAccountId}&memberPayout=true&profileId=${encodedProfileId}`
+    );
+
+    return { success: true, url: accountLink.url };
+  } catch (err) {
+    console.error("initiateMemberPayoutConnect error:", err);
+    const detail = err instanceof Error ? err.message : String(err);
+    return {
+      success: false,
+      error: `Unable to start payout onboarding. (${detail})`
+    };
+  }
+}
+
 export async function checkConnectStatus(accountId?: string | null): Promise<ActionState> {
   try {
     const { user } = await requireConnectedRole();

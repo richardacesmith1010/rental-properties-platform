@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getDistributionMembersForAccount } from "@/lib/distributions";
 import { awardXp, XP_VALUES } from "@/lib/gamification";
 import { formatCurrency } from "@/lib/format";
 import { sideEffectError } from "@/lib/logger";
@@ -109,6 +110,129 @@ async function getChargeContext(
     property,
     tenantProfile
   };
+}
+
+interface PlannedMemberShare {
+  profileId: string;
+  amountCents: number;
+  distributionPct: number | null;
+  destination: string;
+}
+
+function roundPct(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+function planEqualDistribution(
+  ownerAmount: number,
+  members: Awaited<ReturnType<typeof getDistributionMembersForAccount>>["members"]
+) {
+  if (members.length === 0) {
+    return { memberShares: [] as PlannedMemberShare[], llcFallbackAmount: ownerAmount };
+  }
+
+  const baseAmount = Math.floor(ownerAmount / members.length);
+  let llcFallbackAmount = 0;
+  const memberShares: PlannedMemberShare[] = [];
+  const distributionPct = roundPct(100 / members.length);
+
+  for (let index = 0; index < members.length; index += 1) {
+    const member = members[index];
+    const amountCents = baseAmount + (index === 0 ? ownerAmount - baseAmount * members.length : 0);
+    if (amountCents <= 0) {
+      continue;
+    }
+
+    if (!member.payoutStripeAccountId) {
+      llcFallbackAmount += amountCents;
+      continue;
+    }
+
+    memberShares.push({
+      profileId: member.profileId,
+      amountCents,
+      distributionPct,
+      destination: member.payoutStripeAccountId
+    });
+  }
+
+  return { memberShares, llcFallbackAmount };
+}
+
+function planCustomDistribution(
+  ownerAmount: number,
+  members: Awaited<ReturnType<typeof getDistributionMembersForAccount>>["members"]
+) {
+  const normalizedMembers = members.map((member) => ({
+    ...member,
+    distributionPct: member.distributionPct ?? 0
+  }));
+  const totalPct = normalizedMembers.reduce((sum, member) => sum + member.distributionPct, 0);
+
+  if (totalPct <= 0) {
+    return { memberShares: [] as PlannedMemberShare[], llcFallbackAmount: ownerAmount };
+  }
+
+  const floorAmounts = normalizedMembers.map((member) =>
+    Math.floor(ownerAmount * (member.distributionPct / totalPct))
+  );
+  const remainder = ownerAmount - floorAmounts.reduce((sum, amount) => sum + amount, 0);
+  let llcFallbackAmount = 0;
+  const memberShares: PlannedMemberShare[] = [];
+
+  for (let index = 0; index < normalizedMembers.length; index += 1) {
+    const member = normalizedMembers[index];
+    const amountCents = floorAmounts[index] + (index === 0 ? remainder : 0);
+
+    if (amountCents <= 0) {
+      continue;
+    }
+
+    if (!member.payoutStripeAccountId) {
+      llcFallbackAmount += amountCents;
+      continue;
+    }
+
+    memberShares.push({
+      profileId: member.profileId,
+      amountCents,
+      distributionPct: member.distributionPct,
+      destination: member.payoutStripeAccountId
+    });
+  }
+
+  return { memberShares, llcFallbackAmount };
+}
+
+async function insertDistributionRecord(
+  supabase: ReturnType<typeof createAdminClient>,
+  params: {
+    paymentId: string | null;
+    accountId: string;
+    profileId: string;
+    amountCents: number;
+    distributionPct: number | null;
+    stripeTransferId: string | null;
+    status: "completed" | "failed" | "pending";
+  }
+) {
+  if (!params.paymentId) {
+    return;
+  }
+
+  const { error } = await supabase.from("payment_distributions").insert({
+    payment_id: params.paymentId,
+    account_id: params.accountId,
+    member_profile_id: params.profileId,
+    amount_cents: params.amountCents,
+    distribution_pct: params.distributionPct,
+    stripe_transfer_id: params.stripeTransferId,
+    status: params.status
+  });
+
+  if (error) {
+    console.error("[stripe-webhook] Failed to record payment distribution:", error);
+  }
 }
 
 async function isAuthorizedCheckoutUser(
@@ -227,14 +351,117 @@ async function createTransfersForPayment(
       platform_fee_cents: platformFee
     };
 
+    let firstTransferId: string | null = null;
+
     if (ownerAmount > 0) {
-      const ownerTransfer = await createStripeTransfer({
-        amountCents: ownerAmount,
-        destination: ownerStripeAccount,
-        transferGroup: params.transferGroup,
-        description: `Rent payment for charge ${params.chargeId.slice(0, 8)}`
-      });
-      paymentUpdate.stripe_transfer_id = ownerTransfer.id;
+      const { data: property } = await supabase
+        .from("properties")
+        .select("owner_account_id")
+        .eq("id", params.propertyId)
+        .maybeSingle();
+
+      const ownerAccountId = property?.owner_account_id ?? null;
+      let distributed = false;
+
+      if (ownerAccountId) {
+        const distribution = await getDistributionMembersForAccount(ownerAccountId);
+
+        if (distribution.mode !== "retain" && distribution.members.length > 0) {
+          const plannedTransfers =
+            distribution.mode === "split_equal"
+              ? planEqualDistribution(ownerAmount, distribution.members)
+              : planCustomDistribution(ownerAmount, distribution.members);
+
+          if (plannedTransfers.memberShares.length > 0) {
+            const { data: payment } = await supabase
+              .from("payments")
+              .select("id")
+              .eq(params.paymentMatch.column, params.paymentMatch.value)
+              .maybeSingle();
+
+            if (plannedTransfers.llcFallbackAmount > 0) {
+              const llcTransfer = await createStripeTransfer({
+                amountCents: plannedTransfers.llcFallbackAmount,
+                destination: ownerStripeAccount,
+                transferGroup: params.transferGroup,
+                description: `LLC retained share for charge ${params.chargeId.slice(0, 8)}`
+              });
+              firstTransferId = llcTransfer.id;
+            }
+
+            for (const share of plannedTransfers.memberShares) {
+              try {
+                const transfer = await createStripeTransfer({
+                  amountCents: share.amountCents,
+                  destination: share.destination,
+                  transferGroup: params.transferGroup,
+                  description: `Distribution for charge ${params.chargeId.slice(0, 8)}`
+                });
+
+                if (!firstTransferId) {
+                  firstTransferId = transfer.id;
+                }
+
+                await insertDistributionRecord(supabase, {
+                  paymentId: payment?.id ?? null,
+                  accountId: ownerAccountId,
+                  profileId: share.profileId,
+                  amountCents: share.amountCents,
+                  distributionPct: share.distributionPct,
+                  stripeTransferId: transfer.id,
+                  status: "completed"
+                });
+              } catch (transferError) {
+                console.error(
+                  `[stripe-webhook] Member transfer failed for ${share.profileId}:`,
+                  transferError
+                );
+                try {
+                  const fallbackTransfer = await createStripeTransfer({
+                    amountCents: share.amountCents,
+                    destination: ownerStripeAccount,
+                    transferGroup: params.transferGroup,
+                    description: `LLC fallback share for charge ${params.chargeId.slice(0, 8)}`
+                  });
+                  if (!firstTransferId) {
+                    firstTransferId = fallbackTransfer.id;
+                  }
+                } catch (fallbackError) {
+                  console.error(
+                    `[stripe-webhook] LLC fallback transfer failed for ${share.profileId}:`,
+                    fallbackError
+                  );
+                }
+                await insertDistributionRecord(supabase, {
+                  paymentId: payment?.id ?? null,
+                  accountId: ownerAccountId,
+                  profileId: share.profileId,
+                  amountCents: share.amountCents,
+                  distributionPct: share.distributionPct,
+                  stripeTransferId: null,
+                  status: "failed"
+                });
+              }
+            }
+
+            distributed = true;
+          }
+        }
+      }
+
+      if (!distributed) {
+        const ownerTransfer = await createStripeTransfer({
+          amountCents: ownerAmount,
+          destination: ownerStripeAccount,
+          transferGroup: params.transferGroup,
+          description: `Rent payment for charge ${params.chargeId.slice(0, 8)}`
+        });
+        firstTransferId = ownerTransfer.id;
+      }
+    }
+
+    if (firstTransferId) {
+      paymentUpdate.stripe_transfer_id = firstTransferId;
     }
 
     if (managerInfo && managementFee > 0) {

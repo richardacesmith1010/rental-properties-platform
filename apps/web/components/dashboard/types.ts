@@ -6,7 +6,7 @@ import type { NotificationDTO } from "@/lib/notifications";
 import type { OwnerDocumentsData } from "@/lib/documents";
 import type { VendorDTO } from "@/lib/vendors";
 import type { FeatureCapabilitiesDTO } from "@/lib/feature-capabilities";
-import type { OwnershipAccountDTO } from "@/lib/ownership";
+import type { OwnershipAccountDTO, OwnershipMemberDTO } from "@/lib/ownership";
 import type { ExpenseDashboardData } from "@/lib/expenses";
 import type { AutomationRuleDTO, AutomationTemplateDTO } from "@/lib/automations";
 import type { InboxThreadDTO } from "@/lib/inbox";
@@ -16,6 +16,7 @@ import type { UserGamificationData } from "@/lib/gamification";
 import type { AnalyticsDashboardData } from "@/lib/analytics";
 import type { AuditLogEntry } from "@/lib/audit";
 import type { RentIncreaseEntry } from "@/lib/rent-increases";
+import type { DistributionHistoryEntry } from "@/lib/distributions";
 import type { ActionState } from "@/app/actions";
 import type { ManagerWorkflowMode, OwnerWorkflowMode } from "./dashboard-config";
 
@@ -38,6 +39,8 @@ export interface DashboardProps {
   expensesData?: ExpenseDashboardData;
   capabilities?: FeatureCapabilitiesDTO;
   ownershipAccounts?: OwnershipAccountDTO[];
+  ownershipMembers?: OwnershipMemberDTO[];
+  distributionHistory?: DistributionHistoryEntry[];
   listings?: RentalListingDTO[];
   applications?: ApplicationDTO[];
   applicationCount?: number;
@@ -106,5 +109,7 @@ export interface DashboardProps {
   onCreateOwnershipAccount?: StatefulAction;
   onLinkPropertyToOwnershipAccount?: StatefulAction;
   onInitiateAccountStripeConnect?: StatefulAction;
+  onUpdateDistributionConfig?: StatefulAction;
+  onInitiateMemberPayoutConnect?: StatefulAction;
   onUpdateManagementFee?: StatefulAction;
 }
