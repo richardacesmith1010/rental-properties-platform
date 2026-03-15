@@ -66,21 +66,36 @@ export async function renewLease(_prev: ActionState, formData: FormData): Promis
     return { success: false, error: isMissingSchemaError(insertError) ? "This feature requires a database update." : "Failed to renew lease. Please try again." };
   }
 
-  const { error: previousLeaseError } = await supabase.from("leases").update({ lease_status: "renewed", active: false }).eq("id", lease.id);
-  if (previousLeaseError) return { success: false, error: "New lease created, but the prior lease could not be closed." };
+  const [previousLeaseSettled, rentIncreaseSettled] = await Promise.allSettled([
+    supabase
+      .from("leases")
+      .update({ lease_status: "renewed", active: false })
+      .eq("id", lease.id),
+    newMonthlyRentCents !== (lease.monthly_rent_cents ?? 0)
+      ? supabase.from("rent_increase_history").insert({
+          lease_id: newLease.id,
+          previous_rent_cents: lease.monthly_rent_cents ?? 0,
+          new_rent_cents: newMonthlyRentCents,
+          effective_date: newStartDate,
+          reason: "Lease renewal",
+          created_by: user.id
+        })
+      : Promise.resolve({ error: null })
+  ]);
 
-  if (newMonthlyRentCents !== (lease.monthly_rent_cents ?? 0)) {
-    const { error: rentIncreaseError } = await supabase.from("rent_increase_history").insert({
-      lease_id: newLease.id,
-      previous_rent_cents: lease.monthly_rent_cents ?? 0,
-      new_rent_cents: newMonthlyRentCents,
-      effective_date: newStartDate,
-      reason: "Lease renewal",
-      created_by: user.id
-    });
-    if (rentIncreaseError && !isMissingSchemaError(rentIncreaseError)) {
-      console.error("[leases] Failed to record rent increase history:", rentIncreaseError);
-    }
+  if (previousLeaseSettled.status === "rejected") {
+    console.error("[leases] Failed to close prior lease:", previousLeaseSettled.reason);
+    return { success: false, error: "New lease created, but the prior lease could not be closed." };
+  }
+
+  if (previousLeaseSettled.value.error) {
+    return { success: false, error: "New lease created, but the prior lease could not be closed." };
+  }
+
+  if (rentIncreaseSettled.status === "rejected") {
+    console.error("[leases] Failed to record rent increase history:", rentIncreaseSettled.reason);
+  } else if (rentIncreaseSettled.value.error && !isMissingSchemaError(rentIncreaseSettled.value.error)) {
+    console.error("[leases] Failed to record rent increase history:", rentIncreaseSettled.value.error);
   }
 
   if (lease.tenant_profile_id) {

@@ -146,17 +146,31 @@ export async function refreshPlaidBalance(
       return { success: false, error: "Too many requests. Please try again later." };
     }
 
-    const canAdmin = await canUserAdministerOwnershipAccount(user.id, accountId);
-    if (!canAdmin) {
+    const admin = createAdminClient();
+    const [canAdminSettled, accountSettled] = await Promise.allSettled([
+      canUserAdministerOwnershipAccount(user.id, accountId),
+      admin
+        .from("ownership_accounts")
+        .select("plaid_access_token, plaid_account_id")
+        .eq("id", accountId)
+        .maybeSingle()
+    ]);
+
+    if (canAdminSettled.status === "rejected") {
+      console.error("refreshPlaidBalance permission error:", canAdminSettled.reason);
+      return { success: false, error: "Unable to verify account access right now." };
+    }
+
+    if (!canAdminSettled.value) {
       return { success: false, error: "Access denied." };
     }
 
-    const admin = createAdminClient();
-    const { data: account, error: accountError } = await admin
-      .from("ownership_accounts")
-      .select("plaid_access_token, plaid_account_id")
-      .eq("id", accountId)
-      .maybeSingle();
+    if (accountSettled.status === "rejected") {
+      console.error("refreshPlaidBalance select error:", accountSettled.reason);
+      return { success: false, error: "Unable to load the connected bank account." };
+    }
+
+    const { data: account, error: accountError } = accountSettled.value;
 
     if (accountError) {
       if (isMissingSchemaError(accountError)) {

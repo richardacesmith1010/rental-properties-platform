@@ -82,12 +82,26 @@ export async function submitWithdrawalRequest(
     return { success: false, error: "Withdrawal amount must be greater than $0." };
   }
 
-  const canAdmin = await canUserAdministerOwnershipAccount(user.id, accountId);
-  if (!canAdmin) {
+  const [canAdminSettled, memberResultSettled] = await Promise.allSettled([
+    canUserAdministerOwnershipAccount(user.id, accountId),
+    getActiveMembers(accountId)
+  ]);
+
+  if (canAdminSettled.status === "rejected") {
+    console.error("submitWithdrawalRequest permission error:", canAdminSettled.reason);
+    return { success: false, error: "Unable to verify account access right now." };
+  }
+
+  if (!canAdminSettled.value) {
     return { success: false, error: "Access denied." };
   }
 
-  const memberResult = await getActiveMembers(accountId);
+  if (memberResultSettled.status === "rejected") {
+    console.error("submitWithdrawalRequest members error:", memberResultSettled.reason);
+    return { success: false, error: "Unable to load member data right now." };
+  }
+
+  const memberResult = memberResultSettled.value;
   if ("error" in memberResult) {
     return {
       success: false,

@@ -43,6 +43,7 @@ export function DomMascot({
         alt="Dom, the Domus mascot"
         width={width}
         height={height}
+        sizes={`${width}px`}
         className={cn("object-contain", animate ? moodAnimationMap[mood] : undefined)}
         priority={size === "lg" || size === "xl"}
         loading={size === "lg" || size === "xl" ? "eager" : "lazy"}

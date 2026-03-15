@@ -85,17 +85,31 @@ export async function createCheckoutForCharge(formData: FormData): Promise<Actio
     return { success: false, error: "Property not found for this charge." };
   }
 
-  const isAdmin = await canUserAdministerProperty(user.id, property.id);
   const isTenant = lease.tenant_profile_id === user.id;
-  if (!isAdmin && !isTenant) {
-    redirect("/");
-  }
-
   if (!isStripeConfigured()) {
     return { success: false, error: PAYMENTS_UNAVAILABLE_MESSAGE };
   }
 
-  if (!(await getOwnerStripeAccountForProperty(property.id))) {
+  const [isAdminSettled, ownerStripeSettled] = await Promise.allSettled([
+    canUserAdministerProperty(user.id, property.id),
+    getOwnerStripeAccountForProperty(property.id)
+  ]);
+
+  if (isAdminSettled.status === "rejected") {
+    console.error("createCheckoutForCharge permission error:", isAdminSettled.reason);
+    return { success: false, error: "Unable to verify access for this charge right now." };
+  }
+
+  if (!isAdminSettled.value && !isTenant) {
+    redirect("/");
+  }
+
+  if (ownerStripeSettled.status === "rejected") {
+    console.error("createCheckoutForCharge owner stripe error:", ownerStripeSettled.reason);
+    return { success: false, error: "This property is not ready to accept online payments yet." };
+  }
+
+  if (!ownerStripeSettled.value) {
     return { success: false, error: "This property is not ready to accept online payments yet." };
   }
 
