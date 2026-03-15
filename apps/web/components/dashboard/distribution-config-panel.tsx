@@ -21,6 +21,7 @@ interface DistributionConfigPanelProps {
   currentMode: string;
   members: OwnershipMemberDTO[];
   onUpdateDistributionConfig: StatefulAction;
+  onSubmitDistributionChangeRequest?: StatefulAction;
   onInitiateMemberPayoutConnect?: StatefulAction;
 }
 
@@ -85,9 +86,18 @@ export function DistributionConfigPanel({
   currentMode,
   members,
   onUpdateDistributionConfig,
+  onSubmitDistributionChangeRequest,
   onInitiateMemberPayoutConnect
 }: DistributionConfigPanelProps) {
-  const [state, formAction] = useFormState(onUpdateDistributionConfig, null);
+  const activeMembers = useMemo(() => members.filter((member) => member.active), [members]);
+  const requiresApproval =
+    activeMembers.length >= 2 && Boolean(onSubmitDistributionChangeRequest);
+  const [state, formAction] = useFormState(
+    requiresApproval && onSubmitDistributionChangeRequest
+      ? onSubmitDistributionChangeRequest
+      : onUpdateDistributionConfig,
+    null
+  );
   const [mode, setMode] = useState<DistributionMode>(
     currentMode === "split_equal" || currentMode === "split_custom" ? currentMode : "retain"
   );
@@ -98,7 +108,6 @@ export function DistributionConfigPanel({
     setMemberPcts(buildPctMap(members));
   }, [currentMode, members]);
 
-  const activeMembers = useMemo(() => members.filter((member) => member.active), [members]);
   const customTotal = useMemo(
     () => Array.from(memberPcts.values()).reduce((sum, pct) => sum + pct, 0),
     [memberPcts]
@@ -120,6 +129,11 @@ export function DistributionConfigPanel({
       <CardContent className="space-y-4">
         {state && !state.success ? <Alert variant="error">{state.error}</Alert> : null}
         {state?.success ? <Alert variant="success">{state.message ?? "Distribution updated."}</Alert> : null}
+        {requiresApproval ? (
+          <Alert variant="info" className="text-sm font-normal">
+            This LLC has multiple active members. Saving this form will create an approval request instead of applying changes immediately.
+          </Alert>
+        ) : null}
 
         <form action={formAction} className="space-y-4">
           <input type="hidden" name="accountId" value={accountId} />
@@ -256,8 +270,15 @@ export function DistributionConfigPanel({
             <div className="text-xs text-zinc-500">
               Members without a payout account keep their share in the LLC account.
             </div>
-            <SubmitButton disabled={disableSave} title="Save this distribution configuration.">
-              Save Distribution
+            <SubmitButton
+              disabled={disableSave}
+              title={
+                requiresApproval
+                  ? "Submit this distribution update for member approval."
+                  : "Save this distribution configuration."
+              }
+            >
+              {requiresApproval ? "Request Approval" : "Save Distribution"}
             </SubmitButton>
           </div>
         </form>

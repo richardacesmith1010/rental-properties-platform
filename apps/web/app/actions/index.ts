@@ -14,6 +14,22 @@ export {
   updateManagementFee
 } from "./connect";
 export { updateDistributionConfig } from "./distributions";
+export {
+  submitDistributionChangeRequest,
+  voteOnDistributionChange
+} from "./distribution-approvals";
+export {
+  submitWithdrawalRequest,
+  voteOnWithdrawal
+} from "./withdrawals";
+export {
+  deleteAllProperties,
+  deleteAllTenants,
+  deleteAllManagers,
+  deleteAllLeases,
+  deleteAllFinancialData,
+  fullAccountWipe
+} from "./account-wipe";
 export { completeOnboarding } from "./profile";
 export { updateProfile } from "./profile";
 export { uploadAvatar } from "./profile";

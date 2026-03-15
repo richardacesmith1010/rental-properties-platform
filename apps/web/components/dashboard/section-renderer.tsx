@@ -17,7 +17,9 @@ import type { ApplicationDTO } from "@/lib/applications";
 import type { AnalyticsDashboardData } from "@/lib/analytics";
 import type { AuditLogEntry } from "@/lib/audit";
 import type { RentIncreaseEntry } from "@/lib/rent-increases";
-import type { DistributionHistoryEntry } from "@/lib/distributions";
+import type { DistributionHistoryEntry, FinancialActivityEvent } from "@/lib/distributions";
+import type { DistributionChangeRequestDTO } from "@/lib/distribution-approvals";
+import type { WithdrawalRequestDTO } from "@/lib/withdrawals";
 import type { ActionState } from "@/app/actions";
 import { FeatureWarning } from "@/components/shared/feature-warning";
 import { KpiGrid } from "./kpi-grid";
@@ -79,7 +81,11 @@ interface SectionRendererProps {
   safeOwnershipAccounts: OwnershipAccountDTO[];
   ownershipMembers?: OwnershipMemberDTO[];
   distributionHistory?: DistributionHistoryEntry[];
+  pendingChangeRequests?: DistributionChangeRequestDTO[];
+  pendingWithdrawals?: WithdrawalRequestDTO[];
+  financialActivityFeed?: FinancialActivityEvent[];
   activeAccountId?: string | null;
+  currentUserId?: string;
   safeCapabilities: FeatureCapabilitiesDTO;
   sortedVendors: VendorDTO[];
   hasLeasingSection: boolean;
@@ -136,7 +142,11 @@ interface SectionRendererProps {
   onLinkPropertyToOwnershipAccount?: StatefulAction;
   onInitiateAccountStripeConnect?: StatefulAction;
   onUpdateDistributionConfig?: StatefulAction;
+  onSubmitDistributionChangeRequest?: StatefulAction;
+  onVoteOnDistributionChange?: StatefulAction;
   onInitiateMemberPayoutConnect?: StatefulAction;
+  onSubmitWithdrawalRequest?: StatefulAction;
+  onVoteOnWithdrawal?: StatefulAction;
   onUpdateManagementFee?: StatefulAction;
   onCreateProperty: StatefulAction;
   onCreateUnit: StatefulAction;
@@ -183,7 +193,11 @@ export function SectionRenderer({
   safeOwnershipAccounts,
   ownershipMembers,
   distributionHistory,
+  pendingChangeRequests,
+  pendingWithdrawals,
+  financialActivityFeed,
   activeAccountId,
+  currentUserId,
   safeCapabilities,
   sortedVendors,
   hasLeasingSection,
@@ -240,7 +254,11 @@ export function SectionRenderer({
   onLinkPropertyToOwnershipAccount,
   onInitiateAccountStripeConnect,
   onUpdateDistributionConfig,
+  onSubmitDistributionChangeRequest,
+  onVoteOnDistributionChange,
   onInitiateMemberPayoutConnect,
+  onSubmitWithdrawalRequest,
+  onVoteOnWithdrawal,
   onUpdateManagementFee,
   onCreateProperty,
   onCreateUnit,
@@ -453,11 +471,19 @@ export function SectionRenderer({
           }))}
           members={ownershipMembers}
           distributionHistory={distributionHistory}
+          pendingChangeRequests={pendingChangeRequests}
+          pendingWithdrawals={pendingWithdrawals}
+          financialActivityFeed={financialActivityFeed}
+          currentUserId={currentUserId}
           onCreateOwnershipAccount={onCreateOwnershipAccount!}
           onLinkPropertyToOwnershipAccount={onLinkPropertyToOwnershipAccount!}
           onInitiateAccountStripeConnect={onInitiateAccountStripeConnect}
           onUpdateDistributionConfig={onUpdateDistributionConfig}
+          onSubmitDistributionChangeRequest={onSubmitDistributionChangeRequest}
+          onVoteOnDistributionChange={onVoteOnDistributionChange}
           onInitiateMemberPayoutConnect={onInitiateMemberPayoutConnect}
+          onSubmitWithdrawalRequest={onSubmitWithdrawalRequest}
+          onVoteOnWithdrawal={onVoteOnWithdrawal}
         />
       ) : (
         <FeatureWarning

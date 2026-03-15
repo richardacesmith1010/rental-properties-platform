@@ -4,6 +4,7 @@ import { buildNotificationEmail } from "@/lib/email-templates";
 import { shouldRecordSuccessfulDelivery } from "@/lib/idempotency";
 import { ensureInboxThreadForEvent } from "@/lib/inbox";
 import { getNotificationPreference } from "@/lib/notification-preferences";
+import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 export type NotificationType =
   | "new_ticket"
@@ -19,7 +20,14 @@ export type NotificationType =
   | "achievement_unlocked"
   | "lease_expiring_soon"
   | "lease_expired"
-  | "delinquency_escalation";
+  | "delinquency_escalation"
+  | "distribution_change_requested"
+  | "distribution_change_approved"
+  | "distribution_change_rejected"
+  | "withdrawal_requested"
+  | "withdrawal_approved"
+  | "withdrawal_rejected"
+  | "withdrawal_completed";
 
 export interface NotificationDTO {
   id: string;
@@ -261,6 +269,70 @@ export async function notifyOwnerMembersForProperty(params: NotifyOwnerMembersPa
     }
   } catch (error) {
     console.error("Failed to notify owner members:", error);
+  }
+}
+
+interface NotifyAccountMembersParams {
+  accountId: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  entityType: string;
+  entityId?: string | null;
+  excludeProfileId?: string | null;
+}
+
+export async function notifyAccountMembers(params: NotifyAccountMembersParams) {
+  try {
+    const admin = createAdminClient();
+    const { data: members, error: membersError } = await admin
+      .from("ownership_account_members")
+      .select("profile_id")
+      .eq("account_id", params.accountId)
+      .eq("active", true);
+
+    if (membersError) {
+      if (!isMissingSchemaError(membersError)) {
+        console.error("notifyAccountMembers member query error:", membersError);
+      }
+      return;
+    }
+
+    const recipientIds = (members ?? [])
+      .map((member) => member.profile_id)
+      .filter((profileId) => profileId !== params.excludeProfileId);
+
+    if (recipientIds.length === 0) {
+      return;
+    }
+
+    const { data: profiles, error: profilesError } = await admin
+      .from("profiles")
+      .select("id, email")
+      .in("id", recipientIds);
+
+    if (profilesError) {
+      if (!isMissingSchemaError(profilesError)) {
+        console.error("notifyAccountMembers profile query error:", profilesError);
+      }
+      return;
+    }
+
+    await Promise.all(
+      (profiles ?? []).map((profile) =>
+        createNotificationWithDelivery({
+          recipientProfileId: profile.id,
+          recipientEmail: profile.email,
+          type: params.type,
+          title: params.title,
+          body: params.body,
+          entityType: params.entityType,
+          entityId: params.entityId ?? null
+        })
+      )
+    );
+  } catch (error) {
+    console.error("Failed to notify account members:", error);
   }
 }
 

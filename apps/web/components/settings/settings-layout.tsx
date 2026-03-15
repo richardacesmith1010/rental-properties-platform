@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Bell, Building2, CreditCard, Palette, Shield, User } from "lucide-react";
+import { Bell, Building2, CreditCard, Palette, Shield, Trash2, User } from "lucide-react";
 import { cn } from "@/lib/format";
 
 type SettingsRole = "owner" | "manager" | "tenant";
@@ -30,7 +30,8 @@ const settingsNav: SettingsNavItem[] = [
   { id: "bank", label: "Bank Account", icon: Building2, roles: ["owner", "manager"] },
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "appearance", label: "Appearance", icon: Palette },
-  { id: "security", label: "Security", icon: Shield }
+  { id: "security", label: "Security", icon: Shield },
+  { id: "account", label: "Account & Data", icon: Trash2 }
 ];
 
 export function SettingsLayout({ role, sections }: SettingsLayoutProps) {

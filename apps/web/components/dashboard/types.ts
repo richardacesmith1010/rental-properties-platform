@@ -16,7 +16,9 @@ import type { UserGamificationData } from "@/lib/gamification";
 import type { AnalyticsDashboardData } from "@/lib/analytics";
 import type { AuditLogEntry } from "@/lib/audit";
 import type { RentIncreaseEntry } from "@/lib/rent-increases";
-import type { DistributionHistoryEntry } from "@/lib/distributions";
+import type { DistributionHistoryEntry, FinancialActivityEvent } from "@/lib/distributions";
+import type { DistributionChangeRequestDTO } from "@/lib/distribution-approvals";
+import type { WithdrawalRequestDTO } from "@/lib/withdrawals";
 import type { ActionState } from "@/app/actions";
 import type { ManagerWorkflowMode, OwnerWorkflowMode } from "./dashboard-config";
 
@@ -27,6 +29,7 @@ export interface DashboardProps {
   data: DashboardData;
   isEmpty?: boolean;
   activeAccountId?: string | null;
+  currentUserId?: string;
   portfolio?: PortfolioData;
   tickets?: MaintenanceTicket[];
   invitations?: InvitationListItem[];
@@ -41,6 +44,9 @@ export interface DashboardProps {
   ownershipAccounts?: OwnershipAccountDTO[];
   ownershipMembers?: OwnershipMemberDTO[];
   distributionHistory?: DistributionHistoryEntry[];
+  pendingChangeRequests?: DistributionChangeRequestDTO[];
+  pendingWithdrawals?: WithdrawalRequestDTO[];
+  financialActivityFeed?: FinancialActivityEvent[];
   listings?: RentalListingDTO[];
   applications?: ApplicationDTO[];
   applicationCount?: number;
@@ -110,6 +116,10 @@ export interface DashboardProps {
   onLinkPropertyToOwnershipAccount?: StatefulAction;
   onInitiateAccountStripeConnect?: StatefulAction;
   onUpdateDistributionConfig?: StatefulAction;
+  onSubmitDistributionChangeRequest?: StatefulAction;
+  onVoteOnDistributionChange?: StatefulAction;
   onInitiateMemberPayoutConnect?: StatefulAction;
+  onSubmitWithdrawalRequest?: StatefulAction;
+  onVoteOnWithdrawal?: StatefulAction;
   onUpdateManagementFee?: StatefulAction;
 }

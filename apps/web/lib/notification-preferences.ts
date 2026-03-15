@@ -84,6 +84,41 @@ export const NOTIFICATION_PREFERENCE_OPTIONS: NotificationPreferenceOption[] = [
     type: "delinquency_escalation",
     label: "Delinquency escalation",
     description: "30, 60, and 90 day past-due escalation notices."
+  },
+  {
+    type: "distribution_change_requested",
+    label: "Distribution change requested",
+    description: "A member proposed a new LLC distribution configuration."
+  },
+  {
+    type: "distribution_change_approved",
+    label: "Distribution change approved",
+    description: "A pending distribution update has been approved and applied."
+  },
+  {
+    type: "distribution_change_rejected",
+    label: "Distribution change rejected",
+    description: "A pending distribution update has been rejected."
+  },
+  {
+    type: "withdrawal_requested",
+    label: "Withdrawal requested",
+    description: "A member requested a withdrawal from an ownership account."
+  },
+  {
+    type: "withdrawal_approved",
+    label: "Withdrawal approved",
+    description: "A pending withdrawal request has been approved."
+  },
+  {
+    type: "withdrawal_rejected",
+    label: "Withdrawal rejected",
+    description: "A pending withdrawal request has been rejected."
+  },
+  {
+    type: "withdrawal_completed",
+    label: "Withdrawal completed",
+    description: "A withdrawal request has been completed."
   }
 ];
 

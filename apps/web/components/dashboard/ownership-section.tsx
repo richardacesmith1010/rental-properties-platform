@@ -13,10 +13,15 @@ import { SubmitButton } from "@/components/shared/submit-button";
 import { Button } from "@/components/ui/button";
 import type { ActionState } from "@/app/actions";
 import type { OwnershipAccountDTO, OwnershipMemberDTO } from "@/lib/ownership";
-import type { DistributionHistoryEntry } from "@/lib/distributions";
+import type { DistributionHistoryEntry, FinancialActivityEvent } from "@/lib/distributions";
+import type { DistributionChangeRequestDTO } from "@/lib/distribution-approvals";
+import type { WithdrawalRequestDTO } from "@/lib/withdrawals";
 import { Alert } from "@/components/ui/alert";
 import { DistributionConfigPanel } from "./distribution-config-panel";
 import { DistributionHistory } from "./distribution-history";
+import { DistributionApprovalCard } from "./distribution-approval-card";
+import { WithdrawalRequestCard } from "./withdrawal-request-card";
+import { FinancialActivityFeed } from "./financial-activity-feed";
 
 type StatefulAction = (
   prev: ActionState,
@@ -31,15 +36,23 @@ interface PropertyOption {
 
 interface OwnershipSectionProps {
   activeAccountId?: string | null;
+  currentUserId?: string;
   accounts: OwnershipAccountDTO[];
   properties: PropertyOption[];
   members?: OwnershipMemberDTO[];
   distributionHistory?: DistributionHistoryEntry[];
+  pendingChangeRequests?: DistributionChangeRequestDTO[];
+  pendingWithdrawals?: WithdrawalRequestDTO[];
+  financialActivityFeed?: FinancialActivityEvent[];
   onCreateOwnershipAccount: StatefulAction;
   onLinkPropertyToOwnershipAccount: StatefulAction;
   onInitiateAccountStripeConnect?: StatefulAction;
   onUpdateDistributionConfig?: StatefulAction;
+  onSubmitDistributionChangeRequest?: StatefulAction;
+  onVoteOnDistributionChange?: StatefulAction;
   onInitiateMemberPayoutConnect?: StatefulAction;
+  onSubmitWithdrawalRequest?: StatefulAction;
+  onVoteOnWithdrawal?: StatefulAction;
 }
 
 type OwnershipFlow = "create_account" | "link_property";
@@ -157,17 +170,92 @@ function OwnershipAccountStripeControl({
   );
 }
 
+function WithdrawalRequestForm({
+  accountId,
+  onSubmitWithdrawalRequest
+}: {
+  accountId: string;
+  onSubmitWithdrawalRequest: StatefulAction;
+}) {
+  const [state, formAction] = useFormState(onSubmitWithdrawalRequest, null);
+  const [amountDollars, setAmountDollars] = useState("");
+  const [reason, setReason] = useState("");
+  const amountValue = Number.parseFloat(amountDollars);
+  const disableSubmit = !Number.isFinite(amountValue) || amountValue <= 0;
+
+  useEffect(() => {
+    if (state?.success) {
+      setAmountDollars("");
+      setReason("");
+    }
+  }, [state]);
+
+  return (
+    <Card className="mt-3 border-amber-200/80 bg-amber-50/20">
+      <CardHeader>
+        <CardTitle>Request Withdrawal</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {state && !state.success ? <Alert variant="error">{state.error}</Alert> : null}
+        {state?.success ? <Alert variant="success">{state.message ?? "Withdrawal request submitted."}</Alert> : null}
+        <form action={formAction} className="space-y-4">
+          <input type="hidden" name="accountId" value={accountId} />
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-zinc-700">Amount</label>
+            <Input
+              name="amountDollars"
+              type="number"
+              min="0"
+              step="0.01"
+              value={amountDollars}
+              onChange={(event) => setAmountDollars(event.target.value)}
+              placeholder="0.00"
+              title="Enter the requested withdrawal amount in dollars."
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-zinc-700">Reason</label>
+            <textarea
+              name="reason"
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              rows={3}
+              className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm transition-all duration-150 placeholder:text-zinc-400 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+              placeholder="Optional context for other members."
+              title="Explain why this withdrawal is needed."
+            />
+          </div>
+          <SubmitButton
+            disabled={disableSubmit}
+            title="Submit this withdrawal request for member approval."
+          >
+            Request Withdrawal
+          </SubmitButton>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function OwnershipSection({
   activeAccountId,
+  currentUserId,
   accounts,
   properties,
   members,
   distributionHistory,
+  pendingChangeRequests,
+  pendingWithdrawals,
+  financialActivityFeed,
   onCreateOwnershipAccount,
   onLinkPropertyToOwnershipAccount,
   onInitiateAccountStripeConnect,
   onUpdateDistributionConfig,
-  onInitiateMemberPayoutConnect
+  onSubmitDistributionChangeRequest,
+  onVoteOnDistributionChange,
+  onInitiateMemberPayoutConnect,
+  onSubmitWithdrawalRequest,
+  onVoteOnWithdrawal
 }: OwnershipSectionProps) {
   const [createState, createAction] = useFormState(onCreateOwnershipAccount, null);
   const [linkState, linkAction] = useFormState(onLinkPropertyToOwnershipAccount, null);
@@ -175,6 +263,8 @@ export function OwnershipSection({
   const [createStep, setCreateStep] = useState(0);
   const [linkStep, setLinkStep] = useState(0);
   const [distributionAccountId, setDistributionAccountId] = useState<string | null>(null);
+  const [showWithdrawalForm, setShowWithdrawalForm] = useState(false);
+  const [activityView, setActivityView] = useState<"history" | "activity">("history");
   const [createDraft, setCreateDraft] = useState<CreateAccountDraft>({
     accountType: "llc",
     displayName: ""
@@ -219,7 +309,12 @@ export function OwnershipSection({
 
   useEffect(() => {
     setDistributionAccountId((current) => (current === activeAccountId ? current : null));
+    setShowWithdrawalForm(false);
+    setActivityView("history");
   }, [activeAccountId]);
+
+  const activeAccount = accounts.find((account) => account.id === activeAccountId);
+  const isActiveLlcAccount = activeAccount?.accountType === "llc";
 
   return (
     <div id="ownership" className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -513,6 +608,10 @@ export function OwnershipSection({
                     account.accountType === "llc" &&
                     account.id === activeAccountId &&
                     Boolean(onUpdateDistributionConfig);
+                  const canRequestWithdrawal =
+                    account.accountType === "llc" &&
+                    account.id === activeAccountId &&
+                    Boolean(onSubmitWithdrawalRequest);
                   const showDistributionPanel = distributionAccountId === account.id;
 
                   return (
@@ -537,21 +636,34 @@ export function OwnershipSection({
                             onInitiateAccountStripeConnect={onInitiateAccountStripeConnect}
                           />
                           {canConfigureDistribution ? (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() =>
-                                setDistributionAccountId(
-                                  distributionAccountId === account.id ? null : account.id
-                                )
-                              }
-                              title={`Configure how rent payments are distributed for ${account.displayName}.`}
-                            >
-                              {distributionAccountId === account.id
-                                ? "Hide Distribution"
-                                : "Configure Distribution"}
-                            </Button>
+                            <div className="flex flex-wrap justify-end gap-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  setDistributionAccountId(
+                                    distributionAccountId === account.id ? null : account.id
+                                  )
+                                }
+                                title={`Configure how rent payments are distributed for ${account.displayName}.`}
+                              >
+                                {distributionAccountId === account.id
+                                  ? "Hide Distribution"
+                                  : "Configure Distribution"}
+                              </Button>
+                              {canRequestWithdrawal ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setShowWithdrawalForm((current) => !current)}
+                                  title={`Request a withdrawal from ${account.displayName}.`}
+                                >
+                                  {showWithdrawalForm ? "Hide Withdrawal" : "Request Withdrawal"}
+                                </Button>
+                              ) : null}
+                            </div>
                           ) : null}
                         </div>
                       </DataRow>
@@ -562,6 +674,7 @@ export function OwnershipSection({
                           currentMode={account.distributionMode}
                           members={members.filter((member) => member.active)}
                           onUpdateDistributionConfig={onUpdateDistributionConfig}
+                          onSubmitDistributionChangeRequest={onSubmitDistributionChangeRequest}
                           onInitiateMemberPayoutConnect={onInitiateMemberPayoutConnect}
                         />
                       ) : null}
@@ -572,10 +685,64 @@ export function OwnershipSection({
             )}
           </CardContent>
         </Card>
-        {activeAccountId &&
-        accounts.some((account) => account.id === activeAccountId && account.accountType === "llc") &&
-        distributionHistory ? (
-          <DistributionHistory entries={distributionHistory} />
+        {isActiveLlcAccount && pendingChangeRequests && pendingChangeRequests.length > 0 && currentUserId && onVoteOnDistributionChange ? (
+          <div className="space-y-3">
+            {pendingChangeRequests.map((request) => (
+              <DistributionApprovalCard
+                key={request.id}
+                request={request}
+                currentUserId={currentUserId}
+                onVote={onVoteOnDistributionChange}
+              />
+            ))}
+          </div>
+        ) : null}
+        {isActiveLlcAccount && activeAccountId && showWithdrawalForm && onSubmitWithdrawalRequest ? (
+          <WithdrawalRequestForm
+            accountId={activeAccountId}
+            onSubmitWithdrawalRequest={onSubmitWithdrawalRequest}
+          />
+        ) : null}
+        {isActiveLlcAccount && pendingWithdrawals && pendingWithdrawals.length > 0 && currentUserId && onVoteOnWithdrawal ? (
+          <div className="space-y-3">
+            {pendingWithdrawals.map((request) => (
+              <WithdrawalRequestCard
+                key={request.id}
+                request={request}
+                currentUserId={currentUserId}
+                onVote={onVoteOnWithdrawal}
+              />
+            ))}
+          </div>
+        ) : null}
+        {isActiveLlcAccount ? (
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={activityView === "history" ? "default" : "outline"}
+                onClick={() => setActivityView("history")}
+                title="Show distribution transfer history."
+              >
+                Distribution History
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={activityView === "activity" ? "default" : "outline"}
+                onClick={() => setActivityView("activity")}
+                title="Show the combined financial activity feed."
+              >
+                Activity Feed
+              </Button>
+            </div>
+            {activityView === "history" ? (
+              <DistributionHistory entries={distributionHistory ?? []} />
+            ) : (
+              <FinancialActivityFeed events={financialActivityFeed ?? []} />
+            )}
+          </div>
         ) : null}
       </div>
     </div>

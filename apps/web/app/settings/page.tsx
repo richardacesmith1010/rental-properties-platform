@@ -8,6 +8,12 @@ import {
 } from "@/lib/auth";
 import {
   disableAutopay,
+  deleteAllFinancialData,
+  deleteAllLeases,
+  deleteAllManagers,
+  deleteAllProperties,
+  deleteAllTenants,
+  fullAccountWipe,
   getExpressDashboardUrl,
   saveNotificationPreference,
   setupAutopay,
@@ -21,6 +27,7 @@ import { ThemeSettingsPanel } from "@/components/settings/theme-settings-panel";
 import { PasswordSettings } from "@/components/settings/password-settings";
 import { ProfileSettings } from "@/components/settings/profile-settings";
 import { SettingsLayout } from "@/components/settings/settings-layout";
+import { AccountDataSettings } from "@/components/settings/account-data-settings";
 import { Alert } from "@/components/ui/alert";
 import {
   getUserNotificationPreferences,
@@ -149,6 +156,20 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             security: {
               title: "Security",
               content: <PasswordSettings />
+            },
+            account: {
+              title: "Account & Data",
+              description: "Manage your data. Destructive actions cannot be undone.",
+              content: (
+                <AccountDataSettings
+                  onDeleteAllProperties={deleteAllProperties}
+                  onDeleteAllTenants={deleteAllTenants}
+                  onDeleteAllManagers={deleteAllManagers}
+                  onDeleteAllLeases={deleteAllLeases}
+                  onDeleteAllFinancialData={deleteAllFinancialData}
+                  onFullAccountWipe={fullAccountWipe}
+                />
+              )
             }
           }}
         />

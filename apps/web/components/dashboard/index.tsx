@@ -48,6 +48,7 @@ export function Dashboard({
   data,
   isEmpty = false,
   activeAccountId,
+  currentUserId,
   portfolio,
   tickets,
   invitations,
@@ -62,6 +63,9 @@ export function Dashboard({
   ownershipAccounts,
   ownershipMembers,
   distributionHistory,
+  pendingChangeRequests,
+  pendingWithdrawals,
+  financialActivityFeed,
   listings,
   applications,
   applicationCount,
@@ -131,7 +135,11 @@ export function Dashboard({
   onLinkPropertyToOwnershipAccount,
   onInitiateAccountStripeConnect,
   onUpdateDistributionConfig,
+  onSubmitDistributionChangeRequest,
+  onVoteOnDistributionChange,
   onInitiateMemberPayoutConnect,
+  onSubmitWithdrawalRequest,
+  onVoteOnWithdrawal,
   onUpdateManagementFee
 }: DashboardProps) {
   const resolvedGamification = gamification ?? {
@@ -258,6 +266,22 @@ export function Dashboard({
   const [managerWorkflowMode, setManagerWorkflowMode] = useState<ManagerWorkflowMode>(
     initialManagerWorkflowMode ?? "daily_ops"
   );
+  useEffect(() => {
+    if (!initialOwnerWorkflowMode) {
+      return;
+    }
+    setOwnerWorkflowMode((current) =>
+      current === initialOwnerWorkflowMode ? current : initialOwnerWorkflowMode
+    );
+  }, [initialOwnerWorkflowMode]);
+  useEffect(() => {
+    if (!initialManagerWorkflowMode) {
+      return;
+    }
+    setManagerWorkflowMode((current) =>
+      current === initialManagerWorkflowMode ? current : initialManagerWorkflowMode
+    );
+  }, [initialManagerWorkflowMode]);
   const allSectionItems = useMemo<NavItem[]>(
     () =>
       buildAllSectionItems({
@@ -774,6 +798,10 @@ export function Dashboard({
               auditLogs={safeAuditLogs}
               rentIncreaseHistory={safeRentIncreaseHistory}
               safeOwnershipAccounts={safeOwnershipAccounts}
+              currentUserId={currentUserId}
+              pendingChangeRequests={pendingChangeRequests}
+              pendingWithdrawals={pendingWithdrawals}
+              financialActivityFeed={financialActivityFeed}
               safeCapabilities={safeCapabilities}
               sortedVendors={sortedVendors}
               hasLeasingSection={hasLeasingSection}
@@ -833,7 +861,11 @@ export function Dashboard({
               distributionHistory={distributionHistory}
               activeAccountId={activeAccountId}
               onUpdateDistributionConfig={onUpdateDistributionConfig}
+              onSubmitDistributionChangeRequest={onSubmitDistributionChangeRequest}
+              onVoteOnDistributionChange={onVoteOnDistributionChange}
               onInitiateMemberPayoutConnect={onInitiateMemberPayoutConnect}
+              onSubmitWithdrawalRequest={onSubmitWithdrawalRequest}
+              onVoteOnWithdrawal={onVoteOnWithdrawal}
               onUpdateManagementFee={onUpdateManagementFee}
               onCreateProperty={onCreateProperty}
               onCreateUnit={onCreateUnit}

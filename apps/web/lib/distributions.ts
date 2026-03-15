@@ -1,6 +1,10 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 
+type DistributionMode = "retain" | "split_equal" | "split_custom";
+
+type DistributionStatus = "completed" | "failed" | "pending";
+
 export interface DistributionHistoryEntry {
   id: string;
   paymentId: string;
@@ -10,14 +14,91 @@ export interface DistributionHistoryEntry {
   amountCents: number;
   distributionPct: number | null;
   stripeTransferId: string | null;
-  status: "completed" | "failed" | "pending";
+  status: DistributionStatus;
   createdAt: string;
 }
 
-interface DistributionMemberRow {
+export interface DistributionMemberConfig {
+  profileId: string;
+  pct: number | null;
+}
+
+export interface DistributionConfigSnapshot {
+  mode: DistributionMode;
+  members: DistributionMemberConfig[];
+}
+
+export interface DistributionMemberRow {
   profileId: string;
   distributionPct: number | null;
   payoutStripeAccountId: string | null;
+}
+
+export interface FinancialActivityEvent {
+  id: string;
+  type: "distribution" | "config_change" | "withdrawal" | "expense";
+  title: string;
+  description: string;
+  amountCents: number | null;
+  status: string | null;
+  createdAt: string;
+}
+
+interface ProfileRow {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+}
+
+function roundPct(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+function toNumber(value: number | string | null | undefined): number | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const parsed = typeof value === "number" ? value : Number.parseFloat(String(value));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function toDistributionMode(value: string | null | undefined): DistributionMode {
+  if (value === "split_equal" || value === "split_custom") {
+    return value;
+  }
+  return "retain";
+}
+
+function buildEqualDistribution(profileIds: string[]): DistributionMemberConfig[] {
+  if (profileIds.length === 0) {
+    return [];
+  }
+
+  const equalPct = roundPct(100 / profileIds.length);
+  const firstPct = roundPct(100 - equalPct * (profileIds.length - 1));
+
+  return profileIds.map((profileId, index) => ({
+    profileId,
+    pct: index === 0 ? firstPct : equalPct
+  }));
+}
+
+async function getProfilesById(profileIds: string[]) {
+  const admin = createAdminClient();
+  if (profileIds.length === 0) {
+    return new Map<string, ProfileRow>();
+  }
+
+  const { data, error } = await admin.from("profiles").select("id, full_name, email").in("id", profileIds);
+  if (error) {
+    if (!isMissingSchemaError(error)) {
+      console.error("getProfilesById error:", error);
+    }
+    return new Map<string, ProfileRow>();
+  }
+
+  return new Map((data ?? []).map((profile) => [profile.id, profile]));
 }
 
 export async function getDistributionHistory(
@@ -47,16 +128,9 @@ export async function getDistributionHistory(
     return [];
   }
 
-  const profileIds = Array.from(new Set(data.map((row) => row.member_profile_id)));
-  const { data: profiles, error: profilesError } = profileIds.length
-    ? await admin.from("profiles").select("id, full_name, email").in("id", profileIds)
-    : { data: [], error: null };
-
-  if (profilesError) {
-    console.error("getDistributionHistory profiles error:", profilesError);
-  }
-
-  const profileMap = new Map((profiles ?? []).map((profile) => [profile.id, profile]));
+  const profileMap = await getProfilesById(
+    Array.from(new Set(data.map((row) => row.member_profile_id)))
+  );
 
   return data.map((row) => {
     const profile = profileMap.get(row.member_profile_id);
@@ -67,12 +141,9 @@ export async function getDistributionHistory(
       memberName: profile?.full_name ?? "Unknown",
       memberEmail: profile?.email ?? "unknown",
       amountCents: row.amount_cents,
-      distributionPct:
-        row.distribution_pct === null || row.distribution_pct === undefined
-          ? null
-          : Number(row.distribution_pct),
+      distributionPct: toNumber(row.distribution_pct),
       stripeTransferId: row.stripe_transfer_id,
-      status: row.status as DistributionHistoryEntry["status"],
+      status: row.status as DistributionStatus,
       createdAt: row.created_at
     };
   });
@@ -108,7 +179,7 @@ export function validateDistributionConfig(
 }
 
 export async function getDistributionMembersForAccount(accountId: string): Promise<{
-  mode: string;
+  mode: DistributionMode;
   members: DistributionMemberRow[];
 }> {
   const admin = createAdminClient();
@@ -119,12 +190,8 @@ export async function getDistributionMembersForAccount(accountId: string): Promi
       .select("profile_id, distribution_pct, payout_stripe_account_id")
       .eq("account_id", accountId)
       .eq("active", true)
+      .order("created_at", { ascending: true })
   ]);
-
-  const mode =
-    accountResult.error && isMissingSchemaError(accountResult.error)
-      ? "retain"
-      : accountResult.data?.distribution_mode ?? "retain";
 
   if (accountResult.error && !isMissingSchemaError(accountResult.error)) {
     console.error("getDistributionMembersForAccount account error:", accountResult.error);
@@ -137,7 +204,8 @@ export async function getDistributionMembersForAccount(accountId: string): Promi
         .from("ownership_account_members")
         .select("profile_id")
         .eq("account_id", accountId)
-        .eq("active", true);
+        .eq("active", true)
+        .order("created_at", { ascending: true });
       if (fallback.error && !isMissingSchemaError(fallback.error)) {
         console.error("getDistributionMembersForAccount fallback error:", fallback.error);
       }
@@ -153,14 +221,245 @@ export async function getDistributionMembersForAccount(accountId: string): Promi
   }
 
   return {
-    mode,
+    mode: toDistributionMode(accountResult.data?.distribution_mode),
     members: rows.map((member) => ({
       profileId: member.profile_id,
-      distributionPct:
-        member.distribution_pct === null || member.distribution_pct === undefined
-          ? null
-          : Number(member.distribution_pct),
+      distributionPct: toNumber(member.distribution_pct),
       payoutStripeAccountId: member.payout_stripe_account_id ?? null
     }))
   };
+}
+
+export async function getDistributionConfigSnapshot(
+  accountId: string
+): Promise<DistributionConfigSnapshot> {
+  const { mode, members } = await getDistributionMembersForAccount(accountId);
+  return {
+    mode,
+    members: members.map((member) => ({
+      profileId: member.profileId,
+      pct: member.distributionPct
+    }))
+  };
+}
+
+export function buildDistributionConfigSnapshot(
+  mode: DistributionMode,
+  profileIds: string[],
+  memberPcts?: Map<string, number>
+): DistributionConfigSnapshot {
+  if (mode === "retain") {
+    return {
+      mode,
+      members: profileIds.map((profileId) => ({ profileId, pct: null }))
+    };
+  }
+
+  if (mode === "split_equal") {
+    return {
+      mode,
+      members: buildEqualDistribution(profileIds)
+    };
+  }
+
+  return {
+    mode,
+    members: profileIds.map((profileId) => ({
+      profileId,
+      pct: roundPct(memberPcts?.get(profileId) ?? 0)
+    }))
+  };
+}
+
+export async function applyDistributionConfig(
+  accountId: string,
+  config: DistributionConfigSnapshot
+): Promise<{ success: true } | { success: false; error: string }> {
+  const admin = createAdminClient();
+  const activeMembers = await getDistributionMembersForAccount(accountId);
+  const activeProfileIds = activeMembers.members.map((member) => member.profileId);
+
+  const targetMembers = buildDistributionConfigSnapshot(
+    config.mode,
+    activeProfileIds,
+    new Map(
+      config.members.map((member) => [member.profileId, member.pct ?? 0])
+    )
+  ).members;
+
+  const memberUpdates = targetMembers.map((member) =>
+    admin
+      .from("ownership_account_members")
+      .update({ distribution_pct: member.pct })
+      .eq("account_id", accountId)
+      .eq("profile_id", member.profileId)
+  );
+
+  const results = await Promise.all([
+    ...memberUpdates,
+    admin
+      .from("ownership_accounts")
+      .update({ distribution_mode: config.mode })
+      .eq("id", accountId)
+  ]);
+
+  const failingResult = results.find((result) => result.error);
+  if (failingResult?.error) {
+    if (isMissingSchemaError(failingResult.error)) {
+      return {
+        success: false,
+        error: "Distribution settings require a database update before they can be used."
+      };
+    }
+    console.error("applyDistributionConfig error:", failingResult.error);
+    return { success: false, error: "Unable to save distribution settings." };
+  }
+
+  return { success: true };
+}
+
+export async function getFinancialActivityFeed(
+  accountId: string,
+  limit = 50
+): Promise<FinancialActivityEvent[]> {
+  const admin = createAdminClient();
+  const safeLimit = Math.max(1, limit);
+
+  const [
+    distributionsResult,
+    configChangesResult,
+    withdrawalsResult,
+    expensePropertiesResult
+  ] = await Promise.all([
+    admin
+      .from("payment_distributions")
+      .select("id, member_profile_id, amount_cents, status, created_at")
+      .eq("account_id", accountId)
+      .order("created_at", { ascending: false })
+      .limit(safeLimit),
+    admin
+      .from("distribution_change_requests")
+      .select("id, requested_by, proposed_config, status, created_at")
+      .eq("ownership_account_id", accountId)
+      .order("created_at", { ascending: false })
+      .limit(safeLimit),
+    admin
+      .from("withdrawal_requests")
+      .select("id, requested_by, amount_cents, reason, status, created_at")
+      .eq("ownership_account_id", accountId)
+      .order("created_at", { ascending: false })
+      .limit(safeLimit),
+    admin.from("properties").select("id, name").eq("owner_account_id", accountId)
+  ]);
+
+  const expenseProperties = expensePropertiesResult.error
+    ? []
+    : (expensePropertiesResult.data ?? []);
+  if (expensePropertiesResult.error && !isMissingSchemaError(expensePropertiesResult.error)) {
+    console.error("getFinancialActivityFeed properties error:", expensePropertiesResult.error);
+  }
+
+  const propertyIds = expenseProperties.map((property) => property.id);
+  const expensesResult = propertyIds.length
+    ? await admin
+        .from("property_expenses")
+        .select("id, property_id, amount_cents, category, description, created_at")
+        .in("property_id", propertyIds)
+        .order("created_at", { ascending: false })
+        .limit(safeLimit)
+    : { data: [], error: null };
+
+  const profileIds = new Set<string>();
+  for (const row of distributionsResult.data ?? []) {
+    profileIds.add(row.member_profile_id);
+  }
+  for (const row of configChangesResult.data ?? []) {
+    profileIds.add(row.requested_by);
+  }
+  for (const row of withdrawalsResult.data ?? []) {
+    profileIds.add(row.requested_by);
+  }
+  const profileMap = await getProfilesById(Array.from(profileIds));
+  const propertyNameById = new Map(expenseProperties.map((property) => [property.id, property.name]));
+
+  const events: FinancialActivityEvent[] = [];
+
+  if (distributionsResult.error && !isMissingSchemaError(distributionsResult.error)) {
+    console.error("getFinancialActivityFeed distributions error:", distributionsResult.error);
+  }
+  for (const row of distributionsResult.data ?? []) {
+    const profile = profileMap.get(row.member_profile_id);
+    events.push({
+      id: `distribution:${row.id}`,
+      type: "distribution",
+      title: profile?.full_name
+        ? `Distribution to ${profile.full_name}`
+        : "Distribution recorded",
+      description: profile?.email
+        ? `Member transfer recorded for ${profile.email}.`
+        : "Member transfer recorded.",
+      amountCents: row.amount_cents,
+      status: row.status,
+      createdAt: row.created_at
+    });
+  }
+
+  if (configChangesResult.error && !isMissingSchemaError(configChangesResult.error)) {
+    console.error("getFinancialActivityFeed config changes error:", configChangesResult.error);
+  }
+  for (const row of configChangesResult.data ?? []) {
+    const proposedMode = toDistributionMode(
+      typeof row.proposed_config === "object" && row.proposed_config && "mode" in row.proposed_config
+        ? String((row.proposed_config as { mode?: string }).mode)
+        : null
+    );
+    const profile = profileMap.get(row.requested_by);
+    events.push({
+      id: `config_change:${row.id}`,
+      type: "config_change",
+      title: "Distribution config change",
+      description: `${profile?.full_name ?? "A member"} proposed ${proposedMode.replace(/_/g, " ")}.`,
+      amountCents: null,
+      status: row.status,
+      createdAt: row.created_at
+    });
+  }
+
+  if (withdrawalsResult.error && !isMissingSchemaError(withdrawalsResult.error)) {
+    console.error("getFinancialActivityFeed withdrawals error:", withdrawalsResult.error);
+  }
+  for (const row of withdrawalsResult.data ?? []) {
+    const profile = profileMap.get(row.requested_by);
+    events.push({
+      id: `withdrawal:${row.id}`,
+      type: "withdrawal",
+      title: "Withdrawal request",
+      description: row.reason?.trim()
+        ? `${profile?.full_name ?? "A member"}: ${row.reason.trim()}`
+        : `${profile?.full_name ?? "A member"} requested a withdrawal.`,
+      amountCents: row.amount_cents,
+      status: row.status,
+      createdAt: row.created_at
+    });
+  }
+
+  if (expensesResult.error && !isMissingSchemaError(expensesResult.error)) {
+    console.error("getFinancialActivityFeed expenses error:", expensesResult.error);
+  }
+  for (const row of expensesResult.data ?? []) {
+    const propertyName = propertyNameById.get(row.property_id) ?? "Property";
+    events.push({
+      id: `expense:${row.id}`,
+      type: "expense",
+      title: `${propertyName} expense`,
+      description: row.description?.trim() || `Recorded ${row.category.replace(/_/g, " ")} expense.`,
+      amountCents: row.amount_cents,
+      status: null,
+      createdAt: row.created_at
+    });
+  }
+
+  return events
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+    .slice(0, safeLimit);
 }

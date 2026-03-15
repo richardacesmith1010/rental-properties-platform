@@ -18,11 +18,15 @@ import { getUserGamification } from "@/lib/gamification";
 import { getOwnerAnalyticsData } from "@/lib/analytics";
 import { getRecentAuditLogs } from "@/lib/audit";
 import { getRentIncreaseHistory } from "@/lib/rent-increases";
-import { getDistributionHistory } from "@/lib/distributions";
+import { getDistributionHistory, getFinancialActivityFeed } from "@/lib/distributions";
+import { getPendingChangeRequests } from "@/lib/distribution-approvals";
+import { getPendingWithdrawals } from "@/lib/withdrawals";
 import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
 import {
   initiateAccountStripeConnect,
   initiateMemberPayoutConnect,
+  submitDistributionChangeRequest,
+  submitWithdrawalRequest,
   createCheckoutForCharge,
   recordManualPayment,
   createLease,
@@ -72,6 +76,8 @@ import {
   createOwnershipAccount,
   linkPropertyToOwnershipAccount,
   updateDistributionConfig,
+  voteOnDistributionChange,
+  voteOnWithdrawal,
   updateManagementFee
 } from "@/app/actions";
 import {
@@ -208,12 +214,21 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
   ).length;
   const activeAccount = ownershipAccounts.find((account) => account.id === activeAccountId);
   const isLlcAccount = activeAccount?.accountType === "llc";
-  const [ownershipMembers, distributionHistory] = await Promise.all([
+  const [ownershipMembers, distributionHistory, pendingChangeRequests, pendingWithdrawals, financialActivityFeed] = await Promise.all([
     isLlcAccount && activeAccountId
       ? getOwnershipMembersForAccount(user.id, activeAccountId)
       : Promise.resolve([]),
     isLlcAccount && activeAccountId
       ? getDistributionHistory(activeAccountId)
+      : Promise.resolve([]),
+    isLlcAccount && activeAccountId
+      ? getPendingChangeRequests(activeAccountId)
+      : Promise.resolve([]),
+    isLlcAccount && activeAccountId
+      ? getPendingWithdrawals(activeAccountId)
+      : Promise.resolve([]),
+    isLlcAccount && activeAccountId
+      ? getFinancialActivityFeed(activeAccountId)
       : Promise.resolve([])
   ]);
   const ownerConnectedMap = await arePropertyOwnersConnected(
@@ -246,7 +261,11 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       ownershipAccounts={ownershipAccounts}
       ownershipMembers={ownershipMembers}
       distributionHistory={distributionHistory}
+      pendingChangeRequests={pendingChangeRequests}
+      pendingWithdrawals={pendingWithdrawals}
+      financialActivityFeed={financialActivityFeed}
       activeAccountId={activeAccountId}
+      currentUserId={user.id}
       capabilities={capabilities}
       initialOwnerWorkflowMode={initialOwnerWorkflowMode}
       initialSectionId={initialSectionId}
@@ -308,7 +327,11 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       onLinkPropertyToOwnershipAccount={linkPropertyToOwnershipAccount}
       onInitiateAccountStripeConnect={initiateAccountStripeConnect}
       onUpdateDistributionConfig={updateDistributionConfig}
+      onSubmitDistributionChangeRequest={submitDistributionChangeRequest}
+      onVoteOnDistributionChange={voteOnDistributionChange}
       onInitiateMemberPayoutConnect={initiateMemberPayoutConnect}
+      onSubmitWithdrawalRequest={submitWithdrawalRequest}
+      onVoteOnWithdrawal={voteOnWithdrawal}
       onUpdateManagementFee={updateManagementFee}
     />
   );
