@@ -1,15 +1,32 @@
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 interface KpiCardProps {
-  label: string;
+  title: string;
   value: string;
-  badge: string;
+  subtitle?: string;
   gradient: string;
+  trend?: "up" | "down" | "flat" | null;
+  prefix?: string;
   alert?: boolean;
 }
 
-export function KpiCard({ label, value, badge, gradient, alert }: KpiCardProps) {
+const trendMap = {
+  up: { symbol: "↑", className: "text-emerald-400" },
+  down: { symbol: "↓", className: "text-rose-300" },
+  flat: { symbol: "→", className: "text-zinc-300" }
+} as const;
+
+export function KpiCard({
+  title,
+  value,
+  subtitle,
+  gradient,
+  trend = null,
+  prefix,
+  alert
+}: KpiCardProps) {
+  const trendDisplay = trend ? trendMap[trend] : null;
+
   return (
     <Card className={`relative overflow-hidden p-5 sm:p-6 ${alert ? "border-amber-200" : ""}`}>
       <div
@@ -17,14 +34,20 @@ export function KpiCard({ label, value, badge, gradient, alert }: KpiCardProps) 
         style={{ background: gradient }}
       />
       <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-        {label}
+        {title}
       </span>
-      <div className="mt-2 text-3xl font-extrabold tracking-tight text-zinc-950">
-        {value}
+      <div className="mt-2 flex items-end gap-2">
+        <div className="text-3xl font-extrabold tracking-tight text-zinc-950">
+          {prefix ?? ""}
+          {value}
+        </div>
+        {trendDisplay ? (
+          <span className={`pb-1 text-lg font-semibold ${trendDisplay.className}`}>
+            {trendDisplay.symbol}
+          </span>
+        ) : null}
       </div>
-      <div className="mt-2.5">
-        <Badge variant={alert ? "warning" : "default"}>{badge}</Badge>
-      </div>
+      {subtitle ? <p className="mt-2.5 text-sm font-medium text-zinc-600">{subtitle}</p> : null}
     </Card>
   );
 }

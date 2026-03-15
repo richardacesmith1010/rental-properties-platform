@@ -13,9 +13,11 @@ import { MaintenanceSection } from "./maintenance-section";
 import { OperationsSection } from "./operations-section";
 import { PaymentsSection } from "./payments-section";
 import { PortfolioSection } from "./portfolio-section";
+import { RentCollectionBar } from "./rent-collection-bar";
 import { SectionErrorBoundary } from "./section-error-boundary";
 import { UnitsSection } from "./units-section";
 import { VendorsSection } from "./vendors-section";
+import { computeTrend } from "@/lib/dashboard";
 import { lazySectionComponents, type SectionRendererProps } from "./section-map";
 
 const AnalyticsSection = dynamic(
@@ -39,6 +41,10 @@ const {
 } = lazySectionComponents;
 
 export function SectionRenderer(props: SectionRendererProps) {
+  const currentRentMetric = props.safeAnalytics.rentMetrics.at(-1) ?? null;
+  const previousRentMetric = props.safeAnalytics.rentMetrics.at(-2) ?? null;
+  const currentOccupancyMetric = props.safeAnalytics.occupancyMetrics.at(-1) ?? null;
+  const previousOccupancyMetric = props.safeAnalytics.occupancyMetrics.at(-2) ?? null;
   const propertyOptions = props.safePortfolio.properties.map((property) => ({
     id: property.id,
     name: property.name
@@ -52,6 +58,23 @@ export function SectionRenderer(props: SectionRendererProps) {
     props.approvedApplicationCount ??
     props.safeApplications.filter((application) => application.status === "approved").length;
   const totalApplicationCount = props.applicationCount ?? props.safeApplications.length;
+  const revenueTrend = computeTrend(
+    currentRentMetric?.dueCents ?? props.data.kpis.monthlyGrossRentCents,
+    previousRentMetric?.dueCents ?? null
+  );
+  const currentCollectionRate =
+    currentRentMetric && currentRentMetric.dueCents > 0
+      ? (currentRentMetric.collectedCents / currentRentMetric.dueCents) * 100
+      : props.data.kpis.collectionRate;
+  const previousCollectionRate =
+    previousRentMetric && previousRentMetric.dueCents > 0
+      ? (previousRentMetric.collectedCents / previousRentMetric.dueCents) * 100
+      : null;
+  const occupancyTrend = computeTrend(
+    currentOccupancyMetric?.rate ?? props.occupancy,
+    previousOccupancyMetric?.rate ?? null
+  );
+  const collectionTrend = computeTrend(currentCollectionRate, previousCollectionRate);
   const renderSection = (sectionName: string, content: ReactNode) => (
     <SectionErrorBoundary sectionName={sectionName}>{content}</SectionErrorBoundary>
   );
@@ -70,15 +93,17 @@ export function SectionRenderer(props: SectionRendererProps) {
             </p>
           </div>
           <KpiGrid
-            monthlyGrossRentCents={props.data.kpis.monthlyGrossRentCents}
+            kpis={props.data.kpis}
             occupancy={props.occupancy}
-            occupiedUnits={props.data.kpis.occupiedUnits}
-            totalUnits={props.data.kpis.totalUnits}
-            activeLeaseCount={props.data.kpis.activeLeaseCount}
-            openMaintenanceCount={props.data.kpis.openMaintenanceCount}
-            highPriorityMaintenanceCount={props.data.kpis.highPriorityMaintenanceCount}
-            lateRentCents={props.data.kpis.lateRentCents}
-            lateAccountCount={props.data.kpis.lateAccountCount}
+            netCashFlowCents={props.data.kpis.netCashFlowCents}
+            revenueTrend={revenueTrend}
+            occupancyTrend={occupancyTrend}
+            collectionTrend={collectionTrend}
+          />
+          <RentCollectionBar
+            collectedCents={props.data.kpis.collectedRentCents}
+            pendingCents={props.data.kpis.pendingRentCents}
+            overdueCents={props.data.kpis.overdueRentCents}
           />
         </>
       );

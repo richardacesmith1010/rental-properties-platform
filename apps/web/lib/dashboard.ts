@@ -4,7 +4,7 @@ import {
   getAdministeredPropertyIdsForAccount
 } from "@/lib/property-access";
 
-interface DashboardKpis {
+export interface DashboardKpis {
   monthlyGrossRentCents: number;
   activeLeaseCount: number;
   occupiedUnits: number;
@@ -13,6 +13,13 @@ interface DashboardKpis {
   highPriorityMaintenanceCount: number;
   lateRentCents: number;
   lateAccountCount: number;
+  collectedRentCents: number;
+  pendingRentCents: number;
+  overdueRentCents: number;
+  collectionRate: number;
+  outstandingCents: number;
+  outstandingAccountCount: number;
+  netCashFlowCents: number;
 }
 
 interface DashboardCharge {
@@ -45,6 +52,22 @@ export interface DashboardData {
   profileRole: "owner" | "manager" | "tenant";
 }
 
+export function computeTrend(
+  current: number,
+  previous: number | null | undefined
+): "up" | "down" | "flat" | null {
+  if (previous == null) {
+    return null;
+  }
+  if (current > previous) {
+    return "up";
+  }
+  if (current < previous) {
+    return "down";
+  }
+  return "flat";
+}
+
 function emptyData(role: DashboardData["profileRole"]): DashboardData {
   return {
     profileRole: role,
@@ -56,7 +79,14 @@ function emptyData(role: DashboardData["profileRole"]): DashboardData {
       openMaintenanceCount: 0,
       highPriorityMaintenanceCount: 0,
       lateRentCents: 0,
-      lateAccountCount: 0
+      lateAccountCount: 0,
+      collectedRentCents: 0,
+      pendingRentCents: 0,
+      overdueRentCents: 0,
+      collectionRate: 0,
+      outstandingCents: 0,
+      outstandingAccountCount: 0,
+      netCashFlowCents: 0
     },
     charges: [],
     recentPayments: []
@@ -284,6 +314,34 @@ export async function getDashboardData(
     }>;
   }
 
+  const now = new Date();
+  const currentMonth = now.getUTCMonth();
+  const currentYear = now.getUTCFullYear();
+  const currentMonthCharges = charges.filter((charge) => {
+    const dueDate = new Date(`${charge.due_date}T00:00:00.000Z`);
+    return (
+      !Number.isNaN(dueDate.getTime()) &&
+      dueDate.getUTCMonth() === currentMonth &&
+      dueDate.getUTCFullYear() === currentYear &&
+      charge.category === "rent"
+    );
+  });
+  const collectedRentCents = currentMonthCharges
+    .filter((charge) => charge.status === "paid")
+    .reduce((sum, charge) => sum + charge.amount_cents, 0);
+  const pendingRentCents = currentMonthCharges
+    .filter((charge) => charge.status === "pending")
+    .reduce((sum, charge) => sum + charge.amount_cents, 0);
+  const overdueRentCents = currentMonthCharges
+    .filter((charge) => charge.status === "late")
+    .reduce((sum, charge) => sum + charge.amount_cents, 0);
+  const totalDueCents = collectedRentCents + pendingRentCents + overdueRentCents;
+  const outstandingCharges = charges.filter(
+    (charge) => charge.status === "pending" || charge.status === "late"
+  );
+  const outstandingCents = outstandingCharges.reduce((sum, charge) => sum + charge.amount_cents, 0);
+  const outstandingAccountCount = new Set(outstandingCharges.map((charge) => charge.lease_id)).size;
+
   return {
     profileRole: role,
     kpis: {
@@ -299,7 +357,14 @@ export async function getDashboardData(
         maintenance?.filter((item) => item.priority === "high" || item.priority === "urgent")
           .length ?? 0,
       lateRentCents: lateCharges.reduce((sum, charge) => sum + charge.amount_cents, 0),
-      lateAccountCount: new Set(lateCharges.map((charge) => charge.lease_id)).size
+      lateAccountCount: new Set(lateCharges.map((charge) => charge.lease_id)).size,
+      collectedRentCents,
+      pendingRentCents,
+      overdueRentCents,
+      collectionRate: totalDueCents > 0 ? (collectedRentCents / totalDueCents) * 100 : 0,
+      outstandingCents,
+      outstandingAccountCount,
+      netCashFlowCents: 0
     },
     charges: charges.map((charge) => {
       const lease = leaseById.get(charge.lease_id);

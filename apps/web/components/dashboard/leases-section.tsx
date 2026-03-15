@@ -18,6 +18,7 @@ import type { RentIncreaseEntry } from "@/lib/rent-increases";
 import type { ActionState } from "@/app/actions";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Alert } from "@/components/ui/alert";
+import { getStatusClasses, statusBadgeClasses } from "@/lib/status-colors";
 
 type StatefulAction = (
   prev: ActionState,
@@ -70,21 +71,26 @@ function LeaseStatusBadge({
     (new Date(`${endDate}T00:00:00.000Z`).getTime() - new Date().setHours(0, 0, 0, 0)) /
       (1000 * 60 * 60 * 24)
   );
+  let badgeStatus: string = normalized;
+  let label = "Active";
 
   if (normalized === "terminated") {
-    return <Badge variant="destructive">Terminated</Badge>;
-  }
-  if (normalized === "renewed") {
-    return <Badge variant="default">Renewed</Badge>;
-  }
-  if (normalized === "expired") {
-    return <Badge variant="warning">Expired</Badge>;
-  }
-  if (normalized === "expiring_soon" || (normalized === "active" && daysRemaining <= 30)) {
-    return <Badge variant="warning">Expiring Soon</Badge>;
+    label = "Terminated";
+  } else if (normalized === "renewed") {
+    label = "Renewed";
+  } else if (normalized === "expired") {
+    label = "Expired";
+  } else if (normalized === "expiring_soon" || (normalized === "active" && daysRemaining <= 30)) {
+    badgeStatus = "upcoming";
+    label = "Expiring Soon";
   }
 
-  return <Badge variant="success">Active</Badge>;
+  return (
+    <span className={statusBadgeClasses(badgeStatus)}>
+      <span className={`h-1.5 w-1.5 rounded-full ${getStatusClasses(badgeStatus).dot}`} />
+      {label}
+    </span>
+  );
 }
 
 function addDays(dateIso: string, days: number) {

@@ -102,21 +102,21 @@ export function ManagerDashboard({
           {/* KPI Grid */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard
-              label="Assigned Properties"
+              title="Assigned Properties"
               value={data.kpis.assignedPropertyCount.toString()}
-              badge={`${data.kpis.assignedPropertyCount} managed`}
+              subtitle={`${data.kpis.assignedPropertyCount} managed`}
               gradient="linear-gradient(135deg, #7c3aed, #10b981)"
             />
             <KpiCard
-              label="Occupancy"
+              title="Occupancy"
               value={`${occupancy}%`}
-              badge={`${data.kpis.occupiedUnits}/${data.kpis.totalUnits} units`}
+              subtitle={`${data.kpis.occupiedUnits}/${data.kpis.totalUnits} units`}
               gradient="linear-gradient(135deg, #10b981, #34d399)"
             />
             <KpiCard
-              label="Open Maintenance"
+              title="Open Maintenance"
               value={data.kpis.openMaintenanceCount.toString()}
-              badge={
+              subtitle={
                 data.kpis.highPriorityMaintenanceCount > 0
                   ? `${data.kpis.highPriorityMaintenanceCount} high priority`
                   : `${data.kpis.openMaintenanceCount} open`
@@ -125,9 +125,9 @@ export function ManagerDashboard({
               alert={data.kpis.highPriorityMaintenanceCount > 0}
             />
             <KpiCard
-              label="Late Rent"
+              title="Late Rent"
               value={formatCurrency(data.kpis.lateRentCents)}
-              badge={
+              subtitle={
                 data.kpis.lateAccountCount > 0
                   ? `${data.kpis.lateAccountCount} account${data.kpis.lateAccountCount === 1 ? "" : "s"}`
                   : "All current"

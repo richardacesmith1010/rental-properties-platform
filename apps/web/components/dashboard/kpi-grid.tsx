@@ -1,55 +1,99 @@
 import { KpiCard } from "@/components/shared/kpi-card";
+import type { DashboardKpis } from "@/lib/dashboard";
 import { formatCurrency } from "@/lib/format";
 
 interface KpiGridProps {
-  monthlyGrossRentCents: number;
+  kpis: DashboardKpis;
   occupancy: number;
-  occupiedUnits: number;
-  totalUnits: number;
-  activeLeaseCount: number;
-  openMaintenanceCount: number;
-  highPriorityMaintenanceCount: number;
-  lateRentCents: number;
-  lateAccountCount: number;
+  netCashFlowCents: number;
+  revenueTrend?: "up" | "down" | "flat" | null;
+  occupancyTrend?: "up" | "down" | "flat" | null;
+  collectionTrend?: "up" | "down" | "flat" | null;
+  maintenanceTrend?: "up" | "down" | "flat" | null;
+  cashFlowTrend?: "up" | "down" | "flat" | null;
+}
+
+function occupancyGradient(occupancy: number) {
+  if (occupancy >= 90) {
+    return "linear-gradient(135deg, #10b981, #34d399)";
+  }
+  if (occupancy >= 70) {
+    return "linear-gradient(135deg, #f59e0b, #fbbf24)";
+  }
+  return "linear-gradient(135deg, #ef4444, #f87171)";
 }
 
 export function KpiGrid({
-  monthlyGrossRentCents,
+  kpis,
   occupancy,
-  occupiedUnits,
-  totalUnits,
-  activeLeaseCount,
-  openMaintenanceCount,
-  highPriorityMaintenanceCount,
-  lateRentCents,
-  lateAccountCount,
+  netCashFlowCents,
+  revenueTrend = null,
+  occupancyTrend = null,
+  collectionTrend = null,
+  maintenanceTrend = null,
+  cashFlowTrend = null
 }: KpiGridProps) {
+  const totalDueCents = kpis.collectedRentCents + kpis.pendingRentCents + kpis.overdueRentCents;
+  const outstandingSubtitleCount = `${kpis.outstandingAccountCount} account${
+    kpis.outstandingAccountCount === 1 ? "" : "s"
+  }`;
+
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <KpiCard
-        label="Monthly Gross Rent"
-        value={formatCurrency(monthlyGrossRentCents)}
-        badge={`${activeLeaseCount} active leases`}
+        title="Monthly Revenue"
+        value={formatCurrency(kpis.monthlyGrossRentCents)}
+        subtitle={`${kpis.activeLeaseCount} active lease${kpis.activeLeaseCount === 1 ? "" : "s"}`}
         gradient="linear-gradient(135deg, #7c3aed, #10b981)"
+        trend={revenueTrend}
       />
       <KpiCard
-        label="Occupancy"
+        title="Occupancy"
         value={`${occupancy}%`}
-        badge={`${occupiedUnits} of ${totalUnits} units`}
-        gradient="linear-gradient(135deg, #10b981, #34d399)"
+        subtitle={`${kpis.occupiedUnits}/${kpis.totalUnits} units`}
+        gradient={occupancyGradient(occupancy)}
+        trend={occupancyTrend}
       />
       <KpiCard
-        label="Open Maintenance"
-        value={String(openMaintenanceCount)}
-        badge={`${highPriorityMaintenanceCount} high priority`}
+        title="Rent Collection"
+        value={`${Math.round(kpis.collectionRate)}%`}
+        subtitle={`${formatCurrency(kpis.collectedRentCents)} of ${formatCurrency(totalDueCents)}`}
+        gradient="linear-gradient(135deg, #3b82f6, #06b6d4)"
+        trend={collectionTrend}
+      />
+      <KpiCard
+        title="Outstanding"
+        value={formatCurrency(kpis.outstandingCents)}
+        subtitle={outstandingSubtitleCount}
+        gradient={
+          kpis.outstandingCents > 0
+            ? "linear-gradient(135deg, #f59e0b, #ef4444)"
+            : "linear-gradient(135deg, #10b981, #34d399)"
+        }
+        alert={kpis.outstandingCents > 0}
+      />
+      <KpiCard
+        title="Open Tickets"
+        value={String(kpis.openMaintenanceCount)}
+        subtitle={
+          kpis.highPriorityMaintenanceCount > 0
+            ? `${kpis.highPriorityMaintenanceCount} high priority`
+            : "No urgent issues"
+        }
         gradient="linear-gradient(135deg, #f59e0b, #ef4444)"
+        trend={maintenanceTrend}
       />
       <KpiCard
-        label="Late Rent"
-        value={formatCurrency(lateRentCents)}
-        badge={`${lateAccountCount} accounts`}
-        gradient="linear-gradient(135deg, #ec4899, #f43f5e)"
-        alert
+        title="Net Cash Flow"
+        value={formatCurrency(Math.abs(netCashFlowCents))}
+        subtitle={netCashFlowCents >= 0 ? "YTD Profit" : "YTD Loss"}
+        gradient={
+          netCashFlowCents >= 0
+            ? "linear-gradient(135deg, #10b981, #059669)"
+            : "linear-gradient(135deg, #ef4444, #dc2626)"
+        }
+        trend={cashFlowTrend}
+        prefix={netCashFlowCents < 0 ? "-" : "+"}
       />
     </div>
   );

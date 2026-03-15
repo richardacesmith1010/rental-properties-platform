@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type ComponentProps } from "
 import { formatDate } from "@/lib/format";
 import type { AnalyticsDashboardData } from "@/lib/analytics";
 import type { AuditLogEntry } from "@/lib/audit";
+import type { DashboardData } from "@/lib/dashboard";
 import type { ExpenseDashboardData } from "@/lib/expenses";
 import type { FeatureCapabilitiesDTO } from "@/lib/feature-capabilities";
 import type { OwnerDocumentsData } from "@/lib/documents";
@@ -96,6 +97,13 @@ export function useDashboardData(props: DashboardProps) {
     automationsEnabled: true,
     warnings: {}
   };
+  const safeDashboardData: DashboardData = {
+    ...props.data,
+    kpis: {
+      ...props.data.kpis,
+      netCashFlowCents: safeAnalytics.summaryKpis.netIncomeCentsYtd
+    }
+  };
   const safeOwnershipAccounts: OwnershipAccountDTO[] = props.ownershipAccounts ?? [];
   const safeNotifications = props.notifications ?? [];
   const safeInboxThreads = props.inboxThreads ?? [];
@@ -111,14 +119,14 @@ export function useDashboardData(props: DashboardProps) {
     return left.name.localeCompare(right.name);
   });
 
-  const isOwnerRole = props.data.profileRole === "owner";
-  const isManagerRole = props.data.profileRole === "manager";
+  const isOwnerRole = safeDashboardData.profileRole === "owner";
+  const isManagerRole = safeDashboardData.profileRole === "manager";
   const canManagePortfolio = isOwnerRole || isManagerRole;
   const occupancy =
-    props.data.kpis.totalUnits > 0
-      ? Math.round((props.data.kpis.occupiedUnits / props.data.kpis.totalUnits) * 100)
+    safeDashboardData.kpis.totalUnits > 0
+      ? Math.round((safeDashboardData.kpis.occupiedUnits / safeDashboardData.kpis.totalUnits) * 100)
       : 0;
-  const chargeBadgeCount = props.data.charges.filter(
+  const chargeBadgeCount = safeDashboardData.charges.filter(
     (charge) => charge.status === "pending" || charge.status === "late"
   ).length;
   const maintenanceBadgeCount = safeTickets.filter(
@@ -515,6 +523,7 @@ export function useDashboardData(props: DashboardProps) {
 
   const sectionRendererProps = {
     ...props,
+    data: safeDashboardData,
     activeSection,
     occupancy,
     canManagePortfolio,

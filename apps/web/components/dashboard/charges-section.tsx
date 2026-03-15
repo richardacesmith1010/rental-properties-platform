@@ -17,6 +17,7 @@ import { AutopayCard } from "./autopay-card";
 import { AnimatedList } from "@/components/ui/animated-list";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Alert } from "@/components/ui/alert";
+import { getStatusClasses, statusBadgeClasses } from "@/lib/status-colors";
 
 type ChargeStatus = "pending" | "paid" | "late";
 type ChargeCategory = "rent" | "late_fee";
@@ -101,6 +102,10 @@ function getChargeLabel(charge: Charge) {
   const propertyName = charge.propertyName ?? "Unknown Property";
   const unitNumber = charge.unitNumber ?? "-";
   return `${propertyName} • Unit ${unitNumber}`;
+}
+
+function statusLabel(status: ChargeStatus) {
+  return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
 export function ChargesSection({
@@ -354,9 +359,12 @@ export function ChargesSection({
                         {formatCurrency(charge.amountCents)}
                       </p>
                       <div className="mt-0.5 flex items-center justify-end gap-1">
-                        <Badge variant={charge.status === "late" ? "destructive" : charge.status === "paid" ? "success" : "warning"}>
-                          {charge.status.toUpperCase()}
-                        </Badge>
+                        <span className={statusBadgeClasses(charge.status)}>
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${getStatusClasses(charge.status).dot}`}
+                          />
+                          {statusLabel(charge.status)}
+                        </span>
                         {category === "late_fee" ? (
                           <Badge variant="destructive">Late Fee</Badge>
                         ) : null}

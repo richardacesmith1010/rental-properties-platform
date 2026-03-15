@@ -14,6 +14,7 @@ import { AnimatedList } from "@/components/ui/animated-list";
 import type { MaintenanceTicket } from "@/lib/maintenance";
 import type { ActionState } from "@/app/actions";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { getStatusClasses, statusBadgeClasses } from "@/lib/status-colors";
 
 type StatefulAction = (
   prev: ActionState,
@@ -33,13 +34,6 @@ interface MaintenanceSectionProps {
   vendorWorkflowWarning?: string | null;
   photoWorkflowWarning?: string | null;
 }
-
-const statusVariant: Record<string, "warning" | "default" | "success" | "outline"> = {
-  open: "warning",
-  in_progress: "default",
-  resolved: "success",
-  closed: "outline",
-};
 
 const priorityVariant: Record<string, "destructive" | "warning" | "default" | "outline"> = {
   urgent: "destructive",
@@ -127,9 +121,12 @@ export function MaintenanceSection({
                       </p>
                     ) : null}
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
-                      <Badge variant={statusVariant[ticket.status] ?? "outline"}>
+                      <span className={statusBadgeClasses(ticket.status)}>
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full ${getStatusClasses(ticket.status).dot}`}
+                        />
                         {statusLabel(ticket.status)}
-                      </Badge>
+                      </span>
                       <Badge variant={priorityVariant[ticket.priority] ?? "outline"}>
                         {ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
                       </Badge>
