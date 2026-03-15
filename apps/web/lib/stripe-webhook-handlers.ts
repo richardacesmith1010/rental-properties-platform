@@ -28,7 +28,7 @@ type Match = {
 };
 
 interface Ctx {
-  charge: { id: string; lease_id: string; status: string; due_date: string };
+  charge: { id: string; lease_id: string; status: string; due_date: string; amount_cents: number };
   lease: { id: string; tenant_profile_id: string | null; unit_id: string };
   unit: { id: string; property_id: string; unit_number: string };
   property: { id: string; owner_account_id: string | null };
@@ -66,7 +66,7 @@ function isConstraintViolation(error: { code?: string; message?: string } | null
 async function getCtx(supabase: AdminClient, chargeId: string): Promise<Ctx | null> {
   const { data: charge } = await supabase
     .from("rent_charges")
-    .select("id, lease_id, status, due_date")
+    .select("id, lease_id, status, due_date, amount_cents")
     .eq("id", chargeId)
     .maybeSingle();
   if (!charge) {
@@ -208,8 +208,9 @@ async function createTransfersForPayment(
     }
 
     const managerInfo = await getManagerStripeAccountForProperty(params.propertyId);
-    const managementFee = managerInfo?.feeCents ?? 0;
-    const ownerAmount = params.amountCents - managementFee;
+    const managementFee = Math.max(managerInfo?.feeCents ?? 0, 0);
+    const effectiveFee = Math.min(managementFee, params.amountCents);
+    const ownerAmount = params.amountCents - effectiveFee;
     const paymentUpdate: Record<string, string | number> = { platform_fee_cents: 0 };
     let firstTransferId: string | null = null;
 
@@ -308,9 +309,9 @@ async function createTransfersForPayment(
     if (firstTransferId) {
       paymentUpdate.stripe_transfer_id = firstTransferId;
     }
-    if (managerInfo && managementFee > 0) {
+    if (managerInfo && effectiveFee > 0) {
       const managerTransfer = await createStripeTransfer({
-        amountCents: managementFee,
+        amountCents: effectiveFee,
         destination: managerInfo.accountId,
         transferGroup: params.transferGroup,
         description: `Management fee for charge ${params.chargeId.slice(0, 8)}`
@@ -443,8 +444,15 @@ async function recordPayment({
   if (!ctx || ctx.charge.status === "paid") {
     return received("charge_already_paid_or_missing");
   }
+  if (amountCents > ctx.charge.amount_cents) {
+    console.error(
+      `[stripe-webhook] Payment amount (${amountCents}) exceeds charge amount (${ctx.charge.amount_cents}) for charge ${chargeId}`
+    );
+    return received("amount_exceeds_charge");
+  }
   if (requireAuthorizedUser && !(await isAuthorizedUser(supabase, ctx, userId))) {
-    return NextResponse.json({ error: "Unauthorized user for this charge." }, { status: 403 });
+    console.error(`[stripe-webhook] Unauthorized user ${userId} for charge ${chargeId}`);
+    return received("unauthorized_user");
   }
 
   try {
@@ -459,11 +467,12 @@ async function recordPayment({
     if (insertStatus === "already_recorded") {
       return received("already_recorded");
     }
-  } catch {
-    return NextResponse.json(
-      { error: method === "autopay" ? "Failed to record autopay payment." : "Failed to record payment." },
-      { status: 500 }
+  } catch (error) {
+    console.error(
+      `[stripe-webhook] Failed to record ${method === "autopay" ? "autopay" : "payment"} for charge ${chargeId}:`,
+      error
     );
+    return received(method === "autopay" ? "autopay_payment_record_failed" : "payment_record_failed");
   }
 
   await markChargePaid(supabase, ctx.charge.id);

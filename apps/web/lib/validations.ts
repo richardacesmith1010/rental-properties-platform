@@ -144,14 +144,23 @@ export const payChargeSchema = z.object({
 
 export const recordManualPaymentSchema = z.object({
   chargeId: z.string().uuid("Invalid charge ID."),
-  amountDollars: z.coerce.number().positive("Amount must be greater than $0."),
+  amountDollars: z.coerce
+    .number()
+    .positive("Amount must be greater than $0.")
+    .max(999999.99, "Amount cannot exceed $999,999.99."),
   method: z.enum(["cash", "check", "ach", "other"]),
-  referenceNote: z.string().optional()
+  referenceNote: z
+    .string()
+    .max(500, "Reference note must be under 500 characters.")
+    .optional()
 });
 
 export const updateManagementFeeSchema = z.object({
   propertyId: z.string().uuid("Invalid property."),
-  managementFeeDollars: z.coerce.number().min(0, "Management fee cannot be negative.")
+  managementFeeDollars: z.coerce
+    .number()
+    .min(0, "Management fee cannot be negative.")
+    .max(99999.99, "Management fee cannot exceed $99,999.99.")
 });
 
 export const setupAutopaySchema = z.object({

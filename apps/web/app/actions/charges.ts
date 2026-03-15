@@ -128,7 +128,7 @@ export async function recordManualPayment(
   const admin = createAdminClient();
   const { data: charge } = await admin
     .from("rent_charges")
-    .select("id, lease_id, due_date, status")
+    .select("id, lease_id, due_date, status, amount_cents")
     .eq("id", chargeId)
     .maybeSingle();
 
@@ -138,6 +138,13 @@ export async function recordManualPayment(
 
   if (charge.status === "paid") {
     return { success: false, error: "This charge is already marked paid." };
+  }
+
+  if (amountCents > charge.amount_cents) {
+    return {
+      success: false,
+      error: `Payment amount ($${amountDollars.toFixed(2)}) exceeds the charge amount ($${(charge.amount_cents / 100).toFixed(2)}).`
+    };
   }
 
   const { data: lease } = await admin

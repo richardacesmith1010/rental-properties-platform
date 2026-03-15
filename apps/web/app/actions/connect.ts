@@ -378,7 +378,27 @@ export async function updateManagementFee(
     return { success: false, error: "Access denied." };
   }
 
+  const admin = createAdminClient();
+  const { data: units, error: unitsError } = await admin
+    .from("units")
+    .select("monthly_rent_cents")
+    .eq("property_id", propertyId)
+    .order("monthly_rent_cents", { ascending: false })
+    .limit(1);
+
+  if (unitsError) {
+    return { success: false, error: "Unable to validate the management fee for this property." };
+  }
+
+  const highestRentCents = units?.[0]?.monthly_rent_cents ?? 0;
   const managementFeeCents = Math.round(managementFeeDollars * 100);
+  if (highestRentCents > 0 && managementFeeCents > highestRentCents) {
+    return {
+      success: false,
+      error: `Management fee ($${managementFeeDollars.toFixed(2)}) cannot exceed the highest unit rent ($${(highestRentCents / 100).toFixed(2)}).`
+    };
+  }
+
   const { error } = await supabase
     .from("properties")
     .update({ management_fee_cents: managementFeeCents })
