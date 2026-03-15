@@ -115,6 +115,15 @@ function unique<T>(values: T[]): T[] {
   return Array.from(new Set(values));
 }
 
+function getFirstName(fullName: string): string {
+  const trimmed = fullName.trim();
+  if (trimmed.length === 0) {
+    return "";
+  }
+  const firstSpace = trimmed.indexOf(" ");
+  return firstSpace > 0 ? trimmed.slice(0, firstSpace) : trimmed;
+}
+
 export function generateJoinCode(): string {
   const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
   return Array.from({ length: 6 }, () =>
@@ -307,7 +316,7 @@ export async function getOwnershipMembersForAccount(
 
 export async function getOrCreateIndividualOwnershipAccount(
   userId: string,
-  fallbackDisplayName = "Individual Account"
+  fallbackDisplayName = "My Account"
 ): Promise<string> {
   const admin = createAdminClient();
 
@@ -325,7 +334,7 @@ export async function getOrCreateIndividualOwnershipAccount(
   }
 
   if (existing?.id) {
-    await admin.from("ownership_account_members").upsert(
+    const { error: membershipError } = await admin.from("ownership_account_members").upsert(
       {
         account_id: existing.id,
         profile_id: userId,
@@ -335,6 +344,13 @@ export async function getOrCreateIndividualOwnershipAccount(
       },
       { onConflict: "account_id,profile_id" }
     );
+    if (membershipError && isMissingSchemaError(membershipError)) {
+      throw new Error("Ownership accounts are not enabled yet. Run the Phase 9 migration first.");
+    }
+    if (membershipError) {
+      console.error("getOrCreateIndividualOwnershipAccount membership upsert error:", membershipError);
+      throw new Error("Failed to sync the ownership account membership.");
+    }
     return existing.id;
   }
 
@@ -346,7 +362,7 @@ export async function getOrCreateIndividualOwnershipAccount(
 
   const displayName =
     profile?.full_name && profile.full_name.trim().length > 0
-      ? `${profile.full_name.trim()} Account`
+      ? `${getFirstName(profile.full_name)}'s Account`
       : fallbackDisplayName;
 
   const { data: created, error } = await admin
@@ -367,13 +383,20 @@ export async function getOrCreateIndividualOwnershipAccount(
     throw new Error("Failed to create ownership account.");
   }
 
-  await admin.from("ownership_account_members").insert({
+  const { error: insertMembershipError } = await admin.from("ownership_account_members").insert({
     account_id: created.id,
     profile_id: userId,
     member_role: "owner",
     active: true,
     can_receive_critical_alerts: true
   });
+  if (insertMembershipError && isMissingSchemaError(insertMembershipError)) {
+    throw new Error("Ownership accounts are not enabled yet. Run the Phase 9 migration first.");
+  }
+  if (insertMembershipError) {
+    console.error("getOrCreateIndividualOwnershipAccount membership insert error:", insertMembershipError);
+    throw new Error("Failed to create the ownership account membership.");
+  }
 
   return created.id;
 }

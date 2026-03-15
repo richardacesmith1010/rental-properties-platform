@@ -396,6 +396,8 @@ export function useDashboardData(props: DashboardProps) {
       <AccountSwitcher
         accounts={safeOwnershipAccounts}
         activeAccountId={props.activeAccountId}
+        onRenameOwnershipAccount={props.onRenameOwnershipAccount}
+        pendingRenameRequests={props.pendingAccountRenameRequests}
       />
     ) : null;
 
