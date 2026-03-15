@@ -5,6 +5,7 @@ export type StatefulAction = (
 ) => Promise<import("./shared").ActionState>;
 
 export { signOut } from "./auth";
+export { forgotPasswordAction } from "./forgot-password";
 export {
   initiateStripeConnect,
   initiateAccountStripeConnect,

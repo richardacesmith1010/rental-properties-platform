@@ -34,6 +34,7 @@ import { TenantDocumentsSection } from "@/components/dashboard/tenant-documents-
 import { NotificationsSection } from "@/components/dashboard/notifications-section";
 import { TenantLeaseDetails } from "@/components/dashboard/tenant-lease-details";
 import { EmptyState as DashboardEmptyState } from "@/components/shared/empty-state";
+import { StripeTestModeBanner } from "@/components/shared/stripe-test-mode-banner";
 import { GamificationSummary } from "@/components/gamification/gamification-summary";
 import { AchievementChecker } from "@/components/gamification/achievement-checker";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
@@ -253,6 +254,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
         </div>
 
         <div className="space-y-6 px-6 pb-8 pt-6 lg:px-8">
+          <StripeTestModeBanner />
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-zinc-900">
               {tenantSectionLabel[activeSection]}

@@ -11,6 +11,7 @@ interface LoginPageProps {
     error?: string;
     error_description?: string;
     confirmed?: string;
+    password_reset?: string;
   };
 }
 
@@ -25,6 +26,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const callbackError = searchParams?.error;
   const callbackErrorDescription = searchParams?.error_description;
   const emailConfirmed = searchParams?.confirmed === "true";
+  const passwordReset = searchParams?.password_reset === "true";
 
   if (data.user) {
     const role = await getCurrentUserRole(data.user.id);
@@ -49,6 +51,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <Alert variant="success" className="mb-6 w-full max-w-3xl px-4 py-3">
           <p className="font-medium">Email confirmed!</p>
           <p className="mt-1">Your account is ready. Sign in below with your email and password.</p>
+        </Alert>
+      )}
+
+      {passwordReset && (
+        <Alert variant="success" className="mb-6 w-full max-w-3xl px-4 py-3">
+          <p className="font-medium">Password updated!</p>
+          <p className="mt-1">Sign in below with your new password.</p>
         </Alert>
       )}
 
