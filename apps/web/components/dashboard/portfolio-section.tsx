@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useFormState } from "react-dom";
 import { Building2 } from "lucide-react";
 import { DataRow } from "@/components/shared/data-row";
-import { EmptyState } from "@/components/shared/empty-state";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -80,9 +80,9 @@ export function PortfolioSection({
   }, [deleteState, managementFeeState, updateState]);
 
   return (
-    <Card id="portfolio">
+    <Card id="portfolio" className="border border-border/50 shadow-sm">
       <CardHeader>
-        <CardTitle>Your Portfolio</CardTitle>
+        <CardTitle className="text-xl font-semibold">Your Portfolio</CardTitle>
       </CardHeader>
       <CardContent>
         {showControls && (
@@ -100,9 +100,10 @@ export function PortfolioSection({
           <EmptyState
             icon={Building2}
             title="No properties yet"
-            description="Create your first property to start managing your portfolio."
-            actionLabel={onGoToOperations ? "Go to Operations" : undefined}
+            description="Add your first property to start managing your portfolio."
+            actionLabel={onGoToOperations ? "Add Property" : undefined}
             onAction={onGoToOperations}
+            actionVariant="default"
           />
         ) : (
           <AnimatedList>
@@ -113,7 +114,7 @@ export function PortfolioSection({
                 tabIndex={onSelectProperty && activeEditPropertyId !== property.id ? 0 : undefined}
                 className={
                   onSelectProperty && activeEditPropertyId !== property.id
-                    ? "rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 focus-visible:ring-offset-2"
+                    ? "rounded-2xl border border-border/40 bg-card/80 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 focus-visible:ring-offset-2"
                     : undefined
                 }
                 onClick={() => {
@@ -139,13 +140,13 @@ export function PortfolioSection({
               >
                 <DataRow last={i === properties.length - 1}>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-zinc-900">{property.name}</p>
-                    <p className="mt-0.5 text-xs text-zinc-500">{property.addressLine1}</p>
-                    <p className="mt-0.5 text-xs text-zinc-500">
+                    <p className="text-base font-medium text-zinc-900">{property.name}</p>
+                    <p className="mt-0.5 text-sm text-zinc-500">{property.addressLine1}</p>
+                    <p className="mt-0.5 text-sm text-zinc-500">
                       {property.city}, {property.state} {property.postalCode}
                     </p>
-                    <p className="mt-0.5 text-xs text-zinc-500">{property.ownerAccountName}</p>
-                    <p className="mt-0.5 text-xs text-zinc-500">
+                    <p className="mt-0.5 text-sm text-zinc-500">{property.ownerAccountName}</p>
+                    <p className="mt-0.5 text-sm text-zinc-500">
                       Management fee: ${(property.managementFeeCents / 100).toFixed(2)}
                     </p>
                     {showControls && activeEditPropertyId === property.id && (
@@ -195,7 +196,7 @@ export function PortfolioSection({
                     className="flex flex-col items-end gap-2"
                     onClick={(event) => event.stopPropagation()}
                   >
-                    <p className="text-xs text-zinc-500">{property.unitCount} units</p>
+                    <p className="text-sm text-zinc-500">{property.unitCount} units</p>
                     {showControls && (
                       <>
                         <Button

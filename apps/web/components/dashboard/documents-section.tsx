@@ -17,7 +17,7 @@ import { DataRow } from "@/components/shared/data-row";
 import { FeatureWarning } from "@/components/shared/feature-warning";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { AnimatedList } from "@/components/ui/animated-list";
-import { EmptyState } from "@/components/shared/empty-state";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { PacketManager } from "./documents/packet-manager";
 import { SignerFlow } from "./documents/signer-flow";
 import { TemplateBuilder } from "./documents/template-builder";
@@ -104,27 +104,27 @@ export function DocumentsSection({
         <SignerFlow properties={properties} propertyFilesEnabled={propertyFilesEnabled} onUploadPropertyFile={onUploadPropertyFile} onCancel={() => setActiveFlow(null)} />
       ) : null}
 
-      <Card>
-        <CardHeader><CardTitle>Templates</CardTitle></CardHeader>
+      <Card className="border border-border/50 shadow-sm">
+        <CardHeader><CardTitle className="text-xl font-semibold">Templates</CardTitle></CardHeader>
         <CardContent>
-          {templates.length === 0 ? <EmptyState icon={FileText} title="No templates yet" description="Create a document template to start sending packets." /> : <AnimatedList>{templates.map((template, index) => <TemplateRow key={template.id} template={template} last={index === templates.length - 1} onDeleteTemplate={onDeleteTemplate} />)}</AnimatedList>}
+          {templates.length === 0 ? <EmptyState icon={FileText} title="No documents yet" description="Create reusable templates for lease agreements, notices, and disclosures." /> : <AnimatedList>{templates.map((template, index) => <TemplateRow key={template.id} template={template} last={index === templates.length - 1} onDeleteTemplate={onDeleteTemplate} />)}</AnimatedList>}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader><CardTitle>Document Packets</CardTitle></CardHeader>
+      <Card className="border border-border/50 shadow-sm">
+        <CardHeader><CardTitle className="text-xl font-semibold">Document Packets</CardTitle></CardHeader>
         <CardContent>
-          {packets.length === 0 ? <EmptyState icon={FileText} title="No document packets yet" description="No documents yet." /> : <AnimatedList>{packets.map((packet, index) => <PacketRow key={packet.id} packet={packet} last={index === packets.length - 1} onSendPacket={onSendPacket} assetAccessEnabled={assetAccessEnabled} />)}</AnimatedList>}
+          {packets.length === 0 ? <EmptyState icon={FileText} title="No documents yet" description="Send lease agreements, notices, and other packets from your saved templates." /> : <AnimatedList>{packets.map((packet, index) => <PacketRow key={packet.id} packet={packet} last={index === packets.length - 1} onSendPacket={onSendPacket} assetAccessEnabled={assetAccessEnabled} />)}</AnimatedList>}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader><CardTitle>Property File Vault</CardTitle></CardHeader>
+      <Card className="border border-border/50 shadow-sm">
+        <CardHeader><CardTitle className="text-xl font-semibold">Property File Vault</CardTitle></CardHeader>
         <CardContent>
           {!propertyFilesEnabled ? (
             <EmptyState icon={FileArchive} title="Property file vault unavailable" description="Property file vault is unavailable. Complete setup to upload and share files." />
           ) : propertyFiles.length === 0 ? (
-            <EmptyState icon={FileArchive} title="No files uploaded yet" description="No documents yet." />
+            <EmptyState icon={FileArchive} title="No documents yet" description="Upload lease agreements, receipts, and other documents here." />
           ) : (
             <AnimatedList>
               {propertyFiles.map((file, index) => (
@@ -152,9 +152,9 @@ function TemplateRow({ template, last, onDeleteTemplate }: { template: DocumentT
   return (
     <DataRow last={last}>
       <div>
-        <p className="text-sm font-semibold text-zinc-900">{template.name}</p>
-        <p className="mt-0.5 text-xs text-zinc-500">{template.category}</p>
-        <p className="mt-0.5 text-[11px] text-zinc-400">Created {formatDate(template.createdAt)}</p>
+        <p className="text-base font-medium text-zinc-900">{template.name}</p>
+        <p className="mt-0.5 text-sm text-zinc-500">{template.category}</p>
+        <p className="mt-0.5 text-sm text-zinc-400">Created {formatDate(template.createdAt)}</p>
       </div>
       <form action={action} ref={formRef}>
         <input type="hidden" name="templateId" value={template.id} />
@@ -173,9 +173,9 @@ function PacketRow({ packet, last, onSendPacket, assetAccessEnabled }: { packet:
   return (
     <DataRow last={last}>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-zinc-900">{packet.templateName}</p>
-        <p className="mt-0.5 text-xs text-zinc-500">{packet.propertyLabel}</p>
-        <p className="mt-0.5 text-[11px] text-zinc-400">Created {formatDate(packet.createdAt)}</p>
+        <p className="text-base font-medium text-zinc-900">{packet.templateName}</p>
+        <p className="mt-0.5 text-sm text-zinc-500">{packet.propertyLabel}</p>
+        <p className="mt-0.5 text-sm text-zinc-400">Created {formatDate(packet.createdAt)}</p>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           <Badge variant={packet.status === "signed" ? "success" : packet.status === "sent" ? "warning" : "outline"}>{packet.status.toUpperCase()}</Badge>
           {assetAccessEnabled ? <Link href={`/api/assets/document-packet/${packet.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center rounded-md border border-zinc-200 px-2 py-1 text-[11px] font-medium text-zinc-700 hover:bg-zinc-50" title="Open this document packet file.">Open File</Link> : null}
@@ -204,10 +204,10 @@ function PropertyFileRow({ file, last, onDeletePropertyFile, onUpdateFileVisibil
   return (
     <DataRow last={last}>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-zinc-900">{file.fileName}</p>
-        <p className="mt-0.5 text-xs text-zinc-500">{file.propertyLabel} • {file.category.replaceAll("_", " ")} • {file.fileType}</p>
-        <p className="mt-0.5 text-[11px] text-zinc-400">Uploaded {formatDate(file.createdAt)}</p>
-        {file.description ? <p className="mt-0.5 text-xs text-zinc-500">{file.description}</p> : null}
+        <p className="text-base font-medium text-zinc-900">{file.fileName}</p>
+        <p className="mt-0.5 text-sm text-zinc-500">{file.propertyLabel} • {file.category.replaceAll("_", " ")} • {file.fileType}</p>
+        <p className="mt-0.5 text-sm text-zinc-400">Uploaded {formatDate(file.createdAt)}</p>
+        {file.description ? <p className="mt-0.5 text-sm text-zinc-500">{file.description}</p> : null}
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           <Badge variant={file.visibility === "all" ? "success" : "outline"}>{file.visibility === "all" ? "Tenant visible" : "Owner/Manager only"}</Badge>
           <Link href={`/api/assets/property-file/${file.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center rounded-md border border-zinc-200 px-2 py-1 text-[11px] font-medium text-zinc-700 hover:bg-zinc-50" title="Open this property file.">Open File</Link>

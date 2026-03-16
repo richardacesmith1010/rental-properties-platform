@@ -52,7 +52,7 @@ describe("PortfolioSection", () => {
     render(<PortfolioSection properties={[]} />);
 
     expect(screen.getByText("No properties yet")).toBeInTheDocument();
-    expect(screen.getByText("Create your first property to start managing your portfolio.")).toBeInTheDocument();
+    expect(screen.getByText("Add your first property to start managing your portfolio.")).toBeInTheDocument();
   });
 
   it("shows property name, address, and owner account details", () => {

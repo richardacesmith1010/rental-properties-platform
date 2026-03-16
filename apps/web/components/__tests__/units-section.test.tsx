@@ -48,7 +48,7 @@ describe("UnitsSection", () => {
     render(<UnitsSection units={[]} />);
 
     expect(screen.getByText("No units yet")).toBeInTheDocument();
-    expect(screen.getByText("Add units to your properties to start creating leases.")).toBeInTheDocument();
+    expect(screen.getByText("Add a property first, then create units within it.")).toBeInTheDocument();
   });
 
   it("shows unit number and property name", () => {

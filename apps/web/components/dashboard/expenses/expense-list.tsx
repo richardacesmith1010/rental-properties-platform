@@ -6,12 +6,13 @@ import type { StatefulAction } from "@/app/actions";
 import type { ExpenseDashboardData } from "@/lib/expenses";
 import type { VendorDTO } from "@/lib/vendors";
 import type { PropertyFileDTO } from "@/lib/documents";
+import { Receipt } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { DataRow } from "@/components/shared/data-row";
-import { EmptyState } from "@/components/shared/empty-state";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/shared/submit-button";
@@ -72,7 +73,15 @@ export function ExpenseList({
         <Input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
       </div>
       {filteredExpenses.length === 0 ? (
-        <EmptyState message="No expenses match the selected filters." />
+        data.expenses.length === 0 ? (
+          <EmptyState
+            icon={Receipt}
+            title="No expenses recorded"
+            description="Track property expenses for tax reporting and P&L."
+          />
+        ) : (
+          <EmptyState message="No expenses match the selected filters." />
+        )
       ) : (
         <AnimatedList>
           {filteredExpenses.map((expense, index) => (
@@ -100,9 +109,9 @@ function ExpenseRow({ expense, vendors, receiptFiles, onUpdateExpense, onDeleteE
   return (
     <DataRow last={last}>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-zinc-900">{expense.propertyName} • {formatCategory(expense.category)}</p>
-        <p className="mt-0.5 text-xs text-zinc-500">{formatDate(expense.expenseDate)}{expense.vendorName ? ` • ${expense.vendorName}` : ""}{expense.recurring ? ` • Recurs ${expense.recurringFrequency ?? "monthly"}` : ""}</p>
-        {expense.description ? <p className="mt-0.5 text-xs text-zinc-500">{expense.description}</p> : null}
+        <p className="text-base font-medium text-zinc-900">{expense.propertyName} • {formatCategory(expense.category)}</p>
+        <p className="mt-0.5 text-sm text-zinc-500">{formatDate(expense.expenseDate)}{expense.vendorName ? ` • ${expense.vendorName}` : ""}{expense.recurring ? ` • Recurs ${expense.recurringFrequency ?? "monthly"}` : ""}</p>
+        {expense.description ? <p className="mt-0.5 text-sm text-zinc-500">{expense.description}</p> : null}
         {isManaging ? (
           <>
             <form action={updateAction} className="mt-3 grid gap-2 sm:grid-cols-3">

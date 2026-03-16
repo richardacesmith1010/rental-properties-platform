@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataRow } from "@/components/shared/data-row";
-import { EmptyState } from "@/components/shared/empty-state";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Input } from "@/components/ui/input";
 import { AutopayCard } from "./autopay-card";
@@ -174,9 +174,11 @@ export function ChargesSection({
   const autopayStatus = searchParams?.get("autopay") ?? null;
 
   return (
-    <Card id="charges">
+    <Card id="charges" className="border border-border/50 shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between gap-3">
-        <CardTitle>{isTenantView ? "Rent Payments" : "Upcoming / Late Charges"}</CardTitle>
+        <CardTitle className="text-xl font-semibold">
+          {isTenantView ? "Rent Payments" : "Upcoming / Late Charges"}
+        </CardTitle>
         {onGenerateChargesHref ? (
           <Link
             href={onGenerateChargesHref}
@@ -224,7 +226,7 @@ export function ChargesSection({
           </AnimatedList>
         ) : null}
 
-        <div className="mb-4 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm">
+        <div className="mb-4 rounded-xl border border-border/50 bg-zinc-50/80 px-3 py-2 text-sm shadow-sm">
           <span className="font-semibold text-amber-700">{pendingCount} pending</span>
           <span className="mx-2 text-zinc-400">•</span>
           <span className="font-semibold text-red-700">{lateCount} late</span>
@@ -267,7 +269,7 @@ export function ChargesSection({
               charges.length === 0
                 ? isTenantView
                   ? "No charges yet. Charges are generated automatically on the 1st of each month."
-                  : "No charges yet. Charges are generated automatically when you have active leases. You can also generate them manually from the Operations section."
+                  : "Charges will appear here once you create a lease with rent terms."
                 : "No charges match this filter right now."
             }
           />
@@ -285,11 +287,11 @@ export function ChargesSection({
               return (
                 <DataRow key={charge.id} last={i === filteredCharges.length - 1}>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-zinc-900">{getChargeLabel(charge)}</p>
+                    <p className="text-base font-medium text-zinc-900">{getChargeLabel(charge)}</p>
                     {!isTenantView && charge.tenantName ? (
-                      <p className="mt-0.5 text-xs text-zinc-500">{charge.tenantName}</p>
+                      <p className="mt-0.5 text-sm text-zinc-500">{charge.tenantName}</p>
                     ) : null}
-                    <p className="mt-0.5 text-xs text-zinc-500">Due {formatDate(charge.dueDate)}</p>
+                    <p className="mt-0.5 text-sm text-zinc-500">Due {formatDate(charge.dueDate)}</p>
 
                     {showManualPayment && manualFormOpen && charge.status !== "paid" ? (
                       <form action={recordManualPaymentAction} className="mt-3 grid gap-3 sm:grid-cols-4">
@@ -355,7 +357,7 @@ export function ChargesSection({
 
                   <div className="flex flex-col items-end gap-2">
                     <div className="text-right">
-                      <p className="text-sm font-semibold text-zinc-900">
+                      <p className="text-base font-medium text-zinc-900">
                         {formatCurrency(charge.amountCents)}
                       </p>
                       <div className="mt-0.5 flex items-center justify-end gap-1">

@@ -59,7 +59,7 @@ describe("LeasesSection", () => {
     render(<LeasesSection leases={[]} />);
 
     expect(screen.getByText("No leases yet")).toBeInTheDocument();
-    expect(screen.getByText("Create a lease to start collecting rent.")).toBeInTheDocument();
+    expect(screen.getByText("Create a lease to start tracking rent and tenant information.")).toBeInTheDocument();
   });
 
   it("shows the lease dates", () => {

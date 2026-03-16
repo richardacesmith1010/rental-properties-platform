@@ -14,10 +14,6 @@ interface AccountSwitcherProps {
   pendingRenameRequests?: AccountRenameRequestDTO[];
 }
 
-function getAccountTypeLabel(accountType: OwnershipAccountDTO["accountType"]) {
-  return accountType === "llc" ? "LLC" : "Individual";
-}
-
 export function AccountSwitcher({
   accounts,
   activeAccountId,
@@ -177,16 +173,18 @@ export function AccountSwitcher({
       className="group flex min-w-0 flex-1 items-center gap-2 text-left disabled:cursor-default"
       title={renameTitle}
     >
-      <span className="truncate text-sm font-semibold text-white">{activeAccount.displayName}</span>
+      <span className="block max-w-[170px] truncate text-sm font-semibold text-white sm:max-w-[184px]">
+        {activeAccount.displayName}
+      </span>
       {onRenameOwnershipAccount ? (
-        <Pencil className="h-3.5 w-3.5 shrink-0 text-white/60 transition group-hover:text-white/90" />
+        <Pencil className="h-3.5 w-3.5 shrink-0 text-white/60 opacity-70 transition group-hover:text-white/95 group-hover:opacity-100" />
       ) : null}
     </button>
   );
 
   if (accounts.length <= 1) {
     return (
-      <div className="rounded-[10px] border border-white/15 bg-white/10 px-3 py-3 text-white">
+      <div className="rounded-[10px] border border-white/15 bg-white/10 px-3.5 py-3.5 text-white shadow-sm">
         <div className="flex items-center gap-2">
           <Building2 className="h-4 w-4 text-white/80" />
           {nameRow}
@@ -210,7 +208,7 @@ export function AccountSwitcher({
   }
 
   return (
-    <div className="rounded-[10px] border border-white/15 bg-white/10 px-3 py-3 text-white">
+    <div className="rounded-[10px] border border-white/15 bg-white/10 px-3.5 py-3.5 text-white shadow-sm">
       <div className="flex items-center gap-2">
         <Building2 className="h-4 w-4 text-white/80" />
         {nameRow}
@@ -229,7 +227,7 @@ export function AccountSwitcher({
       >
         {accounts.map((account) => (
           <option key={account.id} value={account.id} className="text-zinc-900">
-            {account.displayName} ({getAccountTypeLabel(account.accountType)})
+            {account.displayName}
           </option>
         ))}
       </select>

@@ -7,7 +7,7 @@ import { FeatureWarning } from "@/components/shared/feature-warning";
 import { TicketStatusControl } from "./ticket-status-control";
 import { TicketVendorControl } from "./ticket-vendor-control";
 import { TicketPhotoUpload } from "./ticket-photo-upload";
-import { EmptyState } from "@/components/shared/empty-state";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { MaintenanceCommentThread } from "./maintenance-comment-thread";
 import { MaintenanceTracker } from "./maintenance-tracker";
 import { AnimatedList } from "@/components/ui/animated-list";
@@ -74,9 +74,9 @@ export function MaintenanceSection({
   photoWorkflowWarning = null,
 }: MaintenanceSectionProps) {
   return (
-    <Card id="maintenance">
+    <Card id="maintenance" className="border border-border/50 shadow-sm">
       <CardHeader>
-        <CardTitle>Maintenance Tickets</CardTitle>
+        <CardTitle className="text-xl font-semibold">Maintenance Tickets</CardTitle>
       </CardHeader>
       <CardContent>
         {(vendorWorkflowWarning || photoWorkflowWarning) && (
@@ -99,7 +99,7 @@ export function MaintenanceSection({
           <EmptyState
             icon={Wrench}
             title="No maintenance tickets"
-            description="No maintenance tickets. Your properties are in great shape!"
+            description="Tickets submitted by tenants will appear here."
           />
         ) : (
           <AnimatedList>
@@ -108,15 +108,15 @@ export function MaintenanceSection({
               return (
                 <DataRow key={ticket.id} last={i === tickets.length - 1}>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-zinc-900">
+                    <p className="text-base font-medium text-zinc-900">
                       {ticket.title}
                     </p>
-                    <p className="mt-0.5 text-xs text-zinc-500">
+                    <p className="mt-0.5 text-sm text-zinc-500">
                       {ticket.propertyName}
                       {ticket.unitNumber ? ` • Unit ${ticket.unitNumber}` : ""}
                     </p>
                     {ticket.tenantEmail ? (
-                      <p className="mt-0.5 text-xs text-zinc-400">
+                      <p className="mt-0.5 text-sm text-zinc-400">
                         {ticket.tenantEmail}
                       </p>
                     ) : null}
@@ -161,7 +161,7 @@ export function MaintenanceSection({
                     </div>
 
                     {(ticket.commentCount > 0 || onAddComment) ? (
-                      <details className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50/70">
+                      <details className="mt-4 rounded-2xl border border-border/50 bg-zinc-50/70 shadow-sm">
                         <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-zinc-700">
                           <span className="inline-flex items-center gap-2">
                             <MessageSquareText className="h-4 w-4 text-zinc-400" />

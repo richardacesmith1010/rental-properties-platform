@@ -61,7 +61,7 @@ export function ReportCard({ id, icon: Icon, title, description }: ReportCardPro
   return (
     <a
       href={`#${id}`}
-      className="domus-card block p-5 transition hover:border-violet-200 hover:shadow-md"
+      className="domus-card block p-5 shadow-sm transition hover:border-violet-200 hover:shadow-md"
       title={`Jump to the ${title} report.`}
     >
       <div className="flex items-start gap-3">
@@ -69,7 +69,7 @@ export function ReportCard({ id, icon: Icon, title, description }: ReportCardPro
           <ResolvedIcon className="h-5 w-5" />
         </div>
         <div>
-          <h2 className="text-base font-semibold text-zinc-900">{title}</h2>
+          <h2 className="text-base font-medium text-zinc-900">{title}</h2>
           <p className="mt-1 text-sm text-zinc-500">{description}</p>
           <span className="mt-3 inline-flex text-sm font-medium text-violet-700">View report</span>
         </div>
@@ -129,10 +129,10 @@ export function ReportSection<T>({
   }
 
   return (
-      <section id={id} className="domus-card scroll-mt-24 p-5">
+      <section id={id} className="domus-card scroll-mt-24 p-5 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-zinc-900">{title}</h3>
+          <h3 className="text-xl font-semibold text-zinc-900">{title}</h3>
           <p className="mt-1 text-sm text-zinc-500">{description}</p>
         </div>
         <Button

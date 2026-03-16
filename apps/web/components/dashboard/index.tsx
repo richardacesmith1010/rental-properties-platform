@@ -122,7 +122,7 @@ export function Dashboard(props: DashboardProps) {
           </div>
         ) : null}
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-zinc-900">{activeSectionLabel}</h2>
+          <h2 className="text-xl font-semibold domus-heading">{activeSectionLabel}</h2>
           <div className="flex items-center gap-2">
             <Button
               type="button"

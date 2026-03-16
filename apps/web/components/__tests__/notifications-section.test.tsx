@@ -46,7 +46,8 @@ describe("NotificationsSection", () => {
   it("shows the empty state when no notifications exist", () => {
     render(<NotificationsSection notifications={[]} onMarkRead={async () => null} />);
 
-    expect(screen.getByText("No notifications yet")).toBeInTheDocument();
+    expect(screen.getByText("No notifications")).toBeInTheDocument();
+    expect(screen.getByText("You're all caught up!")).toBeInTheDocument();
   });
 
   it("shows notification title and body", () => {

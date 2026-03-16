@@ -2,13 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useFormState } from "react-dom";
-import { Bell, MessageSquare, Search } from "lucide-react";
+import { Bell, Mail, MessageSquare, Search } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/shared/submit-button";
-import { EmptyState } from "@/components/shared/empty-state";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { DataRow } from "@/components/shared/data-row";
 import { Button } from "@/components/ui/button";
 import { AnimatedList } from "@/components/ui/animated-list";
@@ -191,9 +191,9 @@ export function InboxSection({
   const selectedThread = threads.find((thread) => thread.id === selectedThreadId) ?? null;
 
   return (
-    <Card id="inbox">
+    <Card id="inbox" className="border border-border/50 shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-xl font-semibold">
           <Bell className="h-4 w-4" />
           Domus Inbox
         </CardTitle>
@@ -258,7 +258,15 @@ export function InboxSection({
             </div>
 
             {filteredNotifications.length === 0 ? (
-              <EmptyState message="No inbox events match these filters. Try clearing search or status filters." />
+              notifications.length === 0 && !query.trim() && readFilter === "all" && typeFilter === "all" ? (
+                <EmptyState
+                  icon={Mail}
+                  title="No messages"
+                  description="Your inbox is empty."
+                />
+              ) : (
+                <EmptyState message="No inbox events match these filters. Try clearing search or status filters." />
+              )
             ) : (
               <AnimatedList>
                 {filteredNotifications.map((notification, index) => (
@@ -275,7 +283,7 @@ export function InboxSection({
           </>
         ) : (
           <div className="space-y-3">
-            <form action={createThreadAction} className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+            <form action={createThreadAction} className="rounded-2xl border border-border/50 bg-zinc-50 p-3 shadow-sm">
               <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Create thread</p>
               <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <Select
@@ -316,10 +324,14 @@ export function InboxSection({
             </form>
 
             {threads.length === 0 ? (
-              <EmptyState message="No threads yet. Create one to start structured communication for a property." />
+              <EmptyState
+                icon={Mail}
+                title="No messages"
+                description="Your inbox is empty."
+              />
             ) : (
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                <div className="rounded-lg border border-zinc-200 bg-white p-2">
+                <div className="rounded-2xl border border-border/50 bg-white p-2 shadow-sm">
                   <AnimatedList className="space-y-2">
                   {threads.map((thread) => (
                     <button
@@ -334,11 +346,11 @@ export function InboxSection({
                       title="Open this conversation thread."
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <p className="truncate text-sm font-semibold text-zinc-900">{thread.subject}</p>
+                        <p className="truncate text-base font-medium text-zinc-900">{thread.subject}</p>
                         <Badge variant="outline">{thread.messageCount} msg</Badge>
                       </div>
-                      <p className="mt-0.5 text-xs text-zinc-500">{thread.propertyName}</p>
-                      <p className="mt-0.5 truncate text-xs text-zinc-600">
+                      <p className="mt-0.5 text-sm text-zinc-500">{thread.propertyName}</p>
+                      <p className="mt-0.5 truncate text-sm text-zinc-600">
                         {thread.latestMessagePreview ?? "No messages yet."}
                       </p>
                     </button>
@@ -346,12 +358,12 @@ export function InboxSection({
                   </AnimatedList>
                 </div>
 
-                <div className="rounded-lg border border-zinc-200 bg-white p-3">
+                <div className="rounded-2xl border border-border/50 bg-white p-3 shadow-sm">
                   {selectedThread ? (
                     <div className="space-y-3">
                       <div>
-                        <p className="text-sm font-semibold text-zinc-900">{selectedThread.subject}</p>
-                        <p className="text-xs text-zinc-500">{selectedThread.propertyName}</p>
+                        <p className="text-base font-medium text-zinc-900">{selectedThread.subject}</p>
+                        <p className="text-sm text-zinc-500">{selectedThread.propertyName}</p>
                         <div className="mt-1 flex flex-wrap gap-2">
                           <Badge variant="outline">{typeLabel(selectedThread.entityType)}</Badge>
                           <Button
@@ -372,8 +384,8 @@ export function InboxSection({
                         ) : (
                           <AnimatedList className="space-y-2">
                           {selectedThread.messages.map((message) => (
-                            <div key={message.id} className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2">
-                              <p className="text-xs text-zinc-500">
+                            <div key={message.id} className="rounded-xl border border-border/50 bg-zinc-50 px-3 py-2 shadow-sm">
+                              <p className="text-sm text-zinc-500">
                                 {message.senderEmail ?? "System"} • {formatTimestamp(message.createdAt)}
                               </p>
                               <p className="mt-1 text-sm text-zinc-800">{message.body}</p>

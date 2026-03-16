@@ -5,7 +5,7 @@ import { Bell } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SubmitButton } from "@/components/shared/submit-button";
-import { EmptyState } from "@/components/shared/empty-state";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { DataRow } from "@/components/shared/data-row";
 import type { ActionState } from "@/app/actions";
 import type { NotificationDTO } from "@/lib/notifications";
@@ -31,9 +31,9 @@ export function NotificationsSection({
   const [markAllState, markAllAction] = useFormState(onMarkAllRead ?? noopStatefulAction, null);
 
   return (
-    <Card id="notifications">
+    <Card id="notifications" className="border border-border/50 shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-xl font-semibold">
           <Bell className="h-4 w-4" />
           Notifications
         </CardTitle>
@@ -65,8 +65,8 @@ export function NotificationsSection({
         {notifications.length === 0 ? (
           <EmptyState
             icon={Bell}
-            title="No notifications yet"
-            description="Alerts for rent, maintenance, and documents will appear here."
+            title="No notifications"
+            description="You're all caught up!"
           />
         ) : (
           <AnimatedList>
@@ -99,9 +99,9 @@ function NotificationRow({
   return (
     <DataRow last={last}>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-zinc-900">{notification.title}</p>
-        <p className="mt-0.5 text-xs text-zinc-500">{notification.body}</p>
-        <p className="mt-1 text-[11px] text-zinc-400">
+        <p className="text-base font-medium text-zinc-900">{notification.title}</p>
+        <p className="mt-0.5 text-sm text-zinc-500">{notification.body}</p>
+        <p className="mt-1 text-sm text-zinc-400">
           {formatDateTime(notification.createdAt)}
         </p>
       </div>

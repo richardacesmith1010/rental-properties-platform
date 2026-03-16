@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { DataRow } from "@/components/shared/data-row";
-import { EmptyState } from "@/components/shared/empty-state";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Button } from "@/components/ui/button";
 import { AnimatedList } from "@/components/ui/animated-list";
@@ -164,9 +164,9 @@ export function VendorsSection({
   const canSkipCreateStep = (step: number) => step === 1 || step === 2 || step === 4 || step === 5;
 
   return (
-    <Card id="vendors">
+    <Card id="vendors" className="border border-border/50 shadow-sm">
       <CardHeader>
-        <CardTitle>Vendors</CardTitle>
+        <CardTitle className="text-xl font-semibold">Vendors</CardTitle>
       </CardHeader>
       <CardContent>
         {showCreateWorkflow ? (
@@ -396,9 +396,10 @@ export function VendorsSection({
           <EmptyState
             icon={HardHat}
             title="No vendors yet"
-            description="Add your first vendor to track maintenance contractors."
+            description="Add maintenance vendors and contractors for easy assignment."
             actionLabel="Add Vendor"
             onAction={() => setShowCreateWhenEmpty(true)}
+            actionVariant="default"
           />
         ) : filteredVendors.length === 0 ? (
           <EmptyState
@@ -444,8 +445,8 @@ function VendorRow({
   return (
     <DataRow last={last}>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-zinc-900">{vendor.name}</p>
-        <p className="mt-0.5 text-xs text-zinc-500">
+        <p className="text-base font-medium text-zinc-900">{vendor.name}</p>
+        <p className="mt-0.5 text-sm text-zinc-500">
           {tradeLabel(vendor.tradeCategory)}
           {vendor.email ? ` • ${vendor.email}` : ""}
           {vendor.phone ? ` • ${vendor.phone}` : ""}

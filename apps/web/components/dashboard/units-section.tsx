@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useFormState } from "react-dom";
 import { DoorOpen } from "lucide-react";
 import { DataRow } from "@/components/shared/data-row";
-import { EmptyState } from "@/components/shared/empty-state";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,9 +74,9 @@ export function UnitsSection({
   }, [deleteState, updateState]);
 
   return (
-    <Card id="units">
+    <Card id="units" className="border border-border/50 shadow-sm">
       <CardHeader>
-        <CardTitle>Units</CardTitle>
+        <CardTitle className="text-xl font-semibold">Units</CardTitle>
       </CardHeader>
       <CardContent>
         {showControls && (
@@ -92,7 +92,7 @@ export function UnitsSection({
           <EmptyState
             icon={DoorOpen}
             title="No units yet"
-            description="Add units to your properties to start creating leases."
+            description="Add a property first, then create units within it."
             actionLabel={onGoToOperations ? "Go to Operations" : undefined}
             onAction={onGoToOperations}
           />
@@ -101,10 +101,10 @@ export function UnitsSection({
             {units.map((unit, i) => (
               <DataRow key={unit.id} last={i === units.length - 1}>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-zinc-900">
+                  <p className="text-base font-medium text-zinc-900">
                     {unit.propertyName} • Unit {unit.unitNumber}
                   </p>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                  <div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-zinc-500">
                     <span>{unit.bedrooms} bd / {unit.bathrooms} ba</span>
                     <Badge variant={unit.occupied ? "success" : "outline"}>
                       {unit.occupied ? "Occupied" : "Vacant"}
@@ -149,7 +149,7 @@ export function UnitsSection({
                 </div>
 
                 <div className="flex flex-col items-end gap-2">
-                  <p className="text-xs text-zinc-500">{formatCurrency(unit.monthlyRentCents)}</p>
+                  <p className="text-sm text-zinc-500">{formatCurrency(unit.monthlyRentCents)}</p>
                   {showControls && (
                     <>
                       <Button

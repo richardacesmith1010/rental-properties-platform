@@ -208,7 +208,7 @@ export function SidebarNav({
 
   return (
     <aside className="gradient-sidebar hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-[260px] lg:flex-shrink-0 lg:flex-col">
-      <div className="flex items-center justify-between gap-3 px-5 py-6">
+      <div className="flex items-center justify-between gap-3 px-5 pb-4 pt-6">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/15 text-lg font-bold text-white shadow-lg shadow-violet-950/25 backdrop-blur-sm">
             D
@@ -220,7 +220,7 @@ export function SidebarNav({
         {notificationButton}
       </div>
 
-      <div className="space-y-2 px-3 pb-3">
+      <div className="space-y-3 px-4 pb-4">
         {searchItems.length > 0 ? <GlobalSearch items={searchItems} /> : null}
         {accountSwitcher}
         {showWorkspaceButton ? (
@@ -234,7 +234,7 @@ export function SidebarNav({
         ) : null}
       </div>
 
-      <nav aria-label="Main navigation" className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 pb-4">
+      <nav aria-label="Main navigation" className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-4 pb-4 pt-1">
         <NavList navItems={navItems} activeItemId={activeItemId} onSelectItem={onSelectItem} />
       </nav>
 

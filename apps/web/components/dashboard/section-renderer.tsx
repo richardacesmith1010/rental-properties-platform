@@ -158,7 +158,7 @@ export function SectionRenderer(props: SectionRendererProps) {
       return renderSection(
         "Overview",
         <>
-          <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="rounded-2xl border border-border/50 bg-card p-4 shadow-sm">
             <p className="text-xs uppercase tracking-wide text-zinc-500">Snapshot</p>
             <p className="mt-1 text-xl font-bold text-zinc-900">{props.occupancy}% occupied</p>
             <p className="text-sm text-zinc-600">

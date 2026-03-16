@@ -70,7 +70,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
             <div className="flex items-center gap-2">
               <Link
                 href={getRoleHomePath(role)}
-                className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                className="rounded-md border border-zinc-200/80 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm transition-shadow hover:bg-zinc-50 hover:shadow-md"
                 title="Return to your workspace."
               >
                 Back to Workspace
@@ -85,7 +85,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                       className={`rounded-md px-3 py-1.5 text-xs font-semibold ${
                         year === reportYear
                           ? "bg-violet-600 text-white"
-                          : "border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
+                          : "border border-zinc-200/80 bg-white text-zinc-700 shadow-sm transition-shadow hover:bg-zinc-50 hover:shadow-md"
                       }`}
                       title={`View ${year} reports.`}
                     >
