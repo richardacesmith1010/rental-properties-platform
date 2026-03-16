@@ -44,6 +44,57 @@ test.describe("Owner flows", () => {
     await expect(page.getByText("Occupancy Rate")).toBeVisible();
   });
 
+  test("shows contextual greeting summary on overview", async ({ page }) => {
+    await loginOwnerOrSkip(page);
+    await page.goto("/owner");
+    await page.waitForTimeout(1500);
+
+    await expect(page.getByRole("heading", { name: /good (morning|afternoon|evening),/i })).toBeVisible();
+    expect(
+      await page.getByText(/everything looks good|overdue charge|maintenance ticket/i).count()
+    ).toBeGreaterThan(0);
+  });
+
+  test("shows inline edit affordance on portfolio", async ({ page }) => {
+    await loginOwnerOrSkip(page);
+    await page.goto("/owner?mode=records&section=portfolio");
+    await page.waitForTimeout(1500);
+
+    const emptyState = page.getByText(/no properties yet/i);
+    if (await emptyState.count()) {
+      await expect(emptyState.first()).toBeVisible();
+      return;
+    }
+
+    await expect(page.locator('[title^="Rename "]').first()).toBeVisible();
+  });
+
+  test("keeps the batch toolbar hidden by default on charges", async ({ page }) => {
+    await loginOwnerOrSkip(page);
+    await page.goto("/owner?section=charges");
+    await page.waitForTimeout(1500);
+
+    await expect(page.getByText("Send Reminder", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Export CSV", { exact: true })).toHaveCount(0);
+  });
+
+  test("shows vendors content or empty state", async ({ page }) => {
+    await loginOwnerOrSkip(page);
+    await page.goto("/owner?section=vendors");
+    await page.waitForTimeout(1500);
+
+    const vendorHeading = page.getByRole("heading", { name: /vendors/i });
+    if (await vendorHeading.count()) {
+      const vendorState = page.getByText(
+        /no vendors yet|create vendor|vendors unavailable|vendor workflows are not ready/i
+      );
+      expect(await vendorState.count()).toBeGreaterThan(0);
+      return;
+    }
+
+    await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+  });
+
   test("opens the reports page", async ({ page }) => {
     await loginOwnerOrSkip(page);
     await page.goto("/owner/reports");
