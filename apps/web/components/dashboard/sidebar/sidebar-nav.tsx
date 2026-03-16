@@ -52,7 +52,7 @@ function CommandPaletteTrigger({ onOpen }: { onOpen: () => void }) {
         <Search className="h-4 w-4 shrink-0 text-white/60" />
         <span className="truncate">Search navigation, properties, tenants...</span>
       </span>
-      <span className="rounded-md border border-white/15 bg-white/5 px-2 py-0.5 text-[11px] font-semibold text-white/65">
+      <span className="hidden rounded-md border border-white/15 bg-white/5 px-2 py-0.5 text-[11px] font-semibold text-white/65 sm:inline-flex">
         ⌘K
       </span>
     </button>
@@ -333,11 +333,22 @@ export function MobileTopBar({
         </div>
 
         <div className="flex items-center gap-2">
+          {commandPaletteEnabled && onOpenCommandPalette ? (
+            <button
+              type="button"
+              onClick={onOpenCommandPalette}
+              className="flex h-11 w-11 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/80 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+              title="Search navigation, properties, and tenants."
+              aria-label="Open search"
+            >
+              <Search className="h-5 w-5" />
+            </button>
+          ) : null}
           {onSelectItem ? (
             <button
               type="button"
               onClick={() => onSelectItem("notifications")}
-              className="relative rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-white/80 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+              className="relative flex h-11 w-11 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/80 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
               title="Open notifications."
               aria-label="Open notifications"
             >
@@ -351,7 +362,7 @@ export function MobileTopBar({
           ) : (
             <a
               href={notificationHref}
-              className="relative rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-white/80 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+              className="relative flex h-11 w-11 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/80 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
               title="Open notifications."
               aria-label="Open notifications"
             >
@@ -378,7 +389,7 @@ export function MobileTopBar({
             trigger={
               <button
                 type="button"
-                className="rounded-lg border border-white/10 bg-white/5 p-2 text-white/80 transition-colors hover:bg-white/10"
+                className="flex h-11 w-11 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/80 transition-colors hover:bg-white/10"
                 aria-label="Open navigation menu"
                 title="Open navigation menu."
               >

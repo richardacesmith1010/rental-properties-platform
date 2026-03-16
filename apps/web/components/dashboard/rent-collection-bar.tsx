@@ -49,7 +49,7 @@ export function RentCollectionBar({
         ) : null}
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-4 text-sm text-muted-foreground">
+      <div className="mt-3 flex flex-col gap-1 text-sm text-muted-foreground sm:flex-row sm:flex-wrap sm:gap-4">
         <div className="flex items-center gap-1.5">
           <div className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
           <span>Collected {formatCurrency(collectedCents)}</span>

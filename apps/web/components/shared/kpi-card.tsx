@@ -28,7 +28,7 @@ export function KpiCard({
   const trendDisplay = trend ? trendMap[trend] : null;
 
   return (
-    <Card className={`relative overflow-hidden border border-border/50 p-5 shadow-md sm:p-6 ${alert ? "border-amber-200" : ""}`}>
+    <Card className={`relative min-h-[44px] overflow-hidden border border-border/50 p-5 shadow-md sm:p-6 ${alert ? "border-amber-200" : ""}`}>
       <div
         className="absolute -top-10 -right-10 h-28 w-28 rounded-full opacity-[0.14]"
         style={{ background: gradient }}

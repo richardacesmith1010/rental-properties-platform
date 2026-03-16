@@ -173,7 +173,7 @@ export function AccountSwitcher({
       className="group flex min-w-0 flex-1 items-center gap-2 text-left disabled:cursor-default"
       title={renameTitle}
     >
-      <span className="block max-w-[170px] truncate text-sm font-semibold text-white sm:max-w-[184px]">
+      <span className="block min-w-0 flex-1 truncate text-sm font-semibold text-white">
         {activeAccount.displayName}
       </span>
       {onRenameOwnershipAccount ? (
