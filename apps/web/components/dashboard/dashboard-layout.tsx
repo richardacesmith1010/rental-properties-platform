@@ -21,6 +21,8 @@ export interface DashboardLayoutProps {
   onSelectItem?: (id: string) => void;
   unreadNotificationCount?: number;
   searchItems?: GlobalSearchItem[];
+  onOpenCommandPalette?: () => void;
+  commandPaletteEnabled?: boolean;
   reportsHref?: string | null;
   accountSwitcher?: ReactNode;
 }
@@ -41,6 +43,8 @@ export function DashboardLayout({
   onSelectItem,
   unreadNotificationCount = 0,
   searchItems = [],
+  onOpenCommandPalette,
+  commandPaletteEnabled = false,
   reportsHref = null,
   accountSwitcher
 }: DashboardLayoutProps) {
@@ -57,6 +61,8 @@ export function DashboardLayout({
     onSelectItem,
     unreadNotificationCount,
     searchItems,
+    onOpenCommandPalette,
+    commandPaletteEnabled,
     reportsHref,
     accountSwitcher
   };

@@ -5,6 +5,12 @@ import { shouldRecordSuccessfulDelivery } from "@/lib/idempotency";
 import { ensureInboxThreadForEvent } from "@/lib/inbox";
 import { getNotificationPreference } from "@/lib/notification-preferences";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
+export {
+  formatRelativeNotificationTime,
+  getNotificationActionLink,
+  groupNotificationsByRecency
+} from "@/lib/notification-feed";
+export type { GroupedNotifications, NotificationActionLink } from "@/lib/notification-feed";
 
 export type NotificationType =
   | "new_ticket"

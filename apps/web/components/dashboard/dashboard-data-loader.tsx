@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ComponentProps } from "react";
+import { Bell, Building2, CreditCard, FileText, Receipt, UserPlus } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import type { AnalyticsDashboardData } from "@/lib/analytics";
 import type { AuditLogEntry } from "@/lib/audit";
@@ -24,6 +25,13 @@ import {
   type OwnerWorkflowMode
 } from "./dashboard-config";
 import type { GlobalSearchItem } from "./global-search";
+import type {
+  CommandPaletteProperty,
+  CommandPaletteQuickAction,
+  CommandPaletteSection,
+  CommandPaletteTenant,
+  CommandPaletteTransaction
+} from "./command-palette";
 import { SectionRenderer } from "./section-renderer";
 import type { NavItem } from "./sidebar-nav";
 import type { DashboardProps } from "./types";
@@ -31,6 +39,49 @@ import type { DashboardProps } from "./types";
 const EMPTY_TICKETS: MaintenanceTicket[] = [];
 const EMPTY_AUDIT_LOGS: AuditLogEntry[] = [];
 const EMPTY_RENT_INCREASE_HISTORY: RentIncreaseEntry[] = [];
+
+const OWNER_SECTION_MODE_BY_ID: Partial<Record<string, OwnerWorkflowMode>> = {
+  charges: "daily_ops",
+  payments: "daily_ops",
+  maintenance: "daily_ops",
+  applications: "daily_ops",
+  inbox: "daily_ops",
+  automations: "daily_ops",
+  notifications: "daily_ops",
+  activity: "daily_ops",
+  expenses: "daily_ops",
+  analytics: "daily_ops",
+  operations: "new_property",
+  portfolio: "new_property",
+  units: "new_property",
+  leases: "new_property",
+  leasing: "new_tenant",
+  invitations: "new_tenant",
+  vendors: "new_manager",
+  documents: "records",
+  ownership: "records"
+};
+
+const MANAGER_SECTION_MODE_BY_ID: Partial<Record<string, ManagerWorkflowMode>> = {
+  charges: "daily_ops",
+  payments: "daily_ops",
+  maintenance: "daily_ops",
+  applications: "daily_ops",
+  inbox: "daily_ops",
+  automations: "daily_ops",
+  notifications: "daily_ops",
+  activity: "daily_ops",
+  expenses: "daily_ops",
+  analytics: "daily_ops",
+  operations: "new_property",
+  portfolio: "new_property",
+  units: "new_property",
+  leases: "new_property",
+  leasing: "new_tenant",
+  invitations: "new_tenant",
+  documents: "new_tenant",
+  vendors: "vendor_ops"
+};
 
 type SectionRendererProps = ComponentProps<typeof SectionRenderer>;
 type LayoutProps = Omit<DashboardLayoutProps, "children" | "mainClassName" | "afterMain">;
@@ -259,6 +310,7 @@ export function useDashboardData(props: DashboardProps) {
   const [managerWorkflowMode, setManagerWorkflowMode] = useState<ManagerWorkflowMode>(
     props.initialManagerWorkflowMode ?? "daily_ops"
   );
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
   useEffect(() => {
     const nextMode = props.initialOwnerWorkflowMode;
@@ -563,6 +615,47 @@ export function useDashboardData(props: DashboardProps) {
     [sectionItems]
   );
 
+  const openSection = useCallback(
+    (sectionId: string) => {
+      if (!allSectionItems.some((item) => item.id === sectionId)) {
+        return;
+      }
+
+      if (isOwnerRole) {
+        const targetMode = OWNER_SECTION_MODE_BY_ID[sectionId];
+        if (targetMode && ownerWorkflowMode !== targetMode) {
+          setOwnerWorkflowMode(targetMode);
+        }
+      }
+
+      if (isManagerRole) {
+        const targetMode = MANAGER_SECTION_MODE_BY_ID[sectionId];
+        if (targetMode && managerWorkflowMode !== targetMode) {
+          setManagerWorkflowMode(targetMode);
+        }
+      }
+
+      setActiveSection(sectionId);
+    },
+    [allSectionItems, isManagerRole, isOwnerRole, managerWorkflowMode, ownerWorkflowMode]
+  );
+
+  useEffect(() => {
+    if (!isOwnerRole) {
+      return;
+    }
+
+    const handleKeydown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setIsCommandPaletteOpen((current) => !current);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeydown);
+    return () => document.removeEventListener("keydown", handleKeydown);
+  }, [isOwnerRole]);
+
   const handleModeChange = (
     mode: OwnerWorkflowMode | ManagerWorkflowMode,
     meta: typeof ownerWorkflowModeMeta | typeof managerWorkflowModeMeta,
@@ -661,6 +754,102 @@ export function useDashboardData(props: DashboardProps) {
         pendingRenameRequests={props.pendingAccountRenameRequests}
       />
     ) : null;
+
+  const commandPaletteSections = useMemo<CommandPaletteSection[]>(
+    () =>
+      allSectionItems.map((item) => ({
+        id: item.id,
+        label: item.label,
+        description: item.description ?? `${item.label} section`,
+        icon: item.icon,
+        keywords: [item.label, item.description, item.clickHint].filter(
+          (value): value is string => Boolean(value)
+        )
+      })),
+    [allSectionItems]
+  );
+
+  const commandPaletteProperties = useMemo<CommandPaletteProperty[]>(
+    () =>
+      safePortfolio.properties.map((property) => ({
+        id: property.id,
+        name: property.name,
+        address: [property.addressLine1, property.city, property.state]
+          .filter(Boolean)
+          .join(", ")
+      })),
+    [safePortfolio.properties]
+  );
+
+  const commandPaletteTenants = useMemo<CommandPaletteTenant[]>(
+    () =>
+      safePortfolio.tenants.map((tenant) => ({
+        id: tenant.id,
+        name: tenant.fullName || tenant.email,
+        email: tenant.email
+      })),
+    [safePortfolio.tenants]
+  );
+
+  const commandPaletteTransactions = useMemo<CommandPaletteTransaction[]>(
+    () => [
+      ...displayDashboardData.charges.slice(0, 8).map((charge) => ({
+        id: `charge:${charge.id}`,
+        label: `${charge.propertyName} • Unit ${charge.unitNumber}`,
+        description: `${charge.tenantName} • ${charge.status} • ${formatDate(charge.dueDate)}`,
+        sectionId: "charges",
+        propertyId: charge.propertyId,
+        icon: Receipt,
+        keywords: [charge.propertyName, charge.unitNumber, charge.tenantName, charge.status]
+      })),
+      ...safeDashboardData.recentPayments.slice(0, 6).map((payment) => ({
+        id: `payment:${payment.id}`,
+        label: `${payment.propertyName} • Unit ${payment.unitNumber}`,
+        description: `${payment.method} • ${formatDate(payment.paidAt)}`,
+        sectionId: "payments",
+        icon: CreditCard,
+        keywords: [payment.propertyName, payment.unitNumber, payment.method]
+      }))
+    ],
+    [displayDashboardData.charges, safeDashboardData.recentPayments]
+  );
+
+  const commandPaletteQuickActions = useMemo<CommandPaletteQuickAction[]>(
+    () =>
+      isOwnerRole
+        ? [
+            {
+              id: "add-property",
+              label: "Add Property",
+              description: "Start the new property workflow.",
+              icon: Building2,
+              keywords: ["property", "create", "operations"]
+            },
+            {
+              id: "create-lease",
+              label: "Create Lease",
+              description: "Jump to lease setup for a new resident.",
+              icon: FileText,
+              keywords: ["lease", "tenant", "move in"]
+            },
+            {
+              id: "new-tenant",
+              label: "New Tenant",
+              description: "Open the tenant onboarding workflow.",
+              icon: UserPlus,
+              keywords: ["invite", "tenant", "leasing"]
+            },
+            {
+              id: "open-notifications",
+              label: "Review Notifications",
+              description: "Open the owner activity feed.",
+              icon: Bell,
+              keywords: ["alerts", "activity", "feed"]
+            }
+          ]
+        : [],
+    [isOwnerRole]
+  );
 
   const searchItems = useMemo<GlobalSearchItem[]>(() => {
     const basePath = isOwnerRole ? "/owner" : isManagerRole ? "/manager" : null;
@@ -779,6 +968,76 @@ export function useDashboardData(props: DashboardProps) {
     setActiveSection(itemId);
   };
 
+  const openCommandPalette = useCallback(() => {
+    if (isOwnerRole) {
+      setIsCommandPaletteOpen(true);
+    }
+  }, [isOwnerRole]);
+
+  const closeCommandPalette = useCallback(() => {
+    setIsCommandPaletteOpen(false);
+  }, []);
+
+  const handleCommandPaletteSectionSelect = useCallback(
+    (sectionId: string) => {
+      openSection(sectionId);
+      closeCommandPalette();
+    },
+    [closeCommandPalette, openSection]
+  );
+
+  const handleCommandPalettePropertySelect = useCallback(
+    (propertyId: string) => {
+      selectProperty(propertyId);
+      openSection("overview");
+      closeCommandPalette();
+    },
+    [closeCommandPalette, openSection, selectProperty]
+  );
+
+  const handleCommandPaletteTenantSelect = useCallback(
+    (tenantId: string) => {
+      const tenant = safePortfolio.tenants.find((item) => item.id === tenantId);
+      if (tenant?.propertyIds.length === 1) {
+        selectProperty(tenant.propertyIds[0]);
+      }
+      openSection("leases");
+      closeCommandPalette();
+    },
+    [closeCommandPalette, openSection, safePortfolio.tenants, selectProperty]
+  );
+
+  const handleCommandPaletteQuickActionSelect = useCallback(
+    (actionId: string) => {
+      if (!isOwnerRole) {
+        return;
+      }
+
+      if (actionId === "add-property") {
+        setOwnerWorkflowMode("new_property");
+        setActiveSection("operations");
+      }
+
+      if (actionId === "create-lease") {
+        setOwnerWorkflowMode("new_property");
+        setActiveSection("leases");
+      }
+
+      if (actionId === "new-tenant") {
+        setOwnerWorkflowMode("new_tenant");
+        setActiveSection("leasing");
+      }
+
+      if (actionId === "open-notifications") {
+        setOwnerWorkflowMode("daily_ops");
+        setActiveSection("notifications");
+      }
+
+      closeCommandPalette();
+    },
+    [closeCommandPalette, isOwnerRole]
+  );
+
   const sectionRendererProps = {
     ...props,
     data: displayDashboardData,
@@ -823,6 +1082,7 @@ export function useDashboardData(props: DashboardProps) {
     hasExpensesSection,
     hasAnalyticsSection,
     hasActivitySection,
+    openSection,
     goToSectionIfVisible,
     handleTenantInviteSuccess,
     handleManagerInviteSuccess,
@@ -846,8 +1106,24 @@ export function useDashboardData(props: DashboardProps) {
     onSelectItem: handleSidebarSelect,
     unreadNotificationCount: notificationBadgeCount,
     searchItems,
+    onOpenCommandPalette: openCommandPalette,
+    commandPaletteEnabled: isOwnerRole,
     reportsHref,
     accountSwitcher
+  };
+
+  const commandPaletteProps = {
+    open: isCommandPaletteOpen,
+    onClose: closeCommandPalette,
+    sections: commandPaletteSections,
+    properties: commandPaletteProperties,
+    tenants: commandPaletteTenants,
+    transactions: commandPaletteTransactions,
+    quickActions: commandPaletteQuickActions,
+    onSelectSection: handleCommandPaletteSectionSelect,
+    onSelectProperty: handleCommandPalettePropertySelect,
+    onSelectTenant: handleCommandPaletteTenantSelect,
+    onSelectQuickAction: handleCommandPaletteQuickActionSelect
   };
 
   return {
@@ -861,6 +1137,7 @@ export function useDashboardData(props: DashboardProps) {
     isManagerRole,
     isOwnerRole,
     layoutProps,
+    commandPaletteProps,
     occupancy,
     ownerWorkflowMode,
     resolvedGamification,

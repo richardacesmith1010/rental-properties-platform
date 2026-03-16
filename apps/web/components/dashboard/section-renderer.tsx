@@ -141,7 +141,7 @@ export function SectionRenderer(props: SectionRendererProps) {
             occupiedUnits={props.selectedPropertySummary.occupiedUnits}
             monthlyRentCents={props.selectedPropertySummary.monthlyRentCents}
             openTickets={props.selectedPropertySummary.openTickets}
-            onViewDetails={() => props.goToSectionIfVisible("portfolio")}
+            onViewDetails={() => props.openSection("portfolio")}
           />
         ) : null}
       </div>
@@ -301,6 +301,8 @@ export function SectionRenderer(props: SectionRendererProps) {
             notifications={props.safeNotifications}
             onMarkRead={props.onMarkNotificationRead!}
             onMarkAllRead={props.onMarkAllNotificationsRead}
+            onOpenSection={props.openSection}
+            enhanced={props.data.profileRole === "owner"}
           />
         ) : (
           <FeatureWarning

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { NotificationsSection } from "@/components/dashboard/notifications-section";
 import type { NotificationDTO } from "@/lib/notifications";
@@ -79,5 +79,30 @@ describe("NotificationsSection", () => {
     );
 
     expect(screen.getByRole("button", { name: "Mark all as read" })).toBeInTheDocument();
+  });
+
+  it("groups owner notifications and renders section action links in enhanced mode", () => {
+    const onOpenSection = vi.fn();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-05T18:00:00.000Z"));
+    try {
+      render(
+        <NotificationsSection
+          notifications={notifications}
+          onMarkRead={async () => null}
+          onOpenSection={onOpenSection}
+          enhanced
+        />
+      );
+
+      expect(screen.getByText("Today")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "View Charge" })).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: "View Charge" }));
+
+      expect(onOpenSection).toHaveBeenCalledWith("charges");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

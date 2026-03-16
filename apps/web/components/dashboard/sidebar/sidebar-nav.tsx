@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { Drawer } from "vaul";
-import { Bell, Menu, type LucideIcon } from "lucide-react";
+import { Bell, Menu, Search, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GlobalSearch, type GlobalSearchItem } from "@/components/dashboard/global-search";
 import { MobileDrawer } from "@/components/ui/mobile-drawer";
@@ -34,8 +34,29 @@ interface SidebarNavProps {
   onSelectItem?: (id: string) => void;
   unreadNotificationCount?: number;
   searchItems?: GlobalSearchItem[];
+  onOpenCommandPalette?: () => void;
+  commandPaletteEnabled?: boolean;
   reportsHref?: string | null;
   accountSwitcher?: ReactNode;
+}
+
+function CommandPaletteTrigger({ onOpen }: { onOpen: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex w-full items-center justify-between rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-left text-sm text-white/80 shadow-sm transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+      title="Open the command palette."
+    >
+      <span className="flex min-w-0 items-center gap-2">
+        <Search className="h-4 w-4 shrink-0 text-white/60" />
+        <span className="truncate">Search navigation, properties, tenants...</span>
+      </span>
+      <span className="rounded-md border border-white/15 bg-white/5 px-2 py-0.5 text-[11px] font-semibold text-white/65">
+        ⌘K
+      </span>
+    </button>
+  );
 }
 
 function ThemeToggleGroup() {
@@ -165,6 +186,8 @@ export function SidebarNav({
   onSelectItem,
   unreadNotificationCount = 0,
   searchItems = [],
+  onOpenCommandPalette,
+  commandPaletteEnabled = false,
   reportsHref = null,
   accountSwitcher
 }: SidebarNavProps) {
@@ -221,7 +244,11 @@ export function SidebarNav({
       </div>
 
       <div className="space-y-3 px-4 pb-4">
-        {searchItems.length > 0 ? <GlobalSearch items={searchItems} /> : null}
+        {commandPaletteEnabled && onOpenCommandPalette ? (
+          <CommandPaletteTrigger onOpen={onOpenCommandPalette} />
+        ) : searchItems.length > 0 ? (
+          <GlobalSearch items={searchItems} />
+        ) : null}
         {accountSwitcher}
         {showWorkspaceButton ? (
           <Link
@@ -263,6 +290,8 @@ export function MobileTopBar({
   onSelectItem,
   unreadNotificationCount = 0,
   searchItems = [],
+  onOpenCommandPalette,
+  commandPaletteEnabled = false,
   reportsHref = null,
   accountSwitcher
 }: Pick<
@@ -280,6 +309,8 @@ export function MobileTopBar({
   | "onSelectItem"
   | "unreadNotificationCount"
   | "searchItems"
+  | "onOpenCommandPalette"
+  | "commandPaletteEnabled"
   | "reportsHref"
   | "accountSwitcher"
 >) {
@@ -366,7 +397,11 @@ export function MobileTopBar({
                 </Badge>
               </div>
 
-              {searchItems.length > 0 ? <GlobalSearch items={searchItems} /> : null}
+              {commandPaletteEnabled && onOpenCommandPalette ? (
+                <CommandPaletteTrigger onOpen={onOpenCommandPalette} />
+              ) : searchItems.length > 0 ? (
+                <GlobalSearch items={searchItems} />
+              ) : null}
               {accountSwitcher}
 
               <div className="grid grid-cols-1 gap-2">

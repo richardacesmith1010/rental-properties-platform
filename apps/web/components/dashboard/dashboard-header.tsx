@@ -21,6 +21,7 @@ interface DashboardHeaderProps {
   nickname?: string | null;
   fullName?: string | null;
   gamificationSummary?: ReactNode;
+  greetingContent?: ReactNode;
 }
 
 function getDisplayName({
@@ -105,6 +106,7 @@ export function DashboardHeader({
   nickname,
   fullName,
   gamificationSummary,
+  greetingContent,
 }: DashboardHeaderProps) {
   const displayName = getDisplayName({ nickname, fullName, userEmail });
   const now = new Date();
@@ -171,12 +173,16 @@ export function DashboardHeader({
               {formatHeaderDate(now)}
             </span>
           </div>
-          <h1 className="domus-heading text-3xl font-bold tracking-tight">
-            {getGreeting(now)}, {displayName}
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm domus-muted">
-            Keep revenue, maintenance, and resident activity moving without leaving the dashboard.
-          </p>
+          {greetingContent ?? (
+            <>
+              <h1 className="domus-heading text-3xl font-bold tracking-tight">
+                {getGreeting(now)}, {displayName}
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm domus-muted">
+                Keep revenue, maintenance, and resident activity moving without leaving the dashboard.
+              </p>
+            </>
+          )}
         </div>
         {gamificationSummary ? <div className="w-full xl:max-w-md">{gamificationSummary}</div> : null}
       </div>

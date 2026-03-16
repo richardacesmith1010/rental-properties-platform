@@ -4,6 +4,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AchievementChecker } from "@/components/gamification/achievement-checker";
 import { GamificationSummary } from "@/components/gamification/gamification-summary";
 import { ConnectBanner } from "@/components/dashboard/connect-banner";
+import { CommandPalette } from "@/components/dashboard/command-palette";
+import { ContextualGreeting } from "@/components/dashboard/contextual-greeting";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { WelcomeCard } from "@/components/dashboard/welcome-card";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
@@ -20,6 +22,7 @@ export function Dashboard(props: DashboardProps) {
     activeSectionIndex,
     activeSectionLabel,
     activeWorkflowMeta,
+    commandPaletteProps,
     displayDashboardData,
     filteredPortfolio,
     goToNextSection,
@@ -36,6 +39,16 @@ export function Dashboard(props: DashboardProps) {
     sectionRendererProps,
     showOnboardingWizard
   } = useDashboardData(props);
+
+  const displayName =
+    props.nickname?.trim() ||
+    props.fullName?.trim().split(/\s+/)[0] ||
+    props.userEmail;
+  const overdueCharges = displayDashboardData.charges.filter((charge) => charge.status === "late");
+  const overdueAmountCents = overdueCharges.reduce((sum, charge) => sum + charge.amountCents, 0);
+  const openTicketCount = sectionRendererProps.filteredTickets.filter(
+    (ticket) => ticket.status === "open" || ticket.status === "in_progress"
+  ).length;
 
   if (isEmptyOwner) {
     return (
@@ -70,17 +83,20 @@ export function Dashboard(props: DashboardProps) {
       {...layoutProps}
       mainClassName="relative flex-1 lg:ml-[260px]"
       afterMain={
-        showOnboardingWizard && props.onInviteTenant ? (
-          <OnboardingWizard
-            propertyId={safePortfolio.properties[0].id}
-            propertyName={safePortfolio.properties[0].name}
-            stripeConnected={props.stripeConnected === true}
-            unitCount={safePortfolio.units.length}
-            onCreateUnit={props.onCreateUnit}
-            onCreateLease={props.onCreateLease}
-            onInviteTenant={props.onInviteTenant}
-          />
-        ) : null
+        <>
+          {showOnboardingWizard && props.onInviteTenant ? (
+            <OnboardingWizard
+              propertyId={safePortfolio.properties[0].id}
+              propertyName={safePortfolio.properties[0].name}
+              stripeConnected={props.stripeConnected === true}
+              unitCount={safePortfolio.units.length}
+              onCreateUnit={props.onCreateUnit}
+              onCreateLease={props.onCreateLease}
+              onInviteTenant={props.onInviteTenant}
+            />
+          ) : null}
+          {isOwnerRole ? <CommandPalette {...commandPaletteProps} /> : null}
+        </>
       }
     >
       <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
@@ -94,6 +110,16 @@ export function Dashboard(props: DashboardProps) {
             userEmail={props.userEmail}
             nickname={props.nickname}
             fullName={props.fullName}
+            greetingContent={
+              isOwnerRole ? (
+                <ContextualGreeting
+                  userName={displayName}
+                  overdueChargeCount={overdueCharges.length}
+                  overdueAmountCents={overdueAmountCents}
+                  openTicketCount={openTicketCount}
+                />
+              ) : undefined
+            }
             gamificationSummary={
               <GamificationSummary
                 totalXp={resolvedGamification.totalXp}
