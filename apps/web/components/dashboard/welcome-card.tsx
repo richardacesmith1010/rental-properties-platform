@@ -1,119 +1,110 @@
 "use client";
 
-import { Check } from "lucide-react";
+import {
+  ArrowRight,
+  Building2,
+  DoorOpen,
+  FileText,
+  Landmark,
+  PlayCircle,
+  Plus,
+  type LucideIcon
+} from "lucide-react";
 import { DomMascot } from "@/components/gamification/dom-mascot";
 import { Button } from "@/components/ui/button";
+import {
+  OnboardingChecklist,
+  type OnboardingChecklistStep,
+  type OnboardingStepId
+} from "./onboarding-checklist";
 
 interface WelcomeCardProps {
-  fullName?: string | null;
-  nickname?: string | null;
-  role: string;
-  stripeConnected: boolean;
-  hasProperty: boolean;
-  hasUnit: boolean;
-  hasLease: boolean;
-  onAddProperty: () => void;
+  displayName: string;
+  steps: OnboardingChecklistStep[];
+  onContinue: (stepId: OnboardingStepId | null) => void;
+  onSkip?: () => void;
 }
 
-interface ChecklistItem {
+function getPrimaryAction(stepId: OnboardingStepId | null): {
   label: string;
-  complete: boolean;
-}
-
-function getFirstName(fullName?: string | null) {
-  const trimmed = fullName?.trim();
-  if (!trimmed) return "there";
-  return trimmed.split(/\s+/)[0] ?? "there";
-}
-
-function ChecklistRow({ label, complete }: ChecklistItem) {
-  return (
-    <li className="flex items-center gap-3">
-      <span
-        className={
-          complete
-            ? "flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white"
-            : "h-5 w-5 rounded-full border border-violet-300 bg-transparent"
-        }
-      >
-        {complete ? <Check className="h-3.5 w-3.5" /> : null}
-      </span>
-      <span
-        className={
-          complete
-            ? "text-sm text-emerald-700 line-through"
-            : "text-sm text-zinc-700"
-        }
-      >
-        {label}
-      </span>
-    </li>
-  );
+  icon: LucideIcon;
+} {
+  switch (stepId) {
+    case "property":
+      return { label: "Add Your First Property", icon: Plus };
+    case "unit":
+      return { label: "Add Your First Unit", icon: DoorOpen };
+    case "lease":
+      return { label: "Create Your First Lease", icon: FileText };
+    case "bank":
+      return { label: "Connect Bank Account", icon: Landmark };
+    case "account":
+      return { label: "Finish Account Setup", icon: Building2 };
+    default:
+      return { label: "Open Dashboard", icon: ArrowRight };
+  }
 }
 
 export function WelcomeCard({
-  fullName,
-  nickname,
-  role: _role,
-  stripeConnected,
-  hasProperty,
-  hasUnit,
-  hasLease,
-  onAddProperty
+  displayName,
+  steps,
+  onContinue,
+  onSkip
 }: WelcomeCardProps) {
-  const displayName = nickname?.trim() || getFirstName(fullName);
-  const checklistItems: ChecklistItem[] = [
-    { label: "Profile completed", complete: true },
-    { label: "Account set up", complete: true },
-    { label: "Add a property", complete: hasProperty },
-    { label: "Add a unit", complete: hasUnit },
-    { label: "Create a lease", complete: hasLease },
-    { label: "Connect bank account", complete: stripeConnected }
-  ];
-
-  let primaryLabel = "Go to Dashboard";
-  let primaryAction = () => window.location.reload();
-
-  if (!hasProperty) {
-    primaryLabel = "Add Your First Property";
-    primaryAction = onAddProperty;
-  } else if (!hasUnit) {
-    primaryLabel = "Add a Unit";
-    primaryAction = onAddProperty;
-  } else if (!hasLease) {
-    primaryLabel = "Create a Lease";
-    primaryAction = onAddProperty;
-  } else if (!stripeConnected) {
-    primaryLabel = "Connect Bank Account";
-    primaryAction = () => {
-      window.location.href = "/connect/onboard";
-    };
-  }
+  const nextStepId = steps.find((step) => !step.completed)?.id ?? null;
+  const primaryAction = getPrimaryAction(nextStepId);
+  const PrimaryIcon = primaryAction.icon;
 
   return (
-    <div className="domus-card mx-auto w-full max-w-lg px-8 py-8 text-center">
-      <div className="mb-5 flex justify-center">
-        <div className="animate-domus-bob rounded-3xl bg-violet-50/80 px-4 py-3">
-          <DomMascot size="lg" />
+    <div className="mx-auto w-full max-w-3xl rounded-2xl border border-border/60 bg-card px-6 py-8 text-center shadow-sm sm:px-8">
+      <div className="mx-auto mb-5 flex h-32 w-32 items-center justify-center rounded-full bg-primary/10">
+        <div className="animate-domus-bob">
+          <DomMascot size="xl" mood="encouraging" animate />
         </div>
       </div>
-      <h2 className="text-xl font-semibold domus-heading">Welcome, {displayName}!</h2>
-      <p className="mt-2 text-sm domus-muted">
-        Let&apos;s get your first property set up. Here&apos;s your progress:
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+        Owner setup
       </p>
-      <ul className="mt-6 space-y-3 text-left">
-        {checklistItems.map((item) => (
-          <ChecklistRow key={item.label} {...item} />
-        ))}
-      </ul>
-      <Button
-        type="button"
-        className="mt-7"
-        onClick={primaryAction}
-        title={primaryLabel}
-      >
-        {primaryLabel}
-      </Button>
+      <h2 className="mt-2 text-2xl font-bold tracking-tight text-foreground">
+        Welcome, {displayName}!
+      </h2>
+      <p className="mx-auto mt-2 max-w-2xl text-sm text-muted-foreground">
+        Domus keeps your properties, leases, payments, and resident operations in one place.
+        Finish these first steps to get your dashboard running smoothly.
+      </p>
+
+      <OnboardingChecklist steps={steps} className="mt-6" />
+
+      <div className="mt-6 flex flex-col gap-3">
+        <Button
+          type="button"
+          size="lg"
+          className="w-full gap-2"
+          onClick={() => onContinue(nextStepId)}
+          title={primaryAction.label}
+        >
+          <PrimaryIcon className="h-4 w-4" />
+          {primaryAction.label}
+        </Button>
+        <a
+          href="#owner-setup-tour"
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-muted/60 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+          title="Preview the Domus setup tour."
+        >
+          <PlayCircle className="h-4 w-4 text-primary" />
+          Watch a 2-minute tour
+        </a>
+        {onSkip ? (
+          <button
+            type="button"
+            onClick={onSkip}
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+            title="Dismiss setup and go straight to the dashboard."
+          >
+            Skip setup — go to dashboard →
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }

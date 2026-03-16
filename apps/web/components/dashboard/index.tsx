@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AchievementChecker } from "@/components/gamification/achievement-checker";
 import { GamificationSummary } from "@/components/gamification/gamification-summary";
@@ -32,6 +33,7 @@ export function Dashboard(props: DashboardProps) {
     isManagerRole,
     layoutProps,
     occupancy,
+    ownerOnboarding,
     ownerWorkflowMode,
     resolvedGamification,
     safePortfolio,
@@ -49,29 +51,67 @@ export function Dashboard(props: DashboardProps) {
   const openTicketCount = sectionRendererProps.filteredTickets.filter(
     (ticket) => ticket.status === "open" || ticket.status === "in_progress"
   ).length;
+  const onboardingDismissStorageKey = useMemo(
+    () => `domus-owner-onboarding-dismissed:${props.userEmail}`,
+    [props.userEmail]
+  );
+  const [isOnboardingDismissed, setIsOnboardingDismissed] = useState(false);
 
-  if (isEmptyOwner) {
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    setIsOnboardingDismissed(window.localStorage.getItem(onboardingDismissStorageKey) === "true");
+  }, [onboardingDismissStorageKey]);
+
+  const showOwnerOnboarding =
+    isOwnerRole &&
+    ownerOnboarding.shouldShow &&
+    !isOnboardingDismissed &&
+    activeSection === "overview";
+
+  const handleDismissOnboarding = () => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(onboardingDismissStorageKey, "true");
+    }
+    setIsOnboardingDismissed(true);
+  };
+
+  const handleContinueOwnerOnboarding = (stepId: typeof ownerOnboarding.nextStepId) => {
+    switch (stepId) {
+      case "property":
+        window.location.href = `/owner?mode=new_property&section=operations${
+          props.activeAccountId ? `&account=${encodeURIComponent(props.activeAccountId)}` : ""
+        }`;
+        return;
+      case "unit":
+        sectionRendererProps.openSection("units");
+        return;
+      case "lease":
+        sectionRendererProps.openSection("leases");
+        return;
+      case "bank":
+        window.location.href = "/connect/onboard";
+        return;
+      default:
+        sectionRendererProps.openSection("overview");
+    }
+  };
+
+  if (isEmptyOwner && showOwnerOnboarding) {
     return (
       <DashboardLayout
         {...layoutProps}
         mainClassName="flex flex-1 flex-col items-center justify-center px-6 py-12 lg:ml-[260px]"
       >
         <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
-        <div className="w-full max-w-md space-y-4">
+        <div className="w-full max-w-3xl space-y-4">
           {props.stripeConnected === false ? <ConnectBanner connected={false} role="owner" /> : null}
           <WelcomeCard
-            fullName={props.fullName}
-            nickname={props.nickname}
-            role={props.data.profileRole}
-            stripeConnected={props.stripeConnected === true}
-            hasProperty={safePortfolio.properties.length > 0}
-            hasUnit={safePortfolio.units.length > 0}
-            hasLease={safePortfolio.leases.length > 0}
-            onAddProperty={() => {
-              window.location.href = `/owner?mode=new_property&section=operations${
-                props.activeAccountId ? `&account=${encodeURIComponent(props.activeAccountId)}` : ""
-              }`;
-            }}
+            displayName={displayName}
+            steps={ownerOnboarding.steps}
+            onContinue={handleContinueOwnerOnboarding}
+            onSkip={handleDismissOnboarding}
           />
         </div>
       </DashboardLayout>
@@ -84,7 +124,10 @@ export function Dashboard(props: DashboardProps) {
       mainClassName="relative flex-1 lg:ml-[260px]"
       afterMain={
         <>
-          {showOnboardingWizard && props.onInviteTenant ? (
+          {showOnboardingWizard &&
+          props.onInviteTenant &&
+          !isOnboardingDismissed &&
+          !showOwnerOnboarding ? (
             <OnboardingWizard
               propertyId={safePortfolio.properties[0].id}
               propertyName={safePortfolio.properties[0].name}
@@ -102,34 +145,43 @@ export function Dashboard(props: DashboardProps) {
       <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
       {activeSection === "overview" ? (
         <div className="px-6 pt-6 lg:px-8 lg:pt-8" id="overview">
-          <DashboardHeader
-            role={props.data.profileRole}
-            kpis={displayDashboardData.kpis}
-            occupancy={occupancy}
-            propertyCount={filteredPortfolio.properties.length}
-            userEmail={props.userEmail}
-            nickname={props.nickname}
-            fullName={props.fullName}
-            greetingContent={
-              isOwnerRole ? (
-                <ContextualGreeting
-                  userName={displayName}
-                  overdueChargeCount={overdueCharges.length}
-                  overdueAmountCents={overdueAmountCents}
-                  openTicketCount={openTicketCount}
+          {showOwnerOnboarding ? (
+            <WelcomeCard
+              displayName={displayName}
+              steps={ownerOnboarding.steps}
+              onContinue={handleContinueOwnerOnboarding}
+              onSkip={handleDismissOnboarding}
+            />
+          ) : (
+            <DashboardHeader
+              role={props.data.profileRole}
+              kpis={displayDashboardData.kpis}
+              occupancy={occupancy}
+              propertyCount={filteredPortfolio.properties.length}
+              userEmail={props.userEmail}
+              nickname={props.nickname}
+              fullName={props.fullName}
+              greetingContent={
+                isOwnerRole ? (
+                  <ContextualGreeting
+                    userName={displayName}
+                    overdueChargeCount={overdueCharges.length}
+                    overdueAmountCents={overdueAmountCents}
+                    openTicketCount={openTicketCount}
+                  />
+                ) : undefined
+              }
+              gamificationSummary={
+                <GamificationSummary
+                  totalXp={resolvedGamification.totalXp}
+                  currentLevel={resolvedGamification.currentLevel}
+                  streakCount={resolvedGamification.streakCount}
+                  role={props.data.profileRole}
+                  className="w-full"
                 />
-              ) : undefined
-            }
-            gamificationSummary={
-              <GamificationSummary
-                totalXp={resolvedGamification.totalXp}
-                currentLevel={resolvedGamification.currentLevel}
-                streakCount={resolvedGamification.streakCount}
-                role={props.data.profileRole}
-                className="w-full"
-              />
-            }
-          />
+              }
+            />
+          )}
         </div>
       ) : null}
       <div className="space-y-6 px-6 pb-8 pt-6 lg:px-8">
@@ -141,7 +193,10 @@ export function Dashboard(props: DashboardProps) {
         {(isOwnerRole || isManagerRole) && props.stripeConnected === false ? (
           <ConnectBanner connected={false} role={isOwnerRole ? "owner" : "manager"} />
         ) : null}
-        {(isOwnerRole || isManagerRole) && activeWorkflowMeta && activeSection === "overview" ? (
+        {(isOwnerRole || isManagerRole) &&
+        activeWorkflowMeta &&
+        activeSection === "overview" &&
+        !showOwnerOnboarding ? (
           <div className="domus-glass flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm font-semibold text-zinc-900">{activeWorkflowMeta.label}</p>
             <p className="text-sm text-zinc-500">{activeWorkflowMeta.description}</p>

@@ -25,9 +25,9 @@ export default async function OwnerSetupPage() {
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-emerald-500 text-xl font-bold text-white shadow-lg shadow-violet-500/25">
           D
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Set Up Your Account</h1>
-        <p className="mt-2 text-sm text-zinc-500">
-          Tell us about your ownership structure to get started.
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Set up your ownership account</h1>
+        <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+          Tell Domus how you hold your properties so ownership, payouts, and shared access start in the right place.
         </p>
       </div>
       <OwnerSetupWizard

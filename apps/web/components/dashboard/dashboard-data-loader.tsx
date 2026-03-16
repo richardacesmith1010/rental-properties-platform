@@ -14,6 +14,7 @@ import type { PortfolioData } from "@/lib/portfolio";
 import type { RentIncreaseEntry } from "@/lib/rent-increases";
 import type { MaintenanceTicket } from "@/lib/maintenance";
 import { AccountSwitcher } from "@/components/dashboard/account-switcher";
+import type { OnboardingChecklistStep } from "@/components/dashboard/onboarding-checklist";
 import type { DashboardLayoutProps } from "./dashboard-layout";
 import {
   buildAllSectionItems,
@@ -85,6 +86,14 @@ const MANAGER_SECTION_MODE_BY_ID: Partial<Record<string, ManagerWorkflowMode>> =
 
 type SectionRendererProps = ComponentProps<typeof SectionRenderer>;
 type LayoutProps = Omit<DashboardLayoutProps, "children" | "mainClassName" | "afterMain">;
+
+interface OwnerOnboardingState {
+  steps: OnboardingChecklistStep[];
+  nextStepId: OnboardingChecklistStep["id"] | null;
+  completedCount: number;
+  totalSteps: number;
+  shouldShow: boolean;
+}
 
 function buildPropertyAddress(property: {
   addressLine1: string;
@@ -243,7 +252,10 @@ export function useDashboardData(props: DashboardProps) {
     }),
     [props.data, safeAnalytics.summaryKpis.netIncomeCentsYtd]
   );
-  const safeOwnershipAccounts: OwnershipAccountDTO[] = props.ownershipAccounts ?? [];
+  const safeOwnershipAccounts = useMemo<OwnershipAccountDTO[]>(
+    () => props.ownershipAccounts ?? [],
+    [props.ownershipAccounts]
+  );
   const safeNotifications = props.notifications ?? [];
   const safeInboxThreads = props.inboxThreads ?? [];
   const safeAutomationTemplates = props.automationTemplates ?? [];
@@ -754,6 +766,75 @@ export function useDashboardData(props: DashboardProps) {
         pendingRenameRequests={props.pendingAccountRenameRequests}
       />
     ) : null;
+  const ownerOnboarding = useMemo<OwnerOnboardingState>(() => {
+    if (!isOwnerRole) {
+      return {
+        steps: [],
+        nextStepId: null,
+        completedCount: 0,
+        totalSteps: 0,
+        shouldShow: false
+      };
+    }
+
+    const steps: OnboardingChecklistStep[] = [
+      {
+        id: "profile",
+        label: "Profile completed",
+        description: "Your name and contact info are ready to use throughout Domus.",
+        completed: true
+      },
+      {
+        id: "account",
+        label: "Account set up",
+        description: "Your ownership account is ready for properties, members, and payouts.",
+        completed: Boolean(props.activeAccountId ?? safeOwnershipAccounts[0]?.id)
+      },
+      {
+        id: "property",
+        label: "Add a property",
+        description: "Enter your first property address and core details.",
+        completed: safePortfolio.properties.length > 0
+      },
+      {
+        id: "unit",
+        label: "Add a unit",
+        description: "Create at least one rentable unit inside your property.",
+        completed: safePortfolio.units.length > 0
+      },
+      {
+        id: "lease",
+        label: "Create a lease",
+        description: "Set rent, dates, and tenant details so charges can start flowing.",
+        completed: safePortfolio.leases.length > 0
+      },
+      {
+        id: "bank",
+        label: "Connect bank account",
+        description: "Link your payout and rent-collection account to finish setup.",
+        completed: props.stripeConnected === true
+      }
+    ];
+
+    const completedCount = steps.filter((step) => step.completed).length;
+    const nextStepId = steps.find((step) => !step.completed)?.id ?? null;
+
+    return {
+      steps,
+      nextStepId,
+      completedCount,
+      totalSteps: steps.length,
+      shouldShow: nextStepId !== null
+    };
+  }, [
+    isOwnerRole,
+    props.activeAccountId,
+    props.stripeConnected,
+    safeOwnershipAccounts,
+    safePortfolio.leases.length,
+    safePortfolio.properties.length,
+    safePortfolio.units.length
+  ]);
 
   const commandPaletteSections = useMemo<CommandPaletteSection[]>(
     () =>
@@ -1139,6 +1220,7 @@ export function useDashboardData(props: DashboardProps) {
     layoutProps,
     commandPaletteProps,
     occupancy,
+    ownerOnboarding,
     ownerWorkflowMode,
     resolvedGamification,
     selectedPropertyId,
