@@ -14,6 +14,9 @@ import { OperationsSection } from "./operations-section";
 import { PaymentsSection } from "./payments-section";
 import { PortfolioSection } from "./portfolio-section";
 import { RentCollectionBar } from "./rent-collection-bar";
+import { Breadcrumbs, type BreadcrumbItem } from "./breadcrumbs";
+import { PropertySelector } from "./property-selector";
+import { PropertySummaryCard } from "./property-summary-card";
 import { SectionErrorBoundary } from "./section-error-boundary";
 import { UnitsSection } from "./units-section";
 import { VendorsSection } from "./vendors-section";
@@ -40,11 +43,50 @@ const {
   automations: AutomationTemplatesSection
 } = lazySectionComponents;
 
+function buildBreadcrumbItems(props: SectionRendererProps): BreadcrumbItem[] {
+  const items: BreadcrumbItem[] = [
+    {
+      label: "Dashboard",
+      onClick:
+        props.activeSection !== "overview" || props.selectedPropertyId
+          ? () => {
+              props.onSelectProperty(null);
+              props.goToSectionIfVisible("overview");
+            }
+          : undefined
+    }
+  ];
+
+  if (props.activeSection !== "overview") {
+    items.push(
+      props.selectedProperty
+        ? {
+            label: props.activeSectionLabel,
+            onClick: () => {
+              props.onSelectProperty(null);
+              props.goToSectionIfVisible(props.activeSection);
+            }
+          }
+        : { label: props.activeSectionLabel }
+    );
+  }
+
+  if (props.selectedProperty) {
+    items.push({ label: props.selectedProperty.name });
+  }
+
+  return items;
+}
+
 export function SectionRenderer(props: SectionRendererProps) {
-  const currentRentMetric = props.safeAnalytics.rentMetrics.at(-1) ?? null;
-  const previousRentMetric = props.safeAnalytics.rentMetrics.at(-2) ?? null;
-  const currentOccupancyMetric = props.safeAnalytics.occupancyMetrics.at(-1) ?? null;
-  const previousOccupancyMetric = props.safeAnalytics.occupancyMetrics.at(-2) ?? null;
+  const currentRentMetric = props.selectedPropertyId ? null : props.safeAnalytics.rentMetrics.at(-1) ?? null;
+  const previousRentMetric = props.selectedPropertyId ? null : props.safeAnalytics.rentMetrics.at(-2) ?? null;
+  const currentOccupancyMetric = props.selectedPropertyId
+    ? null
+    : props.safeAnalytics.occupancyMetrics.at(-1) ?? null;
+  const previousOccupancyMetric = props.selectedPropertyId
+    ? null
+    : props.safeAnalytics.occupancyMetrics.at(-2) ?? null;
   const propertyOptions = props.safePortfolio.properties.map((property) => ({
     id: property.id,
     name: property.name
@@ -75,8 +117,40 @@ export function SectionRenderer(props: SectionRendererProps) {
     previousOccupancyMetric?.rate ?? null
   );
   const collectionTrend = computeTrend(currentCollectionRate, previousCollectionRate);
+  const ownerChrome =
+    props.data.profileRole === "owner" && props.availableProperties.length > 0 ? (
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <Breadcrumbs items={buildBreadcrumbItems(props)} />
+          <PropertySelector
+            properties={props.availableProperties.map((property) => ({
+              id: property.id,
+              name: property.name,
+              address: [property.addressLine1, property.city, property.state]
+                .filter(Boolean)
+                .join(", ")
+            }))}
+            selectedPropertyId={props.selectedPropertyId}
+            onSelect={props.onSelectProperty}
+          />
+        </div>
+        {props.selectedPropertySummary ? (
+          <PropertySummaryCard
+            property={props.selectedPropertySummary.property}
+            unitCount={props.selectedPropertySummary.unitCount}
+            occupiedUnits={props.selectedPropertySummary.occupiedUnits}
+            monthlyRentCents={props.selectedPropertySummary.monthlyRentCents}
+            openTickets={props.selectedPropertySummary.openTickets}
+            onViewDetails={() => props.goToSectionIfVisible("portfolio")}
+          />
+        ) : null}
+      </div>
+    ) : null;
   const renderSection = (sectionName: string, content: ReactNode) => (
-    <SectionErrorBoundary sectionName={sectionName}>{content}</SectionErrorBoundary>
+    <SectionErrorBoundary sectionName={sectionName}>
+      {ownerChrome}
+      {content}
+    </SectionErrorBoundary>
   );
 
   switch (props.activeSection) {
@@ -129,7 +203,7 @@ export function SectionRenderer(props: SectionRendererProps) {
       return renderSection(
         "Maintenance",
         <MaintenanceSection
-          tickets={props.tickets ?? []}
+          tickets={props.filteredTickets}
           showControls={!!props.onUpdateTicketStatus}
           onUpdateStatus={props.onUpdateTicketStatus}
           onAddComment={props.onAddTicketComment}
@@ -404,13 +478,17 @@ export function SectionRenderer(props: SectionRendererProps) {
       return renderSection(
         "Portfolio",
         <PortfolioSection
-          properties={props.safePortfolio.properties}
+          properties={props.filteredPortfolio.properties}
           showControls={props.canManagePortfolio}
           onUpdateProperty={props.onUpdateProperty}
           onDeleteProperty={props.onDeleteProperty}
           onUpdateManagementFee={
             props.data.profileRole === "owner" ? props.onUpdateManagementFee : undefined
           }
+          onSelectProperty={(propertyId) => {
+            props.onSelectProperty(propertyId);
+            props.goToSectionIfVisible("overview");
+          }}
           onGoToOperations={() => props.goToSectionIfVisible("operations")}
         />
       );
@@ -419,7 +497,7 @@ export function SectionRenderer(props: SectionRendererProps) {
       return renderSection(
         "Units",
         <UnitsSection
-          units={props.safePortfolio.units}
+          units={props.filteredPortfolio.units}
           showControls={props.canManagePortfolio}
           onUpdateUnit={props.onUpdateUnit}
           onDeleteUnit={props.onDeleteUnit}
@@ -431,7 +509,7 @@ export function SectionRenderer(props: SectionRendererProps) {
       return renderSection(
         "Leases",
         <LeasesSection
-          leases={props.safePortfolio.leases}
+          leases={props.filteredPortfolio.leases}
           rentIncreaseHistory={props.rentIncreaseHistory}
           showControls={props.canManagePortfolio}
           onUpdateLease={props.onUpdateLease}

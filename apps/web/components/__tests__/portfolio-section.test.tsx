@@ -87,4 +87,15 @@ describe("PortfolioSection", () => {
     expect(screen.getAllByText(/units?/i)[0]).toBeInTheDocument();
     expect(screen.getByText("3 units")).toBeInTheDocument();
   });
+
+  it("supports property drill-down by click and keyboard", () => {
+    const onSelectProperty = vi.fn();
+    render(<PortfolioSection properties={[properties[0]]} onSelectProperty={onSelectProperty} />);
+
+    fireEvent.click(screen.getByText("Atlas House"));
+    expect(onSelectProperty).toHaveBeenCalledWith("property-1");
+
+    fireEvent.keyDown(screen.getByRole("button", { name: /Atlas House/i }), { key: "Enter" });
+    expect(onSelectProperty).toHaveBeenCalledTimes(2);
+  });
 });

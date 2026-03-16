@@ -1,7 +1,7 @@
 import dynamic from "next/dynamic";
 import { createElement } from "react";
 import type { DashboardData } from "@/lib/dashboard";
-import type { PortfolioData } from "@/lib/portfolio";
+import type { PortfolioData, PropertyListItem } from "@/lib/portfolio";
 import type { MaintenanceTicket } from "@/lib/maintenance";
 import type { InvitationListItem } from "@/lib/invitations";
 import type { NotificationDTO } from "@/lib/notifications";
@@ -32,11 +32,14 @@ export type StatefulAction = (prev: ActionState, formData: FormData) => Promise<
 
 export interface SectionRendererProps {
   activeSection: string;
+  activeSectionLabel: string;
   occupancy: number;
   data: DashboardData;
   canManagePortfolio: boolean;
   safePortfolio: PortfolioData;
+  filteredPortfolio: PortfolioData;
   tickets: MaintenanceTicket[];
+  filteredTickets: MaintenanceTicket[];
   invitations: InvitationListItem[];
   safeNotifications: NotificationDTO[];
   safeInboxThreads: InboxThreadDTO[];
@@ -60,6 +63,21 @@ export interface SectionRendererProps {
   financialActivityFeed?: FinancialActivityEvent[];
   activeAccountId?: string | null;
   currentUserId?: string;
+  availableProperties: PropertyListItem[];
+  selectedPropertyId: string | null;
+  selectedProperty: PropertyListItem | null;
+  selectedPropertySummary: {
+    property: {
+      id: string;
+      name: string;
+      address?: string;
+    };
+    unitCount: number;
+    occupiedUnits: number;
+    monthlyRentCents: number;
+    openTickets: number;
+  } | null;
+  onSelectProperty: (propertyId: string | null) => void;
   safeCapabilities: FeatureCapabilitiesDTO;
   sortedVendors: VendorDTO[];
   hasLeasingSection: boolean;

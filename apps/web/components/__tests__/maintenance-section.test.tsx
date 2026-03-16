@@ -35,6 +35,7 @@ vi.mock("@/components/dashboard/maintenance-tracker", () => ({
 describe("MaintenanceSection", () => {
   const ticket: MaintenanceTicket = {
     id: "ticket-1",
+    propertyId: "property-1",
     propertyName: "Atlas House",
     unitNumber: "1A",
     title: "Leaking sink",

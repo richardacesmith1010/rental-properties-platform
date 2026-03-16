@@ -35,6 +35,87 @@ const EMPTY_RENT_INCREASE_HISTORY: RentIncreaseEntry[] = [];
 type SectionRendererProps = ComponentProps<typeof SectionRenderer>;
 type LayoutProps = Omit<DashboardLayoutProps, "children" | "mainClassName" | "afterMain">;
 
+function buildPropertyAddress(property: {
+  addressLine1: string;
+  city: string;
+  state: string;
+  postalCode: string;
+}) {
+  const locality = [property.city, property.state, property.postalCode].filter(Boolean).join(" ");
+  return [property.addressLine1, locality].filter(Boolean).join(", ");
+}
+
+function computeFilteredKpis(params: {
+  baseKpis: DashboardData["kpis"];
+  charges: DashboardData["charges"];
+  tickets: MaintenanceTicket[];
+  portfolio: PortfolioData;
+  netCashFlowCents: number;
+}) {
+  const { baseKpis, charges, tickets, portfolio, netCashFlowCents } = params;
+  const activeLeases = portfolio.leases.filter((lease) => lease.active);
+  const openTickets = tickets.filter(
+    (ticket) => ticket.status === "open" || ticket.status === "in_progress"
+  );
+  const highPriorityTickets = openTickets.filter(
+    (ticket) => ticket.priority === "high" || ticket.priority === "urgent"
+  );
+  const lateCharges = charges.filter((charge) => charge.status === "late");
+  const currentMonth = new Date().getUTCMonth();
+  const currentYear = new Date().getUTCFullYear();
+  const currentMonthRentCharges = charges.filter((charge) => {
+    if (charge.category !== "rent") {
+      return false;
+    }
+    const dueDate = new Date(`${charge.dueDate}T00:00:00.000Z`);
+    return (
+      !Number.isNaN(dueDate.getTime()) &&
+      dueDate.getUTCMonth() === currentMonth &&
+      dueDate.getUTCFullYear() === currentYear
+    );
+  });
+  const collectedRentCents = currentMonthRentCharges
+    .filter((charge) => charge.status === "paid")
+    .reduce((sum, charge) => sum + charge.amountCents, 0);
+  const pendingRentCents = currentMonthRentCharges
+    .filter((charge) => charge.status === "pending")
+    .reduce((sum, charge) => sum + charge.amountCents, 0);
+  const overdueRentCents = currentMonthRentCharges
+    .filter((charge) => charge.status === "late")
+    .reduce((sum, charge) => sum + charge.amountCents, 0);
+  const outstandingCharges = charges.filter(
+    (charge) => charge.status === "pending" || charge.status === "late"
+  );
+  const totalDueCents = collectedRentCents + pendingRentCents + overdueRentCents;
+
+  return {
+    ...baseKpis,
+    monthlyGrossRentCents: activeLeases.reduce((sum, lease) => sum + lease.monthlyRentCents, 0),
+    activeLeaseCount: activeLeases.length,
+    occupiedUnits: portfolio.units.filter((unit) => unit.occupied).length,
+    totalUnits: portfolio.units.length,
+    openMaintenanceCount: openTickets.length,
+    highPriorityMaintenanceCount: highPriorityTickets.length,
+    lateRentCents: lateCharges.reduce((sum, charge) => sum + charge.amountCents, 0),
+    lateAccountCount: new Set(
+      lateCharges
+        .map((charge) => charge.leaseId)
+        .filter((leaseId): leaseId is string => Boolean(leaseId))
+    ).size,
+    collectedRentCents,
+    pendingRentCents,
+    overdueRentCents,
+    collectionRate: totalDueCents > 0 ? (collectedRentCents / totalDueCents) * 100 : 0,
+    outstandingCents: outstandingCharges.reduce((sum, charge) => sum + charge.amountCents, 0),
+    outstandingAccountCount: new Set(
+      outstandingCharges
+        .map((charge) => charge.leaseId)
+        .filter((leaseId): leaseId is string => Boolean(leaseId))
+    ).size,
+    netCashFlowCents
+  };
+}
+
 export function useDashboardData(props: DashboardProps) {
   const resolvedGamification = props.gamification ?? {
     totalXp: 0,
@@ -42,12 +123,16 @@ export function useDashboardData(props: DashboardProps) {
     streakCount: 0,
     streakLastDate: null
   };
-  const safePortfolio: PortfolioData = props.portfolio ?? {
-    properties: [],
-    units: [],
-    leases: [],
-    tenants: []
-  };
+  const safePortfolio = useMemo<PortfolioData>(
+    () =>
+      props.portfolio ?? {
+        properties: [],
+        units: [],
+        leases: [],
+        tenants: []
+      },
+    [props.portfolio]
+  );
   const safeDocuments: OwnerDocumentsData = props.documents ?? {
     templates: [],
     packets: [],
@@ -97,13 +182,16 @@ export function useDashboardData(props: DashboardProps) {
     automationsEnabled: true,
     warnings: {}
   };
-  const safeDashboardData: DashboardData = {
-    ...props.data,
-    kpis: {
-      ...props.data.kpis,
-      netCashFlowCents: safeAnalytics.summaryKpis.netIncomeCentsYtd
-    }
-  };
+  const safeDashboardData = useMemo<DashboardData>(
+    () => ({
+      ...props.data,
+      kpis: {
+        ...props.data.kpis,
+        netCashFlowCents: safeAnalytics.summaryKpis.netIncomeCentsYtd
+      }
+    }),
+    [props.data, safeAnalytics.summaryKpis.netIncomeCentsYtd]
+  );
   const safeOwnershipAccounts: OwnershipAccountDTO[] = props.ownershipAccounts ?? [];
   const safeNotifications = props.notifications ?? [];
   const safeInboxThreads = props.inboxThreads ?? [];
@@ -122,10 +210,7 @@ export function useDashboardData(props: DashboardProps) {
   const isOwnerRole = safeDashboardData.profileRole === "owner";
   const isManagerRole = safeDashboardData.profileRole === "manager";
   const canManagePortfolio = isOwnerRole || isManagerRole;
-  const occupancy =
-    safeDashboardData.kpis.totalUnits > 0
-      ? Math.round((safeDashboardData.kpis.occupiedUnits / safeDashboardData.kpis.totalUnits) * 100)
-      : 0;
+  const propertyFilteringEnabled = isOwnerRole && safePortfolio.properties.length > 0;
   const chargeBadgeCount = safeDashboardData.charges.filter(
     (charge) => charge.status === "pending" || charge.status === "late"
   ).length;
@@ -159,6 +244,14 @@ export function useDashboardData(props: DashboardProps) {
     canManagePortfolio && props.onCreateExpense && props.onUpdateExpense && props.onDeleteExpense
   );
   const hasAnalyticsSection = Boolean(canManagePortfolio && safeAnalytics.enabled);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(() => {
+    if (!propertyFilteringEnabled || !props.initialPropertyId) {
+      return null;
+    }
+    return safePortfolio.properties.some((property) => property.id === props.initialPropertyId)
+      ? props.initialPropertyId
+      : null;
+  });
 
   const [ownerWorkflowMode, setOwnerWorkflowMode] = useState<OwnerWorkflowMode>(
     props.initialOwnerWorkflowMode ?? "daily_ops"
@@ -182,6 +275,166 @@ export function useDashboardData(props: DashboardProps) {
     }
     setManagerWorkflowMode((current) => (current === nextMode ? current : nextMode));
   }, [props.initialManagerWorkflowMode]);
+
+  const syncPropertyUrl = useCallback((propertyId: string | null) => {
+    const params = new URLSearchParams(window.location.search);
+    if (propertyId) {
+      params.set("property", propertyId);
+    } else {
+      params.delete("property");
+    }
+    const query = params.toString();
+    const nextUrl = `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`;
+    window.history.replaceState(null, "", nextUrl);
+  }, []);
+
+  useEffect(() => {
+    if (!propertyFilteringEnabled) {
+      setSelectedPropertyId(null);
+      return;
+    }
+
+    const currentSelectionIsValid =
+      selectedPropertyId != null &&
+      safePortfolio.properties.some((property) => property.id === selectedPropertyId);
+
+    if (currentSelectionIsValid) {
+      return;
+    }
+
+    const initialSelection =
+      props.initialPropertyId &&
+      safePortfolio.properties.some((property) => property.id === props.initialPropertyId)
+        ? props.initialPropertyId
+        : null;
+
+    setSelectedPropertyId(initialSelection);
+  }, [
+    propertyFilteringEnabled,
+    props.initialPropertyId,
+    safePortfolio.properties,
+    selectedPropertyId
+  ]);
+
+  const selectProperty = useCallback(
+    (propertyId: string | null) => {
+      if (!propertyFilteringEnabled) {
+        return;
+      }
+
+      const nextPropertyId =
+        propertyId && safePortfolio.properties.some((property) => property.id === propertyId)
+          ? propertyId
+          : null;
+
+      setSelectedPropertyId(nextPropertyId);
+      syncPropertyUrl(nextPropertyId);
+    },
+    [propertyFilteringEnabled, safePortfolio.properties, syncPropertyUrl]
+  );
+
+  const selectedProperty = useMemo(
+    () =>
+      propertyFilteringEnabled && selectedPropertyId
+        ? safePortfolio.properties.find((property) => property.id === selectedPropertyId) ?? null
+        : null,
+    [propertyFilteringEnabled, safePortfolio.properties, selectedPropertyId]
+  );
+
+  const filteredPortfolio = useMemo<PortfolioData>(() => {
+    if (!selectedProperty) {
+      return safePortfolio;
+    }
+
+    return {
+      properties: safePortfolio.properties.filter((property) => property.id === selectedProperty.id),
+      units: safePortfolio.units.filter((unit) => unit.propertyId === selectedProperty.id),
+      leases: safePortfolio.leases.filter((lease) => lease.propertyId === selectedProperty.id),
+      tenants: safePortfolio.tenants.filter((tenant) =>
+        tenant.propertyIds.includes(selectedProperty.id)
+      )
+    };
+  }, [safePortfolio, selectedProperty]);
+
+  const filteredTickets = useMemo(
+    () =>
+      selectedProperty
+        ? safeTickets.filter((ticket) => ticket.propertyId === selectedProperty.id)
+        : safeTickets,
+    [safeTickets, selectedProperty]
+  );
+
+  const filteredCharges = useMemo(
+    () =>
+      selectedProperty
+        ? safeDashboardData.charges.filter((charge) => charge.propertyId === selectedProperty.id)
+        : safeDashboardData.charges,
+    [safeDashboardData.charges, selectedProperty]
+  );
+
+  const selectedPropertyNetCashFlowCents = useMemo(() => {
+    if (!selectedProperty) {
+      return safeAnalytics.summaryKpis.netIncomeCentsYtd;
+    }
+
+    return (
+      safeExpenses.pnlByProperty.find((row) => row.propertyId === selectedProperty.id)?.netCents ?? 0
+    );
+  }, [safeAnalytics.summaryKpis.netIncomeCentsYtd, safeExpenses.pnlByProperty, selectedProperty]);
+
+  const filteredKpis = useMemo(
+    () =>
+      computeFilteredKpis({
+        baseKpis: safeDashboardData.kpis,
+        charges: filteredCharges,
+        tickets: filteredTickets,
+        portfolio: filteredPortfolio,
+        netCashFlowCents: selectedPropertyNetCashFlowCents
+      }),
+    [
+      filteredCharges,
+      filteredPortfolio,
+      filteredTickets,
+      safeDashboardData.kpis,
+      selectedPropertyNetCashFlowCents
+    ]
+  );
+
+  const displayDashboardData = useMemo<DashboardData>(
+    () => ({
+      ...safeDashboardData,
+      charges: filteredCharges,
+      kpis: filteredKpis
+    }),
+    [filteredCharges, filteredKpis, safeDashboardData]
+  );
+
+  const occupancy =
+    displayDashboardData.kpis.totalUnits > 0
+      ? Math.round(
+          (displayDashboardData.kpis.occupiedUnits / displayDashboardData.kpis.totalUnits) * 100
+        )
+      : 0;
+
+  const selectedPropertySummary = useMemo(() => {
+    if (!selectedProperty) {
+      return null;
+    }
+
+    return {
+      property: {
+        id: selectedProperty.id,
+        name: selectedProperty.name,
+        address: buildPropertyAddress(selectedProperty)
+      },
+      unitCount: filteredPortfolio.units.length,
+      occupiedUnits: filteredPortfolio.units.filter((unit) => unit.occupied).length,
+      monthlyRentCents: displayDashboardData.kpis.monthlyGrossRentCents,
+      openTickets: filteredTickets.filter(
+        (ticket) => ticket.status === "open" || ticket.status === "in_progress"
+      ).length
+    };
+  }, [displayDashboardData.kpis.monthlyGrossRentCents, filteredPortfolio.units, filteredTickets, selectedProperty]);
 
   const allSectionItems = useMemo(
     () =>
@@ -419,10 +672,14 @@ export function useDashboardData(props: DashboardProps) {
       isOwnerRole && props.activeAccountId
         ? `&account=${encodeURIComponent(props.activeAccountId)}`
         : "";
-    const sectionHref = (section: string) => `${basePath}?section=${section}${accountQuery}`;
+    const propertyQuery = selectedPropertyId
+      ? `&property=${encodeURIComponent(selectedPropertyId)}`
+      : "";
+    const sectionHref = (section: string) =>
+      `${basePath}?section=${section}${accountQuery}${propertyQuery}`;
 
     return [
-      ...safePortfolio.properties.map((property) => ({
+      ...filteredPortfolio.properties.map((property) => ({
         id: `property:${property.id}`,
         label: property.name,
         category: "Properties",
@@ -432,7 +689,7 @@ export function useDashboardData(props: DashboardProps) {
           .join(", "),
         keywords: [property.name, property.addressLine1, property.city, property.state]
       })),
-      ...safePortfolio.units.map((unit) => ({
+      ...filteredPortfolio.units.map((unit) => ({
         id: `unit:${unit.id}`,
         label: `Unit ${unit.unitNumber}`,
         category: "Units",
@@ -440,7 +697,7 @@ export function useDashboardData(props: DashboardProps) {
         description: unit.propertyName,
         keywords: [unit.unitNumber, unit.propertyName]
       })),
-      ...safePortfolio.leases.map((lease) => ({
+      ...filteredPortfolio.leases.map((lease) => ({
         id: `lease:${lease.id}`,
         label: lease.tenantEmail,
         category: "Leases",
@@ -448,7 +705,7 @@ export function useDashboardData(props: DashboardProps) {
         description: `${lease.unitLabel} • ${formatDate(lease.endDate)}`,
         keywords: [lease.tenantEmail, lease.unitLabel, lease.leaseStatus]
       })),
-      ...safePortfolio.tenants.map((tenant) => ({
+      ...filteredPortfolio.tenants.map((tenant) => ({
         id: `tenant:${tenant.id}`,
         label: tenant.fullName || tenant.email,
         category: "Tenants",
@@ -456,7 +713,7 @@ export function useDashboardData(props: DashboardProps) {
         description: tenant.email,
         keywords: [tenant.fullName, tenant.email]
       })),
-      ...safeTickets.map((ticket) => ({
+      ...filteredTickets.map((ticket) => ({
         id: `ticket:${ticket.id}`,
         label: ticket.title,
         category: "Maintenance",
@@ -464,7 +721,7 @@ export function useDashboardData(props: DashboardProps) {
         description: `${ticket.propertyName}${ticket.unitNumber ? ` • Unit ${ticket.unitNumber}` : ""}`,
         keywords: [ticket.title, ticket.description, ticket.propertyName, ticket.unitNumber ?? ""]
       })),
-      ...props.data.charges.map((charge) => ({
+      ...displayDashboardData.charges.map((charge) => ({
         id: `charge:${charge.id}`,
         label: `${charge.propertyName} • Unit ${charge.unitNumber}`,
         category: "Charges",
@@ -485,13 +742,14 @@ export function useDashboardData(props: DashboardProps) {
     isOwnerRole,
     isManagerRole,
     props.activeAccountId,
-    props.data.charges,
+    displayDashboardData.charges,
+    filteredPortfolio.leases,
+    filteredPortfolio.properties,
+    filteredPortfolio.tenants,
+    filteredPortfolio.units,
+    filteredTickets,
+    selectedPropertyId,
     safeAuditLogs,
-    safePortfolio.leases,
-    safePortfolio.properties,
-    safePortfolio.tenants,
-    safePortfolio.units,
-    safeTickets
   ]);
 
   const handleSidebarSelect = (itemId: string) => {
@@ -523,12 +781,15 @@ export function useDashboardData(props: DashboardProps) {
 
   const sectionRendererProps = {
     ...props,
-    data: safeDashboardData,
+    data: displayDashboardData,
     activeSection,
+    activeSectionLabel,
     occupancy,
     canManagePortfolio,
     safePortfolio,
+    filteredPortfolio,
     tickets: safeTickets,
+    filteredTickets,
     invitations: props.invitations ?? [],
     safeNotifications,
     safeInboxThreads,
@@ -543,6 +804,11 @@ export function useDashboardData(props: DashboardProps) {
     auditLogs: safeAuditLogs,
     rentIncreaseHistory: safeRentIncreaseHistory,
     safeOwnershipAccounts,
+    availableProperties: safePortfolio.properties,
+    selectedPropertyId,
+    selectedProperty,
+    selectedPropertySummary,
+    onSelectProperty: selectProperty,
     safeCapabilities,
     sortedVendors,
     hasLeasingSection,
@@ -598,6 +864,10 @@ export function useDashboardData(props: DashboardProps) {
     occupancy,
     ownerWorkflowMode,
     resolvedGamification,
+    selectedPropertyId,
+    selectedPropertySummary,
+    displayDashboardData,
+    filteredPortfolio,
     safePortfolio,
     sectionItems,
     sectionRendererProps,

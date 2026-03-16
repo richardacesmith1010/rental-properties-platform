@@ -20,6 +20,8 @@ export function Dashboard(props: DashboardProps) {
     activeSectionIndex,
     activeSectionLabel,
     activeWorkflowMeta,
+    displayDashboardData,
+    filteredPortfolio,
     goToNextSection,
     goToPreviousSection,
     isEmptyOwner,
@@ -86,9 +88,9 @@ export function Dashboard(props: DashboardProps) {
         <div className="px-6 pt-6 lg:px-8 lg:pt-8" id="overview">
           <DashboardHeader
             role={props.data.profileRole}
-            kpis={props.data.kpis}
+            kpis={displayDashboardData.kpis}
             occupancy={occupancy}
-            propertyCount={safePortfolio.properties.length}
+            propertyCount={filteredPortfolio.properties.length}
             userEmail={props.userEmail}
             nickname={props.nickname}
             fullName={props.fullName}

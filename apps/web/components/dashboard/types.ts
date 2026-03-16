@@ -64,6 +64,7 @@ export interface DashboardProps {
   rentIncreaseHistory?: RentIncreaseEntry[];
   generatedMessage?: string | null;
   initialSectionId?: string | null;
+  initialPropertyId?: string | null;
   initialOwnerWorkflowMode?: OwnerWorkflowMode;
   initialManagerWorkflowMode?: ManagerWorkflowMode;
   userEmail: string;

@@ -32,6 +32,7 @@ export interface StatusHistoryEntry {
 
 export interface MaintenanceTicket {
   id: string;
+  propertyId: string;
   propertyName: string;
   unitNumber: string | null;
   title: string;
@@ -448,6 +449,7 @@ export async function getTenantMaintenanceData(
 
       return {
         id: ticket.id,
+        propertyId: ticket.property_id,
         propertyName: property?.name ?? "Unknown Property",
         unitNumber: unit?.unit_number ?? null,
         title: ticket.title,
@@ -567,6 +569,7 @@ export async function getAdminMaintenanceTickets(
 
     return {
       id: ticket.id,
+      propertyId: ticket.property_id,
       propertyName: property?.name ?? "Unknown Property",
       unitNumber: unit?.unit_number ?? null,
       title: ticket.title,
