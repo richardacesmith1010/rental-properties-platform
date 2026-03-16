@@ -22,9 +22,9 @@ export function BatchToolbar({
   }
 
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-violet-200/70 bg-violet-50/70 px-4 py-3 shadow-sm">
-      <span className="text-sm font-semibold text-violet-900">{selectedCount} selected</span>
-      <div className="hidden h-4 w-px bg-violet-200 sm:block" />
+    <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-primary/10 px-4 py-3 shadow-sm">
+      <span className="text-sm font-semibold text-foreground">{selectedCount} selected</span>
+      <div className="hidden h-4 w-px bg-border sm:block" />
       <Button
         type="button"
         size="sm"

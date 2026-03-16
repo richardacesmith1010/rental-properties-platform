@@ -13,7 +13,7 @@ interface KpiCardProps {
 const trendMap = {
   up: { symbol: "↑", className: "text-emerald-400" },
   down: { symbol: "↓", className: "text-rose-300" },
-  flat: { symbol: "→", className: "text-zinc-300" }
+  flat: { symbol: "→", className: "text-muted-foreground" }
 } as const;
 
 export function KpiCard({
@@ -28,16 +28,16 @@ export function KpiCard({
   const trendDisplay = trend ? trendMap[trend] : null;
 
   return (
-    <Card className={`relative overflow-hidden border border-white/20 p-5 shadow-md sm:p-6 ${alert ? "border-amber-200" : ""}`}>
+    <Card className={`relative overflow-hidden border border-border/50 p-5 shadow-md sm:p-6 ${alert ? "border-amber-200" : ""}`}>
       <div
         className="absolute -top-10 -right-10 h-28 w-28 rounded-full opacity-[0.14]"
         style={{ background: gradient }}
       />
-      <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {title}
       </span>
       <div className="mt-2 flex items-end gap-2">
-        <div className="text-3xl font-extrabold tracking-tight text-zinc-950">
+        <div className="text-3xl font-extrabold tracking-tight text-foreground">
           {prefix ?? ""}
           {value}
         </div>
@@ -47,7 +47,7 @@ export function KpiCard({
           </span>
         ) : null}
       </div>
-      {subtitle ? <p className="mt-2.5 text-sm font-medium text-zinc-600">{subtitle}</p> : null}
+      {subtitle ? <p className="mt-2.5 text-sm font-medium text-muted-foreground">{subtitle}</p> : null}
     </Card>
   );
 }

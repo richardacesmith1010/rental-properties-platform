@@ -63,10 +63,10 @@ export function TenantOverview({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
           {getGreeting()}, {userName}
         </h1>
-        <p className="mt-1 text-sm text-zinc-500">{summary}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{summary}</p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -93,17 +93,17 @@ export function TenantOverview({
       <Card className="border border-border/50 shadow-sm">
         <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm text-zinc-500">Next Payment Due</p>
-            <p className="mt-1 text-2xl font-bold text-zinc-900">
+            <p className="text-sm text-muted-foreground">Next Payment Due</p>
+            <p className="mt-1 text-2xl font-bold text-foreground">
               {nextCharge ? formatCurrency(nextCharge.amountCents) : formatCurrency(0)}
             </p>
-            <p className="mt-1 text-sm text-zinc-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               {nextCharge ? formatDate(nextCharge.dueDate) : "No payment due right now"}
             </p>
           </div>
           <Link
             href={buildSectionHref("charges")}
-            className="inline-flex items-center justify-center rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700"
+            className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90"
             title="Open your rent charges and payment options."
           >
             {nextCharge ? "Pay Now" : "View Charges"}
@@ -114,18 +114,18 @@ export function TenantOverview({
       {lease ? (
         <Card className="border border-border/50 shadow-sm">
           <CardContent className="p-5">
-            <h2 className="text-lg font-semibold text-zinc-900">Your Lease</h2>
+            <h2 className="text-lg font-semibold text-foreground">Your Lease</h2>
             <div className="mt-4 grid gap-y-3 sm:grid-cols-[140px_minmax(0,1fr)] sm:items-center">
-              <span className="text-sm text-zinc-500">Property</span>
-              <span className="text-sm font-medium text-zinc-900">
+              <span className="text-sm text-muted-foreground">Property</span>
+              <span className="text-sm font-medium text-foreground">
                 {lease.propertyName} - Unit {lease.unitLabel}
               </span>
-              <span className="text-sm text-zinc-500">Lease Period</span>
-              <span className="text-sm text-zinc-900">
+              <span className="text-sm text-muted-foreground">Lease Period</span>
+              <span className="text-sm text-foreground">
                 {formatDate(lease.startDate)} – {formatDate(lease.endDate)}
               </span>
-              <span className="text-sm text-zinc-500">Monthly Rent</span>
-              <span className="text-sm font-medium text-zinc-900">
+              <span className="text-sm text-muted-foreground">Monthly Rent</span>
+              <span className="text-sm font-medium text-foreground">
                 {formatCurrency(lease.monthlyRentCents)}
               </span>
             </div>
@@ -154,12 +154,12 @@ function QuickActionCard({
       title={description}
     >
       <div className="flex items-start gap-3">
-        <div className="rounded-xl bg-violet-50 p-2 text-violet-600">
+        <div className="rounded-xl bg-primary/10 p-2 text-primary">
           <Icon className="h-5 w-5" />
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-zinc-900">{title}</p>
-          <p className="mt-1 text-sm text-zinc-500">{description}</p>
+          <p className="text-sm font-semibold text-foreground">{title}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
         </div>
       </div>
     </Link>

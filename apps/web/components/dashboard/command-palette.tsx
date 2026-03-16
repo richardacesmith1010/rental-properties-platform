@@ -410,7 +410,7 @@ export function CommandPalette({
                         className={cn(
                           "flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition",
                           active
-                            ? "bg-violet-50 text-violet-950 shadow-sm ring-1 ring-violet-200"
+                            ? "bg-primary/10 text-foreground shadow-sm ring-1 ring-primary/20"
                             : "text-foreground hover:bg-muted/70"
                         )}
                         title={`Open ${result.label}.`}
@@ -419,7 +419,7 @@ export function CommandPalette({
                           className={cn(
                             "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border",
                             active
-                              ? "border-violet-200 bg-violet-100 text-violet-700"
+                              ? "border-primary/20 bg-primary/15 text-primary"
                               : "border-border/60 bg-background text-muted-foreground"
                           )}
                         >
@@ -431,7 +431,7 @@ export function CommandPalette({
                               {result.label}
                             </span>
                             {result.type === "quick_action" ? (
-                              <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-500" />
+                              <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
                             ) : null}
                           </div>
                           <p className="truncate text-xs text-muted-foreground">{result.secondary}</p>

@@ -30,17 +30,17 @@ export function PropertySummaryCard({
   const occupancy = unitCount > 0 ? Math.round((occupiedUnits / unitCount) * 100) : 0;
 
   return (
-    <Card className="overflow-hidden border-violet-100/80 bg-white/95 shadow-sm">
+    <Card className="overflow-hidden border-border/80 bg-card/95 shadow-sm">
       <CardContent className="flex flex-col gap-4 p-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 space-y-2">
           <div className="flex items-start gap-3">
-            <div className="rounded-2xl bg-violet-100/80 p-2.5 text-violet-700">
+            <div className="rounded-2xl bg-primary/10 p-2.5 text-primary">
               <Building2 className="h-4 w-4" />
             </div>
             <div className="min-w-0">
-              <h3 className="truncate text-lg font-semibold text-zinc-900">{property.name}</h3>
+              <h3 className="truncate text-lg font-semibold text-foreground">{property.name}</h3>
               {property.address ? (
-                <p className="mt-1 flex items-center gap-1.5 text-sm text-zinc-500">
+                <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
                   <MapPin className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{property.address}</span>
                 </p>
@@ -86,12 +86,12 @@ function SummaryMetric({
   icon?: ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-zinc-200/80 bg-zinc-50/80 px-3 py-3">
-      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+    <div className="rounded-xl border border-border/80 bg-muted/80 px-3 py-3">
+      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
         {icon}
         <span>{label}</span>
       </div>
-      <p className="mt-1 text-base font-semibold text-zinc-900">{value}</p>
+      <p className="mt-1 text-base font-semibold text-foreground">{value}</p>
     </div>
   );
 }

@@ -22,13 +22,13 @@ export function RentCollectionBar({
   const collectionRate = Math.round(collectedPct);
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+    <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="text-sm font-medium text-zinc-500">Rent collection this month</h3>
-        <span className="text-lg font-bold text-zinc-950">{collectionRate}%</span>
+        <h3 className="text-sm font-medium text-muted-foreground">Rent collection this month</h3>
+        <span className="text-lg font-bold text-foreground">{collectionRate}%</span>
       </div>
 
-      <div className="flex h-3 overflow-hidden rounded-full bg-zinc-100">
+      <div className="flex h-3 overflow-hidden rounded-full bg-muted">
         {collectedPct > 0 ? (
           <div
             className="bg-emerald-500 transition-all duration-500"
@@ -49,7 +49,7 @@ export function RentCollectionBar({
         ) : null}
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-4 text-sm text-zinc-600">
+      <div className="mt-3 flex flex-wrap gap-4 text-sm text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <div className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
           <span>Collected {formatCurrency(collectedCents)}</span>
