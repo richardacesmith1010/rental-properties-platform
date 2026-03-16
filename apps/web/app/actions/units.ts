@@ -8,6 +8,7 @@ import { sideEffectError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
   createUnitSchema,
+  updateUnitFieldSchema,
   updateUnitSchema,
   deleteUnitSchema,
   parseFormData
@@ -147,6 +148,74 @@ export async function updateUnit(_prev: ActionState, formData: FormData): Promis
   revalidatePath("/owner");
   revalidatePath("/manager");
   return { success: true };
+}
+
+export async function updateUnitField(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { user, supabase } = await requireAuth("owner");
+  if (!checkRateLimit(`updateUnitField:${user.id}`, 40, 60_000).allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
+  }
+
+  const parsed = parseFormData(updateUnitFieldSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { unitId, field, value } = parsed.data;
+  const { data: unit } = await supabase
+    .from("units")
+    .select("id, property_id")
+    .eq("id", unitId)
+    .single();
+
+  if (!unit) {
+    return { success: false, error: "Unit not found." };
+  }
+
+  const canAdminister = await canUserAdministerProperty(user.id, unit.property_id);
+  if (!canAdminister) {
+    return { success: false, error: "You do not have access to this unit." };
+  }
+
+  const updatePayload =
+    field === "unitNumber"
+      ? { unit_number: value }
+      : { monthly_rent_cents: Math.round(value * 100) };
+
+  const { error } = await supabase
+    .from("units")
+    .update(updatePayload)
+    .eq("id", unitId);
+
+  if (error) {
+    return { success: false, error: "Failed to update unit. Please try again." };
+  }
+
+  void logAudit({
+    userId: user.id,
+    action: field === "unitNumber" ? "rename_unit" : "update_unit_rent",
+    entityType: "unit",
+    entityId: unitId,
+    metadata: {
+      propertyId: unit.property_id,
+      field,
+      value
+    }
+  }).catch(
+    sideEffectError("updateUnitField", "log_audit", {
+      userId: user.id,
+      entityType: "unit",
+      entityId: unitId
+    })
+  );
+
+  revalidatePath("/");
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  return {
+    success: true,
+    message: field === "unitNumber" ? "Unit label updated." : "Unit rent updated."
+  };
 }
 
 export async function deleteUnit(_prev: ActionState, formData: FormData): Promise<ActionState> {

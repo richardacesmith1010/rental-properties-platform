@@ -78,8 +78,10 @@ export interface DashboardProps {
   onCreateProperty: StatefulAction;
   onCreateUnit: StatefulAction;
   onCreateLease: StatefulAction;
+  onRenameProperty?: StatefulAction;
   onUpdateProperty?: StatefulAction;
   onDeleteProperty?: StatefulAction;
+  onUpdateUnitField?: StatefulAction;
   onUpdateUnit?: StatefulAction;
   onDeleteUnit?: StatefulAction;
   onUpdateLease?: StatefulAction;
@@ -96,6 +98,7 @@ export interface DashboardProps {
   onResendInvite?: StatefulAction;
   onMarkNotificationRead?: StatefulAction;
   onMarkAllNotificationsRead?: StatefulAction;
+  onSendBatchPaymentReminder?: StatefulAction;
   onCreateInboxThread?: StatefulAction;
   onSendInboxMessage?: StatefulAction;
   onEnableAutomation?: StatefulAction;

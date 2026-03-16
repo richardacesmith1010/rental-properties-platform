@@ -33,6 +33,7 @@ import { MaintenanceSection } from "@/components/dashboard/maintenance-section";
 import { TenantDocumentsSection } from "@/components/dashboard/tenant-documents-section";
 import { NotificationsSection } from "@/components/dashboard/notifications-section";
 import { TenantLeaseDetails } from "@/components/dashboard/tenant-lease-details";
+import { TenantOverview } from "@/components/dashboard/tenant-overview";
 import { EmptyState as DashboardEmptyState } from "@/components/shared/empty-state";
 import { StripeTestModeBanner } from "@/components/shared/stripe-test-mode-banner";
 import { GamificationSummary } from "@/components/gamification/gamification-summary";
@@ -40,7 +41,7 @@ import { AchievementChecker } from "@/components/gamification/achievement-checke
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import { getUserGamification } from "@/lib/gamification";
 import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
-import { ChevronLeft, ChevronRight, CreditCard, Wrench, FileText, Mail, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, CreditCard } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { redirect } from "next/navigation";
@@ -83,6 +84,24 @@ function buildTenantHref(section: TenantSection) {
   const params = new URLSearchParams();
   params.set("section", section);
   return `/tenant?${params.toString()}`;
+}
+
+function getTenantDisplayName(params: {
+  nickname?: string | null;
+  fullName?: string | null;
+  userEmail: string;
+}) {
+  const nickname = params.nickname?.trim();
+  if (nickname) {
+    return nickname;
+  }
+
+  const firstName = params.fullName?.trim().split(/\s+/)[0];
+  if (firstName) {
+    return firstName;
+  }
+
+  return params.userEmail;
 }
 
 interface TenantPageProps {
@@ -155,6 +174,26 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
     (packet) => packet.signerStatus !== "signed"
   ).length;
   const unreadNotificationCount = notifications.filter((notification) => !notification.readAt).length;
+  const displayName = getTenantDisplayName({
+    nickname: profile.nickname,
+    fullName: profile.fullName,
+    userEmail: user.email ?? "Resident"
+  });
+  const nextCharge = paymentData.charges[0]
+    ? {
+        amountCents: paymentData.charges[0].amountCents,
+        dueDate: paymentData.charges[0].dueDate
+      }
+    : null;
+  const currentLease = leaseDetails[0]
+    ? {
+        startDate: leaseDetails[0].startDate,
+        endDate: leaseDetails[0].endDate,
+        propertyName: leaseDetails[0].propertyName,
+        unitLabel: leaseDetails[0].unitNumber,
+        monthlyRentCents: leaseDetails[0].monthlyRentCents
+      }
+    : null;
   const ownerConnectedMap = await arePropertyOwnersConnected(
     paymentData.charges.map((charge) => charge.propertyId)
   );
@@ -234,7 +273,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
         <div className="flex flex-col gap-4 px-6 pt-6 sm:flex-row sm:items-start sm:justify-between lg:px-8 lg:pt-8">
           <div id="overview">
             <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-              Welcome home{profile.nickname ? `, ${profile.nickname}` : ""}
+              {maintenanceData.units[0]?.propertyName ?? "Tenant Portal"}
             </h1>
             {maintenanceData.units.length > 0 && (
               <p className="mt-1 text-sm text-zinc-500">
@@ -291,82 +330,14 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
 
           {activeSection === "overview" && (
             <div className="space-y-5">
-              {/* Quick Status Card */}
-              <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-                {outstandingCents === 0 ? (
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
-                      <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                    </div>
-                    <div>
-                      <p className="text-base font-semibold text-emerald-700">You&apos;re all set!</p>
-                      <p className="text-sm text-zinc-500">No payments due right now.</p>
-                    </div>
-                  </div>
-                ) : lateChargeCount > 0 ? (
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
-                      <CreditCard className="h-5 w-5 text-amber-600" />
-                    </div>
-                    <div>
-                      <p className="text-base font-semibold text-amber-700">
-                        Payment of {formatCurrency(outstandingCents)} was due
-                      </p>
-                      <p className="text-sm text-zinc-500">
-                        {lateChargeCount} overdue payment{lateChargeCount === 1 ? "" : "s"}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-violet-100">
-                      <CreditCard className="h-5 w-5 text-violet-600" />
-                    </div>
-                    <div>
-                      <p className="text-base font-semibold text-zinc-900">
-                        Next payment: {formatCurrency(outstandingCents)}
-                      </p>
-                      <p className="text-sm text-zinc-500">
-                        {paymentData.charges.length} upcoming payment{paymentData.charges.length === 1 ? "" : "s"}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <TenantOverview
+                userName={displayName}
+                nextCharge={nextCharge}
+                lease={currentLease}
+                openTicketCount={openTicketCount}
+                buildSectionHref={buildTenantHref}
+              />
 
-              {/* Action Cards */}
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <Link
-                  href={buildTenantHref("charges")}
-                  className="flex flex-col items-center gap-2 rounded-xl border border-violet-200 bg-violet-50/50 p-4 text-center transition-colors hover:bg-violet-100/60"
-                >
-                  <CreditCard className="h-6 w-6 text-violet-600" />
-                  <span className="text-xs font-semibold text-violet-700">Make a Payment</span>
-                </Link>
-                <Link
-                  href={buildTenantHref("maintenance")}
-                  className="flex flex-col items-center gap-2 rounded-xl border border-zinc-200 bg-white p-4 text-center transition-colors hover:bg-zinc-50"
-                >
-                  <Wrench className="h-6 w-6 text-zinc-600" />
-                  <span className="text-xs font-semibold text-zinc-700">Submit a Request</span>
-                </Link>
-                <Link
-                  href={buildTenantHref("documents")}
-                  className="flex flex-col items-center gap-2 rounded-xl border border-zinc-200 bg-white p-4 text-center transition-colors hover:bg-zinc-50"
-                >
-                  <FileText className="h-6 w-6 text-zinc-600" />
-                  <span className="text-xs font-semibold text-zinc-700">My Documents</span>
-                </Link>
-                <Link
-                  href={buildTenantHref("notifications")}
-                  className="flex flex-col items-center gap-2 rounded-xl border border-zinc-200 bg-white p-4 text-center transition-colors hover:bg-zinc-50"
-                >
-                  <Mail className="h-6 w-6 text-zinc-600" />
-                  <span className="text-xs font-semibold text-zinc-700">Messages</span>
-                </Link>
-              </div>
-
-              {/* Activity Summary */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
                   <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">Open Tickets</p>
@@ -379,9 +350,11 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
                   <p className="text-xs text-zinc-500">pending signature{pendingDocumentCount === 1 ? "" : "s"}</p>
                 </div>
                 <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-                  <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">Alerts</p>
-                  <p className="mt-1 text-2xl font-bold text-zinc-900">{unreadNotificationCount}</p>
-                  <p className="text-xs text-zinc-500">unread</p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">Outstanding</p>
+                  <p className="mt-1 text-2xl font-bold text-zinc-900">{formatCurrency(outstandingCents)}</p>
+                  <p className="text-xs text-zinc-500">
+                    {lateChargeCount > 0 ? `${lateChargeCount} overdue` : "current balance"}
+                  </p>
                 </div>
               </div>
             </div>

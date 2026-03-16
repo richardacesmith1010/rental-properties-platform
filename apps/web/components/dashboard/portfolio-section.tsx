@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useFormState } from "react-dom";
 import { Building2 } from "lucide-react";
 import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/dashboard/empty-state";
+import { InlineEdit } from "@/components/dashboard/inline-edit";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +25,7 @@ type StatefulAction = (
 interface PortfolioSectionProps {
   properties: PropertyListItem[];
   showControls?: boolean;
+  onRenameProperty?: StatefulAction;
   onUpdateProperty?: StatefulAction;
   onDeleteProperty?: StatefulAction;
   onUpdateManagementFee?: StatefulAction;
@@ -56,12 +59,14 @@ function FormSuccess({ state, message }: { state: ActionState; message: string }
 export function PortfolioSection({
   properties,
   showControls = false,
+  onRenameProperty,
   onUpdateProperty,
   onDeleteProperty,
   onUpdateManagementFee,
   onSelectProperty,
   onGoToOperations
 }: PortfolioSectionProps) {
+  const router = useRouter();
   const [updateState, updateAction] = useFormState(onUpdateProperty ?? unavailableAction, null);
   const [deleteState, deleteAction] = useFormState(onDeleteProperty ?? unavailableAction, null);
   const [managementFeeState, managementFeeAction] = useFormState(
@@ -140,7 +145,30 @@ export function PortfolioSection({
               >
                 <DataRow last={i === properties.length - 1}>
                   <div className="min-w-0 flex-1">
-                    <p className="text-base font-medium text-zinc-900">{property.name}</p>
+                    {showControls && onRenameProperty ? (
+                      <InlineEdit
+                        value={property.name}
+                        className="max-w-full text-base font-medium text-zinc-900"
+                        successMessage="Property renamed."
+                        title={`Rename ${property.name}.`}
+                        validate={(nextName) =>
+                          nextName.length > 120 ? "Property name must be under 120 characters." : null
+                        }
+                        onSave={async (nextName) => {
+                          const formData = new FormData();
+                          formData.set("propertyId", property.id);
+                          formData.set("name", nextName);
+                          const result = await onRenameProperty(null, formData);
+                          if (result?.success) {
+                            router.refresh();
+                            return { message: result.message ?? "Property renamed." };
+                          }
+                          return { error: result?.error ?? "Unable to rename this property right now." };
+                        }}
+                      />
+                    ) : (
+                      <p className="text-base font-medium text-zinc-900">{property.name}</p>
+                    )}
                     <p className="mt-0.5 text-sm text-zinc-500">{property.addressLine1}</p>
                     <p className="mt-0.5 text-sm text-zinc-500">
                       {property.city}, {property.state} {property.postalCode}

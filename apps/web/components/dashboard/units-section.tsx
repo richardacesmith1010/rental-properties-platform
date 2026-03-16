@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useFormState } from "react-dom";
 import { DoorOpen } from "lucide-react";
 import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/dashboard/empty-state";
+import { InlineEdit } from "@/components/dashboard/inline-edit";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +27,7 @@ type StatefulAction = (
 interface UnitsSectionProps {
   units: UnitListItem[];
   showControls?: boolean;
+  onUpdateUnitField?: StatefulAction;
   onUpdateUnit?: StatefulAction;
   onDeleteUnit?: StatefulAction;
   onGoToOperations?: () => void;
@@ -56,10 +59,12 @@ function FormSuccess({ state, message }: { state: ActionState; message: string }
 export function UnitsSection({
   units,
   showControls = false,
+  onUpdateUnitField,
   onUpdateUnit,
   onDeleteUnit,
   onGoToOperations
 }: UnitsSectionProps) {
+  const router = useRouter();
   const [updateState, updateAction] = useFormState(onUpdateUnit ?? unavailableAction, null);
   const [deleteState, deleteAction] = useFormState(onDeleteUnit ?? unavailableAction, null);
   const [activeEditUnitId, setActiveEditUnitId] = useState<string | null>(null);
@@ -102,7 +107,32 @@ export function UnitsSection({
               <DataRow key={unit.id} last={i === units.length - 1}>
                 <div className="min-w-0 flex-1">
                   <p className="text-base font-medium text-zinc-900">
-                    {unit.propertyName} • Unit {unit.unitNumber}
+                    {unit.propertyName} • Unit{" "}
+                    {showControls && onUpdateUnitField ? (
+                      <InlineEdit
+                        value={unit.unitNumber}
+                        className="max-w-[140px] align-middle text-base font-medium text-zinc-900"
+                        successMessage="Unit label updated."
+                        title={`Rename Unit ${unit.unitNumber}.`}
+                        validate={(nextValue) =>
+                          nextValue.length > 50 ? "Unit label must be under 50 characters." : null
+                        }
+                        onSave={async (nextValue) => {
+                          const formData = new FormData();
+                          formData.set("unitId", unit.id);
+                          formData.set("field", "unitNumber");
+                          formData.set("value", nextValue);
+                          const result = await onUpdateUnitField(null, formData);
+                          if (result?.success) {
+                            router.refresh();
+                            return { message: result.message ?? "Unit label updated." };
+                          }
+                          return { error: result?.error ?? "Unable to update this unit label right now." };
+                        }}
+                      />
+                    ) : (
+                      unit.unitNumber
+                    )}
                   </p>
                   <div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-zinc-500">
                     <span>{unit.bedrooms} bd / {unit.bathrooms} ba</span>
@@ -149,7 +179,44 @@ export function UnitsSection({
                 </div>
 
                 <div className="flex flex-col items-end gap-2">
-                  <p className="text-sm text-zinc-500">{formatCurrency(unit.monthlyRentCents)}</p>
+                  {showControls && onUpdateUnitField ? (
+                    <InlineEdit
+                      value={(unit.monthlyRentCents / 100).toFixed(2)}
+                      displayValue={(unit.monthlyRentCents / 100).toLocaleString("en-US", {
+                        minimumFractionDigits: unit.monthlyRentCents % 100 === 0 ? 0 : 2,
+                        maximumFractionDigits: 2
+                      })}
+                      inputType="number"
+                      prefix="$"
+                      className="text-sm text-zinc-500"
+                      successMessage="Unit rent updated."
+                      title={`Update rent for Unit ${unit.unitNumber}.`}
+                      validate={(nextValue) => {
+                        const nextAmount = Number(nextValue);
+                        if (Number.isNaN(nextAmount) || nextAmount < 0) {
+                          return "Monthly rent cannot be negative.";
+                        }
+                        if (nextAmount > 100000) {
+                          return "Monthly rent cannot exceed $100,000.";
+                        }
+                        return null;
+                      }}
+                      onSave={async (nextValue) => {
+                        const formData = new FormData();
+                        formData.set("unitId", unit.id);
+                        formData.set("field", "monthlyRentDollars");
+                        formData.set("value", nextValue);
+                        const result = await onUpdateUnitField(null, formData);
+                        if (result?.success) {
+                          router.refresh();
+                          return { message: result.message ?? "Unit rent updated." };
+                        }
+                        return { error: result?.error ?? "Unable to update this unit rent right now." };
+                      }}
+                    />
+                  ) : (
+                    <p className="text-sm text-zinc-500">{formatCurrency(unit.monthlyRentCents)}</p>
+                  )}
                   {showControls && (
                     <>
                       <Button

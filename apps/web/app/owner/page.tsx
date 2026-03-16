@@ -46,9 +46,11 @@ import {
   renewLease,
   terminateLease,
   createProperty,
+  renameProperty,
   updateProperty,
   deleteProperty,
   createUnit,
+  updateUnitField,
   updateUnit,
   deleteUnit,
   signOut,
@@ -60,6 +62,7 @@ import {
   resendInvite,
   markNotificationRead,
   markAllNotificationsRead,
+  sendBatchPaymentReminder,
   createInboxThread,
   sendInboxMessage,
   enableAutomation,
@@ -312,8 +315,10 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         onCreateProperty={createProperty}
         onCreateUnit={createUnit}
         onCreateLease={createLease}
+        onRenameProperty={renameProperty}
         onUpdateProperty={updateProperty}
         onDeleteProperty={deleteProperty}
+        onUpdateUnitField={updateUnitField}
         onUpdateUnit={updateUnit}
         onDeleteUnit={deleteUnit}
         onUpdateLease={updateLease}
@@ -332,6 +337,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         onResendInvite={resendInvite}
         onMarkNotificationRead={markNotificationRead}
         onMarkAllNotificationsRead={markAllNotificationsRead}
+        onSendBatchPaymentReminder={sendBatchPaymentReminder}
         onCreateInboxThread={createInboxThread}
         onSendInboxMessage={sendInboxMessage}
         onEnableAutomation={enableAutomation}

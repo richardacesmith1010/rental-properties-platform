@@ -189,6 +189,9 @@ export function SectionRenderer(props: SectionRendererProps) {
           charges={props.data.charges}
           onPayCharge={props.onPayCharge}
           onRecordManualPayment={props.onRecordManualPayment}
+          onSendBatchPaymentReminder={
+            props.data.profileRole === "owner" ? props.onSendBatchPaymentReminder : undefined
+          }
           showManualPayment={props.data.profileRole !== "tenant"}
           onGenerateChargesHref={props.onGenerateChargesHref}
           ownerConnectedMap={props.ownerConnectedMap}
@@ -482,6 +485,9 @@ export function SectionRenderer(props: SectionRendererProps) {
         <PortfolioSection
           properties={props.filteredPortfolio.properties}
           showControls={props.canManagePortfolio}
+          onRenameProperty={
+            props.data.profileRole === "owner" ? props.onRenameProperty : undefined
+          }
           onUpdateProperty={props.onUpdateProperty}
           onDeleteProperty={props.onDeleteProperty}
           onUpdateManagementFee={
@@ -501,6 +507,9 @@ export function SectionRenderer(props: SectionRendererProps) {
         <UnitsSection
           units={props.filteredPortfolio.units}
           showControls={props.canManagePortfolio}
+          onUpdateUnitField={
+            props.data.profileRole === "owner" ? props.onUpdateUnitField : undefined
+          }
           onUpdateUnit={props.onUpdateUnit}
           onDeleteUnit={props.onDeleteUnit}
           onGoToOperations={() => props.goToSectionIfVisible("operations")}

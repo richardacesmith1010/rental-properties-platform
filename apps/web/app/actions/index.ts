@@ -44,10 +44,12 @@ export { uploadAvatar } from "./profile";
 
 export { createProperty } from "./properties";
 export { updateProperty } from "./properties";
+export { renameProperty } from "./properties";
 export { deleteProperty } from "./properties";
 
 export { createUnit } from "./units";
 export { updateUnit } from "./units";
+export { updateUnitField } from "./units";
 export { deleteUnit } from "./units";
 
 export { createLease, updateLease, deleteLease } from "./lease-mutations";
@@ -83,6 +85,7 @@ export { joinLlcByCode } from "./onboarding";
 
 export { markNotificationRead } from "./notifications";
 export { markAllNotificationsRead } from "./notifications";
+export { sendBatchPaymentReminder } from "./notifications";
 export { saveNotificationPreference } from "./notifications";
 
 export { enableAutomation } from "./automations";

@@ -14,6 +14,7 @@ import { sideEffectError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
   createPropertySchema,
+  renamePropertySchema,
   updatePropertySchema,
   deletePropertySchema,
   parseFormData
@@ -188,6 +189,55 @@ export async function updateProperty(_prev: ActionState, formData: FormData): Pr
   revalidatePath("/owner");
   revalidatePath("/manager");
   return { success: true };
+}
+
+export async function renameProperty(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { user, supabase } = await requireAuth("owner");
+  if (!checkRateLimit(`renameProperty:${user.id}`, 30, 60_000).allowed) {
+    return { success: false, error: "Too many requests. Please try again later." };
+  }
+
+  const parsed = parseFormData(renamePropertySchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const { propertyId, name } = parsed.data;
+  const canAdminister = await canUserAdministerProperty(user.id, propertyId);
+  if (!canAdminister) {
+    return { success: false, error: "You do not have access to this property." };
+  }
+
+  const { error } = await supabase
+    .from("properties")
+    .update({ name })
+    .eq("id", propertyId);
+
+  if (error) {
+    return { success: false, error: "Failed to rename property. Please try again." };
+  }
+
+  void logAudit({
+    userId: user.id,
+    action: "rename_property",
+    entityType: "property",
+    entityId: propertyId,
+    metadata: {
+      propertyId,
+      propertyName: name
+    }
+  }).catch(
+    sideEffectError("renameProperty", "log_audit", {
+      userId: user.id,
+      entityType: "property",
+      entityId: propertyId
+    })
+  );
+
+  revalidatePath("/");
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  return { success: true, message: "Property renamed." };
 }
 
 export async function deleteProperty(_prev: ActionState, formData: FormData): Promise<ActionState> {

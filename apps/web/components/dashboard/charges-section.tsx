@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useFormState } from "react-dom";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CreditCard } from "lucide-react";
+import { toast } from "sonner";
 import type { ActionState } from "@/app/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/dashboard/empty-state";
+import { BatchToolbar } from "@/components/dashboard/batch-toolbar";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Input } from "@/components/ui/input";
 import { AutopayCard } from "./autopay-card";
@@ -57,6 +59,7 @@ interface ChargesSectionProps {
   charges: Charge[];
   onPayCharge: (formData: FormData) => Promise<void>;
   onRecordManualPayment?: StatefulAction;
+  onSendBatchPaymentReminder?: StatefulAction;
   onGenerateChargesHref?: string;
   showManualPayment?: boolean;
   ownerConnectedMap?: Map<string, boolean>;
@@ -108,10 +111,41 @@ function statusLabel(status: ChargeStatus) {
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
+function csvEscape(value: string) {
+  if (value.includes(",") || value.includes("\"") || value.includes("\n")) {
+    return `"${value.replaceAll("\"", "\"\"")}"`;
+  }
+  return value;
+}
+
+function exportChargesCsv(charges: Charge[]) {
+  const rows = [
+    ["Tenant", "Property", "Unit", "Amount", "Due Date", "Status"],
+    ...charges.map((charge) => [
+      charge.tenantName ?? "",
+      charge.propertyName ?? "",
+      charge.unitNumber ?? "",
+      formatCurrency(charge.amountCents),
+      charge.dueDate,
+      charge.status
+    ])
+  ];
+
+  const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `charges-export-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export function ChargesSection({
   charges,
   onPayCharge,
   onRecordManualPayment,
+  onSendBatchPaymentReminder,
   onGenerateChargesHref,
   showManualPayment = false,
   ownerConnectedMap,
@@ -125,10 +159,13 @@ export function ChargesSection({
   const searchParams = useSearchParams();
   const [activeFilter, setActiveFilter] = useState<ChargeFilter>("all");
   const [manualPaymentChargeId, setManualPaymentChargeId] = useState<string | null>(null);
+  const [selectedChargeIds, setSelectedChargeIds] = useState<Set<string>>(new Set());
+  const [isSendingReminders, startSendingReminders] = useTransition();
   const [manualPaymentState, recordManualPaymentAction] = useFormState(
     onRecordManualPayment ?? unavailableManualPaymentAction,
     null
   );
+  const batchActionsEnabled = Boolean(onSendBatchPaymentReminder) && !isTenantView;
 
   useEffect(() => {
     if (manualPaymentState?.success) {
@@ -139,6 +176,22 @@ export function ChargesSection({
   const filteredCharges = useMemo(() => {
     return charges.filter((charge) => activeFilter === "all" || charge.status === activeFilter);
   }, [activeFilter, charges]);
+
+  useEffect(() => {
+    if (!batchActionsEnabled) {
+      setSelectedChargeIds((current) => (current.size === 0 ? current : new Set()));
+      return;
+    }
+
+    setSelectedChargeIds((current) => {
+      const visibleIds = new Set(filteredCharges.map((charge) => charge.id));
+      const next = new Set(Array.from(current).filter((chargeId) => visibleIds.has(chargeId)));
+      if (next.size === current.size) {
+        return current;
+      }
+      return next;
+    });
+  }, [batchActionsEnabled, filteredCharges]);
 
   const pendingCount = charges.filter((charge) => charge.status === "pending").length;
   const lateCount = charges.filter((charge) => charge.status === "late").length;
@@ -172,6 +225,57 @@ export function ChargesSection({
   }, [charges, isTenantView]);
 
   const autopayStatus = searchParams?.get("autopay") ?? null;
+  const selectedVisibleCharges = filteredCharges.filter((charge) => selectedChargeIds.has(charge.id));
+  const allVisibleSelected =
+    filteredCharges.length > 0 && filteredCharges.every((charge) => selectedChargeIds.has(charge.id));
+
+  const toggleChargeSelection = (chargeId: string, checked: boolean) => {
+    setSelectedChargeIds((current) => {
+      const next = new Set(current);
+      if (checked) {
+        next.add(chargeId);
+      } else {
+        next.delete(chargeId);
+      }
+      return next;
+    });
+  };
+
+  const toggleAllVisibleCharges = (checked: boolean) => {
+    setSelectedChargeIds((current) => {
+      const next = new Set(current);
+      for (const charge of filteredCharges) {
+        if (checked) {
+          next.add(charge.id);
+        } else {
+          next.delete(charge.id);
+        }
+      }
+      return next;
+    });
+  };
+
+  const handleSendReminder = () => {
+    if (!onSendBatchPaymentReminder || selectedChargeIds.size === 0) {
+      return;
+    }
+
+    startSendingReminders(async () => {
+      const formData = new FormData();
+      for (const chargeId of selectedChargeIds) {
+        formData.append("chargeIds", chargeId);
+      }
+
+      const result = await onSendBatchPaymentReminder(null, formData);
+      if (!result?.success) {
+        toast.error(result?.error ?? "Unable to send reminders right now.");
+        return;
+      }
+
+      toast.success(result.message ?? "Payment reminders sent.");
+      setSelectedChargeIds(new Set());
+    });
+  };
 
   return (
     <Card id="charges" className="border border-border/50 shadow-sm">
@@ -260,6 +364,32 @@ export function ChargesSection({
         </div>
 
         {showManualPayment ? <InlineAlert state={manualPaymentState} /> : null}
+        {batchActionsEnabled ? (
+          <>
+            <BatchToolbar
+              selectedCount={selectedChargeIds.size}
+              onDeselectAll={() => setSelectedChargeIds(new Set())}
+              onSendReminder={handleSendReminder}
+              onExport={() => exportChargesCsv(selectedVisibleCharges)}
+              sendingReminders={isSendingReminders}
+            />
+            <div className="mb-3 flex items-center justify-between rounded-xl border border-border/50 bg-background px-3 py-2 shadow-sm">
+              <label className="flex items-center gap-2 text-sm text-zinc-600">
+                <input
+                  type="checkbox"
+                  checked={allVisibleSelected}
+                  onChange={(event) => toggleAllVisibleCharges(event.target.checked)}
+                  className="h-4 w-4 rounded border-zinc-300 text-violet-600 focus:ring-violet-500"
+                  aria-label="Select all visible charges"
+                />
+                Select all visible
+              </label>
+              <span className="text-xs text-zinc-500">
+                {selectedVisibleCharges.length} of {filteredCharges.length} visible selected
+              </span>
+            </div>
+          </>
+        ) : null}
 
         {filteredCharges.length === 0 ? (
           <EmptyState
@@ -286,6 +416,18 @@ export function ChargesSection({
 
               return (
                 <DataRow key={charge.id} last={i === filteredCharges.length - 1}>
+                  {batchActionsEnabled ? (
+                    <div className="flex items-start pt-0.5">
+                      <input
+                        type="checkbox"
+                        checked={selectedChargeIds.has(charge.id)}
+                        onChange={(event) => toggleChargeSelection(charge.id, event.target.checked)}
+                        className="h-4 w-4 rounded border-zinc-300 text-violet-600 focus:ring-violet-500"
+                        aria-label={`Select charge for ${getChargeLabel(charge)}`}
+                        title={`Select ${getChargeLabel(charge)}.`}
+                      />
+                    </div>
+                  ) : null}
                   <div className="min-w-0 flex-1">
                     <p className="text-base font-medium text-zinc-900">{getChargeLabel(charge)}</p>
                     {!isTenantView && charge.tenantName ? (

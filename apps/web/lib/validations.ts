@@ -122,6 +122,14 @@ export const updatePropertySchema = z.object({
     .regex(/^\d{5}(-\d{4})?$/, "Enter a valid 5-digit ZIP code."),
 });
 
+export const renamePropertySchema = z.object({
+  propertyId: z.string().uuid("Invalid property selection."),
+  name: z
+    .string()
+    .min(1, "Property name is required.")
+    .max(120, "Property name must be under 120 characters.")
+});
+
 export const deletePropertySchema = z.object({
   propertyId: z.string().uuid("Invalid property selection."),
 });
@@ -133,6 +141,22 @@ export const updateUnitSchema = z.object({
   bathrooms: z.coerce.number().min(0, "Bathrooms must be 0 or more."),
   monthlyRentDollars: z.coerce.number().positive("Monthly rent must be greater than $0."),
 });
+
+export const updateUnitFieldSchema = z.discriminatedUnion("field", [
+  z.object({
+    unitId: z.string().uuid("Invalid unit selection."),
+    field: z.literal("unitNumber"),
+    value: z.string().min(1, "Unit label is required.").max(50, "Unit label must be under 50 characters.")
+  }),
+  z.object({
+    unitId: z.string().uuid("Invalid unit selection."),
+    field: z.literal("monthlyRentDollars"),
+    value: z.coerce
+      .number()
+      .min(0, "Monthly rent cannot be negative.")
+      .max(100000, "Monthly rent cannot exceed $100,000.")
+  })
+]);
 
 export const deleteUnitSchema = z.object({
   unitId: z.string().uuid("Invalid unit selection."),
@@ -555,6 +579,13 @@ export const updateNotificationPreferenceSchema = z.object({
   ]),
   emailEnabled: checkboxBooleanSchema.optional().default(false),
   inAppEnabled: checkboxBooleanSchema.optional().default(false)
+});
+
+export const sendBatchPaymentReminderSchema = z.object({
+  chargeIds: z
+    .array(z.string().uuid("Invalid charge selection."))
+    .min(1, "Select at least one charge.")
+    .max(100, "You can remind up to 100 charges at once.")
 });
 
 export const createExpenseSchema = z

@@ -11,6 +11,12 @@ vi.mock("react-dom", async (importOriginal) => {
   };
 });
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    refresh: vi.fn()
+  })
+}));
+
 describe("PortfolioSection", () => {
   const properties = [
     {

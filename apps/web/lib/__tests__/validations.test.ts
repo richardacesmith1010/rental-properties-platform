@@ -6,11 +6,13 @@ import {
   updateLeaseSchema,
   renewLeaseSchema,
   terminateLeaseSchema,
+  renamePropertySchema,
   payChargeSchema,
   recordManualPaymentSchema,
   setupAutopaySchema,
   disableAutopaySchema,
   updateManagementFeeSchema,
+  updateUnitFieldSchema,
   createMaintenanceTicketSchema,
   updateTicketStatusSchema,
   updateTicketCostSchema,
@@ -51,6 +53,7 @@ import {
   requestDeleteLlcSchema,
   voteOnAccountRenameSchema,
   voteOnDeleteLlcSchema,
+  sendBatchPaymentReminderSchema,
   parseFormData,
 } from "../validations";
 
@@ -226,6 +229,51 @@ describe("createUnitSchema", () => {
       monthlyRentDollars: 0,
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("inline edit action schemas", () => {
+  const validUUID = "550e8400-e29b-41d4-a716-446655440000";
+
+  it("accepts a valid property rename", () => {
+    const result = renamePropertySchema.safeParse({
+      propertyId: validUUID,
+      name: "Atlas House"
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts unit field updates for labels and rent", () => {
+    expect(
+      updateUnitFieldSchema.safeParse({
+        unitId: validUUID,
+        field: "unitNumber",
+        value: "2B"
+      }).success
+    ).toBe(true);
+
+    expect(
+      updateUnitFieldSchema.safeParse({
+        unitId: validUUID,
+        field: "monthlyRentDollars",
+        value: "1650.50"
+      }).success
+    ).toBe(true);
+  });
+
+  it("rejects invalid batch reminder payloads", () => {
+    expect(
+      sendBatchPaymentReminderSchema.safeParse({
+        chargeIds: []
+      }).success
+    ).toBe(false);
+
+    expect(
+      sendBatchPaymentReminderSchema.safeParse({
+        chargeIds: [validUUID]
+      }).success
+    ).toBe(true);
   });
 });
 
