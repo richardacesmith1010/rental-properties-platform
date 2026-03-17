@@ -1,121 +1,76 @@
-# Agent Handoff (Current State)
+# Domus — Agent Handoff Document
 
-Updated (UTC): 2026-03-13T04:00:00Z
+Last updated: 2026-03-16
 
-## Repository
-- Branch: `main`
-- HEAD (latest pushed): `d57f0d1`
-- Remote: `origin/main`
-- Deploy URL: `https://domusbase.com`
+## Production
+- URL: https://domusbase.com
+- Supabase project: `vawqdqkaguhdgfhdebqw`
+- Hosting: Vercel production deployment
+- Primary branch: `main`
 
-## Runtime / Database State
-Latest runtime verifier status (`npm run verify:phase9-runtime` from gate run):
-- `ok: true`
-- All tables, columns, functions, buckets ready
+## Validation Snapshot
+- Unit tests: `562/562` passing at the latest clean gate baseline
+- Playwright coverage: `55` tests across `16` spec files (`cd apps/web && APP_URL=https://domusbase.com npx playwright test --reporter=list`)
+- Gate command: `npm run gate:web`
+- Smoke command: `APP_URL=https://domusbase.com npm run smoke:web`
+- E2E command: `cd apps/web && APP_URL=https://domusbase.com npx playwright test --reporter=list`
 
-Gamification DB (applied via Supabase MCP, Sprint 7):
-- Tables: `user_gamification`, `xp_events`, `achievements`, `user_achievements`
-- Functions: `award_xp()`, `update_streak()`
-- 12 seeded achievements across payment, streak, property, maintenance categories
-- RLS policies active
-
-Notification DB (expanded Sprint 10):
-- 11 notification types: `new_ticket`, `late_rent`, `ticket_resolved`, `payment_recorded`, `lease_updated`, `document_sent`, `document_signed`, `application_reviewed`, `rent_due_reminder`, `invite_accepted`, `achievement_unlocked`
-
-RLS Helper Functions (Sprint 10 hotfix):
-- `is_member_of_account()`, `is_owner_member_of_account()`, `is_creator_of_account()`, `is_manager_of_account()`
-- SECURITY DEFINER — break circular RLS dependency between ownership_accounts and ownership_account_members
-
-Profile Onboarding DB (Sprint 11):
-- `profiles` columns: `nickname` (text), `avatar_url` (text), `onboarding_completed_at` (timestamptz)
-- Storage bucket: `profile-avatars` with per-user folder policies + public read
-
-Stripe Connect DB (Sprint 12, applied):
-- `profiles` columns: `stripe_account_id` (text), `stripe_onboarding_complete` (boolean, default false)
-- `payments` columns: `stripe_transfer_id` (text), `manager_transfer_id` (text), `platform_fee_cents` (integer, default 0)
-- `properties` columns: `management_fee_cents` (integer, default 0)
-
-Autopay DB (Sprint 14, applied):
-- `profiles` columns: `stripe_customer_id` (text)
-- Table: `autopay_enrollments` (id, lease_id UNIQUE, tenant_profile_id, stripe_payment_method_id, payment_method_type, last4, brand, enabled, retry_count, last_failed_at, created_at, updated_at)
-- RLS: tenant own-row + service_role full access
-
-## Deployment State
-- Production host: `https://domusbase.com`
-- Vercel deploy requires authenticated CLI session
-
-## Stripe Infrastructure
-- Webhook endpoint: `https://domusbase.com/api/webhooks/stripe`
-- Webhook destinations: "energetic-glow" (original) + "whimsical-inspiration" (autopay events)
-- Events: `checkout.session.completed`, `account.updated`, `payment_intent.succeeded`, `payment_intent.payment_failed`
-- `STRIPE_WEBHOOK_SECRET` set in Vercel (verified via /api/health)
-- Stripe Connect enabled in sandbox/test mode (Express, platform type)
+## Current Testing Notes
+- The Sprint 49 Playwright additions are in place and were validated in targeted production runs.
+- A full production Playwright run still has known drift in older legacy specs (`apps/web/tests/e2e/auth.spec.ts`, `apps/web/tests/e2e/owner-flows.spec.ts`, `apps/web/tests/e2e/tenant-flows.spec.ts`). Those assertions need selector/data refresh work, but the shipped Sprint 39-52 features are in the repo.
 
 ## Feature Status Matrix
-| Area | Status | Notes |
-|---|---|---|
-| Auth + role routing | LIVE | Owner/Manager/Tenant routes + invite callback |
-| Owner onboarding wizard | LIVE | Individual / Create LLC / Join LLC with passcode |
-| Profile onboarding | LIVE | Sprint 11 — name, nickname, photo upload, onboarding gate |
-| Owner dashboard workflows | LIVE | Properties, units, leases, charges, invites |
-| Manager operations | LIVE | Assigned-property operations active |
-| Tenant dashboard | LIVE | Charges, tickets, documents, notifications |
-| Tenant invitation + password setup | LIVE | inviteUserByEmail → /complete-profile → password set |
-| Stripe checkout + webhook | LIVE | Checkout + webhook recording + auto-redirect |
-| Charge cron generation | LIVE | Per-owner fault isolation (Sprint 9) |
-| Documents + packets + signer flow | LIVE | Includes tenant status view |
-| Notifications (in-app + deliveries) | LIVE | Sprint 10 — bell badge, mark all read, 11 types |
-| Notification triggers | LIVE | Sprint 10 — payments, maintenance, documents, invites |
-| Rent due reminders | LIVE | Sprint 10 — cron sends 3 days before due date |
-| HTML email templates | LIVE | Sprint 10 — Domus violet branding + Dom mascot |
-| Sidebar overhaul | LIVE | Sprint 11 — nickname, avatar, tagline removed, workspace button fixed |
-| Settings popover menu | LIVE | Sprint 11 — Settings, Language, Upgrade Plan, Help/Support, Sign Out |
-| Property form (partial saves) | LIVE | Sprint 11 — only name required, amber warnings for empty optional fields |
-| Vendors + assignment + maintenance photos | LIVE | Vendor assignment and evidence support |
-| Ownership accounts (LLC/shared access) | LIVE | Account/member model + join codes |
-| Marketing landing + auth-aware root | LIVE | Public root + role-based workspace redirect |
-| Password management (settings) | LIVE | Change password in Settings |
-| Palette: Violet + Emerald + Gold | LIVE | Sprint 7 |
-| Dom the Key mascot (PNG) | LIVE | Sprint 8 — user-provided PNG via next/image |
-| Gamification UI (XP, streaks, levels) | LIVE | Sprint 8 — wired to real DB data |
-| Gamification DB | LIVE | 4 tables, 2 functions, 12 achievements |
-| XP awards on server actions | LIVE | Sprint 8 — 8 actions award XP (fire-and-forget) |
-| Streak tracking on login | LIVE | Sprint 8 — updateUserStreak on auth callback |
-| Achievement checker + confetti | LIVE | Sprint 8 — client-side checker, canvas-confetti |
-| Error boundaries | LIVE | Sprint 9 — global-error + app + 3 role error pages |
-| Env validation | LIVE | Sprint 9 — lib/env.ts, middleware hardened |
-| Expired invite token handling | LIVE | Sprint 9 — amber banner on login page |
-| Health endpoint | LIVE | Sprint 9 — /api/health with env status |
-| Gamification unit tests | LIVE | Sprint 9 — 57 tests covering all 12 achievements |
-| Stripe Connect + payment routing | LIVE | Sprint 12 — Express accounts, transfer routing, management fee split |
-| Connect status UI | LIVE | Sprint 12 — banners, settings bank section, disabled Pay Now when unconnected |
-| Analytics dashboard | LIVE | Sprint 13 — recharts, 4 chart panels, CSV export, owner-only |
-| Tenant autopay | LIVE | Sprint 14 — saved payment methods, off-session charging, retry logic, autopay card UI |
-| Autopay cron processing | LIVE | Sprint 14 — processes due charges for enrolled tenants on cron |
-| Autopay webhook handlers | LIVE | Sprint 14 — payment_intent.succeeded + payment_intent.payment_failed |
-| Tenant payment settings | LIVE | Sprint 14 — Payment Methods section in settings for tenants |
-| Modal overlay system | LIVE | Sprint 16 — reusable blurred backdrop, escape/click-outside |
-| Guided owner onboarding wizard | LIVE | Sprint 16 — 5-step flow (unit → lease → invite → bank → done) |
-| Tenant dashboard UX overhaul | LIVE | Sprint 16 — welcome header, quick status, action cards |
-| Smart currency formatting | LIVE | Sprint 16 — no decimals for whole dollars, 7 tests |
-| Sign-in button hardening | LIVE | Sprint 16 — spinner, disabled state, no double-submit |
-| Pay button owner lookup fix | LIVE | Sprint 16 — fallback direct owner_profile_id check |
-| Playwright E2E tests | LIVE | Sprint 6 — auth, owner-setup, tenant, navigation |
-| Mobile app foundation | IN PROGRESS | Expo Router + role-aware tabs (not published) |
 
-## Gate Status
-- `npm run gate:web` — 239/239 tests (9 suites), lint clean, build clean
-- `npm run smoke:web` — all checks passed (+ health endpoint + gamification auth guard)
+| Area | Sprint(s) | Status | Notes |
+| --- | --- | --- | --- |
+| Ops monitoring | 39 | Shipped | Deep health endpoint, cron history API, owner ops dashboard, CSP hardening. |
+| Error recovery and resilience | 40 | Shipped | `withRetry`, `Promise.allSettled` hardening, broader `sideEffectError` coverage, Stripe graceful degradation. |
+| Ownership governance backend | 41 | Shipped | Individual rename, LLC rename/delete voting, governance tables and actions. |
+| Ownership governance UX | 42 | Shipped | Inline account rename in switcher, pending vote banners, LLC delete confirmation flow. |
+| Dashboard performance refactor | 43 | Shipped | Parallelized safe awaits, lazy-loaded conditional sections, large component splits, image sizing fixes. |
+| Owner KPI command center | 44 | Shipped | Six KPI cards, rent collection bar, status color system, trend indicators. |
+| Property drill-down | 45 | Shipped | Property selector, breadcrumbs, property summary card, portfolio click-through drill-down. |
+| Visual polish | 46 | Shipped | Contextual empty states, shadowed cards, typography hierarchy, sidebar cleanup. |
+| Command palette and activity feed | 47 | Shipped | `⌘K` / `Ctrl+K` palette, richer notification feed, contextual owner greeting. |
+| Inline editing and batch operations | 48 | Shipped | Inline property/unit edits, charge batch actions, tenant overview polish. |
+| E2E coverage expansion | 49 | Shipped with follow-up | 55 Playwright tests exist; legacy production spec drift still needs a separate stabilization pass. |
+| Theme-token dark mode fixes | 50 | Shipped | Sprint 44-48 components moved to semantic tokens for Atlas Light, Noctis Neon, and Imperium Night. |
+| Mobile responsiveness | 51 | Shipped | Owner dashboard polish for 375px-768px, mobile search access, touch-target cleanup. |
+| Owner onboarding polish | 52 | Shipped | Animated checklist, auto-progress emphasis, skip persistence, stronger welcome CTAs. |
 
-## Current Risks / Blockers
-- Mobile app not published to app stores yet.
-- User's test account is wiped — needs fresh signup to test.
-- Resend email not configured — in-app notifications work, email activates when RESEND_API_KEY + RESEND_FROM_EMAIL set.
+## Pending User Actions
+- Set `RESEND_API_KEY` and `RESEND_FROM_EMAIL` in Vercel before relying on live outbound email delivery.
+- Set `PLAID_CLIENT_ID`, `PLAID_SECRET`, and `PLAID_ENV` in Vercel before enabling live Plaid account linking.
+- Complete `/Users/courtneysmith/Documents/Codex/Rental Properties/docs/stripe-live-mode-checklist.md` before turning on live Stripe processing.
 
-## Shelved (Needs User Input)
-- Live end-to-end test of Connect onboarding + autopay flow
-- Switch Stripe from sandbox to live mode for real payments
+## Migrations and Schema Notes
+- No known unapplied migrations are required for features shipped through Sprint 52.
+- The Sprint 41 account governance tables were already live when Sprint 42 began.
+- Codex does not apply Supabase migrations. Any future schema changes must be applied by Claude or the user through the approved Supabase workflow.
 
-## Future Sprints
-- Sprint 17: TBD — awaiting user decision
-- Future: Pricing tiers + Stripe Billing, Dom animations, language i18n, tax prep tools, manager analytics, Stripe Connect payouts management
+## Architecture Notes
+- Dashboard loading remains server-driven through `apps/web/components/dashboard/dashboard-data-loader.tsx`, with client-side filtering for property drill-down and tenant/owner section state.
+- Schema drift is handled via feature capability probes and missing-schema guards (`isMissingSchemaError`, feature capability checks, null-safe default returns).
+- Resilience patterns added in Sprint 40 remain the standard: `withRetry` for explicit external retries, `Promise.allSettled` for mixed-criticality fan-out, and `sideEffectError` for non-blocking async failures.
+- Ownership governance follows the established voting pattern used elsewhere in the product: requester auto-votes, quorum is `Math.ceil(activeMembers.length / 2)`, and solo LLCs auto-resolve.
+- Status presentation is centralized through `apps/web/lib/status-colors.ts`; new list views should use that utility instead of hardcoded badge colors.
+- Theme support for recent dashboard work is based on semantic Tailwind tokens (`text-foreground`, `bg-card`, `border-border`, `bg-primary/10`) rather than `dark:` overrides.
+- Owner onboarding dismissal is intentionally a client preference persisted in local storage; all business data remains in Supabase.
+
+## Efficiency Audit (Sprint 53)
+
+| Finding | File | Action Needed |
+| --- | --- | --- |
+| Oversized component: 1236 lines | `apps/web/components/dashboard/dashboard-data-loader.tsx` | Split dashboard orchestration into smaller role/domain loaders before adding more dashboard state. |
+| Oversized component: 568 lines | `apps/web/components/dashboard/charges-section.tsx` | Extract row rendering and batch-action state into focused subcomponents. |
+| Oversized component: 564 lines | `apps/web/components/marketing/landing-page.tsx` | Break hero, proof, and CTA blocks into separate marketing components. |
+| Oversized component: 551 lines | `apps/web/components/dashboard/section-renderer.tsx` | Pull layout framing and role-specific overview rendering into smaller modules. |
+| Oversized component: 512 lines | `apps/web/components/dashboard/dashboard-config.ts` | Split navigation/config constants from helper logic. |
+| Candidate dead export | `apps/web/lib/analytics.ts` (`buildLastTwelveMonths`) | Verify no planned consumers remain; make internal or remove if truly unused. |
+| Candidate dead export | `apps/web/lib/analytics.ts` (`average`) | Verify no planned consumers remain; make internal or remove if truly unused. |
+| Candidate dead export | `apps/web/lib/analytics.ts` (`overlapMonth`) | Verify no planned consumers remain; make internal or remove if truly unused. |
+| Candidate dead export | `apps/web/lib/csv-export.ts` (`downloadCSV`) | Confirm whether export helpers were superseded by inline CSV download code. |
+| Candidate dead export | `apps/web/lib/distribution-approvals.ts` (`getCurrentDistributionConfigForAccount`) | Confirm whether governance UI still needs this externally exported helper. |
+| Duplicate component name | `apps/web/components/dashboard/empty-state.tsx` and `apps/web/components/shared/empty-state.tsx` | Low priority, but the wrapper/shared duplication adds search noise. Consolidate if backward compatibility no longer needs both. |
+| Duplicate component name | `apps/web/components/dashboard/ownership-section.tsx` and `apps/web/components/dashboard/ownership/ownership-section.tsx` | Intentional barrel + implementation pair. Keep if import compatibility still depends on the barrel. |
+| Duplicate component name | `apps/web/components/dashboard/sidebar-nav.tsx` and `apps/web/components/dashboard/sidebar/sidebar-nav.tsx` | Intentional barrel + implementation pair. Keep if import compatibility still depends on the barrel. |
