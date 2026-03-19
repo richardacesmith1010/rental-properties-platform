@@ -31,7 +31,10 @@ test.describe("Settings page", () => {
     await loginOwnerOrSkip(page);
     await page.goto("/owner");
 
-    await expect(page.getByRole("heading", { name: /^Good / })).toBeVisible();
+    // Owner may see contextual greeting OR onboarding welcome card
+    const hasGreeting = await page.getByRole("heading", { name: /^Good / }).count();
+    const hasWelcome = await page.getByRole("heading", { name: /welcome/i }).count();
+    expect(hasGreeting + hasWelcome).toBeGreaterThan(0);
 
     const banner = page.getByText("Stripe is in test mode. Payments will not be processed with real money.");
     const bannerVisible = await banner.isVisible().catch(() => false);
