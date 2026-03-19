@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useFormState } from "react-dom";
-import { FileText } from "lucide-react";
+import { Download, FileText } from "lucide-react";
 import { DataRow } from "@/components/shared/data-row";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
@@ -341,6 +342,14 @@ export function LeasesSection({
                       <p className="text-base font-medium text-zinc-900">{formatCurrency(lease.monthlyRentCents)}</p>
                       <p className="text-sm text-zinc-500">Due day {lease.dueDayOfMonth}</p>
                     </div>
+                    <Link
+                      href={`/api/pdf/lease-summary/${lease.id}`}
+                      className="inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50"
+                      title="Download a one-page PDF summary of this lease."
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      PDF Summary
+                    </Link>
 
                     {showControls && isActiveLease ? (
                       <>

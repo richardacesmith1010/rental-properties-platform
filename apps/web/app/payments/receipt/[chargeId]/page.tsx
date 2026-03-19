@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Download } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserRole } from "@/lib/auth";
@@ -98,7 +100,17 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
             <p className="text-xs uppercase tracking-[0.3em] text-violet-500">Domus</p>
             <h1 className="mt-2 text-2xl font-semibold text-zinc-900">Payment Receipt</h1>
           </div>
-          <PrintButton />
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/api/pdf/receipt/${params.chargeId}`}
+              className="inline-flex items-center gap-2 rounded-md bg-violet-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-violet-500"
+              title="Download this receipt as a PDF."
+            >
+              <Download className="h-4 w-4" />
+              Download PDF
+            </Link>
+            <PrintButton />
+          </div>
         </div>
 
         <Card>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Download } from "lucide-react";
 import { requireRole, getRoleHomePath } from "@/lib/auth";
 import {
   getDelinquencyReport,
@@ -68,6 +69,14 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <Link
+                href={`/api/pdf/receipts?year=${reportYear}`}
+                className="inline-flex items-center gap-2 rounded-md bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-shadow hover:bg-violet-500 hover:shadow-md"
+                title={`Download all ${reportYear} rent receipts as a PDF export.`}
+              >
+                <Download className="h-4 w-4" />
+                Export Receipts
+              </Link>
               <Link
                 href={getRoleHomePath(role)}
                 className="rounded-md border border-zinc-200/80 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm transition-shadow hover:bg-zinc-50 hover:shadow-md"
