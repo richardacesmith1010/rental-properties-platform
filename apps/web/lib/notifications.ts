@@ -46,6 +46,12 @@ export interface NotificationDTO {
   createdAt: string;
 }
 
+interface NotificationEmailContent {
+  subject: string;
+  text: string;
+  html?: string;
+}
+
 export async function getNotificationsForUser(userId: string, limit = 20): Promise<NotificationDTO[]> {
   const supabase = createClient();
 
@@ -78,6 +84,7 @@ interface CreateNotificationParams {
   entityId?: string | null;
   propertyId?: string | null;
   actorProfileId?: string | null;
+  emailContent?: NotificationEmailContent;
 }
 
 function getNotificationCta(type: NotificationType) {
@@ -86,9 +93,9 @@ function getNotificationCta(type: NotificationType) {
   switch (type) {
     case "rent_due_reminder":
     case "late_rent":
-      return { text: "Pay Now", url: `${baseUrl}/tenant` };
+      return { text: "Pay Now", url: `${baseUrl}/tenant?section=charges` };
     case "payment_recorded":
-      return { text: "View Dashboard", url: `${baseUrl}/tenant` };
+      return { text: "View Dashboard", url: `${baseUrl}/tenant?section=charges` };
     case "new_ticket":
     case "document_signed":
     case "invite_accepted":
@@ -101,7 +108,7 @@ function getNotificationCta(type: NotificationType) {
     case "lease_expired":
       return { text: "View Lease", url: `${baseUrl}/tenant` };
     case "delinquency_escalation":
-      return { text: "Resolve Balance", url: `${baseUrl}/tenant` };
+      return { text: "Resolve Balance", url: `${baseUrl}/tenant?section=charges` };
     case "distribution_change_requested":
     case "distribution_change_approved":
     case "distribution_change_rejected":
@@ -202,8 +209,7 @@ export async function createNotificationWithDelivery(params: CreateNotificationP
     } | null = null;
 
     if (shouldSendEmail && shouldRecordSuccessfulDelivery(deliveryRows, "email")) {
-      emailResult = await sendNotificationEmail({
-        to: params.recipientEmail,
+      const emailContent = params.emailContent ?? {
         subject: params.title,
         text: buildNotificationPlainText({
           title: params.title,
@@ -218,6 +224,13 @@ export async function createNotificationWithDelivery(params: CreateNotificationP
           ctaUrl: cta.url,
           preheaderText: params.title
         })
+      };
+
+      emailResult = await sendNotificationEmail({
+        to: params.recipientEmail,
+        subject: emailContent.subject,
+        text: emailContent.text,
+        html: emailContent.html
       });
     }
 

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { buildRentReminderEmail } from "@/lib/email-templates";
 import {
   createNotificationWithDelivery,
   notifyOwnerMembersForProperty
@@ -9,6 +10,20 @@ function differenceInDays(fromDate: string, toDate: string) {
   const from = new Date(`${fromDate}T00:00:00.000Z`);
   const to = new Date(`${toDate}T00:00:00.000Z`);
   return Math.floor((to.getTime() - from.getTime()) / 86400000);
+}
+
+function getTenantDashboardUrl() {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com";
+  return `${baseUrl}/tenant?section=charges`;
+}
+
+function getTenantDisplayName(profile: { full_name?: string | null; email?: string | null } | null) {
+  const fullName = profile?.full_name?.trim();
+  if (fullName) {
+    return fullName.split(/\s+/)[0] ?? fullName;
+  }
+
+  return profile?.email ?? "there";
 }
 
 export async function sendDelinquencyEscalations(supabase: SupabaseClient): Promise<string> {
@@ -96,13 +111,15 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
     new Set((leases ?? []).map((lease) => lease.tenant_profile_id).filter((id): id is string => Boolean(id)))
   );
   const { data: profiles, error: profilesError } = tenantIds.length
-    ? await supabase.from("profiles").select("id, email").in("id", tenantIds)
-    : { data: [] as Array<{ id: string; email: string | null }>, error: null };
+    ? await supabase.from("profiles").select("id, email, full_name").in("id", tenantIds)
+    : { data: [] as Array<{ id: string; email: string | null; full_name: string | null }>, error: null };
   if (profilesError) {
     throw profilesError;
   }
 
-  const profileById = new Map(((profiles ?? []) as Array<{ id: string; email: string | null }>).map((profile) => [profile.id, profile]));
+  const profileById = new Map(
+    ((profiles ?? []) as Array<{ id: string; email: string | null; full_name: string | null }>).map((profile) => [profile.id, profile])
+  );
 
   const work = candidates.filter((charge) => !alreadySent.has(charge.id)).map(async (charge) => {
     const lease = leaseById.get(charge.lease_id);
@@ -126,6 +143,14 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
         : stage === "urgent"
           ? `Your balance of ${formatCurrency(charge.amount_cents)} for Unit ${unit.unit_number} is now more than 60 days overdue. Please pay as soon as possible.`
           : `Your balance of ${formatCurrency(charge.amount_cents)} for Unit ${unit.unit_number} is now 30 days overdue. Please pay when you can to avoid further escalation.`;
+    const reminderEmail = buildRentReminderEmail({
+      tenantName: getTenantDisplayName(tenantProfile),
+      amountFormatted: formatCurrency(charge.amount_cents),
+      dueDate: formatDate(charge.due_date),
+      propertyName: property.name,
+      type: "overdue",
+      dashboardUrl: getTenantDashboardUrl()
+    });
 
     const notifications = [
       createNotificationWithDelivery({
@@ -136,7 +161,8 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
         body,
         entityType: "rent_charge",
         entityId: charge.id,
-        propertyId: unit.property_id
+        propertyId: unit.property_id,
+        emailContent: reminderEmail
       })
     ];
 
@@ -190,35 +216,78 @@ export async function sendRentDueReminders(supabase: SupabaseClient): Promise<st
   const leaseIds = Array.from(new Set(pendingCharges.map((charge) => charge.lease_id)));
   const { data: leases, error: leasesError } = await supabase
     .from("leases")
-    .select("id, tenant_profile_id")
+    .select("id, tenant_profile_id, unit_id")
     .in("id", leaseIds);
   if (leasesError) {
     throw leasesError;
   }
 
   const leaseById = new Map(
-    ((leases ?? []) as Array<{ id: string; tenant_profile_id: string | null }>).map((lease) => [lease.id, lease])
+    ((leases ?? []) as Array<{ id: string; tenant_profile_id: string | null; unit_id: string }>).map((lease) => [lease.id, lease])
+  );
+  const unitIds = Array.from(new Set((leases ?? []).map((lease) => lease.unit_id)));
+  const { data: units, error: unitsError } = unitIds.length
+    ? await supabase
+        .from("units")
+        .select("id, property_id, unit_number")
+        .in("id", unitIds)
+    : { data: [] as Array<{ id: string; property_id: string; unit_number: string }>, error: null };
+  if (unitsError) {
+    throw unitsError;
+  }
+
+  const unitById = new Map(
+    ((units ?? []) as Array<{ id: string; property_id: string; unit_number: string }>).map((unit) => [unit.id, unit])
+  );
+  const propertyIds = Array.from(new Set((units ?? []).map((unit) => unit.property_id)));
+  const { data: properties, error: propertiesError } = propertyIds.length
+    ? await supabase
+        .from("properties")
+        .select("id, name")
+        .in("id", propertyIds)
+    : { data: [] as Array<{ id: string; name: string }>, error: null };
+  if (propertiesError) {
+    throw propertiesError;
+  }
+
+  const propertyById = new Map(
+    ((properties ?? []) as Array<{ id: string; name: string }>).map((property) => [property.id, property])
   );
   const tenantIds = Array.from(
     new Set(Array.from(leaseById.values()).map((lease) => lease.tenant_profile_id).filter((id): id is string => Boolean(id)))
   );
   const { data: profiles, error: profilesError } = tenantIds.length
-    ? await supabase.from("profiles").select("id, email").in("id", tenantIds)
-    : { data: [] as Array<{ id: string; email: string | null }>, error: null };
+    ? await supabase.from("profiles").select("id, email, full_name").in("id", tenantIds)
+    : { data: [] as Array<{ id: string; email: string | null; full_name: string | null }>, error: null };
   if (profilesError) {
     throw profilesError;
   }
 
-  const profileById = new Map(((profiles ?? []) as Array<{ id: string; email: string | null }>).map((profile) => [profile.id, profile]));
+  const profileById = new Map(
+    ((profiles ?? []) as Array<{ id: string; email: string | null; full_name: string | null }>).map((profile) => [profile.id, profile])
+  );
 
   await Promise.all(
     pendingCharges.map(async (charge) => {
-      const tenantId = leaseById.get(charge.lease_id)?.tenant_profile_id;
-      if (!tenantId) {
+      const lease = leaseById.get(charge.lease_id);
+      const tenantId = lease?.tenant_profile_id;
+      const unit = lease ? unitById.get(lease.unit_id) : null;
+      const property = unit ? propertyById.get(unit.property_id) : null;
+
+      if (!tenantId || !unit || !property) {
         return;
       }
 
       const profile = profileById.get(tenantId);
+      const reminderEmail = buildRentReminderEmail({
+        tenantName: getTenantDisplayName(profile ?? null),
+        amountFormatted: formatCurrency(charge.amount_cents),
+        dueDate: formatDate(charge.due_date),
+        propertyName: property.name,
+        type: "upcoming",
+        dashboardUrl: getTenantDashboardUrl()
+      });
+
       await createNotificationWithDelivery({
         recipientProfileId: tenantId,
         recipientEmail: profile?.email ?? null,
@@ -226,7 +295,9 @@ export async function sendRentDueReminders(supabase: SupabaseClient): Promise<st
         title: "Rent Due Soon",
         body: `Your rent of ${formatCurrency(charge.amount_cents)} is due on ${formatDate(charge.due_date)}. Pay now to keep your streak going!`,
         entityType: "rent_charge",
-        entityId: charge.id
+        entityId: charge.id,
+        propertyId: unit.property_id,
+        emailContent: reminderEmail
       });
     })
   );

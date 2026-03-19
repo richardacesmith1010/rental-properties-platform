@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const createClientMock = vi.hoisted(() => vi.fn());
 const createAdminClientMock = vi.hoisted(() => vi.fn());
@@ -125,6 +125,11 @@ describe("notifications utilities", () => {
     });
   });
 
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
   it("maps notification rows for getNotificationsForUser", async () => {
     const result = await getNotificationsForUser("user-1");
 
@@ -176,6 +181,43 @@ describe("notifications utilities", () => {
         entityId: "charge-1"
       })
     ).resolves.toBeUndefined();
+  });
+
+  it("uses custom email content when provided", async () => {
+    const admin = createNotificationAdminClient({ existingDeliveries: [] });
+    createAdminClientMock.mockReturnValue(admin);
+    getNotificationPreferenceMock.mockResolvedValueOnce({ inAppEnabled: false, emailEnabled: true });
+    vi.stubEnv("RESEND_API_KEY", "test-key");
+    vi.stubEnv("RESEND_FROM_EMAIL", "alerts@domusbase.com");
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ id: "email-1" })
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await createNotificationWithDelivery({
+      recipientProfileId: "user-1",
+      recipientEmail: "user@example.com",
+      type: "rent_due_reminder",
+      title: "Rent due soon",
+      body: "Body",
+      entityType: "rent_charge",
+      entityId: "charge-1",
+      emailContent: {
+        subject: "Custom reminder",
+        text: "Custom text",
+        html: "<p>Custom html</p>"
+      }
+    });
+
+    expect(buildNotificationEmailMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.resend.com/emails",
+      expect.objectContaining({
+        method: "POST",
+        body: expect.stringContaining("\"subject\":\"Custom reminder\"")
+      })
+    );
   });
 
   it("skips notification creation when all preferences are disabled", async () => {

@@ -22,7 +22,7 @@ export interface DashboardKpis {
   netCashFlowCents: number;
 }
 
-interface DashboardCharge {
+export interface DashboardCharge {
   id: string;
   leaseId: string;
   propertyId: string;
@@ -33,6 +33,7 @@ interface DashboardCharge {
   unitNumber: string;
   tenantName: string;
   category: "rent" | "late_fee";
+  reminderSentAt?: string | null;
 }
 
 interface RecentPayment {
@@ -205,6 +206,7 @@ export async function getDashboardData(
     method: string;
     rent_charge_id: string;
   }> = [];
+  let reminderSentAtByChargeId = new Map<string, string>();
 
   if (leaseIds.length > 0) {
     const thirtyDaysAgo = new Date();
@@ -261,6 +263,32 @@ export async function getDashboardData(
           .select("id, lease_id, due_date, amount_cents, status, category")
           .in("id", uniqueChargeIds)
       : { data: [] as Array<{ id: string; lease_id: string; due_date: string; amount_cents: number; status: "pending" | "paid" | "late"; category: string | null }> };
+
+    if (uniqueChargeIds.length > 0) {
+      const { data: reminderNotifications, error: reminderError } = await admin
+        .from("notifications")
+        .select("entity_id, created_at")
+        .in("entity_id", uniqueChargeIds)
+        .in("entity_type", ["rent_charge", "charge"])
+        .in("type", ["rent_due_reminder", "delinquency_escalation"])
+        .order("created_at", { ascending: false });
+
+      if (reminderError) {
+        console.error("Unable to load rent reminder activity:", reminderError);
+      } else {
+        reminderSentAtByChargeId = new Map(
+          (reminderNotifications ?? [])
+            .filter(
+              (notification): notification is { entity_id: string; created_at: string } =>
+                Boolean(notification.entity_id && notification.created_at)
+            )
+            .filter((notification, index, rows) =>
+              rows.findIndex((row) => row.entity_id === notification.entity_id) === index
+            )
+            .map((notification) => [notification.entity_id, notification.created_at])
+        );
+      }
+    }
 
     const chargeById = new Map((chargeDetails ?? []).map((charge) => [charge.id, charge]));
 
@@ -385,7 +413,8 @@ export async function getDashboardData(
         propertyName,
         unitNumber,
         tenantName,
-        category: charge.category
+        category: charge.category,
+        reminderSentAt: reminderSentAtByChargeId.get(charge.id) ?? null
       };
     }),
     recentPayments: recentPayments.map((payment) => {

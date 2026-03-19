@@ -330,11 +330,12 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
 
           {activeSection === "overview" && (
             <div className="space-y-5">
-              <TenantOverview
-                userName={displayName}
-                nextCharge={nextCharge}
-                lease={currentLease}
-                openTicketCount={openTicketCount}
+        <TenantOverview
+          userName={displayName}
+          charges={paymentData.charges}
+          nextCharge={nextCharge}
+          lease={currentLease}
+          openTicketCount={openTicketCount}
                 buildSectionHref={buildTenantHref}
               />
 

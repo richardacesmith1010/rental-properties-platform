@@ -23,7 +23,8 @@ describe("ChargesSection", () => {
       propertyLabel: "Atlas House • Unit 1A",
       unitNumber: "1A",
       tenantName: "Maya Bell",
-      category: "rent" as const
+      category: "rent" as const,
+      reminderSentAt: "2026-03-15T12:00:00.000Z"
     }
   ];
 
@@ -87,5 +88,11 @@ describe("ChargesSection", () => {
     render(<ChargesSection charges={charges} onPayCharge={async () => {}} />);
 
     expect(screen.getByLabelText("Charge status: Pending")).toBeInTheDocument();
+  });
+
+  it("shows reminder activity for owner charges when available", () => {
+    render(<ChargesSection charges={charges} onPayCharge={async () => {}} />);
+
+    expect(screen.getByText("Reminder sent Mar 15, 2026")).toBeInTheDocument();
   });
 });

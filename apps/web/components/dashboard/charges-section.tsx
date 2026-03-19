@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useFormState } from "react-dom";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CreditCard } from "lucide-react";
+import { CreditCard, Mail } from "lucide-react";
 import { toast } from "sonner";
 import type { ActionState } from "@/app/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +42,7 @@ interface Charge {
   unitNumber?: string;
   tenantName?: string;
   category?: ChargeCategory;
+  reminderSentAt?: string | null;
 }
 
 interface AutopayEnrollmentView {
@@ -434,6 +435,12 @@ export function ChargesSection({
                       <p className="mt-0.5 text-sm text-zinc-500">{charge.tenantName}</p>
                     ) : null}
                     <p className="mt-0.5 text-sm text-zinc-500">Due {formatDate(charge.dueDate)}</p>
+                    {!isTenantView && charge.reminderSentAt ? (
+                      <p className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <Mail className="h-3 w-3" aria-hidden="true" />
+                        Reminder sent {formatDate(charge.reminderSentAt)}
+                      </p>
+                    ) : null}
 
                     {showManualPayment && manualFormOpen && charge.status !== "paid" ? (
                       <form action={recordManualPaymentAction} className="mt-3 grid gap-3 sm:grid-cols-4">

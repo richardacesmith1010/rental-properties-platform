@@ -15,6 +15,15 @@ interface BrandedEmailShellParams {
   footerPreferencesUrl?: string;
 }
 
+interface RentReminderEmailParams {
+  tenantName: string;
+  amountFormatted: string;
+  dueDate: string;
+  propertyName: string;
+  type: "upcoming" | "due_today" | "overdue";
+  dashboardUrl: string;
+}
+
 export function escapeHtml(value: string) {
   return value
     .replaceAll("&", "&amp;")
@@ -133,4 +142,52 @@ export function buildNotificationEmail({
     preheaderText,
     footerPreferencesUrl: `${appUrl}/settings`,
   });
+}
+
+export function buildRentReminderEmail({
+  tenantName,
+  amountFormatted,
+  dueDate,
+  propertyName,
+  type,
+  dashboardUrl,
+}: RentReminderEmailParams) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com";
+  const subject =
+    type === "overdue"
+      ? `Overdue Rent: ${amountFormatted} was due ${dueDate}`
+      : type === "due_today"
+        ? `Rent Due Today: ${amountFormatted}`
+        : `Rent Reminder: ${amountFormatted} due on ${dueDate}`;
+
+  const summary =
+    type === "overdue"
+      ? `Hi ${tenantName}, your rent of ${amountFormatted} for ${propertyName} was due on ${dueDate} and is now overdue. Please pay as soon as possible.`
+      : type === "due_today"
+        ? `Hi ${tenantName}, your rent of ${amountFormatted} for ${propertyName} is due today.`
+        : `Hi ${tenantName}, your rent of ${amountFormatted} for ${propertyName} is due on ${dueDate}.`;
+
+  const bodyHtml = [
+    `<p style="margin:0;">${escapeHtml(summary)}</p>`,
+    `<p style="margin:16px 0 0 0;">Open your tenant dashboard to review the charge and pay securely.</p>`
+  ].join("");
+
+  const html = buildBrandedEmailShell({
+    titleHtml: escapeHtml(type === "overdue" ? "Overdue rent reminder" : "Rent reminder"),
+    bodyHtml,
+    ctaText: "Pay Now",
+    ctaUrl: dashboardUrl,
+    preheaderText: subject,
+    footerPreferencesUrl: `${appUrl}/settings`
+  });
+
+  const text = [
+    summary,
+    "",
+    `Pay now: ${dashboardUrl}`,
+    "",
+    `Manage notification preferences: ${appUrl}/settings`
+  ].join("\n");
+
+  return { subject, html, text };
 }

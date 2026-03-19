@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { CreditCard, FileText, Wrench } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/format";
+import type { TenantCharge } from "@/lib/tenant-payments";
 import { Card, CardContent } from "@/components/ui/card";
+import { RentUrgencyBanner } from "@/components/dashboard/rent-urgency-banner";
 
 type TenantOverviewSection = "charges" | "maintenance" | "documents";
 
 interface TenantOverviewProps {
   userName: string;
+  charges: TenantCharge[];
   nextCharge: { amountCents: number; dueDate: string } | null;
   lease: {
     startDate: string;
@@ -40,6 +43,7 @@ function getDaysUntil(dateValue: string) {
 
 export function TenantOverview({
   userName,
+  charges,
   nextCharge,
   lease,
   openTicketCount,
@@ -62,6 +66,8 @@ export function TenantOverview({
 
   return (
     <div className="space-y-6">
+      <RentUrgencyBanner charges={charges} payHref={buildSectionHref("charges")} />
+
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
           {getGreeting()}, {userName}
