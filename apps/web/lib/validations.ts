@@ -516,6 +516,10 @@ export const uploadMaintenancePhotoSchema = z.object({
   caption: z.string().max(300, "Caption must be under 300 characters.").optional()
 });
 
+export const deleteMaintenancePhotoSchema = z.object({
+  photoId: z.string().uuid("Invalid photo ID.")
+});
+
 export const uploadPropertyFileSchema = z.object({
   propertyId: z.string().uuid("Invalid property."),
   category: z.enum(

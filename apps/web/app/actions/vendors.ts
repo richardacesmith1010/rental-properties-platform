@@ -12,7 +12,6 @@ import {
   createVendorSchema,
   updateVendorSchema,
   assignVendorSchema,
-  uploadMaintenancePhotoSchema,
   parseFormData
 } from "@/lib/validations";
 import {
@@ -291,90 +290,6 @@ export async function assignVendorToTicket(
       entityId: ticketId
     })
   );
-
-  revalidatePath("/owner");
-  revalidatePath("/manager");
-  return { success: true };
-}
-
-export async function uploadMaintenancePhoto(
-  _prev: ActionState,
-  formData: FormData
-): Promise<ActionState> {
-  const { user } = await requireAuth("owner", "manager");
-  if (!checkRateLimit(`uploadMaintenancePhoto:${user.id}`, 20, 60_000).allowed) {
-    return { success: false, error: "Too many requests. Please try again later." };
-  }
-
-  const capabilityError = await ensureCapabilityEnabled("photoWorkflowEnabled");
-  if (capabilityError) {
-    return capabilityError;
-  }
-
-  const parsed = parseFormData(uploadMaintenancePhotoSchema, formData);
-  if (!parsed.success) {
-    return parsed;
-  }
-
-  const file = formData.get("photo");
-  if (!(file instanceof File) || file.size === 0) {
-    return { success: false, error: "Please select a valid photo file." };
-  }
-  if (file.size > 10 * 1024 * 1024) {
-    return { success: false, error: "Photo must be under 10MB." };
-  }
-
-  const { ticketId, caption } = parsed.data;
-  const admin = createAdminClient();
-
-  const { data: ticket } = await admin
-    .from("maintenance_tickets")
-    .select("id, property_id")
-    .eq("id", ticketId)
-    .single();
-
-  if (!ticket) {
-    return { success: false, error: "Ticket not found." };
-  }
-
-  const { data: property } = await admin
-    .from("properties")
-    .select("id")
-    .eq("id", ticket.property_id)
-    .single();
-
-  if (!property) {
-    return { success: false, error: "Property not found for ticket." };
-  }
-
-  const canAdminister = await canUserAdministerProperty(user.id, property.id);
-  if (!canAdminister) {
-    return { success: false, error: "You do not have access to this ticket." };
-  }
-
-  const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-  const path = `${ticketId}/${crypto.randomUUID()}.${extension}`;
-  const { error: uploadError } = await admin.storage
-    .from("maintenance-photos")
-    .upload(path, file, {
-      contentType: file.type || "application/octet-stream",
-      upsert: false
-    });
-
-  if (uploadError) {
-    return { success: false, error: "Failed to upload photo." };
-  }
-
-  const { error: insertError } = await admin.from("maintenance_photos").insert({
-    ticket_id: ticketId,
-    uploaded_by_profile_id: user.id,
-    storage_path: path,
-    caption: caption || null
-  });
-
-  if (insertError) {
-    return { success: false, error: "Photo uploaded but metadata save failed." };
-  }
 
   revalidatePath("/owner");
   revalidatePath("/manager");

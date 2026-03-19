@@ -24,6 +24,12 @@ vi.mock("@/components/dashboard/ticket-photo-upload", () => ({
   TicketPhotoUpload: ({ ticketId }: { ticketId: string }) => <div data-testid={`photo-upload-${ticketId}`}>photo upload</div>
 }));
 
+vi.mock("@/components/dashboard/maintenance/photo-gallery", () => ({
+  PhotoGallery: ({ photos }: { photos: Array<{ id: string }> }) => (
+    <div data-testid={`photo-gallery-${photos.length}`}>photo gallery</div>
+  )
+}));
+
 vi.mock("@/components/dashboard/maintenance-comment-thread", () => ({
   MaintenanceCommentThread: ({ ticketId }: { ticketId: string }) => <div data-testid={`comment-thread-${ticketId}`}>comment thread</div>
 }));
@@ -47,6 +53,18 @@ describe("MaintenanceSection", () => {
     assignmentStatus: "assigned",
     photoCount: 2,
     latestPhotoId: "photo-1",
+    photos: [
+      {
+        id: "photo-1",
+        ticketId: "ticket-1",
+        uploadedBy: "tenant-1",
+        fileName: "leak-1.jpg",
+        fileType: "image/jpeg",
+        fileSizeBytes: 1024,
+        createdAt: "2026-03-01T00:00:00.000Z",
+        url: "/api/assets/maintenance-photo/photo-1"
+      }
+    ],
     createdAt: "2026-03-01T00:00:00.000Z",
     resolvedAt: null,
     tenantEmail: "tenant@example.com",

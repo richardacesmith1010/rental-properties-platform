@@ -84,6 +84,7 @@ import {
   updateVendor,
   assignVendorToTicket,
   uploadMaintenancePhoto,
+  deleteMaintenancePhoto,
   createExpense,
   updateExpense,
   deleteExpense,
@@ -359,6 +360,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         onUpdateVendor={updateVendor}
         onAssignVendor={assignVendorToTicket}
         onUploadMaintenancePhoto={uploadMaintenancePhoto}
+        onDeleteMaintenancePhoto={deleteMaintenancePhoto}
         onCreateExpense={createExpense}
         onUpdateExpense={updateExpense}
         onDeleteExpense={deleteExpense}

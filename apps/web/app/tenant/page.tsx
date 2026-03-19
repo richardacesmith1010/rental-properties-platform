@@ -3,12 +3,14 @@ import {
   addTicketComment,
   createCheckoutForCharge,
   createMaintenanceTicket,
+  deleteMaintenancePhoto,
   disableAutopay,
   markAllNotificationsRead,
   markNotificationRead,
   signDocumentPacket,
   signOut,
-  setupAutopay
+  setupAutopay,
+  uploadMaintenancePhoto
 } from "@/app/actions";
 import { getAutopayEnrollments } from "@/app/actions/autopay";
 import {
@@ -434,11 +436,17 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
               <TicketForm
                 units={maintenanceData.units}
                 onCreateTicket={createMaintenanceTicket}
+                photoWorkflowEnabled={capabilities.photoWorkflowEnabled}
+                photoWorkflowWarning={capabilities.warnings.photoWorkflow}
               />
 
               <MaintenanceSection
                 tickets={maintenanceData.tickets}
                 showControls={false}
+                currentUserId={user.id}
+                viewerRole="tenant"
+                onUploadPhoto={capabilities.photoWorkflowEnabled ? uploadMaintenancePhoto : undefined}
+                onDeletePhoto={capabilities.photoWorkflowEnabled ? deleteMaintenancePhoto : undefined}
                 onAddComment={addTicketComment}
                 photoWorkflowEnabled={capabilities.photoWorkflowEnabled}
                 photoWorkflowWarning={capabilities.warnings.photoWorkflow}

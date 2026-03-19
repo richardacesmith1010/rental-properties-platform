@@ -1,16 +1,16 @@
 "use client";
 
-import { type KeyboardEvent, useEffect, useState } from "react";
-import { useFormState } from "react-dom";
+import { type KeyboardEvent, useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
-import { SubmitButton } from "@/components/shared/submit-button";
 import { Button } from "@/components/ui/button";
 import type { ActionState } from "@/app/actions";
 import type { TenantUnit } from "@/lib/maintenance";
 import { Alert } from "@/components/ui/alert";
+import { PhotoUpload } from "@/components/dashboard/maintenance/photo-upload";
 
 type StatefulAction = (
   prev: ActionState,
@@ -20,6 +20,8 @@ type StatefulAction = (
 interface TicketFormProps {
   units: TenantUnit[];
   onCreateTicket: StatefulAction;
+  photoWorkflowEnabled?: boolean;
+  photoWorkflowWarning?: string | null;
 }
 
 interface TicketDraft {
@@ -50,7 +52,7 @@ function FormSuccess({ state }: { state: ActionState }) {
   if (!state || !state.success) return null;
   return (
     <Alert variant="success">
-      Maintenance request submitted!
+      {state.message ?? "Maintenance request submitted!"}
     </Alert>
   );
 }
@@ -83,9 +85,17 @@ function onEnterNext(
   advance();
 }
 
-export function TicketForm({ units, onCreateTicket }: TicketFormProps) {
-  const [state, action] = useFormState(onCreateTicket, null);
+export function TicketForm({
+  units,
+  onCreateTicket,
+  photoWorkflowEnabled = true,
+  photoWorkflowWarning = null
+}: TicketFormProps) {
+  const router = useRouter();
+  const [state, setState] = useState<ActionState>(null);
+  const [isSubmitting, startTransition] = useTransition();
   const [step, setStep] = useState(0);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [draft, setDraft] = useState<TicketDraft>({
     unitId: "",
     title: "",
@@ -106,6 +116,7 @@ export function TicketForm({ units, onCreateTicket }: TicketFormProps) {
   useEffect(() => {
     if (!state?.success) return;
     setStep(0);
+    setPhotoFiles([]);
     setDraft({
       unitId: "",
       title: "",
@@ -113,6 +124,25 @@ export function TicketForm({ units, onCreateTicket }: TicketFormProps) {
       priority: "medium"
     });
   }, [state]);
+
+  const handleSubmit = () => {
+    startTransition(async () => {
+      const formData = new FormData();
+      formData.append("unitId", draft.unitId);
+      formData.append("title", draft.title);
+      formData.append("description", draft.description);
+      formData.append("priority", draft.priority);
+      for (const file of photoFiles) {
+        formData.append("photos", file);
+      }
+
+      const result = await onCreateTicket(null, formData);
+      setState(result);
+      if (result?.success) {
+        router.refresh();
+      }
+    });
+  };
 
   return (
     <Card>
@@ -233,19 +263,24 @@ export function TicketForm({ units, onCreateTicket }: TicketFormProps) {
                 {draft.priority.charAt(0).toUpperCase() + draft.priority.slice(1)}
               </p>
             </div>
-            <form className="space-y-3" action={action}>
-              <input type="hidden" name="unitId" value={draft.unitId} />
-              <input type="hidden" name="title" value={draft.title} />
-              <input type="hidden" name="description" value={draft.description} />
-              <input type="hidden" name="priority" value={draft.priority} />
-              <SubmitButton
-                className="w-full"
-                disabled={!requiredComplete}
-                title="Create this maintenance request."
-              >
-                Submit Request
-              </SubmitButton>
-            </form>
+            {photoWorkflowEnabled ? (
+              <PhotoUpload
+                selectedPhotos={photoFiles}
+                onPhotosSelected={setPhotoFiles}
+                disabled={isSubmitting}
+              />
+            ) : photoWorkflowWarning ? (
+              <Alert variant="warning">{photoWorkflowWarning}</Alert>
+            ) : null}
+            <Button
+              type="button"
+              className="w-full"
+              disabled={!requiredComplete || isSubmitting}
+              onClick={handleSubmit}
+              title="Create this maintenance request."
+            >
+              {isSubmitting ? "Submitting..." : "Submit Request"}
+            </Button>
           </div>
         )}
 
@@ -272,6 +307,7 @@ export function TicketForm({ units, onCreateTicket }: TicketFormProps) {
             variant="outline"
             onClick={() => {
               setStep(0);
+              setPhotoFiles([]);
               setDraft({
                 unitId: "",
                 title: "",

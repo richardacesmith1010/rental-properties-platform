@@ -7,6 +7,7 @@ import { FeatureWarning } from "@/components/shared/feature-warning";
 import { TicketStatusControl } from "./ticket-status-control";
 import { TicketVendorControl } from "./ticket-vendor-control";
 import { TicketPhotoUpload } from "./ticket-photo-upload";
+import { PhotoGallery } from "./maintenance/photo-gallery";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { MaintenanceCommentThread } from "./maintenance-comment-thread";
 import { MaintenanceTracker } from "./maintenance-tracker";
@@ -24,10 +25,13 @@ type StatefulAction = (
 interface MaintenanceSectionProps {
   tickets: MaintenanceTicket[];
   showControls?: boolean;
+  currentUserId?: string;
+  viewerRole?: "owner" | "manager" | "tenant";
   onUpdateStatus?: StatefulAction;
   vendors?: Array<{ id: string; name: string; preferred?: boolean }>;
   onAssignVendor?: StatefulAction;
   onUploadPhoto?: StatefulAction;
+  onDeletePhoto?: StatefulAction;
   onAddComment?: StatefulAction;
   vendorWorkflowEnabled?: boolean;
   photoWorkflowEnabled?: boolean;
@@ -63,16 +67,27 @@ function ticketMeta(ticket: MaintenanceTicket) {
 export function MaintenanceSection({
   tickets,
   showControls = false,
+  currentUserId,
+  viewerRole,
   onUpdateStatus,
   vendors = [],
   onAssignVendor,
   onUploadPhoto,
+  onDeletePhoto,
   onAddComment,
   vendorWorkflowEnabled = true,
   photoWorkflowEnabled = true,
   vendorWorkflowWarning = null,
   photoWorkflowWarning = null,
 }: MaintenanceSectionProps) {
+  const canDeleteTicketPhoto = (uploadedBy: string) => {
+    if (!currentUserId) {
+      return false;
+    }
+
+    return viewerRole === "owner" || uploadedBy === currentUserId;
+  };
+
   return (
     <Card id="maintenance" className="border border-border/50 shadow-sm">
       <CardHeader>
@@ -164,6 +179,31 @@ export function MaintenanceSection({
                       </div>
                     </div>
 
+                    {ticket.photos.length > 0 ? (
+                      <div className="mt-4">
+                        <PhotoGallery
+                          photos={ticket.photos}
+                          canDeletePhoto={
+                            onDeletePhoto
+                              ? (photo) => canDeleteTicketPhoto(photo.uploadedBy)
+                              : undefined
+                          }
+                          onDelete={
+                            onDeletePhoto
+                              ? async (photoId) => {
+                                  const formData = new FormData();
+                                  formData.append("photoId", photoId);
+                                  const result = await onDeletePhoto(null, formData);
+                                  if (!result?.success) {
+                                    throw new Error(result?.error ?? "Unable to delete this photo right now.");
+                                  }
+                                }
+                              : undefined
+                          }
+                        />
+                      </div>
+                    ) : null}
+
                     {(ticket.commentCount > 0 || onAddComment) ? (
                       <details className="mt-4 rounded-2xl border border-border/50 bg-zinc-50/70 shadow-sm">
                         <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-zinc-700">
@@ -200,7 +240,7 @@ export function MaintenanceSection({
                     ) : null}
                   </div>
 
-                  {(showControls || (photoWorkflowEnabled && ticket.latestPhotoId)) ? (
+                  {(showControls || Boolean(onUploadPhoto) || (photoWorkflowEnabled && ticket.latestPhotoId)) ? (
                     <div className="flex-shrink-0 space-y-2">
                       {showControls && onUpdateStatus ? (
                         <TicketStatusControl
@@ -216,9 +256,10 @@ export function MaintenanceSection({
                           onAssignVendor={onAssignVendor}
                         />
                       ) : null}
-                      {showControls && onUploadPhoto && photoWorkflowEnabled ? (
+                      {onUploadPhoto && photoWorkflowEnabled ? (
                         <TicketPhotoUpload
                           ticketId={ticket.id}
+                          existingPhotos={ticket.photos}
                           onUploadPhoto={onUploadPhoto}
                         />
                       ) : null}

@@ -212,6 +212,8 @@ export function SectionRenderer(props: SectionRendererProps) {
         <MaintenanceSection
           tickets={props.filteredTickets}
           showControls={!!props.onUpdateTicketStatus}
+          currentUserId={props.currentUserId}
+          viewerRole={props.data.profileRole}
           onUpdateStatus={props.onUpdateTicketStatus}
           onAddComment={props.onAddTicketComment}
           vendors={props.sortedVendors}
@@ -220,6 +222,9 @@ export function SectionRenderer(props: SectionRendererProps) {
           }
           onUploadPhoto={
             props.safeCapabilities.photoWorkflowEnabled ? props.onUploadMaintenancePhoto : undefined
+          }
+          onDeletePhoto={
+            props.safeCapabilities.photoWorkflowEnabled ? props.onDeleteMaintenancePhoto : undefined
           }
           vendorWorkflowEnabled={props.safeCapabilities.vendorWorkflowEnabled}
           photoWorkflowEnabled={props.safeCapabilities.photoWorkflowEnabled}

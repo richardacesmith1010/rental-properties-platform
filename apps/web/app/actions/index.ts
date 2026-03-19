@@ -64,6 +64,8 @@ export { createMaintenanceTicket } from "./maintenance";
 export { updateTicketStatus } from "./maintenance";
 export { updateTicketCost } from "./maintenance";
 export { addTicketComment } from "./maintenance";
+export { uploadMaintenancePhoto } from "./maintenance";
+export { deleteMaintenancePhoto } from "./maintenance";
 
 export { inviteTenant } from "./invitations";
 export { inviteManager } from "./invitations";
@@ -120,7 +122,6 @@ export {
 export { createVendor } from "./vendors";
 export { updateVendor } from "./vendors";
 export { assignVendorToTicket } from "./vendors";
-export { uploadMaintenancePhoto } from "./vendors";
 
 export { createExpense } from "./expenses";
 export { updateExpense } from "./expenses";

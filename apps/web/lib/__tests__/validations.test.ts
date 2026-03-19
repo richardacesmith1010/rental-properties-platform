@@ -40,6 +40,7 @@ import {
   createVendorSchema,
   updateVendorSchema,
   assignVendorSchema,
+  deleteMaintenancePhotoSchema,
   uploadMaintenancePhotoSchema,
   uploadPropertyFileSchema,
   deletePropertyFileSchema,
@@ -1351,6 +1352,15 @@ describe("uploadMaintenancePhotoSchema", () => {
     const result = uploadMaintenancePhotoSchema.safeParse({
       ticketId: "550e8400-e29b-41d4-a716-446655440000",
       caption: "After repair"
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("deleteMaintenancePhotoSchema", () => {
+  it("accepts a valid maintenance photo delete payload", () => {
+    const result = deleteMaintenancePhotoSchema.safeParse({
+      photoId: "550e8400-e29b-41d4-a716-446655440000"
     });
     expect(result.success).toBe(true);
   });

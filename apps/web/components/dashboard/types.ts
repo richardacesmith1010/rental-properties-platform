@@ -120,6 +120,7 @@ export interface DashboardProps {
   onUpdateVendor?: StatefulAction;
   onAssignVendor?: StatefulAction;
   onUploadMaintenancePhoto?: StatefulAction;
+  onDeleteMaintenancePhoto?: StatefulAction;
   onCreateExpense?: StatefulAction;
   onUpdateExpense?: StatefulAction;
   onDeleteExpense?: StatefulAction;

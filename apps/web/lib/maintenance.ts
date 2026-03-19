@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { normalizeMaintenancePhotoRecord } from "@/lib/maintenance-photos";
 import {
   getAdministeredPropertyIds,
   getAdministeredPropertyIdsForAccount
@@ -30,6 +31,18 @@ export interface StatusHistoryEntry {
   createdAt: string;
 }
 
+export interface MaintenancePhotoDTO {
+  id: string;
+  ticketId: string;
+  uploadedBy: string;
+  fileName: string;
+  fileType: string;
+  fileSizeBytes: number;
+  createdAt: string;
+  caption?: string | null;
+  url?: string;
+}
+
 export interface MaintenanceTicket {
   id: string;
   propertyId: string;
@@ -44,6 +57,7 @@ export interface MaintenanceTicket {
   assignmentStatus: "assigned" | "reassigned" | "cancelled" | null;
   photoCount: number;
   latestPhotoId: string | null;
+  photos: MaintenancePhotoDTO[];
   createdAt: string;
   resolvedAt: string | null;
   tenantEmail: string | null;
@@ -291,6 +305,18 @@ async function buildTicketEnhancementMaps(
   supabase: ReturnType<typeof createClient>,
   ticketIds: string[]
 ) {
+  type MaintenancePhotoRow = {
+    id: string;
+    ticket_id: string;
+    uploaded_by_profile_id: string;
+    storage_path: string;
+    caption?: string | null;
+    created_at: string;
+    file_name?: string | null;
+    file_type?: string | null;
+    file_size_bytes?: number | null;
+  };
+
   const assignmentByTicketId = new Map<
     string,
     { vendorId: string; status: "assigned" | "reassigned" | "cancelled" }
@@ -298,13 +324,15 @@ async function buildTicketEnhancementMaps(
   const vendorNameById = new Map<string, string>();
   const photoCountByTicketId = new Map<string, number>();
   const latestPhotoIdByTicketId = new Map<string, string>();
+  const photosByTicketId = new Map<string, MaintenancePhotoDTO[]>();
 
   if (ticketIds.length === 0) {
     return {
       assignmentByTicketId,
       vendorNameById,
       photoCountByTicketId,
-      latestPhotoIdByTicketId
+      latestPhotoIdByTicketId,
+      photosByTicketId
     };
   }
 
@@ -337,13 +365,39 @@ async function buildTicketEnhancementMaps(
     }
   }
 
-  const { data: photos } = await supabase
+  const photoSelect =
+    "id, ticket_id, uploaded_by_profile_id, storage_path, caption, created_at, file_name, file_type, file_size_bytes";
+  const photoFallbackSelect =
+    "id, ticket_id, uploaded_by_profile_id, storage_path, caption, created_at";
+  const photoQuery = await supabase
     .from("maintenance_photos")
-    .select("id, ticket_id, created_at")
+    .select(photoSelect)
     .in("ticket_id", ticketIds)
     .order("created_at", { ascending: false });
 
-  for (const photo of photos ?? []) {
+  let photos: MaintenancePhotoRow[] = (photoQuery.data ?? []) as MaintenancePhotoRow[];
+  if (photoQuery.error) {
+    if (!isMissingSchemaError(photoQuery.error)) {
+      throw photoQuery.error;
+    }
+
+    const fallbackQuery = await supabase
+      .from("maintenance_photos")
+      .select(photoFallbackSelect)
+      .in("ticket_id", ticketIds)
+      .order("created_at", { ascending: false });
+
+    if (fallbackQuery.error) {
+      if (!isMissingSchemaError(fallbackQuery.error)) {
+        throw fallbackQuery.error;
+      }
+      photos = [];
+    } else {
+      photos = (fallbackQuery.data ?? []) as MaintenancePhotoRow[];
+    }
+  }
+
+  for (const photo of photos) {
     photoCountByTicketId.set(
       photo.ticket_id,
       (photoCountByTicketId.get(photo.ticket_id) ?? 0) + 1
@@ -351,13 +405,30 @@ async function buildTicketEnhancementMaps(
     if (!latestPhotoIdByTicketId.has(photo.ticket_id)) {
       latestPhotoIdByTicketId.set(photo.ticket_id, photo.id);
     }
+
+    const ticketPhotos = photosByTicketId.get(photo.ticket_id) ?? [];
+    ticketPhotos.push(
+      normalizeMaintenancePhotoRecord({
+        id: photo.id,
+        ticket_id: photo.ticket_id,
+        uploaded_by_profile_id: photo.uploaded_by_profile_id,
+        storage_path: photo.storage_path,
+        created_at: photo.created_at,
+        caption: "caption" in photo ? photo.caption ?? null : null,
+        file_name: "file_name" in photo ? photo.file_name ?? null : null,
+        file_type: "file_type" in photo ? photo.file_type ?? null : null,
+        file_size_bytes: "file_size_bytes" in photo ? photo.file_size_bytes ?? null : null
+      })
+    );
+    photosByTicketId.set(photo.ticket_id, ticketPhotos);
   }
 
   return {
     assignmentByTicketId,
     vendorNameById,
     photoCountByTicketId,
-    latestPhotoIdByTicketId
+    latestPhotoIdByTicketId,
+    photosByTicketId
   };
 }
 
@@ -422,7 +493,8 @@ export async function getTenantMaintenanceData(
     assignmentByTicketId,
     vendorNameById,
     photoCountByTicketId,
-    latestPhotoIdByTicketId
+    latestPhotoIdByTicketId,
+    photosByTicketId
   } =
     await buildTicketEnhancementMaps(
       supabase,
@@ -461,6 +533,7 @@ export async function getTenantMaintenanceData(
         assignmentStatus: assignment?.status ?? null,
         photoCount: photoCountByTicketId.get(ticket.id) ?? 0,
         latestPhotoId: latestPhotoIdByTicketId.get(ticket.id) ?? null,
+        photos: photosByTicketId.get(ticket.id) ?? [],
         createdAt: ticket.created_at,
         resolvedAt: ticket.resolved_at,
         tenantEmail: null,
@@ -541,7 +614,8 @@ export async function getAdminMaintenanceTickets(
     assignmentByTicketId,
     vendorNameById,
     photoCountByTicketId,
-    latestPhotoIdByTicketId
+    latestPhotoIdByTicketId,
+    photosByTicketId
   } =
     await buildTicketEnhancementMaps(
       supabase,
@@ -578,10 +652,11 @@ export async function getAdminMaintenanceTickets(
       priority: ticket.priority as MaintenanceTicket["priority"],
       actualCostCents: ticket.actual_cost_cents,
       vendorName: assignment ? vendorNameById.get(assignment.vendorId) ?? null : null,
-      assignmentStatus: assignment?.status ?? null,
-      photoCount: photoCountByTicketId.get(ticket.id) ?? 0,
-      latestPhotoId: latestPhotoIdByTicketId.get(ticket.id) ?? null,
-      createdAt: ticket.created_at,
+        assignmentStatus: assignment?.status ?? null,
+        photoCount: photoCountByTicketId.get(ticket.id) ?? 0,
+        latestPhotoId: latestPhotoIdByTicketId.get(ticket.id) ?? null,
+        photos: photosByTicketId.get(ticket.id) ?? [],
+        createdAt: ticket.created_at,
       resolvedAt: ticket.resolved_at,
       tenantEmail: tenant?.email ?? null,
       commentCount: commentCountByTicketId.get(ticket.id) ?? 0,

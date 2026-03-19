@@ -65,6 +65,7 @@ import {
   updateVendor,
   assignVendorToTicket,
   uploadMaintenancePhoto,
+  deleteMaintenancePhoto,
   createOwnershipAccount,
   linkPropertyToOwnershipAccount
 } from "@/app/actions";
@@ -222,6 +223,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       analyticsData={analytics}
       auditLogs={auditLogs}
       rentIncreaseHistory={rentIncreaseHistory}
+      currentUserId={user.id}
       capabilities={capabilities}
       initialManagerWorkflowMode={initialManagerWorkflowMode}
       initialSectionId={initialSectionId}
@@ -276,6 +278,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       onUpdateVendor={updateVendor}
       onAssignVendor={assignVendorToTicket}
       onUploadMaintenancePhoto={uploadMaintenancePhoto}
+      onDeleteMaintenancePhoto={deleteMaintenancePhoto}
       onCreateOwnershipAccount={createOwnershipAccount}
       onLinkPropertyToOwnershipAccount={linkPropertyToOwnershipAccount}
       onCreateExpense={createExpense}
