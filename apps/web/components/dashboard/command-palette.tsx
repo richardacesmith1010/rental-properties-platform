@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent
+} from "react";
 import {
   ArrowRight,
   Building2,
@@ -246,7 +253,9 @@ export function CommandPalette({
   onSelectTenant,
   onSelectQuickAction
 }: CommandPaletteProps) {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const previousFocusedElementRef = useRef<HTMLElement | null>(null);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -265,11 +274,21 @@ export function CommandPalette({
 
   const groupedResults = useMemo(() => groupCommandResults(results), [results]);
 
+  const closePalette = useCallback(() => {
+    const elementToRestore = previousFocusedElementRef.current;
+    onClose();
+    window.requestAnimationFrame(() => {
+      elementToRestore?.focus?.();
+    });
+  }, [onClose]);
+
   useEffect(() => {
     if (!open) {
       return;
     }
 
+    previousFocusedElementRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setQuery("");
     setActiveIndex(0);
     const frame = window.requestAnimationFrame(() => inputRef.current?.focus());
@@ -291,6 +310,8 @@ export function CommandPalette({
   }
 
   const clampedActiveIndex = results.length === 0 ? -1 : Math.min(activeIndex, results.length - 1);
+  const activeResult = clampedActiveIndex >= 0 ? results[clampedActiveIndex] : null;
+  const activeResultId = activeResult ? `command-palette-option-${activeResult.type}-${activeResult.id}` : undefined;
 
   const handleSelect = (result: CommandPaletteResult) => {
     if (result.type === "section" && result.sectionId) {
@@ -318,7 +339,7 @@ export function CommandPalette({
       onSelectQuickAction?.(result.id);
     }
 
-    onClose();
+    closePalette();
   };
 
   const handleInputKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
@@ -346,7 +367,35 @@ export function CommandPalette({
 
     if (event.key === "Escape") {
       event.preventDefault();
-      onClose();
+      closePalette();
+    }
+  };
+
+  const handleDialogKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Tab") {
+      const focusableElements = dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusableElements || focusableElements.length === 0) {
+        return;
+      }
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closePalette();
     }
   };
 
@@ -355,14 +404,18 @@ export function CommandPalette({
       className="fixed inset-0 z-[120] flex items-start justify-center bg-slate-950/55 px-4 py-16 backdrop-blur-sm"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
-          onClose();
+          closePalette();
         }
       }}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Command palette"
     >
-      <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-border/60 bg-card shadow-2xl">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Search commands"
+        onKeyDown={handleDialogKeyDown}
+        className="w-full max-w-2xl overflow-hidden rounded-3xl border border-border/60 bg-card shadow-2xl"
+      >
         <div className="border-b border-border/60 px-5 py-4">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -373,6 +426,13 @@ export function CommandPalette({
               onKeyDown={handleInputKeyDown}
               placeholder="Search sections, properties, tenants, and transactions..."
               className="h-12 border-border/60 bg-background pl-10 pr-14 text-sm shadow-sm"
+              role="combobox"
+              aria-label="Search commands"
+              aria-controls="command-palette-results"
+              aria-expanded="true"
+              aria-autocomplete="list"
+              aria-activedescendant={activeResultId}
+              aria-describedby="command-palette-results-count"
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md border border-border/60 bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
               ⌘K
@@ -381,6 +441,9 @@ export function CommandPalette({
         </div>
 
         <div className="max-h-[28rem] overflow-y-auto px-3 py-3">
+          <p id="command-palette-results-count" className="sr-only" aria-live="polite" aria-atomic="true">
+            {results.length === 0 ? "No results found." : `${results.length} results found.`}
+          </p>
           {groupedResults.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
               <div className="rounded-full bg-muted p-3">
@@ -392,62 +455,90 @@ export function CommandPalette({
               </p>
             </div>
           ) : (
-            groupedResults.map((group) => (
-              <div key={group.label} className="pb-3 last:pb-0">
-                <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  {group.label}
-                </p>
-                <div className="space-y-1">
-                  {group.items.map((result) => {
-                    const index = results.findIndex((item) => item.type === result.type && item.id === result.id);
-                    const active = index === clampedActiveIndex;
-                    const Icon = result.icon;
-                    return (
-                      <button
-                        key={`${result.type}:${result.id}`}
-                        type="button"
-                        onClick={() => handleSelect(result)}
-                        className={cn(
-                          "flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition",
-                          active
-                            ? "bg-primary/10 text-foreground shadow-sm ring-1 ring-primary/20"
-                            : "text-foreground hover:bg-muted/70"
-                        )}
-                        title={`Open ${result.label}.`}
-                      >
-                        <div
+            <div id="command-palette-results" role="listbox" aria-label="Command results">
+              {groupedResults.map((group) => (
+                <div key={group.label} className="pb-3 last:pb-0">
+                  <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    {group.label}
+                  </p>
+                  <div className="space-y-1">
+                    {group.items.map((result) => {
+                      const index = results.findIndex((item) => item.type === result.type && item.id === result.id);
+                      const active = index === clampedActiveIndex;
+                      const Icon = result.icon;
+                      const optionId = `command-palette-option-${result.type}-${result.id}`;
+                      return (
+                        <button
+                          key={`${result.type}:${result.id}`}
+                          id={optionId}
+                          type="button"
+                          role="option"
+                          aria-selected={active}
+                          onClick={() => handleSelect(result)}
+                          onFocus={() => setActiveIndex(index)}
+                          onMouseEnter={() => setActiveIndex(index)}
+                          onKeyDown={(event) => {
+                            if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                              event.preventDefault();
+                              const nextIndex =
+                                event.key === "ArrowDown"
+                                  ? (index + 1) % results.length
+                                  : (index - 1 + results.length) % results.length;
+                              setActiveIndex(nextIndex);
+                              const nextResult = results[nextIndex];
+                              const nextButton = document.getElementById(
+                                `command-palette-option-${nextResult.type}-${nextResult.id}`
+                              );
+                              nextButton?.focus();
+                            }
+                            if (event.key === "Escape") {
+                              event.preventDefault();
+                              closePalette();
+                            }
+                          }}
                           className={cn(
-                            "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border",
+                            "flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition",
                             active
-                              ? "border-primary/20 bg-primary/15 text-primary"
-                              : "border-border/60 bg-background text-muted-foreground"
+                              ? "bg-primary/10 text-foreground shadow-sm ring-1 ring-primary/20"
+                              : "text-foreground hover:bg-muted/70"
                           )}
+                          title={`Open ${result.label}.`}
                         >
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className={cn("truncate text-sm", active ? "font-semibold" : "font-medium")}>
-                              {result.label}
-                            </span>
-                            {result.type === "quick_action" ? (
-                              <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
-                            ) : null}
+                          <div
+                            aria-hidden="true"
+                            className={cn(
+                              "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border",
+                              active
+                                ? "border-primary/20 bg-primary/15 text-primary"
+                                : "border-border/60 bg-background text-muted-foreground"
+                            )}
+                          >
+                            <Icon className="h-4 w-4" />
                           </div>
-                          <p className="truncate text-xs text-muted-foreground">{result.secondary}</p>
-                        </div>
-                        <div className="hidden shrink-0 items-center gap-2 sm:flex">
-                          <span className="rounded-md border border-border/60 bg-background px-2 py-0.5 text-[11px] text-muted-foreground">
-                            {result.shortcutHint ?? "Enter"}
-                          </span>
-                          <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-                        </div>
-                      </button>
-                    );
-                  })}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className={cn("truncate text-sm", active ? "font-semibold" : "font-medium")}>
+                                {result.label}
+                              </span>
+                              {result.type === "quick_action" ? (
+                                <Sparkles aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-primary" />
+                              ) : null}
+                            </div>
+                            <p className="truncate text-xs text-muted-foreground">{result.secondary}</p>
+                          </div>
+                          <div className="hidden shrink-0 items-center gap-2 sm:flex">
+                            <span className="rounded-md border border-border/60 bg-background px-2 py-0.5 text-[11px] text-muted-foreground">
+                              {result.shortcutHint ?? "Enter"}
+                            </span>
+                            <ArrowRight aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground" />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))
+              ))}
+            </div>
           )}
         </div>
       </div>

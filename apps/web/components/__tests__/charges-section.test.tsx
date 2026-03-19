@@ -82,4 +82,10 @@ describe("ChargesSection", () => {
     expect(screen.getByText("1 of 1 visible selected")).toBeInTheDocument();
     expect(screen.getByText("1 selected")).toBeInTheDocument();
   });
+
+  it("adds an aria label to charge status badges", () => {
+    render(<ChargesSection charges={charges} onPayCharge={async () => {}} />);
+
+    expect(screen.getByLabelText("Charge status: Pending")).toBeInTheDocument();
+  });
 });

@@ -33,6 +33,17 @@ export function getStatusCategory(status: string): StatusCategory {
   return STATUS_MAP[status.toLowerCase()] ?? "neutral";
 }
 
+export function statusAriaLabel(status: string, context?: string, labelOverride?: string): string {
+  const normalizedLabel =
+    labelOverride ??
+    status
+      .toLowerCase()
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (character) => character.toUpperCase());
+
+  return context ? `${context}: ${normalizedLabel}` : `Status: ${normalizedLabel}`;
+}
+
 export function getStatusClasses(status: string): {
   text: string;
   bg: string;

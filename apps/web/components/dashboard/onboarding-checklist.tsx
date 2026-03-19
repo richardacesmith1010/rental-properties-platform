@@ -53,6 +53,9 @@ export function OnboardingChecklist({ steps, className }: OnboardingChecklistPro
   return (
     <div className={cn("space-y-4 text-left", className)}>
       <div className="space-y-2">
+        <p className="sr-only" aria-live="polite" aria-atomic="true">
+          {completedSteps} of {totalSteps} complete
+        </p>
         <div className="flex items-center gap-3">
           <div className="text-sm text-muted-foreground">
             {completedSteps} of {totalSteps} complete

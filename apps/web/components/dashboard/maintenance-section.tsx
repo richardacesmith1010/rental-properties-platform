@@ -14,7 +14,7 @@ import { AnimatedList } from "@/components/ui/animated-list";
 import type { MaintenanceTicket } from "@/lib/maintenance";
 import type { ActionState } from "@/app/actions";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { getStatusClasses, statusBadgeClasses } from "@/lib/status-colors";
+import { getStatusClasses, statusAriaLabel, statusBadgeClasses } from "@/lib/status-colors";
 
 type StatefulAction = (
   prev: ActionState,
@@ -121,8 +121,12 @@ export function MaintenanceSection({
                       </p>
                     ) : null}
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
-                      <span className={statusBadgeClasses(ticket.status)}>
+                      <span
+                        className={statusBadgeClasses(ticket.status)}
+                        aria-label={statusAriaLabel(ticket.status, "Ticket status")}
+                      >
                         <span
+                          aria-hidden="true"
                           className={`h-1.5 w-1.5 rounded-full ${getStatusClasses(ticket.status).dot}`}
                         />
                         {statusLabel(ticket.status)}

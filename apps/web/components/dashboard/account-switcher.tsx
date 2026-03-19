@@ -28,6 +28,7 @@ export function AccountSwitcher({
   const [editName, setEditName] = useState("");
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const saveTriggeredRef = useRef(false);
 
   const activePendingRenameRequest =
@@ -59,6 +60,7 @@ export function AccountSwitcher({
     saveTriggeredRef.current = false;
     setEditName(activeAccount.displayName);
     setIsEditing(false);
+    window.requestAnimationFrame(() => triggerRef.current?.focus());
   };
 
   const saveEdit = () => {
@@ -95,6 +97,7 @@ export function AccountSwitcher({
       }
 
       setIsEditing(false);
+      window.requestAnimationFrame(() => triggerRef.current?.focus());
       router.refresh();
     });
   };
@@ -167,11 +170,13 @@ export function AccountSwitcher({
     </div>
   ) : (
     <button
+      ref={triggerRef}
       type="button"
       onClick={startEdit}
       disabled={!canRename || isPending}
       className="group flex min-w-0 flex-1 items-center gap-2 text-left disabled:cursor-default"
       title={renameTitle}
+      aria-label={renameTitle}
     >
       <span className="block min-w-0 flex-1 truncate text-sm font-semibold text-white">
         {activeAccount.displayName}

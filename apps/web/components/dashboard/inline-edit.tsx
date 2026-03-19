@@ -40,8 +40,13 @@ export function InlineEdit({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const saveTriggeredRef = useRef(false);
   const ignoreBlurRef = useRef(false);
+
+  const restoreTriggerFocus = () => {
+    window.requestAnimationFrame(() => triggerRef.current?.focus());
+  };
 
   useEffect(() => {
     setEditValue(value);
@@ -63,6 +68,7 @@ export function InlineEdit({
     setEditing(false);
     setEditValue(value);
     setError(null);
+    restoreTriggerFocus();
   };
 
   const handleSave = async () => {
@@ -74,6 +80,7 @@ export function InlineEdit({
     if (nextValue === value) {
       setEditing(false);
       setError(null);
+      restoreTriggerFocus();
       return;
     }
 
@@ -104,6 +111,7 @@ export function InlineEdit({
 
       setEditing(false);
       toast.success(result?.message ?? successMessage);
+      restoreTriggerFocus();
     } finally {
       saveTriggeredRef.current = false;
       setSaving(false);
@@ -113,6 +121,7 @@ export function InlineEdit({
   if (!editing) {
     return (
       <button
+        ref={triggerRef}
         type="button"
         onClick={(event) => {
           event.stopPropagation();
@@ -125,6 +134,7 @@ export function InlineEdit({
           className
         )}
         title={title}
+        aria-label={title}
       >
         {prefix ? <span className="text-muted-foreground">{prefix}</span> : null}
         <span className="truncate">{(displayValue ?? value) || placeholder || "—"}</span>

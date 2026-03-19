@@ -8,6 +8,7 @@ interface KpiCardProps {
   trend?: "up" | "down" | "flat" | null;
   prefix?: string;
   alert?: boolean;
+  ariaLabel?: string;
 }
 
 const trendMap = {
@@ -23,31 +24,37 @@ export function KpiCard({
   gradient,
   trend = null,
   prefix,
-  alert
+  alert,
+  ariaLabel
 }: KpiCardProps) {
   const trendDisplay = trend ? trendMap[trend] : null;
+  const cardAriaLabel = ariaLabel ?? `${title}: ${prefix ?? ""}${value}${subtitle ? `. ${subtitle}` : ""}`;
 
   return (
-    <Card className={`relative min-h-[44px] overflow-hidden border border-border/50 p-5 shadow-md sm:p-6 ${alert ? "border-amber-200" : ""}`}>
+    <Card
+      role="status"
+      aria-label={cardAriaLabel}
+      className={`relative min-h-[44px] overflow-hidden border border-border/50 p-5 shadow-md sm:p-6 ${alert ? "border-amber-200" : ""}`}
+    >
       <div
         className="absolute -top-10 -right-10 h-28 w-28 rounded-full opacity-[0.14]"
         style={{ background: gradient }}
       />
-      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <span aria-hidden="true" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {title}
       </span>
       <div className="mt-2 flex items-end gap-2">
-        <div className="text-3xl font-extrabold tracking-tight text-foreground">
+        <div aria-live="polite" aria-atomic="true" className="text-3xl font-extrabold tracking-tight text-foreground">
           {prefix ?? ""}
           {value}
         </div>
         {trendDisplay ? (
-          <span className={`pb-1 text-lg font-semibold ${trendDisplay.className}`}>
+          <span aria-hidden="true" className={`pb-1 text-lg font-semibold ${trendDisplay.className}`}>
             {trendDisplay.symbol}
           </span>
         ) : null}
       </div>
-      {subtitle ? <p className="mt-2.5 text-sm font-medium text-muted-foreground">{subtitle}</p> : null}
+      {subtitle ? <p aria-hidden="true" className="mt-2.5 text-sm font-medium text-muted-foreground">{subtitle}</p> : null}
     </Card>
   );
 }

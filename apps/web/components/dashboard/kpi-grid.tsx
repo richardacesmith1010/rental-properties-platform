@@ -46,6 +46,7 @@ export function KpiGrid({
         subtitle={`${kpis.activeLeaseCount} active lease${kpis.activeLeaseCount === 1 ? "" : "s"}`}
         gradient="linear-gradient(135deg, #7c3aed, #10b981)"
         trend={revenueTrend}
+        ariaLabel={`Monthly Revenue: ${formatCurrency(kpis.monthlyGrossRentCents)}. ${kpis.activeLeaseCount} active lease${kpis.activeLeaseCount === 1 ? "" : "s"}.`}
       />
       <KpiCard
         title="Occupancy"
@@ -53,6 +54,7 @@ export function KpiGrid({
         subtitle={`${kpis.occupiedUnits}/${kpis.totalUnits} units`}
         gradient={occupancyGradient(occupancy)}
         trend={occupancyTrend}
+        ariaLabel={`Occupancy: ${occupancy}%. ${kpis.occupiedUnits} of ${kpis.totalUnits} units occupied.`}
       />
       <KpiCard
         title="Rent Collection"
@@ -60,6 +62,7 @@ export function KpiGrid({
         subtitle={`${formatCurrency(kpis.collectedRentCents)} of ${formatCurrency(totalDueCents)}`}
         gradient="linear-gradient(135deg, #3b82f6, #06b6d4)"
         trend={collectionTrend}
+        ariaLabel={`Rent Collection: ${Math.round(kpis.collectionRate)}%. ${formatCurrency(kpis.collectedRentCents)} collected out of ${formatCurrency(totalDueCents)} due.`}
       />
       <KpiCard
         title="Outstanding"
@@ -71,6 +74,7 @@ export function KpiGrid({
             : "linear-gradient(135deg, #10b981, #34d399)"
         }
         alert={kpis.outstandingCents > 0}
+        ariaLabel={`Outstanding Balance: ${formatCurrency(kpis.outstandingCents)} across ${outstandingSubtitleCount}.`}
       />
       <KpiCard
         title="Open Tickets"
@@ -82,6 +86,7 @@ export function KpiGrid({
         }
         gradient="linear-gradient(135deg, #f59e0b, #ef4444)"
         trend={maintenanceTrend}
+        ariaLabel={`Open Tickets: ${kpis.openMaintenanceCount}. ${kpis.highPriorityMaintenanceCount > 0 ? `${kpis.highPriorityMaintenanceCount} high priority.` : "No urgent issues."}`}
       />
       <KpiCard
         title="Net Cash Flow"
@@ -94,6 +99,7 @@ export function KpiGrid({
         }
         trend={cashFlowTrend}
         prefix={netCashFlowCents < 0 ? "-" : "+"}
+        ariaLabel={`Net Cash Flow: ${netCashFlowCents < 0 ? "negative " : ""}${formatCurrency(Math.abs(netCashFlowCents))}. ${netCashFlowCents >= 0 ? "Year to date profit." : "Year to date loss."}`}
       />
     </div>
   );

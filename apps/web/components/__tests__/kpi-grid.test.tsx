@@ -85,6 +85,21 @@ describe("KpiGrid", () => {
     expect(screen.getByText("↓")).toBeInTheDocument();
   });
 
+  it("applies status semantics and descriptive aria labels to the cards", () => {
+    render(<KpiGrid {...baseProps} />);
+
+    expect(
+      screen.getByRole("status", {
+        name: /monthly revenue: \$4,250\. 7 active leases\./i
+      })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("status", {
+        name: /rent collection: 75%\. \$3,200 collected out of \$4,250 due\./i
+      })
+    ).toBeInTheDocument();
+  });
+
   it("handles zero values gracefully", () => {
     render(
       <KpiGrid

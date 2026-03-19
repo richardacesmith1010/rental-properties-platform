@@ -28,7 +28,7 @@ const AnalyticsSection = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="rounded-xl border border-zinc-200 bg-white p-5 text-sm text-zinc-500 shadow-sm">
+      <div className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground shadow-sm">
         Loading analytics...
       </div>
     )
@@ -158,10 +158,14 @@ export function SectionRenderer(props: SectionRendererProps) {
       return renderSection(
         "Overview",
         <>
-          <div className="rounded-2xl border border-border/50 bg-card p-4 shadow-sm">
-            <p className="text-xs uppercase tracking-wide text-zinc-500">Snapshot</p>
-            <p className="mt-1 text-xl font-bold text-zinc-900">{props.occupancy}% occupied</p>
-            <p className="text-sm text-zinc-600">
+          <div
+            role="status"
+            aria-label={`Snapshot: ${props.occupancy}% occupied. ${props.data.kpis.activeLeaseCount} active lease${props.data.kpis.activeLeaseCount === 1 ? "" : "s"}.`}
+            className="rounded-2xl border border-border/50 bg-card p-4 shadow-sm"
+          >
+            <p aria-hidden="true" className="text-xs uppercase tracking-wide text-muted-foreground">Snapshot</p>
+            <p aria-live="polite" aria-atomic="true" className="mt-1 text-xl font-bold text-foreground">{props.occupancy}% occupied</p>
+            <p aria-hidden="true" className="text-sm text-muted-foreground">
               {props.data.kpis.activeLeaseCount} active lease
               {props.data.kpis.activeLeaseCount === 1 ? "" : "s"}
             </p>

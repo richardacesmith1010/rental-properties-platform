@@ -19,7 +19,7 @@ import { AutopayCard } from "./autopay-card";
 import { AnimatedList } from "@/components/ui/animated-list";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Alert } from "@/components/ui/alert";
-import { getStatusClasses, statusBadgeClasses } from "@/lib/status-colors";
+import { getStatusClasses, statusAriaLabel, statusBadgeClasses } from "@/lib/status-colors";
 
 type ChargeStatus = "pending" | "paid" | "late";
 type ChargeCategory = "rent" | "late_fee";
@@ -503,8 +503,12 @@ export function ChargesSection({
                         {formatCurrency(charge.amountCents)}
                       </p>
                       <div className="mt-0.5 flex items-center justify-end gap-1">
-                        <span className={statusBadgeClasses(charge.status)}>
+                        <span
+                          className={statusBadgeClasses(charge.status)}
+                          aria-label={statusAriaLabel(charge.status, "Charge status")}
+                        >
                           <span
+                            aria-hidden="true"
                             className={`h-1.5 w-1.5 rounded-full ${getStatusClasses(charge.status).dot}`}
                           />
                           {statusLabel(charge.status)}

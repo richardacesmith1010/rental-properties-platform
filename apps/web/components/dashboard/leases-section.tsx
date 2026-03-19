@@ -18,7 +18,7 @@ import type { RentIncreaseEntry } from "@/lib/rent-increases";
 import type { ActionState } from "@/app/actions";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Alert } from "@/components/ui/alert";
-import { getStatusClasses, statusBadgeClasses } from "@/lib/status-colors";
+import { getStatusClasses, statusAriaLabel, statusBadgeClasses } from "@/lib/status-colors";
 
 type StatefulAction = (
   prev: ActionState,
@@ -86,8 +86,11 @@ function LeaseStatusBadge({
   }
 
   return (
-    <span className={statusBadgeClasses(badgeStatus)}>
-      <span className={`h-1.5 w-1.5 rounded-full ${getStatusClasses(badgeStatus).dot}`} />
+    <span
+      className={statusBadgeClasses(badgeStatus)}
+      aria-label={statusAriaLabel(badgeStatus, "Lease status", label)}
+    >
+      <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${getStatusClasses(badgeStatus).dot}`} />
       {label}
     </span>
   );

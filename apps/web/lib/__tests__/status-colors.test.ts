@@ -3,6 +3,7 @@ import { computeTrend } from "@/lib/dashboard";
 import {
   getStatusCategory,
   getStatusClasses,
+  statusAriaLabel,
   statusBadgeClasses
 } from "@/lib/status-colors";
 
@@ -44,6 +45,14 @@ describe("status colors", () => {
     expect(className).toContain("inline-flex");
     expect(className).toContain("text-amber-700");
     expect(className).toContain("border-amber-200");
+  });
+
+  it("builds an aria label for status badges", () => {
+    expect(statusAriaLabel("in_progress")).toBe("Status: In Progress");
+    expect(statusAriaLabel("paid", "Charge status")).toBe("Charge status: Paid");
+    expect(statusAriaLabel("upcoming", "Lease status", "Expiring Soon")).toBe(
+      "Lease status: Expiring Soon"
+    );
   });
 });
 
