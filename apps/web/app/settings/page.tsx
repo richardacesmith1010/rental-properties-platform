@@ -28,6 +28,7 @@ import { PasswordSettings } from "@/components/settings/password-settings";
 import { ProfileSettings } from "@/components/settings/profile-settings";
 import { SettingsLayout } from "@/components/settings/settings-layout";
 import { AccountDataSettings } from "@/components/settings/account-data-settings";
+import { InstallDomusSettingsCard } from "@/components/pwa/install-prompt";
 import { Alert } from "@/components/ui/alert";
 import {
   getUserNotificationPreferences,
@@ -151,7 +152,12 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             },
             appearance: {
               title: "Appearance",
-              content: <ThemeSettingsPanel />
+              content: (
+                <div className="space-y-4">
+                  <ThemeSettingsPanel />
+                  <InstallDomusSettingsCard />
+                </div>
+              )
             },
             security: {
               title: "Security",

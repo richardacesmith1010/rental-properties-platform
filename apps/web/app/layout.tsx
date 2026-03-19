@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { InstallPromptBanner } from "@/components/pwa/install-prompt";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SonnerProvider } from "@/components/ui/sonner-provider";
 import "./globals.css";
@@ -31,10 +32,32 @@ export const metadata: Metadata = {
     title: "Domus — Rental Property Management",
     description: "Run your rental portfolio with confidence.",
   },
+  manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.svg", type: "image/svg+xml", sizes: "192x192" },
+      { url: "/icons/icon-512.svg", type: "image/svg+xml", sizes: "512x512" }
+    ],
+    apple: [
+      { url: "/icons/apple-touch-icon.png", type: "image/png", sizes: "180x180" }
+    ]
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Domus"
+  },
   robots: {
     index: true,
     follow: true,
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#7c3aed"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -65,6 +88,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
         <ThemeProvider>
           {children}
+          <InstallPromptBanner />
           <SonnerProvider />
         </ThemeProvider>
       </body>
