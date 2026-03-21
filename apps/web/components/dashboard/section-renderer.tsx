@@ -6,7 +6,6 @@ import { ApplicationsSection } from "./applications-section";
 import { ChargesSection } from "./charges-section";
 import { ExpensesSection } from "./expenses-section";
 import { InvitationsSection } from "./invitations-section";
-import { KpiGrid } from "./kpi-grid";
 import { LeasingHubSection } from "./leasing-hub-section";
 import { LeasesSection } from "./leases-section";
 import { ManagerPaymentsSection } from "./manager-payments-section";
@@ -14,15 +13,10 @@ import { MaintenanceSection } from "./maintenance-section";
 import { OperationsSection } from "./operations-section";
 import { PaymentsSection } from "./payments-section";
 import { PortfolioSection } from "./portfolio-section";
-import { RentCollectionBar } from "./rent-collection-bar";
-import { Breadcrumbs, type BreadcrumbItem } from "./breadcrumbs";
-import { PropertySelector } from "./property-selector";
-import { PropertySummaryCard } from "./property-summary-card";
-import { SectionErrorBoundary } from "./section-error-boundary";
+import { CompactAnalyticsPreview, OverviewSectionContent, SectionFrame } from "./section-renderer-support";
 import { UnitsSection } from "./units-section";
 import { VendorsSection } from "./vendors-section";
 import { computeTrend } from "@/lib/dashboard";
-import { formatCurrency } from "@/lib/format";
 import { lazySectionComponents, type SectionRendererProps } from "./section-map";
 
 const AnalyticsSection = dynamic(
@@ -44,69 +38,6 @@ const {
   ownership: OwnershipSection,
   automations: AutomationTemplatesSection
 } = lazySectionComponents;
-
-function CompactAnalyticsPreview({
-  collectionRate,
-  avgDaysToPayment,
-  totalIncomeCentsYtd,
-  netIncomeCentsYtd
-}: SectionRendererProps["safeAnalytics"]["summaryKpis"]) {
-  const items = [
-    { label: "Collection rate", value: `${Math.round(collectionRate)}%` },
-    { label: "Avg days to pay", value: `${avgDaysToPayment.toFixed(1)}d` },
-    { label: "Income YTD", value: formatCurrency(totalIncomeCentsYtd) },
-    { label: "Net income YTD", value: formatCurrency(netIncomeCentsYtd) }
-  ];
-
-  return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      {items.map((item) => (
-        <div key={item.label} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            {item.label}
-          </p>
-          <p className="mt-2 text-xl font-semibold text-foreground">{item.value}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function buildBreadcrumbItems(props: SectionRendererProps): BreadcrumbItem[] {
-  const items: BreadcrumbItem[] = [
-    {
-      label: "Dashboard",
-      onClick:
-        props.activeSection !== "overview" || props.selectedPropertyId
-          ? () => {
-              props.onSelectProperty(null);
-              props.goToSectionIfVisible("overview");
-            }
-          : undefined
-    }
-  ];
-
-  if (props.activeSection !== "overview") {
-    items.push(
-      props.selectedProperty
-        ? {
-            label: props.activeSectionLabel,
-            onClick: () => {
-              props.onSelectProperty(null);
-              props.goToSectionIfVisible(props.activeSection);
-            }
-          }
-        : { label: props.activeSectionLabel }
-    );
-  }
-
-  if (props.selectedProperty) {
-    items.push({ label: props.selectedProperty.name });
-  }
-
-  return items;
-}
-
 export function SectionRenderer(props: SectionRendererProps) {
   const currentRentMetric = props.selectedPropertyId ? null : props.safeAnalytics.rentMetrics.at(-1) ?? null;
   const previousRentMetric = props.selectedPropertyId ? null : props.safeAnalytics.rentMetrics.at(-2) ?? null;
@@ -146,73 +77,21 @@ export function SectionRenderer(props: SectionRendererProps) {
     previousOccupancyMetric?.rate ?? null
   );
   const collectionTrend = computeTrend(currentCollectionRate, previousCollectionRate);
-  const ownerChrome =
-    props.data.profileRole === "owner" && props.availableProperties.length > 0 ? (
-      <div className="space-y-4">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          <Breadcrumbs items={buildBreadcrumbItems(props)} />
-          <PropertySelector
-            properties={props.availableProperties.map((property) => ({
-              id: property.id,
-              name: property.name,
-              address: [property.addressLine1, property.city, property.state]
-                .filter(Boolean)
-                .join(", ")
-            }))}
-            selectedPropertyId={props.selectedPropertyId}
-            onSelect={props.onSelectProperty}
-          />
-        </div>
-        {props.selectedPropertySummary ? (
-          <PropertySummaryCard
-            property={props.selectedPropertySummary.property}
-            unitCount={props.selectedPropertySummary.unitCount}
-            occupiedUnits={props.selectedPropertySummary.occupiedUnits}
-            monthlyRentCents={props.selectedPropertySummary.monthlyRentCents}
-            openTickets={props.selectedPropertySummary.openTickets}
-            onViewDetails={() => props.openSection("portfolio")}
-          />
-        ) : null}
-      </div>
-    ) : null;
   const renderSection = (sectionName: string, content: ReactNode) => (
-    <SectionErrorBoundary sectionName={sectionName}>
-      {ownerChrome}
+    <SectionFrame props={props} sectionName={sectionName}>
       {content}
-    </SectionErrorBoundary>
+    </SectionFrame>
   );
-
   switch (props.activeSection) {
     case "overview":
       return renderSection(
         "Overview",
-        <>
-          <div
-            role="status"
-            aria-label={`Snapshot: ${props.occupancy}% occupied. ${props.data.kpis.activeLeaseCount} active lease${props.data.kpis.activeLeaseCount === 1 ? "" : "s"}.`}
-            className="rounded-2xl border border-border/50 bg-card p-4 shadow-sm"
-          >
-            <p aria-hidden="true" className="text-xs uppercase tracking-wide text-muted-foreground">Snapshot</p>
-            <p aria-live="polite" aria-atomic="true" className="mt-1 text-xl font-bold text-foreground">{props.occupancy}% occupied</p>
-            <p aria-hidden="true" className="text-sm text-muted-foreground">
-              {props.data.kpis.activeLeaseCount} active lease
-              {props.data.kpis.activeLeaseCount === 1 ? "" : "s"}
-            </p>
-          </div>
-          <KpiGrid
-            kpis={props.data.kpis}
-            occupancy={props.occupancy}
-            netCashFlowCents={props.data.kpis.netCashFlowCents}
-            revenueTrend={revenueTrend}
-            occupancyTrend={occupancyTrend}
-            collectionTrend={collectionTrend}
-          />
-          <RentCollectionBar
-            collectedCents={props.data.kpis.collectedRentCents}
-            pendingCents={props.data.kpis.pendingRentCents}
-            overdueCents={props.data.kpis.overdueRentCents}
-          />
-        </>
+        <OverviewSectionContent
+          props={props}
+          revenueTrend={revenueTrend}
+          occupancyTrend={occupancyTrend}
+          collectionTrend={collectionTrend}
+        />
       );
 
     case "charges":

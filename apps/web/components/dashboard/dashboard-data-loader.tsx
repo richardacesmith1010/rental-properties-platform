@@ -25,6 +25,10 @@ import {
   type ManagerWorkflowMode,
   type OwnerWorkflowMode
 } from "./dashboard-config";
+import {
+  OWNER_DAILY_OPS_SECTION_IDS,
+  useOwnerDailyOpsPagination
+} from "./owner-daily-ops-pagination";
 import type { GlobalSearchItem } from "./global-search";
 import type {
   CommandPaletteProperty,
@@ -40,15 +44,6 @@ import type { DashboardProps } from "./types";
 const EMPTY_TICKETS: MaintenanceTicket[] = [];
 const EMPTY_AUDIT_LOGS: AuditLogEntry[] = [];
 const EMPTY_RENT_INCREASE_HISTORY: RentIncreaseEntry[] = [];
-const OWNER_DAILY_OPS_CAROUSEL_SECTIONS = [
-  "overview",
-  "charges",
-  "portfolio",
-  "maintenance",
-  "leases",
-  "manager-payments",
-  "analytics"
-] as const;
 
 const OWNER_SECTION_MODE_BY_ID: Partial<Record<string, OwnerWorkflowMode>> = {
   charges: "daily_ops",
@@ -589,12 +584,19 @@ export function useDashboardData(props: DashboardProps) {
     const filtered = allSectionItems.filter((item) => allowedSections.has(item.id));
     return filtered.length > 0 ? filtered : allSectionItems;
   }, [activeWorkflowMeta, allSectionItems]);
+  const ownerDailyOpsSectionItems = useMemo<NavItem[]>(
+    () =>
+      OWNER_DAILY_OPS_SECTION_IDS.map((sectionId) =>
+        allSectionItems.find((item) => item.id === sectionId)
+      ).filter((item): item is NavItem => Boolean(item)),
+    [allSectionItems]
+  );
   const sectionItems = useMemo<NavItem[]>(
     () =>
       isOwnerRole && ownerWorkflowMode === "daily_ops"
-        ? allSectionItems.filter((item) => OWNER_DAILY_OPS_CAROUSEL_SECTIONS.includes(item.id as (typeof OWNER_DAILY_OPS_CAROUSEL_SECTIONS)[number]))
+        ? ownerDailyOpsSectionItems
         : workflowSectionItems,
-    [allSectionItems, isOwnerRole, ownerWorkflowMode, workflowSectionItems]
+    [isOwnerRole, ownerDailyOpsSectionItems, ownerWorkflowMode, workflowSectionItems]
   );
   const [activeSection, setActiveSection] = useState(() => {
     if (!props.initialSectionId) {
@@ -624,10 +626,32 @@ export function useDashboardData(props: DashboardProps) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [activeSection]);
 
+  const ownerDailyOpsEnabled = isOwnerRole && ownerWorkflowMode === "daily_ops";
+  const {
+    currentPage: ownerDailyOpsPage,
+    currentPageLabel: ownerDailyOpsPageLabel,
+    currentPageCountLabel: ownerDailyOpsPageCountLabel,
+    isHomePage: isOwnerDailyOpsHomePage,
+    totalPages: ownerDailyOpsTotalPages,
+    goToHomePage,
+    goToNextPage: goToNextOwnerDailyOpsPage,
+    goToPreviousPage: goToPreviousOwnerDailyOpsPage,
+    goToSectionPage
+  } = useOwnerDailyOpsPagination({
+    enabled: ownerDailyOpsEnabled,
+    activeSection,
+    sectionItems: ownerDailyOpsSectionItems,
+    onSelectSection: setActiveSection
+  });
+
   const activeSectionIndex = sectionItems.findIndex((item) => item.id === activeSection);
   const activeSectionLabel =
     allSectionItems.find((item) => item.id === activeSection)?.label ?? "Overview";
   const goToPreviousSection = () => {
+    if (ownerDailyOpsEnabled) {
+      goToPreviousOwnerDailyOpsPage();
+      return;
+    }
     if (sectionItems.length === 0) {
       return;
     }
@@ -638,6 +662,10 @@ export function useDashboardData(props: DashboardProps) {
     setActiveSection(sectionItems[(activeSectionIndex - 1 + sectionItems.length) % sectionItems.length].id);
   };
   const goToNextSection = () => {
+    if (ownerDailyOpsEnabled) {
+      goToNextOwnerDailyOpsPage();
+      return;
+    }
     if (sectionItems.length === 0) {
       return;
     }
@@ -662,10 +690,13 @@ export function useDashboardData(props: DashboardProps) {
         return;
       }
 
+      const targetOwnerMode = isOwnerRole ? OWNER_SECTION_MODE_BY_ID[sectionId] : null;
+      const usesOwnerDailyOps =
+        isOwnerRole && (targetOwnerMode ?? ownerWorkflowMode) === "daily_ops";
+
       if (isOwnerRole) {
-        const targetMode = OWNER_SECTION_MODE_BY_ID[sectionId];
-        if (targetMode && ownerWorkflowMode !== targetMode) {
-          setOwnerWorkflowMode(targetMode);
+        if (targetOwnerMode && ownerWorkflowMode !== targetOwnerMode) {
+          setOwnerWorkflowMode(targetOwnerMode);
         }
       }
 
@@ -676,9 +707,20 @@ export function useDashboardData(props: DashboardProps) {
         }
       }
 
+      if (usesOwnerDailyOps && goToSectionPage(sectionId)) {
+        return;
+      }
+
       setActiveSection(sectionId);
     },
-    [allSectionItems, isManagerRole, isOwnerRole, managerWorkflowMode, ownerWorkflowMode]
+    [
+      allSectionItems,
+      goToSectionPage,
+      isManagerRole,
+      isOwnerRole,
+      managerWorkflowMode,
+      ownerWorkflowMode
+    ]
   );
 
   useEffect(() => {
@@ -1053,13 +1095,11 @@ export function useDashboardData(props: DashboardProps) {
 
   const handleSidebarSelect = (itemId: string) => {
     if (itemId === "analytics" && isOwnerRole) {
-      setOwnerWorkflowMode("daily_ops");
-      setActiveSection("analytics");
+      openSection("analytics");
       return;
     }
     if (itemId === "manager-payments" && isOwnerRole) {
-      setOwnerWorkflowMode("daily_ops");
-      setActiveSection("manager-payments");
+      openSection("manager-payments");
       return;
     }
     if (itemId === "notifications") {
@@ -1073,6 +1113,13 @@ export function useDashboardData(props: DashboardProps) {
       return;
     }
     if (isOwnerRole && itemId.startsWith("owner:")) {
+      if (itemId === "owner:daily_ops") {
+        if (ownerWorkflowMode !== "daily_ops") {
+          setOwnerWorkflowMode("daily_ops");
+        }
+        goToHomePage();
+        return;
+      }
       if (itemId === "owner:new_property") {
         setIsPropertyWizardOpen(true);
         return;
@@ -1084,7 +1131,7 @@ export function useDashboardData(props: DashboardProps) {
       handleModeChange(itemId.replace("manager:", "") as ManagerWorkflowMode, managerWorkflowModeMeta, setManagerWorkflowMode);
       return;
     }
-    setActiveSection(itemId);
+    openSection(itemId);
   };
 
   const openCommandPalette = useCallback(() => {
@@ -1268,9 +1315,15 @@ export function useDashboardData(props: DashboardProps) {
     isEmptyOwner: props.isEmpty && isOwnerRole,
     isManagerRole,
     isOwnerRole,
+    isOwnerDailyOpsEnabled: ownerDailyOpsEnabled,
+    isOwnerDailyOpsHomePage,
     layoutProps,
     commandPaletteProps,
     occupancy,
+    ownerDailyOpsPage,
+    ownerDailyOpsPageCountLabel,
+    ownerDailyOpsPageLabel,
+    ownerDailyOpsTotalPages,
     openPropertyWizard,
     closePropertyWizard,
     ownerOnboarding,

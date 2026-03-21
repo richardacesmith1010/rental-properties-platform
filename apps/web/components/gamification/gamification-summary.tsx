@@ -32,7 +32,12 @@ export function GamificationSummary({
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="flex items-center gap-3">
-          <DomMascot size="sm" className="shrink-0" mood={streakCount >= 3 ? "excited" : "happy"} animate={streakCount >= 3} />
+          <DomMascot
+            size="md"
+            className="shrink-0"
+            mood={streakCount >= 3 ? "excited" : "happy"}
+            animate={streakCount >= 3}
+          />
           <div className="flex flex-col gap-1">
             <LevelBadge level={currentLevel} role={role} size="sm" />
             <StreakDisplay count={streakCount} />

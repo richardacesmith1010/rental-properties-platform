@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Building2, CheckCircle2, DoorOpen, UserPlus } from "lucide-react";
 import type { ActionState } from "@/app/actions";
@@ -104,29 +104,33 @@ export function PropertyWizard({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const managersRef = useRef(managers);
+  const prevOpenRef = useRef(false);
+  managersRef.current = managers;
 
   useEffect(() => {
-    if (!open) {
-      return;
+    if (open && !prevOpenRef.current) {
+      setStep(0);
+      setPropertyId(null);
+      setPropertyName("");
+      setAddressLine1("");
+      setCity("");
+      setStateCode("");
+      setPostalCode("");
+      setPropertyType("single_family");
+      setUnitDrafts([createUnitDraft(0)]);
+      setManagerChoice("no");
+      setManagerMode("existing");
+      setSelectedManagerId(managersRef.current[0]?.id ?? "");
+      setManagerEmail("");
+      setManagerName("");
+      setErrorMessage(null);
+      setSuccessMessage(null);
     }
-
-    setStep(0);
-    setPropertyId(null);
-    setPropertyName("");
-    setAddressLine1("");
-    setCity("");
-    setStateCode("");
-    setPostalCode("");
-    setPropertyType("single_family");
-    setUnitDrafts([createUnitDraft(0)]);
-    setManagerChoice("no");
-    setManagerMode("existing");
-    setSelectedManagerId(managers[0]?.id ?? "");
-    setManagerEmail("");
-    setManagerName("");
-    setErrorMessage(null);
-    setSuccessMessage(null);
-  }, [managers, open]);
+    prevOpenRef.current = open;
+    // Reset only on open-state transitions so typing and step changes never remount the wizard state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const selectedManager = useMemo(
     () => managers.find((manager) => manager.id === selectedManagerId) ?? null,

@@ -8,6 +8,7 @@ import { ConnectBanner } from "@/components/dashboard/connect-banner";
 import { CommandPalette } from "@/components/dashboard/command-palette";
 import { ContextualGreeting } from "@/components/dashboard/contextual-greeting";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { OwnerDailyOpsHome } from "@/components/dashboard/owner-daily-ops-home";
 import { PropertyWizard } from "@/components/dashboard/property-wizard";
 import { WelcomeCard } from "@/components/dashboard/welcome-card";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
@@ -47,11 +48,15 @@ export function Dashboard(props: DashboardProps) {
     isEmptyOwner,
     isManagerRole,
     isOwnerRole,
+    isOwnerDailyOpsEnabled,
+    isOwnerDailyOpsHomePage,
     isPropertyWizardOpen,
     layoutProps,
     occupancy,
     openPropertyWizard,
     ownerOnboarding,
+    ownerDailyOpsPageCountLabel,
+    ownerDailyOpsPageLabel,
     resolvedGamification,
     safePortfolio,
     sectionItems,
@@ -76,6 +81,16 @@ export function Dashboard(props: DashboardProps) {
   const touchStartX = useRef<number | null>(null);
   const ownerSectionCountLabel =
     activeSectionIndex >= 0 && sectionItems.length > 0 ? `${activeSectionIndex + 1} of ${sectionItems.length}` : null;
+  const contentZoneLabel =
+    isOwnerDailyOpsEnabled && ownerDailyOpsPageCountLabel
+      ? ownerDailyOpsPageCountLabel
+      : ownerSectionCountLabel ?? activeWorkflowMeta?.label ?? "Workspace";
+  const contentZoneTitle =
+    isOwnerDailyOpsEnabled && isOwnerDailyOpsHomePage
+      ? "Home"
+      : isOwnerDailyOpsEnabled
+        ? ownerDailyOpsPageLabel
+        : activeSectionLabel;
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -113,7 +128,7 @@ export function Dashboard(props: DashboardProps) {
     isOwnerRole &&
     ownerOnboarding.shouldShow &&
     !isOnboardingDismissed &&
-    activeSection === "overview";
+    (isOwnerDailyOpsEnabled ? isOwnerDailyOpsHomePage : activeSection === "overview");
 
   const handleDismissOnboarding = () => {
     if (typeof window !== "undefined") {
@@ -164,7 +179,7 @@ export function Dashboard(props: DashboardProps) {
   return (
     <DashboardLayout
       {...layoutProps}
-      mainClassName="relative flex min-h-screen flex-1 flex-col lg:ml-[260px]"
+      mainClassName="relative flex min-h-0 flex-1 flex-col overflow-hidden lg:ml-[260px]"
       afterMain={
         <>
           {showOnboardingWizard &&
@@ -202,7 +217,7 @@ export function Dashboard(props: DashboardProps) {
       }
     >
       <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
-      <div className="flex min-h-screen flex-1 flex-col px-6 pb-6 pt-6 lg:px-8 lg:pb-8 lg:pt-8">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-6 pt-6 lg:px-8 lg:pb-8 lg:pt-8">
         <div className="shrink-0 space-y-4">
           {(isOwnerRole || isManagerRole) && props.stripeConnected === false ? (
             <ConnectBanner connected={false} role={isOwnerRole ? "owner" : "manager"} />
@@ -213,34 +228,32 @@ export function Dashboard(props: DashboardProps) {
             </Alert>
           ) : null}
           {isOwnerRole ? (
-            showOwnerOnboarding ? null : (
-              <DashboardHeader
-                role={props.data.profileRole}
-                kpis={displayDashboardData.kpis}
-                occupancy={occupancy}
-                propertyCount={filteredPortfolio.properties.length}
-                userEmail={props.userEmail}
-                nickname={props.nickname}
-                fullName={props.fullName}
-                greetingContent={
-                  <ContextualGreeting
-                    userName={displayName}
-                    overdueChargeCount={overdueCharges.length}
-                    overdueAmountCents={overdueAmountCents}
-                    openTicketCount={openTicketCount}
-                  />
-                }
-                gamificationSummary={
-                  <GamificationSummary
-                    totalXp={resolvedGamification.totalXp}
-                    currentLevel={resolvedGamification.currentLevel}
-                    streakCount={resolvedGamification.streakCount}
-                    role={props.data.profileRole}
-                    className="w-full"
-                  />
-                }
-              />
-            )
+            <DashboardHeader
+              role={props.data.profileRole}
+              kpis={displayDashboardData.kpis}
+              occupancy={occupancy}
+              propertyCount={filteredPortfolio.properties.length}
+              userEmail={props.userEmail}
+              nickname={props.nickname}
+              fullName={props.fullName}
+              greetingContent={
+                <ContextualGreeting
+                  userName={displayName}
+                  overdueChargeCount={overdueCharges.length}
+                  overdueAmountCents={overdueAmountCents}
+                  openTicketCount={openTicketCount}
+                />
+              }
+              gamificationSummary={
+                <GamificationSummary
+                  totalXp={resolvedGamification.totalXp}
+                  currentLevel={resolvedGamification.currentLevel}
+                  streakCount={resolvedGamification.streakCount}
+                  role={props.data.profileRole}
+                  className="w-full"
+                />
+              }
+            />
           ) : activeSection === "overview" ? (
             <DashboardHeader
               role={props.data.profileRole}
@@ -273,9 +286,9 @@ export function Dashboard(props: DashboardProps) {
           <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border/60 px-4 py-4 sm:px-5">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                {ownerSectionCountLabel ?? activeWorkflowMeta?.label ?? "Workspace"}
+                {contentZoneLabel}
               </p>
-              <h2 className="mt-1 text-2xl font-semibold text-foreground">{activeSectionLabel}</h2>
+              <h2 className="mt-1 text-2xl font-semibold text-foreground">{contentZoneTitle}</h2>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -320,9 +333,12 @@ export function Dashboard(props: DashboardProps) {
               touchStartX.current = null;
             }}
           >
-            <section id={activeSection} className="h-full overflow-hidden">
+            <section
+              id={isOwnerDailyOpsEnabled && isOwnerDailyOpsHomePage ? "daily-ops-home" : activeSection}
+              className="h-full overflow-hidden"
+            >
               {showOwnerOnboarding ? (
-                <div className="h-full overflow-auto pr-1">
+                <div className="flex h-full items-center justify-center">
                   <WelcomeCard
                     displayName={displayName}
                     steps={ownerOnboarding.steps}
@@ -330,6 +346,8 @@ export function Dashboard(props: DashboardProps) {
                     onSkip={handleDismissOnboarding}
                   />
                 </div>
+              ) : isOwnerDailyOpsEnabled && isOwnerDailyOpsHomePage ? (
+                <OwnerDailyOpsHome onOpenOverview={goToNextSection} />
               ) : (
                 <div className={isOwnerRole ? "h-full overflow-hidden" : "h-full overflow-auto pr-1"}>
                   <SectionRenderer {...sectionRendererProps} />

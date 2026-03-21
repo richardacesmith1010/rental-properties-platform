@@ -20,10 +20,10 @@ export interface DomMascotProps {
 }
 
 const sizeMap = {
-  sm: { width: 48, height: 32 },
-  md: { width: 72, height: 48 },
-  lg: { width: 120, height: 80 },
-  xl: { width: 180, height: 120 }
+  sm: { width: 48, height: 48 },
+  md: { width: 80, height: 80 },
+  lg: { width: 140, height: 140 },
+  xl: { width: 220, height: 220 }
 } as const;
 
 const moodAnimationMap = {
@@ -70,6 +70,7 @@ export function DomMascot({
         width={width}
         height={height}
         sizes={`${width}px`}
+        style={{ height: "auto" }}
         className={cn("object-contain", animate ? moodAnimationMap[mood] : undefined)}
         priority={size === "lg" || size === "xl"}
         loading={size === "lg" || size === "xl" ? "eager" : "lazy"}
