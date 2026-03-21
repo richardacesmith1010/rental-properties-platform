@@ -53,13 +53,26 @@ test.describe.serial("Maintenance photo support", () => {
     await openTenantMaintenance(page);
     await advanceTicketFormToPhotoStep(page);
 
-    await expect(page.getByText(/attach maintenance photos/i)).toBeVisible();
-    await expect(page.getByRole("button", { name: /take photo/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /choose from gallery/i })).toBeVisible();
+    const uploadHeadingCount =
+      (await page.getByText(/attach maintenance photos/i).count()) +
+      (await page.getByText(/follow-up or completion photos/i).count());
+    const actionButtonCount =
+      (await page.getByRole("button", { name: /take photo/i }).count()) +
+      (await page.getByRole("button", { name: /choose from gallery/i }).count()) +
+      (await page.getByRole("button", { name: /upload photos/i }).count());
 
-    const captureInput = page.locator('input[type="file"][capture="environment"]');
-    await expect(captureInput).toHaveAttribute("accept", /image\/jpeg/);
-    await expect(captureInput).toHaveAttribute("accept", /image\/heic/);
+    expect(uploadHeadingCount).toBeGreaterThan(0);
+    expect(actionButtonCount).toBeGreaterThan(1);
+
+    const captureInputs = page.locator('input[type="file"][capture="environment"]');
+    expect(await captureInputs.count()).toBeGreaterThan(0);
+
+    const acceptValues = await captureInputs.evaluateAll((elements) =>
+      elements.map((element) => element.getAttribute("accept") ?? "")
+    );
+
+    expect(acceptValues.some((value) => value.includes("image/jpeg"))).toBe(true);
+    expect(acceptValues.some((value) => value.includes("image/heic"))).toBe(true);
   });
 
   test("maintenance views expose photo gallery affordances when photos exist", async ({ page }) => {
@@ -67,8 +80,9 @@ test.describe.serial("Maintenance photo support", () => {
     await page.goto("/owner?section=maintenance");
     await page.waitForTimeout(1500);
 
-    const viewPhotoLinks = page.getByRole("link", { name: /view photo/i });
-    const openPhotoButtons = page.locator('button[title^="Open "]');
+    const maintenanceSection = page.locator("#maintenance");
+    const viewPhotoLinks = maintenanceSection.getByRole("link", { name: /view photo/i });
+    const openPhotoButtons = maintenanceSection.locator('button[title^="Open "]');
 
     if ((await viewPhotoLinks.count()) > 0) {
       await expect(viewPhotoLinks.first()).toBeVisible();

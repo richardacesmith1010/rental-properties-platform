@@ -23,6 +23,7 @@ export const metadata: Metadata = {
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const supabase = createClient();
   const { data } = await supabase.auth.getUser();
+  const currentYear = new Date().getFullYear();
   const callbackError = searchParams?.error;
   const callbackErrorDescription = searchParams?.error_description;
   const emailConfirmed = searchParams?.confirmed === "true";
@@ -80,6 +81,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       )}
 
       <RoleSelector />
+
+      <footer className="mt-8 text-center text-xs text-muted-foreground">
+        &copy; {currentYear} Domus. All rights reserved.
+      </footer>
     </div>
   );
 }

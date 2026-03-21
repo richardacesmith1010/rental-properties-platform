@@ -32,6 +32,9 @@ export const metadata: Metadata = {
     title: "Domus — Rental Property Management",
     description: "Run your rental portfolio with confidence.",
   },
+  other: {
+    copyright: `© ${new Date().getFullYear()} Domus. All rights reserved.`
+  },
   manifest: "/manifest.json",
   icons: {
     icon: [

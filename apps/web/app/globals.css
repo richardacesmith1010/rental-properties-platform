@@ -175,6 +175,12 @@
     background: var(--domus-card-hover);
   }
 
+  .marketing-dark-cards {
+    --domus-card-bg: rgba(15, 23, 42, 0.82);
+    --domus-card-border: rgba(148, 163, 184, 0.16);
+    --domus-card-hover: rgba(30, 41, 59, 0.9);
+  }
+
   .domus-input {
     background: var(--domus-input-bg);
     border: 1px solid var(--domus-input-border);
