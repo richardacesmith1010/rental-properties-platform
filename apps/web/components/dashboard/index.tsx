@@ -10,6 +10,7 @@ import { ContextualGreeting } from "@/components/dashboard/contextual-greeting";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { OwnerDailyOpsHome } from "@/components/dashboard/owner-daily-ops-home";
 import { PropertyWizard } from "@/components/dashboard/property-wizard";
+import { TenantInviteWizard } from "@/components/dashboard/tenant-invite-wizard";
 import { WelcomeCard } from "@/components/dashboard/welcome-card";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ export function Dashboard(props: DashboardProps) {
     activeSectionLabel,
     activeWorkflowMeta,
     closePropertyWizard,
+    closeTenantInviteWizard,
     commandPaletteProps,
     displayDashboardData,
     filteredPortfolio,
@@ -51,9 +53,11 @@ export function Dashboard(props: DashboardProps) {
     isOwnerDailyOpsEnabled,
     isOwnerDailyOpsHomePage,
     isPropertyWizardOpen,
+    isTenantInviteWizardOpen,
     layoutProps,
     occupancy,
     openPropertyWizard,
+    openTenantInviteWizard,
     ownerOnboarding,
     ownerDailyOpsPageCountLabel,
     ownerDailyOpsPageLabel,
@@ -210,6 +214,21 @@ export function Dashboard(props: DashboardProps) {
               onCreateProperty={props.onCreateProperty}
               onCreateUnit={props.onCreateUnit}
               onInviteManager={props.onInviteManager}
+              onOpenSection={sectionRendererProps.openSection}
+              onOpenTenantInviteWizard={openTenantInviteWizard}
+            />
+          ) : null}
+          {(isOwnerRole || isManagerRole) && props.onInviteTenant ? (
+            <TenantInviteWizard
+              open={isTenantInviteWizardOpen}
+              properties={safePortfolio.properties}
+              units={safePortfolio.units}
+              onOpenChange={(open) => {
+                if (!open) {
+                  closeTenantInviteWizard();
+                }
+              }}
+              onInviteTenant={props.onInviteTenant}
               onOpenSection={sectionRendererProps.openSection}
             />
           ) : null}

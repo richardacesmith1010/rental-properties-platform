@@ -61,6 +61,7 @@ import {
   inviteManager,
   inviteOwner,
   resendInvite,
+  revokeInvite,
   markNotificationRead,
   markAllNotificationsRead,
   sendBatchPaymentReminder,
@@ -350,6 +351,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         onInviteManager={inviteManager}
         onInviteOwner={inviteOwner}
         onResendInvite={resendInvite}
+        onRevokeInvite={revokeInvite}
         onMarkNotificationRead={markNotificationRead}
         onMarkAllNotificationsRead={markAllNotificationsRead}
         onSendBatchPaymentReminder={sendBatchPaymentReminder}

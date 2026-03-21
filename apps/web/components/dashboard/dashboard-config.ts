@@ -372,8 +372,8 @@ export function getOwnerModeNavItems(params?: { hasAnalyticsSection?: boolean })
       id: "owner:new_tenant",
       label: "New Tenant",
       icon: UserPlus,
-      description: "Invite tenant, create lease, verify billing.",
-      clickHint: "switch to owner new tenant mode"
+      description: "Open the step-by-step tenant invite wizard.",
+      clickHint: "open the tenant invite wizard"
     },
     {
       id: "owner:new_manager",
@@ -432,8 +432,8 @@ export function getManagerModeNavItems(): NavItem[] {
       id: "manager:new_tenant",
       label: "New Tenant",
       icon: UserPlus,
-      description: "Tenant invitation and lease activation flow.",
-      clickHint: "switch to manager new tenant mode"
+      description: "Open the step-by-step tenant invite wizard.",
+      clickHint: "open the tenant invite wizard"
     },
     {
       id: "manager:vendor_ops",

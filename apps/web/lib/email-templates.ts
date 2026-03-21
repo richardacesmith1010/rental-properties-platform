@@ -35,6 +35,18 @@ interface ManagerPaymentEmailParams {
   status: "pending" | "paid";
 }
 
+export interface TenantInviteEmailParams {
+  tenantName: string;
+  ownerName: string;
+  propertyName?: string | null;
+  propertyAddress: string;
+  inviteUrl: string;
+  unitLabel?: string | null;
+  monthlyRent?: string | null;
+  leaseStartDate?: string | null;
+  leaseEndDate?: string | null;
+}
+
 export function escapeHtml(value: string) {
   return value
     .replaceAll("&", "&amp;")
@@ -153,6 +165,72 @@ export function buildNotificationEmail({
     preheaderText,
     footerPreferencesUrl: `${appUrl}/settings`,
   });
+}
+
+export function buildTenantInviteEmail({
+  tenantName,
+  ownerName,
+  propertyName,
+  propertyAddress,
+  inviteUrl,
+  unitLabel,
+  monthlyRent,
+  leaseStartDate,
+  leaseEndDate
+}: TenantInviteEmailParams) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com";
+  const subject = `${ownerName} invited you to Domus`;
+  const unitSummary = unitLabel ? `, ${unitLabel}` : "";
+  const locationSummary = propertyName
+    ? `${propertyName} (${propertyAddress})`
+    : propertyAddress;
+  const leaseSummary =
+    leaseStartDate && leaseEndDate
+      ? `Lease term: ${leaseStartDate} to ${leaseEndDate}.`
+      : leaseStartDate
+        ? `Lease start: ${leaseStartDate}.`
+        : leaseEndDate
+          ? `Lease end: ${leaseEndDate}.`
+          : null;
+
+  const bodyHtml = [
+    `<p style="margin:0;">Hi ${escapeHtml(tenantName)},</p>`,
+    `<p style="margin:16px 0 0 0;">${escapeHtml(ownerName)} invited you to Domus to manage your rental at <strong>${escapeHtml(locationSummary)}${unitLabel ? escapeHtml(unitSummary) : ""}</strong>.</p>`,
+    monthlyRent
+      ? `<p style="margin:16px 0 0 0;">Your monthly rent is <strong>${escapeHtml(monthlyRent)}</strong>.</p>`
+      : "",
+    leaseSummary
+      ? `<p style="margin:16px 0 0 0;">${escapeHtml(leaseSummary)}</p>`
+      : "",
+    `<p style="margin:16px 0 0 0;">Accept the invitation to set your password, view your lease, submit maintenance requests, and pay rent in one place.</p>`
+  ]
+    .filter(Boolean)
+    .join("");
+
+  const html = buildBrandedEmailShell({
+    titleHtml: "Welcome to Domus",
+    bodyHtml,
+    ctaText: "Accept Invitation & Set Up Your Account",
+    ctaUrl: inviteUrl,
+    preheaderText: `${ownerName} invited you to Domus`,
+    footerPreferencesUrl: `${appUrl}/settings`
+  });
+
+  const text = [
+    `Hi ${tenantName},`,
+    "",
+    `${ownerName} invited you to Domus to manage your rental at ${locationSummary}${unitSummary}.`,
+    monthlyRent ? `Monthly rent: ${monthlyRent}` : null,
+    leaseSummary,
+    "",
+    `Accept invitation: ${inviteUrl}`,
+    "",
+    "Domus makes it easy to pay rent, submit maintenance requests, and view your lease."
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return { subject, html, text };
 }
 
 export function buildRentReminderEmail({

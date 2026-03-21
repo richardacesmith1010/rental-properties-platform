@@ -26,6 +26,7 @@ interface PropertyWizardProps {
   onCreateUnit: StatefulAction;
   onInviteManager?: StatefulAction;
   onOpenSection: (sectionId: string) => void;
+  onOpenTenantInviteWizard?: () => void;
 }
 
 type PropertyType = "single_family" | "duplex" | "triplex" | "apartment" | "condo" | "townhouse";
@@ -84,7 +85,8 @@ export function PropertyWizard({
   onCreateProperty,
   onCreateUnit,
   onInviteManager,
-  onOpenSection
+  onOpenSection,
+  onOpenTenantInviteWizard
 }: PropertyWizardProps) {
   const router = useRouter();
   const [step, setStep] = useState<WizardStep>(0);
@@ -440,7 +442,20 @@ export function PropertyWizard({
               <Button type="button" variant="outline" onClick={() => { onOpenChange(false); router.refresh(); onOpenSection("leases"); }} title="Jump to lease creation for this property.">
                 Create a Lease
               </Button>
-              <Button type="button" variant="outline" onClick={() => { onOpenChange(false); router.refresh(); onOpenSection("invitations"); }} title="Open invitations to add a tenant.">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  onOpenChange(false);
+                  router.refresh();
+                  if (onOpenTenantInviteWizard) {
+                    onOpenTenantInviteWizard();
+                    return;
+                  }
+                  onOpenSection("invitations");
+                }}
+                title="Open the tenant invite flow for this property."
+              >
                 Invite a Tenant
               </Button>
               <Button type="button" onClick={handleFinish} title="Return to the dashboard filtered to your portfolio.">

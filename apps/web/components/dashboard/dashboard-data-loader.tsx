@@ -341,6 +341,7 @@ export function useDashboardData(props: DashboardProps) {
   );
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isPropertyWizardOpen, setIsPropertyWizardOpen] = useState(false);
+  const [isTenantInviteWizardOpen, setIsTenantInviteWizardOpen] = useState(false);
 
   useEffect(() => {
     const nextMode = props.initialOwnerWorkflowMode;
@@ -1124,10 +1125,18 @@ export function useDashboardData(props: DashboardProps) {
         setIsPropertyWizardOpen(true);
         return;
       }
+      if (itemId === "owner:new_tenant") {
+        setIsTenantInviteWizardOpen(true);
+        return;
+      }
       handleModeChange(itemId.replace("owner:", "") as OwnerWorkflowMode, ownerWorkflowModeMeta, setOwnerWorkflowMode);
       return;
     }
     if (isManagerRole && itemId.startsWith("manager:")) {
+      if (itemId === "manager:new_tenant") {
+        setIsTenantInviteWizardOpen(true);
+        return;
+      }
       handleModeChange(itemId.replace("manager:", "") as ManagerWorkflowMode, managerWorkflowModeMeta, setManagerWorkflowMode);
       return;
     }
@@ -1146,6 +1155,14 @@ export function useDashboardData(props: DashboardProps) {
   }, [isOwnerRole]);
   const closePropertyWizard = useCallback(() => {
     setIsPropertyWizardOpen(false);
+  }, []);
+  const openTenantInviteWizard = useCallback(() => {
+    if (props.onInviteTenant) {
+      setIsTenantInviteWizardOpen(true);
+    }
+  }, [props.onInviteTenant]);
+  const closeTenantInviteWizard = useCallback(() => {
+    setIsTenantInviteWizardOpen(false);
   }, []);
 
   const closeCommandPalette = useCallback(() => {
@@ -1197,8 +1214,7 @@ export function useDashboardData(props: DashboardProps) {
       }
 
       if (actionId === "new-tenant") {
-        setOwnerWorkflowMode("new_tenant");
-        setActiveSection("leasing");
+        setIsTenantInviteWizardOpen(true);
       }
 
       if (actionId === "open-notifications") {
@@ -1261,6 +1277,7 @@ export function useDashboardData(props: DashboardProps) {
     hasAnalyticsSection,
     hasActivitySection,
     openSection,
+    openTenantInviteWizard,
     goToSectionIfVisible,
     handleTenantInviteSuccess,
     handleManagerInviteSuccess,
@@ -1326,6 +1343,8 @@ export function useDashboardData(props: DashboardProps) {
     ownerDailyOpsTotalPages,
     openPropertyWizard,
     closePropertyWizard,
+    openTenantInviteWizard,
+    closeTenantInviteWizard,
     ownerOnboarding,
     ownerWorkflowMode,
     resolvedGamification,
@@ -1337,6 +1356,7 @@ export function useDashboardData(props: DashboardProps) {
     sectionItems,
     sectionRendererProps,
     isPropertyWizardOpen,
+    isTenantInviteWizardOpen,
     showOnboardingWizard:
       isOwnerRole && safePortfolio.properties.length > 0 && safePortfolio.units.length === 0 && Boolean(props.onInviteTenant)
   };

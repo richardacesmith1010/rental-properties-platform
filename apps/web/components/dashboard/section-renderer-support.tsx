@@ -5,6 +5,8 @@ import { KpiGrid } from "./kpi-grid";
 import { PropertySelector } from "./property-selector";
 import { PropertySummaryCard } from "./property-summary-card";
 import { RentCollectionBar } from "./rent-collection-bar";
+import { PortfolioSection } from "./portfolio-section";
+import { InvitationsPanel } from "./invitations-panel";
 import { SectionErrorBoundary } from "./section-error-boundary";
 import type { SectionRendererProps } from "./section-map";
 
@@ -190,6 +192,43 @@ export function OverviewSectionContent({
       {snapshotCard}
       {overviewGrid}
       {collectionBar}
+    </div>
+  );
+}
+
+export function PortfolioSectionContent({ props }: { props: SectionRendererProps }) {
+  return (
+    <div className={props.data.profileRole === "owner" ? "grid h-full min-h-0 gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.9fr)]" : "h-full"}>
+      <div className="min-h-0 overflow-hidden">
+        <PortfolioSection
+          properties={props.filteredPortfolio.properties}
+          showControls={props.canManagePortfolio}
+          onRenameProperty={
+            props.data.profileRole === "owner" ? props.onRenameProperty : undefined
+          }
+          onUpdateProperty={props.onUpdateProperty}
+          onDeleteProperty={props.onDeleteProperty}
+          onUpdateManagementFee={
+            props.data.profileRole === "owner" ? props.onUpdateManagementFee : undefined
+          }
+          onSelectProperty={(propertyId) => {
+            props.onSelectProperty(propertyId);
+            props.goToSectionIfVisible("overview");
+          }}
+          onGoToOperations={() => props.goToSectionIfVisible("operations")}
+          previewCount={props.isOwnerDailyOpsCarousel ? 4 : undefined}
+        />
+      </div>
+      {props.data.profileRole === "owner" && props.onResendInvite && props.onRevokeInvite ? (
+        <div className="min-h-0 overflow-hidden">
+          <InvitationsPanel
+            invitations={props.invitations ?? []}
+            onResendInvite={props.onResendInvite}
+            onRevokeInvite={props.onRevokeInvite}
+            onOpenInviteWizard={props.openTenantInviteWizard}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

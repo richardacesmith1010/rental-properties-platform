@@ -115,6 +115,7 @@ export interface SectionRendererProps {
   onInviteManager?: StatefulAction;
   onInviteOwner?: StatefulAction;
   onResendInvite?: StatefulAction;
+  onRevokeInvite?: StatefulAction;
   onMarkNotificationRead?: StatefulAction;
   onMarkAllNotificationsRead?: StatefulAction;
   onCreateInboxThread?: StatefulAction;
@@ -181,6 +182,7 @@ export interface SectionRendererProps {
   onTerminateLease?: StatefulAction;
   onAddTicketComment?: StatefulAction;
   openSection: (sectionId: string) => void;
+  openTenantInviteWizard: () => void;
   goToSectionIfVisible: (sectionId: string) => void;
   handleTenantInviteSuccess: () => void;
   handleManagerInviteSuccess: () => void;

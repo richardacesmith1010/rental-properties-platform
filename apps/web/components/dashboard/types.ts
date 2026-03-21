@@ -105,6 +105,7 @@ export interface DashboardProps {
   onInviteManager?: StatefulAction;
   onInviteOwner?: StatefulAction;
   onResendInvite?: StatefulAction;
+  onRevokeInvite?: StatefulAction;
   onMarkNotificationRead?: StatefulAction;
   onMarkAllNotificationsRead?: StatefulAction;
   onSendBatchPaymentReminder?: StatefulAction;

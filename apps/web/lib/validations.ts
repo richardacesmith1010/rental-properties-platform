@@ -250,7 +250,27 @@ export const inviteTenantSchema = z.object({
     .string()
     .min(1, "Full name is required.")
     .max(100, "Name must be under 100 characters."),
-  propertyId: z.string().uuid("Select a property first.")
+  propertyId: z.string().uuid("Select a property first."),
+  unitId: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().uuid("Select a valid unit.").optional()
+  ),
+  phone: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().max(30, "Phone number must be under 30 characters.").optional()
+  ),
+  monthlyRentDollars: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.coerce.number().min(0, "Rent must be zero or more.").optional()
+  ),
+  leaseStartDate: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a valid lease start date.").optional()
+  ),
+  leaseEndDate: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a valid lease end date.").optional()
+  )
 });
 
 export const inviteManagerSchema = z.object({
@@ -278,6 +298,10 @@ export const inviteOwnerSchema = z.object({
 });
 
 export const resendInviteSchema = z.object({
+  invitationId: z.string().uuid("Invalid invitation ID."),
+});
+
+export const revokeInviteSchema = z.object({
   invitationId: z.string().uuid("Invalid invitation ID."),
 });
 

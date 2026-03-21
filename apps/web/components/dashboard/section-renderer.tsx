@@ -12,8 +12,7 @@ import { ManagerPaymentsSection } from "./manager-payments-section";
 import { MaintenanceSection } from "./maintenance-section";
 import { OperationsSection } from "./operations-section";
 import { PaymentsSection } from "./payments-section";
-import { PortfolioSection } from "./portfolio-section";
-import { CompactAnalyticsPreview, OverviewSectionContent, SectionFrame } from "./section-renderer-support";
+import { CompactAnalyticsPreview, OverviewSectionContent, PortfolioSectionContent, SectionFrame } from "./section-renderer-support";
 import { UnitsSection } from "./units-section";
 import { VendorsSection } from "./vendors-section";
 import { computeTrend } from "@/lib/dashboard";
@@ -305,6 +304,7 @@ export function SectionRenderer(props: SectionRendererProps) {
             props.safeCapabilities.ownershipEnabled ? props.onInviteOwner : undefined
           }
           onResendInvite={props.onResendInvite!}
+          onRevokeInvite={props.onRevokeInvite}
           onTenantInviteSuccess={props.handleTenantInviteSuccess}
           onManagerInviteSuccess={props.handleManagerInviteSuccess}
           onOwnerInviteSuccess={props.handleOwnerInviteSuccess}
@@ -406,27 +406,7 @@ export function SectionRenderer(props: SectionRendererProps) {
       );
 
     case "portfolio":
-      return renderSection(
-        "Portfolio",
-        <PortfolioSection
-          properties={props.filteredPortfolio.properties}
-          showControls={props.canManagePortfolio}
-          onRenameProperty={
-            props.data.profileRole === "owner" ? props.onRenameProperty : undefined
-          }
-          onUpdateProperty={props.onUpdateProperty}
-          onDeleteProperty={props.onDeleteProperty}
-          onUpdateManagementFee={
-            props.data.profileRole === "owner" ? props.onUpdateManagementFee : undefined
-          }
-          onSelectProperty={(propertyId) => {
-            props.onSelectProperty(propertyId);
-            props.goToSectionIfVisible("overview");
-          }}
-          onGoToOperations={() => props.goToSectionIfVisible("operations")}
-          previewCount={props.isOwnerDailyOpsCarousel ? 4 : undefined}
-        />
-      );
+      return renderSection("Portfolio", <PortfolioSectionContent props={props} />);
 
     case "units":
       return renderSection(

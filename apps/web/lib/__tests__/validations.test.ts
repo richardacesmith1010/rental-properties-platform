@@ -19,6 +19,7 @@ import {
   inviteTenantSchema,
   inviteManagerSchema,
   resendInviteSchema,
+  revokeInviteSchema,
   createDocumentTemplateSchema,
   createDocumentPacketSchema,
   sendDocumentPacketSchema,
@@ -748,7 +749,12 @@ describe("inviteTenantSchema", () => {
     const result = inviteTenantSchema.safeParse({
       email: "tenant@example.com",
       fullName: "John Doe",
-      propertyId: validUUID
+      propertyId: validUUID,
+      unitId: validUUID,
+      phone: "555-1212",
+      monthlyRentDollars: "1850",
+      leaseStartDate: "2026-04-01",
+      leaseEndDate: "2027-03-31"
     });
     expect(result.success).toBe(true);
   });
@@ -795,6 +801,20 @@ describe("inviteTenantSchema", () => {
       fullName: "John Doe"
     });
     expect(result.success).toBe(false);
+  });
+
+  it("accepts blank optional tenant invite fields", () => {
+    const result = inviteTenantSchema.safeParse({
+      email: "tenant@example.com",
+      fullName: "John Doe",
+      propertyId: validUUID,
+      unitId: "",
+      phone: "",
+      monthlyRentDollars: "",
+      leaseStartDate: "",
+      leaseEndDate: ""
+    });
+    expect(result.success).toBe(true);
   });
 });
 
@@ -849,6 +869,22 @@ describe("resendInviteSchema", () => {
 
   it("rejects non-UUID strings", () => {
     const result = resendInviteSchema.safeParse({
+      invitationId: "abc-123",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("revokeInviteSchema", () => {
+  it("accepts a valid UUID", () => {
+    const result = revokeInviteSchema.safeParse({
+      invitationId: "550e8400-e29b-41d4-a716-446655440000",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects non-UUID strings", () => {
+    const result = revokeInviteSchema.safeParse({
       invitationId: "abc-123",
     });
     expect(result.success).toBe(false);

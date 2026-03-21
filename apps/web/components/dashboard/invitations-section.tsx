@@ -34,6 +34,7 @@ interface InvitationsSectionProps {
   onInviteManager: StatefulAction;
   onInviteOwner?: StatefulAction;
   onResendInvite: StatefulAction;
+  onRevokeInvite?: StatefulAction;
   onTenantInviteSuccess?: () => void;
   onManagerInviteSuccess?: () => void;
   onOwnerInviteSuccess?: () => void;
@@ -68,7 +69,7 @@ function StepPill({ label, active, done, skipped }: { label: string; active: boo
   return <div className={`rounded-md border px-2 py-2 text-xs ${className}`}>{label}</div>;
 }
 
-export function InvitationsSection({ ownershipAccounts, properties, invitations, onInviteTenant, onInviteManager, onInviteOwner, onResendInvite, onTenantInviteSuccess, onManagerInviteSuccess, onOwnerInviteSuccess }: InvitationsSectionProps) {
+export function InvitationsSection({ ownershipAccounts, properties, invitations, onInviteTenant, onInviteManager, onInviteOwner, onResendInvite, onRevokeInvite, onTenantInviteSuccess, onManagerInviteSuccess, onOwnerInviteSuccess }: InvitationsSectionProps) {
   const [ownerState, ownerAction] = useFormState(onInviteOwner ?? onInviteManager, null);
   const [activeFlow, setActiveFlow] = useState<InvitationFlow>("tenant");
   const [showInviteForm, setShowInviteForm] = useState(false);
@@ -142,7 +143,7 @@ export function InvitationsSection({ ownershipAccounts, properties, invitations,
         <Card>
           <CardHeader><CardTitle>Sent Invitations</CardTitle></CardHeader>
           <CardContent>
-            <div>{invitations.map((invitation, index) => <InvitationRow key={invitation.id} invitation={invitation} last={index === invitations.length - 1} onResendInvite={onResendInvite} />)}</div>
+            <div>{invitations.map((invitation, index) => <InvitationRow key={invitation.id} invitation={invitation} last={index === invitations.length - 1} onResendInvite={onResendInvite} onRevokeInvite={onRevokeInvite} />)}</div>
           </CardContent>
         </Card>
       ) : !showInviteForm ? (
@@ -163,8 +164,9 @@ export function InvitationsSection({ ownershipAccounts, properties, invitations,
   );
 }
 
-function InvitationRow({ invitation, last, onResendInvite }: { invitation: InvitationListItem; last: boolean; onResendInvite: StatefulAction }) {
+function InvitationRow({ invitation, last, onResendInvite, onRevokeInvite }: { invitation: InvitationListItem; last: boolean; onResendInvite: StatefulAction; onRevokeInvite?: StatefulAction }) {
   const [resendState, resendAction] = useFormState(onResendInvite, null);
+  const [revokeState, revokeAction] = useFormState(onRevokeInvite ?? onResendInvite, null);
 
   return (
     <DataRow last={last}>
@@ -181,12 +183,22 @@ function InvitationRow({ invitation, last, onResendInvite }: { invitation: Invit
       </div>
       {invitation.status === "pending" ? (
         <div className="flex-shrink-0">
-          <form action={resendAction}>
-            <input type="hidden" name="invitationId" value={invitation.id} />
-            <FormError state={resendState} />
-            <FormSuccess state={resendState} message="Resent!" />
-            <SubmitButton variant="outline" size="sm" title="Resend this pending invitation email.">Resend</SubmitButton>
-          </form>
+          <div className="space-y-2">
+            <form action={resendAction}>
+              <input type="hidden" name="invitationId" value={invitation.id} />
+              <FormError state={resendState} />
+              <FormSuccess state={resendState} message="Resent!" />
+              <SubmitButton variant="outline" size="sm" title="Resend this pending invitation email.">Resend</SubmitButton>
+            </form>
+            {onRevokeInvite ? (
+              <form action={revokeAction}>
+                <input type="hidden" name="invitationId" value={invitation.id} />
+                <FormError state={revokeState} />
+                <FormSuccess state={revokeState} message="Revoked!" />
+                <SubmitButton variant="outline" size="sm" title="Revoke this pending invitation.">Revoke</SubmitButton>
+              </form>
+            ) : null}
+          </div>
         </div>
       ) : null}
     </DataRow>

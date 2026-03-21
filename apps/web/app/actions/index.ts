@@ -67,10 +67,9 @@ export { addTicketComment } from "./maintenance";
 export { uploadMaintenancePhoto } from "./maintenance";
 export { deleteMaintenancePhoto } from "./maintenance";
 
-export { inviteTenant } from "./invitations";
 export { inviteManager } from "./invitations";
 export { inviteOwner } from "./invitations";
-export { resendInvite } from "./invitations";
+export { inviteTenant, resendInvite, revokeInvite } from "./tenant-invitations";
 
 export { createOwnershipAccount } from "./ownership";
 export { addOwnershipMember } from "./ownership";

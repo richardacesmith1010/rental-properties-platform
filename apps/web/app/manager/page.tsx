@@ -39,6 +39,7 @@ import {
   inviteManager,
   inviteOwner,
   resendInvite,
+  revokeInvite,
   markNotificationRead,
   markAllNotificationsRead,
   createInboxThread,
@@ -255,6 +256,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       onInviteManager={inviteManager}
       onInviteOwner={inviteOwner}
       onResendInvite={resendInvite}
+      onRevokeInvite={revokeInvite}
       onMarkNotificationRead={markNotificationRead}
       onMarkAllNotificationsRead={markAllNotificationsRead}
       onCreateInboxThread={createInboxThread}
