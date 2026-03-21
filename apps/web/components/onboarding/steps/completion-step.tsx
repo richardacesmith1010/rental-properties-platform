@@ -13,7 +13,7 @@ export function CompletionStep({ stepsCompleted, onFinish }: CompletionStepProps
   return (
     <div className="space-y-5 text-center">
       <div className="mx-auto flex w-fit items-center justify-center rounded-3xl bg-emerald-50/80 px-6 py-4">
-        <DomMascot size="lg" />
+        <DomMascot size="lg" mood="celebrating" />
       </div>
 
       <div>

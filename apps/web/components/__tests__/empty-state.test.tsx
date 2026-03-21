@@ -10,16 +10,18 @@ const CustomIcon = forwardRef<SVGSVGElement, LucideProps>((props, ref) => (
 CustomIcon.displayName = "CustomIcon";
 
 describe("EmptyState", () => {
-  it("renders the default inbox icon when no icon is provided", () => {
+  it("renders the pointing mascot by default", () => {
     const { container } = render(<EmptyState message="Nothing here yet." />);
 
-    expect(container.querySelector("svg")).toBeInTheDocument();
+    expect(screen.getByAltText("Dom, the Domus mascot")).toBeInTheDocument();
+    expect(container.querySelector("svg")).not.toBeInTheDocument();
   });
 
-  it("renders a custom icon when one is provided", () => {
+  it("renders a custom icon badge when one is provided", () => {
     render(<EmptyState icon={CustomIcon} message="Custom icon state." />);
 
     expect(screen.getByTestId("custom-icon")).toBeInTheDocument();
+    expect(screen.getByAltText("Dom, the Domus mascot")).toBeInTheDocument();
   });
 
   it("shows the title when provided", () => {
@@ -61,5 +63,12 @@ describe("EmptyState", () => {
     render(<EmptyState message="Nothing here yet." showDom />);
 
     expect(screen.getByAltText("Dom, the Domus mascot")).toBeInTheDocument();
+  });
+
+  it("renders icon-only mode when showDom is false", () => {
+    const { container } = render(<EmptyState message="Nothing here yet." showDom={false} />);
+
+    expect(container.querySelector("svg")).toBeInTheDocument();
+    expect(screen.queryByAltText("Dom, the Domus mascot")).not.toBeInTheDocument();
   });
 });

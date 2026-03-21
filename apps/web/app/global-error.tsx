@@ -1,5 +1,7 @@
 "use client";
 
+import { DomMascot } from "@/components/gamification/dom-mascot";
+
 export default function GlobalError({
   error,
   reset
@@ -11,7 +13,10 @@ export default function GlobalError({
     <html lang="en">
       <body className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
         <div className="mx-auto max-w-md px-6 text-center">
-          <p className="text-6xl font-bold text-violet-400">Oops</p>
+          <div className="mx-auto flex w-fit items-center justify-center rounded-3xl bg-white/10 px-4 py-3">
+            <DomMascot size="lg" mood="sleeping" />
+          </div>
+          <p className="mt-4 text-6xl font-bold text-violet-400">Oops</p>
           <h1 className="mt-4 text-2xl font-semibold">Something went wrong</h1>
           <p className="mt-2 text-sm text-slate-400">
             An unexpected error occurred. Please try again.

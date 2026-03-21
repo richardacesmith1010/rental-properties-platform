@@ -38,11 +38,12 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   icons: {
     icon: [
-      { url: "/icons/icon-192.svg", type: "image/svg+xml", sizes: "192x192" },
-      { url: "/icons/icon-512.svg", type: "image/svg+xml", sizes: "512x512" }
+      { url: "/images/mascot/icons/head.png", type: "image/png", sizes: "32x32" },
+      { url: "/images/mascot/icons/head.png", type: "image/png", sizes: "192x192" },
+      { url: "/images/mascot/icons/head.png", type: "image/png", sizes: "512x512" }
     ],
     apple: [
-      { url: "/icons/apple-touch-icon.png", type: "image/png", sizes: "180x180" }
+      { url: "/images/mascot/icons/head.png", type: "image/png", sizes: "180x180" }
     ]
   },
   appleWebApp: {

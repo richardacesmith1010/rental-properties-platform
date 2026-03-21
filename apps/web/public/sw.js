@@ -2,9 +2,8 @@ const CACHE_NAME = "domus-shell-v1";
 const SHELL_URLS = [
   "/offline.html",
   "/manifest.json",
-  "/icons/icon-192.svg",
-  "/icons/icon-512.svg",
-  "/icons/apple-touch-icon.png"
+  "/images/mascot/icons/head.png",
+  "/images/mascot/poses/sleeping.png"
 ];
 
 self.addEventListener("install", (event) => {
@@ -51,7 +50,7 @@ self.addEventListener("fetch", (event) => {
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
             return response;
           })
-          .catch(() => caches.match("/icons/icon-192.svg"));
+          .catch(() => caches.match("/images/mascot/icons/head.png"));
       })
     );
   }

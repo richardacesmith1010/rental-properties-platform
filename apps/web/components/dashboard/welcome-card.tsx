@@ -59,7 +59,7 @@ export function WelcomeCard({
     <div className="mx-auto w-full max-w-3xl rounded-2xl border border-border/60 bg-card px-6 py-8 text-center shadow-sm sm:px-8">
       <div className="mx-auto mb-5 flex h-32 w-32 items-center justify-center rounded-full bg-primary/10">
         <div className="animate-domus-bob">
-          <DomMascot size="xl" mood="encouraging" animate />
+          <DomMascot size="xl" mood="waving" animate />
         </div>
       </div>
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">

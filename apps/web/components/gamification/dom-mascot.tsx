@@ -3,7 +3,16 @@ import { cn } from "@/lib/format";
 
 export interface DomMascotProps {
   size?: "sm" | "md" | "lg" | "xl";
-  mood?: "happy" | "excited" | "encouraging" | "celebrating" | "thinking";
+  mood?:
+    | "happy"
+    | "excited"
+    | "encouraging"
+    | "celebrating"
+    | "thinking"
+    | "waving"
+    | "pointing"
+    | "sleeping"
+    | "working";
   className?: string;
   label?: string;
   animate?: boolean;
@@ -11,10 +20,10 @@ export interface DomMascotProps {
 }
 
 const sizeMap = {
-  sm: { width: 32, height: 48 },
-  md: { width: 48, height: 72 },
-  lg: { width: 80, height: 120 },
-  xl: { width: 120, height: 180 }
+  sm: { width: 48, height: 32 },
+  md: { width: 72, height: 48 },
+  lg: { width: 120, height: 80 },
+  xl: { width: 180, height: 120 }
 } as const;
 
 const moodAnimationMap = {
@@ -22,7 +31,23 @@ const moodAnimationMap = {
   excited: "animate-domus-bounce",
   encouraging: "animate-domus-wiggle",
   celebrating: "animate-domus-celebrate",
-  thinking: "animate-domus-think"
+  thinking: "animate-domus-think",
+  waving: "animate-domus-wiggle",
+  pointing: "animate-domus-wiggle",
+  sleeping: "animate-domus-bob",
+  working: "animate-domus-think"
+} as const;
+
+const poseMap = {
+  happy: "/images/mascot/poses/happy.png",
+  excited: "/images/mascot/poses/celebrating.png",
+  encouraging: "/images/mascot/poses/waving.png",
+  celebrating: "/images/mascot/poses/celebrating.png",
+  thinking: "/images/mascot/poses/thinking.png",
+  waving: "/images/mascot/poses/waving.png",
+  pointing: "/images/mascot/poses/pointing.png",
+  sleeping: "/images/mascot/poses/sleeping.png",
+  working: "/images/mascot/poses/thinking.png"
 } as const;
 
 export function DomMascot({
@@ -35,11 +60,12 @@ export function DomMascot({
 }: DomMascotProps) {
   const { width, height } = sizeMap[size];
   const resolvedLabel = label ?? (showLabel ? "Dom" : null);
+  const poseSrc = poseMap[mood] ?? poseMap.happy;
 
   return (
     <div className={cn("inline-flex flex-col items-center", className)}>
       <Image
-        src="/images/dom-the-key.png"
+        src={poseSrc}
         alt="Dom, the Domus mascot"
         width={width}
         height={height}

@@ -38,7 +38,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     <div className="app-surface flex min-h-screen flex-col items-center justify-center px-4 py-12">
       <div className="mb-10 text-center">
         <div className="mx-auto mb-4 flex w-fit items-center justify-center rounded-3xl bg-white/80 px-4 py-3 shadow-lg shadow-violet-500/10">
-          <DomMascot size="lg" />
+          <DomMascot size="lg" mood="happy" />
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
           Welcome to Domus

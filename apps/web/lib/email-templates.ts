@@ -75,10 +75,10 @@ export function buildBrandedEmailShell({
                   <tr>
                     <td style="vertical-align:middle;">
                       <img
-                        src="https://domusbase.com/images/dom-the-key.png"
+                        src="https://domusbase.com/images/mascot/poses/happy.png"
                         alt="Domus mascot"
-                        width="36"
-                        height="54"
+                        width="72"
+                        height="48"
                         style="display:block;border:0;outline:none;text-decoration:none;"
                       />
                     </td>
