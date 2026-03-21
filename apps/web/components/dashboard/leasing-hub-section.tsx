@@ -235,7 +235,7 @@ export function LeasingHubSection({
           <CardTitle>Leasing Hub</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="text-sm text-zinc-600">
+          <p className="text-sm text-muted-foreground">
             Use this workflow to move from empty unit to signed lease and active billing with minimal context switching.
           </p>
           {!pipelineReady && (
@@ -243,7 +243,7 @@ export function LeasingHubSection({
               {pipelineWarning ?? "Pipeline persistence is not live yet. Workflow progress uses currently available records only."}
             </Alert>
           )}
-          <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-semibold text-zinc-800">
+          <div className="rounded-lg border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground">
             {currentStepLabel(stages)}
           </div>
         </CardContent>

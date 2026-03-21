@@ -169,9 +169,9 @@ export function PlaidLinkButton({
   }, [completeState]);
 
   return (
-    <div className="mt-3 rounded-xl border border-zinc-200 bg-zinc-50/70 px-4 py-4">
-      <p className="text-sm font-medium text-zinc-800">Connect this LLC bank account with Plaid.</p>
-      <p className="mt-1 text-xs text-zinc-500">
+    <div className="mt-3 rounded-xl border border-border bg-card px-4 py-4">
+      <p className="text-sm font-medium text-foreground">Connect this LLC bank account with Plaid.</p>
+      <p className="mt-1 text-xs text-muted-foreground">
         Link a bank account to surface its balance inside the ownership dashboard.
       </p>
 

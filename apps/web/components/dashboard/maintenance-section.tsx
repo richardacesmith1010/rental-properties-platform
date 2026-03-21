@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import { MessageSquareText, Wrench } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +40,7 @@ interface MaintenanceSectionProps {
   photoWorkflowEnabled?: boolean;
   vendorWorkflowWarning?: string | null;
   photoWorkflowWarning?: string | null;
+  previewCount?: number;
 }
 
 const priorityVariant: Record<string, "destructive" | "warning" | "default" | "outline"> = {
@@ -79,7 +83,9 @@ export function MaintenanceSection({
   photoWorkflowEnabled = true,
   vendorWorkflowWarning = null,
   photoWorkflowWarning = null,
+  previewCount,
 }: MaintenanceSectionProps) {
+  const [expanded, setExpanded] = useState(false);
   const canDeleteTicketPhoto = (uploadedBy: string) => {
     if (!currentUserId) {
       return false;
@@ -87,6 +93,8 @@ export function MaintenanceSection({
 
     return viewerRole === "owner" || uploadedBy === currentUserId;
   };
+  const visibleTickets = previewCount && !expanded ? tickets.slice(0, previewCount) : tickets;
+  const hasMore = previewCount != null && tickets.length > previewCount;
 
   return (
     <Card id="maintenance" className="border border-border/50 shadow-sm">
@@ -117,11 +125,12 @@ export function MaintenanceSection({
             description="Tickets submitted by tenants will appear here."
           />
         ) : (
-          <AnimatedList>
-            {tickets.map((ticket, i) => {
+          <>
+            <AnimatedList>
+              {visibleTickets.map((ticket, i) => {
               const meta = ticketMeta(ticket);
               return (
-                <DataRow key={ticket.id} last={i === tickets.length - 1}>
+                <DataRow key={ticket.id} last={i === visibleTickets.length - 1}>
                   <div className="min-w-0 flex-1">
                     <p className="text-base font-medium text-zinc-900">
                       {ticket.title}
@@ -205,15 +214,15 @@ export function MaintenanceSection({
                     ) : null}
 
                     {(ticket.commentCount > 0 || onAddComment) ? (
-                      <details className="mt-4 rounded-2xl border border-border/50 bg-zinc-50/70 shadow-sm">
-                        <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-zinc-700">
+                      <details className="mt-4 rounded-2xl border border-border bg-card/70 shadow-sm">
+                        <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-foreground">
                           <span className="inline-flex items-center gap-2">
-                            <MessageSquareText className="h-4 w-4 text-zinc-400" />
+                            <MessageSquareText className="h-4 w-4 text-muted-foreground" />
                             Conversation
-                            <span className="text-zinc-400">({ticket.commentCount})</span>
+                            <span className="text-muted-foreground">({ticket.commentCount})</span>
                           </span>
                         </summary>
-                        <div className="border-t border-zinc-200 px-4 py-4">
+                        <div className="border-t border-border px-4 py-4">
                           <div className="mb-4">
                             <MaintenanceTracker
                               currentStatus={ticket.status}
@@ -268,7 +277,7 @@ export function MaintenanceSection({
                           href={`/api/assets/maintenance-photo/${ticket.latestPhotoId}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex h-8 items-center justify-center rounded-md border border-zinc-200 px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                          className="inline-flex h-8 items-center justify-center rounded-md border border-border px-3 text-xs font-medium text-foreground hover:bg-muted"
                           title="Open the latest maintenance photo for this ticket."
                         >
                           View Photo
@@ -278,8 +287,21 @@ export function MaintenanceSection({
                   ) : null}
                 </DataRow>
               );
-            })}
-          </AnimatedList>
+              })}
+            </AnimatedList>
+            {hasMore ? (
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setExpanded((current) => !current)}
+                  className="text-sm font-medium text-primary transition-colors hover:text-primary/80"
+                  title={expanded ? "Collapse the maintenance ticket preview." : "Show the full maintenance ticket list."}
+                >
+                  {expanded ? "Show Less" : `View All Tickets (${tickets.length})`}
+                </button>
+              </div>
+            ) : null}
+          </>
         )}
       </CardContent>
     </Card>

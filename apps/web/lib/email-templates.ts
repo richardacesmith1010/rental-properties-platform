@@ -24,6 +24,17 @@ interface RentReminderEmailParams {
   dashboardUrl: string;
 }
 
+interface ManagerPaymentEmailParams {
+  recipientName: string;
+  propertyName: string;
+  categoryLabel: string;
+  amountFormatted: string;
+  paymentDate: string;
+  invoiceUrl: string;
+  invoiceNumber: string;
+  status: "pending" | "paid";
+}
+
 export function escapeHtml(value: string) {
   return value
     .replaceAll("&", "&amp;")
@@ -185,6 +196,54 @@ export function buildRentReminderEmail({
     summary,
     "",
     `Pay now: ${dashboardUrl}`,
+    "",
+    `Manage notification preferences: ${appUrl}/settings`
+  ].join("\n");
+
+  return { subject, html, text };
+}
+
+export function buildManagerPaymentEmail({
+  recipientName,
+  propertyName,
+  categoryLabel,
+  amountFormatted,
+  paymentDate,
+  invoiceUrl,
+  invoiceNumber,
+  status
+}: ManagerPaymentEmailParams) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com";
+  const subject =
+    status === "paid"
+      ? `Payment Confirmed: ${categoryLabel} ${amountFormatted}`
+      : `Manager Invoice: ${categoryLabel} ${amountFormatted}`;
+
+  const summary =
+    status === "paid"
+      ? `Hi ${recipientName}, the ${categoryLabel.toLowerCase()} for ${propertyName} totaling ${amountFormatted} was marked paid on ${paymentDate}.`
+      : `Hi ${recipientName}, a ${categoryLabel.toLowerCase()} invoice for ${propertyName} totaling ${amountFormatted} was recorded on ${paymentDate}.`;
+
+  const bodyHtml = [
+    `<p style="margin:0;">${escapeHtml(summary)}</p>`,
+    `<p style="margin:16px 0 0 0;">Invoice number: <strong>${escapeHtml(invoiceNumber)}</strong></p>`,
+    `<p style="margin:16px 0 0 0;">Open Domus to download the PDF invoice and review the payment record.</p>`
+  ].join("");
+
+  const html = buildBrandedEmailShell({
+    titleHtml: escapeHtml(status === "paid" ? "Manager payment confirmed" : "Manager payment invoice"),
+    bodyHtml,
+    ctaText: "Open Invoice",
+    ctaUrl: invoiceUrl,
+    preheaderText: subject,
+    footerPreferencesUrl: `${appUrl}/settings`
+  });
+
+  const text = [
+    summary,
+    `Invoice number: ${invoiceNumber}`,
+    "",
+    `Open invoice: ${invoiceUrl}`,
     "",
     `Manage notification preferences: ${appUrl}/settings`
   ].join("\n");

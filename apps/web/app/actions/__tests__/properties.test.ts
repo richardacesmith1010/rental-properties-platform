@@ -181,7 +181,7 @@ describe("properties actions", () => {
 
     const result = await createProperty(null, new FormData());
 
-    expect(result).toEqual({ success: true });
+    expect(result).toEqual({ success: true, propertyId: "property-1" });
     expect(getOrCreateIndividualOwnershipAccountMock).toHaveBeenCalledWith("user-1");
   });
 

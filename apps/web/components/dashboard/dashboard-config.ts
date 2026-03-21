@@ -3,6 +3,7 @@ import type { OwnerDocumentsData } from "@/lib/documents";
 import type { VendorDTO } from "@/lib/vendors";
 import type { MaintenanceTicket } from "@/lib/maintenance";
 import {
+  Banknote,
   BarChart3,
   Bell,
   BriefcaseBusiness,
@@ -44,14 +45,10 @@ export const ownerWorkflowModeMeta: Record<
     sections: [
       "overview",
       "charges",
-      "payments",
+      "portfolio",
       "maintenance",
-      "notifications",
-      "activity",
-      "applications",
-      "inbox",
-      "automations",
-      "expenses",
+      "leases",
+      "manager-payments",
       "analytics"
     ]
   },
@@ -144,6 +141,7 @@ interface BuildAllSectionItemsParams {
   hasActivitySection: boolean;
   hasLeasingSection: boolean;
   hasApplicationsSection: boolean;
+  hasManagerPaymentsSection: boolean;
   hasInboxSection: boolean;
   hasAutomationsSection: boolean;
   hasNotificationsSection: boolean;
@@ -205,6 +203,16 @@ export function buildAllSectionItems(params: BuildAllSectionItemsParams): NavIte
       icon: ClipboardList,
       description: "Review tenant applications, notes, and screening scores.",
       clickHint: "open application review pipeline"
+    });
+  }
+
+  if (params.hasManagerPaymentsSection) {
+    items.push({
+      id: "manager-payments",
+      label: "Manager Payments",
+      icon: Banknote,
+      description: "Recurring fees, reimbursements, and manager invoices.",
+      clickHint: "open manager payments"
     });
   }
 
@@ -357,8 +365,8 @@ export function getOwnerModeNavItems(params?: { hasAnalyticsSection?: boolean })
       id: "owner:new_property",
       label: "New Property",
       icon: Building2,
-      description: "Property to unit to lease onboarding flow.",
-      clickHint: "switch to owner new property mode"
+      description: "Open the step-by-step property creation wizard.",
+      clickHint: "open the new property wizard"
     },
     {
       id: "owner:new_tenant",
@@ -392,6 +400,14 @@ export function getOwnerModeNavItems(params?: { hasAnalyticsSection?: boolean })
       clickHint: "open owner analytics"
     });
   }
+
+  items.push({
+    id: "manager-payments",
+    label: "Manager Payments",
+    icon: Banknote,
+    description: "Recurring manager fees, reimbursements, and invoices.",
+    clickHint: "open manager payments"
+  });
 
   return items;
 }

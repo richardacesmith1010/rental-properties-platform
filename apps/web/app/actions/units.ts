@@ -27,20 +27,34 @@ export async function createUnit(_prev: ActionState, formData: FormData): Promis
     return parsed;
   }
 
-  const { propertyId, unitNumber, bedrooms, bathrooms, monthlyRentDollars } = parsed.data;
+  const { propertyId, unitNumber, bedrooms, bathrooms, monthlyRentDollars, squareFeet } = parsed.data;
   const canAdminister = await canUserAdministerProperty(user.id, propertyId);
   if (!canAdminister) {
     return { success: false, error: "You do not have access to this property." };
   }
 
-  const { data: createdUnit, error } = await supabase.from("units").insert({
+  let insertResult = await supabase.from("units").insert({
     property_id: propertyId,
     unit_number: unitNumber,
     bedrooms,
     bathrooms,
     monthly_rent_cents: Math.round(monthlyRentDollars * 100),
+    square_feet: squareFeet ?? null,
     occupied: false
   }).select("id").single();
+
+  if (insertResult.error && isMissingSchemaError(insertResult.error)) {
+    insertResult = await supabase.from("units").insert({
+      property_id: propertyId,
+      unit_number: unitNumber,
+      bedrooms,
+      bathrooms,
+      monthly_rent_cents: Math.round(monthlyRentDollars * 100),
+      occupied: false
+    }).select("id").single();
+  }
+
+  const { data: createdUnit, error } = insertResult;
 
   if (error) {
     return { success: false, error: "Failed to create unit. Please try again." };

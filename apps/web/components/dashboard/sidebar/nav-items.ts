@@ -1,4 +1,5 @@
 import {
+  Banknote,
   BarChart3,
   Bell,
   BriefcaseBusiness,
@@ -48,6 +49,13 @@ export const defaultNavItems: NavItem[] = [
     icon: CreditCard,
     description: "Recent payment history and status.",
     clickHint: "open payment records"
+  },
+  {
+    id: "manager-payments",
+    label: "Manager Payments",
+    icon: Banknote,
+    description: "Recurring manager fees, reimbursements, and invoices.",
+    clickHint: "open manager payments"
   },
   {
     id: "maintenance",

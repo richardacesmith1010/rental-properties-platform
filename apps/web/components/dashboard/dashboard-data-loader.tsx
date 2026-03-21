@@ -40,22 +40,32 @@ import type { DashboardProps } from "./types";
 const EMPTY_TICKETS: MaintenanceTicket[] = [];
 const EMPTY_AUDIT_LOGS: AuditLogEntry[] = [];
 const EMPTY_RENT_INCREASE_HISTORY: RentIncreaseEntry[] = [];
+const OWNER_DAILY_OPS_CAROUSEL_SECTIONS = [
+  "overview",
+  "charges",
+  "portfolio",
+  "maintenance",
+  "leases",
+  "manager-payments",
+  "analytics"
+] as const;
 
 const OWNER_SECTION_MODE_BY_ID: Partial<Record<string, OwnerWorkflowMode>> = {
   charges: "daily_ops",
-  payments: "daily_ops",
+  payments: "records",
   maintenance: "daily_ops",
-  applications: "daily_ops",
-  inbox: "daily_ops",
-  automations: "daily_ops",
-  notifications: "daily_ops",
-  activity: "daily_ops",
-  expenses: "daily_ops",
+  applications: "new_tenant",
+  inbox: "new_manager",
+  automations: "new_manager",
+  notifications: "records",
+  activity: "records",
+  expenses: "records",
   analytics: "daily_ops",
   operations: "new_property",
-  portfolio: "new_property",
-  units: "new_property",
-  leases: "new_property",
+  portfolio: "daily_ops",
+  units: "records",
+  leases: "daily_ops",
+  "manager-payments": "daily_ops",
   leasing: "new_tenant",
   invitations: "new_tenant",
   vendors: "new_manager",
@@ -262,6 +272,9 @@ export function useDashboardData(props: DashboardProps) {
   const safeAutomationRules = props.automationRules ?? [];
   const safeListings = props.listings ?? [];
   const safeApplications = props.applications ?? [];
+  const safeManagerPaymentConfigs = props.managerPaymentConfigs ?? [];
+  const safeManagerPayments = props.managerPayments ?? [];
+  const safeManagerPaymentManagers = props.managerPaymentManagers ?? [];
   const safeVendors = props.vendors ?? [];
   const sortedVendors = [...safeVendors].sort((left, right) => {
     if (left.preferred !== right.preferred) {
@@ -306,6 +319,15 @@ export function useDashboardData(props: DashboardProps) {
   const hasExpensesSection = Boolean(
     canManagePortfolio && props.onCreateExpense && props.onUpdateExpense && props.onDeleteExpense
   );
+  const hasManagerPaymentsSection = Boolean(
+    isOwnerRole &&
+      (props.onSetupManagerPaymentConfig ||
+        props.onRecordManagerPayment ||
+        safeManagerPaymentConfigs.length > 0 ||
+        safeManagerPayments.length > 0 ||
+        safeManagerPaymentManagers.length > 0 ||
+        props.managerPaymentsWarning)
+  );
   const hasAnalyticsSection = Boolean(canManagePortfolio && safeAnalytics.enabled);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(() => {
     if (!propertyFilteringEnabled || !props.initialPropertyId) {
@@ -323,6 +345,7 @@ export function useDashboardData(props: DashboardProps) {
     props.initialManagerWorkflowMode ?? "daily_ops"
   );
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isPropertyWizardOpen, setIsPropertyWizardOpen] = useState(false);
 
   useEffect(() => {
     const nextMode = props.initialOwnerWorkflowMode;
@@ -511,6 +534,7 @@ export function useDashboardData(props: DashboardProps) {
         hasAnalyticsSection,
         hasLeasingSection,
         hasApplicationsSection,
+        hasManagerPaymentsSection,
         hasInboxSection,
         hasAutomationsSection,
         hasNotificationsSection,
@@ -529,6 +553,7 @@ export function useDashboardData(props: DashboardProps) {
       hasAnalyticsSection,
       hasLeasingSection,
       hasApplicationsSection,
+      hasManagerPaymentsSection,
       hasInboxSection,
       hasAutomationsSection,
       hasNotificationsSection,
@@ -556,7 +581,7 @@ export function useDashboardData(props: DashboardProps) {
     }
     return null;
   }, [isManagerRole, isOwnerRole, managerWorkflowMode, ownerWorkflowMode]);
-  const sectionItems = useMemo<NavItem[]>(() => {
+  const workflowSectionItems = useMemo<NavItem[]>(() => {
     if (!activeWorkflowMeta) {
       return allSectionItems;
     }
@@ -564,11 +589,18 @@ export function useDashboardData(props: DashboardProps) {
     const filtered = allSectionItems.filter((item) => allowedSections.has(item.id));
     return filtered.length > 0 ? filtered : allSectionItems;
   }, [activeWorkflowMeta, allSectionItems]);
+  const sectionItems = useMemo<NavItem[]>(
+    () =>
+      isOwnerRole && ownerWorkflowMode === "daily_ops"
+        ? allSectionItems.filter((item) => OWNER_DAILY_OPS_CAROUSEL_SECTIONS.includes(item.id as (typeof OWNER_DAILY_OPS_CAROUSEL_SECTIONS)[number]))
+        : workflowSectionItems,
+    [allSectionItems, isOwnerRole, ownerWorkflowMode, workflowSectionItems]
+  );
   const [activeSection, setActiveSection] = useState(() => {
     if (!props.initialSectionId) {
       return "overview";
     }
-    return sectionItems.some((item) => item.id === props.initialSectionId)
+    return allSectionItems.some((item) => item.id === props.initialSectionId)
       ? props.initialSectionId
       : "overview";
   });
@@ -577,16 +609,16 @@ export function useDashboardData(props: DashboardProps) {
     if (!props.initialSectionId) {
       return;
     }
-    if (sectionItems.some((item) => item.id === props.initialSectionId)) {
+    if (allSectionItems.some((item) => item.id === props.initialSectionId)) {
       setActiveSection(props.initialSectionId);
     }
-  }, [props.initialSectionId, sectionItems]);
+  }, [allSectionItems, props.initialSectionId]);
 
   useEffect(() => {
-    if (!sectionItems.some((item) => item.id === activeSection)) {
-      setActiveSection(sectionItems[0]?.id ?? "overview");
+    if (!allSectionItems.some((item) => item.id === activeSection)) {
+      setActiveSection("overview");
     }
-  }, [activeSection, sectionItems]);
+  }, [activeSection, allSectionItems]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -594,37 +626,34 @@ export function useDashboardData(props: DashboardProps) {
 
   const activeSectionIndex = sectionItems.findIndex((item) => item.id === activeSection);
   const activeSectionLabel =
-    sectionItems.find((item) => item.id === activeSection)?.label ?? "Overview";
+    allSectionItems.find((item) => item.id === activeSection)?.label ?? "Overview";
   const goToPreviousSection = () => {
-    if (activeSectionIndex <= 0) {
-      if (isOwnerRole && ownerWorkflowMode === "records") {
-        setOwnerWorkflowMode("daily_ops");
-        setActiveSection("analytics");
-      }
+    if (sectionItems.length === 0) {
       return;
     }
-    setActiveSection(sectionItems[activeSectionIndex - 1].id);
+    if (activeSectionIndex < 0) {
+      setActiveSection(sectionItems[sectionItems.length - 1].id);
+      return;
+    }
+    setActiveSection(sectionItems[(activeSectionIndex - 1 + sectionItems.length) % sectionItems.length].id);
   };
   const goToNextSection = () => {
+    if (sectionItems.length === 0) {
+      return;
+    }
     if (activeSectionIndex < 0) {
+      setActiveSection(sectionItems[0].id);
       return;
     }
-    if (activeSectionIndex >= sectionItems.length - 1) {
-      if (isOwnerRole && ownerWorkflowMode === "daily_ops") {
-        setOwnerWorkflowMode("records");
-        setActiveSection("documents");
-      }
-      return;
-    }
-    setActiveSection(sectionItems[activeSectionIndex + 1].id);
+    setActiveSection(sectionItems[(activeSectionIndex + 1) % sectionItems.length].id);
   };
   const goToSectionIfVisible = useCallback(
     (sectionId: string) => {
-      if (sectionItems.some((item) => item.id === sectionId)) {
+      if (allSectionItems.some((item) => item.id === sectionId)) {
         setActiveSection(sectionId);
       }
     },
-    [sectionItems]
+    [allSectionItems]
   );
 
   const openSection = useCallback(
@@ -744,8 +773,8 @@ export function useDashboardData(props: DashboardProps) {
       ? managerModeNavItems
       : sectionItems;
   const sidebarActiveItemId = isOwnerRole
-    ? activeSection === "analytics"
-      ? "analytics"
+    ? activeSection === "analytics" || activeSection === "manager-payments"
+      ? activeSection
       : `owner:${ownerWorkflowMode}`
     : isManagerRole
       ? `manager:${managerWorkflowMode}`
@@ -1028,9 +1057,14 @@ export function useDashboardData(props: DashboardProps) {
       setActiveSection("analytics");
       return;
     }
+    if (itemId === "manager-payments" && isOwnerRole) {
+      setOwnerWorkflowMode("daily_ops");
+      setActiveSection("manager-payments");
+      return;
+    }
     if (itemId === "notifications") {
       if (isOwnerRole) {
-        setOwnerWorkflowMode("daily_ops");
+        setOwnerWorkflowMode("records");
       }
       if (isManagerRole) {
         setManagerWorkflowMode("daily_ops");
@@ -1039,6 +1073,10 @@ export function useDashboardData(props: DashboardProps) {
       return;
     }
     if (isOwnerRole && itemId.startsWith("owner:")) {
+      if (itemId === "owner:new_property") {
+        setIsPropertyWizardOpen(true);
+        return;
+      }
       handleModeChange(itemId.replace("owner:", "") as OwnerWorkflowMode, ownerWorkflowModeMeta, setOwnerWorkflowMode);
       return;
     }
@@ -1054,6 +1092,14 @@ export function useDashboardData(props: DashboardProps) {
       setIsCommandPaletteOpen(true);
     }
   }, [isOwnerRole]);
+  const openPropertyWizard = useCallback(() => {
+    if (isOwnerRole) {
+      setIsPropertyWizardOpen(true);
+    }
+  }, [isOwnerRole]);
+  const closePropertyWizard = useCallback(() => {
+    setIsPropertyWizardOpen(false);
+  }, []);
 
   const closeCommandPalette = useCallback(() => {
     setIsCommandPaletteOpen(false);
@@ -1095,12 +1141,11 @@ export function useDashboardData(props: DashboardProps) {
       }
 
       if (actionId === "add-property") {
-        setOwnerWorkflowMode("new_property");
-        setActiveSection("operations");
+        setIsPropertyWizardOpen(true);
       }
 
       if (actionId === "create-lease") {
-        setOwnerWorkflowMode("new_property");
+        setOwnerWorkflowMode("daily_ops");
         setActiveSection("leases");
       }
 
@@ -1138,6 +1183,10 @@ export function useDashboardData(props: DashboardProps) {
     safeAutomationRules,
     safeListings,
     safeApplications,
+    managerPaymentConfigs: safeManagerPaymentConfigs,
+    managerPayments: safeManagerPayments,
+    managerPaymentManagers: safeManagerPaymentManagers,
+    managerPaymentsWarning: props.managerPaymentsWarning,
     safeVendors,
     safeExpenses,
     safeAnalytics,
@@ -1153,6 +1202,7 @@ export function useDashboardData(props: DashboardProps) {
     sortedVendors,
     hasLeasingSection,
     hasApplicationsSection,
+    hasManagerPaymentsSection,
     hasInboxSection,
     hasAutomationsSection,
     hasNotificationsSection,
@@ -1171,7 +1221,8 @@ export function useDashboardData(props: DashboardProps) {
     handleVendorCreatedSuccess,
     handlePropertyCreated,
     handleUnitCreated,
-    handleLeaseCreated
+    handleLeaseCreated,
+    isOwnerDailyOpsCarousel: isOwnerRole && ownerWorkflowMode === "daily_ops"
   } satisfies SectionRendererProps;
 
   const layoutProps: LayoutProps = {
@@ -1220,6 +1271,8 @@ export function useDashboardData(props: DashboardProps) {
     layoutProps,
     commandPaletteProps,
     occupancy,
+    openPropertyWizard,
+    closePropertyWizard,
     ownerOnboarding,
     ownerWorkflowMode,
     resolvedGamification,
@@ -1230,6 +1283,7 @@ export function useDashboardData(props: DashboardProps) {
     safePortfolio,
     sectionItems,
     sectionRendererProps,
+    isPropertyWizardOpen,
     showOnboardingWizard:
       isOwnerRole && safePortfolio.properties.length > 0 && safePortfolio.units.length === 0 && Boolean(props.onInviteTenant)
   };

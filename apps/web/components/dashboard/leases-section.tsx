@@ -30,6 +30,7 @@ interface LeasesSectionProps {
   leases: LeaseListItem[];
   rentIncreaseHistory?: RentIncreaseEntry[];
   showControls?: boolean;
+  previewCount?: number;
   onUpdateLease?: StatefulAction;
   onDeleteLease?: StatefulAction;
   onRenewLease?: StatefulAction;
@@ -113,12 +114,14 @@ export function LeasesSection({
   leases,
   rentIncreaseHistory = [],
   showControls = false,
+  previewCount,
   onUpdateLease,
   onDeleteLease,
   onRenewLease,
   onTerminateLease,
   onGoToOperations
 }: LeasesSectionProps) {
+  const [expanded, setExpanded] = useState(false);
   const [updateState, updateAction] = useFormState(onUpdateLease ?? unavailableAction, null);
   const [deleteState, deleteAction] = useFormState(onDeleteLease ?? unavailableAction, null);
   const [renewState, renewAction] = useFormState(onRenewLease ?? unavailableAction, null);
@@ -128,6 +131,8 @@ export function LeasesSection({
   const [activeTerminateLeaseId, setActiveTerminateLeaseId] = useState<string | null>(null);
   const [confirmDeleteLeaseId, setConfirmDeleteLeaseId] = useState<string | null>(null);
   const deleteFormRefs = useRef<Record<string, HTMLFormElement | null>>({});
+  const visibleLeases = previewCount && !expanded ? leases.slice(0, previewCount) : leases;
+  const hasMore = previewCount != null && leases.length > previewCount;
 
   useEffect(() => {
     if (updateState?.success || deleteState?.success || renewState?.success || terminateState?.success) {
@@ -168,20 +173,20 @@ export function LeasesSection({
         ) : (
           <div className="space-y-6">
             <AnimatedList className="space-y-6">
-            {leases.map((lease, i) => {
+            {visibleLeases.map((lease, i) => {
               const isActiveLease = (lease.leaseStatus ?? "active") === "active";
               return (
-                <DataRow key={lease.id} last={i === leases.length - 1}>
+                <DataRow key={lease.id} last={i === visibleLeases.length - 1}>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-base font-medium text-zinc-900">{lease.unitLabel}</p>
+                      <p className="text-base font-medium text-foreground">{lease.unitLabel}</p>
                       <LeaseStatusBadge status={lease.leaseStatus} endDate={lease.endDate} />
                     </div>
-                    <p className="mt-0.5 text-sm text-zinc-500">{lease.tenantEmail}</p>
-                    <p className="mt-0.5 text-sm text-zinc-500">
+                    <p className="mt-0.5 text-sm text-muted-foreground">{lease.tenantEmail}</p>
+                    <p className="mt-0.5 text-sm text-muted-foreground">
                       {formatDate(lease.startDate)} to {formatDate(lease.endDate)}
                     </p>
-                    <p className="mt-0.5 text-sm text-zinc-500">
+                    <p className="mt-0.5 text-sm text-muted-foreground">
                       {lease.gracePeriodDays}-day grace • {formatCurrency(lease.lateFeeCents)} late fee
                     </p>
 
@@ -244,9 +249,9 @@ export function LeasesSection({
 
                         {isActiveLease ? (
                           <div className="grid gap-4 lg:grid-cols-2">
-                            <div className="rounded-2xl border border-border/50 bg-zinc-50 p-4 shadow-sm">
+                            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
                               <div className="mb-3 flex items-center justify-between gap-2">
-                                <p className="text-base font-medium text-zinc-900">Renew Lease</p>
+                                <p className="text-base font-medium text-foreground">Renew Lease</p>
                                 <Button
                                   type="button"
                                   size="sm"
@@ -339,12 +344,12 @@ export function LeasesSection({
 
                   <div className="flex flex-col items-end gap-2">
                     <div className="text-right">
-                      <p className="text-base font-medium text-zinc-900">{formatCurrency(lease.monthlyRentCents)}</p>
-                      <p className="text-sm text-zinc-500">Due day {lease.dueDayOfMonth}</p>
+                      <p className="text-base font-medium text-foreground">{formatCurrency(lease.monthlyRentCents)}</p>
+                      <p className="text-sm text-muted-foreground">Due day {lease.dueDayOfMonth}</p>
                     </div>
                     <Link
                       href={`/api/pdf/lease-summary/${lease.id}`}
-                      className="inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50"
+                      className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow-sm transition hover:bg-muted"
                       title="Download a one-page PDF summary of this lease."
                     >
                       <Download className="h-3.5 w-3.5" />
@@ -396,13 +401,26 @@ export function LeasesSection({
               );
             })}
             </AnimatedList>
+            {hasMore ? (
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setExpanded((current) => !current)}
+                  title={expanded ? "Collapse the lease list preview." : "Show the full lease list."}
+                >
+                  {expanded ? "Show Less" : `View All Leases (${leases.length})`}
+                </Button>
+              </div>
+            ) : null}
 
             {rentIncreaseHistory.length > 0 ? (
-              <div className="rounded-2xl border border-border/50 bg-zinc-50 p-4 shadow-sm">
+              <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <div>
-                    <p className="text-base font-medium text-zinc-900">Rent Increase History</p>
-                    <p className="text-sm text-zinc-500">
+                    <p className="text-base font-medium text-foreground">Rent Increase History</p>
+                    <p className="text-sm text-muted-foreground">
                       Recent renewal-driven rent changes across your portfolio.
                     </p>
                   </div>
@@ -412,19 +430,19 @@ export function LeasesSection({
                   {rentIncreaseHistory.map((entry) => (
                     <div
                       key={entry.id}
-                      className="grid gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_auto]"
+                      className="grid gap-2 rounded-lg border border-border bg-muted/40 px-3 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_auto]"
                     >
                       <div className="min-w-0">
-                        <p className="font-medium text-zinc-900">
+                        <p className="font-medium text-foreground">
                           {entry.tenantName} • {entry.propertyName} • Unit {entry.unitNumber}
                         </p>
-                        <p className="mt-1 text-xs text-zinc-500">
+                        <p className="mt-1 text-xs text-muted-foreground">
                           Effective {formatDate(entry.effectiveDate)}
                           {entry.reason ? ` • ${entry.reason}` : ""}
                         </p>
                       </div>
                       <div className="text-left sm:text-right">
-                        <p className="font-semibold text-zinc-900">
+                        <p className="font-semibold text-foreground">
                           {formatCurrency(entry.previousRentCents)} → {formatCurrency(entry.newRentCents)}
                         </p>
                         <p

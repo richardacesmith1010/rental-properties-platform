@@ -55,6 +55,10 @@ import {
   voteOnAccountRenameSchema,
   voteOnDeleteLlcSchema,
   sendBatchPaymentReminderSchema,
+  setupManagerPaymentConfigSchema,
+  recordManagerPaymentSchema,
+  updateManagerPaymentStatusSchema,
+  generateManagerPaymentsSchema,
   parseFormData,
 } from "../validations";
 
@@ -221,7 +225,7 @@ describe("createUnitSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects zero rent", () => {
+  it("accepts zero rent for placeholder unit setup flows", () => {
     const result = createUnitSchema.safeParse({
       propertyId: validUUID,
       unitNumber: "2B",
@@ -229,7 +233,97 @@ describe("createUnitSchema", () => {
       bathrooms: 1,
       monthlyRentDollars: 0,
     });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts optional square footage", () => {
+    const result = createUnitSchema.safeParse({
+      propertyId: validUUID,
+      unitNumber: "2B",
+      bedrooms: 2,
+      bathrooms: 1,
+      monthlyRentDollars: 1500,
+      squareFeet: 980
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("manager payment schemas", () => {
+  const validUUID = "550e8400-e29b-41d4-a716-446655440000";
+
+  it("accepts a percentage-based recurring manager payment config", () => {
+    const result = setupManagerPaymentConfigSchema.safeParse({
+      propertyId: validUUID,
+      managerProfileId: validUUID,
+      paymentType: "percentage",
+      percentageRate: "9.00",
+      baseRentDollars: "2350.00",
+      label: "Property Management Fee",
+      frequency: "monthly"
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a flat recurring manager payment config", () => {
+    const result = setupManagerPaymentConfigSchema.safeParse({
+      propertyId: validUUID,
+      managerProfileId: validUUID,
+      paymentType: "flat",
+      flatAmountDollars: "500.00",
+      label: "Flat Management Fee",
+      frequency: "monthly"
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects configs without a matching amount input", () => {
+    const result = setupManagerPaymentConfigSchema.safeParse({
+      propertyId: validUUID,
+      managerProfileId: validUUID,
+      paymentType: "percentage",
+      label: "Missing Rate",
+      frequency: "monthly"
+    });
+
     expect(result.success).toBe(false);
+  });
+
+  it("accepts reimbursement and custom manager payments", () => {
+    expect(
+      recordManagerPaymentSchema.safeParse({
+        propertyId: validUUID,
+        managerProfileId: validUUID,
+        category: "reimbursement",
+        description: "Emergency lock replacement",
+        amountDollars: "75.50",
+        notes: "Paid out of pocket."
+      }).success
+    ).toBe(true);
+
+    expect(
+      recordManagerPaymentSchema.safeParse({
+        propertyId: validUUID,
+        managerProfileId: validUUID,
+        category: "custom",
+        description: "Monthly inspection bonus",
+        amountDollars: "125.00"
+      }).success
+    ).toBe(true);
+  });
+
+  it("accepts payment status updates and optional generation filters", () => {
+    expect(
+      updateManagerPaymentStatusSchema.safeParse({
+        paymentId: validUUID,
+        status: "paid"
+      }).success
+    ).toBe(true);
+
+    expect(generateManagerPaymentsSchema.safeParse({ propertyId: validUUID }).success).toBe(true);
+    expect(generateManagerPaymentsSchema.safeParse({ propertyId: "" }).success).toBe(true);
   });
 });
 

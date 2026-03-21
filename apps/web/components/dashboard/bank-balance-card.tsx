@@ -50,15 +50,15 @@ export function BankBalanceCard({
     : "Balance has not been refreshed yet.";
 
   return (
-    <div className="mt-3 rounded-xl border border-zinc-200 bg-zinc-50/70 px-4 py-4">
+    <div className="mt-3 rounded-xl border border-border bg-card px-4 py-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-zinc-900">
+          <p className="text-sm font-semibold text-foreground">
             {bankName ?? "Connected bank"}
             {bankMask ? ` ••••${bankMask}` : ""}
           </p>
-          <p className="mt-1 text-2xl font-semibold text-zinc-900">{balanceLabel}</p>
-          <p className="mt-1 text-xs text-zinc-500">{updatedLabel}</p>
+          <p className="mt-1 text-2xl font-semibold text-foreground">{balanceLabel}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{updatedLabel}</p>
         </div>
         <form action={refreshAction} className="space-y-2">
           <input type="hidden" name="accountId" value={accountId} />
@@ -82,13 +82,13 @@ export function BankBalanceCard({
         </form>
       </div>
 
-      <div className="mt-3 border-t border-zinc-200 pt-3">
+      <div className="mt-3 border-t border-border pt-3">
         {!showDisconnectConfirm ? (
           <Button
             type="button"
             variant="link"
             size="sm"
-            className="h-auto px-0 text-xs text-zinc-500 hover:text-zinc-700"
+            className="h-auto px-0 text-xs text-muted-foreground hover:text-foreground"
             onClick={() => setShowDisconnectConfirm(true)}
             title="Disconnect this Plaid-linked bank account."
           >
@@ -98,7 +98,7 @@ export function BankBalanceCard({
           <form action={disconnectAction} className="space-y-2">
             <input type="hidden" name="accountId" value={accountId} />
             <input type="hidden" name="confirmation" value={confirmation} />
-            <p className="text-xs text-zinc-600">Type DISCONNECT to remove this linked bank account.</p>
+            <p className="text-xs text-muted-foreground">Type DISCONNECT to remove this linked bank account.</p>
             <div className="flex flex-wrap items-center gap-2">
               <Input
                 value={confirmation}

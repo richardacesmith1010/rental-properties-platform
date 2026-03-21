@@ -13,6 +13,11 @@ const optionalOwnershipAccountIdSchema = z.preprocess(
   z.string().uuid("Invalid ownership account.").optional()
 );
 
+const optionalPositiveIntegerSchema = z.preprocess(
+  (value) => (value === "" || value == null ? undefined : value),
+  z.coerce.number().int().min(0, "Value must be 0 or more.").optional()
+);
+
 const avatarFileSchema = z.preprocess(
   (value) => {
     if (!(value instanceof File) || value.size === 0) {
@@ -42,6 +47,9 @@ export const createPropertySchema = z.object({
     (value) => (value === "" ? undefined : value),
     z.string().regex(/^\d{5}(-\d{4})?$/, "Enter a valid 5-digit ZIP code.").optional()
   ),
+  propertyType: z
+    .enum(["single_family", "duplex", "triplex", "apartment", "condo", "townhouse"])
+    .optional(),
   ownerAccountId: optionalOwnershipAccountIdSchema
 });
 
@@ -50,7 +58,8 @@ export const createUnitSchema = z.object({
   unitNumber: z.string().min(1, "Unit number is required."),
   bedrooms: z.coerce.number().int().min(0, "Bedrooms must be 0 or more."),
   bathrooms: z.coerce.number().min(0, "Bathrooms must be 0 or more."),
-  monthlyRentDollars: z.coerce.number().positive("Monthly rent must be greater than $0."),
+  monthlyRentDollars: z.coerce.number().min(0, "Monthly rent cannot be negative."),
+  squareFeet: optionalPositiveIntegerSchema
 });
 
 export const createLeaseSchema = z
@@ -518,6 +527,76 @@ export const uploadMaintenancePhotoSchema = z.object({
 
 export const deleteMaintenancePhotoSchema = z.object({
   photoId: z.string().uuid("Invalid photo ID.")
+});
+
+/* ─── Manager Payments ─── */
+
+export const setupManagerPaymentConfigSchema = z
+  .object({
+    propertyId: z.string().uuid("Invalid property selection."),
+    managerProfileId: z.string().uuid("Invalid manager selection."),
+    paymentType: z.enum(["percentage", "flat"], {
+      message: "Select a valid payment type."
+    }),
+    percentageRate: z.preprocess(
+      (value) => (value === "" || value == null ? undefined : value),
+      z.coerce.number().min(0.01, "Rate must be greater than 0%.").max(100, "Rate cannot exceed 100%.").optional()
+    ),
+    flatAmountDollars: z.preprocess(
+      (value) => (value === "" || value == null ? undefined : value),
+      z.coerce.number().min(0.01, "Amount must be greater than $0.").max(999999.99, "Amount is too large.").optional()
+    ),
+    baseRentDollars: z.preprocess(
+      (value) => (value === "" || value == null ? undefined : value),
+      z.coerce.number().min(0, "Base rent cannot be negative.").max(999999.99, "Amount is too large.").optional()
+    ),
+    label: z
+      .string()
+      .min(1, "Label is required.")
+      .max(120, "Label must be under 120 characters."),
+    frequency: z.enum(["monthly"], {
+      message: "Monthly is the only supported frequency right now."
+    }).default("monthly")
+  })
+  .refine(
+    (data) =>
+      (data.paymentType === "percentage" && data.percentageRate != null) ||
+      (data.paymentType === "flat" && data.flatAmountDollars != null),
+    {
+      message: "Provide a rate for percentage payments or an amount for flat payments.",
+      path: ["paymentType"]
+    }
+  );
+
+export const recordManagerPaymentSchema = z.object({
+  propertyId: z.string().uuid("Invalid property selection."),
+  managerProfileId: z.string().uuid("Invalid manager selection."),
+  category: z.enum(["reimbursement", "custom"], {
+    message: "Select a valid payment category."
+  }),
+  description: z
+    .string()
+    .min(1, "Description is required.")
+    .max(200, "Description must be under 200 characters."),
+  amountDollars: z.coerce.number().min(0.01, "Amount must be greater than $0.").max(999999.99),
+  notes: z
+    .string()
+    .max(500, "Notes must be under 500 characters.")
+    .optional()
+});
+
+export const updateManagerPaymentStatusSchema = z.object({
+  paymentId: z.string().uuid("Invalid payment."),
+  status: z.enum(["paid", "cancelled"], {
+    message: "Select a valid payment status."
+  })
+});
+
+export const generateManagerPaymentsSchema = z.object({
+  propertyId: z.preprocess(
+    (value) => (value === "" || value == null ? undefined : value),
+    z.string().uuid("Invalid property selection.").optional()
+  )
 });
 
 export const uploadPropertyFileSchema = z.object({

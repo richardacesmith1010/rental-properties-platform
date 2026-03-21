@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AchievementChecker } from "@/components/gamification/achievement-checker";
 import { GamificationSummary } from "@/components/gamification/gamification-summary";
@@ -8,6 +8,7 @@ import { ConnectBanner } from "@/components/dashboard/connect-banner";
 import { CommandPalette } from "@/components/dashboard/command-palette";
 import { ContextualGreeting } from "@/components/dashboard/contextual-greeting";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { PropertyWizard } from "@/components/dashboard/property-wizard";
 import { WelcomeCard } from "@/components/dashboard/welcome-card";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import { Button } from "@/components/ui/button";
@@ -17,24 +18,40 @@ import { useDashboardData } from "./dashboard-data-loader";
 import { SectionRenderer } from "./section-renderer";
 import type { DashboardProps } from "./types";
 
+function shouldHandleSectionHotkeys(target: EventTarget | null) {
+  const element = target as HTMLElement | null;
+  if (!element) {
+    return true;
+  }
+
+  const tagName = element.tagName;
+  if (["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(tagName)) {
+    return false;
+  }
+
+  return !element.isContentEditable;
+}
+
 export function Dashboard(props: DashboardProps) {
   const {
     activeSection,
     activeSectionIndex,
     activeSectionLabel,
     activeWorkflowMeta,
+    closePropertyWizard,
     commandPaletteProps,
     displayDashboardData,
     filteredPortfolio,
     goToNextSection,
     goToPreviousSection,
     isEmptyOwner,
-    isOwnerRole,
     isManagerRole,
+    isOwnerRole,
+    isPropertyWizardOpen,
     layoutProps,
     occupancy,
+    openPropertyWizard,
     ownerOnboarding,
-    ownerWorkflowMode,
     resolvedGamification,
     safePortfolio,
     sectionItems,
@@ -56,6 +73,9 @@ export function Dashboard(props: DashboardProps) {
     [props.userEmail]
   );
   const [isOnboardingDismissed, setIsOnboardingDismissed] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+  const ownerSectionCountLabel =
+    activeSectionIndex >= 0 && sectionItems.length > 0 ? `${activeSectionIndex + 1} of ${sectionItems.length}` : null;
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -63,6 +83,31 @@ export function Dashboard(props: DashboardProps) {
     }
     setIsOnboardingDismissed(window.localStorage.getItem(onboardingDismissStorageKey) === "true");
   }, [onboardingDismissStorageKey]);
+
+  useEffect(() => {
+    if (!isOwnerRole) {
+      return;
+    }
+
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (!shouldHandleSectionHotkeys(event.target)) {
+        return;
+      }
+
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        goToPreviousSection();
+      }
+
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        goToNextSection();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeydown);
+    return () => document.removeEventListener("keydown", handleKeydown);
+  }, [goToNextSection, goToPreviousSection, isOwnerRole]);
 
   const showOwnerOnboarding =
     isOwnerRole &&
@@ -80,9 +125,7 @@ export function Dashboard(props: DashboardProps) {
   const handleContinueOwnerOnboarding = (stepId: typeof ownerOnboarding.nextStepId) => {
     switch (stepId) {
       case "property":
-        window.location.href = `/owner?mode=new_property&section=operations${
-          props.activeAccountId ? `&account=${encodeURIComponent(props.activeAccountId)}` : ""
-        }`;
+        openPropertyWizard();
         return;
       case "unit":
         sectionRendererProps.openSection("units");
@@ -121,7 +164,7 @@ export function Dashboard(props: DashboardProps) {
   return (
     <DashboardLayout
       {...layoutProps}
-      mainClassName="relative flex-1 lg:ml-[260px]"
+      mainClassName="relative flex min-h-screen flex-1 flex-col lg:ml-[260px]"
       afterMain={
         <>
           {showOnboardingWizard &&
@@ -139,20 +182,66 @@ export function Dashboard(props: DashboardProps) {
             />
           ) : null}
           {isOwnerRole ? <CommandPalette {...commandPaletteProps} /> : null}
+          {isOwnerRole ? (
+            <PropertyWizard
+              open={isPropertyWizardOpen}
+              activeAccountId={props.activeAccountId}
+              managers={props.managerPaymentManagers ?? []}
+              onOpenChange={(open) => {
+                if (!open) {
+                  closePropertyWizard();
+                }
+              }}
+              onCreateProperty={props.onCreateProperty}
+              onCreateUnit={props.onCreateUnit}
+              onInviteManager={props.onInviteManager}
+              onOpenSection={sectionRendererProps.openSection}
+            />
+          ) : null}
         </>
       }
     >
       <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
-      {activeSection === "overview" ? (
-        <div className="px-6 pt-6 lg:px-8 lg:pt-8" id="overview">
-          {showOwnerOnboarding ? (
-            <WelcomeCard
-              displayName={displayName}
-              steps={ownerOnboarding.steps}
-              onContinue={handleContinueOwnerOnboarding}
-              onSkip={handleDismissOnboarding}
-            />
-          ) : (
+      <div className="flex min-h-screen flex-1 flex-col px-6 pb-6 pt-6 lg:px-8 lg:pb-8 lg:pt-8">
+        <div className="shrink-0 space-y-4">
+          {(isOwnerRole || isManagerRole) && props.stripeConnected === false ? (
+            <ConnectBanner connected={false} role={isOwnerRole ? "owner" : "manager"} />
+          ) : null}
+          {props.generatedMessage ? (
+            <Alert variant="success" className="rounded-xl px-4 py-3">
+              {props.generatedMessage}
+            </Alert>
+          ) : null}
+          {isOwnerRole ? (
+            showOwnerOnboarding ? null : (
+              <DashboardHeader
+                role={props.data.profileRole}
+                kpis={displayDashboardData.kpis}
+                occupancy={occupancy}
+                propertyCount={filteredPortfolio.properties.length}
+                userEmail={props.userEmail}
+                nickname={props.nickname}
+                fullName={props.fullName}
+                greetingContent={
+                  <ContextualGreeting
+                    userName={displayName}
+                    overdueChargeCount={overdueCharges.length}
+                    overdueAmountCents={overdueAmountCents}
+                    openTicketCount={openTicketCount}
+                  />
+                }
+                gamificationSummary={
+                  <GamificationSummary
+                    totalXp={resolvedGamification.totalXp}
+                    currentLevel={resolvedGamification.currentLevel}
+                    streakCount={resolvedGamification.streakCount}
+                    role={props.data.profileRole}
+                    className="w-full"
+                  />
+                }
+              />
+            )
+          ) : activeSection === "overview" ? (
             <DashboardHeader
               role={props.data.profileRole}
               kpis={displayDashboardData.kpis}
@@ -161,16 +250,6 @@ export function Dashboard(props: DashboardProps) {
               userEmail={props.userEmail}
               nickname={props.nickname}
               fullName={props.fullName}
-              greetingContent={
-                isOwnerRole ? (
-                  <ContextualGreeting
-                    userName={displayName}
-                    overdueChargeCount={overdueCharges.length}
-                    overdueAmountCents={overdueAmountCents}
-                    openTicketCount={openTicketCount}
-                  />
-                ) : undefined
-              }
               gamificationSummary={
                 <GamificationSummary
                   totalXp={resolvedGamification.totalXp}
@@ -181,59 +260,84 @@ export function Dashboard(props: DashboardProps) {
                 />
               }
             />
-          )}
+          ) : null}
+          {(isOwnerRole || isManagerRole) && activeWorkflowMeta && !showOwnerOnboarding ? (
+            <div className="domus-glass flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-semibold text-foreground">{activeWorkflowMeta.label}</p>
+              <p className="text-sm text-muted-foreground">{activeWorkflowMeta.description}</p>
+            </div>
+          ) : null}
         </div>
-      ) : null}
-      <div className="space-y-6 px-6 pb-8 pt-6 lg:px-8">
-        {props.generatedMessage ? (
-          <Alert variant="success" className="rounded-xl px-4 py-3">
-            {props.generatedMessage}
-          </Alert>
-        ) : null}
-        {(isOwnerRole || isManagerRole) && props.stripeConnected === false ? (
-          <ConnectBanner connected={false} role={isOwnerRole ? "owner" : "manager"} />
-        ) : null}
-        {(isOwnerRole || isManagerRole) &&
-        activeWorkflowMeta &&
-        activeSection === "overview" &&
-        !showOwnerOnboarding ? (
-          <div className="domus-glass flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-semibold text-zinc-900">{activeWorkflowMeta.label}</p>
-            <p className="text-sm text-zinc-500">{activeWorkflowMeta.description}</p>
+
+        <div className="mt-6 flex min-h-0 flex-1 flex-col rounded-[28px] border border-border/50 bg-background/80 shadow-sm">
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border/60 px-4 py-4 sm:px-5">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                {ownerSectionCountLabel ?? activeWorkflowMeta?.label ?? "Workspace"}
+              </p>
+              <h2 className="mt-1 text-2xl font-semibold text-foreground">{activeSectionLabel}</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={goToPreviousSection}
+                title="Previous section"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={goToNextSection}
+                title="Next section"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
-        ) : null}
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold domus-heading">{activeSectionLabel}</h2>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={goToPreviousSection}
-              disabled={activeSectionIndex <= 0 && !(isOwnerRole && ownerWorkflowMode === "records")}
-              title="Previous section"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={goToNextSection}
-              disabled={
-                activeSectionIndex < 0 ||
-                (activeSectionIndex >= sectionItems.length - 1 &&
-                  !(isOwnerRole && ownerWorkflowMode === "daily_ops"))
+
+          <div
+            className="min-h-0 flex-1 overflow-hidden px-4 pb-4 pt-4 sm:px-5"
+            onTouchStart={(event) => {
+              touchStartX.current = event.changedTouches[0]?.clientX ?? null;
+            }}
+            onTouchEnd={(event) => {
+              if (!isOwnerRole || touchStartX.current == null) {
+                return;
               }
-              title="Next section"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+              const delta = (event.changedTouches[0]?.clientX ?? 0) - touchStartX.current;
+              if (Math.abs(delta) < 40) {
+                return;
+              }
+              if (delta > 0) {
+                goToPreviousSection();
+              } else {
+                goToNextSection();
+              }
+              touchStartX.current = null;
+            }}
+          >
+            <section id={activeSection} className="h-full overflow-hidden">
+              {showOwnerOnboarding ? (
+                <div className="h-full overflow-auto pr-1">
+                  <WelcomeCard
+                    displayName={displayName}
+                    steps={ownerOnboarding.steps}
+                    onContinue={handleContinueOwnerOnboarding}
+                    onSkip={handleDismissOnboarding}
+                  />
+                </div>
+              ) : (
+                <div className={isOwnerRole ? "h-full overflow-hidden" : "h-full overflow-auto pr-1"}>
+                  <SectionRenderer {...sectionRendererProps} />
+                </div>
+              )}
+            </section>
           </div>
         </div>
-        <section id={activeSection} className="space-y-6">
-          <SectionRenderer {...sectionRendererProps} />
-        </section>
       </div>
     </DashboardLayout>
   );

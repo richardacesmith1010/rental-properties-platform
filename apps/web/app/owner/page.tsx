@@ -28,6 +28,7 @@ import { getDistributionHistory, getFinancialActivityFeed } from "@/lib/distribu
 import { getPendingChangeRequests } from "@/lib/distribution-approvals";
 import { getPendingWithdrawals } from "@/lib/withdrawals";
 import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
+import { getManagerPaymentsDashboardData } from "@/lib/manager-payments-data";
 import {
   completePlaidLink,
   disconnectPlaid,
@@ -99,6 +100,13 @@ import {
   voteOnWithdrawal,
   updateManagementFee
 } from "@/app/actions";
+import {
+  setupManagerPaymentConfig,
+  recordManagerPayment,
+  markManagerPaymentPaid,
+  cancelManagerPayment,
+  generateMonthlyManagerPayments
+} from "@/app/actions/manager-payments";
 import {
   getAuthenticatedUser,
   getCurrentUserRole,
@@ -189,6 +197,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
     applications,
     vendors,
     expenses,
+    managerPaymentsData,
     gamification,
     analytics,
     auditLogs,
@@ -229,6 +238,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       ? getOwnerVendors(user.id, activeAccountId)
       : Promise.resolve([]),
     getOwnerExpenseData(user.id, activeAccountId),
+    getManagerPaymentsDashboardData(user.id, activeAccountId),
     getUserGamification(user.id),
     getOwnerAnalyticsData(user.id, activeAccountId),
     getRecentAuditLogs(user.id, activeAccountId),
@@ -292,6 +302,10 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         rentIncreaseHistory={rentIncreaseHistory}
         vendors={vendors}
         expensesData={expenses}
+        managerPaymentConfigs={managerPaymentsData.configs}
+        managerPayments={managerPaymentsData.payments}
+        managerPaymentManagers={managerPaymentsData.managers}
+        managerPaymentsWarning={managerPaymentsData.warning}
         ownershipAccounts={ownershipAccounts}
         ownershipMembers={ownershipMembers}
         pendingAccountRenameRequests={pendingAccountRenameRequests}
@@ -364,6 +378,11 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         onCreateExpense={createExpense}
         onUpdateExpense={updateExpense}
         onDeleteExpense={deleteExpense}
+        onSetupManagerPaymentConfig={setupManagerPaymentConfig}
+        onRecordManagerPayment={recordManagerPayment}
+        onMarkManagerPaymentPaid={markManagerPaymentPaid}
+        onCancelManagerPayment={cancelManagerPayment}
+        onGenerateMonthlyManagerPayments={generateMonthlyManagerPayments}
         onCreateOwnershipAccount={createOwnershipAccount}
         onLinkPropertyToOwnershipAccount={linkPropertyToOwnershipAccount}
         onRenameOwnershipAccount={renameOwnershipAccount}

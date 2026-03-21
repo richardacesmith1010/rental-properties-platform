@@ -25,6 +25,7 @@ type StatefulAction = (
 interface PortfolioSectionProps {
   properties: PropertyListItem[];
   showControls?: boolean;
+  previewCount?: number;
   onRenameProperty?: StatefulAction;
   onUpdateProperty?: StatefulAction;
   onDeleteProperty?: StatefulAction;
@@ -59,6 +60,7 @@ function FormSuccess({ state, message }: { state: ActionState; message: string }
 export function PortfolioSection({
   properties,
   showControls = false,
+  previewCount,
   onRenameProperty,
   onUpdateProperty,
   onDeleteProperty,
@@ -67,6 +69,7 @@ export function PortfolioSection({
   onGoToOperations
 }: PortfolioSectionProps) {
   const router = useRouter();
+  const [expanded, setExpanded] = useState(false);
   const [updateState, updateAction] = useFormState(onUpdateProperty ?? unavailableAction, null);
   const [deleteState, deleteAction] = useFormState(onDeleteProperty ?? unavailableAction, null);
   const [managementFeeState, managementFeeAction] = useFormState(
@@ -76,6 +79,8 @@ export function PortfolioSection({
   const [activeEditPropertyId, setActiveEditPropertyId] = useState<string | null>(null);
   const [confirmDeletePropertyId, setConfirmDeletePropertyId] = useState<string | null>(null);
   const deleteFormRefs = useRef<Record<string, HTMLFormElement | null>>({});
+  const visibleProperties = previewCount && !expanded ? properties.slice(0, previewCount) : properties;
+  const hasMore = previewCount != null && properties.length > previewCount;
 
   useEffect(() => {
     if (updateState?.success || deleteState?.success || managementFeeState?.success) {
@@ -111,8 +116,9 @@ export function PortfolioSection({
             actionVariant="default"
           />
         ) : (
-          <AnimatedList>
-            {properties.map((property, i) => (
+          <>
+            <AnimatedList>
+              {visibleProperties.map((property, i) => (
               <div
                 key={property.id}
                 role={onSelectProperty && activeEditPropertyId !== property.id ? "button" : undefined}
@@ -143,7 +149,7 @@ export function PortfolioSection({
                     : undefined
                 }
               >
-                <DataRow last={i === properties.length - 1}>
+                <DataRow last={i === visibleProperties.length - 1}>
                   <div className="min-w-0 flex-1">
                     {showControls && onRenameProperty ? (
                       <InlineEdit
@@ -270,8 +276,22 @@ export function PortfolioSection({
                   </div>
                 </DataRow>
               </div>
-            ))}
-          </AnimatedList>
+              ))}
+            </AnimatedList>
+            {hasMore ? (
+              <div className="mt-4 flex justify-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setExpanded((current) => !current)}
+                  title={expanded ? "Collapse the property list preview." : "Show the full property list."}
+                >
+                  {expanded ? "Show Less" : `View All Properties (${properties.length})`}
+                </Button>
+              </div>
+            ) : null}
+          </>
         )}
       </CardContent>
       <ConfirmDialog

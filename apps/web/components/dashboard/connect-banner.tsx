@@ -8,12 +8,12 @@ interface ConnectBannerProps {
 export function ConnectBanner({ connected, role }: ConnectBannerProps) {
   if (connected) {
     return (
-      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
         <div className="flex items-center gap-3">
           <span className="text-2xl">✅</span>
           <div className="flex-1">
-            <h3 className="font-semibold text-emerald-900">Bank Connected</h3>
-            <p className="text-sm text-emerald-700">
+            <h3 className="font-semibold text-foreground">Bank Connected</h3>
+            <p className="text-sm text-muted-foreground">
               Your bank account is connected. Rent payments will be deposited directly.
             </p>
           </div>
@@ -23,12 +23,12 @@ export function ConnectBanner({ connected, role }: ConnectBannerProps) {
   }
 
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
       <div className="flex items-center gap-3">
         <span className="text-2xl">🏦</span>
         <div className="flex-1">
-          <h3 className="font-semibold text-amber-900">Connect Your Bank Account</h3>
-          <p className="text-sm text-amber-700">
+          <h3 className="font-semibold text-foreground">Connect Your Bank Account</h3>
+          <p className="text-sm text-muted-foreground">
             {role === "owner"
               ? "Connect your bank account to receive rent payments directly."
               : "Connect your bank account to receive management fee payments."}

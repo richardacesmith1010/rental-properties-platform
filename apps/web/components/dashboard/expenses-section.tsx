@@ -43,9 +43,9 @@ export function ExpensesSection({ data, vendors, propertyFiles, onCreateExpense,
             {selectedSummary ? (
               <>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                  <div className="rounded-xl border border-border/50 bg-zinc-50 px-3 py-2 shadow-sm"><p className="text-[11px] uppercase tracking-wide text-zinc-500">Income</p><p className="text-lg font-semibold text-emerald-700">{formatCurrency(selectedSummary.incomeCents)}</p></div>
-                  <div className="rounded-xl border border-border/50 bg-zinc-50 px-3 py-2 shadow-sm"><p className="text-[11px] uppercase tracking-wide text-zinc-500">Expenses</p><p className="text-lg font-semibold text-rose-700">{formatCurrency(selectedSummary.expenseCents)}</p></div>
-                  <div className="rounded-xl border border-border/50 bg-zinc-50 px-3 py-2 shadow-sm"><p className="text-[11px] uppercase tracking-wide text-zinc-500">Net Cashflow</p><p className="text-lg font-semibold text-violet-700">{formatCurrency(selectedSummary.netCents)}</p></div>
+                  <div className="rounded-xl border border-border bg-card px-3 py-2 shadow-sm"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Income</p><p className="text-lg font-semibold text-emerald-600">{formatCurrency(selectedSummary.incomeCents)}</p></div>
+                  <div className="rounded-xl border border-border bg-card px-3 py-2 shadow-sm"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Expenses</p><p className="text-lg font-semibold text-rose-600">{formatCurrency(selectedSummary.expenseCents)}</p></div>
+                  <div className="rounded-xl border border-border bg-card px-3 py-2 shadow-sm"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Net Cashflow</p><p className="text-lg font-semibold text-primary">{formatCurrency(selectedSummary.netCents)}</p></div>
                 </div>
                 <div>
                   <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">Last 12 Months</p>

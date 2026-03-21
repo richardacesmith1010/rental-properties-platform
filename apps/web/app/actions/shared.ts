@@ -7,7 +7,9 @@ export type ActionState =
       message?: string;
       joinCode?: string;
       accountId?: string;
+      propertyId?: string;
       unitId?: string;
+      paymentId?: string;
       avatarUrl?: string;
       url?: string;
       connected?: boolean;

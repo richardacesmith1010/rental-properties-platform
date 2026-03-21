@@ -126,3 +126,11 @@ export { assignVendorToTicket } from "./vendors";
 export { createExpense } from "./expenses";
 export { updateExpense } from "./expenses";
 export { deleteExpense } from "./expenses";
+
+export {
+  setupManagerPaymentConfig,
+  recordManagerPayment,
+  markManagerPaymentPaid,
+  cancelManagerPayment,
+  generateMonthlyManagerPayments
+} from "./manager-payments";

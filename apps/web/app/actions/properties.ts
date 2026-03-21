@@ -35,9 +35,18 @@ export async function createProperty(_prev: ActionState, formData: FormData): Pr
 
   const admin = createAdminClient();
   const capabilities = await getFeatureCapabilities();
-  const { name, addressLine1, city, state, postalCode, ownerAccountId } = parsed.data;
+  const { name, addressLine1, city, state, postalCode, propertyType, ownerAccountId } = parsed.data;
   let property: { id: string } | null = null;
   let error: { message: string } | null = null;
+  const basePayload = {
+    owner_profile_id: user.id,
+    name,
+    address_line1: addressLine1,
+    city,
+    state,
+    postal_code: postalCode,
+    ...(propertyType ? { property_type: propertyType } : {})
+  };
 
   if (capabilities.ownershipEnabled) {
     let targetOwnerAccountId = ownerAccountId;
@@ -51,26 +60,35 @@ export async function createProperty(_prev: ActionState, formData: FormData): Pr
       }
     }
 
-    const insertResult = await admin.from("properties").insert({
-      owner_profile_id: user.id,
-      owner_account_id: targetOwnerAccountId,
-      name,
-      address_line1: addressLine1,
-      city,
-      state,
-      postal_code: postalCode
+    let insertResult = await admin.from("properties").insert({
+      ...basePayload,
+      owner_account_id: targetOwnerAccountId
     }).select("id").single();
+    if (insertResult.error && isMissingSchemaError(insertResult.error)) {
+      insertResult = await admin.from("properties").insert({
+        owner_profile_id: user.id,
+        owner_account_id: targetOwnerAccountId,
+        name,
+        address_line1: addressLine1,
+        city,
+        state,
+        postal_code: postalCode
+      }).select("id").single();
+    }
     property = insertResult.data;
     error = insertResult.error;
   } else {
-    const insertResult = await admin.from("properties").insert({
-      owner_profile_id: user.id,
-      name,
-      address_line1: addressLine1,
-      city,
-      state,
-      postal_code: postalCode
-    }).select("id").single();
+    let insertResult = await admin.from("properties").insert(basePayload).select("id").single();
+    if (insertResult.error && isMissingSchemaError(insertResult.error)) {
+      insertResult = await admin.from("properties").insert({
+        owner_profile_id: user.id,
+        name,
+        address_line1: addressLine1,
+        city,
+        state,
+        postal_code: postalCode
+      }).select("id").single();
+    }
     property = insertResult.data;
     error = insertResult.error;
   }
@@ -132,7 +150,7 @@ export async function createProperty(_prev: ActionState, formData: FormData): Pr
   revalidatePath("/");
   revalidatePath("/owner");
   revalidatePath("/manager");
-  return { success: true };
+  return { success: true, propertyId: property?.id };
 }
 
 

@@ -24,6 +24,11 @@ import type { RentIncreaseEntry } from "@/lib/rent-increases";
 import type { DistributionHistoryEntry, FinancialActivityEvent } from "@/lib/distributions";
 import type { DistributionChangeRequestDTO } from "@/lib/distribution-approvals";
 import type { WithdrawalRequestDTO } from "@/lib/withdrawals";
+import type {
+  ManagerAssignmentOption,
+  ManagerPaymentConfigDTO,
+  ManagerPaymentDTO
+} from "@/lib/manager-payments";
 import type { ActionState } from "@/app/actions";
 import type { ManagerWorkflowMode, OwnerWorkflowMode } from "./dashboard-config";
 
@@ -56,6 +61,10 @@ export interface DashboardProps {
   financialActivityFeed?: FinancialActivityEvent[];
   listings?: RentalListingDTO[];
   applications?: ApplicationDTO[];
+  managerPaymentConfigs?: ManagerPaymentConfigDTO[];
+  managerPayments?: ManagerPaymentDTO[];
+  managerPaymentManagers?: ManagerAssignmentOption[];
+  managerPaymentsWarning?: string | null;
   applicationCount?: number;
   approvedApplicationCount?: number;
   gamification?: UserGamificationData;
@@ -124,6 +133,11 @@ export interface DashboardProps {
   onCreateExpense?: StatefulAction;
   onUpdateExpense?: StatefulAction;
   onDeleteExpense?: StatefulAction;
+  onSetupManagerPaymentConfig?: StatefulAction;
+  onRecordManagerPayment?: StatefulAction;
+  onMarkManagerPaymentPaid?: StatefulAction;
+  onCancelManagerPayment?: StatefulAction;
+  onGenerateMonthlyManagerPayments?: StatefulAction;
   onCreateOwnershipAccount?: StatefulAction;
   onLinkPropertyToOwnershipAccount?: StatefulAction;
   onRenameOwnershipAccount?: StatefulAction;

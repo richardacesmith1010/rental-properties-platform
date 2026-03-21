@@ -25,6 +25,11 @@ import type { RentIncreaseEntry } from "@/lib/rent-increases";
 import type { DistributionHistoryEntry, FinancialActivityEvent } from "@/lib/distributions";
 import type { DistributionChangeRequestDTO } from "@/lib/distribution-approvals";
 import type { WithdrawalRequestDTO } from "@/lib/withdrawals";
+import type {
+  ManagerAssignmentOption,
+  ManagerPaymentConfigDTO,
+  ManagerPaymentDTO
+} from "@/lib/manager-payments";
 import type { ActionState } from "@/app/actions";
 
 export type FormAction = (formData: FormData) => Promise<void>;
@@ -48,6 +53,10 @@ export interface SectionRendererProps {
   safeAutomationRules: AutomationRuleDTO[];
   safeListings: RentalListingDTO[];
   safeApplications: ApplicationDTO[];
+  managerPaymentConfigs: ManagerPaymentConfigDTO[];
+  managerPayments: ManagerPaymentDTO[];
+  managerPaymentManagers: ManagerAssignmentOption[];
+  managerPaymentsWarning?: string | null;
   safeVendors: VendorDTO[];
   safeExpenses: ExpenseDashboardData;
   safeAnalytics: AnalyticsDashboardData;
@@ -82,6 +91,7 @@ export interface SectionRendererProps {
   sortedVendors: VendorDTO[];
   hasLeasingSection: boolean;
   hasApplicationsSection: boolean;
+  hasManagerPaymentsSection: boolean;
   hasInboxSection: boolean;
   hasAutomationsSection: boolean;
   hasNotificationsSection: boolean;
@@ -132,6 +142,11 @@ export interface SectionRendererProps {
   onCreateExpense?: StatefulAction;
   onUpdateExpense?: StatefulAction;
   onDeleteExpense?: StatefulAction;
+  onSetupManagerPaymentConfig?: StatefulAction;
+  onRecordManagerPayment?: StatefulAction;
+  onMarkManagerPaymentPaid?: StatefulAction;
+  onCancelManagerPayment?: StatefulAction;
+  onGenerateMonthlyManagerPayments?: StatefulAction;
   onCreateOwnershipAccount?: StatefulAction;
   onLinkPropertyToOwnershipAccount?: StatefulAction;
   onRenameOwnershipAccount?: StatefulAction;
@@ -174,6 +189,7 @@ export interface SectionRendererProps {
   handlePropertyCreated: () => void;
   handleUnitCreated: () => void;
   handleLeaseCreated: () => void;
+  isOwnerDailyOpsCarousel?: boolean;
 }
 
 function SectionSkeleton() {

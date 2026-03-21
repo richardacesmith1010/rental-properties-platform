@@ -9,6 +9,7 @@ import { InvitationsSection } from "./invitations-section";
 import { KpiGrid } from "./kpi-grid";
 import { LeasingHubSection } from "./leasing-hub-section";
 import { LeasesSection } from "./leases-section";
+import { ManagerPaymentsSection } from "./manager-payments-section";
 import { MaintenanceSection } from "./maintenance-section";
 import { OperationsSection } from "./operations-section";
 import { PaymentsSection } from "./payments-section";
@@ -21,6 +22,7 @@ import { SectionErrorBoundary } from "./section-error-boundary";
 import { UnitsSection } from "./units-section";
 import { VendorsSection } from "./vendors-section";
 import { computeTrend } from "@/lib/dashboard";
+import { formatCurrency } from "@/lib/format";
 import { lazySectionComponents, type SectionRendererProps } from "./section-map";
 
 const AnalyticsSection = dynamic(
@@ -42,6 +44,33 @@ const {
   ownership: OwnershipSection,
   automations: AutomationTemplatesSection
 } = lazySectionComponents;
+
+function CompactAnalyticsPreview({
+  collectionRate,
+  avgDaysToPayment,
+  totalIncomeCentsYtd,
+  netIncomeCentsYtd
+}: SectionRendererProps["safeAnalytics"]["summaryKpis"]) {
+  const items = [
+    { label: "Collection rate", value: `${Math.round(collectionRate)}%` },
+    { label: "Avg days to pay", value: `${avgDaysToPayment.toFixed(1)}d` },
+    { label: "Income YTD", value: formatCurrency(totalIncomeCentsYtd) },
+    { label: "Net income YTD", value: formatCurrency(netIncomeCentsYtd) }
+  ];
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {items.map((item) => (
+        <div key={item.label} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            {item.label}
+          </p>
+          <p className="mt-2 text-xl font-semibold text-foreground">{item.value}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function buildBreadcrumbItems(props: SectionRendererProps): BreadcrumbItem[] {
   const items: BreadcrumbItem[] = [
@@ -200,6 +229,7 @@ export function SectionRenderer(props: SectionRendererProps) {
           onGenerateChargesHref={props.onGenerateChargesHref}
           ownerConnectedMap={props.ownerConnectedMap}
           stripeConnected={props.stripeConnected}
+          previewCount={props.isOwnerDailyOpsCarousel ? 5 : undefined}
         />
       );
 
@@ -230,6 +260,7 @@ export function SectionRenderer(props: SectionRendererProps) {
           photoWorkflowEnabled={props.safeCapabilities.photoWorkflowEnabled}
           vendorWorkflowWarning={props.safeCapabilities.warnings.vendorWorkflow}
           photoWorkflowWarning={props.safeCapabilities.warnings.photoWorkflow}
+          previewCount={props.isOwnerDailyOpsCarousel ? 4 : undefined}
         />
       );
 
@@ -471,7 +502,14 @@ export function SectionRenderer(props: SectionRendererProps) {
 
     case "analytics":
       if (!props.hasAnalyticsSection) break;
-      return renderSection("Analytics", <AnalyticsSection data={props.safeAnalytics} />);
+      return renderSection(
+        "Analytics",
+        props.isOwnerDailyOpsCarousel ? (
+          <CompactAnalyticsPreview {...props.safeAnalytics.summaryKpis} />
+        ) : (
+          <AnalyticsSection data={props.safeAnalytics} />
+        )
+      );
 
     case "operations":
       return renderSection(
@@ -507,6 +545,7 @@ export function SectionRenderer(props: SectionRendererProps) {
             props.goToSectionIfVisible("overview");
           }}
           onGoToOperations={() => props.goToSectionIfVisible("operations")}
+          previewCount={props.isOwnerDailyOpsCarousel ? 4 : undefined}
         />
       );
 
@@ -537,6 +576,26 @@ export function SectionRenderer(props: SectionRendererProps) {
           onRenewLease={props.onRenewLease}
           onTerminateLease={props.onTerminateLease}
           onGoToOperations={() => props.goToSectionIfVisible("operations")}
+          previewCount={props.isOwnerDailyOpsCarousel ? 4 : undefined}
+        />
+      );
+
+    case "manager-payments":
+      if (!props.hasManagerPaymentsSection) break;
+      return renderSection(
+        "Manager Payments",
+        <ManagerPaymentsSection
+          configs={props.managerPaymentConfigs}
+          payments={props.managerPayments}
+          managers={props.managerPaymentManagers}
+          properties={propertyOptions}
+          warning={props.managerPaymentsWarning}
+          onSetupManagerPaymentConfig={props.onSetupManagerPaymentConfig}
+          onRecordManagerPayment={props.onRecordManagerPayment}
+          onMarkManagerPaymentPaid={props.onMarkManagerPaymentPaid}
+          onCancelManagerPayment={props.onCancelManagerPayment}
+          onGenerateMonthlyManagerPayments={props.onGenerateMonthlyManagerPayments}
+          previewCount={props.isOwnerDailyOpsCarousel ? 4 : undefined}
         />
       );
 

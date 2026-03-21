@@ -69,6 +69,7 @@ interface ChargesSectionProps {
   autopayEnrollments?: AutopayEnrollmentView[];
   onSetupAutopay?: StatefulAction;
   onDisableAutopay?: StatefulAction;
+  previewCount?: number;
 }
 
 const unavailableManualPaymentAction: StatefulAction = async () => ({
@@ -154,13 +155,15 @@ export function ChargesSection({
   isTenantView = false,
   autopayEnrollments = [],
   onSetupAutopay,
-  onDisableAutopay
+  onDisableAutopay,
+  previewCount
 }: ChargesSectionProps) {
   const stripeConfigured = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
   const searchParams = useSearchParams();
   const [activeFilter, setActiveFilter] = useState<ChargeFilter>("all");
   const [manualPaymentChargeId, setManualPaymentChargeId] = useState<string | null>(null);
   const [selectedChargeIds, setSelectedChargeIds] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState(false);
   const [isSendingReminders, startSendingReminders] = useTransition();
   const [manualPaymentState, recordManualPaymentAction] = useFormState(
     onRecordManualPayment ?? unavailableManualPaymentAction,
@@ -177,6 +180,8 @@ export function ChargesSection({
   const filteredCharges = useMemo(() => {
     return charges.filter((charge) => activeFilter === "all" || charge.status === activeFilter);
   }, [activeFilter, charges]);
+  const visibleCharges = previewCount && !expanded ? filteredCharges.slice(0, previewCount) : filteredCharges;
+  const hasMoreVisibleCharges = previewCount != null && filteredCharges.length > previewCount;
 
   useEffect(() => {
     if (!batchActionsEnabled) {
@@ -185,14 +190,14 @@ export function ChargesSection({
     }
 
     setSelectedChargeIds((current) => {
-      const visibleIds = new Set(filteredCharges.map((charge) => charge.id));
+      const visibleIds = new Set(visibleCharges.map((charge) => charge.id));
       const next = new Set(Array.from(current).filter((chargeId) => visibleIds.has(chargeId)));
       if (next.size === current.size) {
         return current;
       }
       return next;
     });
-  }, [batchActionsEnabled, filteredCharges]);
+  }, [batchActionsEnabled, visibleCharges]);
 
   const pendingCount = charges.filter((charge) => charge.status === "pending").length;
   const lateCount = charges.filter((charge) => charge.status === "late").length;
@@ -226,9 +231,9 @@ export function ChargesSection({
   }, [charges, isTenantView]);
 
   const autopayStatus = searchParams?.get("autopay") ?? null;
-  const selectedVisibleCharges = filteredCharges.filter((charge) => selectedChargeIds.has(charge.id));
+  const selectedVisibleCharges = visibleCharges.filter((charge) => selectedChargeIds.has(charge.id));
   const allVisibleSelected =
-    filteredCharges.length > 0 && filteredCharges.every((charge) => selectedChargeIds.has(charge.id));
+    visibleCharges.length > 0 && visibleCharges.every((charge) => selectedChargeIds.has(charge.id));
 
   const toggleChargeSelection = (chargeId: string, checked: boolean) => {
     setSelectedChargeIds((current) => {
@@ -245,7 +250,7 @@ export function ChargesSection({
   const toggleAllVisibleCharges = (checked: boolean) => {
     setSelectedChargeIds((current) => {
       const next = new Set(current);
-      for (const charge of filteredCharges) {
+      for (const charge of visibleCharges) {
         if (checked) {
           next.add(charge.id);
         } else {
@@ -331,12 +336,12 @@ export function ChargesSection({
           </AnimatedList>
         ) : null}
 
-        <div className="mb-4 rounded-xl border border-border/50 bg-zinc-50/80 px-3 py-2 text-sm shadow-sm">
-          <span className="font-semibold text-amber-700">{pendingCount} pending</span>
-          <span className="mx-2 text-zinc-400">•</span>
-          <span className="font-semibold text-red-700">{lateCount} late</span>
-          <span className="mx-2 text-zinc-400">•</span>
-          <span className="font-semibold text-emerald-700">{paidThisMonthCount} paid this month</span>
+        <div className="mb-4 rounded-xl border border-border bg-card px-3 py-2 text-sm shadow-sm">
+          <span className="font-semibold text-amber-600">{pendingCount} pending</span>
+          <span className="mx-2 text-muted-foreground">•</span>
+          <span className="font-semibold text-red-600">{lateCount} late</span>
+          <span className="mx-2 text-muted-foreground">•</span>
+          <span className="font-semibold text-emerald-600">{paidThisMonthCount} paid this month</span>
         </div>
 
         <div className="mb-4 flex flex-wrap gap-2">
@@ -386,7 +391,7 @@ export function ChargesSection({
                 Select all visible
               </label>
               <span className="text-xs text-zinc-500">
-                {selectedVisibleCharges.length} of {filteredCharges.length} visible selected
+                {selectedVisibleCharges.length} of {visibleCharges.length} visible selected
               </span>
             </div>
           </>
@@ -405,8 +410,9 @@ export function ChargesSection({
             }
           />
         ) : (
-          <AnimatedList>
-            {filteredCharges.map((charge, i) => {
+          <>
+            <AnimatedList>
+              {visibleCharges.map((charge, i) => {
               const manualFormOpen = manualPaymentChargeId === charge.id;
               const ownerConnected =
                 ownerConnectedMap?.get(charge.propertyId) ??
@@ -416,7 +422,7 @@ export function ChargesSection({
               const category = charge.category ?? "rent";
 
               return (
-                <DataRow key={charge.id} last={i === filteredCharges.length - 1}>
+                <DataRow key={charge.id} last={i === visibleCharges.length - 1}>
                   {batchActionsEnabled ? (
                     <div className="flex items-start pt-0.5">
                       <input
@@ -570,8 +576,22 @@ export function ChargesSection({
                   </div>
                 </DataRow>
               );
-            })}
-          </AnimatedList>
+              })}
+            </AnimatedList>
+            {hasMoreVisibleCharges ? (
+              <div className="mt-4 flex justify-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setExpanded((current) => !current)}
+                  title={expanded ? "Collapse the charges preview." : "Show the full charges list."}
+                >
+                  {expanded ? "Show Less" : `View All Charges (${filteredCharges.length})`}
+                </Button>
+              </div>
+            ) : null}
+          </>
         )}
       </CardContent>
     </Card>

@@ -46,12 +46,12 @@ export function AutopayCard({
 
   if (!enrollment) {
     return (
-      <div className="rounded-xl border border-dashed border-violet-300 bg-violet-50/60 p-4">
+      <div className="rounded-xl border border-dashed border-primary/30 bg-primary/10 p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-semibold text-violet-900">Enable Autopay</p>
-            <p className="mt-1 text-sm text-violet-700">{propertyLabel}</p>
-            <p className="mt-1 text-sm text-violet-700">
+            <p className="text-sm font-semibold text-foreground">Enable Autopay</p>
+            <p className="mt-1 text-sm text-muted-foreground">{propertyLabel}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
               Automatically pay rent on the due date with your saved card.
             </p>
           </div>
@@ -63,7 +63,7 @@ export function AutopayCard({
           </form>
         </div>
         {feedbackState && !feedbackState.success ? (
-          <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700">
             {feedbackState.error}
           </p>
         ) : null}
@@ -73,12 +73,12 @@ export function AutopayCard({
 
   if (!enrollment.enabled) {
     return (
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-semibold text-amber-900">Autopay Paused</p>
-            <p className="mt-1 text-sm text-amber-700">{propertyLabel}</p>
-            <p className="mt-1 text-sm text-amber-700">
+            <p className="text-sm font-semibold text-foreground">Autopay Paused</p>
+            <p className="mt-1 text-sm text-muted-foreground">{propertyLabel}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
               Automatic payment failed twice. Add an updated card to re-enable autopay.
             </p>
           </div>
@@ -89,11 +89,11 @@ export function AutopayCard({
             </SubmitButton>
           </form>
         </div>
-        <p className="mt-3 text-xs text-amber-800">
+        <p className="mt-3 text-xs text-muted-foreground">
           Saved method: {enrollment.brand ? `${enrollment.brand.toUpperCase()} ` : ""}•••• {enrollment.last4}
         </p>
         {feedbackState && !feedbackState.success ? (
-          <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700">
             {feedbackState.error}
           </p>
         ) : null}
@@ -102,16 +102,16 @@ export function AutopayCard({
   }
 
   return (
-    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-semibold text-emerald-900">Autopay Active</p>
-          <p className="mt-1 text-sm text-emerald-700">{propertyLabel}</p>
-          <p className="mt-1 text-sm text-emerald-700">
+          <p className="text-sm font-semibold text-foreground">Autopay Active</p>
+          <p className="mt-1 text-sm text-muted-foreground">{propertyLabel}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
             {enrollment.brand ? `${enrollment.brand.toUpperCase()} ` : enrollment.paymentMethodType.toUpperCase()}•••• {enrollment.last4}
           </p>
           {enrollment.retryCount > 0 ? (
-            <p className="mt-1 text-xs text-amber-700">
+            <p className="mt-1 text-xs text-muted-foreground">
               Last payment attempt failed. We&apos;ll retry once your retry window opens.
             </p>
           ) : null}
@@ -124,7 +124,7 @@ export function AutopayCard({
         </form>
       </div>
       {disableState && !disableState.success ? (
-        <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700">
           {disableState.error}
         </p>
       ) : null}

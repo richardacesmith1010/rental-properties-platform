@@ -68,10 +68,10 @@ export function MaintenanceTracker({
   }
 
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4">
+    <div className="rounded-2xl border border-border bg-card p-4">
       <div className="mb-4">
-        <p className="text-sm font-semibold text-zinc-900">Repair Tracker</p>
-        <p className="mt-1 text-xs text-zinc-500">
+        <p className="text-sm font-semibold text-foreground">Repair Tracker</p>
+        <p className="mt-1 text-xs text-muted-foreground">
           Follow the maintenance request from submission to closeout.
         </p>
       </div>
@@ -86,7 +86,7 @@ export function MaintenanceTracker({
           return (
             <div key={step} className="relative flex flex-1 gap-3 md:flex-col md:items-center">
               {index < TRACKER_STEPS.length - 1 ? (
-                <div className="absolute left-[15px] top-8 h-[calc(100%-1rem)] w-px border-l border-dashed border-zinc-300 md:left-[calc(50%+1rem)] md:top-4 md:h-px md:w-[calc(100%-1rem)] md:border-l-0 md:border-t" />
+                <div className="absolute left-[15px] top-8 h-[calc(100%-1rem)] w-px border-l border-dashed border-border md:left-[calc(50%+1rem)] md:top-4 md:h-px md:w-[calc(100%-1rem)] md:border-l-0 md:border-t" />
               ) : null}
               <div
                 className={[
@@ -95,19 +95,19 @@ export function MaintenanceTracker({
                     ? "border-violet-400 bg-violet-500 text-white shadow-[0_0_0_6px_rgba(124,58,237,0.12)] animate-pulse"
                     : isCompleted
                       ? "border-violet-500 bg-violet-500 text-white"
-                      : "border-zinc-300 bg-white text-zinc-400"
+                      : "border-border bg-background text-muted-foreground"
                 ].join(" ")}
               >
                 {index + 1}
               </div>
               <div className="min-w-0 md:text-center">
-                <p className={`text-sm font-medium ${isFuture ? "text-zinc-500" : "text-zinc-900"}`}>
+                <p className={`text-sm font-medium ${isFuture ? "text-muted-foreground" : "text-foreground"}`}>
                   {labelForStatus(step)}
                 </p>
-                <p className="mt-1 text-xs text-zinc-500">
+                <p className="mt-1 text-xs text-muted-foreground">
                   {entry ? formatDateTime(entry.createdAt) : "Pending"}
                 </p>
-                <p className="mt-1 text-[11px] text-zinc-400">
+                <p className="mt-1 text-[11px] text-muted-foreground">
                   {entry ? entry.changedByName : isFuture ? "Pending" : "Awaiting update"}
                 </p>
                 {entry?.notes ? (
