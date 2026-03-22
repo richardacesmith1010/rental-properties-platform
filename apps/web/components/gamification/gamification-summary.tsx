@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/format";
+import { DomMascot } from "./dom-mascot";
 import { LevelBadge } from "./level-badge";
 import { StreakDisplay } from "./streak-display";
 import { XpBar } from "./xp-bar";
@@ -29,12 +30,15 @@ export function GamificationSummary({
           View achievements
         </Link>
       </div>
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <LevelBadge level={currentLevel} role={role} size="sm" />
-          <StreakDisplay count={streakCount} />
+      <div className="flex items-center gap-4">
+        <DomMascot size="md" mood="happy" className="shrink-0" />
+        <div className="min-w-0 flex-1 space-y-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <LevelBadge level={currentLevel} role={role} size="sm" />
+            <StreakDisplay count={streakCount} />
+          </div>
+          <XpBar currentXp={totalXp} currentLevel={currentLevel} />
         </div>
-        <XpBar currentXp={totalXp} currentLevel={currentLevel} />
       </div>
     </div>
   );

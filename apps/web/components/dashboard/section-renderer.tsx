@@ -15,7 +15,6 @@ import { PaymentsSection } from "./payments-section";
 import { OverviewSectionContent, PortfolioSectionContent, SectionFrame } from "./section-renderer-support";
 import { UnitsSection } from "./units-section";
 import { VendorsSection } from "./vendors-section";
-import { computeTrend } from "@/lib/dashboard";
 import { lazySectionComponents, type SectionRendererProps } from "./section-map";
 
 const AnalyticsSection = dynamic(
@@ -38,14 +37,6 @@ const {
   automations: AutomationTemplatesSection
 } = lazySectionComponents;
 export function SectionRenderer(props: SectionRendererProps) {
-  const currentRentMetric = props.selectedPropertyId ? null : props.safeAnalytics.rentMetrics.at(-1) ?? null;
-  const previousRentMetric = props.selectedPropertyId ? null : props.safeAnalytics.rentMetrics.at(-2) ?? null;
-  const currentOccupancyMetric = props.selectedPropertyId
-    ? null
-    : props.safeAnalytics.occupancyMetrics.at(-1) ?? null;
-  const previousOccupancyMetric = props.selectedPropertyId
-    ? null
-    : props.safeAnalytics.occupancyMetrics.at(-2) ?? null;
   const propertyOptions = props.safePortfolio.properties.map((property) => ({
     id: property.id,
     name: property.name
@@ -59,23 +50,6 @@ export function SectionRenderer(props: SectionRendererProps) {
     props.approvedApplicationCount ??
     props.safeApplications.filter((application) => application.status === "approved").length;
   const totalApplicationCount = props.applicationCount ?? props.safeApplications.length;
-  const revenueTrend = computeTrend(
-    currentRentMetric?.dueCents ?? props.data.kpis.monthlyGrossRentCents,
-    previousRentMetric?.dueCents ?? null
-  );
-  const currentCollectionRate =
-    currentRentMetric && currentRentMetric.dueCents > 0
-      ? (currentRentMetric.collectedCents / currentRentMetric.dueCents) * 100
-      : props.data.kpis.collectionRate;
-  const previousCollectionRate =
-    previousRentMetric && previousRentMetric.dueCents > 0
-      ? (previousRentMetric.collectedCents / previousRentMetric.dueCents) * 100
-      : null;
-  const occupancyTrend = computeTrend(
-    currentOccupancyMetric?.rate ?? props.occupancy,
-    previousOccupancyMetric?.rate ?? null
-  );
-  const collectionTrend = computeTrend(currentCollectionRate, previousCollectionRate);
   const renderSection = (sectionName: string, content: ReactNode) => (
     <SectionFrame props={props} sectionName={sectionName}>
       {content}
@@ -83,15 +57,7 @@ export function SectionRenderer(props: SectionRendererProps) {
   );
   switch (props.activeSection) {
     case "overview":
-      return renderSection(
-        "Overview",
-        <OverviewSectionContent
-          props={props}
-          revenueTrend={revenueTrend}
-          occupancyTrend={occupancyTrend}
-          collectionTrend={collectionTrend}
-        />
-      );
+      return renderSection("Overview", <OverviewSectionContent props={props} />);
 
     case "charges":
       return renderSection(

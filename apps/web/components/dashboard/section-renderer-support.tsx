@@ -1,9 +1,7 @@
 import type { ReactNode } from "react";
 import { Building2, MapPin, Wrench } from "lucide-react";
 import { formatCurrency, pluralize } from "@/lib/format";
-import { KpiGrid } from "./kpi-grid";
 import { PropertySelector } from "./property-selector";
-import { RentCollectionBar } from "./rent-collection-bar";
 import { PortfolioSection } from "./portfolio-section";
 import { InvitationsPanel } from "./invitations-panel";
 import { SectionErrorBoundary } from "./section-error-boundary";
@@ -97,34 +95,19 @@ export function SectionFrame({
 }
 
 export function OverviewSectionContent({
-  props,
-  revenueTrend,
-  occupancyTrend,
-  collectionTrend
+  props
 }: {
   props: SectionRendererProps;
-  revenueTrend: "up" | "down" | "flat" | null;
-  occupancyTrend: "up" | "down" | "flat" | null;
-  collectionTrend: "up" | "down" | "flat" | null;
 }) {
   return (
     <div className="flex min-h-full flex-col gap-4">
       <OverviewSummaryStrip props={props} />
-      <div className="space-y-4">
-        <KpiGrid
-          kpis={props.data.kpis}
-          occupancy={props.occupancy}
-          netCashFlowCents={props.data.kpis.netCashFlowCents}
-          revenueTrend={revenueTrend}
-          occupancyTrend={occupancyTrend}
-          collectionTrend={collectionTrend}
-        />
-        <RentCollectionBar
-          collectedCents={props.data.kpis.collectedRentCents}
-          pendingCents={props.data.kpis.pendingRentCents}
-          overdueCents={props.data.kpis.overdueRentCents}
-        />
-      </div>
+      <PortfolioSection
+        properties={props.filteredPortfolio.properties}
+        previewCount={props.isOwnerDailyOpsCarousel ? 3 : undefined}
+        onSelectProperty={props.onSelectProperty}
+        onGoToOperations={() => props.goToSectionIfVisible("operations")}
+      />
     </div>
   );
 }

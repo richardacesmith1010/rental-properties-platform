@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AchievementChecker } from "@/components/gamification/achievement-checker";
 import { GamificationSummary } from "@/components/gamification/gamification-summary";
+import { CompactGreetingBar } from "@/components/dashboard/compact-greeting-bar";
 import { ConnectBanner } from "@/components/dashboard/connect-banner";
 import { CommandPalette } from "@/components/dashboard/command-palette";
 import { ContextualGreeting } from "@/components/dashboard/contextual-greeting";
@@ -34,6 +35,51 @@ function shouldHandleSectionHotkeys(target: EventTarget | null) {
   }
 
   return !element.isContentEditable;
+}
+
+function PageHeader({
+  title,
+  pageCountLabel,
+  onPrevious,
+  onNext
+}: {
+  title: string;
+  pageCountLabel: string | null;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  return (
+    <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border/60 px-4 py-3 sm:px-5">
+      <div className="min-w-0">
+        <h2 className="truncate text-2xl font-bold text-foreground sm:text-[1.9rem]">{title}</h2>
+        {pageCountLabel ? <p className="mt-1 text-sm text-muted-foreground">{pageCountLabel}</p> : null}
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-11 w-11 rounded-full"
+          onClick={onPrevious}
+          title="Previous section"
+          aria-label="Previous section"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-11 w-11 rounded-full"
+          onClick={onNext}
+          title="Next section"
+          aria-label="Next section"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 export function Dashboard(props: DashboardProps) {
@@ -82,25 +128,28 @@ export function Dashboard(props: DashboardProps) {
   const openTicketCount = sectionRendererProps.filteredTickets.filter(
     (ticket) => ticket.status === "open" || ticket.status === "in_progress"
   ).length;
+  const urgentTicketCount = sectionRendererProps.filteredTickets.filter(
+    (ticket) => ticket.priority === "high" || ticket.priority === "urgent"
+  ).length;
   const onboardingDismissStorageKey = useMemo(
     () => `domus-owner-onboarding-dismissed:${props.userEmail}`,
     [props.userEmail]
   );
   const [isOnboardingDismissed, setIsOnboardingDismissed] = useState(false);
   const touchStartX = useRef<number | null>(null);
-  const ownerSectionCountLabel =
-    activeSectionIndex >= 0 && sectionItems.length > 0 ? `${activeSectionIndex + 1} of ${sectionItems.length}` : null;
+  const ownerSectionCountLabel = activeSectionIndex >= 0 && sectionItems.length > 0
+    ? `${activeSectionIndex + 1} of ${sectionItems.length}`
+    : null;
   const showOwnerDailyOpsShell = isOwnerRole && isOwnerDailyOpsEnabled;
-  const contentZoneLabel =
-    showOwnerDailyOpsShell && ownerDailyOpsPageCountLabel
-      ? ownerDailyOpsPageCountLabel
-      : ownerSectionCountLabel ?? activeWorkflowMeta?.label ?? "Workspace";
-  const contentZoneTitle =
-    showOwnerDailyOpsShell && isOwnerDailyOpsHomePage
-      ? "Home"
-      : showOwnerDailyOpsShell
-        ? ownerDailyOpsPageLabel
-        : activeSectionLabel;
+  const statusSummary = overdueCharges.length > 0
+    ? `${overdueCharges.length} overdue charge${overdueCharges.length === 1 ? "" : "s"}`
+    : urgentTicketCount > 0
+      ? `${urgentTicketCount} urgent ticket${urgentTicketCount === 1 ? "" : "s"}`
+      : openTicketCount > 0
+        ? `${openTicketCount} open ticket${openTicketCount === 1 ? "" : "s"}`
+        : "Everything looks good";
+  const contentZoneLabel = ownerSectionCountLabel ?? activeWorkflowMeta?.label ?? "Workspace";
+  const contentZoneTitle = activeSectionLabel;
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -270,149 +319,165 @@ export function Dashboard(props: DashboardProps) {
           </Alert>
         ) : null}
 
-        {!showOwnerDailyOpsShell ? (
-          <div className="mt-3 shrink-0 space-y-3">
-            {isOwnerRole ? (
-              <DashboardHeader
-                role={props.data.profileRole}
-                kpis={displayDashboardData.kpis}
-                occupancy={occupancy}
-                propertyCount={filteredPortfolio.properties.length}
-                userEmail={props.userEmail}
-                nickname={props.nickname}
-                fullName={props.fullName}
-                greetingContent={
-                  <ContextualGreeting
-                    userName={displayName}
-                    overdueChargeCount={overdueCharges.length}
-                    overdueAmountCents={overdueAmountCents}
-                    openTicketCount={openTicketCount}
-                  />
-                }
-                gamificationSummary={
-                  <GamificationSummary
-                    totalXp={resolvedGamification.totalXp}
-                    currentLevel={resolvedGamification.currentLevel}
-                    streakCount={resolvedGamification.streakCount}
-                    role={props.data.profileRole}
-                    className="w-full"
-                  />
-                }
+        {showOwnerDailyOpsShell ? (
+          <>
+            <CompactGreetingBar
+              userName={displayName}
+              statusSummary={statusSummary}
+              unreadNotificationCount={layoutProps.unreadNotificationCount}
+              onOpenSettings={() => router.push("/settings")}
+              onOpenNotifications={() => sectionRendererProps.openSection("notifications")}
+            />
+            <div className="mt-3 flex min-h-0 flex-1 flex-col rounded-[28px] border border-border/50 bg-background/80 shadow-sm">
+              <PageHeader
+                title={ownerDailyOpsPageLabel}
+                pageCountLabel={ownerDailyOpsPageCountLabel}
+                onPrevious={goToPreviousSection}
+                onNext={goToNextSection}
               />
-            ) : activeSection === "overview" ? (
-              <DashboardHeader
-                role={props.data.profileRole}
-                kpis={displayDashboardData.kpis}
-                occupancy={occupancy}
-                propertyCount={filteredPortfolio.properties.length}
-                userEmail={props.userEmail}
-                nickname={props.nickname}
-                fullName={props.fullName}
-                gamificationSummary={
-                  <GamificationSummary
-                    totalXp={resolvedGamification.totalXp}
-                    currentLevel={resolvedGamification.currentLevel}
-                    streakCount={resolvedGamification.streakCount}
-                    role={props.data.profileRole}
-                    className="w-full"
-                  />
-                }
-              />
-            ) : null}
-            {(isOwnerRole || isManagerRole) && activeWorkflowMeta && !showOwnerOnboarding ? (
-              <div className="domus-glass flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm font-semibold text-foreground">{activeWorkflowMeta.label}</p>
-                <p className="text-sm text-muted-foreground">{activeWorkflowMeta.description}</p>
+              <div
+                className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scroll-smooth px-4 pb-4 pt-3 sm:px-5 [-webkit-overflow-scrolling:touch]"
+                onTouchStart={(event) => {
+                  touchStartX.current = event.changedTouches[0]?.clientX ?? null;
+                }}
+                onTouchEnd={(event) => {
+                  if (touchStartX.current == null) {
+                    return;
+                  }
+                  const delta = (event.changedTouches[0]?.clientX ?? 0) - touchStartX.current;
+                  if (Math.abs(delta) < 40) {
+                    return;
+                  }
+                  if (delta > 0) {
+                    goToPreviousSection();
+                  } else {
+                    goToNextSection();
+                  }
+                  touchStartX.current = null;
+                }}
+              >
+                <section
+                  id={isOwnerDailyOpsHomePage ? "daily-ops-home" : activeSection}
+                  className="min-h-full"
+                >
+                  {showOwnerOnboarding ? (
+                    <div className="flex h-full items-center justify-center">
+                      <WelcomeCard
+                        displayName={displayName}
+                        steps={ownerOnboarding.steps}
+                        onContinue={handleContinueOwnerOnboarding}
+                        onSkip={handleDismissOnboarding}
+                      />
+                    </div>
+                  ) : isOwnerDailyOpsHomePage ? (
+                    <OwnerDailyOpsHome
+                      kpis={displayDashboardData.kpis}
+                      occupancy={occupancy}
+                      totalXp={resolvedGamification.totalXp}
+                      currentLevel={resolvedGamification.currentLevel}
+                      streakCount={resolvedGamification.streakCount}
+                      modeLabel={activeWorkflowMeta?.label ?? "Daily Operations Mode"}
+                      modeDescription={
+                        activeWorkflowMeta?.description ??
+                        "Daily owner runbook: revenue risk, payments, maintenance, and alerts."
+                      }
+                    />
+                  ) : (
+                    <div className="min-h-full">
+                      <SectionRenderer {...sectionRendererProps} />
+                    </div>
+                  )}
+                </section>
               </div>
-            ) : null}
-          </div>
-        ) : null}
-
-        <div className={`flex min-h-0 flex-1 flex-col rounded-[28px] border border-border/50 bg-background/80 shadow-sm ${showOwnerDailyOpsShell ? "mt-3" : "mt-4"}`}>
-          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border/60 px-4 py-3 sm:px-5">
-            <div className="min-w-0">
-              <h2 className="truncate text-2xl font-bold text-foreground sm:text-3xl">
-                {contentZoneTitle}
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">{contentZoneLabel}</p>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-11 w-11 rounded-full"
-                onClick={goToPreviousSection}
-                title="Previous section"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-11 w-11 rounded-full"
-                onClick={goToNextSection}
-                title="Next section"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-
-          <div
-            className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scroll-smooth px-4 pb-4 pt-3 sm:px-5 [-webkit-overflow-scrolling:touch]"
-            onTouchStart={(event) => {
-              touchStartX.current = event.changedTouches[0]?.clientX ?? null;
-            }}
-            onTouchEnd={(event) => {
-              if (!isOwnerRole || touchStartX.current == null) {
-                return;
-              }
-              const delta = (event.changedTouches[0]?.clientX ?? 0) - touchStartX.current;
-              if (Math.abs(delta) < 40) {
-                return;
-              }
-              if (delta > 0) {
-                goToPreviousSection();
-              } else {
-                goToNextSection();
-              }
-              touchStartX.current = null;
-            }}
-          >
-            <section
-              id={isOwnerDailyOpsEnabled && isOwnerDailyOpsHomePage ? "daily-ops-home" : activeSection}
-              className={isOwnerDailyOpsEnabled && !isOwnerDailyOpsHomePage ? "min-h-full" : "h-full"}
-            >
-              {showOwnerOnboarding ? (
-                <div className="flex h-full items-center justify-center">
-                  <WelcomeCard
-                    displayName={displayName}
-                    steps={ownerOnboarding.steps}
-                    onContinue={handleContinueOwnerOnboarding}
-                    onSkip={handleDismissOnboarding}
-                  />
-                </div>
-              ) : isOwnerDailyOpsEnabled && isOwnerDailyOpsHomePage ? (
-                <OwnerDailyOpsHome
-                  userName={displayName}
-                  overdueChargeCount={overdueCharges.length}
-                  overdueAmountCents={overdueAmountCents}
-                  openTicketCount={openTicketCount}
-                  onOpenOverview={goToNextSection}
-                  onOpenPropertyWizard={openPropertyWizard}
-                  onOpenTenantInviteWizard={openTenantInviteWizard}
-                  onOpenReports={() => router.push(layoutProps.reportsHref ?? "/owner/reports")}
+          </>
+        ) : (
+          <>
+            <div className="mt-3 shrink-0 space-y-3">
+              {isOwnerRole ? (
+                <DashboardHeader
+                  role={props.data.profileRole}
+                  kpis={displayDashboardData.kpis}
+                  occupancy={occupancy}
+                  propertyCount={filteredPortfolio.properties.length}
+                  userEmail={props.userEmail}
+                  nickname={props.nickname}
+                  fullName={props.fullName}
+                  greetingContent={
+                    <ContextualGreeting
+                      userName={displayName}
+                      overdueChargeCount={overdueCharges.length}
+                      overdueAmountCents={overdueAmountCents}
+                      openTicketCount={openTicketCount}
+                    />
+                  }
+                  gamificationSummary={
+                    <GamificationSummary
+                      totalXp={resolvedGamification.totalXp}
+                      currentLevel={resolvedGamification.currentLevel}
+                      streakCount={resolvedGamification.streakCount}
+                      role={props.data.profileRole}
+                      className="w-full"
+                    />
+                  }
                 />
-              ) : (
-                <div className={isOwnerRole ? "min-h-full" : "min-h-full"}>
-                  <SectionRenderer {...sectionRendererProps} />
+              ) : activeSection === "overview" ? (
+                <DashboardHeader
+                  role={props.data.profileRole}
+                  kpis={displayDashboardData.kpis}
+                  occupancy={occupancy}
+                  propertyCount={filteredPortfolio.properties.length}
+                  userEmail={props.userEmail}
+                  nickname={props.nickname}
+                  fullName={props.fullName}
+                  gamificationSummary={
+                    <GamificationSummary
+                      totalXp={resolvedGamification.totalXp}
+                      currentLevel={resolvedGamification.currentLevel}
+                      streakCount={resolvedGamification.streakCount}
+                      role={props.data.profileRole}
+                      className="w-full"
+                    />
+                  }
+                />
+              ) : null}
+              {(isOwnerRole || isManagerRole) && activeWorkflowMeta && !showOwnerOnboarding ? (
+                <div className="domus-glass flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm font-semibold text-foreground">{activeWorkflowMeta.label}</p>
+                  <p className="text-sm text-muted-foreground">{activeWorkflowMeta.description}</p>
                 </div>
-              )}
-            </section>
-          </div>
-        </div>
+              ) : null}
+            </div>
+
+            <div className="mt-4 flex min-h-0 flex-1 flex-col rounded-[28px] border border-border/50 bg-background/80 shadow-sm">
+              <PageHeader
+                title={contentZoneTitle}
+                pageCountLabel={contentZoneLabel}
+                onPrevious={goToPreviousSection}
+                onNext={goToNextSection}
+              />
+
+              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scroll-smooth px-4 pb-4 pt-3 sm:px-5 [-webkit-overflow-scrolling:touch]">
+                <section id={activeSection} className="min-h-full">
+                  {showOwnerOnboarding ? (
+                    <div className="flex h-full items-center justify-center">
+                      <WelcomeCard
+                        displayName={displayName}
+                        steps={ownerOnboarding.steps}
+                        onContinue={handleContinueOwnerOnboarding}
+                        onSkip={handleDismissOnboarding}
+                      />
+                    </div>
+                  ) : (
+                    <div className="min-h-full">
+                      <SectionRenderer {...sectionRendererProps} />
+                    </div>
+                  )}
+                </section>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </DashboardLayout>
   );
