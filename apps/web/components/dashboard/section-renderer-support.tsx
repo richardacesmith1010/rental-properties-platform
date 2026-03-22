@@ -88,9 +88,9 @@ export function SectionFrame({
 }) {
   return (
     <SectionErrorBoundary sectionName={sectionName}>
-      <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
+      <div className="flex min-h-full flex-col gap-4">
         <PropertyScopeControl props={props} />
-        <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
+        <div>{children}</div>
       </div>
     </SectionErrorBoundary>
   );
@@ -108,24 +108,22 @@ export function OverviewSectionContent({
   collectionTrend: "up" | "down" | "flat" | null;
 }) {
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
+    <div className="flex min-h-full flex-col gap-4">
       <OverviewSummaryStrip props={props} />
-      <div className="min-h-0 flex-1 overflow-hidden">
-        <div className="space-y-4">
-          <KpiGrid
-            kpis={props.data.kpis}
-            occupancy={props.occupancy}
-            netCashFlowCents={props.data.kpis.netCashFlowCents}
-            revenueTrend={revenueTrend}
-            occupancyTrend={occupancyTrend}
-            collectionTrend={collectionTrend}
-          />
-          <RentCollectionBar
-            collectedCents={props.data.kpis.collectedRentCents}
-            pendingCents={props.data.kpis.pendingRentCents}
-            overdueCents={props.data.kpis.overdueRentCents}
-          />
-        </div>
+      <div className="space-y-4">
+        <KpiGrid
+          kpis={props.data.kpis}
+          occupancy={props.occupancy}
+          netCashFlowCents={props.data.kpis.netCashFlowCents}
+          revenueTrend={revenueTrend}
+          occupancyTrend={occupancyTrend}
+          collectionTrend={collectionTrend}
+        />
+        <RentCollectionBar
+          collectedCents={props.data.kpis.collectedRentCents}
+          pendingCents={props.data.kpis.pendingRentCents}
+          overdueCents={props.data.kpis.overdueRentCents}
+        />
       </div>
     </div>
   );
@@ -141,8 +139,8 @@ export function PortfolioSectionContent({ props }: { props: SectionRendererProps
     tenantInvitationCount > 0;
 
   return (
-    <div className={showInvitationPanel ? "grid h-full min-h-0 gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)]" : "h-full"}>
-      <div className="min-h-0 overflow-hidden">
+    <div className={showInvitationPanel ? "grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)]" : ""}>
+      <div>
         <PortfolioSection
           properties={props.filteredPortfolio.properties}
           showControls={props.canManagePortfolio}
@@ -161,7 +159,7 @@ export function PortfolioSectionContent({ props }: { props: SectionRendererProps
         />
       </div>
       {showInvitationPanel ? (
-        <div className="min-h-0 overflow-hidden">
+        <div>
           <InvitationsPanel
             invitations={props.invitations ?? []}
             onResendInvite={props.onResendInvite!}

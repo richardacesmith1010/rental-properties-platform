@@ -27,7 +27,7 @@ export function OwnerDailyOpsHome({
   onOpenReports
 }: OwnerDailyOpsHomeProps) {
   return (
-    <div className="flex h-full min-h-0 items-center justify-center">
+    <div className="flex min-h-full items-center justify-center py-6">
       <div className="flex w-full max-w-3xl flex-col items-center gap-6 rounded-[32px] border border-border/60 bg-card/75 px-8 py-10 text-center shadow-sm">
         <div className="space-y-2">
           <ContextualGreeting

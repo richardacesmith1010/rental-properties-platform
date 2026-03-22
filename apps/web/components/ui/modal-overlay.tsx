@@ -108,7 +108,7 @@ export function ModalOverlay({ open, onClose, children }: ModalOverlayProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50 overflow-y-auto"
       role="dialog"
       aria-modal="true"
     >
@@ -117,12 +117,14 @@ export function ModalOverlay({ open, onClose, children }: ModalOverlayProps) {
         onClick={() => onCloseRef.current?.()}
         aria-hidden="true"
       />
-      <div
-        ref={containerRef}
-        className="relative z-10 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto rounded-2xl animate-scale-in"
-        tabIndex={-1}
-      >
-        {children}
+      <div className="relative z-10 flex min-h-full items-start justify-center px-4 py-6 sm:items-center">
+        <div
+          ref={containerRef}
+          className="relative z-10 mx-auto w-full max-w-2xl overflow-y-auto rounded-2xl animate-scale-in scroll-smooth [-webkit-overflow-scrolling:touch]"
+          tabIndex={-1}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );

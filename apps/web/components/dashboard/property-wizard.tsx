@@ -260,18 +260,22 @@ export function PropertyWizard({
 
   return (
     <ModalOverlay open={open} onClose={() => onOpenChange(false)}>
-      <div className="w-full max-w-3xl rounded-[28px] border border-border bg-background p-6 shadow-2xl">
-        <div className="mb-5">
+      <div className="flex w-full max-w-3xl max-h-[85vh] flex-col overflow-hidden rounded-[28px] border border-border bg-background shadow-2xl">
+        <div className="shrink-0 p-6 pb-0">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">New Property</p>
           <h2 className="mt-2 text-2xl font-semibold text-foreground">Create a property, units, and manager assignment</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Create a property, add units, and optionally assign a manager without leaving the dashboard.
           </p>
         </div>
-        <div className="space-y-5">
-        <WizardProgress step={step} />
-        {errorMessage ? <Alert variant="error">{errorMessage}</Alert> : null}
-        {successMessage ? <Alert variant="success">{successMessage}</Alert> : null}
+        <div className="flex min-h-0 flex-1 flex-col p-6 pt-5">
+          <div className="shrink-0 space-y-5">
+            <WizardProgress step={step} />
+            {errorMessage ? <Alert variant="error">{errorMessage}</Alert> : null}
+            {successMessage ? <Alert variant="success">{successMessage}</Alert> : null}
+          </div>
+
+          <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1 scroll-smooth [-webkit-overflow-scrolling:touch]">
 
         {step === 0 ? (
           <div className="space-y-4">
@@ -464,9 +468,10 @@ export function PropertyWizard({
             </div>
           </div>
         ) : null}
+          </div>
 
         {step < 3 ? (
-          <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
+          <div className="mt-5 flex shrink-0 items-center justify-between gap-3 border-t border-border pt-4">
             <Button
               type="button"
               variant="outline"

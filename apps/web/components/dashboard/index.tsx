@@ -361,7 +361,7 @@ export function Dashboard(props: DashboardProps) {
           </div>
 
           <div
-            className="min-h-0 flex-1 overflow-hidden px-4 pb-4 pt-3 sm:px-5"
+            className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scroll-smooth px-4 pb-4 pt-3 sm:px-5 [-webkit-overflow-scrolling:touch]"
             onTouchStart={(event) => {
               touchStartX.current = event.changedTouches[0]?.clientX ?? null;
             }}
@@ -383,7 +383,7 @@ export function Dashboard(props: DashboardProps) {
           >
             <section
               id={isOwnerDailyOpsEnabled && isOwnerDailyOpsHomePage ? "daily-ops-home" : activeSection}
-              className="h-full overflow-hidden"
+              className={isOwnerDailyOpsEnabled && !isOwnerDailyOpsHomePage ? "min-h-full" : "h-full"}
             >
               {showOwnerOnboarding ? (
                 <div className="flex h-full items-center justify-center">
@@ -406,7 +406,7 @@ export function Dashboard(props: DashboardProps) {
                   onOpenReports={() => router.push(layoutProps.reportsHref ?? "/owner/reports")}
                 />
               ) : (
-                <div className={isOwnerRole ? "h-full overflow-hidden" : "h-full overflow-auto pr-1"}>
+                <div className={isOwnerRole ? "min-h-full" : "min-h-full"}>
                   <SectionRenderer {...sectionRendererProps} />
                 </div>
               )}
