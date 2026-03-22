@@ -1,6 +1,7 @@
+import type { ChargeDetailRecordDTO } from "@/lib/charge-audit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
-import { getLeasesForScope } from "./reports-rent-roll";
+import { getChargeDetailsForLeases, getLeasesForScope } from "./reports-rent-roll";
 
 export interface TenantLedgerEntry {
   date: string;
@@ -10,6 +11,9 @@ export interface TenantLedgerEntry {
   balance: number;
   propertyName: string;
   unitNumber: string;
+  chargeId?: string | null;
+  paymentId?: string | null;
+  charge?: ChargeDetailRecordDTO | null;
 }
 
 export interface TenantLedger {
@@ -36,23 +40,22 @@ export async function getTenantLedgerReport(
       return [];
     }
 
-    const leaseIds = filteredLeases.map((lease) => lease.id);
-    const { data: charges, error: chargeError } = await admin
-      .from("rent_charges")
-      .select("id, lease_id, due_date, amount_cents, category")
-      .in("lease_id", leaseIds)
-      .order("due_date", { ascending: true });
-
-    if (chargeError) {
-      throw chargeError;
-    }
-
-    const chargeIdById = new Map((charges ?? []).map((charge) => [charge.id, charge]));
+    const { detailsByLeaseId, chargeIds } = await getChargeDetailsForLeases({
+      admin,
+      context,
+      leases: filteredLeases,
+      tenantById
+    });
+    const chargeIdById = new Map(
+      Array.from(detailsByLeaseId.values())
+        .flat()
+        .map((charge) => [charge.id, charge])
+    );
     const { data: payments, error: paymentError } = chargeIdById.size
       ? await admin
           .from("payments")
           .select("id, rent_charge_id, amount_cents, paid_at")
-          .in("rent_charge_id", Array.from(chargeIdById.keys()))
+          .in("rent_charge_id", chargeIds)
           .order("paid_at", { ascending: true })
       : { data: [], error: null };
 
@@ -72,16 +75,18 @@ export async function getTenantLedgerReport(
       const propertyName = property?.name ?? "Unknown Property";
       const unitNumber = unit?.unitNumber ?? "-";
 
-      for (const charge of charges?.filter((row) => row.lease_id === lease.id) ?? []) {
+      for (const charge of detailsByLeaseId.get(lease.id) ?? []) {
         const tenantEntries = entriesByTenantId.get(lease.tenant_profile_id) ?? [];
         tenantEntries.push({
-          date: charge.due_date,
+          date: charge.dueDate,
           type: "charge",
-          description: `${charge.category === "late_fee" ? "Late fee" : "Rent charge"} posted`,
-          amount: charge.amount_cents,
+          description: `${charge.category === "late_fee" ? "Late fee" : "Charge"} posted`,
+          amount: charge.amountCents,
           balance: 0,
           propertyName,
-          unitNumber
+          unitNumber,
+          chargeId: charge.id,
+          charge
         });
         entriesByTenantId.set(lease.tenant_profile_id, tenantEntries);
       }
@@ -93,7 +98,7 @@ export async function getTenantLedgerReport(
         continue;
       }
 
-      const lease = filteredLeases.find((candidate) => candidate.id === charge.lease_id);
+      const lease = filteredLeases.find((candidate) => candidate.id === charge.leaseId);
       if (!lease?.tenant_profile_id) {
         continue;
       }
@@ -108,7 +113,10 @@ export async function getTenantLedgerReport(
         amount: -payment.amount_cents,
         balance: 0,
         propertyName: property?.name ?? "Unknown Property",
-        unitNumber: unit?.unitNumber ?? "-"
+        unitNumber: unit?.unitNumber ?? "-",
+        paymentId: payment.id,
+        chargeId: charge.id,
+        charge
       });
       entriesByTenantId.set(lease.tenant_profile_id, tenantEntries);
     }

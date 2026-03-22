@@ -1,15 +1,27 @@
 "use client";
 
+import type { ActionState } from "@/app/actions";
 import { delinquencyToCsv, downloadReportCsv } from "@/lib/csv-export-reports";
 import type { DelinquencyItem } from "@/lib/reports";
 import { formatCurrency } from "@/lib/format";
 import { ReportSection } from "./report-layout";
+import { ChargeActionList } from "./drilldown-panel";
+
+type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
 interface DelinquencyReportProps {
   data: DelinquencyItem[];
+  onEditCharge?: StatefulAction;
+  onDeleteCharge?: StatefulAction;
+  onWaiveCharge?: StatefulAction;
 }
 
-export function DelinquencyReport({ data }: DelinquencyReportProps) {
+export function DelinquencyReport({
+  data,
+  onEditCharge,
+  onDeleteCharge,
+  onWaiveCharge
+}: DelinquencyReportProps) {
   return (
     <ReportSection
       id="delinquency-aging"
@@ -40,6 +52,15 @@ export function DelinquencyReport({ data }: DelinquencyReportProps) {
       ]}
       emptyTitle="No delinquency data"
       emptyDescription="Past-due balances will appear here when charges age beyond the due date."
+      getRowId={(row) => `${row.leaseId}:${row.tenantEmail}`}
+      renderExpandedContent={(row) => (
+        <ChargeActionList
+          charges={row.chargeDetails}
+          onEditCharge={onEditCharge}
+          onDeleteCharge={onDeleteCharge}
+          onWaiveCharge={onWaiveCharge}
+        />
+      )}
     />
   );
 }

@@ -52,12 +52,19 @@ export { updateUnit } from "./units";
 export { updateUnitField } from "./units";
 export { deleteUnit } from "./units";
 
-export { createLease, updateLease, deleteLease } from "./lease-mutations";
+export { createLease, updateLease, deleteLease, updateRentAmount } from "./lease-mutations";
 export { renewLease, terminateLease } from "./lease-lifecycle-actions";
 
 export { createCheckoutForCharge } from "./charges";
 export { deletePendingCharge } from "./charges";
 export { recordManualPayment } from "./charges";
+export {
+  createManualCharge,
+  deleteCharge,
+  editCharge,
+  updateLeaseRentAmount,
+  waiveCharge
+} from "./charge-management";
 export { setupAutopay } from "./autopay";
 export { disableAutopay } from "./autopay";
 

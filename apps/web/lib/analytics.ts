@@ -3,6 +3,7 @@ import {
   getAdministeredPropertyIds,
   getAdministeredPropertyIdsForAccount
 } from "@/lib/property-access";
+import { withChargeEditingFallback } from "@/lib/charge-audit";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 export interface MonthlyRentMetric {
@@ -402,12 +403,23 @@ export async function getOwnerAnalyticsData(
     const leaseIds = leaseRows.map((lease) => lease.id);
 
     const chargesQuery = leaseIds.length
-      ? await admin
-          .from("rent_charges")
-          .select("id, lease_id, due_date, amount_cents, status, category")
-          .in("lease_id", leaseIds)
-          .gte("due_date", analyticsStartDate)
-          .lte("due_date", analyticsEndDate)
+      ? await withChargeEditingFallback(
+          () =>
+            admin
+              .from("rent_charges")
+              .select("id, lease_id, due_date, amount_cents, status, category")
+              .in("lease_id", leaseIds)
+              .gte("due_date", analyticsStartDate)
+              .lte("due_date", analyticsEndDate)
+              .is("deleted_at", null),
+          () =>
+            admin
+              .from("rent_charges")
+              .select("id, lease_id, due_date, amount_cents, status, category")
+              .in("lease_id", leaseIds)
+              .gte("due_date", analyticsStartDate)
+              .lte("due_date", analyticsEndDate)
+        )
       : {
           data: [] as AnalyticsChargeRow[],
           error: null

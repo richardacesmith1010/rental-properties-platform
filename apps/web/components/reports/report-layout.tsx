@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import {
   ArrowUpDown,
   BarChart3,
@@ -38,6 +38,8 @@ interface ReportSectionProps<T> {
   defaultSortKey?: string;
   defaultSortDirection?: SortDirection;
   footer?: React.ReactNode;
+  getRowId?: (row: T, index: number) => string;
+  renderExpandedContent?: (row: T) => React.ReactNode;
 }
 
 export interface ReportCardProps {
@@ -90,11 +92,14 @@ export function ReportSection<T>({
   exportLabel = "Export CSV",
   defaultSortKey,
   defaultSortDirection = "asc",
-  footer
+  footer,
+  getRowId,
+  renderExpandedContent
 }: ReportSectionProps<T>) {
   const initialSortKey = defaultSortKey ?? columns.find((column) => column.sortValue)?.key ?? columns[0]?.key;
   const [sortKey, setSortKey] = useState(initialSortKey);
   const [sortDirection, setSortDirection] = useState<SortDirection>(defaultSortDirection);
+  const [expandedRowIds, setExpandedRowIds] = useState<Set<string>>(new Set());
 
   const sortedRows = useMemo(() => {
     const column = columns.find((entry) => entry.key === sortKey);
@@ -126,6 +131,22 @@ export function ReportSection<T>({
     }
     setSortKey(column.key);
     setSortDirection("asc");
+  }
+
+  function toggleExpanded(row: T, index: number) {
+    if (!renderExpandedContent) {
+      return;
+    }
+    const rowId = getRowId?.(row, index) ?? `${id}-${index}`;
+    setExpandedRowIds((current) => {
+      const next = new Set(current);
+      if (next.has(rowId)) {
+        next.delete(rowId);
+      } else {
+        next.add(rowId);
+      }
+      return next;
+    });
   }
 
   return (
@@ -175,15 +196,32 @@ export function ReportSection<T>({
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
-              {sortedRows.map((row, index) => (
-                <tr key={index} className="domus-table-row align-top">
-                  {columns.map((column) => (
-                    <td key={column.key} className={`px-3 py-2 text-zinc-700 ${column.className ?? ""}`}>
-                      {column.render(row)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
+              {sortedRows.map((row, index) => {
+                const rowId = getRowId?.(row, index) ?? `${id}-${index}`;
+                const expanded = expandedRowIds.has(rowId);
+                return (
+                  <Fragment key={rowId}>
+                    <tr
+                      className={`domus-table-row align-top ${renderExpandedContent ? "cursor-pointer" : ""}`}
+                      onClick={() => toggleExpanded(row, index)}
+                      title={renderExpandedContent ? `Expand ${title} details for this row.` : undefined}
+                    >
+                      {columns.map((column) => (
+                        <td key={column.key} className={`px-3 py-2 text-zinc-700 ${column.className ?? ""}`}>
+                          {column.render(row)}
+                        </td>
+                      ))}
+                    </tr>
+                    {expanded && renderExpandedContent ? (
+                      <tr className="bg-muted/20">
+                        <td colSpan={columns.length} className="px-3 py-4">
+                          {renderExpandedContent(row)}
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
           {footer ? <div className="mt-4">{footer}</div> : null}

@@ -22,6 +22,7 @@ const STATUS_MAP: Record<string, StatusCategory> = {
   failed: "danger",
   terminated: "danger",
   cancelled: "neutral",
+  waived: "neutral",
   inactive: "neutral",
   void: "neutral",
   draft: "neutral",

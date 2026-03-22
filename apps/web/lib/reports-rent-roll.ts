@@ -1,8 +1,19 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  type ChargeDetailRecordDTO,
+  type ChargeEditHistoryEntryDTO,
+  type ChargeStatus,
+  getChargeAuditSummary,
+  getChargeEditHistoryMap,
+  withChargeEditingFallback
+} from "@/lib/charge-audit";
 import { getAdministeredPropertyIds } from "@/lib/property-access";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 export interface RentRollItem {
+  leaseId: string;
+  propertyId: string;
+  tenantProfileId: string | null;
   propertyName: string;
   unitNumber: string;
   tenantName: string | null;
@@ -13,6 +24,7 @@ export interface RentRollItem {
   leaseStatus: string;
   currentBalance: number;
   lastPaymentDate: string | null;
+  chargeDetails: ChargeDetailRecordDTO[];
 }
 
 export interface ScopedPropertyContext {
@@ -218,6 +230,105 @@ export function composePropertyAddress(property: {
     .join(", ");
 }
 
+export async function getChargeDetailsForLeases(params: {
+  admin: ReturnType<typeof createAdminClient>;
+  context: ScopedPropertyContext;
+  leases: Array<{
+    id: string;
+    unit_id: string;
+    tenant_profile_id: string | null;
+  }>;
+  tenantById: Map<string, { name: string | null; email: string | null }>;
+  statuses?: ChargeStatus[];
+}) {
+  const { admin, context, leases, tenantById, statuses } = params;
+  const leaseIds = leases.map((lease) => lease.id);
+
+  if (leaseIds.length === 0) {
+    return {
+      chargeIds: [] as string[],
+      detailsByLeaseId: new Map<string, ChargeDetailRecordDTO[]>()
+    };
+  }
+
+  const primary = () => {
+    let query = admin
+      .from("rent_charges")
+      .select("id, lease_id, due_date, amount_cents, status, category, notes")
+      .in("lease_id", leaseIds)
+      .is("deleted_at", null)
+      .order("due_date", { ascending: true });
+    if (statuses?.length) {
+      query = query.in("status", statuses);
+    }
+    return query;
+  };
+  const fallback = () => {
+    let query = admin
+      .from("rent_charges")
+      .select("id, lease_id, due_date, amount_cents, status, category")
+      .in("lease_id", leaseIds)
+      .order("due_date", { ascending: true });
+    if (statuses?.length) {
+      query = query.in("status", statuses.filter((status) => status !== "waived"));
+    }
+    return query;
+  };
+
+  const { data: charges, error } = await withChargeEditingFallback(primary, fallback);
+  if (error) {
+    throw error;
+  }
+
+  const chargeRows = (charges ?? []) as Array<{
+    id: string;
+    lease_id: string;
+    due_date: string;
+    amount_cents: number;
+    status: ChargeStatus;
+    category: string | null;
+    notes?: string | null;
+  }>;
+  const chargeIds = chargeRows.map((charge) => charge.id);
+  const historyByChargeId = await getChargeEditHistoryMap(admin, chargeIds);
+  const leaseById = new Map(leases.map((lease) => [lease.id, lease]));
+  const detailsByLeaseId = new Map<string, ChargeDetailRecordDTO[]>();
+
+  for (const charge of chargeRows) {
+    const lease = leaseById.get(charge.lease_id);
+    if (!lease) {
+      continue;
+    }
+    const unit = context.unitById.get(lease.unit_id);
+    const property = unit ? context.propertyById.get(unit.propertyId) : null;
+    const tenant = lease.tenant_profile_id ? tenantById.get(lease.tenant_profile_id) : null;
+    const history = historyByChargeId.get(charge.id) ?? ([] as ChargeEditHistoryEntryDTO[]);
+    const audit = getChargeAuditSummary(history);
+    const list = detailsByLeaseId.get(charge.lease_id) ?? [];
+    list.push({
+      id: charge.id,
+      leaseId: charge.lease_id,
+      propertyId: unit?.propertyId ?? "",
+      propertyName: property?.name ?? "Unknown Property",
+      unitNumber: unit?.unitNumber ?? "-",
+      tenantProfileId: lease.tenant_profile_id,
+      tenantName: tenant?.name ?? tenant?.email ?? "Unknown tenant",
+      tenantEmail: tenant?.email ?? "",
+      dueDate: charge.due_date,
+      amountCents: charge.amount_cents,
+      status: charge.status,
+      category: (charge.category ?? "rent") as ChargeDetailRecordDTO["category"],
+      notes: charge.notes ?? null,
+      latestEditedAt: audit.latestEditedAt,
+      latestEditedByName: audit.latestEditedByName,
+      editedCount: audit.editedCount
+    });
+    detailsByLeaseId.set(charge.lease_id, list);
+  }
+
+  return { chargeIds, detailsByLeaseId };
+}
+
 export async function getRentRollReport(userId: string): Promise<RentRollItem[]> {
   try {
     const admin = createAdminClient();
@@ -230,19 +341,19 @@ export async function getRentRollReport(userId: string): Promise<RentRollItem[]>
       return [];
     }
 
-    const leaseIds = activeLeases.map((lease) => lease.id);
-    const { data: charges } = await admin
-      .from("rent_charges")
-      .select("id, lease_id, amount_cents, status")
-      .in("lease_id", leaseIds)
-      .in("status", ["pending", "late"]);
-
-    const { data: chargeIds } = await admin
-      .from("rent_charges")
-      .select("id, lease_id")
-      .in("lease_id", leaseIds);
-
-    const leaseIdByChargeId = new Map((chargeIds ?? []).map((charge) => [charge.id, charge.lease_id]));
+    const { detailsByLeaseId } = await getChargeDetailsForLeases({
+      admin,
+      context,
+      leases: activeLeases,
+      tenantById,
+      statuses: ["pending", "late", "waived", "paid"]
+    });
+    const leaseIdByChargeId = new Map<string, string>();
+    for (const [leaseId, details] of detailsByLeaseId.entries()) {
+      for (const detail of details) {
+        leaseIdByChargeId.set(detail.id, leaseId);
+      }
+    }
     const { data: payments } = leaseIdByChargeId.size
       ? await admin
           .from("payments")
@@ -251,10 +362,12 @@ export async function getRentRollReport(userId: string): Promise<RentRollItem[]>
       : { data: [] };
 
     const balanceByLeaseId = new Map<string, number>();
-    for (const charge of charges ?? []) {
+    for (const [leaseId, details] of detailsByLeaseId.entries()) {
       balanceByLeaseId.set(
-        charge.lease_id,
-        (balanceByLeaseId.get(charge.lease_id) ?? 0) + charge.amount_cents
+        leaseId,
+        details
+          .filter((detail) => detail.status === "pending" || detail.status === "late")
+          .reduce((sum, detail) => sum + detail.amountCents, 0)
       );
     }
 
@@ -276,6 +389,9 @@ export async function getRentRollReport(userId: string): Promise<RentRollItem[]>
       const tenant = lease.tenant_profile_id ? tenantById.get(lease.tenant_profile_id) : null;
 
       return {
+        leaseId: lease.id,
+        propertyId: unit?.propertyId ?? "",
+        tenantProfileId: lease.tenant_profile_id ?? null,
         propertyName: property?.name ?? "Unknown Property",
         unitNumber: unit?.unitNumber ?? "-",
         tenantName: tenant?.name ?? null,
@@ -285,7 +401,8 @@ export async function getRentRollReport(userId: string): Promise<RentRollItem[]>
         leaseEnd: lease.end_date,
         leaseStatus: lease.lease_status ?? (lease.active ? "active" : "inactive"),
         currentBalance: balanceByLeaseId.get(lease.id) ?? 0,
-        lastPaymentDate: latestPaymentByLeaseId.get(lease.id) ?? null
+        lastPaymentDate: latestPaymentByLeaseId.get(lease.id) ?? null,
+        chargeDetails: detailsByLeaseId.get(lease.id) ?? []
       };
     });
   } catch (error) {

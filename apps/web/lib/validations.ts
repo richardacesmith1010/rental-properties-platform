@@ -176,7 +176,77 @@ export const payChargeSchema = z.object({
 });
 
 export const deletePendingChargeSchema = z.object({
-  chargeId: z.string().uuid("Invalid charge ID.")
+  chargeId: z.string().uuid("Invalid charge ID."),
+  reason: z
+    .string()
+    .trim()
+    .max(500, "Reason must be under 500 characters.")
+    .optional()
+});
+
+export const chargeCategorySchema = z.enum([
+  "rent",
+  "late_fee",
+  "utility",
+  "maintenance",
+  "deposit",
+  "key_replacement",
+  "other"
+]);
+
+export const editableChargeStatusSchema = z.enum(["pending", "late", "waived"]);
+
+export const editChargeSchema = z.object({
+  chargeId: z.string().uuid("Invalid charge ID."),
+  amountDollars: z.coerce
+    .number()
+    .positive("Amount must be greater than $0.")
+    .max(999999.99, "Amount cannot exceed $999,999.99."),
+  dueDate: z.string().min(1, "Due date is required."),
+  category: chargeCategorySchema,
+  status: editableChargeStatusSchema,
+  notes: z
+    .string()
+    .trim()
+    .max(1000, "Notes must be under 1,000 characters.")
+    .optional(),
+  reason: z
+    .string()
+    .trim()
+    .min(1, "Reason is required.")
+    .max(500, "Reason must be under 500 characters.")
+});
+
+export const createManualChargeSchema = z.object({
+  leaseId: z.string().uuid("Select a valid lease."),
+  amountDollars: z.coerce
+    .number()
+    .positive("Amount must be greater than $0.")
+    .max(999999.99, "Amount cannot exceed $999,999.99."),
+  dueDate: z.string().min(1, "Due date is required."),
+  category: chargeCategorySchema,
+  notes: z
+    .string()
+    .trim()
+    .max(1000, "Description must be under 1,000 characters.")
+    .optional()
+});
+
+export const waiveChargeSchema = z.object({
+  chargeId: z.string().uuid("Invalid charge ID."),
+  reason: z
+    .string()
+    .trim()
+    .max(500, "Reason must be under 500 characters.")
+    .optional()
+});
+
+export const updateLeaseRentAmountSchema = z.object({
+  leaseId: z.string().uuid("Invalid lease ID."),
+  monthlyRentDollars: z.coerce
+    .number()
+    .positive("Rent amount must be greater than $0.")
+    .max(999999.99, "Rent amount cannot exceed $999,999.99.")
 });
 
 export const recordManualPaymentSchema = z.object({

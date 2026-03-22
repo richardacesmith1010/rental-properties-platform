@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { withChargeEditingFallback } from "@/lib/charge-audit";
 import { formatDate } from "@/lib/format";
 import {
   createNotificationWithDelivery,
@@ -159,13 +160,25 @@ export async function applyLateFeesToOverdueCharges(
     return 0;
   }
 
-  const { data: lateCandidates, error: candidateError } = await supabase
-    .from("rent_charges")
-    .select("id, lease_id, due_date, status, category")
-    .in("lease_id", leaseIds)
-    .eq("status", "pending")
-    .eq("category", "rent")
-    .lt("due_date", todayIso);
+  const { data: lateCandidates, error: candidateError } = await withChargeEditingFallback(
+    () =>
+      supabase
+        .from("rent_charges")
+        .select("id, lease_id, due_date, status, category")
+        .in("lease_id", leaseIds)
+        .eq("status", "pending")
+        .eq("category", "rent")
+        .lt("due_date", todayIso)
+        .is("deleted_at", null),
+    () =>
+      supabase
+        .from("rent_charges")
+        .select("id, lease_id, due_date, status, category")
+        .in("lease_id", leaseIds)
+        .eq("status", "pending")
+        .eq("category", "rent")
+        .lt("due_date", todayIso)
+  );
 
   if (candidateError) {
     throw candidateError;

@@ -1,4 +1,5 @@
 import type { AppRole } from "@/lib/auth";
+import { withChargeEditingFallback } from "@/lib/charge-audit";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { canUserAdministerProperty, getAdministeredPropertyIds } from "@/lib/property-access";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -230,11 +231,22 @@ export function buildLeaseSummaryPdfData(shape: LeaseQueryShape): LeaseSummaryPd
 
 async function fetchReceiptShape(chargeId: string): Promise<ReceiptQueryShape | null> {
   const admin = createAdminClient();
-  const { data: charge } = await admin
-    .from("rent_charges")
-    .select("id, lease_id, due_date, amount_cents, category")
-    .eq("id", chargeId)
-    .maybeSingle();
+  const chargeQuery = await withChargeEditingFallback(
+    () =>
+      admin
+        .from("rent_charges")
+        .select("id, lease_id, due_date, amount_cents, category")
+        .eq("id", chargeId)
+        .is("deleted_at", null)
+        .maybeSingle(),
+    () =>
+      admin
+        .from("rent_charges")
+        .select("id, lease_id, due_date, amount_cents, category")
+        .eq("id", chargeId)
+        .maybeSingle()
+  );
+  const charge = chargeQuery.data;
 
   if (!charge) {
     return null;
@@ -461,10 +473,19 @@ export async function getReceiptsPdfDataForYear(
   }
 
   const leaseIds = leaseRows.map((lease) => lease.id);
-  const { data: charges } = await admin
-    .from("rent_charges")
-    .select("id, lease_id, due_date, amount_cents, category")
-    .in("lease_id", leaseIds);
+  const { data: charges } = await withChargeEditingFallback(
+    () =>
+      admin
+        .from("rent_charges")
+        .select("id, lease_id, due_date, amount_cents, category")
+        .in("lease_id", leaseIds)
+        .is("deleted_at", null),
+    () =>
+      admin
+        .from("rent_charges")
+        .select("id, lease_id, due_date, amount_cents, category")
+        .in("lease_id", leaseIds)
+  );
 
   const chargeRows =
     (charges ?? []) as Array<{

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useFormState } from "react-dom";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { CreditCard, Mail, Trash2 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { CircleOff, CreditCard, Mail, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { ActionState } from "@/app/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,15 +21,13 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { Alert } from "@/components/ui/alert";
 import { getStatusClasses, statusAriaLabel, statusBadgeClasses } from "@/lib/status-colors";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { ChargeEditModal } from "./charge-edit-modal";
+import { ChargeCreateForm } from "./charge-create-form";
+import { chargeCategoryLabel, type ChargeCategory } from "@/lib/charge-audit";
 
-type ChargeStatus = "pending" | "paid" | "late";
-type ChargeCategory = "rent" | "late_fee";
+type ChargeStatus = "pending" | "paid" | "late" | "waived";
 type ChargeFilter = "all" | ChargeStatus;
-
-type StatefulAction = (
-  prev: ActionState,
-  formData: FormData
-) => Promise<ActionState>;
+type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
 interface Charge {
   id: string;
@@ -43,7 +41,17 @@ interface Charge {
   unitNumber?: string;
   tenantName?: string;
   category?: ChargeCategory;
+  notes?: string | null;
   reminderSentAt?: string | null;
+  latestEditedAt?: string | null;
+  latestEditedByName?: string | null;
+  editedCount?: number;
+}
+
+interface ChargeLeaseOption {
+  id: string;
+  tenantLabel: string;
+  propertyLabel: string;
 }
 
 interface AutopayEnrollmentView {
@@ -61,6 +69,9 @@ interface ChargesSectionProps {
   charges: Charge[];
   onPayCharge: (formData: FormData) => Promise<void>;
   onDeletePendingCharge?: StatefulAction;
+  onEditCharge?: StatefulAction;
+  onCreateManualCharge?: StatefulAction;
+  onWaiveCharge?: StatefulAction;
   onRecordManualPayment?: StatefulAction;
   onSendBatchPaymentReminder?: StatefulAction;
   onGenerateChargesHref?: string;
@@ -72,29 +83,20 @@ interface ChargesSectionProps {
   onSetupAutopay?: StatefulAction;
   onDisableAutopay?: StatefulAction;
   previewCount?: number;
+  availableLeases?: ChargeLeaseOption[];
 }
 
-const unavailableManualPaymentAction: StatefulAction = async () => ({
+const unavailableAction: StatefulAction = async () => ({
   success: false,
-  error: "Manual payment recording is unavailable."
+  error: "This action is unavailable."
 });
 
-const unavailableDeletePendingChargeAction: StatefulAction = async () => ({
-  success: false,
-  error: "Pending charge deletion is unavailable."
-});
-
-const unavailableAutopayAction: StatefulAction = async () => ({
-  success: false,
-  error: "Autopay management is unavailable."
-});
-
-function InlineAlert({ state }: { state: ActionState }) {
+function InlineAlert({ state, defaultMessage }: { state: ActionState; defaultMessage: string }) {
   if (!state) return null;
   if (state.success) {
     return (
       <Alert variant="success" className="mb-3">
-        {state.message ?? "Payment recorded."}
+        {state.message ?? defaultMessage}
       </Alert>
     );
   }
@@ -154,6 +156,9 @@ export function ChargesSection({
   charges,
   onPayCharge,
   onDeletePendingCharge,
+  onEditCharge,
+  onCreateManualCharge,
+  onWaiveCharge,
   onRecordManualPayment,
   onSendBatchPaymentReminder,
   onGenerateChargesHref,
@@ -164,25 +169,25 @@ export function ChargesSection({
   autopayEnrollments = [],
   onSetupAutopay,
   onDisableAutopay,
-  previewCount
+  previewCount,
+  availableLeases = []
 }: ChargesSectionProps) {
+  const router = useRouter();
   const stripeConfigured = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
   const searchParams = useSearchParams();
   const [activeFilter, setActiveFilter] = useState<ChargeFilter>("all");
   const [manualPaymentChargeId, setManualPaymentChargeId] = useState<string | null>(null);
+  const [activeEditChargeId, setActiveEditChargeId] = useState<string | null>(null);
+  const [showCreateChargeForm, setShowCreateChargeForm] = useState(false);
   const [confirmDeleteChargeId, setConfirmDeleteChargeId] = useState<string | null>(null);
   const [selectedChargeIds, setSelectedChargeIds] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState(false);
   const [isSendingReminders, startSendingReminders] = useTransition();
+  const [isMutatingCharges, startChargeMutation] = useTransition();
   const [manualPaymentState, recordManualPaymentAction] = useFormState(
-    onRecordManualPayment ?? unavailableManualPaymentAction,
+    onRecordManualPayment ?? unavailableAction,
     null
   );
-  const [deleteChargeState, deletePendingChargeAction] = useFormState(
-    onDeletePendingCharge ?? unavailableDeletePendingChargeAction,
-    null
-  );
-  const deleteFormRefs = useRef<Record<string, HTMLFormElement | null>>({});
   const batchActionsEnabled = Boolean(onSendBatchPaymentReminder) && !isTenantView;
 
   useEffect(() => {
@@ -191,15 +196,10 @@ export function ChargesSection({
     }
   }, [manualPaymentState]);
 
-  useEffect(() => {
-    if (deleteChargeState?.success) {
-      setConfirmDeleteChargeId(null);
-    }
-  }, [deleteChargeState]);
-
-  const filteredCharges = useMemo(() => {
-    return charges.filter((charge) => activeFilter === "all" || charge.status === activeFilter);
-  }, [activeFilter, charges]);
+  const filteredCharges = useMemo(
+    () => charges.filter((charge) => activeFilter === "all" || charge.status === activeFilter),
+    [activeFilter, charges]
+  );
   const visibleCharges = previewCount && !expanded ? filteredCharges.slice(0, previewCount) : filteredCharges;
   const hasMoreVisibleCharges = previewCount != null && filteredCharges.length > previewCount;
 
@@ -212,10 +212,7 @@ export function ChargesSection({
     setSelectedChargeIds((current) => {
       const visibleIds = new Set(visibleCharges.map((charge) => charge.id));
       const next = new Set(Array.from(current).filter((chargeId) => visibleIds.has(chargeId)));
-      if (next.size === current.size) {
-        return current;
-      }
-      return next;
+      return next.size === current.size ? current : next;
     });
   }, [batchActionsEnabled, visibleCharges]);
 
@@ -225,10 +222,7 @@ export function ChargesSection({
     if (charge.status !== "paid") return false;
     const dueDate = new Date(`${charge.dueDate}T00:00:00.000Z`);
     const now = new Date();
-    return (
-      dueDate.getUTCMonth() === now.getUTCMonth() &&
-      dueDate.getUTCFullYear() === now.getUTCFullYear()
-    );
+    return dueDate.getUTCMonth() === now.getUTCMonth() && dueDate.getUTCFullYear() === now.getUTCFullYear();
   }).length;
 
   const uniqueLeaseCards = useMemo(() => {
@@ -254,10 +248,20 @@ export function ChargesSection({
   const selectedVisibleCharges = visibleCharges.filter((charge) => selectedChargeIds.has(charge.id));
   const allVisibleSelected =
     visibleCharges.length > 0 && visibleCharges.every((charge) => selectedChargeIds.has(charge.id));
-  const chargePendingDeletion =
-    (confirmDeleteChargeId
-      ? charges.find((charge) => charge.id === confirmDeleteChargeId)
-      : null) ?? null;
+  const chargePendingDeletion = confirmDeleteChargeId
+    ? charges.find((charge) => charge.id === confirmDeleteChargeId) ?? null
+    : null;
+  const activeEditCharge = activeEditChargeId
+    ? (() => {
+        const charge = charges.find((item) => item.id === activeEditChargeId) ?? null;
+        return charge
+          ? {
+              ...charge,
+              category: charge.category ?? "rent"
+            }
+          : null;
+      })()
+    : null;
 
   const toggleChargeSelection = (chargeId: string, checked: boolean) => {
     setSelectedChargeIds((current) => {
@@ -304,6 +308,46 @@ export function ChargesSection({
 
       toast.success(result.message ?? "Payment reminders sent.");
       setSelectedChargeIds(new Set());
+      router.refresh();
+    });
+  };
+
+  const handleDeleteCharge = () => {
+    if (!confirmDeleteChargeId || !onDeletePendingCharge) {
+      return;
+    }
+
+    startChargeMutation(async () => {
+      const formData = new FormData();
+      formData.set("chargeId", confirmDeleteChargeId);
+      formData.set("reason", "Deleted from charges dashboard");
+      const result = await onDeletePendingCharge(null, formData);
+      if (!result?.success) {
+        toast.error(result?.error ?? "Unable to delete this charge.");
+        return;
+      }
+      toast.success(result.message ?? "Charge deleted.");
+      setConfirmDeleteChargeId(null);
+      router.refresh();
+    });
+  };
+
+  const handleWaiveCharge = (chargeId: string) => {
+    if (!onWaiveCharge) {
+      return;
+    }
+
+    startChargeMutation(async () => {
+      const formData = new FormData();
+      formData.set("chargeId", chargeId);
+      formData.set("reason", "Waived from charges dashboard");
+      const result = await onWaiveCharge(null, formData);
+      if (!result?.success) {
+        toast.error(result?.error ?? "Unable to waive this charge.");
+        return;
+      }
+      toast.success(result.message ?? "Charge waived.");
+      router.refresh();
     });
   };
 
@@ -313,15 +357,28 @@ export function ChargesSection({
         <CardTitle className="text-xl font-semibold">
           {isTenantView ? "Rent Payments" : "Upcoming / Late Charges"}
         </CardTitle>
-        {onGenerateChargesHref ? (
-          <Link
-            href={onGenerateChargesHref}
-            className="rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
-            title="Generate rent charges for the current billing period."
-          >
-            Generate This Month Charges
-          </Link>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {onCreateManualCharge && availableLeases.length > 0 && !isTenantView ? (
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setShowCreateChargeForm(true)}
+              title="Create a manual one-off charge."
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Charge
+            </Button>
+          ) : null}
+          {onGenerateChargesHref ? (
+            <Link
+              href={onGenerateChargesHref}
+              className="rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+              title="Generate rent charges for the current billing period."
+            >
+              Generate This Month Charges
+            </Link>
+          ) : null}
+        </div>
       </CardHeader>
       <CardContent>
         {isTenantView && autopayStatus === "enrolled" ? (
@@ -352,8 +409,8 @@ export function ChargesSection({
                   leaseId={leaseId}
                   propertyLabel={enrollment?.propertyLabel ?? propertyLabel}
                   enrollment={enrollment}
-                  onSetupAutopay={onSetupAutopay ?? unavailableAutopayAction}
-                  onDisableAutopay={onDisableAutopay ?? unavailableAutopayAction}
+                  onSetupAutopay={onSetupAutopay ?? unavailableAction}
+                  onDisableAutopay={onDisableAutopay ?? unavailableAction}
                 />
               );
             })}
@@ -377,7 +434,8 @@ export function ChargesSection({
             ["all", "All"],
             ["pending", "Pending"],
             ["late", "Late"],
-            ["paid", "Paid"]
+            ["paid", "Paid"],
+            ["waived", "Waived"]
           ] as Array<[ChargeFilter, string]>).map(([value, label]) => (
             <Button
               key={value}
@@ -397,8 +455,10 @@ export function ChargesSection({
           ))}
         </div>
 
-        {showManualPayment ? <InlineAlert state={manualPaymentState} /> : null}
-        {onDeletePendingCharge ? <InlineAlert state={deleteChargeState} /> : null}
+        {showManualPayment ? (
+          <InlineAlert state={manualPaymentState} defaultMessage="Payment recorded." />
+        ) : null}
+
         {batchActionsEnabled ? (
           <>
             <BatchToolbar
@@ -441,195 +501,211 @@ export function ChargesSection({
         ) : (
           <>
             <AnimatedList>
-              {visibleCharges.map((charge, i) => {
-              const manualFormOpen = manualPaymentChargeId === charge.id;
-              const ownerConnected =
-                ownerConnectedMap?.get(charge.propertyId) ??
-                stripeConnected ??
-                true;
-              const paymentsAvailable = stripeConfigured && ownerConnected;
-              const category = charge.category ?? "rent";
-              const canDeletePendingCharge =
-                Boolean(onDeletePendingCharge) && !isTenantView && charge.status === "pending";
+              {visibleCharges.map((charge, index) => {
+                const manualFormOpen = manualPaymentChargeId === charge.id;
+                const ownerConnected = ownerConnectedMap?.get(charge.propertyId) ?? stripeConnected ?? true;
+                const paymentsAvailable = stripeConfigured && ownerConnected;
+                const category = charge.category ?? "rent";
+                const canModify = !isTenantView && (charge.status === "pending" || charge.status === "late");
 
-              return (
-                <DataRow key={charge.id} last={i === visibleCharges.length - 1}>
-                  {batchActionsEnabled ? (
-                    <div className="flex items-start pt-0.5">
-                      <input
-                        type="checkbox"
-                        checked={selectedChargeIds.has(charge.id)}
-                        onChange={(event) => toggleChargeSelection(charge.id, event.target.checked)}
-                        className="h-4 w-4 rounded border-zinc-300 text-violet-600 focus:ring-violet-500"
-                        aria-label={`Select charge for ${getChargeLabel(charge)}`}
-                        title={`Select ${getChargeLabel(charge)}.`}
-                      />
-                    </div>
-                  ) : null}
-                  <div className="min-w-0 flex-1">
-                    <p className="text-base font-medium text-zinc-900">{getChargeLabel(charge)}</p>
-                    {!isTenantView && charge.tenantName ? (
-                      <p className="mt-0.5 text-sm text-zinc-500">{charge.tenantName}</p>
-                    ) : null}
-                    <p className="mt-0.5 text-sm text-zinc-500">Due {formatDate(charge.dueDate)}</p>
-                    {!isTenantView && charge.reminderSentAt ? (
-                      <p className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
-                        <Mail className="h-3 w-3" aria-hidden="true" />
-                        Reminder sent {formatDate(charge.reminderSentAt)}
-                      </p>
-                    ) : null}
-
-                    {showManualPayment && manualFormOpen && charge.status !== "paid" ? (
-                      <form action={recordManualPaymentAction} className="mt-3 grid gap-3 sm:grid-cols-4">
-                        <input type="hidden" name="chargeId" value={charge.id} />
-                        <div className="space-y-1">
-                          <label
-                            className="block text-xs font-medium text-zinc-600"
-                            htmlFor={`manual-payment-amount-${charge.id}`}
-                          >
-                            Amount
-                          </label>
-                          <Input
-                            id={`manual-payment-amount-${charge.id}`}
-                            name="amountDollars"
-                            type="number"
-                            min={0.01}
-                            step="0.01"
-                            defaultValue={(charge.amountCents / 100).toFixed(2)}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label
-                            className="block text-xs font-medium text-zinc-600"
-                            htmlFor={`manual-payment-method-${charge.id}`}
-                          >
-                            Method
-                          </label>
-                          <select
-                            id={`manual-payment-method-${charge.id}`}
-                            name="method"
-                            className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm"
-                            defaultValue="cash"
-                            title="Select manual payment method."
-                          >
-                            <option value="cash">Cash</option>
-                            <option value="check">Check</option>
-                            <option value="ach">ACH</option>
-                            <option value="other">Other</option>
-                          </select>
-                        </div>
-                        <div className="space-y-1">
-                          <label
-                            className="block text-xs font-medium text-zinc-600"
-                            htmlFor={`manual-payment-reference-${charge.id}`}
-                          >
-                            Reference Note
-                          </label>
-                          <Input
-                            id={`manual-payment-reference-${charge.id}`}
-                            name="referenceNote"
-                            placeholder="Optional"
-                          />
-                        </div>
-                        <div>
-                          <SubmitButton size="sm" variant="outline" title="Record this manual payment.">
-                            Save Payment
-                          </SubmitButton>
-                        </div>
-                      </form>
-                    ) : null}
-                  </div>
-
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="text-right">
-                      <p className="text-base font-medium text-zinc-900">
-                        {formatCurrency(charge.amountCents)}
-                      </p>
-                      <div className="mt-0.5 flex items-center justify-end gap-1">
-                        <span
-                          className={statusBadgeClasses(charge.status)}
-                          aria-label={statusAriaLabel(charge.status, "Charge status")}
-                        >
-                          <span
-                            aria-hidden="true"
-                            className={`h-1.5 w-1.5 rounded-full ${getStatusClasses(charge.status).dot}`}
-                          />
-                          {statusLabel(charge.status)}
-                        </span>
-                        {category === "late_fee" ? (
-                          <Badge variant="destructive">Late Fee</Badge>
-                        ) : null}
+                return (
+                  <DataRow key={charge.id} last={index === visibleCharges.length - 1}>
+                    {batchActionsEnabled ? (
+                      <div className="flex items-start pt-0.5">
+                        <input
+                          type="checkbox"
+                          checked={selectedChargeIds.has(charge.id)}
+                          onChange={(event) => toggleChargeSelection(charge.id, event.target.checked)}
+                          className="h-4 w-4 rounded border-zinc-300 text-violet-600 focus:ring-violet-500"
+                          aria-label={`Select charge for ${getChargeLabel(charge)}`}
+                          title={`Select ${getChargeLabel(charge)}.`}
+                        />
                       </div>
+                    ) : null}
+
+                    <div className="min-w-0 flex-1">
+                      <p className="text-base font-medium text-zinc-900">{getChargeLabel(charge)}</p>
+                      {!isTenantView && charge.tenantName ? (
+                        <p className="mt-0.5 text-sm text-zinc-500">{charge.tenantName}</p>
+                      ) : null}
+                      <p className="mt-0.5 text-sm text-zinc-500">Due {formatDate(charge.dueDate)}</p>
+                      {charge.notes ? (
+                        <p className="mt-0.5 text-sm text-zinc-500">{charge.notes}</p>
+                      ) : null}
+                      {!isTenantView && charge.reminderSentAt ? (
+                        <p className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                          <Mail className="h-3 w-3" aria-hidden="true" />
+                          Reminder sent {formatDate(charge.reminderSentAt)}
+                        </p>
+                      ) : null}
+                      {!isTenantView && charge.editedCount ? (
+                        <p
+                          className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground"
+                          title={
+                            charge.latestEditedAt && charge.latestEditedByName
+                              ? `Last edited by ${charge.latestEditedByName} on ${formatDate(charge.latestEditedAt)}`
+                              : "Charge has been edited."
+                          }
+                        >
+                          Edited {charge.editedCount}x
+                        </p>
+                      ) : null}
+
+                      {showManualPayment && manualFormOpen && charge.status !== "paid" && charge.status !== "waived" ? (
+                        <form action={recordManualPaymentAction} className="mt-3 grid gap-3 sm:grid-cols-4">
+                          <input type="hidden" name="chargeId" value={charge.id} />
+                          <div className="space-y-1">
+                            <label className="block text-xs font-medium text-zinc-600" htmlFor={`manual-payment-amount-${charge.id}`}>
+                              Amount
+                            </label>
+                            <Input
+                              id={`manual-payment-amount-${charge.id}`}
+                              name="amountDollars"
+                              type="number"
+                              min={0.01}
+                              step="0.01"
+                              defaultValue={(charge.amountCents / 100).toFixed(2)}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="block text-xs font-medium text-zinc-600" htmlFor={`manual-payment-method-${charge.id}`}>
+                              Method
+                            </label>
+                            <select
+                              id={`manual-payment-method-${charge.id}`}
+                              name="method"
+                              className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm"
+                              defaultValue="cash"
+                              title="Select manual payment method."
+                            >
+                              <option value="cash">Cash</option>
+                              <option value="check">Check</option>
+                              <option value="ach">ACH</option>
+                              <option value="other">Other</option>
+                            </select>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="block text-xs font-medium text-zinc-600" htmlFor={`manual-payment-reference-${charge.id}`}>
+                              Reference Note
+                            </label>
+                            <Input id={`manual-payment-reference-${charge.id}`} name="referenceNote" placeholder="Optional" />
+                          </div>
+                          <div>
+                            <SubmitButton size="sm" variant="outline" title="Record this manual payment.">
+                              Save Payment
+                            </SubmitButton>
+                          </div>
+                        </form>
+                      ) : null}
                     </div>
 
-                    {charge.status !== "paid" ? paymentsAvailable ? (
-                      <form action={onPayCharge}>
-                        <input type="hidden" name="chargeId" value={charge.id} />
-                        <SubmitButton
+                    <div className="flex flex-col items-end gap-2">
+                      <div className="text-right">
+                        <p className="text-base font-medium text-zinc-900">{formatCurrency(charge.amountCents)}</p>
+                        <div className="mt-0.5 flex items-center justify-end gap-1">
+                          <span
+                            className={statusBadgeClasses(charge.status)}
+                            aria-label={statusAriaLabel(charge.status, "Charge status")}
+                          >
+                            <span
+                              aria-hidden="true"
+                              className={`h-1.5 w-1.5 rounded-full ${getStatusClasses(charge.status).dot}`}
+                            />
+                            {statusLabel(charge.status)}
+                          </span>
+                          {category !== "rent" ? (
+                            <Badge variant="outline">{chargeCategoryLabel(category)}</Badge>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      {charge.status !== "paid" && charge.status !== "waived" ? (
+                        paymentsAvailable ? (
+                          <form action={onPayCharge}>
+                            <input type="hidden" name="chargeId" value={charge.id} />
+                            <SubmitButton
+                              size="sm"
+                              title={isTenantView ? "Open secure checkout to pay this charge." : "Open secure checkout for this charge."}
+                            >
+                              {isTenantView ? "Pay with Card" : "Pay now"}
+                            </SubmitButton>
+                          </form>
+                        ) : (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled
+                            title={
+                              stripeConfigured
+                                ? "Online payment unavailable - property owner hasn't connected their bank account."
+                                : "Online payment unavailable - Stripe is not configured."
+                            }
+                          >
+                            {isTenantView ? "Pay with Card" : "Pay now"}
+                          </Button>
+                        )
+                      ) : null}
+
+                      {showManualPayment && charge.status !== "paid" && charge.status !== "waived" ? (
+                        <Button
+                          type="button"
                           size="sm"
-                          title={isTenantView ? "Open secure checkout to pay this charge." : "Open secure checkout for this charge."}
+                          variant={manualFormOpen ? "default" : "outline"}
+                          onClick={() => setManualPaymentChargeId((current) => (current === charge.id ? null : charge.id))}
+                          title="Record a manual payment for this charge."
                         >
-                          {isTenantView ? "Pay with Card" : "Pay now"}
-                        </SubmitButton>
-                      </form>
-                    ) : (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled
-                        title={
-                          stripeConfigured
-                            ? "Online payment unavailable - property owner hasn't connected their bank account."
-                            : "Online payment unavailable - Stripe is not configured."
-                        }
-                      >
-                        {isTenantView ? "Pay with Card" : "Pay now"}
-                      </Button>
-                    ) : null}
+                          {manualFormOpen ? "Cancel" : "Record Payment"}
+                        </Button>
+                      ) : null}
 
-                    {showManualPayment && charge.status !== "paid" ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={manualFormOpen ? "default" : "outline"}
-                        onClick={() =>
-                          setManualPaymentChargeId((current) =>
-                            current === charge.id ? null : charge.id
-                          )
-                        }
-                        title="Record a manual payment for this charge."
-                      >
-                        {manualFormOpen ? "Cancel" : "Record Payment"}
-                      </Button>
-                    ) : null}
+                      {canModify && onEditCharge ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setActiveEditChargeId(charge.id)}
+                          title="Edit this charge."
+                        >
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit
+                        </Button>
+                      ) : null}
 
-                    {canDeletePendingCharge ? (
-                      <form
-                        ref={(element) => {
-                          deleteFormRefs.current[charge.id] = element;
-                        }}
-                        action={deletePendingChargeAction}
-                      >
-                        <input type="hidden" name="chargeId" value={charge.id} />
+                      {canModify && onWaiveCharge ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={isMutatingCharges}
+                          onClick={() => handleWaiveCharge(charge.id)}
+                          title="Waive this charge."
+                        >
+                          <CircleOff className="mr-2 h-4 w-4" />
+                          Waive
+                        </Button>
+                      ) : null}
+
+                      {canModify && onDeletePendingCharge ? (
                         <Button
                           type="button"
                           size="icon"
                           variant="outline"
-                          aria-label={`Delete pending charge for ${getChargeLabel(charge)}`}
-                          title={`Delete the pending charge for ${getChargeLabel(charge)}.`}
+                          disabled={isMutatingCharges}
+                          aria-label={`Delete charge for ${getChargeLabel(charge)}`}
+                          title={`Delete the ${charge.status} charge for ${getChargeLabel(charge)}.`}
                           onClick={() => setConfirmDeleteChargeId(charge.id)}
                         >
                           <Trash2 className="h-4 w-4" aria-hidden="true" />
                         </Button>
-                      </form>
-                    ) : null}
-                  </div>
-                </DataRow>
-              );
+                      ) : null}
+                    </div>
+                  </DataRow>
+                );
               })}
             </AnimatedList>
+
             {hasMoreVisibleCharges ? (
               <div className="mt-4 flex justify-end">
                 <Button
@@ -645,12 +721,13 @@ export function ChargesSection({
             ) : null}
           </>
         )}
+
         <ConfirmDialog
-          title="Delete Pending Charge?"
+          title="Delete Charge?"
           description={
             chargePendingDeletion
-              ? `Delete this pending charge of ${formatCurrency(chargePendingDeletion.amountCents)} due on ${formatDate(chargePendingDeletion.dueDate)}? This cannot be undone.`
-              : "Delete this pending charge? This cannot be undone."
+              ? `Delete this ${chargePendingDeletion.status} charge of ${formatCurrency(chargePendingDeletion.amountCents)} due on ${formatDate(chargePendingDeletion.dueDate)}? This cannot be undone.`
+              : "Delete this charge? This cannot be undone."
           }
           confirmLabel="Delete Charge"
           open={Boolean(confirmDeleteChargeId)}
@@ -659,13 +736,26 @@ export function ChargesSection({
               setConfirmDeleteChargeId(null);
             }
           }}
-          onConfirm={() => {
-            if (!confirmDeleteChargeId) {
-              return;
-            }
-            deleteFormRefs.current[confirmDeleteChargeId]?.requestSubmit();
-          }}
+          onConfirm={handleDeleteCharge}
         />
+
+        {onEditCharge ? (
+          <ChargeEditModal
+            charge={activeEditCharge}
+            open={Boolean(activeEditCharge)}
+            onClose={() => setActiveEditChargeId(null)}
+            onSave={onEditCharge}
+          />
+        ) : null}
+
+        {onCreateManualCharge ? (
+          <ChargeCreateForm
+            open={showCreateChargeForm}
+            leases={availableLeases}
+            onSubmit={onCreateManualCharge}
+            onCancel={() => setShowCreateChargeForm(false)}
+          />
+        ) : null}
       </CardContent>
     </Card>
   );

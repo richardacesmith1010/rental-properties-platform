@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { withChargeEditingFallback } from "@/lib/charge-audit";
 import { createStripeCheckoutSession } from "@/lib/stripe";
 import { getOwnerStripeAccountForProperty } from "@/lib/stripe-connect";
 import { canUserAdministerProperty } from "@/lib/property-access";
@@ -15,13 +16,13 @@ import { sideEffectError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { withRetry } from "@/lib/retry";
 import {
-  deletePendingChargeSchema,
   payChargeSchema,
   parseFormData,
   recordManualPaymentSchema
 } from "@/lib/validations";
 import { requireAuth } from "./auth-helpers";
 import type { ActionState } from "./shared";
+import { deleteCharge } from "./charge-management";
 
 const PAYMENTS_UNAVAILABLE_MESSAGE =
   "Payment processing is temporarily unavailable. Please try again later.";
@@ -47,17 +48,34 @@ export async function createCheckoutForCharge(formData: FormData): Promise<Actio
 
   const { chargeId } = parsed.data;
 
-  const { data: charge } = await supabase
-    .from("rent_charges")
-    .select("id, amount_cents, status, lease_id")
-    .eq("id", chargeId)
-    .single();
+  const chargeQuery = await withChargeEditingFallback(
+    () =>
+      supabase
+        .from("rent_charges")
+        .select("id, amount_cents, status, lease_id, deleted_at")
+        .eq("id", chargeId)
+        .is("deleted_at", null)
+        .single(),
+    () =>
+      supabase
+        .from("rent_charges")
+        .select("id, amount_cents, status, lease_id")
+        .eq("id", chargeId)
+        .single()
+  );
+  if (chargeQuery.error) {
+    return { success: false, error: "Unable to load this charge right now." };
+  }
+  const charge = chargeQuery.data;
 
   if (!charge) {
     return { success: false, error: "Charge not found." };
   }
   if (charge.status === "paid") {
     return { success: false, error: "This charge has already been paid." };
+  }
+  if (charge.status === "waived") {
+    return { success: false, error: "Waived charges cannot be paid." };
   }
 
   const { data: lease } = await supabase
@@ -159,64 +177,7 @@ export async function deletePendingCharge(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const { user } = await requireAuth("owner", "manager");
-
-  const parsed = parseFormData(deletePendingChargeSchema, formData);
-  if (!parsed.success) {
-    return parsed;
-  }
-
-  const admin = createAdminClient();
-  const { data: charge } = await admin
-    .from("rent_charges")
-    .select("id, lease_id, amount_cents, due_date, status")
-    .eq("id", parsed.data.chargeId)
-    .maybeSingle();
-
-  if (!charge) {
-    return { success: false, error: "Charge not found." };
-  }
-
-  if (charge.status !== "pending") {
-    return { success: false, error: "Only pending charges can be deleted." };
-  }
-
-  const { data: lease } = await admin
-    .from("leases")
-    .select("id, unit_id")
-    .eq("id", charge.lease_id)
-    .maybeSingle();
-
-  if (!lease) {
-    return { success: false, error: "Lease not found for this charge." };
-  }
-
-  const { data: unit } = await admin
-    .from("units")
-    .select("id, property_id")
-    .eq("id", lease.unit_id)
-    .maybeSingle();
-
-  if (!unit) {
-    return { success: false, error: "Unit not found for this charge." };
-  }
-
-  const canAdmin = await canUserAdministerProperty(user.id, unit.property_id);
-  if (!canAdmin) {
-    return { success: false, error: "Access denied." };
-  }
-
-  const { error } = await admin.from("rent_charges").delete().eq("id", charge.id);
-  if (error) {
-    return { success: false, error: "Unable to delete this pending charge right now." };
-  }
-
-  revalidatePath("/owner");
-  revalidatePath("/manager");
-  return {
-    success: true,
-    message: `Deleted pending charge for ${formatCurrency(charge.amount_cents)} due ${charge.due_date}.`
-  };
+  return deleteCharge(_prev, formData);
 }
 
 export async function recordManualPayment(
@@ -244,11 +205,25 @@ export async function recordManualPayment(
   }
 
   const admin = createAdminClient();
-  const { data: charge } = await admin
-    .from("rent_charges")
-    .select("id, lease_id, due_date, status, amount_cents")
-    .eq("id", chargeId)
-    .maybeSingle();
+  const chargeQuery = await withChargeEditingFallback(
+    () =>
+      admin
+        .from("rent_charges")
+        .select("id, lease_id, due_date, status, amount_cents, deleted_at")
+        .eq("id", chargeId)
+        .is("deleted_at", null)
+        .maybeSingle(),
+    () =>
+      admin
+        .from("rent_charges")
+        .select("id, lease_id, due_date, status, amount_cents")
+        .eq("id", chargeId)
+        .maybeSingle()
+  );
+  if (chargeQuery.error) {
+    return { success: false, error: "Unable to load this charge right now." };
+  }
+  const charge = chargeQuery.data;
 
   if (!charge) {
     return { success: false, error: "Charge not found." };
@@ -256,6 +231,9 @@ export async function recordManualPayment(
 
   if (charge.status === "paid") {
     return { success: false, error: "This charge is already marked paid." };
+  }
+  if (charge.status === "waived") {
+    return { success: false, error: "Waived charges cannot be paid." };
   }
 
   if (amountCents > charge.amount_cents) {

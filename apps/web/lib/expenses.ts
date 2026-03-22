@@ -3,6 +3,7 @@ import {
   getAdministeredPropertyIds,
   getAdministeredPropertyIdsForAccount
 } from "@/lib/property-access";
+import { withChargeEditingFallback } from "@/lib/charge-audit";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 type ExpenseCategory =
@@ -187,11 +188,21 @@ export async function getOwnerExpenseData(
   );
 
   const { data: paidCharges } = leaseIds.length
-    ? await admin
-        .from("rent_charges")
-        .select("lease_id, amount_cents, due_date")
-        .in("lease_id", leaseIds)
-        .eq("status", "paid")
+    ? await withChargeEditingFallback(
+        () =>
+          admin
+            .from("rent_charges")
+            .select("lease_id, amount_cents, due_date")
+            .in("lease_id", leaseIds)
+            .eq("status", "paid")
+            .is("deleted_at", null),
+        () =>
+          admin
+            .from("rent_charges")
+            .select("lease_id, amount_cents, due_date")
+            .in("lease_id", leaseIds)
+            .eq("status", "paid")
+      )
     : { data: [] as Array<{ lease_id: string; amount_cents: number; due_date: string }> };
 
   const monthKeys = buildLastTwelveMonthKeys();

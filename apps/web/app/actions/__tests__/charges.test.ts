@@ -61,6 +61,19 @@ function createCheckoutSupabase(config: CheckoutConfig): SupabaseClient {
     from: vi.fn((table: string) => ({
       select: vi.fn(() => ({
         eq: vi.fn(() => ({
+          is: vi.fn(() => ({
+            single: vi.fn().mockResolvedValue({
+              data:
+                table === "rent_charges"
+                  ? config.charge ?? null
+                  : table === "leases"
+                    ? config.lease ?? null
+                    : table === "units"
+                      ? config.unit ?? null
+                      : config.property ?? null,
+              error: null
+            })
+          })),
           single: vi.fn().mockResolvedValue({
             data:
               table === "rent_charges"
@@ -91,6 +104,9 @@ function createManualAdminClient(config: ManualConfig): SupabaseClient {
         return {
           select: vi.fn(() => ({
             eq: vi.fn(() => ({
+              is: vi.fn(() => ({
+                maybeSingle: vi.fn().mockResolvedValue({ data: config.charge ?? null, error: null })
+              })),
               maybeSingle: vi.fn().mockResolvedValue({ data: config.charge ?? null, error: null })
             }))
           })),

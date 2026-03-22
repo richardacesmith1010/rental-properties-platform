@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { withChargeEditingFallback } from "@/lib/charge-audit";
 
 export interface TenantCharge {
   id: string;
@@ -46,12 +47,23 @@ export async function getTenantPaymentData(userId: string): Promise<TenantPaymen
     .select("id, name")
     .in("id", propertyIds);
 
-  const { data: charges } = await supabase
-    .from("rent_charges")
-    .select("id, lease_id, due_date, amount_cents, status")
-    .in("lease_id", leaseIds)
-    .in("status", ["pending", "late"])
-    .order("due_date", { ascending: true });
+  const { data: charges } = await withChargeEditingFallback(
+    () =>
+      supabase
+        .from("rent_charges")
+        .select("id, lease_id, due_date, amount_cents, status")
+        .in("lease_id", leaseIds)
+        .in("status", ["pending", "late"])
+        .is("deleted_at", null)
+        .order("due_date", { ascending: true }),
+    () =>
+      supabase
+        .from("rent_charges")
+        .select("id, lease_id, due_date, amount_cents, status")
+        .in("lease_id", leaseIds)
+        .in("status", ["pending", "late"])
+        .order("due_date", { ascending: true })
+  );
 
   const leaseById = new Map(leaseRows.map((lease) => [lease.id, lease]));
   const unitById = new Map((units ?? []).map((unit) => [unit.id, unit]));

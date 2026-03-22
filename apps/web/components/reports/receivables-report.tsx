@@ -1,15 +1,27 @@
 "use client";
 
+import type { ActionState } from "@/app/actions";
 import { downloadReportCsv, receivablesToCsv } from "@/lib/csv-export-reports";
 import type { ReceivableItem } from "@/lib/reports";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { ReportSection } from "./report-layout";
+import { ChargeActionList } from "./drilldown-panel";
+
+type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
 interface ReceivablesReportProps {
   data: ReceivableItem[];
+  onEditCharge?: StatefulAction;
+  onDeleteCharge?: StatefulAction;
+  onWaiveCharge?: StatefulAction;
 }
 
-export function ReceivablesReport({ data }: ReceivablesReportProps) {
+export function ReceivablesReport({
+  data,
+  onEditCharge,
+  onDeleteCharge,
+  onWaiveCharge
+}: ReceivablesReportProps) {
   return (
     <ReportSection
       id="accounts-receivable"
@@ -38,6 +50,15 @@ export function ReceivablesReport({ data }: ReceivablesReportProps) {
       ]}
       emptyTitle="No receivables"
       emptyDescription="Outstanding balances will appear here when tenants have unpaid charges."
+      getRowId={(row) => `${row.leaseId}:${row.tenantEmail}`}
+      renderExpandedContent={(row) => (
+        <ChargeActionList
+          charges={row.chargeDetails}
+          onEditCharge={onEditCharge}
+          onDeleteCharge={onDeleteCharge}
+          onWaiveCharge={onWaiveCharge}
+        />
+      )}
     />
   );
 }

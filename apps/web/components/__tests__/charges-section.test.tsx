@@ -10,6 +10,16 @@ vi.mock("react-dom", async (importOriginal) => {
   };
 });
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    refresh: vi.fn(),
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn()
+  }),
+  useSearchParams: () => new URLSearchParams()
+}));
+
 describe("ChargesSection", () => {
   const charges = [
     {
@@ -111,7 +121,7 @@ describe("ChargesSection", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: /delete pending charge for atlas house/i })
+      screen.getByRole("button", { name: /delete charge for atlas house/i })
     ).toBeInTheDocument();
   });
 
@@ -138,9 +148,9 @@ describe("ChargesSection", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /delete pending charge for atlas house/i }));
+    fireEvent.click(screen.getByRole("button", { name: /delete charge for atlas house/i }));
 
-    expect(screen.getByRole("dialog", { name: "Delete Pending Charge?" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Delete Charge?" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Delete Charge" })).toBeInTheDocument();
   });
 });

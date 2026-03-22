@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { withChargeEditingFallback } from "@/lib/charge-audit";
 
 export interface PaymentHistoryItem {
   chargeId: string;
@@ -26,10 +27,19 @@ export async function getTenantPaymentHistory(userId: string): Promise<PaymentHi
   }
 
   const leaseIds = Array.from(new Set(leaseRows.map((lease) => lease.id)));
-  const { data: charges } = await supabase
-    .from("rent_charges")
-    .select("id, lease_id, due_date, amount_cents, category")
-    .in("lease_id", leaseIds);
+  const { data: charges } = await withChargeEditingFallback(
+    () =>
+      supabase
+        .from("rent_charges")
+        .select("id, lease_id, due_date, amount_cents, category")
+        .in("lease_id", leaseIds)
+        .is("deleted_at", null),
+    () =>
+      supabase
+        .from("rent_charges")
+        .select("id, lease_id, due_date, amount_cents, category")
+        .in("lease_id", leaseIds)
+  );
 
   const chargeRows =
     (charges ?? []) as Array<{

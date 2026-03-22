@@ -1,15 +1,21 @@
 "use client";
 
+import type { ActionState } from "@/app/actions";
 import { downloadReportCsv, monthlyPnlToCsv } from "@/lib/csv-export-reports";
 import type { MonthlyPnLRow } from "@/lib/reports";
 import { formatCurrency } from "@/lib/format";
 import { ReportSection } from "./report-layout";
+import { ChargeActionList, ExpenseActionList } from "./drilldown-panel";
+
+type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
 interface MonthlyPnLReportProps {
   data: MonthlyPnLRow[];
+  onEditCharge?: StatefulAction;
+  onUpdateExpense?: StatefulAction;
 }
 
-export function MonthlyPnLReport({ data }: MonthlyPnLReportProps) {
+export function MonthlyPnLReport({ data, onEditCharge, onUpdateExpense }: MonthlyPnLReportProps) {
   const portfolioSummary = data.reduce(
     (summary, row) => ({
       rentalIncome: summary.rentalIncome + row.rentalIncome,
@@ -48,6 +54,19 @@ export function MonthlyPnLReport({ data }: MonthlyPnLReportProps) {
           </div>
         ) : null
       }
+      getRowId={(row) => `${row.propertyId}:${row.month}`}
+      renderExpandedContent={(row) => (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="space-y-3">
+            <h4 className="font-medium text-foreground">Income</h4>
+            <ChargeActionList charges={row.incomeLineItems} onEditCharge={onEditCharge} />
+          </div>
+          <div className="space-y-3">
+            <h4 className="font-medium text-foreground">Expenses</h4>
+            <ExpenseActionList expenses={row.expenseLineItems} onUpdateExpense={onUpdateExpense} />
+          </div>
+        </div>
+      )}
     />
   );
 }

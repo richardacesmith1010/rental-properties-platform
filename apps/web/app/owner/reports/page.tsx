@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Download } from "lucide-react";
 import { requireRole, getRoleHomePath } from "@/lib/auth";
+import { editCharge, deleteCharge, waiveCharge, updateExpense } from "@/app/actions";
 import {
   getDelinquencyReport,
   getMonthlyPnLReport,
@@ -11,13 +12,13 @@ import {
   getTenantLedgerReport,
 } from "@/lib/reports";
 import { ReportCard } from "@/components/reports/report-layout";
+import { DrilldownPanel } from "@/components/reports/drilldown-panel";
 import { DelinquencyReport } from "@/components/reports/delinquency-report";
 import { MonthlyPnLReport } from "@/components/reports/monthly-pnl-report";
 import { ReceivablesReport } from "@/components/reports/receivables-report";
 import { RentRollReport } from "@/components/reports/rent-roll-report";
 import { TaxSummaryReport } from "@/components/reports/tax-summary-report";
 import { TenantLedgerReport } from "@/components/reports/tenant-ledger-report";
-import { CountUp } from "@/components/ui/count-up";
 
 export const dynamic = "force-dynamic";
 
@@ -53,9 +54,18 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
 
   const yearOptions = Array.from({ length: 4 }, (_, index) => new Date().getUTCFullYear() - index);
   const reportsBasePath = role === "manager" ? "/owner/reports" : "/owner/reports";
-  const openBalanceDollars = receivables.reduce((sum, item) => sum + item.totalOwedCents, 0) / 100;
-  const netIncomeDollars = monthlyPnl.reduce((sum, row) => sum + row.netIncome, 0) / 100;
+  const openBalanceCents = receivables.reduce((sum, item) => sum + item.totalOwedCents, 0);
+  const netIncomeCents = monthlyPnl.reduce((sum, row) => sum + row.netIncome, 0);
   const tenantCount = tenantLedger.length;
+  const receivableCharges = receivables.flatMap((item) => item.chargeDetails);
+  const paidCharges = monthlyPnl.flatMap((row) => row.incomeLineItems);
+  const expenseItems = monthlyPnl.flatMap((row) => row.expenseLineItems);
+  const tenantBalances = tenantLedger.map((ledger) => ({
+    tenantName: ledger.tenantName,
+    tenantEmail: ledger.tenantEmail,
+    currentBalanceCents: ledger.currentBalance,
+    chargeCount: ledger.entries.filter((entry) => entry.type === "charge" && entry.amount > 0).length
+  }));
 
   return (
     <main id="main-content" className="app-surface min-h-screen px-6 py-6 lg:px-8">
@@ -107,20 +117,20 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
           </div>
         </header>
 
-        <section className="grid gap-3 md:grid-cols-3">
-          <div className="domus-kpi-pill">
-            <p className="text-xs uppercase tracking-[0.16em] domus-muted">Open receivables</p>
-            <CountUp target={openBalanceDollars} prefix="$" className="text-tabular mt-2 block text-2xl font-bold domus-heading" />
-          </div>
-          <div className="domus-kpi-pill">
-            <p className="text-xs uppercase tracking-[0.16em] domus-muted">Net income ({reportYear})</p>
-            <CountUp target={netIncomeDollars} prefix="$" className="text-tabular mt-2 block text-2xl font-bold domus-heading" />
-          </div>
-          <div className="domus-kpi-pill">
-            <p className="text-xs uppercase tracking-[0.16em] domus-muted">Tenants in ledger</p>
-            <CountUp target={tenantCount} className="text-tabular mt-2 block text-2xl font-bold domus-heading" />
-          </div>
-        </section>
+        <DrilldownPanel
+          openBalanceCents={openBalanceCents}
+          netIncomeCents={netIncomeCents}
+          tenantCount={tenantCount}
+          receivableCharges={receivableCharges}
+          paidCharges={paidCharges}
+          expenseItems={expenseItems}
+          tenantBalances={tenantBalances}
+          reportYear={reportYear}
+          onEditCharge={editCharge}
+          onDeleteCharge={deleteCharge}
+          onWaiveCharge={waiveCharge}
+          onUpdateExpense={role === "owner" ? updateExpense : undefined}
+        />
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <ReportCard id="rent-roll" icon="bar-chart-3" title="Rent Roll" description="Current tenant roster with rent amounts and balances." />
@@ -132,12 +142,12 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         </section>
 
         <div className="space-y-6">
-          <RentRollReport data={rentRoll} />
-          <DelinquencyReport data={delinquency} />
-          <TenantLedgerReport data={tenantLedger} />
-          <MonthlyPnLReport data={monthlyPnl} />
+          <RentRollReport data={rentRoll} onEditCharge={editCharge} onDeleteCharge={deleteCharge} onWaiveCharge={waiveCharge} />
+          <DelinquencyReport data={delinquency} onEditCharge={editCharge} onDeleteCharge={deleteCharge} onWaiveCharge={waiveCharge} />
+          <TenantLedgerReport data={tenantLedger} onEditCharge={editCharge} onDeleteCharge={deleteCharge} onWaiveCharge={waiveCharge} />
+          <MonthlyPnLReport data={monthlyPnl} onEditCharge={editCharge} onUpdateExpense={role === "owner" ? updateExpense : undefined} />
           <TaxSummaryReport data={taxSummary} />
-          <ReceivablesReport data={receivables} />
+          <ReceivablesReport data={receivables} onEditCharge={editCharge} onDeleteCharge={deleteCharge} onWaiveCharge={waiveCharge} />
         </div>
       </div>
     </main>

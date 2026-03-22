@@ -19,6 +19,7 @@ import {
 } from "@/lib/validations";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 import { requireAuth } from "./auth-helpers";
+import { updateLeaseRentAmount } from "./charge-management";
 import type { ActionState } from "./shared";
 
 export async function createLease(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -277,4 +278,11 @@ export async function deleteLease(_prev: ActionState, formData: FormData): Promi
   revalidatePath("/manager");
   revalidatePath("/tenant");
   return { success: true };
+}
+
+export async function updateRentAmount(
+  prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  return updateLeaseRentAmount(prev, formData);
 }

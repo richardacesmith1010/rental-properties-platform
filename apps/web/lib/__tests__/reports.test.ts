@@ -1,3 +1,4 @@
+import type { ChargeDetailRecordDTO } from "@/lib/charge-audit";
 import { describe, expect, it } from "vitest";
 import {
   bucketDelinquencyDays,
@@ -77,9 +78,14 @@ describe("mapExpenseCategoryToTaxField", () => {
 });
 
 describe("report csv exporters", () => {
+  const baseChargeDetails: ChargeDetailRecordDTO[] = [];
+
   it("builds rent roll csv", () => {
     const csv = rentRollToCsv([
       {
+        leaseId: "lease-1",
+        propertyId: "property-1",
+        tenantProfileId: "tenant-1",
         propertyName: "Atlas",
         unitNumber: "101",
         tenantName: "Maya",
@@ -89,7 +95,8 @@ describe("report csv exporters", () => {
         leaseEnd: "2026-12-31",
         leaseStatus: "active",
         currentBalance: 5000,
-        lastPaymentDate: "2026-02-01"
+        lastPaymentDate: "2026-02-01",
+        chargeDetails: baseChargeDetails
       }
     ]);
 
@@ -101,6 +108,9 @@ describe("report csv exporters", () => {
   it("builds rent roll csv rows for vacant units", () => {
     const csv = rentRollToCsv([
       {
+        leaseId: "lease-2",
+        propertyId: "property-1",
+        tenantProfileId: null,
         propertyName: "Atlas",
         unitNumber: "102",
         tenantName: null,
@@ -110,7 +120,8 @@ describe("report csv exporters", () => {
         leaseEnd: "",
         leaseStatus: "vacant",
         currentBalance: 0,
-        lastPaymentDate: null
+        lastPaymentDate: null,
+        chargeDetails: baseChargeDetails
       }
     ]);
 
@@ -121,6 +132,8 @@ describe("report csv exporters", () => {
   it("builds delinquency csv", () => {
     const csv = delinquencyToCsv([
       {
+        leaseId: "lease-1",
+        tenantProfileId: "tenant-1",
         tenantName: "Maya",
         tenantEmail: "maya@example.com",
         propertyName: "Atlas",
@@ -129,7 +142,8 @@ describe("report csv exporters", () => {
         thirtyDay: 2000,
         sixtyDay: 3000,
         ninetyPlus: 4000,
-        totalOwed: 10000
+        totalOwed: 10000,
+        chargeDetails: baseChargeDetails
       }
     ]);
 
@@ -140,6 +154,8 @@ describe("report csv exporters", () => {
   it("builds delinquency csv with zero balances", () => {
     const csv = delinquencyToCsv([
       {
+        leaseId: "lease-2",
+        tenantProfileId: "tenant-2",
         tenantName: "Paid In Full",
         tenantEmail: "paid@example.com",
         propertyName: "Atlas",
@@ -148,7 +164,8 @@ describe("report csv exporters", () => {
         thirtyDay: 0,
         sixtyDay: 0,
         ninetyPlus: 0,
-        totalOwed: 0
+        totalOwed: 0,
+        chargeDetails: baseChargeDetails
       }
     ]);
 
@@ -221,12 +238,15 @@ describe("report csv exporters", () => {
     const csv = monthlyPnlToCsv([
       {
         month: "2026-01",
+        propertyId: "property-1",
         propertyName: "Atlas",
         rentalIncome: 100000,
         lateFeeIncome: 5000,
         totalIncome: 105000,
         expenses: 40000,
-        netIncome: 65000
+        netIncome: 65000,
+        incomeLineItems: baseChargeDetails,
+        expenseLineItems: []
       }
     ]);
 
@@ -238,12 +258,15 @@ describe("report csv exporters", () => {
     const csv = monthlyPnlToCsv([
       {
         month: "2026-02",
+        propertyId: "property-1",
         propertyName: "Atlas",
         rentalIncome: 0,
         lateFeeIncome: 0,
         totalIncome: 0,
         expenses: 40000,
-        netIncome: -40000
+        netIncome: -40000,
+        incomeLineItems: baseChargeDetails,
+        expenseLineItems: []
       }
     ]);
 
@@ -255,12 +278,15 @@ describe("report csv exporters", () => {
     const csv = monthlyPnlToCsv([
       {
         month: "2026-03",
+        propertyId: "property-1",
         propertyName: "Atlas",
         rentalIncome: 100000,
         lateFeeIncome: 0,
         totalIncome: 100000,
         expenses: 0,
-        netIncome: 100000
+        netIncome: 100000,
+        incomeLineItems: baseChargeDetails,
+        expenseLineItems: []
       }
     ]);
 
@@ -327,12 +353,15 @@ describe("report csv exporters", () => {
   it("builds receivables csv", () => {
     const csv = receivablesToCsv([
       {
+        leaseId: "lease-1",
+        tenantProfileId: "tenant-1",
         tenantName: "Maya",
         tenantEmail: "maya@example.com",
         propertyName: "Atlas",
         chargeCount: 2,
         totalOwedCents: 25000,
-        oldestDueDate: "2026-01-01"
+        oldestDueDate: "2026-01-01",
+        chargeDetails: baseChargeDetails
       }
     ]);
 
@@ -343,6 +372,9 @@ describe("report csv exporters", () => {
   it("escapes commas inside csv values", () => {
     const csv = rentRollToCsv([
       {
+        leaseId: "lease-3",
+        propertyId: "property-2",
+        tenantProfileId: "tenant-1",
         propertyName: "Atlas, East",
         unitNumber: "101",
         tenantName: "Maya",
@@ -352,7 +384,8 @@ describe("report csv exporters", () => {
         leaseEnd: "2026-12-31",
         leaseStatus: "active",
         currentBalance: 0,
-        lastPaymentDate: "2026-01-01"
+        lastPaymentDate: "2026-01-01",
+        chargeDetails: baseChargeDetails
       }
     ]);
 
@@ -362,6 +395,9 @@ describe("report csv exporters", () => {
   it("escapes quotes inside csv values", () => {
     const csv = rentRollToCsv([
       {
+        leaseId: "lease-4",
+        propertyId: "property-3",
+        tenantProfileId: "tenant-1",
         propertyName: 'The "Atlas" Building',
         unitNumber: "101",
         tenantName: "Maya",
@@ -371,7 +407,8 @@ describe("report csv exporters", () => {
         leaseEnd: "2026-12-31",
         leaseStatus: "active",
         currentBalance: 0,
-        lastPaymentDate: "2026-01-01"
+        lastPaymentDate: "2026-01-01",
+        chargeDetails: baseChargeDetails
       }
     ]);
 

@@ -20,13 +20,17 @@ import { getRentIncreaseHistory } from "@/lib/rent-increases";
 import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
 import {
   createCheckoutForCharge,
+  createManualCharge,
   deletePendingCharge,
+  editCharge,
   recordManualPayment,
   createLease,
   updateLease,
+  updateRentAmount,
   deleteLease,
   renewLease,
   terminateLease,
+  waiveCharge,
   createProperty,
   updateProperty,
   deleteProperty,
@@ -244,11 +248,15 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       onUpdateUnit={updateUnit}
       onDeleteUnit={deleteUnit}
       onUpdateLease={updateLease}
+      onUpdateRentAmount={updateRentAmount}
       onDeleteLease={deleteLease}
       onRenewLease={renewLease}
       onTerminateLease={terminateLease}
       onPayCharge={createCheckoutForCharge as (formData: FormData) => Promise<void>}
       onDeletePendingCharge={deletePendingCharge}
+      onEditCharge={editCharge}
+      onCreateManualCharge={createManualCharge}
+      onWaiveCharge={waiveCharge}
       onRecordManualPayment={recordManualPayment}
       onGenerateChargesHref="/owner/generate"
       generatedMessage={generatedMessage}

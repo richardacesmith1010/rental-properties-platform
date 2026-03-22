@@ -94,11 +94,15 @@ export interface DashboardProps {
   onUpdateUnit?: StatefulAction;
   onDeleteUnit?: StatefulAction;
   onUpdateLease?: StatefulAction;
+  onUpdateRentAmount?: StatefulAction;
   onDeleteLease?: StatefulAction;
   onRenewLease?: StatefulAction;
   onTerminateLease?: StatefulAction;
   onPayCharge: FormAction;
   onDeletePendingCharge?: StatefulAction;
+  onEditCharge?: StatefulAction;
+  onCreateManualCharge?: StatefulAction;
+  onWaiveCharge?: StatefulAction;
   onRecordManualPayment?: StatefulAction;
   onUpdateTicketStatus?: StatefulAction;
   onAddTicketComment?: StatefulAction;

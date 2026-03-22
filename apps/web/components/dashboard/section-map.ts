@@ -109,6 +109,9 @@ export interface SectionRendererProps {
   onGenerateChargesHref?: string;
   onPayCharge: FormAction;
   onDeletePendingCharge?: StatefulAction;
+  onEditCharge?: StatefulAction;
+  onCreateManualCharge?: StatefulAction;
+  onWaiveCharge?: StatefulAction;
   onRecordManualPayment?: StatefulAction;
   onSendBatchPaymentReminder?: StatefulAction;
   onUpdateTicketStatus?: StatefulAction;
@@ -178,6 +181,7 @@ export interface SectionRendererProps {
   onUpdateUnit?: StatefulAction;
   onDeleteUnit?: StatefulAction;
   onUpdateLease?: StatefulAction;
+  onUpdateRentAmount?: StatefulAction;
   onDeleteLease?: StatefulAction;
   onRenewLease?: StatefulAction;
   onTerminateLease?: StatefulAction;

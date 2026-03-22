@@ -1,15 +1,27 @@
 "use client";
 
+import type { ActionState } from "@/app/actions";
 import { downloadReportCsv, rentRollToCsv } from "@/lib/csv-export-reports";
 import type { RentRollItem } from "@/lib/reports";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { ReportSection } from "./report-layout";
+import { ChargeActionList } from "./drilldown-panel";
+
+type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
 interface RentRollReportProps {
   data: RentRollItem[];
+  onEditCharge?: StatefulAction;
+  onDeleteCharge?: StatefulAction;
+  onWaiveCharge?: StatefulAction;
 }
 
-export function RentRollReport({ data }: RentRollReportProps) {
+export function RentRollReport({
+  data,
+  onEditCharge,
+  onDeleteCharge,
+  onWaiveCharge
+}: RentRollReportProps) {
   return (
     <ReportSection
       id="rent-roll"
@@ -51,6 +63,15 @@ export function RentRollReport({ data }: RentRollReportProps) {
       ]}
       emptyTitle="No rent roll data yet"
       emptyDescription="Active leases will appear here once properties and tenants are live."
+      getRowId={(row) => row.leaseId}
+      renderExpandedContent={(row) => (
+        <ChargeActionList
+          charges={row.chargeDetails}
+          onEditCharge={onEditCharge}
+          onDeleteCharge={onDeleteCharge}
+          onWaiveCharge={onWaiveCharge}
+        />
+      )}
     />
   );
 }

@@ -1,13 +1,20 @@
 "use client";
 
+import type { ActionState } from "@/app/actions";
 import { downloadReportCsv, tenantLedgerToCsv } from "@/lib/csv-export-reports";
 import type { TenantLedger } from "@/lib/reports";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { ReportSection } from "./report-layout";
+import { ChargeActionList } from "./drilldown-panel";
 
 interface TenantLedgerReportProps {
   data: TenantLedger[];
+  onEditCharge?: StatefulAction;
+  onDeleteCharge?: StatefulAction;
+  onWaiveCharge?: StatefulAction;
 }
+
+type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
 interface LedgerRow {
   tenantName: string;
@@ -19,9 +26,16 @@ interface LedgerRow {
   balance: number;
   propertyName: string;
   unitNumber: string;
+  chargeId?: string | null;
+  charge?: TenantLedger["entries"][number]["charge"];
 }
 
-export function TenantLedgerReport({ data }: TenantLedgerReportProps) {
+export function TenantLedgerReport({
+  data,
+  onEditCharge,
+  onDeleteCharge,
+  onWaiveCharge
+}: TenantLedgerReportProps) {
   const rows: LedgerRow[] = data.flatMap((ledger) =>
     ledger.entries.map((entry) => ({
       tenantName: ledger.tenantName,
@@ -32,7 +46,9 @@ export function TenantLedgerReport({ data }: TenantLedgerReportProps) {
       amount: entry.amount,
       balance: entry.balance,
       propertyName: entry.propertyName,
-      unitNumber: entry.unitNumber
+      unitNumber: entry.unitNumber,
+      chargeId: entry.chargeId ?? null,
+      charge: entry.charge ?? null
     }))
   );
 
@@ -66,6 +82,21 @@ export function TenantLedgerReport({ data }: TenantLedgerReportProps) {
       ]}
       emptyTitle="No tenant ledger data"
       emptyDescription="Charge and payment history will appear once billing activity exists."
+      getRowId={(row, index) => row.chargeId ?? `${row.tenantEmail}:${row.date}:${index}`}
+      renderExpandedContent={(row) =>
+        row.charge ? (
+          <ChargeActionList
+            charges={[row.charge]}
+            onEditCharge={onEditCharge}
+            onDeleteCharge={onDeleteCharge}
+            onWaiveCharge={onWaiveCharge}
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Payments are immutable records and can be traced back from the tenant ledger.
+          </p>
+        )
+      }
     />
   );
 }

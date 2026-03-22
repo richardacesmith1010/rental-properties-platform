@@ -1,8 +1,11 @@
+import type { ChargeDetailRecordDTO } from "@/lib/charge-audit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
-import { differenceInDays, getLeasesForScope } from "./reports-rent-roll";
+import { differenceInDays, getChargeDetailsForLeases, getLeasesForScope } from "./reports-rent-roll";
 
 export interface DelinquencyItem {
+  leaseId: string;
+  tenantProfileId: string | null;
   tenantName: string;
   tenantEmail: string;
   propertyName: string;
@@ -12,15 +15,19 @@ export interface DelinquencyItem {
   sixtyDay: number;
   ninetyPlus: number;
   totalOwed: number;
+  chargeDetails: ChargeDetailRecordDTO[];
 }
 
 export interface ReceivableItem {
+  leaseId: string;
+  tenantProfileId: string | null;
   tenantName: string;
   tenantEmail: string;
   propertyName: string;
   chargeCount: number;
   totalOwedCents: number;
   oldestDueDate: string;
+  chargeDetails: ChargeDetailRecordDTO[];
 }
 
 export function bucketDelinquencyDays(
@@ -43,27 +50,24 @@ export async function getDelinquencyReport(userId: string): Promise<DelinquencyI
     const admin = createAdminClient();
     const { context, leases, tenantById } = await getLeasesForScope(userId);
     const leaseById = new Map(leases.map((lease) => [lease.id, lease]));
-    const leaseIds = leases.map((lease) => lease.id);
+    const { detailsByLeaseId } = await getChargeDetailsForLeases({
+      admin,
+      context,
+      leases,
+      tenantById,
+      statuses: ["pending", "late"]
+    });
+    const leaseIds = Array.from(detailsByLeaseId.keys());
 
     if (leaseIds.length === 0) {
       return [];
     }
 
-    const { data: charges, error } = await admin
-      .from("rent_charges")
-      .select("lease_id, due_date, amount_cents, status")
-      .in("lease_id", leaseIds)
-      .in("status", ["pending", "late"]);
-
-    if (error) {
-      throw error;
-    }
-
     const todayIso = new Date().toISOString().slice(0, 10);
     const grouped = new Map<string, DelinquencyItem>();
 
-    for (const charge of charges ?? []) {
-      const lease = leaseById.get(charge.lease_id);
+    for (const [leaseId, chargeDetails] of detailsByLeaseId.entries()) {
+      const lease = leaseById.get(leaseId);
       if (!lease || !lease.tenant_profile_id) {
         continue;
       }
@@ -73,6 +77,8 @@ export async function getDelinquencyReport(userId: string): Promise<DelinquencyI
       const tenant = tenantById.get(lease.tenant_profile_id);
       const key = `${lease.tenant_profile_id}:${lease.unit_id}`;
       const row = grouped.get(key) ?? {
+        leaseId,
+        tenantProfileId: lease.tenant_profile_id,
         tenantName: tenant?.name ?? tenant?.email ?? "Unknown Tenant",
         tenantEmail: tenant?.email ?? "",
         propertyName: property?.name ?? "Unknown Property",
@@ -81,12 +87,16 @@ export async function getDelinquencyReport(userId: string): Promise<DelinquencyI
         thirtyDay: 0,
         sixtyDay: 0,
         ninetyPlus: 0,
-        totalOwed: 0
+        totalOwed: 0,
+        chargeDetails: [] as ChargeDetailRecordDTO[]
       };
 
-      const bucket = bucketDelinquencyDays(Math.max(differenceInDays(charge.due_date, todayIso), 0));
-      row[bucket] += charge.amount_cents;
-      row.totalOwed += charge.amount_cents;
+      for (const charge of chargeDetails) {
+        const bucket = bucketDelinquencyDays(Math.max(differenceInDays(charge.dueDate, todayIso), 0));
+        row[bucket] += charge.amountCents;
+        row.totalOwed += charge.amountCents;
+        row.chargeDetails.push(charge);
+      }
       grouped.set(key, row);
     }
 
@@ -104,25 +114,22 @@ export async function getReceivablesReport(userId: string): Promise<ReceivableIt
     const admin = createAdminClient();
     const { context, leases, tenantById } = await getLeasesForScope(userId);
     const leaseById = new Map(leases.map((lease) => [lease.id, lease]));
-    const leaseIds = leases.map((lease) => lease.id);
+    const { detailsByLeaseId } = await getChargeDetailsForLeases({
+      admin,
+      context,
+      leases,
+      tenantById,
+      statuses: ["pending", "late"]
+    });
+    const leaseIds = Array.from(detailsByLeaseId.keys());
 
     if (leaseIds.length === 0) {
       return [];
     }
 
-    const { data: charges, error } = await admin
-      .from("rent_charges")
-      .select("lease_id, amount_cents, due_date")
-      .in("lease_id", leaseIds)
-      .in("status", ["pending", "late"]);
-
-    if (error) {
-      throw error;
-    }
-
     const grouped = new Map<string, ReceivableItem>();
-    for (const charge of charges ?? []) {
-      const lease = leaseById.get(charge.lease_id);
+    for (const [leaseId, chargeDetails] of detailsByLeaseId.entries()) {
+      const lease = leaseById.get(leaseId);
       if (!lease?.tenant_profile_id) {
         continue;
       }
@@ -132,18 +139,24 @@ export async function getReceivablesReport(userId: string): Promise<ReceivableIt
       const tenant = tenantById.get(lease.tenant_profile_id);
       const key = `${lease.tenant_profile_id}:${lease.unit_id}`;
       const row = grouped.get(key) ?? {
+        leaseId,
+        tenantProfileId: lease.tenant_profile_id,
         tenantName: tenant?.name ?? tenant?.email ?? "Unknown Tenant",
         tenantEmail: tenant?.email ?? "",
         propertyName: property?.name ?? "Unknown Property",
         chargeCount: 0,
         totalOwedCents: 0,
-        oldestDueDate: charge.due_date
+        oldestDueDate: chargeDetails[0]?.dueDate ?? new Date().toISOString().slice(0, 10),
+        chargeDetails: [] as ChargeDetailRecordDTO[]
       };
 
-      row.chargeCount += 1;
-      row.totalOwedCents += charge.amount_cents;
-      if (charge.due_date < row.oldestDueDate) {
-        row.oldestDueDate = charge.due_date;
+      for (const charge of chargeDetails) {
+        row.chargeCount += 1;
+        row.totalOwedCents += charge.amountCents;
+        if (charge.dueDate < row.oldestDueDate) {
+          row.oldestDueDate = charge.dueDate;
+        }
+        row.chargeDetails.push(charge);
       }
       grouped.set(key, row);
     }

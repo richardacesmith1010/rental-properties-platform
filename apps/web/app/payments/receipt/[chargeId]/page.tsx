@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Download } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
+import { withChargeEditingFallback } from "@/lib/charge-audit";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserRole } from "@/lib/auth";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
@@ -29,11 +30,22 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
     redirect("/");
   }
 
-  const { data: charge } = await supabase
-    .from("rent_charges")
-    .select("id, lease_id, due_date, amount_cents, category")
-    .eq("id", params.chargeId)
-    .maybeSingle();
+  const chargeQuery = await withChargeEditingFallback(
+    () =>
+      supabase
+        .from("rent_charges")
+        .select("id, lease_id, due_date, amount_cents, category")
+        .eq("id", params.chargeId)
+        .is("deleted_at", null)
+        .maybeSingle(),
+    () =>
+      supabase
+        .from("rent_charges")
+        .select("id, lease_id, due_date, amount_cents, category")
+        .eq("id", params.chargeId)
+        .maybeSingle()
+  );
+  const charge = chargeQuery.data;
 
   if (!charge) {
     notFound();

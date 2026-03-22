@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { type ChargeDetailRecordDTO, type ExpenseLineItemDTO, withChargeEditingFallback } from "@/lib/charge-audit";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 import {
   buildMonthKeys,
@@ -11,12 +12,15 @@ import {
 
 export interface MonthlyPnLRow {
   month: string;
+  propertyId: string;
   propertyName: string;
   rentalIncome: number;
   lateFeeIncome: number;
   totalIncome: number;
   expenses: number;
   netIncome: number;
+  incomeLineItems: ChargeDetailRecordDTO[];
+  expenseLineItems: ExpenseLineItemDTO[];
 }
 
 export interface TaxSummaryRow {
@@ -87,9 +91,24 @@ export async function getMonthlyPnLReport(
     const leaseIds = leases.map((lease) => lease.id);
     const monthKeys = buildMonthKeys(year);
 
-    const { data: charges } = leaseIds.length
-      ? await admin.from("rent_charges").select("id, lease_id, category").in("lease_id", leaseIds)
-      : { data: [] };
+    const { data: charges, error: chargeError } = leaseIds.length
+      ? await withChargeEditingFallback(
+          () =>
+            admin
+              .from("rent_charges")
+              .select("id, lease_id, category, due_date, amount_cents, status")
+              .in("lease_id", leaseIds)
+              .is("deleted_at", null),
+          () =>
+            admin
+              .from("rent_charges")
+              .select("id, lease_id, category, due_date, amount_cents, status")
+              .in("lease_id", leaseIds)
+        )
+      : { data: [], error: null };
+    if (chargeError) {
+      throw chargeError;
+    }
 
     const chargeById = new Map((charges ?? []).map((charge) => [charge.id, charge]));
     const { data: payments } = chargeById.size
@@ -103,14 +122,20 @@ export async function getMonthlyPnLReport(
 
     const { data: expenses } = await admin
       .from("property_expenses")
-      .select("property_id, amount_cents, expense_date")
+      .select("id, property_id, category, description, amount_cents, expense_date")
       .in("property_id", context.propertyIds)
       .gte("expense_date", startOfYear(year))
       .lte("expense_date", endOfYear(year));
 
     const totalsByMonthProperty = new Map<
       string,
-      { rentalIncome: number; lateFeeIncome: number; expenses: number }
+      {
+        rentalIncome: number;
+        lateFeeIncome: number;
+        expenses: number;
+        incomeLineItems: ChargeDetailRecordDTO[];
+        expenseLineItems: ExpenseLineItemDTO[];
+      }
     >();
 
     for (const property of context.propertyById.values()) {
@@ -118,7 +143,9 @@ export async function getMonthlyPnLReport(
         totalsByMonthProperty.set(`${property.id}:${month}`, {
           rentalIncome: 0,
           lateFeeIncome: 0,
-          expenses: 0
+          expenses: 0,
+          incomeLineItems: [],
+          expenseLineItems: []
         });
       }
     }
@@ -141,6 +168,25 @@ export async function getMonthlyPnLReport(
       } else {
         bucket.rentalIncome += payment.amount_cents;
       }
+      const tenantId = lease.tenant_profile_id ?? null;
+      bucket.incomeLineItems.push({
+        id: charge.id,
+        leaseId: lease.id,
+        propertyId: unit.propertyId,
+        propertyName: context.propertyById.get(unit.propertyId)?.name ?? "Unknown Property",
+        unitNumber: unit.unitNumber,
+        tenantProfileId: tenantId,
+        tenantName: tenantId ? "Tenant charge" : "Vacant unit",
+        tenantEmail: "",
+        dueDate: charge.due_date,
+        amountCents: payment.amount_cents,
+        status: charge.status,
+        category: (charge.category ?? "rent") as ChargeDetailRecordDTO["category"],
+        notes: null,
+        latestEditedAt: null,
+        latestEditedByName: null,
+        editedCount: 0
+      });
     }
 
     for (const expense of expenses ?? []) {
@@ -154,6 +200,15 @@ export async function getMonthlyPnLReport(
         continue;
       }
       bucket.expenses += expense.amount_cents;
+      bucket.expenseLineItems.push({
+        id: expense.id,
+        propertyId: expense.property_id,
+        propertyName: context.propertyById.get(expense.property_id)?.name ?? "Unknown Property",
+        category: expense.category,
+        description: expense.description ?? null,
+        amountCents: expense.amount_cents,
+        expenseDate: expense.expense_date
+      });
     }
 
     const rows: MonthlyPnLRow[] = [];
@@ -166,12 +221,15 @@ export async function getMonthlyPnLReport(
         const totalIncome = bucket.rentalIncome + bucket.lateFeeIncome;
         rows.push({
           month,
+          propertyId: property.id,
           propertyName: property.name,
           rentalIncome: bucket.rentalIncome,
           lateFeeIncome: bucket.lateFeeIncome,
           totalIncome,
           expenses: bucket.expenses,
-          netIncome: totalIncome - bucket.expenses
+          netIncome: totalIncome - bucket.expenses,
+          incomeLineItems: bucket.incomeLineItems,
+          expenseLineItems: bucket.expenseLineItems
         });
       }
     }
@@ -199,9 +257,20 @@ export async function getTaxSummaryReport(
     const leaseById = new Map(leases.map((lease) => [lease.id, lease]));
     const leaseIds = leases.map((lease) => lease.id);
 
-    const { data: charges } = leaseIds.length
-      ? await admin.from("rent_charges").select("id, lease_id").in("lease_id", leaseIds)
-      : { data: [] };
+    const { data: charges, error: taxChargeError } = leaseIds.length
+      ? await withChargeEditingFallback(
+          () =>
+            admin
+              .from("rent_charges")
+              .select("id, lease_id")
+              .in("lease_id", leaseIds)
+              .is("deleted_at", null),
+          () => admin.from("rent_charges").select("id, lease_id").in("lease_id", leaseIds)
+        )
+      : { data: [], error: null };
+    if (taxChargeError) {
+      throw taxChargeError;
+    }
 
     const chargeById = new Map((charges ?? []).map((charge) => [charge.id, charge]));
     const { data: payments } = chargeById.size

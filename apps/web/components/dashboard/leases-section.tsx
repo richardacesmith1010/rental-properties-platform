@@ -32,6 +32,7 @@ interface LeasesSectionProps {
   showControls?: boolean;
   previewCount?: number;
   onUpdateLease?: StatefulAction;
+  onUpdateRentAmount?: StatefulAction;
   onDeleteLease?: StatefulAction;
   onRenewLease?: StatefulAction;
   onTerminateLease?: StatefulAction;
@@ -117,6 +118,7 @@ export function LeasesSection({
   showControls = false,
   previewCount,
   onUpdateLease,
+  onUpdateRentAmount,
   onDeleteLease,
   onRenewLease,
   onTerminateLease,
@@ -125,10 +127,12 @@ export function LeasesSection({
 }: LeasesSectionProps) {
   const [expanded, setExpanded] = useState(false);
   const [updateState, updateAction] = useFormState(onUpdateLease ?? unavailableAction, null);
+  const [rentAmountState, updateRentAmountAction] = useFormState(onUpdateRentAmount ?? unavailableAction, null);
   const [deleteState, deleteAction] = useFormState(onDeleteLease ?? unavailableAction, null);
   const [renewState, renewAction] = useFormState(onRenewLease ?? unavailableAction, null);
   const [terminateState, terminateAction] = useFormState(onTerminateLease ?? unavailableAction, null);
   const [activeEditLeaseId, setActiveEditLeaseId] = useState<string | null>(null);
+  const [activeRentAmountLeaseId, setActiveRentAmountLeaseId] = useState<string | null>(null);
   const [activeRenewLeaseId, setActiveRenewLeaseId] = useState<string | null>(null);
   const [activeTerminateLeaseId, setActiveTerminateLeaseId] = useState<string | null>(null);
   const [confirmDeleteLeaseId, setConfirmDeleteLeaseId] = useState<string | null>(null);
@@ -137,13 +141,20 @@ export function LeasesSection({
   const hasMore = previewCount != null && leases.length > previewCount;
 
   useEffect(() => {
-    if (updateState?.success || deleteState?.success || renewState?.success || terminateState?.success) {
+    if (
+      updateState?.success ||
+      rentAmountState?.success ||
+      deleteState?.success ||
+      renewState?.success ||
+      terminateState?.success
+    ) {
       setActiveEditLeaseId(null);
+      setActiveRentAmountLeaseId(null);
       setActiveRenewLeaseId(null);
       setActiveTerminateLeaseId(null);
       setConfirmDeleteLeaseId(null);
     }
-  }, [deleteState, renewState, terminateState, updateState]);
+  }, [deleteState, renewState, rentAmountState, terminateState, updateState]);
 
   return (
     <Card id="leases" className="border border-border/50 shadow-sm">
@@ -168,10 +179,12 @@ export function LeasesSection({
         {showControls ? (
           <>
             <FormError state={updateState} />
+            <FormError state={rentAmountState} />
             <FormError state={deleteState} />
             <FormError state={renewState} />
             <FormError state={terminateState} />
             <FormSuccess state={updateState} message="Lease updated." />
+            <FormSuccess state={rentAmountState} message="Recurring rent amount updated." />
             <FormSuccess state={deleteState} message="Lease archived." />
             <FormSuccess state={renewState} message="Lease renewed." />
             <FormSuccess state={terminateState} message="Lease terminated." />
@@ -205,6 +218,38 @@ export function LeasesSection({
                     <p className="mt-0.5 text-sm text-muted-foreground">
                       {lease.gracePeriodDays}-day grace • {formatCurrency(lease.lateFeeCents)} late fee
                     </p>
+
+                    {showControls && isActiveLease && activeRentAmountLeaseId === lease.id ? (
+                      <form action={updateRentAmountAction} className="mt-3 flex flex-wrap items-end gap-2">
+                        <input type="hidden" name="leaseId" value={lease.id} />
+                        <div className="space-y-1">
+                          <label className="block text-xs font-medium text-zinc-600" htmlFor={`lease-rent-amount-${lease.id}`}>
+                            New Rent Amount
+                          </label>
+                          <Input
+                            id={`lease-rent-amount-${lease.id}`}
+                            name="monthlyRentDollars"
+                            type="number"
+                            min={1}
+                            step="0.01"
+                            defaultValue={lease.monthlyRentCents / 100}
+                            required
+                          />
+                        </div>
+                        <SubmitButton size="sm" variant="outline" title="Save the recurring rent amount for future charge generation.">
+                          Save Rent Amount
+                        </SubmitButton>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setActiveRentAmountLeaseId(null)}
+                          title="Cancel rent amount editing."
+                        >
+                          Cancel
+                        </Button>
+                      </form>
+                    ) : null}
 
                     {showControls && isActiveLease && activeEditLeaseId === lease.id ? (
                       <div className="mt-3 space-y-4">
@@ -374,6 +419,19 @@ export function LeasesSection({
 
                     {showControls && isActiveLease ? (
                       <>
+                        {onUpdateRentAmount ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={activeRentAmountLeaseId === lease.id ? "default" : "outline"}
+                            onClick={() =>
+                              setActiveRentAmountLeaseId((current) => (current === lease.id ? null : lease.id))
+                            }
+                            title="Edit the recurring rent amount used for future charges."
+                          >
+                            {activeRentAmountLeaseId === lease.id ? "Hide Rent Editor" : "Edit Rent Amount"}
+                          </Button>
+                        ) : null}
                         <Button
                           type="button"
                           size="sm"

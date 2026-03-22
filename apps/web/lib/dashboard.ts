@@ -1,5 +1,13 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  type ChargeCategory,
+  type ChargeEditHistoryEntryDTO,
+  type ChargeStatus,
+  getChargeAuditSummary,
+  getChargeEditHistoryMap,
+  withChargeEditingFallback
+} from "@/lib/charge-audit";
+import {
   getAdministeredPropertyIds,
   getAdministeredPropertyIdsForAccount
 } from "@/lib/property-access";
@@ -28,12 +36,16 @@ export interface DashboardCharge {
   propertyId: string;
   dueDate: string;
   amountCents: number;
-  status: "pending" | "paid" | "late";
+  status: ChargeStatus;
   propertyName: string;
   unitNumber: string;
   tenantName: string;
-  category: "rent" | "late_fee";
+  category: ChargeCategory;
+  notes?: string | null;
   reminderSentAt?: string | null;
+  latestEditedAt?: string | null;
+  latestEditedByName?: string | null;
+  editedCount?: number;
 }
 
 interface RecentPayment {
@@ -94,8 +106,19 @@ function emptyData(role: DashboardData["profileRole"]): DashboardData {
   };
 }
 
-function normalizeChargeCategory(value: string | null | undefined): "rent" | "late_fee" {
-  return value === "late_fee" ? "late_fee" : "rent";
+function normalizeChargeCategory(value: string | null | undefined): ChargeCategory {
+  switch (value) {
+    case "late_fee":
+    case "utility":
+    case "maintenance":
+    case "deposit":
+    case "key_replacement":
+    case "other":
+      return value;
+    case "rent":
+    default:
+      return "rent";
+  }
 }
 
 export async function getDashboardData(
@@ -193,8 +216,9 @@ export async function getDashboardData(
     lease_id: string;
     due_date: string;
     amount_cents: number;
-    status: "pending" | "paid" | "late";
-    category: "rent" | "late_fee";
+    status: ChargeStatus;
+    category: ChargeCategory;
+    notes?: string | null;
   }> = [];
 
   let lateCharges: Array<{ amount_cents: number; lease_id: string }> = [];
@@ -207,29 +231,63 @@ export async function getDashboardData(
     rent_charge_id: string;
   }> = [];
   let reminderSentAtByChargeId = new Map<string, string>();
+  let chargeHistoryById = new Map<string, ChargeEditHistoryEntryDTO[]>();
 
   if (leaseIds.length > 0) {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30);
 
     const [lateChargeRows, pendingLateChargeRows, leaseChargeIdRows] = await Promise.all([
-      admin
-        .from("rent_charges")
-        .select("amount_cents, lease_id")
-        .in("lease_id", leaseIds)
-        .eq("status", "late"),
-      admin
-        .from("rent_charges")
-        .select("id, lease_id, due_date, amount_cents, status, category")
-        .in("lease_id", leaseIds)
-        .in("status", ["pending", "late"])
-        .order("due_date", { ascending: true })
-        .limit(20),
-      admin
-        .from("rent_charges")
-        .select("id")
-        .in("lease_id", leaseIds)
+      withChargeEditingFallback(
+        () =>
+          admin
+            .from("rent_charges")
+            .select("amount_cents, lease_id")
+            .in("lease_id", leaseIds)
+            .eq("status", "late")
+            .is("deleted_at", null),
+        () =>
+          admin
+            .from("rent_charges")
+            .select("amount_cents, lease_id")
+            .in("lease_id", leaseIds)
+            .eq("status", "late")
+      ),
+      withChargeEditingFallback(
+        () =>
+          admin
+            .from("rent_charges")
+            .select("id, lease_id, due_date, amount_cents, status, category, notes")
+            .in("lease_id", leaseIds)
+            .in("status", ["pending", "late", "waived"])
+            .is("deleted_at", null)
+            .order("due_date", { ascending: true })
+            .limit(30),
+        () =>
+          admin
+            .from("rent_charges")
+            .select("id, lease_id, due_date, amount_cents, status, category")
+            .in("lease_id", leaseIds)
+            .in("status", ["pending", "late"])
+            .order("due_date", { ascending: true })
+            .limit(20)
+      ),
+      withChargeEditingFallback(
+        () =>
+          admin
+            .from("rent_charges")
+            .select("id")
+            .in("lease_id", leaseIds)
+            .is("deleted_at", null),
+        () => admin.from("rent_charges").select("id").in("lease_id", leaseIds)
+      )
     ]);
+
+    const chargeQueryError =
+      lateChargeRows.error ?? pendingLateChargeRows.error ?? leaseChargeIdRows.error ?? null;
+    if (chargeQueryError) {
+      throw chargeQueryError;
+    }
 
     const chargeIdsForLease = (leaseChargeIdRows.data ?? []).map((row) => row.id);
 
@@ -249,20 +307,45 @@ export async function getDashboardData(
       lease_id: string;
       due_date: string;
       amount_cents: number;
-      status: "pending" | "paid" | "late";
+      status: ChargeStatus;
       category: string | null;
+      notes?: string | null;
     }>;
 
     const uniqueChargeIds = Array.from(
       new Set([...pendingLateRows.map((row) => row.id), ...paidChargeIds])
     );
 
-    const { data: chargeDetails } = uniqueChargeIds.length
-      ? await admin
-          .from("rent_charges")
-          .select("id, lease_id, due_date, amount_cents, status, category")
-          .in("id", uniqueChargeIds)
-      : { data: [] as Array<{ id: string; lease_id: string; due_date: string; amount_cents: number; status: "pending" | "paid" | "late"; category: string | null }> };
+    const chargeDetailsResult = uniqueChargeIds.length
+      ? await withChargeEditingFallback(
+          () =>
+            admin
+              .from("rent_charges")
+              .select("id, lease_id, due_date, amount_cents, status, category, notes")
+              .in("id", uniqueChargeIds)
+              .is("deleted_at", null),
+          () =>
+            admin
+              .from("rent_charges")
+              .select("id, lease_id, due_date, amount_cents, status, category")
+              .in("id", uniqueChargeIds)
+        )
+      : {
+          data: [] as Array<{
+            id: string;
+            lease_id: string;
+            due_date: string;
+            amount_cents: number;
+            status: ChargeStatus;
+            category: string | null;
+            notes?: string | null;
+          }>,
+          error: null
+        };
+    const chargeDetails = chargeDetailsResult.data ?? [];
+    if (chargeDetailsResult.error) {
+      throw chargeDetailsResult.error;
+    }
 
     if (uniqueChargeIds.length > 0) {
       const { data: reminderNotifications, error: reminderError } = await admin
@@ -290,7 +373,8 @@ export async function getDashboardData(
       }
     }
 
-    const chargeById = new Map((chargeDetails ?? []).map((charge) => [charge.id, charge]));
+    chargeHistoryById = await getChargeEditHistoryMap(admin, uniqueChargeIds);
+    const chargeById = new Map(chargeDetails.map((charge) => [charge.id, charge]));
 
     const pendingLateCharges = pendingLateRows.map((charge) => ({
       id: charge.id,
@@ -298,7 +382,8 @@ export async function getDashboardData(
       due_date: charge.due_date,
       amount_cents: charge.amount_cents,
       status: charge.status,
-      category: normalizeChargeCategory(charge.category)
+      category: normalizeChargeCategory(charge.category),
+      notes: charge.notes ?? null
     }));
 
     const paidChargeRows = (recentPaymentRows ?? [])
@@ -309,8 +394,9 @@ export async function getDashboardData(
           lease_id: string;
           due_date: string;
           amount_cents: number;
-          status: "pending" | "paid" | "late";
+          status: ChargeStatus;
           category: string | null;
+          notes?: string | null;
         } => Boolean(charge)
       )
       .filter((charge) => charge.status === "paid")
@@ -320,7 +406,8 @@ export async function getDashboardData(
         due_date: charge.due_date,
         amount_cents: charge.amount_cents,
         status: charge.status,
-        category: normalizeChargeCategory(charge.category)
+        category: normalizeChargeCategory(charge.category),
+        notes: charge.notes ?? null
       }));
 
     const seenChargeIds = new Set<string>();
@@ -414,7 +501,9 @@ export async function getDashboardData(
         unitNumber,
         tenantName,
         category: charge.category,
-        reminderSentAt: reminderSentAtByChargeId.get(charge.id) ?? null
+        notes: charge.notes ?? null,
+        reminderSentAt: reminderSentAtByChargeId.get(charge.id) ?? null,
+        ...getChargeAuditSummary(chargeHistoryById.get(charge.id) ?? [])
       };
     }),
     recentPayments: recentPayments.map((payment) => {

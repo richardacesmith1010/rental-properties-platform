@@ -66,6 +66,9 @@ export function SectionRenderer(props: SectionRendererProps) {
           charges={props.data.charges}
           onPayCharge={props.onPayCharge}
           onDeletePendingCharge={props.onDeletePendingCharge}
+          onEditCharge={props.onEditCharge}
+          onCreateManualCharge={props.onCreateManualCharge}
+          onWaiveCharge={props.onWaiveCharge}
           onRecordManualPayment={props.onRecordManualPayment}
           onSendBatchPaymentReminder={
             props.data.profileRole === "owner" ? props.onSendBatchPaymentReminder : undefined
@@ -75,6 +78,13 @@ export function SectionRenderer(props: SectionRendererProps) {
           ownerConnectedMap={props.ownerConnectedMap}
           stripeConnected={props.stripeConnected}
           previewCount={props.isOwnerDailyOpsCarousel ? 5 : undefined}
+          availableLeases={props.safePortfolio.leases
+            .filter((lease) => lease.active)
+            .map((lease) => ({
+              id: lease.id,
+              tenantLabel: lease.tenantEmail,
+              propertyLabel: lease.unitLabel
+            }))}
         />
       );
 
@@ -391,6 +401,7 @@ export function SectionRenderer(props: SectionRendererProps) {
           rentIncreaseHistory={props.rentIncreaseHistory}
           showControls={props.canManagePortfolio}
           onUpdateLease={props.onUpdateLease}
+          onUpdateRentAmount={props.onUpdateRentAmount}
           onDeleteLease={props.onDeleteLease}
           onRenewLease={props.onRenewLease}
           onTerminateLease={props.onTerminateLease}
