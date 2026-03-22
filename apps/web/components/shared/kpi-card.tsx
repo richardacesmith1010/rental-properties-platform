@@ -34,7 +34,7 @@ export function KpiCard({
     <Card
       role="status"
       aria-label={cardAriaLabel}
-      className={`relative min-h-[44px] overflow-hidden border border-border/50 p-5 shadow-md sm:p-6 ${alert ? "border-amber-200" : ""}`}
+      className={`relative min-h-[44px] overflow-hidden border border-border/50 p-4 shadow-md ${alert ? "border-amber-200" : ""}`}
     >
       <div
         className="absolute -top-10 -right-10 h-28 w-28 rounded-full opacity-[0.14]"
@@ -44,7 +44,7 @@ export function KpiCard({
         {title}
       </span>
       <div className="mt-2 flex items-end gap-2">
-        <div aria-live="polite" aria-atomic="true" className="text-3xl font-extrabold tracking-tight text-foreground">
+        <div aria-live="polite" aria-atomic="true" className="text-2xl font-extrabold tracking-tight text-foreground sm:text-[1.75rem]">
           {prefix ?? ""}
           {value}
         </div>
@@ -54,7 +54,7 @@ export function KpiCard({
           </span>
         ) : null}
       </div>
-      {subtitle ? <p aria-hidden="true" className="mt-2.5 text-sm font-medium text-muted-foreground">{subtitle}</p> : null}
+      {subtitle ? <p aria-hidden="true" className="mt-2 text-sm font-medium text-muted-foreground">{subtitle}</p> : null}
     </Card>
   );
 }

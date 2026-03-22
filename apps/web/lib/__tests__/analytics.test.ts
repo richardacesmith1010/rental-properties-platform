@@ -5,6 +5,7 @@ import {
   buildOccupancyMetrics,
   buildRentMetrics,
   calculateOccupancyRate,
+  formatAverageDaysToPayment,
   type MonthWindow
 } from "../analytics";
 
@@ -226,6 +227,15 @@ describe("analytics transformations", () => {
 
   it("returns zero occupancy when no units exist", () => {
     expect(calculateOccupancyRate(2, 0)).toBe(0);
+  });
+
+  it("formats empty average days to pay values as an em dash", () => {
+    expect(formatAverageDaysToPayment(0)).toBe("—");
+    expect(formatAverageDaysToPayment(null)).toBe("—");
+  });
+
+  it("formats positive average days to pay with a day suffix", () => {
+    expect(formatAverageDaysToPayment(3.25)).toBe("3.3d");
   });
 
   it("builds occupancy metrics using overlapping leases and unique unit counts", () => {

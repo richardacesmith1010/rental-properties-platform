@@ -16,6 +16,7 @@ import { AnimatedList } from "@/components/ui/animated-list";
 import type { PropertyListItem } from "@/lib/portfolio";
 import type { ActionState } from "@/app/actions";
 import { Alert } from "@/components/ui/alert";
+import { pluralize } from "@/lib/format";
 
 type StatefulAction = (
   prev: ActionState,
@@ -180,9 +181,11 @@ export function PortfolioSection({
                       {property.city}, {property.state} {property.postalCode}
                     </p>
                     <p className="mt-0.5 text-sm text-zinc-500">{property.ownerAccountName}</p>
-                    <p className="mt-0.5 text-sm text-zinc-500">
-                      Management fee: ${(property.managementFeeCents / 100).toFixed(2)}
-                    </p>
+                    {property.managementFeeCents > 0 ? (
+                      <p className="mt-0.5 text-sm text-zinc-500">
+                        Management fee: ${(property.managementFeeCents / 100).toFixed(2)}
+                      </p>
+                    ) : null}
                     {showControls && activeEditPropertyId === property.id && (
                       <div className="mt-3 space-y-3" onClick={(event) => event.stopPropagation()}>
                         <form action={updateAction} className="grid gap-2 sm:grid-cols-2">
@@ -230,7 +233,7 @@ export function PortfolioSection({
                     className="flex flex-col items-end gap-2"
                     onClick={(event) => event.stopPropagation()}
                   >
-                    <p className="text-sm text-zinc-500">{property.unitCount} units</p>
+                    <p className="text-sm text-zinc-500">{pluralize(property.unitCount, "unit")}</p>
                     {showControls && (
                       <>
                         <Button

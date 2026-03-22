@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  pluralize,
   formatCurrency,
   formatDate,
   formatDateTime,
@@ -61,6 +62,20 @@ describe("formatDateTime", () => {
 
   it("returns invalid datetime strings unchanged", () => {
     expect(formatDateTime("invalid-datetime")).toBe("invalid-datetime");
+  });
+});
+
+describe("pluralize", () => {
+  it("returns the singular form for one item", () => {
+    expect(pluralize(1, "unit")).toBe("1 unit");
+  });
+
+  it("returns the plural form for multiple items", () => {
+    expect(pluralize(3, "unit")).toBe("3 units");
+  });
+
+  it("supports custom plural forms", () => {
+    expect(pluralize(2, "person", "people")).toBe("2 people");
   });
 });
 

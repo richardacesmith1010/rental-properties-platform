@@ -23,6 +23,7 @@ export function PropertySelector({
 }: PropertySelectorProps) {
   const selectId = useId();
   const [isExpanded, setIsExpanded] = useState(false);
+  const selectedProperty = properties.find((property) => property.id === selectedPropertyId) ?? null;
 
   if (properties.length === 0) {
     return null;
@@ -43,14 +44,19 @@ export function PropertySelector({
         onChange={(event) => onSelect(event.target.value || null)}
         onFocus={() => setIsExpanded(true)}
         onBlur={() => setIsExpanded(false)}
-        title="Choose a property to scope the dashboard."
+        title={
+          selectedProperty?.address
+            ? `${selectedProperty.name} — ${selectedProperty.address}`
+            : "Choose a property to scope the dashboard."
+        }
         aria-haspopup="listbox"
         aria-expanded={isExpanded}
+        className="truncate"
       >
         <option value="">All Properties</option>
         {properties.map((property) => (
           <option key={property.id} value={property.id}>
-            {property.address ? `${property.name} - ${property.address}` : property.name}
+            {property.name}
           </option>
         ))}
       </Select>

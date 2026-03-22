@@ -127,7 +127,12 @@ export function ManagerPaymentsSection({
               Track recurring management fees, reimbursements, and invoice history per property.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            {onRecordManagerPayment ? (
+              <Button type="button" onClick={() => setShowPaymentForm((current) => !current)} title="Record a reimbursement or custom manager payment.">
+                Record Payment
+              </Button>
+            ) : null}
             {onGenerateMonthlyManagerPayments ? (
               <Button type="button" variant="outline" onClick={handleGenerateMonthlyPayments} title="Generate this month's recurring manager payments.">
                 Generate This Month
@@ -136,11 +141,6 @@ export function ManagerPaymentsSection({
             {onSetupManagerPaymentConfig ? (
               <Button type="button" variant="outline" onClick={() => setShowConfigForm((current) => !current)} title="Set up a recurring payment for an assigned manager.">
                 Set Up Recurring
-              </Button>
-            ) : null}
-            {onRecordManagerPayment ? (
-              <Button type="button" onClick={() => setShowPaymentForm((current) => !current)} title="Record a reimbursement or custom manager payment.">
-                Record Payment
               </Button>
             ) : null}
           </div>

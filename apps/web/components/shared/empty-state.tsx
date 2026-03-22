@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import { InboxIcon } from "lucide-react";
-import { DomMascot } from "@/components/gamification/dom-mascot";
+import { DomMascot, type DomMascotProps } from "@/components/gamification/dom-mascot";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/format";
 
@@ -14,6 +14,8 @@ interface EmptyStateProps {
   actionVariant?: ButtonProps["variant"];
   className?: string;
   showDom?: boolean;
+  domMood?: DomMascotProps["mood"];
+  domSize?: DomMascotProps["size"];
 }
 
 export function EmptyState({
@@ -25,19 +27,21 @@ export function EmptyState({
   onAction,
   actionVariant = "outline",
   className,
-  showDom = true
+  showDom = true,
+  domMood = "pointing",
+  domSize = "lg"
 }: EmptyStateProps) {
   const body = message ?? description ?? "";
   const hasCustomIcon = Icon !== InboxIcon;
 
   return (
     <div className={cn("domus-card mx-auto max-w-2xl px-6 py-12 text-center opacity-95", className)}>
-      <div className="relative mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 shadow-sm ring-1 ring-border/60">
+      <div className="relative mx-auto flex h-36 w-36 items-center justify-center rounded-full bg-primary/10 shadow-sm ring-1 ring-border/60">
         {showDom ? (
           <>
-            <DomMascot size="md" mood="pointing" className="animate-domus-bob" />
+            <DomMascot size={domSize} mood={domMood} className="animate-domus-bob" />
             {hasCustomIcon ? (
-              <span className="absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card shadow-sm">
+              <span className="absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card shadow-sm">
                 <Icon className="h-4 w-4 text-primary" />
               </span>
             ) : null}

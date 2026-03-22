@@ -1,6 +1,6 @@
 import { KpiCard } from "@/components/shared/kpi-card";
 import type { DashboardKpis } from "@/lib/dashboard";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, pluralize } from "@/lib/format";
 
 interface KpiGridProps {
   kpis: DashboardKpis;
@@ -39,7 +39,7 @@ export function KpiGrid({
   }`;
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <KpiCard
         title="Monthly Revenue"
         value={formatCurrency(kpis.monthlyGrossRentCents)}
@@ -51,10 +51,10 @@ export function KpiGrid({
       <KpiCard
         title="Occupancy"
         value={`${occupancy}%`}
-        subtitle={`${kpis.occupiedUnits}/${kpis.totalUnits} units`}
+        subtitle={`${kpis.occupiedUnits}/${kpis.totalUnits} ${kpis.totalUnits === 1 ? "unit" : "units"}`}
         gradient={occupancyGradient(occupancy)}
         trend={occupancyTrend}
-        ariaLabel={`Occupancy: ${occupancy}%. ${kpis.occupiedUnits} of ${kpis.totalUnits} units occupied.`}
+        ariaLabel={`Occupancy: ${occupancy}%. ${kpis.occupiedUnits} of ${pluralize(kpis.totalUnits, "unit")} occupied.`}
       />
       <KpiCard
         title="Rent Collection"

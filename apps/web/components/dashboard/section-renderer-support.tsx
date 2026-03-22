@@ -1,108 +1,78 @@
 import type { ReactNode } from "react";
-import { formatCurrency } from "@/lib/format";
-import { Breadcrumbs, type BreadcrumbItem } from "./breadcrumbs";
+import { Building2, MapPin, Wrench } from "lucide-react";
+import { formatCurrency, pluralize } from "@/lib/format";
 import { KpiGrid } from "./kpi-grid";
 import { PropertySelector } from "./property-selector";
-import { PropertySummaryCard } from "./property-summary-card";
 import { RentCollectionBar } from "./rent-collection-bar";
 import { PortfolioSection } from "./portfolio-section";
 import { InvitationsPanel } from "./invitations-panel";
 import { SectionErrorBoundary } from "./section-error-boundary";
 import type { SectionRendererProps } from "./section-map";
 
-export function CompactAnalyticsPreview({
-  collectionRate,
-  avgDaysToPayment,
-  totalIncomeCentsYtd,
-  netIncomeCentsYtd
-}: SectionRendererProps["safeAnalytics"]["summaryKpis"]) {
-  const items = [
-    { label: "Collection rate", value: `${Math.round(collectionRate)}%` },
-    { label: "Avg days to pay", value: `${avgDaysToPayment.toFixed(1)}d` },
-    { label: "Income YTD", value: formatCurrency(totalIncomeCentsYtd) },
-    { label: "Net income YTD", value: formatCurrency(netIncomeCentsYtd) }
-  ];
-
-  return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      {items.map((item) => (
-        <div key={item.label} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            {item.label}
-          </p>
-          <p className="mt-2 text-xl font-semibold text-foreground">{item.value}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function buildBreadcrumbItems(props: SectionRendererProps): BreadcrumbItem[] {
-  const items: BreadcrumbItem[] = [
-    {
-      label: "Dashboard",
-      onClick:
-        props.activeSection !== "overview" || props.selectedPropertyId
-          ? () => {
-              props.onSelectProperty(null);
-              props.goToSectionIfVisible("overview");
-            }
-          : undefined
-    }
-  ];
-
-  if (props.activeSection !== "overview") {
-    items.push(
-      props.selectedProperty
-        ? {
-            label: props.activeSectionLabel,
-            onClick: () => {
-              props.onSelectProperty(null);
-              props.goToSectionIfVisible(props.activeSection);
-            }
-          }
-        : { label: props.activeSectionLabel }
-    );
-  }
-
-  if (props.selectedProperty) {
-    items.push({ label: props.selectedProperty.name });
-  }
-
-  return items;
-}
-
-function OwnerSectionChrome({ props }: { props: SectionRendererProps }) {
+function PropertyScopeControl({ props }: { props: SectionRendererProps }) {
   if (props.data.profileRole !== "owner" || props.availableProperties.length === 0) {
     return null;
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <Breadcrumbs items={buildBreadcrumbItems(props)} />
-        <PropertySelector
-          properties={props.availableProperties.map((property) => ({
-            id: property.id,
-            name: property.name,
-            address: [property.addressLine1, property.city, property.state]
-              .filter(Boolean)
-              .join(", ")
-          }))}
-          selectedPropertyId={props.selectedPropertyId}
-          onSelect={props.onSelectProperty}
-        />
+    <div className="flex justify-end">
+      <PropertySelector
+        properties={props.availableProperties.map((property) => ({
+          id: property.id,
+          name: property.name,
+          address: [property.addressLine1, property.city, property.state].filter(Boolean).join(", ")
+        }))}
+        selectedPropertyId={props.selectedPropertyId}
+        onSelect={props.onSelectProperty}
+      />
+    </div>
+  );
+}
+
+function OverviewSummaryStrip({ props }: { props: SectionRendererProps }) {
+  const summary = props.selectedPropertySummary;
+  const unitCount = summary?.unitCount ?? props.filteredPortfolio.units.length;
+  const occupiedUnits =
+    summary?.occupiedUnits ?? props.filteredPortfolio.units.filter((unit) => unit.occupied).length;
+  const openTickets =
+    summary?.openTickets ??
+    props.filteredTickets.filter((ticket) => ticket.status === "open" || ticket.status === "in_progress")
+      .length;
+  const occupancy = unitCount > 0 ? Math.round((occupiedUnits / unitCount) * 100) : 0;
+  const title = summary?.property.name ?? "Portfolio Summary";
+  const subtitle =
+    summary?.property.address ??
+    `${pluralize(props.filteredPortfolio.properties.length, "property")} in view`;
+
+  const items = [
+    { label: "Units", value: pluralize(unitCount, "unit"), icon: Building2 },
+    { label: "Occupancy", value: `${occupancy}% occupied` },
+    { label: "Monthly rent", value: formatCurrency(summary?.monthlyRentCents ?? props.data.kpis.monthlyGrossRentCents) },
+    { label: "Open tickets", value: pluralize(openTickets, "ticket"), icon: Wrench }
+  ];
+
+  return (
+    <div className="rounded-2xl border border-border bg-card/90 px-4 py-3 shadow-sm">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-foreground">{title}</p>
+          <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+            {summary?.property.address ? <MapPin className="h-3.5 w-3.5 shrink-0" /> : null}
+            <span className="truncate">{subtitle}</span>
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {items.map(({ label, value, icon: Icon }) => (
+            <div key={label} className="rounded-full border border-border/80 bg-background/70 px-3 py-1.5 text-sm">
+              <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
+                <span className="font-medium">{label}</span>
+              </span>
+              <span className="ml-2 font-semibold text-foreground">{value}</span>
+            </div>
+          ))}
+        </div>
       </div>
-      {props.activeSection === "overview" && props.selectedPropertySummary ? (
-        <PropertySummaryCard
-          property={props.selectedPropertySummary.property}
-          unitCount={props.selectedPropertySummary.unitCount}
-          occupiedUnits={props.selectedPropertySummary.occupiedUnits}
-          monthlyRentCents={props.selectedPropertySummary.monthlyRentCents}
-          openTickets={props.selectedPropertySummary.openTickets}
-          onViewDetails={() => props.openSection("portfolio")}
-        />
-      ) : null}
     </div>
   );
 }
@@ -119,7 +89,7 @@ export function SectionFrame({
   return (
     <SectionErrorBoundary sectionName={sectionName}>
       <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
-        <OwnerSectionChrome props={props} />
+        <PropertyScopeControl props={props} />
         <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
       </div>
     </SectionErrorBoundary>
@@ -137,75 +107,46 @@ export function OverviewSectionContent({
   occupancyTrend: "up" | "down" | "flat" | null;
   collectionTrend: "up" | "down" | "flat" | null;
 }) {
-  const snapshotCard = (
-    <div
-      role="status"
-      aria-label={`Snapshot: ${props.occupancy}% occupied. ${props.data.kpis.activeLeaseCount} active lease${props.data.kpis.activeLeaseCount === 1 ? "" : "s"}.`}
-      className="rounded-2xl border border-border/50 bg-card p-4 shadow-sm"
-    >
-      <p aria-hidden="true" className="text-xs uppercase tracking-wide text-muted-foreground">
-        Snapshot
-      </p>
-      <p aria-live="polite" aria-atomic="true" className="mt-1 text-xl font-bold text-foreground">
-        {props.occupancy}% occupied
-      </p>
-      <p aria-hidden="true" className="text-sm text-muted-foreground">
-        {props.data.kpis.activeLeaseCount} active lease
-        {props.data.kpis.activeLeaseCount === 1 ? "" : "s"}
-      </p>
-    </div>
-  );
-
-  const collectionBar = (
-    <RentCollectionBar
-      collectedCents={props.data.kpis.collectedRentCents}
-      pendingCents={props.data.kpis.pendingRentCents}
-      overdueCents={props.data.kpis.overdueRentCents}
-    />
-  );
-
-  const overviewGrid = (
-    <KpiGrid
-      kpis={props.data.kpis}
-      occupancy={props.occupancy}
-      netCashFlowCents={props.data.kpis.netCashFlowCents}
-      revenueTrend={revenueTrend}
-      occupancyTrend={occupancyTrend}
-      collectionTrend={collectionTrend}
-    />
-  );
-
-  if (props.isOwnerDailyOpsCarousel) {
-    return (
-      <div className="grid h-full min-h-0 gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-        <div className="grid content-start gap-4">
-          {snapshotCard}
-          {collectionBar}
-        </div>
-        <div className="min-h-0 overflow-hidden">{overviewGrid}</div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
-      {snapshotCard}
-      {overviewGrid}
-      {collectionBar}
+      <OverviewSummaryStrip props={props} />
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <div className="space-y-4">
+          <KpiGrid
+            kpis={props.data.kpis}
+            occupancy={props.occupancy}
+            netCashFlowCents={props.data.kpis.netCashFlowCents}
+            revenueTrend={revenueTrend}
+            occupancyTrend={occupancyTrend}
+            collectionTrend={collectionTrend}
+          />
+          <RentCollectionBar
+            collectedCents={props.data.kpis.collectedRentCents}
+            pendingCents={props.data.kpis.pendingRentCents}
+            overdueCents={props.data.kpis.overdueRentCents}
+          />
+        </div>
+      </div>
     </div>
   );
 }
 
 export function PortfolioSectionContent({ props }: { props: SectionRendererProps }) {
+  const tenantInvitationCount =
+    props.invitations?.filter((invitation) => invitation.role === "tenant").length ?? 0;
+  const showInvitationPanel =
+    props.data.profileRole === "owner" &&
+    Boolean(props.onResendInvite) &&
+    Boolean(props.onRevokeInvite) &&
+    tenantInvitationCount > 0;
+
   return (
-    <div className={props.data.profileRole === "owner" ? "grid h-full min-h-0 gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.9fr)]" : "h-full"}>
+    <div className={showInvitationPanel ? "grid h-full min-h-0 gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)]" : "h-full"}>
       <div className="min-h-0 overflow-hidden">
         <PortfolioSection
           properties={props.filteredPortfolio.properties}
           showControls={props.canManagePortfolio}
-          onRenameProperty={
-            props.data.profileRole === "owner" ? props.onRenameProperty : undefined
-          }
+          onRenameProperty={props.data.profileRole === "owner" ? props.onRenameProperty : undefined}
           onUpdateProperty={props.onUpdateProperty}
           onDeleteProperty={props.onDeleteProperty}
           onUpdateManagementFee={
@@ -219,12 +160,12 @@ export function PortfolioSectionContent({ props }: { props: SectionRendererProps
           previewCount={props.isOwnerDailyOpsCarousel ? 4 : undefined}
         />
       </div>
-      {props.data.profileRole === "owner" && props.onResendInvite && props.onRevokeInvite ? (
+      {showInvitationPanel ? (
         <div className="min-h-0 overflow-hidden">
           <InvitationsPanel
             invitations={props.invitations ?? []}
-            onResendInvite={props.onResendInvite}
-            onRevokeInvite={props.onRevokeInvite}
+            onResendInvite={props.onResendInvite!}
+            onRevokeInvite={props.onRevokeInvite!}
             onOpenInviteWizard={props.openTenantInviteWizard}
           />
         </div>

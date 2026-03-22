@@ -12,7 +12,7 @@ import { ManagerPaymentsSection } from "./manager-payments-section";
 import { MaintenanceSection } from "./maintenance-section";
 import { OperationsSection } from "./operations-section";
 import { PaymentsSection } from "./payments-section";
-import { CompactAnalyticsPreview, OverviewSectionContent, PortfolioSectionContent, SectionFrame } from "./section-renderer-support";
+import { OverviewSectionContent, PortfolioSectionContent, SectionFrame } from "./section-renderer-support";
 import { UnitsSection } from "./units-section";
 import { VendorsSection } from "./vendors-section";
 import { computeTrend } from "@/lib/dashboard";
@@ -381,14 +381,7 @@ export function SectionRenderer(props: SectionRendererProps) {
 
     case "analytics":
       if (!props.hasAnalyticsSection) break;
-      return renderSection(
-        "Analytics",
-        props.isOwnerDailyOpsCarousel ? (
-          <CompactAnalyticsPreview {...props.safeAnalytics.summaryKpis} />
-        ) : (
-          <AnalyticsSection data={props.safeAnalytics} />
-        )
-      );
+      return renderSection("Analytics", <AnalyticsSection data={props.safeAnalytics} />);
 
     case "operations":
       return renderSection(

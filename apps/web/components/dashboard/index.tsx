@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AchievementChecker } from "@/components/gamification/achievement-checker";
 import { GamificationSummary } from "@/components/gamification/gamification-summary";
 import { ConnectBanner } from "@/components/dashboard/connect-banner";
 import { CommandPalette } from "@/components/dashboard/command-palette";
-import { CompactHeader } from "@/components/dashboard/compact-header";
 import { ContextualGreeting } from "@/components/dashboard/contextual-greeting";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { LeaseWizard } from "@/components/dashboard/lease-wizard";
@@ -37,6 +37,7 @@ function shouldHandleSectionHotkeys(target: EventTarget | null) {
 }
 
 export function Dashboard(props: DashboardProps) {
+  const router = useRouter();
   const {
     activeSection,
     activeSectionIndex,
@@ -89,17 +90,15 @@ export function Dashboard(props: DashboardProps) {
   const touchStartX = useRef<number | null>(null);
   const ownerSectionCountLabel =
     activeSectionIndex >= 0 && sectionItems.length > 0 ? `${activeSectionIndex + 1} of ${sectionItems.length}` : null;
-  const activeOwnershipAccountName =
-    props.ownershipAccounts?.find((account) => account.id === props.activeAccountId)?.displayName ?? null;
-  const showOwnerCompactHeader = isOwnerRole && isOwnerDailyOpsEnabled && !isOwnerDailyOpsHomePage;
+  const showOwnerDailyOpsShell = isOwnerRole && isOwnerDailyOpsEnabled;
   const contentZoneLabel =
-    isOwnerDailyOpsEnabled && ownerDailyOpsPageCountLabel
+    showOwnerDailyOpsShell && ownerDailyOpsPageCountLabel
       ? ownerDailyOpsPageCountLabel
       : ownerSectionCountLabel ?? activeWorkflowMeta?.label ?? "Workspace";
   const contentZoneTitle =
-    isOwnerDailyOpsEnabled && isOwnerDailyOpsHomePage
+    showOwnerDailyOpsShell && isOwnerDailyOpsHomePage
       ? "Home"
-      : isOwnerDailyOpsEnabled
+      : showOwnerDailyOpsShell
         ? ownerDailyOpsPageLabel
         : activeSectionLabel;
 
@@ -262,82 +261,74 @@ export function Dashboard(props: DashboardProps) {
     >
       <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-6 pt-6 lg:px-8 lg:pb-8 lg:pt-8">
-        <div className="shrink-0 space-y-3">
-          {(isOwnerRole || isManagerRole) && props.stripeConnected === false ? (
-            <ConnectBanner connected={false} role={isOwnerRole ? "owner" : "manager"} />
-          ) : null}
-          {props.generatedMessage ? (
-            <Alert variant="success" className="rounded-xl px-4 py-3">
-              {props.generatedMessage}
-            </Alert>
-          ) : null}
-          {showOwnerCompactHeader ? (
-            <CompactHeader
-              title={activeOwnershipAccountName ?? `${displayName}'s Account`}
-              monthlyRevenueCents={displayDashboardData.kpis.monthlyGrossRentCents}
-              occupancy={occupancy}
-              openTickets={openTicketCount}
-              overdueCharges={displayDashboardData.kpis.lateAccountCount}
-            />
-          ) : isOwnerRole ? (
-            <DashboardHeader
-              role={props.data.profileRole}
-              kpis={displayDashboardData.kpis}
-              occupancy={occupancy}
-              propertyCount={filteredPortfolio.properties.length}
-              userEmail={props.userEmail}
-              nickname={props.nickname}
-              fullName={props.fullName}
-              greetingContent={
-                <ContextualGreeting
-                  userName={displayName}
-                  overdueChargeCount={overdueCharges.length}
-                  overdueAmountCents={overdueAmountCents}
-                  openTicketCount={openTicketCount}
-                />
-              }
-              gamificationSummary={
-                <GamificationSummary
-                  totalXp={resolvedGamification.totalXp}
-                  currentLevel={resolvedGamification.currentLevel}
-                  streakCount={resolvedGamification.streakCount}
-                  role={props.data.profileRole}
-                  className="w-full"
-                />
-              }
-            />
-          ) : activeSection === "overview" ? (
-            <DashboardHeader
-              role={props.data.profileRole}
-              kpis={displayDashboardData.kpis}
-              occupancy={occupancy}
-              propertyCount={filteredPortfolio.properties.length}
-              userEmail={props.userEmail}
-              nickname={props.nickname}
-              fullName={props.fullName}
-              gamificationSummary={
-                <GamificationSummary
-                  totalXp={resolvedGamification.totalXp}
-                  currentLevel={resolvedGamification.currentLevel}
-                  streakCount={resolvedGamification.streakCount}
-                  role={props.data.profileRole}
-                  className="w-full"
-                />
-              }
-            />
-          ) : null}
-          {(isOwnerRole || isManagerRole) &&
-          activeWorkflowMeta &&
-          !showOwnerOnboarding &&
-          !showOwnerCompactHeader ? (
-            <div className="domus-glass flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm font-semibold text-foreground">{activeWorkflowMeta.label}</p>
-              <p className="text-sm text-muted-foreground">{activeWorkflowMeta.description}</p>
-            </div>
-          ) : null}
-        </div>
+        {(isOwnerRole || isManagerRole) && props.stripeConnected === false ? (
+          <ConnectBanner connected={false} role={isOwnerRole ? "owner" : "manager"} />
+        ) : null}
+        {props.generatedMessage ? (
+          <Alert variant="success" className="mt-3 rounded-xl px-4 py-3">
+            {props.generatedMessage}
+          </Alert>
+        ) : null}
 
-        <div className="mt-4 flex min-h-0 flex-1 flex-col rounded-[28px] border border-border/50 bg-background/80 shadow-sm">
+        {!showOwnerDailyOpsShell ? (
+          <div className="mt-3 shrink-0 space-y-3">
+            {isOwnerRole ? (
+              <DashboardHeader
+                role={props.data.profileRole}
+                kpis={displayDashboardData.kpis}
+                occupancy={occupancy}
+                propertyCount={filteredPortfolio.properties.length}
+                userEmail={props.userEmail}
+                nickname={props.nickname}
+                fullName={props.fullName}
+                greetingContent={
+                  <ContextualGreeting
+                    userName={displayName}
+                    overdueChargeCount={overdueCharges.length}
+                    overdueAmountCents={overdueAmountCents}
+                    openTicketCount={openTicketCount}
+                  />
+                }
+                gamificationSummary={
+                  <GamificationSummary
+                    totalXp={resolvedGamification.totalXp}
+                    currentLevel={resolvedGamification.currentLevel}
+                    streakCount={resolvedGamification.streakCount}
+                    role={props.data.profileRole}
+                    className="w-full"
+                  />
+                }
+              />
+            ) : activeSection === "overview" ? (
+              <DashboardHeader
+                role={props.data.profileRole}
+                kpis={displayDashboardData.kpis}
+                occupancy={occupancy}
+                propertyCount={filteredPortfolio.properties.length}
+                userEmail={props.userEmail}
+                nickname={props.nickname}
+                fullName={props.fullName}
+                gamificationSummary={
+                  <GamificationSummary
+                    totalXp={resolvedGamification.totalXp}
+                    currentLevel={resolvedGamification.currentLevel}
+                    streakCount={resolvedGamification.streakCount}
+                    role={props.data.profileRole}
+                    className="w-full"
+                  />
+                }
+              />
+            ) : null}
+            {(isOwnerRole || isManagerRole) && activeWorkflowMeta && !showOwnerOnboarding ? (
+              <div className="domus-glass flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm font-semibold text-foreground">{activeWorkflowMeta.label}</p>
+                <p className="text-sm text-muted-foreground">{activeWorkflowMeta.description}</p>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className={`flex min-h-0 flex-1 flex-col rounded-[28px] border border-border/50 bg-background/80 shadow-sm ${showOwnerDailyOpsShell ? "mt-3" : "mt-4"}`}>
           <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border/60 px-4 py-3 sm:px-5">
             <div className="min-w-0">
               <h2 className="truncate text-2xl font-bold text-foreground sm:text-3xl">
@@ -404,7 +395,16 @@ export function Dashboard(props: DashboardProps) {
                   />
                 </div>
               ) : isOwnerDailyOpsEnabled && isOwnerDailyOpsHomePage ? (
-                <OwnerDailyOpsHome onOpenOverview={goToNextSection} />
+                <OwnerDailyOpsHome
+                  userName={displayName}
+                  overdueChargeCount={overdueCharges.length}
+                  overdueAmountCents={overdueAmountCents}
+                  openTicketCount={openTicketCount}
+                  onOpenOverview={goToNextSection}
+                  onOpenPropertyWizard={openPropertyWizard}
+                  onOpenTenantInviteWizard={openTenantInviteWizard}
+                  onOpenReports={() => router.push(layoutProps.reportsHref ?? "/owner/reports")}
+                />
               ) : (
                 <div className={isOwnerRole ? "h-full overflow-hidden" : "h-full overflow-auto pr-1"}>
                   <SectionRenderer {...sectionRendererProps} />

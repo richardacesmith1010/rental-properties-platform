@@ -336,12 +336,16 @@ export function ChargesSection({
           </AnimatedList>
         ) : null}
 
-        <div className="mb-4 rounded-xl border border-border bg-card px-3 py-2 text-sm shadow-sm">
-          <span className="font-semibold text-amber-600">{pendingCount} pending</span>
-          <span className="mx-2 text-muted-foreground">•</span>
-          <span className="font-semibold text-red-600">{lateCount} late</span>
-          <span className="mx-2 text-muted-foreground">•</span>
-          <span className="font-semibold text-emerald-600">{paidThisMonthCount} paid this month</span>
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm shadow-sm">
+          <Badge className="border-amber-500/30 bg-amber-500/15 px-3 py-1 text-amber-200">
+            {pendingCount} pending
+          </Badge>
+          <Badge className="border-red-500/30 bg-red-500/15 px-3 py-1 text-red-200">
+            {lateCount} late
+          </Badge>
+          <Badge className="border-emerald-500/30 bg-emerald-500/15 px-3 py-1 text-emerald-200">
+            {paidThisMonthCount} paid this month
+          </Badge>
         </div>
 
         <div className="mb-4 flex flex-wrap gap-2">
@@ -358,7 +362,7 @@ export function ChargesSection({
               variant="outline"
               className={
                 activeFilter === value
-                  ? "border-violet-300 bg-violet-50 font-semibold text-violet-700 shadow-sm"
+                  ? "border-primary/40 bg-primary/10 font-semibold text-primary shadow-sm"
                   : "font-medium"
               }
               onClick={() => setActiveFilter(value)}

@@ -146,6 +146,14 @@ export function average(values: number[]): number {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
+export function formatAverageDaysToPayment(value: number | null | undefined): string {
+  if (value == null || value <= 0) {
+    return "—";
+  }
+
+  return `${value.toFixed(1)}d`;
+}
+
 export function overlapMonth(startDate: string, endDate: string, month: MonthWindow): boolean {
   return startDate <= month.endIso && endDate >= month.startIso;
 }
