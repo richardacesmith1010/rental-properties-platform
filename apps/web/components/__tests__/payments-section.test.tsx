@@ -37,7 +37,7 @@ describe("PaymentsSection", () => {
     render(<PaymentsSection payments={payments} />);
 
     expect(screen.getByText("ACH")).toBeInTheDocument();
-    expect(screen.getByText("Atlas House • Unit 1A")).toBeInTheDocument();
+    expect(screen.getByText("Atlas House • 1A")).toBeInTheDocument();
   });
 
   it("shows the associated charge due date when present", () => {

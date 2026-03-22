@@ -1,6 +1,12 @@
-import type { ReactNode } from "react";
-import { Building2, MapPin, Wrench } from "lucide-react";
+"use client";
+
+import { useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { Building2, MapPin, Pencil, Wrench } from "lucide-react";
+import { EntityEditModal } from "@/components/dashboard/entity-edit-modal";
+import { Button } from "@/components/ui/button";
 import { formatCurrency, pluralize } from "@/lib/format";
+import { buildEntityUpdateFormData, buildPropertyEditFields } from "@/lib/entity-edit-fields";
 import { PropertySelector } from "./property-selector";
 import { PortfolioSection } from "./portfolio-section";
 import { InvitationsPanel } from "./invitations-panel";
@@ -28,7 +34,12 @@ function PropertyScopeControl({ props }: { props: SectionRendererProps }) {
 }
 
 function OverviewSummaryStrip({ props }: { props: SectionRendererProps }) {
+  const router = useRouter();
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const summary = props.selectedPropertySummary;
+  const editableProperty = summary
+    ? props.filteredPortfolio.properties.find((property) => property.id === summary.property.id) ?? null
+    : null;
   const unitCount = summary?.unitCount ?? props.filteredPortfolio.units.length;
   const occupiedUnits =
     summary?.occupiedUnits ?? props.filteredPortfolio.units.filter((unit) => unit.occupied).length;
@@ -53,7 +64,22 @@ function OverviewSummaryStrip({ props }: { props: SectionRendererProps }) {
     <div className="rounded-2xl border border-border bg-card/90 px-4 py-3 shadow-sm">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-foreground">{title}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold text-foreground">{title}</p>
+            {props.canManagePortfolio && props.onUpdateProperty && editableProperty ? (
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 rounded-md"
+                onClick={() => setIsEditOpen(true)}
+                title={`Edit ${editableProperty.name}`}
+                aria-label={`Edit ${editableProperty.name}`}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            ) : null}
+          </div>
           <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
             {summary?.property.address ? <MapPin className="h-3.5 w-3.5 shrink-0" /> : null}
             <span className="truncate">{subtitle}</span>
@@ -71,6 +97,26 @@ function OverviewSummaryStrip({ props }: { props: SectionRendererProps }) {
           ))}
         </div>
       </div>
+      {editableProperty && props.onUpdateProperty ? (
+        <EntityEditModal
+          open={isEditOpen}
+          onClose={() => setIsEditOpen(false)}
+          title="Edit Property"
+          entityType="property"
+          fields={buildPropertyEditFields(editableProperty)}
+          onSave={async (updates) => {
+            const result = await props.onUpdateProperty!(
+              null,
+              buildEntityUpdateFormData({ propertyId: editableProperty.id }, updates)
+            );
+            if (result?.success) {
+              router.refresh();
+              return { message: result.message ?? "Property updated." };
+            }
+            return { error: result?.error ?? "Unable to update this property right now." };
+          }}
+        />
+      ) : null}
     </div>
   );
 }

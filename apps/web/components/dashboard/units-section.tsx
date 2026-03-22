@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFormState } from "react-dom";
-import { DoorOpen } from "lucide-react";
+import { DoorOpen, Pencil } from "lucide-react";
 import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/dashboard/empty-state";
+import { EntityEditModal } from "@/components/dashboard/entity-edit-modal";
 import { InlineEdit } from "@/components/dashboard/inline-edit";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
@@ -18,6 +19,7 @@ import type { UnitListItem } from "@/lib/portfolio";
 import type { ActionState } from "@/app/actions";
 import { formatCurrency } from "@/lib/format";
 import { Alert } from "@/components/ui/alert";
+import { buildEntityUpdateFormData, buildUnitEditFields } from "@/lib/entity-edit-fields";
 
 type StatefulAction = (
   prev: ActionState,
@@ -68,12 +70,14 @@ export function UnitsSection({
   const [updateState, updateAction] = useFormState(onUpdateUnit ?? unavailableAction, null);
   const [deleteState, deleteAction] = useFormState(onDeleteUnit ?? unavailableAction, null);
   const [activeEditUnitId, setActiveEditUnitId] = useState<string | null>(null);
+  const [editingUnit, setEditingUnit] = useState<UnitListItem | null>(null);
   const [confirmDeleteUnitId, setConfirmDeleteUnitId] = useState<string | null>(null);
   const deleteFormRefs = useRef<Record<string, HTMLFormElement | null>>({});
 
   useEffect(() => {
     if (updateState?.success || deleteState?.success) {
       setActiveEditUnitId(null);
+      setEditingUnit(null);
       setConfirmDeleteUnitId(null);
     }
   }, [deleteState, updateState]);
@@ -106,34 +110,49 @@ export function UnitsSection({
             {units.map((unit, i) => (
               <DataRow key={unit.id} last={i === units.length - 1}>
                 <div className="min-w-0 flex-1">
-                  <p className="text-base font-medium text-zinc-900">
-                    {unit.propertyName} • Unit{" "}
-                    {showControls && onUpdateUnitField ? (
-                      <InlineEdit
-                        value={unit.unitNumber}
-                        className="max-w-[140px] align-middle text-base font-medium text-zinc-900"
-                        successMessage="Unit label updated."
-                        title={`Rename Unit ${unit.unitNumber}.`}
-                        validate={(nextValue) =>
-                          nextValue.length > 50 ? "Unit label must be under 50 characters." : null
-                        }
-                        onSave={async (nextValue) => {
-                          const formData = new FormData();
-                          formData.set("unitId", unit.id);
-                          formData.set("field", "unitNumber");
-                          formData.set("value", nextValue);
-                          const result = await onUpdateUnitField(null, formData);
-                          if (result?.success) {
-                            router.refresh();
-                            return { message: result.message ?? "Unit label updated." };
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="min-w-0 text-base font-medium text-foreground">
+                      {unit.propertyName} •{" "}
+                      {showControls && onUpdateUnitField ? (
+                        <InlineEdit
+                          value={unit.unitNumber}
+                          className="max-w-[140px] align-middle text-base font-medium text-foreground"
+                          successMessage="Unit label updated."
+                          title={`Rename ${unit.unitNumber}.`}
+                          validate={(nextValue) =>
+                            nextValue.length > 50 ? "Unit label must be under 50 characters." : null
                           }
-                          return { error: result?.error ?? "Unable to update this unit label right now." };
-                        }}
-                      />
-                    ) : (
-                      unit.unitNumber
-                    )}
-                  </p>
+                          onSave={async (nextValue) => {
+                            const formData = new FormData();
+                            formData.set("unitId", unit.id);
+                            formData.set("field", "unitNumber");
+                            formData.set("value", nextValue);
+                            const result = await onUpdateUnitField(null, formData);
+                            if (result?.success) {
+                              router.refresh();
+                              return { message: result.message ?? "Unit label updated." };
+                            }
+                            return { error: result?.error ?? "Unable to update this unit label right now." };
+                          }}
+                        />
+                      ) : (
+                        unit.unitNumber
+                      )}
+                    </p>
+                    {showControls && onUpdateUnit ? (
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 shrink-0 rounded-md"
+                        onClick={() => setEditingUnit(unit)}
+                        title={`Edit ${unit.unitNumber}`}
+                        aria-label={`Edit ${unit.unitNumber}`}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    ) : null}
+                  </div>
                   <div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-zinc-500">
                     <span>{unit.bedrooms} bd / {unit.bathrooms} ba</span>
                     <Badge variant={unit.occupied ? "success" : "outline"}>
@@ -190,7 +209,7 @@ export function UnitsSection({
                       prefix="$"
                       className="text-sm text-zinc-500"
                       successMessage="Unit rent updated."
-                      title={`Update rent for Unit ${unit.unitNumber}.`}
+                      title={`Update rent for ${unit.unitNumber}.`}
                       validate={(nextValue) => {
                         const nextAmount = Number(nextValue);
                         if (Number.isNaN(nextAmount) || nextAmount < 0) {
@@ -280,6 +299,26 @@ export function UnitsSection({
           deleteFormRefs.current[confirmDeleteUnitId]?.requestSubmit();
         }}
       />
+      {editingUnit && onUpdateUnit ? (
+        <EntityEditModal
+          open
+          onClose={() => setEditingUnit(null)}
+          title="Edit Unit"
+          entityType="unit"
+          fields={buildUnitEditFields(editingUnit)}
+          onSave={async (updates) => {
+            const result = await onUpdateUnit(
+              null,
+              buildEntityUpdateFormData({ unitId: editingUnit.id }, updates)
+            );
+            if (result?.success) {
+              router.refresh();
+              return { message: result.message ?? "Unit updated." };
+            }
+            return { error: result?.error ?? "Unable to update this unit right now." };
+          }}
+        />
+      ) : null}
     </Card>
   );
 }

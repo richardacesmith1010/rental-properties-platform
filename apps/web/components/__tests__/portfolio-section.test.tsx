@@ -72,6 +72,7 @@ describe("PortfolioSection", () => {
   it("renders management controls when showControls is true", () => {
     render(<PortfolioSection properties={[properties[0]]} showControls onUpdateProperty={async () => null} onDeleteProperty={async () => null} />);
 
+    expect(screen.getByRole("button", { name: "Edit Atlas House" })).toBeInTheDocument();
     const manageButton = screen.getByRole("button", { name: "Manage" });
     expect(manageButton).toBeInTheDocument();
 

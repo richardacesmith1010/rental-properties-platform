@@ -115,7 +115,7 @@ function getChargeLabel(charge: Charge) {
 
   const propertyName = charge.propertyName ?? "Unknown Property";
   const unitNumber = charge.unitNumber ?? "-";
-  return `${propertyName} • Unit ${unitNumber}`;
+  return `${propertyName} • ${unitNumber}`;
 }
 
 function statusLabel(status: ChargeStatus) {

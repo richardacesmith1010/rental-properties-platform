@@ -27,6 +27,7 @@ describe("UnitsSection", () => {
       bedrooms: 2,
       bathrooms: 1.5,
       monthlyRentCents: 165000,
+      squareFeet: 900,
       occupied: true,
       active: true
     },
@@ -38,6 +39,7 @@ describe("UnitsSection", () => {
       bedrooms: 1,
       bathrooms: 1,
       monthlyRentCents: 135000,
+      squareFeet: null,
       occupied: false,
       active: true
     }
@@ -46,8 +48,8 @@ describe("UnitsSection", () => {
   it("renders the unit list when units exist", () => {
     render(<UnitsSection units={units} />);
 
-    expect(screen.getByText("Atlas House • Unit 1A")).toBeInTheDocument();
-    expect(screen.getByText("Atlas House • Unit 2B")).toBeInTheDocument();
+    expect(screen.getByText("Atlas House • 1A")).toBeInTheDocument();
+    expect(screen.getByText("Atlas House • 2B")).toBeInTheDocument();
   });
 
   it("shows the empty state when no units exist", () => {
@@ -60,7 +62,7 @@ describe("UnitsSection", () => {
   it("shows unit number and property name", () => {
     render(<UnitsSection units={[units[0]]} />);
 
-    expect(screen.getByText("Atlas House • Unit 1A")).toBeInTheDocument();
+    expect(screen.getByText("Atlas House • 1A")).toBeInTheDocument();
     expect(screen.getByText("2 bd / 1.5 ba")).toBeInTheDocument();
   });
 
@@ -91,5 +93,17 @@ describe("UnitsSection", () => {
 
     expect(screen.getByRole("button", { name: "Save Unit Changes" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Archive" })).toBeInTheDocument();
+  });
+
+  it("shows an edit button for unit details when management is enabled", () => {
+    render(
+      <UnitsSection
+        units={[units[0]]}
+        showControls
+        onUpdateUnit={async () => ({ success: true, message: "Unit updated." })}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Edit 1A" })).toBeInTheDocument();
   });
 });

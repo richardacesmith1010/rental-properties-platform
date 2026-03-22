@@ -949,7 +949,7 @@ export function useDashboardData(props: DashboardProps) {
     () => [
       ...displayDashboardData.charges.slice(0, 8).map((charge) => ({
         id: `charge:${charge.id}`,
-        label: `${charge.propertyName} • Unit ${charge.unitNumber}`,
+        label: `${charge.propertyName} • ${charge.unitNumber}`,
         description: `${charge.tenantName} • ${charge.status} • ${formatDate(charge.dueDate)}`,
         sectionId: "charges",
         propertyId: charge.propertyId,
@@ -958,7 +958,7 @@ export function useDashboardData(props: DashboardProps) {
       })),
       ...safeDashboardData.recentPayments.slice(0, 6).map((payment) => ({
         id: `payment:${payment.id}`,
-        label: `${payment.propertyName} • Unit ${payment.unitNumber}`,
+        label: `${payment.propertyName} • ${payment.unitNumber}`,
         description: `${payment.method} • ${formatDate(payment.paidAt)}`,
         sectionId: "payments",
         icon: CreditCard,
@@ -1061,12 +1061,12 @@ export function useDashboardData(props: DashboardProps) {
         label: ticket.title,
         category: "Maintenance",
         href: sectionHref("maintenance"),
-        description: `${ticket.propertyName}${ticket.unitNumber ? ` • Unit ${ticket.unitNumber}` : ""}`,
+        description: `${ticket.propertyName}${ticket.unitNumber ? ` • ${ticket.unitNumber}` : ""}`,
         keywords: [ticket.title, ticket.description, ticket.propertyName, ticket.unitNumber ?? ""]
       })),
       ...displayDashboardData.charges.map((charge) => ({
         id: `charge:${charge.id}`,
-        label: `${charge.propertyName} • Unit ${charge.unitNumber}`,
+        label: `${charge.propertyName} • ${charge.unitNumber}`,
         category: "Charges",
         href: sectionHref("charges"),
         description: `${charge.tenantName} • ${charge.status} • ${formatDate(charge.dueDate)}`,

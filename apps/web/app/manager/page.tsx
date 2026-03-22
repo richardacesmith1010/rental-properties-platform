@@ -25,17 +25,14 @@ import {
   editCharge,
   recordManualPayment,
   createLease,
-  updateLease,
   updateRentAmount,
   deleteLease,
   renewLease,
   terminateLease,
   waiveCharge,
   createProperty,
-  updateProperty,
   deleteProperty,
   createUnit,
-  updateUnit,
   deleteUnit,
   signOut,
   updateTicketStatus,
@@ -75,6 +72,15 @@ import {
   createOwnershipAccount,
   linkPropertyToOwnershipAccount
 } from "@/app/actions";
+import {
+  updateLeaseDetails,
+  updatePropertyDetails,
+  updateUnitDetails
+} from "@/app/actions/entity-updates";
+import {
+  updateManagerInfo,
+  updateTenantDisplayInfo
+} from "@/app/actions/entity-profile-updates";
 import {
   getAuthenticatedUser,
   getCurrentUserRole,
@@ -243,12 +249,14 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       onCreateProperty={createProperty}
       onCreateUnit={createUnit}
       onCreateLease={createLease}
-      onUpdateProperty={updateProperty}
+      onUpdateProperty={updatePropertyDetails}
       onDeleteProperty={deleteProperty}
-      onUpdateUnit={updateUnit}
+      onUpdateUnit={updateUnitDetails}
       onDeleteUnit={deleteUnit}
-      onUpdateLease={updateLease}
+      onUpdateLease={updateLeaseDetails}
       onUpdateRentAmount={updateRentAmount}
+      onUpdateTenantDisplayInfo={updateTenantDisplayInfo}
+      onUpdateManagerInfo={updateManagerInfo}
       onDeleteLease={deleteLease}
       onRenewLease={renewLease}
       onTerminateLease={terminateLease}

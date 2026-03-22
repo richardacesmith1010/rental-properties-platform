@@ -46,6 +46,12 @@ export { createProperty } from "./properties";
 export { updateProperty } from "./properties";
 export { renameProperty } from "./properties";
 export { deleteProperty } from "./properties";
+export {
+  updatePropertyDetails,
+  updateUnitDetails,
+  updateLeaseDetails
+} from "./entity-updates";
+export { updateTenantDisplayInfo, updateManagerInfo } from "./entity-profile-updates";
 
 export { createUnit } from "./units";
 export { updateUnit } from "./units";

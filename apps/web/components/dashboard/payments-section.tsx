@@ -42,7 +42,7 @@ export function PaymentsSection({ payments }: PaymentsSectionProps) {
                   </p>
                   <p className="mt-0.5 text-xs text-zinc-500">{formatDateTime(payment.paidAt)}</p>
                   <p className="mt-0.5 text-xs text-zinc-500">
-                    {payment.propertyName} • Unit {payment.unitNumber}
+                    {payment.propertyName} • {payment.unitNumber}
                   </p>
                   {payment.chargeDueDate && (
                     <p className="mt-0.5 text-xs text-zinc-500">Charge due {formatDate(payment.chargeDueDate)}</p>

@@ -18,6 +18,54 @@ const optionalPositiveIntegerSchema = z.preprocess(
   z.coerce.number().int().min(0, "Value must be 0 or more.").optional()
 );
 
+const optionalNullableStringUpdateSchema = (maxLength: number, label: string) =>
+  z.preprocess(
+    (value) => {
+      if (value === undefined) return undefined;
+      if (value == null) return null;
+      if (typeof value !== "string") return value;
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : null;
+    },
+    z.string().max(maxLength, `${label} must be under ${maxLength} characters.`).nullable().optional()
+  );
+
+const optionalRequiredStringUpdateSchema = (
+  requiredMessage: string,
+  maxLength: number,
+  maxLengthMessage: string
+) =>
+  z.preprocess(
+    (value) => {
+      if (value === undefined) return undefined;
+      if (typeof value !== "string") return value;
+      return value.trim();
+    },
+    z
+      .string()
+      .min(1, requiredMessage)
+      .max(maxLength, maxLengthMessage)
+      .optional()
+  );
+
+const optionalNullableNumberUpdateSchema = <T extends z.ZodTypeAny>(
+  schema: T
+) =>
+  z.preprocess((value) => {
+    if (value === undefined) return undefined;
+    if (value === "" || value == null) return null;
+    return value;
+  }, schema.nullable().optional());
+
+const optionalNumberUpdateSchema = <T extends z.ZodTypeAny>(
+  schema: T
+) =>
+  z.preprocess((value) => (value === undefined || value === "" || value == null ? undefined : value), schema.optional());
+
+function hasChangedFields<T extends Record<string, unknown>>(data: T, idKeys: string[]) {
+  return Object.entries(data).some(([key, value]) => !idKeys.includes(key) && value !== undefined);
+}
+
 const avatarFileSchema = z.preprocess(
   (value) => {
     if (!(value instanceof File) || value.size === 0) {
@@ -149,7 +197,167 @@ export const updateUnitSchema = z.object({
   bedrooms: z.coerce.number().int().min(0, "Bedrooms must be 0 or more."),
   bathrooms: z.coerce.number().min(0, "Bathrooms must be 0 or more."),
   monthlyRentDollars: z.coerce.number().positive("Monthly rent must be greater than $0."),
+  squareFeet: optionalPositiveIntegerSchema
 });
+
+export const updatePropertyDetailsSchema = z
+  .object({
+    propertyId: z.string().uuid("Invalid property selection."),
+    name: optionalRequiredStringUpdateSchema(
+      "Property name is required.",
+      120,
+      "Property name must be under 120 characters."
+    ),
+    addressLine1: optionalRequiredStringUpdateSchema(
+      "Street address is required.",
+      180,
+      "Street address must be under 180 characters."
+    ),
+    city: optionalRequiredStringUpdateSchema("City is required.", 120, "City must be under 120 characters."),
+    state: optionalRequiredStringUpdateSchema("State is required.", 60, "State must be under 60 characters."),
+    postalCode: z.preprocess(
+      (value) => {
+        if (value === undefined) return undefined;
+        if (typeof value !== "string") return value;
+        return value.trim();
+      },
+      z
+        .string()
+        .min(1, "ZIP code is required.")
+        .regex(/^\d{5}(-\d{4})?$/, "Enter a valid 5-digit ZIP code.")
+        .optional()
+    )
+  })
+  .refine((data) => hasChangedFields(data, ["propertyId"]), {
+    message: "No property changes were provided."
+  });
+
+export const updateUnitDetailsSchema = z
+  .object({
+    unitId: z.string().uuid("Invalid unit selection."),
+    unitNumber: optionalRequiredStringUpdateSchema(
+      "Unit label is required.",
+      80,
+      "Unit label must be under 80 characters."
+    ),
+    bedrooms: optionalNumberUpdateSchema(
+      z.coerce.number().int().min(0, "Bedrooms must be 0 or more.")
+    ),
+    bathrooms: optionalNumberUpdateSchema(
+      z.coerce.number().min(0, "Bathrooms must be 0 or more.")
+    ),
+    monthlyRentDollars: optionalNumberUpdateSchema(
+      z.coerce.number().min(0, "Monthly rent cannot be negative.")
+    ),
+    squareFeet: optionalNullableNumberUpdateSchema(
+      z.coerce.number().int().min(0, "Square footage must be 0 or more.")
+    )
+  })
+  .refine((data) => hasChangedFields(data, ["unitId"]), {
+    message: "No unit changes were provided."
+  });
+
+export const updateLeaseDetailsSchema = z
+  .object({
+    leaseId: z.string().uuid("Invalid lease ID."),
+    startDate: z.preprocess(
+      (value) => (value === undefined || value === "" ? undefined : value),
+      isoDateSchema.optional()
+    ),
+    endDate: z.preprocess(
+      (value) => (value === undefined || value === "" ? undefined : value),
+      isoDateSchema.optional()
+    ),
+    dueDayOfMonth: optionalNumberUpdateSchema(
+      z.coerce.number().int().min(1, "Due day must be between 1 and 28.").max(28, "Due day must be between 1 and 28.")
+    ),
+    monthlyRentDollars: optionalNumberUpdateSchema(
+      z.coerce.number().positive("Monthly rent must be greater than $0.")
+    ),
+    depositDollars: optionalNumberUpdateSchema(
+      z.coerce.number().min(0, "Deposit cannot be negative.")
+    ),
+    gracePeriodDays: optionalNumberUpdateSchema(
+      z.coerce.number().int().min(0, "Grace period must be 0 or more.").max(30, "Grace period must be 30 days or less.")
+    ),
+    lateFeeDollars: optionalNumberUpdateSchema(
+      z.coerce.number().min(0, "Late fee cannot be negative.")
+    ),
+    notes: optionalNullableStringUpdateSchema(1500, "Lease notes")
+  })
+  .refine((data) => hasChangedFields(data, ["leaseId"]), {
+    message: "No lease changes were provided."
+  });
+
+export const updateTenantDisplayInfoSchema = z
+  .object({
+    profileId: z.string().uuid("Invalid tenant selection."),
+    fullName: optionalRequiredStringUpdateSchema(
+      "Tenant name is required.",
+      120,
+      "Tenant name must be under 120 characters."
+    ),
+    email: z.preprocess(
+      (value) => {
+        if (value === undefined) return undefined;
+        if (typeof value !== "string") return value;
+        return value.trim();
+      },
+      z.string().email("Enter a valid tenant email.").max(160, "Tenant email must be under 160 characters.").optional()
+    ),
+    phone: optionalNullableStringUpdateSchema(30, "Phone")
+  })
+  .refine((data) => hasChangedFields(data, ["profileId"]), {
+    message: "No tenant changes were provided."
+  });
+
+export const updateManagerInfoSchema = z
+  .object({
+    propertyId: z.string().uuid("Invalid property."),
+    managerProfileId: z.string().uuid("Invalid manager."),
+    configId: z.preprocess(
+      (value) => (value === undefined || value === "" ? undefined : value),
+      z.string().uuid("Invalid manager payment config.").optional()
+    ),
+    fullName: optionalRequiredStringUpdateSchema(
+      "Manager name is required.",
+      120,
+      "Manager name must be under 120 characters."
+    ),
+    email: z.preprocess(
+      (value) => {
+        if (value === undefined) return undefined;
+        if (typeof value !== "string") return value;
+        return value.trim();
+      },
+      z.string().email("Enter a valid manager email.").max(160, "Manager email must be under 160 characters.").optional()
+    ),
+    label: optionalRequiredStringUpdateSchema(
+      "Payment label is required.",
+      120,
+      "Payment label must be under 120 characters."
+    ),
+    paymentType: z.preprocess(
+      (value) => (value === undefined || value === "" ? undefined : value),
+      z.enum(["percentage", "flat"]).optional()
+    ),
+    percentageRate: optionalNullableNumberUpdateSchema(
+      z.coerce.number().min(0, "Percentage must be 0 or more.").max(100, "Percentage must be 100 or less.")
+    ),
+    flatAmountDollars: optionalNullableNumberUpdateSchema(
+      z.coerce.number().min(0, "Flat fee cannot be negative.").max(999999.99, "Flat fee cannot exceed $999,999.99.")
+    ),
+    baseRentDollars: optionalNullableNumberUpdateSchema(
+      z.coerce.number().min(0, "Base rent cannot be negative.").max(999999.99, "Base rent cannot exceed $999,999.99.")
+    ),
+    frequency: z.preprocess(
+      (value) => (value === undefined || value === "" ? undefined : value),
+      z.enum(["monthly", "biweekly", "weekly"]).optional()
+    )
+  })
+  .refine((data) => hasChangedFields(data, ["propertyId", "managerProfileId", "configId"]), {
+    message: "No manager changes were provided."
+  });
 
 export const updateUnitFieldSchema = z.discriminatedUnion("field", [
   z.object({

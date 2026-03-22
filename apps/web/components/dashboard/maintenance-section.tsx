@@ -137,7 +137,7 @@ export function MaintenanceSection({
                     </p>
                     <p className="mt-0.5 text-sm text-muted-foreground">
                       {ticket.propertyName}
-                      {ticket.unitNumber ? ` • Unit ${ticket.unitNumber}` : ""}
+                      {ticket.unitNumber ? ` • ${ticket.unitNumber}` : ""}
                     </p>
                     {ticket.tenantEmail ? (
                       <p className="mt-0.5 text-sm text-muted-foreground">

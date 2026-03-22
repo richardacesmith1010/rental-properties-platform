@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Banknote, Download, ReceiptText } from "lucide-react";
+import { Banknote, Download, Pencil, ReceiptText } from "lucide-react";
 import type { ActionState } from "@/app/actions";
 import { EmptyState } from "@/components/dashboard/empty-state";
+import { EntityEditModal } from "@/components/dashboard/entity-edit-modal";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +18,7 @@ import type {
   ManagerPaymentDTO
 } from "@/lib/manager-payments";
 import { statusAriaLabel, statusBadgeClasses } from "@/lib/status-colors";
+import { buildEntityUpdateFormData, buildManagerEditFields } from "@/lib/entity-edit-fields";
 import { ManagerConfigForm } from "./manager-config-form";
 import { ManagerPaymentForm } from "./manager-payment-form";
 
@@ -38,6 +40,7 @@ interface ManagerPaymentsSectionProps {
   warning?: string | null;
   onSetupManagerPaymentConfig?: StatefulAction;
   onRecordManagerPayment?: StatefulAction;
+  onUpdateManagerInfo?: StatefulAction;
   onMarkManagerPaymentPaid?: StatefulAction;
   onCancelManagerPayment?: StatefulAction;
   onGenerateMonthlyManagerPayments?: StatefulAction;
@@ -52,6 +55,7 @@ export function ManagerPaymentsSection({
   warning,
   onSetupManagerPaymentConfig,
   onRecordManagerPayment,
+  onUpdateManagerInfo,
   onMarkManagerPaymentPaid,
   onCancelManagerPayment,
   onGenerateMonthlyManagerPayments,
@@ -61,6 +65,7 @@ export function ManagerPaymentsSection({
   const [showConfigForm, setShowConfigForm] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [editingConfig, setEditingConfig] = useState<ManagerPaymentConfigDTO | null>(null);
   const [statusMessage, setStatusMessage] = useState<ActionState>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -196,11 +201,26 @@ export function ManagerPaymentsSection({
                         <p className="text-sm text-muted-foreground">{config.propertyName}</p>
                         <p className="text-sm text-muted-foreground">{config.managerName}</p>
                       </div>
-                      <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
-                        {config.paymentType === "percentage"
-                          ? `${config.percentageRate?.toFixed(2) ?? "0.00"}%`
-                          : formatCurrency(config.flatAmountCents ?? 0)}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+                          {config.paymentType === "percentage"
+                            ? `${config.percentageRate?.toFixed(2) ?? "0.00"}%`
+                            : formatCurrency(config.flatAmountCents ?? 0)}
+                        </span>
+                        {onUpdateManagerInfo ? (
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 rounded-md"
+                            onClick={() => setEditingConfig(config)}
+                            title={`Edit ${config.managerName}`}
+                            aria-label={`Edit ${config.managerName}`}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        ) : null}
+                      </div>
                     </div>
                     <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
                       <div className="rounded-xl border border-border bg-muted/40 px-3 py-2">
@@ -338,6 +358,33 @@ export function ManagerPaymentsSection({
           ) : null}
         </CardContent>
       </Card>
+      {editingConfig && onUpdateManagerInfo ? (
+        <EntityEditModal
+          open
+          onClose={() => setEditingConfig(null)}
+          title="Edit Manager"
+          entityType="manager"
+          fields={buildManagerEditFields(editingConfig)}
+          onSave={async (updates) => {
+            const result = await onUpdateManagerInfo(
+              null,
+              buildEntityUpdateFormData(
+                {
+                  propertyId: editingConfig.propertyId,
+                  managerProfileId: editingConfig.managerProfileId,
+                  configId: editingConfig.id
+                },
+                updates
+              )
+            );
+            if (result?.success) {
+              router.refresh();
+              return { message: result.message ?? "Manager details updated." };
+            }
+            return { error: result?.error ?? "Unable to update this manager right now." };
+          }}
+        />
+      ) : null}
     </div>
   );
 }

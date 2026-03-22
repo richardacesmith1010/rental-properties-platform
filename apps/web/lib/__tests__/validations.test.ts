@@ -61,6 +61,11 @@ import {
   recordManagerPaymentSchema,
   updateManagerPaymentStatusSchema,
   generateManagerPaymentsSchema,
+  updatePropertyDetailsSchema,
+  updateUnitDetailsSchema,
+  updateLeaseDetailsSchema,
+  updateTenantDisplayInfoSchema,
+  updateManagerInfoSchema,
   parseFormData,
 } from "../validations";
 
@@ -326,6 +331,66 @@ describe("manager payment schemas", () => {
 
     expect(generateManagerPaymentsSchema.safeParse({ propertyId: validUUID }).success).toBe(true);
     expect(generateManagerPaymentsSchema.safeParse({ propertyId: "" }).success).toBe(true);
+  });
+});
+
+describe("entity update schemas", () => {
+  const validUUID = "550e8400-e29b-41d4-a716-446655440000";
+
+  it("accepts a partial property update", () => {
+    expect(
+      updatePropertyDetailsSchema.safeParse({
+        propertyId: validUUID,
+        name: "Atlas House"
+      }).success
+    ).toBe(true);
+  });
+
+  it("rejects a property update with no changed fields", () => {
+    expect(
+      updatePropertyDetailsSchema.safeParse({
+        propertyId: validUUID
+      }).success
+    ).toBe(false);
+  });
+
+  it("accepts a unit update with square footage", () => {
+    expect(
+      updateUnitDetailsSchema.safeParse({
+        unitId: validUUID,
+        unitNumber: "Primary Suite",
+        squareFeet: 840
+      }).success
+    ).toBe(true);
+  });
+
+  it("rejects a negative lease rent update", () => {
+    expect(
+      updateLeaseDetailsSchema.safeParse({
+        leaseId: validUUID,
+        monthlyRentDollars: -1
+      }).success
+    ).toBe(false);
+  });
+
+  it("accepts clearing optional tenant phone fields", () => {
+    const result = updateTenantDisplayInfoSchema.safeParse({
+      profileId: validUUID,
+      phone: ""
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.phone).toBeNull();
+    }
+  });
+
+  it("requires at least one manager change", () => {
+    expect(
+      updateManagerInfoSchema.safeParse({
+        propertyId: validUUID,
+        managerProfileId: validUUID
+      }).success
+    ).toBe(false);
   });
 });
 

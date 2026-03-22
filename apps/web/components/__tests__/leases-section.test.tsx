@@ -12,14 +12,25 @@ vi.mock("react-dom", async (importOriginal) => {
   };
 });
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    refresh: vi.fn(),
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn()
+  })
+}));
+
 describe("LeasesSection", () => {
   const activeLease = {
     id: "lease-1",
     unitId: "unit-1",
     propertyId: "property-1",
     tenantProfileId: "tenant-1",
-    unitLabel: "Atlas House • Unit 1A",
+    unitLabel: "Atlas House • 1A",
+    tenantName: "Taylor Tenant",
     tenantEmail: "tenant@example.com",
+    tenantPhone: "555-111-2222",
     monthlyRentCents: 180000,
     depositCents: 90000,
     dueDayOfMonth: 1,
@@ -28,6 +39,7 @@ describe("LeasesSection", () => {
     leaseStatus: "active" as const,
     gracePeriodDays: 5,
     lateFeeCents: 5000,
+    notes: "No smoking.",
     active: true
   };
 
@@ -52,7 +64,7 @@ describe("LeasesSection", () => {
   it("renders the lease list when leases exist", () => {
     render(<LeasesSection leases={[activeLease]} />);
 
-    expect(screen.getByText("Atlas House • Unit 1A")).toBeInTheDocument();
+    expect(screen.getByText("Atlas House • 1A")).toBeInTheDocument();
   });
 
   it("shows the new lease button when lease management is enabled", () => {
@@ -111,7 +123,8 @@ describe("LeasesSection", () => {
   it("shows the tenant email", () => {
     render(<LeasesSection leases={[activeLease]} />);
 
-    expect(screen.getByText("tenant@example.com")).toBeInTheDocument();
+    expect(screen.getByText("Taylor Tenant")).toBeInTheDocument();
+    expect(screen.getByText("tenant@example.com • 555-111-2222")).toBeInTheDocument();
   });
 
   it("renders renew and terminate controls when management is enabled", () => {
@@ -136,7 +149,7 @@ describe("LeasesSection", () => {
     render(<LeasesSection leases={[activeLease]} rentIncreaseHistory={rentIncreaseHistory} />);
 
     expect(screen.getByText("Rent Increase History")).toBeInTheDocument();
-    expect(screen.getByText(/Taylor Tenant • Atlas House • Unit 1A/)).toBeInTheDocument();
+    expect(screen.getByText(/Taylor Tenant • Atlas House • 1A/)).toBeInTheDocument();
     expect(
       screen.getByText(
         `${formatCurrency(rentIncreaseHistory[0].previousRentCents)} → ${formatCurrency(
@@ -144,5 +157,19 @@ describe("LeasesSection", () => {
         )}`
       )
     ).toBeInTheDocument();
+  });
+
+  it("shows edit buttons for lease and tenant records when controls are enabled", () => {
+    render(
+      <LeasesSection
+        leases={[activeLease]}
+        showControls
+        onUpdateLease={async () => ({ success: true, message: "Lease updated." })}
+        onUpdateTenantDisplayInfo={async () => ({ success: true, message: "Tenant updated." })}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Edit lease for Atlas House • 1A" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit Taylor Tenant" })).toBeInTheDocument();
   });
 });

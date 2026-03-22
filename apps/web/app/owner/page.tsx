@@ -45,7 +45,6 @@ import {
   editCharge,
   recordManualPayment,
   createLease,
-  updateLease,
   updateRentAmount,
   deleteLease,
   renewLease,
@@ -53,11 +52,9 @@ import {
   waiveCharge,
   createProperty,
   renameProperty,
-  updateProperty,
   deleteProperty,
   createUnit,
   updateUnitField,
-  updateUnit,
   deleteUnit,
   signOut,
   updateTicketStatus,
@@ -106,6 +103,15 @@ import {
   voteOnWithdrawal,
   updateManagementFee
 } from "@/app/actions";
+import {
+  updateLeaseDetails,
+  updatePropertyDetails,
+  updateUnitDetails
+} from "@/app/actions/entity-updates";
+import {
+  updateManagerInfo,
+  updateTenantDisplayInfo
+} from "@/app/actions/entity-profile-updates";
 import {
   setupManagerPaymentConfig,
   recordManagerPayment,
@@ -337,14 +343,16 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         onCreateUnit={createUnit}
         onCreateLease={createLease}
         onRenameProperty={renameProperty}
-        onUpdateProperty={updateProperty}
-        onDeleteProperty={deleteProperty}
-        onUpdateUnitField={updateUnitField}
-        onUpdateUnit={updateUnit}
-        onDeleteUnit={deleteUnit}
-        onUpdateLease={updateLease}
-        onUpdateRentAmount={updateRentAmount}
-        onDeleteLease={deleteLease}
+      onUpdateProperty={updatePropertyDetails}
+      onDeleteProperty={deleteProperty}
+      onUpdateUnitField={updateUnitField}
+      onUpdateUnit={updateUnitDetails}
+      onDeleteUnit={deleteUnit}
+      onUpdateLease={updateLeaseDetails}
+      onUpdateRentAmount={updateRentAmount}
+      onUpdateTenantDisplayInfo={updateTenantDisplayInfo}
+      onUpdateManagerInfo={updateManagerInfo}
+      onDeleteLease={deleteLease}
         onRenewLease={renewLease}
         onTerminateLease={terminateLease}
         onPayCharge={createCheckoutForCharge as (formData: FormData) => Promise<void>}

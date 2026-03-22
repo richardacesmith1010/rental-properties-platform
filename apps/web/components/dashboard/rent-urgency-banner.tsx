@@ -21,7 +21,7 @@ export function RentUrgencyBanner({ charges, payHref }: RentUrgencyBannerProps) 
   const isOverdue = urgency.level === "overdue";
   const styles = getStatusClasses(isOverdue ? "overdue" : "upcoming");
   const Icon = isOverdue ? AlertTriangle : Clock3;
-  const propertyLabel = charge.propertyLabel || `${charge.propertyName} • Unit ${charge.unitNumber}`;
+  const propertyLabel = charge.propertyLabel || `${charge.propertyName} • ${charge.unitNumber}`;
   const amount = formatCurrency(charge.amountCents);
 
   const heading = (() => {

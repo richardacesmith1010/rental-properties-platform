@@ -88,7 +88,7 @@ describe("MaintenanceSection", () => {
   it("shows ticket title and property details", () => {
     render(<MaintenanceSection tickets={[ticket]} />);
 
-    expect(screen.getByText("Atlas House • Unit 1A")).toBeInTheDocument();
+    expect(screen.getByText("Atlas House • 1A")).toBeInTheDocument();
     expect(screen.getByText("tenant@example.com")).toBeInTheDocument();
   });
 

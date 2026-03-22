@@ -178,7 +178,7 @@ export function LeaseForm({ portfolio, onCreateLease, onLeaseCreated, onBack }: 
             <option value="">Select unit</option>
             {unitsForSelectedProperty.map((unit) => (
               <option key={unit.id} value={unit.id}>
-                {unit.propertyName} • Unit {unit.unitNumber}
+                {unit.propertyName} • {unit.unitNumber}
               </option>
             ))}
           </Select>

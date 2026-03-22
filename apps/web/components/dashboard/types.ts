@@ -95,6 +95,8 @@ export interface DashboardProps {
   onDeleteUnit?: StatefulAction;
   onUpdateLease?: StatefulAction;
   onUpdateRentAmount?: StatefulAction;
+  onUpdateTenantDisplayInfo?: StatefulAction;
+  onUpdateManagerInfo?: StatefulAction;
   onDeleteLease?: StatefulAction;
   onRenewLease?: StatefulAction;
   onTerminateLease?: StatefulAction;

@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useFormState } from "react-dom";
-import { Download, FileText } from "lucide-react";
+import { Download, FileText, Pencil } from "lucide-react";
 import { DataRow } from "@/components/shared/data-row";
+import { EntityEditModal } from "@/components/dashboard/entity-edit-modal";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +22,11 @@ import type { ActionState } from "@/app/actions";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Alert } from "@/components/ui/alert";
 import { getStatusClasses, statusAriaLabel, statusBadgeClasses } from "@/lib/status-colors";
+import {
+  buildEntityUpdateFormData,
+  buildLeaseEditFields,
+  buildTenantEditFields
+} from "@/lib/entity-edit-fields";
 
 type StatefulAction = (
   prev: ActionState,
@@ -33,6 +40,7 @@ interface LeasesSectionProps {
   previewCount?: number;
   onUpdateLease?: StatefulAction;
   onUpdateRentAmount?: StatefulAction;
+  onUpdateTenantDisplayInfo?: StatefulAction;
   onDeleteLease?: StatefulAction;
   onRenewLease?: StatefulAction;
   onTerminateLease?: StatefulAction;
@@ -119,12 +127,14 @@ export function LeasesSection({
   previewCount,
   onUpdateLease,
   onUpdateRentAmount,
+  onUpdateTenantDisplayInfo,
   onDeleteLease,
   onRenewLease,
   onTerminateLease,
   onGoToOperations,
   onOpenLeaseWizard
 }: LeasesSectionProps) {
+  const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [updateState, updateAction] = useFormState(onUpdateLease ?? unavailableAction, null);
   const [rentAmountState, updateRentAmountAction] = useFormState(onUpdateRentAmount ?? unavailableAction, null);
@@ -135,6 +145,8 @@ export function LeasesSection({
   const [activeRentAmountLeaseId, setActiveRentAmountLeaseId] = useState<string | null>(null);
   const [activeRenewLeaseId, setActiveRenewLeaseId] = useState<string | null>(null);
   const [activeTerminateLeaseId, setActiveTerminateLeaseId] = useState<string | null>(null);
+  const [editingLease, setEditingLease] = useState<LeaseListItem | null>(null);
+  const [editingTenant, setEditingTenant] = useState<LeaseListItem | null>(null);
   const [confirmDeleteLeaseId, setConfirmDeleteLeaseId] = useState<string | null>(null);
   const deleteFormRefs = useRef<Record<string, HTMLFormElement | null>>({});
   const visibleLeases = previewCount && !expanded ? leases.slice(0, previewCount) : leases;
@@ -152,6 +164,8 @@ export function LeasesSection({
       setActiveRentAmountLeaseId(null);
       setActiveRenewLeaseId(null);
       setActiveTerminateLeaseId(null);
+      setEditingLease(null);
+      setEditingTenant(null);
       setConfirmDeleteLeaseId(null);
     }
   }, [deleteState, renewState, rentAmountState, terminateState, updateState]);
@@ -210,8 +224,40 @@ export function LeasesSection({
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-base font-medium text-foreground">{lease.unitLabel}</p>
                       <LeaseStatusBadge status={lease.leaseStatus} endDate={lease.endDate} />
+                      {showControls && onUpdateLease ? (
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 rounded-md"
+                          onClick={() => setEditingLease(lease)}
+                          title={`Edit lease for ${lease.unitLabel}`}
+                          aria-label={`Edit lease for ${lease.unitLabel}`}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      ) : null}
                     </div>
-                    <p className="mt-0.5 text-sm text-muted-foreground">{lease.tenantEmail}</p>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                      <span>{lease.tenantName}</span>
+                      {showControls && onUpdateTenantDisplayInfo ? (
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 rounded-md"
+                          onClick={() => setEditingTenant(lease)}
+                          title={`Edit ${lease.tenantName}`}
+                          aria-label={`Edit ${lease.tenantName}`}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      ) : null}
+                    </div>
+                    <p className="mt-0.5 text-sm text-muted-foreground">
+                      {lease.tenantEmail}
+                      {lease.tenantPhone ? ` • ${lease.tenantPhone}` : ""}
+                    </p>
                     <p className="mt-0.5 text-sm text-muted-foreground">
                       {formatDate(lease.startDate)} to {formatDate(lease.endDate)}
                     </p>
@@ -508,7 +554,7 @@ export function LeasesSection({
                     >
                       <div className="min-w-0">
                         <p className="font-medium text-foreground">
-                          {entry.tenantName} • {entry.propertyName} • Unit {entry.unitNumber}
+                          {entry.tenantName} • {entry.propertyName} • {entry.unitNumber}
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">
                           Effective {formatDate(entry.effectiveDate)}
@@ -551,6 +597,50 @@ export function LeasesSection({
           deleteFormRefs.current[confirmDeleteLeaseId]?.requestSubmit();
         }}
       />
+      {editingLease && onUpdateLease ? (
+        <EntityEditModal
+          open
+          onClose={() => setEditingLease(null)}
+          title="Edit Lease"
+          entityType="lease"
+          fields={buildLeaseEditFields(editingLease)}
+          onSave={async (updates) => {
+            const result = await onUpdateLease(
+              null,
+              buildEntityUpdateFormData({ leaseId: editingLease.id }, updates)
+            );
+            if (result?.success) {
+              router.refresh();
+              return { message: result.message ?? "Lease updated." };
+            }
+            return { error: result?.error ?? "Unable to update this lease right now." };
+          }}
+        />
+      ) : null}
+      {editingTenant && onUpdateTenantDisplayInfo ? (
+        <EntityEditModal
+          open
+          onClose={() => setEditingTenant(null)}
+          title="Edit Tenant"
+          entityType="tenant"
+          fields={buildTenantEditFields({
+            fullName: editingTenant.tenantName,
+            email: editingTenant.tenantEmail,
+            phone: editingTenant.tenantPhone
+          })}
+          onSave={async (updates) => {
+            const result = await onUpdateTenantDisplayInfo(
+              null,
+              buildEntityUpdateFormData({ profileId: editingTenant.tenantProfileId }, updates)
+            );
+            if (result?.success) {
+              router.refresh();
+              return { message: result.message ?? "Tenant details updated." };
+            }
+            return { error: result?.error ?? "Unable to update this tenant right now." };
+          }}
+        />
+      ) : null}
     </Card>
   );
 }

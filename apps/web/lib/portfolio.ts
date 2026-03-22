@@ -27,6 +27,7 @@ export interface UnitListItem {
   bedrooms: number;
   bathrooms: number;
   monthlyRentCents: number;
+  squareFeet: number | null;
   occupied: boolean;
   active: boolean;
 }
@@ -37,7 +38,9 @@ export interface LeaseListItem {
   propertyId: string;
   tenantProfileId: string;
   unitLabel: string;
+  tenantName: string;
   tenantEmail: string;
+  tenantPhone: string | null;
   monthlyRentCents: number;
   depositCents: number;
   dueDayOfMonth: number;
@@ -46,6 +49,7 @@ export interface LeaseListItem {
   leaseStatus: "active" | "expiring_soon" | "expired" | "terminated" | "renewed";
   gracePeriodDays: number;
   lateFeeCents: number;
+  notes: string | null;
   active: boolean;
 }
 
@@ -53,6 +57,7 @@ export interface TenantOption {
   id: string;
   email: string;
   fullName: string;
+  phone: string | null;
   propertyIds: string[];
 }
 
@@ -63,32 +68,84 @@ export interface PortfolioData {
   tenants: TenantOption[];
 }
 
+interface TenantProfileRow {
+  id: string;
+  email: string;
+  full_name: string;
+  phone: string | null;
+}
+
+async function fetchTenantProfiles(admin: ReturnType<typeof createAdminClient>) {
+  const result = await admin
+    .from("profiles")
+    .select("id, email, full_name, phone")
+    .eq("role", "tenant")
+    .order("email", { ascending: true })
+    .limit(100);
+
+  if (result.error && isMissingSchemaError(result.error)) {
+    const fallback = await admin
+      .from("profiles")
+      .select("id, email, full_name")
+      .eq("role", "tenant")
+      .order("email", { ascending: true })
+      .limit(100);
+
+    return (fallback.data ?? []).map((row) => ({
+      ...row,
+      phone: null
+    })) as TenantProfileRow[];
+  }
+
+  return ((result.data ?? []) as TenantProfileRow[]);
+}
+
 export async function getPortfolioData(
   userId: string,
   accountId?: string | null
 ): Promise<PortfolioData> {
   const admin = createAdminClient();
 
-  const { data: selfProfile } = await admin
+  const selfProfileResult = await admin
     .from("profiles")
-    .select("id, email, full_name")
+    .select("id, email, full_name, phone")
     .eq("id", userId)
     .single();
+  let selfProfile = selfProfileResult.data;
+  if (selfProfileResult.error && isMissingSchemaError(selfProfileResult.error)) {
+    const fallback = await admin
+      .from("profiles")
+      .select("id, email, full_name")
+      .eq("id", userId)
+      .single();
+    selfProfile = fallback.data
+      ? {
+          ...fallback.data,
+          phone: null as string | null
+        }
+      : null;
+  }
 
   function mergeTenantOptions(
-    rows: Array<{ id: string; email: string; full_name: string }> | null,
+    rows: TenantProfileRow[] | null,
     propertyIdsByTenantId: Map<string, string[]>,
     propertyIdsByEmail: Map<string, string[]>
   ) {
-    const byId = new Map<string, { id: string; email: string; fullName: string }>();
+    const byId = new Map<string, { id: string; email: string; fullName: string; phone: string | null }>();
     for (const row of rows ?? []) {
-      byId.set(row.id, { id: row.id, email: row.email, fullName: row.full_name });
+      byId.set(row.id, {
+        id: row.id,
+        email: row.email,
+        fullName: row.full_name,
+        phone: row.phone ?? null
+      });
     }
     if (selfProfile?.id) {
       byId.set(selfProfile.id, {
         id: selfProfile.id,
         email: selfProfile.email,
-        fullName: `${selfProfile.full_name} (you)`
+        fullName: `${selfProfile.full_name} (you)`,
+        phone: selfProfile.phone ?? null
       });
     }
     return Array.from(byId.values()).map((tenant) => {
@@ -112,22 +169,17 @@ export async function getPortfolioData(
   const propertyIds = administeredProperties.map((property) => property.id);
 
   if (propertyIds.length === 0) {
-    const { data: tenants } = await admin
-      .from("profiles")
-      .select("id, email, full_name")
-      .eq("role", "tenant")
-      .order("email", { ascending: true })
-      .limit(100);
+    const tenants = await fetchTenantProfiles(admin);
 
     return {
       properties: [],
       units: [],
       leases: [],
-      tenants: mergeTenantOptions(tenants ?? null, new Map(), new Map())
+      tenants: mergeTenantOptions(tenants, new Map(), new Map())
     };
   }
 
-  const [{ data: properties, error: propertiesError }, { data: units, error: unitsError }, { data: tenants }, { data: tenantInvitations }] = await Promise.all([
+  const [{ data: properties, error: propertiesError }, { data: units, error: unitsError }, tenants, { data: tenantInvitations }] = await Promise.all([
     admin
       .from("properties")
       .select("id, name, address_line1, city, state, postal_code, owner_account_id, management_fee_cents, active")
@@ -135,15 +187,10 @@ export async function getPortfolioData(
       .order("created_at", { ascending: true }),
     admin
       .from("units")
-      .select("id, property_id, unit_number, bedrooms, bathrooms, monthly_rent_cents, occupied, active")
+      .select("id, property_id, unit_number, bedrooms, bathrooms, monthly_rent_cents, square_feet, occupied, active")
       .in("property_id", propertyIds)
       .order("unit_number", { ascending: true }),
-    admin
-      .from("profiles")
-      .select("id, email, full_name")
-      .eq("role", "tenant")
-      .order("email", { ascending: true })
-      .limit(100),
+    fetchTenantProfiles(admin),
     admin
       .from("invitations")
       .select("email, property_id, role, status")
@@ -209,6 +256,7 @@ export async function getPortfolioData(
     bedrooms: number;
     bathrooms: number;
     monthly_rent_cents: number;
+    square_feet: number | null;
     occupied: boolean;
     active: boolean;
   }> = [];
@@ -222,11 +270,13 @@ export async function getPortfolioData(
 
     unitRows = (legacyUnits ?? []).map((unit) => ({
       ...unit,
+      square_feet: null,
       active: true
     }));
   } else {
     unitRows = (units ?? []).map((unit) => ({
       ...unit,
+      square_feet: unit.square_feet ?? null,
       active: unit.active ?? true
     }));
   }
@@ -266,19 +316,38 @@ export async function getPortfolioData(
     lease_status: "active" | "expiring_soon" | "expired" | "terminated" | "renewed" | null;
     grace_period_days: number | null;
     late_fee_cents: number | null;
+    notes: string | null;
     active: boolean;
   }> = [];
 
   if (unitIds.length > 0) {
-    const { data: leaseRows } = await admin
+    const leaseResult = await admin
       .from("leases")
       .select(
-        "id, unit_id, tenant_profile_id, monthly_rent_cents, deposit_cents, due_day_of_month, start_date, end_date, lease_status, grace_period_days, late_fee_cents, active"
+        "id, unit_id, tenant_profile_id, monthly_rent_cents, deposit_cents, due_day_of_month, start_date, end_date, lease_status, grace_period_days, late_fee_cents, notes, active"
       )
       .in("unit_id", unitIds)
       .order("start_date", { ascending: false });
 
-    leases = leaseRows ?? [];
+    if (leaseResult.error && isMissingSchemaError(leaseResult.error)) {
+      const fallback = await admin
+        .from("leases")
+        .select(
+          "id, unit_id, tenant_profile_id, monthly_rent_cents, deposit_cents, due_day_of_month, start_date, end_date, lease_status, grace_period_days, late_fee_cents, active"
+        )
+        .in("unit_id", unitIds)
+        .order("start_date", { ascending: false });
+
+      leases = (fallback.data ?? []).map((lease) => ({
+        ...lease,
+        notes: null
+      }));
+    } else {
+      leases = (leaseResult.data ?? []).map((lease) => ({
+        ...lease,
+        notes: lease.notes ?? null
+      }));
+    }
   }
 
   const propertyById = new Map(propertyRows.map((property) => [property.id, property]));
@@ -310,6 +379,7 @@ export async function getPortfolioData(
     bedrooms: unit.bedrooms,
     bathrooms: unit.bathrooms,
     monthlyRentCents: unit.monthly_rent_cents,
+    squareFeet: unit.square_feet ?? null,
     occupied: unit.occupied,
     active: unit.active
   }));
@@ -323,9 +393,11 @@ export async function getPortfolioData(
       id: lease.id,
       unitId: lease.unit_id,
       propertyId: unit?.property_id ?? "",
-      tenantProfileId: lease.tenant_profile_id,
-      unitLabel: property && unit ? `${property.name} • Unit ${unit.unit_number}` : lease.unit_id,
+      tenantProfileId: lease.tenant_profile_id ?? "",
+      unitLabel: property && unit ? `${property.name} • ${unit.unit_number}` : lease.unit_id,
+      tenantName: tenant?.full_name ?? tenant?.email ?? "Unknown tenant",
       tenantEmail: tenant?.email ?? lease.tenant_profile_id,
+      tenantPhone: tenant?.phone ?? null,
       monthlyRentCents: lease.monthly_rent_cents,
       depositCents: lease.deposit_cents,
       dueDayOfMonth: lease.due_day_of_month,
@@ -334,6 +406,7 @@ export async function getPortfolioData(
       leaseStatus: lease.lease_status ?? "active",
       gracePeriodDays: lease.grace_period_days ?? 5,
       lateFeeCents: lease.late_fee_cents ?? 0,
+      notes: lease.notes ?? null,
       active: lease.active
     };
   });
@@ -363,6 +436,6 @@ export async function getPortfolioData(
     properties: propertiesWithCounts,
     units: unitsWithProperty,
     leases: leaseList,
-    tenants: mergeTenantOptions(tenants ?? null, propertyIdsByTenantId, propertyIdsByEmail)
+    tenants: mergeTenantOptions(tenants, propertyIdsByTenantId, propertyIdsByEmail)
   };
 }

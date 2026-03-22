@@ -402,6 +402,7 @@ export function SectionRenderer(props: SectionRendererProps) {
           showControls={props.canManagePortfolio}
           onUpdateLease={props.onUpdateLease}
           onUpdateRentAmount={props.onUpdateRentAmount}
+          onUpdateTenantDisplayInfo={props.onUpdateTenantDisplayInfo}
           onDeleteLease={props.onDeleteLease}
           onRenewLease={props.onRenewLease}
           onTerminateLease={props.onTerminateLease}
@@ -423,6 +424,7 @@ export function SectionRenderer(props: SectionRendererProps) {
           warning={props.managerPaymentsWarning}
           onSetupManagerPaymentConfig={props.onSetupManagerPaymentConfig}
           onRecordManagerPayment={props.onRecordManagerPayment}
+          onUpdateManagerInfo={props.onUpdateManagerInfo}
           onMarkManagerPaymentPaid={props.onMarkManagerPaymentPaid}
           onCancelManagerPayment={props.onCancelManagerPayment}
           onGenerateMonthlyManagerPayments={props.onGenerateMonthlyManagerPayments}
