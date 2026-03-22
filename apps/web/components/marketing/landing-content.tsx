@@ -108,7 +108,7 @@ export const featureTabs: MarketingFeatureTab[] = [
             </div>
           ))}
         </div>
-        <div className="mt-4 grid grid-cols-3 gap-3 text-xs text-slate-400">
+        <div className="mt-4 grid grid-cols-3 gap-3 text-xs text-slate-300">
           <div>Submitted<br />Mar 10</div>
           <div>Reviewed<br />Mar 10</div>
           <div>Vendor on site<br />Mar 11</div>

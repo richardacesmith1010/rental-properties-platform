@@ -107,10 +107,6 @@ export function ProfileSettings({
 
   return (
     <form action={formAction} className="space-y-4">
-      <p className="text-sm text-zinc-600">
-        Update how your name and photo appear throughout Domus.
-      </p>
-
       <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Email</p>
         <p className="mt-1 text-sm font-medium text-zinc-900">{email}</p>

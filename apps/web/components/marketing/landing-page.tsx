@@ -98,7 +98,7 @@ export function LandingPage() {
                       className="animate-in slide-in-from-bottom-2 rounded-2xl border border-white/10 bg-white/5 p-4 duration-300"
                       style={{ animationDelay: `${index * 120}ms` }}
                     >
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">{label}</p>
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-slate-300">{label}</p>
                       <p className={`mt-2 text-2xl font-semibold ${color}`}>{value}</p>
                     </div>
                   ))}
@@ -160,7 +160,7 @@ export function LandingPage() {
                   <div className="inline-flex rounded-2xl border border-violet-200 bg-violet-50 p-3">
                     <Icon className="h-5 w-5 text-violet-700" />
                   </div>
-                  <h2 className="text-xl font-semibold text-slate-900">{card.title}</h2>
+                  <h2 className="text-xl font-bold text-slate-900">{card.title}</h2>
                   <p className="text-sm leading-relaxed text-slate-700">{card.body}</p>
                 </article>
               );
@@ -291,7 +291,7 @@ export function LandingPage() {
                 ) : null}
                 <h3 className="text-2xl font-semibold text-slate-900">{tier.name}</h3>
                 <p className="mt-4 text-4xl font-semibold text-violet-700">{tier.price}</p>
-                <p className="mt-1 text-sm text-slate-700">{tier.detail}</p>
+                <p className="mt-1 text-sm text-slate-600">{tier.detail}</p>
                 <ul className="mt-6 space-y-3 text-sm text-slate-700">
                   {tier.points.map((point) => (
                     <li key={point} className="flex items-start gap-3">
@@ -314,7 +314,7 @@ export function LandingPage() {
               </article>
             ))}
           </div>
-          <p className="text-center text-sm text-slate-700">
+          <p className="text-center text-sm text-slate-600">
             All plans include unlimited tenants, SSL encryption, and 99.9% uptime.
           </p>
         </section>
@@ -360,7 +360,7 @@ export function LandingPage() {
         </section>
       </AnimateOnScroll>
 
-      <footer className="rounded-[32px] bg-[#f1f5f9] px-6 py-8 text-sm text-slate-700">
+      <footer className="rounded-[32px] bg-[#f1f5f9] px-6 py-8 text-sm text-slate-600">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-base font-semibold text-slate-900">Domus</p>
