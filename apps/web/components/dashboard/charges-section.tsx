@@ -372,7 +372,7 @@ export function ChargesSection({
           {onGenerateChargesHref ? (
             <Link
               href={onGenerateChargesHref}
-              className="rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+              className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-800 transition-colors hover:bg-zinc-50"
               title="Generate rent charges for the current billing period."
             >
               Generate This Month Charges
@@ -418,13 +418,13 @@ export function ChargesSection({
         ) : null}
 
         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm shadow-sm">
-          <Badge className="border-amber-500/30 bg-amber-500/15 px-3 py-1 text-amber-200">
+          <Badge className="border-amber-300 bg-amber-100 px-3 py-1 text-amber-800">
             {pendingCount} pending
           </Badge>
-          <Badge className="border-red-500/30 bg-red-500/15 px-3 py-1 text-red-200">
+          <Badge className="border-red-300 bg-red-100 px-3 py-1 text-red-800">
             {lateCount} late
           </Badge>
-          <Badge className="border-emerald-500/30 bg-emerald-500/15 px-3 py-1 text-emerald-200">
+          <Badge className="border-emerald-300 bg-emerald-100 px-3 py-1 text-emerald-800">
             {paidThisMonthCount} paid this month
           </Badge>
         </div>
@@ -469,7 +469,7 @@ export function ChargesSection({
               sendingReminders={isSendingReminders}
             />
             <div className="mb-3 flex items-center justify-between rounded-xl border border-border/50 bg-background px-3 py-2 shadow-sm">
-              <label className="flex items-center gap-2 text-sm text-zinc-600">
+              <label className="flex items-center gap-2 text-sm text-zinc-700">
                 <input
                   type="checkbox"
                   checked={allVisibleSelected}
@@ -479,7 +479,7 @@ export function ChargesSection({
                 />
                 Select all visible
               </label>
-              <span className="text-xs text-zinc-500">
+              <span className="text-xs text-zinc-600">
                 {selectedVisibleCharges.length} of {visibleCharges.length} visible selected
               </span>
             </div>
@@ -524,13 +524,13 @@ export function ChargesSection({
                     ) : null}
 
                     <div className="min-w-0 flex-1">
-                      <p className="text-base font-medium text-zinc-900">{getChargeLabel(charge)}</p>
+                      <p className="text-base font-medium text-foreground">{getChargeLabel(charge)}</p>
                       {!isTenantView && charge.tenantName ? (
-                        <p className="mt-0.5 text-sm text-zinc-500">{charge.tenantName}</p>
+                        <p className="mt-0.5 text-sm text-muted-foreground">{charge.tenantName}</p>
                       ) : null}
-                      <p className="mt-0.5 text-sm text-zinc-500">Due {formatDate(charge.dueDate)}</p>
+                      <p className="mt-0.5 text-sm text-muted-foreground">Due {formatDate(charge.dueDate)}</p>
                       {charge.notes ? (
-                        <p className="mt-0.5 text-sm text-zinc-500">{charge.notes}</p>
+                        <p className="mt-0.5 text-sm text-muted-foreground">{charge.notes}</p>
                       ) : null}
                       {!isTenantView && charge.reminderSentAt ? (
                         <p className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
@@ -602,7 +602,7 @@ export function ChargesSection({
 
                     <div className="flex flex-col items-end gap-2">
                       <div className="text-right">
-                        <p className="text-base font-medium text-zinc-900">{formatCurrency(charge.amountCents)}</p>
+                        <p className="text-base font-medium text-foreground">{formatCurrency(charge.amountCents)}</p>
                         <div className="mt-0.5 flex items-center justify-end gap-1">
                           <span
                             className={statusBadgeClasses(charge.status)}

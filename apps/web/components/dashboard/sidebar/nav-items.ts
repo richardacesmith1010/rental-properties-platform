@@ -232,8 +232,6 @@ export function navButtonClasses(isActive: boolean, mobile = false) {
   return [
     "flex w-full items-center gap-3 rounded-[10px] px-3.5 py-2.5 text-[13px] transition-all",
     mobile ? "justify-start" : "",
-    isActive
-      ? "bg-white/20 text-white shadow-sm"
-      : "text-white/60 hover:bg-white/15 hover:text-white"
+    isActive ? "sidebar-shell-button sidebar-shell-button-active" : "sidebar-shell-button"
   ].join(" ");
 }

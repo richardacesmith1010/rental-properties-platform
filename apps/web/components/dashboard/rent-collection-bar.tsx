@@ -23,9 +23,9 @@ export function RentCollectionBar({
   const legendId = "rent-collection-legend";
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+    <div className="rounded-xl border border-border/60 bg-card p-5 shadow-sm">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="text-sm font-medium text-muted-foreground">Rent collection this month</h3>
+        <h3 className="text-sm font-semibold text-muted-foreground">Rent collection this month</h3>
         <span className="text-lg font-bold text-foreground">{collectionRate}%</span>
       </div>
 
@@ -46,7 +46,7 @@ export function RentCollectionBar({
         ) : null}
         {pendingPct > 0 ? (
           <div
-            className="bg-amber-400 transition-all duration-500"
+            className="bg-amber-500 transition-all duration-500"
             style={{ width: `${pendingPct}%` }}
           />
         ) : null}
@@ -67,7 +67,7 @@ export function RentCollectionBar({
           <span>Collected {formatCurrency(collectedCents)}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+          <div aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-amber-500" />
           <span>Pending {formatCurrency(pendingCents)}</span>
         </div>
         {overdueCents > 0 ? (

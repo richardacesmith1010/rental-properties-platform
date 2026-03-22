@@ -7,11 +7,11 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: "domus-badge border border-violet-200",
-        success: "domus-badge domus-badge-success border border-emerald-200",
-        warning: "domus-badge domus-badge-warning border border-amber-200",
-        destructive: "domus-badge domus-badge-danger border border-red-200",
-        outline: "border border-zinc-200 bg-transparent text-zinc-600",
+        default: "domus-badge border border-violet-300",
+        success: "domus-badge domus-badge-success border border-emerald-300",
+        warning: "domus-badge domus-badge-warning border border-amber-300",
+        destructive: "domus-badge domus-badge-danger border border-red-300",
+        outline: "border border-zinc-300 bg-white/80 text-zinc-700",
       },
     },
     defaultVariants: {

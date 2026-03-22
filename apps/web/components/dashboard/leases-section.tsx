@@ -223,7 +223,7 @@ export function LeasesSection({
                       <form action={updateRentAmountAction} className="mt-3 flex flex-wrap items-end gap-2">
                         <input type="hidden" name="leaseId" value={lease.id} />
                         <div className="space-y-1">
-                          <label className="block text-xs font-medium text-zinc-600" htmlFor={`lease-rent-amount-${lease.id}`}>
+                          <label className="block text-xs font-medium text-muted-foreground" htmlFor={`lease-rent-amount-${lease.id}`}>
                             New Rent Amount
                           </label>
                           <Input

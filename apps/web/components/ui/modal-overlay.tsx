@@ -113,7 +113,7 @@ export function ModalOverlay({ open, onClose, children }: ModalOverlayProps) {
       aria-modal="true"
     >
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-200"
+        className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm transition-opacity duration-200"
         onClick={() => onCloseRef.current?.()}
         aria-hidden="true"
       />

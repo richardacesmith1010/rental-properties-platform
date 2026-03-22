@@ -132,15 +132,15 @@ export function MaintenanceSection({
               return (
                 <DataRow key={ticket.id} last={i === visibleTickets.length - 1}>
                   <div className="min-w-0 flex-1">
-                    <p className="text-base font-medium text-zinc-900">
+                    <p className="text-base font-medium text-foreground">
                       {ticket.title}
                     </p>
-                    <p className="mt-0.5 text-sm text-zinc-500">
+                    <p className="mt-0.5 text-sm text-muted-foreground">
                       {ticket.propertyName}
                       {ticket.unitNumber ? ` • Unit ${ticket.unitNumber}` : ""}
                     </p>
                     {ticket.tenantEmail ? (
-                      <p className="mt-0.5 text-sm text-zinc-400">
+                      <p className="mt-0.5 text-sm text-muted-foreground">
                         {ticket.tenantEmail}
                       </p>
                     ) : null}
@@ -162,27 +162,27 @@ export function MaintenanceSection({
                         {ticket.commentCount} comment{ticket.commentCount === 1 ? "" : "s"}
                       </Badge>
                     </div>
-                    <div className="mt-2 grid gap-2 text-[11px] text-zinc-500 sm:grid-cols-2">
+                    <div className="mt-2 grid gap-2 text-[11px] text-muted-foreground sm:grid-cols-2">
                       <div className="space-y-1">
                         <p>
-                          <span className="font-medium text-zinc-700">Created:</span> {meta.created}
+                          <span className="font-medium text-foreground">Created:</span> {meta.created}
                         </p>
                         <p>
-                          <span className="font-medium text-zinc-700">Resolved:</span> {meta.resolved}
+                          <span className="font-medium text-foreground">Resolved:</span> {meta.resolved}
                         </p>
                       </div>
                       <div className="space-y-1">
                         <p>
-                          <span className="font-medium text-zinc-700">Cost:</span> {meta.cost}
+                          <span className="font-medium text-foreground">Cost:</span> {meta.cost}
                         </p>
                         <p>
-                          <span className="font-medium text-zinc-700">Vendor:</span> {meta.vendor}
+                          <span className="font-medium text-foreground">Vendor:</span> {meta.vendor}
                         </p>
                         <p>
-                          <span className="font-medium text-zinc-700">Assignment:</span> {meta.assignment}
+                          <span className="font-medium text-foreground">Assignment:</span> {meta.assignment}
                         </p>
                         <p>
-                          <span className="font-medium text-zinc-700">Photos:</span> {meta.photos}
+                          <span className="font-medium text-foreground">Photos:</span> {meta.photos}
                           {ticket.photoCount > 0 && !photoWorkflowEnabled ? " (access unavailable)" : ""}
                         </p>
                       </div>

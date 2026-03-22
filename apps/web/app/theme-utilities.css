@@ -1,0 +1,217 @@
+.sidebar-shell-panel {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 44px -34px rgba(15, 23, 42, 0.45);
+  @apply rounded-[10px] backdrop-blur-sm;
+}
+
+.sidebar-shell-panel-soft {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.92);
+  @apply rounded-[10px] backdrop-blur-sm;
+}
+
+.sidebar-shell-input {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.98);
+  @apply rounded-[10px] transition-colors duration-150;
+}
+
+.sidebar-shell-input::placeholder {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.sidebar-shell-input:focus {
+  border-color: rgba(255, 255, 255, 0.34);
+  @apply outline-none ring-2 ring-white/20;
+}
+
+.sidebar-shell-button {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.84);
+  @apply rounded-[10px] transition-all duration-150;
+}
+
+.sidebar-shell-button:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.98);
+}
+
+.sidebar-shell-button-active {
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  color: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 18px 38px -30px rgba(15, 23, 42, 0.45);
+}
+
+.sidebar-shell-muted {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.bg-background {
+  background-color: color-mix(in srgb, var(--domus-card-bg) 82%, white);
+}
+
+.bg-background\/60 {
+  background-color: color-mix(in srgb, var(--domus-card-bg) 60%, transparent);
+}
+
+.bg-background\/70 {
+  background-color: color-mix(in srgb, var(--domus-card-bg) 70%, transparent);
+}
+
+.bg-background\/80 {
+  background-color: color-mix(in srgb, var(--domus-card-bg) 80%, transparent);
+}
+
+.bg-background\/90 {
+  background-color: color-mix(in srgb, var(--domus-card-bg) 90%, transparent);
+}
+
+.bg-background\/95 {
+  background-color: color-mix(in srgb, var(--domus-card-bg) 95%, transparent);
+}
+
+.bg-card {
+  background-color: var(--domus-card-bg);
+}
+
+.bg-card\/70 {
+  background-color: color-mix(in srgb, var(--domus-card-bg) 70%, transparent);
+}
+
+.bg-card\/80 {
+  background-color: color-mix(in srgb, var(--domus-card-bg) 80%, transparent);
+}
+
+.bg-card\/90 {
+  background-color: color-mix(in srgb, var(--domus-card-bg) 90%, transparent);
+}
+
+.bg-card\/95 {
+  background-color: color-mix(in srgb, var(--domus-card-bg) 95%, transparent);
+}
+
+.bg-muted {
+  background-color: color-mix(in srgb, white 50%, var(--domus-divider));
+}
+
+.bg-muted\/20 {
+  background-color: color-mix(in srgb, white 20%, transparent);
+}
+
+.bg-muted\/30 {
+  background-color: color-mix(in srgb, var(--domus-divider) 18%, white);
+}
+
+.bg-muted\/40 {
+  background-color: color-mix(in srgb, var(--domus-divider) 24%, white);
+}
+
+.bg-muted\/50 {
+  background-color: color-mix(in srgb, var(--domus-divider) 32%, white);
+}
+
+.bg-muted\/60 {
+  background-color: color-mix(in srgb, var(--domus-divider) 40%, white);
+}
+
+.bg-muted\/70 {
+  background-color: color-mix(in srgb, var(--domus-divider) 48%, white);
+}
+
+.bg-primary {
+  background-color: var(--domus-primary);
+}
+
+.bg-primary\/5 {
+  background-color: color-mix(in srgb, var(--domus-primary) 5%, transparent);
+}
+
+.bg-primary\/10 {
+  background-color: color-mix(in srgb, var(--domus-primary) 10%, transparent);
+}
+
+.bg-primary\/15 {
+  background-color: color-mix(in srgb, var(--domus-primary) 15%, transparent);
+}
+
+.bg-primary\/90 {
+  background-color: color-mix(in srgb, var(--domus-primary) 90%, transparent);
+}
+
+.text-foreground {
+  color: var(--domus-heading-text);
+}
+
+.text-muted-foreground {
+  color: var(--domus-muted-text);
+}
+
+.text-primary {
+  color: var(--domus-primary);
+}
+
+.text-primary\/80 {
+  color: color-mix(in srgb, var(--domus-primary) 80%, transparent);
+}
+
+.border-border {
+  border-color: var(--domus-card-border);
+}
+
+.border-border\/40 {
+  border-color: color-mix(in srgb, var(--domus-card-border) 40%, transparent);
+}
+
+.border-border\/50 {
+  border-color: color-mix(in srgb, var(--domus-card-border) 50%, transparent);
+}
+
+.border-border\/60 {
+  border-color: color-mix(in srgb, var(--domus-card-border) 60%, transparent);
+}
+
+.border-border\/70 {
+  border-color: color-mix(in srgb, var(--domus-card-border) 70%, transparent);
+}
+
+.border-border\/80 {
+  border-color: color-mix(in srgb, var(--domus-card-border) 80%, transparent);
+}
+
+.border-primary\/20 {
+  border-color: color-mix(in srgb, var(--domus-primary) 20%, transparent);
+}
+
+.border-primary\/30 {
+  border-color: color-mix(in srgb, var(--domus-primary) 30%, transparent);
+}
+
+.border-primary\/40 {
+  border-color: color-mix(in srgb, var(--domus-primary) 40%, transparent);
+}
+
+.ring-primary\/20 {
+  --tw-ring-color: color-mix(in srgb, var(--domus-primary) 20%, transparent);
+}
+
+.ring-primary\/40 {
+  --tw-ring-color: color-mix(in srgb, var(--domus-primary) 40%, transparent);
+}
+
+.text-zinc-400,
+.text-gray-400,
+.text-slate-400 {
+  color: #64748b;
+}
+
+.text-zinc-500,
+.text-gray-500,
+.text-slate-500 {
+  color: #475569;
+}

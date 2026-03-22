@@ -49,9 +49,9 @@ function ForgotPasswordPanel({
         <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
           <CheckCircle className="h-7 w-7 text-emerald-600" />
         </div>
-        <h3 className="text-lg font-semibold text-zinc-900">Check your email</h3>
-        <p className="mt-2 text-sm text-zinc-500">
-          If an account exists for <span className="font-medium text-zinc-700">{email}</span>, a password reset link has been sent.
+        <h3 className="text-lg font-semibold text-foreground">Check your email</h3>
+        <p className="mt-2 text-sm text-muted-foreground">
+          If an account exists for <span className="font-medium text-foreground">{email}</span>, a password reset link has been sent.
         </p>
         <Button type="button" variant="outline" className="mt-6" onClick={onBack}>
           Back to sign in
@@ -63,8 +63,8 @@ function ForgotPasswordPanel({
   return (
     <div className="space-y-4">
       <div className="text-center">
-        <h3 className="text-lg font-semibold text-zinc-900">Reset your password</h3>
-        <p className="mt-1 text-sm text-zinc-500">
+        <h3 className="text-lg font-semibold text-foreground">Reset your password</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
           Enter your email and we&apos;ll send you a reset link.
         </p>
       </div>
@@ -73,7 +73,7 @@ function ForgotPasswordPanel({
         <div>
           <label
             htmlFor={`forgot-email-${inputIdSuffix}`}
-            className="mb-1.5 block text-sm font-medium text-zinc-700"
+            className="mb-1.5 block text-sm font-medium text-foreground"
           >
             Email
           </label>
@@ -95,10 +95,10 @@ function ForgotPasswordPanel({
         </SubmitButton>
       </form>
 
-      <p className="text-center text-sm text-zinc-600">
+      <p className="text-center text-sm text-muted-foreground">
         <button
           type="button"
-          className="font-semibold text-violet-600 hover:text-violet-500"
+          className="font-semibold text-primary hover:text-primary/80"
           onClick={onBack}
         >
           Back to sign in
@@ -197,9 +197,9 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
         <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
           <CheckCircle className="h-7 w-7 text-emerald-600" />
         </div>
-        <h3 className="text-lg font-semibold text-zinc-900">Check your email</h3>
-        <p className="mt-2 text-sm text-zinc-500">
-          We sent a confirmation link to <span className="font-medium text-zinc-700">{email}</span>.
+        <h3 className="text-lg font-semibold text-foreground">Check your email</h3>
+        <p className="mt-2 text-sm text-muted-foreground">
+          We sent a confirmation link to <span className="font-medium text-foreground">{email}</span>.
           Click the link in your email to activate your account.
         </p>
         <Button
@@ -237,7 +237,7 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div>
-        <label htmlFor={`email-${inputIdSuffix}`} className="mb-1.5 block text-sm font-medium text-zinc-700">
+        <label htmlFor={`email-${inputIdSuffix}`} className="mb-1.5 block text-sm font-medium text-foreground">
           Email
         </label>
         <Input
@@ -251,7 +251,7 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
       </div>
 
       <div>
-        <label htmlFor={`password-${inputIdSuffix}`} className="mb-1.5 block text-sm font-medium text-zinc-700">
+        <label htmlFor={`password-${inputIdSuffix}`} className="mb-1.5 block text-sm font-medium text-foreground">
           Password
         </label>
         <Input
@@ -269,7 +269,7 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
         <div className="flex justify-end">
           <button
             type="button"
-            className="text-sm text-violet-600 hover:text-violet-800"
+            className="text-sm text-primary hover:text-primary/80"
             onClick={() => {
               setForgotMode(true);
               setError(null);
@@ -282,7 +282,7 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
 
       {mode === "signup" ? (
         <div>
-          <label htmlFor={`confirm-password-${inputIdSuffix}`} className="mb-1.5 block text-sm font-medium text-zinc-700">
+          <label htmlFor={`confirm-password-${inputIdSuffix}`} className="mb-1.5 block text-sm font-medium text-foreground">
             Confirm Password
           </label>
           <Input
@@ -314,11 +314,11 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
       </Button>
 
       {mode === "signin" ? (
-        <p className="text-center text-sm text-zinc-600">
+        <p className="text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}
           <button
             type="button"
-            className="font-semibold text-violet-600 hover:text-violet-500"
+            className="font-semibold text-primary hover:text-primary/80"
             onClick={() => {
               setMode("signup");
               setError(null);
@@ -330,11 +330,11 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
       ) : null}
 
       {mode === "signup" ? (
-        <p className="text-center text-sm text-zinc-600">
+        <p className="text-center text-sm text-muted-foreground">
           Already have an account?{" "}
           <button
             type="button"
-            className="font-semibold text-violet-600 hover:text-violet-500"
+            className="font-semibold text-primary hover:text-primary/80"
             onClick={() => {
               setMode("signin");
               setError(null);

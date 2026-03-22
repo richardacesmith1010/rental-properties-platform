@@ -26,25 +26,25 @@ describe("status colors", () => {
 
   it("returns success classes for successful statuses", () => {
     expect(getStatusClasses("paid")).toEqual({
-      text: "text-emerald-700",
-      bg: "bg-emerald-50",
-      border: "border-emerald-200",
-      dot: "bg-emerald-500"
+      text: "text-emerald-800",
+      bg: "bg-emerald-100",
+      border: "border-emerald-300",
+      dot: "bg-emerald-600"
     });
   });
 
   it("returns warning and danger classes for the other categories", () => {
-    expect(getStatusClasses("pending").text).toBe("text-amber-700");
-    expect(getStatusClasses("overdue").text).toBe("text-red-700");
-    expect(getStatusClasses("draft").text).toBe("text-gray-600");
+    expect(getStatusClasses("pending").text).toBe("text-amber-800");
+    expect(getStatusClasses("overdue").text).toBe("text-red-800");
+    expect(getStatusClasses("draft").text).toBe("text-gray-700");
   });
 
   it("builds a combined badge class string", () => {
     const className = statusBadgeClasses("pending");
 
     expect(className).toContain("inline-flex");
-    expect(className).toContain("text-amber-700");
-    expect(className).toContain("border-amber-200");
+    expect(className).toContain("text-amber-800");
+    expect(className).toContain("border-amber-300");
   });
 
   it("builds an aria label for status badges", () => {

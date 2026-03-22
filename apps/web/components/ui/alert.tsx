@@ -7,10 +7,10 @@ const alertVariants = cva(
   {
     variants: {
       variant: {
-        error: "border-red-200 bg-red-50 text-red-700",
-        success: "border-emerald-200 bg-emerald-50 text-emerald-700",
-        warning: "border-amber-200 bg-amber-50 text-amber-800",
-        info: "border-blue-200 bg-blue-50 text-blue-700",
+        error: "border-red-300 bg-red-100 text-red-800",
+        success: "border-emerald-300 bg-emerald-100 text-emerald-800",
+        warning: "border-amber-300 bg-amber-100 text-amber-800",
+        info: "border-blue-300 bg-blue-100 text-blue-800",
       },
     },
     defaultVariants: {

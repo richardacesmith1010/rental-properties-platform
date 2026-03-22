@@ -153,7 +153,7 @@ export function AccountSwitcher({
           }
         }}
         disabled={isPending}
-        className="h-8 min-w-0 flex-1 rounded-[10px] border border-white/15 bg-white/5 px-2.5 text-sm font-semibold text-white outline-none transition placeholder:text-white/35 focus:border-white/35 focus:bg-white/10"
+        className="sidebar-shell-input h-8 min-w-0 flex-1 px-2.5 text-sm font-semibold"
         aria-label="Rename account"
         title={renameTitle}
       />
@@ -162,7 +162,7 @@ export function AccountSwitcher({
         onMouseDown={(event) => event.preventDefault()}
         onClick={saveEdit}
         disabled={isPending}
-        className="flex h-8 w-8 items-center justify-center rounded-[10px] border border-white/15 bg-white/5 text-white/70 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+        className="sidebar-shell-button flex h-8 w-8 items-center justify-center disabled:cursor-not-allowed disabled:opacity-60"
         title="Save this account name."
       >
         {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
@@ -182,27 +182,27 @@ export function AccountSwitcher({
         {activeAccount.displayName}
       </span>
       {onRenameOwnershipAccount ? (
-        <Pencil className="h-3.5 w-3.5 shrink-0 text-white/60 opacity-70 transition group-hover:text-white/95 group-hover:opacity-100" />
+        <Pencil className="h-3.5 w-3.5 shrink-0 text-white/80 opacity-80 transition group-hover:text-white group-hover:opacity-100" />
       ) : null}
     </button>
   );
 
   if (accounts.length <= 1) {
     return (
-      <div className="rounded-[10px] border border-white/15 bg-white/10 px-3.5 py-3.5 text-white shadow-sm">
+      <div className="sidebar-shell-panel px-3.5 py-3.5 text-white shadow-sm">
         <div className="flex items-center gap-2">
-          <Building2 className="h-4 w-4 text-white/80" />
+          <Building2 className="h-4 w-4 text-white/90" />
           {nameRow}
         </div>
         {activePendingRenameRequest ? (
-          <p className="mt-2 text-xs text-amber-200/90">
+          <p className="mt-2 text-xs text-amber-100">
             Rename pending • {activePendingRenameRequest.votesReceived}/{activePendingRenameRequest.votesRequired} votes
           </p>
         ) : null}
         <button
           type="button"
           onClick={handleCreateAccount}
-          className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-white/15 bg-white/5 px-3 py-2 text-xs text-white/60 transition hover:bg-white/10 hover:text-white/80"
+          className="sidebar-shell-button mt-3 flex w-full items-center justify-center gap-1.5 px-3 py-2 text-xs"
           title="Create a new ownership account."
         >
           <Plus className="h-3 w-3" />
@@ -213,20 +213,20 @@ export function AccountSwitcher({
   }
 
   return (
-    <div className="rounded-[10px] border border-white/15 bg-white/10 px-3.5 py-3.5 text-white shadow-sm">
+    <div className="sidebar-shell-panel px-3.5 py-3.5 text-white shadow-sm">
       <div className="flex items-center gap-2">
-        <Building2 className="h-4 w-4 text-white/80" />
+        <Building2 className="h-4 w-4 text-white/90" />
         {nameRow}
       </div>
       {activePendingRenameRequest ? (
-        <p className="mt-2 text-xs text-amber-200/90">
+        <p className="mt-2 text-xs text-amber-100">
           Rename pending • {activePendingRenameRequest.votesReceived}/{activePendingRenameRequest.votesRequired} votes
         </p>
       ) : null}
       <select
         value={activeAccount.id}
         onChange={(event) => handleAccountChange(event.target.value)}
-        className="mt-3 w-full rounded-[10px] border border-white/15 bg-white/10 px-3 py-2 text-sm text-white transition focus:outline-none focus:ring-2 focus:ring-white/70"
+        className="sidebar-shell-input mt-3 w-full px-3 py-2 text-sm"
         title="Switch ownership account."
         aria-label="Switch ownership account"
       >
@@ -239,7 +239,7 @@ export function AccountSwitcher({
       <button
         type="button"
         onClick={handleCreateAccount}
-        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-white/15 bg-white/5 px-3 py-2 text-xs text-white/60 transition hover:bg-white/10 hover:text-white/80"
+        className="sidebar-shell-button mt-3 flex w-full items-center justify-center gap-1.5 px-3 py-2 text-xs"
         title="Create a new ownership account."
       >
         <Plus className="h-3 w-3" />

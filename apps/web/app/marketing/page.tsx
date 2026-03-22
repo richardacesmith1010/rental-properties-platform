@@ -3,7 +3,7 @@ import { LandingShell } from "@/components/marketing/landing-shell";
 import { LandingPage } from "@/components/marketing/landing-page";
 
 export const metadata: Metadata = {
-  title: "Marketing",
+  title: "Domus",
   description:
     "Explore Domus pricing, features, and role-based rental operations for owners, managers, and tenants.",
 };

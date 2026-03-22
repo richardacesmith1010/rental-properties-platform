@@ -46,7 +46,7 @@ export function RoleSelector() {
 
   return (
     <div className="w-full max-w-3xl">
-      <p className="mb-5 text-center text-sm text-zinc-500">
+      <p className="mb-5 text-center text-sm text-muted-foreground">
         Choose your role to sign in or create an account.
       </p>
       {/* Role cards */}
@@ -71,14 +71,14 @@ export function RoleSelector() {
                     : `Select ${role.label} and open its login options.`
                 }
                 className={`
-                  group relative flex flex-col items-center rounded-2xl border bg-white p-6 text-center
+                  group relative flex flex-col items-center rounded-2xl border bg-card p-6 text-center shadow-sm
                   transition-all duration-300 ease-out
                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2
                   ${isSelected
                     ? `ring-2 ${role.glowColor} shadow-lg border-transparent scale-[1.02]`
                     : isOther
-                      ? "opacity-40 scale-95 border-zinc-100 pointer-events-none"
-                      : `border-zinc-200 hover:border-transparent hover:ring-2 hover:${role.glowColor} hover:shadow-lg hover:scale-105 cursor-pointer`
+                      ? "opacity-40 scale-95 border-border/60 pointer-events-none"
+                      : `border-border/70 hover:border-transparent hover:ring-2 hover:${role.glowColor} hover:shadow-lg hover:scale-105 cursor-pointer`
                   }
                 `}
               >
@@ -102,8 +102,8 @@ export function RoleSelector() {
                 </div>
 
                 {/* Label */}
-                <h3 className="text-base font-bold text-zinc-900">{role.label}</h3>
-                <p className="mt-1 text-xs text-zinc-500">{role.description}</p>
+                <h3 className="text-base font-bold text-foreground">{role.label}</h3>
+                <p className="mt-1 text-xs text-muted-foreground">{role.description}</p>
               </button>
 
               {/* Expanded login form */}
@@ -114,7 +114,7 @@ export function RoleSelector() {
                 `}
               >
                 {isSelected && (
-                  <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+                  <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
                     <LoginForm nextPath={role.nextPath} role={role.id} />
                   </div>
                 )}
@@ -135,7 +135,7 @@ export function RoleSelector() {
           type="button"
           onClick={() => setSelectedRole(null)}
           title="Return to role selection cards."
-          className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+          className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Choose a different role

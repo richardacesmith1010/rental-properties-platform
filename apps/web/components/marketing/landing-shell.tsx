@@ -1,9 +1,24 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
+
+const marketingShellStyle = {
+  "--marketing-page-bg": "#ffffff",
+  "--marketing-section-alt": "#f8fafc",
+  "--marketing-card": "#ffffff",
+  "--marketing-card-soft": "#f8fafc",
+  "--marketing-border": "#e2e8f0",
+  "--marketing-heading": "#0f172a",
+  "--marketing-body": "#334155",
+  "--marketing-muted": "#64748b",
+  "--marketing-accent": "#7c3aed"
+} as CSSProperties;
 
 export function LandingShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_20%_10%,rgba(129,140,248,0.2),transparent_30%),radial-gradient(circle_at_80%_0%,rgba(168,85,247,0.18),transparent_35%),linear-gradient(to_bottom,#020617,#0b1120)]" />
+    <div
+      className="relative min-h-screen bg-[color:var(--marketing-page-bg)] text-[color:var(--marketing-body)]"
+      style={marketingShellStyle}
+    >
+      <div className="absolute inset-x-0 top-0 -z-10 h-[32rem] bg-[radial-gradient(circle_at_top_left,rgba(196,181,253,0.3),transparent_28%),radial-gradient(circle_at_top_right,rgba(125,211,252,0.18),transparent_24%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)]" />
       {children}
     </div>
   );

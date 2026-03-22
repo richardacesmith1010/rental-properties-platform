@@ -1,3 +1,5 @@
+@import "./theme-utilities.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -9,36 +11,36 @@
     --domus-secondary: #10b981;
     --domus-accent: #f59e0b;
     --domus-danger: #f43f5e;
-    --domus-body-bg: linear-gradient(135deg, #f5f3ff 0%, #ecfdf5 50%, #f5f3ff 100%);
-    --domus-body-text: #18181b;
-    --domus-surface-bg: rgba(255, 255, 255, 0.92);
+    --domus-body-bg: linear-gradient(180deg, #f8fafc 0%, #f5f3ff 48%, #ffffff 100%);
+    --domus-body-text: #0f172a;
+    --domus-surface-bg: rgba(255, 255, 255, 0.94);
     --domus-sidebar-bg:
       radial-gradient(circle at 18% 16%, rgba(167, 139, 250, 0.3), transparent 34%),
       linear-gradient(180deg, #7c3aed 0%, #5b21b6 40%, #064e3b 100%);
-    --domus-card-bg: rgba(255, 255, 255, 0.95);
-    --domus-card-border: rgba(228, 228, 231, 0.8);
-    --domus-card-hover: rgba(250, 250, 250, 1);
+    --domus-card-bg: rgba(255, 255, 255, 0.98);
+    --domus-card-border: rgba(203, 213, 225, 0.92);
+    --domus-card-hover: rgba(248, 250, 252, 1);
     --domus-primary-glow: hsl(263 70% 58% / 0.3);
     --domus-input-bg: #ffffff;
-    --domus-input-border: #d4d4d8;
-    --domus-muted-text: #71717a;
-    --domus-heading-text: #18181b;
-    --domus-divider: rgba(228, 228, 231, 0.6);
-    --domus-badge-bg: rgba(245, 243, 255, 0.9);
-    --domus-badge-text: #6d28d9;
-    --domus-success-bg: rgba(236, 253, 245, 0.9);
-    --domus-success-text: #047857;
-    --domus-warning-bg: rgba(255, 251, 235, 0.9);
-    --domus-warning-text: #b45309;
-    --domus-danger-bg: rgba(255, 241, 242, 0.9);
-    --domus-danger-text: #be123c;
-    --domus-skeleton: #e4e4e7;
-    --domus-table-row-hover: rgba(245, 243, 255, 0.5);
+    --domus-input-border: #cbd5e1;
+    --domus-muted-text: #475569;
+    --domus-heading-text: #0f172a;
+    --domus-divider: rgba(148, 163, 184, 0.34);
+    --domus-badge-bg: rgba(237, 233, 254, 0.95);
+    --domus-badge-text: #5b21b6;
+    --domus-success-bg: rgba(209, 250, 229, 0.96);
+    --domus-success-text: #166534;
+    --domus-warning-bg: rgba(254, 243, 199, 0.96);
+    --domus-warning-text: #92400e;
+    --domus-danger-bg: rgba(254, 226, 226, 0.96);
+    --domus-danger-text: #991b1b;
+    --domus-skeleton: #e2e8f0;
+    --domus-table-row-hover: rgba(237, 233, 254, 0.34);
     --domus-tooltip-bg: #18181b;
     --domus-tooltip-text: #fafafa;
-    --domus-shadow-sm: 0 12px 30px -20px rgba(15, 23, 42, 0.25);
-    --domus-shadow-md: 0 18px 38px -24px rgba(15, 23, 42, 0.28);
-    --domus-shadow-lg: 0 24px 52px -30px rgba(15, 23, 42, 0.32);
+    --domus-shadow-sm: 0 14px 34px -24px rgba(15, 23, 42, 0.16);
+    --domus-shadow-md: 0 22px 48px -28px rgba(15, 23, 42, 0.2);
+    --domus-shadow-lg: 0 28px 62px -32px rgba(15, 23, 42, 0.24);
     --domus-glow: 0 0 0 rgba(124, 58, 237, 0);
   }
 
@@ -175,12 +177,6 @@
     background: var(--domus-card-hover);
   }
 
-  .marketing-dark-cards {
-    --domus-card-bg: rgba(15, 23, 42, 0.82);
-    --domus-card-border: rgba(148, 163, 184, 0.16);
-    --domus-card-hover: rgba(30, 41, 59, 0.9);
-  }
-
   .domus-input {
     background: var(--domus-input-bg);
     border: 1px solid var(--domus-input-border);
@@ -280,6 +276,7 @@
     transform: translateY(-1px);
     box-shadow: var(--domus-shadow-md);
   }
+
 }
 
 @layer utilities {

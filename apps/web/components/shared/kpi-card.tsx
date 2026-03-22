@@ -12,8 +12,8 @@ interface KpiCardProps {
 }
 
 const trendMap = {
-  up: { symbol: "↑", className: "text-emerald-400" },
-  down: { symbol: "↓", className: "text-rose-300" },
+  up: { symbol: "↑", className: "text-emerald-700" },
+  down: { symbol: "↓", className: "text-rose-700" },
   flat: { symbol: "→", className: "text-muted-foreground" }
 } as const;
 
@@ -34,10 +34,10 @@ export function KpiCard({
     <Card
       role="status"
       aria-label={cardAriaLabel}
-      className={`relative min-h-[44px] overflow-hidden border border-border/50 p-4 shadow-md ${alert ? "border-amber-200" : ""}`}
+      className={`relative min-h-[44px] overflow-hidden border border-border/60 p-4 shadow-md ${alert ? "border-amber-300" : ""}`}
     >
       <div
-        className="absolute -top-10 -right-10 h-28 w-28 rounded-full opacity-[0.14]"
+        className="absolute -top-10 -right-10 h-28 w-28 rounded-full opacity-[0.18]"
         style={{ background: gradient }}
       />
       <span aria-hidden="true" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">

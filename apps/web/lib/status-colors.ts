@@ -54,32 +54,32 @@ export function getStatusClasses(status: string): {
   switch (getStatusCategory(status)) {
     case "success":
       return {
-        text: "text-emerald-700",
-        bg: "bg-emerald-50",
-        border: "border-emerald-200",
-        dot: "bg-emerald-500"
+        text: "text-emerald-800",
+        bg: "bg-emerald-100",
+        border: "border-emerald-300",
+        dot: "bg-emerald-600"
       };
     case "warning":
       return {
-        text: "text-amber-700",
-        bg: "bg-amber-50",
-        border: "border-amber-200",
-        dot: "bg-amber-500"
+        text: "text-amber-800",
+        bg: "bg-amber-100",
+        border: "border-amber-300",
+        dot: "bg-amber-600"
       };
     case "danger":
       return {
-        text: "text-red-700",
-        bg: "bg-red-50",
-        border: "border-red-200",
-        dot: "bg-red-500"
+        text: "text-red-800",
+        bg: "bg-red-100",
+        border: "border-red-300",
+        dot: "bg-red-600"
       };
     case "neutral":
     default:
       return {
-        text: "text-gray-600",
-        bg: "bg-gray-50",
-        border: "border-gray-200",
-        dot: "bg-gray-400"
+        text: "text-gray-700",
+        bg: "bg-gray-100",
+        border: "border-gray-300",
+        dot: "bg-gray-500"
       };
   }
 }
