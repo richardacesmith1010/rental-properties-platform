@@ -157,7 +157,11 @@ export async function inviteTenant(
 
       revalidatePath("/owner");
       revalidatePath("/manager");
-      return { success: true, message: "Tenant linked to property. Continue to lease setup." };
+      return {
+        success: true,
+        message: "Tenant linked to property. Continue to lease setup.",
+        tenantProfileId: existingProfile.id
+      };
     }
 
     return {
@@ -282,7 +286,10 @@ export async function inviteTenant(
 
   revalidatePath("/owner");
   revalidatePath("/manager");
-  return { success: true };
+  return {
+    success: true,
+    tenantProfileId: invitedProfileId ?? undefined
+  };
 }
 
 export async function resendInvite(

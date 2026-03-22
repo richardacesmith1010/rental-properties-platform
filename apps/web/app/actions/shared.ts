@@ -9,6 +9,7 @@ export type ActionState =
       accountId?: string;
       propertyId?: string;
       unitId?: string;
+      tenantProfileId?: string;
       paymentId?: string;
       avatarUrl?: string;
       url?: string;

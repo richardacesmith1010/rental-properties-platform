@@ -268,7 +268,7 @@ export function ManagerPaymentsSection({
                             Cancel
                           </Button>
                           <Link
-                            href={`/api/pdf/manager-invoice/${payment.id}`}
+                            href={`/api/pdf/invoice/${payment.id}`}
                             className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                             title="Download the PDF invoice for this manager payment."
                           >
@@ -314,7 +314,7 @@ export function ManagerPaymentsSection({
                       <div className="flex items-center gap-3">
                         <span className="font-semibold text-foreground">{formatCurrency(payment.amountCents)}</span>
                         <Link
-                          href={`/api/pdf/manager-invoice/${payment.id}`}
+                          href={`/api/pdf/invoice/${payment.id}`}
                           className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                           title="Download the PDF invoice for this manager payment."
                         >

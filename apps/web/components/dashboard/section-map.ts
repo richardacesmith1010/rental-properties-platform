@@ -182,6 +182,7 @@ export interface SectionRendererProps {
   onTerminateLease?: StatefulAction;
   onAddTicketComment?: StatefulAction;
   openSection: (sectionId: string) => void;
+  openLeaseWizard: () => void;
   openTenantInviteWizard: () => void;
   goToSectionIfVisible: (sectionId: string) => void;
   handleTenantInviteSuccess: () => void;

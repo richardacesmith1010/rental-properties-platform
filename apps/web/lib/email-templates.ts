@@ -26,9 +26,11 @@ interface RentReminderEmailParams {
 
 interface ManagerPaymentEmailParams {
   recipientName: string;
+  ownerName: string;
   propertyName: string;
   categoryLabel: string;
   amountFormatted: string;
+  description: string;
   paymentDate: string;
   invoiceUrl: string;
   invoiceNumber: string;
@@ -281,11 +283,13 @@ export function buildRentReminderEmail({
   return { subject, html, text };
 }
 
-export function buildManagerPaymentEmail({
+export function buildInvoiceEmailTemplate({
   recipientName,
+  ownerName,
   propertyName,
   categoryLabel,
   amountFormatted,
+  description,
   paymentDate,
   invoiceUrl,
   invoiceNumber,
@@ -294,17 +298,20 @@ export function buildManagerPaymentEmail({
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com";
   const subject =
     status === "paid"
-      ? `Payment Confirmed: ${categoryLabel} ${amountFormatted}`
-      : `Manager Invoice: ${categoryLabel} ${amountFormatted}`;
+      ? `Invoice ${invoiceNumber} from ${ownerName} - ${amountFormatted} paid`
+      : `Invoice ${invoiceNumber} from ${ownerName} - ${amountFormatted}`;
 
   const summary =
     status === "paid"
-      ? `Hi ${recipientName}, the ${categoryLabel.toLowerCase()} for ${propertyName} totaling ${amountFormatted} was marked paid on ${paymentDate}.`
-      : `Hi ${recipientName}, a ${categoryLabel.toLowerCase()} invoice for ${propertyName} totaling ${amountFormatted} was recorded on ${paymentDate}.`;
+      ? `Hi ${recipientName}, ${ownerName} marked the ${categoryLabel.toLowerCase()} for ${propertyName} totaling ${amountFormatted} as paid on ${paymentDate}.`
+      : `Hi ${recipientName}, ${ownerName} recorded a ${categoryLabel.toLowerCase()} invoice for ${propertyName} totaling ${amountFormatted} on ${paymentDate}.`;
 
   const bodyHtml = [
     `<p style="margin:0;">${escapeHtml(summary)}</p>`,
+    `<p style="margin:16px 0 0 0;">Description: <strong>${escapeHtml(description)}</strong></p>`,
     `<p style="margin:16px 0 0 0;">Invoice number: <strong>${escapeHtml(invoiceNumber)}</strong></p>`,
+    `<p style="margin:16px 0 0 0;">Property: <strong>${escapeHtml(propertyName)}</strong></p>`,
+    `<p style="margin:16px 0 0 0;">Amount: <strong>${escapeHtml(amountFormatted)}</strong></p>`,
     `<p style="margin:16px 0 0 0;">Open Domus to download the PDF invoice and review the payment record.</p>`
   ].join("");
 
@@ -319,7 +326,10 @@ export function buildManagerPaymentEmail({
 
   const text = [
     summary,
+    `Description: ${description}`,
     `Invoice number: ${invoiceNumber}`,
+    `Property: ${propertyName}`,
+    `Amount: ${amountFormatted}`,
     "",
     `Open invoice: ${invoiceUrl}`,
     "",
@@ -327,4 +337,8 @@ export function buildManagerPaymentEmail({
   ].join("\n");
 
   return { subject, html, text };
+}
+
+export function buildManagerPaymentEmail(params: ManagerPaymentEmailParams) {
+  return buildInvoiceEmailTemplate(params);
 }

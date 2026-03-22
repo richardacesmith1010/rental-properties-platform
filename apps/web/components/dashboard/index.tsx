@@ -9,6 +9,7 @@ import { CommandPalette } from "@/components/dashboard/command-palette";
 import { CompactHeader } from "@/components/dashboard/compact-header";
 import { ContextualGreeting } from "@/components/dashboard/contextual-greeting";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { LeaseWizard } from "@/components/dashboard/lease-wizard";
 import { OwnerDailyOpsHome } from "@/components/dashboard/owner-daily-ops-home";
 import { PropertyWizard } from "@/components/dashboard/property-wizard";
 import { TenantInviteWizard } from "@/components/dashboard/tenant-invite-wizard";
@@ -42,6 +43,7 @@ export function Dashboard(props: DashboardProps) {
     activeSectionLabel,
     activeWorkflowMeta,
     closePropertyWizard,
+    closeLeaseWizard,
     closeTenantInviteWizard,
     commandPaletteProps,
     displayDashboardData,
@@ -53,6 +55,7 @@ export function Dashboard(props: DashboardProps) {
     isOwnerRole,
     isOwnerDailyOpsEnabled,
     isOwnerDailyOpsHomePage,
+    isLeaseWizardOpen,
     isPropertyWizardOpen,
     isTenantInviteWizardOpen,
     layoutProps,
@@ -220,6 +223,24 @@ export function Dashboard(props: DashboardProps) {
               onInviteManager={props.onInviteManager}
               onOpenSection={sectionRendererProps.openSection}
               onOpenTenantInviteWizard={openTenantInviteWizard}
+            />
+          ) : null}
+          {(isOwnerRole || isManagerRole) ? (
+            <LeaseWizard
+              open={isLeaseWizardOpen}
+              properties={filteredPortfolio.properties}
+              units={filteredPortfolio.units}
+              leases={filteredPortfolio.leases}
+              tenants={filteredPortfolio.tenants}
+              selectedPropertyId={sectionRendererProps.selectedPropertyId}
+              onOpenChange={(open) => {
+                if (!open) {
+                  closeLeaseWizard();
+                }
+              }}
+              onCreateLease={props.onCreateLease}
+              onInviteTenant={props.onInviteTenant}
+              onOpenSection={sectionRendererProps.openSection}
             />
           ) : null}
           {(isOwnerRole || isManagerRole) && props.onInviteTenant ? (

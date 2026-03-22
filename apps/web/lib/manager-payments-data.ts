@@ -441,6 +441,7 @@ export async function getManagerPaymentEmailContext(paymentId: string) {
 
   return {
     pdfData,
+    propertyId: shape.property.id,
     propertyName: shape.property.name,
     propertyAddress: buildPropertyAddress(shape.property) || shape.property.name,
     ownerName: getProfileName(shape.ownerProfile, "Property Owner"),

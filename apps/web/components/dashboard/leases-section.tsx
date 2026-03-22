@@ -36,6 +36,7 @@ interface LeasesSectionProps {
   onRenewLease?: StatefulAction;
   onTerminateLease?: StatefulAction;
   onGoToOperations?: () => void;
+  onOpenLeaseWizard?: () => void;
 }
 
 const unavailableAction: StatefulAction = async () => ({
@@ -119,7 +120,8 @@ export function LeasesSection({
   onDeleteLease,
   onRenewLease,
   onTerminateLease,
-  onGoToOperations
+  onGoToOperations,
+  onOpenLeaseWizard
 }: LeasesSectionProps) {
   const [expanded, setExpanded] = useState(false);
   const [updateState, updateAction] = useFormState(onUpdateLease ?? unavailableAction, null);
@@ -145,8 +147,22 @@ export function LeasesSection({
 
   return (
     <Card id="leases" className="border border-border/50 shadow-sm">
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold">Leases</CardTitle>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <CardTitle className="text-xl font-semibold">Leases</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Keep lease terms, renewals, and tenant assignments in one place.
+          </p>
+        </div>
+        {showControls && onOpenLeaseWizard ? (
+          <Button
+            type="button"
+            onClick={onOpenLeaseWizard}
+            title="Open the guided lease creation wizard."
+          >
+            New Lease
+          </Button>
+        ) : null}
       </CardHeader>
       <CardContent>
         {showControls ? (
@@ -167,8 +183,8 @@ export function LeasesSection({
             icon={FileText}
             title="No leases yet"
             description="Create a lease to start tracking rent and tenant information."
-            actionLabel={onGoToOperations ? "Create a Lease" : undefined}
-            onAction={onGoToOperations}
+            actionLabel={onOpenLeaseWizard || onGoToOperations ? "Create a Lease" : undefined}
+            onAction={onOpenLeaseWizard ?? onGoToOperations}
           />
         ) : (
           <div className="space-y-6">

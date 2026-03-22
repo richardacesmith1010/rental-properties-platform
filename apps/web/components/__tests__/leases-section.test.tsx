@@ -55,6 +55,25 @@ describe("LeasesSection", () => {
     expect(screen.getByText("Atlas House • Unit 1A")).toBeInTheDocument();
   });
 
+  it("shows the new lease button when lease management is enabled", () => {
+    const onOpenLeaseWizard = vi.fn();
+
+    render(
+      <LeasesSection
+        leases={[activeLease]}
+        showControls
+        onUpdateLease={async () => null}
+        onDeleteLease={async () => null}
+        onRenewLease={async () => null}
+        onTerminateLease={async () => null}
+        onOpenLeaseWizard={onOpenLeaseWizard}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "New Lease" }));
+    expect(onOpenLeaseWizard).toHaveBeenCalledTimes(1);
+  });
+
   it("shows the empty state when no leases exist", () => {
     render(<LeasesSection leases={[]} />);
 

@@ -2,7 +2,7 @@
 
 import { renderToBuffer } from "@react-pdf/renderer";
 import { revalidatePath } from "next/cache";
-import { buildManagerPaymentEmail } from "@/lib/email-templates";
+import { sendInvoiceEmail } from "@/lib/invoice-email";
 import { sideEffectError } from "@/lib/logger";
 import {
   buildManagerInvoiceFileName,
@@ -11,7 +11,7 @@ import {
   generateInvoiceNumber
 } from "@/lib/manager-payments";
 import { getManagerPaymentEmailContext } from "@/lib/manager-payments-data";
-import { createManagerInvoicePdfDocument } from "@/lib/pdf/manager-invoice-template";
+import { createInvoicePdfDocument } from "@/lib/pdf/invoice-template";
 import { canUserAdministerProperty, getAdministeredProperties } from "@/lib/property-access";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -49,81 +49,47 @@ async function getPropertyBaseRentCents(propertyId: string) {
   return (activeLeases ?? []).reduce((sum, lease) => sum + (lease.monthly_rent_cents ?? 0), 0);
 }
 
-async function sendManagerPaymentInvoiceEmails(paymentId: string, status: "pending" | "paid") {
-  const apiKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.RESEND_FROM_EMAIL;
-
-  if (!apiKey || !fromEmail) {
-    return;
-  }
-
+async function sendManagerPaymentInvoiceEmails(
+  actorUserId: string,
+  paymentId: string,
+  status: "pending" | "paid"
+) {
   const context = await getManagerPaymentEmailContext(paymentId);
   if (!context) {
     return;
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com";
-  const invoiceUrl = `${appUrl}/api/pdf/manager-invoice/${paymentId}`;
+  const invoiceUrl = `${appUrl}/api/pdf/invoice/${paymentId}`;
   const pdfBuffer = await renderToBuffer(
-    createManagerInvoicePdfDocument({
+    createInvoicePdfDocument({
       invoice: context.pdfData
     })
   );
-  const attachment = {
-    filename: buildManagerInvoiceFileName(paymentId),
-    content: Buffer.from(pdfBuffer).toString("base64")
-  };
-
-  const recipients = [
-    context.managerEmail
-      ? {
-          email: context.managerEmail,
-          name: context.managerName
-        }
-      : null,
-    context.ownerEmail
-      ? {
-          email: context.ownerEmail,
-          name: context.ownerName
-        }
-      : null
-  ].filter((recipient): recipient is { email: string; name: string } => Boolean(recipient));
-
-  await Promise.all(
-    recipients.map(async (recipient) => {
-      const { subject, html, text } = buildManagerPaymentEmail({
-        recipientName: recipient.name,
+  const emailSent = context.managerEmail
+    ? await sendInvoiceEmail({
+        actorUserId,
+        paymentId,
+        propertyId: context.propertyId,
+        managerName: context.managerName,
+        managerEmail: context.managerEmail,
+        ownerName: context.ownerName,
+        ownerEmail: context.ownerEmail ?? null,
+        amount: context.amountFormatted,
+        description: context.description,
         propertyName: context.propertyName,
-        categoryLabel: context.categoryLabel,
-        amountFormatted: context.amountFormatted,
-        paymentDate: context.paymentDate,
-        invoiceUrl,
         invoiceNumber: context.pdfData.invoiceNumber,
-        status
-      });
+        date: context.paymentDate,
+        invoiceUrl,
+        status,
+        attachmentFileName: buildManagerInvoiceFileName(paymentId),
+        attachmentContentBase64: Buffer.from(pdfBuffer).toString("base64")
+      })
+    : false;
 
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          from: fromEmail,
-          to: [recipient.email],
-          subject,
-          html,
-          text,
-          attachments: [attachment]
-        })
-      });
-
-      if (!response.ok) {
-        const responseText = await response.text();
-        throw new Error(`Resend request failed (${response.status}): ${responseText}`);
-      }
-    })
-  );
+  if (!emailSent) {
+    throw new Error("Resend invoice delivery failed.");
+  }
 }
 
 function revalidateManagerPaymentPaths() {
@@ -238,7 +204,7 @@ export async function recordManagerPayment(
     return { success: false, error: "Unable to record this manager payment right now." };
   }
 
-  void sendManagerPaymentInvoiceEmails(paymentId, "pending").catch(
+  void sendManagerPaymentInvoiceEmails(user.id, paymentId, "pending").catch(
     sideEffectError("recordManagerPayment", "email_invoice", {
       userId: user.id,
       entityType: "manager_payment",
@@ -287,7 +253,7 @@ async function updateManagerPaymentStatus(
   }
 
   if (status === "paid") {
-    void sendManagerPaymentInvoiceEmails(paymentId, "paid").catch(
+    void sendManagerPaymentInvoiceEmails(userId, paymentId, "paid").catch(
       sideEffectError("markManagerPaymentPaid", "email_invoice", {
         userId,
         entityType: "manager_payment",
@@ -421,7 +387,7 @@ export async function generateMonthlyManagerPayments(
 
   void Promise.all(
     rowsToInsert.map((row) =>
-      sendManagerPaymentInvoiceEmails(row.id, "pending").catch(
+      sendManagerPaymentInvoiceEmails(user.id, row.id, "pending").catch(
         sideEffectError("generateMonthlyManagerPayments", "email_invoice", {
           userId: user.id,
           entityType: "manager_payment",

@@ -342,6 +342,7 @@ export function useDashboardData(props: DashboardProps) {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isPropertyWizardOpen, setIsPropertyWizardOpen] = useState(false);
   const [isTenantInviteWizardOpen, setIsTenantInviteWizardOpen] = useState(false);
+  const [isLeaseWizardOpen, setIsLeaseWizardOpen] = useState(false);
 
   useEffect(() => {
     const nextMode = props.initialOwnerWorkflowMode;
@@ -1156,6 +1157,12 @@ export function useDashboardData(props: DashboardProps) {
   const closePropertyWizard = useCallback(() => {
     setIsPropertyWizardOpen(false);
   }, []);
+  const openLeaseWizard = useCallback(() => {
+    setIsLeaseWizardOpen(true);
+  }, []);
+  const closeLeaseWizard = useCallback(() => {
+    setIsLeaseWizardOpen(false);
+  }, []);
   const openTenantInviteWizard = useCallback(() => {
     if (props.onInviteTenant) {
       setIsTenantInviteWizardOpen(true);
@@ -1211,6 +1218,7 @@ export function useDashboardData(props: DashboardProps) {
       if (actionId === "create-lease") {
         setOwnerWorkflowMode("daily_ops");
         setActiveSection("leases");
+        setIsLeaseWizardOpen(true);
       }
 
       if (actionId === "new-tenant") {
@@ -1277,6 +1285,7 @@ export function useDashboardData(props: DashboardProps) {
     hasAnalyticsSection,
     hasActivitySection,
     openSection,
+    openLeaseWizard,
     openTenantInviteWizard,
     goToSectionIfVisible,
     handleTenantInviteSuccess,
@@ -1343,6 +1352,8 @@ export function useDashboardData(props: DashboardProps) {
     ownerDailyOpsTotalPages,
     openPropertyWizard,
     closePropertyWizard,
+    openLeaseWizard,
+    closeLeaseWizard,
     openTenantInviteWizard,
     closeTenantInviteWizard,
     ownerOnboarding,
@@ -1356,6 +1367,7 @@ export function useDashboardData(props: DashboardProps) {
     sectionItems,
     sectionRendererProps,
     isPropertyWizardOpen,
+    isLeaseWizardOpen,
     isTenantInviteWizardOpen,
     showOnboardingWizard:
       isOwnerRole && safePortfolio.properties.length > 0 && safePortfolio.units.length === 0 && Boolean(props.onInviteTenant)
