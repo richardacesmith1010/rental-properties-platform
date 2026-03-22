@@ -56,21 +56,21 @@ export const featureTabs: MarketingFeatureTab[] = [
     mock: (
       <div className="grid gap-3 rounded-3xl border border-white/10 bg-slate-950/92 p-5">
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-emerald-200">Collected</p>
-            <p className="mt-2 text-3xl font-semibold text-white">$8,200</p>
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-emerald-700">Collected</p>
+            <p className="mt-2 text-3xl font-semibold text-emerald-900">$8,200</p>
           </div>
-          <div className="rounded-2xl border border-rose-400/20 bg-rose-400/10 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-rose-200">Overdue</p>
-            <p className="mt-2 text-3xl font-semibold text-white">$425</p>
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-rose-700">Overdue</p>
+            <p className="mt-2 text-3xl font-semibold text-rose-900">$425</p>
           </div>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          <div className="flex items-center justify-between text-sm text-slate-300">
+        <div className="rounded-2xl border border-slate-200 bg-slate-100 p-4">
+          <div className="flex items-center justify-between text-sm text-slate-600">
             <span>Autopay enabled</span>
             <span>78%</span>
           </div>
-          <div className="mt-3 h-2 rounded-full bg-white/10">
+          <div className="mt-3 h-2 rounded-full bg-slate-200">
             <div className="h-2 w-[78%] rounded-full bg-gradient-to-r from-emerald-400 to-cyan-300" />
           </div>
         </div>
@@ -134,12 +134,12 @@ export const featureTabs: MarketingFeatureTab[] = [
           ["Move-out checklist", "Draft"],
           ["Insurance certificate", "Signed"]
         ].map(([title, status]) => (
-          <div key={title} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+          <div key={title} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3">
             <div>
-              <p className="text-sm font-medium text-white">{title}</p>
-              <p className="text-xs text-slate-300">Ready for tenant workflow</p>
+              <p className="text-sm font-medium text-slate-900">{title}</p>
+              <p className="text-xs text-slate-600">Ready for tenant workflow</p>
             </div>
-            <span className="rounded-full bg-violet-500/20 px-3 py-1 text-xs text-violet-100">{status}</span>
+            <span className="rounded-full bg-violet-100 px-3 py-1 text-xs text-violet-700">{status}</span>
           </div>
         ))}
       </div>
@@ -160,15 +160,15 @@ export const featureTabs: MarketingFeatureTab[] = [
       <div className="space-y-4 rounded-3xl border border-white/10 bg-slate-950/92 p-5">
         <div className="grid grid-cols-3 gap-3">
           {["Occupancy", "Revenue", "Net"].map((metric) => (
-            <div key={metric} className="rounded-2xl border border-white/10 bg-white/5 p-3 text-center">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">{metric}</p>
-              <p className="mt-2 text-xl font-semibold text-white">
+            <div key={metric} className="rounded-2xl border border-slate-200 bg-slate-100 p-3 text-center">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">{metric}</p>
+              <p className="mt-2 text-xl font-semibold text-slate-900">
                 {metric === "Occupancy" ? "96%" : metric === "Revenue" ? "$9.1k" : "$5.3k"}
               </p>
             </div>
           ))}
         </div>
-        <div className="flex h-40 items-end gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+        <div className="flex h-40 items-end gap-3 rounded-2xl border border-slate-200 bg-slate-100 p-4">
           {[55, 72, 61, 84, 70, 92, 88].map((height, index) => (
             <div key={index} className="flex-1 rounded-t-2xl bg-gradient-to-t from-violet-500 to-cyan-300/80" style={{ height: `${height}%` }} />
           ))}
@@ -189,18 +189,18 @@ export const featureTabs: MarketingFeatureTab[] = [
     ],
     mock: (
       <div className="space-y-4 rounded-3xl border border-white/10 bg-slate-950/92 p-5">
-        <div className="rounded-2xl border border-violet-400/20 bg-violet-500/10 p-4">
-          <div className="flex items-center justify-between text-sm text-violet-100">
+        <div className="rounded-2xl border border-violet-200 bg-violet-100 p-4">
+          <div className="flex items-center justify-between text-sm text-violet-800">
             <span>Level 3 Tenant</span>
             <span>2,450 XP</span>
           </div>
-          <div className="mt-3 h-3 rounded-full bg-white/10">
+          <div className="mt-3 h-3 rounded-full bg-violet-200">
             <div className="h-3 w-[72%] rounded-full bg-gradient-to-r from-violet-400 via-fuchsia-300 to-amber-300" />
           </div>
         </div>
         <div className="grid grid-cols-4 gap-3">
           {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="rounded-2xl border border-white/10 bg-white/5 p-3 text-center text-xs text-slate-300">
+            <div key={index} className="rounded-2xl border border-slate-200 bg-slate-100 p-3 text-center text-xs text-slate-700">
               <Sparkles className="mx-auto h-5 w-5 text-amber-300" />
               <p className="mt-2">Achievement</p>
             </div>
@@ -279,10 +279,10 @@ export const faqs = [
   }
 ];
 
-export const sectionKickerClass = "text-xs font-semibold uppercase tracking-[0.22em] text-[color:var(--marketing-accent)]";
-export const sectionHeadingClass = "text-4xl font-semibold tracking-tight text-[color:var(--marketing-heading)]";
-export const sectionCopyClass = "max-w-3xl text-base leading-7 text-[color:var(--marketing-body)]";
+export const sectionKickerClass = "text-xs font-semibold uppercase tracking-[0.22em] text-violet-700";
+export const sectionHeadingClass = "text-4xl font-semibold tracking-tight text-slate-900";
+export const sectionCopyClass = "max-w-3xl text-base leading-7 text-slate-700";
 export const surfaceClass =
-  "rounded-[30px] border border-[color:var(--marketing-border)] bg-[color:var(--marketing-card)] shadow-[0_22px_60px_-42px_rgba(15,23,42,0.22)]";
+  "rounded-[30px] border border-slate-200 bg-white shadow-[0_22px_60px_-42px_rgba(15,23,42,0.22)]";
 export const softSurfaceClass =
-  "rounded-[28px] border border-[color:var(--marketing-border)] bg-[color:var(--marketing-card-soft)] shadow-[0_18px_46px_-38px_rgba(15,23,42,0.16)]";
+  "rounded-[28px] border border-slate-200 bg-slate-50 shadow-[0_18px_46px_-38px_rgba(15,23,42,0.16)]";

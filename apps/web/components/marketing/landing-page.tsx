@@ -34,7 +34,7 @@ export function LandingPage() {
     <main id="main-content" className="mx-auto flex w-full max-w-7xl flex-col gap-20 px-6 pb-20 pt-10 md:px-10">
       <AnimateOnScroll>
         <header className={`${surfaceClass} flex items-center justify-between px-5 py-4 backdrop-blur`}>
-          <p className="text-lg font-semibold leading-none tracking-tight text-[color:var(--marketing-heading)]">Domus</p>
+          <p className="text-lg font-semibold leading-none tracking-tight text-slate-900">Domus</p>
           <Link
             href="/login"
             className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700 transition hover:bg-violet-100"
@@ -52,10 +52,10 @@ export function LandingPage() {
             Domus for landlords with 1-10 units
           </p>
           <div className="space-y-4">
-            <h1 className="max-w-3xl text-5xl font-semibold leading-tight tracking-tight text-[color:var(--marketing-heading)] sm:text-6xl">
+            <h1 className="max-w-3xl text-5xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-6xl">
               Stop managing rentals in spreadsheets.
             </h1>
-            <p className="max-w-2xl text-lg leading-relaxed text-[color:var(--marketing-body)]">
+            <p className="max-w-2xl text-lg leading-relaxed text-slate-700">
               Domus gives landlords with 1-10 units a professional command center for payments, tenants, and maintenance, for free.
             </p>
           </div>
@@ -70,13 +70,13 @@ export function LandingPage() {
             </Link>
             <a
               href="#features"
-              className="inline-flex items-center gap-2 rounded-2xl border border-[color:var(--marketing-border)] bg-[color:var(--marketing-card)] px-5 py-3 text-sm font-semibold text-[color:var(--marketing-heading)] transition hover:bg-[color:var(--marketing-card-soft)]"
+              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
               title="Jump to the feature showcase."
             >
               See how it works
             </a>
           </div>
-          <p className="text-sm font-medium text-[color:var(--marketing-body)]">
+          <p className="text-sm font-medium text-slate-700">
             Trusted by 500+ landlords managing 2,000+ units
           </p>
         </section>
@@ -147,7 +147,7 @@ export function LandingPage() {
       </AnimateOnScroll>
 
       <AnimateOnScroll>
-        <section className="rounded-[36px] bg-[color:var(--marketing-section-alt)] px-6 py-8 sm:px-8">
+        <section className="rounded-[36px] bg-slate-50 px-6 py-8 sm:px-8">
           <div className="grid gap-4 md:grid-cols-3">
             {problemCards.map((card, index) => {
               const Icon = card.icon;
@@ -160,8 +160,8 @@ export function LandingPage() {
                   <div className="inline-flex rounded-2xl border border-violet-200 bg-violet-50 p-3">
                     <Icon className="h-5 w-5 text-violet-700" />
                   </div>
-                  <h2 className="text-xl font-semibold text-[color:var(--marketing-heading)]">{card.title}</h2>
-                  <p className="text-sm leading-relaxed text-[color:var(--marketing-body)]">{card.body}</p>
+                  <h2 className="text-xl font-semibold text-slate-900">{card.title}</h2>
+                  <p className="text-sm leading-relaxed text-slate-700">{card.body}</p>
                 </article>
               );
             })}
@@ -186,18 +186,18 @@ export function LandingPage() {
             }))}
             activeTab={activeTab}
             onTabChange={(tabId) => setActiveTab(tabId as (typeof featureTabs)[number]["id"])}
-            className="border-b border-[color:var(--marketing-border)] pb-2"
-            activeClassName="text-[color:var(--marketing-heading)]"
-            inactiveClassName="text-[color:var(--marketing-muted)] hover:text-[color:var(--marketing-heading)]"
-            indicatorClassName="bg-[color:var(--marketing-accent)]"
+            className="border-b border-slate-200 pb-2"
+            activeClassName="text-slate-900"
+            inactiveClassName="text-slate-500 hover:text-slate-900"
+            indicatorClassName="bg-violet-600"
           />
           <div className={`${softSurfaceClass} grid gap-6 p-6 lg:grid-cols-[0.95fr_1.05fr]`}>
             <div className="space-y-5">
               <div>
-                <h3 className="text-3xl font-semibold text-[color:var(--marketing-heading)]">{activeFeature.title}</h3>
-                <p className="mt-3 text-base leading-relaxed text-[color:var(--marketing-body)]">{activeFeature.body}</p>
+                <h3 className="text-3xl font-semibold text-slate-900">{activeFeature.title}</h3>
+                <p className="mt-3 text-base leading-relaxed text-slate-700">{activeFeature.body}</p>
               </div>
-              <ul className="space-y-3 text-sm text-[color:var(--marketing-body)]">
+              <ul className="space-y-3 text-sm text-slate-700">
                 {activeFeature.points.map((point) => (
                   <li key={point} className="flex items-start gap-3">
                     <BadgeCheck className="mt-0.5 h-4 w-4 text-emerald-600" />
@@ -223,14 +223,14 @@ export function LandingPage() {
               return (
                 <div key={step.title} className={`relative ${surfaceClass} p-6 text-center`}>
                   {index < steps.length - 1 ? (
-                    <div className="absolute left-[58%] top-9 hidden h-px w-full border-t border-dashed border-[color:var(--marketing-border)] md:block" />
+                    <div className="absolute left-[58%] top-9 hidden h-px w-full border-t border-dashed border-slate-200 md:block" />
                   ) : null}
                   <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-violet-200 bg-violet-50 text-violet-700">
                     <Icon className="h-6 w-6" />
                   </div>
                   <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-violet-700">0{index + 1}</p>
-                  <h3 className="mt-2 text-lg font-semibold text-[color:var(--marketing-heading)]">{step.title}</h3>
-                  <p className="mt-2 text-sm text-[color:var(--marketing-body)]">{step.body}</p>
+                  <h3 className="mt-2 text-lg font-semibold text-slate-900">{step.title}</h3>
+                  <p className="mt-2 text-sm text-slate-700">{step.body}</p>
                 </div>
               );
             })}
@@ -252,13 +252,13 @@ export function LandingPage() {
                     <Star key={index} className="h-4 w-4 fill-current" />
                   ))}
                 </div>
-                <p className="mt-4 text-sm leading-relaxed text-[color:var(--marketing-body)]">“{testimonial.body}”</p>
+                <p className="mt-4 text-sm leading-relaxed text-slate-700">“{testimonial.body}”</p>
                 <div className="mt-5 flex items-center justify-between">
                   <div>
-                    <p className="font-semibold text-[color:var(--marketing-heading)]">{testimonial.name}</p>
-                    <p className="text-xs text-[color:var(--marketing-muted)]">Domus customer</p>
+                    <p className="font-semibold text-slate-900">{testimonial.name}</p>
+                    <p className="text-xs text-slate-500">Domus customer</p>
                   </div>
-                  <span className="rounded-full border border-[color:var(--marketing-border)] bg-[color:var(--marketing-card-soft)] px-3 py-1 text-xs text-[color:var(--marketing-body)]">
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-700">
                     {testimonial.role}
                   </span>
                 </div>
@@ -281,7 +281,7 @@ export function LandingPage() {
                 className={`relative rounded-[28px] border p-6 shadow-[0_18px_46px_-36px_rgba(15,23,42,0.18)] ${
                   tier.featured
                     ? "border-violet-200 bg-[linear-gradient(180deg,rgba(124,58,237,0.1)_0%,rgba(255,255,255,1)_100%)]"
-                    : "border-[color:var(--marketing-border)] bg-[color:var(--marketing-card)]"
+                    : "border-slate-200 bg-white"
                 }`}
               >
                 {tier.featured ? (
@@ -289,10 +289,10 @@ export function LandingPage() {
                     Most Popular
                   </span>
                 ) : null}
-                <h3 className="text-2xl font-semibold text-[color:var(--marketing-heading)]">{tier.name}</h3>
+                <h3 className="text-2xl font-semibold text-slate-900">{tier.name}</h3>
                 <p className="mt-4 text-4xl font-semibold text-violet-700">{tier.price}</p>
-                <p className="mt-1 text-sm text-[color:var(--marketing-body)]">{tier.detail}</p>
-                <ul className="mt-6 space-y-3 text-sm text-[color:var(--marketing-body)]">
+                <p className="mt-1 text-sm text-slate-700">{tier.detail}</p>
+                <ul className="mt-6 space-y-3 text-sm text-slate-700">
                   {tier.points.map((point) => (
                     <li key={point} className="flex items-start gap-3">
                       <BadgeCheck className="mt-0.5 h-4 w-4 text-emerald-600" />
@@ -305,7 +305,7 @@ export function LandingPage() {
                   className={`mt-6 inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold transition ${
                     tier.featured
                       ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-700 hover:to-fuchsia-700"
-                      : "border border-[color:var(--marketing-border)] bg-[color:var(--marketing-card-soft)] text-[color:var(--marketing-heading)] hover:bg-slate-100"
+                      : "border border-slate-200 bg-slate-50 text-slate-900 hover:bg-slate-100"
                   }`}
                   title={`Start the ${tier.name} plan.`}
                 >
@@ -314,7 +314,7 @@ export function LandingPage() {
               </article>
             ))}
           </div>
-          <p className="text-center text-sm text-[color:var(--marketing-body)]">
+          <p className="text-center text-sm text-slate-700">
             All plans include unlimited tenants, SSL encryption, and 99.9% uptime.
           </p>
         </section>
@@ -329,11 +329,11 @@ export function LandingPage() {
           <div className="space-y-3">
             {faqs.map((item) => (
               <details key={item.q} className={`${surfaceClass} group p-5`}>
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-left text-base font-medium text-[color:var(--marketing-heading)]">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-left text-base font-medium text-slate-900">
                   <span>{item.q}</span>
                   <span className="text-violet-600 transition group-open:rotate-45">+</span>
                 </summary>
-                <p className="mt-4 text-sm leading-relaxed text-[color:var(--marketing-body)]">{item.a}</p>
+                <p className="mt-4 text-sm leading-relaxed text-slate-700">{item.a}</p>
               </details>
             ))}
           </div>
@@ -343,10 +343,10 @@ export function LandingPage() {
       <AnimateOnScroll>
         <section className="rounded-[36px] bg-[linear-gradient(135deg,rgba(124,58,237,0.12)_0%,rgba(168,85,247,0.08)_45%,rgba(34,197,94,0.08)_100%)] p-8 text-center ring-1 ring-violet-200 md:p-12">
           <p className={sectionKickerClass}>Final CTA</p>
-          <h2 className="mt-3 text-4xl font-semibold tracking-tight text-[color:var(--marketing-heading)]">
+          <h2 className="mt-3 text-4xl font-semibold tracking-tight text-slate-900">
             Ready to professionalize your rental business?
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-[color:var(--marketing-body)]">
+          <p className="mx-auto mt-4 max-w-2xl text-slate-700">
             Free for up to 3 units. No credit card required.
           </p>
           <Link
@@ -360,20 +360,20 @@ export function LandingPage() {
         </section>
       </AnimateOnScroll>
 
-      <footer className="rounded-[32px] bg-[#f1f5f9] px-6 py-8 text-sm text-[color:var(--marketing-body)]">
+      <footer className="rounded-[32px] bg-[#f1f5f9] px-6 py-8 text-sm text-slate-700">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-base font-semibold text-[color:var(--marketing-heading)]">Domus</p>
+            <p className="text-base font-semibold text-slate-900">Domus</p>
             <p>Built with care for independent landlords.</p>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/terms" className="transition hover:text-[color:var(--marketing-heading)]" title="Read Domus terms of service.">
+            <Link href="/terms" className="transition hover:text-slate-900" title="Read Domus terms of service.">
               Terms
             </Link>
-            <Link href="/privacy" className="transition hover:text-[color:var(--marketing-heading)]" title="Read Domus privacy policy.">
+            <Link href="/privacy" className="transition hover:text-slate-900" title="Read Domus privacy policy.">
               Privacy
             </Link>
-            <a href="#" className="transition hover:text-[color:var(--marketing-heading)]" title="Open help resources.">
+            <a href="#" className="transition hover:text-slate-900" title="Open help resources.">
               Help
             </a>
           </div>
