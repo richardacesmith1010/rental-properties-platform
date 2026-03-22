@@ -108,6 +108,7 @@ export interface SectionRendererProps {
   ownerConnectedMap?: Map<string, boolean>;
   onGenerateChargesHref?: string;
   onPayCharge: FormAction;
+  onDeletePendingCharge?: StatefulAction;
   onRecordManualPayment?: StatefulAction;
   onSendBatchPaymentReminder?: StatefulAction;
   onUpdateTicketStatus?: StatefulAction;

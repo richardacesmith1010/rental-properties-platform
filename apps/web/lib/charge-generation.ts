@@ -12,6 +12,7 @@ type ExistingChargeRow = { lease_id: string; due_date: string };
 type LateChargeRow = { id: string; lease_id: string; due_date: string };
 type LeaseRow = {
   id: string; unit_id: string; tenant_profile_id?: string | null; start_date: string; end_date: string;
+  created_at: string;
   due_day_of_month: number; monthly_rent_cents: number; grace_period_days?: number | null;
   late_fee_cents?: number | null; lease_status?: LeaseStatus;
 };
@@ -23,18 +24,26 @@ type LateLeaseRow = {
 function startOfUtcDay(value: Date) {
   return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
 }
-function getCandidateMonths() {
-  const today = new Date();
-  const baseYear = today.getUTCFullYear();
-  const baseMonth = today.getUTCMonth();
+
+function toUtcDateIso(value: string) {
+  return startOfUtcDay(new Date(value)).toISOString().slice(0, 10);
+}
+
+function isDueDateWithinLeaseWindow(lease: LeaseRow, dueDateIso: string) {
+  const leaseCreatedIso = toUtcDateIso(lease.created_at);
+  return dueDateIso >= leaseCreatedIso && dueDateIso >= lease.start_date && dueDateIso <= lease.end_date;
+}
+
+export function getCandidateMonths(baseDate = new Date()) {
+  const baseYear = baseDate.getUTCFullYear();
+  const baseMonth = baseDate.getUTCMonth();
   return [
     { year: baseYear, month: baseMonth },
-    { year: baseMonth === 11 ? baseYear + 1 : baseYear, month: (baseMonth + 1) % 12 },
-    { year: baseMonth >= 10 ? baseYear + 1 : baseYear, month: (baseMonth + 2) % 12 }
+    { year: baseMonth === 11 ? baseYear + 1 : baseYear, month: (baseMonth + 1) % 12 }
   ];
 }
 function nextDueDateOnOrAfterToday(dueDayOfMonth: number, todayIso: string) {
-  const today = new Date();
+  const today = new Date(`${todayIso}T00:00:00.000Z`);
   const monthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
   for (let i = 0; i < 12; i += 1) {
     const year = monthStart.getUTCFullYear() + Math.floor((monthStart.getUTCMonth() + i) / 12);
@@ -46,13 +55,14 @@ function nextDueDateOnOrAfterToday(dueDayOfMonth: number, todayIso: string) {
   }
   return todayIso;
 }
-function buildDueDatesByLeaseId(leases: LeaseRow[], todayIso: string) {
+export function buildDueDatesByLeaseId(leases: LeaseRow[], todayIso: string) {
+  const today = new Date(`${todayIso}T00:00:00.000Z`);
   const dueDatesByLeaseId = new Map<string, string[]>();
   for (const lease of leases) {
-    const dueDates = getCandidateMonths()
+    const dueDates = getCandidateMonths(today)
       .map((candidate) => new Date(Date.UTC(candidate.year, candidate.month, lease.due_day_of_month)))
       .map((date) => date.toISOString().slice(0, 10))
-      .filter((date) => date >= lease.start_date && date <= lease.end_date);
+      .filter((date) => isDueDateWithinLeaseWindow(lease, date));
     if (dueDates.length > 0) {
       dueDatesByLeaseId.set(lease.id, dueDates);
       continue;
@@ -61,11 +71,11 @@ function buildDueDatesByLeaseId(leases: LeaseRow[], todayIso: string) {
       continue;
     }
     const fallbackDueDate = nextDueDateOnOrAfterToday(lease.due_day_of_month, todayIso);
-    if (fallbackDueDate >= lease.start_date && fallbackDueDate <= lease.end_date) {
+    if (isDueDateWithinLeaseWindow(lease, fallbackDueDate)) {
       dueDatesByLeaseId.set(lease.id, [fallbackDueDate]);
       continue;
     }
-    if (todayIso >= lease.start_date && todayIso <= lease.end_date) {
+    if (isDueDateWithinLeaseWindow(lease, todayIso)) {
       dueDatesByLeaseId.set(lease.id, [todayIso]);
     }
   }
@@ -323,7 +333,7 @@ export async function generateMonthlyChargesForPropertyIdsWithClient(
   const { data: leases, error: leasesError } = await supabase
     .from("leases")
     .select(
-      "id, unit_id, tenant_profile_id, start_date, end_date, due_day_of_month, monthly_rent_cents, grace_period_days, late_fee_cents, lease_status"
+      "id, unit_id, tenant_profile_id, start_date, end_date, created_at, due_day_of_month, monthly_rent_cents, grace_period_days, late_fee_cents, lease_status"
     )
     .in("unit_id", unitIds)
     .eq("active", true);

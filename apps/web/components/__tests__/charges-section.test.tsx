@@ -27,6 +27,11 @@ describe("ChargesSection", () => {
       reminderSentAt: "2026-03-15T12:00:00.000Z"
     }
   ];
+  const paidCharge = {
+    ...charges[0],
+    id: "550e8400-e29b-41d4-a716-446655440010",
+    status: "paid" as const
+  };
 
   it("shows the generate charges link when href is provided", () => {
     render(
@@ -94,5 +99,48 @@ describe("ChargesSection", () => {
     render(<ChargesSection charges={charges} onPayCharge={async () => {}} />);
 
     expect(screen.getByText("Reminder sent Mar 15, 2026")).toBeInTheDocument();
+  });
+
+  it("shows a delete action for pending charges when a delete action is provided", () => {
+    render(
+      <ChargesSection
+        charges={charges}
+        onPayCharge={async () => {}}
+        onDeletePendingCharge={async () => ({ success: true })}
+      />
+    );
+
+    expect(
+      screen.getByRole("button", { name: /delete pending charge for atlas house/i })
+    ).toBeInTheDocument();
+  });
+
+  it("does not show a delete action for paid charges", () => {
+    render(
+      <ChargesSection
+        charges={[paidCharge]}
+        onPayCharge={async () => {}}
+        onDeletePendingCharge={async () => ({ success: true })}
+      />
+    );
+
+    expect(
+      screen.queryByRole("button", { name: /delete pending charge/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it("opens a confirmation dialog before deleting a pending charge", () => {
+    render(
+      <ChargesSection
+        charges={charges}
+        onPayCharge={async () => {}}
+        onDeletePendingCharge={async () => ({ success: true })}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /delete pending charge for atlas house/i }));
+
+    expect(screen.getByRole("dialog", { name: "Delete Pending Charge?" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete Charge" })).toBeInTheDocument();
   });
 });

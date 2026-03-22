@@ -99,6 +99,7 @@ export function SectionRenderer(props: SectionRendererProps) {
         <ChargesSection
           charges={props.data.charges}
           onPayCharge={props.onPayCharge}
+          onDeletePendingCharge={props.onDeletePendingCharge}
           onRecordManualPayment={props.onRecordManualPayment}
           onSendBatchPaymentReminder={
             props.data.profileRole === "owner" ? props.onSendBatchPaymentReminder : undefined

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useFormState } from "react-dom";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CreditCard, Mail } from "lucide-react";
+import { CreditCard, Mail, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { ActionState } from "@/app/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +20,7 @@ import { AnimatedList } from "@/components/ui/animated-list";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Alert } from "@/components/ui/alert";
 import { getStatusClasses, statusAriaLabel, statusBadgeClasses } from "@/lib/status-colors";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 
 type ChargeStatus = "pending" | "paid" | "late";
 type ChargeCategory = "rent" | "late_fee";
@@ -59,6 +60,7 @@ interface AutopayEnrollmentView {
 interface ChargesSectionProps {
   charges: Charge[];
   onPayCharge: (formData: FormData) => Promise<void>;
+  onDeletePendingCharge?: StatefulAction;
   onRecordManualPayment?: StatefulAction;
   onSendBatchPaymentReminder?: StatefulAction;
   onGenerateChargesHref?: string;
@@ -75,6 +77,11 @@ interface ChargesSectionProps {
 const unavailableManualPaymentAction: StatefulAction = async () => ({
   success: false,
   error: "Manual payment recording is unavailable."
+});
+
+const unavailableDeletePendingChargeAction: StatefulAction = async () => ({
+  success: false,
+  error: "Pending charge deletion is unavailable."
 });
 
 const unavailableAutopayAction: StatefulAction = async () => ({
@@ -146,6 +153,7 @@ function exportChargesCsv(charges: Charge[]) {
 export function ChargesSection({
   charges,
   onPayCharge,
+  onDeletePendingCharge,
   onRecordManualPayment,
   onSendBatchPaymentReminder,
   onGenerateChargesHref,
@@ -162,6 +170,7 @@ export function ChargesSection({
   const searchParams = useSearchParams();
   const [activeFilter, setActiveFilter] = useState<ChargeFilter>("all");
   const [manualPaymentChargeId, setManualPaymentChargeId] = useState<string | null>(null);
+  const [confirmDeleteChargeId, setConfirmDeleteChargeId] = useState<string | null>(null);
   const [selectedChargeIds, setSelectedChargeIds] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState(false);
   const [isSendingReminders, startSendingReminders] = useTransition();
@@ -169,6 +178,11 @@ export function ChargesSection({
     onRecordManualPayment ?? unavailableManualPaymentAction,
     null
   );
+  const [deleteChargeState, deletePendingChargeAction] = useFormState(
+    onDeletePendingCharge ?? unavailableDeletePendingChargeAction,
+    null
+  );
+  const deleteFormRefs = useRef<Record<string, HTMLFormElement | null>>({});
   const batchActionsEnabled = Boolean(onSendBatchPaymentReminder) && !isTenantView;
 
   useEffect(() => {
@@ -176,6 +190,12 @@ export function ChargesSection({
       setManualPaymentChargeId(null);
     }
   }, [manualPaymentState]);
+
+  useEffect(() => {
+    if (deleteChargeState?.success) {
+      setConfirmDeleteChargeId(null);
+    }
+  }, [deleteChargeState]);
 
   const filteredCharges = useMemo(() => {
     return charges.filter((charge) => activeFilter === "all" || charge.status === activeFilter);
@@ -234,6 +254,10 @@ export function ChargesSection({
   const selectedVisibleCharges = visibleCharges.filter((charge) => selectedChargeIds.has(charge.id));
   const allVisibleSelected =
     visibleCharges.length > 0 && visibleCharges.every((charge) => selectedChargeIds.has(charge.id));
+  const chargePendingDeletion =
+    (confirmDeleteChargeId
+      ? charges.find((charge) => charge.id === confirmDeleteChargeId)
+      : null) ?? null;
 
   const toggleChargeSelection = (chargeId: string, checked: boolean) => {
     setSelectedChargeIds((current) => {
@@ -374,6 +398,7 @@ export function ChargesSection({
         </div>
 
         {showManualPayment ? <InlineAlert state={manualPaymentState} /> : null}
+        {onDeletePendingCharge ? <InlineAlert state={deleteChargeState} /> : null}
         {batchActionsEnabled ? (
           <>
             <BatchToolbar
@@ -424,6 +449,8 @@ export function ChargesSection({
                 true;
               const paymentsAvailable = stripeConfigured && ownerConnected;
               const category = charge.category ?? "rent";
+              const canDeletePendingCharge =
+                Boolean(onDeletePendingCharge) && !isTenantView && charge.status === "pending";
 
               return (
                 <DataRow key={charge.id} last={i === visibleCharges.length - 1}>
@@ -577,6 +604,27 @@ export function ChargesSection({
                         {manualFormOpen ? "Cancel" : "Record Payment"}
                       </Button>
                     ) : null}
+
+                    {canDeletePendingCharge ? (
+                      <form
+                        ref={(element) => {
+                          deleteFormRefs.current[charge.id] = element;
+                        }}
+                        action={deletePendingChargeAction}
+                      >
+                        <input type="hidden" name="chargeId" value={charge.id} />
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="outline"
+                          aria-label={`Delete pending charge for ${getChargeLabel(charge)}`}
+                          title={`Delete the pending charge for ${getChargeLabel(charge)}.`}
+                          onClick={() => setConfirmDeleteChargeId(charge.id)}
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
+                        </Button>
+                      </form>
+                    ) : null}
                   </div>
                 </DataRow>
               );
@@ -597,6 +645,27 @@ export function ChargesSection({
             ) : null}
           </>
         )}
+        <ConfirmDialog
+          title="Delete Pending Charge?"
+          description={
+            chargePendingDeletion
+              ? `Delete this pending charge of ${formatCurrency(chargePendingDeletion.amountCents)} due on ${formatDate(chargePendingDeletion.dueDate)}? This cannot be undone.`
+              : "Delete this pending charge? This cannot be undone."
+          }
+          confirmLabel="Delete Charge"
+          open={Boolean(confirmDeleteChargeId)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setConfirmDeleteChargeId(null);
+            }
+          }}
+          onConfirm={() => {
+            if (!confirmDeleteChargeId) {
+              return;
+            }
+            deleteFormRefs.current[confirmDeleteChargeId]?.requestSubmit();
+          }}
+        />
       </CardContent>
     </Card>
   );

@@ -8,6 +8,7 @@ import {
   terminateLeaseSchema,
   renamePropertySchema,
   payChargeSchema,
+  deletePendingChargeSchema,
   recordManualPaymentSchema,
   setupAutopaySchema,
   disableAutopaySchema,
@@ -535,6 +536,24 @@ describe("recordManualPaymentSchema", () => {
       referenceNote: "Check #1042"
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe("deletePendingChargeSchema", () => {
+  it("accepts a valid charge ID", () => {
+    const result = deletePendingChargeSchema.safeParse({
+      chargeId: "550e8400-e29b-41d4-a716-446655440000"
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an invalid charge ID", () => {
+    const result = deletePendingChargeSchema.safeParse({
+      chargeId: "not-a-charge-id"
+    });
+
+    expect(result.success).toBe(false);
   });
 });
 

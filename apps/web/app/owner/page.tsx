@@ -40,6 +40,7 @@ import {
   submitDistributionChangeRequest,
   submitWithdrawalRequest,
   createCheckoutForCharge,
+  deletePendingCharge,
   recordManualPayment,
   createLease,
   updateLease,
@@ -342,6 +343,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         onRenewLease={renewLease}
         onTerminateLease={terminateLease}
         onPayCharge={createCheckoutForCharge as (formData: FormData) => Promise<void>}
+        onDeletePendingCharge={deletePendingCharge}
         onRecordManualPayment={recordManualPayment}
         onGenerateChargesHref="/owner/generate"
         generatedMessage={generatedMessage}

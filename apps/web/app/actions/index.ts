@@ -56,6 +56,7 @@ export { createLease, updateLease, deleteLease } from "./lease-mutations";
 export { renewLease, terminateLease } from "./lease-lifecycle-actions";
 
 export { createCheckoutForCharge } from "./charges";
+export { deletePendingCharge } from "./charges";
 export { recordManualPayment } from "./charges";
 export { setupAutopay } from "./autopay";
 export { disableAutopay } from "./autopay";

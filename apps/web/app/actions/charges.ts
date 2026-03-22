@@ -14,7 +14,12 @@ import { isStripeConfigured } from "@/lib/env";
 import { sideEffectError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { withRetry } from "@/lib/retry";
-import { payChargeSchema, parseFormData, recordManualPaymentSchema } from "@/lib/validations";
+import {
+  deletePendingChargeSchema,
+  payChargeSchema,
+  parseFormData,
+  recordManualPaymentSchema
+} from "@/lib/validations";
 import { requireAuth } from "./auth-helpers";
 import type { ActionState } from "./shared";
 
@@ -148,6 +153,70 @@ export async function createCheckoutForCharge(formData: FormData): Promise<Actio
   }
 
   return { success: false, error: PAYMENTS_UNAVAILABLE_MESSAGE };
+}
+
+export async function deletePendingCharge(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const { user } = await requireAuth("owner", "manager");
+
+  const parsed = parseFormData(deletePendingChargeSchema, formData);
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const admin = createAdminClient();
+  const { data: charge } = await admin
+    .from("rent_charges")
+    .select("id, lease_id, amount_cents, due_date, status")
+    .eq("id", parsed.data.chargeId)
+    .maybeSingle();
+
+  if (!charge) {
+    return { success: false, error: "Charge not found." };
+  }
+
+  if (charge.status !== "pending") {
+    return { success: false, error: "Only pending charges can be deleted." };
+  }
+
+  const { data: lease } = await admin
+    .from("leases")
+    .select("id, unit_id")
+    .eq("id", charge.lease_id)
+    .maybeSingle();
+
+  if (!lease) {
+    return { success: false, error: "Lease not found for this charge." };
+  }
+
+  const { data: unit } = await admin
+    .from("units")
+    .select("id, property_id")
+    .eq("id", lease.unit_id)
+    .maybeSingle();
+
+  if (!unit) {
+    return { success: false, error: "Unit not found for this charge." };
+  }
+
+  const canAdmin = await canUserAdministerProperty(user.id, unit.property_id);
+  if (!canAdmin) {
+    return { success: false, error: "Access denied." };
+  }
+
+  const { error } = await admin.from("rent_charges").delete().eq("id", charge.id);
+  if (error) {
+    return { success: false, error: "Unable to delete this pending charge right now." };
+  }
+
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  return {
+    success: true,
+    message: `Deleted pending charge for ${formatCurrency(charge.amount_cents)} due ${charge.due_date}.`
+  };
 }
 
 export async function recordManualPayment(

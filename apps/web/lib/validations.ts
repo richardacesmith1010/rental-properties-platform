@@ -175,6 +175,10 @@ export const payChargeSchema = z.object({
   chargeId: z.string().uuid("Invalid charge ID."),
 });
 
+export const deletePendingChargeSchema = z.object({
+  chargeId: z.string().uuid("Invalid charge ID.")
+});
+
 export const recordManualPaymentSchema = z.object({
   chargeId: z.string().uuid("Invalid charge ID."),
   amountDollars: z.coerce

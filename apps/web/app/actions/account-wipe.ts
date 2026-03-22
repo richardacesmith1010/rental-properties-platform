@@ -20,13 +20,19 @@ interface DeletionScope {
   chargeIds: string[];
   paymentIds: string[];
   ticketIds: string[];
+  expenseIds: string[];
+  invitationIds: string[];
+  managerPaymentIds: string[];
   listingIds: string[];
   applicationIds: string[];
   automationRuleIds: string[];
   documentTemplateIds: string[];
   documentPacketIds: string[];
+  propertyNotificationIds: string[];
   notificationIds: string[];
+  propertyThreadIds: string[];
   threadIds: string[];
+  propertyMessageIds: string[];
   messageIds: string[];
   propertyFiles: Array<{ id: string; storage_path: string }>;
   maintenancePhotos: Array<{ id: string; storage_path: string }>;
@@ -129,6 +135,26 @@ async function removeStorageObjects(bucket: string, paths: string[]) {
   }
 }
 
+async function loadNotificationIdsForEntity(
+  admin: ReturnType<typeof createAdminClient>,
+  entityType: string,
+  entityIds: string[],
+  label: string
+) {
+  const rows = await selectRows<{ id: string }>(
+    entityIds.length
+      ? admin
+          .from("notifications")
+          .select("id")
+          .eq("entity_type", entityType)
+          .in("entity_id", entityIds)
+      : Promise.resolve({ data: [], error: null }),
+    label
+  );
+
+  return rows.map((row) => row.id);
+}
+
 async function loadDeletionScope(userId: string): Promise<DeletionScope> {
   const admin = createAdminClient();
   const [accountIdsSettled, propertyIdsSettled] = await Promise.allSettled([
@@ -192,6 +218,30 @@ async function loadDeletionScope(userId: string): Promise<DeletionScope> {
   );
   const ticketIds = ticketRows.map((ticket) => ticket.id);
 
+  const expenseRows = await selectRows<{ id: string }>(
+    propertyIds.length
+      ? admin.from("property_expenses").select("id").in("property_id", propertyIds)
+      : Promise.resolve({ data: [], error: null }),
+    "load property expenses"
+  );
+  const expenseIds = expenseRows.map((expense) => expense.id);
+
+  const invitationRows = await selectRows<{ id: string }>(
+    propertyIds.length
+      ? admin.from("invitations").select("id").in("property_id", propertyIds)
+      : Promise.resolve({ data: [], error: null }),
+    "load invitations"
+  );
+  const invitationIds = invitationRows.map((invitation) => invitation.id);
+
+  const managerPaymentRows = await selectRows<{ id: string }>(
+    propertyIds.length
+      ? admin.from("manager_payments").select("id").in("property_id", propertyIds)
+      : Promise.resolve({ data: [], error: null }),
+    "load manager payments"
+  );
+  const managerPaymentIds = managerPaymentRows.map((payment) => payment.id);
+
   const listingRows = await selectRows<{ id: string }>(
     propertyIds.length
       ? admin.from("rental_listings").select("id").in("property_id", propertyIds)
@@ -232,11 +282,28 @@ async function loadDeletionScope(userId: string): Promise<DeletionScope> {
   );
   const documentPacketIds = packetRows.map((packet) => packet.id);
 
-  const notificationRows = await selectRows<{ id: string }>(
-    admin.from("notifications").select("id").eq("recipient_profile_id", userId),
-    "load notifications"
-  );
-  const notificationIds = notificationRows.map((notification) => notification.id);
+  const [
+    propertyNotificationIds,
+    ownerNotificationIds
+  ] = await Promise.all([
+    Promise.all([
+      loadNotificationIdsForEntity(admin, "property", propertyIds, "load property notifications"),
+      loadNotificationIdsForEntity(admin, "unit", unitIds, "load unit notifications"),
+      loadNotificationIdsForEntity(admin, "lease", leaseIds, "load lease notifications"),
+      loadNotificationIdsForEntity(admin, "rent_charge", chargeIds, "load rent charge notifications"),
+      loadNotificationIdsForEntity(admin, "charge", chargeIds, "load charge notifications"),
+      loadNotificationIdsForEntity(admin, "maintenance_ticket", ticketIds, "load maintenance ticket notifications"),
+      loadNotificationIdsForEntity(admin, "ticket", ticketIds, "load ticket notifications"),
+      loadNotificationIdsForEntity(admin, "expense", expenseIds, "load expense notifications"),
+      loadNotificationIdsForEntity(admin, "invitation", invitationIds, "load invitation notifications"),
+      loadNotificationIdsForEntity(admin, "manager_payment", managerPaymentIds, "load manager payment notifications")
+    ]).then((groups) => unique(groups.flat())),
+    selectRows<{ id: string }>(
+      admin.from("notifications").select("id").eq("recipient_profile_id", userId),
+      "load notifications"
+    ).then((rows) => rows.map((row) => row.id))
+  ]);
+  const notificationIds = unique([...ownerNotificationIds, ...propertyNotificationIds]);
 
   const [propertyThreadsSettled, ownedThreadsSettled] = await Promise.allSettled([
     selectRows<{ id: string }>(
@@ -264,10 +331,19 @@ async function loadDeletionScope(userId: string): Promise<DeletionScope> {
   }
   const propertyThreads = propertyThreadsSettled.value;
   const ownedThreads = ownedThreadsSettled.value;
+  const propertyThreadIds = propertyThreads.map((thread) => thread.id);
   const threadIds = unique([
-    ...propertyThreads.map((thread) => thread.id),
+    ...propertyThreadIds,
     ...ownedThreads.map((thread) => thread.id)
   ]);
+
+  const propertyMessageRows = await selectRows<{ id: string }>(
+    propertyThreadIds.length
+      ? admin.from("inbox_messages").select("id").in("thread_id", propertyThreadIds)
+      : Promise.resolve({ data: [], error: null }),
+    "load property inbox messages"
+  );
+  const propertyMessageIds = propertyMessageRows.map((message) => message.id);
 
   const messageRows = await selectRows<{ id: string }>(
     threadIds.length
@@ -299,13 +375,19 @@ async function loadDeletionScope(userId: string): Promise<DeletionScope> {
     chargeIds,
     paymentIds,
     ticketIds,
+    expenseIds,
+    invitationIds,
+    managerPaymentIds,
     listingIds,
     applicationIds,
     automationRuleIds,
     documentTemplateIds,
     documentPacketIds,
+    propertyNotificationIds,
     notificationIds,
+    propertyThreadIds,
     threadIds,
+    propertyMessageIds,
     messageIds,
     propertyFiles,
     maintenancePhotos
@@ -392,13 +474,20 @@ export async function deleteAllProperties(
     await deleteDocuments(scope, false);
     await deleteLeasingPipeline(scope);
     await deleteAutomation(scope);
-    await deleteByIds("property_expenses", "property_id", scope.propertyIds, "Delete expenses");
+    await deleteByIds("manager_payments", "property_id", scope.propertyIds, "Delete manager payments");
+    await deleteByIds("manager_payment_configs", "property_id", scope.propertyIds, "Delete manager payment configs");
+    await deleteByIds("property_expenses", "id", scope.expenseIds, "Delete expenses");
     await deleteByIds("vendors", "property_id", scope.propertyIds, "Delete vendors");
+    await deleteByIds("notification_deliveries", "notification_id", scope.propertyNotificationIds, "Delete property notification deliveries");
+    await deleteByIds("notifications", "id", scope.propertyNotificationIds, "Delete property notifications");
+    await deleteByIds("message_deliveries", "message_id", scope.propertyMessageIds, "Delete property message deliveries");
+    await deleteByIds("inbox_messages", "id", scope.propertyMessageIds, "Delete property inbox messages");
+    await deleteByIds("inbox_threads", "id", scope.propertyThreadIds, "Delete property inbox threads");
     await deleteByIds("property_managers", "property_id", scope.propertyIds, "Delete property managers");
-    await deleteByIds("invitations", "property_id", scope.propertyIds, "Delete invitations");
+    await deleteByIds("invitations", "id", scope.invitationIds, "Delete invitations");
     await deleteByIds("leases", "id", scope.leaseIds, "Delete leases");
     await deleteByIds("units", "id", scope.unitIds, "Delete units");
-    await updateByIds("properties", { active: false }, "id", scope.propertyIds, "Deactivate properties");
+    await deleteByIds("properties", "id", scope.propertyIds, "Delete properties");
     await revalidateSettingsSurfaces();
     return { success: true, message: "All properties and related operational data have been removed." };
   } catch (error) {
