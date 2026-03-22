@@ -161,7 +161,7 @@ export const featureTabs: MarketingFeatureTab[] = [
         <div className="grid grid-cols-3 gap-3">
           {["Occupancy", "Revenue", "Net"].map((metric) => (
             <div key={metric} className="rounded-2xl border border-slate-200 bg-slate-100 p-3 text-center">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">{metric}</p>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-600">{metric}</p>
               <p className="mt-2 text-xl font-semibold text-slate-900">
                 {metric === "Occupancy" ? "96%" : metric === "Revenue" ? "$9.1k" : "$5.3k"}
               </p>
@@ -279,7 +279,7 @@ export const faqs = [
   }
 ];
 
-export const sectionKickerClass = "text-xs font-semibold uppercase tracking-[0.22em] text-violet-700";
+export const sectionKickerClass = "text-xs font-semibold uppercase tracking-[0.22em] text-violet-600";
 export const sectionHeadingClass = "text-4xl font-semibold tracking-tight text-slate-900";
 export const sectionCopyClass = "max-w-3xl text-base leading-7 text-slate-700";
 export const surfaceClass =

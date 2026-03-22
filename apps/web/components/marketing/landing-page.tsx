@@ -188,7 +188,7 @@ export function LandingPage() {
             onTabChange={(tabId) => setActiveTab(tabId as (typeof featureTabs)[number]["id"])}
             className="border-b border-slate-200 pb-2"
             activeClassName="text-slate-900"
-            inactiveClassName="text-slate-500 hover:text-slate-900"
+            inactiveClassName="text-slate-600 hover:text-slate-900"
             indicatorClassName="bg-violet-600"
           />
           <div className={`${softSurfaceClass} grid gap-6 p-6 lg:grid-cols-[0.95fr_1.05fr]`}>
@@ -256,7 +256,7 @@ export function LandingPage() {
                 <div className="mt-5 flex items-center justify-between">
                   <div>
                     <p className="font-semibold text-slate-900">{testimonial.name}</p>
-                    <p className="text-xs text-slate-500">Domus customer</p>
+                    <p className="text-xs text-slate-600">Domus customer</p>
                   </div>
                   <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-700">
                     {testimonial.role}
