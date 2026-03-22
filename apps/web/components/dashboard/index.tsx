@@ -6,6 +6,7 @@ import { AchievementChecker } from "@/components/gamification/achievement-checke
 import { GamificationSummary } from "@/components/gamification/gamification-summary";
 import { ConnectBanner } from "@/components/dashboard/connect-banner";
 import { CommandPalette } from "@/components/dashboard/command-palette";
+import { CompactHeader } from "@/components/dashboard/compact-header";
 import { ContextualGreeting } from "@/components/dashboard/contextual-greeting";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { OwnerDailyOpsHome } from "@/components/dashboard/owner-daily-ops-home";
@@ -85,6 +86,9 @@ export function Dashboard(props: DashboardProps) {
   const touchStartX = useRef<number | null>(null);
   const ownerSectionCountLabel =
     activeSectionIndex >= 0 && sectionItems.length > 0 ? `${activeSectionIndex + 1} of ${sectionItems.length}` : null;
+  const activeOwnershipAccountName =
+    props.ownershipAccounts?.find((account) => account.id === props.activeAccountId)?.displayName ?? null;
+  const showOwnerCompactHeader = isOwnerRole && isOwnerDailyOpsEnabled && !isOwnerDailyOpsHomePage;
   const contentZoneLabel =
     isOwnerDailyOpsEnabled && ownerDailyOpsPageCountLabel
       ? ownerDailyOpsPageCountLabel
@@ -237,7 +241,7 @@ export function Dashboard(props: DashboardProps) {
     >
       <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-6 pt-6 lg:px-8 lg:pb-8 lg:pt-8">
-        <div className="shrink-0 space-y-4">
+        <div className="shrink-0 space-y-3">
           {(isOwnerRole || isManagerRole) && props.stripeConnected === false ? (
             <ConnectBanner connected={false} role={isOwnerRole ? "owner" : "manager"} />
           ) : null}
@@ -246,7 +250,15 @@ export function Dashboard(props: DashboardProps) {
               {props.generatedMessage}
             </Alert>
           ) : null}
-          {isOwnerRole ? (
+          {showOwnerCompactHeader ? (
+            <CompactHeader
+              title={activeOwnershipAccountName ?? `${displayName}'s Account`}
+              monthlyRevenueCents={displayDashboardData.kpis.monthlyGrossRentCents}
+              occupancy={occupancy}
+              openTickets={openTicketCount}
+              overdueCharges={displayDashboardData.kpis.lateAccountCount}
+            />
+          ) : isOwnerRole ? (
             <DashboardHeader
               role={props.data.profileRole}
               kpis={displayDashboardData.kpis}
@@ -293,7 +305,10 @@ export function Dashboard(props: DashboardProps) {
               }
             />
           ) : null}
-          {(isOwnerRole || isManagerRole) && activeWorkflowMeta && !showOwnerOnboarding ? (
+          {(isOwnerRole || isManagerRole) &&
+          activeWorkflowMeta &&
+          !showOwnerOnboarding &&
+          !showOwnerCompactHeader ? (
             <div className="domus-glass flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm font-semibold text-foreground">{activeWorkflowMeta.label}</p>
               <p className="text-sm text-muted-foreground">{activeWorkflowMeta.description}</p>
@@ -301,19 +316,20 @@ export function Dashboard(props: DashboardProps) {
           ) : null}
         </div>
 
-        <div className="mt-6 flex min-h-0 flex-1 flex-col rounded-[28px] border border-border/50 bg-background/80 shadow-sm">
-          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border/60 px-4 py-4 sm:px-5">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                {contentZoneLabel}
-              </p>
-              <h2 className="mt-1 text-2xl font-semibold text-foreground">{contentZoneTitle}</h2>
+        <div className="mt-4 flex min-h-0 flex-1 flex-col rounded-[28px] border border-border/50 bg-background/80 shadow-sm">
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border/60 px-4 py-3 sm:px-5">
+            <div className="min-w-0">
+              <h2 className="truncate text-2xl font-bold text-foreground sm:text-3xl">
+                {contentZoneTitle}
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">{contentZoneLabel}</p>
             </div>
             <div className="flex items-center gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
+                className="h-11 w-11 rounded-full"
                 onClick={goToPreviousSection}
                 title="Previous section"
               >
@@ -323,6 +339,7 @@ export function Dashboard(props: DashboardProps) {
                 type="button"
                 variant="outline"
                 size="icon"
+                className="h-11 w-11 rounded-full"
                 onClick={goToNextSection}
                 title="Next section"
               >
@@ -332,7 +349,7 @@ export function Dashboard(props: DashboardProps) {
           </div>
 
           <div
-            className="min-h-0 flex-1 overflow-hidden px-4 pb-4 pt-4 sm:px-5"
+            className="min-h-0 flex-1 overflow-hidden px-4 pb-4 pt-3 sm:px-5"
             onTouchStart={(event) => {
               touchStartX.current = event.changedTouches[0]?.clientX ?? null;
             }}

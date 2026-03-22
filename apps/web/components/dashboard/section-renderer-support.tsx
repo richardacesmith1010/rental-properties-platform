@@ -93,7 +93,7 @@ function OwnerSectionChrome({ props }: { props: SectionRendererProps }) {
           onSelect={props.onSelectProperty}
         />
       </div>
-      {props.selectedPropertySummary ? (
+      {props.activeSection === "overview" && props.selectedPropertySummary ? (
         <PropertySummaryCard
           property={props.selectedPropertySummary.property}
           unitCount={props.selectedPropertySummary.unitCount}
