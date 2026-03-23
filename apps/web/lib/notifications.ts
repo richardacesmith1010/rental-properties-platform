@@ -3,7 +3,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { buildNotificationEmail } from "@/lib/email-templates";
 import { shouldRecordSuccessfulDelivery } from "@/lib/idempotency";
 import { ensureInboxThreadForEvent } from "@/lib/inbox";
-import { getNotificationPreference } from "@/lib/notification-preferences";
+import {
+  DEFAULT_NOTIFICATION_EMAIL_PREFERENCES,
+  getNotificationPreference,
+  getUserNotificationPreferenceSettingsMap,
+  resolveNotificationDeliveryPreference,
+  type NotificationDeliveryPreference,
+  type NotificationPreferenceSettings
+} from "@/lib/notification-preferences";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 export {
   formatRelativeNotificationTime,
@@ -53,6 +60,14 @@ interface NotificationEmailContent {
   html?: string;
 }
 
+function createFallbackNotificationSettings(): NotificationPreferenceSettings {
+  return {
+    preferences: { ...DEFAULT_NOTIFICATION_EMAIL_PREFERENCES },
+    pausedUntil: null,
+    schemaReady: false
+  };
+}
+
 export async function getNotificationsForUser(userId: string, limit = 20): Promise<NotificationDTO[]> {
   const supabase = createClient();
 
@@ -86,6 +101,7 @@ interface CreateNotificationParams {
   propertyId?: string | null;
   actorProfileId?: string | null;
   emailContent?: NotificationEmailContent;
+  deliveryPreference?: NotificationDeliveryPreference;
 }
 
 function getNotificationCta(type: NotificationType) {
@@ -148,7 +164,9 @@ function buildNotificationPlainText(params: {
 export async function createNotificationWithDelivery(params: CreateNotificationParams) {
   try {
     const admin = createAdminClient();
-    const preference = await getNotificationPreference(params.recipientProfileId, params.type);
+    const preference =
+      params.deliveryPreference ??
+      (await getNotificationPreference(params.recipientProfileId, params.type));
     const shouldCreateInApp = preference.inAppEnabled;
     const shouldSendEmail = preference.emailEnabled;
 
@@ -210,6 +228,18 @@ export async function createNotificationWithDelivery(params: CreateNotificationP
       providerRef: string | null;
       errorMessage: string | null;
     } | null = null;
+
+    if (
+      !shouldSendEmail &&
+      params.recipientEmail &&
+      preference.emailBlockReason
+    ) {
+      console.log("[notifications] skipped email delivery", {
+        recipientProfileId: params.recipientProfileId,
+        notificationType: params.type,
+        reason: preference.emailBlockReason
+      });
+    }
 
     if (shouldSendEmail && shouldRecordSuccessfulDelivery(deliveryRows, "email")) {
       const emailContent = params.emailContent ?? {
@@ -312,6 +342,10 @@ export async function notifyOwnerMembersForProperty(params: NotifyOwnerMembersPa
       .select("id, email")
       .in("id", recipientIds);
 
+    const settingsByProfileId = await getUserNotificationPreferenceSettingsMap(
+      recipientIds
+    );
+
     for (const profile of profiles ?? []) {
       await createNotificationWithDelivery({
         recipientProfileId: profile.id,
@@ -320,7 +354,12 @@ export async function notifyOwnerMembersForProperty(params: NotifyOwnerMembersPa
         title: params.title,
         body: params.body,
         entityType: params.entityType,
-        entityId: params.entityId ?? null
+        entityId: params.entityId ?? null,
+        deliveryPreference: resolveNotificationDeliveryPreference(
+          settingsByProfileId.get(profile.id) ??
+            createFallbackNotificationSettings(),
+          params.type
+        )
       });
     }
   } catch (error) {
@@ -374,6 +413,10 @@ export async function notifyAccountMembers(params: NotifyAccountMembersParams) {
       return;
     }
 
+    const settingsByProfileId = await getUserNotificationPreferenceSettingsMap(
+      recipientIds
+    );
+
     await Promise.all(
       (profiles ?? []).map((profile) =>
         createNotificationWithDelivery({
@@ -383,7 +426,12 @@ export async function notifyAccountMembers(params: NotifyAccountMembersParams) {
           title: params.title,
           body: params.body,
           entityType: params.entityType,
-          entityId: params.entityId ?? null
+          entityId: params.entityId ?? null,
+          deliveryPreference: resolveNotificationDeliveryPreference(
+            settingsByProfileId.get(profile.id) ??
+              createFallbackNotificationSettings(),
+            params.type
+          )
         })
       )
     );

@@ -79,7 +79,7 @@ function FinanceViewButton({
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+        "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors sm:flex-none",
         active
           ? "bg-background text-foreground shadow-sm"
           : "text-muted-foreground hover:text-foreground"
@@ -215,7 +215,7 @@ export function FinancialOverviewPanel({
       : null;
 
   return (
-    <div className="rounded-2xl border border-border/60 bg-card/95 p-5 shadow-sm">
+    <div className="rounded-2xl border border-border/60 bg-card/95 p-4 shadow-sm sm:p-5">
       <div className="flex flex-col gap-4 border-b border-border/60 pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
@@ -237,7 +237,7 @@ export function FinancialOverviewPanel({
           ) : null}
         </div>
 
-        <div className="inline-flex w-fit rounded-lg border border-border bg-muted/50 p-1">
+        <div className="inline-flex w-full rounded-lg border border-border bg-muted/50 p-1 sm:w-fit">
           <FinanceViewButton
             active={activeTab === "bank"}
             label="Bank"
@@ -271,7 +271,7 @@ export function FinancialOverviewPanel({
         </Alert>
       ) : null}
 
-      <div className="mt-4 space-y-4">
+      <div className="mt-4 space-y-4 overflow-x-hidden">
         {activeTab === "bank" ? (
           canRenderBankCard ? (
             <BankBalanceCard

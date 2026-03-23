@@ -260,15 +260,15 @@ export function PropertyWizard({
 
   return (
     <ModalOverlay open={open} onClose={() => onOpenChange(false)}>
-      <div className="flex w-full max-w-3xl max-h-[85vh] flex-col overflow-hidden rounded-[28px] border border-border bg-background shadow-2xl">
-        <div className="shrink-0 p-6 pb-0">
+      <div className="flex max-h-[90svh] w-full max-w-3xl flex-col overflow-hidden rounded-t-[1.5rem] border border-border bg-background shadow-2xl sm:max-h-[85vh] sm:rounded-[28px]">
+        <div className="shrink-0 px-4 pb-0 pt-5 sm:p-6 sm:pb-0">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">New Property</p>
           <h2 className="mt-2 text-2xl font-semibold text-foreground">Create a property, units, and manager assignment</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Create a property, add units, and optionally assign a manager without leaving the dashboard.
           </p>
         </div>
-        <div className="flex min-h-0 flex-1 flex-col p-6 pt-5">
+        <div className="flex min-h-0 flex-1 flex-col px-4 pb-4 pt-5 sm:p-6 sm:pt-5">
           <div className="shrink-0 space-y-5">
             <WizardProgress step={step} />
             {errorMessage ? <Alert variant="error">{errorMessage}</Alert> : null}
@@ -471,19 +471,20 @@ export function PropertyWizard({
           </div>
 
         {step < 3 ? (
-          <div className="mt-5 flex shrink-0 items-center justify-between gap-3 border-t border-border pt-4">
+          <div className="mt-5 flex shrink-0 flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
             <Button
               type="button"
               variant="outline"
               disabled={!canGoBack || isPending}
               onClick={() => setStep((current) => Math.max(0, current - 1) as WizardStep)}
               title="Go back to the previous setup step."
+              className="w-full sm:w-auto"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
             </Button>
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} title="Close the property wizard.">
+            <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row sm:items-center">
+              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} title="Close the property wizard." className="w-full sm:w-auto">
                 Close
               </Button>
               <Button
@@ -501,7 +502,7 @@ export function PropertyWizard({
                   handleAssignManager();
                 }}
                 title={step === 0 ? "Create the property and continue." : step === 1 ? "Create the drafted units and continue." : "Finish manager assignment and continue."}
-                className={cn("min-w-[160px]")}
+                className={cn("w-full sm:min-w-[160px] sm:w-auto")}
               >
                 {step === 2 ? "Finish Setup" : "Next"}
                 <ArrowRight className="ml-2 h-4 w-4" />

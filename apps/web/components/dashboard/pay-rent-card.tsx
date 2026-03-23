@@ -45,7 +45,7 @@ export function PayRentCard({
   if (!charge) {
     return (
       <Card className="overflow-hidden border border-emerald-200/80 bg-emerald-50/70 shadow-lg">
-        <CardContent className="flex min-h-[260px] flex-col items-center justify-center gap-5 p-8 text-center">
+        <CardContent className="flex min-h-[220px] flex-col items-center justify-center gap-4 p-5 text-center sm:min-h-[260px] sm:gap-5 sm:p-8">
           <div className="rounded-full bg-white/90 p-4 shadow-sm ring-1 ring-emerald-200/80">
             <DomMascot size="lg" mood="celebrating" animate />
           </div>
@@ -54,7 +54,7 @@ export function PayRentCard({
               <CheckCircle2 className="h-4 w-4" />
               You&apos;re all set
             </div>
-            <h2 className="text-3xl font-bold text-foreground">No payments due right now</h2>
+            <h2 className="text-2xl font-bold text-foreground sm:text-3xl">No payments due right now</h2>
             <p className="max-w-xl text-sm text-muted-foreground">
               Your balance is clear. When a new rent charge posts, it will show up here first.
             </p>
@@ -91,10 +91,10 @@ export function PayRentCard({
           : "border border-violet-200/80 bg-violet-50/40"
       )}
     >
-      <CardContent className="min-h-[280px] p-0">
+      <CardContent className="min-h-[240px] p-0 sm:min-h-[280px]">
         <div
           className={cn(
-            "h-full border-l-[10px] px-6 py-8 sm:px-8",
+            "h-full border-l-[8px] px-4 py-6 sm:border-l-[10px] sm:px-8 sm:py-8",
             isLate ? "border-l-red-500" : "border-l-violet-600"
           )}
         >
@@ -105,7 +105,7 @@ export function PayRentCard({
                   <p className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                     {isLate ? "Rent overdue" : "Rent due"}
                   </p>
-                  <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                  <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-4xl">
                     {formatDate(charge.dueDate)}
                   </h2>
                 </div>
@@ -122,11 +122,13 @@ export function PayRentCard({
               </div>
 
               <div className="space-y-2 text-center sm:text-left">
-                <p className="text-5xl font-black tracking-tight text-foreground sm:text-6xl">
+                <p className="text-3xl font-black tracking-tight text-foreground sm:text-5xl lg:text-6xl">
                   {formatCurrency(charge.amountCents)}
                 </p>
-                <p className="text-base text-muted-foreground">
-                  {charge.propertyName} · {charge.unitNumber}
+                <p className="text-sm text-muted-foreground sm:text-base">
+                  <span className="block sm:inline">{charge.propertyName}</span>
+                  <span className="hidden sm:inline"> · </span>
+                  <span className="block sm:inline">Unit {charge.unitNumber}</span>
                 </p>
               </div>
 

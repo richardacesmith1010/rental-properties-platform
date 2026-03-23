@@ -57,7 +57,8 @@ describe("PayRentCard", () => {
 
     expect(screen.getByText("Overdue")).toBeInTheDocument();
     expect(screen.getByText(formatCurrency(charges[1].amountCents))).toBeInTheDocument();
-    expect(screen.getByText("Roman Court · 2B")).toBeInTheDocument();
+    expect(screen.getByText("Roman Court")).toBeInTheDocument();
+    expect(screen.getByText("Unit 2B")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /pay now/i })).toBeInTheDocument();
   });
 

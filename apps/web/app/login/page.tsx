@@ -44,8 +44,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   return (
     <div className="app-surface min-h-screen">
-      <div className="grid min-h-screen lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(196,181,253,0.45),transparent_30%),linear-gradient(135deg,#5b21b6_0%,#7c3aed_42%,#0f172a_100%)] px-6 py-10 text-white sm:px-10 lg:flex lg:flex-col lg:justify-between lg:px-12 lg:py-12">
+      <div className="flex min-h-screen flex-col lg:grid lg:grid-cols-[1.05fr_0.95fr]">
+        <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(196,181,253,0.45),transparent_30%),linear-gradient(135deg,#5b21b6_0%,#7c3aed_42%,#0f172a_100%)] px-5 py-8 text-white sm:px-8 lg:flex lg:flex-col lg:justify-between lg:px-12 lg:py-12">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_18%,rgba(255,255,255,0.12),transparent_24%),radial-gradient(circle_at_20%_85%,rgba(52,211,153,0.16),transparent_22%)]" />
           <div className="relative z-10 flex items-center justify-between">
             <Link href="/marketing" className="inline-flex items-center gap-3" title="Return to the Domus marketing page.">
@@ -67,14 +67,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </Link>
           </div>
 
-          <div className="relative z-10 mt-10 grid gap-10 lg:mt-16 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div className="relative z-10 mt-8 grid gap-6 lg:mt-16 lg:grid-cols-[1fr_auto] lg:items-center lg:gap-10">
             <div className="max-w-2xl space-y-5">
               <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-white/85">
                 <Sparkles className="h-3.5 w-3.5" />
                 Premium landlord workspace
               </p>
               <div className="space-y-4">
-                <h1 className="text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
+                <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-5xl">
                   Manage your rentals like a pro.
                 </h1>
                 <p className="max-w-xl text-base leading-7 text-white/78 sm:text-lg">
@@ -82,7 +82,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 </p>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="hidden gap-3 sm:grid sm:grid-cols-3">
                 {proofPoints.map((item) => (
                   <div
                     key={item.label}
@@ -94,7 +94,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 ))}
               </div>
 
-              <div className="grid gap-3 text-sm text-white/82 sm:grid-cols-2">
+              <div className="hidden gap-3 text-sm text-white/82 sm:grid sm:grid-cols-2">
                 <div className="rounded-2xl border border-white/[0.14] bg-white/10 px-4 py-4 backdrop-blur-sm">
                   <div className="flex items-center gap-2 font-semibold">
                     <BarChart3 className="h-4 w-4" />
@@ -116,7 +116,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               </div>
             </div>
 
-            <div className="mx-auto lg:mx-0">
+            <div className="mx-auto hidden lg:mx-0 lg:block">
               <div className="rounded-[32px] border border-white/[0.14] bg-white/10 p-6 shadow-2xl shadow-slate-950/30 backdrop-blur-md">
                 <DomMascot size="xl" mood="waving" className="mx-auto" />
               </div>
@@ -124,7 +124,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </div>
         </section>
 
-        <section className="flex items-center justify-center bg-background/95 px-4 py-10 sm:px-6 lg:px-10">
+        <section className="flex flex-1 items-center justify-center bg-background/95 px-4 py-8 sm:px-6 lg:px-10">
           <div className="w-full max-w-xl">
             <div className="domus-card overflow-hidden border border-border/60 shadow-[0_30px_90px_-45px_rgba(15,23,42,0.35)]">
               <div className="border-b border-border/60 bg-background/90 px-6 py-6 sm:px-8">

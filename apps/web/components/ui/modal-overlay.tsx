@@ -117,10 +117,10 @@ export function ModalOverlay({ open, onClose, children }: ModalOverlayProps) {
         onClick={() => onCloseRef.current?.()}
         aria-hidden="true"
       />
-      <div className="relative z-10 flex min-h-full items-start justify-center px-4 py-6 sm:items-center">
+      <div className="relative z-10 flex min-h-full items-end justify-center px-0 py-0 sm:items-center sm:px-4 sm:py-6">
         <div
           ref={containerRef}
-          className="relative z-10 mx-auto w-full max-w-2xl overflow-y-auto rounded-2xl animate-scale-in scroll-smooth [-webkit-overflow-scrolling:touch]"
+          className="relative z-10 mx-auto w-full max-w-full overflow-y-auto rounded-t-[1.5rem] animate-scale-in scroll-smooth [-webkit-overflow-scrolling:touch] sm:max-w-2xl sm:rounded-2xl"
           tabIndex={-1}
         >
           {children}

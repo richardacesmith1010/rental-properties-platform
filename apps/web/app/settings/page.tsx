@@ -15,8 +15,10 @@ import {
   deleteAllTenants,
   fullAccountWipe,
   getExpressDashboardUrl,
-  saveNotificationPreference,
+  pauseNotificationEmails,
+  resumeNotificationEmails,
   setupAutopay,
+  updateNotificationPreferences,
   updateProfile
 } from "@/app/actions";
 import { getAutopayEnrollments } from "@/app/actions/autopay";
@@ -31,8 +33,8 @@ import { AccountDataSettings } from "@/components/settings/account-data-settings
 import { InstallDomusSettingsCard } from "@/components/pwa/install-prompt";
 import { Alert } from "@/components/ui/alert";
 import {
-  getUserNotificationPreferences,
-  NOTIFICATION_PREFERENCE_OPTIONS
+  getUserNotificationPreferenceSettings,
+  NOTIFICATION_EMAIL_PREFERENCE_OPTIONS
 } from "@/lib/notification-preferences";
 
 export const dynamic = "force-dynamic";
@@ -50,7 +52,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const profile = await getUserProfileSummary(user.id);
   const [enrollments, notificationPreferences] = await Promise.all([
     role === "tenant" ? getAutopayEnrollments(user.id) : Promise.resolve([]),
-    getUserNotificationPreferences(user.id)
+    getUserNotificationPreferenceSettings(user.id)
   ]);
   const connectMessage =
     typeof searchParams?.connect === "string"
@@ -144,9 +146,11 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
               description: "Choose how you want Domus to contact you.",
               content: (
                 <NotificationPreferences
-                  options={NOTIFICATION_PREFERENCE_OPTIONS}
-                  preferences={notificationPreferences}
-                  onUpdatePreference={saveNotificationPreference}
+                  options={NOTIFICATION_EMAIL_PREFERENCE_OPTIONS}
+                  settings={notificationPreferences}
+                  onUpdatePreferences={updateNotificationPreferences}
+                  onPauseNotifications={pauseNotificationEmails}
+                  onResumeNotifications={resumeNotificationEmails}
                 />
               )
             },

@@ -7,13 +7,29 @@ const buildNotificationEmailMock = vi.hoisted(() => vi.fn());
 const shouldRecordSuccessfulDeliveryMock = vi.hoisted(() => vi.fn());
 const ensureInboxThreadForEventMock = vi.hoisted(() => vi.fn());
 const getNotificationPreferenceMock = vi.hoisted(() => vi.fn());
+const getUserNotificationPreferenceSettingsMapMock = vi.hoisted(() => vi.fn());
+const resolveNotificationDeliveryPreferenceMock = vi.hoisted(() => vi.fn());
+const defaultNotificationPreferences = vi.hoisted(() => ({
+  rent_due_reminder: true,
+  late_rent: true,
+  payment_received: true,
+  maintenance_updates: true,
+  lease_expiration: true,
+  delinquency_escalation: true,
+  manager_invoice: true
+}));
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: createClientMock }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: createAdminClientMock }));
 vi.mock("@/lib/email-templates", () => ({ buildNotificationEmail: buildNotificationEmailMock }));
 vi.mock("@/lib/idempotency", () => ({ shouldRecordSuccessfulDelivery: shouldRecordSuccessfulDeliveryMock }));
 vi.mock("@/lib/inbox", () => ({ ensureInboxThreadForEvent: ensureInboxThreadForEventMock }));
-vi.mock("@/lib/notification-preferences", () => ({ getNotificationPreference: getNotificationPreferenceMock }));
+vi.mock("@/lib/notification-preferences", () => ({
+  DEFAULT_NOTIFICATION_EMAIL_PREFERENCES: defaultNotificationPreferences,
+  getNotificationPreference: getNotificationPreferenceMock,
+  getUserNotificationPreferenceSettingsMap: getUserNotificationPreferenceSettingsMapMock,
+  resolveNotificationDeliveryPreference: resolveNotificationDeliveryPreferenceMock
+}));
 
 import { createNotificationWithDelivery, getNotificationsForUser, notifyOwnerMembersForProperty } from "@/lib/notifications";
 
@@ -98,6 +114,12 @@ describe("notifications utilities", () => {
     shouldRecordSuccessfulDeliveryMock.mockReturnValue(true);
     ensureInboxThreadForEventMock.mockResolvedValue(undefined);
     getNotificationPreferenceMock.mockResolvedValue({ inAppEnabled: true, emailEnabled: false });
+    getUserNotificationPreferenceSettingsMapMock.mockResolvedValue(new Map());
+    resolveNotificationDeliveryPreferenceMock.mockReturnValue({
+      inAppEnabled: true,
+      emailEnabled: true,
+      emailBlockReason: null
+    });
     createClientMock.mockReturnValue({
       from: vi.fn(() => ({
         select: vi.fn(() => ({

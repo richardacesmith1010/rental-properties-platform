@@ -102,6 +102,11 @@ export { markNotificationRead } from "./notifications";
 export { markAllNotificationsRead } from "./notifications";
 export { sendBatchPaymentReminder } from "./notifications";
 export { saveNotificationPreference } from "./notifications";
+export {
+  pauseNotificationEmails,
+  resumeNotificationEmails,
+  updateNotificationPreferences
+} from "./notification-preferences";
 
 export { enableAutomation } from "./automations";
 export { disableAutomation } from "./automations";

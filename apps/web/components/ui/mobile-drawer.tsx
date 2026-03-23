@@ -12,18 +12,17 @@ interface MobileDrawerProps {
 
 export function MobileDrawer({ trigger, children, className }: MobileDrawerProps) {
   return (
-    <Drawer.Root>
+    <Drawer.Root direction="left">
       <Drawer.Trigger asChild>{trigger}</Drawer.Trigger>
       <Drawer.Portal>
-        <Drawer.Overlay className="fixed inset-0 z-40 bg-black/40" />
+        <Drawer.Overlay className="fixed inset-0 z-40 bg-black/45 backdrop-blur-[2px]" />
         <Drawer.Content
           className={cn(
-            "fixed bottom-0 left-0 right-0 z-50 mt-24 flex flex-col rounded-t-2xl bg-white dark:bg-zinc-900",
+            "fixed inset-y-0 left-0 z-50 flex h-full w-[86vw] max-w-[320px] flex-col border-r border-white/10 bg-white text-foreground shadow-2xl dark:bg-zinc-900",
             className
           )}
         >
-          <div className="mx-auto mb-2 mt-3 h-1 w-10 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-          <div className="max-h-[85vh] overflow-y-auto px-4 pb-8">{children}</div>
+          <div className="max-h-full overflow-y-auto px-4 pb-8 pt-5">{children}</div>
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>

@@ -51,7 +51,7 @@ export function OwnerDailyOpsHome({
   onDisconnectPlaid
 }: OwnerDailyOpsHomeProps) {
   return (
-    <div className="flex min-h-full flex-col gap-4 py-1">
+    <div className="flex min-h-full flex-col gap-3 py-1 sm:gap-4">
       <KpiGrid
         kpis={kpis}
         occupancy={occupancy}
@@ -89,7 +89,7 @@ export function OwnerDailyOpsHome({
       />
       <div className="domus-glass flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm font-semibold text-foreground">{modeLabel}</p>
-        <p className="text-sm text-muted-foreground">{modeDescription}</p>
+        <p className="text-sm leading-6 text-muted-foreground">{modeDescription}</p>
       </div>
     </div>
   );

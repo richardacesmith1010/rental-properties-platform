@@ -31,13 +31,13 @@ export function LandingPage() {
   );
 
   return (
-    <main id="main-content" className="mx-auto flex w-full max-w-7xl flex-col gap-20 px-6 pb-20 pt-10 md:px-10">
+    <main id="main-content" className="mx-auto flex w-full max-w-7xl flex-col gap-16 overflow-x-hidden px-4 pb-16 pt-6 sm:gap-20 sm:px-6 sm:pb-20 sm:pt-10 md:px-10">
       <AnimateOnScroll>
-        <header className={`${surfaceClass} flex items-center justify-between px-5 py-4 backdrop-blur`}>
+        <header className={`${surfaceClass} flex flex-col gap-3 px-4 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-5`}>
           <p className="text-lg font-semibold leading-none tracking-tight text-slate-900">Domus</p>
           <Link
             href="/login"
-            className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700 transition hover:bg-violet-100"
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700 transition hover:bg-violet-100 sm:min-h-10 sm:w-auto"
             title="Open role-based sign in."
           >
             Sign in
@@ -52,17 +52,17 @@ export function LandingPage() {
             Domus for landlords with 1-10 units
           </p>
           <div className="space-y-4">
-            <h1 className="max-w-3xl text-5xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-6xl">
+            <h1 className="max-w-3xl text-4xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-6xl">
               Stop managing rentals in spreadsheets.
             </h1>
-            <p className="max-w-2xl text-lg leading-relaxed text-slate-700">
+            <p className="max-w-2xl text-base leading-relaxed text-slate-700 sm:text-lg">
               Domus gives landlords with 1-10 units a professional command center for payments, tenants, and maintenance, for free.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Link
               href="/login"
-              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-300/30 transition hover:-translate-y-0.5 hover:from-violet-700 hover:to-fuchsia-700"
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-300/30 transition hover:-translate-y-0.5 hover:from-violet-700 hover:to-fuchsia-700 sm:w-auto"
               title="Start your Domus account."
             >
               Start free — no credit card
@@ -70,7 +70,7 @@ export function LandingPage() {
             </Link>
             <a
               href="#features"
-              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50 sm:w-auto"
               title="Jump to the feature showcase."
             >
               See how it works

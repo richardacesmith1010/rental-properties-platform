@@ -11,6 +11,7 @@ import { CommandPalette } from "@/components/dashboard/command-palette";
 import { ContextualGreeting } from "@/components/dashboard/contextual-greeting";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { LeaseWizard } from "@/components/dashboard/lease-wizard";
+import { NotificationPauseBanner } from "@/components/dashboard/notification-pause-banner";
 import { OwnerDailyOpsHome } from "@/components/dashboard/owner-daily-ops-home";
 import { PropertyWizard } from "@/components/dashboard/property-wizard";
 import { TenantInviteWizard } from "@/components/dashboard/tenant-invite-wizard";
@@ -49,12 +50,12 @@ function PageHeader({
   onNext: () => void;
 }) {
   return (
-    <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border/60 px-4 py-3 sm:px-5">
+    <div className="flex shrink-0 flex-col gap-3 border-b border-border/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
       <div className="min-w-0">
-        <h2 className="truncate text-2xl font-bold text-foreground sm:text-[1.9rem]">{title}</h2>
+        <h2 className="truncate text-xl font-bold text-foreground sm:text-[1.9rem]">{title}</h2>
         {pageCountLabel ? <p className="mt-1 text-sm text-muted-foreground">{pageCountLabel}</p> : null}
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto">
         <Button
           type="button"
           variant="outline"
@@ -151,6 +152,8 @@ export function Dashboard(props: DashboardProps) {
         : "Everything looks good";
   const contentZoneLabel = ownerSectionCountLabel ?? activeWorkflowMeta?.label ?? "Workspace";
   const contentZoneTitle = activeSectionLabel;
+  const notificationsPausedUntil =
+    props.notificationPreferenceSettings?.pausedUntil ?? null;
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -237,9 +240,9 @@ export function Dashboard(props: DashboardProps) {
   }
 
   return (
-    <DashboardLayout
-      {...layoutProps}
-      mainClassName="relative flex min-h-0 flex-1 flex-col overflow-hidden lg:ml-[260px]"
+      <DashboardLayout
+        {...layoutProps}
+        mainClassName="relative flex min-h-0 flex-1 flex-col overflow-hidden lg:ml-[260px]"
       afterMain={
         <>
           {showOnboardingWizard &&
@@ -310,7 +313,7 @@ export function Dashboard(props: DashboardProps) {
       }
     >
       <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-6 pt-6 lg:px-8 lg:pb-8 lg:pt-8">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-3 pt-3 sm:px-4 sm:pb-4 sm:pt-4 lg:px-8 lg:pb-8 lg:pt-8">
         {(isOwnerRole || isManagerRole) && props.stripeConnected === false ? (
           <ConnectBanner connected={false} role={isOwnerRole ? "owner" : "manager"} />
         ) : null}
@@ -318,6 +321,14 @@ export function Dashboard(props: DashboardProps) {
           <Alert variant="success" className="mt-3 rounded-xl px-4 py-3">
             {props.generatedMessage}
           </Alert>
+        ) : null}
+        {isOwnerRole &&
+        notificationsPausedUntil &&
+        props.onResumeNotificationEmails ? (
+          <NotificationPauseBanner
+            pausedUntil={notificationsPausedUntil}
+            onResume={props.onResumeNotificationEmails}
+          />
         ) : null}
 
         {showOwnerDailyOpsShell ? (
@@ -329,7 +340,7 @@ export function Dashboard(props: DashboardProps) {
               onOpenSettings={() => router.push("/settings")}
               onOpenNotifications={() => sectionRendererProps.openSection("notifications")}
             />
-            <div className="mt-3 flex min-h-0 flex-1 flex-col rounded-[28px] border border-border/50 bg-background/80 shadow-sm">
+            <div className="mt-3 flex min-h-0 flex-1 flex-col rounded-[24px] border border-border/50 bg-background/80 shadow-sm sm:rounded-[28px]">
               <PageHeader
                 title={ownerDailyOpsPageLabel}
                 pageCountLabel={ownerDailyOpsPageCountLabel}
@@ -337,7 +348,7 @@ export function Dashboard(props: DashboardProps) {
                 onNext={goToNextSection}
               />
               <div
-                className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scroll-smooth px-4 pb-4 pt-3 sm:px-5 [-webkit-overflow-scrolling:touch]"
+                className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scroll-smooth px-3 pb-3 pt-3 sm:px-5 sm:pb-4 [-webkit-overflow-scrolling:touch]"
                 onTouchStart={(event) => {
                   touchStartX.current = event.changedTouches[0]?.clientX ?? null;
                 }}
@@ -455,7 +466,7 @@ export function Dashboard(props: DashboardProps) {
               ) : null}
             </div>
 
-            <div className="mt-4 flex min-h-0 flex-1 flex-col rounded-[28px] border border-border/50 bg-background/80 shadow-sm">
+            <div className="mt-4 flex min-h-0 flex-1 flex-col rounded-[24px] border border-border/50 bg-background/80 shadow-sm sm:rounded-[28px]">
               <PageHeader
                 title={contentZoneTitle}
                 pageCountLabel={contentZoneLabel}
@@ -463,7 +474,7 @@ export function Dashboard(props: DashboardProps) {
                 onNext={goToNextSection}
               />
 
-              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scroll-smooth px-4 pb-4 pt-3 sm:px-5 [-webkit-overflow-scrolling:touch]">
+              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scroll-smooth px-3 pb-3 pt-3 sm:px-5 sm:pb-4 [-webkit-overflow-scrolling:touch]">
                 <section id={activeSection} className="min-h-full">
                   {showOwnerOnboarding ? (
                     <div className="flex h-full items-center justify-center">

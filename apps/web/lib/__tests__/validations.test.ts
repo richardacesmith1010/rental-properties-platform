@@ -26,8 +26,10 @@ import {
   sendDocumentPacketSchema,
   signDocumentPacketSchema,
   markNotificationReadSchema,
+  pauseNotificationEmailsSchema,
   completeOnboardingSchema,
   updateProfileSchema,
+  resumeNotificationEmailsSchema,
   uploadAvatarSchema,
   enableAutomationSchema,
   disableAutomationSchema,
@@ -64,6 +66,7 @@ import {
   updateManagerPaymentStatusSchema,
   generateManagerPaymentsSchema,
   updatePropertyDetailsSchema,
+  updateNotificationEmailPreferenceSchema,
   updateUnitDetailsSchema,
   updateLeaseDetailsSchema,
   updateTenantDisplayInfoSchema,
@@ -1051,6 +1054,28 @@ describe("markNotificationReadSchema", () => {
     const result = markNotificationReadSchema.safeParse({
       notificationId: "550e8400-e29b-41d4-a716-446655440000"
     });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("notification preference schemas", () => {
+  it("accepts a valid email preference toggle", () => {
+    const result = updateNotificationEmailPreferenceSchema.safeParse({
+      preferenceKey: "late_rent",
+      enabled: true
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a supported pause duration", () => {
+    const result = pauseNotificationEmailsSchema.safeParse({
+      duration: "1_week"
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts resume payloads without fields", () => {
+    const result = resumeNotificationEmailsSchema.safeParse({});
     expect(result.success).toBe(true);
   });
 });

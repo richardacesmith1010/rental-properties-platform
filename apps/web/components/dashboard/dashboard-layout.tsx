@@ -71,7 +71,7 @@ export function DashboardLayout({
     <div className="app-surface flex h-[100svh] min-h-[100svh] flex-col overflow-hidden lg:flex-row">
       <MobileTopBar {...navProps} />
       <SidebarNav {...navProps} />
-      <main id="main-content" className={`min-h-0 ${mainClassName}`}>
+      <main id="main-content" className={`min-h-0 overflow-x-hidden ${mainClassName}`}>
         {children}
       </main>
       {afterMain}

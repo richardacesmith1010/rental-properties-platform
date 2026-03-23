@@ -322,7 +322,7 @@ export function MobileTopBar({
   const notificationHref = role === "tenant" ? "/tenant?section=notifications" : `${workspacePath}#notifications`;
 
   return (
-    <div className="gradient-sidebar px-4 py-3 shadow-lg lg:hidden">
+    <div className="gradient-sidebar px-3 py-3 shadow-lg lg:hidden">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.18] text-sm font-bold text-white">D</div>
@@ -385,7 +385,7 @@ export function MobileTopBar({
           />
 
           <MobileDrawer
-            className="gradient-sidebar border-t border-white/10 text-white"
+            className="gradient-sidebar border-r border-white/10 text-white"
             trigger={
               <button
                 type="button"
@@ -397,7 +397,7 @@ export function MobileTopBar({
               </button>
             }
           >
-            <div className="space-y-4">
+            <div className="flex max-h-[calc(100svh-2rem)] flex-col space-y-4 overflow-y-auto pr-1">
               <div className="flex items-center justify-between gap-3 pb-1">
                 <div>
                   <p className="text-sm font-semibold text-white">{displayName}</p>

@@ -5,6 +5,9 @@ import {
   createNotificationWithDelivery,
   notifyOwnerMembersForProperty
 } from "@/lib/notifications";
+import {
+  getPropertyNotificationDeliveryPreferences,
+} from "@/lib/notification-preferences";
 
 function differenceInDays(fromDate: string, toDate: string) {
   const from = new Date(`${fromDate}T00:00:00.000Z`);
@@ -120,6 +123,11 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
   const profileById = new Map(
     ((profiles ?? []) as Array<{ id: string; email: string | null; full_name: string | null }>).map((profile) => [profile.id, profile])
   );
+  const deliveryByPropertyId = await getPropertyNotificationDeliveryPreferences(
+    supabase,
+    propertyIds,
+    "delinquency_escalation"
+  );
 
   const work = candidates.filter((charge) => !alreadySent.has(charge.id)).map(async (charge) => {
     const lease = leaseById.get(charge.lease_id);
@@ -162,7 +170,8 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
         entityType: "rent_charge",
         entityId: charge.id,
         propertyId: unit.property_id,
-        emailContent: reminderEmail
+        emailContent: reminderEmail,
+        deliveryPreference: deliveryByPropertyId.get(unit.property_id)
       })
     ];
 
@@ -266,6 +275,11 @@ export async function sendRentDueReminders(supabase: SupabaseClient): Promise<st
   const profileById = new Map(
     ((profiles ?? []) as Array<{ id: string; email: string | null; full_name: string | null }>).map((profile) => [profile.id, profile])
   );
+  const deliveryByPropertyId = await getPropertyNotificationDeliveryPreferences(
+    supabase,
+    propertyIds,
+    "rent_due_reminder"
+  );
 
   await Promise.all(
     pendingCharges.map(async (charge) => {
@@ -297,7 +311,8 @@ export async function sendRentDueReminders(supabase: SupabaseClient): Promise<st
         entityType: "rent_charge",
         entityId: charge.id,
         propertyId: unit.property_id,
-        emailContent: reminderEmail
+        emailContent: reminderEmail,
+        deliveryPreference: deliveryByPropertyId.get(unit.property_id)
       });
     })
   );

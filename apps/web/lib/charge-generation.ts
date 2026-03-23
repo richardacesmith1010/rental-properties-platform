@@ -6,6 +6,7 @@ import {
   createNotificationWithDelivery,
   notifyOwnerMembersForProperty
 } from "@/lib/notifications";
+import { getPropertyNotificationDeliveryPreferences } from "@/lib/notification-preferences";
 import { getAdministeredPropertyIds } from "@/lib/property-access";
 type LeaseStatus = "active" | "expiring_soon" | "expired" | "terminated" | "renewed" | null;
 type UnitRow = { id: string; property_id: string };
@@ -267,7 +268,13 @@ export async function applyLateFeesToOverdueCharges(
     throw lateUnitsError;
   }
 
-  const propertyIdByUnitId = new Map(((lateUnits ?? []) as UnitRow[]).map((unit) => [unit.id, unit.property_id]));
+  const lateUnitRows = (lateUnits ?? []) as UnitRow[];
+  const propertyIdByUnitId = new Map(lateUnitRows.map((unit) => [unit.id, unit.property_id]));
+  const propertyDeliveryPreferences = await getPropertyNotificationDeliveryPreferences(
+    supabase,
+    lateUnitRows.map((unit) => unit.property_id),
+    "late_rent"
+  );
   const tenantIds = Array.from(
     new Set(lateLeaseRows.map((lease) => lease.tenant_profile_id).filter((id): id is string => Boolean(id)))
   );
@@ -294,7 +301,10 @@ export async function applyLateFeesToOverdueCharges(
             title: "Rent payment overdue",
             body: `Your rent charge due on ${formatDate(charge.due_date)} is now marked late.`,
             entityType: "rent_charge",
-            entityId: charge.id
+            entityId: charge.id,
+            deliveryPreference: propertyId
+              ? propertyDeliveryPreferences.get(propertyId)
+              : undefined
           })
         );
       }

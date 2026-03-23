@@ -30,7 +30,7 @@ export function GamificationSummary({
           View achievements
         </Link>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <DomMascot size="md" mood="happy" className="shrink-0" />
         <div className="min-w-0 flex-1 space-y-3">
           <div className="flex flex-wrap items-center gap-3">

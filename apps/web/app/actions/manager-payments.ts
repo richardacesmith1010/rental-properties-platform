@@ -5,6 +5,10 @@ import { revalidatePath } from "next/cache";
 import { sendInvoiceEmail } from "@/lib/invoice-email";
 import { sideEffectError } from "@/lib/logger";
 import {
+  getUserNotificationPreferenceSettings,
+  resolveNotificationDeliveryPreference
+} from "@/lib/notification-preferences";
+import {
   buildManagerInvoiceFileName,
   calculateConfiguredManagerPaymentAmount,
   formatManagerPaymentCategory,
@@ -54,6 +58,21 @@ async function sendManagerPaymentInvoiceEmails(
   paymentId: string,
   status: "pending" | "paid"
 ) {
+  const notificationSettings = await getUserNotificationPreferenceSettings(actorUserId);
+  const deliveryPreference = resolveNotificationDeliveryPreference(
+    notificationSettings,
+    "manager_invoice"
+  );
+
+  if (!deliveryPreference.emailEnabled) {
+    console.log("[manager-payments] skipped invoice email delivery", {
+      actorUserId,
+      paymentId,
+      reason: deliveryPreference.emailBlockReason ?? "manager invoice emails disabled"
+    });
+    return;
+  }
+
   const context = await getManagerPaymentEmailContext(paymentId);
   if (!context) {
     return;

@@ -55,8 +55,8 @@ export function BankBalanceCard({
 
   return (
     <div className={cn("mt-3 rounded-xl border border-border bg-card px-4 py-4", className)}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <p className="text-sm font-semibold text-foreground">
             {bankName ?? "Connected bank"}
             {bankMask ? ` ••••${bankMask}` : ""}
@@ -64,11 +64,12 @@ export function BankBalanceCard({
           <p className="mt-1 text-2xl font-semibold text-foreground">{balanceLabel}</p>
           <p className="mt-1 text-xs text-muted-foreground">{updatedLabel}</p>
         </div>
-        <form action={refreshAction} className="space-y-2">
+        <form action={refreshAction} className="w-full space-y-2 sm:w-auto">
           <input type="hidden" name="accountId" value={accountId} />
           <SubmitButton
             size="sm"
             variant="outline"
+            className="w-full sm:w-auto"
             title="Refresh the linked bank balance from Plaid."
           >
             Refresh
@@ -104,18 +105,19 @@ export function BankBalanceCard({
               <input type="hidden" name="accountId" value={accountId} />
               <input type="hidden" name="confirmation" value={confirmation} />
               <p className="text-xs text-muted-foreground">Type DISCONNECT to remove this linked bank account.</p>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                 <Input
                   value={confirmation}
                   onChange={(event) => setConfirmation(event.target.value)}
                   placeholder="DISCONNECT"
-                  className="h-9 max-w-[11rem]"
+                  className="h-9 w-full sm:max-w-[11rem]"
                   title='Type "DISCONNECT" to confirm removing this linked bank account.'
                 />
                 <SubmitButton
                   size="sm"
                   variant="destructive"
                   disabled={confirmation !== "DISCONNECT"}
+                  className="w-full sm:w-auto"
                   title="Confirm disconnecting this Plaid-linked bank account."
                 >
                   Confirm Disconnect
@@ -124,6 +126,7 @@ export function BankBalanceCard({
                   type="button"
                   size="sm"
                   variant="outline"
+                  className="w-full sm:w-auto"
                   onClick={() => {
                     setShowDisconnectConfirm(false);
                     setConfirmation("");

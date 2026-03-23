@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  NOTIFICATION_EMAIL_PREFERENCE_KEYS,
+  NOTIFICATION_PAUSE_DURATIONS
+} from "@/lib/notification-preferences";
 
 const isoDateSchema = z
   .string()
@@ -987,6 +991,17 @@ export const updateNotificationPreferenceSchema = z.object({
   emailEnabled: checkboxBooleanSchema.optional().default(false),
   inAppEnabled: checkboxBooleanSchema.optional().default(false)
 });
+
+export const updateNotificationEmailPreferenceSchema = z.object({
+  preferenceKey: z.enum(NOTIFICATION_EMAIL_PREFERENCE_KEYS),
+  enabled: checkboxBooleanSchema.optional().default(false)
+});
+
+export const pauseNotificationEmailsSchema = z.object({
+  duration: z.enum(NOTIFICATION_PAUSE_DURATIONS)
+});
+
+export const resumeNotificationEmailsSchema = z.object({});
 
 export const sendBatchPaymentReminderSchema = z.object({
   chargeIds: z

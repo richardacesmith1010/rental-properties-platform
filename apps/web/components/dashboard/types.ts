@@ -1,4 +1,5 @@
 import type { DashboardData } from "@/lib/dashboard";
+import type { NotificationPreferenceSettings } from "@/lib/notification-preferences";
 import type { PortfolioData } from "@/lib/portfolio";
 import type { MaintenanceTicket } from "@/lib/maintenance";
 import type { InvitationListItem } from "@/lib/invitations";
@@ -44,6 +45,7 @@ export interface DashboardProps {
   tickets?: MaintenanceTicket[];
   invitations?: InvitationListItem[];
   notifications?: NotificationDTO[];
+  notificationPreferenceSettings?: NotificationPreferenceSettings | null;
   inboxThreads?: InboxThreadDTO[];
   documents?: OwnerDocumentsData;
   automationTemplates?: AutomationTemplateDTO[];
@@ -116,6 +118,7 @@ export interface DashboardProps {
   onRevokeInvite?: StatefulAction;
   onMarkNotificationRead?: StatefulAction;
   onMarkAllNotificationsRead?: StatefulAction;
+  onResumeNotificationEmails?: StatefulAction;
   onSendBatchPaymentReminder?: StatefulAction;
   onCreateInboxThread?: StatefulAction;
   onSendInboxMessage?: StatefulAction;

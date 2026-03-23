@@ -3,6 +3,9 @@ import {
   createNotificationWithDelivery,
   notifyOwnerMembersForProperty
 } from "@/lib/notifications";
+import {
+  getPropertyNotificationDeliveryPreferences
+} from "@/lib/notification-preferences";
 
 export async function detectExpiredLeases(supabase: SupabaseClient): Promise<string> {
   const todayIso = new Date().toISOString().slice(0, 10);
@@ -72,6 +75,11 @@ export async function detectExpiredLeases(supabase: SupabaseClient): Promise<str
   const unitById = new Map(unitRows.map((unit) => [unit.id, unit]));
   const propertyById = new Map(((properties ?? []) as Array<{ id: string; name: string }>).map((property) => [property.id, property]));
   const profileById = new Map(((profiles ?? []) as Array<{ id: string; email: string | null }>).map((profile) => [profile.id, profile]));
+  const deliveryByPropertyId = await getPropertyNotificationDeliveryPreferences(
+    supabase,
+    propertyIds,
+    "lease_expired"
+  );
 
   await Promise.all(
     candidates.flatMap((lease) => {
@@ -89,7 +97,10 @@ export async function detectExpiredLeases(supabase: SupabaseClient): Promise<str
             title: "Lease Expired",
             body: `Your lease for Unit ${unit?.unit_number ?? "?"} at ${property?.name ?? "your property"} has expired.`,
             entityType: "lease",
-            entityId: lease.id
+            entityId: lease.id,
+            deliveryPreference: unit?.property_id
+              ? deliveryByPropertyId.get(unit.property_id)
+              : undefined
           })
         );
       }
@@ -196,6 +207,11 @@ export async function sendLeaseExpirationWarnings(supabase: SupabaseClient): Pro
   const unitById = new Map(unitRows.map((unit) => [unit.id, unit]));
   const propertyById = new Map(((properties ?? []) as Array<{ id: string; name: string }>).map((property) => [property.id, property]));
   const profileById = new Map(((profiles ?? []) as Array<{ id: string; email: string | null }>).map((profile) => [profile.id, profile]));
+  const deliveryByPropertyId = await getPropertyNotificationDeliveryPreferences(
+    supabase,
+    propertyIds,
+    "lease_expiring_soon"
+  );
 
   const pendingNotifications = candidates
     .filter((lease) => lease.tenant_profile_id && !alreadyWarned.has(lease.id))
@@ -210,7 +226,10 @@ export async function sendLeaseExpirationWarnings(supabase: SupabaseClient): Pro
         title: "Lease Expiring Soon",
         body: `Your lease for Unit ${unit?.unit_number ?? "?"} at ${property?.name ?? "your property"} expires on ${lease.end_date}. Contact your landlord about renewal.`,
         entityType: "lease",
-        entityId: lease.id
+        entityId: lease.id,
+        deliveryPreference: unit?.property_id
+          ? deliveryByPropertyId.get(unit.property_id)
+          : undefined
       });
     });
 

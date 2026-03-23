@@ -2,6 +2,7 @@ import { Dashboard } from "@/components/dashboard";
 import { StripeTestModeBanner } from "@/components/shared/stripe-test-mode-banner";
 import { getDashboardData } from "@/lib/dashboard";
 import { getGeneratedMessage } from "@/lib/format";
+import { getUserNotificationPreferenceSettings } from "@/lib/notification-preferences";
 import { getPortfolioData } from "@/lib/portfolio";
 import { getAdminMaintenanceTickets } from "@/lib/maintenance";
 import { getOwnerInvitations } from "@/lib/invitations";
@@ -64,6 +65,7 @@ import {
   inviteOwner,
   resendInvite,
   revokeInvite,
+  resumeNotificationEmails,
   markNotificationRead,
   markAllNotificationsRead,
   sendBatchPaymentReminder,
@@ -203,6 +205,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
     invitations,
     documents,
     notifications,
+    notificationPreferenceSettings,
     inboxThreads,
     automationTemplates,
     automationRules,
@@ -232,6 +235,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
     capabilities.notificationsEnabled
       ? getNotificationsForUser(user.id)
       : Promise.resolve([]),
+    getUserNotificationPreferenceSettings(user.id),
     capabilities.inboxThreadsEnabled
       ? getInboxThreadsForUser(user.id)
       : Promise.resolve([]),
@@ -301,8 +305,9 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         tickets={tickets}
         invitations={invitations}
         documents={documents}
-        notifications={notifications}
-        inboxThreads={inboxThreads}
+      notifications={notifications}
+      notificationPreferenceSettings={notificationPreferenceSettings}
+      inboxThreads={inboxThreads}
         automationTemplates={automationTemplates}
         automationRules={automationRules}
         listings={listings}
@@ -371,9 +376,10 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         onInviteOwner={inviteOwner}
         onResendInvite={resendInvite}
         onRevokeInvite={revokeInvite}
-        onMarkNotificationRead={markNotificationRead}
-        onMarkAllNotificationsRead={markAllNotificationsRead}
-        onSendBatchPaymentReminder={sendBatchPaymentReminder}
+      onMarkNotificationRead={markNotificationRead}
+      onMarkAllNotificationsRead={markAllNotificationsRead}
+      onResumeNotificationEmails={resumeNotificationEmails}
+      onSendBatchPaymentReminder={sendBatchPaymentReminder}
         onCreateInboxThread={createInboxThread}
         onSendMessageToTenant={sendMessageToTenant}
         onSendInboxMessage={sendInboxMessage}
