@@ -30,11 +30,13 @@ interface InboxSectionProps {
   threads: InboxThreadDTO[];
   properties: Array<{ id: string; name: string }>;
   onMarkRead: StatefulAction;
+  onMarkAllRead?: StatefulAction;
   onCreateThread?: StatefulAction;
   onSendMessage?: StatefulAction;
   threadsReady?: boolean;
   threadsWarning?: string | null;
   onOpenSection?: (sectionId: string) => void;
+  messageSectionId?: string;
 }
 
 const unavailableAction: StatefulAction = async () => ({
@@ -43,6 +45,7 @@ const unavailableAction: StatefulAction = async () => ({
 });
 
 function mapNotificationToSection(type: NotificationDTO["type"]): string {
+  if (type === "owner_message") return "inbox";
   if (type === "new_ticket" || type === "ticket_resolved") return "maintenance";
   if (type === "late_rent" || type === "payment_recorded") return "charges";
   if (type === "lease_updated") return "leases";
@@ -51,6 +54,7 @@ function mapNotificationToSection(type: NotificationDTO["type"]): string {
 }
 
 function mapEntityTypeToSection(entityType: string): string {
+  if (entityType === "tenant_profile") return "inbox";
   if (entityType === "maintenance_ticket") return "maintenance";
   if (entityType === "lease") return "leases";
   if (entityType === "rent_charge") return "charges";
@@ -104,15 +108,17 @@ function InboxNotificationRow({
             {state && state.success && <p className="mt-1 text-xs text-emerald-600">Marked read.</p>}
           </form>
         )}
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          title={`Open ${targetSection} context for this inbox event.`}
-          onClick={() => onOpenSection?.(targetSection)}
-        >
-          Open context
-        </Button>
+        {onOpenSection ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            title={`Open ${targetSection} context for this inbox event.`}
+            onClick={() => onOpenSection(targetSection)}
+          >
+            Open context
+          </Button>
+        ) : null}
       </div>
     </DataRow>
   );
@@ -123,11 +129,13 @@ export function InboxSection({
   threads,
   properties,
   onMarkRead,
+  onMarkAllRead,
   onCreateThread,
   onSendMessage,
   threadsReady = true,
   threadsWarning = null,
-  onOpenSection
+  onOpenSection,
+  messageSectionId = "inbox"
 }: InboxSectionProps) {
   const [activeTab, setActiveTab] = useState<InboxTab>("timeline");
   const [query, setQuery] = useState("");
@@ -138,6 +146,10 @@ export function InboxSection({
 
   const [createThreadState, createThreadAction] = useFormState(
     onCreateThread ?? unavailableAction,
+    null
+  );
+  const [markAllState, markAllAction] = useFormState(
+    onMarkAllRead ?? unavailableAction,
     null
   );
   const [sendMessageState, sendMessageAction] = useFormState(
@@ -197,9 +209,29 @@ export function InboxSection({
           <Bell className="h-4 w-4" />
           Domus Inbox
         </CardTitle>
-        <Badge variant={unreadCount > 0 ? "warning" : "outline"}>{unreadCount} unread</Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant={unreadCount > 0 ? "warning" : "outline"}>{unreadCount} unread</Badge>
+          {onMarkAllRead ? (
+            <form action={markAllAction}>
+              <SubmitButton
+                size="sm"
+                variant="outline"
+                disabled={unreadCount === 0}
+                title="Mark every unread inbox item as read."
+              >
+                Mark all as read
+              </SubmitButton>
+            </form>
+          ) : null}
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
+        {markAllState && !markAllState.success ? (
+          <p className="text-sm text-red-600">{markAllState.error}</p>
+        ) : null}
+        {markAllState && markAllState.success && markAllState.message ? (
+          <p className="text-sm text-emerald-600">{markAllState.message}</p>
+        ) : null}
         <p className="text-sm text-zinc-600">
           Central communication timeline for rent, maintenance, lease, and document events.
         </p>
@@ -251,6 +283,7 @@ export function InboxSection({
                 <option value="late_rent">Late rent</option>
                 <option value="ticket_resolved">Ticket resolved</option>
                 <option value="payment_recorded">Payment recorded</option>
+                <option value="owner_message">Messages</option>
                 <option value="lease_updated">Lease updated</option>
                 <option value="document_sent">Document sent</option>
                 <option value="document_signed">Document signed</option>
@@ -274,7 +307,12 @@ export function InboxSection({
                     key={notification.id}
                     notification={notification}
                     onMarkRead={onMarkRead}
-                    onOpenSection={onOpenSection}
+                    onOpenSection={
+                      onOpenSection
+                        ? (sectionId) =>
+                            onOpenSection(sectionId === "inbox" ? messageSectionId : sectionId)
+                        : undefined
+                    }
                     last={index === filteredNotifications.length - 1}
                   />
                 ))}
@@ -283,45 +321,47 @@ export function InboxSection({
           </>
         ) : (
           <div className="space-y-3">
-            <form action={createThreadAction} className="rounded-2xl border border-border/50 bg-zinc-50 p-3 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Create thread</p>
-              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <Select
-                  name="propertyId"
-                  value={selectedPropertyId}
-                  onChange={(event) => setSelectedPropertyId(event.target.value)}
-                  required
-                  title="Select property for this thread."
-                >
-                  <option value="">Select property</option>
-                  {properties.map((property) => (
-                    <option key={property.id} value={property.id}>
-                      {property.name}
-                    </option>
-                  ))}
-                </Select>
-                <Select name="entityType" defaultValue="general" title="Link this thread to a related workflow entity.">
-                  <option value="general">General</option>
-                  <option value="maintenance_ticket">Maintenance Ticket</option>
-                  <option value="lease">Lease</option>
-                  <option value="rent_charge">Rent Charge</option>
-                  <option value="document_packet">Document Packet</option>
-                </Select>
-              </div>
-              <Input name="subject" className="mt-2" placeholder="Thread subject" required />
-              <Input name="entityId" className="mt-2" placeholder="Entity ID (optional)" />
-              <div className="mt-2 flex justify-end">
-                <SubmitButton size="sm" title="Create a new inbox conversation thread.">
-                  Create thread
-                </SubmitButton>
-              </div>
-              {createThreadState && !createThreadState.success && (
-                <p className="mt-2 text-xs text-red-600">{createThreadState.error}</p>
-              )}
-              {createThreadState && createThreadState.success && (
-                <p className="mt-2 text-xs text-emerald-600">Thread created.</p>
-              )}
-            </form>
+            {onCreateThread ? (
+              <form action={createThreadAction} className="rounded-2xl border border-border/50 bg-zinc-50 p-3 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Create thread</p>
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <Select
+                    name="propertyId"
+                    value={selectedPropertyId}
+                    onChange={(event) => setSelectedPropertyId(event.target.value)}
+                    required
+                    title="Select property for this thread."
+                  >
+                    <option value="">Select property</option>
+                    {properties.map((property) => (
+                      <option key={property.id} value={property.id}>
+                        {property.name}
+                      </option>
+                    ))}
+                  </Select>
+                  <Select name="entityType" defaultValue="general" title="Link this thread to a related workflow entity.">
+                    <option value="general">General</option>
+                    <option value="maintenance_ticket">Maintenance Ticket</option>
+                    <option value="lease">Lease</option>
+                    <option value="rent_charge">Rent Charge</option>
+                    <option value="document_packet">Document Packet</option>
+                  </Select>
+                </div>
+                <Input name="subject" className="mt-2" placeholder="Thread subject" required />
+                <Input name="entityId" className="mt-2" placeholder="Entity ID (optional)" />
+                <div className="mt-2 flex justify-end">
+                  <SubmitButton size="sm" title="Create a new inbox conversation thread.">
+                    Create thread
+                  </SubmitButton>
+                </div>
+                {createThreadState && !createThreadState.success && (
+                  <p className="mt-2 text-xs text-red-600">{createThreadState.error}</p>
+                )}
+                {createThreadState && createThreadState.success && (
+                  <p className="mt-2 text-xs text-emerald-600">Thread created.</p>
+                )}
+              </form>
+            ) : null}
 
             {threads.length === 0 ? (
               <EmptyState
@@ -366,15 +406,17 @@ export function InboxSection({
                         <p className="text-sm text-zinc-500">{selectedThread.propertyName}</p>
                         <div className="mt-1 flex flex-wrap gap-2">
                           <Badge variant="outline">{typeLabel(selectedThread.entityType)}</Badge>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            title="Open the related workspace section for this thread."
-                            onClick={() => onOpenSection?.(mapEntityTypeToSection(selectedThread.entityType))}
-                          >
-                            Open context
-                          </Button>
+                          {onOpenSection ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              title="Open the related workspace section for this thread."
+                              onClick={() => onOpenSection(mapEntityTypeToSection(selectedThread.entityType))}
+                            >
+                              Open context
+                            </Button>
+                          ) : null}
                         </div>
                       </div>
 

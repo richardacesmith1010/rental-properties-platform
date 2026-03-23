@@ -71,6 +71,11 @@ export const NOTIFICATION_PREFERENCE_OPTIONS: NotificationPreferenceOption[] = [
     description: "Gamification milestones and achievements."
   },
   {
+    type: "owner_message",
+    label: "Messages",
+    description: "Direct messages between owners, managers, and tenants."
+  },
+  {
     type: "lease_expiring_soon",
     label: "Lease expiring soon",
     description: "Warnings for leases approaching expiration."

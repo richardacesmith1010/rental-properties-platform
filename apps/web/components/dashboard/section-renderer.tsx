@@ -70,6 +70,7 @@ export function SectionRenderer(props: SectionRendererProps) {
           onCreateManualCharge={props.onCreateManualCharge}
           onWaiveCharge={props.onWaiveCharge}
           onRecordManualPayment={props.onRecordManualPayment}
+          onSendMessageToTenant={props.onSendMessageToTenant}
           onSendBatchPaymentReminder={
             props.data.profileRole === "owner" ? props.onSendBatchPaymentReminder : undefined
           }
@@ -403,6 +404,7 @@ export function SectionRenderer(props: SectionRendererProps) {
           onUpdateLease={props.onUpdateLease}
           onUpdateRentAmount={props.onUpdateRentAmount}
           onUpdateTenantDisplayInfo={props.onUpdateTenantDisplayInfo}
+          onSendMessageToTenant={props.onSendMessageToTenant}
           onDeleteLease={props.onDeleteLease}
           onRenewLease={props.onRenewLease}
           onTerminateLease={props.onTerminateLease}

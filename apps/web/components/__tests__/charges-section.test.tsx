@@ -26,6 +26,7 @@ describe("ChargesSection", () => {
       id: "550e8400-e29b-41d4-a716-446655440000",
       leaseId: "550e8400-e29b-41d4-a716-446655440001",
       propertyId: "550e8400-e29b-41d4-a716-446655440002",
+      tenantProfileId: "550e8400-e29b-41d4-a716-446655440003",
       dueDate: "2026-03-01",
       amountCents: 165000,
       status: "pending" as const,
@@ -152,5 +153,17 @@ describe("ChargesSection", () => {
 
     expect(screen.getByRole("dialog", { name: "Delete Charge?" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Delete Charge" })).toBeInTheDocument();
+  });
+
+  it("shows a message action for owner charge rows when tenant messaging is enabled", () => {
+    render(
+      <ChargesSection
+        charges={charges}
+        onPayCharge={async () => {}}
+        onSendMessageToTenant={async () => ({ success: true, message: "Sent." })}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Message Maya Bell" })).toBeInTheDocument();
   });
 });

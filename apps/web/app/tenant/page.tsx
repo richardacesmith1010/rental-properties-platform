@@ -7,6 +7,8 @@ import {
   disableAutopay,
   markAllNotificationsRead,
   markNotificationRead,
+  requestManualPaymentConfirmation,
+  sendInboxMessage,
   signDocumentPacket,
   signOut,
   setupAutopay,
@@ -25,6 +27,7 @@ import { getTenantLeaseDetails } from "@/lib/leases";
 import { getTenantMaintenanceData } from "@/lib/maintenance";
 import { getTenantDocumentsData } from "@/lib/documents";
 import { getNotificationsForUser } from "@/lib/notifications";
+import { getInboxThreadsForUser } from "@/lib/inbox";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { SidebarNav, MobileTopBar } from "@/components/dashboard/sidebar-nav";
 import type { GlobalSearchItem } from "@/components/dashboard/global-search";
@@ -33,7 +36,7 @@ import { FeatureWarning } from "@/components/shared/feature-warning";
 import { TicketForm } from "@/components/dashboard/ticket-form";
 import { MaintenanceSection } from "@/components/dashboard/maintenance-section";
 import { TenantDocumentsSection } from "@/components/dashboard/tenant-documents-section";
-import { NotificationsSection } from "@/components/dashboard/notifications-section";
+import { InboxSection } from "@/components/dashboard/inbox-section";
 import { TenantLeaseDetails } from "@/components/dashboard/tenant-lease-details";
 import { TenantOverview } from "@/components/dashboard/tenant-overview";
 import { EmptyState as DashboardEmptyState } from "@/components/shared/empty-state";
@@ -65,7 +68,7 @@ const tenantSectionLabel: Record<TenantSection, string> = {
   charges: "Charges",
   maintenance: "Maintenance",
   documents: "Documents",
-  notifications: "Notifications"
+  notifications: "Inbox"
 };
 
 function parseSearchParam(value: string | string[] | undefined): string | null {
@@ -142,6 +145,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
     maintenanceData,
     documentsData,
     notifications,
+    inboxThreads,
     gamification,
     autopayEnrollments
   ] = await Promise.all([
@@ -159,6 +163,9 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
         }),
     capabilities.notificationsEnabled
       ? getNotificationsForUser(user.id)
+      : Promise.resolve([]),
+    capabilities.inboxThreadsEnabled
+      ? getInboxThreadsForUser(user.id)
       : Promise.resolve([]),
     getUserGamification(user.id),
     getAutopayEnrollments(user.id)
@@ -198,6 +205,14 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
     : null;
   const ownerConnectedMap = await arePropertyOwnersConnected(
     paymentData.charges.map((charge) => charge.propertyId)
+  );
+  const inboxProperties = Array.from(
+    new Map(
+      leaseDetails.map((lease) => [
+        lease.propertyId,
+        { id: lease.propertyId, name: lease.propertyName }
+      ])
+    ).values()
   );
   const searchItems: GlobalSearchItem[] = [
     ...paymentData.charges.map((charge) => ({
@@ -283,15 +298,17 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
               </p>
             )}
           </div>
-          <div className="flex w-full flex-col gap-3 sm:max-w-md sm:items-end">
-            <GamificationSummary
-              totalXp={gamification.totalXp}
-              currentLevel={gamification.currentLevel}
-              streakCount={gamification.streakCount}
-              role="tenant"
-              className="w-full"
-            />
-          </div>
+          {activeSection !== "overview" ? (
+            <div className="flex w-full flex-col gap-3 sm:max-w-md sm:items-end">
+              <GamificationSummary
+                totalXp={gamification.totalXp}
+                currentLevel={gamification.currentLevel}
+                streakCount={gamification.streakCount}
+                role="tenant"
+                className="w-full"
+              />
+            </div>
+          ) : null}
         </div>
 
         <div className="space-y-6 px-6 pb-8 pt-6 lg:px-8">
@@ -339,6 +356,8 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
           lease={currentLease}
           openTicketCount={openTicketCount}
                 buildSectionHref={buildTenantHref}
+                onPayCharge={createCheckoutForCharge as (formData: FormData) => Promise<void>}
+                onRequestManualPaymentConfirmation={requestManualPaymentConfirmation}
               />
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -473,11 +492,17 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
           )}
 
           {activeSection === "notifications" &&
-            (capabilities.notificationsEnabled ? (
-              <NotificationsSection
+            (capabilities.notificationsEnabled || capabilities.inboxThreadsEnabled ? (
+              <InboxSection
                 notifications={notifications}
+                threads={inboxThreads}
+                properties={inboxProperties}
                 onMarkRead={markNotificationRead}
                 onMarkAllRead={markAllNotificationsRead}
+                onSendMessage={sendInboxMessage}
+                threadsReady={capabilities.inboxThreadsEnabled}
+                threadsWarning={capabilities.warnings.inboxThreads}
+                messageSectionId="notifications"
               />
             ) : (
               <FeatureWarning

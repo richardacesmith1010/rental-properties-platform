@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export interface TenantLeaseDetails {
   leaseId: string;
+  propertyId: string;
   propertyName: string;
   unitNumber: string;
   startDate: string;
@@ -80,6 +81,7 @@ export async function getTenantLeaseDetails(userId: string): Promise<TenantLease
 
     return {
       leaseId: lease.id,
+      propertyId: unit?.property_id ?? "",
       propertyName: property?.name ?? "Your Rental",
       unitNumber: unit?.unit_number ?? "?",
       startDate: lease.start_date,

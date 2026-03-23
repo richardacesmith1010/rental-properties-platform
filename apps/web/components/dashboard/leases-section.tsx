@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFormState } from "react-dom";
-import { Download, FileText, Pencil } from "lucide-react";
+import { Download, FileText, MessageSquare, Pencil } from "lucide-react";
 import { DataRow } from "@/components/shared/data-row";
+import { ComposeMessageModal } from "@/components/dashboard/compose-message-modal";
 import { EntityEditModal } from "@/components/dashboard/entity-edit-modal";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
@@ -41,6 +42,7 @@ interface LeasesSectionProps {
   onUpdateLease?: StatefulAction;
   onUpdateRentAmount?: StatefulAction;
   onUpdateTenantDisplayInfo?: StatefulAction;
+  onSendMessageToTenant?: StatefulAction;
   onDeleteLease?: StatefulAction;
   onRenewLease?: StatefulAction;
   onTerminateLease?: StatefulAction;
@@ -128,6 +130,7 @@ export function LeasesSection({
   onUpdateLease,
   onUpdateRentAmount,
   onUpdateTenantDisplayInfo,
+  onSendMessageToTenant,
   onDeleteLease,
   onRenewLease,
   onTerminateLease,
@@ -147,6 +150,7 @@ export function LeasesSection({
   const [activeTerminateLeaseId, setActiveTerminateLeaseId] = useState<string | null>(null);
   const [editingLease, setEditingLease] = useState<LeaseListItem | null>(null);
   const [editingTenant, setEditingTenant] = useState<LeaseListItem | null>(null);
+  const [messagingTenant, setMessagingTenant] = useState<LeaseListItem | null>(null);
   const [confirmDeleteLeaseId, setConfirmDeleteLeaseId] = useState<string | null>(null);
   const deleteFormRefs = useRef<Record<string, HTMLFormElement | null>>({});
   const visibleLeases = previewCount && !expanded ? leases.slice(0, previewCount) : leases;
@@ -166,6 +170,7 @@ export function LeasesSection({
       setActiveTerminateLeaseId(null);
       setEditingLease(null);
       setEditingTenant(null);
+      setMessagingTenant(null);
       setConfirmDeleteLeaseId(null);
     }
   }, [deleteState, renewState, rentAmountState, terminateState, updateState]);
@@ -251,6 +256,19 @@ export function LeasesSection({
                           aria-label={`Edit ${lease.tenantName}`}
                         >
                           <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      ) : null}
+                      {showControls && onSendMessageToTenant ? (
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 rounded-md"
+                          onClick={() => setMessagingTenant(lease)}
+                          title={`Message ${lease.tenantName}`}
+                          aria-label={`Message ${lease.tenantName}`}
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" />
                         </Button>
                       ) : null}
                     </div>
@@ -639,6 +657,18 @@ export function LeasesSection({
             }
             return { error: result?.error ?? "Unable to update this tenant right now." };
           }}
+        />
+      ) : null}
+      {messagingTenant && onSendMessageToTenant ? (
+        <ComposeMessageModal
+          open
+          onClose={() => setMessagingTenant(null)}
+          recipientName={messagingTenant.tenantName}
+          recipientProfileId={messagingTenant.tenantProfileId}
+          propertyId={messagingTenant.propertyId}
+          propertyName={`${messagingTenant.propertyName ?? "Property"} · ${messagingTenant.unitLabel}`}
+          prefilledSubject={`Message about ${messagingTenant.propertyName ?? "your lease"}`}
+          onSend={onSendMessageToTenant}
         />
       ) : null}
     </Card>

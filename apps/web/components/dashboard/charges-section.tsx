@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useFormState } from "react-dom";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CircleOff, CreditCard, Mail, Pencil, Plus, Trash2 } from "lucide-react";
+import { CircleOff, CreditCard, Mail, MessageSquare, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { ActionState } from "@/app/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +23,7 @@ import { getStatusClasses, statusAriaLabel, statusBadgeClasses } from "@/lib/sta
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { ChargeEditModal } from "./charge-edit-modal";
 import { ChargeCreateForm } from "./charge-create-form";
+import { ComposeMessageModal } from "./compose-message-modal";
 import { chargeCategoryLabel, type ChargeCategory } from "@/lib/charge-audit";
 
 type ChargeStatus = "pending" | "paid" | "late" | "waived";
@@ -33,6 +34,7 @@ interface Charge {
   id: string;
   leaseId?: string;
   propertyId: string;
+  tenantProfileId?: string | null;
   dueDate: string;
   amountCents: number;
   status: ChargeStatus;
@@ -40,6 +42,7 @@ interface Charge {
   propertyLabel?: string;
   unitNumber?: string;
   tenantName?: string;
+  tenantEmail?: string | null;
   category?: ChargeCategory;
   notes?: string | null;
   reminderSentAt?: string | null;
@@ -73,6 +76,7 @@ interface ChargesSectionProps {
   onCreateManualCharge?: StatefulAction;
   onWaiveCharge?: StatefulAction;
   onRecordManualPayment?: StatefulAction;
+  onSendMessageToTenant?: StatefulAction;
   onSendBatchPaymentReminder?: StatefulAction;
   onGenerateChargesHref?: string;
   showManualPayment?: boolean;
@@ -160,6 +164,7 @@ export function ChargesSection({
   onCreateManualCharge,
   onWaiveCharge,
   onRecordManualPayment,
+  onSendMessageToTenant,
   onSendBatchPaymentReminder,
   onGenerateChargesHref,
   showManualPayment = false,
@@ -180,6 +185,7 @@ export function ChargesSection({
   const [activeEditChargeId, setActiveEditChargeId] = useState<string | null>(null);
   const [showCreateChargeForm, setShowCreateChargeForm] = useState(false);
   const [confirmDeleteChargeId, setConfirmDeleteChargeId] = useState<string | null>(null);
+  const [activeMessageChargeId, setActiveMessageChargeId] = useState<string | null>(null);
   const [selectedChargeIds, setSelectedChargeIds] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState(false);
   const [isSendingReminders, startSendingReminders] = useTransition();
@@ -261,6 +267,9 @@ export function ChargesSection({
             }
           : null;
       })()
+    : null;
+  const activeMessageCharge = activeMessageChargeId
+    ? charges.find((charge) => charge.id === activeMessageChargeId) ?? null
     : null;
 
   const toggleChargeSelection = (chargeId: string, checked: boolean) => {
@@ -526,7 +535,22 @@ export function ChargesSection({
                     <div className="min-w-0 flex-1">
                       <p className="text-base font-medium text-foreground">{getChargeLabel(charge)}</p>
                       {!isTenantView && charge.tenantName ? (
-                        <p className="mt-0.5 text-sm text-muted-foreground">{charge.tenantName}</p>
+                        <div className="mt-0.5 flex items-center gap-2 text-sm text-muted-foreground">
+                          <p>{charge.tenantName}</p>
+                          {onSendMessageToTenant && charge.tenantProfileId ? (
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 rounded-md"
+                              onClick={() => setActiveMessageChargeId(charge.id)}
+                              title={`Message ${charge.tenantName}`}
+                              aria-label={`Message ${charge.tenantName}`}
+                            >
+                              <MessageSquare className="h-3.5 w-3.5" />
+                            </Button>
+                          ) : null}
+                        </div>
                       ) : null}
                       <p className="mt-0.5 text-sm text-muted-foreground">Due {formatDate(charge.dueDate)}</p>
                       {charge.notes ? (
@@ -754,6 +778,22 @@ export function ChargesSection({
             leases={availableLeases}
             onSubmit={onCreateManualCharge}
             onCancel={() => setShowCreateChargeForm(false)}
+          />
+        ) : null}
+
+        {onSendMessageToTenant &&
+        activeMessageCharge &&
+        activeMessageCharge.tenantProfileId &&
+        activeMessageCharge.tenantName ? (
+          <ComposeMessageModal
+            open={Boolean(activeMessageCharge)}
+            onClose={() => setActiveMessageChargeId(null)}
+            recipientName={activeMessageCharge.tenantName}
+            recipientProfileId={activeMessageCharge.tenantProfileId}
+            propertyId={activeMessageCharge.propertyId}
+            propertyName={`${activeMessageCharge.propertyName ?? "Property"} · ${activeMessageCharge.unitNumber ?? "Unit"}`}
+            prefilledSubject={`Charge update for ${activeMessageCharge.propertyName ?? "your rental"}`}
+            onSend={onSendMessageToTenant}
           />
         ) : null}
       </CardContent>

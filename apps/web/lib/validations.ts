@@ -706,6 +706,23 @@ export const sendInboxMessageSchema = z.object({
     .max(4000, "Message must be under 4,000 characters.")
 });
 
+export const sendMessageToTenantSchema = z.object({
+  recipientProfileId: z.string().uuid("Invalid tenant selection."),
+  propertyId: z.string().uuid("Invalid property selection."),
+  subject: z
+    .string()
+    .min(1, "Message subject is required.")
+    .max(180, "Message subject must be under 180 characters."),
+  body: z
+    .string()
+    .min(1, "Message body is required.")
+    .max(4000, "Message must be under 4,000 characters.")
+});
+
+export const requestManualPaymentConfirmationSchema = z.object({
+  chargeId: z.string().uuid("Invalid charge selection.")
+});
+
 const optionalListingNumberSchema = z.preprocess(
   (value) => (value === "" || value === undefined || value === null ? undefined : value),
   z.coerce.number().min(0, "Value must be 0 or greater.").max(50, "Value is too high.").optional()
@@ -962,6 +979,7 @@ export const updateNotificationPreferenceSchema = z.object({
     "rent_due_reminder",
     "invite_accepted",
     "achievement_unlocked",
+    "owner_message",
     "lease_expiring_soon",
     "lease_expired",
     "delinquency_escalation"

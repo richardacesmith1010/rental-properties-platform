@@ -106,6 +106,7 @@ export interface DashboardProps {
   onCreateManualCharge?: StatefulAction;
   onWaiveCharge?: StatefulAction;
   onRecordManualPayment?: StatefulAction;
+  onSendMessageToTenant?: StatefulAction;
   onUpdateTicketStatus?: StatefulAction;
   onAddTicketComment?: StatefulAction;
   onInviteTenant?: StatefulAction;

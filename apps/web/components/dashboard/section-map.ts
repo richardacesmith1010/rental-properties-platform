@@ -113,6 +113,7 @@ export interface SectionRendererProps {
   onCreateManualCharge?: StatefulAction;
   onWaiveCharge?: StatefulAction;
   onRecordManualPayment?: StatefulAction;
+  onSendMessageToTenant?: StatefulAction;
   onSendBatchPaymentReminder?: StatefulAction;
   onUpdateTicketStatus?: StatefulAction;
   onInviteTenant?: StatefulAction;

@@ -33,6 +33,8 @@ import {
   disableAutomationSchema,
   createInboxThreadSchema,
   sendInboxMessageSchema,
+  sendMessageToTenantSchema,
+  requestManualPaymentConfirmationSchema,
   createRentalListingSchema,
   updateListingStatusSchema,
   createApplicationSchema,
@@ -1275,6 +1277,48 @@ describe("sendInboxMessageSchema", () => {
       threadId: validUUID,
       body: "B".repeat(4001)
     });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("sendMessageToTenantSchema", () => {
+  it("accepts valid direct-message payload", () => {
+    const result = sendMessageToTenantSchema.safeParse({
+      recipientProfileId: "550e8400-e29b-41d4-a716-446655440000",
+      propertyId: "550e8400-e29b-41d4-a716-446655440001",
+      subject: "Rent reminder",
+      body: "Rent is due tomorrow."
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an empty message body", () => {
+    const result = sendMessageToTenantSchema.safeParse({
+      recipientProfileId: "550e8400-e29b-41d4-a716-446655440000",
+      propertyId: "550e8400-e29b-41d4-a716-446655440001",
+      subject: "Rent reminder",
+      body: ""
+    });
+
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("requestManualPaymentConfirmationSchema", () => {
+  it("accepts a valid charge ID", () => {
+    const result = requestManualPaymentConfirmationSchema.safeParse({
+      chargeId: "550e8400-e29b-41d4-a716-446655440000"
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an invalid charge ID", () => {
+    const result = requestManualPaymentConfirmationSchema.safeParse({
+      chargeId: "bad-id"
+    });
+
     expect(result.success).toBe(false);
   });
 });

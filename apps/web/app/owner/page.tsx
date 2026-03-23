@@ -68,6 +68,7 @@ import {
   markAllNotificationsRead,
   sendBatchPaymentReminder,
   createInboxThread,
+  sendMessageToTenant,
   sendInboxMessage,
   enableAutomation,
   disableAutomation,
@@ -374,6 +375,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         onMarkAllNotificationsRead={markAllNotificationsRead}
         onSendBatchPaymentReminder={sendBatchPaymentReminder}
         onCreateInboxThread={createInboxThread}
+        onSendMessageToTenant={sendMessageToTenant}
         onSendInboxMessage={sendInboxMessage}
         onEnableAutomation={enableAutomation}
         onDisableAutomation={disableAutomation}

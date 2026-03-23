@@ -24,6 +24,7 @@ export type NotificationType =
   | "rent_due_reminder"
   | "invite_accepted"
   | "achievement_unlocked"
+  | "owner_message"
   | "lease_expiring_soon"
   | "lease_expired"
   | "delinquency_escalation"
@@ -96,6 +97,8 @@ function getNotificationCta(type: NotificationType) {
       return { text: "Pay Now", url: `${baseUrl}/tenant?section=charges` };
     case "payment_recorded":
       return { text: "View Dashboard", url: `${baseUrl}/tenant?section=charges` };
+    case "owner_message":
+      return { text: "Open Messages", url: baseUrl };
     case "new_ticket":
     case "document_signed":
     case "invite_accepted":

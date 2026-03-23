@@ -34,12 +34,14 @@ export interface DashboardCharge {
   id: string;
   leaseId: string;
   propertyId: string;
+  tenantProfileId: string | null;
   dueDate: string;
   amountCents: number;
   status: ChargeStatus;
   propertyName: string;
   unitNumber: string;
   tenantName: string;
+  tenantEmail?: string | null;
   category: ChargeCategory;
   notes?: string | null;
   reminderSentAt?: string | null;
@@ -209,6 +211,9 @@ export async function getDashboardData(
 
   const tenantNameById = new Map(
     (tenantProfiles ?? []).map((profile) => [profile.id, profile.full_name || profile.email || "Unknown tenant"])
+  );
+  const tenantEmailById = new Map(
+    (tenantProfiles ?? []).map((profile) => [profile.id, profile.email ?? null])
   );
 
   let charges: Array<{
@@ -494,12 +499,16 @@ export async function getDashboardData(
         id: charge.id,
         leaseId: charge.lease_id,
         propertyId: unit?.property_id ?? "",
+        tenantProfileId: lease?.tenant_profile_id ?? null,
         dueDate: charge.due_date,
         amountCents: charge.amount_cents,
         status: charge.status,
         propertyName,
         unitNumber,
         tenantName,
+        tenantEmail: lease?.tenant_profile_id
+          ? tenantEmailById.get(lease.tenant_profile_id) ?? null
+          : null,
         category: charge.category,
         notes: charge.notes ?? null,
         reminderSentAt: reminderSentAtByChargeId.get(charge.id) ?? null,

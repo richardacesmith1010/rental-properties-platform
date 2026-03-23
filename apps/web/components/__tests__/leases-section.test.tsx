@@ -172,4 +172,16 @@ describe("LeasesSection", () => {
     expect(screen.getByRole("button", { name: "Edit lease for Atlas House • 1A" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Edit Taylor Tenant" })).toBeInTheDocument();
   });
+
+  it("shows a message action for tenant lease cards when messaging is enabled", () => {
+    render(
+      <LeasesSection
+        leases={[activeLease]}
+        showControls
+        onSendMessageToTenant={async () => ({ success: true, message: "Sent." })}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Message Taylor Tenant" })).toBeInTheDocument();
+  });
 });

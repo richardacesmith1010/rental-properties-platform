@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { CreditCard, FileText, Wrench } from "lucide-react";
+import type { ActionState } from "@/app/actions";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { TenantCharge } from "@/lib/tenant-payments";
 import { Card, CardContent } from "@/components/ui/card";
-import { RentUrgencyBanner } from "@/components/dashboard/rent-urgency-banner";
+import { PayRentCard } from "@/components/dashboard/pay-rent-card";
 
 type TenantOverviewSection = "charges" | "maintenance" | "documents";
+type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
 interface TenantOverviewProps {
   userName: string;
@@ -20,6 +22,8 @@ interface TenantOverviewProps {
   } | null;
   openTicketCount: number;
   buildSectionHref: (section: TenantOverviewSection) => string;
+  onPayCharge: (formData: FormData) => Promise<void>;
+  onRequestManualPaymentConfirmation: StatefulAction;
 }
 
 function getGreeting(date = new Date()) {
@@ -47,7 +51,9 @@ export function TenantOverview({
   nextCharge,
   lease,
   openTicketCount,
-  buildSectionHref
+  buildSectionHref,
+  onPayCharge,
+  onRequestManualPaymentConfirmation
 }: TenantOverviewProps) {
   const summary = (() => {
     if (!nextCharge) {
@@ -66,7 +72,12 @@ export function TenantOverview({
 
   return (
     <div className="space-y-6">
-      <RentUrgencyBanner charges={charges} payHref={buildSectionHref("charges")} />
+      <PayRentCard
+        charges={charges}
+        onPayCharge={onPayCharge}
+        onRequestManualPaymentConfirmation={onRequestManualPaymentConfirmation}
+        chargesHref={buildSectionHref("charges")}
+      />
 
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
@@ -95,27 +106,6 @@ export function TenantOverview({
           description="Access your lease packet and shared files."
         />
       </div>
-
-      <Card className="border border-border/50 shadow-sm">
-        <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">Next Payment Due</p>
-            <p className="mt-1 text-2xl font-bold text-foreground">
-              {nextCharge ? formatCurrency(nextCharge.amountCents) : formatCurrency(0)}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {nextCharge ? formatDate(nextCharge.dueDate) : "No payment due right now"}
-            </p>
-          </div>
-          <Link
-            href={buildSectionHref("charges")}
-            className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90"
-            title="Open your rent charges and payment options."
-          >
-            {nextCharge ? "Pay Now" : "View Charges"}
-          </Link>
-        </CardContent>
-      </Card>
 
       {lease ? (
         <Card className="border border-border/50 shadow-sm">

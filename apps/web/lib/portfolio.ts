@@ -36,6 +36,7 @@ export interface LeaseListItem {
   id: string;
   unitId: string;
   propertyId: string;
+  propertyName?: string;
   tenantProfileId: string;
   unitLabel: string;
   tenantName: string;
@@ -393,6 +394,7 @@ export async function getPortfolioData(
       id: lease.id,
       unitId: lease.unit_id,
       propertyId: unit?.property_id ?? "",
+      propertyName: property?.name ?? "Property",
       tenantProfileId: lease.tenant_profile_id ?? "",
       unitLabel: property && unit ? `${property.name} • ${unit.unit_number}` : lease.unit_id,
       tenantName: tenant?.full_name ?? tenant?.email ?? "Unknown tenant",

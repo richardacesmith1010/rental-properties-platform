@@ -45,6 +45,7 @@ import {
   markNotificationRead,
   markAllNotificationsRead,
   createInboxThread,
+  sendMessageToTenant,
   sendInboxMessage,
   enableAutomation,
   disableAutomation,
@@ -278,6 +279,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       onMarkNotificationRead={markNotificationRead}
       onMarkAllNotificationsRead={markAllNotificationsRead}
       onCreateInboxThread={createInboxThread}
+      onSendMessageToTenant={sendMessageToTenant}
       onSendInboxMessage={sendInboxMessage}
       onEnableAutomation={enableAutomation}
       onDisableAutomation={disableAutomation}

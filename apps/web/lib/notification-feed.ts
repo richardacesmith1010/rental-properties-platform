@@ -74,6 +74,13 @@ export function getNotificationActionLink(notification: {
   entityType: string;
 }): NotificationActionLink | null {
   if (
+    notification.type === "owner_message" ||
+    notification.entityType === "inbox_thread"
+  ) {
+    return { label: "Open Inbox", sectionId: "inbox" };
+  }
+
+  if (
     notification.type === "late_rent" ||
     notification.type === "rent_due_reminder" ||
     notification.type === "delinquency_escalation" ||
