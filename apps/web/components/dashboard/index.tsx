@@ -94,6 +94,7 @@ export function Dashboard(props: DashboardProps) {
     closeTenantInviteWizard,
     commandPaletteProps,
     displayDashboardData,
+    financialOverviewData,
     filteredPortfolio,
     goToNextSection,
     goToPreviousSection,
@@ -381,6 +382,11 @@ export function Dashboard(props: DashboardProps) {
                         activeWorkflowMeta?.description ??
                         "Daily owner runbook: revenue risk, payments, maintenance, and alerts."
                       }
+                      financialOverview={financialOverviewData}
+                      onInitiatePlaidLink={props.onInitiatePlaidLink}
+                      onCompletePlaidLink={props.onCompletePlaidLink}
+                      onRefreshPlaidBalance={props.onRefreshPlaidBalance}
+                      onDisconnectPlaid={props.onDisconnectPlaid}
                     />
                   ) : (
                     <div className="min-h-full">

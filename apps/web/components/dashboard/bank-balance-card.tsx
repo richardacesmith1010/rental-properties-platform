@@ -6,7 +6,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SubmitButton } from "@/components/shared/submit-button";
-import { formatCurrency, formatRelativeTime } from "@/lib/format";
+import { cn, formatCurrency, formatRelativeTime } from "@/lib/format";
 import type { ActionState } from "@/app/actions";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
@@ -19,6 +19,8 @@ interface BankBalanceCardProps {
   onRefreshBalance: StatefulAction;
   onDisconnect: StatefulAction;
   accountId: string;
+  className?: string;
+  showDisconnect?: boolean;
 }
 
 export function BankBalanceCard({
@@ -28,7 +30,9 @@ export function BankBalanceCard({
   balanceUpdatedAt,
   onRefreshBalance,
   onDisconnect,
-  accountId
+  accountId,
+  className,
+  showDisconnect = true
 }: BankBalanceCardProps) {
   const [refreshState, refreshAction] = useFormState(onRefreshBalance, null);
   const [disconnectState, disconnectAction] = useFormState(onDisconnect, null);
@@ -50,7 +54,7 @@ export function BankBalanceCard({
     : "Balance has not been refreshed yet.";
 
   return (
-    <div className="mt-3 rounded-xl border border-border bg-card px-4 py-4">
+    <div className={cn("mt-3 rounded-xl border border-border bg-card px-4 py-4", className)}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-foreground">
@@ -82,65 +86,67 @@ export function BankBalanceCard({
         </form>
       </div>
 
-      <div className="mt-3 border-t border-border pt-3">
-        {!showDisconnectConfirm ? (
-          <Button
-            type="button"
-            variant="link"
-            size="sm"
-            className="h-auto px-0 text-xs text-muted-foreground hover:text-foreground"
-            onClick={() => setShowDisconnectConfirm(true)}
-            title="Disconnect this Plaid-linked bank account."
-          >
-            Disconnect
-          </Button>
-        ) : (
-          <form action={disconnectAction} className="space-y-2">
-            <input type="hidden" name="accountId" value={accountId} />
-            <input type="hidden" name="confirmation" value={confirmation} />
-            <p className="text-xs text-muted-foreground">Type DISCONNECT to remove this linked bank account.</p>
-            <div className="flex flex-wrap items-center gap-2">
-              <Input
-                value={confirmation}
-                onChange={(event) => setConfirmation(event.target.value)}
-                placeholder="DISCONNECT"
-                className="h-9 max-w-[11rem]"
-                title='Type "DISCONNECT" to confirm removing this linked bank account.'
-              />
-              <SubmitButton
-                size="sm"
-                variant="destructive"
-                disabled={confirmation !== "DISCONNECT"}
-                title="Confirm disconnecting this Plaid-linked bank account."
-              >
-                Confirm Disconnect
-              </SubmitButton>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setShowDisconnectConfirm(false);
-                  setConfirmation("");
-                }}
-                title="Cancel disconnecting this bank account."
-              >
-                Cancel
-              </Button>
-            </div>
-            {disconnectState && !disconnectState.success ? (
-              <Alert variant="error" className="text-xs font-normal">
-                {disconnectState.error}
-              </Alert>
-            ) : null}
-            {disconnectState?.success && disconnectState.message ? (
-              <Alert variant="success" className="text-xs font-normal">
-                {disconnectState.message}
-              </Alert>
-            ) : null}
-          </form>
-        )}
-      </div>
+      {showDisconnect ? (
+        <div className="mt-3 border-t border-border pt-3">
+          {!showDisconnectConfirm ? (
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              className="h-auto px-0 text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => setShowDisconnectConfirm(true)}
+              title="Disconnect this Plaid-linked bank account."
+            >
+              Disconnect
+            </Button>
+          ) : (
+            <form action={disconnectAction} className="space-y-2">
+              <input type="hidden" name="accountId" value={accountId} />
+              <input type="hidden" name="confirmation" value={confirmation} />
+              <p className="text-xs text-muted-foreground">Type DISCONNECT to remove this linked bank account.</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  value={confirmation}
+                  onChange={(event) => setConfirmation(event.target.value)}
+                  placeholder="DISCONNECT"
+                  className="h-9 max-w-[11rem]"
+                  title='Type "DISCONNECT" to confirm removing this linked bank account.'
+                />
+                <SubmitButton
+                  size="sm"
+                  variant="destructive"
+                  disabled={confirmation !== "DISCONNECT"}
+                  title="Confirm disconnecting this Plaid-linked bank account."
+                >
+                  Confirm Disconnect
+                </SubmitButton>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setShowDisconnectConfirm(false);
+                    setConfirmation("");
+                  }}
+                  title="Cancel disconnecting this bank account."
+                >
+                  Cancel
+                </Button>
+              </div>
+              {disconnectState && !disconnectState.success ? (
+                <Alert variant="error" className="text-xs font-normal">
+                  {disconnectState.error}
+                </Alert>
+              ) : null}
+              {disconnectState?.success && disconnectState.message ? (
+                <Alert variant="success" className="text-xs font-normal">
+                  {disconnectState.message}
+                </Alert>
+              ) : null}
+            </form>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }

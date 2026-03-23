@@ -16,10 +16,28 @@ import type { ActionState } from "./shared";
 
 const SCHEMA_ERROR_MESSAGE =
   "Bank balance visibility requires a database update before it can be used.";
+const PLAID_BALANCE_STALE_MS = 4 * 60 * 60 * 1000;
 
 function getAccountId(formData: FormData): string | null {
   const value = formData.get("accountId");
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function getRefreshMode(formData: FormData): "auto" | "manual" {
+  return formData.get("refreshMode") === "auto" ? "auto" : "manual";
+}
+
+function isBalanceFresh(balanceUpdatedAt: string | null | undefined): boolean {
+  if (!balanceUpdatedAt) {
+    return false;
+  }
+
+  const updatedAtMs = new Date(balanceUpdatedAt).getTime();
+  if (Number.isNaN(updatedAtMs)) {
+    return false;
+  }
+
+  return Date.now() - updatedAtMs <= PLAID_BALANCE_STALE_MS;
 }
 
 function handlePlaidError(error: unknown, fallback: string): ActionState {
@@ -138,12 +156,10 @@ export async function refreshPlaidBalance(
   try {
     const { user } = await requireAuth("owner");
     const accountId = getAccountId(formData);
+    const refreshMode = getRefreshMode(formData);
 
     if (!accountId) {
       return { success: false, error: "Missing account ID." };
-    }
-    if (!checkRateLimit(`plaidRefresh:${accountId}`, 5, 60_000).allowed) {
-      return { success: false, error: "Too many requests. Please try again later." };
     }
 
     const admin = createAdminClient();
@@ -151,7 +167,7 @@ export async function refreshPlaidBalance(
       canUserAdministerOwnershipAccount(user.id, accountId),
       admin
         .from("ownership_accounts")
-        .select("plaid_access_token, plaid_account_id")
+        .select("plaid_access_token, plaid_account_id, plaid_balance_updated_at")
         .eq("id", accountId)
         .maybeSingle()
     ]);
@@ -182,6 +198,13 @@ export async function refreshPlaidBalance(
 
     if (!account?.plaid_access_token || !account.plaid_account_id) {
       return { success: false, error: "Bank not connected." };
+    }
+
+    if (refreshMode === "auto" && isBalanceFresh(account.plaid_balance_updated_at)) {
+      return { success: true, message: "Balance is already current." };
+    }
+    if (!checkRateLimit(`plaidRefresh:${accountId}`, 5, 60_000).allowed) {
+      return { success: false, error: "Too many requests. Please try again later." };
     }
 
     const { currentCents } = await getBalances(account.plaid_access_token, account.plaid_account_id);

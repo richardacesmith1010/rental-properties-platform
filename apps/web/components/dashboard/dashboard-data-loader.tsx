@@ -110,6 +110,15 @@ function buildPropertyAddress(property: {
   return [property.addressLine1, locality].filter(Boolean).join(", ");
 }
 
+function occursInUtcMonth(value: string, year: number, month: number): boolean {
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime())) {
+    return false;
+  }
+
+  return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month;
+}
+
 function computeFilteredKpis(params: {
   baseKpis: DashboardData["kpis"];
   charges: DashboardData["charges"];
@@ -260,6 +269,13 @@ export function useDashboardData(props: DashboardProps) {
   const safeOwnershipAccounts = useMemo<OwnershipAccountDTO[]>(
     () => props.ownershipAccounts ?? [],
     [props.ownershipAccounts]
+  );
+  const activeOwnershipAccount = useMemo(
+    () =>
+      (props.activeAccountId
+        ? safeOwnershipAccounts.find((account) => account.id === props.activeAccountId)
+        : safeOwnershipAccounts[0]) ?? null,
+    [props.activeAccountId, safeOwnershipAccounts]
   );
   const safeNotifications = props.notifications ?? [];
   const safeInboxThreads = props.inboxThreads ?? [];
@@ -519,6 +535,52 @@ export function useDashboardData(props: DashboardProps) {
       ).length
     };
   }, [displayDashboardData.kpis.monthlyGrossRentCents, filteredPortfolio.units, filteredTickets, selectedProperty]);
+
+  const financialOverviewData = useMemo(() => {
+    const now = new Date();
+    const currentYear = now.getUTCFullYear();
+    const currentMonth = now.getUTCMonth();
+    const currentYearStartIso = `${currentYear}-01-01`;
+    const expensePropertyId = selectedProperty?.id ?? null;
+    const visibleExpenses = expensePropertyId
+      ? safeExpenses.expenses.filter((expense) => expense.propertyId === expensePropertyId)
+      : safeExpenses.expenses;
+    const monthlyExpensesCents = visibleExpenses
+      .filter((expense) => occursInUtcMonth(expense.expenseDate, currentYear, currentMonth))
+      .reduce((sum, expense) => sum + expense.amountCents, 0);
+    const ytdExpensesCents = visibleExpenses
+      .filter((expense) => expense.expenseDate >= currentYearStartIso)
+      .reduce((sum, expense) => sum + expense.amountCents, 0);
+    const ytdIncomeCents = filteredCharges
+      .filter((charge) => charge.status === "paid" && charge.dueDate >= currentYearStartIso)
+      .reduce((sum, charge) => sum + charge.amountCents, 0);
+    const monthlyCollectedCents = displayDashboardData.kpis.collectedRentCents;
+    const monthlyOutstandingCents = displayDashboardData.kpis.outstandingCents;
+
+    return {
+      accountId: activeOwnershipAccount?.id ?? null,
+      plaidConnected: activeOwnershipAccount?.plaidConnected ?? false,
+      bankName: activeOwnershipAccount?.bankName ?? null,
+      bankMask: activeOwnershipAccount?.bankMask ?? null,
+      balanceCents: activeOwnershipAccount?.balanceCents ?? null,
+      balanceUpdatedAt: activeOwnershipAccount?.balanceUpdatedAt ?? null,
+      monthlyCollectedCents,
+      monthlyOutstandingCents,
+      monthlyExpensesCents,
+      netIncomeCents: monthlyCollectedCents - monthlyExpensesCents,
+      ytdIncomeCents,
+      ytdExpensesCents,
+      collectionRate: displayDashboardData.kpis.collectionRate
+    };
+  }, [
+    activeOwnershipAccount,
+    displayDashboardData.kpis.collectedRentCents,
+    displayDashboardData.kpis.collectionRate,
+    displayDashboardData.kpis.outstandingCents,
+    filteredCharges,
+    safeExpenses.expenses,
+    selectedProperty
+  ]);
 
   const allSectionItems = useMemo(
     () =>
@@ -1361,6 +1423,7 @@ export function useDashboardData(props: DashboardProps) {
     resolvedGamification,
     selectedPropertyId,
     selectedPropertySummary,
+    financialOverviewData,
     displayDashboardData,
     filteredPortfolio,
     safePortfolio,

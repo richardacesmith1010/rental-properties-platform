@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useFormState } from "react-dom";
 import { Alert } from "@/components/ui/alert";
 import { SubmitButton } from "@/components/shared/submit-button";
+import { cn } from "@/lib/format";
 import type { ActionState } from "@/app/actions";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
@@ -12,6 +13,10 @@ interface PlaidLinkButtonProps {
   accountId: string;
   onInitiatePlaidLink: StatefulAction;
   onCompletePlaidLink: StatefulAction;
+  className?: string;
+  title?: string;
+  description?: string;
+  buttonLabel?: string;
 }
 
 interface PlaidAccountMetadata {
@@ -84,7 +89,11 @@ function loadPlaidScript(): Promise<void> {
 export function PlaidLinkButton({
   accountId,
   onInitiatePlaidLink,
-  onCompletePlaidLink
+  onCompletePlaidLink,
+  className,
+  title = "Connect this LLC bank account with Plaid.",
+  description = "Link a bank account to surface its balance inside the ownership dashboard.",
+  buttonLabel = "Connect Bank Account"
 }: PlaidLinkButtonProps) {
   const [initiateState, initiateAction] = useFormState(onInitiatePlaidLink, null);
   const [completeState, completeAction] = useFormState(onCompletePlaidLink, null);
@@ -169,11 +178,9 @@ export function PlaidLinkButton({
   }, [completeState]);
 
   return (
-    <div className="mt-3 rounded-xl border border-border bg-card px-4 py-4">
-      <p className="text-sm font-medium text-foreground">Connect this LLC bank account with Plaid.</p>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Link a bank account to surface its balance inside the ownership dashboard.
-      </p>
+    <div className={cn("mt-3 rounded-xl border border-border bg-card px-4 py-4", className)}>
+      <p className="text-sm font-medium text-foreground">{title}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{description}</p>
 
       <form action={initiateAction} className="mt-3">
         <input type="hidden" name="accountId" value={accountId} />
@@ -182,7 +189,7 @@ export function PlaidLinkButton({
           disabled={openingPlaid || Boolean(completionPayload)}
           title="Connect a bank account with Plaid."
         >
-          {openingPlaid ? "Opening Plaid..." : "Connect Bank Account"}
+          {openingPlaid ? "Opening Plaid..." : buttonLabel}
         </SubmitButton>
       </form>
 
