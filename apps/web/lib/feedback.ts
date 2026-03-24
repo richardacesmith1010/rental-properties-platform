@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 export const FEEDBACK_OWNER_EMAIL = "richard.ace.smith@gmail.com";
 
@@ -97,4 +99,25 @@ export function getFeedbackStatusBadgeVariant(status: FeedbackStatus) {
 
 export function getFeedbackSubmitterLabel(entry: Pick<FeedbackEntry, "submitterName" | "email">) {
   return entry.submitterName ?? entry.email ?? "Anonymous";
+}
+
+export async function getNewFeedbackCountForOwner(userEmail?: string | null) {
+  if (!userEmail || userEmail.trim().toLowerCase() !== FEEDBACK_OWNER_EMAIL) {
+    return 0;
+  }
+
+  const admin = createAdminClient();
+  const { count, error } = await admin
+    .from("feedback")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "new");
+
+  if (error) {
+    if (!isMissingSchemaError(error)) {
+      console.error("getNewFeedbackCountForOwner error:", error);
+    }
+    return 0;
+  }
+
+  return count ?? 0;
 }

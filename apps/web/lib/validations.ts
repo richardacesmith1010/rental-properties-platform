@@ -136,6 +136,155 @@ export const createLeaseSchema = z
     path: ["endDate"],
   });
 
+const unifiedSetupPropertySchema = z.object({
+  name: z.string().min(1, "Property name is required."),
+  addressLine1: z.string().min(1, "Street address is required."),
+  city: z.string().min(1, "City is required."),
+  state: z.string().min(1, "State is required."),
+  postalCode: z.string().regex(/^\d{5}(-\d{4})?$/, "Enter a valid 5-digit ZIP code."),
+  propertyType: z.enum([
+    "single_family",
+    "duplex",
+    "triplex",
+    "apartment",
+    "condo",
+    "townhouse"
+  ])
+});
+
+const unifiedSetupUnitSchema = z.object({
+  id: z.string().min(1, "Unit ID is required."),
+  label: z.string().min(1, "Unit label is required."),
+  bedrooms: z.coerce.number().int().min(0, "Bedrooms must be 0 or more."),
+  bathrooms: z.coerce.number().min(0, "Bathrooms must be 0 or more."),
+  squareFeet: optionalPositiveIntegerSchema,
+  monthlyRentDollars: z.coerce.number().positive("Monthly rent must be greater than $0.")
+});
+
+const unifiedSetupLeaseSchema = z
+  .object({
+    hasTenant: z.preprocess(
+      (value) => value === true || value === "true" || value === "on",
+      z.boolean()
+    ),
+    leasedUnitId: z.preprocess(
+      (value) => (value === "" || value == null ? undefined : value),
+      z.string().min(1, "Choose a unit for the lease.").optional()
+    ),
+    tenantEmail: z.preprocess(
+      (value) => (value === "" || value == null ? undefined : value),
+      z.string().email("Enter a valid tenant email.").optional()
+    ),
+    startDate: z.preprocess(
+      (value) => (value === "" || value == null ? undefined : value),
+      isoDateSchema.optional()
+    ),
+    endDate: z.preprocess(
+      (value) => (value === "" || value == null ? undefined : value),
+      isoDateSchema.optional()
+    ),
+    monthlyRentDollars: z.preprocess(
+      (value) => (value === "" || value == null ? undefined : value),
+      z.coerce.number().positive("Monthly rent must be greater than $0.").optional()
+    ),
+    depositDollars: z.preprocess(
+      (value) => (value === "" || value == null ? undefined : value),
+      z.coerce.number().min(0, "Deposit cannot be negative.").optional().default(0)
+    )
+  })
+  .superRefine((data, context) => {
+    if (!data.hasTenant) {
+      return;
+    }
+
+    if (!data.leasedUnitId) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Choose the unit that should receive the lease.",
+        path: ["leasedUnitId"]
+      });
+    }
+
+    if (!data.tenantEmail) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Tenant email is required.",
+        path: ["tenantEmail"]
+      });
+    }
+
+    if (!data.startDate) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Lease start date is required.",
+        path: ["startDate"]
+      });
+    }
+
+    if (!data.endDate) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Lease end date is required.",
+        path: ["endDate"]
+      });
+    }
+
+    if (data.startDate && data.endDate && data.endDate <= data.startDate) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "End date must be after start date.",
+        path: ["endDate"]
+      });
+    }
+
+    if (data.monthlyRentDollars == null || data.monthlyRentDollars <= 0) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Monthly rent must be greater than $0.",
+        path: ["monthlyRentDollars"]
+      });
+    }
+  });
+
+const unifiedPropertySetupPayloadSchema = z
+  .object({
+    property: unifiedSetupPropertySchema,
+    units: z.array(unifiedSetupUnitSchema).min(1, "Add at least one unit."),
+    lease: unifiedSetupLeaseSchema
+  })
+  .superRefine((data, context) => {
+    if (!data.lease.hasTenant) {
+      return;
+    }
+
+    if (!data.units.some((unit) => unit.id === data.lease.leasedUnitId)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "The selected lease unit is no longer in this setup draft.",
+        path: ["lease", "leasedUnitId"]
+      });
+    }
+  });
+
+export const createPropertyWithSetupSchema = z.object({
+  accountId: optionalOwnershipAccountIdSchema,
+  payload: z
+    .string()
+    .min(1, "Setup details are missing.")
+    .transform((value, context) => {
+      try {
+        return JSON.parse(value) as unknown;
+      } catch {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Setup details are invalid."
+        });
+        return z.NEVER;
+      }
+    })
+    .pipe(unifiedPropertySetupPayloadSchema)
+});
+
 export const updateLeaseSchema = z.object({
   leaseId: z.string().uuid("Invalid lease ID."),
   endDate: isoDateSchema,

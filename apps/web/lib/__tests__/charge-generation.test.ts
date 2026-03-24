@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildDueDatesByLeaseId, getCandidateMonths } from "@/lib/charge-generation";
+import {
+  buildDueDatesByLeaseId,
+  getCandidateMonths,
+  isLeaseActiveForChargeMonth
+} from "@/lib/charge-generation";
 
 function setToday(isoDateTime: string) {
   vi.useFakeTimers();
@@ -106,5 +110,85 @@ describe("charge generation", () => {
     );
 
     expect(dueDates.get("lease-4")).toEqual(["2026-04-01"]);
+  });
+
+  it("skips charge months before the lease start month", () => {
+    expect(
+      isLeaseActiveForChargeMonth(
+        {
+          id: "lease-start-guard",
+          unit_id: "unit-1",
+          tenant_profile_id: "tenant-1",
+          start_date: "2026-04-01",
+          end_date: "2027-03-31",
+          created_at: "2026-03-22T12:00:00.000Z",
+          due_day_of_month: 1,
+          monthly_rent_cents: 235000
+        },
+        "2026-03-01"
+      )
+    ).toBe(false);
+  });
+
+  it("skips charge months after the lease end month", () => {
+    expect(
+      isLeaseActiveForChargeMonth(
+        {
+          id: "lease-end-guard",
+          unit_id: "unit-1",
+          tenant_profile_id: "tenant-1",
+          start_date: "2025-04-01",
+          end_date: "2026-03-31",
+          created_at: "2025-03-15T12:00:00.000Z",
+          due_day_of_month: 1,
+          monthly_rent_cents: 235000
+        },
+        "2026-04-01"
+      )
+    ).toBe(false);
+  });
+
+  it("does not backfill a charge into the month before the lease begins", () => {
+    setToday("2026-03-23T12:00:00.000Z");
+
+    const dueDates = buildDueDatesByLeaseId(
+      [
+        {
+          id: "lease-future-start",
+          unit_id: "unit-1",
+          tenant_profile_id: "tenant-1",
+          start_date: "2026-04-01",
+          end_date: "2027-03-31",
+          created_at: "2026-03-23T12:00:00.000Z",
+          due_day_of_month: 1,
+          monthly_rent_cents: 235000
+        }
+      ],
+      "2026-03-23"
+    );
+
+    expect(dueDates.get("lease-future-start")).toEqual(["2026-04-01"]);
+  });
+
+  it("does not generate charges after a lease has already ended", () => {
+    setToday("2026-04-02T12:00:00.000Z");
+
+    const dueDates = buildDueDatesByLeaseId(
+      [
+        {
+          id: "lease-ended",
+          unit_id: "unit-1",
+          tenant_profile_id: "tenant-1",
+          start_date: "2025-04-01",
+          end_date: "2026-03-31",
+          created_at: "2025-03-15T12:00:00.000Z",
+          due_day_of_month: 1,
+          monthly_rent_cents: 235000
+        }
+      ],
+      "2026-04-02"
+    );
+
+    expect(dueDates.has("lease-ended")).toBe(false);
   });
 });

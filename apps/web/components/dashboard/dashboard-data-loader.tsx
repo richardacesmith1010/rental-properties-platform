@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type ComponentProps } from "react";
 import { Bell, Building2, CreditCard, FileText, Receipt, UserPlus } from "lucide-react";
 import { formatDate } from "@/lib/format";
+import { computeActionItems, getNextRentCollectionLabel } from "@/lib/action-items";
 import type { AnalyticsDashboardData } from "@/lib/analytics";
 import type { AuditLogEntry } from "@/lib/audit";
 import type { DashboardData } from "@/lib/dashboard";
@@ -285,7 +286,10 @@ export function useDashboardData(props: DashboardProps) {
   const safeListings = props.listings ?? [];
   const safeApplications = props.applications ?? [];
   const safeManagerPaymentConfigs = props.managerPaymentConfigs ?? [];
-  const safeManagerPayments = props.managerPayments ?? [];
+  const safeManagerPayments = useMemo(
+    () => props.managerPayments ?? [],
+    [props.managerPayments]
+  );
   const safeManagerPaymentManagers = props.managerPaymentManagers ?? [];
   const safeVendors = props.vendors ?? [];
   const sortedVendors = [...safeVendors].sort((left, right) => {
@@ -1000,6 +1004,38 @@ export function useDashboardData(props: DashboardProps) {
       safePortfolio.properties.length
     ]
   );
+  const homeActionItems = useMemo(
+    () =>
+      isOwnerRole
+        ? computeActionItems({
+            charges: displayDashboardData.charges,
+            tickets: filteredTickets,
+            managerPayments: safeManagerPayments,
+            leases: filteredPortfolio.leases,
+            pendingInvitations: props.pendingLlcInvitations ?? [],
+            newFeedbackCount: props.newFeedbackCount ?? 0
+          })
+        : [],
+    [
+      displayDashboardData.charges,
+      filteredPortfolio.leases,
+      filteredTickets,
+      isOwnerRole,
+      props.newFeedbackCount,
+      props.pendingLlcInvitations,
+      safeManagerPayments
+    ]
+  );
+  const nextRentCollectionLabel = useMemo(
+    () =>
+      isOwnerRole
+        ? getNextRentCollectionLabel({
+            charges: displayDashboardData.charges,
+            leases: filteredPortfolio.leases
+          })
+        : null,
+    [displayDashboardData.charges, filteredPortfolio.leases, isOwnerRole]
+  );
 
   const commandPaletteSections = useMemo<CommandPaletteSection[]>(
     () =>
@@ -1458,6 +1494,8 @@ export function useDashboardData(props: DashboardProps) {
     closeTenantInviteWizard,
     ownerOnboarding,
     llcSetupPrompt,
+    homeActionItems,
+    nextRentCollectionLabel,
     ownerWorkflowMode,
     resolvedGamification,
     selectedPropertyId,

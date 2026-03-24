@@ -1,6 +1,7 @@
 import { Dashboard } from "@/components/dashboard";
 import { StripeTestModeBanner } from "@/components/shared/stripe-test-mode-banner";
 import { getDashboardData } from "@/lib/dashboard";
+import { getNewFeedbackCountForOwner } from "@/lib/feedback";
 import { getGeneratedMessage } from "@/lib/format";
 import { getUserNotificationPreferenceSettings } from "@/lib/notification-preferences";
 import { getPortfolioData } from "@/lib/portfolio";
@@ -43,6 +44,7 @@ import {
   submitWithdrawalRequest,
   createCheckoutForCharge,
   createManualCharge,
+  createPropertyWithSetup,
   deletePendingCharge,
   editCharge,
   recordManualPayment,
@@ -222,7 +224,8 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
     gamification,
     analytics,
     auditLogs,
-    rentIncreaseHistory
+    rentIncreaseHistory,
+    newFeedbackCount
   ] = await Promise.all([
     getDashboardData(user.id, activeAccountId),
     getPortfolioData(user.id, activeAccountId),
@@ -264,7 +267,8 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
     getUserGamification(user.id),
     getOwnerAnalyticsData(user.id, activeAccountId),
     getRecentAuditLogs(user.id, activeAccountId),
-    getRentIncreaseHistory(user.id, activeAccountId)
+    getRentIncreaseHistory(user.id, activeAccountId),
+    getNewFeedbackCountForOwner(user.email)
   ]);
 
   const approvedApplicationCount = applications.filter(
@@ -350,6 +354,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         pendingChangeRequests={pendingChangeRequests}
         pendingWithdrawals={pendingWithdrawals}
         financialActivityFeed={financialActivityFeed}
+        newFeedbackCount={newFeedbackCount}
         activeAccountId={activeAccountId}
         currentUserId={user.id}
         capabilities={capabilities}
@@ -364,6 +369,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         ownerConnectedMap={ownerConnectedMap}
         onSignOut={signOut}
         onCreateProperty={createProperty}
+        onCreatePropertyWithSetup={createPropertyWithSetup}
         onCreateUnit={createUnit}
         onCreateLease={createLease}
         onRenameProperty={renameProperty}

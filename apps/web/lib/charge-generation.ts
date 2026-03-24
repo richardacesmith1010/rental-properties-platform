@@ -31,6 +31,27 @@ function toUtcDateIso(value: string) {
   return startOfUtcDay(new Date(value)).toISOString().slice(0, 10);
 }
 
+function monthStartFromIso(value: string) {
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), 1));
+}
+
+export function isLeaseActiveForChargeMonth(lease: LeaseRow, dueDateIso: string) {
+  const chargeMonth = monthStartFromIso(dueDateIso);
+  const leaseStartMonth = monthStartFromIso(lease.start_date);
+
+  if (chargeMonth.getTime() < leaseStartMonth.getTime()) {
+    return false;
+  }
+
+  const leaseEndMonth = monthStartFromIso(lease.end_date);
+  if (chargeMonth.getTime() > leaseEndMonth.getTime()) {
+    return false;
+  }
+
+  return true;
+}
+
 function isDueDateWithinLeaseWindow(lease: LeaseRow, dueDateIso: string) {
   const leaseCreatedIso = toUtcDateIso(lease.created_at);
   return dueDateIso >= leaseCreatedIso && dueDateIso >= lease.start_date && dueDateIso <= lease.end_date;
@@ -64,7 +85,10 @@ export function buildDueDatesByLeaseId(leases: LeaseRow[], todayIso: string) {
     const dueDates = getCandidateMonths(today)
       .map((candidate) => new Date(Date.UTC(candidate.year, candidate.month, lease.due_day_of_month)))
       .map((date) => date.toISOString().slice(0, 10))
-      .filter((date) => isDueDateWithinLeaseWindow(lease, date));
+      .filter(
+        (date) =>
+          isLeaseActiveForChargeMonth(lease, date) && isDueDateWithinLeaseWindow(lease, date)
+      );
     if (dueDates.length > 0) {
       dueDatesByLeaseId.set(lease.id, dueDates);
       continue;
@@ -73,11 +97,14 @@ export function buildDueDatesByLeaseId(leases: LeaseRow[], todayIso: string) {
       continue;
     }
     const fallbackDueDate = nextDueDateOnOrAfterToday(lease.due_day_of_month, todayIso);
-    if (isDueDateWithinLeaseWindow(lease, fallbackDueDate)) {
+    if (
+      isLeaseActiveForChargeMonth(lease, fallbackDueDate) &&
+      isDueDateWithinLeaseWindow(lease, fallbackDueDate)
+    ) {
       dueDatesByLeaseId.set(lease.id, [fallbackDueDate]);
       continue;
     }
-    if (isDueDateWithinLeaseWindow(lease, todayIso)) {
+    if (isLeaseActiveForChargeMonth(lease, todayIso) && isDueDateWithinLeaseWindow(lease, todayIso)) {
       dueDatesByLeaseId.set(lease.id, [todayIso]);
     }
   }

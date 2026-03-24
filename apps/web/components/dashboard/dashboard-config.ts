@@ -55,7 +55,7 @@ export const ownerWorkflowModeMeta: Record<
   },
   new_property: {
     label: "New Property Mode",
-    description: "Step-by-step flow to add a property, add units, and finalize lease setup.",
+    description: "One guided flow to create the property, units, lease, and first tenant invite.",
     sections: ["overview", "operations", "portfolio", "units", "leases", "charges"]
   },
   new_tenant: {
@@ -108,7 +108,7 @@ export const managerWorkflowModeMeta: Record<
   },
   new_property: {
     label: "New Property Mode",
-    description: "Onboard a property with units and leases in order.",
+    description: "Guide a property from address to lease readiness without bouncing between sections.",
     sections: ["overview", "operations", "portfolio", "units", "leases", "charges"]
   },
   new_tenant: {

@@ -99,6 +99,7 @@ export function Dashboard(props: DashboardProps) {
     filteredPortfolio,
     goToNextSection,
     goToPreviousSection,
+    homeActionItems,
     isEmptyOwner,
     isManagerRole,
     isOwnerRole,
@@ -111,10 +112,10 @@ export function Dashboard(props: DashboardProps) {
     llcSetupPrompt,
     occupancy,
     openPropertyWizard,
-    openTenantInviteWizard,
     ownerOnboarding,
     ownerDailyOpsPageCountLabel,
     ownerDailyOpsPageLabel,
+    nextRentCollectionLabel,
     resolvedGamification,
     safePortfolio,
     sectionItems,
@@ -268,18 +269,20 @@ export function Dashboard(props: DashboardProps) {
           {isOwnerRole ? (
             <PropertyWizard
               open={isPropertyWizardOpen}
-              activeAccountId={props.activeAccountId}
-              managers={props.managerPaymentManagers ?? []}
+              accountId={props.activeAccountId}
               onOpenChange={(open) => {
                 if (!open) {
                   closePropertyWizard();
                 }
               }}
-              onCreateProperty={props.onCreateProperty}
-              onCreateUnit={props.onCreateUnit}
-              onInviteManager={props.onInviteManager}
-              onOpenSection={sectionRendererProps.openSection}
-              onOpenTenantInviteWizard={openTenantInviteWizard}
+              onCreatePropertyWithSetup={props.onCreatePropertyWithSetup}
+              onComplete={(propertyId) => {
+                closePropertyWizard();
+                if (propertyId) {
+                  sectionRendererProps.onSelectProperty(propertyId);
+                }
+                sectionRendererProps.openSection("overview");
+              }}
             />
           ) : null}
           {(isOwnerRole || isManagerRole) ? (
@@ -390,16 +393,12 @@ export function Dashboard(props: DashboardProps) {
                     </div>
                   ) : isOwnerDailyOpsHomePage ? (
                     <OwnerDailyOpsHome
-                      kpis={displayDashboardData.kpis}
-                      occupancy={occupancy}
-                      totalXp={resolvedGamification.totalXp}
-                      currentLevel={resolvedGamification.currentLevel}
-                      streakCount={resolvedGamification.streakCount}
-                      modeLabel={activeWorkflowMeta?.label ?? "Daily Operations Mode"}
-                      modeDescription={
-                        activeWorkflowMeta?.description ??
-                        "Daily owner runbook: revenue risk, payments, maintenance, and alerts."
-                      }
+                      actionItems={homeActionItems}
+                      nextCollectionLabel={nextRentCollectionLabel}
+                      onOpenSection={sectionRendererProps.openSection}
+                      onSendBatchPaymentReminder={props.onSendBatchPaymentReminder}
+                      onWaiveCharge={props.onWaiveCharge}
+                      onMarkManagerPaymentPaid={props.onMarkManagerPaymentPaid}
                       financialOverview={financialOverviewData}
                       llcSetupPrompt={
                         showLlcSetupPrompt

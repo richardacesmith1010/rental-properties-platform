@@ -44,6 +44,7 @@ export { updateProfile } from "./profile";
 export { uploadAvatar } from "./profile";
 
 export { createProperty } from "./properties";
+export { createPropertyWithSetup } from "./unified-setup";
 export { updateProperty } from "./properties";
 export { renameProperty } from "./properties";
 export { deleteProperty } from "./properties";

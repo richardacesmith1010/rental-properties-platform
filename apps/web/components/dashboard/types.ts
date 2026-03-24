@@ -63,6 +63,7 @@ export interface DashboardProps {
   pendingChangeRequests?: DistributionChangeRequestDTO[];
   pendingWithdrawals?: WithdrawalRequestDTO[];
   financialActivityFeed?: FinancialActivityEvent[];
+  newFeedbackCount?: number;
   listings?: RentalListingDTO[];
   applications?: ApplicationDTO[];
   managerPaymentConfigs?: ManagerPaymentConfigDTO[];
@@ -89,6 +90,7 @@ export interface DashboardProps {
   onGenerateChargesHref?: string;
   onSignOut: FormAction;
   onCreateProperty: StatefulAction;
+  onCreatePropertyWithSetup?: StatefulAction;
   onCreateUnit: StatefulAction;
   onCreateLease: StatefulAction;
   onRenameProperty?: StatefulAction;

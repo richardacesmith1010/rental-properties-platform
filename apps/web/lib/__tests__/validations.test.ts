@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   createPropertySchema,
+  createPropertyWithSetupSchema,
   createUnitSchema,
   createLeaseSchema,
   updateLeaseSchema,
@@ -529,6 +530,88 @@ describe("createLeaseSchema", () => {
       lateFeeDollars: "-5"
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("createPropertyWithSetupSchema", () => {
+  const validPayload = {
+    property: {
+      name: "1st Home",
+      addressLine1: "131 Chaste Tree Circle",
+      city: "Springfield",
+      state: "IL",
+      postalCode: "62701",
+      propertyType: "single_family"
+    },
+    units: [
+      {
+        id: "unit-a",
+        label: "Unit A",
+        bedrooms: 2,
+        bathrooms: 1,
+        squareFeet: 900,
+        monthlyRentDollars: 2350
+      }
+    ],
+    lease: {
+      hasTenant: true,
+      leasedUnitId: "unit-a",
+      tenantEmail: "tenant@example.com",
+      startDate: "2026-04-01",
+      endDate: "2027-03-31",
+      monthlyRentDollars: 2350,
+      depositDollars: 1000
+    }
+  };
+
+  it("accepts a valid unified property setup payload", () => {
+    const result = createPropertyWithSetupSchema.safeParse({
+      accountId: "550e8400-e29b-41d4-a716-446655440000",
+      payload: JSON.stringify(validPayload)
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("requires tenant details when the lease step says a tenant exists", () => {
+    const result = createPropertyWithSetupSchema.safeParse({
+      payload: JSON.stringify({
+        ...validPayload,
+        lease: {
+          ...validPayload.lease,
+          tenantEmail: ""
+        }
+      })
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects lease units that are not part of the unit draft list", () => {
+    const result = createPropertyWithSetupSchema.safeParse({
+      payload: JSON.stringify({
+        ...validPayload,
+        lease: {
+          ...validPayload.lease,
+          leasedUnitId: "missing-unit"
+        }
+      })
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("allows property setup without a tenant or lease dates", () => {
+    const result = createPropertyWithSetupSchema.safeParse({
+      payload: JSON.stringify({
+        ...validPayload,
+        lease: {
+          hasTenant: false
+        }
+      })
+    });
+
+    expect(result.success).toBe(true);
   });
 });
 
