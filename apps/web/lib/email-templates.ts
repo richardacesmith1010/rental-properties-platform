@@ -1,3 +1,5 @@
+import { getFeedbackTypeMeta, type FeedbackType } from "@/lib/feedback";
+
 export interface EmailTemplateParams {
   title: string;
   body: string;
@@ -43,6 +45,15 @@ interface PropertyMessageEmailParams {
   propertyName: string;
   messageContent: string;
   dashboardUrl: string;
+}
+
+interface FeedbackEmailParams {
+  type: FeedbackType;
+  message: string;
+  email: string | null;
+  userName: string | null;
+  userRole: string | null;
+  pageUrl: string;
 }
 
 export interface TenantInviteEmailParams {
@@ -407,4 +418,63 @@ export function buildInvoiceEmailTemplate({
 
 export function buildManagerPaymentEmail(params: ManagerPaymentEmailParams) {
   return buildInvoiceEmailTemplate(params);
+}
+
+export function buildFeedbackEmail({
+  type,
+  message,
+  email,
+  userName,
+  userRole,
+  pageUrl
+}: FeedbackEmailParams) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com";
+  const typeMeta = getFeedbackTypeMeta(type);
+  const subjectLabel =
+    type === "bug" ? "Bug report" : type === "feature" ? "Feature request" : "Feedback";
+  const submitter = userName ?? email ?? "Anonymous";
+  const fromLine = [email, userRole ? `(${userRole})` : null].filter(Boolean).join(" ");
+  const safeMessage = escapeHtml(message).replaceAll("\n", "<br />");
+  const subject = `[Domus Feedback] ${subjectLabel} from ${submitter}`;
+  const opsUrl = `${appUrl}/ops?section=feedback`;
+
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+  <body style="margin:0;padding:24px;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;margin:0 auto;border-collapse:collapse;">
+      <tr>
+        <td style="padding:24px;border:1px solid #e2e8f0;border-radius:20px;background:#ffffff;">
+          <div style="font-size:20px;font-weight:700;color:#111827;">${typeMeta.emoji} ${escapeHtml(subjectLabel)}</div>
+          <div style="margin-top:16px;font-size:14px;line-height:1.7;color:#334155;">
+            <p style="margin:0;"><strong>From:</strong> ${escapeHtml(submitter)}${fromLine ? ` - ${escapeHtml(fromLine)}` : ""}</p>
+            <p style="margin:8px 0 0 0;"><strong>Page:</strong> ${escapeHtml(pageUrl)}</p>
+            <p style="margin:8px 0 0 0;"><strong>Type:</strong> ${escapeHtml(typeMeta.label)}</p>
+          </div>
+          <div style="margin-top:20px;padding:16px;border-radius:16px;border:1px solid #e2e8f0;background:#f8fafc;font-size:14px;line-height:1.7;color:#0f172a;">
+            ${safeMessage}
+          </div>
+          <div style="margin-top:24px;">
+            <a href="${escapeHtml(opsUrl)}" style="display:inline-block;border-radius:999px;background:#7c3aed;padding:12px 20px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;">
+              View all feedback
+            </a>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`.trim();
+
+  const text = [
+    `${typeMeta.emoji} ${subjectLabel}`,
+    `From: ${submitter}${fromLine ? ` - ${fromLine}` : ""}`,
+    `Page: ${pageUrl}`,
+    `Type: ${typeMeta.label}`,
+    "",
+    message,
+    "",
+    `View all feedback: ${opsUrl}`
+  ].join("\n");
+
+  return { subject, html, text };
 }

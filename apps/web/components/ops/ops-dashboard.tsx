@@ -2,11 +2,15 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Activity, CheckCircle2, ExternalLink, RefreshCcw, XCircle } from "lucide-react";
+import { Activity, CheckCircle2, ExternalLink, MessageCircleMore, RefreshCcw, XCircle } from "lucide-react";
+import type { StatefulAction } from "@/app/actions";
+import { FeedbackViewer } from "@/components/ops/feedback-viewer";
 import { Alert } from "@/components/ui/alert";
+import { AnimatedTabs } from "@/components/ui/animated-tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
+import type { FeedbackEntry } from "@/lib/feedback";
 import { formatDateTime, formatRelativeTime } from "@/lib/format";
 import type { EnvSummary } from "@/lib/env";
 
@@ -47,6 +51,10 @@ interface OpsDashboardProps {
   envSummary: EnvSummary;
   initialCronRuns: OpsCronRun[];
   initialCronWarning?: string | null;
+  initialFeedback: FeedbackEntry[];
+  initialFeedbackWarning?: string | null;
+  onUpdateFeedbackStatus: StatefulAction;
+  initialTab?: "overview" | "feedback";
 }
 
 function statusVariant(status: string) {
@@ -67,10 +75,19 @@ function healthVariant(ok: boolean) {
   return ok ? ("success" as const) : ("destructive" as const);
 }
 
-export function OpsDashboard({ envSummary, initialCronRuns, initialCronWarning }: OpsDashboardProps) {
+export function OpsDashboard({
+  envSummary,
+  initialCronRuns,
+  initialCronWarning,
+  initialFeedback,
+  initialFeedbackWarning,
+  onUpdateFeedbackStatus,
+  initialTab = "overview"
+}: OpsDashboardProps) {
   const [health, setHealth] = useState<HealthData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"overview" | "feedback">(initialTab);
 
   const fetchHealth = useCallback(async () => {
     setLoading(true);
@@ -129,7 +146,30 @@ export function OpsDashboard({ envSummary, initialCronRuns, initialCronWarning }
         {error ? <Alert variant="warning">{error}</Alert> : null}
         {initialCronWarning ? <Alert variant="warning">{initialCronWarning}</Alert> : null}
 
-        <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+        <div className="rounded-2xl border border-border/70 bg-card px-4 py-2">
+          <AnimatedTabs
+            tabs={[
+              { id: "overview", label: "Overview", icon: <Activity className="h-4 w-4" /> },
+              {
+                id: "feedback",
+                label: `Feedback (${initialFeedback.length})`,
+                icon: <MessageCircleMore className="h-4 w-4" />
+              }
+            ]}
+            activeTab={activeTab}
+            onTabChange={(tabId) => setActiveTab(tabId as "overview" | "feedback")}
+          />
+        </div>
+
+        {activeTab === "feedback" ? (
+          <FeedbackViewer
+            items={initialFeedback}
+            warning={initialFeedbackWarning}
+            onUpdateStatus={onUpdateFeedbackStatus}
+          />
+        ) : (
+          <>
+            <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
           <Card>
             <CardHeader className="flex flex-row items-start justify-between gap-3">
               <div>
@@ -217,9 +257,9 @@ export function OpsDashboard({ envSummary, initialCronRuns, initialCronWarning }
               </Link>
             </CardContent>
           </Card>
-        </div>
+            </div>
 
-        <Card>
+            <Card>
           <CardHeader>
             <CardTitle>Environment Status</CardTitle>
             <p className="mt-1 text-sm text-zinc-500">
@@ -253,9 +293,9 @@ export function OpsDashboard({ envSummary, initialCronRuns, initialCronWarning }
               ))}
             </div>
           </CardContent>
-        </Card>
+            </Card>
 
-        <Card>
+            <Card>
           <CardHeader>
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -332,7 +372,9 @@ export function OpsDashboard({ envSummary, initialCronRuns, initialCronWarning }
               </div>
             )}
           </CardContent>
-        </Card>
+            </Card>
+          </>
+        )}
       </div>
     </main>
   );
