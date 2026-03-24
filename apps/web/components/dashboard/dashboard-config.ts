@@ -49,6 +49,7 @@ export const ownerWorkflowModeMeta: Record<
       "maintenance",
       "leases",
       "manager-payments",
+      "members",
       "analytics"
     ]
   },
@@ -142,6 +143,7 @@ interface BuildAllSectionItemsParams {
   hasLeasingSection: boolean;
   hasApplicationsSection: boolean;
   hasManagerPaymentsSection: boolean;
+  hasMembersSection: boolean;
   hasInboxSection: boolean;
   hasAutomationsSection: boolean;
   hasNotificationsSection: boolean;
@@ -213,6 +215,16 @@ export function buildAllSectionItems(params: BuildAllSectionItemsParams): NavIte
       icon: Banknote,
       description: "Recurring fees, reimbursements, and manager invoices.",
       clickHint: "open manager payments"
+    });
+  }
+
+  if (params.hasMembersSection) {
+    items.push({
+      id: "members",
+      label: "Members",
+      icon: UserPlus,
+      description: "LLC members, join codes, and distribution controls.",
+      clickHint: "open LLC members"
     });
   }
 
@@ -352,7 +364,11 @@ export function buildAllSectionItems(params: BuildAllSectionItemsParams): NavIte
   return items;
 }
 
-export function getOwnerModeNavItems(params?: { hasAnalyticsSection?: boolean }): NavItem[] {
+export function getOwnerModeNavItems(params?: {
+  hasAnalyticsSection?: boolean;
+  hasManagerPaymentsSection?: boolean;
+  hasMembersSection?: boolean;
+}): NavItem[] {
   const items: NavItem[] = [
     {
       id: "owner:daily_ops",
@@ -401,13 +417,25 @@ export function getOwnerModeNavItems(params?: { hasAnalyticsSection?: boolean })
     });
   }
 
-  items.push({
-    id: "manager-payments",
-    label: "Manager Payments",
-    icon: Banknote,
-    description: "Recurring manager fees, reimbursements, and invoices.",
-    clickHint: "open manager payments"
-  });
+  if (params?.hasManagerPaymentsSection) {
+    items.push({
+      id: "manager-payments",
+      label: "Manager Payments",
+      icon: Banknote,
+      description: "Recurring manager fees, reimbursements, and invoices.",
+      clickHint: "open manager payments"
+    });
+  }
+
+  if (params?.hasMembersSection) {
+    items.push({
+      id: "members",
+      label: "Members",
+      icon: UserPlus,
+      description: "Invite LLC members, share join codes, and manage splits.",
+      clickHint: "open LLC members"
+    });
+  }
 
   return items;
 }

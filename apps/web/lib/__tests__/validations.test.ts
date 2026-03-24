@@ -56,6 +56,7 @@ import {
   deleteExpenseSchema,
   setupLlcAccountSchema,
   joinLlcByCodeSchema,
+  removeOwnershipMemberSchema,
   renameOwnershipAccountSchema,
   requestDeleteLlcSchema,
   voteOnAccountRenameSchema,
@@ -1743,6 +1744,22 @@ describe("owner onboarding schemas", () => {
   it("rejects LLC join codes that are not 6 characters", () => {
     const result = joinLlcByCodeSchema.safeParse({
       joinCode: "ABC12"
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts valid ownership member removal payloads", () => {
+    const result = removeOwnershipMemberSchema.safeParse({
+      accountId: "550e8400-e29b-41d4-a716-446655440000",
+      profileId: "550e8400-e29b-41d4-a716-446655440001"
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid ownership member removal payloads", () => {
+    const result = removeOwnershipMemberSchema.safeParse({
+      accountId: "not-a-uuid",
+      profileId: "still-not-a-uuid"
     });
     expect(result.success).toBe(false);
   });

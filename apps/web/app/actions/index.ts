@@ -88,6 +88,7 @@ export { inviteTenant, resendInvite, revokeInvite } from "./tenant-invitations";
 
 export { createOwnershipAccount } from "./ownership";
 export { addOwnershipMember } from "./ownership";
+export { removeOwnershipMember } from "./ownership";
 export { linkPropertyToOwnershipAccount } from "./ownership";
 export {
   renameOwnershipAccount,

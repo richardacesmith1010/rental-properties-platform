@@ -77,6 +77,11 @@ describe("pluralize", () => {
   it("supports custom plural forms", () => {
     expect(pluralize(2, "person", "people")).toBe("2 people");
   });
+
+  it("handles y-ending nouns with ies by default", () => {
+    expect(pluralize(0, "property")).toBe("0 properties");
+    expect(pluralize(2, "property")).toBe("2 properties");
+  });
 });
 
 describe("formatRelativeTime", () => {

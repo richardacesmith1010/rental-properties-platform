@@ -14,7 +14,11 @@ import { SectionErrorBoundary } from "./section-error-boundary";
 import type { SectionRendererProps } from "./section-map";
 
 function PropertyScopeControl({ props }: { props: SectionRendererProps }) {
-  if (props.data.profileRole !== "owner" || props.availableProperties.length === 0) {
+  if (
+    props.data.profileRole !== "owner" ||
+    props.availableProperties.length === 0 ||
+    props.activeSection === "members"
+  ) {
     return null;
   }
 

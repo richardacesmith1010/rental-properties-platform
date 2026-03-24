@@ -92,6 +92,7 @@ export interface SectionRendererProps {
   hasLeasingSection: boolean;
   hasApplicationsSection: boolean;
   hasManagerPaymentsSection: boolean;
+  hasMembersSection: boolean;
   hasInboxSection: boolean;
   hasAutomationsSection: boolean;
   hasNotificationsSection: boolean;
@@ -156,6 +157,7 @@ export interface SectionRendererProps {
   onCreateOwnershipAccount?: StatefulAction;
   onLinkPropertyToOwnershipAccount?: StatefulAction;
   onRenameOwnershipAccount?: StatefulAction;
+  onRemoveOwnershipMember?: StatefulAction;
   onVoteOnAccountRename?: StatefulAction;
   onRequestDeleteLLC?: StatefulAction;
   onVoteOnDeleteLLC?: StatefulAction;
@@ -233,6 +235,11 @@ const LazyOwnershipSection = dynamic(
   { loading: () => createElement(SectionSkeleton) }
 );
 
+const LazyMembersSection = dynamic(
+  () => import("./members-section").then((module) => ({ default: module.MembersSection })),
+  { loading: () => createElement(SectionSkeleton) }
+);
+
 const LazyAutomationTemplatesSection = dynamic(
   () => import("./automation-templates-section").then((module) => ({ default: module.AutomationTemplatesSection })),
   { loading: () => createElement(SectionSkeleton) }
@@ -243,5 +250,6 @@ export const lazySectionComponents = {
   inbox: LazyInboxSection,
   documents: LazyDocumentsSection,
   ownership: LazyOwnershipSection,
+  members: LazyMembersSection,
   automations: LazyAutomationTemplatesSection
 } as const;

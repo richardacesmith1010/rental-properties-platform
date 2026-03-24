@@ -3,6 +3,7 @@
 import { FinancialOverviewPanel } from "@/components/dashboard/financial-overview-panel";
 import { GamificationSummary } from "@/components/gamification/gamification-summary";
 import { KpiGrid } from "@/components/dashboard/kpi-grid";
+import { LlcSetupPrompt } from "@/components/dashboard/llc-setup-prompt";
 import { RentCollectionBar } from "@/components/dashboard/rent-collection-bar";
 import type { DashboardData } from "@/lib/dashboard";
 import type { StatefulAction } from "./types";
@@ -30,6 +31,13 @@ interface OwnerDailyOpsHomeProps {
     ytdExpensesCents: number;
     collectionRate: number;
   };
+  llcSetupPrompt?: {
+    accountName: string;
+    memberCount: number;
+    propertyCount: number;
+    onInviteMembers: () => void;
+    onAddProperty: () => void;
+  } | null;
   onInitiatePlaidLink?: StatefulAction;
   onCompletePlaidLink?: StatefulAction;
   onRefreshPlaidBalance?: StatefulAction;
@@ -45,11 +53,26 @@ export function OwnerDailyOpsHome({
   modeLabel,
   modeDescription,
   financialOverview,
+  llcSetupPrompt,
   onInitiatePlaidLink,
   onCompletePlaidLink,
   onRefreshPlaidBalance,
   onDisconnectPlaid
 }: OwnerDailyOpsHomeProps) {
+  if (llcSetupPrompt) {
+    return (
+      <div className="flex min-h-full flex-col justify-center py-1 sm:py-4">
+        <LlcSetupPrompt
+          accountName={llcSetupPrompt.accountName}
+          memberCount={llcSetupPrompt.memberCount}
+          propertyCount={llcSetupPrompt.propertyCount}
+          onInviteMembers={llcSetupPrompt.onInviteMembers}
+          onAddProperty={llcSetupPrompt.onAddProperty}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-full flex-col gap-3 py-1 sm:gap-4">
       <KpiGrid

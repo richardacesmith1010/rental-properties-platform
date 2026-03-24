@@ -131,6 +131,18 @@ export function generateJoinCode(): string {
   ).join("");
 }
 
+export async function getUniqueOwnershipJoinCode(maxAttempts = 10): Promise<string | null> {
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const candidate = generateJoinCode();
+    const existing = await findAccountByJoinCode(candidate);
+    if (!existing) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
 export async function getOwnershipAccountsForUser(userId: string): Promise<OwnershipAccountDTO[]> {
   const admin = createAdminClient();
 

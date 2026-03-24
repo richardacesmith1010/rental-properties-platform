@@ -153,6 +153,7 @@ export interface DashboardProps {
   onCreateOwnershipAccount?: StatefulAction;
   onLinkPropertyToOwnershipAccount?: StatefulAction;
   onRenameOwnershipAccount?: StatefulAction;
+  onRemoveOwnershipMember?: StatefulAction;
   onVoteOnAccountRename?: StatefulAction;
   onRequestDeleteLLC?: StatefulAction;
   onVoteOnDeleteLLC?: StatefulAction;

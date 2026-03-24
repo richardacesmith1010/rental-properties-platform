@@ -108,6 +108,7 @@ export function Dashboard(props: DashboardProps) {
     isPropertyWizardOpen,
     isTenantInviteWizardOpen,
     layoutProps,
+    llcSetupPrompt,
     occupancy,
     openPropertyWizard,
     openTenantInviteWizard,
@@ -143,6 +144,9 @@ export function Dashboard(props: DashboardProps) {
     ? `${activeSectionIndex + 1} of ${sectionItems.length}`
     : null;
   const showOwnerDailyOpsShell = isOwnerRole && isOwnerDailyOpsEnabled;
+  const showLlcSetupPrompt = Boolean(
+    isOwnerRole && isOwnerDailyOpsEnabled && isOwnerDailyOpsHomePage && llcSetupPrompt.shouldShow
+  );
   const statusSummary = overdueCharges.length > 0
     ? `${overdueCharges.length} overdue charge${overdueCharges.length === 1 ? "" : "s"}`
     : urgentTicketCount > 0
@@ -190,6 +194,7 @@ export function Dashboard(props: DashboardProps) {
   const showOwnerOnboarding =
     isOwnerRole &&
     ownerOnboarding.shouldShow &&
+    !showLlcSetupPrompt &&
     !isOnboardingDismissed &&
     (isOwnerDailyOpsEnabled ? isOwnerDailyOpsHomePage : activeSection === "overview");
 
@@ -396,6 +401,17 @@ export function Dashboard(props: DashboardProps) {
                         "Daily owner runbook: revenue risk, payments, maintenance, and alerts."
                       }
                       financialOverview={financialOverviewData}
+                      llcSetupPrompt={
+                        showLlcSetupPrompt
+                          ? {
+                              accountName: llcSetupPrompt.accountName,
+                              memberCount: llcSetupPrompt.memberCount,
+                              propertyCount: llcSetupPrompt.propertyCount,
+                              onInviteMembers: () => sectionRendererProps.openSection("members"),
+                              onAddProperty: openPropertyWizard
+                            }
+                          : null
+                      }
                       onInitiatePlaidLink={props.onInitiatePlaidLink}
                       onCompletePlaidLink={props.onCompletePlaidLink}
                       onRefreshPlaidBalance={props.onRefreshPlaidBalance}

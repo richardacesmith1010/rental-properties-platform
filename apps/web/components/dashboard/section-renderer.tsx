@@ -34,6 +34,7 @@ const {
   inbox: InboxSection,
   documents: DocumentsSection,
   ownership: OwnershipSection,
+  members: MembersSection,
   automations: AutomationTemplatesSection
 } = lazySectionComponents;
 export function SectionRenderer(props: SectionRendererProps) {
@@ -50,6 +51,10 @@ export function SectionRenderer(props: SectionRendererProps) {
     props.approvedApplicationCount ??
     props.safeApplications.filter((application) => application.status === "approved").length;
   const totalApplicationCount = props.applicationCount ?? props.safeApplications.length;
+  const activeOwnershipAccount =
+    (props.activeAccountId
+      ? props.safeOwnershipAccounts.find((account) => account.id === props.activeAccountId)
+      : props.safeOwnershipAccounts[0]) ?? null;
   const renderSection = (sectionName: string, content: ReactNode) => (
     <SectionFrame props={props} sectionName={sectionName}>
       {content}
@@ -263,6 +268,22 @@ export function SectionRenderer(props: SectionRendererProps) {
             }
           />
         )
+      );
+
+    case "members":
+      if (!props.hasMembersSection) break;
+      return renderSection(
+        "Members",
+        <MembersSection
+          account={activeOwnershipAccount}
+          members={props.ownershipMembers ?? []}
+          currentUserId={props.currentUserId}
+          onRenameOwnershipAccount={props.onRenameOwnershipAccount}
+          onRemoveOwnershipMember={props.onRemoveOwnershipMember}
+          onUpdateDistributionConfig={props.onUpdateDistributionConfig}
+          onSubmitDistributionChangeRequest={props.onSubmitDistributionChangeRequest}
+          onInitiateMemberPayoutConnect={props.onInitiateMemberPayoutConnect}
+        />
       );
 
     case "invitations":

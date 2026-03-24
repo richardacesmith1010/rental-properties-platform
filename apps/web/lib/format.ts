@@ -63,7 +63,20 @@ export function formatDateTime(value: string | Date | null | undefined): string 
   return dateTimeFormatter.format(parsed);
 }
 
-export function pluralize(count: number, singular: string, plural = `${singular}s`): string {
+function inferPluralForm(singular: string) {
+  const lower = singular.toLowerCase();
+  if (
+    lower.endsWith("y") &&
+    singular.length > 1 &&
+    !"aeiou".includes(lower.charAt(lower.length - 2))
+  ) {
+    return `${singular.slice(0, -1)}ies`;
+  }
+
+  return `${singular}s`;
+}
+
+export function pluralize(count: number, singular: string, plural = inferPluralForm(singular)): string {
   return `${count} ${count === 1 ? singular : plural}`;
 }
 

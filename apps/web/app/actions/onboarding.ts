@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
   findAccountByJoinCode,
-  generateJoinCode,
+  getUniqueOwnershipJoinCode,
   getOrCreateIndividualOwnershipAccount
 } from "@/lib/ownership";
 import {
@@ -15,18 +15,6 @@ import {
 } from "@/lib/validations";
 import { requireAuth } from "./auth-helpers";
 import { ensureCapabilityEnabled, type ActionState } from "./shared";
-
-async function getUniqueJoinCode(): Promise<string | null> {
-  for (let attempt = 0; attempt < 10; attempt += 1) {
-    const candidate = generateJoinCode();
-    const existing = await findAccountByJoinCode(candidate);
-    if (!existing) {
-      return candidate;
-    }
-  }
-
-  return null;
-}
 
 export async function setupIndividualAccount(
   _prev: ActionState,
@@ -77,7 +65,7 @@ export async function setupLlcAccount(
     return parsed;
   }
 
-  const joinCode = await getUniqueJoinCode();
+  const joinCode = await getUniqueOwnershipJoinCode();
   if (!joinCode) {
     return { success: false, error: "Failed to generate a unique join code. Please try again." };
   }

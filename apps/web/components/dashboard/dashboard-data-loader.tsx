@@ -61,6 +61,7 @@ const OWNER_SECTION_MODE_BY_ID: Partial<Record<string, OwnerWorkflowMode>> = {
   units: "records",
   leases: "daily_ops",
   "manager-payments": "daily_ops",
+  members: "daily_ops",
   leasing: "new_tenant",
   invitations: "new_tenant",
   vendors: "new_manager",
@@ -330,14 +331,11 @@ export function useDashboardData(props: DashboardProps) {
   const hasExpensesSection = Boolean(
     canManagePortfolio && props.onCreateExpense && props.onUpdateExpense && props.onDeleteExpense
   );
-  const hasManagerPaymentsSection = Boolean(
+  const hasManagerPaymentsSection = Boolean(isOwnerRole && safeManagerPaymentManagers.length > 0);
+  const hasMembersSection = Boolean(
     isOwnerRole &&
-      (props.onSetupManagerPaymentConfig ||
-        props.onRecordManagerPayment ||
-        safeManagerPaymentConfigs.length > 0 ||
-        safeManagerPayments.length > 0 ||
-        safeManagerPaymentManagers.length > 0 ||
-        props.managerPaymentsWarning)
+      safeCapabilities.ownershipEnabled &&
+      activeOwnershipAccount?.accountType === "llc"
   );
   const hasAnalyticsSection = Boolean(canManagePortfolio && safeAnalytics.enabled);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(() => {
@@ -594,6 +592,7 @@ export function useDashboardData(props: DashboardProps) {
         hasLeasingSection,
         hasApplicationsSection,
         hasManagerPaymentsSection,
+        hasMembersSection,
         hasInboxSection,
         hasAutomationsSection,
         hasNotificationsSection,
@@ -613,6 +612,7 @@ export function useDashboardData(props: DashboardProps) {
       hasLeasingSection,
       hasApplicationsSection,
       hasManagerPaymentsSection,
+      hasMembersSection,
       hasInboxSection,
       hasAutomationsSection,
       hasNotificationsSection,
@@ -624,8 +624,15 @@ export function useDashboardData(props: DashboardProps) {
     ]
   );
   const ownerModeNavItems = useMemo(
-    () => (isOwnerRole ? getOwnerModeNavItems({ hasAnalyticsSection }) : []),
-    [hasAnalyticsSection, isOwnerRole]
+    () =>
+      isOwnerRole
+        ? getOwnerModeNavItems({
+            hasAnalyticsSection,
+            hasManagerPaymentsSection,
+            hasMembersSection
+          })
+        : [],
+    [hasAnalyticsSection, hasManagerPaymentsSection, hasMembersSection, isOwnerRole]
   );
   const managerModeNavItems = useMemo(
     () => (isManagerRole ? getManagerModeNavItems() : []),
@@ -879,7 +886,7 @@ export function useDashboardData(props: DashboardProps) {
       ? managerModeNavItems
       : sectionItems;
   const sidebarActiveItemId = isOwnerRole
-    ? activeSection === "analytics" || activeSection === "manager-payments"
+    ? activeSection === "analytics" || activeSection === "manager-payments" || activeSection === "members"
       ? activeSection
       : `owner:${ownerWorkflowMode}`
     : isManagerRole
@@ -970,6 +977,29 @@ export function useDashboardData(props: DashboardProps) {
     safePortfolio.properties.length,
     safePortfolio.units.length
   ]);
+  const activeOwnershipMembers = useMemo(
+    () => (props.ownershipMembers ?? []).filter((member) => member.active),
+    [props.ownershipMembers]
+  );
+  const llcSetupPrompt = useMemo(
+    () => ({
+      shouldShow:
+        isOwnerRole &&
+        activeOwnershipAccount?.accountType === "llc" &&
+        activeOwnershipMembers.length <= 1 &&
+        safePortfolio.properties.length === 0,
+      accountName: activeOwnershipAccount?.displayName ?? "Your LLC",
+      memberCount: activeOwnershipMembers.length,
+      propertyCount: safePortfolio.properties.length
+    }),
+    [
+      activeOwnershipAccount?.accountType,
+      activeOwnershipAccount?.displayName,
+      activeOwnershipMembers.length,
+      isOwnerRole,
+      safePortfolio.properties.length
+    ]
+  );
 
   const commandPaletteSections = useMemo<CommandPaletteSection[]>(
     () =>
@@ -1166,6 +1196,10 @@ export function useDashboardData(props: DashboardProps) {
       openSection("manager-payments");
       return;
     }
+    if (itemId === "members" && isOwnerRole) {
+      openSection("members");
+      return;
+    }
     if (itemId === "notifications") {
       if (isOwnerRole) {
         setOwnerWorkflowMode("records");
@@ -1336,6 +1370,7 @@ export function useDashboardData(props: DashboardProps) {
     hasLeasingSection,
     hasApplicationsSection,
     hasManagerPaymentsSection,
+    hasMembersSection,
     hasInboxSection,
     hasAutomationsSection,
     hasNotificationsSection,
@@ -1422,6 +1457,7 @@ export function useDashboardData(props: DashboardProps) {
     openTenantInviteWizard,
     closeTenantInviteWizard,
     ownerOnboarding,
+    llcSetupPrompt,
     ownerWorkflowMode,
     resolvedGamification,
     selectedPropertyId,

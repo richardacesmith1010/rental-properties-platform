@@ -10,6 +10,7 @@ export const OWNER_DAILY_OPS_SECTION_IDS = [
   "maintenance",
   "leases",
   "manager-payments",
+  "members",
   "analytics"
 ] as const;
 

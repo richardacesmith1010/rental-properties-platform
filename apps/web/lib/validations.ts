@@ -1064,6 +1064,11 @@ export const addOwnershipMemberSchema = z.object({
   canReceiveCriticalAlerts: z.coerce.boolean().optional()
 });
 
+export const removeOwnershipMemberSchema = z.object({
+  accountId: z.string().uuid("Invalid ownership account."),
+  profileId: z.string().uuid("Invalid member profile.")
+});
+
 export const linkPropertyToOwnershipAccountSchema = z.object({
   propertyId: z.string().uuid("Invalid property."),
   ownershipAccountId: z.string().uuid("Invalid ownership account.")

@@ -97,6 +97,7 @@ import {
   deleteExpense,
   createOwnershipAccount,
   linkPropertyToOwnershipAccount,
+  removeOwnershipMember,
   renameOwnershipAccount,
   voteOnAccountRename,
   requestDeleteLLC,
@@ -414,6 +415,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         onCreateOwnershipAccount={createOwnershipAccount}
         onLinkPropertyToOwnershipAccount={linkPropertyToOwnershipAccount}
         onRenameOwnershipAccount={renameOwnershipAccount}
+        onRemoveOwnershipMember={removeOwnershipMember}
         onVoteOnAccountRename={voteOnAccountRename}
         onRequestDeleteLLC={requestDeleteLLC}
         onVoteOnDeleteLLC={voteOnDeleteLLC}
