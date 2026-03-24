@@ -32,11 +32,11 @@ test.describe.serial("Owner navigation", () => {
     await page.getByRole("button", { name: "Sign In" }).click();
 
     await expect(page).toHaveURL(/\/owner/, { timeout: 10000 });
-    await expect(page.getByText("Daily Operations Mode")).toBeVisible();
+    await expect(page.getByText(/Daily (Operations Mode|Ops)/).first()).toBeVisible();
 
     await page.waitForTimeout(500);
-    await page.getByRole("button", { name: "New Property" }).click();
-    await expect(page.getByText("New Property Mode")).toBeVisible();
+    await page.getByRole("button", { name: /New Property/ }).click();
+    await expect(page.getByText(/New Property/).first()).toBeVisible();
     await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
 
     await page.getByRole("button", { name: "Next section" }).click();

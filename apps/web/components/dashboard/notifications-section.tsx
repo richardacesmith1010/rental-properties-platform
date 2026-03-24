@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useFormState } from "react-dom";
-import { Bell } from "lucide-react";
+import { Bell, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SubmitButton } from "@/components/shared/submit-button";
@@ -69,9 +69,9 @@ export function NotificationsSection({
                 size="sm"
                 variant="outline"
                 disabled={unreadCount === 0}
-                title="Mark every unread notification as read."
+                title="Clear every unread notification."
               >
-                Mark all as read
+                Clear all
               </SubmitButton>
             </form>
           ) : null}
@@ -179,12 +179,15 @@ function EnhancedNotificationRow({
             <form action={action} className="flex flex-col items-start gap-1 md:items-end">
               <input type="hidden" name="notificationId" value={notification.id} />
               <SubmitButton size="sm" variant="outline" title="Mark this notification as read.">
-                Mark read
+                <span className="flex items-center gap-2">
+                  <X className="h-3.5 w-3.5" />
+                  Dismiss
+                </span>
               </SubmitButton>
               {state && !state.success ? (
                 <p className="text-xs text-red-500">{state.error}</p>
               ) : null}
-              {state && state.success ? <p className="text-xs text-emerald-600">Marked read.</p> : null}
+              {state && state.success ? <p className="text-xs text-emerald-600">Dismissed.</p> : null}
             </form>
           ) : null}
         </div>
@@ -214,10 +217,13 @@ function LegacyNotificationRow({
           <form action={action} className="flex flex-col items-start gap-1 sm:items-end">
             <input type="hidden" name="notificationId" value={notification.id} />
             <SubmitButton size="sm" variant="outline" title="Mark this notification as read.">
-              Mark read
+              <span className="flex items-center gap-2">
+                <X className="h-3.5 w-3.5" />
+                Dismiss
+              </span>
             </SubmitButton>
             {state && !state.success ? <p className="text-xs text-red-500">{state.error}</p> : null}
-            {state && state.success ? <p className="text-xs text-emerald-600">Marked read.</p> : null}
+            {state && state.success ? <p className="text-xs text-emerald-600">Dismissed.</p> : null}
           </form>
         ) : (
           <Badge variant="outline">Read</Badge>

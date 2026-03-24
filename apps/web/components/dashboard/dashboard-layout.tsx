@@ -3,7 +3,8 @@
 import type { ReactNode } from "react";
 import { MobileTopBar, SidebarNav, type NavItem } from "./sidebar-nav";
 import type { GlobalSearchItem } from "./global-search";
-import type { FormAction } from "./types";
+import type { FormAction, StatefulAction } from "./types";
+import type { NotificationDTO } from "@/lib/notifications";
 
 export interface DashboardLayoutProps {
   children: ReactNode;
@@ -20,6 +21,9 @@ export interface DashboardLayoutProps {
   activeItemId?: string;
   onSelectItem?: (id: string) => void;
   unreadNotificationCount?: number;
+  notifications?: NotificationDTO[];
+  onDismissNotification?: StatefulAction;
+  onClearAllNotifications?: StatefulAction;
   searchItems?: GlobalSearchItem[];
   onOpenCommandPalette?: () => void;
   commandPaletteEnabled?: boolean;
@@ -42,6 +46,9 @@ export function DashboardLayout({
   activeItemId,
   onSelectItem,
   unreadNotificationCount = 0,
+  notifications = [],
+  onDismissNotification,
+  onClearAllNotifications,
   searchItems = [],
   onOpenCommandPalette,
   commandPaletteEnabled = false,
@@ -60,6 +67,9 @@ export function DashboardLayout({
     activeItemId,
     onSelectItem,
     unreadNotificationCount,
+    notifications,
+    onDismissNotification,
+    onClearAllNotifications,
     searchItems,
     onOpenCommandPalette,
     commandPaletteEnabled,

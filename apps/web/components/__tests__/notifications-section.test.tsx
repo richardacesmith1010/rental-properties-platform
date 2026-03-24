@@ -63,13 +63,13 @@ describe("NotificationsSection", () => {
     expect(screen.getByText("1 unread")).toBeInTheDocument();
   });
 
-  it("renders a mark read button for unread notifications", () => {
+  it("renders a dismiss button for unread notifications", () => {
     render(<NotificationsSection notifications={[notifications[0]]} onMarkRead={async () => null} />);
 
-    expect(screen.getByRole("button", { name: "Mark read" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /dismiss/i })).toBeInTheDocument();
   });
 
-  it("renders a mark all read button when onMarkAllRead is provided", () => {
+  it("renders a clear all button when onMarkAllRead is provided", () => {
     render(
       <NotificationsSection
         notifications={notifications}
@@ -78,7 +78,7 @@ describe("NotificationsSection", () => {
       />
     );
 
-    expect(screen.getByRole("button", { name: "Mark all as read" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Clear all" })).toBeInTheDocument();
   });
 
   it("groups owner notifications and renders section action links in enhanced mode", () => {

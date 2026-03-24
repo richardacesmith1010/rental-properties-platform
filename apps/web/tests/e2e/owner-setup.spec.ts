@@ -33,7 +33,7 @@ test.describe.serial("Owner setup flow", () => {
     await page.waitForTimeout(500);
     await page.getByRole("button", { name: /Individual Landlord/ }).click();
 
-    await expect(page).toHaveURL(/\/owner(?:\?.*)?$/, { timeout: 15000 });
+    await expect(page).toHaveURL(/\/owner(\/setup)?(\?.*)?$/, { timeout: 15000 });
     await page.waitForLoadState("networkidle").catch(() => {});
     await page.waitForFunction(() => {
       const text = document.body.innerText || "";

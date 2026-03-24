@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { Analytics } from "@vercel/analytics/react";
 import { InstallPromptBanner } from "@/components/pwa/install-prompt";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SonnerProvider } from "@/components/ui/sonner-provider";
@@ -94,6 +95,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
           <InstallPromptBanner />
           <SonnerProvider />
+          <Analytics />
         </ThemeProvider>
       </body>
     </html>

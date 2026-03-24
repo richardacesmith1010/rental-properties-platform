@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { LifeBuoy, LogOut, Settings } from "lucide-react";
@@ -69,7 +69,7 @@ export function UserMenuPopover({
       return;
     }
 
-    function handlePointerDown(event: MouseEvent) {
+    function handlePointerDown(event: MouseEvent | TouchEvent) {
       if (!containerRef.current?.contains(event.target as Node)) {
         setOpen(false);
       }
@@ -82,9 +82,11 @@ export function UserMenuPopover({
     }
 
     document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
     document.addEventListener("keydown", handleEscape);
     return () => {
       document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
       document.removeEventListener("keydown", handleEscape);
     };
   }, [open]);
@@ -104,11 +106,17 @@ export function UserMenuPopover({
       ? "bottom-full mb-2 left-0"
       : "top-full mt-2 right-0";
 
+  const handleToggle = (event: ReactMouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setOpen((current) => !current);
+  };
+
   return (
     <div ref={containerRef} className={cn("relative", compact ? "shrink-0" : "w-full")}>
       <button
         type="button"
-        onClick={() => setOpen((current) => !current)}
+        onClick={handleToggle}
         className={cn(
           "flex items-center gap-2.5 rounded-xl border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2",
           compact
@@ -116,6 +124,7 @@ export function UserMenuPopover({
             : "w-full border-white/15 bg-white/5 px-3 py-2.5 text-left text-white/85 hover:bg-white/12 focus-visible:ring-offset-slate-900"
         )}
         title="Open user menu."
+        aria-expanded={open}
       >
         <Avatar avatarUrl={avatarUrl} displayName={displayName} />
         <div className="min-w-0 flex-1">

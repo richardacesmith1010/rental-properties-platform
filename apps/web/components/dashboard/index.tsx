@@ -336,7 +336,9 @@ export function Dashboard(props: DashboardProps) {
             <CompactGreetingBar
               userName={displayName}
               statusSummary={statusSummary}
-              unreadNotificationCount={layoutProps.unreadNotificationCount}
+              notifications={layoutProps.notifications}
+              onDismissNotification={layoutProps.onDismissNotification}
+              onClearAllNotifications={layoutProps.onClearAllNotifications}
               onOpenSettings={() => router.push("/settings")}
               onOpenNotifications={() => sectionRendererProps.openSection("notifications")}
             />

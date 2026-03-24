@@ -1,12 +1,17 @@
 "use client";
 
-import { Bell, Settings } from "lucide-react";
+import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { NotificationDTO } from "@/lib/notifications";
+import { NotificationBellMenu } from "@/components/dashboard/notification-bell-menu";
+import type { StatefulAction } from "./types";
 
 interface CompactGreetingBarProps {
   userName: string;
   statusSummary: string;
-  unreadNotificationCount?: number;
+  notifications?: NotificationDTO[];
+  onDismissNotification?: StatefulAction;
+  onClearAllNotifications?: StatefulAction;
   onOpenSettings?: () => void;
   onOpenNotifications?: () => void;
 }
@@ -21,7 +26,9 @@ function getTimeOfDayGreeting(date = new Date()): string {
 export function CompactGreetingBar({
   userName,
   statusSummary,
-  unreadNotificationCount = 0,
+  notifications = [],
+  onDismissNotification,
+  onClearAllNotifications,
   onOpenSettings,
   onOpenNotifications
 }: CompactGreetingBarProps) {
@@ -37,24 +44,14 @@ export function CompactGreetingBar({
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-10 w-10 rounded-full"
-          onClick={onOpenNotifications}
-          title="Open notifications."
-          aria-label="Open notifications"
-        >
-          <div className="relative">
-            <Bell className="h-4 w-4" />
-            {unreadNotificationCount > 0 ? (
-              <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-[1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-semibold text-white">
-                {unreadNotificationCount}
-              </span>
-            ) : null}
-          </div>
-        </Button>
+        <NotificationBellMenu
+          notifications={notifications}
+          onDismissNotification={onDismissNotification}
+          onClearAllNotifications={onClearAllNotifications}
+          onOpenNotifications={onOpenNotifications}
+          triggerClassName="inline-flex h-10 w-10 items-center justify-center rounded-full text-zinc-600 transition hover:bg-zinc-100/70 hover:text-zinc-900"
+          panelClassName="w-[min(24rem,calc(100vw-2rem))]"
+        />
         <Button
           type="button"
           variant="ghost"

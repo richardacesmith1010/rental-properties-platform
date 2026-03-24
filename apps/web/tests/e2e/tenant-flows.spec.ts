@@ -10,8 +10,8 @@ test.describe("Tenant flows", () => {
   test("loads tenant dashboard welcome", async ({ page }) => {
     await loginTenantOrSkip(page);
 
-    await expect(page.getByRole("heading", { name: /Welcome home/ })).toBeVisible();
-    await expect(page.getByText("Riverside Apartments")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Good (morning|afternoon|evening),/i })).toBeVisible();
+    await expect(page.getByText("Riverside Apartments").first()).toBeVisible();
   });
 
   test("shows charges and payment history", async ({ page }) => {

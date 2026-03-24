@@ -4,11 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { Drawer } from "vaul";
-import { Bell, Menu, Search, type LucideIcon } from "lucide-react";
+import { Menu, Search, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GlobalSearch, type GlobalSearchItem } from "@/components/dashboard/global-search";
+import { NotificationBellMenu } from "@/components/dashboard/notification-bell-menu";
 import { MobileDrawer } from "@/components/ui/mobile-drawer";
 import { useDomusTheme } from "@/components/theme-provider";
+import type { NotificationDTO } from "@/lib/notifications";
 import {
   getDisplayName,
   getNavTitle,
@@ -19,6 +21,7 @@ import {
   type NavItem
 } from "./nav-items";
 import { MobileUserFooter, SidebarUserFooter } from "./user-footer";
+import type { StatefulAction } from "../types";
 
 interface SidebarNavProps {
   userEmail: string;
@@ -33,6 +36,9 @@ interface SidebarNavProps {
   activeItemId?: string;
   onSelectItem?: (id: string) => void;
   unreadNotificationCount?: number;
+  notifications?: NotificationDTO[];
+  onDismissNotification?: StatefulAction;
+  onClearAllNotifications?: StatefulAction;
   searchItems?: GlobalSearchItem[];
   onOpenCommandPalette?: () => void;
   commandPaletteEnabled?: boolean;
@@ -184,7 +190,10 @@ export function SidebarNav({
   items,
   activeItemId,
   onSelectItem,
-  unreadNotificationCount = 0,
+  unreadNotificationCount: _unreadNotificationCount = 0,
+  notifications = [],
+  onDismissNotification,
+  onClearAllNotifications,
   searchItems = [],
   onOpenCommandPalette,
   commandPaletteEnabled = false,
@@ -198,40 +207,23 @@ export function SidebarNav({
   const showWorkspaceButton = pathname !== workspacePath;
   const notificationHref = role === "tenant" ? "/tenant?section=notifications" : `${workspacePath}#notifications`;
 
-  const notificationButton = onSelectItem ? (
-    <button
-      type="button"
-      onClick={() => onSelectItem("notifications")}
-      className="sidebar-shell-button relative flex items-center justify-center px-2 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-      title="Open notifications."
-      aria-label="Open notifications"
-    >
-      <Bell className="h-3.5 w-3.5" />
-      {unreadNotificationCount > 0 ? (
-        <span className="absolute -right-1 -top-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white">
-          {unreadNotificationCount}
-        </span>
-      ) : null}
-    </button>
-  ) : (
-    <a
-      href={notificationHref}
-      className="sidebar-shell-button relative flex items-center justify-center px-2 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-      title="Open notifications."
-      aria-label="Open notifications"
-    >
-      <Bell className="h-3.5 w-3.5" />
-      {unreadNotificationCount > 0 ? (
-        <span className="absolute -right-1 -top-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white">
-          {unreadNotificationCount}
-        </span>
-      ) : null}
-    </a>
+  const notificationButton = (
+    <NotificationBellMenu
+      notifications={notifications}
+      onDismissNotification={onDismissNotification}
+      onClearAllNotifications={onClearAllNotifications}
+      onOpenNotifications={onSelectItem ? () => onSelectItem("notifications") : undefined}
+      notificationsHref={notificationHref}
+      triggerClassName="sidebar-shell-button relative flex items-center justify-center px-2 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+      iconClassName="h-3.5 w-3.5"
+      badgeClassName="absolute -right-1 -top-1 min-w-[1.1rem] px-1 text-[10px]"
+      panelClassName="w-[20rem]"
+    />
   );
 
   return (
-    <aside className="gradient-sidebar hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-[260px] lg:flex-shrink-0 lg:flex-col">
-      <div className="flex items-center justify-between gap-3 px-5 pb-4 pt-6">
+    <aside className="gradient-sidebar hidden min-h-0 lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-[260px] lg:flex-shrink-0 lg:flex-col">
+      <div className="shrink-0 flex items-center justify-between gap-3 px-5 pb-4 pt-6">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/[0.18] text-lg font-bold text-white shadow-lg shadow-violet-950/25 backdrop-blur-sm">
             D
@@ -243,7 +235,7 @@ export function SidebarNav({
         {notificationButton}
       </div>
 
-      <div className="space-y-3 px-4 pb-4">
+      <div className="shrink-0 space-y-3 px-4 pb-4">
         {commandPaletteEnabled && onOpenCommandPalette ? (
           <CommandPaletteTrigger onOpen={onOpenCommandPalette} />
         ) : searchItems.length > 0 ? (
@@ -289,6 +281,9 @@ export function MobileTopBar({
   onSignOut,
   onSelectItem,
   unreadNotificationCount = 0,
+  notifications = [],
+  onDismissNotification,
+  onClearAllNotifications,
   searchItems = [],
   onOpenCommandPalette,
   commandPaletteEnabled = false,
@@ -308,6 +303,9 @@ export function MobileTopBar({
   | "onSignOut"
   | "onSelectItem"
   | "unreadNotificationCount"
+  | "notifications"
+  | "onDismissNotification"
+  | "onClearAllNotifications"
   | "searchItems"
   | "onOpenCommandPalette"
   | "commandPaletteEnabled"
@@ -344,36 +342,17 @@ export function MobileTopBar({
               <Search className="h-5 w-5" />
             </button>
           ) : null}
-          {onSelectItem ? (
-            <button
-              type="button"
-              onClick={() => onSelectItem("notifications")}
-              className="sidebar-shell-button relative flex h-11 w-11 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-              title="Open notifications."
-              aria-label="Open notifications"
-            >
-              <Bell className="h-3.5 w-3.5" />
-              {unreadNotificationCount > 0 ? (
-                <span className="absolute -right-1 -top-1 inline-flex min-w-[1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-semibold text-white">
-                  {unreadNotificationCount}
-                </span>
-              ) : null}
-            </button>
-          ) : (
-            <a
-              href={notificationHref}
-              className="sidebar-shell-button relative flex h-11 w-11 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-              title="Open notifications."
-              aria-label="Open notifications"
-            >
-              <Bell className="h-3.5 w-3.5" />
-              {unreadNotificationCount > 0 ? (
-                <span className="absolute -right-1 -top-1 inline-flex min-w-[1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-semibold text-white">
-                  {unreadNotificationCount}
-                </span>
-              ) : null}
-            </a>
-          )}
+          <NotificationBellMenu
+            notifications={notifications}
+            onDismissNotification={onDismissNotification}
+            onClearAllNotifications={onClearAllNotifications}
+            onOpenNotifications={onSelectItem ? () => onSelectItem("notifications") : undefined}
+            notificationsHref={notificationHref}
+            triggerClassName="sidebar-shell-button relative flex h-11 w-11 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+            iconClassName="h-3.5 w-3.5"
+            badgeClassName="absolute -right-1 -top-1 min-w-[1rem] px-1 text-[9px]"
+            panelClassName="right-0 w-[min(22rem,calc(100vw-1.5rem))]"
+          />
 
           <MobileUserFooter
             displayName={displayName}
@@ -397,8 +376,8 @@ export function MobileTopBar({
               </button>
             }
           >
-            <div className="flex max-h-[calc(100svh-2rem)] flex-col space-y-4 overflow-y-auto pr-1">
-              <div className="flex items-center justify-between gap-3 pb-1">
+            <div className="flex max-h-[calc(100svh-2rem)] min-h-0 flex-col pr-1">
+              <div className="shrink-0 flex items-center justify-between gap-3 pb-1">
                 <div>
                   <p className="text-sm font-semibold text-white">{displayName}</p>
                   <p className="text-xs uppercase tracking-[0.18em] sidebar-shell-muted">{role}</p>
@@ -408,32 +387,37 @@ export function MobileTopBar({
                 </Badge>
               </div>
 
-              {commandPaletteEnabled && onOpenCommandPalette ? (
-                <CommandPaletteTrigger onOpen={onOpenCommandPalette} />
-              ) : searchItems.length > 0 ? (
-                <GlobalSearch items={searchItems} />
-              ) : null}
-              {accountSwitcher}
-
-              <div className="grid grid-cols-1 gap-2">
-                {showWorkspaceButton ? (
-                  <Drawer.Close asChild>
-                    <Link
-                      href={workspacePath}
-                      className="sidebar-shell-button rounded-xl px-3 py-2 text-sm font-semibold"
-                      title="Return to your main workspace for this role."
-                    >
-                      {role === "owner" ? "Owner Workspace" : role === "manager" ? "Manager Workspace" : "Tenant Workspace"}
-                    </Link>
-                  </Drawer.Close>
+              <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
+                {commandPaletteEnabled && onOpenCommandPalette ? (
+                  <CommandPaletteTrigger onOpen={onOpenCommandPalette} />
+                ) : searchItems.length > 0 ? (
+                  <GlobalSearch items={searchItems} />
                 ) : null}
+                {accountSwitcher}
+
+                <div className="grid grid-cols-1 gap-2">
+                  {showWorkspaceButton ? (
+                    <Drawer.Close asChild>
+                      <Link
+                        href={workspacePath}
+                        className="sidebar-shell-button rounded-xl px-3 py-2 text-sm font-semibold"
+                        title="Return to your main workspace for this role."
+                      >
+                        {role === "owner" ? "Owner Workspace" : role === "manager" ? "Manager Workspace" : "Tenant Workspace"}
+                      </Link>
+                    </Drawer.Close>
+                  ) : null}
+                </div>
+
+                <nav
+                  aria-label="Main navigation"
+                  className="min-h-0 flex-1 space-y-1 overflow-y-auto rounded-2xl border border-white/[0.12] bg-white/[0.07] p-2"
+                >
+                  <NavList navItems={navItems} activeItemId={activeItemId} onSelectItem={onSelectItem} mobile />
+                </nav>
+
+                <ThemeToggleGroup />
               </div>
-
-              <nav aria-label="Main navigation" className="space-y-1 rounded-2xl border border-white/[0.12] bg-white/[0.07] p-2">
-                <NavList navItems={navItems} activeItemId={activeItemId} onSelectItem={onSelectItem} mobile />
-              </nav>
-
-              <ThemeToggleGroup />
             </div>
           </MobileDrawer>
         </div>

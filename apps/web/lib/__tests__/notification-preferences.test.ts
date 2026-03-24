@@ -52,7 +52,7 @@ describe("notification preference helpers", () => {
       resolveNotificationDeliveryPreference(
         {
           preferences: { ...DEFAULT_NOTIFICATION_EMAIL_PREFERENCES },
-          pausedUntil: "2026-03-23T12:00:00.000Z",
+          pausedUntil: "9999-12-31T23:59:59.000Z",
           schemaReady: true
         },
         "rent_due_reminder"

@@ -112,21 +112,25 @@ describe("ChargesSection", () => {
     expect(screen.getByText("Reminder sent Mar 15, 2026")).toBeInTheDocument();
   });
 
-  it("shows a delete action for pending charges when a delete action is provided", () => {
+  it("shows labeled charge actions in the more menu when charge management is available", () => {
     render(
       <ChargesSection
         charges={charges}
         onPayCharge={async () => {}}
+        onEditCharge={async () => ({ success: true })}
+        onWaiveCharge={async () => ({ success: true })}
         onDeletePendingCharge={async () => ({ success: true })}
       />
     );
 
-    expect(
-      screen.getByRole("button", { name: /delete charge for atlas house/i })
-    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Open more charge actions" }));
+
+    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Waive" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
   });
 
-  it("does not show a delete action for paid charges", () => {
+  it("does not show the more menu for paid charges", () => {
     render(
       <ChargesSection
         charges={[paidCharge]}
@@ -135,9 +139,7 @@ describe("ChargesSection", () => {
       />
     );
 
-    expect(
-      screen.queryByRole("button", { name: /delete pending charge/i })
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open more charge actions" })).not.toBeInTheDocument();
   });
 
   it("opens a confirmation dialog before deleting a pending charge", () => {
@@ -145,11 +147,14 @@ describe("ChargesSection", () => {
       <ChargesSection
         charges={charges}
         onPayCharge={async () => {}}
+        onEditCharge={async () => ({ success: true })}
+        onWaiveCharge={async () => ({ success: true })}
         onDeletePendingCharge={async () => ({ success: true })}
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /delete charge for atlas house/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Open more charge actions" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
     expect(screen.getByRole("dialog", { name: "Delete Charge?" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Delete Charge" })).toBeInTheDocument();

@@ -4,52 +4,28 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useFormState } from "react-dom";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CircleOff, CreditCard, Mail, MessageSquare, Pencil, Plus, Trash2 } from "lucide-react";
+import { CreditCard, Plus } from "lucide-react";
 import { toast } from "sonner";
 import type { ActionState } from "@/app/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DataRow } from "@/components/shared/data-row";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { BatchToolbar } from "@/components/dashboard/batch-toolbar";
-import { SubmitButton } from "@/components/shared/submit-button";
-import { Input } from "@/components/ui/input";
 import { AutopayCard } from "./autopay-card";
 import { AnimatedList } from "@/components/ui/animated-list";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Alert } from "@/components/ui/alert";
-import { getStatusClasses, statusAriaLabel, statusBadgeClasses } from "@/lib/status-colors";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { ChargeEditModal } from "./charge-edit-modal";
 import { ChargeCreateForm } from "./charge-create-form";
 import { ComposeMessageModal } from "./compose-message-modal";
-import { chargeCategoryLabel, type ChargeCategory } from "@/lib/charge-audit";
+import { ChargeRow, getChargeLabel, type ChargeRowData, type ChargeStatus } from "./charge-row";
 
-type ChargeStatus = "pending" | "paid" | "late" | "waived";
 type ChargeFilter = "all" | ChargeStatus;
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
-interface Charge {
-  id: string;
-  leaseId?: string;
-  propertyId: string;
-  tenantProfileId?: string | null;
-  dueDate: string;
-  amountCents: number;
-  status: ChargeStatus;
-  propertyName?: string;
-  propertyLabel?: string;
-  unitNumber?: string;
-  tenantName?: string;
-  tenantEmail?: string | null;
-  category?: ChargeCategory;
-  notes?: string | null;
-  reminderSentAt?: string | null;
-  latestEditedAt?: string | null;
-  latestEditedByName?: string | null;
-  editedCount?: number;
-}
+type Charge = ChargeRowData;
 
 interface ChargeLeaseOption {
   id: string;
@@ -110,20 +86,6 @@ function InlineAlert({ state, defaultMessage }: { state: ActionState; defaultMes
       {state.error}
     </Alert>
   );
-}
-
-function getChargeLabel(charge: Charge) {
-  if (charge.propertyLabel) {
-    return charge.propertyLabel;
-  }
-
-  const propertyName = charge.propertyName ?? "Unknown Property";
-  const unitNumber = charge.unitNumber ?? "-";
-  return `${propertyName} • ${unitNumber}`;
-}
-
-function statusLabel(status: ChargeStatus) {
-  return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
 function csvEscape(value: string) {
@@ -518,214 +480,43 @@ export function ChargesSection({
                 const canModify = !isTenantView && (charge.status === "pending" || charge.status === "late");
 
                 return (
-                  <DataRow key={charge.id} last={index === visibleCharges.length - 1}>
-                    {batchActionsEnabled ? (
-                      <div className="flex items-start pt-0.5">
-                        <input
-                          type="checkbox"
-                          checked={selectedChargeIds.has(charge.id)}
-                          onChange={(event) => toggleChargeSelection(charge.id, event.target.checked)}
-                          className="h-4 w-4 rounded border-zinc-300 text-violet-600 focus:ring-violet-500"
-                          aria-label={`Select charge for ${getChargeLabel(charge)}`}
-                          title={`Select ${getChargeLabel(charge)}.`}
-                        />
-                      </div>
-                    ) : null}
-
-                    <div className="min-w-0 flex-1">
-                      <p className="text-base font-medium text-foreground">{getChargeLabel(charge)}</p>
-                      {!isTenantView && charge.tenantName ? (
-                        <div className="mt-0.5 flex items-center gap-2 text-sm text-muted-foreground">
-                          <p>{charge.tenantName}</p>
-                          {onSendMessageToTenant && charge.tenantProfileId ? (
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="ghost"
-                              className="h-7 w-7 rounded-md"
-                              onClick={() => setActiveMessageChargeId(charge.id)}
-                              title={`Message ${charge.tenantName}`}
-                              aria-label={`Message ${charge.tenantName}`}
-                            >
-                              <MessageSquare className="h-3.5 w-3.5" />
-                            </Button>
-                          ) : null}
-                        </div>
-                      ) : null}
-                      <p className="mt-0.5 text-sm text-muted-foreground">Due {formatDate(charge.dueDate)}</p>
-                      {charge.notes ? (
-                        <p className="mt-0.5 text-sm text-muted-foreground">{charge.notes}</p>
-                      ) : null}
-                      {!isTenantView && charge.reminderSentAt ? (
-                        <p className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
-                          <Mail className="h-3 w-3" aria-hidden="true" />
-                          Reminder sent {formatDate(charge.reminderSentAt)}
-                        </p>
-                      ) : null}
-                      {!isTenantView && charge.editedCount ? (
-                        <p
-                          className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground"
-                          title={
-                            charge.latestEditedAt && charge.latestEditedByName
-                              ? `Last edited by ${charge.latestEditedByName} on ${formatDate(charge.latestEditedAt)}`
-                              : "Charge has been edited."
-                          }
-                        >
-                          Edited {charge.editedCount}x
-                        </p>
-                      ) : null}
-
-                      {showManualPayment && manualFormOpen && charge.status !== "paid" && charge.status !== "waived" ? (
-                        <form action={recordManualPaymentAction} className="mt-3 grid gap-3 sm:grid-cols-4">
-                          <input type="hidden" name="chargeId" value={charge.id} />
-                          <div className="space-y-1">
-                            <label className="block text-xs font-medium text-zinc-600" htmlFor={`manual-payment-amount-${charge.id}`}>
-                              Amount
-                            </label>
-                            <Input
-                              id={`manual-payment-amount-${charge.id}`}
-                              name="amountDollars"
-                              type="number"
-                              min={0.01}
-                              step="0.01"
-                              defaultValue={(charge.amountCents / 100).toFixed(2)}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="block text-xs font-medium text-zinc-600" htmlFor={`manual-payment-method-${charge.id}`}>
-                              Method
-                            </label>
-                            <select
-                              id={`manual-payment-method-${charge.id}`}
-                              name="method"
-                              className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm"
-                              defaultValue="cash"
-                              title="Select manual payment method."
-                            >
-                              <option value="cash">Cash</option>
-                              <option value="check">Check</option>
-                              <option value="ach">ACH</option>
-                              <option value="other">Other</option>
-                            </select>
-                          </div>
-                          <div className="space-y-1">
-                            <label className="block text-xs font-medium text-zinc-600" htmlFor={`manual-payment-reference-${charge.id}`}>
-                              Reference Note
-                            </label>
-                            <Input id={`manual-payment-reference-${charge.id}`} name="referenceNote" placeholder="Optional" />
-                          </div>
-                          <div>
-                            <SubmitButton size="sm" variant="outline" title="Record this manual payment.">
-                              Save Payment
-                            </SubmitButton>
-                          </div>
-                        </form>
-                      ) : null}
-                    </div>
-
-                    <div className="flex flex-col items-end gap-2">
-                      <div className="text-right">
-                        <p className="text-base font-medium text-foreground">{formatCurrency(charge.amountCents)}</p>
-                        <div className="mt-0.5 flex items-center justify-end gap-1">
-                          <span
-                            className={statusBadgeClasses(charge.status)}
-                            aria-label={statusAriaLabel(charge.status, "Charge status")}
-                          >
-                            <span
-                              aria-hidden="true"
-                              className={`h-1.5 w-1.5 rounded-full ${getStatusClasses(charge.status).dot}`}
-                            />
-                            {statusLabel(charge.status)}
-                          </span>
-                          {category !== "rent" ? (
-                            <Badge variant="outline">{chargeCategoryLabel(category)}</Badge>
-                          ) : null}
-                        </div>
-                      </div>
-
-                      {charge.status !== "paid" && charge.status !== "waived" ? (
-                        paymentsAvailable ? (
-                          <form action={onPayCharge}>
-                            <input type="hidden" name="chargeId" value={charge.id} />
-                            <SubmitButton
-                              size="sm"
-                              title={isTenantView ? "Open secure checkout to pay this charge." : "Open secure checkout for this charge."}
-                            >
-                              {isTenantView ? "Pay with Card" : "Pay now"}
-                            </SubmitButton>
-                          </form>
-                        ) : (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled
-                            title={
-                              stripeConfigured
-                                ? "Online payment unavailable - property owner hasn't connected their bank account."
-                                : "Online payment unavailable - Stripe is not configured."
-                            }
-                          >
-                            {isTenantView ? "Pay with Card" : "Pay now"}
-                          </Button>
-                        )
-                      ) : null}
-
-                      {showManualPayment && charge.status !== "paid" && charge.status !== "waived" ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={manualFormOpen ? "default" : "outline"}
-                          onClick={() => setManualPaymentChargeId((current) => (current === charge.id ? null : charge.id))}
-                          title="Record a manual payment for this charge."
-                        >
-                          {manualFormOpen ? "Cancel" : "Record Payment"}
-                        </Button>
-                      ) : null}
-
-                      {canModify && onEditCharge ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setActiveEditChargeId(charge.id)}
-                          title="Edit this charge."
-                        >
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit
-                        </Button>
-                      ) : null}
-
-                      {canModify && onWaiveCharge ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={isMutatingCharges}
-                          onClick={() => handleWaiveCharge(charge.id)}
-                          title="Waive this charge."
-                        >
-                          <CircleOff className="mr-2 h-4 w-4" />
-                          Waive
-                        </Button>
-                      ) : null}
-
-                      {canModify && onDeletePendingCharge ? (
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="outline"
-                          disabled={isMutatingCharges}
-                          aria-label={`Delete charge for ${getChargeLabel(charge)}`}
-                          title={`Delete the ${charge.status} charge for ${getChargeLabel(charge)}.`}
-                          onClick={() => setConfirmDeleteChargeId(charge.id)}
-                        >
-                          <Trash2 className="h-4 w-4" aria-hidden="true" />
-                        </Button>
-                      ) : null}
-                    </div>
-                  </DataRow>
+                  <ChargeRow
+                    key={charge.id}
+                    charge={charge}
+                    last={index === visibleCharges.length - 1}
+                    batchActionsEnabled={batchActionsEnabled}
+                    selected={selectedChargeIds.has(charge.id)}
+                    onToggleSelection={(checked) => toggleChargeSelection(charge.id, checked)}
+                    canModify={canModify}
+                    category={category}
+                    isTenantView={isTenantView}
+                    paymentsAvailable={paymentsAvailable}
+                    stripeConfigured={stripeConfigured}
+                    onPayCharge={onPayCharge}
+                    showManualPayment={showManualPayment}
+                    manualFormOpen={manualFormOpen}
+                    manualPaymentAction={recordManualPaymentAction}
+                    onToggleManualPayment={() =>
+                      setManualPaymentChargeId((current) => (current === charge.id ? null : charge.id))
+                    }
+                    onOpenEdit={
+                      canModify && onEditCharge ? () => setActiveEditChargeId(charge.id) : undefined
+                    }
+                    onWaive={
+                      canModify && onWaiveCharge ? () => handleWaiveCharge(charge.id) : undefined
+                    }
+                    onDelete={
+                      canModify && onDeletePendingCharge
+                        ? () => setConfirmDeleteChargeId(charge.id)
+                        : undefined
+                    }
+                    onOpenMessage={
+                      onSendMessageToTenant && charge.tenantProfileId && charge.tenantName
+                        ? () => setActiveMessageChargeId(charge.id)
+                        : undefined
+                    }
+                    isMutatingCharges={isMutatingCharges}
+                  />
                 );
               })}
             </AnimatedList>

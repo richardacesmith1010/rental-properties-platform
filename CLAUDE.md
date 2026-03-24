@@ -73,6 +73,17 @@ Claude must verify at 4 levels:
 - UX behavior aligns with user intent
 - output matches acceptance criteria exactly
 
+5. Visual correctness (MANDATORY for any sprint that changes UI)
+- After deploying, Claude must open the affected pages in Chrome using browser tools
+- Take screenshots of each changed page/component in BOTH light and dark modes
+- Verify: all text is readable against its background (WCAG AA minimum)
+- Verify: status badges, buttons, and interactive elements have sufficient contrast
+- Verify: no content is invisible, clipped, or overlapping
+- Verify: modals/wizards are centered, scrollable, and dismissible
+- Verify: empty states show appropriate content (not blank areas)
+- Report any visual issues found and include them in the next sprint prompt
+- If a visual issue is production-breaking (invisible text, blank pages), flag it as URGENT
+
 ## 5) Required Validation Commands
 
 Unless task explicitly narrows scope, Claude verifies these:
@@ -248,6 +259,53 @@ Claude must proactively maintain codebase hygiene to minimize token waste and ma
 - **Consistent naming.** Dashboard sections: `*-section.tsx`. Lib modules: `{domain}.ts`. Tests: `{domain}.test.ts`.
 - **Shared code earns its place.** `packages/shared/` must have real exports used by 2+ workspaces or be deleted.
 
+## 12a) Codebase Efficiency Protocol (Hard Rule)
+
+Claude must proactively audit and address codebase inefficiencies. This is not optional — every sprint plan must include efficiency considerations, and every 3-4 feature sprints, a dedicated efficiency sprint must be proposed.
+
+### Efficiency Audit Checklist (Run Every Review Cycle)
+
+Before approving any sprint as PASS, Claude must check:
+
+1. **DRY violations**: Scan for functions/patterns duplicated across 3+ files. If found, flag for extraction into a shared utility in the next sprint.
+2. **N+1 query patterns**: Grep for database queries inside loops (`for`, `forEach`, `map` with `await supabase`). Flag for batch-fetch refactoring.
+3. **God files**: Any file exceeding 800 lines must be flagged for splitting. Target: no file >500 lines except orchestrators.
+4. **Dead exports**: Check for functions exported but never imported. Flag for deletion.
+5. **Duplicate components**: Scan for components with the same name in different directories. Flag for consolidation.
+6. **Sequential awaits that could be parallel**: Look for consecutive `await` calls on independent operations. Flag for `Promise.all`.
+7. **Missing code splitting**: Heavy libraries (charts, editors, etc.) that aren't behind `next/dynamic`. Flag for lazy loading.
+8. **Auth/validation boilerplate**: Repeated patterns across actions that should be extracted into shared helpers.
+9. **CSS bloat**: Brute-force overrides, `!important` abuse, duplicated styles. Flag for CSS variable usage.
+10. **Package waste**: Unused dependencies, unused workspace packages, dead `transpilePackages` entries.
+
+### Efficiency Metrics (Report Every 3 Sprints)
+
+| Metric | Target | How to Measure |
+|---|---|---|
+| Max file line count | ≤500 | `wc -l` on largest files |
+| Duplicated functions (3+ copies) | 0 | grep for known patterns |
+| N+1 query patterns | 0 | grep for queries inside loops |
+| Dead exports | 0 | grep for unused exported functions |
+| `!important` count in CSS | ≤10 | grep globals.css |
+| Unused npm dependencies | 0 | check package.json vs imports |
+| Auth boilerplate lines saved | Track | count after extraction |
+
+### Efficiency Sprint Cadence
+
+- **Every 3-4 feature sprints**, Claude must propose a dedicated efficiency/cleanup sprint.
+- The efficiency sprint must address ALL accumulated findings from the audit checklist.
+- Feature sprints may include small cleanup items alongside features, but large refactors get their own sprint.
+- Claude must maintain a running "efficiency debt" list and present it when proposing the next efficiency sprint.
+
+### Industry Standards to Enforce
+
+- **No function duplicated in more than 2 files.** Extract to shared utility.
+- **No database query inside a loop.** Use `.in()` batch queries or pre-fetch with lookup maps.
+- **Every server action uses a shared auth helper** — not copy-pasted boilerplate.
+- **Every error path returns an explicit error state** — never silent `return`.
+- **Strict ESLint rules enforced**: `no-explicit-any`, `no-unused-vars`, `core-web-vitals`.
+- **Consistent code formatting** via Prettier.
+
 ## 13) Session Continuity Protocol
 
 Claude's memory lives in the repo, not in chat history. Sessions will be compacted or restarted.
@@ -312,4 +370,35 @@ To prevent edit conflicts between agents:
 | `docs/agent-handoff.md` | Claude | Codex may append status reports only |
 
 If either agent needs to modify the other's owned section, it must request user approval first.
+
+## 17) User Action Item Protocol (Hard Rule)
+
+When the user has action items that require their personal involvement (API key setup, account creation, credential entry, dashboard configuration), Claude must:
+
+1. **Navigate for the user.** Use Chrome browser tools to open the exact page/URL the user needs. Never say "go to X" when Claude can open it directly.
+2. **Do everything possible without the user.** Fill forms, click buttons, navigate menus — anything that doesn't require the user's private credentials or personal authorization.
+3. **Present ONE action at a time.** Never give the user a list of 5 things to do. Give them exactly ONE thing: "Paste your API key here" or "Click the Create button." Once they do it, Claude handles everything until the next single-point-of-failure.
+4. **Make the ask obvious.** When the user needs to act, state it clearly and concisely. No paragraphs of explanation — just the action.
+5. **Resume immediately.** The moment the user completes their one action, Claude takes over again — clicking, navigating, configuring — until the next point where only the user can act.
+
+**Pattern:**
+```
+Claude: [navigates to the page, fills everything possible]
+Claude: "Paste your Stripe secret key into this field." [points to exact location]
+User: [pastes key]
+Claude: [clicks save, navigates to next page, fills next form, etc.]
+Claude: "Click 'Confirm' to authorize." [one action]
+User: [clicks]
+Claude: [continues autonomously]
+```
+
+**Anti-pattern (NEVER do this):**
+```
+Claude: "Here are the 5 steps you need to do:
+1. Go to stripe.com
+2. Click API Keys
+3. Copy your secret key
+4. Go to vercel.com
+5. Paste it in environment variables"
+```
 

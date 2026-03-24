@@ -132,6 +132,37 @@ Never skip steps 1-4. Never trust client-side role checks alone.
 - Always return user-friendly error messages (not raw SQL errors)
 - Detect schema errors (`42P01`, `42703`, `PGRST205`) and return "This feature requires a database update" instead of crashing
 - Never swallow errors silently — log them or return them
+- Never `return` without a value on validation failure — always return `{ success: false, error: "descriptive message" }`
+
+### Code Efficiency Standards
+
+These rules are mandatory. Claude will reject sprints that violate them.
+
+1. **Never duplicate a function across files.** If a utility exists in one file and you need it in another, import it. If it doesn't exist yet, create it in the appropriate `lib/` file and import from there. Never copy-paste.
+
+2. **Never query the database inside a loop.** If you need data for N items, collect the IDs first, query with `.in()`, and build a lookup Map. Example:
+   ```typescript
+   // WRONG:
+   for (const item of items) {
+     const { data } = await supabase.from("units").select("*").eq("id", item.unit_id);
+   }
+   // RIGHT:
+   const unitIds = items.map(i => i.unit_id);
+   const { data: units } = await supabase.from("units").select("*").in("id", unitIds);
+   const unitMap = new Map(units?.map(u => [u.id, u]) ?? []);
+   ```
+
+3. **Use the shared auth helper** for server action auth/role checks (once it exists). Do not copy-paste the 6-line auth boilerplate.
+
+4. **Use the shared `isMissingSchemaError` utility** (once extracted). Do not define it locally in your file.
+
+5. **Batch notifications.** When sending notifications in a loop, collect payloads and use `Promise.all` — never sequential `await` in a loop.
+
+6. **Use CSS variables for colors** — not raw Tailwind classes that require dark mode `!important` overrides. Use `.domus-card`, `.domus-input`, `var(--domus-*)` instead of `bg-white`, `text-gray-900`, etc.
+
+7. **Code-split heavy libraries.** If importing a large library (recharts, canvas-confetti, etc.), ensure the component is behind `next/dynamic` or only reachable via a dynamically loaded parent.
+
+8. **No file over 500 lines** without explicit justification in the sprint prompt. If you're building something that will exceed 500 lines, split it into sub-modules before committing.
 
 ### Validation
 
@@ -417,3 +448,21 @@ Before reporting your sprint as complete, check:
 - [ ] Any touched file that was misnamed or redundant → cleaned up
 - [ ] If you created a utility function, it went in an existing utility file (not a new one)
 - [ ] Imports in modified files still resolve (no broken references after renames)
+
+### Commit Protocol
+
+Every sprint must end with a commit and push to `origin/main`. Do NOT leave work in the working tree for Claude to discover uncommitted. Use the commit message format specified in the sprint prompt. If no format is specified, use:
+
+```
+feat|fix|chore: <short description>
+
+- bullet point per major change
+```
+
+### Size Budget
+
+When building a new component or module, if it will exceed 20KB, split it into sub-components before committing. Do not create a god file and plan to split it later — split upfront. If an existing file is already over 30KB and you're modifying it, split out at least one logical sub-component as part of your sprint.
+
+### Import Verification
+
+After any file rename, move, or delete, you MUST run `npm run gate:web` and confirm zero broken imports before reporting done. A passing gate is the only acceptable proof that renames didn't break anything. If the gate fails after a rename, fix the imports — don't revert the rename.

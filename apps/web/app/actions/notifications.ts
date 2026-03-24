@@ -5,6 +5,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { logAudit } from "@/lib/audit";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { sideEffectError } from "@/lib/logger";
+import {
+  markAllNotificationsReadForUser,
+  markNotificationReadForUser
+} from "@/lib/notifications";
 import { updateNotificationPreference } from "@/lib/notification-preferences";
 import { getAdministeredPropertyIds } from "@/lib/property-access";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -17,7 +21,13 @@ import {
 import { requireAuth } from "./auth-helpers";
 import { ensureCapabilityEnabled, type ActionState } from "./shared";
 
-export async function markNotificationRead(
+function revalidateNotificationPaths() {
+  revalidatePath("/owner");
+  revalidatePath("/tenant");
+  revalidatePath("/manager");
+}
+
+async function updateSingleNotificationReadState(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
@@ -37,23 +47,17 @@ export async function markNotificationRead(
   }
 
   const { notificationId } = parsed.data;
-  const { error } = await supabase
-    .from("notifications")
-    .update({ read_at: new Date().toISOString() })
-    .eq("id", notificationId)
-    .eq("recipient_profile_id", user.id);
+  const { error } = await markNotificationReadForUser(supabase, user.id, notificationId);
 
   if (error) {
     return { success: false, error: "Failed to mark notification as read." };
   }
 
-  revalidatePath("/owner");
-  revalidatePath("/tenant");
-  revalidatePath("/manager");
+  revalidateNotificationPaths();
   return { success: true };
 }
 
-export async function markAllNotificationsRead(
+async function updateAllNotificationsReadState(
   _prev: ActionState,
   _formData: FormData
 ): Promise<ActionState> {
@@ -67,20 +71,42 @@ export async function markAllNotificationsRead(
     return capabilityError;
   }
 
-  const { error } = await supabase
-    .from("notifications")
-    .update({ read_at: new Date().toISOString() })
-    .eq("recipient_profile_id", user.id)
-    .is("read_at", null);
+  const { error } = await markAllNotificationsReadForUser(supabase, user.id);
 
   if (error) {
     return { success: false, error: "Failed to mark notifications as read." };
   }
 
-  revalidatePath("/owner");
-  revalidatePath("/tenant");
-  revalidatePath("/manager");
-  return { success: true, message: "All notifications marked read." };
+  revalidateNotificationPaths();
+  return { success: true, message: "All notifications cleared." };
+}
+
+export async function dismissNotification(
+  prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  return updateSingleNotificationReadState(prev, formData);
+}
+
+export async function markNotificationRead(
+  prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  return updateSingleNotificationReadState(prev, formData);
+}
+
+export async function clearAllNotifications(
+  prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  return updateAllNotificationsReadState(prev, formData);
+}
+
+export async function markAllNotificationsRead(
+  prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  return updateAllNotificationsReadState(prev, formData);
 }
 
 export async function saveNotificationPreference(

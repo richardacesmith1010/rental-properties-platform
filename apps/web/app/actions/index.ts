@@ -100,6 +100,8 @@ export { joinLlcByCode } from "./onboarding";
 
 export { markNotificationRead } from "./notifications";
 export { markAllNotificationsRead } from "./notifications";
+export { dismissNotification } from "./notifications";
+export { clearAllNotifications } from "./notifications";
 export { sendBatchPaymentReminder } from "./notifications";
 export { saveNotificationPreference } from "./notifications";
 export {

@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildNotificationEmail } from "@/lib/email-templates";
@@ -88,6 +89,29 @@ export async function getNotificationsForUser(userId: string, limit = 20): Promi
     readAt: row.read_at,
     createdAt: row.created_at
   }));
+}
+
+export async function markNotificationReadForUser(
+  supabase: SupabaseClient,
+  userId: string,
+  notificationId: string
+) {
+  return supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("id", notificationId)
+    .eq("recipient_profile_id", userId);
+}
+
+export async function markAllNotificationsReadForUser(
+  supabase: SupabaseClient,
+  userId: string
+) {
+  return supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("recipient_profile_id", userId)
+    .is("read_at", null);
 }
 
 interface CreateNotificationParams {
