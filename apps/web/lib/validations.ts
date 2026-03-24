@@ -3,6 +3,7 @@ import {
   NOTIFICATION_EMAIL_PREFERENCE_KEYS,
   NOTIFICATION_PAUSE_DURATIONS
 } from "@/lib/notification-preferences";
+import { parseInvitationEmails } from "@/lib/llc-invitations";
 
 const isoDateSchema = z
   .string()
@@ -1110,6 +1111,61 @@ export const setupLlcAccountSchema = z.object({
 export const joinLlcByCodeSchema = z.object({
   joinCode: z.string().length(6, "Join code must be 6 characters")
 });
+
+export const sendLlcInvitationsSchema = z.object({
+  accountId: z.string().uuid("Invalid ownership account."),
+  emails: z
+    .string()
+    .min(1, "Enter at least one email address.")
+    .superRefine((value, context) => {
+      const parsed = parseInvitationEmails(value);
+      if (parsed.emails.length === 0) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Enter at least one valid email address."
+        });
+      }
+      if (parsed.invalidEmails.length > 0) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Invalid email: ${parsed.invalidEmails[0]}`
+        });
+      }
+    })
+});
+
+export const resendLlcInvitationSchema = z.object({
+  invitationId: z.string().uuid("Invalid invitation.")
+});
+
+export const cancelLlcInvitationSchema = z.object({
+  invitationId: z.string().uuid("Invalid invitation.")
+});
+
+export const signInToLlcInvitationSchema = z.object({
+  token: z.string().uuid("Invalid invitation."),
+  email: z.string().email("Enter a valid email address."),
+  password: z.string().min(1, "Password is required.")
+});
+
+export const createLlcInvitationAccountSchema = z
+  .object({
+    token: z.string().uuid("Invalid invitation."),
+    firstName: z
+      .string()
+      .min(1, "First name is required.")
+      .max(80, "First name must be under 80 characters."),
+    lastName: z
+      .string()
+      .min(1, "Last name is required.")
+      .max(80, "Last name must be under 80 characters."),
+    password: z.string().min(6, "Password should be at least 6 characters."),
+    confirmPassword: z.string().min(6, "Confirm your password.")
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"]
+  });
 
 /** Parse FormData against a Zod schema. Returns parsed data or a formatted error string. */
 export function parseFormData<T extends z.ZodTypeAny>(

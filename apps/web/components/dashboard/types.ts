@@ -3,6 +3,7 @@ import type { NotificationPreferenceSettings } from "@/lib/notification-preferen
 import type { PortfolioData } from "@/lib/portfolio";
 import type { MaintenanceTicket } from "@/lib/maintenance";
 import type { InvitationListItem } from "@/lib/invitations";
+import type { LLCInvitationDTO } from "@/lib/llc-invitations";
 import type { NotificationDTO } from "@/lib/notifications";
 import type { OwnerDocumentsData } from "@/lib/documents";
 import type { VendorDTO } from "@/lib/vendors";
@@ -55,6 +56,7 @@ export interface DashboardProps {
   capabilities?: FeatureCapabilitiesDTO;
   ownershipAccounts?: OwnershipAccountDTO[];
   ownershipMembers?: OwnershipMemberDTO[];
+  pendingLlcInvitations?: LLCInvitationDTO[];
   pendingAccountRenameRequests?: AccountRenameRequestDTO[];
   pendingAccountDeleteRequests?: AccountDeleteRequestDTO[];
   distributionHistory?: DistributionHistoryEntry[];
@@ -154,6 +156,9 @@ export interface DashboardProps {
   onLinkPropertyToOwnershipAccount?: StatefulAction;
   onRenameOwnershipAccount?: StatefulAction;
   onRemoveOwnershipMember?: StatefulAction;
+  onSendLLCInvitations?: StatefulAction;
+  onResendLLCInvitation?: StatefulAction;
+  onCancelLLCInvitation?: StatefulAction;
   onVoteOnAccountRename?: StatefulAction;
   onRequestDeleteLLC?: StatefulAction;
   onVoteOnDeleteLLC?: StatefulAction;

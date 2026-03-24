@@ -2,15 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Copy,
-  Mail,
-  MailPlus,
-  Pencil,
-  ShieldCheck,
-  Trash2,
-  UserRound
-} from "lucide-react";
+import { Pencil, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -20,19 +12,22 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { ModalOverlay } from "@/components/ui/modal-overlay";
-import { Textarea } from "@/components/ui/textarea";
-import type { OwnershipAccountDTO, OwnershipMemberDTO } from "@/lib/ownership";
+import type { LLCInvitationDTO } from "@/lib/llc-invitations";
 import { pluralize } from "@/lib/format";
+import type { OwnershipAccountDTO, OwnershipMemberDTO } from "@/lib/ownership";
+import { LLCInviteForm } from "./llc-invite-form";
 import type { StatefulAction } from "./types";
 
 interface MembersSectionProps {
   account: OwnershipAccountDTO | null;
   members: OwnershipMemberDTO[];
+  pendingInvitations?: LLCInvitationDTO[];
   currentUserId?: string;
   onRenameOwnershipAccount?: StatefulAction;
   onRemoveOwnershipMember?: StatefulAction;
+  onSendLLCInvitations?: StatefulAction;
+  onResendLLCInvitation?: StatefulAction;
+  onCancelLLCInvitation?: StatefulAction;
   onUpdateDistributionConfig?: StatefulAction;
   onSubmitDistributionChangeRequest?: StatefulAction;
   onInitiateMemberPayoutConnect?: StatefulAction;
@@ -47,105 +42,22 @@ function getInitials(fullName: string) {
     .join("");
 }
 
-function buildJoinCodeSubject(accountName: string) {
-  return `Join ${accountName} on Domus`;
-}
-
-function buildJoinCodeBody(accountName: string, joinCode: string) {
-  return [
-    `I've set up ${accountName} on Domus for managing our rental properties.`,
-    "",
-    "To join, create an account at domusbase.com and enter this code:",
-    joinCode
-  ].join("\n");
-}
-
-function ShareJoinCodeModal({
-  open,
-  onClose,
-  accountName,
-  joinCode
-}: {
-  open: boolean;
-  onClose: () => void;
-  accountName: string;
-  joinCode: string;
-}) {
-  const [recipientEmail, setRecipientEmail] = useState("");
-  const subject = buildJoinCodeSubject(accountName);
-  const body = buildJoinCodeBody(accountName, joinCode);
-
-  if (!open) {
-    return null;
-  }
-
-  return (
-    <ModalOverlay open={open} onClose={onClose}>
-      <Card className="mx-auto w-full max-w-xl border border-border/70 bg-card shadow-2xl">
-        <CardHeader className="border-b border-border/60">
-          <CardTitle className="text-xl font-semibold text-foreground">Share via Email</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            This opens your default mail app with the Domus join instructions pre-filled.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4 p-5">
-          <div className="space-y-2">
-            <label htmlFor="share-email-recipient" className="text-sm font-medium text-foreground">
-              Recipient email
-            </label>
-            <Input
-              id="share-email-recipient"
-              type="email"
-              value={recipientEmail}
-              onChange={(event) => setRecipientEmail(event.target.value)}
-              placeholder="co-owner@example.com"
-              title="Enter the recipient email address."
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Subject</label>
-            <Input value={subject} readOnly title="Email subject preview." />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Message</label>
-            <Textarea value={body} readOnly rows={6} title="Email body preview." />
-          </div>
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button type="button" variant="outline" onClick={onClose} title="Close this email draft.">
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={() => {
-                const mailtoUrl = `mailto:${encodeURIComponent(recipientEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-                window.location.href = mailtoUrl;
-                onClose();
-              }}
-              title="Open your email app with this draft."
-            >
-              <MailPlus className="mr-2 h-4 w-4" />
-              Open Email Draft
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </ModalOverlay>
-  );
-}
-
 export function MembersSection({
   account,
   members,
+  pendingInvitations = [],
   currentUserId,
   onRenameOwnershipAccount,
   onRemoveOwnershipMember,
+  onSendLLCInvitations,
+  onResendLLCInvitation,
+  onCancelLLCInvitation,
   onUpdateDistributionConfig,
   onSubmitDistributionChangeRequest,
   onInitiateMemberPayoutConnect
 }: MembersSectionProps) {
   const router = useRouter();
   const [isRenameOpen, setIsRenameOpen] = useState(false);
-  const [shareModalOpen, setShareModalOpen] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<OwnershipMemberDTO | null>(null);
   const [isRemoving, startTransition] = useTransition();
 
@@ -161,21 +73,6 @@ export function MembersSection({
       />
     );
   }
-
-  const handleCopyCode = async () => {
-    if (!account.joinCode) {
-      toast.error("Join code unavailable for this LLC.");
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(account.joinCode);
-      toast.success("Join code copied.");
-    } catch (error) {
-      console.error("MembersSection copy join code error:", error);
-      toast.error("Unable to copy the join code right now.");
-    }
-  };
 
   const handleRemoveMember = () => {
     if (!memberToRemove || !onRemoveOwnershipMember) {
@@ -229,48 +126,13 @@ export function MembersSection({
         </CardHeader>
       </Card>
 
-      <Card className="border border-border/60 shadow-sm">
-        <CardHeader>
-          <CardTitle>Invite Members</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Share this code with your co-owners. They&apos;ll enter it after creating their Domus account.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {account.joinCode ? (
-            <div className="rounded-2xl border border-violet-200 bg-violet-50 px-6 py-5 text-center">
-              <div className="text-3xl font-semibold tracking-[0.3em] text-violet-900 sm:text-4xl">
-                {account.joinCode}
-              </div>
-            </div>
-          ) : (
-            <Alert variant="warning">
-              Join code unavailable for this LLC right now.
-            </Alert>
-          )}
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => void handleCopyCode()}
-              disabled={!account.joinCode}
-              title="Copy this LLC join code."
-            >
-              <Copy className="mr-2 h-4 w-4" />
-              Copy Code
-            </Button>
-            <Button
-              type="button"
-              onClick={() => setShareModalOpen(true)}
-              disabled={!account.joinCode}
-              title="Open an email draft with these join instructions."
-            >
-              <Mail className="mr-2 h-4 w-4" />
-              Share via Email
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <LLCInviteForm
+        accountId={account.id}
+        pendingInvitations={pendingInvitations}
+        onSendInvitations={onSendLLCInvitations}
+        onResendInvitation={onResendLLCInvitation}
+        onCancelInvitation={onCancelLLCInvitation}
+      />
 
       <Card className="border border-border/60 shadow-sm">
         <CardHeader>
@@ -296,7 +158,7 @@ export function MembersSection({
                     key={member.profileId}
                     className={`rounded-2xl border px-4 py-4 ${
                       isCurrentUser
-                        ? "border-violet-300 bg-violet-50/60"
+                        ? "border-primary/30 bg-primary/5"
                         : "border-border/60 bg-card"
                     }`}
                   >
@@ -390,15 +252,6 @@ export function MembersSection({
             }
             return { error: result?.error ?? "Unable to update this LLC name right now." };
           }}
-        />
-      ) : null}
-
-      {account.joinCode ? (
-        <ShareJoinCodeModal
-          open={shareModalOpen}
-          onClose={() => setShareModalOpen(false)}
-          accountName={account.displayName}
-          joinCode={account.joinCode}
         />
       ) : null}
 

@@ -223,7 +223,7 @@ export function buildAllSectionItems(params: BuildAllSectionItemsParams): NavIte
       id: "members",
       label: "Members",
       icon: UserPlus,
-      description: "LLC members, join codes, and distribution controls.",
+      description: "LLC members, email invites, and distribution controls.",
       clickHint: "open LLC members"
     });
   }
@@ -432,7 +432,7 @@ export function getOwnerModeNavItems(params?: {
       id: "members",
       label: "Members",
       icon: UserPlus,
-      description: "Invite LLC members, share join codes, and manage splits.",
+      description: "Invite LLC members by email and manage splits.",
       clickHint: "open LLC members"
     });
   }

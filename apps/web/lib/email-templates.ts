@@ -68,6 +68,12 @@ export interface TenantInviteEmailParams {
   leaseEndDate?: string | null;
 }
 
+interface LLCInviteEmailParams {
+  llcName: string;
+  inviterName: string;
+  acceptUrl: string;
+}
+
 export function escapeHtml(value: string) {
   return value
     .replaceAll("&", "&amp;")
@@ -308,6 +314,43 @@ export function buildTenantInviteEmail({
   ]
     .filter(Boolean)
     .join("\n");
+
+  return { subject, html, text };
+}
+
+export function buildLLCInviteEmail({
+  llcName,
+  inviterName,
+  acceptUrl
+}: LLCInviteEmailParams) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com";
+  const subject = `You've been invited to join ${llcName} on Domus`;
+
+  const bodyHtml = [
+    `<p style="margin:0;">Hi,</p>`,
+    `<p style="margin:16px 0 0 0;">${escapeHtml(inviterName)} has invited you to join <strong>${escapeHtml(llcName)}</strong> on Domus.</p>`,
+    `<p style="margin:16px 0 0 0;">Accept the invitation to access the LLC dashboard, manage properties together, and review shared financials in one place.</p>`,
+    `<p style="margin:16px 0 0 0;">This invitation expires in 7 days.</p>`
+  ].join("");
+
+  const html = buildBrandedEmailShell({
+    titleHtml: escapeHtml(`Join ${llcName} on Domus`),
+    bodyHtml,
+    ctaText: "Accept Invitation",
+    ctaUrl: acceptUrl,
+    preheaderText: subject,
+    footerPreferencesUrl: `${appUrl}/settings`
+  });
+
+  const text = [
+    `Hi,`,
+    "",
+    `${inviterName} has invited you to join ${llcName} on Domus.`,
+    "",
+    `Accept invitation: ${acceptUrl}`,
+    "",
+    "This invitation expires in 7 days."
+  ].join("\n");
 
   return { subject, html, text };
 }

@@ -20,6 +20,7 @@ import {
   getPendingAccountDeleteRequests,
   getPendingAccountRenameRequests
 } from "@/lib/ownership";
+import { getPendingLLCInvitationsForAccount } from "@/lib/llc-invitations";
 import { getOwnerExpenseData } from "@/lib/expenses";
 import { getUserGamification } from "@/lib/gamification";
 import { getOwnerAnalyticsData } from "@/lib/analytics";
@@ -98,6 +99,9 @@ import {
   createOwnershipAccount,
   linkPropertyToOwnershipAccount,
   removeOwnershipMember,
+  sendLLCInvitations,
+  resendLLCInvitation,
+  cancelLLCInvitation,
   renameOwnershipAccount,
   voteOnAccountRename,
   requestDeleteLLC,
@@ -268,9 +272,21 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
   ).length;
   const activeAccount = ownershipAccounts.find((account) => account.id === activeAccountId);
   const isLlcAccount = activeAccount?.accountType === "llc";
-  const [ownershipMembers, distributionHistory, pendingChangeRequests, pendingWithdrawals, financialActivityFeed, pendingAccountRenameRequests, pendingAccountDeleteRequests] = await Promise.all([
+  const [
+    ownershipMembers,
+    pendingLlcInvitations,
+    distributionHistory,
+    pendingChangeRequests,
+    pendingWithdrawals,
+    financialActivityFeed,
+    pendingAccountRenameRequests,
+    pendingAccountDeleteRequests
+  ] = await Promise.all([
     isLlcAccount && activeAccountId
       ? getOwnershipMembersForAccount(user.id, activeAccountId)
+      : Promise.resolve([]),
+    isLlcAccount && activeAccountId
+      ? getPendingLLCInvitationsForAccount(user.id, activeAccountId)
       : Promise.resolve([]),
     isLlcAccount && activeAccountId
       ? getDistributionHistory(activeAccountId)
@@ -327,6 +343,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         managerPaymentsWarning={managerPaymentsData.warning}
         ownershipAccounts={ownershipAccounts}
         ownershipMembers={ownershipMembers}
+        pendingLlcInvitations={pendingLlcInvitations}
         pendingAccountRenameRequests={pendingAccountRenameRequests}
         pendingAccountDeleteRequests={pendingAccountDeleteRequests}
         distributionHistory={distributionHistory}
@@ -416,6 +433,9 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         onLinkPropertyToOwnershipAccount={linkPropertyToOwnershipAccount}
         onRenameOwnershipAccount={renameOwnershipAccount}
         onRemoveOwnershipMember={removeOwnershipMember}
+        onSendLLCInvitations={sendLLCInvitations}
+        onResendLLCInvitation={resendLLCInvitation}
+        onCancelLLCInvitation={cancelLLCInvitation}
         onVoteOnAccountRename={voteOnAccountRename}
         onRequestDeleteLLC={requestDeleteLLC}
         onVoteOnDeleteLLC={voteOnDeleteLLC}

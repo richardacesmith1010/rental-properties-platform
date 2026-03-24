@@ -91,6 +91,14 @@ export { addOwnershipMember } from "./ownership";
 export { removeOwnershipMember } from "./ownership";
 export { linkPropertyToOwnershipAccount } from "./ownership";
 export {
+  sendLLCInvitations,
+  resendLLCInvitation,
+  cancelLLCInvitation,
+  acceptLLCInvitation,
+  signInToJoinLLC,
+  createAccountToJoinLLC
+} from "./llc-invitations";
+export {
   renameOwnershipAccount,
   voteOnAccountRename,
   requestDeleteLLC,

@@ -56,6 +56,11 @@ import {
   deleteExpenseSchema,
   setupLlcAccountSchema,
   joinLlcByCodeSchema,
+  sendLlcInvitationsSchema,
+  resendLlcInvitationSchema,
+  cancelLlcInvitationSchema,
+  signInToLlcInvitationSchema,
+  createLlcInvitationAccountSchema,
   removeOwnershipMemberSchema,
   renameOwnershipAccountSchema,
   requestDeleteLlcSchema,
@@ -1744,6 +1749,56 @@ describe("owner onboarding schemas", () => {
   it("rejects LLC join codes that are not 6 characters", () => {
     const result = joinLlcByCodeSchema.safeParse({
       joinCode: "ABC12"
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts valid LLC invitation emails", () => {
+    const result = sendLlcInvitationsSchema.safeParse({
+      accountId: "550e8400-e29b-41d4-a716-446655440000",
+      emails: "first@example.com, second@example.com\nthird@example.com"
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid LLC invitation emails", () => {
+    const result = sendLlcInvitationsSchema.safeParse({
+      accountId: "550e8400-e29b-41d4-a716-446655440000",
+      emails: "valid@example.com, not-an-email"
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts valid LLC invitation resend payloads", () => {
+    const result = resendLlcInvitationSchema.safeParse({
+      invitationId: "550e8400-e29b-41d4-a716-446655440010"
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts valid LLC invitation cancel payloads", () => {
+    const result = cancelLlcInvitationSchema.safeParse({
+      invitationId: "550e8400-e29b-41d4-a716-446655440010"
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts valid LLC invitation sign-in payloads", () => {
+    const result = signInToLlcInvitationSchema.safeParse({
+      token: "550e8400-e29b-41d4-a716-446655440010",
+      email: "owner@example.com",
+      password: "secret123"
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects LLC invitation sign-up payloads with mismatched passwords", () => {
+    const result = createLlcInvitationAccountSchema.safeParse({
+      token: "550e8400-e29b-41d4-a716-446655440010",
+      firstName: "Jordan",
+      lastName: "Smith",
+      password: "secret123",
+      confirmPassword: "secret124"
     });
     expect(result.success).toBe(false);
   });

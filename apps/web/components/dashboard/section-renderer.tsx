@@ -277,9 +277,13 @@ export function SectionRenderer(props: SectionRendererProps) {
         <MembersSection
           account={activeOwnershipAccount}
           members={props.ownershipMembers ?? []}
+          pendingInvitations={props.pendingLlcInvitations ?? []}
           currentUserId={props.currentUserId}
           onRenameOwnershipAccount={props.onRenameOwnershipAccount}
           onRemoveOwnershipMember={props.onRemoveOwnershipMember}
+          onSendLLCInvitations={props.onSendLLCInvitations}
+          onResendLLCInvitation={props.onResendLLCInvitation}
+          onCancelLLCInvitation={props.onCancelLLCInvitation}
           onUpdateDistributionConfig={props.onUpdateDistributionConfig}
           onSubmitDistributionChangeRequest={props.onSubmitDistributionChangeRequest}
           onInitiateMemberPayoutConnect={props.onInitiateMemberPayoutConnect}
