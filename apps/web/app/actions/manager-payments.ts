@@ -65,11 +65,7 @@ async function sendManagerPaymentInvoiceEmails(
   );
 
   if (!deliveryPreference.emailEnabled) {
-    console.log("[manager-payments] skipped invoice email delivery", {
-      actorUserId,
-      paymentId,
-      reason: deliveryPreference.emailBlockReason ?? "manager invoice emails disabled"
-    });
+    // Email delivery skipped — preference or pause active
     return;
   }
 

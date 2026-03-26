@@ -142,7 +142,7 @@ export async function terminateLease(_prev: ActionState, formData: FormData): Pr
 
   const { lease, unit } = context;
   if (!(await canUserAdministerProperty(user.id, unit.property_id))) return { success: false, error: "You do not have access to this lease." };
-  if (!lease.active || (lease.lease_status ?? "active") !== "active") return { success: false, error: "Only active leases can be terminated." };
+  if (!lease.active || (lease.lease_status ?? "active") !== "active") return { success: false, error: "Only active leases can be ended." };
 
   const terminatedAt = new Date().toISOString();
   const { error: terminateError } = await supabase.from("leases").update({
@@ -152,11 +152,11 @@ export async function terminateLease(_prev: ActionState, formData: FormData): Pr
     terminated_at: terminatedAt
   }).eq("id", lease.id);
   if (terminateError) {
-    return { success: false, error: isMissingSchemaError(terminateError) ? "This feature requires a database update." : "Failed to terminate lease. Please try again." };
+    return { success: false, error: isMissingSchemaError(terminateError) ? "This feature requires a database update." : "Failed to end the lease. Please try again." };
   }
 
   const { error: unitError } = await supabase.from("units").update({ occupied: false }).eq("id", lease.unit_id);
-  if (unitError) return { success: false, error: "Lease terminated, but the unit occupancy could not be updated." };
+  if (unitError) return { success: false, error: "The lease ended, but the unit occupancy could not be updated." };
 
   if (lease.tenant_profile_id) {
     const { data: tenantProfile } = await createAdminClient().from("profiles").select("id, email").eq("id", lease.tenant_profile_id).maybeSingle();
@@ -165,8 +165,8 @@ export async function terminateLease(_prev: ActionState, formData: FormData): Pr
         recipientProfileId: tenantProfile.id,
         recipientEmail: tenantProfile.email,
         type: "lease_updated",
-        title: "Lease terminated",
-        body: "Your lease has been terminated.",
+        title: "Lease ended",
+        body: "Your lease has ended.",
         entityType: "lease",
         entityId: lease.id
       }).catch(sideEffectError("terminateLease", "notify_tenant", { userId: user.id, entityType: "lease", entityId: lease.id }));
@@ -185,5 +185,5 @@ export async function terminateLease(_prev: ActionState, formData: FormData): Pr
   revalidatePath("/owner");
   revalidatePath("/manager");
   revalidatePath("/tenant");
-  return { success: true, message: "Lease terminated." };
+  return { success: true, message: "Lease ended." };
 }

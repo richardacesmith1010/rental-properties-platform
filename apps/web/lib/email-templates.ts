@@ -287,7 +287,7 @@ export function buildTenantInviteEmail({
     leaseSummary
       ? `<p style="margin:16px 0 0 0;">${escapeHtml(leaseSummary)}</p>`
       : "",
-    `<p style="margin:16px 0 0 0;">Accept the invitation to set your password, view your lease, submit maintenance requests, and pay rent in one place.</p>`
+    `<p style="margin:16px 0 0 0;">Accept the invitation to set your password, view your lease, report problems, and pay rent in one place.</p>`
   ]
     .filter(Boolean)
     .join("");
@@ -310,7 +310,7 @@ export function buildTenantInviteEmail({
     "",
     `Accept invitation: ${inviteUrl}`,
     "",
-    "Domus makes it easy to pay rent, submit maintenance requests, and view your lease."
+    "Domus makes it easy to pay rent, report problems, and view your lease."
   ]
     .filter(Boolean)
     .join("\n");
@@ -386,7 +386,7 @@ export function buildRentReminderEmail({
   const html = buildBrandedEmailShell({
     titleHtml: escapeHtml(type === "overdue" ? "Overdue rent reminder" : "Rent reminder"),
     bodyHtml,
-    ctaText: "Pay Now",
+    ctaText: "Pay Rent",
     ctaUrl: dashboardUrl,
     preheaderText: subject,
     footerPreferencesUrl: `${appUrl}/settings`
@@ -395,7 +395,7 @@ export function buildRentReminderEmail({
   const text = [
     summary,
     "",
-    `Pay now: ${dashboardUrl}`,
+    `Pay rent: ${dashboardUrl}`,
     "",
     `Manage notification preferences: ${appUrl}/settings`
   ].join("\n");

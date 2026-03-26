@@ -89,7 +89,7 @@ function LeaseStatusBadge({
   let label = "Active";
 
   if (normalized === "terminated") {
-    label = "Terminated";
+    label = "Ended";
   } else if (normalized === "renewed") {
     label = "Renewed";
   } else if (normalized === "expired") {
@@ -206,7 +206,7 @@ export function LeasesSection({
             <FormSuccess state={rentAmountState} message="Recurring rent amount updated." />
             <FormSuccess state={deleteState} message="Lease archived." />
             <FormSuccess state={renewState} message="Lease renewed." />
-            <FormSuccess state={terminateState} message="Lease terminated." />
+            <FormSuccess state={terminateState} message="Lease ended." />
           </>
         ) : null}
 
@@ -429,7 +429,7 @@ export function LeasesSection({
 
                             <div className="rounded-2xl border border-rose-200/80 bg-rose-50 p-4 shadow-sm">
                               <div className="mb-3 flex items-center justify-between gap-2">
-                                <p className="text-base font-medium text-rose-900">Terminate Lease</p>
+                                <p className="text-base font-medium text-rose-900">End Lease</p>
                                 <Button
                                   type="button"
                                   size="sm"
@@ -437,9 +437,9 @@ export function LeasesSection({
                                   onClick={() =>
                                     setActiveTerminateLeaseId((current) => (current === lease.id ? null : lease.id))
                                   }
-                                  title="Open termination controls for this lease."
+                                  title="Open lease end controls."
                                 >
-                                  {activeTerminateLeaseId === lease.id ? "Hide" : "Terminate"}
+                                  {activeTerminateLeaseId === lease.id ? "Hide" : "End Lease"}
                                 </Button>
                               </div>
                               {activeTerminateLeaseId === lease.id ? (
@@ -448,15 +448,15 @@ export function LeasesSection({
                                   <Textarea
                                     name="terminationReason"
                                     rows={3}
-                                    placeholder="Document why this lease is being terminated."
+                                    placeholder="Add a note about why this lease is ending."
                                     required
                                   />
                                   <SubmitButton
                                     size="sm"
                                     variant="destructive"
-                                    title="Terminate this lease and mark the unit as no longer occupied."
+                                    title="End this lease and mark the unit as no longer occupied."
                                   >
-                                    Confirm Termination
+                                    Confirm Lease End
                                   </SubmitButton>
                                 </form>
                               ) : null}

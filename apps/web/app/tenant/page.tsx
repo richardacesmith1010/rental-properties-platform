@@ -64,11 +64,11 @@ const tenantSectionOrder: TenantSection[] = [
 ];
 
 const tenantSectionLabel: Record<TenantSection, string> = {
-  overview: "Overview",
-  charges: "Charges",
-  maintenance: "Maintenance",
-  documents: "Documents",
-  notifications: "Inbox"
+  overview: "Rent",
+  charges: "Payment History",
+  maintenance: "Problems",
+  documents: "Lease",
+  notifications: "Messages"
 };
 
 function parseSearchParam(value: string | string[] | undefined): string | null {
@@ -218,7 +218,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
     ...paymentData.charges.map((charge) => ({
       id: `charge:${charge.id}`,
       label: `${charge.propertyName} • Unit ${charge.unitNumber}`,
-      category: "Charges",
+      category: "Rent",
       href: "/tenant?section=charges",
       description: `${charge.status} • ${formatCurrency(charge.amountCents)}`,
       keywords: [charge.propertyName, charge.unitNumber, charge.status, charge.dueDate]
@@ -234,7 +234,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
     ...maintenanceData.tickets.map((ticket) => ({
       id: `ticket:${ticket.id}`,
       label: ticket.title,
-      category: "Maintenance",
+      category: "Problems",
       href: "/tenant?section=maintenance",
       description: `${ticket.propertyName}${ticket.unitNumber ? ` • Unit ${ticket.unitNumber}` : ""}`,
       keywords: [ticket.title, ticket.description, ticket.propertyName, ticket.unitNumber ?? ""]
@@ -242,7 +242,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
     ...documentsData.packets.map((packet) => ({
       id: `document:${packet.id}`,
       label: packet.templateName,
-      category: "Documents",
+      category: "Lease",
       href: "/tenant?section=documents",
       description: packet.signerStatus,
       keywords: [packet.templateName, packet.signerStatus]
@@ -250,7 +250,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
     ...notifications.map((notification) => ({
       id: `notification:${notification.id}`,
       label: notification.title,
-      category: "Notifications",
+      category: "Messages",
       href: "/tenant?section=notifications",
       description: notification.body,
       keywords: [notification.title, notification.body, notification.type]
@@ -269,6 +269,9 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
         activeItemId={activeSection}
         onSignOut={signOut}
         unreadNotificationCount={unreadNotificationCount}
+        notifications={notifications}
+        onDismissNotification={markNotificationRead}
+        onClearAllNotifications={markAllNotificationsRead}
         searchItems={searchItems}
       />
 
@@ -282,6 +285,9 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
         onSignOut={signOut}
         activeItemId={activeSection}
         unreadNotificationCount={unreadNotificationCount}
+        notifications={notifications}
+        onDismissNotification={markNotificationRead}
+        onClearAllNotifications={markAllNotificationsRead}
         searchItems={searchItems}
       />
 
@@ -457,6 +463,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
                 onCreateTicket={createMaintenanceTicket}
                 photoWorkflowEnabled={capabilities.photoWorkflowEnabled}
                 photoWorkflowWarning={capabilities.warnings.photoWorkflow}
+                viewerRole="tenant"
               />
 
               <MaintenanceSection

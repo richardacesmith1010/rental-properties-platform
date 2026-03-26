@@ -95,7 +95,7 @@ export function formatAuditAction(
     case "renew_lease":
       return `Renewed lease${tenantName ? ` for ${tenantName}` : ""}`;
     case "terminate_lease":
-      return `Terminated lease${tenantName ? ` for ${tenantName}` : ""}`;
+      return `Ended lease${tenantName ? ` for ${tenantName}` : ""}`;
     case "delete_lease":
       return `Archived lease${tenantName ? ` for ${tenantName}` : ""}`;
     case "record_payment":

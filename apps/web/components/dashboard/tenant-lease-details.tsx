@@ -17,7 +17,7 @@ function LeaseStatusBadge({
   daysRemaining: number;
 }) {
   if (status === "terminated") {
-    return <Badge variant="destructive">Terminated</Badge>;
+    return <Badge variant="destructive">Ended</Badge>;
   }
 
   if (status === "renewed") {

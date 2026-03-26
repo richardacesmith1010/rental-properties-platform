@@ -109,7 +109,7 @@ describe("LeasesSection", () => {
     expect(screen.getByText(formatCurrency(activeLease.monthlyRentCents))).toBeInTheDocument();
   });
 
-  it("shows active, expired, and terminated status badges", () => {
+  it("shows active, expired, and ended status badges", () => {
     const expiredLease = { ...activeLease, id: "lease-2", leaseStatus: "expired" as const };
     const terminatedLease = { ...activeLease, id: "lease-3", leaseStatus: "terminated" as const };
 
@@ -117,7 +117,7 @@ describe("LeasesSection", () => {
 
     expect(screen.getByText("Active")).toBeInTheDocument();
     expect(screen.getByText("Expired")).toBeInTheDocument();
-    expect(screen.getByText("Terminated")).toBeInTheDocument();
+    expect(screen.getByText("Ended")).toBeInTheDocument();
   });
 
   it("shows the tenant email", () => {
@@ -127,7 +127,7 @@ describe("LeasesSection", () => {
     expect(screen.getByText("tenant@example.com • 555-111-2222")).toBeInTheDocument();
   });
 
-  it("renders renew and terminate controls when management is enabled", () => {
+  it("renders renew and end controls when management is enabled", () => {
     render(
       <LeasesSection
         leases={[activeLease]}
@@ -142,7 +142,7 @@ describe("LeasesSection", () => {
     fireEvent.click(screen.getByRole("button", { name: "Manage" }));
 
     expect(screen.getByRole("button", { name: "Renew" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Terminate" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "End Lease" })).toBeInTheDocument();
   });
 
   it("renders rent increase history when entries exist", () => {

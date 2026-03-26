@@ -52,9 +52,9 @@ export default function TermsPage() {
           </article>
 
           <article className="space-y-2">
-            <h2 className="text-base font-semibold text-white">Termination</h2>
+            <h2 className="text-base font-semibold text-white">Account Closure</h2>
             <p>
-              We may suspend or terminate accounts for violations of these terms, non-payment, or misuse of the
+              We may suspend or end accounts for violations of these terms, non-payment, or misuse of the
               service. You may cancel your account at any time subject to plan terms.
             </p>
           </article>

@@ -95,11 +95,15 @@ export function MaintenanceSection({
   };
   const visibleTickets = previewCount && !expanded ? tickets.slice(0, previewCount) : tickets;
   const hasMore = previewCount != null && tickets.length > previewCount;
+  const sectionTitle = viewerRole === "tenant" ? "Problems" : "Maintenance Tickets";
+  const emptyDescription = viewerRole === "tenant"
+    ? "Problems you report will show up here with status updates from your landlord."
+    : "Tickets submitted by tenants will appear here.";
 
   return (
     <Card id="maintenance" className="border border-border/50 shadow-sm">
       <CardHeader>
-        <CardTitle className="text-xl font-semibold">Maintenance Tickets</CardTitle>
+        <CardTitle className="text-xl font-semibold">{sectionTitle}</CardTitle>
       </CardHeader>
       <CardContent>
         {(vendorWorkflowWarning || photoWorkflowWarning) && (
@@ -121,8 +125,8 @@ export function MaintenanceSection({
         {tickets.length === 0 ? (
           <EmptyState
             icon={Wrench}
-            title="No maintenance tickets"
-            description="Tickets submitted by tenants will appear here."
+            title={viewerRole === "tenant" ? "No problems reported" : "No maintenance tickets"}
+            description={emptyDescription}
           />
         ) : (
           <>

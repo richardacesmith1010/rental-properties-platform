@@ -8,10 +8,14 @@ import type { StatefulAction } from "./types";
 
 interface CompactGreetingBarProps {
   userName: string;
+  role: "owner" | "manager" | "tenant";
   statusSummary: string;
   notifications?: NotificationDTO[];
   onDismissNotification?: StatefulAction;
   onClearAllNotifications?: StatefulAction;
+  onSendBatchPaymentReminder?: StatefulAction;
+  onWaiveCharge?: StatefulAction;
+  onMarkManagerPaymentPaid?: StatefulAction;
   onOpenSettings?: () => void;
   onOpenNotifications?: () => void;
 }
@@ -25,10 +29,14 @@ function getTimeOfDayGreeting(date = new Date()): string {
 
 export function CompactGreetingBar({
   userName,
+  role,
   statusSummary,
   notifications = [],
   onDismissNotification,
   onClearAllNotifications,
+  onSendBatchPaymentReminder,
+  onWaiveCharge,
+  onMarkManagerPaymentPaid,
   onOpenSettings,
   onOpenNotifications
 }: CompactGreetingBarProps) {
@@ -46,8 +54,12 @@ export function CompactGreetingBar({
       <div className="flex shrink-0 items-center gap-2">
         <NotificationBellMenu
           notifications={notifications}
+          role={role}
           onDismissNotification={onDismissNotification}
           onClearAllNotifications={onClearAllNotifications}
+          onSendBatchPaymentReminder={onSendBatchPaymentReminder}
+          onWaiveCharge={onWaiveCharge}
+          onMarkManagerPaymentPaid={onMarkManagerPaymentPaid}
           onOpenNotifications={onOpenNotifications}
           triggerClassName="inline-flex h-10 w-10 items-center justify-center rounded-full text-zinc-600 transition hover:bg-zinc-100/70 hover:text-zinc-900"
           panelClassName="w-[min(24rem,calc(100vw-2rem))]"

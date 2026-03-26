@@ -121,7 +121,7 @@ function DeleteLlcButton({
         return;
       }
 
-      toast.success(result.message ?? "Delete request submitted.");
+      toast.success(result.message ?? "Delete request sent.");
       router.refresh();
     });
   };
@@ -136,7 +136,7 @@ function DeleteLlcButton({
         onClick={() => setConfirmOpen(true)}
         title={`Delete ${account.displayName} after member approval.`}
       >
-        {isPending ? "Submitting..." : "Delete Account"}
+        {isPending ? (account.memberCount > 1 ? "Sending..." : "Deleting...") : "Delete Account"}
       </Button>
       <ConfirmDialog
         title="Delete LLC Account"

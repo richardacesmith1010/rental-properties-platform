@@ -67,8 +67,8 @@ export function MembersSection({
     return (
       <EmptyState
         icon={ShieldCheck}
-        title="No LLC members page"
-        description="Members only appears for LLC ownership accounts."
+        title="No members page here"
+        description="Members only shows up for LLC accounts."
         showDom={false}
       />
     );

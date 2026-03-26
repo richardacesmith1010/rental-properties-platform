@@ -29,6 +29,22 @@ const noopStatefulAction: StatefulAction = async () => ({
   error: "Manual payment confirmation is unavailable right now."
 });
 
+function getRelativeDueText(dueDate: string) {
+  const today = new Date();
+  const currentDay = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  const due = new Date(`${dueDate}T00:00:00.000Z`);
+  const dueDay = Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate());
+  const diffDays = Math.ceil((dueDay - currentDay) / 86400000);
+
+  if (diffDays < 0) {
+    return `${Math.abs(diffDays)} day${Math.abs(diffDays) === 1 ? "" : "s"} ago`;
+  }
+  if (diffDays === 0) {
+    return "today";
+  }
+  return `in ${diffDays} day${diffDays === 1 ? "" : "s"}`;
+}
+
 export function PayRentCard({
   charges,
   onPayCharge,
@@ -103,10 +119,10 @@ export function PayRentCard({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="space-y-1">
                   <p className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                    {isLate ? "Rent overdue" : "Rent due"}
+                    Your Rent
                   </p>
                   <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-4xl">
-                    {formatDate(charge.dueDate)}
+                    {formatCurrency(charge.amountCents)}
                   </h2>
                 </div>
                 <Badge
@@ -122,13 +138,18 @@ export function PayRentCard({
               </div>
 
               <div className="space-y-2 text-center sm:text-left">
-                <p className="text-3xl font-black tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-                  {formatCurrency(charge.amountCents)}
+                <p className="text-base font-medium text-foreground sm:text-lg">
+                  {isLate
+                    ? `Your rent of ${formatCurrency(charge.amountCents)} was due ${getRelativeDueText(charge.dueDate)}. Please pay as soon as possible to avoid late fees.`
+                    : `Due ${formatDate(charge.dueDate)} (${getRelativeDueText(charge.dueDate)})`}
                 </p>
                 <p className="text-sm text-muted-foreground sm:text-base">
                   <span className="block sm:inline">{charge.propertyName}</span>
                   <span className="hidden sm:inline"> · </span>
                   <span className="block sm:inline">Unit {charge.unitNumber}</span>
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Paid by credit card or bank transfer. You&apos;ll get a receipt by email.
                 </p>
               </div>
 
@@ -145,9 +166,9 @@ export function PayRentCard({
                 <input type="hidden" name="chargeId" value={charge.id} />
                 <SubmitButton
                   className="h-14 w-full rounded-2xl text-base font-bold"
-                  title={`Pay ${formatCurrency(charge.amountCents)} now.`}
+                  title={`Pay rent of ${formatCurrency(charge.amountCents)}.`}
                 >
-                  Pay Now — {formatCurrency(charge.amountCents)}
+                  Pay Rent — {formatCurrency(charge.amountCents)}
                 </SubmitButton>
               </form>
 

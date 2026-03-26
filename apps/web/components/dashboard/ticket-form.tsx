@@ -22,6 +22,7 @@ interface TicketFormProps {
   onCreateTicket: StatefulAction;
   photoWorkflowEnabled?: boolean;
   photoWorkflowWarning?: string | null;
+  viewerRole?: "owner" | "manager" | "tenant";
 }
 
 interface TicketDraft {
@@ -31,7 +32,7 @@ interface TicketDraft {
   priority: "low" | "medium" | "high" | "urgent";
 }
 
-const TICKET_STEPS = ["Unit", "Summary", "Details", "Priority", "Review & Submit"] as const;
+const TICKET_STEPS = ["Unit", "Summary", "Details", "Priority", "Review & Send"] as const;
 const PRIORITY_HELP: Record<TicketDraft["priority"], string> = {
   low: "Minor inconvenience",
   medium: "Affecting daily use",
@@ -41,20 +42,12 @@ const PRIORITY_HELP: Record<TicketDraft["priority"], string> = {
 
 function FormError({ state }: { state: ActionState }) {
   if (!state || state.success) return null;
-  return (
-    <Alert variant="error">
-      {state.error}
-    </Alert>
-  );
+  return <Alert variant="error">{state.error}</Alert>;
 }
 
-function FormSuccess({ state }: { state: ActionState }) {
+function FormSuccess({ state, message }: { state: ActionState; message?: string }) {
   if (!state || !state.success) return null;
-  return (
-    <Alert variant="success">
-      {state.message ?? "Maintenance request submitted!"}
-    </Alert>
-  );
+  return <Alert variant="success">{message ?? state.message ?? "Maintenance request sent!"}</Alert>;
 }
 
 function StepPill({
@@ -85,11 +78,17 @@ function onEnterNext(
   advance();
 }
 
+function buildTenantTicketTitle(description: string) {
+  const summary = description.trim().split(/[.!?]/)[0] || "Reported problem";
+  return summary.slice(0, 200);
+}
+
 export function TicketForm({
   units,
   onCreateTicket,
   photoWorkflowEnabled = true,
-  photoWorkflowWarning = null
+  photoWorkflowWarning = null,
+  viewerRole = "tenant"
 }: TicketFormProps) {
   const router = useRouter();
   const [state, setState] = useState<ActionState>(null);
@@ -97,13 +96,14 @@ export function TicketForm({
   const [step, setStep] = useState(0);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [draft, setDraft] = useState<TicketDraft>({
-    unitId: "",
+    unitId: units[0]?.id ?? "",
     title: "",
     description: "",
     priority: "medium"
   });
 
   const requiredComplete = Boolean(draft.unitId && draft.title && draft.description && draft.priority);
+  const activeUnit = units.find((unit) => unit.id === draft.unitId) ?? units[0] ?? null;
 
   const stepComplete = (index: number) => {
     if (index === 0) return Boolean(draft.unitId);
@@ -114,22 +114,31 @@ export function TicketForm({
   };
 
   useEffect(() => {
+    if (!draft.unitId && units[0]?.id) {
+      setDraft((current) => ({ ...current, unitId: units[0]?.id ?? current.unitId }));
+    }
+  }, [draft.unitId, units]);
+
+  useEffect(() => {
     if (!state?.success) return;
     setStep(0);
     setPhotoFiles([]);
     setDraft({
-      unitId: "",
+      unitId: units[0]?.id ?? "",
       title: "",
       description: "",
       priority: "medium"
     });
-  }, [state]);
+  }, [state, units]);
 
   const handleSubmit = () => {
     startTransition(async () => {
       const formData = new FormData();
       formData.append("unitId", draft.unitId);
-      formData.append("title", draft.title);
+      formData.append(
+        "title",
+        viewerRole === "tenant" ? buildTenantTicketTitle(draft.description) : draft.title
+      );
       formData.append("description", draft.description);
       formData.append("priority", draft.priority);
       for (const file of photoFiles) {
@@ -144,10 +153,80 @@ export function TicketForm({
     });
   };
 
+  if (viewerRole === "tenant") {
+    const canSubmit = Boolean(draft.unitId && draft.description.trim());
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Report a Problem</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-zinc-600">
+            Describe what&apos;s wrong and we&apos;ll notify your landlord right away.
+          </p>
+
+          <FormError state={state} />
+          <FormSuccess
+            state={state}
+            message="Got it! Your landlord has been notified. We&apos;ll update you when there&apos;s progress."
+          />
+
+          {activeUnit ? (
+            <div className="rounded-xl border border-border/60 bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+              Reporting for <span className="font-semibold text-foreground">{activeUnit.propertyName}</span> · Unit {activeUnit.unitNumber}
+            </div>
+          ) : null}
+
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-foreground">What&apos;s the problem?</span>
+            <Textarea
+              value={draft.description}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, description: event.target.value }))
+              }
+              rows={5}
+              placeholder="For example: The kitchen faucet is leaking under the sink."
+              required
+            />
+          </label>
+
+          {photoWorkflowEnabled ? (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-foreground">Add a photo (optional)</p>
+              <PhotoUpload
+                selectedPhotos={photoFiles}
+                onPhotosSelected={setPhotoFiles}
+                disabled={isSubmitting}
+              />
+            </div>
+          ) : photoWorkflowWarning ? (
+            <Alert variant="warning">{photoWorkflowWarning}</Alert>
+          ) : null}
+
+          <Button
+            type="button"
+            size="lg"
+            className="w-full"
+            disabled={!canSubmit || isSubmitting}
+            onClick={handleSubmit}
+            title="Report this problem."
+          >
+            {isSubmitting ? "Reporting..." : "Report Problem"}
+          </Button>
+
+          <p className="text-center text-xs text-muted-foreground">
+            Your landlord will be notified immediately.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Submit Maintenance Request</CardTitle>
+        <CardTitle>Send Maintenance Request</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-zinc-600">
@@ -246,7 +325,7 @@ export function TicketForm({
 
         {step === 4 && (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Final step: review and submit request.</p>
+            <p className="text-sm text-zinc-600">Final step: review and send the request.</p>
             <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-700">
               <p>
                 <span className="font-semibold">Unit:</span>{" "}
@@ -277,9 +356,9 @@ export function TicketForm({
               className="w-full"
               disabled={!requiredComplete || isSubmitting}
               onClick={handleSubmit}
-              title="Create this maintenance request."
+              title="Send this maintenance request."
             >
-              {isSubmitting ? "Submitting..." : "Submit Request"}
+              {isSubmitting ? "Sending..." : "Send Request"}
             </Button>
           </div>
         )}
@@ -309,7 +388,7 @@ export function TicketForm({
               setStep(0);
               setPhotoFiles([]);
               setDraft({
-                unitId: "",
+                unitId: units[0]?.id ?? "",
                 title: "",
                 description: "",
                 priority: "medium"

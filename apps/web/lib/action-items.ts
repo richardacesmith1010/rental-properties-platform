@@ -259,7 +259,7 @@ export function computeActionItems({
       kind: "pending_members",
       severity: "info",
       title: `${pluralize(pendingInvitations.length, "pending member invitation")} awaiting acceptance`,
-      description: "Review LLC invites, resend stalled emails, or cancel the extras.",
+      description: "Check if your invites were accepted.",
       linkTo: "members",
       sortDate: pendingInvitations[0]?.createdAt
     });

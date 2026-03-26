@@ -39,6 +39,9 @@ interface SidebarNavProps {
   notifications?: NotificationDTO[];
   onDismissNotification?: StatefulAction;
   onClearAllNotifications?: StatefulAction;
+  onSendBatchPaymentReminder?: StatefulAction;
+  onWaiveCharge?: StatefulAction;
+  onMarkManagerPaymentPaid?: StatefulAction;
   searchItems?: GlobalSearchItem[];
   onOpenCommandPalette?: () => void;
   commandPaletteEnabled?: boolean;
@@ -194,6 +197,9 @@ export function SidebarNav({
   notifications = [],
   onDismissNotification,
   onClearAllNotifications,
+  onSendBatchPaymentReminder,
+  onWaiveCharge,
+  onMarkManagerPaymentPaid,
   searchItems = [],
   onOpenCommandPalette,
   commandPaletteEnabled = false,
@@ -210,8 +216,12 @@ export function SidebarNav({
   const notificationButton = (
     <NotificationBellMenu
       notifications={notifications}
+      role={role as "owner" | "manager" | "tenant"}
       onDismissNotification={onDismissNotification}
       onClearAllNotifications={onClearAllNotifications}
+      onSendBatchPaymentReminder={onSendBatchPaymentReminder}
+      onWaiveCharge={onWaiveCharge}
+      onMarkManagerPaymentPaid={onMarkManagerPaymentPaid}
       onOpenNotifications={onSelectItem ? () => onSelectItem("notifications") : undefined}
       notificationsHref={notificationHref}
       triggerClassName="sidebar-shell-button relative flex items-center justify-center px-2 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
@@ -284,6 +294,9 @@ export function MobileTopBar({
   notifications = [],
   onDismissNotification,
   onClearAllNotifications,
+  onSendBatchPaymentReminder,
+  onWaiveCharge,
+  onMarkManagerPaymentPaid,
   searchItems = [],
   onOpenCommandPalette,
   commandPaletteEnabled = false,
@@ -306,6 +319,9 @@ export function MobileTopBar({
   | "notifications"
   | "onDismissNotification"
   | "onClearAllNotifications"
+  | "onSendBatchPaymentReminder"
+  | "onWaiveCharge"
+  | "onMarkManagerPaymentPaid"
   | "searchItems"
   | "onOpenCommandPalette"
   | "commandPaletteEnabled"
@@ -344,8 +360,12 @@ export function MobileTopBar({
           ) : null}
           <NotificationBellMenu
             notifications={notifications}
+            role={role as "owner" | "manager" | "tenant"}
             onDismissNotification={onDismissNotification}
             onClearAllNotifications={onClearAllNotifications}
+            onSendBatchPaymentReminder={onSendBatchPaymentReminder}
+            onWaiveCharge={onWaiveCharge}
+            onMarkManagerPaymentPaid={onMarkManagerPaymentPaid}
             onOpenNotifications={onSelectItem ? () => onSelectItem("notifications") : undefined}
             notificationsHref={notificationHref}
             triggerClassName="sidebar-shell-button relative flex h-11 w-11 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"

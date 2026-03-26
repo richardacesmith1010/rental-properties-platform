@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { CreditCard, FileText, Wrench } from "lucide-react";
+import { CreditCard, FileText, MessageSquareText, Wrench } from "lucide-react";
 import type { ActionState } from "@/app/actions";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { TenantCharge } from "@/lib/tenant-payments";
 import { Card, CardContent } from "@/components/ui/card";
 import { PayRentCard } from "@/components/dashboard/pay-rent-card";
 
-type TenantOverviewSection = "charges" | "maintenance" | "documents";
+type TenantOverviewSection = "charges" | "maintenance" | "documents" | "notifications";
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
 interface TenantOverviewProps {
@@ -86,24 +86,30 @@ export function TenantOverview({
         <p className="mt-1 text-sm text-muted-foreground">{summary}</p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <QuickActionCard
           href={buildSectionHref("charges")}
           icon={CreditCard}
-          title="Pay Rent"
-          description={nextCharge ? "Review your open balance and checkout options." : "Review your payment history and receipts."}
+          title="Rent"
+          description={nextCharge ? "Pay your rent and review receipts." : "Review your payment history and receipts."}
         />
         <QuickActionCard
           href={buildSectionHref("maintenance")}
           icon={Wrench}
-          title="Submit Request"
-          description={openTicketCount > 0 ? `${openTicketCount} request${openTicketCount === 1 ? "" : "s"} currently open.` : "Report an issue in your home."}
+          title="Problems"
+          description={openTicketCount > 0 ? `${openTicketCount} problem${openTicketCount === 1 ? "" : "s"} currently open.` : "Report an issue in your home."}
+        />
+        <QuickActionCard
+          href={buildSectionHref("notifications")}
+          icon={MessageSquareText}
+          title="Messages"
+          description="Read updates from your landlord and reply in one place."
         />
         <QuickActionCard
           href={buildSectionHref("documents")}
           icon={FileText}
-          title="View Documents"
-          description="Access your lease packet and shared files."
+          title="Lease"
+          description="Open your lease packet and shared rental documents."
         />
       </div>
 

@@ -203,8 +203,16 @@ export function SectionRenderer(props: SectionRendererProps) {
         props.safeCapabilities.notificationsEnabled ? (
           <NotificationsSection
             notifications={props.safeNotifications}
+            role={props.data.profileRole}
             onMarkRead={props.onMarkNotificationRead!}
             onMarkAllRead={props.onMarkAllNotificationsRead}
+            onSendBatchPaymentReminder={
+              props.data.profileRole === "owner" ? props.onSendBatchPaymentReminder : undefined
+            }
+            onWaiveCharge={props.data.profileRole === "owner" ? props.onWaiveCharge : undefined}
+            onMarkManagerPaymentPaid={
+              props.data.profileRole === "owner" ? props.onMarkManagerPaymentPaid : undefined
+            }
             onOpenSection={props.openSection}
             enhanced={props.data.profileRole === "owner"}
           />

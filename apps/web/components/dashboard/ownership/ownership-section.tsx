@@ -123,7 +123,7 @@ function WithdrawalRequestForm({
           </div>
           <SubmitButton
             disabled={disableSubmit}
-            title="Submit this withdrawal request for member approval."
+            title="Send this withdrawal request for member approval."
           >
             Request Withdrawal
           </SubmitButton>

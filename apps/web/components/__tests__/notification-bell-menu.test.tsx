@@ -44,8 +44,11 @@ describe("NotificationBellMenu", () => {
     render(
       <NotificationBellMenu
         notifications={notifications}
+        role="owner"
         onDismissNotification={async () => ({ success: true })}
         onClearAllNotifications={async () => ({ success: true })}
+        onSendBatchPaymentReminder={async () => ({ success: true, message: "Reminder sent." })}
+        onWaiveCharge={async () => ({ success: true, message: "Charge waived." })}
         triggerClassName="inline-flex h-10 w-10 items-center justify-center"
       />
     );
@@ -56,12 +59,14 @@ describe("NotificationBellMenu", () => {
 
     expect(screen.getByRole("button", { name: "Clear all" })).toBeInTheDocument();
     expect(screen.getByText("Late rent detected")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send Reminder" })).toBeInTheDocument();
   });
 
   it("clears the local badge and list when clear all succeeds", async () => {
     render(
       <NotificationBellMenu
         notifications={notifications}
+        role="owner"
         onDismissNotification={async () => ({ success: true })}
         onClearAllNotifications={async () => ({ success: true })}
         triggerClassName="inline-flex h-10 w-10 items-center justify-center"
@@ -82,6 +87,7 @@ describe("NotificationBellMenu", () => {
     render(
       <NotificationBellMenu
         notifications={notifications}
+        role="owner"
         onDismissNotification={async () => ({ success: true })}
         onClearAllNotifications={async () => ({ success: true })}
         triggerClassName="inline-flex h-10 w-10 items-center justify-center"

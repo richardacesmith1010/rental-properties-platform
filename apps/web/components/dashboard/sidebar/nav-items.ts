@@ -132,43 +132,35 @@ export const defaultNavItems: NavItem[] = [
 export const tenantNavItems: NavItem[] = [
   {
     id: "overview",
-    label: "Overview",
+    label: "Rent",
     icon: LayoutDashboard,
     href: "/tenant?section=overview",
-    description: "Summary of rent, tickets, and alerts.",
-    clickHint: "open overview"
-  },
-  {
-    id: "charges",
-    label: "Charges",
-    icon: Receipt,
-    href: "/tenant?section=charges",
-    description: "Outstanding and late rent charges.",
-    clickHint: "open charges"
+    description: "Pay rent, review due dates, and see your next payment.",
+    clickHint: "open rent"
   },
   {
     id: "maintenance",
-    label: "Maintenance",
+    label: "Problems",
     icon: Wrench,
     href: "/tenant?section=maintenance",
-    description: "Maintenance requests and status.",
-    clickHint: "open maintenance"
+    description: "Report issues in your home and track updates.",
+    clickHint: "open problems"
   },
   {
     id: "documents",
-    label: "Documents",
+    label: "Lease",
     icon: FileSignature,
     href: "/tenant?section=documents",
-    description: "Lease packets and shared files.",
-    clickHint: "open documents"
+    description: "Open your lease packet and rental documents.",
+    clickHint: "open lease"
   },
   {
     id: "notifications",
-    label: "Notifications",
+    label: "Messages",
     icon: Bell,
     href: "/tenant?section=notifications",
-    description: "Unread and historical alerts.",
-    clickHint: "open notifications"
+    description: "Read landlord updates and reply in one place.",
+    clickHint: "open messages"
   }
 ];
 

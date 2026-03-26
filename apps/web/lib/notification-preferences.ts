@@ -93,8 +93,8 @@ export const NOTIFICATION_EMAIL_PREFERENCE_OPTIONS: NotificationPreferenceOption
     },
     {
       key: "delinquency_escalation",
-      label: "Delinquency escalations",
-      description: "Send repeated delinquency escalation emails for unpaid rent."
+      label: "Overdue rent follow-ups",
+      description: "Send repeat emails when rent stays unpaid."
     },
     {
       key: "manager_invoice",

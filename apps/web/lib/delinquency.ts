@@ -55,7 +55,7 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
     .filter((charge) => charge.daysPastDue >= 30);
 
   if (candidates.length === 0) {
-    return "Delinquency escalations sent: 0.";
+    return "Overdue rent follow-ups sent: 0.";
   }
 
   const { data: existingNotifications, error: existingError } = await supabase
@@ -141,9 +141,9 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
     const stage = charge.daysPastDue >= 90 ? "final" : charge.daysPastDue >= 60 ? "urgent" : "friendly";
     const title =
       stage === "final"
-        ? "Final Delinquency Notice"
+        ? "Final Overdue Rent Notice"
         : stage === "urgent"
-          ? "Urgent Rent Delinquency Notice"
+          ? "Urgent Overdue Rent Notice"
           : "Friendly Rent Reminder";
     const body =
       stage === "final"
@@ -180,8 +180,8 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
         notifyOwnerMembersForProperty({
           propertyId: unit.property_id,
           type: "delinquency_escalation",
-          title: "Final Delinquency Notice Sent",
-          body: `Unit ${unit.unit_number} at ${property.name} is more than 90 days delinquent.`,
+          title: "Final Overdue Rent Notice Sent",
+          body: `Unit ${unit.unit_number} at ${property.name} is more than 90 days overdue.`,
           entityType: "rent_charge",
           entityId: charge.id
         })
@@ -194,7 +194,7 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
   });
 
   const results = await Promise.all(work);
-  return `Delinquency escalations sent: ${results.reduce<number>((sum, value) => sum + value, 0)}.`;
+  return `Overdue rent follow-ups sent: ${results.reduce<number>((sum, value) => sum + value, 0)}.`;
 }
 
 export async function sendRentDueReminders(supabase: SupabaseClient): Promise<string> {

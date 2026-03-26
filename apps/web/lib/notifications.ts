@@ -12,6 +12,11 @@ import {
   type NotificationDeliveryPreference,
   type NotificationPreferenceSettings
 } from "@/lib/notification-preferences";
+import {
+  getPrimaryNotificationAction,
+  toAbsoluteNotificationUrl,
+  type NotificationRecipientRole
+} from "@/lib/notification-actions";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 export {
   formatRelativeNotificationTime,
@@ -117,6 +122,7 @@ export async function markAllNotificationsReadForUser(
 interface CreateNotificationParams {
   recipientProfileId: string;
   recipientEmail?: string | null;
+  recipientRole?: NotificationRecipientRole;
   type: NotificationType;
   title: string;
   body: string;
@@ -126,44 +132,6 @@ interface CreateNotificationParams {
   actorProfileId?: string | null;
   emailContent?: NotificationEmailContent;
   deliveryPreference?: NotificationDeliveryPreference;
-}
-
-function getNotificationCta(type: NotificationType) {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com";
-
-  switch (type) {
-    case "rent_due_reminder":
-    case "late_rent":
-      return { text: "Pay Now", url: `${baseUrl}/tenant?section=charges` };
-    case "payment_recorded":
-      return { text: "View Dashboard", url: `${baseUrl}/tenant?section=charges` };
-    case "owner_message":
-      return { text: "Open Messages", url: baseUrl };
-    case "new_ticket":
-    case "document_signed":
-    case "invite_accepted":
-      return { text: "View Dashboard", url: `${baseUrl}/owner` };
-    case "ticket_resolved":
-      return { text: "View Details", url: `${baseUrl}/tenant` };
-    case "document_sent":
-      return { text: "Review Document", url: `${baseUrl}/tenant` };
-    case "lease_expiring_soon":
-    case "lease_expired":
-      return { text: "View Lease", url: `${baseUrl}/tenant` };
-    case "delinquency_escalation":
-      return { text: "Resolve Balance", url: `${baseUrl}/tenant?section=charges` };
-    case "distribution_change_requested":
-    case "distribution_change_approved":
-    case "distribution_change_rejected":
-      return { text: "View Account", url: `${baseUrl}/owner` };
-    case "withdrawal_requested":
-    case "withdrawal_approved":
-    case "withdrawal_rejected":
-    case "withdrawal_completed":
-      return { text: "View Account", url: `${baseUrl}/owner` };
-    default:
-      return { text: "Open Domus", url: baseUrl };
-  }
 }
 
 function buildNotificationPlainText(params: {
@@ -185,6 +153,26 @@ function buildNotificationPlainText(params: {
   ].join("\n");
 }
 
+async function resolveRecipientRole(
+  admin: SupabaseClient,
+  recipientProfileId: string,
+  providedRole?: NotificationRecipientRole
+): Promise<NotificationRecipientRole> {
+  if (providedRole) {
+    return providedRole;
+  }
+
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("role")
+    .eq("id", recipientProfileId)
+    .maybeSingle();
+
+  return profile?.role === "owner" || profile?.role === "manager" || profile?.role === "tenant"
+    ? profile.role
+    : "owner";
+}
+
 export async function createNotificationWithDelivery(params: CreateNotificationParams) {
   try {
     const admin = createAdminClient();
@@ -198,7 +186,6 @@ export async function createNotificationWithDelivery(params: CreateNotificationP
       return;
     }
 
-    const cta = getNotificationCta(params.type);
     let notificationId: string | null = null;
     let deliveryRows: Array<{
       channel: "in_app" | "email";
@@ -258,27 +245,44 @@ export async function createNotificationWithDelivery(params: CreateNotificationP
       params.recipientEmail &&
       preference.emailBlockReason
     ) {
-      console.log("[notifications] skipped email delivery", {
-        recipientProfileId: params.recipientProfileId,
-        notificationType: params.type,
-        reason: preference.emailBlockReason
-      });
+      // Email delivery skipped — preference or pause active
     }
 
     if (shouldSendEmail && shouldRecordSuccessfulDelivery(deliveryRows, "email")) {
+      const recipientRole = await resolveRecipientRole(
+        admin,
+        params.recipientProfileId,
+        params.recipientRole
+      );
+      const primaryAction =
+        getPrimaryNotificationAction(
+          {
+            type: params.type,
+            entityType: params.entityType,
+            entityId: params.entityId ?? null,
+            title: params.title,
+            body: params.body
+          },
+          recipientRole
+        ) ?? {
+          label: "Open Domus",
+          href: "/",
+          variant: "default"
+        };
+      const ctaUrl = toAbsoluteNotificationUrl(primaryAction.href);
       const emailContent = params.emailContent ?? {
         subject: params.title,
         text: buildNotificationPlainText({
           title: params.title,
           body: params.body,
-          ctaText: cta.text,
-          ctaUrl: cta.url
+          ctaText: primaryAction.label,
+          ctaUrl
         }),
         html: buildNotificationEmail({
           title: params.title,
           body: params.body,
-          ctaText: cta.text,
-          ctaUrl: cta.url,
+          ctaText: primaryAction.label,
+          ctaUrl,
           preheaderText: params.title
         })
       };
@@ -363,7 +367,7 @@ export async function notifyOwnerMembersForProperty(params: NotifyOwnerMembersPa
 
     const { data: profiles } = await admin
       .from("profiles")
-      .select("id, email")
+      .select("id, email, role")
       .in("id", recipientIds);
 
     const settingsByProfileId = await getUserNotificationPreferenceSettingsMap(
@@ -374,6 +378,10 @@ export async function notifyOwnerMembersForProperty(params: NotifyOwnerMembersPa
       await createNotificationWithDelivery({
         recipientProfileId: profile.id,
         recipientEmail: profile.email,
+        recipientRole:
+          profile.role === "owner" || profile.role === "manager" || profile.role === "tenant"
+            ? profile.role
+            : undefined,
         type: params.type,
         title: params.title,
         body: params.body,
@@ -427,7 +435,7 @@ export async function notifyAccountMembers(params: NotifyAccountMembersParams) {
 
     const { data: profiles, error: profilesError } = await admin
       .from("profiles")
-      .select("id, email")
+      .select("id, email, role")
       .in("id", recipientIds);
 
     if (profilesError) {
@@ -446,6 +454,10 @@ export async function notifyAccountMembers(params: NotifyAccountMembersParams) {
         createNotificationWithDelivery({
           recipientProfileId: profile.id,
           recipientEmail: profile.email,
+          recipientRole:
+            profile.role === "owner" || profile.role === "manager" || profile.role === "tenant"
+              ? profile.role
+              : undefined,
           type: params.type,
           title: params.title,
           body: params.body,

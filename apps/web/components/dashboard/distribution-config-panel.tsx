@@ -123,7 +123,7 @@ export function DistributionConfigPanel({
       <CardHeader>
         <CardTitle>Distribution Settings</CardTitle>
         <p className="text-sm text-zinc-600">
-          Configure how rent payments for {accountDisplayName} are routed after the LLC account receives funds.
+          How should rent money be split for {accountDisplayName}?
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -151,7 +151,7 @@ export function DistributionConfigPanel({
               />
               <div>
                 <p className="text-sm font-semibold text-zinc-900">Retain All</p>
-                <p className="text-xs text-zinc-500">All funds stay in the LLC account.</p>
+                <p className="text-xs text-zinc-500">Keep all money in the LLC.</p>
               </div>
             </label>
 
@@ -166,7 +166,7 @@ export function DistributionConfigPanel({
               />
               <div>
                 <p className="text-sm font-semibold text-zinc-900">Split Equally</p>
-                <p className="text-xs text-zinc-500">Each active member receives an equal share.</p>
+                <p className="text-xs text-zinc-500">Everyone gets the same amount.</p>
               </div>
             </label>
 
@@ -181,20 +181,20 @@ export function DistributionConfigPanel({
               />
               <div>
                 <p className="text-sm font-semibold text-zinc-900">Custom Split</p>
-                <p className="text-xs text-zinc-500">Set exact percentages for each active member.</p>
+                <p className="text-xs text-zinc-500">You pick who gets what.</p>
               </div>
             </label>
           </div>
 
           {mode === "retain" ? (
             <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-600">
-              All funds stay in the LLC account.
+              Keep all money in the LLC.
             </div>
           ) : null}
 
           {mode === "split_equal" ? (
             <div className="space-y-2 rounded-xl border border-zinc-200 bg-white px-4 py-3">
-              <p className="text-sm font-medium text-zinc-700">Each member receives an equal share.</p>
+              <p className="text-sm font-medium text-zinc-700">Everyone gets the same amount.</p>
               {activeMembers.length === 0 ? (
                 <p className="text-sm text-red-600">No active members are available for distribution.</p>
               ) : (
@@ -268,13 +268,13 @@ export function DistributionConfigPanel({
 
           <div className="flex items-center justify-between gap-3">
             <div className="text-xs text-zinc-500">
-              Members without a payout account keep their share in the LLC account.
+              If someone hasn&apos;t linked their bank, their share stays in the LLC.
             </div>
             <SubmitButton
               disabled={disableSave}
               title={
                 requiresApproval
-                  ? "Submit this distribution update for member approval."
+                  ? "Send this split update for member approval."
                   : "Save this distribution configuration."
               }
             >

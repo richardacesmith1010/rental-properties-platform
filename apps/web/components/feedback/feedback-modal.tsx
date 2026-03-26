@@ -206,9 +206,9 @@ export function FeedbackModal({ open, onClose, onSubmit, defaultEmail }: Feedbac
               onClick={handleSubmit}
               disabled={isPending}
               className="sm:min-w-[180px]"
-              title="Submit this feedback to the Domus team."
+              title="Send this feedback to the Domus team."
             >
-              {isPending ? "Submitting..." : "Submit Feedback"}
+              {isPending ? "Sending..." : "Send Feedback"}
             </Button>
           </div>
         </CardContent>

@@ -93,7 +93,13 @@ function createNotificationAdminClient(config: NotificationAdminConfig): Supabas
     if (table === "profiles") {
       return {
         select: vi.fn(() => ({
-          in: vi.fn().mockResolvedValue({ data: config.profiles ?? [], error: null })
+          in: vi.fn().mockResolvedValue({ data: config.profiles ?? [], error: null }),
+          eq: vi.fn((column: string, value: string) => ({
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: (config.profiles ?? []).find((profile) => profile.id === value) ?? null,
+              error: null
+            })
+          }))
         }))
       };
     }

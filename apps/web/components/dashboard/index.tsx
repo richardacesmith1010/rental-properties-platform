@@ -343,10 +343,14 @@ export function Dashboard(props: DashboardProps) {
           <>
             <CompactGreetingBar
               userName={displayName}
+              role={props.data.profileRole}
               statusSummary={statusSummary}
               notifications={layoutProps.notifications}
               onDismissNotification={layoutProps.onDismissNotification}
               onClearAllNotifications={layoutProps.onClearAllNotifications}
+              onSendBatchPaymentReminder={layoutProps.onSendBatchPaymentReminder}
+              onWaiveCharge={layoutProps.onWaiveCharge}
+              onMarkManagerPaymentPaid={layoutProps.onMarkManagerPaymentPaid}
               onOpenSettings={() => router.push("/settings")}
               onOpenNotifications={() => sectionRendererProps.openSection("notifications")}
             />

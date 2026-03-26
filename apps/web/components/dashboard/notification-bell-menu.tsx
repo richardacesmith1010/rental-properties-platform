@@ -2,21 +2,23 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, X } from "lucide-react";
+import { Bell } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { ActionableNotification } from "@/components/dashboard/actionable-notification";
 import { cn } from "@/lib/format";
 import type { NotificationDTO } from "@/lib/notifications";
-import {
-  formatRelativeNotificationTime,
-  getNotificationActionLink
-} from "@/lib/notification-feed";
+import type { NotificationRecipientRole } from "@/lib/notification-actions";
 import type { StatefulAction } from "./types";
 
 interface NotificationBellMenuProps {
   notifications: NotificationDTO[];
+  role: NotificationRecipientRole;
   onDismissNotification?: StatefulAction;
   onClearAllNotifications?: StatefulAction;
+  onSendBatchPaymentReminder?: StatefulAction;
+  onWaiveCharge?: StatefulAction;
+  onMarkManagerPaymentPaid?: StatefulAction;
   onOpenNotifications?: () => void;
   notificationsHref?: string | null;
   triggerClassName?: string;
@@ -28,8 +30,12 @@ interface NotificationBellMenuProps {
 
 export function NotificationBellMenu({
   notifications,
+  role,
   onDismissNotification,
   onClearAllNotifications,
+  onSendBatchPaymentReminder,
+  onWaiveCharge,
+  onMarkManagerPaymentPaid,
   onOpenNotifications,
   notificationsHref = null,
   triggerClassName,
@@ -44,7 +50,6 @@ export function NotificationBellMenu({
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => new Set());
   const [clearAllActive, setClearAllActive] = useState(false);
   const [isClearing, startClearing] = useTransition();
-  const [dismissingId, startDismissing] = useTransition();
 
   const visibleNotifications = useMemo(() => {
     if (clearAllActive) {
@@ -95,26 +100,10 @@ export function NotificationBellMenu({
   };
 
   const handleDismissNotification = (notificationId: string) => {
-    if (!onDismissNotification) {
-      setDismissedIds((current) => new Set(current).add(notificationId));
-      return;
-    }
-
-    startDismissing(async () => {
-      const formData = new FormData();
-      formData.set("notificationId", notificationId);
-      const result = await onDismissNotification(null, formData);
-      if (!result?.success) {
-        toast.error(result?.error ?? "Unable to dismiss this notification.");
-        return;
-      }
-
-      setDismissedIds((current) => {
-        const next = new Set(current);
-        next.add(notificationId);
-        return next;
-      });
-      router.refresh();
+    setDismissedIds((current) => {
+      const next = new Set(current);
+      next.add(notificationId);
+      return next;
     });
   };
 
@@ -199,58 +188,21 @@ export function NotificationBellMenu({
             </div>
           ) : (
             <div className="max-h-[24rem] overflow-y-auto">
-              {visibleNotifications.slice(0, 8).map((notification) => {
-                const actionLink = getNotificationActionLink(notification);
-                return (
-                  <div
+              <div className="space-y-3 p-3">
+                {visibleNotifications.slice(0, 8).map((notification) => (
+                  <ActionableNotification
                     key={notification.id}
-                    className="border-b border-border/50 px-4 py-3 last:border-b-0"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={cn(
-                              "h-2 w-2 shrink-0 rounded-full",
-                              notification.readAt ? "bg-zinc-300" : "bg-violet-500"
-                            )}
-                            aria-hidden="true"
-                          />
-                          <p className="truncate text-sm font-semibold text-foreground">
-                            {notification.title}
-                          </p>
-                        </div>
-                        <p className="mt-1 text-sm text-muted-foreground">{notification.body}</p>
-                        <div className="mt-2 flex flex-wrap items-center gap-3">
-                          <span className="text-xs text-muted-foreground">
-                            {formatRelativeNotificationTime(notification.createdAt)}
-                          </span>
-                          {actionLink ? (
-                            <button
-                              type="button"
-                              onClick={handleOpenNotifications}
-                              className="text-xs font-medium text-violet-700 transition hover:text-violet-900 hover:underline"
-                              title={`Open ${actionLink.sectionId}.`}
-                            >
-                              {actionLink.label}
-                            </button>
-                          ) : null}
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleDismissNotification(notification.id)}
-                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                        title={`Dismiss ${notification.title}`}
-                        aria-label={`Dismiss ${notification.title}`}
-                        disabled={dismissingId}
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+                    notification={notification}
+                    role={role}
+                    compact
+                    onDismissNotification={onDismissNotification}
+                    onSendBatchPaymentReminder={onSendBatchPaymentReminder}
+                    onWaiveCharge={onWaiveCharge}
+                    onMarkManagerPaymentPaid={onMarkManagerPaymentPaid}
+                    onDidDismiss={handleDismissNotification}
+                  />
+                ))}
+              </div>
             </div>
           )}
 

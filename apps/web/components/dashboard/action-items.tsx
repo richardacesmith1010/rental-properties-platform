@@ -129,7 +129,7 @@ export function ActionItems({
 
     const formData = new FormData();
     formData.set("chargeId", item.chargeId);
-    formData.set("reason", "Waived from the Home action center.");
+    formData.set("reason", "Waived from What needs attention.");
     runAction({
       item,
       key: `waive-${item.id}`,
@@ -178,7 +178,7 @@ export function ActionItems({
     <section className="space-y-4">
       <div className="space-y-2 px-1">
         <Badge variant="outline" className="px-3 py-1 text-sm">
-          Home Action Center
+          What needs attention
         </Badge>
         <h2 className="text-3xl font-semibold tracking-tight text-foreground">{attentionLabel}</h2>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">

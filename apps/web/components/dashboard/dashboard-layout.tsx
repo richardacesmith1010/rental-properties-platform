@@ -24,6 +24,9 @@ export interface DashboardLayoutProps {
   notifications?: NotificationDTO[];
   onDismissNotification?: StatefulAction;
   onClearAllNotifications?: StatefulAction;
+  onSendBatchPaymentReminder?: StatefulAction;
+  onWaiveCharge?: StatefulAction;
+  onMarkManagerPaymentPaid?: StatefulAction;
   searchItems?: GlobalSearchItem[];
   onOpenCommandPalette?: () => void;
   commandPaletteEnabled?: boolean;
@@ -49,6 +52,9 @@ export function DashboardLayout({
   notifications = [],
   onDismissNotification,
   onClearAllNotifications,
+  onSendBatchPaymentReminder,
+  onWaiveCharge,
+  onMarkManagerPaymentPaid,
   searchItems = [],
   onOpenCommandPalette,
   commandPaletteEnabled = false,
@@ -70,6 +76,9 @@ export function DashboardLayout({
     notifications,
     onDismissNotification,
     onClearAllNotifications,
+    onSendBatchPaymentReminder,
+    onWaiveCharge,
+    onMarkManagerPaymentPaid,
     searchItems,
     onOpenCommandPalette,
     commandPaletteEnabled,

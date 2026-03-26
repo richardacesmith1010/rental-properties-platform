@@ -25,7 +25,7 @@ export function DelinquencyReport({
   return (
     <ReportSection
       id="delinquency-aging"
-      title="Delinquency Aging"
+      title="Overdue Rent Aging"
       description="Outstanding balances grouped into 30/60/90+ day buckets."
       rows={data}
       onExport={() => downloadReportCsv(`domus-delinquency-aging-${new Date().toISOString().slice(0, 10)}.csv`, delinquencyToCsv(data))}
@@ -50,7 +50,7 @@ export function DelinquencyReport({
         { key: "ninety", label: "90+", sortValue: (row) => row.ninetyPlus, render: (row) => formatCurrency(row.ninetyPlus) },
         { key: "total", label: "Total Owed", sortValue: (row) => row.totalOwed, render: (row) => formatCurrency(row.totalOwed) }
       ]}
-      emptyTitle="No delinquency data"
+      emptyTitle="No overdue rent data"
       emptyDescription="Past-due balances will appear here when charges age beyond the due date."
       getRowId={(row) => `${row.leaseId}:${row.tenantEmail}`}
       renderExpandedContent={(row) => (

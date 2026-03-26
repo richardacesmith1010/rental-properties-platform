@@ -4,6 +4,8 @@ import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, MapPin, Pencil, Wrench } from "lucide-react";
 import { EntityEditModal } from "@/components/dashboard/entity-edit-modal";
+import { FirstVisitHelp } from "@/components/dashboard/first-visit-help";
+import { ManagerDashboard } from "@/components/dashboard/manager-dashboard";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, pluralize } from "@/lib/format";
 import { buildEntityUpdateFormData, buildPropertyEditFields } from "@/lib/entity-edit-fields";
@@ -12,6 +14,28 @@ import { PortfolioSection } from "./portfolio-section";
 import { InvitationsPanel } from "./invitations-panel";
 import { SectionErrorBoundary } from "./section-error-boundary";
 import type { SectionRendererProps } from "./section-map";
+
+function getSectionHelpText(sectionId: string, role: string) {
+  if (sectionId === "charges" && role !== "tenant") {
+    return "Charges are automatically created each month from your leases. You can send reminders, edit, waive, or delete them here.";
+  }
+
+  if (sectionId === "maintenance") {
+    return role === "tenant"
+      ? "When you report a problem, updates from your landlord will show up here."
+      : "When your tenant reports a problem, it shows up here with status and photo updates.";
+  }
+
+  if (sectionId === "members") {
+    return "Everyone you invite here can view and manage this LLC's properties.";
+  }
+
+  if (sectionId === "analytics") {
+    return "These reports pull from your actual lease, payment, and expense data.";
+  }
+
+  return null;
+}
 
 function PropertyScopeControl({ props }: { props: SectionRendererProps }) {
   if (
@@ -138,6 +162,11 @@ export function SectionFrame({
     <SectionErrorBoundary sectionName={sectionName}>
       <div className="flex min-h-full flex-col gap-4">
         <PropertyScopeControl props={props} />
+        {getSectionHelpText(props.activeSection, props.data.profileRole) ? (
+          <FirstVisitHelp sectionId={`${props.data.profileRole}-${props.activeSection}`}>
+            {getSectionHelpText(props.activeSection, props.data.profileRole)}
+          </FirstVisitHelp>
+        ) : null}
         <div>{children}</div>
       </div>
     </SectionErrorBoundary>
@@ -149,6 +178,18 @@ export function OverviewSectionContent({
 }: {
   props: SectionRendererProps;
 }) {
+  if (props.data.profileRole === "manager") {
+    return (
+      <ManagerDashboard
+        tickets={props.filteredTickets}
+        charges={props.data.charges}
+        notifications={props.safeNotifications}
+        onOpenSection={props.goToSectionIfVisible}
+        onUpdateTicketStatus={props.onUpdateTicketStatus}
+      />
+    );
+  }
+
   return (
     <div className="flex min-h-full flex-col gap-4">
       <OverviewSummaryStrip props={props} />

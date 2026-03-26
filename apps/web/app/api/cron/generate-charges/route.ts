@@ -202,7 +202,7 @@ export async function GET(request: Request) {
       warningSummary: getLegacyOperationSummary(warningOp, "Expiration warnings failed"),
       delinquencySummary: getLegacyOperationSummary(
         delinquencyOp,
-        "Delinquency escalations failed"
+        "Overdue rent follow-ups failed"
       ),
       reminderSummary: getLegacyOperationSummary(reminderOp, "Reminders failed"),
       operations,

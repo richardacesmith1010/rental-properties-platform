@@ -1,234 +1,185 @@
-import type { ManagerDashboardData } from "@/lib/manager-dashboard";
-import type { VendorDTO } from "@/lib/vendors";
-import type { FeatureCapabilitiesDTO } from "@/lib/feature-capabilities";
-import type { ActionState } from "@/app/actions";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { KpiCard } from "@/components/shared/kpi-card";
-import { DataRow } from "@/components/shared/data-row";
-import { EmptyState } from "@/components/shared/empty-state";
-import { SidebarNav, MobileTopBar, type NavItem } from "./sidebar-nav";
-import { MaintenanceSection } from "./maintenance-section";
-import { formatCurrency, formatDate } from "@/lib/format";
-import {
-  LayoutDashboard,
-  Building2,
-  Wrench,
-  Receipt,
-} from "lucide-react";
+"use client";
 
-type FormAction = (formData: FormData) => Promise<void>;
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { Bell, Receipt, Wrench } from "lucide-react";
+import { toast } from "sonner";
+import type { ActionState } from "@/app/actions";
+import { EmptyState } from "@/components/dashboard/empty-state";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { DashboardCharge } from "@/lib/dashboard";
+import { formatCurrency, formatDate } from "@/lib/format";
+import type { MaintenanceTicket } from "@/lib/maintenance";
+import type { NotificationDTO } from "@/lib/notifications";
+
 type StatefulAction = (
   prev: ActionState,
   formData: FormData
 ) => Promise<ActionState>;
 
 interface ManagerDashboardProps {
-  data: ManagerDashboardData;
-  vendors: VendorDTO[];
-  capabilities?: FeatureCapabilitiesDTO;
-  userEmail: string;
-  onSignOut: FormAction;
-  onUpdateTicketStatus: StatefulAction;
-  onAssignVendor: StatefulAction;
-  onUploadPhoto: StatefulAction;
+  tickets: MaintenanceTicket[];
+  charges: DashboardCharge[];
+  notifications: NotificationDTO[];
+  onOpenSection: (sectionId: string) => void;
+  onUpdateTicketStatus?: StatefulAction;
 }
 
-const managerNavItems: NavItem[] = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "properties", label: "Properties", icon: Building2 },
-  { id: "maintenance", label: "Maintenance", icon: Wrench },
-  { id: "rent-status", label: "Rent Status", icon: Receipt },
-];
+interface ManagerTask {
+  id: string;
+  kind: "ticket" | "charge" | "message";
+  title: string;
+  description: string;
+  primaryLabel: string;
+  secondaryLabel?: string;
+  onPrimary: () => void;
+  onSecondary?: () => void;
+}
 
 export function ManagerDashboard({
-  data,
-  vendors,
-  capabilities,
-  userEmail,
-  onSignOut,
-  onUpdateTicketStatus,
-  onAssignVendor,
-  onUploadPhoto
+  tickets,
+  charges,
+  notifications,
+  onOpenSection,
+  onUpdateTicketStatus
 }: ManagerDashboardProps) {
-  const safeCapabilities: FeatureCapabilitiesDTO = capabilities ?? {
-    documentsEnabled: true,
-    documentAssetAccessEnabled: true,
-    notificationsEnabled: true,
-    vendorWorkflowEnabled: true,
-    photoWorkflowEnabled: true,
-    ownershipEnabled: true,
-    leasingPipelineEnabled: true,
-    inboxThreadsEnabled: true,
-    automationsEnabled: true,
-    warnings: {}
-  };
+  const router = useRouter();
+  const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
-  const occupancy =
-    data.kpis.totalUnits > 0
-      ? Math.round((data.kpis.occupiedUnits / data.kpis.totalUnits) * 100)
-      : 0;
+  const maintenanceTasks = tickets
+    .filter((ticket) => ticket.status === "open" || ticket.status === "in_progress")
+    .sort((left, right) => {
+      const priorityRank = (value: string) => {
+        switch (value) {
+          case "urgent":
+            return 3;
+          case "high":
+            return 2;
+          case "medium":
+            return 1;
+          default:
+            return 0;
+        }
+      };
+      return priorityRank(right.priority) - priorityRank(left.priority);
+    })
+    .slice(0, 3);
+
+  const overdueCharges = charges.filter((charge) => charge.status === "late").slice(0, 2);
+  const unreadMessages = notifications.filter((notification) => !notification.readAt).slice(0, 2);
+
+  const tasks: ManagerTask[] = [
+    ...maintenanceTasks.map((ticket) => ({
+      id: `ticket:${ticket.id}`,
+      kind: "ticket" as const,
+      title: ticket.status === "open" ? "New maintenance ticket" : "Maintenance follow-up",
+      description: `${ticket.title} · ${ticket.propertyName}${ticket.unitNumber ? ` · Unit ${ticket.unitNumber}` : ""}`,
+      primaryLabel: ticket.status === "open" ? "Mark In Progress" : "Open Ticket",
+      secondaryLabel: "Respond",
+      onPrimary: () => {
+        if (ticket.status !== "open" || !onUpdateTicketStatus) {
+          onOpenSection("maintenance");
+          return;
+        }
+
+        setPendingTaskId(`ticket:${ticket.id}`);
+        startTransition(async () => {
+          const formData = new FormData();
+          formData.set("ticketId", ticket.id);
+          formData.set("status", "in_progress");
+          const result = await onUpdateTicketStatus(null, formData);
+          if (!result?.success) {
+            toast.error(result?.error ?? "Unable to update this ticket.");
+            setPendingTaskId(null);
+            return;
+          }
+
+          toast.success(result.message ?? "Ticket marked in progress.");
+          setPendingTaskId(null);
+          router.refresh();
+        });
+      },
+      onSecondary: () => onOpenSection("maintenance")
+    })),
+    ...overdueCharges.map((charge) => ({
+      id: `charge:${charge.id}`,
+      kind: "charge" as const,
+      title: "Late rent needs follow-up",
+      description: `${charge.tenantName} · ${charge.propertyName} · ${formatCurrency(charge.amountCents)} due ${formatDate(charge.dueDate)}`,
+      primaryLabel: "View Charge",
+      onPrimary: () => onOpenSection("charges")
+    })),
+    ...unreadMessages.map((notification) => ({
+      id: `message:${notification.id}`,
+      kind: "message" as const,
+      title: notification.title,
+      description: notification.body,
+      primaryLabel: "Open Messages",
+      onPrimary: () => onOpenSection(notification.entityType === "inbox_thread" ? "inbox" : "notifications")
+    }))
+  ];
 
   return (
-    <div className="flex min-h-screen flex-col lg:flex-row">
-      {/* Mobile top bar */}
-      <MobileTopBar userEmail={userEmail} role="manager" items={managerNavItems} activeItemId="overview" onSignOut={onSignOut} />
-
-      {/* Desktop sidebar */}
-      <SidebarNav
-        userEmail={userEmail}
-        role="manager"
-        onSignOut={onSignOut}
-        items={managerNavItems}
-      />
-
-      {/* Main content */}
-      <main className="flex-1 lg:ml-[260px]">
-        {/* Header */}
-        <div className="flex flex-col gap-4 px-6 pt-6 sm:flex-row sm:items-start sm:justify-between lg:px-8 lg:pt-8">
-          <div id="overview">
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-              Manager Dashboard
-            </h1>
-            <p className="mt-1 text-sm text-zinc-500">
-              {formatDate(new Date())}
-            </p>
-          </div>
-          <Badge className="self-start capitalize">manager</Badge>
-        </div>
-
-        {/* Content sections */}
-        <div className="space-y-6 px-6 pb-8 pt-6 lg:px-8">
-          {/* KPI Grid */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <KpiCard
-              title="Assigned Properties"
-              value={data.kpis.assignedPropertyCount.toString()}
-              subtitle={`${data.kpis.assignedPropertyCount} managed`}
-              gradient="linear-gradient(135deg, #7c3aed, #10b981)"
-            />
-            <KpiCard
-              title="Occupancy"
-              value={`${occupancy}%`}
-              subtitle={`${data.kpis.occupiedUnits}/${data.kpis.totalUnits} units`}
-              gradient="linear-gradient(135deg, #10b981, #34d399)"
-            />
-            <KpiCard
-              title="Open Maintenance"
-              value={data.kpis.openMaintenanceCount.toString()}
-              subtitle={
-                data.kpis.highPriorityMaintenanceCount > 0
-                  ? `${data.kpis.highPriorityMaintenanceCount} high priority`
-                  : `${data.kpis.openMaintenanceCount} open`
-              }
-              gradient="linear-gradient(135deg, #f59e0b, #fbbf24)"
-              alert={data.kpis.highPriorityMaintenanceCount > 0}
-            />
-            <KpiCard
-              title="Late Rent"
-              value={formatCurrency(data.kpis.lateRentCents)}
-              subtitle={
-                data.kpis.lateAccountCount > 0
-                  ? `${data.kpis.lateAccountCount} account${data.kpis.lateAccountCount === 1 ? "" : "s"}`
-                  : "All current"
-              }
-              gradient="linear-gradient(135deg, #f43f5e, #fb7185)"
-              alert={data.kpis.lateAccountCount > 0}
-            />
-          </div>
-
-          {/* Properties */}
-          <Card id="properties">
-            <CardHeader>
-              <CardTitle>Assigned Properties</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {data.properties.length === 0 ? (
-                <EmptyState message="No properties assigned yet." />
-              ) : (
-                <div>
-                  {data.properties.map((property, i) => (
-                    <DataRow
-                      key={property.id}
-                      last={i === data.properties.length - 1}
-                    >
-                      <div>
-                        <p className="text-sm font-semibold text-zinc-900">
-                          {property.name}
-                        </p>
-                        <p className="mt-0.5 text-xs text-zinc-500">
-                          {property.city}, {property.state}
-                        </p>
-                      </div>
-                      <Badge variant="outline">
-                        {property.unitCount} unit
-                        {property.unitCount === 1 ? "" : "s"}
-                      </Badge>
-                    </DataRow>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Maintenance Tickets */}
-          <MaintenanceSection
-            tickets={data.tickets}
-            showControls={true}
-            onUpdateStatus={onUpdateTicketStatus}
-            vendors={vendors}
-            onAssignVendor={safeCapabilities.vendorWorkflowEnabled ? onAssignVendor : undefined}
-            onUploadPhoto={safeCapabilities.photoWorkflowEnabled ? onUploadPhoto : undefined}
-            vendorWorkflowEnabled={safeCapabilities.vendorWorkflowEnabled}
-            photoWorkflowEnabled={safeCapabilities.photoWorkflowEnabled}
-            vendorWorkflowWarning={safeCapabilities.warnings.vendorWorkflow}
-            photoWorkflowWarning={safeCapabilities.warnings.photoWorkflow}
+    <Card className="border border-border/50 shadow-sm">
+      <CardHeader>
+        <CardTitle className="text-xl font-semibold">Your Tasks</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {tasks.length === 0 ? (
+          <EmptyState
+            icon={Wrench}
+            title="No other tasks right now"
+            description="Maintenance updates, rent follow-ups, and new messages will show up here automatically."
           />
-
-          {/* Rent Status */}
-          <Card id="rent-status">
-            <CardHeader>
-              <CardTitle>Rent Charges</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {data.charges.length === 0 ? (
-                <EmptyState message="No pending or late rent charges." />
-              ) : (
-                <div>
-                  {data.charges.map((charge, i) => (
-                    <DataRow
-                      key={charge.id}
-                      last={i === data.charges.length - 1}
-                    >
-                      <div>
-                        <p className="text-sm font-semibold text-zinc-900">
-                          {charge.leaseId.slice(0, 8)}...
-                        </p>
-                        <p className="mt-0.5 text-xs text-zinc-500">
-                          Due {formatDate(charge.dueDate)}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold text-zinc-900">
-                          {formatCurrency(charge.amountCents)}
-                        </p>
-                        <Badge
-                          variant={
-                            charge.status === "late" ? "destructive" : "warning"
-                          }
-                          className="mt-0.5"
+        ) : (
+          <div className="space-y-3">
+            {tasks.map((task) => {
+              const icon = task.kind === "ticket" ? Wrench : task.kind === "charge" ? Receipt : Bell;
+              const Icon = icon;
+              return (
+                <div
+                  key={task.id}
+                  className="rounded-2xl border border-border/60 bg-card/90 px-4 py-4 shadow-sm"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0 space-y-1">
+                      <p className="inline-flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <Icon className="h-4 w-4 text-muted-foreground" />
+                        {task.title}
+                      </p>
+                      <p className="text-sm leading-6 text-muted-foreground">{task.description}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        loading={isPending && pendingTaskId === task.id}
+                        onClick={task.onPrimary}
+                        title={task.primaryLabel}
+                      >
+                        {task.primaryLabel}
+                      </Button>
+                      {task.onSecondary && task.secondaryLabel ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={task.onSecondary}
+                          title={task.secondaryLabel}
                         >
-                          {charge.status.toUpperCase()}
-                        </Badge>
-                      </div>
-                    </DataRow>
-                  ))}
+                          {task.secondaryLabel}
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-    </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

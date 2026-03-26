@@ -134,7 +134,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <ReportCard id="rent-roll" icon="bar-chart-3" title="Rent Roll" description="Current tenant roster with rent amounts and balances." />
-          <ReportCard id="delinquency-aging" icon="receipt" title="Delinquency Aging" description="Outstanding balances by 30/60/90+ day aging." />
+          <ReportCard id="delinquency-aging" icon="receipt" title="Overdue Rent Aging" description="Outstanding balances by 30/60/90+ day aging." />
           <ReportCard id="tenant-ledger" icon="file-bar-chart-2" title="Tenant Ledger" description="Complete charge and payment history per tenant." />
           <ReportCard id="monthly-pnl" icon="wallet" title="Monthly P&L" description="Revenue versus expenses by property by month." />
           <ReportCard id="tax-summary" icon="landmark" title="Tax Summary" description="Annual rental income and deductions in a Schedule E style format." />

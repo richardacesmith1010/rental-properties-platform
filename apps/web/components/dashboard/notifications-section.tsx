@@ -2,7 +2,8 @@
 
 import { useMemo } from "react";
 import { useFormState } from "react-dom";
-import { Bell, X } from "lucide-react";
+import { Bell } from "lucide-react";
+import { ActionableNotification } from "@/components/dashboard/actionable-notification";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SubmitButton } from "@/components/shared/submit-button";
@@ -10,11 +11,9 @@ import { EmptyState } from "@/components/dashboard/empty-state";
 import type { ActionState } from "@/app/actions";
 import type { NotificationDTO } from "@/lib/notifications";
 import {
-  formatRelativeNotificationTime,
-  getNotificationActionLink,
   groupNotificationsByRecency
 } from "@/lib/notification-feed";
-import { formatDateTime } from "@/lib/format";
+import type { NotificationRecipientRole } from "@/lib/notification-actions";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -22,8 +21,12 @@ const noopStatefulAction: StatefulAction = async () => null;
 
 interface NotificationsSectionProps {
   notifications: NotificationDTO[];
+  role: NotificationRecipientRole;
   onMarkRead: StatefulAction;
   onMarkAllRead?: StatefulAction;
+  onSendBatchPaymentReminder?: StatefulAction;
+  onWaiveCharge?: StatefulAction;
+  onMarkManagerPaymentPaid?: StatefulAction;
   onOpenSection?: (sectionId: string) => void;
   enhanced?: boolean;
 }
@@ -35,8 +38,12 @@ interface NotificationGroup {
 
 export function NotificationsSection({
   notifications,
+  role,
   onMarkRead,
   onMarkAllRead,
+  onSendBatchPaymentReminder,
+  onWaiveCharge,
+  onMarkManagerPaymentPaid,
   onOpenSection,
   enhanced = false
 }: NotificationsSectionProps) {
@@ -95,10 +102,14 @@ export function NotificationsSection({
                 </h3>
                 <div className="space-y-3">
                   {group.notifications.map((notification) => (
-                    <EnhancedNotificationRow
+                    <NotificationRow
                       key={notification.id}
                       notification={notification}
+                      role={role}
                       onMarkRead={onMarkRead}
+                      onSendBatchPaymentReminder={onSendBatchPaymentReminder}
+                      onWaiveCharge={onWaiveCharge}
+                      onMarkManagerPaymentPaid={onMarkManagerPaymentPaid}
                       onOpenSection={onOpenSection}
                     />
                   ))}
@@ -109,10 +120,15 @@ export function NotificationsSection({
         ) : (
           <div className="space-y-3">
             {notifications.map((notification) => (
-              <LegacyNotificationRow
+              <NotificationRow
                 key={notification.id}
                 notification={notification}
+                role={role}
                 onMarkRead={onMarkRead}
+                onSendBatchPaymentReminder={onSendBatchPaymentReminder}
+                onWaiveCharge={onWaiveCharge}
+                onMarkManagerPaymentPaid={onMarkManagerPaymentPaid}
+                onOpenSection={onOpenSection}
               />
             ))}
           </div>
@@ -122,113 +138,32 @@ export function NotificationsSection({
   );
 }
 
-function EnhancedNotificationRow({
+function NotificationRow({
   notification,
+  role,
   onMarkRead,
+  onSendBatchPaymentReminder,
+  onWaiveCharge,
+  onMarkManagerPaymentPaid,
   onOpenSection
 }: {
   notification: NotificationDTO;
+  role: NotificationRecipientRole;
   onMarkRead: StatefulAction;
+  onSendBatchPaymentReminder?: StatefulAction;
+  onWaiveCharge?: StatefulAction;
+  onMarkManagerPaymentPaid?: StatefulAction;
   onOpenSection?: (sectionId: string) => void;
 }) {
-  const [state, action] = useFormState(onMarkRead, null);
-  const actionLink = getNotificationActionLink(notification);
-  const unread = !notification.readAt;
-
   return (
-    <div
-      className={[
-        "rounded-2xl border px-4 py-4 shadow-sm transition",
-        unread
-          ? "border-violet-200/70 bg-violet-50/60"
-          : "border-border/50 bg-background"
-      ].join(" ")}
-    >
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span
-              className={[
-                "mt-0.5 h-2.5 w-2.5 rounded-full",
-                unread ? "bg-violet-500" : "bg-zinc-300"
-              ].join(" ")}
-              aria-hidden="true"
-            />
-            <p className={unread ? "text-base font-semibold text-foreground" : "text-base font-medium text-foreground"}>
-              {notification.title}
-            </p>
-          </div>
-          <p className="mt-2 text-sm text-muted-foreground">{notification.body}</p>
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-            <span>{formatRelativeNotificationTime(notification.createdAt)}</span>
-            {!unread ? <span>Read</span> : <span>Unread</span>}
-            {actionLink && onOpenSection ? (
-              <button
-                type="button"
-                onClick={() => onOpenSection(actionLink.sectionId)}
-                className="font-medium text-violet-700 transition hover:text-violet-900 hover:underline"
-                title={`Open ${actionLink.sectionId}.`}
-              >
-                {actionLink.label}
-              </button>
-            ) : null}
-          </div>
-        </div>
-        <div className="md:pl-4">
-          {!notification.readAt ? (
-            <form action={action} className="flex flex-col items-start gap-1 md:items-end">
-              <input type="hidden" name="notificationId" value={notification.id} />
-              <SubmitButton size="sm" variant="outline" title="Mark this notification as read.">
-                <span className="flex items-center gap-2">
-                  <X className="h-3.5 w-3.5" />
-                  Dismiss
-                </span>
-              </SubmitButton>
-              {state && !state.success ? (
-                <p className="text-xs text-red-500">{state.error}</p>
-              ) : null}
-              {state && state.success ? <p className="text-xs text-emerald-600">Dismissed.</p> : null}
-            </form>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function LegacyNotificationRow({
-  notification,
-  onMarkRead
-}: {
-  notification: NotificationDTO;
-  onMarkRead: StatefulAction;
-}) {
-  const [state, action] = useFormState(onMarkRead, null);
-
-  return (
-    <div className="rounded-2xl border border-border/50 bg-background px-4 py-4 shadow-sm">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 flex-1">
-          <p className="text-base font-medium text-zinc-900">{notification.title}</p>
-          <p className="mt-0.5 text-sm text-zinc-500">{notification.body}</p>
-          <p className="mt-1 text-sm text-zinc-400">{formatDateTime(notification.createdAt)}</p>
-        </div>
-        {!notification.readAt ? (
-          <form action={action} className="flex flex-col items-start gap-1 sm:items-end">
-            <input type="hidden" name="notificationId" value={notification.id} />
-            <SubmitButton size="sm" variant="outline" title="Mark this notification as read.">
-              <span className="flex items-center gap-2">
-                <X className="h-3.5 w-3.5" />
-                Dismiss
-              </span>
-            </SubmitButton>
-            {state && !state.success ? <p className="text-xs text-red-500">{state.error}</p> : null}
-            {state && state.success ? <p className="text-xs text-emerald-600">Dismissed.</p> : null}
-          </form>
-        ) : (
-          <Badge variant="outline">Read</Badge>
-        )}
-      </div>
-    </div>
+    <ActionableNotification
+      notification={notification}
+      role={role}
+      onDismissNotification={onMarkRead}
+      onSendBatchPaymentReminder={onSendBatchPaymentReminder}
+      onWaiveCharge={onWaiveCharge}
+      onMarkManagerPaymentPaid={onMarkManagerPaymentPaid}
+      onOpenSection={onOpenSection}
+    />
   );
 }

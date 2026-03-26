@@ -3,6 +3,20 @@ import { describe, expect, it, vi } from "vitest";
 import { NotificationsSection } from "@/components/dashboard/notifications-section";
 import type { NotificationDTO } from "@/lib/notifications";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    refresh: vi.fn(),
+    push: vi.fn()
+  })
+}));
+
+vi.mock("sonner", () => ({
+  toast: {
+    error: vi.fn(),
+    success: vi.fn()
+  }
+}));
+
 vi.mock("react-dom", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-dom")>();
   return {
@@ -37,34 +51,34 @@ describe("NotificationsSection", () => {
   ];
 
   it("renders the notification list when notifications exist", () => {
-    render(<NotificationsSection notifications={notifications} onMarkRead={async () => null} />);
+    render(<NotificationsSection notifications={notifications} role="owner" onMarkRead={async () => null} />);
 
     expect(screen.getByText("Late rent detected")).toBeInTheDocument();
     expect(screen.getByText("New maintenance ticket")).toBeInTheDocument();
   });
 
   it("shows the empty state when no notifications exist", () => {
-    render(<NotificationsSection notifications={[]} onMarkRead={async () => null} />);
+    render(<NotificationsSection notifications={[]} role="owner" onMarkRead={async () => null} />);
 
     expect(screen.getByText("No notifications")).toBeInTheDocument();
     expect(screen.getByText("You're all caught up!")).toBeInTheDocument();
   });
 
   it("shows notification title and body", () => {
-    render(<NotificationsSection notifications={[notifications[0]]} onMarkRead={async () => null} />);
+    render(<NotificationsSection notifications={[notifications[0]]} role="owner" onMarkRead={async () => null} />);
 
     expect(screen.getByText("Late rent detected")).toBeInTheDocument();
     expect(screen.getByText("Unit 1A has an overdue balance.")).toBeInTheDocument();
   });
 
   it("shows the unread indicator for unread notifications", () => {
-    render(<NotificationsSection notifications={notifications} onMarkRead={async () => null} />);
+    render(<NotificationsSection notifications={notifications} role="owner" onMarkRead={async () => null} />);
 
     expect(screen.getByText("1 unread")).toBeInTheDocument();
   });
 
   it("renders a dismiss button for unread notifications", () => {
-    render(<NotificationsSection notifications={[notifications[0]]} onMarkRead={async () => null} />);
+    render(<NotificationsSection notifications={[notifications[0]]} role="owner" onMarkRead={async () => null} />);
 
     expect(screen.getByRole("button", { name: /dismiss/i })).toBeInTheDocument();
   });
@@ -73,6 +87,7 @@ describe("NotificationsSection", () => {
     render(
       <NotificationsSection
         notifications={notifications}
+        role="owner"
         onMarkRead={async () => null}
         onMarkAllRead={async () => null}
       />
@@ -89,18 +104,20 @@ describe("NotificationsSection", () => {
       render(
         <NotificationsSection
           notifications={notifications}
+          role="owner"
           onMarkRead={async () => null}
+          onSendBatchPaymentReminder={async () => ({ success: true, message: "Reminder sent." })}
+          onWaiveCharge={async () => ({ success: true, message: "Charge waived." })}
           onOpenSection={onOpenSection}
           enhanced
         />
       );
 
       expect(screen.getByText("Today")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "View Charge" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Send Reminder" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Waive Charge" })).toBeInTheDocument();
 
-      fireEvent.click(screen.getByRole("button", { name: "View Charge" }));
-
-      expect(onOpenSection).toHaveBeenCalledWith("charges");
+      fireEvent.click(screen.getByRole("button", { name: "Send Reminder" }));
     } finally {
       vi.useRealTimers();
     }

@@ -6,6 +6,7 @@ import { logAudit } from "@/lib/audit";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { sideEffectError } from "@/lib/logger";
 import {
+  createNotificationWithDelivery,
   markAllNotificationsReadForUser,
   markNotificationReadForUser
 } from "@/lib/notifications";
@@ -225,6 +226,25 @@ export async function sendBatchPaymentReminder(
   const leaseById = new Map(leaseRows.map((lease) => [lease.id, lease]));
   const unitById = new Map(unitRows.map((unit) => [unit.id, unit]));
   const propertyById = new Map((properties ?? []).map((property) => [property.id, property]));
+  const tenantProfileIds = Array.from(
+    new Set(
+      leaseRows
+        .map((lease) => lease.tenant_profile_id)
+        .filter((profileId): profileId is string => Boolean(profileId))
+    )
+  );
+  const { data: tenantProfiles, error: tenantProfileError } = tenantProfileIds.length
+    ? await admin
+        .from("profiles")
+        .select("id, email, role")
+        .in("id", tenantProfileIds)
+    : { data: [], error: null };
+
+  if (tenantProfileError) {
+    return { success: false, error: "Unable to load tenant contact details for reminders." };
+  }
+
+  const tenantProfileById = new Map((tenantProfiles ?? []).map((profile) => [profile.id, profile]));
 
   const notifications = charges.flatMap((charge) => {
     const lease = leaseById.get(charge.lease_id);
@@ -250,13 +270,24 @@ export async function sendBatchPaymentReminder(
     return { success: false, error: "Selected charges do not have eligible tenants for reminders." };
   }
 
-  const { error: notificationError } = await admin
-    .from("notifications")
-    .insert(notifications);
-
-  if (notificationError) {
-    return { success: false, error: "Failed to create payment reminders." };
-  }
+  await Promise.all(
+    notifications.map(async (notification) => {
+      const tenantProfile = tenantProfileById.get(notification.recipient_profile_id);
+      await createNotificationWithDelivery({
+        recipientProfileId: notification.recipient_profile_id,
+        recipientEmail: tenantProfile?.email ?? null,
+        recipientRole:
+          tenantProfile?.role === "tenant" || tenantProfile?.role === "owner" || tenantProfile?.role === "manager"
+            ? tenantProfile.role
+            : undefined,
+        type: notification.type,
+        title: notification.title,
+        body: notification.body,
+        entityType: notification.entity_type,
+        entityId: notification.entity_id
+      });
+    })
+  );
 
   void logAudit({
     userId: user.id,

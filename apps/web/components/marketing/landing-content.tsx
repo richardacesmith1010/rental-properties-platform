@@ -150,7 +150,7 @@ export const featureTabs: MarketingFeatureTab[] = [
     label: "Analytics",
     icon: LineChart,
     title: "See the health of your portfolio fast",
-    body: "Owners and managers get clean visibility into occupancy, revenue, expenses, delinquency, and property-level performance.",
+    body: "Owners and managers get clean visibility into occupancy, revenue, expenses, overdue rent, and property-level performance.",
     points: [
       "Revenue, occupancy, and maintenance charts",
       "Expense tracking and monthly P&L",
@@ -215,7 +215,7 @@ export const steps = [
   { icon: UserPlus, title: "Create your account", body: "Pick your role and get into the dashboard in minutes." },
   { icon: Building2, title: "Add your properties", body: "Set up units, ownership, and the records you already manage." },
   { icon: Users, title: "Invite your tenants", body: "Bring tenants and managers into the same operational system." },
-  { icon: CreditCard, title: "Collect rent automatically", body: "Track due dates, autopay, receipts, and delinquency without a spreadsheet." }
+  { icon: CreditCard, title: "Collect rent automatically", body: "Track due dates, autopay, receipts, and overdue rent without a spreadsheet." }
 ];
 
 export const testimonials = [
@@ -271,7 +271,7 @@ export const faqs = [
   },
   {
     q: "What happens when a tenant doesn't pay?",
-    a: "Charges stay visible, reminders and delinquency escalation can trigger automatically, and owners get clean reporting on who owes what and for how long."
+    a: "Charges stay visible, reminders and overdue follow-ups can trigger automatically, and owners get clean reporting on who owes what and for how long."
   },
   {
     q: "Can my property manager use Domus?",

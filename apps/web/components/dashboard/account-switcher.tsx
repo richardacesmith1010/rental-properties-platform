@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Building2, Check, Loader2, Pencil, Plus } from "lucide-react";
+import { Building2, Check, ChevronDown, Loader2, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 import type { AccountRenameRequestDTO, OwnershipAccountDTO } from "@/lib/ownership";
 import type { StatefulAction } from "./types";
@@ -23,12 +23,16 @@ export function AccountSwitcher({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const menuId = useId();
   const activeAccount = accounts.find((account) => account.id === activeAccountId) ?? accounts[0] ?? null;
   const [isEditing, setIsEditing] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const renameTriggerRef = useRef<HTMLButtonElement>(null);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const saveTriggeredRef = useRef(false);
 
   const activePendingRenameRequest =
@@ -39,6 +43,7 @@ export function AccountSwitcher({
     : `Rename ${activeAccount?.displayName ?? "this account"}.`;
 
   const handleAccountChange = (nextAccountId: string) => {
+    setIsMenuOpen(false);
     const params = new URLSearchParams(searchParams.toString());
     params.set("account", nextAccountId);
     const query = params.toString();
@@ -60,7 +65,7 @@ export function AccountSwitcher({
     saveTriggeredRef.current = false;
     setEditName(activeAccount.displayName);
     setIsEditing(false);
-    window.requestAnimationFrame(() => triggerRef.current?.focus());
+    window.requestAnimationFrame(() => renameTriggerRef.current?.focus());
   };
 
   const saveEdit = () => {
@@ -97,7 +102,7 @@ export function AccountSwitcher({
       }
 
       setIsEditing(false);
-      window.requestAnimationFrame(() => triggerRef.current?.focus());
+      window.requestAnimationFrame(() => renameTriggerRef.current?.focus());
       router.refresh();
     });
   };
@@ -109,6 +114,7 @@ export function AccountSwitcher({
     if (!canRename || isPending) {
       return;
     }
+    setIsMenuOpen(false);
     setEditName(activeAccount.displayName);
     setIsEditing(true);
   };
@@ -125,7 +131,44 @@ export function AccountSwitcher({
     saveTriggeredRef.current = false;
     setEditName(activeAccount?.displayName ?? "");
     setIsEditing(false);
+    setIsMenuOpen(false);
   }, [activeAccount?.displayName, activeAccount?.id]);
+
+  useEffect(() => {
+    if (!isMenuOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) {
+        return;
+      }
+
+      if (menuTriggerRef.current?.contains(target) || menuRef.current?.contains(target)) {
+        return;
+      }
+
+      setIsMenuOpen(false);
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      setIsMenuOpen(false);
+      window.requestAnimationFrame(() => menuTriggerRef.current?.focus());
+    };
+
+    window.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isMenuOpen]);
 
   if (!activeAccount) {
     return null;
@@ -170,7 +213,7 @@ export function AccountSwitcher({
     </div>
   ) : (
     <button
-      ref={triggerRef}
+      ref={renameTriggerRef}
       type="button"
       onClick={startEdit}
       disabled={!canRename || isPending}
@@ -223,19 +266,61 @@ export function AccountSwitcher({
           Rename pending • {activePendingRenameRequest.votesReceived}/{activePendingRenameRequest.votesRequired} votes
         </p>
       ) : null}
-      <select
-        value={activeAccount.id}
-        onChange={(event) => handleAccountChange(event.target.value)}
-        className="sidebar-shell-input mt-3 w-full px-3 py-2 text-sm"
-        title="Switch ownership account."
-        aria-label="Switch ownership account"
-      >
-        {accounts.map((account) => (
-          <option key={account.id} value={account.id} className="text-zinc-900">
-            {account.displayName}
-          </option>
-        ))}
-      </select>
+      <div className="relative mt-3">
+        <button
+          ref={menuTriggerRef}
+          type="button"
+          onClick={() => setIsMenuOpen((current) => !current)}
+          className="sidebar-shell-input flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm"
+          title="Switch ownership account."
+          aria-label="Switch ownership account"
+          aria-haspopup="listbox"
+          aria-expanded={isMenuOpen}
+          aria-controls={menuId}
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
+              Switch account
+            </span>
+            <span className="block truncate text-sm font-semibold text-white">
+              {activeAccount.displayName}
+            </span>
+          </span>
+          <ChevronDown
+            className={`h-4 w-4 shrink-0 text-white/80 transition-transform ${isMenuOpen ? "rotate-180" : ""}`}
+          />
+        </button>
+
+        {isMenuOpen ? (
+          <div
+            id={menuId}
+            ref={menuRef}
+            role="listbox"
+            aria-label="Available ownership accounts"
+            className="absolute left-0 right-0 z-40 mt-2 overflow-hidden rounded-[12px] border border-white/18 bg-slate-950/95 p-1 shadow-[0_20px_44px_-24px_rgba(15,23,42,0.7)] backdrop-blur"
+          >
+            {accounts.map((account) => {
+              const isActive = account.id === activeAccount.id;
+              return (
+                <button
+                  key={account.id}
+                  type="button"
+                  role="option"
+                  aria-selected={isActive}
+                  onClick={() => handleAccountChange(account.id)}
+                  className={`flex w-full items-center justify-between gap-3 rounded-[10px] px-3 py-2 text-left text-sm transition ${
+                    isActive ? "bg-white/14 text-white" : "text-white/82 hover:bg-white/10 hover:text-white"
+                  }`}
+                  title={`Switch to ${account.displayName}.`}
+                >
+                  <span className="truncate font-medium">{account.displayName}</span>
+                  {isActive ? <Check className="h-4 w-4 shrink-0" /> : null}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
       <button
         type="button"
         onClick={handleCreateAccount}

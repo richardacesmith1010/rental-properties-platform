@@ -23,7 +23,7 @@ export function SubmitButton({
   onClick,
 }: SubmitButtonProps) {
   const { pending } = useFormStatus();
-  const resolvedTitle = title ?? "Click to submit this action.";
+  const resolvedTitle = title ?? "Click to finish this action.";
 
   return (
     <Button
