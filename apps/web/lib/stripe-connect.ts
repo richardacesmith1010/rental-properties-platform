@@ -185,11 +185,6 @@ export async function getOwnerStripeAccountForProperty(propertyId: string): Prom
         return directProfile.stripe_account_id;
       }
     }
-    if (process.env.NODE_ENV === "development") {
-      console.warn(
-        `[stripe-connect] Owner Stripe account not found for property ${propertyId} via ownership chain or direct profile.`
-      );
-    }
   }
 
   return null;
