@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BarChart3, ShieldCheck, Sparkles } from "lucide-react";
 import { redirect } from "next/navigation";
@@ -49,9 +50,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_18%,rgba(255,255,255,0.12),transparent_24%),radial-gradient(circle_at_20%_85%,rgba(52,211,153,0.16),transparent_22%)]" />
           <div className="relative z-10 flex items-center justify-between">
             <Link href="/marketing" className="inline-flex items-center gap-3" title="Return to the Domus marketing page.">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 text-lg font-bold shadow-lg shadow-slate-950/25 backdrop-blur-sm">
-                D
-              </div>
+              <Image
+                src="/images/mascot/icons/head.png"
+                alt="Domus"
+                width={44}
+                height={44}
+                className="rounded-2xl shadow-lg shadow-slate-950/25"
+                priority
+              />
               <div>
                 <p className="text-lg font-semibold tracking-tight">Domus</p>
                 <p className="text-xs uppercase tracking-[0.2em] text-white/70">Rental operations</p>
@@ -129,9 +135,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             <div className="domus-card overflow-hidden border border-border/60 shadow-[0_30px_90px_-45px_rgba(15,23,42,0.35)]">
               <div className="border-b border-border/60 bg-background/90 px-6 py-6 sm:px-8">
                 <div className="mb-5 flex items-center gap-3 lg:hidden">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-base font-bold text-primary">
-                    D
-                  </div>
+                  <Image
+                    src="/images/mascot/icons/head.png"
+                    alt="Domus"
+                    width={40}
+                    height={40}
+                    className="rounded-2xl"
+                    priority
+                  />
                   <div>
                     <p className="text-lg font-semibold text-foreground">Domus</p>
                     <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Rental operations</p>

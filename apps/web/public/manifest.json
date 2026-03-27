@@ -4,7 +4,7 @@
   "description": "Professional rental property management for landlords with 1-10 units.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f0fdf4",
+  "background_color": "#ffffff",
   "theme_color": "#7c3aed",
   "orientation": "portrait-primary",
   "icons": [

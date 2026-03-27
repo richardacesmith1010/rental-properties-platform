@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -235,9 +236,14 @@ export function SidebarNav({
     <aside className="gradient-sidebar hidden min-h-0 lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-[260px] lg:flex-shrink-0 lg:flex-col">
       <div className="shrink-0 flex items-center justify-between gap-3 px-5 pb-4 pt-6">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/[0.18] text-lg font-bold text-white shadow-lg shadow-violet-950/25 backdrop-blur-sm">
-            D
-          </div>
+          <Image
+            src="/images/mascot/icons/head.png"
+            alt="Domus"
+            width={32}
+            height={32}
+            className="rounded-xl shadow-lg shadow-violet-950/25"
+            priority
+          />
           <div>
             <div className="text-base font-bold text-white">Domus</div>
           </div>
@@ -339,11 +345,15 @@ export function MobileTopBar({
     <div className="gradient-sidebar sticky top-0 z-30 px-3 pb-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] shadow-lg lg:hidden">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.18] text-sm font-bold text-white">D</div>
-          <div>
-            <span className="block text-sm font-bold text-white">Domus</span>
-            <span className="block text-[10px] uppercase tracking-wide sidebar-shell-muted">{role}</span>
-          </div>
+          <Image
+            src="/images/mascot/icons/head.png"
+            alt="Domus"
+            width={28}
+            height={28}
+            className="rounded-lg"
+            priority
+          />
+          <span className="sr-only">Domus</span>
         </div>
 
         <div className="flex items-center gap-2">

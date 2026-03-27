@@ -248,7 +248,7 @@ export function Dashboard(props: DashboardProps) {
   return (
       <DashboardLayout
         {...layoutProps}
-        mainClassName="relative flex min-h-0 flex-1 flex-col overflow-hidden lg:ml-[260px]"
+        mainClassName="relative flex min-h-0 flex-1 flex-col overflow-x-hidden lg:ml-[260px]"
       afterMain={
         <>
           {showOnboardingWizard &&
@@ -321,7 +321,7 @@ export function Dashboard(props: DashboardProps) {
       }
     >
       <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-3 pt-3 sm:px-4 sm:pb-4 sm:pt-4 lg:px-8 lg:pb-8 lg:pt-8">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 pb-3 pt-3 sm:px-4 sm:pb-4 sm:pt-4 lg:px-8 lg:pb-8 lg:pt-8">
         {(isOwnerRole || isManagerRole) && props.stripeConnected === false ? (
           <ConnectBanner connected={false} role={isOwnerRole ? "owner" : "manager"} />
         ) : null}
