@@ -402,3 +402,122 @@ Claude: "Here are the 5 steps you need to do:
 5. Paste it in environment variables"
 ```
 
+## 18) Zero Friction Design Principle (Hard Rule)
+
+Humans are lazy. Every additional step, every extra click, every moment of confusion increases friction and causes users to quit or ask questions. Claude must apply this principle to every sprint plan, every feature design, and every UX decision.
+
+### Core Rule
+
+**If a user has to think about what to do next, the design has failed.** The system should guide them through a single obvious path with zero ambiguity.
+
+### Application to Sprint Planning
+
+Before writing any Codex prompt that involves user-facing features, Claude must ask:
+
+1. **How many steps does this require from the user?** If more than 2, find a way to reduce.
+2. **Does the user need to copy/paste anything?** If yes, can we eliminate it with a link or auto-fill?
+3. **Does the user need to navigate somewhere else?** If yes, can we bring them there automatically?
+4. **Does the user need to understand a concept?** If yes, can we make it self-explanatory through UI?
+5. **Is there a code, token, or ID the user needs to enter?** If yes, replace with a magic link.
+6. **Could this entire flow be a single button click?** If yes, make it one.
+
+### Plain Language Rule (Hard Rule)
+
+Most Americans read below an 8th grade level. ALL user-facing text in Domus must be written for a 6th grader. This applies to:
+
+- Button labels
+- Form labels and placeholders
+- Error messages
+- Email notifications
+- Onboarding text
+- Help text
+- Section names
+- Confirmation messages
+
+**Rules:**
+1. **No jargon.** "Charge" → "Rent". "Submit" → "Send". "Delinquency" → "Overdue". "Reconciliation" → never use this word.
+2. **Short sentences.** Max 12 words per sentence in UI text. If you need more, split into two.
+3. **Common words only.** If a word wouldn't appear in a 5th grader's vocabulary, replace it.
+4. **Verbs over nouns.** "Pay Rent" not "Payment Processing". "Report a Problem" not "Maintenance Ticket Submission".
+5. **Tell them what happens.** "You'll get a receipt by email" not "A confirmation will be dispatched to your registered email address."
+6. **No acronyms without explanation.** First use: "LLC (a type of business account)". After that: "LLC" is fine.
+7. **Test it:** Read every piece of UI text out loud. If it sounds like a lawyer wrote it, rewrite it.
+
+**Word replacements (enforced in all Codex prompts):**
+
+| Never use | Use instead |
+|---|---|
+| Charge | Rent (for tenants), Payment (for owners) |
+| Submit | Send |
+| Maintenance Ticket | Problem / Issue |
+| Delinquency | Overdue |
+| Disbursement | Payout |
+| Reconciliation | (don't use — explain the concept instead) |
+| Remittance | Payment |
+| Acknowledgment | Confirmation |
+| Terminate | End |
+| Commence | Start |
+| Pursuant to | Based on |
+| Herein | (delete) |
+| Utilize | Use |
+| Facilitate | Help |
+| Subsequent | Next |
+| Prior to | Before |
+| Inquire | Ask |
+| Endeavor | Try |
+
+### Examples
+
+- **BAD**: "Share this join code with your siblings. They'll need to create an account, go to Settings, find the LLC section, and enter the code." (5 steps, requires explanation)
+- **GOOD**: "Enter your siblings' emails. They'll get a link. One click → account created → they're in." (1 step for owner, 1 click for invitee)
+
+- **BAD**: "Go to stripe.com, create an account, find your API key, copy it, go to Vercel, find environment variables, paste it." (7 steps)
+- **GOOD**: Claude navigates to the page, fills everything possible, asks user for ONE thing: "Paste your API key here."
+
+- **BAD**: A settings page with 15 options and no guidance on what to do first.
+- **GOOD**: A setup wizard that asks one question at a time and auto-advances.
+
+### Friction Checklist (Run Before Every Sprint)
+
+- [ ] Can any manual step be automated?
+- [ ] Can any multi-step process become a single action?
+- [ ] Can any code/token entry be replaced with a magic link?
+- [ ] Can any navigation be replaced with a direct link or auto-redirect?
+- [ ] Can any form be pre-filled with known data?
+- [ ] Would a first-time user know exactly what to do without instructions?
+- [ ] Is there a simpler way to achieve the same outcome?
+
+### For Codex Prompts
+
+Every Codex prompt for user-facing features must include this constraint:
+> "The user should never need to read instructions to complete this flow. Every step must be self-explanatory. If the user needs to think about what to do, the UI needs to be clearer."
+
+## 19) Visual Audit Protocol (Hard Rule)
+
+After every sprint that changes UI, Claude must perform a visual audit before reporting PASS. This is not optional.
+
+### Audit Steps
+
+1. **Deploy the sprint** to production (or verify local build)
+2. **Open each affected page** in Chrome using browser tools
+3. **Take screenshots** of each changed component
+4. **Check for**:
+   - Text contrast (all text readable against background)
+   - Clipped/truncated content
+   - Buttons and interactive elements visible without scrolling
+   - Empty states showing appropriate content
+   - Responsive layout not broken
+   - Status badges using correct colors
+   - No overlapping elements
+   - Modal/wizard focus and scroll behavior
+5. **Report findings** — any issues found go into the next sprint prompt
+6. **If a visual issue is production-breaking** (invisible text, blank page, broken layout), flag as URGENT and write an immediate hotfix sprint
+
+### What Counts as Production-Breaking
+
+- Text invisible against background (white on white, etc.)
+- Page renders blank or mostly empty
+- Primary action buttons not visible without scrolling
+- Forms that can't be submitted (focus bugs, scroll bugs)
+- Content that can't be reached (no scroll, clipped off-screen)
+
