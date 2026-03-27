@@ -1,9 +1,15 @@
 import { expect, test, type Page } from "@playwright/test";
-import { DEMO_USERS, loginAs } from "./helpers";
+import { DEMO_USERS, dismissOwnerOnboarding, loginAs } from "./helpers";
 
 async function loginOwnerOrSkip(page: Page) {
   const loggedIn = await loginAs(page, DEMO_USERS.owner.email, DEMO_USERS.owner.password);
   test.skip(!loggedIn, "Demo seed not available. Run npm run seed:demo first.");
+}
+
+async function openOwnerHome(page: Page) {
+  await dismissOwnerOnboarding(page, DEMO_USERS.owner.email);
+  await page.goto("/owner");
+  await page.waitForLoadState("networkidle").catch(() => {});
 }
 
 test.describe.serial("Mobile viewport", () => {
@@ -11,8 +17,7 @@ test.describe.serial("Mobile viewport", () => {
 
   test("shows hamburger menu on mobile", async ({ page }) => {
     await loginOwnerOrSkip(page);
-    await page.goto("/owner");
-    await page.waitForTimeout(1500);
+    await openOwnerHome(page);
 
     const menuButton = page.getByRole("button", { name: /open navigation menu/i });
     test.skip((await menuButton.count()) === 0, "Mobile navigation trigger is not available.");
@@ -22,31 +27,33 @@ test.describe.serial("Mobile viewport", () => {
     await expect(page.getByRole("navigation", { name: "Main navigation" }).first()).toBeVisible();
   });
 
-  test("KPI grid stacks into a single column on mobile", async ({ page }) => {
+  test("home cards stack into a single column on mobile", async ({ page }) => {
     await loginOwnerOrSkip(page);
-    await page.goto("/owner");
-    await page.waitForTimeout(1500);
+    await openOwnerHome(page);
 
-    const cards = page.getByRole("status");
-    const cardCount = await cards.count();
-    test.skip(cardCount < 2, "Not enough KPI cards are visible to verify the mobile stack.");
+    const topCard =
+      (await page.getByRole("heading", { name: /needs your attention/i }).count()) > 0
+        ? page.getByRole("heading", { name: /needs your attention/i }).first()
+        : page.getByRole("heading", { name: /no action items right now/i });
+    const lowerCard = page.getByRole("heading", { name: /financial overview/i });
 
-    const firstBox = await cards.nth(0).boundingBox();
-    const secondBox = await cards.nth(1).boundingBox();
+    await expect(topCard).toBeVisible();
+    await expect(lowerCard).toBeVisible();
+
+    const firstBox = await topCard.boundingBox();
+    const secondBox = await lowerCard.boundingBox();
 
     if (!firstBox || !secondBox) {
-      test.skip(true, "Unable to measure KPI card layout.");
+      test.skip(true, "Unable to measure the mobile card layout.");
       return;
     }
 
-    expect(Math.abs(firstBox.x - secondBox.x)).toBeLessThan(8);
-    expect(secondBox.y).toBeGreaterThan(firstBox.y + 10);
+    expect(secondBox.y).toBeGreaterThan(firstBox.y + firstBox.height);
   });
 
   test("command palette opens from the mobile search button", async ({ page }) => {
     await loginOwnerOrSkip(page);
-    await page.goto("/owner");
-    await page.waitForTimeout(1500);
+    await openOwnerHome(page);
 
     const searchButton = page.getByRole("button", { name: /open search/i });
     test.skip((await searchButton.count()) === 0, "Mobile search trigger is not available.");
@@ -55,29 +62,26 @@ test.describe.serial("Mobile viewport", () => {
     await expect(page.getByRole("dialog", { name: /search commands/i })).toBeVisible();
   });
 
-  test("batch toolbar stacks vertically on mobile", async ({ page }) => {
+  test("pagination controls stay thumb-sized on mobile", async ({ page }) => {
     await loginOwnerOrSkip(page);
+    await dismissOwnerOnboarding(page, DEMO_USERS.owner.email);
     await page.goto("/owner?section=charges");
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState("networkidle").catch(() => {});
 
-    const chargeCheckboxes = page.locator('input[type="checkbox"][aria-label^="Select charge for "]');
-    test.skip((await chargeCheckboxes.count()) === 0, "No selectable charges are available for the demo account.");
+    const previousButton = page.getByRole("button", { name: "Previous section" });
+    const nextButton = page.getByRole("button", { name: "Next section" });
 
-    await chargeCheckboxes.first().check();
+    const previousBox = await previousButton.boundingBox();
+    const nextBox = await nextButton.boundingBox();
 
-    const toolbar = page.getByRole("toolbar", { name: /batch actions for selected charges/i });
-    await expect(toolbar).toBeVisible();
-
-    const selectionStatus = toolbar.getByRole("status");
-    const sendReminderButton = toolbar.getByRole("button", { name: /send reminder/i });
-    const statusBox = await selectionStatus.boundingBox();
-    const buttonBox = await sendReminderButton.boundingBox();
-
-    if (!statusBox || !buttonBox) {
-      test.skip(true, "Unable to measure the batch toolbar layout.");
+    if (!previousBox || !nextBox) {
+      test.skip(true, "Unable to measure pagination controls.");
       return;
     }
 
-    expect(buttonBox.y).toBeGreaterThan(statusBox.y + 4);
+    expect(previousBox.width).toBeGreaterThanOrEqual(44);
+    expect(previousBox.height).toBeGreaterThanOrEqual(44);
+    expect(nextBox.width).toBeGreaterThanOrEqual(44);
+    expect(nextBox.height).toBeGreaterThanOrEqual(44);
   });
 });

@@ -1,13 +1,9 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { buildTestEmail, createTestUser } from "./helpers/auth";
 import { cleanupAllTestData, cleanupTestUser } from "./helpers/cleanup";
+import { loginAsRole } from "./helpers";
 
 const password = "TestPass123!";
-
-async function openRoleLogin(page: Page, role: "Owner" | "Tenant") {
-  await page.goto("/login");
-  await page.getByRole("button", { name: role }).click();
-}
 
 test.describe.serial("Authentication", () => {
   const createdUsers: Array<{ id: string; email: string }> = [];
@@ -27,8 +23,10 @@ test.describe.serial("Authentication", () => {
 
   test("login page loads with Domus branding", async ({ page }) => {
     await page.goto("/login");
-    await expect(page.getByText("Domus")).toBeVisible();
-    await expect(page.getByText("Choose your role to sign in or create an account.").first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: /sign in to your workspace/i })).toBeVisible();
+    await expect(page.getByText(/choose your role, then sign in or create your account/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: /owner/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /tenant/i })).toBeVisible();
   });
 
   test("owner can sign in and reach owner setup", async ({ page }) => {
@@ -36,12 +34,10 @@ test.describe.serial("Authentication", () => {
     const user = await createTestUser({ email, password, role: "owner", fullName: "E2E Owner Auth" });
     createdUsers.push({ id: user.id, email });
 
-    await openRoleLogin(page, "Owner");
-    await page.getByLabel("Email").fill(email);
-    await page.getByLabel("Password").fill(password);
-    await page.getByRole("button", { name: "Sign In" }).click();
-
-    await expect(page).toHaveURL(/\/owner\/setup/, { timeout: 10000 });
+    const loggedIn = await loginAsRole(page, "Owner", email, password);
+    expect(loggedIn).toBeTruthy();
+    await expect(page).toHaveURL(/\/owner(\/setup)?/, { timeout: 10000 });
+    await expect(page.getByRole("heading", { name: /set up your ownership account/i })).toBeVisible();
   });
 
   test("tenant can sign in and reach tenant dashboard", async ({ page }) => {
@@ -49,13 +45,15 @@ test.describe.serial("Authentication", () => {
     const user = await createTestUser({ email, password, role: "tenant", fullName: "E2E Tenant Auth" });
     createdUsers.push({ id: user.id, email });
 
-    await openRoleLogin(page, "Tenant");
-    await page.getByLabel("Email").fill(email);
-    await page.getByLabel("Password").fill(password);
-    await page.getByRole("button", { name: "Sign In" }).click();
+    const loggedIn = await loginAsRole(page, "Tenant", email, password);
+    expect(loggedIn).toBeTruthy();
 
     await expect(page).toHaveURL(/\/tenant/, { timeout: 10000 });
-    await expect(page.getByRole("heading", { name: /Good (morning|afternoon|evening),/i })).toBeVisible();
+    await expect(page.getByText(/good (morning|afternoon|evening),/i)).toBeVisible();
+    const rentVisible =
+      (await page.getByRole("heading", { name: /your rent|rent paid!/i }).count()) > 0 ||
+      (await page.getByText(/rent due|no payments due right now/i).count()) > 0;
+    expect(rentVisible).toBeTruthy();
   });
 
   test("unauthenticated user is redirected from protected routes", async ({ page }) => {

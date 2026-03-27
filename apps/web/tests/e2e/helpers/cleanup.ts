@@ -91,6 +91,11 @@ export async function cleanupTestUserData(userId: string, email?: string | null)
       await admin.from("ownership_accounts").delete().in("id", accountIds);
     }
 
+    await admin.from("feedback").delete().eq("profile_id", userId);
+    if (email) {
+      await admin.from("feedback").delete().eq("email", email.toLowerCase());
+    }
+
     await admin.from("ownership_account_members").delete().eq("profile_id", userId);
     await admin.from("notifications").delete().eq("recipient_profile_id", userId);
     await admin.from("profiles").delete().eq("id", userId);

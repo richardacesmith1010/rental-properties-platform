@@ -1,9 +1,15 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { DEMO_USERS, loginAs } from "./helpers";
+import { DEMO_USERS, dismissOwnerOnboarding, loginAs } from "./helpers";
 
 async function loginOwnerOrSkip(page: Page) {
   const loggedIn = await loginAs(page, DEMO_USERS.owner.email, DEMO_USERS.owner.password);
   test.skip(!loggedIn, "Demo seed not available. Run npm run seed:demo first.");
+}
+
+async function openOwnerHome(page: Page) {
+  await dismissOwnerOnboarding(page, DEMO_USERS.owner.email);
+  await page.goto("/owner");
+  await page.waitForLoadState("networkidle").catch(() => {});
 }
 
 async function openCommandPaletteOrSkip(page: Page): Promise<Locator> {
@@ -23,36 +29,27 @@ async function openCommandPaletteOrSkip(page: Page): Promise<Locator> {
 }
 
 test.describe.serial("Enhanced accessibility", () => {
-  test("KPI cards expose status roles with aria labels", async ({ page }) => {
+  test("home pagination controls expose accessible labels", async ({ page }) => {
     await loginOwnerOrSkip(page);
-    await page.goto("/owner");
-    await page.waitForTimeout(1500);
+    await openOwnerHome(page);
 
-    const statusElements = page.locator('[role="status"][aria-label]');
-    const count = await statusElements.count();
-    test.skip(count === 0, "KPI cards are not visible for the current demo account state.");
-
-    expect(count).toBeGreaterThan(0);
-    await expect(statusElements.first()).toHaveAttribute("aria-label", /.+/);
+    await expect(page.getByRole("button", { name: "Previous section" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Next section" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /open notifications/i }).first()).toBeVisible();
   });
 
-  test("rent collection bar exposes progressbar semantics", async ({ page }) => {
+  test("financial overview toggle exposes labeled controls", async ({ page }) => {
     await loginOwnerOrSkip(page);
-    await page.goto("/owner");
-    await page.waitForTimeout(1500);
+    await openOwnerHome(page);
 
-    const progressbar = page.getByRole("progressbar");
-    test.skip((await progressbar.count()) === 0, "Rent collection data is not available for the current demo account state.");
-
-    await expect(progressbar.first()).toHaveAttribute("aria-valuenow", /\d+/);
-    await expect(progressbar.first()).toHaveAttribute("aria-valuemin", "0");
-    await expect(progressbar.first()).toHaveAttribute("aria-valuemax", "100");
+    await expect(page.getByRole("heading", { name: /financial overview/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Bank", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Domus", exact: true })).toBeVisible();
   });
 
   test("command palette exposes dialog semantics and traps focus", async ({ page }) => {
     await loginOwnerOrSkip(page);
-    await page.goto("/owner");
-    await page.waitForTimeout(1500);
+    await openOwnerHome(page);
 
     const dialog = await openCommandPaletteOrSkip(page);
     await expect(dialog).toHaveAttribute("aria-modal", "true");
@@ -83,15 +80,13 @@ test.describe.serial("Enhanced accessibility", () => {
     await expect(page.getByRole("dialog", { name: /search commands/i })).toHaveCount(0);
   });
 
-  test("breadcrumbs expose an accessible label and current page", async ({ page }) => {
+  test("section pages expose the current page heading", async ({ page }) => {
     await loginOwnerOrSkip(page);
+    await dismissOwnerOnboarding(page, DEMO_USERS.owner.email);
     await page.goto("/owner?section=charges");
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState("networkidle").catch(() => {});
 
-    const breadcrumb = page.locator('nav[aria-label="Breadcrumb"]');
-    test.skip((await breadcrumb.count()) === 0, "Breadcrumbs are not visible for the current view.");
-
-    await expect(breadcrumb.first()).toBeVisible();
-    expect(await breadcrumb.locator('[aria-current="page"]').count()).toBeGreaterThan(0);
+    await expect(page.getByRole("heading", { name: "Charges", exact: true })).toBeVisible();
+    await expect(page.getByText(/\d+ of \d+/i).first()).toBeVisible();
   });
 });

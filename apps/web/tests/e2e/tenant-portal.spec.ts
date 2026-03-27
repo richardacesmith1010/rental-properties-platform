@@ -8,7 +8,7 @@ async function loginTenantOrSkip(page: Page) {
 
 async function openTenantOverview(page: Page) {
   await page.goto("/tenant");
-  await page.waitForTimeout(1500);
+  await page.waitForLoadState("networkidle").catch(() => {});
 }
 
 test.describe("Tenant portal", () => {
@@ -16,30 +16,32 @@ test.describe("Tenant portal", () => {
     await loginTenantOrSkip(page);
     await openTenantOverview(page);
 
-    await expect(page.getByRole("heading", { name: /good (morning|afternoon|evening),/i })).toBeVisible();
+    await expect(page.getByText(/good (morning|afternoon|evening),/i).first()).toBeVisible();
   });
 
-  test("shows quick action buttons", async ({ page }) => {
+  test("shows the simplified quick action links", async ({ page }) => {
     await loginTenantOrSkip(page);
     await openTenantOverview(page);
 
-    await expect(page.getByRole("link", { name: /pay rent/i })).toBeVisible();
-    await expect(page.getByRole("link", { name: /submit request/i })).toBeVisible();
-    await expect(page.getByRole("link", { name: /view documents/i })).toBeVisible();
+    const quickActions = page.getByRole("main");
+    await expect(quickActions.getByRole("link", { name: /rent review your payment history/i })).toBeVisible();
+    await expect(quickActions.getByRole("link", { name: /problems report an issue in your home/i })).toBeVisible();
+    await expect(
+      quickActions.getByRole("link", { name: /messages read updates from your landlord and reply in one place/i })
+    ).toBeVisible();
+    await expect(
+      quickActions.getByRole("link", { name: /lease open your lease packet and shared rental documents/i })
+    ).toBeVisible();
   });
 
-  test("shows lease summary or payment info", async ({ page }) => {
+  test("shows lease or payment summary blocks", async ({ page }) => {
     await loginTenantOrSkip(page);
     await openTenantOverview(page);
-
-    const nextPaymentCard = page.getByText(/next payment due/i);
-    const allCaughtUp = page.getByText(/all caught up|no payments due/i);
-    const leaseCard = page.getByRole("heading", { name: "Your Lease" });
 
     const visibleBlocks =
-      (await nextPaymentCard.count()) +
-      (await allCaughtUp.count()) +
-      (await leaseCard.count());
+      (await page.getByRole("heading", { name: /no payments due right now|your rent|rent paid!/i }).count()) +
+      (await page.getByText(/you'?re all caught up|rent due|outstanding/i).count()) +
+      (await page.getByText(/open tickets|documents/i).count());
 
     expect(visibleBlocks).toBeGreaterThan(0);
   });

@@ -1,4 +1,5 @@
 import { getAdminClient } from "./auth";
+import { randomUUID } from "node:crypto";
 
 function labelSuffix(id: string) {
   return id.slice(0, 8);
@@ -131,6 +132,46 @@ export async function seedOwnerData(userId: string) {
   }
 
   return { accountId, propertyId, unitId };
+}
+
+export async function seedOwnershipAccount(options: {
+  userId: string;
+  accountType: "individual" | "llc";
+  displayName: string;
+}) {
+  const admin = getAdminClient();
+
+  const { data: createdAccount, error: createAccountError } = await admin
+    .from("ownership_accounts")
+    .insert({
+      account_type: options.accountType,
+      display_name: options.displayName,
+      created_by_profile_id: options.userId,
+      join_code: options.accountType === "llc" ? randomUUID().slice(0, 6).toUpperCase() : null
+    })
+    .select("id")
+    .single();
+
+  if (createAccountError || !createdAccount?.id) {
+    throw new Error(`Failed to create ownership account: ${createAccountError?.message ?? "missing id"}`);
+  }
+
+  const { error: memberError } = await admin.from("ownership_account_members").upsert(
+    {
+      account_id: createdAccount.id,
+      profile_id: options.userId,
+      member_role: "owner",
+      active: true,
+      can_receive_critical_alerts: true
+    },
+    { onConflict: "account_id,profile_id" }
+  );
+
+  if (memberError) {
+    throw new Error(`Failed to create ownership membership: ${memberError.message}`);
+  }
+
+  return { accountId: createdAccount.id };
 }
 
 export async function seedTenantLease(options: {

@@ -23,16 +23,16 @@ test.describe("Settings page", () => {
 
     await page.getByRole("button", { name: "Notifications" }).click();
     await expect(page.getByRole("heading", { name: "Notifications" })).toBeVisible();
-    await expect(page.getByText("New maintenance ticket")).toBeVisible();
-    await expect(page.getByText("Rent due reminder")).toBeVisible();
+    await expect(page.getByText("Maintenance ticket updates")).toBeVisible();
+    await expect(page.getByText("Rent due reminders")).toBeVisible();
+    await expect(page.getByRole("button", { name: /pause for 24 hours/i })).toBeVisible();
   });
 
   test("owner page shows Stripe test mode banner", async ({ page }) => {
     await loginOwnerOrSkip(page);
     await page.goto("/owner");
 
-    // Owner may see contextual greeting OR onboarding welcome card
-    const hasGreeting = await page.getByRole("heading", { name: /^Good / }).count();
+    const hasGreeting = await page.getByText(/good (morning|afternoon|evening),/i).count();
     const hasWelcome = await page.getByRole("heading", { name: /welcome/i }).count();
     expect(hasGreeting + hasWelcome).toBeGreaterThan(0);
 

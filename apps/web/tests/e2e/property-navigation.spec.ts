@@ -1,38 +1,42 @@
 import { expect, test, type Page } from "@playwright/test";
-import { DEMO_USERS, loginAs } from "./helpers";
+import { DEMO_USERS, dismissOwnerOnboarding, loginAs } from "./helpers";
 
 async function loginOwnerOrSkip(page: Page) {
   const loggedIn = await loginAs(page, DEMO_USERS.owner.email, DEMO_USERS.owner.password);
   test.skip(!loggedIn, "Demo seed not available. Run npm run seed:demo first.");
 }
 
-test.describe("Property navigation", () => {
-  test("property selector renders on overview", async ({ page }) => {
-    await loginOwnerOrSkip(page);
-    await page.goto("/owner");
-    await page.waitForTimeout(1500);
+async function openOwnerSection(page: Page, section: string) {
+  await dismissOwnerOnboarding(page, DEMO_USERS.owner.email);
+  await page.goto(`/owner?section=${section}`);
+  await page.waitForLoadState("networkidle").catch(() => {});
+}
 
-    const selector = page.locator("select").first();
+test.describe("Property navigation", () => {
+  test("property scope selector renders on charges", async ({ page }) => {
+    await loginOwnerOrSkip(page);
+    await openOwnerSection(page, "charges");
+
+    const selector = page.getByRole("combobox", { name: /property scope/i });
     await expect(page.getByText("Property Scope", { exact: true })).toBeVisible();
     await expect(selector).toBeVisible();
     await expect(selector.locator('option[value=""]')).toHaveCount(1);
   });
 
-  test("breadcrumbs show on section navigation", async ({ page }) => {
+  test("section header reflects page navigation", async ({ page }) => {
     await loginOwnerOrSkip(page);
-    await page.goto("/owner?section=charges");
-    await page.waitForTimeout(1500);
+    await openOwnerSection(page, "charges");
 
-    const breadcrumbs = page.locator('nav[aria-label="Breadcrumb"]');
-    await expect(breadcrumbs).toBeVisible();
-    await expect(breadcrumbs.getByText("Dashboard", { exact: true })).toBeVisible();
-    await expect(breadcrumbs.getByText("Charges", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Charges", exact: true })).toBeVisible();
+    await expect(page.getByText(/\d+ of \d+/i).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: /upcoming \/ late charges/i })).toBeVisible();
   });
 
-  test("portfolio drill-down is available from property cards", async ({ page }) => {
+  test("portfolio drill-down scopes the dashboard by property", async ({ page }) => {
     await loginOwnerOrSkip(page);
-    await page.goto("/owner?mode=records&section=portfolio");
-    await page.waitForTimeout(1500);
+    await dismissOwnerOnboarding(page, DEMO_USERS.owner.email);
+    await page.goto("/owner?section=portfolio");
+    await page.waitForLoadState("networkidle").catch(() => {});
 
     const emptyState = page.getByText(/no properties yet/i);
     if (await emptyState.count()) {
@@ -41,11 +45,16 @@ test.describe("Property navigation", () => {
     }
 
     const propertyCard = page.locator('[title^="Open the dashboard filtered to "]').first();
+    const propertyTitle = (await propertyCard.getAttribute("title")) ?? "";
+    const propertyName = propertyTitle.replace(/^Open the dashboard filtered to\s+/, "").replace(/\.$/, "");
+
     await expect(propertyCard).toBeVisible();
     await propertyCard.click();
     await page.waitForFunction(() => new URL(window.location.href).searchParams.has("property"));
+    await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
 
-    await expect(page.locator('nav[aria-label="Breadcrumb"]')).toBeVisible();
-    await expect(page.getByRole("button", { name: "View Details" })).toBeVisible();
+    const selector = page.getByRole("combobox", { name: /property scope/i });
+    await expect(selector).toBeVisible();
+    await expect(selector.locator("option:checked")).toContainText(propertyName);
   });
 });

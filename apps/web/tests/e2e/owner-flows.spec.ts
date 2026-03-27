@@ -1,76 +1,78 @@
 import { expect, test, type Page } from "@playwright/test";
-import { collectConsoleErrors, DEMO_USERS, expectNoConsoleErrors, loginAs } from "./helpers";
+import { collectConsoleErrors, DEMO_USERS, dismissOwnerOnboarding, expectNoConsoleErrors, loginAs } from "./helpers";
 
 async function loginOwnerOrSkip(page: Page) {
   const loggedIn = await loginAs(page, DEMO_USERS.owner.email, DEMO_USERS.owner.password);
   test.skip(!loggedIn, "Demo seed not available. Run npm run seed:demo first.");
 }
 
+async function openOwnerWorkspace(page: Page, path = "/owner") {
+  await dismissOwnerOnboarding(page, DEMO_USERS.owner.email);
+  await page.goto(path);
+  await page.waitForLoadState("networkidle").catch(() => {});
+}
+
 test.describe("Owner flows", () => {
-  test("loads dashboard header and KPI pills", async ({ page }) => {
+  test("loads owner home with action center and finance panel", async ({ page }) => {
     const errors = collectConsoleErrors(page);
     await loginOwnerOrSkip(page);
+    await openOwnerWorkspace(page);
 
-    // Owner may see contextual greeting OR onboarding welcome card
-    const hasGreeting = await page.getByRole("heading", { name: /^Good / }).count();
-    const hasWelcome = await page.getByRole("heading", { name: /welcome/i }).count();
-    expect(hasGreeting + hasWelcome).toBeGreaterThan(0);
+    await expect(page.getByRole("heading", { name: "Home", exact: true })).toBeVisible();
+    await expect(page.getByText(/good (morning|afternoon|evening),/i)).toBeVisible();
+    await expect(page.getByRole("heading", { name: /financial overview/i })).toBeVisible();
 
-    if (hasGreeting > 0) {
-      await expect(page.getByText("Monthly Revenue").first()).toBeVisible();
-      await expect(page.getByText("Open Tickets").first()).toBeVisible();
-    }
+    const actionCenterVisible =
+      (await page.getByText(/what needs attention/i).count()) > 0 ||
+      (await page.getByRole("heading", { name: /no action items right now/i }).count()) > 0;
+    expect(actionCenterVisible).toBeTruthy();
+
     expectNoConsoleErrors(errors);
   });
 
   test("shows seeded portfolio data", async ({ page }) => {
     await loginOwnerOrSkip(page);
-    await page.goto("/owner?mode=records&section=portfolio");
+    await openOwnerWorkspace(page, "/owner?section=portfolio");
 
     await expect(page.getByRole("heading", { name: "Portfolio", exact: true })).toBeVisible();
-    await expect(page.locator('span, h2, h3, td, a, p').getByText("Riverside Apartments").first()).toBeVisible();
-    await expect(page.locator('span, h2, h3, td, a, p').getByText("Oak Park Duplex").first()).toBeVisible();
+    const portfolio = page.locator("#portfolio");
+    await expect(portfolio.getByRole("button", { name: "Rename Riverside Apartments.", exact: true })).toBeVisible();
+    await expect(portfolio.getByRole("button", { name: "Rename Oak Park Duplex.", exact: true })).toBeVisible();
   });
 
-  test("shows expenses section with seeded expenses", async ({ page }) => {
+  test("shows manager payments section or empty state", async ({ page }) => {
     await loginOwnerOrSkip(page);
-    await page.goto("/owner?section=expenses");
+    await openOwnerWorkspace(page, "/owner?section=manager-payments");
 
-    await expect(page.getByRole("heading", { name: "Expenses" })).toBeVisible();
-    await expect(page.getByText("Create Expense")).toBeVisible();
-    await expect(page.getByText("Property P&L")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Manager Payments" }).first()).toBeVisible();
+    const paymentStateVisible =
+      (await page.getByText(/pay manager|record payment|no manager payments|manager payments unavailable/i).count()) >
+      0;
+    expect(paymentStateVisible).toBeTruthy();
   });
 
   test("shows analytics charts", async ({ page }) => {
     await loginOwnerOrSkip(page);
-    await page.goto("/owner?section=analytics");
+    await openOwnerWorkspace(page, "/owner?section=analytics");
 
-    await expect(page.getByText("Rent Collection")).toBeVisible();
-    await expect(page.getByText("Expense Breakdown")).toBeVisible();
-    await expect(page.getByText("Occupancy Rate")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Analytics" })).toBeVisible();
+    await expect(page.getByText(/rent collection|collected/i).first()).toBeVisible();
+    await expect(page.getByText(/expense breakdown|maintenance/i).first()).toBeVisible();
   });
 
-  test("shows contextual greeting summary on overview", async ({ page }) => {
+  test("shows the compact greeting summary on the home page", async ({ page }) => {
     await loginOwnerOrSkip(page);
-    await page.goto("/owner");
-    await page.waitForTimeout(1500);
+    await openOwnerWorkspace(page);
 
-    // Owner may see contextual greeting OR onboarding welcome card
-    const hasGreeting = await page.getByRole("heading", { name: /good (morning|afternoon|evening),/i }).count();
-    const hasWelcome = await page.getByRole("heading", { name: /welcome/i }).count();
-    expect(hasGreeting + hasWelcome).toBeGreaterThan(0);
-
-    if (hasGreeting > 0) {
-      expect(
-        await page.getByText(/everything looks good|overdue charge|maintenance ticket/i).count()
-      ).toBeGreaterThan(0);
-    }
+    await expect(page.getByText(/good (morning|afternoon|evening),/i)).toBeVisible();
+    const summaryVisible =
+      (await page.getByText(/everything looks good|overdue charge|open ticket|urgent ticket/i).count()) > 0;
+    expect(summaryVisible).toBeTruthy();
   });
 
   test("shows inline edit affordance on portfolio", async ({ page }) => {
     await loginOwnerOrSkip(page);
-    await page.goto("/owner?mode=records&section=portfolio");
-    await page.waitForTimeout(1500);
+    await openOwnerWorkspace(page, "/owner?section=portfolio");
 
     const emptyState = page.getByText(/no properties yet/i);
     if (await emptyState.count()) {
@@ -83,28 +85,20 @@ test.describe("Owner flows", () => {
 
   test("keeps the batch toolbar hidden by default on charges", async ({ page }) => {
     await loginOwnerOrSkip(page);
-    await page.goto("/owner?section=charges");
-    await page.waitForTimeout(1500);
+    await openOwnerWorkspace(page, "/owner?section=charges");
 
-    await expect(page.getByText("Send Reminder", { exact: true })).toHaveCount(0);
-    await expect(page.getByText("Export CSV", { exact: true })).toHaveCount(0);
+    await expect(page.getByRole("toolbar", { name: /batch actions for selected charges/i })).toHaveCount(0);
   });
 
-  test("shows vendors content or empty state", async ({ page }) => {
+  test("shows members content or empty state", async ({ page }) => {
     await loginOwnerOrSkip(page);
-    await page.goto("/owner?section=vendors");
-    await page.waitForTimeout(1500);
+    await openOwnerWorkspace(page, "/owner?section=members");
 
-    const vendorHeading = page.getByRole("heading", { name: /vendors/i });
-    if (await vendorHeading.count()) {
-      const vendorState = page.getByText(
-        /no vendors yet|create vendor|vendors unavailable|vendor workflows are not ready/i
-      );
-      expect(await vendorState.count()).toBeGreaterThan(0);
-      return;
-    }
-
-    await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Members" }).first()).toBeVisible();
+    const membersState = page.getByText(
+      /invite members|current members|members only shows up for llc accounts|you have no pending invitations/i
+    );
+    expect(await membersState.count()).toBeGreaterThan(0);
   });
 
   test("opens the reports page", async ({ page }) => {

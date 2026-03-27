@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { dismissOwnerOnboarding, loginAsRole } from "./helpers";
 import { buildTestEmail, createTestUser } from "./helpers/auth";
 import { cleanupAllTestData, cleanupTestUser } from "./helpers/cleanup";
 import { seedOwnerData } from "./helpers/seed";
@@ -19,30 +20,34 @@ test.describe.serial("Owner navigation", () => {
     await cleanupAllTestData().catch(() => {});
   });
 
-  test("owner can switch workflow modes and move section-by-section", async ({ page }) => {
+  test("owner can open the property wizard and move page-by-page", async ({ page }) => {
     const email = buildTestEmail("owner-navigation");
     const user = await createTestUser({ email, password, role: "owner", fullName: "E2E Navigation Owner" });
     createdUser = { id: user.id, email };
     await seedOwnerData(user.id);
 
-    await page.goto("/login");
-    await page.getByRole("button", { name: "Owner" }).click();
-    await page.getByLabel("Email").fill(email);
-    await page.getByLabel("Password").fill(password);
-    await page.getByRole("button", { name: "Sign In" }).click();
+    const loggedIn = await loginAsRole(page, "Owner", email, password);
+    expect(loggedIn).toBeTruthy();
 
-    await expect(page).toHaveURL(/\/owner/, { timeout: 10000 });
-    await expect(page.getByText(/Daily (Operations Mode|Ops)/).first()).toBeVisible();
+    await dismissOwnerOnboarding(page, email);
+    await page.goto("/owner");
+    await page.waitForLoadState("networkidle").catch(() => {});
 
-    await page.waitForTimeout(500);
-    await page.getByRole("button", { name: /New Property/ }).click();
-    await expect(page.getByText(/New Property/).first()).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Home", exact: true })).toBeVisible();
+
+    await page.getByRole("button", { name: /^New Property$/ }).click();
+    const wizard = page.getByRole("dialog");
+    await expect(wizard.getByText(/set up the property, units, lease, and tenant in one flow/i)).toBeVisible();
+    await wizard.getByRole("button", { name: "Close", exact: true }).click();
+    await expect(wizard).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Next section" }).click();
+    await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: "Next section" }).click();
     await expect(page.getByRole("heading", { name: "Charges", exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: "Previous section" }).click();
-    await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
   });
 });

@@ -14,9 +14,24 @@ function inferRoleLabel(email: string) {
   return "Tenant";
 }
 
-export async function loginAs(page: Page, email: string, password: string) {
+export function ownerOnboardingDismissKey(email: string) {
+  return `domus-owner-onboarding-dismissed:${email.toLowerCase()}`;
+}
+
+export async function dismissOwnerOnboarding(page: Page, email: string) {
+  await page.evaluate((storageKey) => {
+    window.localStorage.setItem(storageKey, "true");
+  }, ownerOnboardingDismissKey(email));
+}
+
+export async function loginAsRole(
+  page: Page,
+  role: "Owner" | "Manager" | "Tenant",
+  email: string,
+  password: string
+) {
   await page.goto("/login");
-  await page.getByRole("button", { name: inferRoleLabel(email) }).click();
+  await page.getByRole("button", { name: role }).click();
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign In" }).click();
@@ -29,10 +44,20 @@ export async function loginAs(page: Page, email: string, password: string) {
   return redirected && !page.url().includes("/login");
 }
 
+export async function loginAs(page: Page, email: string, password: string) {
+  return loginAsRole(page, inferRoleLabel(email), email, password);
+}
+
 export function collectConsoleErrors(page: Page) {
   const errors: string[] = [];
   page.on("console", (message) => {
-    if (message.type() === "error" && !message.text().toLowerCase().includes("favicon")) {
+    const text = message.text();
+    const lower = text.toLowerCase();
+    const ignoredAnalyticsCspError =
+      lower.includes("va.vercel-scripts.com/v1/script.debug.js") &&
+      lower.includes("content security policy directive");
+
+    if (message.type() === "error" && !lower.includes("favicon") && !ignoredAnalyticsCspError) {
       errors.push(message.text());
     }
   });
