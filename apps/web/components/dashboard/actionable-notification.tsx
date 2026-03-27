@@ -52,24 +52,40 @@ export function ActionableNotification({
   const presentation = getNotificationPresentation(notification);
   const actions = getNotificationActions(notification, role);
 
-  const handleDismiss = () => {
+  const dismissNotification = async (notifyOnError = true) => {
     if (!onDismissNotification) {
       onDidDismiss?.(notification.id);
-      return;
+      return true;
     }
 
+    if (notification.readAt) {
+      onDidDismiss?.(notification.id);
+      return true;
+    }
+
+    const formData = new FormData();
+    formData.set("notificationId", notification.id);
+    const result = await onDismissNotification(null, formData);
+    if (!result?.success) {
+      if (notifyOnError) {
+        toast.error(result?.error ?? "Unable to dismiss this notification.");
+      }
+      return false;
+    }
+
+    onDidDismiss?.(notification.id);
+    return true;
+  };
+
+  const handleDismiss = () => {
     setPendingAction("dismiss");
     startTransition(async () => {
-      const formData = new FormData();
-      formData.set("notificationId", notification.id);
-      const result = await onDismissNotification(null, formData);
-      if (!result?.success) {
-        toast.error(result?.error ?? "Unable to dismiss this notification.");
+      const dismissed = await dismissNotification();
+      if (!dismissed) {
         setPendingAction(null);
         return;
       }
 
-      onDidDismiss?.(notification.id);
       setPendingAction(null);
       router.refresh();
     });
@@ -83,6 +99,11 @@ export function ActionableNotification({
 
     setPendingAction(`${action.kind}:${actionIndex}`);
     startTransition(async () => {
+      const clearAfterAction = async () => {
+        await dismissNotification(false);
+        setPendingAction(null);
+      };
+
       if (action.kind === "send_reminder") {
         if (!notification.entityId || !onSendBatchPaymentReminder) {
           toast.error("Reminder action is unavailable right now.");
@@ -100,7 +121,7 @@ export function ActionableNotification({
         }
 
         toast.success(result.message ?? "Reminder sent.");
-        setPendingAction(null);
+        await clearAfterAction();
         router.refresh();
         return;
       }
@@ -123,15 +144,15 @@ export function ActionableNotification({
         }
 
         toast.success(result.message ?? "Charge waived.");
-        setPendingAction(null);
+        await clearAfterAction();
         router.refresh();
         return;
       }
 
       if (action.kind === "mark_manager_payment_paid") {
         if (!notification.entityId || !onMarkManagerPaymentPaid) {
+          await clearAfterAction();
           router.push(action.href);
-          setPendingAction(null);
           return;
         }
 
@@ -146,17 +167,17 @@ export function ActionableNotification({
         }
 
         toast.success(result.message ?? "Manager payment marked paid.");
-        setPendingAction(null);
+        await clearAfterAction();
         router.refresh();
         return;
       }
 
+      await clearAfterAction();
       if (action.sectionId && onOpenSection) {
         onOpenSection(action.sectionId);
       } else {
         router.push(action.href);
       }
-      setPendingAction(null);
     });
   };
 

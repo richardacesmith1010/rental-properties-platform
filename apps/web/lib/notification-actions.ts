@@ -27,6 +27,22 @@ export interface NotificationPresentation {
   eyebrow: string;
 }
 
+function getNotificationText(notification: NotificationActionSource) {
+  return [
+    notification.type,
+    notification.entityType,
+    notification.title,
+    notification.body
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function includesEvery(text: string, parts: string[]) {
+  return parts.every((part) => text.includes(part));
+}
+
 function buildDashboardHref(
   role: NotificationRecipientRole,
   sectionId: string,
@@ -81,6 +97,15 @@ function resolveChargeActions(
         }),
         variant: "outline",
         sectionId: "charges"
+      },
+      {
+        kind: "navigate",
+        label: "View Charge",
+        href: buildDashboardHref("owner", "charges", {
+          chargeId
+        }),
+        variant: "outline",
+        sectionId: "charges"
       }
     ];
   }
@@ -102,7 +127,7 @@ function resolveChargeActions(
   return [
     {
       kind: "navigate",
-      label: "View Details",
+      label: "View Charge",
       href: buildDashboardHref("manager", "charges", {
         chargeId
       }),
@@ -178,6 +203,45 @@ function resolveLeaseActions(
       href: buildDashboardHref(role, "leases", { leaseId }),
       variant: "default",
       sectionId: "leases"
+    }
+  ];
+}
+
+function resolvePaymentActions(
+  role: NotificationRecipientRole,
+  notification: NotificationActionSource
+): NotificationActionDefinition[] {
+  if (role === "owner") {
+    return [
+      {
+        kind: "navigate",
+        label: "View Receipt",
+        href: receiptHref(notification.entityId ?? null),
+        variant: "default"
+      }
+    ];
+  }
+
+  if (role === "tenant") {
+    return [
+      {
+        kind: "navigate",
+        label: "Download Receipt",
+        href: receiptHref(notification.entityId ?? null, true),
+        variant: "default"
+      }
+    ];
+  }
+
+  return [
+    {
+      kind: "navigate",
+      label: "View Payment",
+      href: buildDashboardHref("manager", "charges", {
+        chargeId: notification.entityId ?? null
+      }),
+      variant: "default",
+      sectionId: "charges"
     }
   ];
 }
@@ -273,15 +337,31 @@ function resolveInvitationActions(
   role: NotificationRecipientRole,
   notification: NotificationActionSource
 ): NotificationActionDefinition[] {
+  const notificationText = getNotificationText(notification);
+
+  if (notificationText.includes("tenant invite accepted")) {
+    return [
+      {
+        kind: "navigate",
+        label: "View Tenant",
+        href: buildDashboardHref(role === "tenant" ? "tenant" : role, role === "tenant" ? "notifications" : "leases", {
+          invitationId: notification.entityId ?? null
+        }),
+        variant: "default",
+        sectionId: role === "tenant" ? "notifications" : "leases"
+      }
+    ];
+  }
+
   return [
     {
       kind: "navigate",
-      label: role === "owner" ? "View Invitations" : "Open Invitations",
-      href: buildDashboardHref(role === "tenant" ? "tenant" : role, role === "tenant" ? "notifications" : "invitations", {
+      label: role === "owner" ? "View Members" : "View Details",
+      href: buildDashboardHref(role === "tenant" ? "tenant" : role, role === "tenant" ? "notifications" : "members", {
         invitationId: notification.entityId ?? null
       }),
       variant: "default",
-      sectionId: role === "tenant" ? "notifications" : "invitations"
+      sectionId: role === "tenant" ? "notifications" : "members"
     }
   ];
 }
@@ -289,6 +369,20 @@ function resolveInvitationActions(
 function resolveOwnershipActions(
   notification: NotificationActionSource
 ): NotificationActionDefinition[] {
+  if (notification.type === "withdrawal_completed") {
+    return [
+      {
+        kind: "navigate",
+        label: "View Payout",
+        href: buildDashboardHref("owner", "ownership", {
+          requestId: notification.entityId ?? null
+        }),
+        variant: "default",
+        sectionId: "ownership"
+      }
+    ];
+  }
+
   return [
     {
       kind: "navigate",
@@ -342,37 +436,35 @@ export function getNotificationActions(
   }
 
   if (notification.type === "payment_recorded") {
-    if (role === "owner") {
-      return [
-        {
-          kind: "navigate",
-          label: "View Receipt",
-          href: receiptHref(notification.entityId ?? null),
-          variant: "default"
-        }
-      ];
-    }
+    return resolvePaymentActions(role, notification);
+  }
 
-    if (role === "tenant") {
-      return [
-        {
-          kind: "navigate",
-          label: "Download Receipt",
-          href: receiptHref(notification.entityId ?? null, true),
-          variant: "default"
-        }
-      ];
-    }
+  const notificationText = getNotificationText(notification);
 
+  if (notificationText.includes("tenant") && notificationText.includes("added")) {
     return [
       {
         kind: "navigate",
-        label: "View Payment",
-        href: buildDashboardHref("manager", "charges", {
-          chargeId: notification.entityId ?? null
+        label: "View Tenant",
+        href: buildDashboardHref(role === "tenant" ? "tenant" : role, role === "tenant" ? "notifications" : "leases", {
+          tenantId: notification.entityId ?? null
         }),
         variant: "default",
-        sectionId: "charges"
+        sectionId: role === "tenant" ? "notifications" : "leases"
+      }
+    ];
+  }
+
+  if (notificationText.includes("payout")) {
+    return [
+      {
+        kind: "navigate",
+        label: "View Payout",
+        href: buildDashboardHref("owner", "ownership", {
+          requestId: notification.entityId ?? null
+        }),
+        variant: "default",
+        sectionId: "ownership"
       }
     ];
   }
@@ -446,10 +538,26 @@ export function getNotificationActions(
     return resolveManagerPaymentActions(role, notification);
   }
 
+  if (notificationText.includes("late") || notificationText.includes("overdue")) {
+    return resolveChargeActions(role, notification);
+  }
+
+  if (includesEvery(notificationText, ["lease", "created"])) {
+    return resolveLeaseActions(role, notification);
+  }
+
+  if (includesEvery(notificationText, ["payment", "received"])) {
+    return resolvePaymentActions(role, notification);
+  }
+
+  if (notificationText.includes("maintenance") || notificationText.includes("ticket")) {
+    return resolveMaintenanceActions(role, notification);
+  }
+
   return [
     {
       kind: "navigate",
-      label: "Open Domus",
+      label: "View Details",
       href: `/${role}`,
       variant: "default"
     }

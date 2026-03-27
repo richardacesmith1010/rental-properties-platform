@@ -20,9 +20,13 @@ describe("notification actions", () => {
   it("returns owner actions for late rent notifications", () => {
     const actions = getNotificationActions(lateRentNotification, "owner");
 
-    expect(actions).toHaveLength(2);
+    expect(actions).toHaveLength(3);
     expect(actions[0]).toMatchObject({ label: "Send Reminder", kind: "send_reminder" });
     expect(actions[1]).toMatchObject({ label: "Waive Charge", kind: "waive_charge" });
+    expect(actions[2]).toMatchObject({
+      label: "View Charge",
+      href: "/owner?section=charges&chargeId=charge-1"
+    });
   });
 
   it("returns a tenant pay action for late rent notifications", () => {
@@ -65,5 +69,54 @@ describe("notification actions", () => {
     );
 
     expect(action).toMatchObject({ label: "View Receipt", href: "/payments/receipt/charge-9" });
+  });
+
+  it("falls back to content matching when a notification title describes a payment", () => {
+    const actions = getNotificationActions(
+      {
+        type: "achievement_unlocked",
+        title: "Payment received",
+        body: "Payment received for Unit 1A.",
+        entityType: "note",
+        entityId: "charge-2"
+      },
+      "owner"
+    );
+
+    expect(actions[0]).toMatchObject({ label: "View Receipt", href: "/payments/receipt/charge-2" });
+  });
+
+  it("uses a generic details action for unknown notifications", () => {
+    const actions = getNotificationActions(
+      {
+        type: "achievement_unlocked",
+        title: "System update",
+        body: "A new update is available.",
+        entityType: "system",
+        entityId: null
+      },
+      "owner"
+    );
+
+    expect(actions).toHaveLength(1);
+    expect(actions[0]).toMatchObject({ label: "View Details", href: "/owner" });
+  });
+
+  it("routes tenant invite acceptance notices to the tenant context", () => {
+    const actions = getNotificationActions(
+      {
+        type: "invite_accepted",
+        title: "Tenant invite accepted",
+        body: "Angel accepted the invitation and can now access Domus.",
+        entityType: "invitation",
+        entityId: "invite-1"
+      },
+      "owner"
+    );
+
+    expect(actions[0]).toMatchObject({
+      label: "View Tenant",
+      href: "/owner?section=leases&invitationId=invite-1"
+    });
   });
 });

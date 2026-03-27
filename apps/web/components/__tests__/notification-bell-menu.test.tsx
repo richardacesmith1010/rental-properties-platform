@@ -1,12 +1,16 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ActionState } from "@/app/actions";
 import { NotificationBellMenu } from "@/components/dashboard/notification-bell-menu";
 import type { NotificationDTO } from "@/lib/notifications";
 
+const pushMock = vi.fn();
+const refreshMock = vi.fn();
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
-    refresh: vi.fn(),
-    push: vi.fn()
+    refresh: refreshMock,
+    push: pushMock
   })
 }));
 
@@ -17,6 +21,11 @@ vi.mock("sonner", () => ({
 }));
 
 describe("NotificationBellMenu", () => {
+  beforeEach(() => {
+    pushMock.mockReset();
+    refreshMock.mockReset();
+  });
+
   const notifications: NotificationDTO[] = [
     {
       id: "notification-1",
@@ -60,6 +69,7 @@ describe("NotificationBellMenu", () => {
     expect(screen.getByRole("button", { name: "Clear all" })).toBeInTheDocument();
     expect(screen.getByText("Late rent detected")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send Reminder" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "View Charge" })).toBeInTheDocument();
   });
 
   it("clears the local badge and list when clear all succeeds", async () => {
@@ -102,5 +112,30 @@ describe("NotificationBellMenu", () => {
     });
 
     expect(screen.getByText("Owner message")).toBeInTheDocument();
+  });
+
+  it("marks a notification read before navigating from an action button", async () => {
+    const dismissMock = vi.fn<(_: ActionState, formData: FormData) => Promise<ActionState>>(
+      async () => ({ success: true })
+    );
+
+    render(
+      <NotificationBellMenu
+        notifications={notifications}
+        role="owner"
+        onDismissNotification={dismissMock}
+        onClearAllNotifications={async () => ({ success: true })}
+        triggerClassName="inline-flex h-10 w-10 items-center justify-center"
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Open notifications" }));
+    fireEvent.click(screen.getByRole("button", { name: "View Charge" }));
+
+    await waitFor(() => {
+      expect(dismissMock).toHaveBeenCalledTimes(1);
+      expect(pushMock).toHaveBeenCalledWith("/owner?section=charges&chargeId=charge-1");
+      expect(screen.queryByText("Late rent detected")).not.toBeInTheDocument();
+    });
   });
 });
