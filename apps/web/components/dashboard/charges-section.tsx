@@ -324,15 +324,16 @@ export function ChargesSection({
 
   return (
     <Card id="charges" className="border border-border/50 shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between gap-3">
+      <CardHeader className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
         <CardTitle className="text-xl font-semibold">
           {isTenantView ? "Rent Payments" : "Upcoming / Late Charges"}
         </CardTitle>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           {onCreateManualCharge && availableLeases.length > 0 && !isTenantView ? (
             <Button
               type="button"
               size="sm"
+              className="w-full sm:w-auto"
               onClick={() => setShowCreateChargeForm(true)}
               title="Create a manual one-off charge."
             >
@@ -343,7 +344,7 @@ export function ChargesSection({
           {onGenerateChargesHref ? (
             <Link
               href={onGenerateChargesHref}
-              className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-800 transition-colors hover:bg-zinc-50"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-800 transition-colors hover:bg-zinc-50 sm:min-h-0 sm:w-auto"
               title="Generate rent charges for the current billing period."
             >
               Generate This Month Charges
@@ -439,7 +440,7 @@ export function ChargesSection({
               onExport={() => exportChargesCsv(selectedVisibleCharges)}
               sendingReminders={isSendingReminders}
             />
-            <div className="mb-3 flex items-center justify-between rounded-xl border border-border/50 bg-background px-3 py-2 shadow-sm">
+            <div className="mb-3 flex flex-col gap-2 rounded-xl border border-border/50 bg-background px-3 py-2 shadow-sm sm:flex-row sm:items-center sm:justify-between">
               <label className="flex items-center gap-2 text-sm text-zinc-700">
                 <input
                   type="checkbox"

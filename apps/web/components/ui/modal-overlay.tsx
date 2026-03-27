@@ -108,7 +108,7 @@ export function ModalOverlay({ open, onClose, children }: ModalOverlayProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 overflow-y-auto"
+      className="fixed inset-0 z-50 overflow-y-auto overscroll-contain"
       role="dialog"
       aria-modal="true"
     >
@@ -120,9 +120,12 @@ export function ModalOverlay({ open, onClose, children }: ModalOverlayProps) {
       <div className="relative z-10 flex min-h-full items-end justify-center px-0 py-0 sm:items-center sm:px-4 sm:py-6">
         <div
           ref={containerRef}
-          className="relative z-10 mx-auto w-full max-w-full overflow-y-auto rounded-t-[1.5rem] animate-scale-in scroll-smooth [-webkit-overflow-scrolling:touch] sm:max-w-2xl sm:rounded-2xl"
+          className="relative z-10 mx-auto max-h-[92svh] w-full max-w-full overflow-y-auto rounded-t-[1.5rem] animate-scale-in scroll-smooth [-webkit-overflow-scrolling:touch] sm:max-h-[calc(100svh-3rem)] sm:max-w-2xl sm:rounded-2xl"
           tabIndex={-1}
         >
+          <div className="sticky top-0 z-20 flex justify-center bg-transparent pt-3 sm:hidden" aria-hidden="true">
+            <div className="h-1.5 w-12 rounded-full bg-border/80" />
+          </div>
           {children}
         </div>
       </div>

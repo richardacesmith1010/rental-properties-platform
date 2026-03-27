@@ -188,6 +188,7 @@ export function LeasesSection({
           <Button
             type="button"
             onClick={onOpenLeaseWizard}
+            className="w-full sm:w-auto"
             title="Open the guided lease creation wizard."
           >
             New Lease
@@ -234,7 +235,7 @@ export function LeasesSection({
                           type="button"
                           size="icon"
                           variant="ghost"
-                          className="h-8 w-8 rounded-md"
+                          className="h-11 w-11 rounded-md sm:h-8 sm:w-8"
                           onClick={() => setEditingLease(lease)}
                           title={`Edit lease for ${lease.unitLabel}`}
                           aria-label={`Edit lease for ${lease.unitLabel}`}
@@ -250,7 +251,7 @@ export function LeasesSection({
                           type="button"
                           size="icon"
                           variant="ghost"
-                          className="h-7 w-7 rounded-md"
+                          className="h-11 w-11 rounded-md sm:h-7 sm:w-7"
                           onClick={() => setEditingTenant(lease)}
                           title={`Edit ${lease.tenantName}`}
                           aria-label={`Edit ${lease.tenantName}`}
@@ -263,7 +264,7 @@ export function LeasesSection({
                           type="button"
                           size="icon"
                           variant="ghost"
-                          className="h-7 w-7 rounded-md"
+                          className="h-11 w-11 rounded-md sm:h-7 sm:w-7"
                           onClick={() => setMessagingTenant(lease)}
                           title={`Message ${lease.tenantName}`}
                           aria-label={`Message ${lease.tenantName}`}
@@ -467,14 +468,14 @@ export function LeasesSection({
                     ) : null}
                   </div>
 
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="text-right">
+                  <div className="flex flex-col items-stretch gap-2 sm:items-end">
+                    <div className="text-left sm:text-right">
                       <p className="text-base font-medium text-foreground">{formatCurrency(lease.monthlyRentCents)}</p>
                       <p className="text-sm text-muted-foreground">Due day {lease.dueDayOfMonth}</p>
                     </div>
                     <Link
                       href={`/api/pdf/lease-summary/${lease.id}`}
-                      className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow-sm transition hover:bg-muted"
+                      className="inline-flex min-h-11 items-center justify-center gap-1 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow-sm transition hover:bg-muted sm:min-h-0"
                       title="Download a one-page PDF summary of this lease."
                     >
                       <Download className="h-3.5 w-3.5" />
@@ -487,6 +488,7 @@ export function LeasesSection({
                           <Button
                             type="button"
                             size="sm"
+                            className="w-full sm:w-auto"
                             variant={activeRentAmountLeaseId === lease.id ? "default" : "outline"}
                             onClick={() =>
                               setActiveRentAmountLeaseId((current) => (current === lease.id ? null : lease.id))
@@ -499,6 +501,7 @@ export function LeasesSection({
                         <Button
                           type="button"
                           size="sm"
+                          className="w-full sm:w-auto"
                           variant={activeEditLeaseId === lease.id ? "default" : "outline"}
                           onClick={() =>
                             setActiveEditLeaseId((current) => (current === lease.id ? null : lease.id))

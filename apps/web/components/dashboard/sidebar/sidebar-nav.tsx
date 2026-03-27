@@ -336,7 +336,7 @@ export function MobileTopBar({
   const notificationHref = role === "tenant" ? "/tenant?section=notifications" : `${workspacePath}#notifications`;
 
   return (
-    <div className="gradient-sidebar px-3 py-3 shadow-lg lg:hidden">
+    <div className="gradient-sidebar sticky top-0 z-30 px-3 pb-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] shadow-lg lg:hidden">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.18] text-sm font-bold text-white">D</div>
@@ -371,7 +371,7 @@ export function MobileTopBar({
             triggerClassName="sidebar-shell-button relative flex h-11 w-11 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
             iconClassName="h-3.5 w-3.5"
             badgeClassName="absolute -right-1 -top-1 min-w-[1rem] px-1 text-[9px]"
-            panelClassName="right-0 w-[min(22rem,calc(100vw-1.5rem))]"
+            panelClassName="right-0 w-[min(22rem,calc(100vw-1rem))]"
           />
 
           <MobileUserFooter
@@ -407,7 +407,7 @@ export function MobileTopBar({
                 </Badge>
               </div>
 
-              <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
+              <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-4">
                 {commandPaletteEnabled && onOpenCommandPalette ? (
                   <CommandPaletteTrigger onOpen={onOpenCommandPalette} />
                 ) : searchItems.length > 0 ? (

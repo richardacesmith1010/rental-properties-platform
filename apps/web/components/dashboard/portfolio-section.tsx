@@ -188,7 +188,7 @@ export function PortfolioSection({
                           type="button"
                           size="icon"
                           variant="ghost"
-                          className="h-8 w-8 shrink-0 rounded-md"
+                          className="h-11 w-11 shrink-0 rounded-md sm:h-8 sm:w-8"
                           onClick={() => setEditingProperty(property)}
                           title={`Edit ${property.name}`}
                           aria-label={`Edit ${property.name}`}
@@ -251,7 +251,7 @@ export function PortfolioSection({
                     )}
                   </div>
                   <div
-                    className="flex flex-col items-end gap-2"
+                    className="flex flex-col items-stretch gap-2 sm:items-end"
                     onClick={(event) => event.stopPropagation()}
                   >
                     <p className="text-sm text-zinc-500">{pluralize(property.unitCount, "unit")}</p>

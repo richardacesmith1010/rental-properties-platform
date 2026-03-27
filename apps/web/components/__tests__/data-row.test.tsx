@@ -22,7 +22,14 @@ describe("DataRow", () => {
       </DataRow>
     );
 
-    expect(container.firstChild).toHaveClass("flex", "items-center", "justify-between");
+    expect(container.firstChild).toHaveClass(
+      "flex",
+      "flex-col",
+      "items-stretch",
+      "sm:flex-row",
+      "sm:items-center",
+      "sm:justify-between"
+    );
   });
 
   it("handles empty value content", () => {

@@ -18,11 +18,13 @@ export function MobileDrawer({ trigger, children, className }: MobileDrawerProps
         <Drawer.Overlay className="fixed inset-0 z-40 bg-black/45 backdrop-blur-[2px]" />
         <Drawer.Content
           className={cn(
-            "fixed inset-y-0 left-0 z-50 flex h-full w-[86vw] max-w-[320px] flex-col border-r border-white/10 bg-white text-foreground shadow-2xl dark:bg-zinc-900",
+            "fixed inset-y-0 left-0 z-50 flex h-full w-[min(88vw,22rem)] max-w-[22rem] flex-col overflow-hidden border-r border-white/10 bg-white text-foreground shadow-2xl dark:bg-zinc-900",
             className
           )}
         >
-          <div className="max-h-full overflow-y-auto px-4 pb-8 pt-5">{children}</div>
+          <div className="max-h-full overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1.25rem)] pt-[calc(env(safe-area-inset-top,0px)+1rem)]">
+            {children}
+          </div>
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>

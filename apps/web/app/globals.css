@@ -124,6 +124,8 @@
 
   html {
     color-scheme: light;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
   html[data-domus-theme="noctis-neon"],
@@ -134,6 +136,8 @@
   body {
     background: var(--domus-body-bg);
     color: var(--domus-body-text);
+    max-width: 100%;
+    overflow-x: hidden;
     @apply antialiased;
   }
 
@@ -683,6 +687,44 @@
 .domus-error-reveal[data-visible="true"] {
   max-height: 2rem;
   opacity: 1;
+}
+
+@media (max-width: 640px) {
+  .mobile-full-width {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .mobile-stack {
+    flex-direction: column !important;
+  }
+
+  .mobile-hide {
+    display: none !important;
+  }
+
+  .mobile-scroll-x {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .app-surface {
+    overflow-x: hidden;
+  }
+
+  .domus-card,
+  .domus-glass,
+  .domus-kpi-pill {
+    max-width: 100%;
+  }
+
+  button,
+  [role="button"],
+  a[role="button"],
+  input[type="button"],
+  input[type="submit"] {
+    touch-action: manipulation;
+  }
 }
 
 /* ─── Stagger delay utilities ─── */

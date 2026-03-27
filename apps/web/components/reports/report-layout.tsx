@@ -159,6 +159,7 @@ export function ReportSection<T>({
         <Button
           type="button"
           variant="outline"
+          className="w-full sm:w-auto"
           onClick={onExport}
           title={`Export the ${title} data as CSV.`}
         >
@@ -172,7 +173,7 @@ export function ReportSection<T>({
           <EmptyState icon={Download} title={emptyTitle} description={emptyDescription} />
         </div>
       ) : (
-        <div className="mt-6 overflow-x-auto">
+        <div className="mt-6 overflow-x-auto [-webkit-overflow-scrolling:touch]">
           <table className="min-w-full divide-y divide-zinc-200 text-sm">
             <thead>
               <tr>

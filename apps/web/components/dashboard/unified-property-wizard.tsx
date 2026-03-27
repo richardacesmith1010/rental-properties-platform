@@ -406,7 +406,7 @@ export function UnifiedPropertyWizard({
           {step !== "success" ? <div className="py-5"><WizardProgress step={step} /></div> : null}
         </div>
 
-        <div ref={contentRef} className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-5 sm:px-6 sm:pb-6">
+        <div ref={contentRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-4 pt-5 sm:px-6 sm:pb-6">
           {errorMessage ? <Alert variant="error">{errorMessage}</Alert> : null}
           {successMessage && step === "success" ? <Alert variant="success">{successMessage}</Alert> : null}
 
@@ -749,21 +749,21 @@ export function UnifiedPropertyWizard({
           <div className="shrink-0 border-t border-border/60 px-4 py-4 sm:px-6">
             <div className={cn("flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between", step === "property" && "sm:justify-end")}>
               {step !== "property" ? (
-                <Button type="button" variant="outline" onClick={goBack} title="Go back to the previous setup step.">
+                <Button type="button" variant="outline" onClick={goBack} title="Go back to the previous setup step." className="w-full sm:w-auto">
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
                 </Button>
               ) : <div />}
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} title="Close this wizard without saving anything.">
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} title="Close this wizard without saving anything." className="w-full sm:w-auto">
                   Close
                 </Button>
                 {step === "confirm" ? (
-                  <Button type="button" loading={isPending} onClick={handleSubmit} title="Create the property, units, lease, and tenant invitation in one submission.">
+                  <Button type="button" loading={isPending} onClick={handleSubmit} title="Create the property, units, lease, and tenant invitation in one submission." className="w-full sm:w-auto">
                     Create Everything
                   </Button>
                 ) : (
-                  <Button type="button" onClick={goNext} title="Continue to the next step.">
+                  <Button type="button" onClick={goNext} title="Continue to the next step." className="w-full sm:w-auto">
                     Continue
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>

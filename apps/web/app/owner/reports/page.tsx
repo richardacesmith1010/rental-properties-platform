@@ -68,20 +68,20 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   }));
 
   return (
-    <main id="main-content" className="app-surface min-h-screen px-6 py-6 lg:px-8">
+    <main id="main-content" className="app-surface min-h-screen px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-6">
         <header className="space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Financial Reports</h1>
               <p className="text-sm text-zinc-600">
                 Portfolio reporting for rent, receivables, ledgers, P&amp;L, and tax prep.
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               <Link
                 href={`/api/pdf/receipts?year=${reportYear}`}
-                className="inline-flex items-center gap-2 rounded-md bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-shadow hover:bg-violet-500 hover:shadow-md"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-shadow hover:bg-violet-500 hover:shadow-md sm:min-h-0"
                 title={`Download all ${reportYear} rent receipts as a PDF export.`}
               >
                 <Download className="h-4 w-4" />
@@ -89,19 +89,19 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               </Link>
               <Link
                 href={getRoleHomePath(role)}
-                className="rounded-md border border-zinc-200/80 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm transition-shadow hover:bg-zinc-50 hover:shadow-md"
+                className="inline-flex min-h-11 items-center justify-center rounded-md border border-zinc-200/80 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm transition-shadow hover:bg-zinc-50 hover:shadow-md sm:min-h-0"
                 title="Return to your workspace."
               >
                 Back to Workspace
               </Link>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                 <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Year</span>
-                <div className="flex flex-wrap gap-2">
+                <div className="mobile-scroll-x flex gap-2 pb-1 sm:flex-wrap sm:pb-0">
                   {yearOptions.map((year) => (
                     <Link
                       key={year}
                       href={`${reportsBasePath}?year=${year}`}
-                      className={`rounded-md px-3 py-1.5 text-xs font-semibold ${
+                      className={`inline-flex min-h-11 shrink-0 items-center justify-center rounded-md px-3 py-1.5 text-xs font-semibold sm:min-h-0 ${
                         year === reportYear
                           ? "bg-violet-600 text-white"
                           : "border border-zinc-200/80 bg-white text-zinc-700 shadow-sm transition-shadow hover:bg-zinc-50 hover:shadow-md"

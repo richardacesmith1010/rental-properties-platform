@@ -176,11 +176,11 @@ export function ActionItems({
 
   return (
     <section className="space-y-4">
-      <div className="space-y-2 px-1">
+      <div className="space-y-2 px-0.5 sm:px-1">
         <Badge variant="outline" className="px-3 py-1 text-sm">
           What needs attention
         </Badge>
-        <h2 className="text-3xl font-semibold tracking-tight text-foreground">{attentionLabel}</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{attentionLabel}</h2>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
           Start with the top card. Domus sorted everything by urgency so you can clear the queue without hunting through sections.
         </p>
@@ -206,7 +206,7 @@ export function ActionItems({
                 }
               }}
               className={cn(
-                "domus-card cursor-pointer border-l-4 px-5 py-4 transition hover:-translate-y-0.5 hover:shadow-md",
+                "domus-card cursor-pointer border-l-4 px-4 py-4 transition hover:-translate-y-0.5 hover:shadow-md sm:px-5",
                 severityClasses[item.severity]
               )}
               title={`Open ${item.linkTo.replace(/-/g, " ")}.`}
@@ -228,12 +228,13 @@ export function ActionItems({
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2" onClick={(event) => event.stopPropagation()}>
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center" onClick={(event) => event.stopPropagation()}>
                   {(item.kind === "overdue_charge" || item.kind === "due_soon_charge") && item.chargeId ? (
                     <>
                       <Button
                         type="button"
                         size="sm"
+                        className="w-full sm:w-auto"
                         loading={isPending && pendingKey === remindKey}
                         onClick={() => handleReminder(item)}
                         title="Send a rent reminder right now."
@@ -245,6 +246,7 @@ export function ActionItems({
                           type="button"
                           size="sm"
                           variant="outline"
+                          className="w-full sm:w-auto"
                           loading={isPending && pendingKey === waiveKey}
                           onClick={() => handleWaive(item)}
                           title="Waive this overdue charge."
@@ -256,6 +258,7 @@ export function ActionItems({
                           type="button"
                           size="sm"
                           variant="outline"
+                          className="w-full sm:w-auto"
                           onClick={() => openLinkedSurface(item)}
                           title="Open the charge details."
                         >
@@ -267,11 +270,12 @@ export function ActionItems({
 
                   {item.kind === "manager_payment" ? (
                     <>
-                      <Button
-                        type="button"
-                        size="sm"
-                        loading={isPending && pendingKey === payKey}
-                        onClick={() => handleMarkManagerPaymentPaid(item)}
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="w-full sm:w-auto"
+                          loading={isPending && pendingKey === payKey}
+                          onClick={() => handleMarkManagerPaymentPaid(item)}
                         title="Mark this manager payment as paid."
                       >
                         Pay Now
@@ -293,6 +297,7 @@ export function ActionItems({
                       type="button"
                       size="sm"
                       variant="outline"
+                      className="w-full sm:w-auto"
                       onClick={() => openLinkedSurface(item)}
                       title={`Open ${item.linkTo.replace(/-/g, " ")}.`}
                     >

@@ -110,7 +110,7 @@ export function PayRentCard({
       <CardContent className="min-h-[240px] p-0 sm:min-h-[280px]">
         <div
           className={cn(
-            "h-full border-l-[8px] px-4 py-6 sm:border-l-[10px] sm:px-8 sm:py-8",
+            "h-full border-l-[8px] px-4 py-5 sm:border-l-[10px] sm:px-8 sm:py-8",
             isLate ? "border-l-red-500" : "border-l-violet-600"
           )}
         >
@@ -121,7 +121,7 @@ export function PayRentCard({
                   <p className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                     Your Rent
                   </p>
-                  <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-4xl">
+                  <h2 className="text-[2rem] font-bold tracking-tight text-foreground sm:text-4xl">
                     {formatCurrency(charge.amountCents)}
                   </h2>
                 </div>

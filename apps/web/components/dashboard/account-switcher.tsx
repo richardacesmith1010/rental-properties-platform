@@ -266,12 +266,12 @@ export function AccountSwitcher({
           Rename pending • {activePendingRenameRequest.votesReceived}/{activePendingRenameRequest.votesRequired} votes
         </p>
       ) : null}
-      <div className="relative mt-3">
+      <div className="relative z-10 mt-3">
         <button
           ref={menuTriggerRef}
           type="button"
           onClick={() => setIsMenuOpen((current) => !current)}
-          className="sidebar-shell-input flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm"
+          className="sidebar-shell-input flex min-h-11 w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm"
           title="Switch ownership account."
           aria-label="Switch ownership account"
           aria-haspopup="listbox"
@@ -297,7 +297,7 @@ export function AccountSwitcher({
             ref={menuRef}
             role="listbox"
             aria-label="Available ownership accounts"
-            className="absolute left-0 right-0 z-40 mt-2 overflow-hidden rounded-[12px] border border-white/18 bg-slate-950/95 p-1 shadow-[0_20px_44px_-24px_rgba(15,23,42,0.7)] backdrop-blur"
+            className="z-[60] mt-3 overflow-hidden rounded-[12px] border border-white/18 bg-slate-950/95 p-1 shadow-[0_20px_44px_-24px_rgba(15,23,42,0.7)] backdrop-blur sm:absolute sm:left-0 sm:right-0 sm:mt-2"
           >
             {accounts.map((account) => {
               const isActive = account.id === activeAccount.id;
@@ -308,7 +308,7 @@ export function AccountSwitcher({
                   role="option"
                   aria-selected={isActive}
                   onClick={() => handleAccountChange(account.id)}
-                  className={`flex w-full items-center justify-between gap-3 rounded-[10px] px-3 py-2 text-left text-sm transition ${
+                  className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-[10px] px-3 py-2 text-left text-sm transition sm:min-h-0 ${
                     isActive ? "bg-white/14 text-white" : "text-white/82 hover:bg-white/10 hover:text-white"
                   }`}
                   title={`Switch to ${account.displayName}.`}
@@ -324,7 +324,7 @@ export function AccountSwitcher({
       <button
         type="button"
         onClick={handleCreateAccount}
-        className="sidebar-shell-button mt-3 flex w-full items-center justify-center gap-1.5 px-3 py-2 text-xs"
+        className="sidebar-shell-button mt-3 flex min-h-11 w-full items-center justify-center gap-1.5 px-3 py-2 text-xs"
         title="Create a new ownership account."
       >
         <Plus className="h-3 w-3" />

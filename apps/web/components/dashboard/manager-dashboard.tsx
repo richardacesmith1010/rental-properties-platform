@@ -151,10 +151,11 @@ export function ManagerDashboard({
                       </p>
                       <p className="text-sm leading-6 text-muted-foreground">{task.description}</p>
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                       <Button
                         type="button"
                         size="sm"
+                        className="w-full sm:w-auto"
                         loading={isPending && pendingTaskId === task.id}
                         onClick={task.onPrimary}
                         title={task.primaryLabel}
@@ -166,6 +167,7 @@ export function ManagerDashboard({
                           type="button"
                           size="sm"
                           variant="outline"
+                          className="w-full sm:w-auto"
                           onClick={task.onSecondary}
                           title={task.secondaryLabel}
                         >

@@ -105,8 +105,8 @@ export function FeedbackModal({ open, onClose, onSubmit, defaultEmail }: Feedbac
 
   return (
     <ModalOverlay open={open} onClose={onClose}>
-      <Card className="mx-auto w-full max-w-xl border border-border/70 bg-background shadow-2xl">
-        <CardHeader className="border-b border-border/60 pb-4">
+      <Card className="mx-auto w-full max-w-xl rounded-t-[1.5rem] border border-border/70 bg-background shadow-2xl sm:rounded-2xl">
+        <CardHeader className="border-b border-border/60 px-4 pb-4 pt-2 sm:px-6 sm:pt-6">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
               <CardTitle className="text-xl font-semibold text-foreground">Send Feedback</CardTitle>
@@ -127,7 +127,7 @@ export function FeedbackModal({ open, onClose, onSubmit, defaultEmail }: Feedbac
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="space-y-5 p-5 sm:p-6">
+        <CardContent className="space-y-5 p-4 pb-[calc(env(safe-area-inset-bottom,0px)+1.25rem)] sm:p-6">
           <div className="space-y-2">
             <p className="text-sm font-medium text-foreground">What type of feedback?</p>
             <div className="grid gap-2 sm:grid-cols-3">
