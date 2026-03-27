@@ -59,6 +59,14 @@ export async function GET(request: Request) {
         // PKCE code_verifier missing — email was already confirmed by Supabase
         // before the redirect, so treat this as a success and prompt sign-in.
         if (error.message?.includes("code verifier")) {
+          if (type === "recovery") {
+            // Reset link opened in a different browser than where it was requested.
+            // PKCE verifier is missing — ask them to request a new link in this browser.
+            const params = new URLSearchParams();
+            params.set("error", "reset_link_expired");
+            params.set("error_description", "Your reset link didn't work in this browser. Request a new one below.");
+            return NextResponse.redirect(`${origin}/login?${params.toString()}`);
+          }
           return NextResponse.redirect(
             `${origin}/login?confirmed=true&next=${encodeURIComponent(next)}`
           );
