@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -23,6 +24,11 @@ import { DashboardLayout } from "./dashboard-layout";
 import { useDashboardData } from "./dashboard-data-loader";
 import { SectionRenderer } from "./section-renderer";
 import type { DashboardProps } from "./types";
+
+const AiAssistant = dynamic(
+  () => import("@/components/dashboard/ai-assistant").then((module) => module.AiAssistant),
+  { ssr: false }
+);
 
 function shouldHandleSectionHotkeys(target: EventTarget | null) {
   const element = target as HTMLElement | null;
@@ -144,6 +150,7 @@ export function Dashboard(props: DashboardProps) {
   const ownerSectionCountLabel = activeSectionIndex >= 0 && sectionItems.length > 0
     ? `${activeSectionIndex + 1} of ${sectionItems.length}`
     : null;
+  const assistantAccountId = props.activeAccountId ?? props.ownershipAccounts?.[0]?.id ?? "";
   const showOwnerDailyOpsShell = isOwnerRole && isOwnerDailyOpsEnabled;
   const showLlcSetupPrompt = Boolean(
     isOwnerRole && isOwnerDailyOpsEnabled && isOwnerDailyOpsHomePage && llcSetupPrompt.shouldShow
@@ -517,6 +524,9 @@ export function Dashboard(props: DashboardProps) {
           </>
         )}
       </div>
+      {(isOwnerRole || isManagerRole) ? (
+        <AiAssistant accountId={assistantAccountId} ownerName={displayName} />
+      ) : null}
     </DashboardLayout>
   );
 }

@@ -9,6 +9,7 @@ export function getEnvStatus() {
     CRON_SECRET: Boolean(process.env.CRON_SECRET),
     RESEND_API_KEY: Boolean(process.env.RESEND_API_KEY),
     RESEND_FROM_EMAIL: Boolean(process.env.RESEND_FROM_EMAIL),
+    ANTHROPIC_API_KEY: Boolean(process.env.ANTHROPIC_API_KEY),
     PLAID_CLIENT_ID: Boolean(process.env.PLAID_CLIENT_ID),
     PLAID_SECRET: Boolean(process.env.PLAID_SECRET),
     PLAID_ENV: Boolean(process.env.PLAID_ENV)
@@ -32,6 +33,7 @@ export interface EnvSummary {
   supabase: EnvSummaryGroup;
   stripe: EnvSummaryGroup;
   email: EnvSummaryGroup;
+  ai: EnvSummaryGroup;
   plaid: EnvSummaryGroup;
   cron: EnvSummaryGroup;
 }
@@ -68,6 +70,12 @@ export function getEnvSummary(): EnvSummary {
       vars: {
         RESEND_API_KEY: Boolean(process.env.RESEND_API_KEY),
         RESEND_FROM_EMAIL: Boolean(process.env.RESEND_FROM_EMAIL)
+      }
+    },
+    ai: {
+      configured: Boolean(process.env.ANTHROPIC_API_KEY),
+      vars: {
+        ANTHROPIC_API_KEY: Boolean(process.env.ANTHROPIC_API_KEY)
       }
     },
     plaid: {
