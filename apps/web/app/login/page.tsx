@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BarChart3, ShieldCheck, Sparkles } from "lucide-react";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { RoleSelector } from "@/components/auth/role-selector";
@@ -31,12 +32,14 @@ const proofPoints = [
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const supabase = createClient();
+  const cookieStore = cookies();
   const { data } = await supabase.auth.getUser();
   const currentYear = new Date().getFullYear();
   const callbackError = searchParams?.error;
   const callbackErrorDescription = searchParams?.error_description;
   const emailConfirmed = searchParams?.confirmed === "true";
   const passwordReset = searchParams?.password_reset === "true";
+  const sessionExpired = cookieStore.get("x-session-expired")?.value === "1";
 
   if (data.user) {
     const role = await getCurrentUserRole(data.user.id);
@@ -159,6 +162,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               </div>
 
               <div className="space-y-4 px-6 py-6 sm:px-8">
+                {sessionExpired ? (
+                  <Alert variant="warning" className="px-4 py-3">
+                    <p className="font-medium">Your session expired.</p>
+                    <p className="mt-1">Please sign in again.</p>
+                  </Alert>
+                ) : null}
+
                 {emailConfirmed ? (
                   <Alert variant="success" className="px-4 py-3">
                     <p className="font-medium">Email confirmed!</p>

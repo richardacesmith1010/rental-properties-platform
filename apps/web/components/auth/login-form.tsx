@@ -2,12 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { useFormState } from "react-dom";
-import { CheckCircle, Loader2, Lock } from "lucide-react";
+import { CheckCircle, Lock } from "lucide-react";
 import { forgotPasswordAction } from "@/app/actions/forgot-password";
+import { loginAction, type LoginActionState } from "@/app/actions/login";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { mapAuthErrorMessage, validatePassword } from "@/lib/password-validation";
 import { createClient } from "@/lib/supabase/client";
 
 interface LoginFormProps {
@@ -17,17 +19,41 @@ interface LoginFormProps {
 
 type AuthMode = "signin" | "signup";
 
-function mapAuthError(message: string) {
-  if (message.includes("Invalid login credentials")) {
-    return "Incorrect email or password.";
+const emptyLoginState: LoginActionState = {};
+const strengthBarColors = [
+  "bg-red-500",
+  "bg-orange-500",
+  "bg-amber-400",
+  "bg-emerald-500"
+] as const;
+
+function PasswordStrengthMeter({ password }: { password: string }) {
+  const strength = validatePassword(password);
+
+  if (strength.score === 0) {
+    return null;
   }
-  if (message.includes("User already registered")) {
-    return "An account with this email already exists. Try signing in.";
-  }
-  if (message.includes("Password should be at least 6 characters")) {
-    return message;
-  }
-  return message;
+
+  return (
+    <div className="mt-2 space-y-2">
+      <div className="grid grid-cols-4 gap-2" aria-hidden="true">
+        {strengthBarColors.map((color, index) => (
+          <div
+            key={color}
+            className={`h-1.5 rounded-full ${index < strength.score ? color : "bg-muted"}`}
+          />
+        ))}
+      </div>
+      <div className="flex items-start justify-between gap-3 text-xs">
+        <span className="font-semibold text-foreground">{strength.label}</span>
+        {strength.errors.length > 0 ? (
+          <span className="text-right text-muted-foreground">{strength.errors.join(" · ")}</span>
+        ) : (
+          <span className="text-right text-emerald-600">Password looks good.</span>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function ForgotPasswordPanel({
@@ -51,7 +77,7 @@ function ForgotPasswordPanel({
         </div>
         <h3 className="text-lg font-semibold text-foreground">Check your email</h3>
         <p className="mt-2 text-sm text-muted-foreground">
-          If an account exists for <span className="font-medium text-foreground">{email}</span>, a password reset link has been sent.
+          If an account exists for <span className="font-medium text-foreground">{email}</span>, a reset link has been sent.
         </p>
         <Button type="button" variant="outline" className="mt-6" onClick={onBack}>
           Back to sign in
@@ -90,8 +116,8 @@ function ForgotPasswordPanel({
 
         {state?.error ? <Alert variant="error">{state.error}</Alert> : null}
 
-        <SubmitButton className="w-full" title="Send a password reset link to this email address.">
-          Send Reset Link
+        <SubmitButton className="w-full" title="Send a reset link to this email address.">
+          Send reset link
         </SubmitButton>
       </form>
 
@@ -105,6 +131,101 @@ function ForgotPasswordPanel({
         </button>
       </p>
     </div>
+  );
+}
+
+function SignInPanel({
+  email,
+  password,
+  inputIdSuffix,
+  onEmailChange,
+  onPasswordChange,
+  onForgotPassword,
+  onSwitchToSignup
+}: {
+  email: string;
+  password: string;
+  inputIdSuffix: string;
+  onEmailChange: (value: string) => void;
+  onPasswordChange: (value: string) => void;
+  onForgotPassword: () => void;
+  onSwitchToSignup: () => void;
+}) {
+  const [state, formAction] = useFormState(loginAction, emptyLoginState);
+
+  return (
+    <form action={formAction} className="space-y-3">
+      <div>
+        <label htmlFor={`email-${inputIdSuffix}`} className="mb-1.5 block text-sm font-medium text-foreground">
+          Email
+        </label>
+        <Input
+          id={`email-${inputIdSuffix}`}
+          name="email"
+          type="email"
+          value={email}
+          onChange={(event) => onEmailChange(event.target.value)}
+          placeholder="you@example.com"
+          required
+        />
+      </div>
+
+      <div>
+        <label htmlFor={`password-${inputIdSuffix}`} className="mb-1.5 block text-sm font-medium text-foreground">
+          Password
+        </label>
+        <Input
+          id={`password-${inputIdSuffix}`}
+          name="password"
+          type="password"
+          value={password}
+          onChange={(event) => onPasswordChange(event.target.value)}
+          placeholder="Enter your password"
+          required
+        />
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          className="text-sm text-primary hover:text-primary/80"
+          onClick={onForgotPassword}
+        >
+          Forgot password?
+        </button>
+      </div>
+
+      {state.error ? <Alert variant="error">{state.error}</Alert> : null}
+
+      {state.blocked ? (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          <p className="font-semibold">Need help getting back in?</p>
+          <button
+            type="button"
+            className="mt-2 font-semibold text-amber-900 underline underline-offset-4 hover:text-amber-700"
+            onClick={onForgotPassword}
+          >
+            Reset your password
+          </button>
+        </div>
+      ) : null}
+
+      <SubmitButton className="w-full" title="Sign in to your Domus account.">
+        <Lock className="mr-2 h-4 w-4" />
+        Sign in
+      </SubmitButton>
+
+      <p className="text-center text-sm text-muted-foreground">
+        Don&apos;t have an account?{" "}
+        <button
+          type="button"
+          className="font-semibold text-primary hover:text-primary/80"
+          onClick={onSwitchToSignup}
+        >
+          Sign up
+        </button>
+      </p>
+    </form>
   );
 }
 
@@ -130,63 +251,50 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
     return `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
   }, [nextPath]);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  const passwordStrength = validatePassword(password);
+  const passwordsMatch = confirmPassword.length === 0 || password === confirmPassword;
+  const canSubmitSignup = passwordStrength.isValid && confirmPassword.length > 0 && password === confirmPassword;
+
+  async function handleSignupSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setError(null);
 
     try {
+      if (!passwordStrength.isValid) {
+        setError(passwordStrength.errors[0] ?? "Use at least 8 characters with a capital letter and a number.");
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setError("Passwords do not match yet.");
+        return;
+      }
+
       const supabase = createClient();
-
-      if (mode === "signup") {
-        if (password.length < 6) {
-          setError("Password should be at least 6 characters.");
-          setLoading(false);
-          return;
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo,
+          data: role ? { role } : undefined
         }
+      });
 
-        if (password !== confirmPassword) {
-          setError("Passwords do not match.");
-          setLoading(false);
-          return;
-        }
-
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo,
-            data: role ? { role } : undefined
-          }
-        });
-
-        if (signUpError) {
-          setError(mapAuthError(signUpError.message));
-          setLoading(false);
-          return;
-        }
-
-        if (data.user && data.user.identities && data.user.identities.length === 0) {
-          setError("An account with this email already exists. Try signing in.");
-          setLoading(false);
-          return;
-        }
-
-        setSignupComplete(true);
-        setLoading(false);
+      if (signUpError) {
+        setError(mapAuthErrorMessage(signUpError.message));
         return;
       }
 
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signInError) {
-        setError(mapAuthError(signInError.message));
-        setLoading(false);
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        setError("This email already has an account. Try signing in instead.");
         return;
       }
 
-      window.location.href = nextPath;
+      setSignupComplete(true);
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : "Unable to complete authentication.");
+      setError(caughtError instanceof Error ? mapAuthErrorMessage(caughtError.message) : "Something went wrong. Try again.");
+    } finally {
       setLoading(false);
     }
   }
@@ -200,7 +308,7 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
         <h3 className="text-lg font-semibold text-foreground">Check your email</h3>
         <p className="mt-2 text-sm text-muted-foreground">
           We sent a confirmation link to <span className="font-medium text-foreground">{email}</span>.
-          Click the link in your email to activate your account.
+          Click the link in your email to finish setting up your account.
         </p>
         <Button
           type="button"
@@ -234,8 +342,30 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
     );
   }
 
+  if (mode === "signin") {
+    return (
+      <SignInPanel
+        email={email}
+        password={password}
+        inputIdSuffix={inputIdSuffix}
+        onEmailChange={setEmail}
+        onPasswordChange={setPassword}
+        onForgotPassword={() => {
+          setForgotMode(true);
+          setError(null);
+        }}
+        onSwitchToSignup={() => {
+          setMode("signup");
+          setError(null);
+          setPassword("");
+          setConfirmPassword("");
+        }}
+      />
+    );
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
+    <form onSubmit={handleSignupSubmit} className="space-y-3">
       <div>
         <label htmlFor={`email-${inputIdSuffix}`} className="mb-1.5 block text-sm font-medium text-foreground">
           Email
@@ -259,93 +389,59 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
           type="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          placeholder={mode === "signup" ? "Create a password (6+ characters)" : "Enter your password"}
-          minLength={6}
+          placeholder="Create a password"
+          minLength={8}
           required
         />
+        <PasswordStrengthMeter password={password} />
       </div>
 
-      {mode === "signin" ? (
-        <div className="flex justify-end">
-          <button
-            type="button"
-            className="text-sm text-primary hover:text-primary/80"
-            onClick={() => {
-              setForgotMode(true);
-              setError(null);
-            }}
-          >
-            Forgot password?
-          </button>
-        </div>
-      ) : null}
+      <div>
+        <label htmlFor={`confirm-password-${inputIdSuffix}`} className="mb-1.5 block text-sm font-medium text-foreground">
+          Confirm Password
+        </label>
+        <Input
+          id={`confirm-password-${inputIdSuffix}`}
+          type="password"
+          value={confirmPassword}
+          onChange={(event) => setConfirmPassword(event.target.value)}
+          placeholder="Confirm your password"
+          minLength={8}
+          required
+        />
+        {confirmPassword.length > 0 && !passwordsMatch ? (
+          <p className="mt-2 text-xs font-medium text-red-600">Passwords do not match yet.</p>
+        ) : null}
+      </div>
 
-      {mode === "signup" ? (
-        <div>
-          <label htmlFor={`confirm-password-${inputIdSuffix}`} className="mb-1.5 block text-sm font-medium text-foreground">
-            Confirm Password
-          </label>
-          <Input
-            id={`confirm-password-${inputIdSuffix}`}
-            type="password"
-            value={confirmPassword}
-            onChange={(event) => setConfirmPassword(event.target.value)}
-            placeholder="Confirm your password"
-            minLength={6}
-            required
-          />
-        </div>
-      ) : null}
+      {error ? <Alert variant="error">{error}</Alert> : null}
 
       <Button
         type="submit"
-        disabled={loading}
-        aria-disabled={loading}
-        className={`w-full ${loading ? "pointer-events-none opacity-60" : ""}`}
+        loading={loading}
+        disabled={!canSubmitSignup || loading}
+        className="w-full"
+        title="Create your Domus account."
       >
-        {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lock className="mr-2 h-4 w-4" />}
-        {loading
-          ? mode === "signup"
-            ? "Creating account..."
-            : "Signing in..."
-          : mode === "signup"
-            ? "Create Account"
-            : "Sign In"}
+        <Lock className="mr-2 h-4 w-4" />
+        Create account
       </Button>
 
-      {mode === "signin" ? (
-        <p className="text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
-          <button
-            type="button"
-            className="font-semibold text-primary hover:text-primary/80"
-            onClick={() => {
-              setMode("signup");
-              setError(null);
-            }}
-          >
-            Sign up
-          </button>
-        </p>
-      ) : null}
-
-      {mode === "signup" ? (
-        <p className="text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <button
-            type="button"
-            className="font-semibold text-primary hover:text-primary/80"
-            onClick={() => {
-              setMode("signin");
-              setError(null);
-            }}
-          >
-            Sign in
-          </button>
-        </p>
-      ) : null}
-
-      {error ? <Alert variant="error">{error}</Alert> : null}
+      <p className="text-center text-sm text-muted-foreground">
+        Already have an account?{" "}
+        <button
+          type="button"
+          className="font-semibold text-primary hover:text-primary/80"
+          onClick={() => {
+            setMode("signin");
+            setError(null);
+            setPassword("");
+            setConfirmPassword("");
+          }}
+        >
+          Sign in
+        </button>
+      </p>
     </form>
   );
 }

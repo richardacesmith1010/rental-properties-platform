@@ -1,6 +1,21 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const protectedRoutePrefixes = [
+  "/owner",
+  "/manager",
+  "/tenant",
+  "/onboarding",
+  "/complete-profile",
+  "/reset-password",
+  "/settings",
+  "/achievements"
+] as const;
+
+function isProtectedRoute(pathname: string) {
+  return protectedRoutePrefixes.some((prefix) => pathname.startsWith(prefix));
+}
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -33,7 +48,16 @@ export async function middleware(request: NextRequest) {
 
   // Refresh the auth token — this is the critical PKCE fix
   try {
-    await supabase.auth.getUser();
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    if (!user && isProtectedRoute(request.nextUrl.pathname)) {
+      supabaseResponse.cookies.set("x-session-expired", "1", {
+        path: "/",
+        maxAge: 10
+      });
+    }
   } catch {
     // Auth service unavailable — allow request through. Route-level auth still protects access.
   }
