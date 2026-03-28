@@ -42,7 +42,10 @@ export async function getCurrentUserRole(userId: string): Promise<AppRole> {
   return "tenant";
 }
 
-export async function getAuthState(userId: string): Promise<{
+export async function getAuthState(
+  userId: string,
+  opts?: { invitedAt?: string | null }
+): Promise<{
   hasProfile: boolean;
   onboardingComplete: boolean;
   role: "owner" | "manager" | "tenant" | null;
@@ -61,7 +64,19 @@ export async function getAuthState(userId: string): Promise<{
     profile?.role === "owner" || profile?.role === "manager" || profile?.role === "tenant"
       ? profile.role
       : null;
-  const needsPasswordSet = hasProfile && !onboardingComplete && role === "tenant";
+
+  // invited_at is the definitive signal for "created without a password".
+  // DO NOT use role === "tenant" — that incorrectly matches direct-signup
+  // tenants who already have a password.
+  // Callers with the user object pass invitedAt directly; page guards
+  // that don't have it fall back to fetching the user.
+  let invitedAt = opts?.invitedAt;
+  if (invitedAt === undefined) {
+    const { data: { user } } = await supabase.auth.getUser();
+    invitedAt = typeof user?.invited_at === "string" ? user.invited_at : null;
+  }
+
+  const needsPasswordSet = Boolean(invitedAt) && !onboardingComplete;
 
   return {
     hasProfile,

@@ -182,7 +182,9 @@ export async function GET(request: Request) {
       authenticatedUserId = await trackAuthenticatedUser({ user, type, rawNext });
 
       if (type === "invite") {
-        const authState = await getAuthState(authenticatedUserId!);
+        const authState = await getAuthState(authenticatedUserId!, {
+          invitedAt: user?.invited_at ?? null
+        });
         const destination = resolveAuthRoute({ hasSession: true, ...authState });
         return NextResponse.redirect(`${origin}${destination}`);
       }
@@ -210,7 +212,10 @@ export async function GET(request: Request) {
     }
 
     if (authenticatedUserId) {
-      const authState = await getAuthState(authenticatedUserId);
+      const { data: { user: freshUser } } = await supabase.auth.getUser();
+      const authState = await getAuthState(authenticatedUserId, {
+        invitedAt: typeof freshUser?.invited_at === "string" ? freshUser.invited_at : null
+      });
       const destination = resolveAuthRoute({
         hasSession: true,
         ...authState
