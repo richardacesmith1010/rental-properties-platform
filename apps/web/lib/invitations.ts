@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { formatCurrency } from "@/lib/format";
 import { getAdministeredPropertyIdsForAccount } from "@/lib/property-access";
 import { canUserAdministerOwnershipAccount } from "@/lib/ownership";
@@ -242,4 +243,19 @@ export async function getTenantInviteOnboardingContext(params: {
         ? invitation.status
         : null
   };
+}
+
+export async function markTenantInvitationAccepted(profileId: string) {
+  const admin = createAdminClient();
+  const acceptedAt = new Date().toISOString();
+  const { error } = await admin
+    .from("invitations")
+    .update({ status: "accepted", accepted_at: acceptedAt })
+    .eq("role", "tenant")
+    .eq("invited_profile_id", profileId)
+    .eq("status", "pending");
+
+  if (error && !isMissingSchemaError(error)) {
+    console.error("markTenantInvitationAccepted error:", error);
+  }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getRoleHomePath } from "@/lib/auth";
 import { updateUserStreak } from "@/lib/gamification";
+import { markTenantInvitationAccepted } from "@/lib/invitations";
 import { sideEffectError } from "@/lib/logger";
 import { notifyOwnerMembersOfAcceptedTenantInvite } from "@/lib/notifications";
 
@@ -30,12 +31,92 @@ function hasInvitedSession(
   return Boolean(invitedAt && role && !rawNext);
 }
 
+function buildHashRelayResponse(requestUrl: string) {
+  const safeLoginUrl = "/login?error=auth_callback_failed&error_description=Your+sign-in+link+needs+to+be+opened+again.";
+  const html = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Signing you in…</title>
+  </head>
+  <body style="font-family: Arial, sans-serif; padding: 24px;">
+    <p>Signing you in…</p>
+    <script>
+      (function () {
+        const url = new URL(${JSON.stringify(requestUrl)});
+        const hash = window.location.hash.startsWith("#")
+          ? window.location.hash.slice(1)
+          : "";
+
+        if (!hash) {
+          window.location.replace(${JSON.stringify(safeLoginUrl)});
+          return;
+        }
+
+        const hashParams = new URLSearchParams(hash);
+        hashParams.forEach((value, key) => {
+          url.searchParams.set(key, value);
+        });
+        url.hash = "";
+        window.location.replace(url.toString());
+      })();
+    </script>
+  </body>
+</html>`;
+
+  return new NextResponse(html, {
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store"
+    }
+  });
+}
+
+async function trackAuthenticatedUser(params: {
+  user: {
+    id?: string;
+    invited_at?: string | null;
+    user_metadata?: Record<string, unknown>;
+  } | null;
+  type: string | null;
+  rawNext: string | null;
+}) {
+  const { user, type, rawNext } = params;
+  if (!user?.id) {
+    return null;
+  }
+
+  if (hasInvitedSession(type, rawNext, user)) {
+    await markTenantInvitationAccepted(user.id);
+  }
+
+  void updateUserStreak(user.id, "increment").catch(
+    sideEffectError("authCallback", "update_streak", {
+      userId: user.id,
+      entityType: "profile",
+      entityId: user.id
+    })
+  );
+  void notifyOwnerMembersOfAcceptedTenantInvite(user.id).catch(
+    sideEffectError("authCallback", "create_notification", {
+      userId: user.id,
+      entityType: "profile",
+      entityId: user.id
+    })
+  );
+
+  return user.id;
+}
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const callbackError = searchParams.get("error");
   const callbackErrorDescription = searchParams.get("error_description");
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
+  const accessToken = searchParams.get("access_token");
+  const refreshToken = searchParams.get("refresh_token");
   const type = searchParams.get("type");
   const rawNext = searchParams.get("next");
   const next = getSafeNextPath(rawNext);
@@ -48,6 +129,10 @@ export async function GET(request: Request) {
       params.set("error_description", callbackErrorDescription);
     }
     return NextResponse.redirect(`${origin}/login?${params.toString()}`);
+  }
+
+  if (!code && !tokenHash && !(accessToken && refreshToken)) {
+    return buildHashRelayResponse(request.url);
   }
 
   try {
@@ -76,24 +161,7 @@ export async function GET(request: Request) {
       const {
         data: { user }
       } = await supabase.auth.getUser();
-
-      if (user?.id) {
-        authenticatedUserId = user.id;
-        void updateUserStreak(user.id, "increment").catch(
-          sideEffectError("authCallback", "update_streak", {
-            userId: user.id,
-            entityType: "profile",
-            entityId: user.id
-          })
-        );
-        void notifyOwnerMembersOfAcceptedTenantInvite(user.id).catch(
-          sideEffectError("authCallback", "create_notification", {
-            userId: user.id,
-            entityType: "profile",
-            entityId: user.id
-          })
-        );
-      }
+      authenticatedUserId = await trackAuthenticatedUser({ user, type, rawNext });
 
       if (type === "recovery") {
         return NextResponse.redirect(`${origin}/reset-password`);
@@ -102,7 +170,7 @@ export async function GET(request: Request) {
       if (hasInvitedSession(type, rawNext, user)) {
         return NextResponse.redirect(`${origin}/complete-profile`);
       }
-    } else if (tokenHash && (type === "email" || type === "recovery" || type === "invite")) {
+    } else if (tokenHash && (type === "email" || type === "recovery" || type === "invite" || type === "magiclink" || type === "email_change")) {
       const { error } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
         type
@@ -114,24 +182,7 @@ export async function GET(request: Request) {
       const {
         data: { user }
       } = await supabase.auth.getUser();
-
-      if (user?.id) {
-        authenticatedUserId = user.id;
-        void updateUserStreak(user.id, "increment").catch(
-          sideEffectError("authCallback", "update_streak", {
-            userId: user.id,
-            entityType: "profile",
-            entityId: user.id
-          })
-        );
-        void notifyOwnerMembersOfAcceptedTenantInvite(user.id).catch(
-          sideEffectError("authCallback", "create_notification", {
-            userId: user.id,
-            entityType: "profile",
-            entityId: user.id
-          })
-        );
-      }
+      authenticatedUserId = await trackAuthenticatedUser({ user, type, rawNext });
 
       if (type === "invite") {
         return NextResponse.redirect(`${origin}/complete-profile`);
@@ -139,6 +190,27 @@ export async function GET(request: Request) {
 
       if (type === "recovery") {
         return NextResponse.redirect(`${origin}/reset-password`);
+      }
+    } else if (accessToken && refreshToken) {
+      const { error } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken
+      });
+      if (error) {
+        throw error;
+      }
+
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+      authenticatedUserId = await trackAuthenticatedUser({ user, type, rawNext });
+
+      if (type === "recovery") {
+        return NextResponse.redirect(`${origin}/reset-password`);
+      }
+
+      if (hasInvitedSession(type, rawNext, user)) {
+        return NextResponse.redirect(`${origin}/complete-profile`);
       }
     }
 
