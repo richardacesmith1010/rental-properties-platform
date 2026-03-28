@@ -1,6 +1,6 @@
 # Domus — Agent Operating Manual
 
-This file is the permanent instruction set for all AI agents (Codex, Claude, Copilot) working on the Domus codebase. Read it in full before starting any task.
+This file is the permanent instruction set for all AI agents (Codex, Claude) working on the Domus codebase. Read it in full before starting any task.
 
 ---
 
@@ -72,7 +72,7 @@ docs/              — Handoff docs, checklists, UAT guides
 
 ## 3. Coding Standards
 
-### Server Actions (`apps/web/app/actions.ts`)
+### Server Actions (`apps/web/app/actions/*.ts`)
 
 Every server action MUST follow this pattern in order:
 
@@ -259,7 +259,9 @@ Do NOT create tables. If you need a new table or column:
 2. Claude will create the migration and apply it to live Supabase
 3. Write your app code assuming the table WILL exist, and use feature capability gating to handle the case where it doesn't yet
 
-### Existing Tables (for reference)
+### Existing Tables (illustrative — NOT exhaustive)
+
+The live Supabase schema is the source of truth. This list covers core tables but does NOT include all tables added during sprints 30-95. When in doubt, check the schema via MCP or `supabase/migrations/`.
 
 **Core:** `profiles`, `properties`, `units`, `leases`, `rent_charges`, `payments`
 **Operations:** `maintenance_tickets`, `maintenance_assignments`, `maintenance_photos`, `vendors`
@@ -332,7 +334,7 @@ Never hardcode these. Never commit `.env.local`. Reference them via `process.env
 | API route | `apps/web/app/api/{name}/route.ts` | `apps/web/app/api/cron/generate-charges/route.ts` |
 | Dashboard section | `apps/web/components/dashboard/{name}-section.tsx` | `automation-templates-section.tsx` |
 | Data fetching | `apps/web/lib/{domain}.ts` | `apps/web/lib/expenses.ts` |
-| Server actions | `apps/web/app/actions.ts` | Single file, organized by domain |
+| Server actions | `apps/web/app/actions/*.ts` | Split by domain (e.g., `charges.ts`, `inbox.ts`) |
 | Validation schemas | `apps/web/lib/validations.ts` | Single file |
 | Tests | `apps/web/lib/__tests__/{name}.test.ts` | `feature-capabilities.test.ts` |
 | Migration | `supabase/migrations/{date}_{description}.sql` | `20260302_phase10_leasing_inbox_automations.sql` |

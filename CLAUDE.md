@@ -30,10 +30,10 @@ Every work cycle must follow this exact sequence:
 2. Prompt Codex with a deterministic implementation packet
 3. Verify Codex output (files, behavior, commands)
 4. Gate, deploy, and report results to user
-5. Immediately begin planning the next sprint (no waiting for user prompt)
-6. Present the next sprint plan for user concurrence before dispatching
+5. Prepare the next sprint plan immediately (no waiting for user prompt)
+6. Present the next sprint plan for user approval before dispatching
 
-Claude must not skip any step. After verification + deploy, Claude must seamlessly transition into the next planning cycle without requiring user prompting. The user should never need to say "continue" or "what's next" — Claude drives the cadence.
+Claude must not skip any step. After verification + deploy, Claude prepares the next plan immediately but does NOT dispatch to Codex without user approval. The user should never need to say "what's next" — Claude drives the cadence. But the user always approves before execution begins.
 
 ## 3) Codex Prompt Packet Format (Required)
 
@@ -54,7 +54,7 @@ If any field is missing, the prompt is invalid and must not be sent.
 
 ## 4) Verification Standard (God-Tier Gate)
 
-Claude must verify at 4 levels:
+Claude must verify at 5 levels:
 
 1. Code-level correctness
 - changes match scope
@@ -73,7 +73,7 @@ Claude must verify at 4 levels:
 - UX behavior aligns with user intent
 - output matches acceptance criteria exactly
 
-5. Visual correctness (MANDATORY for any sprint that changes UI)
+5. Visual correctness (MANDATORY for any sprint that changes UI — i.e., modifies any `.tsx` file in `components/` or any `page.tsx`)
 - After deploying, Claude must open the affected pages in Chrome using browser tools
 - Take screenshots of each changed page/component in BOTH light and dark modes
 - Verify: all text is readable against its background (WCAG AA minimum)
@@ -90,14 +90,14 @@ Unless task explicitly narrows scope, Claude verifies these:
 
 ```bash
 npm run gate:web
-APP_URL=https://rental-properties-platform-web.vercel.app npm run smoke:web
+APP_URL=https://domusbase.com npm run smoke:web
 ```
 
 When deployment is included:
 
 ```bash
 npx vercel deploy --prod --yes
-APP_URL=https://rental-properties-platform-web.vercel.app npm run smoke:web
+APP_URL=https://domusbase.com npm run smoke:web
 ```
 
 ## 6) Failure Classification and Stop Rules
@@ -112,6 +112,7 @@ Automatic `FAIL` if any of these occur:
 - smoke failure
 - auth/payment/security regression
 - schema mismatch against required feature behavior
+- server action missing auth, role, or permission checks (steps 1-4 of AGENTS.md §3)
 
 On `FAIL`, Claude must stop forward planning and output:
 - exact failing command
@@ -120,7 +121,7 @@ On `FAIL`, Claude must stop forward planning and output:
 
 ## 7) Anti-Drift Protocol
 
-Every relay must begin with:
+Every new session or compaction recovery must begin with:
 - current branch
 - current HEAD
 - `git status` summary
@@ -228,83 +229,41 @@ If a planned action matches a pattern from a prior lesson, Claude must stop and 
 
 This section must be updated whenever a new lesson is added that introduces a new "always check" pattern.
 
-## 12) Continuous Codebase Grooming
+## 12) Codebase Health Protocol
 
-Claude must proactively maintain codebase hygiene to minimize token waste and maximize agent efficiency. The codebase is optimized for AI readability, not human readability.
+Claude must maintain codebase hygiene and efficiency. The codebase is optimized for AI readability, not human readability. Every file an agent reads costs tokens — dead files, god files, and stale docs waste budget on every review cycle.
 
-### Standing Orders
+### Grooming rules are defined in AGENTS.md §13.
 
-1. **Every review cycle**, scan for grooming opportunities:
-   - Dead/orphaned files (components never imported, docs never referenced)
-   - Redundant modules (two files doing the same job)
-   - God files (>30KB single files that should be split)
-   - Misleading file names (file name implies X but contains Y)
-   - Stale documentation (docs describing completed/obsolete phases)
-   - Empty packages or placeholder code
+Claude enforces grooming during review. Codex executes cleanup during sprints. See AGENTS.md §13 for the full grooming checklist and naming conventions.
 
-2. **Every sprint prompt**, include a grooming task if debt exists. Append a `Grooming` section to the Codex prompt listing specific cleanup items that can be done alongside the main work.
+### Top 5 Efficiency Checks (Run During Review)
 
-3. **Metrics to track** (report at end of each cycle):
-   - Total files in `apps/web/lib/` — target: each file has a clear single purpose
-   - Largest component file — target: no single file >30KB
-   - Dead files count — target: 0
-   - Stale docs count — target: 0
+Before approving any sprint as PASS, Claude must check for these high-impact issues:
 
-### Grooming Principles
+1. **DRY violations**: Functions/patterns duplicated across 3+ files → flag for extraction
+2. **N+1 query patterns**: Database queries inside loops → flag for `.in()` batch refactoring
+3. **God files**: Any file >500 lines → flag for splitting
+4. **Dead exports**: Functions exported but never imported → flag for deletion
+5. **Auth boilerplate**: Server actions with copy-pasted auth/role checks → flag for shared helper extraction
 
-- **One purpose per file.** If a file does two unrelated things, split it.
-- **No dead code.** If nothing imports it, delete it. Git preserves history.
-- **Docs are current or archived.** Move completed-phase docs to `docs/archive/`. Active docs only in `docs/`.
-- **Flat > nested.** Don't create deep folder hierarchies. Prefer descriptive file names over folder nesting.
-- **Consistent naming.** Dashboard sections: `*-section.tsx`. Lib modules: `{domain}.ts`. Tests: `{domain}.test.ts`.
-- **Shared code earns its place.** `packages/shared/` must have real exports used by 2+ workspaces or be deleted.
+### Nice to Check (When Reviewing Nearby Code)
 
-## 12a) Codebase Efficiency Protocol (Hard Rule)
-
-Claude must proactively audit and address codebase inefficiencies. This is not optional — every sprint plan must include efficiency considerations, and every 3-4 feature sprints, a dedicated efficiency sprint must be proposed.
-
-### Efficiency Audit Checklist (Run Every Review Cycle)
-
-Before approving any sprint as PASS, Claude must check:
-
-1. **DRY violations**: Scan for functions/patterns duplicated across 3+ files. If found, flag for extraction into a shared utility in the next sprint.
-2. **N+1 query patterns**: Grep for database queries inside loops (`for`, `forEach`, `map` with `await supabase`). Flag for batch-fetch refactoring.
-3. **God files**: Any file exceeding 800 lines must be flagged for splitting. Target: no file >500 lines except orchestrators.
-4. **Dead exports**: Check for functions exported but never imported. Flag for deletion.
-5. **Duplicate components**: Scan for components with the same name in different directories. Flag for consolidation.
-6. **Sequential awaits that could be parallel**: Look for consecutive `await` calls on independent operations. Flag for `Promise.all`.
-7. **Missing code splitting**: Heavy libraries (charts, editors, etc.) that aren't behind `next/dynamic`. Flag for lazy loading.
-8. **Auth/validation boilerplate**: Repeated patterns across actions that should be extracted into shared helpers.
-9. **CSS bloat**: Brute-force overrides, `!important` abuse, duplicated styles. Flag for CSS variable usage.
-10. **Package waste**: Unused dependencies, unused workspace packages, dead `transpilePackages` entries.
-
-### Efficiency Metrics (Report Every 3 Sprints)
-
-| Metric | Target | How to Measure |
-|---|---|---|
-| Max file line count | ≤500 | `wc -l` on largest files |
-| Duplicated functions (3+ copies) | 0 | grep for known patterns |
-| N+1 query patterns | 0 | grep for queries inside loops |
-| Dead exports | 0 | grep for unused exported functions |
-| `!important` count in CSS | ≤10 | grep globals.css |
-| Unused npm dependencies | 0 | check package.json vs imports |
-| Auth boilerplate lines saved | Track | count after extraction |
+- Sequential awaits that could be `Promise.all`
+- Heavy libraries not behind `next/dynamic`
+- CSS `!important` abuse
+- Unused npm dependencies
 
 ### Efficiency Sprint Cadence
 
-- **Every 3-4 feature sprints**, Claude must propose a dedicated efficiency/cleanup sprint.
-- The efficiency sprint must address ALL accumulated findings from the audit checklist.
-- Feature sprints may include small cleanup items alongside features, but large refactors get their own sprint.
-- Claude must maintain a running "efficiency debt" list and present it when proposing the next efficiency sprint.
+Claude proposes efficiency work when accumulated debt is visible during review — not on a fixed schedule. Large refactors get their own sprint. Small cleanup items can ride alongside feature sprints.
 
-### Industry Standards to Enforce
+### Industry Standards
 
 - **No function duplicated in more than 2 files.** Extract to shared utility.
 - **No database query inside a loop.** Use `.in()` batch queries or pre-fetch with lookup maps.
 - **Every server action uses a shared auth helper** — not copy-pasted boilerplate.
 - **Every error path returns an explicit error state** — never silent `return`.
-- **Strict ESLint rules enforced**: `no-explicit-any`, `no-unused-vars`, `core-web-vitals`.
-- **Consistent code formatting** via Prettier.
 
 ## 13) Session Continuity Protocol
 
@@ -323,7 +282,7 @@ Do NOT ask the user "what were we working on?" — recover context from the repo
 
 - Current feature status matrix → `docs/agent-handoff.md`
 - Lessons learned → `CLAUDE.md` §10
-- Grooming debt → `CLAUDE.md` §12
+- Grooming debt → `AGENTS.md` §13
 - Sprint acceptance results → `docs/agent-handoff.md`
 
 If important state exists only in chat, persist it to the appropriate file before the session ends.
