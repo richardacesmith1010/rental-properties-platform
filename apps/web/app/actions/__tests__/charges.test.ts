@@ -5,6 +5,7 @@ const redirectMock = vi.hoisted(() => vi.fn());
 const revalidatePathMock = vi.hoisted(() => vi.fn());
 const createAdminClientMock = vi.hoisted(() => vi.fn());
 const createStripeCheckoutSessionMock = vi.hoisted(() => vi.fn());
+const calculateCardFeeMock = vi.hoisted(() => vi.fn());
 const getOwnerStripeAccountForPropertyMock = vi.hoisted(() => vi.fn());
 const canUserAdministerPropertyMock = vi.hoisted(() => vi.fn());
 const createNotificationWithDeliveryMock = vi.hoisted(() => vi.fn());
@@ -19,6 +20,7 @@ vi.mock("next/navigation", () => ({ redirect: redirectMock }));
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: createAdminClientMock }));
 vi.mock("@/lib/stripe", () => ({ createStripeCheckoutSession: createStripeCheckoutSessionMock }));
+vi.mock("@/lib/payment-fees", () => ({ calculateCardFee: calculateCardFeeMock }));
 vi.mock("@/lib/stripe-connect", () => ({ getOwnerStripeAccountForProperty: getOwnerStripeAccountForPropertyMock }));
 vi.mock("@/lib/property-access", () => ({ canUserAdministerProperty: canUserAdministerPropertyMock }));
 vi.mock("@/lib/notifications", () => ({
@@ -31,6 +33,7 @@ vi.mock("@/lib/gamification", () => ({
   XP_VALUES: { rent_paid_on_time: 10, rent_paid_late: 5 }
 }));
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: checkRateLimitMock }));
+vi.mock("@/lib/env", () => ({ isStripeConfigured: () => true }));
 vi.mock("@/lib/validations", () => ({
   payChargeSchema: {},
   recordManualPaymentSchema: {},
@@ -38,7 +41,7 @@ vi.mock("@/lib/validations", () => ({
 }));
 vi.mock("@/app/actions/auth-helpers", () => ({ requireAuth: requireAuthMock }));
 
-import { createCheckoutForCharge, recordManualPayment } from "@/app/actions/charges";
+import { payWithCard, recordManualPayment } from "@/app/actions/charges";
 
 interface CheckoutConfig {
   charge?: { id: string; amount_cents: number; status: string; lease_id: string } | null;
@@ -162,8 +165,10 @@ describe("charges actions", () => {
       throw new Error(`REDIRECT:${path}`);
     });
     checkRateLimitMock.mockReturnValue({ allowed: true, remaining: 10 });
+    calculateCardFeeMock.mockReturnValue({ baseCents: 125000, feeCents: 3762, totalCents: 128762 });
     getOwnerStripeAccountForPropertyMock.mockResolvedValue("acct_123");
     canUserAdministerPropertyMock.mockResolvedValue(true);
+    createStripeCheckoutSessionMock.mockResolvedValue({ url: "https://checkout.stripe.test/session" });
     requireAuthMock.mockResolvedValue({
       user: { id: "user-1", email: "owner@example.com" },
       role: "owner",
@@ -191,7 +196,7 @@ describe("charges actions", () => {
   it("returns a validation error when chargeId is missing", async () => {
     parseFormDataMock.mockReturnValueOnce({ success: false, error: "Charge ID is required." });
 
-    const result = await createCheckoutForCharge(new FormData());
+    const result = await payWithCard(new FormData());
 
     expect(result).toEqual({ success: false, error: "Charge ID is required." });
   });
@@ -206,7 +211,7 @@ describe("charges actions", () => {
       })
     });
 
-    const result = await createCheckoutForCharge(new FormData());
+    const result = await payWithCard(new FormData());
 
     expect(result).toEqual({ success: false, error: "This charge has already been paid." });
   });
@@ -222,7 +227,7 @@ describe("charges actions", () => {
       })
     });
 
-    const result = await createCheckoutForCharge(new FormData());
+    const result = await payWithCard(new FormData());
 
     expect(result).toEqual({ success: false, error: "Lease not found for this charge." });
   });
@@ -230,9 +235,33 @@ describe("charges actions", () => {
   it("returns a rate limit error after too many checkout attempts", async () => {
     checkRateLimitMock.mockReturnValueOnce({ allowed: false, remaining: 0 });
 
-    const result = await createCheckoutForCharge(new FormData());
+    const result = await payWithCard(new FormData());
 
     expect(result).toEqual({ success: false, error: "Too many requests. Please try again later." });
+  });
+
+  it("creates a destination charge checkout session for card payments", async () => {
+    parseFormDataMock.mockReturnValueOnce({ success: true, data: { chargeId: "charge-1" } });
+
+    await expect(payWithCard(new FormData())).rejects.toThrow("REDIRECT:https://checkout.stripe.test/session");
+
+    expect(calculateCardFeeMock).toHaveBeenCalledWith(125000);
+    expect(createStripeCheckoutSessionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        amountCents: 128762,
+        paymentMethodTypes: ["card"],
+        transferDataDestination: "acct_123",
+        applicationFeeAmountCents: 3762,
+        metadata: expect.objectContaining({
+          charge_id: "charge-1",
+          user_id: "user-1",
+          payment_method: "card",
+          transfer_mode: "destination",
+          processing_fee_cents: "3762",
+          base_amount_cents: "125000"
+        })
+      })
+    );
   });
 
   it("returns an error when a manual payment amount is invalid", async () => {

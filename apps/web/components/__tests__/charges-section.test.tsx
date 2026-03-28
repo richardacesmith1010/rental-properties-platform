@@ -1,12 +1,14 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ChargesSection } from "@/components/dashboard/charges-section";
+import { calculateCardFee, formatCentsAsDollars } from "@/lib/payment-fees";
 
 vi.mock("react-dom", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-dom")>();
   return {
     ...actual,
-    useFormState: () => [null, async () => null] as const
+    useFormState: () => [null, async () => null] as const,
+    useFormStatus: () => ({ pending: false })
   };
 });
 
@@ -170,5 +172,22 @@ describe("ChargesSection", () => {
     );
 
     expect(screen.getByRole("button", { name: "Message Maya Bell" })).toBeInTheDocument();
+  });
+
+  it("shows tenant card payment totals and the ACH placeholder", () => {
+    const payment = calculateCardFee(charges[0].amountCents);
+
+    render(
+      <ChargesSection
+        charges={charges}
+        onPayCharge={async () => {}}
+        isTenantView
+      />
+    );
+
+    expect(screen.getByText(`Includes ${formatCentsAsDollars(payment.feeCents)} processing fee`)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: `Pay ${formatCentsAsDollars(payment.totalCents)}` })).toBeInTheDocument();
+    expect(screen.getByText("Pay from bank account")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Coming Soon" })).toBeDisabled();
   });
 });

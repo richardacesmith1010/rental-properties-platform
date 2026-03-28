@@ -49,6 +49,8 @@ interface PaymentParams {
   requireAuthorizedUser?: boolean;
   resetAutopay?: boolean;
   queueXp?: boolean;
+  transferMode?: string | null;
+  baseAmountCents?: number | null;
 }
 
 function received(status?: string) {
@@ -429,7 +431,9 @@ async function recordPayment({
   stripePaymentIntentId,
   requireAuthorizedUser = false,
   resetAutopay = false,
-  queueXp = false
+  queueXp = false,
+  transferMode = null,
+  baseAmountCents = null
 }: PaymentParams) {
   const { data: existingPayment } = await supabase
     .from("payments")
@@ -444,9 +448,16 @@ async function recordPayment({
   if (!ctx || ctx.charge.status === "paid") {
     return received("charge_already_paid_or_missing");
   }
-  if (amountCents > ctx.charge.amount_cents) {
+  const parsedBase = typeof baseAmountCents === "number" && baseAmountCents > 0
+    ? baseAmountCents
+    : null;
+  const recordedAmountCents = transferMode === "destination"
+    ? (parsedBase ?? ctx.charge.amount_cents)
+    : amountCents;
+
+  if (recordedAmountCents > ctx.charge.amount_cents) {
     console.error(
-      `[stripe-webhook] Payment amount (${amountCents}) exceeds charge amount (${ctx.charge.amount_cents}) for charge ${chargeId}`
+      `[stripe-webhook] Payment amount (${recordedAmountCents}) exceeds charge amount (${ctx.charge.amount_cents}) for charge ${chargeId}`
     );
     return received("amount_exceeds_charge");
   }
@@ -458,7 +469,7 @@ async function recordPayment({
   try {
     const insertStatus = await insertPaymentRecord(supabase, {
       chargeId: ctx.charge.id,
-      amountCents,
+      amountCents: recordedAmountCents,
       method,
       referenceNote,
       stripeCheckoutSessionId,
@@ -486,13 +497,15 @@ async function recordPayment({
     });
   }
 
-  await createTransfersForPayment(supabase, {
-    propertyId: ctx.property.id,
-    chargeId: ctx.charge.id,
-    amountCents,
-    transferGroup,
-    paymentMatch
-  });
+  if (transferMode !== "destination") {
+    await createTransfersForPayment(supabase, {
+      propertyId: ctx.property.id,
+      chargeId: ctx.charge.id,
+      amountCents,
+      transferGroup,
+      paymentMatch
+    });
+  }
 
   queuePaymentNotifications(ctx, amountCents);
   if (queueXp) {
@@ -593,6 +606,10 @@ export async function handleCheckoutSessionCompleted(supabase: AdminClient, sess
   const chargeId = session.metadata?.charge_id;
   const userId = session.metadata?.user_id;
   const amountCents = typeof session.amount_total === "number" ? session.amount_total : null;
+  const transferMode = session.metadata?.transfer_mode ?? null;
+  const baseAmountCents = session.metadata?.base_amount_cents
+    ? Number.parseInt(session.metadata.base_amount_cents, 10)
+    : null;
 
   if (!chargeId || !userId || session.payment_status !== "paid" || !amountCents) {
     return received();
@@ -609,6 +626,8 @@ export async function handleCheckoutSessionCompleted(supabase: AdminClient, sess
     transferGroup: `charge_${chargeId}`,
     stripeCheckoutSessionId: session.id,
     stripePaymentIntentId: session.payment_intent ?? null,
-    requireAuthorizedUser: true
+    requireAuthorizedUser: true,
+    transferMode,
+    baseAmountCents
   });
 }

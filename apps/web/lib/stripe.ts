@@ -94,7 +94,17 @@ export async function createStripeCheckoutSession(params: {
   cancelUrl: string;
   metadata: Record<string, string>;
   transferGroup?: string;
+  paymentMethodTypes?: string[];
+  applicationFeeAmountCents?: number;
+  transferDataDestination?: string;
 }) {
+  if (
+    typeof params.applicationFeeAmountCents === "number" &&
+    !params.transferDataDestination
+  ) {
+    throw new Error("applicationFeeAmountCents requires transferDataDestination (destination charges)");
+  }
+
   const secretKey = getStripeSecretKey();
 
   const body = new URLSearchParams();
@@ -109,7 +119,18 @@ export async function createStripeCheckoutSession(params: {
   Object.entries(params.metadata).forEach(([key, value]) => {
     body.set(`metadata[${key}]`, value);
   });
-  if (params.transferGroup) {
+  if (params.paymentMethodTypes?.length) {
+    params.paymentMethodTypes.forEach((type, idx) => {
+      body.set(`payment_method_types[${idx}]`, type);
+    });
+  }
+  if (params.transferDataDestination) {
+    body.set("payment_intent_data[transfer_data][destination]", params.transferDataDestination);
+  }
+  if (typeof params.applicationFeeAmountCents === "number") {
+    body.set("payment_intent_data[application_fee_amount]", String(params.applicationFeeAmountCents));
+  }
+  if (!params.transferDataDestination && params.transferGroup) {
     body.set("payment_intent_data[transfer_group]", params.transferGroup);
   }
 

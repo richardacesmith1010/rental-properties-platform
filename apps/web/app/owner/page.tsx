@@ -42,7 +42,7 @@ import {
   refreshPlaidBalance,
   submitDistributionChangeRequest,
   submitWithdrawalRequest,
-  createCheckoutForCharge,
+  payWithCard,
   createManualCharge,
   createPropertyWithSetup,
   deletePendingCharge,
@@ -385,7 +385,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
       onDeleteLease={deleteLease}
         onRenewLease={renewLease}
         onTerminateLease={terminateLease}
-        onPayCharge={createCheckoutForCharge as (formData: FormData) => Promise<void>}
+        onPayCharge={payWithCard as (formData: FormData) => Promise<void>}
         onDeletePendingCharge={deletePendingCharge}
         onEditCharge={editCharge}
         onCreateManualCharge={createManualCharge}

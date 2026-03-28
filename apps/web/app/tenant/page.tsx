@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   addTicketComment,
-  createCheckoutForCharge,
   createMaintenanceTicket,
   deleteMaintenancePhoto,
   disableAutopay,
@@ -11,6 +10,7 @@ import {
   sendInboxMessage,
   signDocumentPacket,
   signOut,
+  payWithCard,
   setupAutopay,
   uploadMaintenancePhoto
 } from "@/app/actions";
@@ -355,15 +355,17 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
 
           {activeSection === "overview" && (
             <div className="space-y-5">
-        <TenantOverview
-          userName={displayName}
-          charges={paymentData.charges}
-          nextCharge={nextCharge}
-          lease={currentLease}
-          openTicketCount={openTicketCount}
+              <TenantOverview
+                userName={displayName}
+                charges={paymentData.charges}
+                nextCharge={nextCharge}
+                lease={currentLease}
+                openTicketCount={openTicketCount}
                 buildSectionHref={buildTenantHref}
-                onPayCharge={createCheckoutForCharge as (formData: FormData) => Promise<void>}
+                onPayCharge={payWithCard as (formData: FormData) => Promise<void>}
                 onRequestManualPaymentConfirmation={requestManualPaymentConfirmation}
+                autopayEnrollments={autopayEnrollments}
+                onSetupAutopay={setupAutopay}
               />
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -393,7 +395,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
               <TenantLeaseDetails leases={leaseDetails} />
               <ChargesSection
                 charges={paymentData.charges}
-                onPayCharge={createCheckoutForCharge as (formData: FormData) => Promise<void>}
+                onPayCharge={payWithCard as (formData: FormData) => Promise<void>}
                 ownerConnectedMap={ownerConnectedMap}
                 isTenantView
                 autopayEnrollments={autopayEnrollments}

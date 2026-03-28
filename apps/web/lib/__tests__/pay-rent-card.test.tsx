@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { PayRentCard, sortTenantChargesByUrgency } from "@/components/dashboard/pay-rent-card";
 import { formatCurrency } from "@/lib/format";
+import { calculateCardFee, formatCentsAsDollars } from "@/lib/payment-fees";
 
 vi.mock("react-dom", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-dom")>();
@@ -46,12 +47,14 @@ describe("PayRentCard", () => {
   });
 
   it("shows the most urgent charge as the dominant payment card", () => {
+    const lateChargePayment = calculateCardFee(charges[1].amountCents);
     render(
       <PayRentCard
         charges={charges}
         onPayCharge={async () => {}}
         onRequestManualPaymentConfirmation={async () => ({ success: true })}
         chargesHref="/tenant?section=charges"
+        onSetupAutopay={async () => ({ success: true })}
       />
     );
 
@@ -60,10 +63,14 @@ describe("PayRentCard", () => {
     expect(screen.getByText(formatCurrency(charges[1].amountCents))).toBeInTheDocument();
     expect(screen.getByText("Roman Court")).toBeInTheDocument();
     expect(screen.getByText("Unit 2B")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /pay rent/i })).toBeInTheDocument();
+    expect(screen.getByText(`Includes ${formatCentsAsDollars(lateChargePayment.feeCents)} processing fee`)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: `Pay ${formatCentsAsDollars(lateChargePayment.totalCents)}` })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Enable Autopay" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Coming Soon" })).toBeDisabled();
   });
 
-  it("formats the pay button label with the charge amount", () => {
+  it("shows the fee-inclusive card payment amount", () => {
+    const payment = calculateCardFee(charges[0].amountCents);
     render(
       <PayRentCard
         charges={[charges[0]]}
@@ -75,9 +82,62 @@ describe("PayRentCard", () => {
 
     expect(
       screen.getByRole("button", {
-        name: `Pay Rent — ${formatCurrency(charges[0].amountCents)}`
+        name: `Pay ${formatCentsAsDollars(payment.totalCents)}`
       })
     ).toBeInTheDocument();
+  });
+
+  it("shows the active autopay badge when enrollment is enabled", () => {
+    render(
+      <PayRentCard
+        charges={[charges[0]]}
+        onPayCharge={async () => {}}
+        onRequestManualPaymentConfirmation={async () => ({ success: true })}
+        chargesHref="/tenant?section=charges"
+        autopayEnrollments={[
+          {
+            id: "enrollment-1",
+            leaseId: "lease-1",
+            propertyLabel: "Atlas House • 1A",
+            last4: "4242",
+            brand: "visa",
+            paymentMethodType: "card",
+            enabled: true,
+            retryCount: 0
+          }
+        ]}
+      />
+    );
+
+    expect(screen.getByText("Autopay is on")).toBeInTheDocument();
+    expect(screen.getByText("Visa ending in 4242")).toBeInTheDocument();
+  });
+
+  it("shows the paused autopay message when enrollment is disabled", () => {
+    render(
+      <PayRentCard
+        charges={[charges[0]]}
+        onPayCharge={async () => {}}
+        onRequestManualPaymentConfirmation={async () => ({ success: true })}
+        chargesHref="/tenant?section=charges"
+        autopayEnrollments={[
+          {
+            id: "enrollment-2",
+            leaseId: "lease-1",
+            propertyLabel: "Atlas House • 1A",
+            last4: "1111",
+            brand: "mastercard",
+            paymentMethodType: "card",
+            enabled: false,
+            retryCount: 1
+          }
+        ]}
+        onSetupAutopay={async () => ({ success: true })}
+      />
+    );
+
+    expect(screen.getByText("Autopay paused — update your card to re-enable")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Update Card" })).toBeInTheDocument();
   });
 
   it("shows the all-set state when no charges are open", () => {

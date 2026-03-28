@@ -11,22 +11,41 @@ import { Card, CardContent } from "@/components/ui/card";
 import { getChargeUrgency } from "@/lib/rent-urgency";
 import type { TenantCharge } from "@/lib/tenant-payments";
 import { cn, formatCurrency, formatDate } from "@/lib/format";
+import { calculateCardFee, formatCentsAsDollars } from "@/lib/payment-fees";
 
 type StatefulAction = (
   prev: ActionState,
   formData: FormData
 ) => Promise<ActionState>;
 
+export interface AutopayEnrollmentView {
+  id: string;
+  leaseId: string;
+  propertyLabel: string;
+  last4: string;
+  brand: string | null;
+  paymentMethodType: string;
+  enabled: boolean;
+  retryCount: number;
+}
+
 interface PayRentCardProps {
   charges: TenantCharge[];
   onPayCharge: (formData: FormData) => Promise<void>;
   onRequestManualPaymentConfirmation: StatefulAction;
   chargesHref: string;
+  autopayEnrollments?: AutopayEnrollmentView[];
+  onSetupAutopay?: StatefulAction;
 }
 
 const noopStatefulAction: StatefulAction = async () => ({
   success: false,
   error: "Manual payment confirmation is unavailable right now."
+});
+
+const unavailableAutopayAction: StatefulAction = async () => ({
+  success: false,
+  error: "Autopay is unavailable right now."
 });
 
 function getRelativeDueText(dueDate: string) {
@@ -45,14 +64,25 @@ function getRelativeDueText(dueDate: string) {
   return `in ${diffDays} day${diffDays === 1 ? "" : "s"}`;
 }
 
+function formatAutopayCardLabel(enrollment: AutopayEnrollmentView) {
+  const brand = enrollment.brand ? enrollment.brand.charAt(0).toUpperCase() + enrollment.brand.slice(1) : "Card";
+  return `${brand} ending in ${enrollment.last4}`;
+}
+
 export function PayRentCard({
   charges,
   onPayCharge,
   onRequestManualPaymentConfirmation,
-  chargesHref
+  chargesHref,
+  autopayEnrollments = [],
+  onSetupAutopay
 }: PayRentCardProps) {
   const [manualState, manualAction] = useFormState(
     onRequestManualPaymentConfirmation ?? noopStatefulAction,
+    null
+  );
+  const [autopayState, autopayAction] = useFormState(
+    onSetupAutopay ?? unavailableAutopayAction,
     null
   );
   const orderedCharges = sortTenantChargesByUrgency(charges);
@@ -97,6 +127,10 @@ export function PayRentCard({
       : urgency.level === "due_today"
         ? "Due today"
         : `Due ${formatDate(charge.dueDate)}`;
+  const cardPayment = calculateCardFee(charge.amountCents);
+  const enrollment = autopayEnrollments.find((item) => item.leaseId === charge.leaseId) ?? null;
+  const autopayEnabled = enrollment?.enabled === true;
+  const autopayPaused = enrollment?.enabled === false;
 
   return (
     <Card
@@ -149,7 +183,7 @@ export function PayRentCard({
                   <span className="block sm:inline">Unit {charge.unitNumber}</span>
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Paid by credit card or bank transfer. You&apos;ll get a receipt by email.
+                  You&apos;ll get a receipt by email after you pay.
                 </p>
               </div>
 
@@ -162,15 +196,88 @@ export function PayRentCard({
             </div>
 
             <div className="space-y-3">
-              <form action={onPayCharge}>
-                <input type="hidden" name="chargeId" value={charge.id} />
-                <SubmitButton
-                  className="h-14 w-full rounded-2xl text-base font-bold"
-                  title={`Pay rent of ${formatCurrency(charge.amountCents)}.`}
-                >
-                  Pay Rent — {formatCurrency(charge.amountCents)}
-                </SubmitButton>
-              </form>
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-violet-200 bg-white/90 p-4 shadow-sm">
+                  <p className="text-sm font-semibold text-foreground">Pay with debit or credit card</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Includes {formatCentsAsDollars(cardPayment.feeCents)} processing fee
+                  </p>
+                  <form action={onPayCharge} className="mt-3">
+                    <input type="hidden" name="chargeId" value={charge.id} />
+                    <SubmitButton
+                      className="h-14 w-full rounded-2xl text-base font-bold"
+                      title={`Pay ${formatCentsAsDollars(cardPayment.totalCents)} with debit or credit card.`}
+                    >
+                      Pay {formatCentsAsDollars(cardPayment.totalCents)}
+                    </SubmitButton>
+                  </form>
+                </div>
+
+                <div className="rounded-2xl border border-border bg-background/80 p-4 opacity-80">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-foreground">Pay from bank account</p>
+                    <span className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                      Free
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">Coming soon — no extra fees</p>
+                  <button
+                    type="button"
+                    className="mt-3 flex h-12 w-full items-center justify-center rounded-2xl border border-border bg-muted px-4 text-sm font-semibold text-muted-foreground"
+                    disabled
+                    title="Bank account payments are coming soon."
+                  >
+                    Coming Soon
+                  </button>
+                </div>
+              </div>
+
+              {autopayEnabled && enrollment ? (
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 text-left">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className="border-emerald-300 bg-emerald-100 text-emerald-800">
+                      Autopay is on
+                    </Badge>
+                    <span className="text-sm font-medium text-emerald-900">
+                      {formatAutopayCardLabel(enrollment)}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-emerald-900">
+                    Your card will be charged automatically each month.
+                  </p>
+                </div>
+              ) : onSetupAutopay ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    <span className="h-px flex-1 bg-border" />
+                    <span>or</span>
+                    <span className="h-px flex-1 bg-border" />
+                  </div>
+                  <div className="rounded-2xl border border-border bg-white/90 p-4 text-left shadow-sm">
+                    <p className="text-sm font-semibold text-foreground">
+                      {autopayPaused
+                        ? "Autopay paused — update your card to re-enable"
+                        : "Set up autopay — never think about rent again."}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Your card will be charged automatically each month.
+                    </p>
+                    <form action={autopayAction} className="mt-3">
+                      <input type="hidden" name="leaseId" value={charge.leaseId} />
+                      <SubmitButton
+                        variant="outline"
+                        className="h-12 w-full rounded-2xl text-sm font-semibold"
+                        title={autopayPaused ? "Update your card and turn autopay back on." : "Set up autopay for this lease."}
+                      >
+                        {autopayPaused ? "Update Card" : "Enable Autopay"}
+                      </SubmitButton>
+                    </form>
+                    {autopayState && !autopayState.success && "error" in autopayState ? (
+                      <p className="mt-2 text-sm text-red-600">{autopayState.error}</p>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
 
               <form action={manualAction} className="text-center sm:text-left">
                 <input type="hidden" name="chargeId" value={charge.id} />

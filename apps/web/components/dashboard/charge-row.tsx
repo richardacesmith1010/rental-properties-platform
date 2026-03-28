@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { cn, formatCurrency, formatDate } from "@/lib/format";
+import { calculateCardFee, formatCentsAsDollars } from "@/lib/payment-fees";
 import { getStatusClasses, statusAriaLabel, statusBadgeClasses } from "@/lib/status-colors";
 import { chargeCategoryLabel, type ChargeCategory } from "@/lib/charge-audit";
 
@@ -214,6 +215,7 @@ export function ChargeRow({
   isMutatingCharges
 }: ChargeRowProps) {
   const label = getChargeLabel(charge);
+  const cardPayment = calculateCardFee(charge.amountCents);
 
   return (
     <div
@@ -308,32 +310,93 @@ export function ChargeRow({
 
             <div className="flex flex-wrap items-center gap-2 xl:justify-end">
               {charge.status !== "paid" && charge.status !== "waived" ? (
-                paymentsAvailable ? (
-                  <form action={onPayCharge}>
-                    <input type="hidden" name="chargeId" value={charge.id} />
-                    <SubmitButton
-                      size="sm"
-                      className="h-11 sm:h-8"
-                      title={isTenantView ? "Open secure checkout to pay this charge." : "Open secure checkout for this charge."}
-                    >
-                      {isTenantView ? "Pay with Card" : "Pay now"}
-                    </SubmitButton>
-                  </form>
+                isTenantView ? (
+                  <div className="w-full space-y-2 xl:w-[18rem]">
+                    <div className="rounded-2xl border border-violet-200 bg-violet-50/70 p-3">
+                      <p className="text-sm font-semibold text-foreground">
+                        Pay with debit or credit card
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Includes {formatCentsAsDollars(cardPayment.feeCents)} processing fee
+                      </p>
+                      {paymentsAvailable ? (
+                        <form action={onPayCharge} className="mt-3">
+                          <input type="hidden" name="chargeId" value={charge.id} />
+                          <SubmitButton
+                            size="sm"
+                            className="h-11 w-full"
+                            title={`Pay ${formatCentsAsDollars(cardPayment.totalCents)} with debit or credit card.`}
+                          >
+                            Pay {formatCentsAsDollars(cardPayment.totalCents)}
+                          </SubmitButton>
+                        </form>
+                      ) : (
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="mt-3 h-11 w-full"
+                          disabled
+                          title={
+                            stripeConfigured
+                              ? "Online payment is not ready for this property yet."
+                              : "Online payment is not available right now."
+                          }
+                        >
+                          Pay {formatCentsAsDollars(cardPayment.totalCents)}
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="rounded-2xl border border-border bg-background/80 p-3 opacity-80">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-foreground">Pay from bank account</p>
+                        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                          Free
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Coming soon — no extra fees
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="mt-3 h-11 w-full"
+                        disabled
+                        title="Bank account payments are coming soon."
+                      >
+                        Coming Soon
+                      </Button>
+                    </div>
+                  </div>
                 ) : (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-11 sm:h-8"
-                    disabled
-                    title={
-                      stripeConfigured
-                        ? "Online payment unavailable - property owner hasn't connected their bank account."
-                        : "Online payment unavailable - Stripe is not configured."
-                    }
-                  >
-                    {isTenantView ? "Pay with Card" : "Pay now"}
-                  </Button>
+                  paymentsAvailable ? (
+                    <form action={onPayCharge}>
+                      <input type="hidden" name="chargeId" value={charge.id} />
+                      <SubmitButton
+                        size="sm"
+                        className="h-11 sm:h-8"
+                        title="Open secure checkout for this charge."
+                      >
+                        Pay now
+                      </SubmitButton>
+                    </form>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-11 sm:h-8"
+                      disabled
+                      title={
+                        stripeConfigured
+                          ? "Online payment unavailable - property owner hasn't connected their bank account."
+                          : "Online payment unavailable - Stripe is not configured."
+                      }
+                    >
+                      Pay now
+                    </Button>
+                  )
                 )
               ) : null}
 
@@ -343,9 +406,9 @@ export function ChargeRow({
                   size="sm"
                   variant={manualFormOpen ? "default" : "outline"}
                   className="h-11 sm:h-8"
-                    disabled={isMutatingCharges}
-                    onClick={onToggleManualPayment}
-                    title="Record a manual payment for this charge."
+                  disabled={isMutatingCharges}
+                  onClick={onToggleManualPayment}
+                  title="Record a manual payment for this charge."
                 >
                   {manualFormOpen ? "Cancel" : "Record"}
                 </Button>

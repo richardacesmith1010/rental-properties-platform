@@ -63,7 +63,7 @@ export { deleteUnit } from "./units";
 export { createLease, updateLease, deleteLease, updateRentAmount } from "./lease-mutations";
 export { renewLease, terminateLease } from "./lease-lifecycle-actions";
 
-export { createCheckoutForCharge } from "./charges";
+export { payWithCard } from "./charges";
 export { deletePendingCharge } from "./charges";
 export { recordManualPayment } from "./charges";
 export {

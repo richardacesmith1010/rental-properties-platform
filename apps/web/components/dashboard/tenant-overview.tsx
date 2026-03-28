@@ -4,7 +4,7 @@ import type { ActionState } from "@/app/actions";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { TenantCharge } from "@/lib/tenant-payments";
 import { Card, CardContent } from "@/components/ui/card";
-import { PayRentCard } from "@/components/dashboard/pay-rent-card";
+import { PayRentCard, type AutopayEnrollmentView } from "@/components/dashboard/pay-rent-card";
 
 type TenantOverviewSection = "charges" | "maintenance" | "documents" | "notifications";
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
@@ -24,6 +24,8 @@ interface TenantOverviewProps {
   buildSectionHref: (section: TenantOverviewSection) => string;
   onPayCharge: (formData: FormData) => Promise<void>;
   onRequestManualPaymentConfirmation: StatefulAction;
+  autopayEnrollments?: AutopayEnrollmentView[];
+  onSetupAutopay?: StatefulAction;
 }
 
 function getGreeting(date = new Date()) {
@@ -53,7 +55,9 @@ export function TenantOverview({
   openTicketCount,
   buildSectionHref,
   onPayCharge,
-  onRequestManualPaymentConfirmation
+  onRequestManualPaymentConfirmation,
+  autopayEnrollments = [],
+  onSetupAutopay
 }: TenantOverviewProps) {
   const summary = (() => {
     if (!nextCharge) {
@@ -77,6 +81,8 @@ export function TenantOverview({
         onPayCharge={onPayCharge}
         onRequestManualPaymentConfirmation={onRequestManualPaymentConfirmation}
         chargesHref={buildSectionHref("charges")}
+        autopayEnrollments={autopayEnrollments}
+        onSetupAutopay={onSetupAutopay}
       />
 
       <div>

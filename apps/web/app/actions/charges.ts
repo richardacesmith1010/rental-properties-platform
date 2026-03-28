@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { withChargeEditingFallback } from "@/lib/charge-audit";
+import { calculateCardFee } from "@/lib/payment-fees";
 import { createStripeCheckoutSession } from "@/lib/stripe";
 import { getOwnerStripeAccountForProperty } from "@/lib/stripe-connect";
 import { canUserAdministerProperty } from "@/lib/property-access";
@@ -35,9 +36,9 @@ function isRetryableStripeError(error: unknown) {
   );
 }
 
-export async function createCheckoutForCharge(formData: FormData): Promise<ActionState | void> {
+export async function payWithCard(formData: FormData): Promise<ActionState | void> {
   const { user, supabase } = await requireAuth("owner", "manager", "tenant");
-  if (!checkRateLimit(`createCheckoutForCharge:${user.id}`, 20, 60_000).allowed) {
+  if (!checkRateLimit(`payWithCard:${user.id}`, 20, 60_000).allowed) {
     return { success: false, error: "Too many requests. Please try again later." };
   }
 
@@ -119,7 +120,7 @@ export async function createCheckoutForCharge(formData: FormData): Promise<Actio
   ]);
 
   if (isAdminSettled.status === "rejected") {
-    console.error("createCheckoutForCharge permission error:", isAdminSettled.reason);
+    console.error("payWithCard permission error:", isAdminSettled.reason);
     return { success: false, error: "Unable to verify access for this charge right now." };
   }
 
@@ -128,7 +129,7 @@ export async function createCheckoutForCharge(formData: FormData): Promise<Actio
   }
 
   if (ownerStripeSettled.status === "rejected") {
-    console.error("createCheckoutForCharge owner stripe error:", ownerStripeSettled.reason);
+    console.error("payWithCard owner stripe error:", ownerStripeSettled.reason);
     return { success: false, error: "This property is not ready to accept online payments yet." };
   }
 
@@ -137,19 +138,28 @@ export async function createCheckoutForCharge(formData: FormData): Promise<Actio
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const ownerStripeAccount = ownerStripeSettled.value;
+  const { baseCents, feeCents, totalCents } = calculateCardFee(charge.amount_cents);
+
   let session;
   try {
     session = await withRetry(
       () =>
         createStripeCheckoutSession({
-          amountCents: charge.amount_cents,
+          amountCents: totalCents,
           metadata: {
             charge_id: charge.id,
-            user_id: user.id
+            user_id: user.id,
+            payment_method: "card",
+            transfer_mode: "destination",
+            processing_fee_cents: String(feeCents),
+            base_amount_cents: String(baseCents)
           },
           successUrl: `${appUrl}/payments/success?session_id={CHECKOUT_SESSION_ID}`,
           cancelUrl: `${appUrl}/payments/cancel`,
-          transferGroup: `charge_${charge.id}`
+          paymentMethodTypes: ["card"],
+          transferDataDestination: ownerStripeAccount,
+          applicationFeeAmountCents: feeCents
         }),
       {
         maxAttempts: 2,
@@ -158,7 +168,7 @@ export async function createCheckoutForCharge(formData: FormData): Promise<Actio
       }
     );
   } catch (error) {
-    sideEffectError("createCheckoutForCharge", "start_stripe_checkout", {
+    sideEffectError("payWithCard", "start_stripe_checkout", {
       userId: user.id,
       entityType: "rent_charge",
       entityId: charge.id
