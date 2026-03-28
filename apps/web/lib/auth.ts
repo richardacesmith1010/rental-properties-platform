@@ -42,6 +42,35 @@ export async function getCurrentUserRole(userId: string): Promise<AppRole> {
   return "tenant";
 }
 
+export async function getAuthState(userId: string): Promise<{
+  hasProfile: boolean;
+  onboardingComplete: boolean;
+  role: "owner" | "manager" | "tenant" | null;
+  needsPasswordSet: boolean;
+}> {
+  const supabase = createClient();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, onboarding_completed_at")
+    .eq("id", userId)
+    .maybeSingle();
+
+  const hasProfile = profile !== null;
+  const onboardingComplete = Boolean(profile?.onboarding_completed_at);
+  const role =
+    profile?.role === "owner" || profile?.role === "manager" || profile?.role === "tenant"
+      ? profile.role
+      : null;
+  const needsPasswordSet = hasProfile && !onboardingComplete && role === "tenant";
+
+  return {
+    hasProfile,
+    onboardingComplete,
+    role,
+    needsPasswordSet
+  };
+}
+
 export function getRoleHomePath(role: AppRole) {
   if (role === "owner") {
     return "/owner";

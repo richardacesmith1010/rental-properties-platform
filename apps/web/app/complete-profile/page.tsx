@@ -1,12 +1,21 @@
-import { getAuthenticatedUser } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { getAuthState, getAuthenticatedUser } from "@/lib/auth";
 import { DomMascot } from "@/components/gamification/dom-mascot";
 import { CompleteProfileForm } from "@/components/auth/complete-profile-form";
 import { getTenantInviteOnboardingContext } from "@/lib/invitations";
+import { resolveAuthRoute } from "@/lib/route-resolver";
 
 export const dynamic = "force-dynamic";
 
 export default async function CompleteProfilePage() {
   const user = await getAuthenticatedUser();
+  const authState = await getAuthState(user.id);
+
+  if (!authState.needsPasswordSet) {
+    const destination = resolveAuthRoute({ hasSession: true, ...authState });
+    redirect(destination);
+  }
+
   const inviteContext = await getTenantInviteOnboardingContext({
     userId: user.id,
     email: user.email,

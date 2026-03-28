@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getRoleHomePath } from "@/lib/auth";
+import { getAuthState } from "@/lib/auth";
 import { updateUserStreak } from "@/lib/gamification";
 import { markTenantInvitationAccepted } from "@/lib/invitations";
 import { sideEffectError } from "@/lib/logger";
 import { notifyOwnerMembersOfAcceptedTenantInvite } from "@/lib/notifications";
+import { resolveAuthRoute } from "@/lib/route-resolver";
 
 function getSafeNextPath(rawNext: string | null) {
   if (!rawNext || !rawNext.startsWith("/") || rawNext.startsWith("//")) {
@@ -166,10 +167,6 @@ export async function GET(request: Request) {
       if (type === "recovery") {
         return NextResponse.redirect(`${origin}/reset-password`);
       }
-
-      if (hasInvitedSession(type, rawNext, user)) {
-        return NextResponse.redirect(`${origin}/complete-profile`);
-      }
     } else if (tokenHash && (type === "email" || type === "recovery" || type === "invite" || type === "magiclink" || type === "email_change")) {
       const { error } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
@@ -185,7 +182,9 @@ export async function GET(request: Request) {
       authenticatedUserId = await trackAuthenticatedUser({ user, type, rawNext });
 
       if (type === "invite") {
-        return NextResponse.redirect(`${origin}/complete-profile`);
+        const authState = await getAuthState(authenticatedUserId!);
+        const destination = resolveAuthRoute({ hasSession: true, ...authState });
+        return NextResponse.redirect(`${origin}${destination}`);
       }
 
       if (type === "recovery") {
@@ -208,31 +207,15 @@ export async function GET(request: Request) {
       if (type === "recovery") {
         return NextResponse.redirect(`${origin}/reset-password`);
       }
-
-      if (hasInvitedSession(type, rawNext, user)) {
-        return NextResponse.redirect(`${origin}/complete-profile`);
-      }
     }
 
     if (authenticatedUserId) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role, onboarding_completed_at")
-        .eq("id", authenticatedUserId)
-        .maybeSingle();
-
-      if (!profile?.onboarding_completed_at) {
-        return NextResponse.redirect(`${origin}/onboarding`);
-      }
-
-      const role =
-        profile?.role === "owner" || profile?.role === "manager" || profile?.role === "tenant"
-          ? profile.role
-          : "tenant";
-      const roleHomePath = getRoleHomePath(role);
-      if (next === "/" || next === roleHomePath) {
-        return NextResponse.redirect(`${origin}${roleHomePath}`);
-      }
+      const authState = await getAuthState(authenticatedUserId);
+      const destination = resolveAuthRoute({
+        hasSession: true,
+        ...authState
+      });
+      return NextResponse.redirect(`${origin}${destination}`);
     }
   } catch (error) {
     const params = new URLSearchParams();
@@ -254,5 +237,8 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/login?${params.toString()}`);
   }
 
-  return NextResponse.redirect(`${origin}${next}`);
+  const params = new URLSearchParams();
+  params.set("error", "auth_callback_failed");
+  params.set("error_description", "Something went wrong. Try signing in again or request a new link.");
+  return NextResponse.redirect(`${origin}/login?${params.toString()}`);
 }
