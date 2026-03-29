@@ -602,16 +602,15 @@ export async function handlePaymentIntentPaymentFailed(supabase: AdminClient, pa
   return received("autopay_failure_recorded");
 }
 
-export async function handleCheckoutSessionCompleted(supabase: AdminClient, session: StripeCheckoutSession) {
+export async function handleAsyncPaymentSucceeded(
+  supabase: AdminClient,
+  session: StripeCheckoutSession
+) {
   const chargeId = session.metadata?.charge_id;
   const userId = session.metadata?.user_id;
   const amountCents = typeof session.amount_total === "number" ? session.amount_total : null;
-  const transferMode = session.metadata?.transfer_mode ?? null;
-  const baseAmountCents = session.metadata?.base_amount_cents
-    ? Number.parseInt(session.metadata.base_amount_cents, 10)
-    : null;
 
-  if (!chargeId || !userId || session.payment_status !== "paid" || !amountCents) {
+  if (!chargeId || !userId || !amountCents) {
     return received();
   }
 
@@ -621,7 +620,83 @@ export async function handleCheckoutSessionCompleted(supabase: AdminClient, sess
     userId,
     amountCents,
     paymentMatch: { column: "stripe_checkout_session_id", value: session.id },
-    method: "card",
+    method: "ach",
+    referenceNote: "Stripe Checkout",
+    transferGroup: `charge_${chargeId}`,
+    stripeCheckoutSessionId: session.id,
+    stripePaymentIntentId: session.payment_intent ?? null,
+    requireAuthorizedUser: true,
+    transferMode: null,
+    baseAmountCents: null
+  });
+}
+
+export async function handleAsyncPaymentFailed(
+  supabase: AdminClient,
+  session: StripeCheckoutSession
+) {
+  const chargeId = session.metadata?.charge_id;
+  const userId = session.metadata?.user_id;
+
+  if (!chargeId || !userId) {
+    return received();
+  }
+
+  console.error(
+    `[stripe-webhook] ACH payment failed for charge ${chargeId}, user ${userId}, session ${session.id}`
+  );
+
+  const { data: charge } = await supabase
+    .from("rent_charges")
+    .select("status")
+    .eq("id", chargeId)
+    .maybeSingle();
+
+  if (charge?.status === "paid") {
+    const { error } = await supabase
+      .from("rent_charges")
+      .update({ status: "pending" })
+      .eq("id", chargeId);
+    if (error) {
+      console.error(`[stripe-webhook] Failed to revert charge ${chargeId}:`, error);
+    } else {
+      console.error(
+        `[stripe-webhook] Reverted charge ${chargeId} from paid to pending after ACH failure`
+      );
+    }
+  }
+
+  // TODO (future sprint): Send notification to tenant about failed bank account payment.
+  // TODO (future sprint): If a payment record exists, clean it up and reverse transfers.
+  return received("async_payment_failed");
+}
+
+export async function handleCheckoutSessionCompleted(supabase: AdminClient, session: StripeCheckoutSession) {
+  const chargeId = session.metadata?.charge_id;
+  const userId = session.metadata?.user_id;
+  const amountCents = typeof session.amount_total === "number" ? session.amount_total : null;
+  const transferMode = session.metadata?.transfer_mode ?? null;
+  const method = session.metadata?.payment_method === "ach" ? "ach" : "card";
+  const baseAmountCents = session.metadata?.base_amount_cents
+    ? Number.parseInt(session.metadata.base_amount_cents, 10)
+    : null;
+
+  if (!chargeId || !userId || session.payment_status !== "paid" || !amountCents) {
+    if (session.payment_status !== "paid" && session.metadata?.payment_method === "ach") {
+      console.log(
+        `[stripe-webhook] ACH session ${session.id} completed with status '${session.payment_status}' — awaiting async confirmation`
+      );
+    }
+    return received();
+  }
+
+  return recordPayment({
+    supabase,
+    chargeId,
+    userId,
+    amountCents,
+    paymentMatch: { column: "stripe_checkout_session_id", value: session.id },
+    method,
     referenceNote: "Stripe Checkout",
     transferGroup: `charge_${chargeId}`,
     stripeCheckoutSessionId: session.id,

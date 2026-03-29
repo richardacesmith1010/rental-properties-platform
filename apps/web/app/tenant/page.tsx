@@ -14,6 +14,7 @@ import {
   setupAutopay,
   uploadMaintenancePhoto
 } from "@/app/actions";
+import { payWithACH } from "@/app/actions/charges";
 import { getAutopayEnrollments } from "@/app/actions/autopay";
 import {
   getAuthenticatedUser,
@@ -203,6 +204,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
         monthlyRentCents: leaseDetails[0].monthlyRentCents
       }
     : null;
+  const hasActiveLease = leaseDetails.length > 0;
   const ownerConnectedMap = await arePropertyOwnersConnected(
     paymentData.charges.map((charge) => charge.propertyId)
   );
@@ -363,7 +365,9 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
                 openTicketCount={openTicketCount}
                 buildSectionHref={buildTenantHref}
                 onPayCharge={payWithCard as (formData: FormData) => Promise<void>}
+                onPayWithACH={payWithACH as (formData: FormData) => Promise<void>}
                 onRequestManualPaymentConfirmation={requestManualPaymentConfirmation}
+                hasActiveLease={hasActiveLease}
                 autopayEnrollments={autopayEnrollments}
                 onSetupAutopay={setupAutopay}
               />
@@ -396,6 +400,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
               <ChargesSection
                 charges={paymentData.charges}
                 onPayCharge={payWithCard as (formData: FormData) => Promise<void>}
+                onPayWithACH={payWithACH as (formData: FormData) => Promise<void>}
                 ownerConnectedMap={ownerConnectedMap}
                 isTenantView
                 autopayEnrollments={autopayEnrollments}

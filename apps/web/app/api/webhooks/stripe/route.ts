@@ -7,6 +7,8 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   handleAccountUpdated,
+  handleAsyncPaymentFailed,
+  handleAsyncPaymentSucceeded,
   handleCheckoutSessionCompleted,
   handlePaymentIntentPaymentFailed,
   handlePaymentIntentSucceeded
@@ -44,6 +46,16 @@ export async function POST(request: NextRequest) {
       );
     case "checkout.session.completed":
       return handleCheckoutSessionCompleted(
+        supabase,
+        event.data.object as unknown as StripeCheckoutSession
+      );
+    case "checkout.session.async_payment_succeeded":
+      return handleAsyncPaymentSucceeded(
+        supabase,
+        event.data.object as unknown as StripeCheckoutSession
+      );
+    case "checkout.session.async_payment_failed":
+      return handleAsyncPaymentFailed(
         supabase,
         event.data.object as unknown as StripeCheckoutSession
       );

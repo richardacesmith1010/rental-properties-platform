@@ -36,9 +36,23 @@ function isRetryableStripeError(error: unknown) {
   );
 }
 
-export async function payWithCard(formData: FormData): Promise<ActionState | void> {
+type CheckoutContext = {
+  appUrl: string;
+  charge: { id: string; amount_cents: number; status: string; lease_id: string };
+  ownerStripeAccount: string;
+  userId: string;
+};
+
+function isCheckoutContext(value: ActionState | CheckoutContext): value is CheckoutContext {
+  return Boolean(value && "charge" in value);
+}
+
+async function prepareCheckoutContext(
+  formData: FormData,
+  actionName: "payWithCard" | "payWithACH"
+): Promise<ActionState | CheckoutContext> {
   const { user, supabase } = await requireAuth("owner", "manager", "tenant");
-  if (!checkRateLimit(`payWithCard:${user.id}`, 20, 60_000).allowed) {
+  if (!checkRateLimit(`${actionName}:${user.id}`, 20, 60_000).allowed) {
     return { success: false, error: "Too many requests. Please try again later." };
   }
 
@@ -48,7 +62,6 @@ export async function payWithCard(formData: FormData): Promise<ActionState | voi
   }
 
   const { chargeId } = parsed.data;
-
   const chargeQuery = await withChargeEditingFallback(
     () =>
       supabase
@@ -137,8 +150,21 @@ export async function payWithCard(formData: FormData): Promise<ActionState | voi
     return { success: false, error: "This property is not ready to accept online payments yet." };
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const ownerStripeAccount = ownerStripeSettled.value;
+  return {
+    appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+    charge,
+    ownerStripeAccount: ownerStripeSettled.value,
+    userId: user.id
+  };
+}
+
+export async function payWithCard(formData: FormData): Promise<ActionState | void> {
+  const checkoutContext = await prepareCheckoutContext(formData, "payWithCard");
+  if (!isCheckoutContext(checkoutContext)) {
+    return checkoutContext;
+  }
+
+  const { appUrl, charge, ownerStripeAccount, userId } = checkoutContext;
   const { baseCents, feeCents, totalCents } = calculateCardFee(charge.amount_cents);
 
   let session;
@@ -149,7 +175,7 @@ export async function payWithCard(formData: FormData): Promise<ActionState | voi
           amountCents: totalCents,
           metadata: {
             charge_id: charge.id,
-            user_id: user.id,
+            user_id: userId,
             payment_method: "card",
             transfer_mode: "destination",
             processing_fee_cents: String(feeCents),
@@ -169,7 +195,54 @@ export async function payWithCard(formData: FormData): Promise<ActionState | voi
     );
   } catch (error) {
     sideEffectError("payWithCard", "start_stripe_checkout", {
-      userId: user.id,
+      userId,
+      entityType: "rent_charge",
+      entityId: charge.id
+    })(error);
+    return { success: false, error: PAYMENTS_UNAVAILABLE_MESSAGE };
+  }
+
+  if (session.url) {
+    redirect(session.url);
+  }
+
+  return { success: false, error: PAYMENTS_UNAVAILABLE_MESSAGE };
+}
+
+export async function payWithACH(formData: FormData): Promise<ActionState | void> {
+  const checkoutContext = await prepareCheckoutContext(formData, "payWithACH");
+  if (!isCheckoutContext(checkoutContext)) {
+    return checkoutContext;
+  }
+
+  const { appUrl, charge, userId } = checkoutContext;
+
+  let session;
+  try {
+    session = await withRetry(
+      () =>
+        createStripeCheckoutSession({
+          amountCents: charge.amount_cents,
+          metadata: {
+            charge_id: charge.id,
+            user_id: userId,
+            payment_method: "ach",
+            base_amount_cents: String(charge.amount_cents)
+          },
+          successUrl: `${appUrl}/payments/success?session_id={CHECKOUT_SESSION_ID}&method=ach`,
+          cancelUrl: `${appUrl}/payments/cancel`,
+          transferGroup: `charge_${charge.id}`,
+          paymentMethodTypes: ["us_bank_account"]
+        }),
+      {
+        maxAttempts: 2,
+        baseDelayMs: 250,
+        retryIf: isRetryableStripeError
+      }
+    );
+  } catch (error) {
+    sideEffectError("payWithACH", "start_stripe_checkout", {
+      userId,
       entityType: "rent_charge",
       entityId: charge.id
     })(error);

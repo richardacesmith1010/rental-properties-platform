@@ -23,7 +23,9 @@ interface TenantOverviewProps {
   openTicketCount: number;
   buildSectionHref: (section: TenantOverviewSection) => string;
   onPayCharge: (formData: FormData) => Promise<void>;
+  onPayWithACH?: (formData: FormData) => Promise<void>;
   onRequestManualPaymentConfirmation: StatefulAction;
+  hasActiveLease?: boolean;
   autopayEnrollments?: AutopayEnrollmentView[];
   onSetupAutopay?: StatefulAction;
 }
@@ -55,12 +57,17 @@ export function TenantOverview({
   openTicketCount,
   buildSectionHref,
   onPayCharge,
+  onPayWithACH,
   onRequestManualPaymentConfirmation,
+  hasActiveLease = true,
   autopayEnrollments = [],
   onSetupAutopay
 }: TenantOverviewProps) {
   const summary = (() => {
     if (!nextCharge) {
+      if (!hasActiveLease) {
+        return "Your landlord hasn't set up your lease yet.";
+      }
       return "You're all caught up - no payments due.";
     }
 
@@ -79,8 +86,10 @@ export function TenantOverview({
       <PayRentCard
         charges={charges}
         onPayCharge={onPayCharge}
+        onPayWithACH={onPayWithACH}
         onRequestManualPaymentConfirmation={onRequestManualPaymentConfirmation}
         chargesHref={buildSectionHref("charges")}
+        hasActiveLease={hasActiveLease}
         autopayEnrollments={autopayEnrollments}
         onSetupAutopay={onSetupAutopay}
       />

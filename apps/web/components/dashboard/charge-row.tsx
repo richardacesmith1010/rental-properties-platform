@@ -53,6 +53,7 @@ interface ChargeRowProps {
   paymentsAvailable: boolean;
   stripeConfigured: boolean;
   onPayCharge: (formData: FormData) => Promise<void>;
+  onPayWithACH?: (formData: FormData) => Promise<void>;
   showManualPayment: boolean;
   manualFormOpen: boolean;
   manualPaymentAction: (formData: FormData) => void;
@@ -204,6 +205,7 @@ export function ChargeRow({
   paymentsAvailable,
   stripeConfigured,
   onPayCharge,
+  onPayWithACH,
   showManualPayment,
   manualFormOpen,
   manualPaymentAction,
@@ -347,26 +349,42 @@ export function ChargeRow({
                       )}
                     </div>
 
-                    <div className="rounded-2xl border border-border bg-background/80 p-3 opacity-80">
+                    <div className="rounded-2xl border border-border bg-background/80 p-3">
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-sm font-semibold text-foreground">Pay from bank account</p>
                         <span className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
-                          Free
+                          FREE
                         </span>
                       </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Coming soon — no extra fees
-                      </p>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="mt-3 h-11 w-full"
-                        disabled
-                        title="Bank account payments are coming soon."
-                      >
-                        Coming Soon
-                      </Button>
+                      <p className="mt-1 text-xs text-muted-foreground">No extra fees</p>
+                      {paymentsAvailable && onPayWithACH ? (
+                        <form action={onPayWithACH} className="mt-3">
+                          <input type="hidden" name="chargeId" value={charge.id} />
+                          <SubmitButton
+                            size="sm"
+                            variant="outline"
+                            className="h-11 w-full"
+                            title={`Pay ${formatCentsAsDollars(charge.amountCents)} from your bank account.`}
+                          >
+                            Pay {formatCentsAsDollars(charge.amountCents)}
+                          </SubmitButton>
+                        </form>
+                      ) : (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="mt-3 h-11 w-full"
+                          disabled
+                          title={
+                            stripeConfigured
+                              ? "Online payment is not ready for this property yet."
+                              : "Online payment is not available right now."
+                          }
+                        >
+                          Pay {formatCentsAsDollars(charge.amountCents)}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ) : (

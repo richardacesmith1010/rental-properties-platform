@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 interface SuccessPageProps {
   searchParams: {
     session_id?: string;
+    method?: string;
   };
 }
 
@@ -86,6 +87,7 @@ function StatusCard({
 export default async function PaymentSuccessPage({ searchParams }: SuccessPageProps) {
   await getAuthenticatedUser();
   const sessionId = searchParams.session_id;
+  const method = searchParams.method;
 
   if (!sessionId) {
     return (
@@ -96,6 +98,18 @@ export default async function PaymentSuccessPage({ searchParams }: SuccessPagePr
         body="We could not verify your payment session."
         redirectMessage="Returning to dashboard in {seconds} seconds..."
         buttonVariant="outline"
+      />
+    );
+  }
+
+  if (method === "ach") {
+    return (
+      <StatusCard
+        icon={<Clock className="h-7 w-7 text-amber-500" />}
+        iconBg="bg-amber-50"
+        title="Payment processing"
+        body="Your bank is processing this payment. This usually takes 4-5 business days. We'll update your account when it clears."
+        buttonLabel="Back to Dashboard"
       />
     );
   }

@@ -47,6 +47,7 @@ interface AutopayEnrollmentView {
 interface ChargesSectionProps {
   charges: Charge[];
   onPayCharge: (formData: FormData) => Promise<void>;
+  onPayWithACH?: (formData: FormData) => Promise<void>;
   onDeletePendingCharge?: StatefulAction;
   onEditCharge?: StatefulAction;
   onCreateManualCharge?: StatefulAction;
@@ -121,6 +122,7 @@ function exportChargesCsv(charges: Charge[]) {
 export function ChargesSection({
   charges,
   onPayCharge,
+  onPayWithACH,
   onDeletePendingCharge,
   onEditCharge,
   onCreateManualCharge,
@@ -494,6 +496,7 @@ export function ChargesSection({
                     paymentsAvailable={paymentsAvailable}
                     stripeConfigured={stripeConfigured}
                     onPayCharge={onPayCharge}
+                    onPayWithACH={onPayWithACH}
                     showManualPayment={showManualPayment}
                     manualFormOpen={manualFormOpen}
                     manualPaymentAction={recordManualPaymentAction}

@@ -32,8 +32,10 @@ export interface AutopayEnrollmentView {
 interface PayRentCardProps {
   charges: TenantCharge[];
   onPayCharge: (formData: FormData) => Promise<void>;
+  onPayWithACH?: (formData: FormData) => Promise<void>;
   onRequestManualPaymentConfirmation: StatefulAction;
   chargesHref: string;
+  hasActiveLease?: boolean;
   autopayEnrollments?: AutopayEnrollmentView[];
   onSetupAutopay?: StatefulAction;
 }
@@ -72,8 +74,10 @@ function formatAutopayCardLabel(enrollment: AutopayEnrollmentView) {
 export function PayRentCard({
   charges,
   onPayCharge,
+  onPayWithACH,
   onRequestManualPaymentConfirmation,
   chargesHref,
+  hasActiveLease = true,
   autopayEnrollments = [],
   onSetupAutopay
 }: PayRentCardProps) {
@@ -96,14 +100,27 @@ export function PayRentCard({
             <DomMascot size="lg" mood="celebrating" animate />
           </div>
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/80 bg-white/90 px-3 py-1 text-sm font-medium text-emerald-700">
-              <CheckCircle2 className="h-4 w-4" />
-              You&apos;re all set
-            </div>
-            <h2 className="text-2xl font-bold text-foreground sm:text-3xl">No payments due right now</h2>
-            <p className="max-w-xl text-sm text-muted-foreground">
-              Your balance is clear. When a new rent charge posts, it will show up here first.
-            </p>
+            {hasActiveLease ? (
+              <>
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/80 bg-white/90 px-3 py-1 text-sm font-medium text-emerald-700">
+                  <CheckCircle2 className="h-4 w-4" />
+                  You&apos;re all set
+                </div>
+                <h2 className="text-2xl font-bold text-foreground sm:text-3xl">No payments due right now</h2>
+                <p className="max-w-xl text-sm text-muted-foreground">
+                  Your balance is clear. When a new rent charge posts, it will show up here first.
+                </p>
+              </>
+            ) : (
+              <>
+                <h2 className="text-2xl font-bold text-foreground sm:text-3xl">
+                  Your landlord hasn&apos;t set up your lease yet
+                </h2>
+                <p className="max-w-xl text-sm text-muted-foreground">
+                  Once it&apos;s ready, your rent will show up here.
+                </p>
+              </>
+            )}
           </div>
           <Link
             href={chargesHref}
@@ -213,22 +230,35 @@ export function PayRentCard({
                   </form>
                 </div>
 
-                <div className="rounded-2xl border border-border bg-background/80 p-4 opacity-80">
+                <div className="rounded-2xl border border-border bg-background/80 p-4">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-semibold text-foreground">Pay from bank account</p>
                     <span className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
-                      Free
+                      FREE
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-muted-foreground">Coming soon — no extra fees</p>
-                  <button
-                    type="button"
-                    className="mt-3 flex h-12 w-full items-center justify-center rounded-2xl border border-border bg-muted px-4 text-sm font-semibold text-muted-foreground"
-                    disabled
-                    title="Bank account payments are coming soon."
-                  >
-                    Coming Soon
-                  </button>
+                  <p className="mt-1 text-sm text-muted-foreground">No extra fees</p>
+                  {onPayWithACH ? (
+                    <form action={onPayWithACH} className="mt-3">
+                      <input type="hidden" name="chargeId" value={charge.id} />
+                      <SubmitButton
+                        variant="outline"
+                        className="h-12 w-full rounded-2xl text-sm font-semibold"
+                        title={`Pay ${formatCentsAsDollars(charge.amountCents)} from your bank account.`}
+                      >
+                        Pay {formatCentsAsDollars(charge.amountCents)}
+                      </SubmitButton>
+                    </form>
+                  ) : (
+                    <button
+                      type="button"
+                      className="mt-3 flex h-12 w-full items-center justify-center rounded-2xl border border-border bg-muted px-4 text-sm font-semibold text-muted-foreground"
+                      disabled
+                      title="Bank account payments are unavailable right now."
+                    >
+                      Pay {formatCentsAsDollars(charge.amountCents)}
+                    </button>
+                  )}
                 </div>
               </div>
 
