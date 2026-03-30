@@ -71,7 +71,7 @@ export async function requestDeleteLLC(
   }
 
   if (memberResult.members.length <= 1) {
-    const deletionError = await deleteGovernedAccount(accountId);
+    const deletionError = await deleteGovernedAccount(accountId, user.id);
     if (deletionError) {
       return { success: false, error: deletionError };
     }
@@ -117,7 +117,7 @@ export async function requestDeleteLLC(
     return { success: false, error: "Delete request created, but the initial vote could not be recorded." };
   }
 
-  const resolvedStatus = votesRequired <= 1 ? await resolveAccountDeleteRequest(request.id) : "pending";
+  const resolvedStatus = votesRequired <= 1 ? await resolveAccountDeleteRequest(request.id, user.id) : "pending";
   revalidateOwnershipSurfaces();
 
   if (resolvedStatus === "approved") {
@@ -201,7 +201,7 @@ export async function voteOnDeleteLLC(
     return { success: false, error: voteUpdate.error };
   }
 
-  const resolvedStatus = await resolveAccountDeleteRequest(requestId);
+  const resolvedStatus = await resolveAccountDeleteRequest(requestId, user.id);
   revalidateOwnershipSurfaces();
 
   if (resolvedStatus === "approved") {

@@ -3,7 +3,37 @@ import { isMissingSchemaError } from "@/lib/supabase-errors";
 import type { DeleteRequestRow, GovernanceStatus } from "./account-governance-setup";
 import { getVoteCounts } from "./account-governance-setup";
 
-export async function deleteGovernedAccount(accountId: string): Promise<string | null> {
+async function assertAccountMembership(
+  accountId: string,
+  callerUserId: string,
+  roles?: Array<"owner" | "admin" | "member" | "viewer">
+) {
+  const admin = createAdminClient();
+  const membershipQuery = admin
+    .from("ownership_account_members")
+    .select("account_id")
+    .eq("account_id", accountId)
+    .eq("profile_id", callerUserId)
+    .eq("active", true);
+  const { data: membership, error } = roles?.length
+    ? await membershipQuery.in("member_role", roles).maybeSingle()
+    : await membershipQuery.maybeSingle();
+
+  if (error) {
+    throw new Error("Unable to verify delete access for this LLC account.");
+  }
+
+  if (!membership) {
+    throw new Error("Unauthorized: caller is not allowed to manage this LLC delete request.");
+  }
+}
+
+export async function deleteGovernedAccount(
+  accountId: string,
+  callerUserId: string
+): Promise<string | null> {
+  await assertAccountMembership(accountId, callerUserId, ["owner", "admin"]);
+
   const admin = createAdminClient();
 
   const { error: unlinkPropertiesError } = await admin
@@ -42,11 +72,14 @@ export async function deleteGovernedAccount(accountId: string): Promise<string |
   return null;
 }
 
-export async function resolveAccountDeleteRequest(requestId: string): Promise<GovernanceStatus | null> {
+export async function resolveAccountDeleteRequest(
+  requestId: string,
+  callerUserId: string
+): Promise<GovernanceStatus | null> {
   const admin = createAdminClient();
   const { data: request, error } = await admin
     .from("account_delete_requests")
-    .select("id, ownership_account_id, status, votes_required, votes_received")
+    .select("id, ownership_account_id, requested_by, status, votes_required, votes_received")
     .eq("id", requestId)
     .maybeSingle();
 
@@ -57,10 +90,12 @@ export async function resolveAccountDeleteRequest(requestId: string): Promise<Go
     return null;
   }
 
-  const requestRow = request as DeleteRequestRow | null;
+  const requestRow = request as (DeleteRequestRow & { requested_by: string | null }) | null;
   if (!requestRow) {
     return null;
   }
+
+  await assertAccountMembership(requestRow.ownership_account_id, callerUserId);
 
   if (requestRow.status !== "pending") {
     return requestRow.status;
@@ -97,7 +132,10 @@ export async function resolveAccountDeleteRequest(requestId: string): Promise<Go
       return (current?.status as GovernanceStatus | undefined) ?? "approved";
     }
 
-    const deletionError = await deleteGovernedAccount(requestRow.ownership_account_id);
+    const deletionError = await deleteGovernedAccount(
+      requestRow.ownership_account_id,
+      requestRow.requested_by ?? callerUserId
+    );
     if (deletionError) {
       const { error: rollbackError } = await admin
         .from("account_delete_requests")
