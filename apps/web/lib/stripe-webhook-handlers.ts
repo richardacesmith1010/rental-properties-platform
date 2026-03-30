@@ -51,6 +51,7 @@ interface PaymentParams {
   queueXp?: boolean;
   transferMode?: string | null;
   baseAmountCents?: number | null;
+  managerFeeCents?: number | null;
 }
 
 function received(status?: string) {
@@ -201,7 +202,14 @@ async function updateAutopay(
 
 async function createTransfersForPayment(
   supabase: AdminClient,
-  params: { propertyId: string; chargeId: string; amountCents: number; transferGroup: string; paymentMatch: Match }
+  params: {
+    propertyId: string;
+    chargeId: string;
+    amountCents: number;
+    transferGroup: string;
+    paymentMatch: Match;
+    managerFeeCentsOverride?: number | null;
+  }
 ) {
   try {
     const ownerStripeAccount = await getOwnerStripeAccountForProperty(params.propertyId);
@@ -209,8 +217,14 @@ async function createTransfersForPayment(
       return;
     }
 
-    const managerInfo = await getManagerStripeAccountForProperty(params.propertyId);
-    const managementFee = Math.max(managerInfo?.feeCents ?? 0, 0);
+    const managerInfo = await getManagerStripeAccountForProperty(params.propertyId, params.amountCents);
+    const hasManagerFeeOverride =
+      typeof params.managerFeeCentsOverride === "number" &&
+      Number.isFinite(params.managerFeeCentsOverride);
+    const managerFeeOverride = hasManagerFeeOverride ? Number(params.managerFeeCentsOverride) : 0;
+    const managementFee = hasManagerFeeOverride
+      ? Math.max(managerFeeOverride, 0)
+      : Math.max(managerInfo?.feeCents ?? 0, 0);
     const effectiveFee = Math.min(managementFee, params.amountCents);
     const ownerAmount = params.amountCents - effectiveFee;
     const paymentUpdate: Record<string, string | number> = { platform_fee_cents: 0 };
@@ -433,7 +447,8 @@ async function recordPayment({
   resetAutopay = false,
   queueXp = false,
   transferMode = null,
-  baseAmountCents = null
+  baseAmountCents = null,
+  managerFeeCents = null
 }: PaymentParams) {
   const { data: existingPayment } = await supabase
     .from("payments")
@@ -501,10 +516,43 @@ async function recordPayment({
     await createTransfersForPayment(supabase, {
       propertyId: ctx.property.id,
       chargeId: ctx.charge.id,
-      amountCents,
+      amountCents: recordedAmountCents,
       transferGroup,
-      paymentMatch
+      paymentMatch,
+      managerFeeCentsOverride: managerFeeCents
     });
+  } else if (typeof managerFeeCents === "number" && Number.isFinite(managerFeeCents) && managerFeeCents > 0) {
+    const { data: existingTransfer } = await supabase
+      .from("payments")
+      .select("manager_transfer_id")
+      .eq(paymentMatch.column, paymentMatch.value)
+      .maybeSingle();
+
+    if (!existingTransfer?.manager_transfer_id) {
+      const managerInfo = await getManagerStripeAccountForProperty(ctx.property.id, recordedAmountCents);
+      if (managerInfo?.accountId) {
+        try {
+          const managerTransfer = await createStripeTransfer({
+            amountCents: managerFeeCents,
+            destination: managerInfo.accountId,
+            description: `Management fee for charge ${ctx.charge.id.slice(0, 8)}`,
+            idempotencyKey: `manager-transfer:${paymentMatch.column}:${paymentMatch.value}`
+          });
+          const { error: updateError } = await supabase
+            .from("payments")
+            .update({ manager_transfer_id: managerTransfer.id })
+            .eq(paymentMatch.column, paymentMatch.value);
+          if (updateError) {
+            console.error("[stripe-webhook] update manager transfer metadata:", updateError);
+          }
+        } catch (transferError) {
+          console.error(
+            `[stripe-webhook] Manager transfer failed for charge ${ctx.charge.id}:`,
+            transferError
+          );
+        }
+      }
+    }
   }
 
   queuePaymentNotifications(ctx, amountCents);
@@ -609,6 +657,9 @@ export async function handleAsyncPaymentSucceeded(
   const chargeId = session.metadata?.charge_id;
   const userId = session.metadata?.user_id;
   const amountCents = typeof session.amount_total === "number" ? session.amount_total : null;
+  const managerFeeCents = session.metadata?.manager_fee_cents
+    ? Number.parseInt(session.metadata.manager_fee_cents, 10)
+    : null;
 
   if (!chargeId || !userId || !amountCents) {
     return received();
@@ -627,7 +678,8 @@ export async function handleAsyncPaymentSucceeded(
     stripePaymentIntentId: session.payment_intent ?? null,
     requireAuthorizedUser: true,
     transferMode: null,
-    baseAmountCents: null
+    baseAmountCents: null,
+    managerFeeCents
   });
 }
 
@@ -680,6 +732,9 @@ export async function handleCheckoutSessionCompleted(supabase: AdminClient, sess
   const baseAmountCents = session.metadata?.base_amount_cents
     ? Number.parseInt(session.metadata.base_amount_cents, 10)
     : null;
+  const managerFeeCents = session.metadata?.manager_fee_cents
+    ? Number.parseInt(session.metadata.manager_fee_cents, 10)
+    : null;
 
   if (!chargeId || !userId || session.payment_status !== "paid" || !amountCents) {
     if (session.payment_status !== "paid" && session.metadata?.payment_method === "ach") {
@@ -703,6 +758,7 @@ export async function handleCheckoutSessionCompleted(supabase: AdminClient, sess
     stripePaymentIntentId: session.payment_intent ?? null,
     requireAuthorizedUser: true,
     transferMode,
-    baseAmountCents
+    baseAmountCents,
+    managerFeeCents
   });
 }

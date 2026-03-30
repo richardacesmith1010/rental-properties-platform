@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getManagerFeeForProperty } from "@/lib/payment-fees";
 import { getStripeSecretKey } from "@/lib/stripe";
 
 interface StripeAccountResponse {
@@ -191,28 +192,27 @@ export async function getOwnerStripeAccountForProperty(propertyId: string): Prom
 }
 
 export async function getManagerStripeAccountForProperty(
-  propertyId: string
+  propertyId: string,
+  rentAmountCents = 0
 ): Promise<{ accountId: string; feeCents: number } | null> {
   const admin = createAdminClient();
-  const { data: property } = await admin
-    .from("properties")
-    .select("id, management_fee_cents")
-    .eq("id", propertyId)
-    .maybeSingle();
-
-  if (!property || (property.management_fee_cents ?? 0) <= 0) {
+  const feeInfo = await getManagerFeeForProperty(propertyId, rentAmountCents);
+  if (feeInfo.feeCents <= 0) {
     return null;
   }
 
-  const { data: assignments } = await admin
-    .from("property_managers")
-    .select("manager_profile_id")
-    .eq("property_id", propertyId)
-    .eq("active", true)
-    .order("created_at", { ascending: true })
-    .limit(1);
+  let managerProfileId = feeInfo.managerProfileId;
+  if (!managerProfileId) {
+    const { data: assignments } = await admin
+      .from("property_managers")
+      .select("manager_profile_id")
+      .eq("property_id", propertyId)
+      .eq("active", true)
+      .order("created_at", { ascending: true })
+      .limit(1);
+    managerProfileId = assignments?.[0]?.manager_profile_id ?? null;
+  }
 
-  const managerProfileId = assignments?.[0]?.manager_profile_id;
   if (!managerProfileId) {
     return null;
   }
@@ -224,7 +224,7 @@ export async function getManagerStripeAccountForProperty(
 
   return {
     accountId: profile.stripe_account_id,
-    feeCents: property.management_fee_cents ?? 0
+    feeCents: feeInfo.feeCents
   };
 }
 

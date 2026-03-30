@@ -4,9 +4,12 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { withChargeEditingFallback } from "@/lib/charge-audit";
-import { calculateCardFee } from "@/lib/payment-fees";
+import { calculateCardFee, getManagerFeeForProperty } from "@/lib/payment-fees";
 import { createStripeCheckoutSession } from "@/lib/stripe";
-import { getOwnerStripeAccountForProperty } from "@/lib/stripe-connect";
+import {
+  getManagerStripeAccountForProperty,
+  getOwnerStripeAccountForProperty
+} from "@/lib/stripe-connect";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { createNotificationWithDelivery, notifyOwnerMembersForProperty } from "@/lib/notifications";
 import { logAudit } from "@/lib/audit";
@@ -39,6 +42,7 @@ function isRetryableStripeError(error: unknown) {
 type CheckoutContext = {
   appUrl: string;
   charge: { id: string; amount_cents: number; status: string; lease_id: string };
+  propertyId: string;
   ownerStripeAccount: string;
   userId: string;
 };
@@ -153,6 +157,7 @@ async function prepareCheckoutContext(
   return {
     appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
     charge,
+    propertyId: property.id,
     ownerStripeAccount: ownerStripeSettled.value,
     userId: user.id
   };
@@ -164,8 +169,30 @@ export async function payWithCard(formData: FormData): Promise<ActionState | voi
     return checkoutContext;
   }
 
-  const { appUrl, charge, ownerStripeAccount, userId } = checkoutContext;
-  const { baseCents, feeCents, totalCents } = calculateCardFee(charge.amount_cents);
+  const { appUrl, charge, propertyId, ownerStripeAccount, userId } = checkoutContext;
+  const { baseCents, feeCents: cardFeeCents, totalCents } = calculateCardFee(charge.amount_cents);
+
+  let managerFee;
+  try {
+    managerFee = await getManagerFeeForProperty(propertyId, baseCents);
+  } catch (error) {
+    console.error("payWithCard manager fee error:", error);
+    return { success: false, error: "Unable to calculate this payment right now." };
+  }
+
+  let managerStripeAccount = null;
+  if (managerFee.feeCents > 0) {
+    try {
+      managerStripeAccount = await getManagerStripeAccountForProperty(propertyId, baseCents);
+    } catch (error) {
+      console.error("payWithCard manager stripe error:", error);
+      return { success: false, error: "Unable to calculate this payment right now." };
+    }
+  }
+
+  const managerOnboarded = managerStripeAccount !== null;
+  const effectiveManagerFee = managerOnboarded ? managerFee.feeCents : 0;
+  const applicationFeeAmountCents = cardFeeCents + effectiveManagerFee;
 
   let session;
   try {
@@ -178,14 +205,16 @@ export async function payWithCard(formData: FormData): Promise<ActionState | voi
             user_id: userId,
             payment_method: "card",
             transfer_mode: "destination",
-            processing_fee_cents: String(feeCents),
-            base_amount_cents: String(baseCents)
+            processing_fee_cents: String(cardFeeCents),
+            base_amount_cents: String(baseCents),
+            manager_fee_cents: String(effectiveManagerFee),
+            manager_fee_full_cents: String(managerFee.feeCents)
           },
           successUrl: `${appUrl}/payments/success?session_id={CHECKOUT_SESSION_ID}`,
           cancelUrl: `${appUrl}/payments/cancel`,
           paymentMethodTypes: ["card"],
           transferDataDestination: ownerStripeAccount,
-          applicationFeeAmountCents: feeCents
+          applicationFeeAmountCents
         }),
       {
         maxAttempts: 2,
@@ -215,19 +244,43 @@ export async function payWithACH(formData: FormData): Promise<ActionState | void
     return checkoutContext;
   }
 
-  const { appUrl, charge, userId } = checkoutContext;
+  const { appUrl, charge, propertyId, userId } = checkoutContext;
+  const baseCents = charge.amount_cents;
+
+  let managerFee;
+  try {
+    managerFee = await getManagerFeeForProperty(propertyId, baseCents);
+  } catch (error) {
+    console.error("payWithACH manager fee error:", error);
+    return { success: false, error: "Unable to calculate this payment right now." };
+  }
+
+  let managerStripeAccount = null;
+  if (managerFee.feeCents > 0) {
+    try {
+      managerStripeAccount = await getManagerStripeAccountForProperty(propertyId, baseCents);
+    } catch (error) {
+      console.error("payWithACH manager stripe error:", error);
+      return { success: false, error: "Unable to calculate this payment right now." };
+    }
+  }
+
+  const managerOnboarded = managerStripeAccount !== null;
+  const effectiveManagerFee = managerOnboarded ? managerFee.feeCents : 0;
 
   let session;
   try {
     session = await withRetry(
       () =>
         createStripeCheckoutSession({
-          amountCents: charge.amount_cents,
+          amountCents: baseCents,
           metadata: {
             charge_id: charge.id,
             user_id: userId,
             payment_method: "ach",
-            base_amount_cents: String(charge.amount_cents)
+            base_amount_cents: String(baseCents),
+            manager_fee_cents: String(effectiveManagerFee),
+            manager_fee_full_cents: String(managerFee.feeCents)
           },
           successUrl: `${appUrl}/payments/success?session_id={CHECKOUT_SESSION_ID}&method=ach`,
           cancelUrl: `${appUrl}/payments/cancel`,

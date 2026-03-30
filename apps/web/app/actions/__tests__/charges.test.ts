@@ -6,7 +6,9 @@ const revalidatePathMock = vi.hoisted(() => vi.fn());
 const createAdminClientMock = vi.hoisted(() => vi.fn());
 const createStripeCheckoutSessionMock = vi.hoisted(() => vi.fn());
 const calculateCardFeeMock = vi.hoisted(() => vi.fn());
+const getManagerFeeForPropertyMock = vi.hoisted(() => vi.fn());
 const getOwnerStripeAccountForPropertyMock = vi.hoisted(() => vi.fn());
+const getManagerStripeAccountForPropertyMock = vi.hoisted(() => vi.fn());
 const canUserAdministerPropertyMock = vi.hoisted(() => vi.fn());
 const createNotificationWithDeliveryMock = vi.hoisted(() => vi.fn());
 const notifyOwnerMembersForPropertyMock = vi.hoisted(() => vi.fn());
@@ -20,8 +22,14 @@ vi.mock("next/navigation", () => ({ redirect: redirectMock }));
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: createAdminClientMock }));
 vi.mock("@/lib/stripe", () => ({ createStripeCheckoutSession: createStripeCheckoutSessionMock }));
-vi.mock("@/lib/payment-fees", () => ({ calculateCardFee: calculateCardFeeMock }));
-vi.mock("@/lib/stripe-connect", () => ({ getOwnerStripeAccountForProperty: getOwnerStripeAccountForPropertyMock }));
+vi.mock("@/lib/payment-fees", () => ({
+  calculateCardFee: calculateCardFeeMock,
+  getManagerFeeForProperty: getManagerFeeForPropertyMock
+}));
+vi.mock("@/lib/stripe-connect", () => ({
+  getOwnerStripeAccountForProperty: getOwnerStripeAccountForPropertyMock,
+  getManagerStripeAccountForProperty: getManagerStripeAccountForPropertyMock
+}));
 vi.mock("@/lib/property-access", () => ({ canUserAdministerProperty: canUserAdministerPropertyMock }));
 vi.mock("@/lib/notifications", () => ({
   createNotificationWithDelivery: createNotificationWithDeliveryMock,
@@ -41,7 +49,7 @@ vi.mock("@/lib/validations", () => ({
 }));
 vi.mock("@/app/actions/auth-helpers", () => ({ requireAuth: requireAuthMock }));
 
-import { payWithCard, recordManualPayment } from "@/app/actions/charges";
+import { payWithACH, payWithCard, recordManualPayment } from "@/app/actions/charges";
 
 interface CheckoutConfig {
   charge?: { id: string; amount_cents: number; status: string; lease_id: string } | null;
@@ -166,7 +174,12 @@ describe("charges actions", () => {
     });
     checkRateLimitMock.mockReturnValue({ allowed: true, remaining: 10 });
     calculateCardFeeMock.mockReturnValue({ baseCents: 125000, feeCents: 3762, totalCents: 128762 });
+    getManagerFeeForPropertyMock.mockResolvedValue({ feeCents: 11250, managerProfileId: "manager-1" });
     getOwnerStripeAccountForPropertyMock.mockResolvedValue("acct_123");
+    getManagerStripeAccountForPropertyMock.mockResolvedValue({
+      accountId: "acct_manager_123",
+      feeCents: 11250
+    });
     canUserAdministerPropertyMock.mockResolvedValue(true);
     createStripeCheckoutSessionMock.mockResolvedValue({ url: "https://checkout.stripe.test/session" });
     requireAuthMock.mockResolvedValue({
@@ -246,22 +259,71 @@ describe("charges actions", () => {
     await expect(payWithCard(new FormData())).rejects.toThrow("REDIRECT:https://checkout.stripe.test/session");
 
     expect(calculateCardFeeMock).toHaveBeenCalledWith(125000);
+    expect(getManagerFeeForPropertyMock).toHaveBeenCalledWith("property-1", 125000);
     expect(createStripeCheckoutSessionMock).toHaveBeenCalledWith(
       expect.objectContaining({
         amountCents: 128762,
         paymentMethodTypes: ["card"],
         transferDataDestination: "acct_123",
-        applicationFeeAmountCents: 3762,
+        applicationFeeAmountCents: 15012,
         metadata: expect.objectContaining({
           charge_id: "charge-1",
           user_id: "user-1",
           payment_method: "card",
           transfer_mode: "destination",
           processing_fee_cents: "3762",
-          base_amount_cents: "125000"
+          base_amount_cents: "125000",
+          manager_fee_cents: "11250",
+          manager_fee_full_cents: "11250"
         })
       })
     );
+  });
+
+  it("keeps the owner whole when the manager is not Stripe-onboarded for card payments", async () => {
+    parseFormDataMock.mockReturnValueOnce({ success: true, data: { chargeId: "charge-1" } });
+    getManagerStripeAccountForPropertyMock.mockResolvedValueOnce(null);
+
+    await expect(payWithCard(new FormData())).rejects.toThrow("REDIRECT:https://checkout.stripe.test/session");
+
+    expect(createStripeCheckoutSessionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        amountCents: 128762,
+        applicationFeeAmountCents: 3762,
+        metadata: expect.objectContaining({
+          manager_fee_cents: "0",
+          manager_fee_full_cents: "11250"
+        })
+      })
+    );
+  });
+
+  it("creates a bank account checkout session without fees for ACH payments", async () => {
+    parseFormDataMock.mockReturnValueOnce({ success: true, data: { chargeId: "charge-1" } });
+
+    await expect(payWithACH(new FormData())).rejects.toThrow(
+      "REDIRECT:https://checkout.stripe.test/session"
+    );
+
+    const sessionConfig = createStripeCheckoutSessionMock.mock.calls[0]?.[0];
+    expect(sessionConfig).toMatchObject({
+      amountCents: 125000,
+      successUrl: expect.stringContaining("method=ach"),
+      paymentMethodTypes: ["us_bank_account"],
+      transferGroup: "charge_charge-1",
+      metadata: {
+        charge_id: "charge-1",
+        user_id: "user-1",
+        payment_method: "ach",
+        base_amount_cents: "125000",
+        manager_fee_cents: "11250",
+        manager_fee_full_cents: "11250"
+      }
+    });
+    expect(sessionConfig.transferDataDestination).toBeUndefined();
+    expect(sessionConfig.applicationFeeAmountCents).toBeUndefined();
+    expect(sessionConfig.metadata.transfer_mode).toBeUndefined();
+    expect(sessionConfig.metadata.processing_fee_cents).toBeUndefined();
   });
 
   it("returns an error when a manual payment amount is invalid", async () => {
