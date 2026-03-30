@@ -35,6 +35,11 @@ interface Ctx {
   tenantProfile: { id: string; email: string | null } | null;
 }
 
+type CtxResult =
+  | { ok: true; ctx: Ctx }
+  | { ok: false; reason: "not_found" }
+  | { ok: false; reason: "db_error"; error: unknown };
+
 interface PaymentParams {
   supabase: AdminClient;
   chargeId: string;
@@ -58,6 +63,13 @@ function received(status?: string) {
   return NextResponse.json(status ? { received: true, status } : { received: true });
 }
 
+function retryableWebhookError(error: string) {
+  return new NextResponse(JSON.stringify({ error }), {
+    status: 500,
+    headers: { "Content-Type": "application/json" }
+  });
+}
+
 function isConstraintViolation(error: { code?: string; message?: string } | null) {
   return Boolean(
     error &&
@@ -66,41 +78,57 @@ function isConstraintViolation(error: { code?: string; message?: string } | null
   );
 }
 
-async function getCtx(supabase: AdminClient, chargeId: string): Promise<Ctx | null> {
-  const { data: charge } = await supabase
+async function getCtx(supabase: AdminClient, chargeId: string): Promise<CtxResult> {
+  const { data: charge, error: chargeError } = await supabase
     .from("rent_charges")
     .select("id, lease_id, status, due_date, amount_cents")
     .eq("id", chargeId)
     .maybeSingle();
+  if (chargeError) {
+    console.error("[stripe-webhook] getCtx charge query failed:", chargeError);
+    return { ok: false, reason: "db_error", error: chargeError };
+  }
   if (!charge) {
-    return null;
+    return { ok: false, reason: "not_found" };
   }
 
-  const { data: lease } = await supabase
+  const { data: lease, error: leaseError } = await supabase
     .from("leases")
     .select("id, tenant_profile_id, unit_id")
     .eq("id", charge.lease_id)
     .maybeSingle();
+  if (leaseError) {
+    console.error("[stripe-webhook] getCtx lease query failed:", leaseError);
+    return { ok: false, reason: "db_error", error: leaseError };
+  }
   if (!lease) {
-    return null;
+    return { ok: false, reason: "not_found" };
   }
 
-  const { data: unit } = await supabase
+  const { data: unit, error: unitError } = await supabase
     .from("units")
     .select("id, property_id, unit_number")
     .eq("id", lease.unit_id)
     .maybeSingle();
+  if (unitError) {
+    console.error("[stripe-webhook] getCtx unit query failed:", unitError);
+    return { ok: false, reason: "db_error", error: unitError };
+  }
   if (!unit) {
-    return null;
+    return { ok: false, reason: "not_found" };
   }
 
-  const { data: property } = await supabase
+  const { data: property, error: propertyError } = await supabase
     .from("properties")
     .select("id, owner_account_id")
     .eq("id", unit.property_id)
     .maybeSingle();
+  if (propertyError) {
+    console.error("[stripe-webhook] getCtx property query failed:", propertyError);
+    return { ok: false, reason: "db_error", error: propertyError };
+  }
   if (!property) {
-    return null;
+    return { ok: false, reason: "not_found" };
   }
 
   const { data: tenantProfile } = lease.tenant_profile_id
@@ -111,7 +139,7 @@ async function getCtx(supabase: AdminClient, chargeId: string): Promise<Ctx | nu
         .maybeSingle()
     : { data: null };
 
-  return { charge, lease, unit, property, tenantProfile };
+  return { ok: true, ctx: { charge, lease, unit, property, tenantProfile } };
 }
 
 async function isAuthorizedUser(supabase: AdminClient, ctx: Ctx, userId: string) {
@@ -181,11 +209,13 @@ async function insertPaymentRecord(
   throw error;
 }
 
-async function markChargePaid(supabase: AdminClient, chargeId: string) {
+async function markChargePaid(supabase: AdminClient, chargeId: string): Promise<boolean> {
   const { error } = await supabase.from("rent_charges").update({ status: "paid" }).eq("id", chargeId);
   if (error) {
     console.error("[stripe-webhook] markChargePaid:", error);
+    return false;
   }
+  return true;
 }
 
 async function updateAutopay(
@@ -211,6 +241,9 @@ async function createTransfersForPayment(
     managerFeeCentsOverride?: number | null;
   }
 ) {
+  const paymentUpdate: Record<string, string | number> = { platform_fee_cents: 0 };
+  let firstTransferId: string | null = null;
+
   try {
     const ownerStripeAccount = await getOwnerStripeAccountForProperty(params.propertyId);
     if (!ownerStripeAccount) {
@@ -227,8 +260,6 @@ async function createTransfersForPayment(
       : Math.max(managerInfo?.feeCents ?? 0, 0);
     const effectiveFee = Math.min(managementFee, params.amountCents);
     const ownerAmount = params.amountCents - effectiveFee;
-    const paymentUpdate: Record<string, string | number> = { platform_fee_cents: 0 };
-    let firstTransferId: string | null = null;
 
     if (ownerAmount > 0) {
       const { data: property } = await supabase
@@ -334,16 +365,22 @@ async function createTransfersForPayment(
       });
       paymentUpdate.manager_transfer_id = managerTransfer.id;
     }
-
-    const { error } = await supabase
-      .from("payments")
-      .update(paymentUpdate)
-      .eq(params.paymentMatch.column, params.paymentMatch.value);
-    if (error) {
-      console.error("[stripe-webhook] update payment transfer metadata:", error);
-    }
   } catch (transferError) {
     console.error("[stripe-webhook] Transfer creation failed:", transferError);
+  } finally {
+    if (firstTransferId) {
+      paymentUpdate.stripe_transfer_id = firstTransferId;
+    }
+
+    if (Object.keys(paymentUpdate).length > 1 || firstTransferId) {
+      const { error } = await supabase
+        .from("payments")
+        .update(paymentUpdate)
+        .eq(params.paymentMatch.column, params.paymentMatch.value);
+      if (error) {
+        console.error("[stripe-webhook] RECONCILIATION: update payment transfer metadata:", error);
+      }
+    }
   }
 }
 
@@ -456,12 +493,38 @@ async function recordPayment({
     .eq(paymentMatch.column, paymentMatch.value)
     .maybeSingle();
   if (existingPayment) {
+    const ctxResult = await getCtx(supabase, chargeId);
+    if (!ctxResult.ok) {
+      if (ctxResult.reason === "db_error") {
+        console.error(`[stripe-webhook] CRITICAL: getCtx DB failure while repairing charge ${chargeId}`);
+        return retryableWebhookError("db_error");
+      }
+      return received("already_recorded");
+    }
+
+    if (ctxResult.ctx.charge.status !== "paid") {
+      const repaired = await markChargePaid(supabase, ctxResult.ctx.charge.id);
+      if (!repaired) {
+        return retryableWebhookError("charge_status_repair_failed");
+      }
+      console.log(`[stripe-webhook] Repaired charge ${chargeId} status to paid on retry`);
+    }
+
     return received("already_recorded");
   }
 
-  const ctx = await getCtx(supabase, chargeId);
-  if (!ctx || ctx.charge.status === "paid") {
-    return received("charge_already_paid_or_missing");
+  const ctxResult = await getCtx(supabase, chargeId);
+  if (!ctxResult.ok) {
+    if (ctxResult.reason === "db_error") {
+      console.error(`[stripe-webhook] CRITICAL: getCtx DB failure for charge ${chargeId}`);
+      return retryableWebhookError("db_error");
+    }
+    return received("charge_not_found");
+  }
+
+  const ctx = ctxResult.ctx;
+  if (ctx.charge.status === "paid") {
+    return received("charge_already_paid");
   }
   const parsedBase = typeof baseAmountCents === "number" && baseAmountCents > 0
     ? baseAmountCents
@@ -501,7 +564,12 @@ async function recordPayment({
     return received(method === "autopay" ? "autopay_payment_record_failed" : "payment_record_failed");
   }
 
-  await markChargePaid(supabase, ctx.charge.id);
+  const chargePaid = await markChargePaid(supabase, ctx.charge.id);
+  if (!chargePaid) {
+    console.error(`[stripe-webhook] CRITICAL: markChargePaid failed for charge ${ctx.charge.id}. Aborting transfers.`);
+    return retryableWebhookError("charge_status_update_failed");
+  }
+
   if (resetAutopay) {
     const timestamp = new Date().toISOString();
     await updateAutopay(supabase, "lease_id", ctx.lease.id, {
@@ -555,7 +623,7 @@ async function recordPayment({
     }
   }
 
-  queuePaymentNotifications(ctx, amountCents);
+  queuePaymentNotifications(ctx, recordedAmountCents);
   if (queueXp) {
     queuePaymentXp(ctx, userId, method);
   }
@@ -632,7 +700,8 @@ export async function handlePaymentIntentPaymentFailed(supabase: AdminClient, pa
     return received();
   }
 
-  const context = await getCtx(supabase, chargeId);
+  const contextResult = await getCtx(supabase, chargeId);
+  const context = contextResult.ok ? contextResult.ctx : null;
   const tenantProfile = enrollment.tenant_profile_id
     ? await supabase.from("profiles").select("id, email").eq("id", enrollment.tenant_profile_id).maybeSingle()
     : { data: null };
