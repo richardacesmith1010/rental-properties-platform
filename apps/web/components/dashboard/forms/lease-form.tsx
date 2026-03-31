@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useFormState } from "react-dom";
+import { Building2, ClipboardList, UserRound } from "lucide-react";
 import type { StatefulAction, ActionState } from "@/app/actions";
 import type { PortfolioData } from "@/lib/portfolio";
 import { Button } from "@/components/ui/button";
@@ -38,6 +40,9 @@ interface LeaseFormProps {
   onCreateLease: StatefulAction;
   onLeaseCreated?: () => void;
   onBack: () => void;
+  onCreatePropertyAction?: () => void;
+  onAddUnitAction?: (propertyId: string) => void;
+  onInviteTenantAction?: () => void;
 }
 
 function StepPill({ label, active, done, skipped }: { label: string; active: boolean; done: boolean; skipped: boolean }) {
@@ -52,7 +57,17 @@ function StepPill({ label, active, done, skipped }: { label: string; active: boo
   return <div className={`rounded-md border px-2 py-2 text-xs ${className}`}>{label}</div>;
 }
 
-export function LeaseForm({ portfolio, onCreateLease, onLeaseCreated, onBack }: LeaseFormProps) {
+export function LeaseForm({
+  portfolio,
+  onCreateLease,
+  onLeaseCreated,
+  onBack,
+  onCreatePropertyAction,
+  onAddUnitAction,
+  onInviteTenantAction
+}: LeaseFormProps) {
+  const pathname = usePathname();
+  const router = useRouter();
   const [state, action] = useFormState(onCreateLease, null);
   const handledStateRef = useRef<ActionState>(null);
   const [stepIndex, setStepIndex] = useState(0);
@@ -82,6 +97,13 @@ export function LeaseForm({ portfolio, onCreateLease, onLeaseCreated, onBack }: 
         (tenant) => !draft.propertyId || tenant.propertyIds.includes(draft.propertyId)
       ),
     [draft.propertyId, portfolio.tenants]
+  );
+  const selectedProperty =
+    portfolio.properties.find((property) => property.id === draft.propertyId) ?? null;
+  const hasNoProperties = portfolio.properties.length === 0;
+  const hasNoUnitsForSelectedProperty = Boolean(draft.propertyId && unitsForSelectedProperty.length === 0);
+  const hasNoTenantsForSelectedProperty = Boolean(
+    draft.propertyId && draft.unitId && tenantsForSelectedProperty.length === 0
   );
 
   const requiredComplete = useMemo(
@@ -120,6 +142,39 @@ export function LeaseForm({ portfolio, onCreateLease, onLeaseCreated, onBack }: 
     onLeaseCreated?.();
   }, [onLeaseCreated, state]);
 
+  useEffect(() => {
+    if (draft.propertyId || portfolio.properties.length !== 1) {
+      return;
+    }
+    setDraft((current) =>
+      current.propertyId
+        ? current
+        : { ...current, propertyId: portfolio.properties[0]?.id ?? "" }
+    );
+  }, [draft.propertyId, portfolio.properties]);
+
+  useEffect(() => {
+    if (!draft.propertyId || draft.unitId || unitsForSelectedProperty.length !== 1) {
+      return;
+    }
+    setDraft((current) =>
+      current.unitId
+        ? current
+        : { ...current, unitId: unitsForSelectedProperty[0]?.id ?? "" }
+    );
+  }, [draft.propertyId, draft.unitId, unitsForSelectedProperty]);
+
+  useEffect(() => {
+    if (!draft.propertyId || draft.tenantProfileId || tenantsForSelectedProperty.length !== 1) {
+      return;
+    }
+    setDraft((current) =>
+      current.tenantProfileId
+        ? current
+        : { ...current, tenantProfileId: tenantsForSelectedProperty[0]?.id ?? "" }
+    );
+  }, [draft.propertyId, draft.tenantProfileId, tenantsForSelectedProperty]);
+
   const suggestedLateFeeDollars = useMemo(() => {
     const monthlyRent = Number(draft.monthlyRentDollars);
     if (!Number.isFinite(monthlyRent) || monthlyRent <= 0) {
@@ -130,11 +185,62 @@ export function LeaseForm({ portfolio, onCreateLease, onLeaseCreated, onBack }: 
   }, [draft.monthlyRentDollars]);
 
   const effectiveLateFeeDollars = lateFeeTouched ? draft.lateFeeDollars : suggestedLateFeeDollars;
+  const navigateAfterLeave = (callback: () => void) => {
+    onBack();
+    window.setTimeout(callback, 0);
+  };
+  const handleCreateProperty = () => {
+    if (onCreatePropertyAction) {
+      navigateAfterLeave(onCreatePropertyAction);
+      return;
+    }
+    navigateAfterLeave(() => router.push(`${pathname}?section=operations`));
+  };
+  const handleAddUnit = () => {
+    if (onAddUnitAction && draft.propertyId) {
+      navigateAfterLeave(() => onAddUnitAction(draft.propertyId));
+      return;
+    }
+    const propertyParam = draft.propertyId ? `&property=${encodeURIComponent(draft.propertyId)}` : "";
+    navigateAfterLeave(() => router.push(`${pathname}?section=operations${propertyParam}`));
+  };
+  const handleInviteTenant = () => {
+    if (onInviteTenantAction) {
+      navigateAfterLeave(onInviteTenantAction);
+      return;
+    }
+    navigateAfterLeave(() => router.push(`${pathname}?section=invitations`));
+  };
   const next = () => setStepIndex((current) => Math.min(current + 1, LEASE_STEP_LABELS.length - 1));
   const back = () => setStepIndex((current) => Math.max(current - 1, 0));
+  const isStepBlockedByEmptyState =
+    (stepIndex === 0 && hasNoProperties) ||
+    (stepIndex === 1 && hasNoUnitsForSelectedProperty) ||
+    (stepIndex === 2 && hasNoTenantsForSelectedProperty);
 
   const renderStep = () => {
     if (stepIndex === 0) {
+      if (hasNoProperties) {
+        return (
+          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-5">
+            <div className="flex items-start gap-3">
+              <ClipboardList className="mt-0.5 h-5 w-5 text-violet-600" />
+              <div className="space-y-4">
+                <div>
+                  <p className="font-semibold text-zinc-900">No properties found</p>
+                  <p className="mt-1 text-sm text-zinc-600">
+                    You need to create a property before you can set up a lease.
+                  </p>
+                </div>
+                <Button type="button" onClick={handleCreateProperty} title="Open the property setup flow.">
+                  Create Property
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div className="space-y-3">
           <p className="text-sm text-zinc-600">Step 1: Select the property first. Everything else depends on this.</p>
@@ -143,12 +249,30 @@ export function LeaseForm({ portfolio, onCreateLease, onLeaseCreated, onBack }: 
             id="lease-property"
             value={draft.propertyId}
             onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                propertyId: event.target.value,
-                unitId: "",
-                tenantProfileId: ""
-              }))
+              setDraft((current) => {
+                const propertyId = event.target.value;
+                const nextUnits = portfolio.units.filter((unit) => unit.propertyId === propertyId);
+                const nextTenants = portfolio.tenants.filter((tenant) =>
+                  tenant.propertyIds.includes(propertyId)
+                );
+
+                return {
+                  ...current,
+                  propertyId,
+                  unitId:
+                    nextUnits.some((unit) => unit.id === current.unitId)
+                      ? current.unitId
+                      : nextUnits.length === 1
+                        ? nextUnits[0]?.id ?? ""
+                        : "",
+                  tenantProfileId:
+                    nextTenants.some((tenant) => tenant.id === current.tenantProfileId)
+                      ? current.tenantProfileId
+                      : nextTenants.length === 1
+                        ? nextTenants[0]?.id ?? ""
+                        : ""
+                };
+              })
             }
             required
           >
@@ -164,6 +288,27 @@ export function LeaseForm({ portfolio, onCreateLease, onLeaseCreated, onBack }: 
     }
 
     if (stepIndex === 1) {
+      if (hasNoUnitsForSelectedProperty && selectedProperty) {
+        return (
+          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-5">
+            <div className="flex items-start gap-3">
+              <Building2 className="mt-0.5 h-5 w-5 text-violet-600" />
+              <div className="space-y-4">
+                <div>
+                  <p className="font-semibold text-zinc-900">{selectedProperty.name} has no units</p>
+                  <p className="mt-1 text-sm text-zinc-600">
+                    Add a unit to this property before creating a lease.
+                  </p>
+                </div>
+                <Button type="button" variant="outline" onClick={handleAddUnit} title="Open the unit setup flow.">
+                  Add a Unit
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div className="space-y-3">
           <p className="text-sm text-zinc-600">Step 2: Select the unit for this lease.</p>
@@ -188,6 +333,27 @@ export function LeaseForm({ portfolio, onCreateLease, onLeaseCreated, onBack }: 
     }
 
     if (stepIndex === 2) {
+      if (hasNoTenantsForSelectedProperty) {
+        return (
+          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-5">
+            <div className="flex items-start gap-3">
+              <UserRound className="mt-0.5 h-5 w-5 text-violet-600" />
+              <div className="space-y-4">
+                <div>
+                  <p className="font-semibold text-zinc-900">No tenants available</p>
+                  <p className="mt-1 text-sm text-zinc-600">
+                    Invite a tenant to this property first. They&apos;ll receive an email to set up their account.
+                  </p>
+                </div>
+                <Button type="button" onClick={handleInviteTenant} title="Open the tenant invite flow.">
+                  Invite Tenant
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div className="space-y-3">
           <p className="text-sm text-zinc-600">Step 3: Select a tenant linked to this property.</p>
@@ -371,7 +537,11 @@ export function LeaseForm({ portfolio, onCreateLease, onLeaseCreated, onBack }: 
           <Button
             type="button"
             onClick={next}
-            disabled={stepIndex >= LEASE_STEP_LABELS.length - 1 || !stepComplete(stepIndex)}
+            disabled={
+              stepIndex >= LEASE_STEP_LABELS.length - 1 ||
+              !stepComplete(stepIndex) ||
+              isStepBlockedByEmptyState
+            }
             title="Complete this step and move to the next step."
           >
             Next
@@ -383,7 +553,7 @@ export function LeaseForm({ portfolio, onCreateLease, onLeaseCreated, onBack }: 
               setSkippedSteps((previous) => (previous.includes(stepIndex) ? previous : [...previous, stepIndex]));
               next();
             }}
-            disabled={stepIndex >= LEASE_STEP_LABELS.length - 1}
+            disabled={stepIndex >= LEASE_STEP_LABELS.length - 1 || isStepBlockedByEmptyState}
             title="Skip this step for now and continue."
           >
             Skip for now

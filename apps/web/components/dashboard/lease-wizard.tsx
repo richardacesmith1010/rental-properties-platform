@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, FileText } from "lucide-react";
 import { toast } from "sonner";
 import type { ActionState } from "@/app/actions";
@@ -111,7 +111,10 @@ interface LeaseWizardProps {
   selectedPropertyId?: string | null;
   onOpenChange: (open: boolean) => void;
   onCreateLease: StatefulAction;
-  onInviteTenant?: StatefulAction;
+  onSendTenantInvite?: StatefulAction;
+  onCreatePropertyAction?: () => void;
+  onAddUnitAction?: (propertyId: string) => void;
+  onInviteTenantAction?: () => void;
   onOpenSection: (sectionId: string) => void;
 }
 
@@ -124,13 +127,17 @@ export function LeaseWizard({
   selectedPropertyId,
   onOpenChange,
   onCreateLease,
-  onInviteTenant,
+  onSendTenantInvite,
+  onCreatePropertyAction,
+  onAddUnitAction,
+  onInviteTenantAction,
   onOpenSection
 }: LeaseWizardProps) {
+  const pathname = usePathname();
   const router = useRouter();
   const [step, setStep] = useState<LeaseWizardStep>(0);
   const [draft, setDraft] = useState<LeaseWizardDraft>(() =>
-    createDefaultLeaseWizardDraft({ properties, units, leases, selectedPropertyId })
+    createDefaultLeaseWizardDraft({ properties, units, leases, tenants, selectedPropertyId })
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -150,6 +157,7 @@ export function LeaseWizard({
           properties: propertiesRef.current,
           units: unitsRef.current,
           leases: leasesRef.current,
+          tenants,
           selectedPropertyId
         })
       );
@@ -158,7 +166,7 @@ export function LeaseWizard({
     prevOpenRef.current = open;
     // Reset only on closed -> open transitions so parent refreshes do not blow away wizard state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, selectedPropertyId]);
+  }, [open, selectedPropertyId, tenants]);
 
   const availableUnits = useMemo(
     () => getVacantUnitsForProperty(units, leases, draft.propertyId),
@@ -184,8 +192,59 @@ export function LeaseWizard({
   const currentStepError = getLeaseWizardStepError({
     step,
     draft,
-    availableUnits: availableUnits.length
+    availableUnits: availableUnits.length,
+    availableTenants: availableTenants.length
   });
+  const isBlockedByEmptyState =
+    (step === 0 && (properties.length === 0 || Boolean(draft.propertyId && availableUnits.length === 0))) ||
+    (step === 2 && availableTenants.length === 0);
+
+  useEffect(() => {
+    if (draft.propertyId || properties.length !== 1) {
+      return;
+    }
+    setDraft((current) =>
+      current.propertyId
+        ? current
+        : {
+            ...current,
+            propertyId: properties[0]?.id ?? ""
+          }
+    );
+  }, [draft.propertyId, properties]);
+
+  useEffect(() => {
+    if (!draft.propertyId || draft.unitId || availableUnits.length !== 1) {
+      return;
+    }
+    setDraft((current) =>
+      current.unitId
+        ? current
+        : {
+            ...current,
+            unitId: availableUnits[0]?.id ?? ""
+          }
+    );
+  }, [availableUnits, draft.propertyId, draft.unitId]);
+
+  useEffect(() => {
+    if (
+      !draft.propertyId ||
+      draft.tenantMode !== "existing" ||
+      draft.tenantProfileId ||
+      availableTenants.length !== 1
+    ) {
+      return;
+    }
+    setDraft((current) =>
+      current.tenantProfileId
+        ? current
+        : {
+            ...current,
+            tenantProfileId: availableTenants[0]?.id ?? ""
+          }
+    );
+  }, [availableTenants, draft.propertyId, draft.tenantMode, draft.tenantProfileId]);
 
   const handlePropertyChange = (propertyId: string) => {
     const propertyUnits = getVacantUnitsForProperty(units, leases, propertyId);
@@ -196,10 +255,14 @@ export function LeaseWizard({
       propertyId,
       unitId: propertyUnits.some((unit) => unit.id === current.unitId)
         ? current.unitId
-        : propertyUnits[0]?.id ?? "",
+        : propertyUnits.length === 1
+          ? propertyUnits[0]?.id ?? ""
+          : "",
       tenantProfileId: propertyTenants.some((tenant) => tenant.id === current.tenantProfileId)
         ? current.tenantProfileId
-        : "",
+        : propertyTenants.length === 1
+          ? propertyTenants[0]?.id ?? ""
+          : "",
       tenantSearch: ""
     }));
     setErrorMessage(null);
@@ -209,11 +272,56 @@ export function LeaseWizard({
     onOpenChange(false);
   };
 
+  const handleResolveAction = (callback: () => void) => {
+    handleClose();
+    window.setTimeout(callback, 0);
+  };
+
+  const handleCreateProperty = () => {
+    if (onCreatePropertyAction) {
+      handleResolveAction(onCreatePropertyAction);
+      return;
+    }
+    handleResolveAction(() => router.push(`${pathname}?section=operations`));
+  };
+
+  const handleAddUnit = (propertyId: string) => {
+    if (onAddUnitAction) {
+      handleResolveAction(() => onAddUnitAction(propertyId));
+      return;
+    }
+    const propertyParam = propertyId ? `&property=${encodeURIComponent(propertyId)}` : "";
+    handleResolveAction(() => router.push(`${pathname}?section=operations${propertyParam}`));
+  };
+
+  const handleInviteTenant = () => {
+    if (onInviteTenantAction) {
+      handleResolveAction(onInviteTenantAction);
+      return;
+    }
+    handleResolveAction(() => router.push(`${pathname}?section=invitations`));
+  };
+
   const handleCreateLease = () => {
     const validationError =
-      getLeaseWizardStepError({ step: 0, draft, availableUnits: availableUnits.length }) ??
-      getLeaseWizardStepError({ step: 1, draft, availableUnits: availableUnits.length }) ??
-      getLeaseWizardStepError({ step: 2, draft, availableUnits: availableUnits.length });
+      getLeaseWizardStepError({
+        step: 0,
+        draft,
+        availableUnits: availableUnits.length,
+        availableTenants: availableTenants.length
+      }) ??
+      getLeaseWizardStepError({
+        step: 1,
+        draft,
+        availableUnits: availableUnits.length,
+        availableTenants: availableTenants.length
+      }) ??
+      getLeaseWizardStepError({
+        step: 2,
+        draft,
+        availableUnits: availableUnits.length,
+        availableTenants: availableTenants.length
+      });
 
     if (validationError) {
       setErrorMessage(validationError);
@@ -225,7 +333,7 @@ export function LeaseWizard({
       let tenantProfileId = draft.tenantProfileId;
 
       if (draft.tenantMode === "invite_new") {
-        if (!onInviteTenant) {
+        if (!onSendTenantInvite) {
           setErrorMessage("Tenant invitations are unavailable for this workspace.");
           return;
         }
@@ -239,7 +347,7 @@ export function LeaseWizard({
         inviteFormData.set("leaseStartDate", draft.startDate);
         inviteFormData.set("leaseEndDate", effectiveEndDate);
 
-        const inviteResult = await onInviteTenant(null, inviteFormData);
+        const inviteResult = await onSendTenantInvite(null, inviteFormData);
         if (!inviteResult?.success) {
           setErrorMessage(inviteResult?.error ?? "Unable to invite this tenant right now.");
           return;
@@ -330,6 +438,8 @@ export function LeaseWizard({
               draft={draft}
               onPropertyChange={handlePropertyChange}
               onUnitChange={(unitId) => setDraft((current) => ({ ...current, unitId }))}
+              onCreatePropertyAction={handleCreateProperty}
+              onAddUnitAction={handleAddUnit}
             />
           ) : null}
 
@@ -342,6 +452,7 @@ export function LeaseWizard({
               draft={draft}
               tenants={availableTenants}
               onDraftChange={setDraft}
+              onInviteTenantAction={handleInviteTenant}
             />
           ) : null}
 
@@ -382,7 +493,7 @@ export function LeaseWizard({
             </Button>
             <Button
               type="button"
-              disabled={isPending}
+              disabled={isPending || isBlockedByEmptyState}
               onClick={handleNext}
               className="w-full sm:w-auto"
               title={

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useFormState } from "react-dom";
 import type { StatefulAction, ActionState } from "@/app/actions";
 import type { PortfolioData } from "@/lib/portfolio";
@@ -33,6 +33,7 @@ interface UnitFormProps {
   onCreateUnit: StatefulAction;
   onUnitCreated?: () => void;
   onBack: () => void;
+  initialPropertyId?: string | null;
 }
 
 function StepPill({ label, active, done, skipped }: { label: string; active: boolean; done: boolean; skipped: boolean }) {
@@ -47,13 +48,26 @@ function StepPill({ label, active, done, skipped }: { label: string; active: boo
   return <div className={`rounded-md border px-2 py-2 text-xs ${className}`}>{label}</div>;
 }
 
-export function UnitForm({ portfolio, onCreateUnit, onUnitCreated, onBack }: UnitFormProps) {
+export function UnitForm({
+  portfolio,
+  onCreateUnit,
+  onUnitCreated,
+  onBack,
+  initialPropertyId = null
+}: UnitFormProps) {
+  const getDefaultPropertyId = useCallback(
+    () =>
+      initialPropertyId && portfolio.properties.some((property) => property.id === initialPropertyId)
+        ? initialPropertyId
+        : "",
+    [initialPropertyId, portfolio.properties]
+  );
   const [state, action] = useFormState(onCreateUnit, null);
   const handledStateRef = useRef<ActionState>(null);
   const [stepIndex, setStepIndex] = useState(0);
   const [skippedSteps, setSkippedSteps] = useState<number[]>([]);
   const [draft, setDraft] = useState<UnitDraft>({
-    propertyId: "",
+    propertyId: getDefaultPropertyId(),
     unitNumber: "",
     bedrooms: "1",
     bathrooms: "1",
@@ -81,14 +95,25 @@ export function UnitForm({ portfolio, onCreateUnit, onUnitCreated, onBack }: Uni
     setStepIndex(0);
     setSkippedSteps([]);
     setDraft({
-      propertyId: "",
+      propertyId: getDefaultPropertyId(),
       unitNumber: "",
       bedrooms: "1",
       bathrooms: "1",
       monthlyRentDollars: ""
     });
     onUnitCreated?.();
-  }, [onUnitCreated, state]);
+  }, [getDefaultPropertyId, onUnitCreated, state]);
+
+  useEffect(() => {
+    const nextPropertyId = getDefaultPropertyId();
+    if (!nextPropertyId || draft.propertyId) {
+      return;
+    }
+    setDraft((current) => ({
+      ...current,
+      propertyId: nextPropertyId
+    }));
+  }, [draft.propertyId, getDefaultPropertyId]);
 
   const handleEnterAdvance = (
     event: KeyboardEvent<HTMLInputElement | HTMLSelectElement>,

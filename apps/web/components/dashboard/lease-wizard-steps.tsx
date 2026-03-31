@@ -1,4 +1,12 @@
-import { Building2, CalendarDays, CheckCircle2, DoorOpen, Mail, UserRound } from "lucide-react";
+import {
+  Building2,
+  CalendarDays,
+  CheckCircle2,
+  ClipboardList,
+  DoorOpen,
+  Mail,
+  UserRound
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -55,16 +63,45 @@ export function LeaseWizardStepOne({
   availableUnits,
   draft,
   onPropertyChange,
-  onUnitChange
+  onUnitChange,
+  onCreatePropertyAction,
+  onAddUnitAction
 }: {
   properties: PropertyListItem[];
   availableUnits: UnitListItem[];
   draft: LeaseWizardDraft;
   onPropertyChange: (propertyId: string) => void;
   onUnitChange: (unitId: string) => void;
+  onCreatePropertyAction: () => void;
+  onAddUnitAction: (propertyId: string) => void;
 }) {
   const selectedProperty = properties.find((property) => property.id === draft.propertyId) ?? null;
   const selectedUnit = availableUnits.find((unit) => unit.id === draft.unitId) ?? null;
+
+  if (properties.length === 0) {
+    return (
+      <div className="rounded-2xl border border-border bg-muted/40 p-5 text-sm">
+        <div className="flex items-start gap-3">
+          <ClipboardList className="mt-0.5 h-5 w-5 text-primary" />
+          <div className="space-y-4">
+            <div>
+              <p className="font-medium text-foreground">No properties found</p>
+              <p className="mt-1 text-muted-foreground">
+                You need to create a property before you can set up a lease.
+              </p>
+            </div>
+            <Button
+              type="button"
+              onClick={onCreatePropertyAction}
+              title="Open the property setup flow."
+            >
+              Create Property
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -93,30 +130,49 @@ export function LeaseWizardStepOne({
           ) : null}
         </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground" htmlFor="lease-wizard-unit">
-            Vacant unit
-          </label>
-          <Select
-            id="lease-wizard-unit"
-            value={draft.unitId}
-            onChange={(event) => onUnitChange(event.target.value)}
-            disabled={!draft.propertyId || availableUnits.length === 0}
-            title="Choose a vacant unit for this lease."
-          >
-            <option value="">Select unit</option>
-            {availableUnits.map((unit) => (
-              <option key={unit.id} value={unit.id}>
-                {unit.unitNumber}
-              </option>
-            ))}
-          </Select>
-          {draft.propertyId && availableUnits.length === 0 ? (
-            <p className="text-xs text-amber-600">
-              This property has no vacant units available right now.
-            </p>
-          ) : null}
-        </div>
+        {selectedProperty && availableUnits.length === 0 ? (
+          <div className="rounded-2xl border border-border bg-muted/40 p-4 text-sm">
+            <div className="flex items-start gap-3">
+              <Building2 className="mt-0.5 h-4 w-4 text-primary" />
+              <div className="space-y-4">
+                <div>
+                  <p className="font-medium text-foreground">{selectedProperty.name} has no units</p>
+                  <p className="mt-1 text-muted-foreground">
+                    Add a unit to this property before creating a lease.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onAddUnitAction(selectedProperty.id)}
+                  title={`Open the unit setup flow for ${selectedProperty.name}.`}
+                >
+                  Add a Unit
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground" htmlFor="lease-wizard-unit">
+              Vacant unit
+            </label>
+            <Select
+              id="lease-wizard-unit"
+              value={draft.unitId}
+              onChange={(event) => onUnitChange(event.target.value)}
+              disabled={!draft.propertyId || availableUnits.length === 0}
+              title="Choose a vacant unit for this lease."
+            >
+              <option value="">Select unit</option>
+              {availableUnits.map((unit) => (
+                <option key={unit.id} value={unit.id}>
+                  {unit.unitNumber}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
       </div>
 
       {selectedUnit ? (
@@ -314,11 +370,13 @@ export function LeaseWizardStepTwo({
 export function LeaseWizardStepThree({
   draft,
   tenants,
-  onDraftChange
+  onDraftChange,
+  onInviteTenantAction
 }: {
   draft: LeaseWizardDraft;
   tenants: TenantOption[];
   onDraftChange: (draft: LeaseWizardDraft) => void;
+  onInviteTenantAction: () => void;
 }) {
   const filteredTenants = draft.tenantSearch.trim()
     ? tenants.filter((tenant) => {
@@ -329,6 +387,31 @@ export function LeaseWizardStepThree({
       })
     : tenants;
   const selectedTenant = tenants.find((tenant) => tenant.id === draft.tenantProfileId) ?? null;
+
+  if (tenants.length === 0) {
+    return (
+      <div className="rounded-2xl border border-border bg-muted/40 p-5 text-sm">
+        <div className="flex items-start gap-3">
+          <UserRound className="mt-0.5 h-5 w-5 text-primary" />
+          <div className="space-y-4">
+            <div>
+              <p className="font-medium text-foreground">No tenants available</p>
+              <p className="mt-1 text-muted-foreground">
+                Invite a tenant to this property first. They&apos;ll get an email to set up their account.
+              </p>
+            </div>
+            <Button
+              type="button"
+              onClick={onInviteTenantAction}
+              title="Open the tenant invite flow."
+            >
+              Invite Tenant
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">

@@ -81,16 +81,25 @@ export function createDefaultLeaseWizardDraft(params: {
   properties: PropertyListItem[];
   units: UnitListItem[];
   leases: LeaseListItem[];
+  tenants: TenantOption[];
   selectedPropertyId?: string | null;
 }): LeaseWizardDraft {
   const propertyId =
     (params.selectedPropertyId &&
       params.properties.some((property) => property.id === params.selectedPropertyId)
       ? params.selectedPropertyId
-      : params.properties[0]?.id) ?? "";
-  const unitId = propertyId
-    ? getVacantUnitsForProperty(params.units, params.leases, propertyId)[0]?.id ?? ""
-    : "";
+      : params.properties.length === 1
+        ? params.properties[0]?.id
+        : "") ?? "";
+  const availableUnits = propertyId
+    ? getVacantUnitsForProperty(params.units, params.leases, propertyId)
+    : [];
+  const availableTenants = propertyId
+    ? getTenantsForProperty(params.tenants, propertyId)
+    : [];
+  const unitId = availableUnits.length === 1 ? availableUnits[0]?.id ?? "" : "";
+  const tenantProfileId =
+    availableTenants.length === 1 ? availableTenants[0]?.id ?? "" : "";
   const startDate = firstOfNextMonth();
 
   return {
@@ -105,7 +114,7 @@ export function createDefaultLeaseWizardDraft(params: {
     gracePeriodDays: "5",
     lateFeeDollars: "0",
     tenantMode: "existing",
-    tenantProfileId: "",
+    tenantProfileId,
     tenantSearch: "",
     tenantFullName: "",
     tenantEmail: ""
@@ -121,8 +130,9 @@ export function getLeaseWizardStepError(params: {
   step: LeaseWizardStep;
   draft: LeaseWizardDraft;
   availableUnits: number;
+  availableTenants: number;
 }) {
-  const { step, draft, availableUnits } = params;
+  const { step, draft, availableUnits, availableTenants } = params;
 
   if (step === 0) {
     if (!draft.propertyId) {
@@ -154,6 +164,9 @@ export function getLeaseWizardStepError(params: {
   }
 
   if (step === 2) {
+    if (availableTenants === 0) {
+      return "Invite a tenant to this property first.";
+    }
     if (draft.tenantMode === "existing") {
       if (!draft.tenantProfileId) {
         return "Select an existing tenant or switch to invite a new tenant.";

@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { DashboardLayout } from "./dashboard-layout";
 import { useDashboardData } from "./dashboard-data-loader";
+import type { OperationTask } from "./operations-section";
 import { SectionRenderer } from "./section-renderer";
 import type { DashboardProps } from "./types";
 
@@ -91,6 +92,8 @@ function PageHeader({
 
 export function Dashboard(props: DashboardProps) {
   const router = useRouter();
+  const [initialOperationsTask, setInitialOperationsTask] = useState<OperationTask | undefined>(undefined);
+  const [initialOperationsPropertyId, setInitialOperationsPropertyId] = useState<string | null>(null);
   const {
     activeSection,
     activeSectionIndex,
@@ -331,7 +334,28 @@ export function Dashboard(props: DashboardProps) {
                 }
               }}
               onCreateLease={props.onCreateLease}
-              onInviteTenant={props.onInviteTenant}
+              onSendTenantInvite={props.onInviteTenant}
+              onCreatePropertyAction={() => {
+                closeLeaseWizard();
+                setInitialOperationsTask(undefined);
+                setInitialOperationsPropertyId(null);
+                openPropertyWizard();
+              }}
+              onAddUnitAction={(propertyId) => {
+                closeLeaseWizard();
+                setInitialOperationsTask("unit");
+                setInitialOperationsPropertyId(propertyId);
+                sectionRendererProps.onSelectProperty(propertyId);
+                sectionRendererProps.openSection("operations");
+              }}
+              onInviteTenantAction={() => {
+                closeLeaseWizard();
+                setInitialOperationsTask(undefined);
+                setInitialOperationsPropertyId(null);
+                closePropertyWizard();
+                closeTenantInviteWizard();
+                sectionRendererProps.openSection("invitations");
+              }}
               onOpenSection={sectionRendererProps.openSection}
             />
           ) : null}
@@ -459,7 +483,15 @@ export function Dashboard(props: DashboardProps) {
                     />
                   ) : (
                     <div className="min-h-full">
-                      <SectionRenderer {...sectionRendererProps} />
+                      <SectionRenderer
+                        {...sectionRendererProps}
+                        initialOperationsTask={initialOperationsTask}
+                        initialOperationsPropertyId={initialOperationsPropertyId}
+                        onInitialOperationsStateConsumed={() => {
+                          setInitialOperationsTask(undefined);
+                          setInitialOperationsPropertyId(null);
+                        }}
+                      />
                     </div>
                   )}
                 </section>
@@ -545,7 +577,15 @@ export function Dashboard(props: DashboardProps) {
                     </div>
                   ) : (
                     <div className="min-h-full">
-                      <SectionRenderer {...sectionRendererProps} />
+                      <SectionRenderer
+                        {...sectionRendererProps}
+                        initialOperationsTask={initialOperationsTask}
+                        initialOperationsPropertyId={initialOperationsPropertyId}
+                        onInitialOperationsStateConsumed={() => {
+                          setInitialOperationsTask(undefined);
+                          setInitialOperationsPropertyId(null);
+                        }}
+                      />
                     </div>
                   )}
                 </section>

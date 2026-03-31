@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { StatefulAction } from "@/app/actions";
 import type { PortfolioData } from "@/lib/portfolio";
 import type { OwnershipAccountDTO } from "@/lib/ownership";
@@ -17,9 +17,12 @@ export interface OperationsSectionProps {
   onPropertyCreated?: () => void;
   onUnitCreated?: () => void;
   onLeaseCreated?: () => void;
+  initialTask?: OperationTask;
+  initialPropertyId?: string | null;
+  onInitialStateConsumed?: () => void;
 }
 
-type OperationTask = "property" | "unit" | "lease" | null;
+export type OperationTask = "property" | "unit" | "lease" | null;
 
 const tasks = [
   {
@@ -47,22 +50,39 @@ export function OperationsSection({
   onCreateLease,
   onPropertyCreated,
   onUnitCreated,
-  onLeaseCreated
+  onLeaseCreated,
+  initialTask,
+  initialPropertyId = null,
+  onInitialStateConsumed
 }: OperationsSectionProps) {
-  const [task, setTask] = useState<OperationTask>("property");
+  const [task, setTask] = useState<OperationTask>(initialTask ?? "property");
+  const [unitPropertyId, setUnitPropertyId] = useState<string | null>(initialPropertyId);
+
+  useEffect(() => {
+    if (!initialTask && !initialPropertyId) {
+      return;
+    }
+
+    setTask(initialTask ?? "property");
+    setUnitPropertyId(initialPropertyId ?? null);
+    onInitialStateConsumed?.();
+  }, [initialPropertyId, initialTask, onInitialStateConsumed]);
 
   const handlePropertyCreated = () => {
     onPropertyCreated?.();
+    setUnitPropertyId(null);
     setTask("unit");
   };
 
   const handleUnitCreated = () => {
     onUnitCreated?.();
+    setUnitPropertyId(null);
     setTask("lease");
   };
 
   const handleLeaseCreated = () => {
     onLeaseCreated?.();
+    setUnitPropertyId(null);
     setTask("lease");
   };
 
@@ -77,7 +97,10 @@ export function OperationsSection({
               type="button"
               size="sm"
               variant={task === item.id ? "default" : "outline"}
-              onClick={() => setTask(item.id)}
+              onClick={() => {
+                setUnitPropertyId(null);
+                setTask(item.id);
+              }}
               title={item.description}
             >
               {item.title}
@@ -92,7 +115,10 @@ export function OperationsSection({
             <button
               key={item.id}
               type="button"
-              onClick={() => setTask(item.id)}
+              onClick={() => {
+                setUnitPropertyId(null);
+                setTask(item.id);
+              }}
               className="domus-card p-5 text-left transition-transform duration-150 hover:-translate-y-0.5"
               title={item.description}
             >
@@ -115,6 +141,7 @@ export function OperationsSection({
       {task === "unit" ? (
         <UnitForm
           portfolio={portfolio}
+          initialPropertyId={unitPropertyId}
           onCreateUnit={onCreateUnit}
           onUnitCreated={handleUnitCreated}
           onBack={() => setTask(null)}
@@ -127,6 +154,14 @@ export function OperationsSection({
           onCreateLease={onCreateLease}
           onLeaseCreated={handleLeaseCreated}
           onBack={() => setTask(null)}
+          onCreatePropertyAction={() => {
+            setUnitPropertyId(null);
+            setTask("property");
+          }}
+          onAddUnitAction={(propertyId) => {
+            setUnitPropertyId(propertyId);
+            setTask("unit");
+          }}
         />
       ) : null}
     </div>

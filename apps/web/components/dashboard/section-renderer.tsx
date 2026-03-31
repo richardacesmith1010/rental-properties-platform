@@ -10,7 +10,7 @@ import { LeasingHubSection } from "./leasing-hub-section";
 import { LeasesSection } from "./leases-section";
 import { ManagerPaymentsSection } from "./manager-payments-section";
 import { MaintenanceSection } from "./maintenance-section";
-import { OperationsSection } from "./operations-section";
+import { OperationsSection, type OperationTask } from "./operations-section";
 import { PaymentsSection } from "./payments-section";
 import { OverviewSectionContent, PortfolioSectionContent, SectionFrame } from "./section-renderer-support";
 import { UnitsSection } from "./units-section";
@@ -37,7 +37,14 @@ const {
   members: MembersSection,
   automations: AutomationTemplatesSection
 } = lazySectionComponents;
-export function SectionRenderer(props: SectionRendererProps) {
+
+interface SectionRendererComponentProps extends SectionRendererProps {
+  initialOperationsTask?: OperationTask;
+  initialOperationsPropertyId?: string | null;
+  onInitialOperationsStateConsumed?: () => void;
+}
+
+export function SectionRenderer(props: SectionRendererComponentProps) {
   const propertyOptions = props.safePortfolio.properties.map((property) => ({
     id: property.id,
     name: property.name
@@ -406,6 +413,9 @@ export function SectionRenderer(props: SectionRendererProps) {
           onPropertyCreated={props.handlePropertyCreated}
           onUnitCreated={props.handleUnitCreated}
           onLeaseCreated={props.handleLeaseCreated}
+          initialTask={props.initialOperationsTask}
+          initialPropertyId={props.initialOperationsPropertyId}
+          onInitialStateConsumed={props.onInitialOperationsStateConsumed}
         />
       );
 
