@@ -16,6 +16,7 @@ import { getApplicationsForUser, type ApplicationDTO } from "@/lib/applications"
 import { getOwnerVendors } from "@/lib/vendors";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import {
+  getActiveLlcMembershipsForUser,
   getOwnershipAccountsForUser,
   getOwnershipMembersForAccount,
   getPendingAccountDeleteRequests,
@@ -225,6 +226,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
     analytics,
     auditLogs,
     rentIncreaseHistory,
+    llcPayoutMemberships,
     newFeedbackCount
   ] = await Promise.all([
     getDashboardData(user.id, activeAccountId),
@@ -268,6 +270,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
     getOwnerAnalyticsData(user.id, activeAccountId),
     getRecentAuditLogs(user.id, activeAccountId),
     getRentIncreaseHistory(user.id, activeAccountId),
+    getActiveLlcMembershipsForUser(user.id),
     getNewFeedbackCountForOwner(user.email)
   ]);
 
@@ -326,9 +329,9 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         tickets={tickets}
         invitations={invitations}
         documents={documents}
-      notifications={notifications}
-      notificationPreferenceSettings={notificationPreferenceSettings}
-      inboxThreads={inboxThreads}
+        notifications={notifications}
+        notificationPreferenceSettings={notificationPreferenceSettings}
+        inboxThreads={inboxThreads}
         automationTemplates={automationTemplates}
         automationRules={automationRules}
         listings={listings}
@@ -347,6 +350,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         managerPaymentsWarning={managerPaymentsData.warning}
         ownershipAccounts={ownershipAccounts}
         ownershipMembers={ownershipMembers}
+        llcPayoutMemberships={llcPayoutMemberships}
         pendingLlcInvitations={pendingLlcInvitations}
         pendingAccountRenameRequests={pendingAccountRenameRequests}
         pendingAccountDeleteRequests={pendingAccountDeleteRequests}
@@ -373,16 +377,16 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         onCreateUnit={createUnit}
         onCreateLease={createLease}
         onRenameProperty={renameProperty}
-      onUpdateProperty={updatePropertyDetails}
-      onDeleteProperty={deleteProperty}
-      onUpdateUnitField={updateUnitField}
-      onUpdateUnit={updateUnitDetails}
-      onDeleteUnit={deleteUnit}
-      onUpdateLease={updateLeaseDetails}
-      onUpdateRentAmount={updateRentAmount}
-      onUpdateTenantDisplayInfo={updateTenantDisplayInfo}
-      onUpdateManagerInfo={updateManagerInfo}
-      onDeleteLease={deleteLease}
+        onUpdateProperty={updatePropertyDetails}
+        onDeleteProperty={deleteProperty}
+        onUpdateUnitField={updateUnitField}
+        onUpdateUnit={updateUnitDetails}
+        onDeleteUnit={deleteUnit}
+        onUpdateLease={updateLeaseDetails}
+        onUpdateRentAmount={updateRentAmount}
+        onUpdateTenantDisplayInfo={updateTenantDisplayInfo}
+        onUpdateManagerInfo={updateManagerInfo}
+        onDeleteLease={deleteLease}
         onRenewLease={renewLease}
         onTerminateLease={terminateLease}
         onPayCharge={payWithCard as (formData: FormData) => Promise<void>}
@@ -400,10 +404,10 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         onInviteOwner={inviteOwner}
         onResendInvite={resendInvite}
         onRevokeInvite={revokeInvite}
-      onMarkNotificationRead={markNotificationRead}
-      onMarkAllNotificationsRead={markAllNotificationsRead}
-      onResumeNotificationEmails={resumeNotificationEmails}
-      onSendBatchPaymentReminder={sendBatchPaymentReminder}
+        onMarkNotificationRead={markNotificationRead}
+        onMarkAllNotificationsRead={markAllNotificationsRead}
+        onResumeNotificationEmails={resumeNotificationEmails}
+        onSendBatchPaymentReminder={sendBatchPaymentReminder}
         onCreateInboxThread={createInboxThread}
         onSendMessageToTenant={sendMessageToTenant}
         onSendInboxMessage={sendInboxMessage}

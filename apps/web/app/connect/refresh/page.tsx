@@ -45,7 +45,7 @@ export default async function ConnectRefreshPage({ searchParams }: ConnectRefres
       <main className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
         <div className="w-full max-w-lg rounded-2xl border border-amber-200 bg-white p-8 shadow-sm">
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-            Stripe onboarding unavailable
+            Bank connection unavailable
           </h1>
           <p className="mt-2 text-sm text-zinc-600">
             Payment processing is temporarily unavailable. Please try again later.
@@ -57,12 +57,12 @@ export default async function ConnectRefreshPage({ searchParams }: ConnectRefres
 
   const result = memberPayout
     ? await (async () => {
-        if (!accountId || !profileId) {
+        if (!accountId) {
           return { success: false, error: "Missing payout onboarding details." } as const;
         }
         const formData = new FormData();
         formData.set("accountId", accountId);
-        formData.set("profileId", profileId);
+        formData.set("profileId", profileId ?? user.id);
         return initiateMemberPayoutConnect(null, formData);
       })()
     : accountId
@@ -81,7 +81,7 @@ export default async function ConnectRefreshPage({ searchParams }: ConnectRefres
       <div className="w-full max-w-lg rounded-2xl border border-red-200 bg-white p-8 shadow-sm">
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Unable to refresh onboarding link</h1>
         <p className="mt-2 text-sm text-zinc-600">
-          {result && !result.success ? result.error : "Stripe onboarding could not be restarted right now."}
+          {result && !result.success ? result.error : "Your bank connection could not be restarted right now."}
         </p>
       </div>
     </main>

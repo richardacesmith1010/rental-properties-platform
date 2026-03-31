@@ -13,7 +13,10 @@ import { getManagerVendors } from "@/lib/vendors";
 import { getOwnerExpenseData } from "@/lib/expenses";
 import { getOwnerAnalyticsData } from "@/lib/analytics";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
-import { getOwnershipAccountsForUser } from "@/lib/ownership";
+import {
+  getActiveLlcMembershipsForUser,
+  getOwnershipAccountsForUser
+} from "@/lib/ownership";
 import { getUserGamification } from "@/lib/gamification";
 import { getRecentAuditLogs } from "@/lib/audit";
 import { getRentIncreaseHistory } from "@/lib/rent-increases";
@@ -156,6 +159,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
     applications,
     vendors,
     ownershipAccounts,
+    llcPayoutMemberships,
     gamification,
     expenses,
     analytics,
@@ -200,6 +204,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       capabilities.ownershipEnabled
         ? getOwnershipAccountsForUser(user.id)
         : Promise.resolve([]),
+      getActiveLlcMembershipsForUser(user.id),
       getUserGamification(user.id),
       getOwnerExpenseData(user.id),
       getOwnerAnalyticsData(user.id),
@@ -232,6 +237,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       gamification={gamification}
       vendors={vendors}
       ownershipAccounts={ownershipAccounts}
+      llcPayoutMemberships={llcPayoutMemberships}
       expensesData={expenses}
       analyticsData={analytics}
       auditLogs={auditLogs}

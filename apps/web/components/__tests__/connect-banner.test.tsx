@@ -27,4 +27,23 @@ describe("ConnectBanner", () => {
 
     expect(screen.getByText("Connect your bank account to receive management fee payments.")).toBeInTheDocument();
   });
+
+  it("routes LLC members to the payout connect flow", () => {
+    render(
+      <ConnectBanner
+        connected={false}
+        role="owner"
+        llcMembershipDetected
+        llcAccountId="llc_123"
+      />
+    );
+
+    expect(screen.getByRole("link", { name: "Connect Now" })).toHaveAttribute(
+      "href",
+      "/connect/onboard?accountId=llc_123&memberPayout=true"
+    );
+    expect(
+      screen.getByText("Connect your bank to receive rent payouts.")
+    ).toBeInTheDocument();
+  });
 });

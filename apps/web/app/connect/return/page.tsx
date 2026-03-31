@@ -108,29 +108,31 @@ export default async function ConnectReturnPage({ searchParams }: ConnectReturnP
       : "/manager?section=ownership"
     : getRoleHomePath(role);
   const retryPath =
-    accountId && memberPayout && profileId
-      ? `/connect/onboard?accountId=${encodeURIComponent(accountId)}&memberPayout=true&profileId=${encodeURIComponent(profileId)}`
+    accountId && memberPayout
+      ? profileId
+        ? `/connect/onboard?accountId=${encodeURIComponent(accountId)}&memberPayout=true&profileId=${encodeURIComponent(profileId)}`
+        : `/connect/onboard?accountId=${encodeURIComponent(accountId)}&memberPayout=true`
       : accountId
         ? `/connect/onboard?accountId=${encodeURIComponent(accountId)}`
         : "/connect/onboard";
   const result =
-    memberPayout && accountId && profileId
-      ? await checkMemberPayoutStatus(accountId, profileId)
+    memberPayout && accountId
+      ? await checkMemberPayoutStatus(accountId, profileId ?? user.id)
       : await checkConnectStatus(accountId);
   const unableToVerifyTitle = memberPayout
     ? "Unable to verify payout connection"
     : "Unable to verify bank connection";
   const connectedTitle = memberPayout ? "Payout Account Connected" : "Bank Account Connected";
   const connectedDescription = memberPayout
-    ? "This member can now receive LLC distribution transfers."
+    ? "This bank account is ready to receive rent payouts."
     : "You'll now receive rent payments directly to your bank account.";
   const almostThereDescription = memberPayout
-    ? "Stripe is reviewing this payout account. This usually takes a few minutes."
-    : "Stripe is reviewing your information. This usually takes a few minutes.";
+    ? "We're still reviewing this bank account. This usually takes a few minutes."
+    : "We're still reviewing your bank account. This usually takes a few minutes.";
   const incompleteTitle = memberPayout ? "Payout Onboarding Incomplete" : "Onboarding Incomplete";
   const incompleteDescription = memberPayout
-    ? "This payout onboarding was not finished. Start again to complete the member payout account."
-    : "Your Stripe onboarding was not finished. Start again to complete your bank connection.";
+    ? "This bank connection was not finished. Start again to receive rent payouts."
+    : "Your bank connection was not finished. Start again to complete it.";
 
   if (!result || !result.success) {
     return (

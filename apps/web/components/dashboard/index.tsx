@@ -151,6 +151,20 @@ export function Dashboard(props: DashboardProps) {
     ? `${activeSectionIndex + 1} of ${sectionItems.length}`
     : null;
   const assistantAccountId = props.activeAccountId ?? props.ownershipAccounts?.[0]?.id ?? "";
+  const activeLlcPayoutMembership =
+    props.activeAccountId
+      ? props.llcPayoutMemberships?.find((membership) => membership.accountId === props.activeAccountId) ?? null
+      : (props.llcPayoutMemberships?.length ?? 0) === 1
+        ? props.llcPayoutMemberships?.[0] ?? null
+        : null;
+  const hasLlcPayoutMembership = props.activeAccountId
+    ? activeLlcPayoutMembership !== null
+    : (props.llcPayoutMemberships?.length ?? 0) > 0;
+  const llcBannerConnected = hasLlcPayoutMembership
+    ? activeLlcPayoutMembership?.payoutStripeConnected ??
+      (!props.activeAccountId &&
+      (props.llcPayoutMemberships?.every((membership) => membership.payoutStripeConnected) ?? false))
+    : props.stripeConnected === true;
   const showOwnerDailyOpsShell = isOwnerRole && isOwnerDailyOpsEnabled;
   const showLlcSetupPrompt = Boolean(
     isOwnerRole && isOwnerDailyOpsEnabled && isOwnerDailyOpsHomePage && llcSetupPrompt.shouldShow
@@ -225,7 +239,11 @@ export function Dashboard(props: DashboardProps) {
         sectionRendererProps.openSection("leases");
         return;
       case "bank":
-        window.location.href = "/connect/onboard";
+        window.location.href = hasLlcPayoutMembership
+          ? activeLlcPayoutMembership?.accountId
+            ? `/connect/onboard?accountId=${encodeURIComponent(activeLlcPayoutMembership.accountId)}&memberPayout=true`
+            : "/connect/onboard?memberPayout=true"
+          : "/connect/onboard";
         return;
       default:
         sectionRendererProps.openSection("overview");
@@ -240,7 +258,14 @@ export function Dashboard(props: DashboardProps) {
       >
         <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
         <div className="w-full max-w-3xl space-y-4">
-          {props.stripeConnected === false ? <ConnectBanner connected={false} role="owner" /> : null}
+          {llcBannerConnected === false ? (
+            <ConnectBanner
+              connected={false}
+              role="owner"
+              llcMembershipDetected={hasLlcPayoutMembership}
+              llcAccountId={activeLlcPayoutMembership?.accountId ?? null}
+            />
+          ) : null}
           <WelcomeCard
             displayName={displayName}
             steps={ownerOnboarding.steps}
@@ -329,8 +354,13 @@ export function Dashboard(props: DashboardProps) {
     >
       <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 pb-3 pt-3 sm:px-4 sm:pb-4 sm:pt-4 lg:px-8 lg:pb-8 lg:pt-8">
-        {(isOwnerRole || isManagerRole) && props.stripeConnected === false ? (
-          <ConnectBanner connected={false} role={isOwnerRole ? "owner" : "manager"} />
+        {(isOwnerRole || isManagerRole) && llcBannerConnected === false ? (
+          <ConnectBanner
+            connected={false}
+            role={isOwnerRole ? "owner" : "manager"}
+            llcMembershipDetected={hasLlcPayoutMembership}
+            llcAccountId={activeLlcPayoutMembership?.accountId ?? null}
+          />
         ) : null}
         {props.generatedMessage ? (
           <Alert variant="success" className="mt-3 rounded-xl px-4 py-3">

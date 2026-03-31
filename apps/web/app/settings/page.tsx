@@ -36,6 +36,7 @@ import {
   getUserNotificationPreferenceSettings,
   NOTIFICATION_EMAIL_PREFERENCE_OPTIONS
 } from "@/lib/notification-preferences";
+import { getActiveLlcMembershipsForUser } from "@/lib/ownership";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +55,16 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     role === "tenant" ? getAutopayEnrollments(user.id) : Promise.resolve([]),
     getUserNotificationPreferenceSettings(user.id)
   ]);
+  const llcMemberships =
+    role === "owner" || role === "manager"
+      ? await getActiveLlcMembershipsForUser(user.id)
+      : [];
+  const singleLlcMembership = llcMemberships.length === 1 ? llcMemberships[0] : null;
+  const llcMembershipDetected = llcMemberships.length > 0;
+  const llcPayoutConnected = llcMembershipDetected
+    ? singleLlcMembership?.payoutStripeConnected ??
+      llcMemberships.every((membership) => membership.payoutStripeConnected)
+    : false;
   const connectMessage =
     typeof searchParams?.connect === "string"
       ? searchParams.connect
@@ -131,13 +142,17 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             },
             bank: {
               title: "Bank Account",
-              description: "Manage where your Stripe payouts are delivered.",
+              description: "Manage where your payouts go.",
               content: (
                 <BankSettings
                   stripeConnected={profile.stripeOnboardingComplete}
                   stripeAccountId={profile.stripeAccountId}
                   role={role === "tenant" ? "owner" : role}
                   onGetExpressDashboardUrl={getExpressDashboardUrl}
+                  llcMembershipDetected={llcMembershipDetected}
+                  llcPayoutConnected={llcPayoutConnected}
+                  llcAccountId={singleLlcMembership?.accountId ?? null}
+                  llcAccountName={singleLlcMembership?.accountName ?? null}
                 />
               )
             },

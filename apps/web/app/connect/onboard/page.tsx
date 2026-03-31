@@ -1,9 +1,11 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   initiateAccountStripeConnect,
   initiateMemberPayoutConnect,
   initiateStripeConnect
 } from "@/app/actions";
+import { getActiveLlcMembershipsForUser } from "@/lib/ownership";
 import { getAuthenticatedUser, getCurrentUserRole, getRoleHomePath, getUserProfileSummary } from "@/lib/auth";
 import { isStripeConfigured } from "@/lib/env";
 
@@ -20,16 +22,16 @@ interface ConnectOnboardPageProps {
 export default async function ConnectOnboardPage({ searchParams }: ConnectOnboardPageProps) {
   const user = await getAuthenticatedUser();
   const role = await getCurrentUserRole(user.id);
-  const accountId =
+  const requestedAccountId =
     typeof searchParams?.accountId === "string"
       ? searchParams.accountId
       : Array.isArray(searchParams?.accountId)
         ? searchParams.accountId[0] ?? null
         : null;
-  const memberPayout =
+  const requestedMemberPayout =
     (typeof searchParams?.memberPayout === "string" && searchParams.memberPayout === "true") ||
     (Array.isArray(searchParams?.memberPayout) && searchParams.memberPayout[0] === "true");
-  const profileId =
+  const requestedProfileId =
     typeof searchParams?.profileId === "string"
       ? searchParams.profileId
       : Array.isArray(searchParams?.profileId)
@@ -45,7 +47,7 @@ export default async function ConnectOnboardPage({ searchParams }: ConnectOnboar
       <main className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
         <div className="w-full max-w-lg rounded-2xl border border-amber-200 bg-white p-8 shadow-sm">
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-            Stripe onboarding unavailable
+            Bank connection unavailable
           </h1>
           <p className="mt-2 text-sm text-zinc-600">
             Payment processing is temporarily unavailable. Please try again later.
@@ -55,25 +57,69 @@ export default async function ConnectOnboardPage({ searchParams }: ConnectOnboar
     );
   }
 
+  const llcMemberships =
+    requestedMemberPayout || !requestedAccountId
+      ? await getActiveLlcMembershipsForUser(user.id)
+      : [];
+  const singleLlcMembership = llcMemberships.length === 1 ? llcMemberships[0] : null;
+  const effectiveMemberPayout =
+    requestedMemberPayout || (!requestedAccountId && llcMemberships.length > 0);
+  const effectiveAccountId = requestedAccountId ?? singleLlcMembership?.accountId ?? null;
   const profile = await getUserProfileSummary(user.id);
-  if (!accountId && profile.stripeOnboardingComplete) {
+  if (!effectiveMemberPayout && !effectiveAccountId && profile.stripeOnboardingComplete) {
     redirect("/settings?connect=ready");
   }
 
-  const result = memberPayout
+  if (effectiveMemberPayout && !effectiveAccountId && llcMemberships.length > 1) {
+    return (
+      <main className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
+        <div className="w-full max-w-2xl rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
+            Which account are you connecting for?
+          </h1>
+          <p className="mt-2 text-sm text-zinc-600">
+            Pick the LLC that should receive your rent payouts.
+          </p>
+          <div className="mt-6 space-y-3">
+            {llcMemberships.map((membership) => (
+              <Link
+                key={membership.accountId}
+                href={`/connect/onboard?accountId=${encodeURIComponent(membership.accountId)}&memberPayout=true`}
+                className="flex items-center justify-between rounded-xl border border-zinc-200 px-4 py-3 text-left transition hover:border-violet-300 hover:bg-violet-50"
+              >
+                <div>
+                  <p className="font-semibold text-zinc-900">{membership.accountName}</p>
+                  <p className="mt-1 text-sm text-zinc-600">
+                    {membership.payoutStripeConnected
+                      ? "Your payout account is connected."
+                      : "Connect your bank account to receive your share of rent."}
+                  </p>
+                </div>
+                <span className="text-sm font-semibold text-violet-700">
+                  {membership.payoutStripeConnected ? "Manage" : "Connect"}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  const result = effectiveMemberPayout
     ? await (async () => {
-        if (!accountId || !profileId) {
-          return { success: false, error: "Missing payout onboarding details." } as const;
+        if (!effectiveAccountId) {
+          return { success: false, error: "We could not find an LLC account to connect." } as const;
         }
         const formData = new FormData();
-        formData.set("accountId", accountId);
-        formData.set("profileId", profileId);
+        formData.set("accountId", effectiveAccountId);
+        formData.set("profileId", requestedProfileId ?? user.id);
         return initiateMemberPayoutConnect(null, formData);
       })()
-    : accountId
+    : effectiveAccountId
       ? await (async () => {
         const formData = new FormData();
-        formData.set("accountId", accountId);
+        formData.set("accountId", effectiveAccountId);
         return initiateAccountStripeConnect(null, formData);
       })()
       : await initiateStripeConnect();
@@ -86,7 +132,7 @@ export default async function ConnectOnboardPage({ searchParams }: ConnectOnboar
       <div className="w-full max-w-lg rounded-2xl border border-red-200 bg-white p-8 shadow-sm">
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Unable to start bank connection</h1>
         <p className="mt-2 text-sm text-zinc-600">
-          {result && !result.success ? result.error : "Stripe onboarding could not be started right now."}
+          {result && !result.success ? result.error : "Your bank connection could not be started right now."}
         </p>
       </div>
     </main>

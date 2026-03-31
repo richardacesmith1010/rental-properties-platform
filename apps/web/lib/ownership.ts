@@ -29,6 +29,12 @@ export interface OwnershipMemberDTO {
   payoutStripeConnected: boolean;
 }
 
+export interface ActiveLlcMembershipDTO {
+  accountId: string;
+  accountName: string;
+  payoutStripeConnected: boolean;
+}
+
 export interface AccountRenameRequestDTO {
   id: string;
   ownershipAccountId: string;
@@ -238,6 +244,62 @@ export async function getOwnershipAccountsForUser(userId: string): Promise<Owner
     bankMask: account.plaid_bank_mask ?? null,
     balanceCents: account.plaid_balance_cents ?? null,
     balanceUpdatedAt: account.plaid_balance_updated_at ?? null
+  }));
+}
+
+export async function getActiveLlcMembershipsForUser(
+  userId: string
+): Promise<ActiveLlcMembershipDTO[]> {
+  const admin = createAdminClient();
+
+  const membershipQuery = () =>
+    admin
+      .from("ownership_account_members")
+      .select("account_id, payout_stripe_account_id")
+      .eq("profile_id", userId)
+      .eq("active", true)
+      .is("deleted_at", null);
+
+  let membershipRowsResult = await membershipQuery();
+  if (membershipRowsResult.error && isMissingSchemaError(membershipRowsResult.error)) {
+    membershipRowsResult = await admin
+      .from("ownership_account_members")
+      .select("account_id, payout_stripe_account_id")
+      .eq("profile_id", userId)
+      .eq("active", true);
+  }
+
+  if (membershipRowsResult.error) {
+    throw membershipRowsResult.error;
+  }
+
+  const membershipRows = membershipRowsResult.data ?? [];
+  const accountIds = unique(membershipRows.map((row) => row.account_id));
+  if (accountIds.length === 0) {
+    return [];
+  }
+
+  const { data: accounts, error: accountsError } = await admin
+    .from("ownership_accounts")
+    .select("id, display_name, account_type")
+    .in("id", accountIds)
+    .eq("account_type", "llc")
+    .order("created_at", { ascending: true });
+
+  if (accountsError) {
+    throw accountsError;
+  }
+
+  const membershipByAccountId = new Map(
+    membershipRows.map((row) => [row.account_id, row])
+  );
+
+  return (accounts ?? []).map((account) => ({
+    accountId: account.id,
+    accountName: account.display_name,
+    payoutStripeConnected: Boolean(
+      membershipByAccountId.get(account.id)?.payout_stripe_account_id
+    )
   }));
 }
 

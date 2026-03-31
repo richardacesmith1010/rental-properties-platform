@@ -9,6 +9,7 @@ import type { OwnerDocumentsData } from "@/lib/documents";
 import type { VendorDTO } from "@/lib/vendors";
 import type { FeatureCapabilitiesDTO } from "@/lib/feature-capabilities";
 import type {
+  ActiveLlcMembershipDTO,
   AccountDeleteRequestDTO,
   AccountRenameRequestDTO,
   OwnershipAccountDTO,
@@ -56,6 +57,7 @@ export interface DashboardProps {
   capabilities?: FeatureCapabilitiesDTO;
   ownershipAccounts?: OwnershipAccountDTO[];
   ownershipMembers?: OwnershipMemberDTO[];
+  llcPayoutMemberships?: ActiveLlcMembershipDTO[];
   pendingLlcInvitations?: LLCInvitationDTO[];
   pendingAccountRenameRequests?: AccountRenameRequestDTO[];
   pendingAccountDeleteRequests?: AccountDeleteRequestDTO[];

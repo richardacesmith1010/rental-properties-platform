@@ -164,17 +164,36 @@ export async function initiateMemberPayoutConnect(
     if (typeof accountId !== "string" || accountId.length === 0) {
       return { success: false, error: "Missing account ID." };
     }
-    if (typeof profileId !== "string" || profileId.length === 0) {
-      return { success: false, error: "Missing member profile ID." };
-    }
     if (!checkRateLimit(`initiateMemberPayoutConnect:${user.id}`, 5, 60 * 60 * 1000).allowed) {
       return { success: false, error: "Too many requests. Please try again later." };
     }
 
+    const requestedProfileId =
+      typeof profileId === "string" && profileId.length > 0 ? profileId : user.id;
+    const isSelfService = requestedProfileId === user.id;
+
     const { canUserAdministerOwnershipAccount } = await import("@/lib/ownership");
-    const canAdmin = await canUserAdministerOwnershipAccount(user.id, accountId);
-    if (!canAdmin) {
-      return { success: false, error: "Access denied." };
+    if (isSelfService) {
+      const admin = createAdminClient();
+      const membershipCheck = await admin
+        .from("ownership_account_members")
+        .select("account_id")
+        .eq("account_id", accountId)
+        .eq("profile_id", user.id)
+        .eq("active", true)
+        .maybeSingle();
+
+      if (membershipCheck.error) {
+        return { success: false, error: "Unable to verify your membership right now." };
+      }
+      if (!membershipCheck.data) {
+        return { success: false, error: "You are not a member of this account." };
+      }
+    } else {
+      const canAdmin = await canUserAdministerOwnershipAccount(user.id, accountId);
+      if (!canAdmin) {
+        return { success: false, error: "Access denied." };
+      }
     }
 
     const admin = createAdminClient();
@@ -182,7 +201,7 @@ export async function initiateMemberPayoutConnect(
       .from("ownership_account_members")
       .select("profile_id, payout_stripe_account_id")
       .eq("account_id", accountId)
-      .eq("profile_id", profileId)
+      .eq("profile_id", isSelfService ? user.id : requestedProfileId)
       .eq("active", true)
       .maybeSingle();
 
@@ -195,7 +214,7 @@ export async function initiateMemberPayoutConnect(
       const { data: profile } = await admin
         .from("profiles")
         .select("email")
-        .eq("id", profileId)
+        .eq("id", isSelfService ? user.id : requestedProfileId)
         .maybeSingle();
 
       if (!profile?.email) {
@@ -209,7 +228,7 @@ export async function initiateMemberPayoutConnect(
         .from("ownership_account_members")
         .update({ payout_stripe_account_id: stripeAccountId })
         .eq("account_id", accountId)
-        .eq("profile_id", profileId);
+        .eq("profile_id", isSelfService ? user.id : requestedProfileId);
 
       if (error) {
         return { success: false, error: "Failed to save payout account." };
@@ -218,11 +237,13 @@ export async function initiateMemberPayoutConnect(
 
     const appUrl = getAppUrl();
     const encodedAccountId = encodeURIComponent(accountId);
-    const encodedProfileId = encodeURIComponent(profileId);
+    const payoutQuery = isSelfService
+      ? `accountId=${encodedAccountId}&memberPayout=true`
+      : `accountId=${encodedAccountId}&memberPayout=true&profileId=${encodeURIComponent(requestedProfileId)}`;
     const accountLink = await createAccountLink(
       stripeAccountId,
-      `${appUrl}/connect/refresh?accountId=${encodedAccountId}&memberPayout=true&profileId=${encodedProfileId}`,
-      `${appUrl}/connect/return?accountId=${encodedAccountId}&memberPayout=true&profileId=${encodedProfileId}`
+      `${appUrl}/connect/refresh?${payoutQuery}`,
+      `${appUrl}/connect/return?${payoutQuery}`
     );
 
     return { success: true, url: accountLink.url };
