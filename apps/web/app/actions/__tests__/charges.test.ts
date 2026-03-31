@@ -59,7 +59,7 @@ interface CheckoutConfig {
 }
 
 interface ManualConfig {
-  charge?: { id: string; lease_id: string; due_date: string; status: string } | null;
+  charge?: { id: string; lease_id: string; due_date: string; status: string; amount_cents: number } | null;
   lease?: { id: string; tenant_profile_id: string; unit_id: string } | null;
   unit?: { id: string; property_id: string; unit_number: string } | null;
   tenantProfile?: { id: string; email: string } | null;
@@ -112,6 +112,7 @@ function createManualAdminClient(config: ManualConfig): SupabaseClient {
       }
 
       if (table === "rent_charges") {
+        const chargeUpdateEq = vi.fn().mockResolvedValue({ error: config.chargeUpdateError ?? null });
         return {
           select: vi.fn(() => ({
             eq: vi.fn(() => ({
@@ -122,7 +123,10 @@ function createManualAdminClient(config: ManualConfig): SupabaseClient {
             }))
           })),
           update: vi.fn(() => ({
-            eq: vi.fn().mockResolvedValue({ error: config.chargeUpdateError ?? null })
+            eq: chargeUpdateEq,
+            in: vi.fn(() => ({
+              eq: chargeUpdateEq
+            }))
           }))
         };
       }
@@ -194,7 +198,13 @@ describe("charges actions", () => {
     });
     createAdminClientMock.mockReturnValue(
       createManualAdminClient({
-        charge: { id: "charge-1", lease_id: "lease-1", due_date: "2026-03-01", status: "pending" },
+        charge: {
+          id: "charge-1",
+          lease_id: "lease-1",
+          due_date: "2026-03-01",
+          status: "pending",
+          amount_cents: 125000
+        },
         lease: { id: "lease-1", tenant_profile_id: "tenant-1", unit_id: "unit-1" },
         unit: { id: "unit-1", property_id: "property-1", unit_number: "1A" },
         tenantProfile: { id: "tenant-1", email: "tenant@example.com" }
@@ -354,7 +364,13 @@ describe("charges actions", () => {
     });
     createAdminClientMock.mockReturnValueOnce(
       createManualAdminClient({
-        charge: { id: "charge-1", lease_id: "lease-1", due_date: "2026-03-01", status: "paid" }
+        charge: {
+          id: "charge-1",
+          lease_id: "lease-1",
+          due_date: "2026-03-01",
+          status: "paid",
+          amount_cents: 125000
+        }
       })
     );
 
@@ -378,6 +394,25 @@ describe("charges actions", () => {
     const result = await recordManualPayment(null, new FormData());
 
     expect(result).toEqual({ success: false, error: "Access denied." });
+  });
+
+  it("rejects partial manual payments", async () => {
+    parseFormDataMock.mockReturnValueOnce({
+      success: true,
+      data: {
+        chargeId: "charge-1",
+        amountDollars: 1200,
+        method: "cash",
+        referenceNote: ""
+      }
+    });
+
+    const result = await recordManualPayment(null, new FormData());
+
+    expect(result).toEqual({
+      success: false,
+      error: "Payment amount must match the charge amount exactly."
+    });
   });
 
   it("returns success for a valid manual payment", async () => {

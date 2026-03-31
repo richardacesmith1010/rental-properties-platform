@@ -215,14 +215,25 @@ export async function deleteLease(_prev: ActionState, formData: FormData): Promi
   const parsed = parseFormData(deleteLeaseSchema, formData);
   if (!parsed.success) return parsed;
 
-  const { data: lease } = await supabase.from("leases").select("id, unit_id, tenant_profile_id, active").eq("id", parsed.data.leaseId).single();
+  const { data: lease } = await supabase
+    .from("leases")
+    .select("id, unit_id, tenant_profile_id, active, lease_status")
+    .eq("id", parsed.data.leaseId)
+    .single();
   if (!lease) return { success: false, error: "Lease not found." };
 
   const { data: unit } = await supabase.from("units").select("id, property_id").eq("id", lease.unit_id).single();
   if (!unit) return { success: false, error: "Unit not found for this lease." };
   if (!(await canUserAdministerProperty(user.id, unit.property_id))) return { success: false, error: "You do not have access to this lease." };
 
-  const { error: leaseError } = await supabase.from("leases").update({ active: false }).eq("id", parsed.data.leaseId);
+  const nextLeaseStatus =
+    lease.lease_status === "expired" || lease.lease_status === "renewed" || lease.lease_status === "terminated"
+      ? lease.lease_status
+      : "terminated";
+  const { error: leaseError } = await supabase
+    .from("leases")
+    .update({ active: false, lease_status: nextLeaseStatus })
+    .eq("id", parsed.data.leaseId);
   if (leaseError) return { success: false, error: "Failed to archive lease. Please try again." };
 
   const { error: unitError } = await supabase.from("units").update({ occupied: false }).eq("id", lease.unit_id);

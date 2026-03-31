@@ -159,7 +159,7 @@ async function updateLeaseStatuses(supabase: SupabaseClient, propertyIds: string
   if (expiringSoonLeaseIds.length > 0) {
     const { error } = await supabase
       .from("leases")
-      .update({ lease_status: "expiring_soon" })
+      .update({ lease_status: "expiring_soon", active: true })
       .in("id", expiringSoonLeaseIds)
       .eq("active", true);
     if (error) {
@@ -244,7 +244,8 @@ export async function applyLateFeesToOverdueCharges(
   const { error: lateUpdateError } = await supabase
     .from("rent_charges")
     .update({ status: "late" })
-    .in("id", lateChargeIds);
+    .in("id", lateChargeIds)
+    .in("status", ["pending"]);
   if (lateUpdateError) {
     throw lateUpdateError;
   }
@@ -253,7 +254,8 @@ export async function applyLateFeesToOverdueCharges(
     .from("rent_charges")
     .select("id, parent_charge_id")
     .in("parent_charge_id", lateChargeIds)
-    .eq("category", "late_fee");
+    .eq("category", "late_fee")
+    .is("deleted_at", null);
   if (existingLateFeeError) {
     throw existingLateFeeError;
   }
@@ -281,7 +283,7 @@ export async function applyLateFeesToOverdueCharges(
 
   if (lateFeeInserts.length > 0) {
     const { error: lateFeeInsertError } = await supabase.from("rent_charges").insert(lateFeeInserts);
-    if (lateFeeInsertError) {
+    if (lateFeeInsertError && lateFeeInsertError.code !== "23505") {
       throw lateFeeInsertError;
     }
   }
@@ -410,7 +412,8 @@ export async function generateMonthlyChargesForPropertyIdsWithClient(
     .select("lease_id, due_date")
     .in("lease_id", leaseIds)
     .in("due_date", targetDueDates)
-    .eq("category", "rent");
+    .eq("category", "rent")
+    .is("deleted_at", null);
   if (existingChargesError) {
     throw existingChargesError;
   }
@@ -433,7 +436,7 @@ export async function generateMonthlyChargesForPropertyIdsWithClient(
 
   if (inserts.length > 0) {
     const { error } = await supabase.from("rent_charges").insert(inserts);
-    if (error) throw error;
+    if (error && error.code !== "23505") throw error;
   }
   await applyLateFeesToOverdueCharges(supabase, leaseIds, todayIso);
   await updateLeaseStatuses(supabase, propertyIds);

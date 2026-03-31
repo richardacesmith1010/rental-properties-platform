@@ -455,6 +455,7 @@ export async function waiveCharge(
     const { error } = await admin
       .from("rent_charges")
       .update({ status: "waived" })
+      .in("status", ["pending", "late"])
       .eq("id", parsed.data.chargeId);
     if (error) {
       if (isMissingSchemaError(error) || error.message?.includes("rent_charges_status_check")) {

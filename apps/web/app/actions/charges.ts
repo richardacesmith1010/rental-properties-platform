@@ -372,10 +372,10 @@ export async function recordManualPayment(
     return { success: false, error: "Waived charges cannot be paid." };
   }
 
-  if (amountCents > charge.amount_cents) {
+  if (amountCents !== charge.amount_cents) {
     return {
       success: false,
-      error: `Payment amount ($${amountDollars.toFixed(2)}) exceeds the charge amount ($${(charge.amount_cents / 100).toFixed(2)}).`
+      error: "Payment amount must match the charge amount exactly."
     };
   }
 
@@ -423,6 +423,7 @@ export async function recordManualPayment(
   const { error: chargeUpdateError } = await admin
     .from("rent_charges")
     .update({ status: "paid" })
+    .in("status", ["pending", "late"])
     .eq("id", charge.id);
 
   if (chargeUpdateError) {

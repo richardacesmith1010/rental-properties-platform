@@ -210,11 +210,44 @@ async function insertPaymentRecord(
 }
 
 async function markChargePaid(supabase: AdminClient, chargeId: string): Promise<boolean> {
-  const { error } = await supabase.from("rent_charges").update({ status: "paid" }).eq("id", chargeId);
+  const { error, count } = await supabase
+    .from("rent_charges")
+    .update({ status: "paid" }, { count: "exact" })
+    .eq("id", chargeId)
+    .in("status", ["pending", "late"])
+    .select("id");
   if (error) {
     console.error("[stripe-webhook] markChargePaid:", error);
     return false;
   }
+
+  if (count === 0) {
+    const { data: current, error: currentError } = await supabase
+      .from("rent_charges")
+      .select("status")
+      .eq("id", chargeId)
+      .maybeSingle();
+
+    if (currentError) {
+      console.error("[stripe-webhook] markChargePaid reread:", currentError);
+      return false;
+    }
+
+    if (current?.status === "paid") {
+      return true;
+    }
+
+    if (current?.status === "waived") {
+      console.warn(`[stripe-webhook] markChargePaid: charge ${chargeId} was waived; proceeding`);
+      return true;
+    }
+
+    console.error(
+      `[stripe-webhook] markChargePaid: charge ${chargeId} in unexpected state '${current?.status ?? "missing"}'`
+    );
+    return false;
+  }
+
   return true;
 }
 
@@ -777,7 +810,8 @@ export async function handleAsyncPaymentFailed(
     const { error } = await supabase
       .from("rent_charges")
       .update({ status: "pending" })
-      .eq("id", chargeId);
+      .eq("id", chargeId)
+      .in("status", ["paid"]);
     if (error) {
       console.error(`[stripe-webhook] Failed to revert charge ${chargeId}:`, error);
     } else {

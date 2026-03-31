@@ -47,7 +47,12 @@ function createAdminMock(config: MockAdminConfig = {}) {
   const rentChargeInsertSelect = vi.fn(() => ({ single: rentChargeInsertSingle }));
   const rentChargeInsert = vi.fn(() => ({ select: rentChargeInsertSelect }));
   const rentChargeUpdateEq = vi.fn().mockResolvedValue({ error: config.rentChargeUpdateError ?? null });
-  const rentChargeUpdate = vi.fn(() => ({ eq: rentChargeUpdateEq }));
+  const rentChargeUpdate = vi.fn(() => ({
+    eq: rentChargeUpdateEq,
+    in: vi.fn(() => ({
+      eq: rentChargeUpdateEq
+    }))
+  }));
   const rentChargeSelectMaybeSingle = vi.fn().mockResolvedValue({ data: config.charge ?? null, error: null });
   const rentChargeSelectSingle = vi.fn().mockResolvedValue({ data: config.charge ?? null, error: null });
   const rentChargeSelectBuilder = {
