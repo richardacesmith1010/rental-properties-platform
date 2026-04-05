@@ -184,4 +184,22 @@ describe("LeasesSection", () => {
 
     expect(screen.getByRole("button", { name: "Message Taylor Tenant" })).toBeInTheDocument();
   });
+
+  it("opens an inline activity panel for the selected lease row", async () => {
+    const onGetTenantActivityLog = vi.fn().mockResolvedValue([]);
+
+    render(
+      <LeasesSection
+        leases={[activeLease]}
+        showControls
+        onCreateTenantActivity={async () => ({ success: true, message: "Saved." })}
+        onGetTenantActivityLog={onGetTenantActivityLog}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Activity" }));
+
+    expect(await screen.findByText("Activity for Taylor Tenant")).toBeInTheDocument();
+    expect(onGetTenantActivityLog).toHaveBeenCalledWith("tenant-1", "property-1");
+  });
 });

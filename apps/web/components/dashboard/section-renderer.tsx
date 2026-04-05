@@ -451,6 +451,8 @@ export function SectionRenderer(props: SectionRendererComponentProps) {
           onDeleteLease={props.onDeleteLease}
           onRenewLease={props.onRenewLease}
           onTerminateLease={props.onTerminateLease}
+          onCreateTenantActivity={props.onCreateTenantActivity}
+          onGetTenantActivityLog={props.onGetTenantActivityLog}
           onGoToOperations={() => props.goToSectionIfVisible("operations")}
           onOpenLeaseWizard={props.openLeaseWizard}
           previewCount={props.isOwnerDailyOpsCarousel ? 4 : undefined}

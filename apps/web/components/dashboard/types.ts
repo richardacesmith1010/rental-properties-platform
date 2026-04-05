@@ -33,10 +33,15 @@ import type {
   ManagerPaymentDTO
 } from "@/lib/manager-payments";
 import type { ActionState } from "@/app/actions";
+import type { TenantActivityEntry } from "@/app/actions/tenant-activity";
 import type { ManagerWorkflowMode, OwnerWorkflowMode } from "./dashboard-config";
 
 export type FormAction = (formData: FormData) => Promise<void>;
 export type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
+export type TenantActivityLoader = (
+  tenantProfileId: string,
+  propertyId: string
+) => Promise<TenantActivityEntry[]>;
 
 export interface DashboardProps {
   data: DashboardData;
@@ -108,6 +113,8 @@ export interface DashboardProps {
   onDeleteLease?: StatefulAction;
   onRenewLease?: StatefulAction;
   onTerminateLease?: StatefulAction;
+  onCreateTenantActivity?: StatefulAction;
+  onGetTenantActivityLog?: TenantActivityLoader;
   onPayCharge: FormAction;
   onDeletePendingCharge?: StatefulAction;
   onEditCharge?: StatefulAction;

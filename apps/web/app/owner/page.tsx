@@ -44,6 +44,8 @@ import {
   submitDistributionChangeRequest,
   submitWithdrawalRequest,
   payWithCard,
+  createTenantActivity,
+  getTenantActivityLog,
   createManualCharge,
   createPropertyWithSetup,
   deletePendingCharge,
@@ -387,9 +389,11 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         onUpdateTenantDisplayInfo={updateTenantDisplayInfo}
         onUpdateManagerInfo={updateManagerInfo}
         onDeleteLease={deleteLease}
-        onRenewLease={renewLease}
-        onTerminateLease={terminateLease}
-        onPayCharge={payWithCard as (formData: FormData) => Promise<void>}
+      onRenewLease={renewLease}
+      onTerminateLease={terminateLease}
+      onCreateTenantActivity={createTenantActivity}
+      onGetTenantActivityLog={getTenantActivityLog}
+      onPayCharge={payWithCard as (formData: FormData) => Promise<void>}
         onDeletePendingCharge={deletePendingCharge}
         onEditCharge={editCharge}
         onCreateManualCharge={createManualCharge}

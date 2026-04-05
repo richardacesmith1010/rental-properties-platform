@@ -120,6 +120,55 @@ export const inviteOwnerSchema = z.object({
   ownershipAccountId: z.string().uuid("Invalid ownership account selection.")
 });
 
+export const createTenantActivitySchema = z
+  .object({
+    leaseId: z.preprocess(
+      (value) => (value === "" || value == null ? undefined : value),
+      z.string().uuid("Invalid lease selection.").optional()
+    ),
+    tenantProfileId: z.preprocess(
+      (value) => (value === "" || value == null ? undefined : value),
+      z.string().uuid("Choose a valid tenant.").optional()
+    ),
+    propertyId: z.preprocess(
+      (value) => (value === "" || value == null ? undefined : value),
+      z.string().uuid("Choose a valid property.").optional()
+    ),
+    unitId: z.preprocess(
+      (value) => (value === "" || value == null ? undefined : value),
+      z.string().uuid("Choose a valid unit.").optional()
+    ),
+    activityType: z.enum(["infraction", "notice", "warning", "note"], {
+      message: "Choose an activity type."
+    }),
+    title: z.string().min(1, "Title is required.").max(200, "Title must be 200 characters or less."),
+    description: z.preprocess(
+      (value) => (value === undefined || value === null ? "" : value),
+      z.string().max(2000, "Details must be 2,000 characters or less.")
+    )
+  })
+  .superRefine((data, context) => {
+    if (data.leaseId) {
+      return;
+    }
+
+    if (!data.tenantProfileId) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Choose a tenant first.",
+        path: ["tenantProfileId"]
+      });
+    }
+
+    if (!data.propertyId) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Choose a property first.",
+        path: ["propertyId"]
+      });
+    }
+  });
+
 export const resendInviteSchema = z.object({
   invitationId: z.string().uuid("Invalid invitation ID.")
 });

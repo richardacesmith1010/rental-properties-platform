@@ -62,6 +62,7 @@ export { deleteUnit } from "./units";
 
 export { createLease, updateLease, deleteLease, updateRentAmount } from "./lease-mutations";
 export { renewLease, terminateLease } from "./lease-lifecycle-actions";
+export { createTenantActivity, getTenantActivityLog } from "./tenant-activity";
 
 export { payWithCard } from "./charges";
 export { deletePendingCharge } from "./charges";

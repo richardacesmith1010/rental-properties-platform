@@ -32,9 +32,14 @@ import type {
   ManagerPaymentDTO
 } from "@/lib/manager-payments";
 import type { ActionState } from "@/app/actions";
+import type { TenantActivityEntry } from "@/app/actions/tenant-activity";
 
 export type FormAction = (formData: FormData) => Promise<void>;
 export type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
+export type TenantActivityLoader = (
+  tenantProfileId: string,
+  propertyId: string
+) => Promise<TenantActivityEntry[]>;
 
 export interface SectionRendererProps {
   activeSection: string;
@@ -195,6 +200,8 @@ export interface SectionRendererProps {
   onDeleteLease?: StatefulAction;
   onRenewLease?: StatefulAction;
   onTerminateLease?: StatefulAction;
+  onCreateTenantActivity?: StatefulAction;
+  onGetTenantActivityLog?: TenantActivityLoader;
   onAddTicketComment?: StatefulAction;
   openSection: (sectionId: string) => void;
   openLeaseWizard: () => void;

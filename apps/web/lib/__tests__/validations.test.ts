@@ -19,6 +19,7 @@ import {
   updateTicketStatusSchema,
   updateTicketCostSchema,
   inviteTenantSchema,
+  createTenantActivitySchema,
   inviteManagerSchema,
   resendInviteSchema,
   revokeInviteSchema,
@@ -184,6 +185,42 @@ describe("account governance schemas", () => {
         vote: "reject"
       }).success
     ).toBe(true);
+  });
+});
+
+describe("createTenantActivitySchema", () => {
+  const validId = "550e8400-e29b-41d4-a716-446655440000";
+
+  it("accepts lease-scoped activity entries", () => {
+    const result = createTenantActivitySchema.safeParse({
+      leaseId: validId,
+      activityType: "notice",
+      title: "Late payment notice",
+      description: "Sent a reminder about the overdue balance."
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("requires tenant and property when no lease is provided", () => {
+    const result = createTenantActivitySchema.safeParse({
+      activityType: "note",
+      title: "Inspection note",
+      description: ""
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects titles longer than 200 characters", () => {
+    const result = createTenantActivitySchema.safeParse({
+      leaseId: validId,
+      activityType: "warning",
+      title: "x".repeat(201),
+      description: ""
+    });
+
+    expect(result.success).toBe(false);
   });
 });
 

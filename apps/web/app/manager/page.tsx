@@ -23,6 +23,8 @@ import { getRentIncreaseHistory } from "@/lib/rent-increases";
 import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
 import {
   payWithCard,
+  createTenantActivity,
+  getTenantActivityLog,
   createManualCharge,
   deletePendingCharge,
   editCharge,
@@ -267,6 +269,8 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       onDeleteLease={deleteLease}
       onRenewLease={renewLease}
       onTerminateLease={terminateLease}
+      onCreateTenantActivity={createTenantActivity}
+      onGetTenantActivityLog={getTenantActivityLog}
       onPayCharge={payWithCard as (formData: FormData) => Promise<void>}
       onDeletePendingCharge={deletePendingCharge}
       onEditCharge={editCharge}
