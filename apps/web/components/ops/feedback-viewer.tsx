@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, useTransition } from "react";
-import { Bug, ChevronDown, ChevronUp, ExternalLink, MessageCircleMore, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { Bug, Check, ChevronDown, ChevronUp, Copy, ExternalLink, MessageCircleMore, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { StatefulAction } from "@/app/actions";
 import { Alert } from "@/components/ui/alert";
@@ -97,6 +97,8 @@ export function FeedbackViewer({ items, warning, onUpdateStatus }: FeedbackViewe
   const [typeFilter, setTypeFilter] = useState<"all" | FeedbackType>("all");
   const [statusFilter, setStatusFilter] = useState<"all" | FeedbackStatus>("all");
   const [expandedId, setExpandedId] = useState<string | null>(items[0]?.id ?? null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const copyResetTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     setEntries(items);
@@ -108,6 +110,33 @@ export function FeedbackViewer({ items, warning, onUpdateStatus }: FeedbackViewe
     }
     setExpandedId(entries[0]?.id ?? null);
   }, [entries, expandedId]);
+
+  useEffect(() => {
+    return () => {
+      if (copyResetTimeoutRef.current !== null) {
+        window.clearTimeout(copyResetTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const copyMessage = async (id: string, message: string) => {
+    try {
+      await navigator.clipboard.writeText(message);
+      setCopiedId(id);
+
+      if (copyResetTimeoutRef.current !== null) {
+        window.clearTimeout(copyResetTimeoutRef.current);
+      }
+
+      copyResetTimeoutRef.current = window.setTimeout(() => {
+        setCopiedId((current) => (current === id ? null : current));
+        copyResetTimeoutRef.current = null;
+      }, 2000);
+    } catch (error) {
+      console.error("[feedback-viewer] copy message:", error);
+      toast.error("Could not copy the feedback message.");
+    }
+  };
 
   const filteredItems = useMemo(() => {
     return entries.filter((item) => {
@@ -201,49 +230,78 @@ export function FeedbackViewer({ items, warning, onUpdateStatus }: FeedbackViewe
                       expanded ? "shadow-sm" : "hover:shadow-sm"
                     )}
                   >
-                    <button
-                      type="button"
-                      onClick={() => setExpandedId(expanded ? null : entry.id)}
-                      className="flex w-full items-start justify-between gap-4 px-4 py-4 text-left"
-                      title={`Open feedback from ${getFeedbackSubmitterLabel(entry)}.`}
-                    >
-                      <div className="min-w-0 flex-1 space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="outline" className="inline-flex items-center gap-1">
-                            <FeedbackTypeIcon type={entry.type} />
-                            {typeMeta.label}
-                          </Badge>
-                          <Badge variant={getFeedbackStatusBadgeVariant(entry.status)}>
-                            {getFeedbackStatusLabel(entry.status)}
-                          </Badge>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm font-semibold text-foreground">
-                            {getFeedbackSubmitterLabel(entry)}
-                            {entry.userRole ? (
-                              <span className="ml-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                {entry.userRole}
+                    <div className="flex items-start gap-3 px-4 py-4">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedId(expanded ? null : entry.id)}
+                        className="min-w-0 flex-1 text-left"
+                        title={`Open feedback from ${getFeedbackSubmitterLabel(entry)}.`}
+                      >
+                        <div className="min-w-0 space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="outline" className="inline-flex items-center gap-1">
+                              <FeedbackTypeIcon type={entry.type} />
+                              {typeMeta.label}
+                            </Badge>
+                            <Badge variant={getFeedbackStatusBadgeVariant(entry.status)}>
+                              {getFeedbackStatusLabel(entry.status)}
+                            </Badge>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold text-foreground">
+                              {getFeedbackSubmitterLabel(entry)}
+                              {entry.userRole ? (
+                                <span className="ml-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                  {entry.userRole}
+                                </span>
+                              ) : null}
+                            </p>
+                            <p className="select-text text-sm leading-6 text-foreground">
+                              {expanded ? entry.message : `${entry.message.slice(0, 140)}${entry.message.length > 140 ? "..." : ""}`}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                            <span>{formatDateTime(entry.createdAt)}</span>
+                            <span>{formatRelativeTime(entry.createdAt)}</span>
+                            {entry.pageUrl ? (
+                              <span className="max-w-full truncate">
+                                Page: {entry.pageUrl.replace(/^https?:\/\/[^/]+/i, "") || "/"}
                               </span>
                             ) : null}
-                          </p>
-                          <p className="text-sm leading-6 text-foreground">
-                            {expanded ? entry.message : `${entry.message.slice(0, 140)}${entry.message.length > 140 ? "..." : ""}`}
-                          </p>
+                          </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                          <span>{formatDateTime(entry.createdAt)}</span>
-                          <span>{formatRelativeTime(entry.createdAt)}</span>
-                          {entry.pageUrl ? (
-                            <span className="max-w-full truncate">
-                              Page: {entry.pageUrl.replace(/^https?:\/\/[^/]+/i, "") || "/"}
-                            </span>
-                          ) : null}
-                        </div>
+                      </button>
+                      <div className="flex flex-shrink-0 items-start gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void copyMessage(entry.id, entry.message)}
+                          className="inline-flex h-9 items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
+                          title="Copy feedback message"
+                          aria-label={copiedId === entry.id ? "Copied feedback message" : "Copy feedback message"}
+                        >
+                          {copiedId === entry.id ? (
+                            <>
+                              <Check className="h-3.5 w-3.5 text-emerald-600" />
+                              <span className="text-emerald-700">Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3.5 w-3.5" />
+                              <span>Copy</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setExpandedId(expanded ? null : entry.id)}
+                          className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-background"
+                          title={expanded ? "Collapse feedback details." : "Expand feedback details."}
+                          aria-label={expanded ? "Collapse feedback details" : "Expand feedback details"}
+                        >
+                          {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </button>
                       </div>
-                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-border/60 bg-background">
-                        {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                      </div>
-                    </button>
+                    </div>
 
                     {expanded ? (
                       <div className="space-y-4 border-t border-border/60 px-4 py-4">
