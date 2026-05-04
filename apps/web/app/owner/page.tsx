@@ -5,6 +5,7 @@ import { getNewFeedbackCountForOwner } from "@/lib/feedback";
 import { getGeneratedMessage } from "@/lib/format";
 import { getUserNotificationPreferenceSettings } from "@/lib/notification-preferences";
 import { getPortfolioData } from "@/lib/portfolio";
+import { getAdministeredPropertyOptions } from "@/lib/property-access";
 import { getAdminMaintenanceTickets } from "@/lib/maintenance";
 import { getOwnerInvitations } from "@/lib/invitations";
 import { getOwnerDocumentsData } from "@/lib/documents";
@@ -33,6 +34,10 @@ import { getPendingChangeRequests } from "@/lib/distribution-approvals";
 import { getPendingWithdrawals } from "@/lib/withdrawals";
 import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
 import { getManagerPaymentsDashboardData } from "@/lib/manager-payments-data";
+import {
+  createAnnouncement,
+  getEstimatedRecipientCount,
+} from "@/app/actions/announcements";
 import {
   completePlaidLink,
   disconnectPlaid,
@@ -211,6 +216,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
   const [
     dashboard,
     portfolio,
+    announcementProperties,
     tickets,
     invitations,
     documents,
@@ -233,6 +239,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
   ] = await Promise.all([
     getDashboardData(user.id, activeAccountId),
     getPortfolioData(user.id, activeAccountId),
+    getAdministeredPropertyOptions(user.id),
     getAdminMaintenanceTickets(user.id, activeAccountId),
     getOwnerInvitations(user.id, activeAccountId),
     capabilities.documentsEnabled
@@ -333,6 +340,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         documents={documents}
         notifications={notifications}
         notificationPreferenceSettings={notificationPreferenceSettings}
+        announcementProperties={announcementProperties}
         inboxThreads={inboxThreads}
         automationTemplates={automationTemplates}
         automationRules={automationRules}
@@ -412,6 +420,8 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         onMarkAllNotificationsRead={markAllNotificationsRead}
         onResumeNotificationEmails={resumeNotificationEmails}
         onSendBatchPaymentReminder={sendBatchPaymentReminder}
+        onCreateAnnouncement={createAnnouncement}
+        onGetAnnouncementRecipientCount={getEstimatedRecipientCount}
         onCreateInboxThread={createInboxThread}
         onSendMessageToTenant={sendMessageToTenant}
         onSendInboxMessage={sendInboxMessage}

@@ -1,10 +1,11 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AchievementChecker } from "@/components/gamification/achievement-checker";
+import { AnnouncementComposer } from "@/components/dashboard/announcement-composer";
 import { GamificationSummary } from "@/components/gamification/gamification-summary";
 import { CompactGreetingBar } from "@/components/dashboard/compact-greeting-bar";
 import { ConnectBanner } from "@/components/dashboard/connect-banner";
@@ -49,12 +50,14 @@ function PageHeader({
   title,
   pageCountLabel,
   onPrevious,
-  onNext
+  onNext,
+  actions
 }: {
   title: string;
   pageCountLabel: string | null;
   onPrevious: () => void;
   onNext: () => void;
+  actions?: ReactNode;
 }) {
   return (
     <div className="flex shrink-0 flex-col gap-3 border-b border-border/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
@@ -63,6 +66,7 @@ function PageHeader({
         {pageCountLabel ? <p className="mt-1 text-sm text-muted-foreground">{pageCountLabel}</p> : null}
       </div>
       <div className="flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto">
+        {actions}
         <Button
           type="button"
           variant="outline"
@@ -92,6 +96,7 @@ function PageHeader({
 
 export function Dashboard(props: DashboardProps) {
   const router = useRouter();
+  const [isAnnouncementComposerOpen, setIsAnnouncementComposerOpen] = useState(false);
   const [initialOperationsTask, setInitialOperationsTask] = useState<OperationTask | undefined>(undefined);
   const [initialOperationsPropertyId, setInitialOperationsPropertyId] = useState<string | null>(null);
   const {
@@ -183,6 +188,19 @@ export function Dashboard(props: DashboardProps) {
   const contentZoneTitle = activeSectionLabel;
   const notificationsPausedUntil =
     props.notificationPreferenceSettings?.pausedUntil ?? null;
+  const canSendAnnouncements =
+    (isOwnerRole || isManagerRole) &&
+    !!props.onCreateAnnouncement &&
+    !!props.onGetAnnouncementRecipientCount;
+  const announcementsReady = props.capabilities?.notificationsEnabled ?? false;
+  const announcementButtonDisabled =
+    !announcementsReady || (props.announcementProperties?.length ?? 0) === 0;
+  const announcementButtonTitle = !announcementsReady
+    ? props.capabilities?.warnings.notifications ??
+      "Notifications are not ready yet."
+    : announcementButtonDisabled
+      ? "Add a property before sending announcements."
+      : "Send a building-wide announcement to your tenants.";
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -373,6 +391,15 @@ export function Dashboard(props: DashboardProps) {
               onOpenSection={sectionRendererProps.openSection}
             />
           ) : null}
+          {canSendAnnouncements && props.announcementProperties ? (
+            <AnnouncementComposer
+              open={isAnnouncementComposerOpen}
+              onClose={() => setIsAnnouncementComposerOpen(false)}
+              properties={props.announcementProperties}
+              onCreateAnnouncement={props.onCreateAnnouncement!}
+              onGetEstimatedRecipientCount={props.onGetAnnouncementRecipientCount!}
+            />
+          ) : null}
         </>
       }
     >
@@ -421,6 +448,20 @@ export function Dashboard(props: DashboardProps) {
                 pageCountLabel={ownerDailyOpsPageCountLabel}
                 onPrevious={goToPreviousSection}
                 onNext={goToNextSection}
+                actions={
+                  canSendAnnouncements ? (
+                    <Button
+                      type="button"
+                      variant="default"
+                      size="sm"
+                      disabled={announcementButtonDisabled}
+                      onClick={() => setIsAnnouncementComposerOpen(true)}
+                      title={announcementButtonTitle}
+                    >
+                      Send Announcement
+                    </Button>
+                  ) : null
+                }
               />
               <div
                 className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scroll-smooth px-3 pb-3 pt-3 sm:px-5 sm:pb-4 [-webkit-overflow-scrolling:touch]"
@@ -562,6 +603,20 @@ export function Dashboard(props: DashboardProps) {
                 pageCountLabel={contentZoneLabel}
                 onPrevious={goToPreviousSection}
                 onNext={goToNextSection}
+                actions={
+                  canSendAnnouncements ? (
+                    <Button
+                      type="button"
+                      variant="default"
+                      size="sm"
+                      disabled={announcementButtonDisabled}
+                      onClick={() => setIsAnnouncementComposerOpen(true)}
+                      title={announcementButtonTitle}
+                    >
+                      Send Announcement
+                    </Button>
+                  ) : null
+                }
               />
 
               <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scroll-smooth px-3 pb-3 pt-3 sm:px-5 sm:pb-4 [-webkit-overflow-scrolling:touch]">

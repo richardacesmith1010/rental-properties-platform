@@ -1,3 +1,4 @@
+import type { AnnouncementPropertyOption } from "@/lib/announcements";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -179,12 +180,61 @@ export async function getAdministeredProperties(
   return Array.from(byPropertyId.values());
 }
 
+/**
+ * Returns the property IDs a user is currently allowed to administer.
+ * Contract:
+ * - Includes only active ownership memberships and active property manager assignments.
+ * - Includes only properties that are active and not soft-deleted.
+ * - Excludes terminated, revoked, or otherwise inactive access.
+ */
 export async function getAdministeredPropertyIds(
   userId: string,
   adminClient?: PropertyAccessClient
 ): Promise<string[]> {
   const properties = await getAdministeredProperties(userId, adminClient);
   return properties.map((property) => property.id);
+}
+
+export async function getAdministeredPropertyOptions(
+  userId: string,
+  adminClient?: PropertyAccessClient
+): Promise<AnnouncementPropertyOption[]> {
+  const admin = adminClient ?? createAdminClient();
+  const propertyIds = await getAdministeredPropertyIds(userId, admin);
+
+  if (propertyIds.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await admin
+    .from("properties")
+    .select("id, name, address_line1, city, state, postal_code, active")
+    .in("id", propertyIds);
+
+  const propertyRows =
+    error && isMissingSchemaError(error)
+      ? (
+          await admin
+            .from("properties")
+            .select("id, name, address_line1, city, state, postal_code")
+            .in("id", propertyIds)
+        ).data?.map((property) => ({
+          ...property,
+          active: true
+        })) ?? []
+      : (data ?? []);
+
+  return propertyRows
+    .filter((property) => property.active !== false)
+    .map((property) => ({
+      id: property.id,
+      name: property.name,
+      addressLine1: property.address_line1 ?? "",
+      city: property.city ?? "",
+      state: property.state ?? "",
+      postalCode: property.postal_code ?? ""
+    }))
+    .sort((left, right) => left.name.localeCompare(right.name));
 }
 
 export async function getAdministeredPropertyIdsForAccount(

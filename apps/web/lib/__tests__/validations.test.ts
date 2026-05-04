@@ -39,6 +39,8 @@ import {
   sendInboxMessageSchema,
   sendMessageToTenantSchema,
   requestManualPaymentConfirmationSchema,
+  announcementTargetingSchema,
+  createAnnouncementSchema,
   createRentalListingSchema,
   updateListingStatusSchema,
   createApplicationSchema,
@@ -218,6 +220,49 @@ describe("createTenantActivitySchema", () => {
       activityType: "warning",
       title: "x".repeat(201),
       description: ""
+    });
+
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("announcement schemas", () => {
+  const validId = "550e8400-e29b-41d4-a716-446655440000";
+
+  it("accepts an all-tenants announcement without property IDs", () => {
+    const result = createAnnouncementSchema.safeParse({
+      scope: "all_administered",
+      title: "Boil water advisory",
+      body: "Please boil tap water until further notice."
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("requires property IDs when targeting specific properties", () => {
+    const result = announcementTargetingSchema.safeParse({
+      scope: "specific_properties",
+      propertyIds: []
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects property IDs when sending to all tenants", () => {
+    const result = announcementTargetingSchema.safeParse({
+      scope: "all_administered",
+      propertyIds: [validId]
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects announcement titles longer than 200 characters", () => {
+    const result = createAnnouncementSchema.safeParse({
+      scope: "specific_properties",
+      propertyIds: [validId],
+      title: "x".repeat(201),
+      body: "Reminder"
     });
 
     expect(result.success).toBe(false);

@@ -113,6 +113,20 @@ describe("property-access utilities", () => {
     expect(result[0]?.id).toBe("property-1");
   });
 
+  it("filters out inactive properties from the administered list", async () => {
+    const client = createAccessClient({
+      memberAccounts: ["account-1"],
+      ownerProperties: [
+        { id: "property-1", owner_account_id: "account-1", active: true },
+        { id: "property-2", owner_account_id: "account-1", active: false }
+      ]
+    });
+
+    const result = await getAdministeredPropertyIds("user-1", client);
+
+    expect(result).toEqual(["property-1"]);
+  });
+
   it("falls back to legacy property access when ownership schema is missing", async () => {
     const client = createAccessClient({
       memberError: { code: "42703", message: "column does not exist" },

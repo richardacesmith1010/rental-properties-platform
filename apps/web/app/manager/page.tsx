@@ -1,6 +1,7 @@
 import { Dashboard } from "@/components/dashboard";
 import { getDashboardData } from "@/lib/dashboard";
 import { getPortfolioData } from "@/lib/portfolio";
+import { getAdministeredPropertyOptions } from "@/lib/property-access";
 import { getAdminMaintenanceTickets } from "@/lib/maintenance";
 import { getOwnerInvitations } from "@/lib/invitations";
 import { getOwnerDocumentsData } from "@/lib/documents";
@@ -21,6 +22,10 @@ import { getUserGamification } from "@/lib/gamification";
 import { getRecentAuditLogs } from "@/lib/audit";
 import { getRentIncreaseHistory } from "@/lib/rent-increases";
 import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
+import {
+  createAnnouncement,
+  getEstimatedRecipientCount
+} from "@/app/actions/announcements";
 import {
   payWithCard,
   createTenantActivity,
@@ -157,6 +162,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
   const [
     dashboard,
     portfolio,
+    announcementProperties,
     tickets,
     invitations,
     documents,
@@ -178,6 +184,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
     await Promise.all([
       getDashboardData(user.id),
       getPortfolioData(user.id),
+      getAdministeredPropertyOptions(user.id),
       getAdminMaintenanceTickets(user.id),
       getOwnerInvitations(user.id),
       capabilities.documentsEnabled
@@ -236,6 +243,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       invitations={invitations}
       documents={documents}
       notifications={notifications}
+      announcementProperties={announcementProperties}
       inboxThreads={inboxThreads}
       automationTemplates={automationTemplates}
       automationRules={automationRules}
@@ -296,6 +304,8 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       onRevokeInvite={revokeInvite}
       onMarkNotificationRead={markNotificationRead}
       onMarkAllNotificationsRead={markAllNotificationsRead}
+      onCreateAnnouncement={createAnnouncement}
+      onGetAnnouncementRecipientCount={getEstimatedRecipientCount}
       onCreateInboxThread={createInboxThread}
       onSendMessageToTenant={sendMessageToTenant}
       onSendInboxMessage={sendInboxMessage}

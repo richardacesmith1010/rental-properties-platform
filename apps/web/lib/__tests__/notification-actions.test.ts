@@ -119,4 +119,22 @@ describe("notification actions", () => {
       href: "/owner?section=leases&invitationId=invite-1"
     });
   });
+
+  it("routes announcements back to the notifications section", () => {
+    const actions = getNotificationActions(
+      {
+        type: "announcement",
+        title: "Boil water advisory",
+        body: "Please boil tap water until further notice.",
+        entityType: "announcement",
+        entityId: "announcement-1"
+      },
+      "tenant"
+    );
+
+    expect(actions[0]).toMatchObject({
+      label: "Read Announcement",
+      href: "/tenant?section=notifications"
+    });
+  });
 });

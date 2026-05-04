@@ -1,3 +1,8 @@
+import {
+  ANNOUNCEMENT_ENTITY_TYPE,
+  ANNOUNCEMENT_NOTIFICATION_TYPE
+} from "@/lib/announcements";
+
 export interface NotificationActionLink {
   label: string;
   sectionId: string;
@@ -73,6 +78,13 @@ export function getNotificationActionLink(notification: {
   type: string;
   entityType: string;
 }): NotificationActionLink | null {
+  if (
+    notification.type === ANNOUNCEMENT_NOTIFICATION_TYPE ||
+    notification.entityType === ANNOUNCEMENT_ENTITY_TYPE
+  ) {
+    return { label: "Read Announcement", sectionId: "notifications" };
+  }
+
   if (
     notification.type === "owner_message" ||
     notification.entityType === "inbox_thread"

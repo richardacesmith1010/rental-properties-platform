@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ANNOUNCEMENT_SCOPES } from "@/lib/announcements";
 import {
   NOTIFICATION_EMAIL_PREFERENCE_KEYS,
   NOTIFICATION_PAUSE_DURATIONS
@@ -171,6 +172,49 @@ export const requestManualPaymentConfirmationSchema = z.object({
   chargeId: z.string().uuid("Invalid charge selection.")
 });
 
+const announcementTargetingBaseSchema = z.object({
+  scope: z.enum(ANNOUNCEMENT_SCOPES),
+  propertyIds: z.array(z.string().uuid("Invalid property selection.")).optional()
+});
+
+function validateAnnouncementTargeting(
+  data: { scope: (typeof ANNOUNCEMENT_SCOPES)[number]; propertyIds?: string[] },
+  context: z.RefinementCtx
+) {
+  if (data.scope === "all_administered" && (data.propertyIds?.length ?? 0) > 0) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["propertyIds"],
+      message: "Do not select properties when sending to all tenants."
+    });
+  }
+
+  if (data.scope === "specific_properties" && (data.propertyIds?.length ?? 0) === 0) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["propertyIds"],
+      message: "Select at least one property."
+    });
+  }
+}
+
+export const announcementTargetingSchema = announcementTargetingBaseSchema.superRefine(
+  validateAnnouncementTargeting
+);
+
+export const createAnnouncementSchema = announcementTargetingBaseSchema
+  .extend({
+    title: z
+      .string()
+      .min(1, "Title is required.")
+      .max(200, "Title must be 200 characters or fewer."),
+    body: z
+      .string()
+      .min(1, "Message is required.")
+      .max(5000, "Message must be 5,000 characters or fewer.")
+  })
+  .superRefine(validateAnnouncementTargeting);
+
 export const updateNotificationPreferenceSchema = z.object({
   notificationType: z.enum([
     "new_ticket",
@@ -185,6 +229,7 @@ export const updateNotificationPreferenceSchema = z.object({
     "invite_accepted",
     "achievement_unlocked",
     "owner_message",
+    "announcement",
     "lease_expiring_soon",
     "lease_expired",
     "delinquency_escalation"

@@ -1,4 +1,8 @@
 import type { DashboardData } from "@/lib/dashboard";
+import type {
+  AnnouncementPropertyOption,
+  AnnouncementScope
+} from "@/lib/announcements";
 import type { NotificationPreferenceSettings } from "@/lib/notification-preferences";
 import type { PortfolioData } from "@/lib/portfolio";
 import type { MaintenanceTicket } from "@/lib/maintenance";
@@ -38,6 +42,10 @@ import type { ManagerWorkflowMode, OwnerWorkflowMode } from "./dashboard-config"
 
 export type FormAction = (formData: FormData) => Promise<void>;
 export type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
+export type AnnouncementRecipientCountAction = (
+  scope: AnnouncementScope,
+  propertyIds: string[]
+) => Promise<number>;
 export type TenantActivityLoader = (
   tenantProfileId: string,
   propertyId: string
@@ -53,6 +61,7 @@ export interface DashboardProps {
   invitations?: InvitationListItem[];
   notifications?: NotificationDTO[];
   notificationPreferenceSettings?: NotificationPreferenceSettings | null;
+  announcementProperties?: AnnouncementPropertyOption[];
   inboxThreads?: InboxThreadDTO[];
   documents?: OwnerDocumentsData;
   automationTemplates?: AutomationTemplateDTO[];
@@ -133,6 +142,8 @@ export interface DashboardProps {
   onMarkAllNotificationsRead?: StatefulAction;
   onResumeNotificationEmails?: StatefulAction;
   onSendBatchPaymentReminder?: StatefulAction;
+  onCreateAnnouncement?: StatefulAction;
+  onGetAnnouncementRecipientCount?: AnnouncementRecipientCountAction;
   onCreateInboxThread?: StatefulAction;
   onSendInboxMessage?: StatefulAction;
   onEnableAutomation?: StatefulAction;

@@ -1,3 +1,8 @@
+import {
+  ANNOUNCEMENT_ENTITY_TYPE,
+  ANNOUNCEMENT_NOTIFICATION_TYPE
+} from "@/lib/announcements";
+
 export type NotificationRecipientRole = "owner" | "manager" | "tenant";
 
 export type NotificationActionKind =
@@ -424,10 +429,29 @@ function resolveManagerPaymentActions(
   ];
 }
 
+function resolveAnnouncementActions(role: NotificationRecipientRole) {
+  return [
+    {
+      kind: "navigate" as const,
+      label: "Read Announcement",
+      href: buildDashboardHref(role, "notifications"),
+      variant: "default" as const,
+      sectionId: "notifications"
+    }
+  ];
+}
+
 export function getNotificationActions(
   notification: NotificationActionSource,
   role: NotificationRecipientRole
 ): NotificationActionDefinition[] {
+  if (
+    notification.type === ANNOUNCEMENT_NOTIFICATION_TYPE ||
+    notification.entityType === ANNOUNCEMENT_ENTITY_TYPE
+  ) {
+    return resolveAnnouncementActions(role);
+  }
+
   if (
     notification.type === "owner_message" ||
     notification.entityType === "inbox_thread"
@@ -574,6 +598,13 @@ export function getPrimaryNotificationAction(
 export function getNotificationPresentation(
   notification: NotificationActionSource
 ): NotificationPresentation {
+  if (
+    notification.type === ANNOUNCEMENT_NOTIFICATION_TYPE ||
+    notification.entityType === ANNOUNCEMENT_ENTITY_TYPE
+  ) {
+    return { severity: "info", eyebrow: "Announcement" };
+  }
+
   if (
     notification.type === "late_rent" ||
     notification.type === "delinquency_escalation"

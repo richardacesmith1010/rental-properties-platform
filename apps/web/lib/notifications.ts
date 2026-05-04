@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { ANNOUNCEMENT_NOTIFICATION_TYPE } from "@/lib/announcements";
 import { buildNotificationEmail } from "@/lib/email-templates";
 import { shouldRecordSuccessfulDelivery } from "@/lib/idempotency";
 import { ensureInboxThreadForEvent } from "@/lib/inbox";
@@ -47,7 +48,8 @@ export type NotificationType =
   | "withdrawal_requested"
   | "withdrawal_approved"
   | "withdrawal_rejected"
-  | "withdrawal_completed";
+  | "withdrawal_completed"
+  | typeof ANNOUNCEMENT_NOTIFICATION_TYPE;
 
 export interface NotificationDTO {
   id: string;
