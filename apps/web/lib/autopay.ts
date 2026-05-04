@@ -22,6 +22,12 @@ interface AutopayEnrollmentRow {
   last_failed_at: string | null;
 }
 
+interface LeaseRow {
+  id: string;
+  unit_id: string;
+  active: boolean;
+}
+
 function retryWindowOpen(lastFailedAt: string | null) {
   if (!lastFailedAt) {
     return true;
@@ -54,30 +60,47 @@ export async function processAutopayCharges(
     return { processed: 0, succeeded: 0, failed: 0, skipped: 0 };
   }
 
-  const todayIso = new Date().toISOString().slice(0, 10);
   const leaseIds = Array.from(new Set(enrollmentRows.map((row) => row.lease_id)));
-  const userIds = Array.from(new Set(enrollmentRows.map((row) => row.tenant_profile_id)));
+  const { data: leases, error: leasesError } = await supabase
+    .from("leases")
+    .select("id, unit_id, active")
+    .in("id", leaseIds);
+  if (leasesError) throw leasesError;
 
-  const [chargesResult, profilesResult, leasesResult, paymentsResult] = await Promise.all([
+  const activeLeases = ((leases ?? []) as LeaseRow[]).filter((lease) => lease.active);
+  if (activeLeases.length === 0) {
+    return { processed: 0, succeeded: 0, failed: 0, skipped: 0 };
+  }
+
+  const activeLeaseIds = activeLeases.map((lease) => lease.id);
+  const activeLeaseIdSet = new Set(activeLeaseIds);
+  const activeEnrollments = enrollmentRows.filter((row) => activeLeaseIdSet.has(row.lease_id));
+  if (activeEnrollments.length === 0) {
+    return { processed: 0, succeeded: 0, failed: 0, skipped: 0 };
+  }
+
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const userIds = Array.from(new Set(activeEnrollments.map((row) => row.tenant_profile_id)));
+
+  const [chargesResult, profilesResult, paymentsResult] = await Promise.all([
     supabase
       .from("rent_charges")
       .select("id, lease_id, due_date, amount_cents, status")
-      .in("lease_id", leaseIds)
+      .in("lease_id", activeLeaseIds)
       .eq("category", "rent")
       .in("status", ["pending", "late"])
       .lte("due_date", todayIso)
+      .is("deleted_at", null)
       .order("due_date", { ascending: true }),
     supabase.from("profiles").select("id, stripe_customer_id").in("id", userIds),
-    supabase.from("leases").select("id, unit_id").in("id", leaseIds),
     supabase.from("payments").select("id, rent_charge_id")
   ]);
 
   if (chargesResult.error) throw chargesResult.error;
   if (profilesResult.error) throw profilesResult.error;
-  if (leasesResult.error) throw leasesResult.error;
   if (paymentsResult.error) throw paymentsResult.error;
 
-  const leaseUnitIds = Array.from(new Set((leasesResult.data ?? []).map((lease) => lease.unit_id)));
+  const leaseUnitIds = Array.from(new Set(activeLeases.map((lease) => lease.unit_id)));
   const { data: units, error: unitsError } = leaseUnitIds.length
     ? await supabase.from("units").select("id, property_id").in("id", leaseUnitIds)
     : { data: [] as Array<{ id: string; property_id: string }>, error: null };
@@ -97,7 +120,7 @@ export async function processAutopayCharges(
   }
 
   const profileMap = new Map((profilesResult.data ?? []).map((profile) => [profile.id, profile]));
-  const leaseMap = new Map((leasesResult.data ?? []).map((lease) => [lease.id, lease]));
+  const leaseMap = new Map(activeLeases.map((lease) => [lease.id, lease]));
   const unitMap = new Map(((units ?? []) as Array<{ id: string; property_id: string }>).map((unit) => [unit.id, unit]));
 
   const ownerStripeAccountByProperty = new Map<string, string | null>();
@@ -114,7 +137,7 @@ export async function processAutopayCharges(
   let failed = 0;
   let skipped = 0;
 
-  for (const enrollment of enrollmentRows) {
+  for (const enrollment of activeEnrollments) {
     try {
       if (enrollment.retry_count > 0 && !retryWindowOpen(enrollment.last_failed_at)) {
         skipped += 1;
@@ -138,6 +161,30 @@ export async function processAutopayCharges(
 
       for (const charge of dueCharges) {
         try {
+          const { data: currentCharge, error: recheckError } = await supabase
+            .from("rent_charges")
+            .select("status, deleted_at")
+            .eq("id", charge.id)
+            .maybeSingle();
+
+          if (recheckError) {
+            console.error(`[autopay] re-check failed for charge ${charge.id}:`, recheckError);
+            skipped += 1;
+            continue;
+          }
+
+          if (!currentCharge || currentCharge.deleted_at !== null) {
+            console.log(`[autopay] charge ${charge.id} no longer exists or was deleted; skipping autopay`);
+            skipped += 1;
+            continue;
+          }
+
+          if (currentCharge.status !== "pending" && currentCharge.status !== "late") {
+            console.log(`[autopay] charge ${charge.id} status is now '${currentCharge.status}'; skipping autopay`);
+            skipped += 1;
+            continue;
+          }
+
           processed += 1;
           const paymentIntent = await createOffSessionPaymentIntent({
             customerId: profile.stripe_customer_id,

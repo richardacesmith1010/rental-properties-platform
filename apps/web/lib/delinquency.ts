@@ -39,7 +39,8 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
     .from("rent_charges")
     .select("id, lease_id, due_date, amount_cents, status")
     .in("status", ["pending", "late"])
-    .lte("due_date", todayIso);
+    .lte("due_date", todayIso)
+    .is("deleted_at", null);
   if (chargesError) {
     throw chargesError;
   }
@@ -207,7 +208,8 @@ export async function sendRentDueReminders(supabase: SupabaseClient): Promise<st
     .select("id, lease_id, due_date, amount_cents")
     .eq("status", "pending")
     .eq("category", "rent")
-    .eq("due_date", targetDueDateIso);
+    .eq("due_date", targetDueDateIso)
+    .is("deleted_at", null);
   if (chargesError) {
     throw chargesError;
   }
