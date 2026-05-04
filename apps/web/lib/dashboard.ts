@@ -5,6 +5,7 @@ import {
   type ChargeStatus,
   getChargeAuditSummary,
   getChargeEditHistoryMap,
+  normalizeChargeCategory,
   withChargeEditingFallback
 } from "@/lib/charge-audit";
 import {
@@ -106,21 +107,6 @@ function emptyData(role: DashboardData["profileRole"]): DashboardData {
     charges: [],
     recentPayments: []
   };
-}
-
-function normalizeChargeCategory(value: string | null | undefined): ChargeCategory {
-  switch (value) {
-    case "late_fee":
-    case "utility":
-    case "maintenance":
-    case "deposit":
-    case "key_replacement":
-    case "other":
-      return value;
-    case "rent":
-    default:
-      return "rent";
-  }
 }
 
 export async function getDashboardData(

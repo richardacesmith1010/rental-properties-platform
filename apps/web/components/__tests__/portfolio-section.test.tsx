@@ -105,4 +105,16 @@ describe("PortfolioSection", () => {
     fireEvent.keyDown(screen.getByRole("button", { name: /Atlas House/i }), { key: "Enter" });
     expect(onSelectProperty).toHaveBeenCalledTimes(2);
   });
+
+  it("renders a view details link when a detail href builder is provided", () => {
+    render(
+      <PortfolioSection
+        properties={[properties[0]]}
+        getPropertyDetailHref={(propertyId) => `/owner/properties/${propertyId}`}
+      />
+    );
+
+    const link = screen.getByRole("link", { name: "View Details" });
+    expect(link).toHaveAttribute("href", "/owner/properties/property-1");
+  });
 });

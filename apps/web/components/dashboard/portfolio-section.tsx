@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFormState } from "react-dom";
@@ -35,6 +36,7 @@ interface PortfolioSectionProps {
   onUpdateManagementFee?: StatefulAction;
   onSelectProperty?: (propertyId: string) => void;
   onGoToOperations?: () => void;
+  getPropertyDetailHref?: (propertyId: string) => string;
 }
 
 const unavailableAction: StatefulAction = async () => ({
@@ -69,7 +71,8 @@ export function PortfolioSection({
   onDeleteProperty,
   onUpdateManagementFee,
   onSelectProperty,
-  onGoToOperations
+  onGoToOperations,
+  getPropertyDetailHref
 }: PortfolioSectionProps) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
@@ -255,6 +258,17 @@ export function PortfolioSection({
                     onClick={(event) => event.stopPropagation()}
                   >
                     <p className="text-sm text-zinc-500">{pluralize(property.unitCount, "unit")}</p>
+                    {getPropertyDetailHref ? (
+                      <Button asChild size="sm" variant="outline">
+                        <Link
+                          href={getPropertyDetailHref(property.id)}
+                          onClick={(event) => event.stopPropagation()}
+                          title={`Open property details for ${property.name}.`}
+                        >
+                          View Details
+                        </Link>
+                      </Button>
+                    ) : null}
                     {showControls && (
                       <>
                         <Button

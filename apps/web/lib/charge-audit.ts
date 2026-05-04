@@ -63,6 +63,23 @@ export interface ChargeAuditSummary {
   editedCount: number;
 }
 
+export function normalizeChargeCategory(
+  value: string | null | undefined
+): ChargeCategory {
+  switch (value) {
+    case "late_fee":
+    case "utility":
+    case "maintenance":
+    case "deposit":
+    case "key_replacement":
+    case "other":
+      return value;
+    case "rent":
+    default:
+      return "rent";
+  }
+}
+
 export function chargeCategoryLabel(category: ChargeCategory | string | null | undefined) {
   switch (category) {
     case "rent":

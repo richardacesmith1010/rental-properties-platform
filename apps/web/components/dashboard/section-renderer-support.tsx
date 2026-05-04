@@ -198,6 +198,11 @@ export function OverviewSectionContent({
         previewCount={props.isOwnerDailyOpsCarousel ? 3 : undefined}
         onSelectProperty={props.onSelectProperty}
         onGoToOperations={() => props.goToSectionIfVisible("operations")}
+        getPropertyDetailHref={(propertyId) =>
+          props.data.profileRole === "owner"
+            ? `/owner/properties/${propertyId}`
+            : `/manager/properties/${propertyId}`
+        }
       />
     </div>
   );
@@ -230,6 +235,11 @@ export function PortfolioSectionContent({ props }: { props: SectionRendererProps
           }}
           onGoToOperations={() => props.goToSectionIfVisible("operations")}
           previewCount={props.isOwnerDailyOpsCarousel ? 4 : undefined}
+          getPropertyDetailHref={(propertyId) =>
+            props.data.profileRole === "owner"
+              ? `/owner/properties/${propertyId}`
+              : `/manager/properties/${propertyId}`
+          }
         />
       </div>
       {showInvitationPanel ? (

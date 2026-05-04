@@ -102,6 +102,7 @@ interface ManagerPageProps {
     generated?: string | string[];
     section?: string | string[];
     mode?: string | string[];
+    property?: string | string[];
   };
 }
 
@@ -145,6 +146,12 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       ? searchParams.section
       : Array.isArray(searchParams?.section)
         ? searchParams?.section[0] ?? null
+        : null;
+  const initialPropertyId =
+    typeof searchParams?.property === "string"
+      ? searchParams.property
+      : Array.isArray(searchParams?.property)
+        ? searchParams?.property[0] ?? null
         : null;
 
   const [
@@ -248,6 +255,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       capabilities={capabilities}
       initialManagerWorkflowMode={initialManagerWorkflowMode}
       initialSectionId={initialSectionId}
+      initialPropertyId={initialPropertyId}
       userEmail={user.email ?? "unknown"}
       fullName={profile.fullName}
       nickname={profile.nickname}
