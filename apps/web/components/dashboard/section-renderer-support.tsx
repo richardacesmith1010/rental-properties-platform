@@ -38,8 +38,10 @@ function getSectionHelpText(sectionId: string, role: string) {
 }
 
 function PropertyScopeControl({ props }: { props: SectionRendererProps }) {
+  const isOwnerOrManager = props.data.profileRole === "owner" || props.data.profileRole === "manager";
+
   if (
-    props.data.profileRole !== "owner" ||
+    !isOwnerOrManager ||
     props.availableProperties.length === 0 ||
     props.activeSection === "members"
   ) {
