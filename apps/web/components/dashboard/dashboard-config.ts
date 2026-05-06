@@ -18,6 +18,7 @@ import {
   Settings,
   ShieldCheck,
   UserPlus,
+  Users,
   Wrench
 } from "lucide-react";
 import type { NavItem } from "./sidebar-nav";
@@ -48,6 +49,7 @@ export const ownerWorkflowModeMeta: Record<
       "portfolio",
       "maintenance",
       "leases",
+      "tenants",
       "manager-payments",
       "members",
       "analytics"
@@ -56,7 +58,7 @@ export const ownerWorkflowModeMeta: Record<
   new_property: {
     label: "New Property Mode",
     description: "One guided flow to create the property, units, lease, and first tenant invite.",
-    sections: ["overview", "operations", "portfolio", "units", "leases", "charges"]
+    sections: ["overview", "operations", "portfolio", "units", "leases", "tenants", "charges"]
   },
   new_tenant: {
     label: "New Tenant Mode",
@@ -68,6 +70,7 @@ export const ownerWorkflowModeMeta: Record<
       "applications",
       "operations",
       "leases",
+      "tenants",
       "documents",
       "charges",
       "inbox"
@@ -81,7 +84,7 @@ export const ownerWorkflowModeMeta: Record<
   records: {
     label: "Records & Compliance Mode",
     description: "Document vault, ownership accounts, and property records.",
-    sections: ["overview", "documents", "ownership", "portfolio", "units", "leases"]
+    sections: ["overview", "documents", "ownership", "portfolio", "units", "leases", "tenants"]
   }
 };
 
@@ -99,6 +102,7 @@ export const managerWorkflowModeMeta: Record<
       "notifications",
       "activity",
       "applications",
+      "tenants",
       "inbox",
       "automations",
       "expenses",
@@ -109,7 +113,7 @@ export const managerWorkflowModeMeta: Record<
   new_property: {
     label: "New Property Mode",
     description: "Guide a property from address to lease readiness without bouncing between sections.",
-    sections: ["overview", "operations", "portfolio", "units", "leases", "charges"]
+    sections: ["overview", "operations", "portfolio", "units", "leases", "tenants", "charges"]
   },
   new_tenant: {
     label: "New Tenant Mode",
@@ -121,6 +125,7 @@ export const managerWorkflowModeMeta: Record<
       "applications",
       "operations",
       "leases",
+      "tenants",
       "documents",
       "charges",
       "inbox"
@@ -358,6 +363,13 @@ export function buildAllSectionItems(params: BuildAllSectionItemsParams): NavIte
       icon: FileText,
       description: "Lease records, edits, and archive actions.",
       clickHint: "open lease management"
+    },
+    {
+      id: "tenants",
+      label: "Tenants",
+      icon: Users,
+      description: "All tenants across your properties.",
+      clickHint: "open tenant directory"
     }
   );
 
@@ -390,6 +402,13 @@ export function getOwnerModeNavItems(params?: {
       icon: UserPlus,
       description: "Open the step-by-step tenant invite wizard.",
       clickHint: "open the tenant invite wizard"
+    },
+    {
+      id: "tenants",
+      label: "Tenants",
+      icon: Users,
+      description: "All tenants across your properties.",
+      clickHint: "open tenant directory"
     },
     {
       id: "owner:new_manager",
@@ -462,6 +481,13 @@ export function getManagerModeNavItems(): NavItem[] {
       icon: UserPlus,
       description: "Open the step-by-step tenant invite wizard.",
       clickHint: "open the tenant invite wizard"
+    },
+    {
+      id: "tenants",
+      label: "Tenants",
+      icon: Users,
+      description: "All tenants across your properties.",
+      clickHint: "open tenant directory"
     },
     {
       id: "manager:vendor_ops",

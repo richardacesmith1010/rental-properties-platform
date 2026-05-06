@@ -35,7 +35,8 @@ const {
   documents: DocumentsSection,
   ownership: OwnershipSection,
   members: MembersSection,
-  automations: AutomationTemplatesSection
+  automations: AutomationTemplatesSection,
+  tenants: TenantsSection
 } = lazySectionComponents;
 
 interface SectionRendererComponentProps extends SectionRendererProps {
@@ -434,6 +435,20 @@ export function SectionRenderer(props: SectionRendererComponentProps) {
           onUpdateUnit={props.onUpdateUnit}
           onDeleteUnit={props.onDeleteUnit}
           onGoToOperations={() => props.goToSectionIfVisible("operations")}
+        />
+      );
+
+    case "tenants":
+      return renderSection(
+        "Tenants",
+        <TenantsSection
+          tenants={props.safePortfolio.tenants}
+          leases={props.safePortfolio.leases}
+          properties={props.safePortfolio.properties}
+          units={props.safePortfolio.units}
+          onSendMessageToTenant={props.onSendMessageToTenant}
+          onCreateTenantActivity={props.onCreateTenantActivity}
+          onGetTenantActivityLog={props.onGetTenantActivityLog}
         />
       );
 

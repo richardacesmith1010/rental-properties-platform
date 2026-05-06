@@ -13,6 +13,7 @@ import {
   Settings,
   SunMedium,
   UserPlus,
+  Users,
   Wrench,
   type LucideIcon
 } from "lucide-react";
@@ -126,6 +127,13 @@ export const defaultNavItems: NavItem[] = [
     icon: FileText,
     description: "Lease terms and lease lifecycle.",
     clickHint: "open lease management"
+  },
+  {
+    id: "tenants",
+    label: "Tenants",
+    icon: Users,
+    description: "All tenants across your properties.",
+    clickHint: "open tenant directory"
   }
 ];
 

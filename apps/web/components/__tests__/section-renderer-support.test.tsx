@@ -83,4 +83,13 @@ describe("SectionFrame property scope control", () => {
 
     expect(screen.queryByLabelText("Property Scope")).not.toBeInTheDocument();
   });
+
+  it("hides the selector on the tenants section", () => {
+    renderSectionFrame({
+      data: { profileRole: "manager" } as SectionRendererProps["data"],
+      activeSection: "tenants"
+    });
+
+    expect(screen.queryByLabelText("Property Scope")).not.toBeInTheDocument();
+  });
 });

@@ -257,11 +257,17 @@ const LazyAutomationTemplatesSection = dynamic(
   { loading: () => createElement(SectionSkeleton) }
 );
 
+const LazyTenantsSection = dynamic(
+  () => import("./tenants-section").then((module) => ({ default: module.TenantsSection })),
+  { loading: () => createElement(SectionSkeleton) }
+);
+
 export const lazySectionComponents = {
   notifications: LazyNotificationsSection,
   inbox: LazyInboxSection,
   documents: LazyDocumentsSection,
   ownership: LazyOwnershipSection,
   members: LazyMembersSection,
-  automations: LazyAutomationTemplatesSection
+  automations: LazyAutomationTemplatesSection,
+  tenants: LazyTenantsSection
 } as const;

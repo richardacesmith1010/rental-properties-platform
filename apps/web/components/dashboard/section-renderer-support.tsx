@@ -43,7 +43,8 @@ function PropertyScopeControl({ props }: { props: SectionRendererProps }) {
   if (
     !isOwnerOrManager ||
     props.availableProperties.length === 0 ||
-    props.activeSection === "members"
+    props.activeSection === "members" ||
+    props.activeSection === "tenants"
   ) {
     return null;
   }

@@ -343,11 +343,16 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
       ? managerModeNavItems
       : sectionItems;
   const sidebarActiveItemId = isOwnerRole
-    ? activeSection === "analytics" || activeSection === "manager-payments" || activeSection === "members"
+    ? activeSection === "analytics" ||
+      activeSection === "manager-payments" ||
+      activeSection === "members" ||
+      activeSection === "tenants"
       ? activeSection
       : `owner:${ownerWorkflowMode}`
     : isManagerRole
-      ? `manager:${managerWorkflowMode}`
+      ? activeSection === "tenants"
+        ? activeSection
+        : `manager:${managerWorkflowMode}`
       : activeSection;
   const reportsHref = isOwnerRole
     ? props.activeAccountId
