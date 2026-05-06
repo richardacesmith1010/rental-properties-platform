@@ -194,7 +194,7 @@ export async function getOwnerStripeAccountForProperty(propertyId: string): Prom
 export async function getManagerStripeAccountForProperty(
   propertyId: string,
   rentAmountCents = 0
-): Promise<{ accountId: string; feeCents: number } | null> {
+): Promise<{ accountId: string; feeCents: number; managerProfileId: string } | null> {
   const admin = createAdminClient();
   const feeInfo = await getManagerFeeForProperty(propertyId, rentAmountCents);
   if (feeInfo.feeCents <= 0) {
@@ -224,7 +224,8 @@ export async function getManagerStripeAccountForProperty(
 
   return {
     accountId: profile.stripe_account_id,
-    feeCents: feeInfo.feeCents
+    feeCents: feeInfo.feeCents,
+    managerProfileId
   };
 }
 

@@ -31,7 +31,7 @@ interface Ctx {
   charge: { id: string; lease_id: string; status: string; due_date: string; amount_cents: number };
   lease: { id: string; tenant_profile_id: string | null; unit_id: string };
   unit: { id: string; property_id: string; unit_number: string };
-  property: { id: string; owner_account_id: string | null };
+  property: { id: string; owner_account_id: string | null; name: string };
   tenantProfile: { id: string; email: string | null } | null;
 }
 
@@ -120,7 +120,7 @@ async function getCtx(supabase: AdminClient, chargeId: string): Promise<CtxResul
 
   const { data: property, error: propertyError } = await supabase
     .from("properties")
-    .select("id, owner_account_id")
+    .select("id, owner_account_id, name")
     .eq("id", unit.property_id)
     .maybeSingle();
   if (propertyError) {
@@ -397,6 +397,11 @@ async function createTransfersForPayment(
         description: `Management fee for charge ${params.chargeId.slice(0, 8)}`
       });
       paymentUpdate.manager_transfer_id = managerTransfer.id;
+      notifyManagerOfFeeTransfer(supabase, {
+        managerProfileId: managerInfo.managerProfileId,
+        amountCents: effectiveFee,
+        chargeId: params.chargeId
+      });
     }
   } catch (transferError) {
     console.error("[stripe-webhook] Transfer creation failed:", transferError);
@@ -415,6 +420,44 @@ async function createTransfersForPayment(
       }
     }
   }
+}
+
+function notifyManagerOfFeeTransfer(
+  supabase: AdminClient,
+  params: {
+    managerProfileId: string;
+    amountCents: number;
+    chargeId: string;
+  }
+) {
+  void (async () => {
+    const [{ data: managerProfile, error: managerProfileError }, ctxResult] = await Promise.all([
+      supabase.from("profiles").select("email").eq("id", params.managerProfileId).maybeSingle(),
+      getCtx(supabase, params.chargeId)
+    ]);
+
+    if (managerProfileError) {
+      console.error("[stripe-webhook] notifyManagerOfFeeTransfer manager profile lookup:", managerProfileError);
+    }
+
+    const propertyName = ctxResult.ok ? ctxResult.ctx.property.name : "your property";
+    const unitNumber = ctxResult.ok ? ctxResult.ctx.unit.unit_number : null;
+    const locationLabel = unitNumber ? `${propertyName} Unit ${unitNumber}` : propertyName;
+
+    await createNotificationWithDelivery({
+      recipientProfileId: params.managerProfileId,
+      recipientEmail: managerProfile?.email ?? null,
+      type: "payment_recorded",
+      title: "Management fee received",
+      body: `Your management fee of ${formatCurrency(params.amountCents)} for ${locationLabel} was sent to your bank.`,
+      entityType: "rent_charge",
+      entityId: params.chargeId
+    });
+  })().catch(sideEffectError("notifyManagerOfFeeTransfer", "notify_manager", {
+    userId: params.managerProfileId,
+    entityType: "rent_charge",
+    entityId: params.chargeId
+  }));
 }
 
 function queuePaymentNotifications(ctx: Ctx, amountCents: number) {
@@ -646,6 +689,11 @@ async function recordPayment({
           if (updateError) {
             console.error("[stripe-webhook] update manager transfer metadata:", updateError);
           }
+          notifyManagerOfFeeTransfer(supabase, {
+            managerProfileId: managerInfo.managerProfileId,
+            amountCents: managerFeeCents,
+            chargeId: ctx.charge.id
+          });
         } catch (transferError) {
           console.error(
             `[stripe-webhook] Manager transfer failed for charge ${ctx.charge.id}:`,
