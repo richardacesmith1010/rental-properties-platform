@@ -17,38 +17,26 @@ import {
 function createFeeAdminClient(params: {
   config?: Record<string, unknown> | null;
   configError?: { code?: string; message?: string } | null;
-  property?: { management_fee_cents?: number | null } | null;
 }) {
   return {
-    from: vi.fn((table: string) => {
-      if (table === "manager_payment_configs") {
-        return {
-          select: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              eq: vi.fn(() => ({
-                order: vi.fn(() => ({
-                  limit: vi.fn(() => ({
-                    maybeSingle: vi.fn().mockResolvedValue({
-                      data: params.config ?? null,
+    from: vi.fn(() => {
+      return {
+        select: vi.fn(() => {
+          return {
+            in: vi.fn(() => {
+              return {
+                eq: vi.fn(() => {
+                  return {
+                    order: vi.fn().mockResolvedValue({
+                      data: params.config ? [params.config] : [],
                       error: params.configError ?? null
                     })
-                  }))
-                }))
-              }))
-            }))
-          }))
-        };
-      }
-
-      return {
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: params.property ?? null,
-              error: null
+                  };
+                })
+              };
             })
-          }))
-        }))
+          };
+        })
       };
     })
   };
@@ -79,15 +67,17 @@ describe("payment fees", () => {
     expect(formatCentsAsDollars(242050)).toBe("$2,420.50");
   });
 
-  it("reads the active manager fee from manager_payment_configs first", async () => {
+  it("reads the active manager fee from manager_payment_configs", async () => {
     createAdminClientMock.mockReturnValue(
       createFeeAdminClient({
         config: {
+          property_id: "property-1",
           manager_profile_id: "manager-1",
           payment_type: "percentage",
           percentage_rate: 9,
           flat_amount_cents: null,
-          base_rent_cents: 235000
+          base_rent_cents: 235000,
+          created_at: "2026-05-05T00:00:00.000Z"
         }
       })
     );
@@ -98,17 +88,15 @@ describe("payment fees", () => {
     });
   });
 
-  it("falls back to properties.management_fee_cents when config is unavailable", async () => {
+  it("returns zero when no active manager payment config exists", async () => {
     createAdminClientMock.mockReturnValue(
       createFeeAdminClient({
-        config: null,
-        configError: { code: "42P01", message: "relation does not exist" },
-        property: { management_fee_cents: 5000 }
+        config: null
       })
     );
 
     await expect(getManagerFeeForProperty("property-1", 240000)).resolves.toEqual({
-      feeCents: 5000,
+      feeCents: 0,
       managerProfileId: null
     });
   });

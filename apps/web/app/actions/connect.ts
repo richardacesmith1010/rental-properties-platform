@@ -6,6 +6,7 @@ import { canUserAdministerProperty } from "@/lib/property-access";
 import { logAudit } from "@/lib/audit";
 import { sideEffectError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { isMissingSchemaError } from "@/lib/supabase-errors";
 import {
   createAccountLink,
   createExpressAccount,
@@ -420,13 +421,57 @@ export async function updateManagementFee(
     };
   }
 
-  const { error } = await supabase
-    .from("properties")
-    .update({ management_fee_cents: managementFeeCents })
-    .eq("id", propertyId);
+  const { data: activeConfig, error: activeConfigError } = await admin.from("manager_payment_configs")
+    .select("manager_profile_id, frequency")
+    .eq("property_id", propertyId)
+    .eq("active", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  if (error) {
-    return { success: false, error: "Failed to update management fee." };
+  if (activeConfigError) {
+    return { success: false, error: isMissingSchemaError(activeConfigError) ? "This feature requires a database update." : "Failed to update management fee." };
+  }
+
+  let managerProfileId = activeConfig?.manager_profile_id ?? null;
+  if (!managerProfileId && managementFeeCents > 0) {
+    const { data: latestManager, error: latestManagerError } = await admin.from("property_managers")
+      .select("manager_profile_id")
+      .eq("property_id", propertyId)
+      .eq("active", true)
+      .order("assigned_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (latestManagerError) {
+      return { success: false, error: isMissingSchemaError(latestManagerError) ? "This feature requires a database update." : "Failed to update management fee." };
+    }
+
+    managerProfileId = latestManager?.manager_profile_id ?? null;
+  }
+
+  if (!managerProfileId && managementFeeCents > 0) {
+    return { success: false, error: "Assign an active manager to this property before setting a management fee." };
+  }
+
+  if (managerProfileId) {
+    const { error } = await supabase.from("manager_payment_configs")
+      .upsert({
+        property_id: propertyId,
+        manager_profile_id: managerProfileId,
+        payment_type: "flat",
+        percentage_rate: null,
+        flat_amount_cents: managementFeeCents,
+        base_rent_cents: null,
+        label: "Property Management Fee",
+        frequency: activeConfig?.frequency ?? "monthly",
+        active: managementFeeCents > 0,
+        updated_at: new Date().toISOString()
+      }, { onConflict: "property_id,manager_profile_id" });
+
+    if (error) {
+      return { success: false, error: isMissingSchemaError(error) ? "This feature requires a database update." : "Failed to update management fee." };
+    }
   }
 
   void logAudit({

@@ -3,6 +3,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadEnvConfig } from "@next/env";
 import { createClient, type User } from "@supabase/supabase-js";
+import {
+  buildDemoManagerPaymentConfigRows,
+  buildDemoPropertyRows,
+  type DemoProperty
+} from "./seed-demo-properties";
 
 const DEMO_PASSWORD = "Demo123!";
 const DEMO_DOMAIN = "@demo.domus.com";
@@ -37,11 +42,6 @@ interface DemoUserSpec {
 
 interface DemoUser extends DemoUserSpec {
   id: string;
-}
-
-interface DemoProperty {
-  id: string;
-  name: string;
 }
 
 const demoUsers: DemoUserSpec[] = [
@@ -357,38 +357,24 @@ async function main() {
     }
   ];
 
-  await upsertById(admin, "properties", [
-    {
-      id: properties[0].id,
-      owner_profile_id: owner.id,
-      owner_account_id: ownershipAccountId,
-      name: properties[0].name,
-      address_line1: "123 River St",
-      city: "Denver",
-      state: "CO",
-      postal_code: "80205",
-      management_fee_cents: 12000,
-      active: true
-    },
-    {
-      id: properties[1].id,
-      owner_profile_id: owner.id,
-      owner_account_id: ownershipAccountId,
-      name: properties[1].name,
-      address_line1: "456 Oak Ave",
-      city: "Lakewood",
-      state: "CO",
-      postal_code: "80214",
-      management_fee_cents: 9000,
-      active: true
-    }
-  ]);
+  await upsertById(
+    admin,
+    "properties",
+    buildDemoPropertyRows(properties, owner.id, ownershipAccountId)
+  );
 
   await upsertByConflict(admin, "property_managers", properties.map((property) => ({
     property_id: property.id,
     manager_profile_id: manager.id,
     active: true
   })), "property_id,manager_profile_id");
+
+  await upsertByConflict(
+    admin,
+    "manager_payment_configs",
+    buildDemoManagerPaymentConfigRows(properties, manager.id),
+    "property_id,manager_profile_id"
+  );
 
   const units = [
     {

@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getManagerFeesForProperties } from "@/lib/payment-fees";
 import {
   getAdministeredProperties,
   getAdministeredPropertyIdsForAccount
@@ -180,10 +181,16 @@ export async function getPortfolioData(
     };
   }
 
-  const [{ data: properties, error: propertiesError }, { data: units, error: unitsError }, tenants, { data: tenantInvitations }] = await Promise.all([
+  const [
+    { data: properties, error: propertiesError },
+    { data: units, error: unitsError },
+    tenants,
+    { data: tenantInvitations },
+    managerFeesByPropertyId
+  ] = await Promise.all([
     admin
       .from("properties")
-      .select("id, name, address_line1, city, state, postal_code, owner_account_id, management_fee_cents, active")
+      .select("id, name, address_line1, city, state, postal_code, owner_account_id, active")
       .in("id", propertyIds)
       .order("created_at", { ascending: true }),
     admin
@@ -197,7 +204,8 @@ export async function getPortfolioData(
       .select("email, property_id, role, status")
       .eq("role", "tenant")
       .in("property_id", propertyIds)
-      .in("status", ["pending", "accepted"])
+      .in("status", ["pending", "accepted"]),
+    getManagerFeesForProperties(propertyIds.map((propertyId) => ({ propertyId })))
   ]);
 
   let propertyRows: Array<{
@@ -208,7 +216,6 @@ export async function getPortfolioData(
     state: string;
     postal_code: string;
     owner_account_id: string | null;
-    management_fee_cents: number | null;
     active: boolean;
   }> = [];
 
@@ -216,7 +223,7 @@ export async function getPortfolioData(
     const [{ data: ownerAwareRows, error: ownerAwareError }, { data: legacyRows }] = await Promise.all([
       admin
         .from("properties")
-        .select("id, name, address_line1, city, state, postal_code, owner_account_id, management_fee_cents")
+        .select("id, name, address_line1, city, state, postal_code, owner_account_id")
         .in("id", propertyIds)
         .order("created_at", { ascending: true }),
       admin
@@ -230,20 +237,17 @@ export async function getPortfolioData(
       ? (legacyRows ?? []).map((property) => ({
           ...property,
           owner_account_id: null as string | null,
-          management_fee_cents: 0,
           active: true
         }))
       : (ownerAwareRows ?? []).map((property) => ({
           ...property,
           owner_account_id: property.owner_account_id as string | null,
-          management_fee_cents: property.management_fee_cents ?? 0,
           active: true
         }));
   } else {
     propertyRows = (properties ?? []).map((property) => ({
       ...property,
       owner_account_id: property.owner_account_id as string | null,
-      management_fee_cents: property.management_fee_cents ?? 0,
       active: property.active ?? true
     }));
   }
@@ -362,7 +366,7 @@ export async function getPortfolioData(
     city: property.city,
     state: property.state,
     postalCode: property.postal_code,
-    managementFeeCents: property.management_fee_cents ?? 0,
+    managementFeeCents: managerFeesByPropertyId.get(property.id)?.feeCents ?? 0,
     unitCount: unitRows.filter((unit) => unit.property_id === property.id).length,
     ownerAccountId: property.owner_account_id,
     ownerAccountName:
