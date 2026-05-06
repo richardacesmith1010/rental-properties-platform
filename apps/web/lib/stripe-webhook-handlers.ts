@@ -821,7 +821,28 @@ export async function handleAsyncPaymentFailed(
     }
   }
 
-  // TODO (future sprint): Send notification to tenant about failed bank account payment.
+  const ctxResult = await getCtx(supabase, chargeId);
+  if (ctxResult.ok) {
+    const ctx = ctxResult.ctx;
+    if (ctx.tenantProfile?.id && ctx.tenantProfile.email) {
+      void createNotificationWithDelivery({
+        recipientProfileId: ctx.tenantProfile.id,
+        recipientEmail: ctx.tenantProfile.email,
+        type: "late_rent",
+        title: "Bank payment didn't go through",
+        body: `Your bank account payment of ${formatCurrency(ctx.charge.amount_cents)} for Unit ${ctx.unit.unit_number} didn't clear. Please try again or use a different payment method.`,
+        entityType: "rent_charge",
+        entityId: ctx.charge.id
+      }).catch(sideEffectError("handleAsyncPaymentFailed", "notify_tenant", {
+        userId: ctx.tenantProfile.id,
+        entityType: "rent_charge",
+        entityId: ctx.charge.id
+      }));
+    }
+  } else if (ctxResult.reason === "db_error") {
+    console.error(`[stripe-webhook] async_payment_failed: getCtx db_error for charge ${chargeId}`);
+  }
+
   // TODO (future sprint): If a payment record exists, clean it up and reverse transfers.
   return received("async_payment_failed");
 }
