@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { MessageSquareText, Wrench } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { DataRow } from "@/components/shared/data-row";
 import { FeatureWarning } from "@/components/shared/feature-warning";
 import { TicketStatusControl } from "./ticket-status-control";
@@ -24,6 +25,7 @@ type StatefulAction = (
   prev: ActionState,
   formData: FormData
 ) => Promise<ActionState>;
+type MaintenanceFilter = "active" | "completed" | "all";
 
 interface MaintenanceSectionProps {
   tickets: MaintenanceTicket[];
@@ -68,6 +70,26 @@ function ticketMeta(ticket: MaintenanceTicket) {
   };
 }
 
+function isActiveMaintenanceStatus(status: MaintenanceTicket["status"]) {
+  return status === "open" || status === "in_progress";
+}
+
+function isCompletedMaintenanceStatus(status: MaintenanceTicket["status"]) {
+  return status === "resolved" || status === "closed";
+}
+
+function emptyStateMessage(filter: MaintenanceFilter) {
+  if (filter === "active") {
+    return "No active tickets right now.";
+  }
+
+  if (filter === "completed") {
+    return "No completed tickets yet.";
+  }
+
+  return "No tickets yet.";
+}
+
 export function MaintenanceSection({
   tickets,
   showControls = false,
@@ -86,6 +108,27 @@ export function MaintenanceSection({
   previewCount,
 }: MaintenanceSectionProps) {
   const [expanded, setExpanded] = useState(false);
+  const [filter, setFilter] = useState<MaintenanceFilter>("active");
+  const filteredTickets = useMemo(() => {
+    if (filter === "active") {
+      return tickets.filter((ticket) => isActiveMaintenanceStatus(ticket.status));
+    }
+
+    if (filter === "completed") {
+      return tickets.filter((ticket) => isCompletedMaintenanceStatus(ticket.status));
+    }
+
+    return tickets;
+  }, [filter, tickets]);
+  const activeCount = useMemo(
+    () => tickets.filter((ticket) => isActiveMaintenanceStatus(ticket.status)).length,
+    [tickets]
+  );
+  const completedCount = useMemo(
+    () => tickets.filter((ticket) => isCompletedMaintenanceStatus(ticket.status)).length,
+    [tickets]
+  );
+  const totalCount = tickets.length;
   const canDeleteTicketPhoto = (uploadedBy: string) => {
     if (!currentUserId) {
       return false;
@@ -93,17 +136,55 @@ export function MaintenanceSection({
 
     return viewerRole === "owner" || uploadedBy === currentUserId;
   };
-  const visibleTickets = previewCount && !expanded ? tickets.slice(0, previewCount) : tickets;
-  const hasMore = previewCount != null && tickets.length > previewCount;
+  const visibleTickets =
+    previewCount && !expanded ? filteredTickets.slice(0, previewCount) : filteredTickets;
+  const hasMore = previewCount != null && filteredTickets.length > previewCount;
   const sectionTitle = viewerRole === "tenant" ? "Problems" : "Maintenance Tickets";
-  const emptyDescription = viewerRole === "tenant"
-    ? "Problems you report will show up here with status updates from your landlord."
-    : "Tickets submitted by tenants will appear here.";
+  const emptyDescription =
+    filter === "all"
+      ? viewerRole === "tenant"
+        ? "Problems you report will show up here with status updates from your landlord."
+        : "Tickets submitted by tenants will appear here."
+      : viewerRole === "tenant"
+        ? "Switch filters to review your other maintenance updates."
+        : "Switch filters to review the rest of your ticket history.";
 
   return (
     <Card id="maintenance" className="border border-border/50 shadow-sm">
-      <CardHeader>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle className="text-xl font-semibold">{sectionTitle}</CardTitle>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={filter === "active" ? "default" : "outline"}
+            aria-pressed={filter === "active"}
+            onClick={() => setFilter("active")}
+            title="Show open and in-progress tickets."
+          >
+            Active ({activeCount})
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={filter === "completed" ? "default" : "outline"}
+            aria-pressed={filter === "completed"}
+            onClick={() => setFilter("completed")}
+            title="Show resolved and closed tickets."
+          >
+            Completed ({completedCount})
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={filter === "all" ? "default" : "outline"}
+            aria-pressed={filter === "all"}
+            onClick={() => setFilter("all")}
+            title="Show every maintenance ticket."
+          >
+            All ({totalCount})
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {(vendorWorkflowWarning || photoWorkflowWarning) && (
@@ -122,10 +203,10 @@ export function MaintenanceSection({
             ) : null}
           </div>
         )}
-        {tickets.length === 0 ? (
+        {filteredTickets.length === 0 ? (
           <EmptyState
             icon={Wrench}
-            title={viewerRole === "tenant" ? "No problems reported" : "No maintenance tickets"}
+            title={emptyStateMessage(filter)}
             description={emptyDescription}
           />
         ) : (
@@ -301,7 +382,7 @@ export function MaintenanceSection({
                   className="text-sm font-medium text-primary transition-colors hover:text-primary/80"
                   title={expanded ? "Collapse the maintenance ticket preview." : "Show the full maintenance ticket list."}
                 >
-                  {expanded ? "Show Less" : `View All Tickets (${tickets.length})`}
+                  {expanded ? "Show Less" : `View All Tickets (${filteredTickets.length})`}
                 </button>
               </div>
             ) : null}

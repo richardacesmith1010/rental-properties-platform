@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { MaintenanceSection } from "@/components/dashboard/maintenance-section";
 import type { MaintenanceTicket } from "@/lib/maintenance";
@@ -39,39 +39,140 @@ vi.mock("@/components/dashboard/maintenance-tracker", () => ({
 }));
 
 describe("MaintenanceSection", () => {
-  const ticket: MaintenanceTicket = {
+  function buildTicket({
+    id,
+    title,
+    status,
+    tenantEmail = "tenant@example.com",
+    commentCount = 1
+  }: {
+    id: string;
+    title: string;
+    status: MaintenanceTicket["status"];
+    tenantEmail?: string | null;
+    commentCount?: number;
+  }): MaintenanceTicket {
+    return {
+      id,
+      propertyId: "property-1",
+      propertyName: "Atlas House",
+      unitNumber: "1A",
+      title,
+      description: "Kitchen sink is leaking under the cabinet.",
+      status,
+      priority: "high",
+      actualCostCents: 12500,
+      vendorName: "Atlas Plumbing",
+      assignmentStatus: "assigned",
+      photoCount: 2,
+      latestPhotoId: "photo-1",
+      photos: [
+        {
+          id: "photo-1",
+          ticketId: id,
+          uploadedBy: "tenant-1",
+          fileName: "leak-1.jpg",
+          fileType: "image/jpeg",
+          fileSizeBytes: 1024,
+          createdAt: "2026-03-01T00:00:00.000Z",
+          url: "/api/assets/maintenance-photo/photo-1"
+        }
+      ],
+      createdAt: "2026-03-01T00:00:00.000Z",
+      resolvedAt: status === "resolved" || status === "closed" ? "2026-03-02T00:00:00.000Z" : null,
+      tenantEmail,
+      commentCount,
+      comments: [],
+      timeline: []
+    };
+  }
+
+  const ticket = buildTicket({
     id: "ticket-1",
-    propertyId: "property-1",
-    propertyName: "Atlas House",
-    unitNumber: "1A",
     title: "Leaking sink",
-    description: "Kitchen sink is leaking under the cabinet.",
-    status: "open",
-    priority: "high",
-    actualCostCents: 12500,
-    vendorName: "Atlas Plumbing",
-    assignmentStatus: "assigned",
-    photoCount: 2,
-    latestPhotoId: "photo-1",
-    photos: [
-      {
-        id: "photo-1",
-        ticketId: "ticket-1",
-        uploadedBy: "tenant-1",
-        fileName: "leak-1.jpg",
-        fileType: "image/jpeg",
-        fileSizeBytes: 1024,
-        createdAt: "2026-03-01T00:00:00.000Z",
-        url: "/api/assets/maintenance-photo/photo-1"
-      }
-    ],
-    createdAt: "2026-03-01T00:00:00.000Z",
-    resolvedAt: null,
-    tenantEmail: "tenant@example.com",
-    commentCount: 1,
-    comments: [],
-    timeline: []
-  };
+    status: "open"
+  });
+
+  const mixedTickets = [
+    buildTicket({ id: "ticket-1", title: "Leaking sink", status: "open" }),
+    buildTicket({ id: "ticket-2", title: "Broken heater", status: "in_progress" }),
+    buildTicket({ id: "ticket-3", title: "Paint touch-up", status: "resolved" }),
+    buildTicket({ id: "ticket-4", title: "Door fixed", status: "closed" })
+  ];
+
+  const activeOnlyTickets = [
+    buildTicket({ id: "ticket-1", title: "Leaking sink", status: "open" }),
+    buildTicket({ id: "ticket-2", title: "Broken heater", status: "in_progress" })
+  ];
+
+  const completedOnlyTickets = [
+    buildTicket({ id: "ticket-3", title: "Paint touch-up", status: "resolved" }),
+    buildTicket({ id: "ticket-4", title: "Door fixed", status: "closed" })
+  ];
+
+  it("defaults to the active filter and shows active counts", () => {
+    render(<MaintenanceSection tickets={mixedTickets} />);
+
+    expect(screen.getByRole("button", { name: "Active (2)" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Completed (2)" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "All (4)" })).toHaveAttribute("aria-pressed", "false");
+
+    expect(screen.getByText("Leaking sink")).toBeInTheDocument();
+    expect(screen.getByText("Broken heater")).toBeInTheDocument();
+    expect(screen.queryByText("Paint touch-up")).not.toBeInTheDocument();
+    expect(screen.queryByText("Door fixed")).not.toBeInTheDocument();
+  });
+
+  it("shows only completed tickets when the completed filter is selected", () => {
+    render(<MaintenanceSection tickets={mixedTickets} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Completed (2)" }));
+
+    expect(screen.getByRole("button", { name: "Completed (2)" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByText("Leaking sink")).not.toBeInTheDocument();
+    expect(screen.queryByText("Broken heater")).not.toBeInTheDocument();
+    expect(screen.getByText("Paint touch-up")).toBeInTheDocument();
+    expect(screen.getByText("Door fixed")).toBeInTheDocument();
+  });
+
+  it("shows every ticket when the all filter is selected without changing the underlying counts", () => {
+    render(<MaintenanceSection tickets={mixedTickets} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Completed (2)" }));
+    fireEvent.click(screen.getByRole("button", { name: "All (4)" }));
+
+    expect(screen.getByRole("button", { name: "Active (2)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Completed (2)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "All (4)" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Leaking sink")).toBeInTheDocument();
+    expect(screen.getByText("Broken heater")).toBeInTheDocument();
+    expect(screen.getByText("Paint touch-up")).toBeInTheDocument();
+    expect(screen.getByText("Door fixed")).toBeInTheDocument();
+  });
+
+  it("shows the active empty state when there are no active tickets", () => {
+    render(<MaintenanceSection tickets={completedOnlyTickets} />);
+
+    expect(screen.getByText("No active tickets right now.")).toBeInTheDocument();
+  });
+
+  it("shows the completed empty state when there are no completed tickets", () => {
+    render(<MaintenanceSection tickets={activeOnlyTickets} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Completed (0)" }));
+
+    expect(screen.getByText("No completed tickets yet.")).toBeInTheDocument();
+  });
+
+  it("shows the all empty state when no tickets exist and all is selected", () => {
+    render(<MaintenanceSection tickets={[]} />);
+
+    expect(screen.getByText("No active tickets right now.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "All (0)" }));
+
+    expect(screen.getByText("No tickets yet.")).toBeInTheDocument();
+  });
 
   it("renders the ticket list when tickets exist", () => {
     render(<MaintenanceSection tickets={[ticket]} />);
@@ -79,10 +180,10 @@ describe("MaintenanceSection", () => {
     expect(screen.getByText("Leaking sink")).toBeInTheDocument();
   });
 
-  it("shows the empty state when no tickets exist", () => {
+  it("shows the active empty state when no tickets exist by default", () => {
     render(<MaintenanceSection tickets={[]} />);
 
-    expect(screen.getByText("No maintenance tickets")).toBeInTheDocument();
+    expect(screen.getByText("No active tickets right now.")).toBeInTheDocument();
   });
 
   it("shows ticket title and property details", () => {
