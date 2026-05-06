@@ -10,6 +10,7 @@ import { awardXp, XP_VALUES } from "@/lib/gamification";
 import { sideEffectError } from "@/lib/logger";
 import {
   createStripeTransfer,
+  createStripeTransferReversal,
   type StripeCheckoutSession,
   type StripePaymentIntent
 } from "@/lib/stripe";
@@ -891,7 +892,66 @@ export async function handleAsyncPaymentFailed(
     console.error(`[stripe-webhook] async_payment_failed: getCtx db_error for charge ${chargeId}`);
   }
 
-  // TODO (future sprint): If a payment record exists, clean it up and reverse transfers.
+  const { data: existingPayment, error: existingPaymentError } = await supabase
+    .from("payments")
+    .select("id, stripe_transfer_id, manager_transfer_id, reversed_at")
+    .eq("stripe_checkout_session_id", session.id)
+    .maybeSingle();
+  if (existingPaymentError) {
+    console.error(
+      `[stripe-webhook] RECONCILIATION: failed to load payment record for failed ACH session ${session.id}:`,
+      existingPaymentError
+    );
+    return received("async_payment_failed");
+  }
+
+  if (existingPayment && !existingPayment.reversed_at) {
+    console.error(
+      `[stripe-webhook] RECONCILIATION: payment record ${existingPayment.id} exists for failed ACH session ${session.id} - reversing transfers`
+    );
+
+    if (existingPayment.stripe_transfer_id) {
+      try {
+        await createStripeTransferReversal({
+          transferId: existingPayment.stripe_transfer_id,
+          description: `Reversal: ACH payment failed for charge ${chargeId.slice(0, 8)}`,
+          idempotencyKey: `reversal:owner:${existingPayment.id}`
+        });
+      } catch (error) {
+        console.error(
+          `[stripe-webhook] RECONCILIATION: failed to reverse owner transfer ${existingPayment.stripe_transfer_id}:`,
+          error
+        );
+      }
+    }
+
+    if (existingPayment.manager_transfer_id) {
+      try {
+        await createStripeTransferReversal({
+          transferId: existingPayment.manager_transfer_id,
+          description: `Reversal: ACH payment failed for charge ${chargeId.slice(0, 8)}`,
+          idempotencyKey: `reversal:manager:${existingPayment.id}`
+        });
+      } catch (error) {
+        console.error(
+          `[stripe-webhook] RECONCILIATION: failed to reverse manager transfer ${existingPayment.manager_transfer_id}:`,
+          error
+        );
+      }
+    }
+
+    const { error: updateError } = await supabase
+      .from("payments")
+      .update({ reversed_at: new Date().toISOString() })
+      .eq("id", existingPayment.id);
+    if (updateError) {
+      console.error(
+        `[stripe-webhook] RECONCILIATION: failed to mark payment ${existingPayment.id} as reversed:`,
+        updateError
+      );
+    }
+  }
+
   return received("async_payment_failed");
 }
 

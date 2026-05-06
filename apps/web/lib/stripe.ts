@@ -208,3 +208,41 @@ export async function createStripeTransfer(params: {
 
   return (await response.json()) as { id: string; amount: number };
 }
+
+export async function createStripeTransferReversal(params: {
+  transferId: string;
+  amountCents?: number;
+  description?: string;
+  idempotencyKey?: string;
+}): Promise<{ id: string }> {
+  const secretKey = getStripeSecretKey();
+  const body = new URLSearchParams();
+  if (typeof params.amountCents === "number") {
+    body.set("amount", String(params.amountCents));
+  }
+  if (params.description) {
+    body.set("description", params.description);
+  }
+
+  const response = await fetch(
+    `https://api.stripe.com/v1/transfers/${encodeURIComponent(params.transferId)}/reversals`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${secretKey}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+        ...(params.idempotencyKey ? { "Idempotency-Key": params.idempotencyKey } : {})
+      },
+      body: body.toString(),
+      cache: "no-store"
+    }
+  );
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Stripe transfer reversal failed: ${response.status} ${text}`);
+  }
+
+  const json = (await response.json()) as { id: string };
+  return { id: json.id };
+}

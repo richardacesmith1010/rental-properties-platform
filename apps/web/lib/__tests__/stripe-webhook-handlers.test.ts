@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createStripeTransferMock = vi.hoisted(() => vi.fn());
+const createStripeTransferReversalMock = vi.hoisted(() => vi.fn());
 const createNotificationWithDeliveryMock = vi.hoisted(() => vi.fn());
 const notifyOwnerMembersForPropertyMock = vi.hoisted(() => vi.fn());
 const getManagerStripeAccountForPropertyMock = vi.hoisted(() => vi.fn());
@@ -34,7 +35,8 @@ vi.mock("@/lib/notifications", () => ({
 }));
 
 vi.mock("@/lib/stripe", () => ({
-  createStripeTransfer: createStripeTransferMock
+  createStripeTransfer: createStripeTransferMock,
+  createStripeTransferReversal: createStripeTransferReversalMock
 }));
 
 vi.mock("@/lib/stripe-connect", () => ({
@@ -47,12 +49,19 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 
 import {
+  handleAsyncPaymentFailed,
   handleAsyncPaymentSucceeded,
   handleCheckoutSessionCompleted
 } from "@/lib/stripe-webhook-handlers";
 
 interface TestSupabaseConfig {
   existingManagerTransferId?: string | null;
+  existingAsyncFailurePayment?: {
+    id: string;
+    stripe_transfer_id: string | null;
+    manager_transfer_id: string | null;
+    reversed_at: string | null;
+  } | null;
   managerProfileEmail?: string | null;
   paymentUpdateError?: { message: string } | null;
 }
@@ -80,25 +89,31 @@ function createWebhookSupabase(config: TestSupabaseConfig = {}) {
     owner_account_id: null,
     name: "Atlas House"
   };
+  const paymentsUpdateMock = vi.fn(() => ({
+    eq: vi.fn().mockResolvedValue({ error: config.paymentUpdateError ?? null })
+  }));
 
   return {
+    __mocks: {
+      paymentsUpdateMock
+    },
     from: vi.fn((table: string) => {
       if (table === "payments") {
         return {
           select: vi.fn((columns: string) => ({
             eq: vi.fn(() => ({
               maybeSingle: vi.fn().mockResolvedValue({
-                data: columns.includes("manager_transfer_id")
-                  ? { manager_transfer_id: config.existingManagerTransferId ?? null }
-                  : null,
+                data: columns.includes("stripe_transfer_id")
+                  ? config.existingAsyncFailurePayment ?? null
+                  : columns.includes("manager_transfer_id")
+                    ? { manager_transfer_id: config.existingManagerTransferId ?? null }
+                    : null,
                 error: null
               })
             }))
           })),
           insert: vi.fn().mockResolvedValue({ error: null }),
-          update: vi.fn(() => ({
-            eq: vi.fn().mockResolvedValue({ error: config.paymentUpdateError ?? null })
-          }))
+          update: paymentsUpdateMock
         };
       }
 
@@ -203,6 +218,7 @@ async function flushAsyncWork() {
 describe("stripe webhook handlers", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    createStripeTransferReversalMock.mockResolvedValue({ id: "trr_123" });
     createNotificationWithDeliveryMock.mockResolvedValue(undefined);
     notifyOwnerMembersForPropertyMock.mockResolvedValue(undefined);
     getOwnerStripeAccountForPropertyMock.mockResolvedValue("acct_owner_123");
@@ -335,5 +351,140 @@ describe("stripe webhook handlers", () => {
     await flushAsyncWork();
 
     expect(getManagerNotificationPayloads()).toHaveLength(0);
+  });
+
+  it("reverses transfers and marks the payment reversed when a failed ACH session already has a payment", async () => {
+    const supabase = createWebhookSupabase({
+      existingAsyncFailurePayment: {
+        id: "payment-1",
+        stripe_transfer_id: "tr_owner_123",
+        manager_transfer_id: "tr_manager_123",
+        reversed_at: null
+      }
+    });
+
+    await handleAsyncPaymentFailed(supabase as never, {
+      id: "cs_failed_123",
+      url: null,
+      payment_status: "unpaid",
+      amount_total: 125000,
+      payment_intent: "pi_failed_123",
+      metadata: {
+        charge_id: "charge-1",
+        user_id: "tenant-1"
+      }
+    });
+    await flushAsyncWork();
+
+    expect(createNotificationWithDeliveryMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipientProfileId: "tenant-1",
+        recipientEmail: "tenant@example.com",
+        type: "late_rent",
+        entityId: "charge-1"
+      })
+    );
+    expect(createStripeTransferReversalMock).toHaveBeenCalledTimes(2);
+    expect(createStripeTransferReversalMock).toHaveBeenNthCalledWith(1, {
+      transferId: "tr_owner_123",
+      description: "Reversal: ACH payment failed for charge charge-1",
+      idempotencyKey: "reversal:owner:payment-1"
+    });
+    expect(createStripeTransferReversalMock).toHaveBeenNthCalledWith(2, {
+      transferId: "tr_manager_123",
+      description: "Reversal: ACH payment failed for charge charge-1",
+      idempotencyKey: "reversal:manager:payment-1"
+    });
+    expect(createNotificationWithDeliveryMock.mock.invocationCallOrder[0]).toBeLessThan(
+      createStripeTransferReversalMock.mock.invocationCallOrder[0]
+    );
+    expect(supabase.__mocks.paymentsUpdateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reversed_at: expect.any(String)
+      })
+    );
+  });
+
+  it("does nothing when the failed ACH session payment is already marked reversed", async () => {
+    const supabase = createWebhookSupabase({
+      existingAsyncFailurePayment: {
+        id: "payment-2",
+        stripe_transfer_id: "tr_owner_456",
+        manager_transfer_id: "tr_manager_456",
+        reversed_at: "2026-05-05T12:00:00.000Z"
+      }
+    });
+
+    await handleAsyncPaymentFailed(supabase as never, {
+      id: "cs_failed_456",
+      url: null,
+      payment_status: "unpaid",
+      amount_total: 125000,
+      payment_intent: "pi_failed_456",
+      metadata: {
+        charge_id: "charge-1",
+        user_id: "tenant-1"
+      }
+    });
+    await flushAsyncWork();
+
+    expect(createStripeTransferReversalMock).not.toHaveBeenCalled();
+    expect(supabase.__mocks.paymentsUpdateMock).not.toHaveBeenCalled();
+  });
+
+  it("still marks the payment reversed when a transfer reversal fails", async () => {
+    const supabase = createWebhookSupabase({
+      existingAsyncFailurePayment: {
+        id: "payment-3",
+        stripe_transfer_id: "tr_owner_789",
+        manager_transfer_id: "tr_manager_789",
+        reversed_at: null
+      }
+    });
+    createStripeTransferReversalMock
+      .mockRejectedValueOnce(new Error("owner reversal failed"))
+      .mockResolvedValueOnce({ id: "trr_manager_789" });
+
+    await handleAsyncPaymentFailed(supabase as never, {
+      id: "cs_failed_999",
+      url: null,
+      payment_status: "unpaid",
+      amount_total: 125000,
+      payment_intent: "pi_failed_999",
+      metadata: {
+        charge_id: "charge-1",
+        user_id: "tenant-1"
+      }
+    });
+    await flushAsyncWork();
+
+    expect(createStripeTransferReversalMock).toHaveBeenCalledTimes(2);
+    expect(supabase.__mocks.paymentsUpdateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reversed_at: expect.any(String)
+      })
+    );
+  });
+
+  it("does nothing when no payment exists for the failed ACH session", async () => {
+    const supabase = createWebhookSupabase({
+      existingAsyncFailurePayment: null
+    });
+
+    await handleAsyncPaymentFailed(supabase as never, {
+      id: "cs_failed_789",
+      url: null,
+      payment_status: "unpaid",
+      amount_total: 125000,
+      payment_intent: "pi_failed_789",
+      metadata: {
+        charge_id: "charge-1",
+        user_id: "tenant-1"
+      }
+    });
+    await flushAsyncWork();
+
+    expect(createStripeTransferReversalMock).not.toHaveBeenCalled();
+    expect(supabase.__mocks.paymentsUpdateMock).not.toHaveBeenCalled();
   });
 });
