@@ -73,8 +73,10 @@ export async function checkStripe(): Promise<ServiceHealth> {
 }
 
 /**
- * Detects whether Stripe Connect is enabled on the platform account.
- * Calls the non-destructive accounts list endpoint to confirm availability.
+ * Detects whether Stripe Connect is fully enabled on the platform account.
+ * Calls GET /v1/account (the platform account itself) and verifies that
+ * capabilities.transfers is active, which is the signal required for
+ * destination-charge flows to succeed.
  */
 export async function checkStripeConnectEnabled(): Promise<ServiceHealth> {
   const start = Date.now();
@@ -89,33 +91,39 @@ export async function checkStripeConnectEnabled(): Promise<ServiceHealth> {
   }
 
   try {
-    const response = await fetch("https://api.stripe.com/v1/accounts?limit=1", {
+    const response = await fetch("https://api.stripe.com/v1/account", {
       headers: {
         Authorization: `Bearer ${key}`
       },
       cache: "no-store"
     });
 
-    if (response.ok) {
-      return {
-        ok: true,
-        latencyMs: Date.now() - start
-      };
-    }
-
-    const text = await response.text();
-    if (/signed up for Connect/i.test(text)) {
+    if (!response.ok) {
+      const text = await response.text();
       return {
         ok: false,
         latencyMs: Date.now() - start,
-        error: "Stripe Connect not enabled — sign up at https://dashboard.stripe.com/connect"
+        error: `Stripe API error: HTTP ${response.status} ${text.slice(0, 120)}`
+      };
+    }
+
+    const json = (await response.json()) as {
+      capabilities?: Record<string, string>;
+      details_submitted?: boolean;
+    };
+    const transfersCapability = json.capabilities?.transfers;
+
+    if (transfersCapability !== "active") {
+      return {
+        ok: false,
+        latencyMs: Date.now() - start,
+        error: `Stripe Connect not fully enabled (transfers capability: ${transfersCapability ?? "missing"}) — finish signup at https://dashboard.stripe.com/connect`
       };
     }
 
     return {
-      ok: false,
+      ok: true,
       latencyMs: Date.now() - start,
-      error: `Stripe API error: HTTP ${response.status}`
     };
   } catch (error) {
     return {

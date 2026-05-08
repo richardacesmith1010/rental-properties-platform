@@ -127,35 +127,69 @@ describe("health route", () => {
   it("returns healthy when Stripe Connect is enabled", async () => {
     fetchMock.mockResolvedValue({
       ok: true,
-      status: 200
+      status: 200,
+      json: vi.fn().mockResolvedValue({
+        capabilities: { transfers: "active", card_payments: "active" }
+      })
     });
 
     const result = await checkStripeConnectEnabled();
 
     expect(result.ok).toBe(true);
     expect(result.error).toBeUndefined();
-    expect(fetchMock).toHaveBeenCalledWith("https://api.stripe.com/v1/accounts?limit=1", {
+    expect(fetchMock).toHaveBeenCalledWith("https://api.stripe.com/v1/account", {
       headers: { Authorization: "Bearer sk_test_123" },
       cache: "no-store"
     });
   });
 
-  it("surfaces a clear error when Stripe Connect is not enabled", async () => {
+  it("returns unhealthy when the transfers capability is inactive", async () => {
     fetchMock.mockResolvedValue({
-      ok: false,
-      status: 400,
-      text: vi.fn().mockResolvedValue(
-        "You can only create new accounts if you've signed up for Connect"
-      )
+      ok: true,
+      status: 200,
+      json: vi.fn().mockResolvedValue({
+        capabilities: { transfers: "inactive" }
+      })
     });
 
     const result = await checkStripeConnectEnabled();
 
     expect(result.ok).toBe(false);
-    expect(result.error).toContain("Stripe Connect not enabled");
+    expect(result.error).toMatch(/transfers capability: inactive/);
+    expect(result.error).toMatch(/dashboard\.stripe\.com\/connect/);
   });
 
-  it("returns the Stripe status code when the Connect check fails for another reason", async () => {
+  it("returns unhealthy when the transfers capability is pending", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: vi.fn().mockResolvedValue({
+        capabilities: { transfers: "pending" }
+      })
+    });
+
+    const result = await checkStripeConnectEnabled();
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/transfers capability: pending/);
+  });
+
+  it("returns unhealthy when the capabilities object is missing", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: vi.fn().mockResolvedValue({
+        details_submitted: true
+      })
+    });
+
+    const result = await checkStripeConnectEnabled();
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/transfers capability: missing/);
+  });
+
+  it("returns the Stripe status code when the Connect check gets a non-200 response", async () => {
     fetchMock.mockResolvedValue({
       ok: false,
       status: 500,
