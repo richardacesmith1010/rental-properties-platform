@@ -215,6 +215,11 @@ Claude must treat every interaction cycle as a learning opportunity. This sectio
 **What was correct:** When a feature fails in production, FIRST read the actual data (production logs, third-party dashboard request logs, direct API queries), THEN form hypotheses. Hypothesis-first wastes minutes-to-hours on theories the data already disproves.
 **Rule:** When a user reports a feature broken in production, the FIRST three actions are mandatory and ordered: (1) read Vercel/runtime logs for the affected route via `vercel logs --follow`, (2) read the relevant third-party dashboard's request log if applicable (Stripe Workbench, Plaid Logs, etc.), (3) make a direct API query to confirm or disprove the most likely root cause. Only hypothesize after at least one of these returns useful signal — and the hypothesis must be grounded in something the data showed.
 
+#### L-009 | 2026-05-08 | PROCESS
+**What happened:** Sprint 123 (audit hotfix bundle) passed all local checks: Codex's test suite (passed), `gate:web` (passed via tests/lint/typecheck/build), `npm run smoke:web` (passed against the deployed URL). Yet the deploy broke `/tenant` immediately — every request errored with "Functions cannot be passed directly to Client Components." The error was a pre-existing Server→Client function-prop violation that only fires at **runtime page render with a real session**, not during static prerender or unit tests. The smoke script only checks HTTP status codes, not full page render.
+**What was correct:** After every deploy that touches dashboard render paths, Claude must do a real-session render check: log in via Chrome MCP (or curl with a session cookie), load the affected pages, and confirm the rendered HTML contains expected content (not an error boundary). HTTP 200 ≠ "the page rendered correctly."
+**Rule:** Post-deploy verification of UI sprints MUST include a Chrome MCP page-load with a real authenticated session, and a `read_console_messages` check for thrown errors. The current smoke test (status-code only) is insufficient for catching render-time crashes. Until the smoke test is extended, Claude is responsible for this manual check on every UI deploy. Evidence required for sprint completion: a screenshot of the rendered page plus a clean console.
+
 ## 11) Pre-Flight Lessons Check (Hard Rule)
 
 Before starting ANY work cycle (planning, verification, or especially implementation), Claude must:
@@ -232,6 +237,7 @@ If a planned action matches a pattern from a prior lesson, Claude must stop and 
 - Am I deploying without checking credentials? → L-005 says check prerequisites.
 - Am I declaring a file orphaned? → L-006 says grep the full tree.
 - Am I about to hypothesize about a production bug? → L-008 says read the actual logs/dashboard first, in order: Vercel logs → third-party dashboard log → direct API query. Hypothesis comes only after data.
+- Am I about to call a UI sprint "shipped" because gate + smoke passed? → L-009 says do a real-session Chrome MCP render check first. HTTP 200 doesn't prove the page actually rendered.
 
 This section must be updated whenever a new lesson is added that introduces a new "always check" pattern.
 
