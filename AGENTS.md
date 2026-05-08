@@ -217,6 +217,7 @@ A feature is done when ALL of these are true:
 5. **Themed** — works in all 3 themes without contrast issues
 6. **Gated** — uses feature capability system if the table might not exist
 7. **Gate passes** — `npm run gate:web` succeeds
+8. **Verifiable** — sprint report includes a `MANUAL_VERIFICATION_PATH` Claude can walk after deploy to confirm the change works for a real user (see subsection below)
 
 ### Self-Verification Checklist
 
@@ -229,6 +230,32 @@ Before reporting any batch as complete, verify:
 - [ ] Error states render meaningful messages (not blank screens)
 - [ ] Dark themes tested (check contrast manually or with tester preview)
 
+### Manual Verification Path (Required in Every Sprint Report)
+
+Every sprint report must include a `MANUAL_VERIFICATION_PATH` field. It tells Claude exactly what to walk through after deploy to confirm the change works for a real user. This is a guardrail: if the sprint prompt didn't specify one and Codex can't infer one from the scope, the prompt is malformed — Codex must surface that in the report rather than proceeding silently.
+
+For UI sprints, list the literal user steps:
+
+```
+MANUAL_VERIFICATION_PATH:
+1. Log in as test tenant
+2. Navigate to /tenant?section=charges
+3. Click "Pay $4.50" → expect blocking error with "$5.00" in the text
+4. Click "Pay $5.00" → expect Stripe checkout redirect
+```
+
+For backend-only sprints, list verification commands with expected outputs:
+
+```
+MANUAL_VERIFICATION_PATH: backend-only
+VERIFICATION_COMMANDS:
+- curl -i $APP_URL/api/health/stripe → expect 200 with { "ok": true }
+- SQL: SELECT stripe_status FROM ownership_accounts WHERE stripe_account_id IS NOT NULL
+  → expect no NULLs after first cron run at 06:00 UTC
+```
+
+If the sprint prompt did not specify a verification path and the change is non-trivial, surface this as a missing field rather than guessing.
+
 ### Reporting Format
 
 After every task, report compact status. Example:
@@ -240,6 +267,7 @@ TESTS_PASS=true|false (X/X)
 BUILD_PASS=true|false
 GATE_PASS=true|false
 SCHEMA_CHANGES_NEEDED=<none or list of tables/columns Claude needs to add>
+MANUAL_VERIFICATION_PATH=<see subsection above>
 ```
 
 If a feature is SCAFFOLDED (not wired to real DB), say so explicitly:
