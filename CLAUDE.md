@@ -210,6 +210,11 @@ Claude must treat every interaction cycle as a learning opportunity. This sectio
 **What was correct:** Claude plans and verifies. Codex implements. The Sprint 16 Codex prompt was already written at `docs/sprint16-codex-prompt.md` — should have handed it off.
 **Rule:** Never write app code directly. If tempted, stop and write a Codex prompt packet instead. The only exception is if §1 boundary-break conditions are explicitly met and declared.
 
+#### L-008 | 2026-05-07 | PROCESS
+**What happened:** When the user reported "Pay $1.34 does nothing," Claude burned ~30 minutes hypothesizing about a small-amount edge case before checking the actual Stripe error log. The real error message ("No such destination: 'acct_xxx'") was visible the whole time in Vercel runtime logs (via `console.error` at `apps/web/app/actions/charges.ts:198`), in Stripe Workbench request logs (the `request_log_url` field returned in the error body), and via a direct Stripe API query (`curl -u "$SKEY:" /v1/accounts`). Every signal was there from the first minute.
+**What was correct:** When a feature fails in production, FIRST read the actual data (production logs, third-party dashboard request logs, direct API queries), THEN form hypotheses. Hypothesis-first wastes minutes-to-hours on theories the data already disproves.
+**Rule:** When a user reports a feature broken in production, the FIRST three actions are mandatory and ordered: (1) read Vercel/runtime logs for the affected route via `vercel logs --follow`, (2) read the relevant third-party dashboard's request log if applicable (Stripe Workbench, Plaid Logs, etc.), (3) make a direct API query to confirm or disprove the most likely root cause. Only hypothesize after at least one of these returns useful signal — and the hypothesis must be grounded in something the data showed.
+
 ## 11) Pre-Flight Lessons Check (Hard Rule)
 
 Before starting ANY work cycle (planning, verification, or especially implementation), Claude must:
@@ -226,6 +231,7 @@ If a planned action matches a pattern from a prior lesson, Claude must stop and 
 - Am I assuming a column/table exists? → L-004 says verify schema first.
 - Am I deploying without checking credentials? → L-005 says check prerequisites.
 - Am I declaring a file orphaned? → L-006 says grep the full tree.
+- Am I about to hypothesize about a production bug? → L-008 says read the actual logs/dashboard first, in order: Vercel logs → third-party dashboard log → direct API query. Hypothesis comes only after data.
 
 This section must be updated whenever a new lesson is added that introduces a new "always check" pattern.
 
@@ -451,26 +457,49 @@ Most Americans read below an 8th grade level. ALL user-facing text in Domus must
 Every Codex prompt for user-facing features must include this constraint:
 > "The user should never need to read instructions to complete this flow. Every step must be self-explanatory. If the user needs to think about what to do, the UI needs to be clearer."
 
-## 19) Visual Audit Protocol (Hard Rule)
+## 19) Sprint Verification Protocol (Hard Rule)
 
-After every sprint that changes UI, Claude must perform a visual audit before reporting PASS. This is not optional.
+After every sprint, Claude must verify the change works for a real user — not just that tests pass. The verification method depends on what the sprint changed. This is not optional.
 
-### Audit Steps
+### For UI Sprints (Mandatory Flow Walk-Through)
 
-1. **Deploy the sprint** to production (or verify local build)
-2. **Open each affected page** in Chrome using browser tools
-3. **Take screenshots** of each changed component
-4. **Check for**:
-   - Text contrast (all text readable against background)
-   - Clipped/truncated content
-   - Buttons and interactive elements visible without scrolling
-   - Empty states showing appropriate content
-   - Responsive layout not broken
-   - Status badges using correct colors
-   - No overlapping elements
-   - Modal/wizard focus and scroll behavior
-5. **Report findings** — any issues found go into the next sprint prompt
-6. **If a visual issue is production-breaking** (invisible text, blank page, broken layout), flag as URGENT and write an immediate hotfix sprint
+If the sprint modifies any `.tsx` file in `components/`, any `page.tsx`, any user-facing copy, or any modal/wizard/form behavior, Claude must:
+
+1. **Walk the affected flow end-to-end via Chrome MCP** using a designated test account (see Test Accounts below). Exercise every changed interaction as a real user would — log in, navigate, click, fill, submit, observe.
+2. **Single-point-of-failure interrupts only.** Claude pings the user only for actions Claude genuinely cannot do: passwords, real money authorization, OAuth flows, real bank or ID information. For everything else — navigation, button clicks, form fills with known values, screenshot inspection — Claude proceeds without asking. The user expects to be pinged as many times as needed for genuine SPOFs, and to be left alone otherwise.
+3. **At each step, take screenshots in both light and dark mode** and verify:
+   - All text is readable against its background (WCAG AA minimum)
+   - Status badges, buttons, and interactive elements have sufficient contrast
+   - No content is invisible, clipped, or overlapping
+   - Modals/wizards are centered, scrollable, and dismissible
+   - Empty states show appropriate content (not blank areas)
+   - Responsive layout works at expected widths
+4. **Verify behavior matches acceptance criteria** by exercising the new behavior in the actual flow, not just by reading the diff. A passing test suite is necessary but not sufficient.
+5. **Report findings** — any issues found go into the next sprint prompt.
+6. **Production-breaking issues are URGENT** — trigger an immediate hotfix sprint.
+
+### For Backend-Only Sprints (Verification Commands)
+
+If the sprint modifies only server actions, API routes, cron jobs, webhook handlers, library code with no UI surface, or migrations, Claude must:
+
+1. **Run verifications directly when possible** — via Bash, Supabase MCP, direct API calls — and report the actual response. Do not delegate to the user what Claude can do.
+2. **Provide explicit verification steps** when delegation is needed:
+   - Exact `curl` commands with expected response shape
+   - Exact SQL queries with expected row state
+   - Exact log patterns to grep for after triggering the code path
+3. **Only delegate verification to the user** when it requires real production data Claude shouldn't access (real tenant payments, real bank balances, etc.).
+
+### Test Accounts
+
+Dedicated test accounts must exist for every role. Claude uses these for flow walks; production user data is never used for testing.
+
+| Role | Email | Status |
+|---|---|---|
+| Tenant | richard.ace.smith+alt@gmail.com | Active |
+| Owner | (to be created) | Missing — request creation in a future sprint |
+| Manager | (to be created) | Missing — request creation in a future sprint |
+
+If a required test account is missing for a planned flow walk, Claude must request its creation as part of that sprint's scope rather than skipping verification.
 
 ### What Counts as Production-Breaking
 
@@ -479,4 +508,6 @@ After every sprint that changes UI, Claude must perform a visual audit before re
 - Primary action buttons not visible without scrolling
 - Forms that can't be submitted (focus bugs, scroll bugs)
 - Content that can't be reached (no scroll, clipped off-screen)
+- Server actions that fail silently (no user feedback, no error logged)
+- Critical flows where the user receives a generic error masking the real failure (see L-008 — Sprint 118's categorized errors are the pattern)
 
