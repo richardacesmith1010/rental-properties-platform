@@ -369,7 +369,6 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
                 nextCharge={nextCharge}
                 lease={currentLease}
                 openTicketCount={openTicketCount}
-                buildSectionHref={buildTenantHref}
                 onPayCharge={payWithCard as (formData: FormData) => Promise<void>}
                 onPayWithACH={payWithACH as (formData: FormData) => Promise<void>}
                 onRequestManualPaymentConfirmation={requestManualPaymentConfirmation}

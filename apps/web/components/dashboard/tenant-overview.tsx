@@ -12,6 +12,10 @@ import { useTimeOfDayGreeting } from "./use-time-of-day-greeting";
 type TenantOverviewSection = "charges" | "maintenance" | "documents" | "notifications";
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
+function buildSectionHref(section: TenantOverviewSection): string {
+  return `/tenant?section=${section}`;
+}
+
 interface TenantOverviewProps {
   userName: string;
   charges: TenantCharge[];
@@ -24,7 +28,6 @@ interface TenantOverviewProps {
     monthlyRentCents: number;
   } | null;
   openTicketCount: number;
-  buildSectionHref: (section: TenantOverviewSection) => string;
   onPayCharge: (formData: FormData) => Promise<void>;
   onPayWithACH?: (formData: FormData) => Promise<void>;
   onRequestManualPaymentConfirmation: StatefulAction;
@@ -47,7 +50,6 @@ export function TenantOverview({
   nextCharge,
   lease,
   openTicketCount,
-  buildSectionHref,
   onPayCharge,
   onPayWithACH,
   onRequestManualPaymentConfirmation,
