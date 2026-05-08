@@ -12,7 +12,12 @@ import { ManagerPaymentsSection } from "./manager-payments-section";
 import { MaintenanceSection } from "./maintenance-section";
 import { OperationsSection, type OperationTask } from "./operations-section";
 import { PaymentsSection } from "./payments-section";
-import { OverviewSectionContent, PortfolioSectionContent, SectionFrame } from "./section-renderer-support";
+import {
+  OverviewSectionContent,
+  PortfolioSectionContent,
+  SectionFrame,
+  SectionNotFoundState
+} from "./section-renderer-support";
 import { UnitsSection } from "./units-section";
 import { VendorsSection } from "./vendors-section";
 import { lazySectionComponents, type SectionRendererProps } from "./section-map";
@@ -496,19 +501,19 @@ export function SectionRenderer(props: SectionRendererComponentProps) {
 
     default:
       return renderSection(
-        "Unavailable section",
-        <FeatureWarning
-          title="Section Unavailable"
-          message="This section is not currently available for your role."
+        "Section not found",
+        <SectionNotFoundState
+          activeSection={props.activeSection}
+          role={props.data.profileRole}
         />
       );
   }
 
   return renderSection(
-    "Unavailable section",
-    <FeatureWarning
-      title="Section Unavailable"
-      message="This section is not currently available for your role."
+    "Section not found",
+    <SectionNotFoundState
+      activeSection={props.activeSection}
+      role={props.data.profileRole}
     />
   );
 }

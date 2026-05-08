@@ -88,7 +88,7 @@ export default async function AchievementsPage() {
             <div className="mt-3 flex items-center justify-between text-xs text-zinc-500">
               <span>Current streak</span>
               <span>
-                <CountUp target={gamification.streakCount} /> days
+                <CountUp target={gamification.streakCount} /> {gamification.streakCount === 1 ? "day" : "days"}
               </span>
             </div>
             <div className="mt-4">

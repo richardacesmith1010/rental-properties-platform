@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   buildPropertyMessageEmail
 } from "@/lib/email-templates";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, formatUnitLabel } from "@/lib/format";
 import { logFailedSideEffect } from "@/lib/logger";
 import {
   createNotificationWithDelivery,
@@ -678,7 +678,8 @@ export async function requestManualPaymentConfirmation(
   const propertyContext = await loadPropertyContext(unit.property_id);
   const propertyName = propertyContext?.propertyName ?? "Property";
   const tenantName = getProfileDisplayName(profile, user.email ?? "Tenant");
-  const subject = `Manual payment review - ${propertyName} • Unit ${unit.unit_number ?? "Unit"}`;
+  const locationLabel = unit.unit_number ? `${propertyName} • ${formatUnitLabel(unit.unit_number)}` : propertyName;
+  const subject = `Manual payment review - ${locationLabel}`;
   const threadId = await findOrCreateTenantThread({
     propertyId: unit.property_id,
     recipientProfileId: user.id,
@@ -690,7 +691,7 @@ export async function requestManualPaymentConfirmation(
     return { success: false, error: "Failed to create a review request." };
   }
 
-  const messageBody = `${tenantName} reported paying ${formatCurrency(charge.amount_cents)} for ${propertyName} • Unit ${unit.unit_number ?? "Unit"} manually. Charge due ${formatDate(charge.due_date)}. Please confirm receipt in Charges.`;
+  const messageBody = `${tenantName} reported paying ${formatCurrency(charge.amount_cents)} for ${locationLabel} manually. Charge due ${formatDate(charge.due_date)}. Please confirm receipt in Charges.`;
 
   const messageError = await insertInboxMessage({
     threadId,

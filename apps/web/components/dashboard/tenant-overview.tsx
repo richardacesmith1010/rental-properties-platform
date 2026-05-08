@@ -1,10 +1,13 @@
+"use client";
+
 import Link from "next/link";
 import { CreditCard, FileText, MessageSquareText, Wrench } from "lucide-react";
 import type { ActionState } from "@/app/actions";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, formatUnitLabel } from "@/lib/format";
 import type { TenantCharge } from "@/lib/tenant-payments";
 import { Card, CardContent } from "@/components/ui/card";
 import { PayRentCard, type AutopayEnrollmentView } from "@/components/dashboard/pay-rent-card";
+import { useTimeOfDayGreeting } from "./use-time-of-day-greeting";
 
 type TenantOverviewSection = "charges" | "maintenance" | "documents" | "notifications";
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
@@ -30,17 +33,6 @@ interface TenantOverviewProps {
   onSetupAutopay?: StatefulAction;
 }
 
-function getGreeting(date = new Date()) {
-  const hour = date.getHours();
-  if (hour < 12) {
-    return "Good morning";
-  }
-  if (hour < 17) {
-    return "Good afternoon";
-  }
-  return "Good evening";
-}
-
 function getDaysUntil(dateValue: string) {
   const today = new Date();
   const todayStart = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
@@ -63,6 +55,7 @@ export function TenantOverview({
   autopayEnrollments = [],
   onSetupAutopay
 }: TenantOverviewProps) {
+  const greeting = useTimeOfDayGreeting();
   const summary = (() => {
     if (!nextCharge) {
       if (!hasActiveLease) {
@@ -96,7 +89,7 @@ export function TenantOverview({
 
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          {getGreeting()}, {userName}
+          {greeting ? `${greeting}, ${userName}` : userName}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">{summary}</p>
       </div>
@@ -135,7 +128,7 @@ export function TenantOverview({
             <div className="mt-4 grid gap-y-3 sm:grid-cols-[140px_minmax(0,1fr)] sm:items-center">
               <span className="text-sm text-muted-foreground">Property</span>
               <span className="text-sm font-medium text-foreground">
-                {lease.propertyName} - Unit {lease.unitLabel}
+                {lease.propertyName} - {formatUnitLabel(lease.unitLabel)}
               </span>
               <span className="text-sm text-muted-foreground">Lease Period</span>
               <span className="text-sm text-foreground">

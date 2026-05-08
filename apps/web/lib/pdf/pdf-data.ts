@@ -1,6 +1,6 @@
 import type { AppRole } from "@/lib/auth";
 import { withChargeEditingFallback } from "@/lib/charge-audit";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { formatDate, formatDateTime, formatUnitLabel } from "@/lib/format";
 import { canUserAdministerProperty, getAdministeredPropertyIds } from "@/lib/property-access";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -192,7 +192,7 @@ export function buildReceiptPdfData(shape: ReceiptQueryShape): ReceiptPdfData {
         state: shape.property.state,
         postalCode: shape.property.postal_code
       }) || shape.property.name,
-    unitLabel: `Unit ${shape.unit.unit_number}`,
+    unitLabel: formatUnitLabel(shape.unit.unit_number),
     amountFormatted: formatCurrencyForPdf(shape.payment.amount_cents),
     dueDate: formatDate(shape.charge.due_date),
     paidDate: formatDateTime(shape.payment.paid_at),
@@ -217,7 +217,7 @@ export function buildLeaseSummaryPdfData(shape: LeaseQueryShape): LeaseSummaryPd
         state: shape.property.state,
         postalCode: shape.property.postal_code
       }) || shape.property.name,
-    unitLabel: `Unit ${shape.unit.unit_number}`,
+    unitLabel: formatUnitLabel(shape.unit.unit_number),
     monthlyRentFormatted: formatCurrencyForPdf(shape.lease.monthly_rent_cents),
     depositFormatted: formatCurrencyForPdf(shape.lease.deposit_cents),
     dueDayLabel: `Day ${shape.lease.due_day_of_month} of each month`,

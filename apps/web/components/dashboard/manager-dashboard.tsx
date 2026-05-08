@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/dashboard/empty-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DashboardCharge } from "@/lib/dashboard";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, formatUnitLabel } from "@/lib/format";
 import type { MaintenanceTicket } from "@/lib/maintenance";
 import type { NotificationDTO } from "@/lib/notifications";
 
@@ -75,7 +75,7 @@ export function ManagerDashboard({
       id: `ticket:${ticket.id}`,
       kind: "ticket" as const,
       title: ticket.status === "open" ? "New maintenance ticket" : "Maintenance follow-up",
-      description: `${ticket.title} · ${ticket.propertyName}${ticket.unitNumber ? ` · Unit ${ticket.unitNumber}` : ""}`,
+      description: `${ticket.title} · ${ticket.propertyName}${ticket.unitNumber ? ` · ${formatUnitLabel(ticket.unitNumber)}` : ""}`,
       primaryLabel: ticket.status === "open" ? "Mark In Progress" : "Open Ticket",
       secondaryLabel: "Respond",
       onPrimary: () => {

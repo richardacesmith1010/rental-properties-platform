@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { Bell, Building2, CreditCard, FileText, Receipt, UserPlus } from "lucide-react";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatUnitLabel } from "@/lib/format";
 import type { GlobalSearchItem } from "./global-search";
 import type {
   CommandPaletteProperty,
@@ -164,7 +164,7 @@ export function useDashboardCommandState(
       })),
       ...filteredPortfolio.units.map((unit) => ({
         id: `unit:${unit.id}`,
-        label: `Unit ${unit.unitNumber}`,
+        label: formatUnitLabel(unit.unitNumber),
         category: "Units",
         href: sectionHref("units"),
         description: unit.propertyName,
@@ -191,7 +191,7 @@ export function useDashboardCommandState(
         label: ticket.title,
         category: "Maintenance",
         href: sectionHref("maintenance"),
-        description: `${ticket.propertyName}${ticket.unitNumber ? ` • ${ticket.unitNumber}` : ""}`,
+        description: `${ticket.propertyName}${ticket.unitNumber ? ` • ${formatUnitLabel(ticket.unitNumber)}` : ""}`,
         keywords: [ticket.title, ticket.description, ticket.propertyName, ticket.unitNumber ?? ""]
       })),
       ...displayDashboardData.charges.map((charge) => ({

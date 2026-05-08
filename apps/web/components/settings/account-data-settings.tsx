@@ -47,19 +47,35 @@ function DangerActionCard({
 
   return (
     <Card
-      className={prominent ? "border-red-300 bg-red-50/40" : "border-red-200/80 bg-red-50/20"}
+      className="border shadow-sm"
+      style={{
+        backgroundColor: "var(--domus-danger-bg)",
+        borderColor: "var(--domus-danger-text)",
+        boxShadow: prominent ? "0 0 0 1px var(--domus-danger-text) inset" : undefined
+      }}
     >
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-red-900">
+        <CardTitle
+          className="flex items-center gap-2"
+          style={{ color: "var(--domus-danger-text)" }}
+        >
           {prominent ? <Trash2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
           {title}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-red-900/80">{description}</p>
+        <p
+          className="text-sm"
+          style={{ color: "var(--domus-danger-text)" }}
+        >
+          {description}
+        </p>
         <form action={formAction} className="space-y-3">
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold uppercase tracking-wide text-red-900/70">
+            <label
+              className="block text-xs font-semibold uppercase tracking-wide"
+              style={{ color: "var(--domus-danger-text)" }}
+            >
               Type DELETE to confirm
             </label>
             <Input
@@ -67,7 +83,12 @@ function DangerActionCard({
               value={confirmation}
               onChange={(event) => setConfirmation(event.target.value)}
               placeholder="DELETE"
-              className="border-red-200 bg-white"
+              className="text-foreground"
+              style={{
+                backgroundColor: "var(--domus-input-bg)",
+                borderColor: "var(--domus-input-border)",
+                color: "var(--domus-heading-text)"
+              }}
               title={`Type DELETE to confirm ${title.toLowerCase()}.`}
             />
           </div>

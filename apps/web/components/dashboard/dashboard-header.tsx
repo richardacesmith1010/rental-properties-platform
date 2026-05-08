@@ -1,3 +1,5 @@
+"use client";
+
 import type { ReactNode } from "react";
 import {
   AlertTriangle,
@@ -11,6 +13,7 @@ import {
 import type { DashboardData } from "@/lib/dashboard";
 import { Badge } from "@/components/ui/badge";
 import { CountUp } from "@/components/ui/count-up";
+import { useTimeOfDayGreeting } from "./use-time-of-day-greeting";
 
 interface DashboardHeaderProps {
   role: DashboardData["profileRole"];
@@ -40,17 +43,6 @@ function getDisplayName({
   }
 
   return userEmail;
-}
-
-function getGreeting(date = new Date()) {
-  const hour = date.getHours();
-  if (hour < 12) {
-    return "Good morning";
-  }
-  if (hour < 18) {
-    return "Good afternoon";
-  }
-  return "Good evening";
 }
 
 function formatHeaderDate(date = new Date()) {
@@ -109,6 +101,7 @@ export function DashboardHeader({
   greetingContent,
 }: DashboardHeaderProps) {
   const displayName = getDisplayName({ nickname, fullName, userEmail });
+  const greeting = useTimeOfDayGreeting(18);
   const now = new Date();
 
   const stats =
@@ -168,7 +161,10 @@ export function DashboardHeader({
             <Badge variant="outline" className="capitalize">
               {role}
             </Badge>
-            <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200/80 bg-white/70 px-3 py-1 text-xs font-medium domus-muted shadow-sm backdrop-blur-sm">
+            <span
+              suppressHydrationWarning
+              className="inline-flex items-center gap-2 rounded-full border border-zinc-200/80 bg-white/70 px-3 py-1 text-xs font-medium domus-muted shadow-sm backdrop-blur-sm"
+            >
               <CalendarClock className="h-3.5 w-3.5" />
               {formatHeaderDate(now)}
             </span>
@@ -176,7 +172,7 @@ export function DashboardHeader({
           {greetingContent ?? (
             <>
               <h1 className="domus-heading text-3xl font-bold tracking-tight">
-                {getGreeting(now)}, {displayName}
+                {greeting ? `${greeting}, ${displayName}` : displayName}
               </h1>
               <p className="mt-2 max-w-2xl text-sm domus-muted">
                 Keep revenue, maintenance, and resident activity moving without leaving the dashboard.

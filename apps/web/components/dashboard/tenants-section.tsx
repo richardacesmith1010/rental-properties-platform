@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import type { ActionState } from "@/app/actions";
 import type { TenantActivityEntry } from "@/app/actions/tenant-activity";
-import { pluralize } from "@/lib/format";
+import { formatUnitLabel, pluralize } from "@/lib/format";
 import type {
   LeaseListItem,
   PropertyListItem,
@@ -76,7 +76,7 @@ function formatLeaseLabel(
   const unitNumber = unitById.get(lease.unitId)?.unitNumber;
 
   if (unitNumber) {
-    return `${propertyName} — Unit ${unitNumber}`;
+    return `${propertyName} — ${formatUnitLabel(unitNumber)}`;
   }
 
   return lease.unitLabel.replace(" • ", " — ");

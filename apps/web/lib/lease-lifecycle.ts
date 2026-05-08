@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { formatUnitLabel } from "@/lib/format";
 import {
   createNotificationWithDelivery,
   notifyOwnerMembersForProperty
@@ -95,7 +96,7 @@ export async function detectExpiredLeases(supabase: SupabaseClient): Promise<str
             recipientEmail: tenantProfile?.email ?? null,
             type: "lease_expired",
             title: "Lease Expired",
-            body: `Your lease for Unit ${unit?.unit_number ?? "?"} at ${property?.name ?? "your property"} has expired.`,
+            body: `Your lease for ${formatUnitLabel(unit?.unit_number ?? "?")} at ${property?.name ?? "your property"} has expired.`,
             entityType: "lease",
             entityId: lease.id,
             deliveryPreference: unit?.property_id
@@ -111,7 +112,7 @@ export async function detectExpiredLeases(supabase: SupabaseClient): Promise<str
             propertyId: unit.property_id,
             type: "lease_expired",
             title: "Lease Expired",
-            body: `Lease for ${tenantProfile?.email ?? "tenant"} at Unit ${unit.unit_number} has expired.`,
+            body: `Lease for ${tenantProfile?.email ?? "tenant"} at ${formatUnitLabel(unit.unit_number)} has expired.`,
             entityType: "lease",
             entityId: lease.id
           })
@@ -224,7 +225,7 @@ export async function sendLeaseExpirationWarnings(supabase: SupabaseClient): Pro
         recipientEmail: tenantProfile?.email ?? null,
         type: "lease_expiring_soon",
         title: "Lease Expiring Soon",
-        body: `Your lease for Unit ${unit?.unit_number ?? "?"} at ${property?.name ?? "your property"} expires on ${lease.end_date}. Contact your landlord about renewal.`,
+        body: `Your lease for ${formatUnitLabel(unit?.unit_number ?? "?")} at ${property?.name ?? "your property"} expires on ${lease.end_date}. Contact your landlord about renewal.`,
         entityType: "lease",
         entityId: lease.id,
         deliveryPreference: unit?.property_id

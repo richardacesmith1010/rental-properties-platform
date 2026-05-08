@@ -139,6 +139,7 @@ export function Dashboard(props: DashboardProps) {
     isOwnerRole,
     isOwnerDailyOpsEnabled,
     isOwnerDailyOpsHomePage,
+    isUnknownSection,
     isLeaseWizardOpen,
     isPropertyWizardOpen,
     isTenantInviteWizardOpen,
@@ -198,7 +199,11 @@ export function Dashboard(props: DashboardProps) {
   );
   const showOwnerDailyOpsShell = isOwnerRole && isOwnerDailyOpsEnabled;
   const showLlcSetupPrompt = Boolean(
-    isOwnerRole && isOwnerDailyOpsEnabled && isOwnerDailyOpsHomePage && llcSetupPrompt.shouldShow
+    isOwnerRole &&
+    isOwnerDailyOpsEnabled &&
+    isOwnerDailyOpsHomePage &&
+    !isUnknownSection &&
+    llcSetupPrompt.shouldShow
   );
   const statusSummary = overdueCharges.length > 0
     ? `${overdueCharges.length} overdue charge${overdueCharges.length === 1 ? "" : "s"}`
@@ -262,6 +267,7 @@ export function Dashboard(props: DashboardProps) {
     ownerOnboarding.shouldShow &&
     !showLlcSetupPrompt &&
     !isOnboardingDismissed &&
+    !isUnknownSection &&
     (isOwnerDailyOpsEnabled ? isOwnerDailyOpsHomePage : activeSection === "overview");
 
   const handleDismissOnboarding = () => {

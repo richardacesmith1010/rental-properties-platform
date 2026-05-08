@@ -168,28 +168,14 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
   );
 
   const [activeSection, setActiveSection] = useState(() => {
-    if (!props.initialSectionId) {
-      return "overview";
-    }
-    return allSectionItems.some((item) => item.id === props.initialSectionId)
-      ? props.initialSectionId
-      : "overview";
+    return props.initialSectionId ?? "overview";
   });
 
   useEffect(() => {
-    if (!props.initialSectionId) {
-      return;
-    }
-    if (allSectionItems.some((item) => item.id === props.initialSectionId)) {
-      setActiveSection(props.initialSectionId);
-    }
-  }, [allSectionItems, props.initialSectionId]);
+    setActiveSection(props.initialSectionId ?? "overview");
+  }, [props.initialSectionId]);
 
-  useEffect(() => {
-    if (!allSectionItems.some((item) => item.id === activeSection)) {
-      setActiveSection("overview");
-    }
-  }, [activeSection, allSectionItems]);
+  const isUnknownSection = !allSectionItems.some((item) => item.id === activeSection);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -215,7 +201,7 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
 
   const activeSectionIndex = sectionItems.findIndex((item) => item.id === activeSection);
   const activeSectionLabel =
-    allSectionItems.find((item) => item.id === activeSection)?.label ?? "Overview";
+    allSectionItems.find((item) => item.id === activeSection)?.label ?? "Section not found";
 
   const goToPreviousSection = () => {
     if (ownerDailyOpsEnabled) {
@@ -460,6 +446,7 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
     activeSectionLabel,
     activeWorkflowMeta,
     allSectionItems,
+    isUnknownSection,
     sectionItems,
     ownerWorkflowMode,
     managerWorkflowMode,

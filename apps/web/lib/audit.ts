@@ -3,7 +3,7 @@ import {
   getAdministeredPropertyIds,
   getAdministeredPropertyIdsForAccount
 } from "@/lib/property-access";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatUnitLabel } from "@/lib/format";
 
 export interface AuditLogEntry {
   id: string;
@@ -89,7 +89,7 @@ export function formatAuditAction(
     case "delete_unit":
       return `Archived unit${unitNumber ? ` ${unitNumber}` : ""}`;
     case "create_lease":
-      return `Created lease${tenantName ? ` for ${tenantName}` : ""}${unitNumber ? ` in Unit ${unitNumber}` : ""}`;
+      return `Created lease${tenantName ? ` for ${tenantName}` : ""}${unitNumber ? ` in ${formatUnitLabel(unitNumber)}` : ""}`;
     case "update_lease":
       return `Updated lease${tenantName ? ` for ${tenantName}` : ""}`;
     case "renew_lease":
@@ -99,7 +99,7 @@ export function formatAuditAction(
     case "delete_lease":
       return `Archived lease${tenantName ? ` for ${tenantName}` : ""}`;
     case "record_payment":
-      return `Recorded payment${unitNumber ? ` for Unit ${unitNumber}` : ""}`;
+      return `Recorded payment${unitNumber ? ` for ${formatUnitLabel(unitNumber)}` : ""}`;
     case "create_ticket":
       return `Created maintenance ticket${propertyName ? ` at ${propertyName}` : ""}`;
     case "update_ticket_status":

@@ -21,8 +21,8 @@ import {
   notifyOwnerOfStripeIssue
 } from "@/lib/notifications";
 import { logAudit } from "@/lib/audit";
+import { formatCurrency, formatUnitLabel } from "@/lib/format";
 import { awardXp, XP_VALUES } from "@/lib/gamification";
-import { formatCurrency } from "@/lib/format";
 import { isStripeConfigured } from "@/lib/env";
 import { sideEffectError } from "@/lib/logger";
 import { sendPlatformAlert } from "@/lib/platform-alerts";
@@ -506,7 +506,7 @@ export async function recordManualPayment(
     propertyId: unit.property_id,
     type: "payment_recorded",
     title: "Rent Payment Received",
-    body: `A payment of ${formatCurrency(amountCents)} was recorded for Unit ${unit.unit_number}.`,
+    body: `A payment of ${formatCurrency(amountCents)} was recorded for ${formatUnitLabel(unit.unit_number)}.`,
     entityType: "rent_charge",
     entityId: charge.id,
     actorProfileId: user.id

@@ -1,4 +1,7 @@
+"use client";
+
 import { formatCurrency } from "@/lib/format";
+import { useTimeOfDayGreeting } from "./use-time-of-day-greeting";
 
 interface ContextualGreetingProps {
   userName: string;
@@ -13,8 +16,7 @@ export function ContextualGreeting({
   overdueAmountCents,
   openTicketCount
 }: ContextualGreetingProps) {
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const greeting = useTimeOfDayGreeting();
 
   let summary = "Everything looks good - no action items today";
   if (overdueChargeCount > 0) {
@@ -26,7 +28,7 @@ export function ContextualGreeting({
   return (
     <div>
       <h1 className="text-2xl font-bold tracking-tight text-foreground">
-        {greeting}, {userName}
+        {greeting ? `${greeting}, ${userName}` : userName}
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">{summary}</p>
     </div>

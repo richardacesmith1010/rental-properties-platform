@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { SectionFrame } from "@/components/dashboard/section-renderer-support";
+import { SectionFrame, SectionNotFoundState } from "@/components/dashboard/section-renderer-support";
 import type { SectionRendererProps } from "@/components/dashboard/section-map";
 
 const availableProperties = [
@@ -91,5 +91,13 @@ describe("SectionFrame property scope control", () => {
     });
 
     expect(screen.queryByLabelText("Property Scope")).not.toBeInTheDocument();
+  });
+
+  it("renders an explicit fallback for unknown sections", () => {
+    render(<SectionNotFoundState activeSection="foobar" role="owner" />);
+
+    expect(screen.getByText("Section not found")).toBeInTheDocument();
+    expect(screen.getByText(/doesn't exist for your role/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Back to home" })).toHaveAttribute("href", "/owner");
   });
 });

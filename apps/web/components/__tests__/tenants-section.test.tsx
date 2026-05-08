@@ -189,6 +189,23 @@ describe("TenantsSection", () => {
     expect(screen.getByText("Mom's House — Unit B")).toBeInTheDocument();
   });
 
+  it("does not duplicate the Unit prefix when legacy unit data already includes it", () => {
+    render(
+      <TenantsSection
+        tenants={tenants}
+        leases={leases}
+        properties={properties}
+        units={[
+          { ...units[0], unitNumber: "Unit A" },
+          ...units.slice(1)
+        ]}
+      />
+    );
+
+    expect(screen.getByText("1st Home — Unit A")).toBeInTheDocument();
+    expect(screen.queryByText("1st Home — Unit Unit A")).not.toBeInTheDocument();
+  });
+
   it("filters tenants by name with a case-insensitive search", () => {
     render(
       <TenantsSection

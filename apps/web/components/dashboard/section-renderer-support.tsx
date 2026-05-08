@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Building2, MapPin, Pencil, Wrench } from "lucide-react";
 import { EntityEditModal } from "@/components/dashboard/entity-edit-modal";
@@ -173,6 +174,38 @@ export function SectionFrame({
         <div>{children}</div>
       </div>
     </SectionErrorBoundary>
+  );
+}
+
+export function SectionNotFoundState({
+  activeSection,
+  role
+}: {
+  activeSection: string;
+  role: "owner" | "manager" | "tenant";
+}) {
+  const homeHref = role === "owner" ? "/owner" : role === "manager" ? "/manager" : "/tenant";
+
+  return (
+    <div
+      className="rounded-2xl border p-6 shadow-sm"
+      style={{
+        backgroundColor: "var(--domus-warning-bg)",
+        borderColor: "var(--domus-warning-text)",
+        color: "var(--domus-warning-text)"
+      }}
+    >
+      <h3 className="text-base font-semibold">Section not found</h3>
+      <p className="mt-1 text-sm">
+        The section <span className="font-semibold">{activeSection}</span> doesn&apos;t exist for your role. Use the sidebar to navigate.
+      </p>
+      <Link
+        href={homeHref}
+        className="mt-3 inline-flex text-sm font-semibold underline underline-offset-4"
+      >
+        Back to home
+      </Link>
+    </div>
   );
 }
 

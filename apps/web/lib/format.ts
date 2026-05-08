@@ -63,6 +63,23 @@ export function formatDateTime(value: string | Date | null | undefined): string 
   return dateTimeFormatter.format(parsed);
 }
 
+export function formatUnitLabel(unitNumber: string | null | undefined): string {
+  if (!unitNumber) {
+    return "";
+  }
+
+  const trimmed = unitNumber.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  if (/^unit\s/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  return `Unit ${trimmed}`;
+}
+
 function inferPluralForm(singular: string) {
   const lower = singular.toLowerCase();
   if (

@@ -3,7 +3,7 @@
 import type { ActionState } from "@/app/actions";
 import { downloadReportCsv, tenantLedgerToCsv } from "@/lib/csv-export-reports";
 import type { TenantLedger } from "@/lib/reports";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, formatUnitLabel } from "@/lib/format";
 import { ReportSection } from "./report-layout";
 import { ChargeActionList } from "./drilldown-panel";
 
@@ -78,7 +78,7 @@ export function TenantLedgerReport({
         { key: "description", label: "Description", sortValue: (row) => row.description, render: (row) => row.description },
         { key: "amount", label: "Amount", sortValue: (row) => row.amount, render: (row) => formatCurrency(row.amount) },
         { key: "balance", label: "Balance", sortValue: (row) => row.balance, render: (row) => formatCurrency(row.balance) },
-        { key: "property", label: "Property", sortValue: (row) => row.propertyName, render: (row) => `${row.propertyName} • Unit ${row.unitNumber}` }
+        { key: "property", label: "Property", sortValue: (row) => row.propertyName, render: (row) => `${row.propertyName} • ${formatUnitLabel(row.unitNumber)}` }
       ]}
       emptyTitle="No tenant ledger data"
       emptyDescription="Charge and payment history will appear once billing activity exists."

@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { createStripeCustomer, createSetupCheckoutSession } from "@/lib/autopay";
 import { isStripeConfigured } from "@/lib/env";
+import { formatUnitLabel } from "@/lib/format";
 import { sideEffectError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { withRetry } from "@/lib/retry";
@@ -266,7 +267,7 @@ export async function getAutopayEnrollments(userId: string): Promise<AutopayEnro
       id: enrollment.id,
       leaseId: enrollment.lease_id,
       propertyLabel: property
-        ? `${property.name} • Unit ${unit?.unit_number ?? "?"}`
+        ? `${property.name} • ${formatUnitLabel(unit?.unit_number ?? "?")}`
         : "Your Rental",
       last4: enrollment.last4,
       brand: enrollment.brand,

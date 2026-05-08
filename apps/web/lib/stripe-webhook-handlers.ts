@@ -5,7 +5,7 @@ import {
   planEqualDistributionTransfers,
   recordPaymentDistribution
 } from "@/lib/distributions";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatUnitLabel } from "@/lib/format";
 import { awardXp, XP_VALUES } from "@/lib/gamification";
 import { sideEffectError } from "@/lib/logger";
 import {
@@ -443,7 +443,7 @@ function notifyManagerOfFeeTransfer(
 
     const propertyName = ctxResult.ok ? ctxResult.ctx.property.name : "your property";
     const unitNumber = ctxResult.ok ? ctxResult.ctx.unit.unit_number : null;
-    const locationLabel = unitNumber ? `${propertyName} Unit ${unitNumber}` : propertyName;
+    const locationLabel = unitNumber ? `${propertyName} ${formatUnitLabel(unitNumber)}` : propertyName;
 
     await createNotificationWithDelivery({
       recipientProfileId: params.managerProfileId,
@@ -466,7 +466,7 @@ function queuePaymentNotifications(ctx: Ctx, amountCents: number) {
     propertyId: ctx.property.id,
     type: "payment_recorded",
     title: "Rent Payment Received",
-    body: `A payment of ${formatCurrency(amountCents)} was recorded for Unit ${ctx.unit.unit_number}.`,
+    body: `A payment of ${formatCurrency(amountCents)} was recorded for ${formatUnitLabel(ctx.unit.unit_number)}.`,
     entityType: "rent_charge",
     entityId: ctx.charge.id
   }).catch(sideEffectError("handlePaymentSucceeded", "notify_owner", {
@@ -535,7 +535,7 @@ function queueAutopayFailure(
       propertyId: context.property.id,
       type: "late_rent",
       title: "Autopay Failed",
-      body: `Automatic payment failed for Unit ${context.unit.unit_number}.`,
+      body: `Automatic payment failed for ${formatUnitLabel(context.unit.unit_number)}.`,
       entityType: "rent_charge",
       entityId: context.charge.id
     }).catch(sideEffectError("handlePaymentFailed", "notify_owner", {
@@ -879,7 +879,7 @@ export async function handleAsyncPaymentFailed(
         recipientEmail: ctx.tenantProfile.email,
         type: "late_rent",
         title: "Bank payment didn't go through",
-        body: `Your bank account payment of ${formatCurrency(ctx.charge.amount_cents)} for Unit ${ctx.unit.unit_number} didn't clear. Please try again or use a different payment method.`,
+        body: `Your bank account payment of ${formatCurrency(ctx.charge.amount_cents)} for ${formatUnitLabel(ctx.unit.unit_number)} didn't clear. Please try again or use a different payment method.`,
         entityType: "rent_charge",
         entityId: ctx.charge.id
       }).catch(sideEffectError("handleAsyncPaymentFailed", "notify_tenant", {

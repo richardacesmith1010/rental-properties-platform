@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAudit } from "@/lib/audit";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, formatUnitLabel } from "@/lib/format";
 import { sideEffectError } from "@/lib/logger";
 import {
   createNotificationWithDelivery,
@@ -259,7 +259,7 @@ export async function sendBatchPaymentReminder(
         recipient_profile_id: lease.tenant_profile_id,
         type: "rent_due_reminder" as const,
         title: "Payment reminder",
-        body: `${property?.name ?? "Your property"} • Unit ${unit.unit_number}: ${formatCurrency(charge.amount_cents)} is due ${formatDate(charge.due_date)}.`,
+        body: `${property?.name ?? "Your property"} • ${formatUnitLabel(unit.unit_number)}: ${formatCurrency(charge.amount_cents)} is due ${formatDate(charge.due_date)}.`,
         entity_type: "charge",
         entity_id: charge.id
       }

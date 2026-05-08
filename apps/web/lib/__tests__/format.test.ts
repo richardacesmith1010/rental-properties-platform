@@ -4,7 +4,8 @@ import {
   formatCurrency,
   formatDate,
   formatDateTime,
-  formatRelativeTime
+  formatRelativeTime,
+  formatUnitLabel
 } from "../format";
 
 describe("formatCurrency", () => {
@@ -81,6 +82,16 @@ describe("pluralize", () => {
   it("handles y-ending nouns with ies by default", () => {
     expect(pluralize(0, "property")).toBe("0 properties");
     expect(pluralize(2, "property")).toBe("2 properties");
+  });
+});
+
+describe("formatUnitLabel", () => {
+  it("adds the Unit prefix when the raw unit number does not include it", () => {
+    expect(formatUnitLabel("A")).toBe("Unit A");
+  });
+
+  it("preserves an existing Unit prefix", () => {
+    expect(formatUnitLabel("Unit A")).toBe("Unit A");
   });
 });
 

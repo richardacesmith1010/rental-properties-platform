@@ -1,6 +1,6 @@
 import { ClipboardList } from "lucide-react";
 import type { PropertyDetailData } from "@/lib/property-detail";
-import { formatCurrency, formatDateTime } from "@/lib/format";
+import { formatCurrency, formatDateTime, formatUnitLabel } from "@/lib/format";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -113,7 +113,7 @@ export function PropertyDetailOverviewPanel({
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {entry.tenantName}
-                        {entry.unitNumber ? ` • Unit ${entry.unitNumber}` : ""}
+                        {entry.unitNumber ? ` • ${formatUnitLabel(entry.unitNumber)}` : ""}
                       </p>
                       {entry.description ? (
                         <p className="text-sm text-muted-foreground">

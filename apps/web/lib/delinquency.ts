@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, formatUnitLabel } from "@/lib/format";
 import { buildRentReminderEmail } from "@/lib/email-templates";
 import {
   createNotificationWithDelivery,
@@ -146,12 +146,13 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
         : stage === "urgent"
           ? "Urgent Overdue Rent Notice"
           : "Friendly Rent Reminder";
+    const unitLabel = formatUnitLabel(unit.unit_number);
     const body =
       stage === "final"
-        ? `Your balance of ${formatCurrency(charge.amount_cents)} for Unit ${unit.unit_number} is more than 90 days overdue. Please resolve it immediately.`
+        ? `Your balance of ${formatCurrency(charge.amount_cents)} for ${unitLabel} is more than 90 days overdue. Please resolve it immediately.`
         : stage === "urgent"
-          ? `Your balance of ${formatCurrency(charge.amount_cents)} for Unit ${unit.unit_number} is now more than 60 days overdue. Please pay as soon as possible.`
-          : `Your balance of ${formatCurrency(charge.amount_cents)} for Unit ${unit.unit_number} is now 30 days overdue. Please pay when you can to avoid further escalation.`;
+          ? `Your balance of ${formatCurrency(charge.amount_cents)} for ${unitLabel} is now more than 60 days overdue. Please pay as soon as possible.`
+          : `Your balance of ${formatCurrency(charge.amount_cents)} for ${unitLabel} is now 30 days overdue. Please pay when you can to avoid further escalation.`;
     const reminderEmail = buildRentReminderEmail({
       tenantName: getTenantDisplayName(tenantProfile),
       amountFormatted: formatCurrency(charge.amount_cents),
@@ -182,7 +183,7 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
           propertyId: unit.property_id,
           type: "delinquency_escalation",
           title: "Final Overdue Rent Notice Sent",
-          body: `Unit ${unit.unit_number} at ${property.name} is more than 90 days overdue.`,
+          body: `${unitLabel} at ${property.name} is more than 90 days overdue.`,
           entityType: "rent_charge",
           entityId: charge.id
         })

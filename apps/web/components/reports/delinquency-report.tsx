@@ -3,7 +3,7 @@
 import type { ActionState } from "@/app/actions";
 import { delinquencyToCsv, downloadReportCsv } from "@/lib/csv-export-reports";
 import type { DelinquencyItem } from "@/lib/reports";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatUnitLabel } from "@/lib/format";
 import { ReportSection } from "./report-layout";
 import { ChargeActionList } from "./drilldown-panel";
 
@@ -43,7 +43,7 @@ export function DelinquencyReport({
             </div>
           )
         },
-        { key: "property", label: "Property", sortValue: (row) => row.propertyName, render: (row) => `${row.propertyName} • Unit ${row.unitNumber}` },
+        { key: "property", label: "Property", sortValue: (row) => row.propertyName, render: (row) => `${row.propertyName} • ${formatUnitLabel(row.unitNumber)}` },
         { key: "current", label: "0-30", sortValue: (row) => row.current, render: (row) => formatCurrency(row.current) },
         { key: "thirty", label: "31-60", sortValue: (row) => row.thirtyDay, render: (row) => formatCurrency(row.thirtyDay) },
         { key: "sixty", label: "61-90", sortValue: (row) => row.sixtyDay, render: (row) => formatCurrency(row.sixtyDay) },

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { withChargeEditingFallback } from "@/lib/charge-audit";
+import { formatUnitLabel } from "@/lib/format";
 
 export interface TenantCharge {
   id: string;
@@ -75,7 +76,7 @@ export async function getTenantPaymentData(userId: string): Promise<TenantPaymen
       const unit = lease ? unitById.get(lease.unit_id) : undefined;
       const property = unit ? propertyById.get(unit.property_id) : undefined;
 
-      const propertyLabel = property ? `${property.name} • Unit ${unit?.unit_number ?? "?"}` : "Your Rental";
+      const propertyLabel = property ? `${property.name} • ${formatUnitLabel(unit?.unit_number ?? "?")}` : "Your Rental";
 
       return {
         id: charge.id,

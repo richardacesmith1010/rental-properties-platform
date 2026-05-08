@@ -3,17 +3,11 @@
 import { useState } from "react";
 import { Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { PasswordStrengthMeter } from "@/components/auth/password-strength-meter";
 import { Alert } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { mapAuthErrorMessage, validatePassword } from "@/lib/password-validation";
-
-const strengthBarColors = [
-  "bg-red-500",
-  "bg-orange-500",
-  "bg-amber-400",
-  "bg-emerald-500"
-] as const;
 
 export function ResetPasswordForm() {
   const [newPassword, setNewPassword] = useState("");
@@ -79,26 +73,7 @@ export function ResetPasswordForm() {
             minLength={8}
             required
           />
-          {passwordStrength.score > 0 ? (
-            <div className="mt-2 space-y-2">
-              <div className="grid grid-cols-4 gap-2" aria-hidden="true">
-                {strengthBarColors.map((color, index) => (
-                  <div
-                    key={color}
-                    className={`h-1.5 rounded-full ${index < passwordStrength.score ? color : "bg-muted"}`}
-                  />
-                ))}
-              </div>
-              <div className="flex items-start justify-between gap-3 text-xs">
-                <span className="font-semibold text-foreground">{passwordStrength.label}</span>
-                {passwordStrength.errors.length > 0 ? (
-                  <span className="text-right text-muted-foreground">{passwordStrength.errors.join(" · ")}</span>
-                ) : (
-                  <span className="text-right text-emerald-600">Password looks good.</span>
-                )}
-              </div>
-            </div>
-          ) : null}
+          <PasswordStrengthMeter password={newPassword} />
         </div>
 
         <div>

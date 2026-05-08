@@ -44,13 +44,14 @@ import { EmptyState as DashboardEmptyState } from "@/components/shared/empty-sta
 import { StripeTestModeBanner } from "@/components/shared/stripe-test-mode-banner";
 import { GamificationSummary } from "@/components/gamification/gamification-summary";
 import { AchievementChecker } from "@/components/gamification/achievement-checker";
-import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
+import { formatCurrency, formatDate, formatDateTime, formatUnitLabel } from "@/lib/format";
 import { getUserGamification } from "@/lib/gamification";
 import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
 import { ChevronLeft, ChevronRight, CreditCard } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { redirect } from "next/navigation";
+import { SectionNotFoundState } from "@/components/dashboard/section-renderer-support";
 
 export const dynamic = "force-dynamic";
 
@@ -130,10 +131,11 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
   }
 
   const sectionValue = parseSearchParam(searchParams?.section);
+  const hasUnknownSection = sectionValue !== null && !isTenantSection(sectionValue);
   const activeSection: TenantSection = isTenantSection(sectionValue) ? sectionValue : "overview";
   const activeSectionIndex = tenantSectionOrder.indexOf(activeSection);
-  const previousSection = activeSectionIndex > 0 ? tenantSectionOrder[activeSectionIndex - 1] : null;
-  const nextSection = activeSectionIndex < tenantSectionOrder.length - 1
+  const previousSection = !hasUnknownSection && activeSectionIndex > 0 ? tenantSectionOrder[activeSectionIndex - 1] : null;
+  const nextSection = !hasUnknownSection && activeSectionIndex < tenantSectionOrder.length - 1
     ? tenantSectionOrder[activeSectionIndex + 1]
     : null;
 
@@ -219,7 +221,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
   const searchItems: GlobalSearchItem[] = [
     ...paymentData.charges.map((charge) => ({
       id: `charge:${charge.id}`,
-      label: `${charge.propertyName} • Unit ${charge.unitNumber}`,
+      label: `${charge.propertyName} • ${formatUnitLabel(charge.unitNumber)}`,
       category: "Rent",
       href: "/tenant?section=charges",
       description: `${charge.status} • ${formatCurrency(charge.amountCents)}`,
@@ -227,7 +229,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
     })),
     ...leaseDetails.map((lease) => ({
       id: `lease:${lease.leaseId}`,
-      label: `${lease.propertyName} • Unit ${lease.unitNumber}`,
+      label: `${lease.propertyName} • ${formatUnitLabel(lease.unitNumber)}`,
       category: "Lease",
       href: "/tenant?section=overview",
       description: `${formatDate(lease.startDate)} to ${formatDate(lease.endDate)}`,
@@ -238,7 +240,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
       label: ticket.title,
       category: "Problems",
       href: "/tenant?section=maintenance",
-      description: `${ticket.propertyName}${ticket.unitNumber ? ` • Unit ${ticket.unitNumber}` : ""}`,
+      description: `${ticket.propertyName}${ticket.unitNumber ? ` • ${formatUnitLabel(ticket.unitNumber)}` : ""}`,
       keywords: [ticket.title, ticket.description, ticket.propertyName, ticket.unitNumber ?? ""]
     })),
     ...documentsData.packets.map((packet) => ({
@@ -302,7 +304,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
             </h1>
             {maintenanceData.units.length > 0 && (
               <p className="mt-1 text-sm text-zinc-500">
-                {maintenanceData.units[0].propertyName} &middot; Unit {maintenanceData.units[0].unitNumber}
+                {maintenanceData.units[0].propertyName} &middot; {formatUnitLabel(maintenanceData.units[0].unitNumber)}
               </p>
             )}
           </div>
@@ -323,7 +325,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
           <StripeTestModeBanner />
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-zinc-900">
-              {tenantSectionLabel[activeSection]}
+              {hasUnknownSection ? "Section not found" : tenantSectionLabel[activeSection]}
             </h2>
             <div className="flex items-center gap-2">
               {previousSection ? (
@@ -355,7 +357,11 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
             </div>
           </div>
 
-          {activeSection === "overview" && (
+          {hasUnknownSection ? (
+            <SectionNotFoundState activeSection={sectionValue ?? "unknown"} role="tenant" />
+          ) : null}
+
+          {!hasUnknownSection && activeSection === "overview" && (
             <div className="space-y-5">
               <TenantOverview
                 userName={displayName}
@@ -394,7 +400,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
             </div>
           )}
 
-          {activeSection === "charges" && (
+          {!hasUnknownSection && activeSection === "charges" && (
             <div className="space-y-6">
               <TenantLeaseDetails leases={leaseDetails} />
               <ChargesSection
@@ -436,7 +442,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
                               <Badge variant="outline">{payment.method.toUpperCase()}</Badge>
                             </div>
                             <p className="mt-1 text-xs text-zinc-500">
-                              {payment.propertyName} • Unit {payment.unitNumber}
+                              {payment.propertyName} • {formatUnitLabel(payment.unitNumber)}
                             </p>
                             <p className="mt-1 text-xs text-zinc-500">
                               Paid {formatDateTime(payment.paidAt)} • Due {formatDate(payment.dueDate)}
@@ -463,7 +469,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
             </div>
           )}
 
-          {activeSection === "maintenance" && (
+          {!hasUnknownSection && activeSection === "maintenance" && (
             <>
               <TicketForm
                 units={maintenanceData.units}
@@ -487,7 +493,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
             </>
           )}
 
-          {activeSection === "documents" && (
+          {!hasUnknownSection && activeSection === "documents" && (
             <TenantDocumentsSection
               packets={documentsData.packets}
               files={documentsData.files}
@@ -505,7 +511,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
             />
           )}
 
-          {activeSection === "notifications" &&
+          {!hasUnknownSection && activeSection === "notifications" &&
             (capabilities.notificationsEnabled || capabilities.inboxThreadsEnabled ? (
               <InboxSection
                 notifications={notifications}
