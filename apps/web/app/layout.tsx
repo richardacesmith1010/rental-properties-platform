@@ -98,7 +98,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <FeedbackButton onSubmit={submitFeedback} />
           <InstallPromptBanner />
           <SonnerProvider />
-          <Analytics />
+          {process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true" ? <Analytics /> : null}
         </ThemeProvider>
       </body>
     </html>

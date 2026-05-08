@@ -304,6 +304,7 @@ describe("health route", () => {
       env: {
         NEXT_PUBLIC_SUPABASE_URL: true,
         NEXT_PUBLIC_SUPABASE_ANON_KEY: false,
+        NEXT_PUBLIC_ENABLE_ANALYTICS: false,
         SUPABASE_SERVICE_ROLE_KEY: true,
         STRIPE_SECRET_KEY: true,
         NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: true,
