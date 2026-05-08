@@ -25,6 +25,15 @@ export interface StripeWebhookEvent {
   };
 }
 
+export type StripeAccountHealthStatus = "active" | "restricted" | "missing";
+
+export type StripeAccountHealth = {
+  status: StripeAccountHealthStatus;
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+  disabledReason: string | null;
+};
+
 /**
  * Verify a Stripe webhook signature using HMAC-SHA256.
  * Returns the parsed event on success, throws on invalid signature.
@@ -245,4 +254,51 @@ export async function createStripeTransferReversal(params: {
 
   const json = (await response.json()) as { id: string };
   return { id: json.id };
+}
+
+export async function getStripeAccountHealth(accountId: string): Promise<StripeAccountHealth> {
+  const secretKey = getStripeSecretKey();
+  const response = await fetch(
+    `https://api.stripe.com/v1/accounts/${encodeURIComponent(accountId)}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${secretKey}`,
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      cache: "no-store"
+    }
+  );
+
+  if (response.status === 404) {
+    return {
+      status: "missing",
+      chargesEnabled: false,
+      payoutsEnabled: false,
+      disabledReason: "account_not_found"
+    };
+  }
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Stripe account retrieve failed: ${response.status} ${text}`);
+  }
+
+  const json = (await response.json()) as {
+    charges_enabled?: boolean;
+    payouts_enabled?: boolean;
+    requirements?: { disabled_reason?: string | null };
+  };
+
+  const chargesEnabled = Boolean(json.charges_enabled);
+  const payoutsEnabled = Boolean(json.payouts_enabled);
+  const disabledReason = json.requirements?.disabled_reason ?? null;
+  const isHealthy = chargesEnabled && payoutsEnabled && !disabledReason;
+
+  return {
+    status: isHealthy ? "active" : "restricted",
+    chargesEnabled,
+    payoutsEnabled,
+    disabledReason
+  };
 }

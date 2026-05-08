@@ -16,6 +16,10 @@ import { LeaseWizard } from "@/components/dashboard/lease-wizard";
 import { NotificationPauseBanner } from "@/components/dashboard/notification-pause-banner";
 import { OwnerDailyOpsHome } from "@/components/dashboard/owner-daily-ops-home";
 import { PropertyWizard } from "@/components/dashboard/property-wizard";
+import {
+  StripeHealthBanner,
+  type StripeHealthStatus
+} from "@/components/dashboard/stripe-health-banner";
 import { TenantInviteWizard } from "@/components/dashboard/tenant-invite-wizard";
 import { WelcomeCard } from "@/components/dashboard/welcome-card";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
@@ -44,6 +48,22 @@ function shouldHandleSectionHotkeys(target: EventTarget | null) {
   }
 
   return !element.isContentEditable;
+}
+
+function getWorstStripeHealthStatus(statuses: StripeHealthStatus[]): StripeHealthStatus {
+  if (statuses.includes("missing")) {
+    return "missing";
+  }
+
+  if (statuses.includes("restricted")) {
+    return "restricted";
+  }
+
+  if (statuses.includes("active")) {
+    return "active";
+  }
+
+  return null;
 }
 
 function PageHeader({
@@ -173,6 +193,9 @@ export function Dashboard(props: DashboardProps) {
       (!props.activeAccountId &&
       (props.llcPayoutMemberships?.every((membership) => membership.payoutStripeConnected) ?? false))
     : props.stripeConnected === true;
+  const stripeHealthStatus = getWorstStripeHealthStatus(
+    (props.ownershipAccounts ?? []).map((account) => account.stripeStatus ?? null)
+  );
   const showOwnerDailyOpsShell = isOwnerRole && isOwnerDailyOpsEnabled;
   const showLlcSetupPrompt = Boolean(
     isOwnerRole && isOwnerDailyOpsEnabled && isOwnerDailyOpsHomePage && llcSetupPrompt.shouldShow
@@ -287,6 +310,7 @@ export function Dashboard(props: DashboardProps) {
               llcAccountId={activeLlcPayoutMembership?.accountId ?? null}
             />
           ) : null}
+          {isOwnerRole ? <StripeHealthBanner status={stripeHealthStatus} /> : null}
           <WelcomeCard
             displayName={displayName}
             steps={ownerOnboarding.steps}
@@ -413,6 +437,7 @@ export function Dashboard(props: DashboardProps) {
             llcAccountId={activeLlcPayoutMembership?.accountId ?? null}
           />
         ) : null}
+        {isOwnerRole ? <StripeHealthBanner status={stripeHealthStatus} /> : null}
         {props.generatedMessage ? (
           <Alert variant="success" className="mt-3 rounded-xl px-4 py-3">
             {props.generatedMessage}

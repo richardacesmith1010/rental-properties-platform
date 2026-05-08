@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { StripeAccountHealthStatus } from "@/lib/stripe";
 import { getAdministeredOwnerAccountIds } from "@/lib/property-access";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 
@@ -11,6 +12,7 @@ export interface OwnershipAccountDTO {
   stripeConnected: boolean;
   distributionMode: string;
   stripeAccountId?: string | null;
+  stripeStatus?: StripeAccountHealthStatus | null;
   plaidConnected: boolean;
   bankName: string | null;
   bankMask: string | null;
@@ -69,6 +71,7 @@ interface OwnershipAccountRow {
   join_code: string | null;
   stripe_account_id: string | null;
   stripe_onboarding_complete: boolean | null;
+  stripe_status: StripeAccountHealthStatus | null;
   distribution_mode: string | null;
   plaid_account_id: string | null;
   plaid_bank_name: string | null;
@@ -184,7 +187,7 @@ export async function getOwnershipAccountsForUser(userId: string): Promise<Owner
     admin
       .from("ownership_accounts")
       .select(
-        "id, account_type, display_name, join_code, stripe_account_id, stripe_onboarding_complete, distribution_mode, plaid_account_id, plaid_bank_name, plaid_bank_mask, plaid_balance_cents, plaid_balance_updated_at"
+        "id, account_type, display_name, join_code, stripe_account_id, stripe_onboarding_complete, stripe_status, distribution_mode, plaid_account_id, plaid_bank_name, plaid_bank_mask, plaid_balance_cents, plaid_balance_updated_at"
       )
       .in("id", accountIds)
       .order("created_at", { ascending: true }),
@@ -213,6 +216,7 @@ export async function getOwnershipAccountsForUser(userId: string): Promise<Owner
           ...account,
           stripe_account_id: account.stripe_account_id ?? null,
           stripe_onboarding_complete: account.stripe_onboarding_complete ?? false,
+          stripe_status: null,
           distribution_mode: account.distribution_mode ?? "retain",
           plaid_account_id: null,
           plaid_bank_name: null,
@@ -239,6 +243,7 @@ export async function getOwnershipAccountsForUser(userId: string): Promise<Owner
     stripeConnected: account.stripe_onboarding_complete === true,
     distributionMode: account.distribution_mode ?? "retain",
     stripeAccountId: account.stripe_account_id ?? null,
+    stripeStatus: account.stripe_status ?? null,
     plaidConnected: Boolean(account.plaid_account_id),
     bankName: account.plaid_bank_name ?? null,
     bankMask: account.plaid_bank_mask ?? null,
