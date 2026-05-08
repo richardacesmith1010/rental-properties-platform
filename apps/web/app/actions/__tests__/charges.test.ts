@@ -12,11 +12,14 @@ const getManagerStripeAccountForPropertyMock = vi.hoisted(() => vi.fn());
 const canUserAdministerPropertyMock = vi.hoisted(() => vi.fn());
 const createNotificationWithDeliveryMock = vi.hoisted(() => vi.fn());
 const notifyOwnerMembersForPropertyMock = vi.hoisted(() => vi.fn());
+const notifyOwnerOfStripeIssueMock = vi.hoisted(() => vi.fn());
 const logAuditMock = vi.hoisted(() => vi.fn());
 const awardXpMock = vi.hoisted(() => vi.fn());
 const checkRateLimitMock = vi.hoisted(() => vi.fn());
 const parseFormDataMock = vi.hoisted(() => vi.fn());
 const requireAuthMock = vi.hoisted(() => vi.fn());
+const sendPlatformAlertMock = vi.hoisted(() => vi.fn());
+const sideEffectErrorMock = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({ redirect: redirectMock }));
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
@@ -34,13 +37,16 @@ vi.mock("@/lib/stripe-connect", () => ({
 vi.mock("@/lib/property-access", () => ({ canUserAdministerProperty: canUserAdministerPropertyMock }));
 vi.mock("@/lib/notifications", () => ({
   createNotificationWithDelivery: createNotificationWithDeliveryMock,
-  notifyOwnerMembersForProperty: notifyOwnerMembersForPropertyMock
+  notifyOwnerMembersForProperty: notifyOwnerMembersForPropertyMock,
+  notifyOwnerOfStripeIssue: notifyOwnerOfStripeIssueMock
 }));
 vi.mock("@/lib/audit", () => ({ logAudit: logAuditMock }));
 vi.mock("@/lib/gamification", () => ({
   awardXp: awardXpMock,
   XP_VALUES: { rent_paid_on_time: 10, rent_paid_late: 5 }
 }));
+vi.mock("@/lib/logger", () => ({ sideEffectError: sideEffectErrorMock }));
+vi.mock("@/lib/platform-alerts", () => ({ sendPlatformAlert: sendPlatformAlertMock }));
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: checkRateLimitMock }));
 vi.mock("@/lib/env", () => ({ isStripeConfigured: () => true }));
 vi.mock("@/lib/validations", () => ({
@@ -212,9 +218,12 @@ describe("charges actions", () => {
       })
     );
     notifyOwnerMembersForPropertyMock.mockResolvedValue(undefined);
+    notifyOwnerOfStripeIssueMock.mockResolvedValue(undefined);
     createNotificationWithDeliveryMock.mockResolvedValue(undefined);
     logAuditMock.mockResolvedValue(undefined);
     awardXpMock.mockResolvedValue(undefined);
+    sendPlatformAlertMock.mockResolvedValue({ sent: true });
+    sideEffectErrorMock.mockReturnValue(() => undefined);
   });
 
   it("returns a validation error when chargeId is missing", async () => {
@@ -401,6 +410,83 @@ describe("charges actions", () => {
     expect(sessionConfig.applicationFeeAmountCents).toBeUndefined();
     expect(sessionConfig.metadata.transfer_mode).toBeUndefined();
     expect(sessionConfig.metadata.processing_fee_cents).toBeUndefined();
+  });
+
+  it("returns an owner-bank message and notifies the owner when Stripe destination is missing", async () => {
+    parseFormDataMock.mockReturnValueOnce({ success: true, data: { chargeId: "charge-1" } });
+    createStripeCheckoutSessionMock.mockRejectedValueOnce(
+      new Error("No such destination: 'acct_xxx'")
+    );
+
+    const result = await payWithCard(new FormData());
+
+    expect(result).toEqual({
+      success: false,
+      error:
+        "We can't connect to your owner's bank right now. We've notified them. Please try again in a few hours, or message your property manager."
+    });
+    expect(notifyOwnerOfStripeIssueMock).toHaveBeenCalledWith({
+      propertyId: "property-1",
+      category: "owner_not_connected"
+    });
+    expect(sendPlatformAlertMock).not.toHaveBeenCalled();
+    expect(sideEffectErrorMock).toHaveBeenCalledWith("payWithCard", "start_stripe_checkout", {
+      userId: "user-1",
+      entityType: "rent_charge",
+      entityId: "charge-1"
+    });
+  });
+
+  it("returns a platform-setup message and alerts the platform admin for ACH setup errors", async () => {
+    parseFormDataMock.mockReturnValueOnce({ success: true, data: { chargeId: "charge-1" } });
+    createStripeCheckoutSessionMock.mockRejectedValueOnce(
+      new Error("You can only create new accounts if you've signed up for Connect")
+    );
+
+    const result = await payWithACH(new FormData());
+
+    expect(result).toEqual({
+      success: false,
+      error:
+        "Online payments are being set up. We've been notified and are fixing it. Please try again later."
+    });
+    expect(sendPlatformAlertMock).toHaveBeenCalledWith({
+      subject: "Stripe Connect platform issue",
+      body:
+        "payWithACH failed for charge charge-1 (property property-1). Error: You can only create new accounts if you've signed up for Connect",
+      dedupeKey: "platform_misconfigured:payWithACH"
+    });
+    expect(notifyOwnerOfStripeIssueMock).not.toHaveBeenCalled();
+  });
+
+  it("returns a retry-later message for transient Stripe failures without sending alerts", async () => {
+    parseFormDataMock.mockReturnValueOnce({ success: true, data: { chargeId: "charge-1" } });
+    createStripeCheckoutSessionMock.mockRejectedValue(new Error("fetch failed"));
+
+    const result = await payWithCard(new FormData());
+
+    expect(result).toEqual({
+      success: false,
+      error:
+        "Our payment processor is having trouble right now. Please try again in a few minutes."
+    });
+    expect(notifyOwnerOfStripeIssueMock).not.toHaveBeenCalled();
+    expect(sendPlatformAlertMock).not.toHaveBeenCalled();
+  });
+
+  it("returns a generic payment message for unknown Stripe failures without notifications", async () => {
+    parseFormDataMock.mockReturnValueOnce({ success: true, data: { chargeId: "charge-1" } });
+    createStripeCheckoutSessionMock.mockRejectedValueOnce(new Error("some weird error"));
+
+    const result = await payWithCard(new FormData());
+
+    expect(result).toEqual({
+      success: false,
+      error:
+        "Something went wrong with your payment. Please try again, or message your property manager."
+    });
+    expect(notifyOwnerOfStripeIssueMock).not.toHaveBeenCalled();
+    expect(sendPlatformAlertMock).not.toHaveBeenCalled();
   });
 
   it("blocks ACH checkout when the charge is below the online payment minimum", async () => {

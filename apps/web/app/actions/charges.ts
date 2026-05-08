@@ -15,14 +15,20 @@ import {
   getOwnerStripeAccountForProperty
 } from "@/lib/stripe-connect";
 import { canUserAdministerProperty } from "@/lib/property-access";
-import { createNotificationWithDelivery, notifyOwnerMembersForProperty } from "@/lib/notifications";
+import {
+  createNotificationWithDelivery,
+  notifyOwnerMembersForProperty,
+  notifyOwnerOfStripeIssue
+} from "@/lib/notifications";
 import { logAudit } from "@/lib/audit";
 import { awardXp, XP_VALUES } from "@/lib/gamification";
 import { formatCurrency } from "@/lib/format";
 import { isStripeConfigured } from "@/lib/env";
 import { sideEffectError } from "@/lib/logger";
+import { sendPlatformAlert } from "@/lib/platform-alerts";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { withRetry } from "@/lib/retry";
+import { categorizeStripeError, userMessageForCategory } from "@/lib/stripe-errors";
 import {
   payChargeSchema,
   parseFormData,
@@ -53,6 +59,52 @@ type CheckoutContext = {
 
 function isCheckoutContext(value: ActionState | CheckoutContext): value is CheckoutContext {
   return Boolean(value && "charge" in value);
+}
+
+function handleStripeCheckoutFailure(params: {
+  actionName: "payWithCard" | "payWithACH";
+  error: unknown;
+  userId: string;
+  chargeId: string;
+  propertyId: string;
+}): ActionState {
+  sideEffectError(params.actionName, "start_stripe_checkout", {
+    userId: params.userId,
+    entityType: "rent_charge",
+    entityId: params.chargeId
+  })(params.error);
+
+  const category = categorizeStripeError(params.error);
+
+  if (category === "owner_not_connected") {
+    void notifyOwnerOfStripeIssue({
+      propertyId: params.propertyId,
+      category
+    }).catch(
+      sideEffectError(params.actionName, "notify_owner_of_stripe_issue", {
+        userId: params.userId,
+        entityType: "rent_charge",
+        entityId: params.chargeId
+      })
+    );
+  } else if (category === "platform_misconfigured") {
+    const errorMessage =
+      params.error instanceof Error ? params.error.message : String(params.error);
+
+    void sendPlatformAlert({
+      subject: "Stripe Connect platform issue",
+      body: `${params.actionName} failed for charge ${params.chargeId} (property ${params.propertyId}). Error: ${errorMessage}`,
+      dedupeKey: `platform_misconfigured:${params.actionName}`
+    }).catch(
+      sideEffectError(params.actionName, "send_platform_alert", {
+        userId: params.userId,
+        entityType: "rent_charge",
+        entityId: params.chargeId
+      })
+    );
+  }
+
+  return { success: false, error: userMessageForCategory(category) };
 }
 
 async function prepareCheckoutContext(
@@ -233,12 +285,13 @@ export async function payWithCard(formData: FormData): Promise<ActionState | voi
       }
     );
   } catch (error) {
-    sideEffectError("payWithCard", "start_stripe_checkout", {
+    return handleStripeCheckoutFailure({
+      actionName: "payWithCard",
+      error,
       userId,
-      entityType: "rent_charge",
-      entityId: charge.id
-    })(error);
-    return { success: false, error: PAYMENTS_UNAVAILABLE_MESSAGE };
+      chargeId: charge.id,
+      propertyId
+    });
   }
 
   if (session.url) {
@@ -304,12 +357,13 @@ export async function payWithACH(formData: FormData): Promise<ActionState | void
       }
     );
   } catch (error) {
-    sideEffectError("payWithACH", "start_stripe_checkout", {
+    return handleStripeCheckoutFailure({
+      actionName: "payWithACH",
+      error,
       userId,
-      entityType: "rent_charge",
-      entityId: charge.id
-    })(error);
-    return { success: false, error: PAYMENTS_UNAVAILABLE_MESSAGE };
+      chargeId: charge.id,
+      propertyId
+    });
   }
 
   if (session.url) {

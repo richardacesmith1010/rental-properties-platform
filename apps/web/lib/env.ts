@@ -9,6 +9,7 @@ export function getEnvStatus() {
     CRON_SECRET: Boolean(process.env.CRON_SECRET),
     RESEND_API_KEY: Boolean(process.env.RESEND_API_KEY),
     RESEND_FROM_EMAIL: Boolean(process.env.RESEND_FROM_EMAIL),
+    PLATFORM_ALERT_EMAIL: Boolean(process.env.PLATFORM_ALERT_EMAIL),
     ANTHROPIC_API_KEY: Boolean(process.env.ANTHROPIC_API_KEY),
     PLAID_CLIENT_ID: Boolean(process.env.PLAID_CLIENT_ID),
     PLAID_SECRET: Boolean(process.env.PLAID_SECRET),
@@ -69,7 +70,8 @@ export function getEnvSummary(): EnvSummary {
       configured: Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL),
       vars: {
         RESEND_API_KEY: Boolean(process.env.RESEND_API_KEY),
-        RESEND_FROM_EMAIL: Boolean(process.env.RESEND_FROM_EMAIL)
+        RESEND_FROM_EMAIL: Boolean(process.env.RESEND_FROM_EMAIL),
+        PLATFORM_ALERT_EMAIL: Boolean(process.env.PLATFORM_ALERT_EMAIL)
       }
     },
     ai: {

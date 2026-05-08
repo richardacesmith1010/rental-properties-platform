@@ -401,6 +401,24 @@ export async function notifyOwnerMembersForProperty(params: NotifyOwnerMembersPa
   }
 }
 
+export async function notifyOwnerOfStripeIssue(params: {
+  propertyId: string;
+  category: "owner_not_connected" | "transient" | "platform_misconfigured" | "unknown";
+}): Promise<void> {
+  if (params.category !== "owner_not_connected") {
+    return;
+  }
+
+  await notifyOwnerMembersForProperty({
+    propertyId: params.propertyId,
+    type: "owner_message",
+    title: "Bank connection issue",
+    body: "We tried to send a tenant payment to your bank but it did not go through. Please reconnect your bank in Settings.",
+    entityType: "property",
+    entityId: params.propertyId
+  });
+}
+
 interface NotifyAccountMembersParams {
   accountId: string;
   type: NotificationType;

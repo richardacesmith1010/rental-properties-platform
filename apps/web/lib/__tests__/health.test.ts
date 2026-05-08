@@ -134,6 +134,7 @@ describe("health route", () => {
         CRON_SECRET: true,
         RESEND_API_KEY: true,
         RESEND_FROM_EMAIL: true,
+        PLATFORM_ALERT_EMAIL: true,
         ANTHROPIC_API_KEY: true,
         PLAID_CLIENT_ID: true,
         PLAID_SECRET: true,
