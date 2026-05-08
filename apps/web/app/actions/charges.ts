@@ -4,7 +4,11 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { withChargeEditingFallback } from "@/lib/charge-audit";
-import { calculateCardFee, getManagerFeeForProperty } from "@/lib/payment-fees";
+import {
+  calculateCardFee,
+  getManagerFeeForProperty,
+  MIN_ONLINE_PAYMENT_CENTS
+} from "@/lib/payment-fees";
 import { createStripeCheckoutSession } from "@/lib/stripe";
 import {
   getManagerStripeAccountForProperty,
@@ -94,6 +98,12 @@ async function prepareCheckoutContext(
   }
   if (charge.status === "waived") {
     return { success: false, error: "Waived charges cannot be paid." };
+  }
+  if (charge.amount_cents < MIN_ONLINE_PAYMENT_CENTS) {
+    return {
+      success: false,
+      error: `Online payments must be at least $${(MIN_ONLINE_PAYMENT_CENTS / 100).toFixed(2)}. For smaller amounts, please ask your owner or manager to record a cash or check payment.`
+    };
   }
 
   const { data: lease } = await supabase

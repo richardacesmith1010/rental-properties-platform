@@ -4,6 +4,13 @@ import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 const CARD_FEE_RATE = 0.029;
 const CARD_FEE_FIXED_CENTS = 30;
+/**
+ * Minimum charge amount (in cents) for online (Stripe-backed) payments.
+ * Below this, fee-on-fee math becomes embarrassing for the tenant and
+ * application_fee math can violate Stripe's `application_fee_amount <= total` rule.
+ * Manual cash/check recording is unaffected.
+ */
+export const MIN_ONLINE_PAYMENT_CENTS = 500;
 const ZERO_MANAGER_FEE = {
   feeCents: 0,
   managerProfileId: null

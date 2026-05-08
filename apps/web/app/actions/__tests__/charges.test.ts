@@ -24,7 +24,8 @@ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: createAdminClientMoc
 vi.mock("@/lib/stripe", () => ({ createStripeCheckoutSession: createStripeCheckoutSessionMock }));
 vi.mock("@/lib/payment-fees", () => ({
   calculateCardFee: calculateCardFeeMock,
-  getManagerFeeForProperty: getManagerFeeForPropertyMock
+  getManagerFeeForProperty: getManagerFeeForPropertyMock,
+  MIN_ONLINE_PAYMENT_CENTS: 500
 }));
 vi.mock("@/lib/stripe-connect", () => ({
   getOwnerStripeAccountForProperty: getOwnerStripeAccountForPropertyMock,
@@ -239,6 +240,26 @@ describe("charges actions", () => {
     expect(result).toEqual({ success: false, error: "This charge has already been paid." });
   });
 
+  it("blocks card checkout when the charge is below the online payment minimum", async () => {
+    parseFormDataMock.mockReturnValueOnce({ success: true, data: { chargeId: "charge-1" } });
+    requireAuthMock.mockResolvedValueOnce({
+      user: { id: "user-1", email: "owner@example.com" },
+      role: "owner",
+      supabase: createCheckoutSupabase({
+        charge: { id: "charge-1", amount_cents: 499, status: "pending", lease_id: "lease-1" }
+      })
+    });
+
+    const result = await payWithCard(new FormData());
+
+    expect(result).toEqual({
+      success: false,
+      error:
+        "Online payments must be at least $5.00. For smaller amounts, please ask your owner or manager to record a cash or check payment."
+    });
+    expect(createStripeCheckoutSessionMock).not.toHaveBeenCalled();
+  });
+
   it("returns an error when the lease is missing", async () => {
     parseFormDataMock.mockReturnValueOnce({ success: true, data: { chargeId: "charge-1" } });
     requireAuthMock.mockResolvedValueOnce({
@@ -290,6 +311,52 @@ describe("charges actions", () => {
     );
   });
 
+  it("allows card checkout when the charge meets the online payment minimum exactly", async () => {
+    parseFormDataMock.mockReturnValueOnce({ success: true, data: { chargeId: "charge-1" } });
+    calculateCardFeeMock.mockReturnValueOnce({ baseCents: 500, feeCents: 46, totalCents: 546 });
+    getManagerFeeForPropertyMock.mockResolvedValueOnce({ feeCents: 0, managerProfileId: null });
+    requireAuthMock.mockResolvedValueOnce({
+      user: { id: "user-1", email: "owner@example.com" },
+      role: "owner",
+      supabase: createCheckoutSupabase({
+        charge: { id: "charge-1", amount_cents: 500, status: "pending", lease_id: "lease-1" },
+        lease: { id: "lease-1", tenant_profile_id: "tenant-1", unit_id: "unit-1" },
+        unit: { id: "unit-1", property_id: "property-1" },
+        property: { id: "property-1" }
+      })
+    });
+
+    await expect(payWithCard(new FormData())).rejects.toThrow(
+      "REDIRECT:https://checkout.stripe.test/session"
+    );
+
+    expect(calculateCardFeeMock).toHaveBeenCalledWith(500);
+    expect(createStripeCheckoutSessionMock).toHaveBeenCalled();
+  });
+
+  it("continues normal card checkout for larger charges", async () => {
+    parseFormDataMock.mockReturnValueOnce({ success: true, data: { chargeId: "charge-1" } });
+    calculateCardFeeMock.mockReturnValueOnce({ baseCents: 10000, feeCents: 339, totalCents: 10339 });
+    getManagerFeeForPropertyMock.mockResolvedValueOnce({ feeCents: 0, managerProfileId: null });
+    requireAuthMock.mockResolvedValueOnce({
+      user: { id: "user-1", email: "owner@example.com" },
+      role: "owner",
+      supabase: createCheckoutSupabase({
+        charge: { id: "charge-1", amount_cents: 10000, status: "pending", lease_id: "lease-1" },
+        lease: { id: "lease-1", tenant_profile_id: "tenant-1", unit_id: "unit-1" },
+        unit: { id: "unit-1", property_id: "property-1" },
+        property: { id: "property-1" }
+      })
+    });
+
+    await expect(payWithCard(new FormData())).rejects.toThrow(
+      "REDIRECT:https://checkout.stripe.test/session"
+    );
+
+    expect(calculateCardFeeMock).toHaveBeenCalledWith(10000);
+    expect(createStripeCheckoutSessionMock).toHaveBeenCalled();
+  });
+
   it("keeps the owner whole when the manager is not Stripe-onboarded for card payments", async () => {
     parseFormDataMock.mockReturnValueOnce({ success: true, data: { chargeId: "charge-1" } });
     getManagerStripeAccountForPropertyMock.mockResolvedValueOnce(null);
@@ -334,6 +401,26 @@ describe("charges actions", () => {
     expect(sessionConfig.applicationFeeAmountCents).toBeUndefined();
     expect(sessionConfig.metadata.transfer_mode).toBeUndefined();
     expect(sessionConfig.metadata.processing_fee_cents).toBeUndefined();
+  });
+
+  it("blocks ACH checkout when the charge is below the online payment minimum", async () => {
+    parseFormDataMock.mockReturnValueOnce({ success: true, data: { chargeId: "charge-1" } });
+    requireAuthMock.mockResolvedValueOnce({
+      user: { id: "user-1", email: "owner@example.com" },
+      role: "owner",
+      supabase: createCheckoutSupabase({
+        charge: { id: "charge-1", amount_cents: 499, status: "pending", lease_id: "lease-1" }
+      })
+    });
+
+    const result = await payWithACH(new FormData());
+
+    expect(result).toEqual({
+      success: false,
+      error:
+        "Online payments must be at least $5.00. For smaller amounts, please ask your owner or manager to record a cash or check payment."
+    });
+    expect(createStripeCheckoutSessionMock).not.toHaveBeenCalled();
   });
 
   it("returns an error when a manual payment amount is invalid", async () => {
