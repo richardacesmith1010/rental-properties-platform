@@ -7,6 +7,7 @@ export function getEnvStatus() {
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY),
     STRIPE_WEBHOOK_SECRET: Boolean(process.env.STRIPE_WEBHOOK_SECRET),
     CRON_SECRET: Boolean(process.env.CRON_SECRET),
+    HEALTH_CHECK_SECRET: Boolean(process.env.HEALTH_CHECK_SECRET),
     RESEND_API_KEY: Boolean(process.env.RESEND_API_KEY),
     RESEND_FROM_EMAIL: Boolean(process.env.RESEND_FROM_EMAIL),
     PLATFORM_ALERT_EMAIL: Boolean(process.env.PLATFORM_ALERT_EMAIL),
