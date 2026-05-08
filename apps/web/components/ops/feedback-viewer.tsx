@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Bug, Check, ChevronDown, ChevronUp, Copy, ExternalLink, MessageCircleMore, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { StatefulAction } from "@/app/actions";
+import { RelativeTime } from "@/components/ui/relative-time";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +20,7 @@ import {
   type FeedbackStatus,
   type FeedbackType
 } from "@/lib/feedback";
-import { cn, formatDateTime, formatRelativeTime } from "@/lib/format";
+import { cn, formatDateTime } from "@/lib/format";
 
 interface FeedbackViewerProps {
   items: FeedbackEntry[];
@@ -262,7 +263,11 @@ export function FeedbackViewer({ items, warning, onUpdateStatus }: FeedbackViewe
                           </div>
                           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                             <span>{formatDateTime(entry.createdAt)}</span>
-                            <span>{formatRelativeTime(entry.createdAt)}</span>
+                            <RelativeTime
+                              value={entry.createdAt}
+                              fallback="dateTime"
+                              title={formatDateTime(entry.createdAt)}
+                            />
                             {entry.pageUrl ? (
                               <span className="max-w-full truncate">
                                 Page: {entry.pageUrl.replace(/^https?:\/\/[^/]+/i, "") || "/"}

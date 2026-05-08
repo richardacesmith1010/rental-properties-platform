@@ -6,8 +6,8 @@ import { X } from "lucide-react";
 import { toast } from "sonner";
 import type { ActionState } from "@/app/actions";
 import { Button } from "@/components/ui/button";
+import { RelativeTime } from "@/components/ui/relative-time";
 import { cn, formatDateTime } from "@/lib/format";
-import { formatRelativeNotificationTime } from "@/lib/notification-feed";
 import type { NotificationDTO } from "@/lib/notifications";
 import {
   getNotificationActions,
@@ -226,9 +226,13 @@ export function ActionableNotification({
                 "text-xs text-muted-foreground",
                 compact ? "ml-0" : "ml-auto"
               )}
-              title={formatDateTime(notification.createdAt)}
             >
-              {formatRelativeNotificationTime(notification.createdAt)}
+              <RelativeTime
+                value={notification.createdAt}
+                variant="notification"
+                fallback="monthDay"
+                title={formatDateTime(notification.createdAt)}
+              />
             </span>
           </div>
         </div>

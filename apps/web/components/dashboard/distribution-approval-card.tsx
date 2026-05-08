@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
 import { SubmitButton } from "@/components/shared/submit-button";
 import type { ActionState } from "@/app/actions";
+import { formatShortDateTime } from "@/lib/format";
 import type { DistributionChangeRequestDTO } from "@/lib/distribution-approvals";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
@@ -17,12 +18,7 @@ interface DistributionApprovalCardProps {
 }
 
 function formatTimestamp(value: string) {
-  return new Date(value).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  });
+  return formatShortDateTime(value);
 }
 
 function statusVariant(status: DistributionChangeRequestDTO["status"]) {

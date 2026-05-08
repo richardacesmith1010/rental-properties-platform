@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/shared/submit-button";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatShortDateTime } from "@/lib/format";
 import type { ActionState } from "@/app/actions";
 import type { WithdrawalRequestDTO } from "@/lib/withdrawals";
 
@@ -22,12 +22,7 @@ interface WithdrawalRequestCardProps {
 }
 
 function formatTimestamp(value: string) {
-  return new Date(value).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  });
+  return formatShortDateTime(value);
 }
 
 function statusVariant(status: WithdrawalRequestDTO["status"]) {

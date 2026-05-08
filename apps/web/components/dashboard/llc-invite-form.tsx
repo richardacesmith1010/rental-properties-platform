@@ -8,7 +8,8 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { formatRelativeTime } from "@/lib/format";
+import { RelativeTime } from "@/components/ui/relative-time";
+import { formatDateTime } from "@/lib/format";
 import type { LLCInvitationDTO } from "@/lib/llc-invitations";
 import type { StatefulAction } from "./types";
 
@@ -144,7 +145,12 @@ export function LLCInviteForm({
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-foreground">{invitation.email}</p>
                       <p className="text-xs text-muted-foreground">
-                        Sent {formatRelativeTime(invitation.createdAt)}
+                        Sent{" "}
+                        <RelativeTime
+                          value={invitation.createdAt}
+                          fallback="dateTime"
+                          title={formatDateTime(invitation.createdAt)}
+                        />
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">

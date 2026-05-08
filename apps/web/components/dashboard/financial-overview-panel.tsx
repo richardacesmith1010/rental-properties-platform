@@ -4,10 +4,11 @@ import { Landmark, Loader2, Wallet } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useFormState } from "react-dom";
 import { Alert } from "@/components/ui/alert";
-import { cn, formatRelativeTime } from "@/lib/format";
 import { BankBalanceCard } from "@/components/dashboard/bank-balance-card";
 import { PlaidLinkButton } from "@/components/dashboard/plaid-link-button";
 import { DomusFinancialsCard } from "@/components/dashboard/domus-financials-card";
+import { RelativeTime } from "@/components/ui/relative-time";
+import { cn, formatDateTime } from "@/lib/format";
 import type { StatefulAction } from "./types";
 
 export type FinancialOverviewTab = "bank" | "domus" | "both";
@@ -207,12 +208,7 @@ export function FinancialOverviewPanel({
     setIsAutoRefreshing(false);
   }, [autoRefreshState]);
 
-  const autoRefreshWarning =
-    autoRefreshState && !autoRefreshState.success && staleBalance
-      ? `Bank refresh failed. Showing the last known balance${
-          balanceUpdatedAt ? ` from ${formatRelativeTime(balanceUpdatedAt)}` : ""
-        }.`
-      : null;
+  const showAutoRefreshWarning = Boolean(autoRefreshState && !autoRefreshState.success && staleBalance);
 
   return (
     <div className="overflow-x-hidden rounded-2xl border border-border/60 bg-card/95 p-4 shadow-sm sm:p-5">
@@ -265,9 +261,20 @@ export function FinancialOverviewPanel({
         </form>
       ) : null}
 
-      {autoRefreshWarning ? (
+      {showAutoRefreshWarning ? (
         <Alert variant="warning" className="mt-4 text-xs font-normal">
-          {autoRefreshWarning}
+          Bank refresh failed. Showing the last known balance
+          {balanceUpdatedAt ? (
+            <>
+              {" "}from{" "}
+              <RelativeTime
+                value={balanceUpdatedAt}
+                fallback="dateTime"
+                title={formatDateTime(balanceUpdatedAt)}
+              />
+            </>
+          ) : null}
+          .
         </Alert>
       ) : null}
 

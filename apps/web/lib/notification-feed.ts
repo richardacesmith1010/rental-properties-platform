@@ -2,6 +2,7 @@ import {
   ANNOUNCEMENT_ENTITY_TYPE,
   ANNOUNCEMENT_NOTIFICATION_TYPE
 } from "@/lib/announcements";
+import { formatMonthDay } from "@/lib/format";
 
 export interface NotificationActionLink {
   label: string;
@@ -44,10 +45,7 @@ export function formatRelativeNotificationTime(
     return `${diffDays}d ago`;
   }
 
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric"
-  });
+  return formatMonthDay(date);
 }
 
 export function groupNotificationsByRecency<T extends { createdAt: string }>(

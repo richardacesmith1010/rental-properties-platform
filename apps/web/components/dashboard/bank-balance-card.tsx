@@ -5,8 +5,9 @@ import { useFormState } from "react-dom";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { RelativeTime } from "@/components/ui/relative-time";
 import { SubmitButton } from "@/components/shared/submit-button";
-import { cn, formatCurrency, formatRelativeTime } from "@/lib/format";
+import { cn, formatCurrency, formatDateTime } from "@/lib/format";
 import type { ActionState } from "@/app/actions";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
@@ -49,9 +50,6 @@ export function BankBalanceCard({
 
   const balanceLabel =
     typeof balanceCents === "number" ? formatCurrency(balanceCents) : "Balance unavailable";
-  const updatedLabel = balanceUpdatedAt
-    ? `Updated ${formatRelativeTime(balanceUpdatedAt)}`
-    : "Balance has not been refreshed yet.";
 
   return (
     <div className={cn("mt-3 rounded-xl border border-border bg-card px-4 py-4", className)}>
@@ -62,7 +60,20 @@ export function BankBalanceCard({
             {bankMask ? ` ••••${bankMask}` : ""}
           </p>
           <p className="mt-1 text-2xl font-semibold text-foreground">{balanceLabel}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{updatedLabel}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {balanceUpdatedAt ? (
+              <>
+                Updated{" "}
+                <RelativeTime
+                  value={balanceUpdatedAt}
+                  fallback="dateTime"
+                  title={formatDateTime(balanceUpdatedAt)}
+                />
+              </>
+            ) : (
+              "Balance has not been refreshed yet."
+            )}
+          </p>
         </div>
         <form action={refreshAction} className="w-full space-y-2 sm:w-auto">
           <input type="hidden" name="accountId" value={accountId} />

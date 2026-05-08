@@ -4,7 +4,9 @@ import {
   formatCurrency,
   formatDate,
   formatDateTime,
+  formatMonthDay,
   formatRelativeTime,
+  formatShortDateTime,
   formatUnitLabel
 } from "../format";
 
@@ -54,15 +56,31 @@ describe("formatDate", () => {
   it("returns an empty string for null input", () => {
     expect(formatDate(null)).toBe("");
   });
+
+  it("keeps date-only values pinned to the original UTC day", () => {
+    expect(formatDate("2026-03-13")).toBe("Mar 13, 2026");
+  });
 });
 
 describe("formatDateTime", () => {
   it("formats ISO datetimes", () => {
-    expect(formatDateTime("2026-03-13T18:45:00.000Z")).toContain("2026");
+    expect(formatDateTime("2026-03-13T18:45:00.000Z")).toBe("Mar 13, 2026, 6:45 PM");
   });
 
   it("returns invalid datetime strings unchanged", () => {
     expect(formatDateTime("invalid-datetime")).toBe("invalid-datetime");
+  });
+});
+
+describe("formatShortDateTime", () => {
+  it("formats UTC datetimes without a year", () => {
+    expect(formatShortDateTime("2026-03-13T18:45:00.000Z")).toBe("Mar 13, 6:45 PM");
+  });
+});
+
+describe("formatMonthDay", () => {
+  it("formats month/day values in UTC", () => {
+    expect(formatMonthDay("2026-03-13T18:45:00.000Z")).toBe("Mar 13");
   });
 });
 

@@ -4,6 +4,7 @@ import { ArrowUpRight, DollarSign, Receipt, Settings2 } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatShortDateTime } from "@/lib/format";
 import type { FinancialActivityEvent } from "@/lib/distributions";
 
 interface FinancialActivityFeedProps {
@@ -22,12 +23,7 @@ function formatCurrency(amountCents: number | null) {
 }
 
 function formatTimestamp(value: string) {
-  return new Date(value).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  });
+  return formatShortDateTime(value);
 }
 
 function iconForEvent(type: FinancialActivityEvent["type"]) {

@@ -174,13 +174,14 @@ describe("ChargesSection", () => {
     expect(screen.getByRole("button", { name: "Message Maya Bell" })).toBeInTheDocument();
   });
 
-  it("shows tenant card payment totals and the ACH placeholder", () => {
+  it("shows tenant card and bank account payment actions", () => {
     const payment = calculateCardFee(charges[0].amountCents);
 
     render(
       <ChargesSection
         charges={charges}
         onPayCharge={async () => {}}
+        onPayWithACH={async () => {}}
         isTenantView
       />
     );
@@ -188,6 +189,10 @@ describe("ChargesSection", () => {
     expect(screen.getByText(`Includes ${formatCentsAsDollars(payment.feeCents)} processing fee`)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: `Pay ${formatCentsAsDollars(payment.totalCents)}` })).toBeInTheDocument();
     expect(screen.getByText("Pay from bank account")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Coming Soon" })).toBeDisabled();
+    expect(screen.getByText("No extra fees")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: `Pay ${formatCentsAsDollars(charges[0].amountCents)}` })
+    ).toBeInTheDocument();
+    expect(screen.getByText("FREE")).toBeInTheDocument();
   });
 });

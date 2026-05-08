@@ -52,6 +52,7 @@ describe("PayRentCard", () => {
       <PayRentCard
         charges={charges}
         onPayCharge={async () => {}}
+        onPayWithACH={async () => {}}
         onRequestManualPaymentConfirmation={async () => ({ success: true })}
         chargesHref="/tenant?section=charges"
         onSetupAutopay={async () => ({ success: true })}
@@ -65,8 +66,10 @@ describe("PayRentCard", () => {
     expect(screen.getByText("Unit 2B")).toBeInTheDocument();
     expect(screen.getByText(`Includes ${formatCentsAsDollars(lateChargePayment.feeCents)} processing fee`)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: `Pay ${formatCentsAsDollars(lateChargePayment.totalCents)}` })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: `Pay ${formatCentsAsDollars(charges[1].amountCents)}` })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Enable Autopay" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Coming Soon" })).toBeDisabled();
+    expect(screen.getByText("No extra fees")).toBeInTheDocument();
+    expect(screen.getByText("FREE")).toBeInTheDocument();
   });
 
   it("shows the fee-inclusive card payment amount", () => {
@@ -75,6 +78,7 @@ describe("PayRentCard", () => {
       <PayRentCard
         charges={[charges[0]]}
         onPayCharge={async () => {}}
+        onPayWithACH={async () => {}}
         onRequestManualPaymentConfirmation={async () => ({ success: true })}
         chargesHref="/tenant?section=charges"
       />
@@ -92,6 +96,7 @@ describe("PayRentCard", () => {
       <PayRentCard
         charges={[charges[0]]}
         onPayCharge={async () => {}}
+        onPayWithACH={async () => {}}
         onRequestManualPaymentConfirmation={async () => ({ success: true })}
         chargesHref="/tenant?section=charges"
         autopayEnrollments={[
@@ -118,6 +123,7 @@ describe("PayRentCard", () => {
       <PayRentCard
         charges={[charges[0]]}
         onPayCharge={async () => {}}
+        onPayWithACH={async () => {}}
         onRequestManualPaymentConfirmation={async () => ({ success: true })}
         chargesHref="/tenant?section=charges"
         autopayEnrollments={[
@@ -147,6 +153,7 @@ describe("PayRentCard", () => {
         onPayCharge={async () => {}}
         onRequestManualPaymentConfirmation={async () => ({ success: true })}
         chargesHref="/tenant?section=charges"
+        hasActiveLease
       />
     );
 
@@ -156,5 +163,21 @@ describe("PayRentCard", () => {
       "href",
       "/tenant?section=charges"
     );
+  });
+
+  it("shows the lease setup message when the tenant has no active lease", () => {
+    render(
+      <PayRentCard
+        charges={[]}
+        onPayCharge={async () => {}}
+        onRequestManualPaymentConfirmation={async () => ({ success: true })}
+        chargesHref="/tenant?section=charges"
+        hasActiveLease={false}
+      />
+    );
+
+    expect(screen.getByText("Your landlord hasn't set up your lease yet")).toBeInTheDocument();
+    expect(screen.getByText("Once it's ready, your rent will show up here.")).toBeInTheDocument();
+    expect(screen.queryByText("No payments due right now")).not.toBeInTheDocument();
   });
 });

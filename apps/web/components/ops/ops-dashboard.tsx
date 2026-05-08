@@ -9,9 +9,10 @@ import { Alert } from "@/components/ui/alert";
 import { AnimatedTabs } from "@/components/ui/animated-tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RelativeTime } from "@/components/ui/relative-time";
 import { EmptyState } from "@/components/shared/empty-state";
 import type { FeedbackEntry } from "@/lib/feedback";
-import { formatDateTime, formatRelativeTime } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import type { EnvSummary } from "@/lib/env";
 
 interface ServiceHealth {
@@ -209,7 +210,13 @@ export function OpsDashboard({
                     ))}
                   </div>
                   <p className="text-xs text-zinc-500">
-                    Last checked {formatRelativeTime(health.timestamp)} ({formatDateTime(health.timestamp)})
+                    Last checked{" "}
+                    <RelativeTime
+                      value={health.timestamp}
+                      fallback="dateTime"
+                      title={formatDateTime(health.timestamp)}
+                    />{" "}
+                    ({formatDateTime(health.timestamp)})
                   </p>
                 </>
               ) : (
@@ -325,11 +332,23 @@ export function OpsDashboard({
                           <Badge variant={statusVariant(run.status)}>{run.status.replace(/_/g, " ")}</Badge>
                         </div>
                         <p className="mt-2 text-xs text-zinc-500">
-                          Started {formatDateTime(run.started_at)} ({formatRelativeTime(run.started_at)})
+                          Started {formatDateTime(run.started_at)} (
+                          <RelativeTime
+                            value={run.started_at}
+                            fallback="dateTime"
+                            title={formatDateTime(run.started_at)}
+                          />
+                          )
                         </p>
                         {run.completed_at ? (
                           <p className="mt-1 text-xs text-zinc-500">
-                            Completed {formatDateTime(run.completed_at)} ({formatRelativeTime(run.completed_at)})
+                            Completed {formatDateTime(run.completed_at)} (
+                            <RelativeTime
+                              value={run.completed_at}
+                              fallback="dateTime"
+                              title={formatDateTime(run.completed_at)}
+                            />
+                            )
                           </p>
                         ) : null}
                         {run.error ? <p className="mt-2 text-xs text-red-600">{run.error}</p> : null}
