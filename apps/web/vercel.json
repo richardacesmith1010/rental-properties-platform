@@ -5,10 +5,6 @@
       "schedule": "0 8 * * *"
     },
     {
-      "path": "/api/cron/keep-alive",
-      "schedule": "0 20 * * *"
-    },
-    {
       "path": "/api/cron/verify-stripe-accounts",
       "schedule": "0 6 * * *"
     }
