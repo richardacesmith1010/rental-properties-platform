@@ -6,6 +6,7 @@ import { canUserAdministerProperty } from "@/lib/property-access";
 import { logAudit } from "@/lib/audit";
 import { sideEffectError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getStripeConnectOnboardingErrorCopy } from "@/lib/stripe-errors";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 import {
   createAccountLink,
@@ -74,10 +75,9 @@ export async function initiateStripeConnect(): Promise<ActionState> {
     };
   } catch (err) {
     console.error("initiateStripeConnect error:", err);
-    const detail = err instanceof Error ? err.message : String(err);
     return {
       success: false,
-      error: `Unable to start Stripe onboarding right now. (${detail})`
+      error: getStripeConnectOnboardingErrorCopy(err).description
     };
   }
 }
@@ -145,10 +145,9 @@ export async function initiateAccountStripeConnect(
     return { success: true, url: accountLink.url };
   } catch (err) {
     console.error("initiateAccountStripeConnect error:", err);
-    const detail = err instanceof Error ? err.message : String(err);
     return {
       success: false,
-      error: `Unable to start Stripe onboarding. (${detail})`
+      error: getStripeConnectOnboardingErrorCopy(err).description
     };
   }
 }
@@ -250,10 +249,9 @@ export async function initiateMemberPayoutConnect(
     return { success: true, url: accountLink.url };
   } catch (err) {
     console.error("initiateMemberPayoutConnect error:", err);
-    const detail = err instanceof Error ? err.message : String(err);
     return {
       success: false,
-      error: `Unable to start payout onboarding. (${detail})`
+      error: getStripeConnectOnboardingErrorCopy(err).description
     };
   }
 }

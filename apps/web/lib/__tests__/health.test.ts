@@ -14,6 +14,7 @@ import {
   checkStripeConnectEnabled,
   checkStripeWebhookRegistered,
   checkSupabase,
+  resetStripeConnectCheckCache,
   type ServiceHealth
 } from "@/lib/health";
 
@@ -31,6 +32,7 @@ describe("health route", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    resetStripeConnectCheckCache();
     process.env = {
       ...originalEnv,
       NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
@@ -43,6 +45,7 @@ describe("health route", () => {
   });
 
   afterEach(() => {
+    resetStripeConnectCheckCache();
     process.env = { ...originalEnv };
     vi.unstubAllGlobals();
   });
@@ -124,85 +127,89 @@ describe("health route", () => {
     expect(result.error).toBe("boom");
   });
 
-  it("returns healthy when Stripe Connect is enabled", async () => {
-    fetchMock.mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: vi.fn().mockResolvedValue({
-        capabilities: { transfers: "active", card_payments: "active" }
+  it("returns healthy only when the probe account can be created and deleted", async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({
+          id: "acct_probe_123"
+        })
       })
-    });
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: vi.fn().mockResolvedValue("")
+      });
 
     const result = await checkStripeConnectEnabled();
 
     expect(result.ok).toBe(true);
     expect(result.error).toBeUndefined();
-    expect(fetchMock).toHaveBeenCalledWith("https://api.stripe.com/v1/account", {
-      headers: { Authorization: "Bearer sk_test_123" },
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "https://api.stripe.com/v1/accounts", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer sk_test_123",
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: "type=express&country=US&capabilities%5Btransfers%5D%5Brequested%5D=true",
+      cache: "no-store"
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "https://api.stripe.com/v1/accounts/acct_probe_123", {
+      method: "DELETE",
+      headers: {
+        Authorization: "Bearer sk_test_123"
+      },
       cache: "no-store"
     });
   });
 
-  it("returns unhealthy when the transfers capability is inactive", async () => {
-    fetchMock.mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: vi.fn().mockResolvedValue({
-        capabilities: { transfers: "inactive" }
-      })
-    });
-
-    const result = await checkStripeConnectEnabled();
-
-    expect(result.ok).toBe(false);
-    expect(result.error).toMatch(/transfers capability: inactive/);
-    expect(result.error).toMatch(/dashboard\.stripe\.com\/connect/);
-  });
-
-  it("returns unhealthy when the transfers capability is pending", async () => {
-    fetchMock.mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: vi.fn().mockResolvedValue({
-        capabilities: { transfers: "pending" }
-      })
-    });
-
-    const result = await checkStripeConnectEnabled();
-
-    expect(result.ok).toBe(false);
-    expect(result.error).toMatch(/transfers capability: pending/);
-  });
-
-  it("returns unhealthy when the capabilities object is missing", async () => {
-    fetchMock.mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: vi.fn().mockResolvedValue({
-        details_submitted: true
-      })
-    });
-
-    const result = await checkStripeConnectEnabled();
-
-    expect(result.ok).toBe(false);
-    expect(result.error).toMatch(/transfers capability: missing/);
-  });
-
-  it("returns the Stripe status code when the Connect check gets a non-200 response", async () => {
+  it("returns unhealthy with the Stripe message when probe account creation is blocked", async () => {
     fetchMock.mockResolvedValue({
       ok: false,
-      status: 500,
-      text: vi.fn().mockResolvedValue("Internal error")
+      status: 400,
+      text: vi.fn().mockResolvedValue(
+        JSON.stringify({
+          error: {
+            message: "You must complete your platform profile to use Connect and create live connected accounts"
+          }
+        })
+      )
     });
 
     const result = await checkStripeConnectEnabled();
 
     expect(result.ok).toBe(false);
-    expect(result.error).toContain("HTTP 500");
+    expect(result.error).toContain("must complete your platform profile");
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 
-  it("returns the thrown message when the Connect check fetch fails", async () => {
+  it("returns the cached probe result for one hour without hitting Stripe again", async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({
+          id: "acct_probe_cached"
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: vi.fn().mockResolvedValue("")
+      });
+
+    const firstResult = await checkStripeConnectEnabled();
+    const fetchCallCountAfterFirstResult = fetchMock.mock.calls.length;
+    const secondResult = await checkStripeConnectEnabled();
+
+    expect(firstResult.ok).toBe(true);
+    expect(secondResult.ok).toBe(true);
+    expect(fetchCallCountAfterFirstResult).toBe(2);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns the thrown message when the Connect probe fetch fails", async () => {
     fetchMock.mockRejectedValue(new Error("network down"));
 
     const result = await checkStripeConnectEnabled();
@@ -211,7 +218,7 @@ describe("health route", () => {
     expect(result.error).toContain("network down");
   });
 
-  it("returns a missing key error when the Connect check has no Stripe secret", async () => {
+  it("returns a missing key error when the Connect probe has no Stripe secret", async () => {
     delete process.env.STRIPE_SECRET_KEY;
 
     const result = await checkStripeConnectEnabled();

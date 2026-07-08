@@ -8,6 +8,7 @@ import {
 import { getActiveLlcMembershipsForUser } from "@/lib/ownership";
 import { getAuthenticatedUser, getCurrentUserRole, getRoleHomePath, getUserProfileSummary } from "@/lib/auth";
 import { isStripeConfigured } from "@/lib/env";
+import { getStripeConnectOnboardingErrorCopy } from "@/lib/stripe-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -106,34 +107,44 @@ export default async function ConnectOnboardPage({ searchParams }: ConnectOnboar
     );
   }
 
-  const result = effectiveMemberPayout
-    ? await (async () => {
-        if (!effectiveAccountId) {
-          return { success: false, error: "We could not find an LLC account to connect." } as const;
-        }
-        const formData = new FormData();
-        formData.set("accountId", effectiveAccountId);
-        formData.set("profileId", requestedProfileId ?? user.id);
-        return initiateMemberPayoutConnect(null, formData);
-      })()
-    : effectiveAccountId
-      ? await (async () => {
-        const formData = new FormData();
-        formData.set("accountId", effectiveAccountId);
-        return initiateAccountStripeConnect(null, formData);
-      })()
-      : await initiateStripeConnect();
+  const result = await (async () => {
+    try {
+      return effectiveMemberPayout
+        ? await (async () => {
+            if (!effectiveAccountId) {
+              return { success: false, error: "We could not find an LLC account to connect." } as const;
+            }
+            const formData = new FormData();
+            formData.set("accountId", effectiveAccountId);
+            formData.set("profileId", requestedProfileId ?? user.id);
+            return initiateMemberPayoutConnect(null, formData);
+          })()
+        : effectiveAccountId
+          ? await (async () => {
+              const formData = new FormData();
+              formData.set("accountId", effectiveAccountId);
+              return initiateAccountStripeConnect(null, formData);
+            })()
+          : await initiateStripeConnect();
+    } catch (error) {
+      console.error("connect onboard page error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      } as const;
+    }
+  })();
   if (result?.success && result.url) {
     redirect(result.url);
   }
 
+  const errorCopy = getStripeConnectOnboardingErrorCopy(result && !result.success ? result.error : null);
+
   return (
     <main className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
       <div className="w-full max-w-lg rounded-2xl border border-red-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Unable to start bank connection</h1>
-        <p className="mt-2 text-sm text-zinc-600">
-          {result && !result.success ? result.error : "Your bank connection could not be started right now."}
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{errorCopy.title}</h1>
+        <p className="mt-2 text-sm text-zinc-600">{errorCopy.description}</p>
       </div>
     </main>
   );

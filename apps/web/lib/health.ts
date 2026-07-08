@@ -17,6 +17,79 @@ export interface HealthResponsePayload {
   timestamp: string;
 }
 
+const STRIPE_CONNECT_CHECK_CACHE_TTL_MS = 60 * 60 * 1000;
+const STRIPE_CONNECT_ERROR_MAX_CHARS = 200;
+
+let stripeConnectCheckCache:
+  | {
+      checkedAt: number;
+      secretKey: string;
+      result: Omit<ServiceHealth, "latencyMs"> & { latencyMs: number };
+    }
+  | null = null;
+
+function truncateStripeMessage(message: string, limit = STRIPE_CONNECT_ERROR_MAX_CHARS): string {
+  if (message.length <= limit) {
+    return message;
+  }
+
+  return `${message.slice(0, limit - 1).trimEnd()}…`;
+}
+
+async function readStripeErrorMessage(response: Pick<Response, "text">): Promise<string> {
+  const text = await response.text();
+
+  try {
+    const parsed = JSON.parse(text) as {
+      error?: {
+        message?: string;
+      };
+    };
+    const message = parsed.error?.message;
+
+    if (typeof message === "string" && message.length > 0) {
+      return truncateStripeMessage(message);
+    }
+  } catch {
+    // Fall back to the raw body when Stripe did not return JSON.
+  }
+
+  return truncateStripeMessage(text);
+}
+
+function getCachedStripeConnectResult(secretKey: string): ServiceHealth | null {
+  if (!stripeConnectCheckCache) {
+    return null;
+  }
+
+  if (stripeConnectCheckCache.secretKey !== secretKey) {
+    return null;
+  }
+
+  if (Date.now() - stripeConnectCheckCache.checkedAt >= STRIPE_CONNECT_CHECK_CACHE_TTL_MS) {
+    return null;
+  }
+
+  return {
+    ...stripeConnectCheckCache.result,
+    latencyMs: 0
+  };
+}
+
+function setCachedStripeConnectResult(secretKey: string, result: ServiceHealth): ServiceHealth {
+  stripeConnectCheckCache = {
+    checkedAt: Date.now(),
+    secretKey,
+    result
+  };
+
+  return result;
+}
+
+export function resetStripeConnectCheckCache(): void {
+  stripeConnectCheckCache = null;
+}
+
 export async function checkSupabase(): Promise<ServiceHealth> {
   const start = Date.now();
 
@@ -73,13 +146,12 @@ export async function checkStripe(): Promise<ServiceHealth> {
 }
 
 /**
- * Detects whether Stripe Connect is fully enabled on the platform account.
- * Calls GET /v1/account (the platform account itself) and verifies that
- * capabilities.transfers is active, which is the signal required for
- * destination-charge flows to succeed.
+ * Read-only Stripe signals can be false-green here: both GET /v1/accounts and
+ * account.capabilities.transfers can succeed while live connected-account
+ * creation is still blocked during Connect review. A probe create/delete is the
+ * only trustworthy signal for whether onboarding can actually start.
  */
 export async function checkStripeConnectEnabled(): Promise<ServiceHealth> {
-  const start = Date.now();
   const key = process.env.STRIPE_SECRET_KEY;
 
   if (!key) {
@@ -90,47 +162,78 @@ export async function checkStripeConnectEnabled(): Promise<ServiceHealth> {
     };
   }
 
+  const cached = getCachedStripeConnectResult(key);
+  if (cached) {
+    return cached;
+  }
+
+  const start = Date.now();
+
   try {
-    const response = await fetch("https://api.stripe.com/v1/account", {
+    const body = new URLSearchParams();
+    body.set("type", "express");
+    body.set("country", "US");
+    body.set("capabilities[transfers][requested]", "true");
+
+    const response = await fetch("https://api.stripe.com/v1/accounts", {
+      method: "POST",
       headers: {
-        Authorization: `Bearer ${key}`
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/x-www-form-urlencoded"
       },
+      body: body.toString(),
       cache: "no-store"
     });
 
     if (!response.ok) {
-      const text = await response.text();
-      return {
+      return setCachedStripeConnectResult(key, {
         ok: false,
         latencyMs: Date.now() - start,
-        error: `Stripe API error: HTTP ${response.status} ${text.slice(0, 120)}`
-      };
+        error: await readStripeErrorMessage(response)
+      });
     }
 
-    const json = (await response.json()) as {
-      capabilities?: Record<string, string>;
-      details_submitted?: boolean;
-    };
-    const transfersCapability = json.capabilities?.transfers;
+    const json = (await response.json()) as { id?: string };
 
-    if (transfersCapability !== "active") {
-      return {
+    if (!json.id) {
+      return setCachedStripeConnectResult(key, {
         ok: false,
         latencyMs: Date.now() - start,
-        error: `Stripe Connect not fully enabled (transfers capability: ${transfersCapability ?? "missing"}) — finish signup at https://dashboard.stripe.com/connect`
-      };
+        error: "Stripe did not return a probe account ID"
+      });
     }
 
-    return {
+    try {
+      const deleteResponse = await fetch(`https://api.stripe.com/v1/accounts/${json.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${key}`
+        },
+        cache: "no-store"
+      });
+
+      if (!deleteResponse.ok) {
+        console.error(
+          "[health] failed to delete Stripe Connect probe account:",
+          json.id,
+          deleteResponse.status,
+          await readStripeErrorMessage(deleteResponse)
+        );
+      }
+    } catch (deleteError) {
+      console.error("[health] failed to delete Stripe Connect probe account:", json.id, deleteError);
+    }
+
+    return setCachedStripeConnectResult(key, {
       ok: true,
       latencyMs: Date.now() - start,
-    };
+    });
   } catch (error) {
-    return {
+    return setCachedStripeConnectResult(key, {
       ok: false,
       latencyMs: Date.now() - start,
       error: error instanceof Error ? error.message : "Unknown error"
-    };
+    });
   }
 }
 
