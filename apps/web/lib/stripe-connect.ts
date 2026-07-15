@@ -9,6 +9,65 @@ interface StripeAccountResponse {
   details_submitted: boolean;
 }
 
+export interface StripeExpressAccountParams {
+  type: "express";
+  country: "US";
+  capabilities: {
+    card_payments: {
+      requested: true;
+    };
+    transfers: {
+      requested: true;
+    };
+  };
+  business_profile: {
+    mcc: "6513";
+    url: string;
+  };
+}
+
+const DEFAULT_EXPRESS_ACCOUNT_BUSINESS_PROFILE_URL = "https://domusbase.com";
+
+export function buildExpressAccountParams(url: string): StripeExpressAccountParams {
+  return {
+    type: "express",
+    country: "US",
+    capabilities: {
+      card_payments: {
+        requested: true
+      },
+      transfers: {
+        requested: true
+      }
+    },
+    business_profile: {
+      mcc: "6513",
+      url
+    }
+  };
+}
+
+export function getDefaultExpressAccountBusinessProfileUrl(): string {
+  return DEFAULT_EXPRESS_ACCOUNT_BUSINESS_PROFILE_URL;
+}
+
+export function buildExpressAccountRequestBody(
+  params: StripeExpressAccountParams,
+  options?: { email?: string }
+): URLSearchParams {
+  const body = new URLSearchParams();
+  body.set("type", params.type);
+  if (options?.email) {
+    body.set("email", options.email);
+  }
+  body.set("country", params.country);
+  body.set("capabilities[card_payments][requested]", String(params.capabilities.card_payments.requested));
+  body.set("capabilities[transfers][requested]", String(params.capabilities.transfers.requested));
+  body.set("business_profile[mcc]", params.business_profile.mcc);
+  body.set("business_profile[url]", params.business_profile.url);
+  return body;
+}
+
 async function stripeConnectRequest<T>(path: string, options?: { method?: "GET" | "POST"; body?: URLSearchParams }) {
   const secretKey = getStripeSecretKey();
   const response = await fetch(`https://api.stripe.com/v1${path}`, {
@@ -30,14 +89,8 @@ async function stripeConnectRequest<T>(path: string, options?: { method?: "GET" 
 }
 
 export async function createExpressAccount(email: string): Promise<{ id: string }> {
-  const body = new URLSearchParams();
-  body.set("type", "express");
-  body.set("email", email);
-  body.set("country", "US");
-  body.set("capabilities[card_payments][requested]", "true");
-  body.set("capabilities[transfers][requested]", "true");
-  body.set("business_profile[mcc]", "6513");
-  body.set("business_profile[url]", "https://domusbase.com");
+  const params = buildExpressAccountParams(getDefaultExpressAccountBusinessProfileUrl());
+  const body = buildExpressAccountRequestBody(params, { email });
 
   const account = await stripeConnectRequest<{ id: string }>("/accounts", {
     method: "POST",

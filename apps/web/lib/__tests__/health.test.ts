@@ -47,6 +47,7 @@ describe("health route", () => {
   afterEach(() => {
     resetStripeConnectCheckCache();
     process.env = { ...originalEnv };
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -139,7 +140,9 @@ describe("health route", () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
-        text: vi.fn().mockResolvedValue("")
+        json: vi.fn().mockResolvedValue({
+          deleted: true
+        })
       });
 
     const result = await checkStripeConnectEnabled();
@@ -152,10 +155,48 @@ describe("health route", () => {
         Authorization: "Bearer sk_test_123",
         "Content-Type": "application/x-www-form-urlencoded"
       },
-      body: "type=express&country=US&capabilities%5Btransfers%5D%5Brequested%5D=true",
+      body: "type=express&country=US&capabilities%5Bcard_payments%5D%5Brequested%5D=true&capabilities%5Btransfers%5D%5Brequested%5D=true&business_profile%5Bmcc%5D=6513&business_profile%5Burl%5D=https%3A%2F%2Fdomusbase.com",
       cache: "no-store"
     });
     expect(fetchMock).toHaveBeenNthCalledWith(2, "https://api.stripe.com/v1/accounts/acct_probe_123", {
+      method: "DELETE",
+      headers: {
+        Authorization: "Bearer sk_test_123"
+      },
+      cache: "no-store"
+    });
+  });
+
+  it("attempts cleanup from finally when a post-creation error is thrown", async () => {
+    const nowSpy = vi.spyOn(Date, "now");
+    nowSpy.mockReturnValueOnce(1000);
+    nowSpy.mockImplementationOnce(() => {
+      throw new Error("clock failed");
+    });
+    nowSpy.mockReturnValue(1100);
+
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({
+          id: "acct_probe_finally"
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({
+          deleted: true
+        })
+      });
+
+    const result = await checkStripeConnectEnabled();
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("clock failed");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "https://api.stripe.com/v1/accounts/acct_probe_finally", {
       method: "DELETE",
       headers: {
         Authorization: "Bearer sk_test_123"
@@ -184,6 +225,39 @@ describe("health route", () => {
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
+  it("returns unhealthy when probe cleanup cannot be confirmed and logs the orphaned account ID", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({
+          id: "acct_probe_orphan"
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({
+          deleted: false
+        })
+      });
+
+    const result = await checkStripeConnectEnabled();
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: "Stripe Connect probe cleanup could not be confirmed"
+    });
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "[health] failed to confirm deletion of Stripe Connect probe account",
+      "acct_probe_orphan",
+      "deleted flag missing or false"
+    );
+    expect(consoleErrorSpy.mock.calls.flat().join(" ")).not.toContain("sk_test_123");
+  });
+
   it("returns the cached probe result for one hour without hitting Stripe again", async () => {
     fetchMock
       .mockResolvedValueOnce({
@@ -196,7 +270,9 @@ describe("health route", () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
-        text: vi.fn().mockResolvedValue("")
+        json: vi.fn().mockResolvedValue({
+          deleted: true
+        })
       });
 
     const firstResult = await checkStripeConnectEnabled();
@@ -229,6 +305,32 @@ describe("health route", () => {
       error: "STRIPE_SECRET_KEY not set"
     });
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("marks the probe unhealthy when the delete request throws", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({
+          id: "acct_probe_delete_throw"
+        })
+      })
+      .mockRejectedValueOnce(new Error("delete transport down"));
+
+    const result = await checkStripeConnectEnabled();
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: "Stripe Connect probe cleanup could not be confirmed"
+    });
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "[health] failed to confirm deletion of Stripe Connect probe account",
+      "acct_probe_delete_throw",
+      "delete transport down"
+    );
   });
 
   it("returns healthy when Stripe has an active webhook on the configured host", async () => {

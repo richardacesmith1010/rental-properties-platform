@@ -1,4 +1,9 @@
 import { getEnvStatus } from "@/lib/env";
+import {
+  buildExpressAccountParams,
+  buildExpressAccountRequestBody,
+  getDefaultExpressAccountBusinessProfileUrl
+} from "@/lib/stripe-connect";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface ServiceHealth {
@@ -19,6 +24,7 @@ export interface HealthResponsePayload {
 
 const STRIPE_CONNECT_CHECK_CACHE_TTL_MS = 60 * 60 * 1000;
 const STRIPE_CONNECT_ERROR_MAX_CHARS = 200;
+const STRIPE_CONNECT_PROBE_CLEANUP_ERROR = "Stripe Connect probe cleanup could not be confirmed";
 
 let stripeConnectCheckCache:
   | {
@@ -55,6 +61,58 @@ async function readStripeErrorMessage(response: Pick<Response, "text">): Promise
   }
 
   return truncateStripeMessage(text);
+}
+
+function formatStripeConnectProbeCleanupError(error: unknown): string {
+  if (error instanceof Error) {
+    return truncateStripeMessage(error.message);
+  }
+
+  return "Unknown error";
+}
+
+async function confirmStripeConnectProbeDeletion(secretKey: string, accountId: string): Promise<boolean> {
+  try {
+    const deleteResponse = await fetch(`https://api.stripe.com/v1/accounts/${accountId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${secretKey}`
+      },
+      cache: "no-store"
+    });
+
+    if (!deleteResponse.ok) {
+      console.error(
+        "[health] failed to confirm deletion of Stripe Connect probe account",
+        accountId,
+        deleteResponse.status,
+        await readStripeErrorMessage(deleteResponse)
+      );
+      return false;
+    }
+
+    const json = (await deleteResponse.json()) as {
+      deleted?: boolean;
+    };
+
+    if (json.deleted !== true) {
+      console.error(
+        "[health] failed to confirm deletion of Stripe Connect probe account",
+        accountId,
+        "deleted flag missing or false"
+      );
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error(
+      "[health] failed to confirm deletion of Stripe Connect probe account",
+      accountId,
+      formatStripeConnectProbeCleanupError(error)
+    );
+    return false;
+  }
 }
 
 function getCachedStripeConnectResult(secretKey: string): ServiceHealth | null {
@@ -168,12 +226,16 @@ export async function checkStripeConnectEnabled(): Promise<ServiceHealth> {
   }
 
   const start = Date.now();
+  let probeAccountId: string | null = null;
+  let result: ServiceHealth = {
+    ok: false,
+    latencyMs: 0,
+    error: "Stripe Connect probe failed"
+  };
 
   try {
-    const body = new URLSearchParams();
-    body.set("type", "express");
-    body.set("country", "US");
-    body.set("capabilities[transfers][requested]", "true");
+    const params = buildExpressAccountParams(getDefaultExpressAccountBusinessProfileUrl());
+    const body = buildExpressAccountRequestBody(params);
 
     const response = await fetch("https://api.stripe.com/v1/accounts", {
       method: "POST",
@@ -186,55 +248,48 @@ export async function checkStripeConnectEnabled(): Promise<ServiceHealth> {
     });
 
     if (!response.ok) {
-      return setCachedStripeConnectResult(key, {
+      result = {
         ok: false,
         latencyMs: Date.now() - start,
         error: await readStripeErrorMessage(response)
-      });
-    }
+      };
+    } else {
+      const json = (await response.json()) as { id?: string };
+      probeAccountId = typeof json.id === "string" && json.id.length > 0 ? json.id : null;
 
-    const json = (await response.json()) as { id?: string };
-
-    if (!json.id) {
-      return setCachedStripeConnectResult(key, {
-        ok: false,
-        latencyMs: Date.now() - start,
-        error: "Stripe did not return a probe account ID"
-      });
-    }
-
-    try {
-      const deleteResponse = await fetch(`https://api.stripe.com/v1/accounts/${json.id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${key}`
-        },
-        cache: "no-store"
-      });
-
-      if (!deleteResponse.ok) {
-        console.error(
-          "[health] failed to delete Stripe Connect probe account:",
-          json.id,
-          deleteResponse.status,
-          await readStripeErrorMessage(deleteResponse)
-        );
+      if (!probeAccountId) {
+        result = {
+          ok: false,
+          latencyMs: Date.now() - start,
+          error: "Stripe did not return a probe account ID"
+        };
+      } else {
+        result = {
+          ok: true,
+          latencyMs: Date.now() - start
+        };
       }
-    } catch (deleteError) {
-      console.error("[health] failed to delete Stripe Connect probe account:", json.id, deleteError);
     }
-
-    return setCachedStripeConnectResult(key, {
-      ok: true,
-      latencyMs: Date.now() - start,
-    });
   } catch (error) {
-    return setCachedStripeConnectResult(key, {
+    result = {
       ok: false,
       latencyMs: Date.now() - start,
-      error: error instanceof Error ? error.message : "Unknown error"
-    });
+      error: formatStripeConnectProbeCleanupError(error)
+    };
+  } finally {
+    if (probeAccountId) {
+      const cleanupConfirmed = await confirmStripeConnectProbeDeletion(key, probeAccountId);
+      if (!cleanupConfirmed) {
+        result = {
+          ok: false,
+          latencyMs: Date.now() - start,
+          error: STRIPE_CONNECT_PROBE_CLEANUP_ERROR
+        };
+      }
+    }
   }
+
+  return setCachedStripeConnectResult(key, result);
 }
 
 /**
