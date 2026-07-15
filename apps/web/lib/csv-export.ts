@@ -1,6 +1,6 @@
 import type { ExpenseCategoryMetric, MonthlyRentMetric } from "./analytics";
 
-export function downloadCSV(filename: string, headers: string[], rows: string[][]): void {
+function downloadCSV(filename: string, headers: string[], rows: string[][]): void {
   const csvContent = [
     headers.join(","),
     ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))

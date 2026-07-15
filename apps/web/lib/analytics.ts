@@ -103,7 +103,7 @@ export interface AnalyticsTicketRow {
   actual_cost_cents: number | null;
 }
 
-export function buildLastTwelveMonths(): MonthWindow[] {
+function buildLastTwelveMonths(): MonthWindow[] {
   const now = new Date();
   const months: MonthWindow[] = [];
 
@@ -140,7 +140,7 @@ function startOfCurrentYearIso(): string {
   return new Date(Date.UTC(now.getUTCFullYear(), 0, 1)).toISOString().slice(0, 10);
 }
 
-export function average(values: number[]): number {
+function average(values: number[]): number {
   if (values.length === 0) {
     return 0;
   }
@@ -155,7 +155,7 @@ export function formatAverageDaysToPayment(value: number | null | undefined): st
   return `${value.toFixed(1)}d`;
 }
 
-export function overlapMonth(startDate: string, endDate: string, month: MonthWindow): boolean {
+function overlapMonth(startDate: string, endDate: string, month: MonthWindow): boolean {
   return startDate <= month.endIso && endDate >= month.startIso;
 }
 

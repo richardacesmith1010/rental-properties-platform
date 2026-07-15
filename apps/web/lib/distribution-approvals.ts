@@ -1,7 +1,6 @@
 import {
   applyDistributionConfig,
-  type DistributionConfigSnapshot,
-  getDistributionConfigSnapshot
+  type DistributionConfigSnapshot
 } from "@/lib/distributions";
 import { sideEffectError } from "@/lib/logger";
 import { notifyAccountMembers } from "@/lib/notifications";
@@ -323,10 +322,4 @@ export async function resolveRequest(
       profileMap
     )[0] ?? null
   );
-}
-
-export async function getCurrentDistributionConfigForAccount(
-  accountId: string
-): Promise<DistributionConfigSnapshot> {
-  return getDistributionConfigSnapshot(accountId);
 }
