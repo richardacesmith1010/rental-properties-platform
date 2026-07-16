@@ -44,7 +44,7 @@ Last updated: 2026-07-12
 ### Code defects found & LOGGED (L3 — review before dispatch; background task spawned)
 1. **Connect banner mis-routes owners to member-payout** (`apps/web/app/connect/onboard/page.tsx` ~61-68): with no query params, any active LLC member is defaulted into MEMBER-PAYOUT onboarding instead of connecting the account that collects rent — left "1st Home" unpayable until the account-level flow was run manually via `/connect/onboard?accountId=<id>`.
 2. **Profile-vs-account status reads:** the dashboard "Connect Your Bank Account" banner and the owner setup checklist still show "not connected" after a successful ACCOUNT-level connect (they read `profiles.stripe_onboarding_complete` only). Same fix family as #1.
-3. Minor: `payments.platform_fee_cents` recorded 0 (the 46¢ application fee is card-fee pass-through; manager fee was 0) — confirm intended semantics before relying on it for reporting.
+3. ~~Minor: `payments.platform_fee_cents` recorded 0~~ **RESOLVED 2026-07-16 (investigated, no bug):** the column tracks the platform/manager's retained cut of the rent (`createTransfersForPayment`, `stripe-webhook-handlers.ts:278`), not the card-processing surcharge. Manager fee was 0 → 0 is correct. If reporting ever needs "processing fees collected," that's a separate metric (application fee minus Stripe's cut), not this column.
 
 **Next step:** Sprint 129 — fix defects 1+2 (Connect onboarding routing + status reads). Then verify the $5 payout arrival. Dispatch to Codex via the CLI (`~/.codex-cli/...`); see memory `project-shell-and-cli-workarounds`.
 

@@ -102,6 +102,8 @@ export interface DashboardProps {
   nickname?: string | null;
   avatarUrl?: string | null;
   stripeConnected?: boolean;
+  rentCollectionConnected?: boolean;
+  rentCollectionConnectHref?: string;
   ownerConnectedMap?: Map<string, boolean>;
   onGenerateChargesHref?: string;
   onSignOut: FormAction;

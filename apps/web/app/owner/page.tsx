@@ -32,7 +32,11 @@ import { getRentIncreaseHistory } from "@/lib/rent-increases";
 import { getDistributionHistory, getFinancialActivityFeed } from "@/lib/distributions";
 import { getPendingChangeRequests } from "@/lib/distribution-approvals";
 import { getPendingWithdrawals } from "@/lib/withdrawals";
-import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
+import {
+  arePropertyOwnersConnected,
+  getRentCollectionConnectHref,
+  getRentCollectionConnectStatus
+} from "@/lib/stripe-connect";
 import { getManagerPaymentsDashboardData } from "@/lib/manager-payments-data";
 import {
   createAnnouncement,
@@ -235,7 +239,8 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
     auditLogs,
     rentIncreaseHistory,
     llcPayoutMemberships,
-    newFeedbackCount
+    newFeedbackCount,
+    rentCollectionStatus
   ] = await Promise.all([
     getDashboardData(user.id, activeAccountId),
     getPortfolioData(user.id, activeAccountId),
@@ -280,7 +285,8 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
     getRecentAuditLogs(user.id, activeAccountId),
     getRentIncreaseHistory(user.id, activeAccountId),
     getActiveLlcMembershipsForUser(user.id),
-    getNewFeedbackCountForOwner(user.email)
+    getNewFeedbackCountForOwner(user.email),
+    getRentCollectionConnectStatus(user.id)
   ]);
 
   const approvedApplicationCount = applications.filter(
@@ -380,6 +386,8 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         nickname={profile.nickname}
         avatarUrl={profile.avatarUrl}
         stripeConnected={profile.stripeOnboardingComplete}
+        rentCollectionConnected={rentCollectionStatus.connected}
+        rentCollectionConnectHref={getRentCollectionConnectHref(rentCollectionStatus)}
         ownerConnectedMap={ownerConnectedMap}
         onSignOut={signOut}
         onCreateProperty={createProperty}

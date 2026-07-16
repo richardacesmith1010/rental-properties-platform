@@ -36,7 +36,10 @@ import {
   getUserNotificationPreferenceSettings,
   NOTIFICATION_EMAIL_PREFERENCE_OPTIONS
 } from "@/lib/notification-preferences";
-import { getActiveLlcMembershipsForUser } from "@/lib/ownership";
+import {
+  getRentCollectionConnectHref,
+  getRentCollectionConnectStatus
+} from "@/lib/stripe-connect";
 
 export const dynamic = "force-dynamic";
 
@@ -55,16 +58,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     role === "tenant" ? getAutopayEnrollments(user.id) : Promise.resolve([]),
     getUserNotificationPreferenceSettings(user.id)
   ]);
-  const llcMemberships =
-    role === "owner" || role === "manager"
-      ? await getActiveLlcMembershipsForUser(user.id)
-      : [];
-  const singleLlcMembership = llcMemberships.length === 1 ? llcMemberships[0] : null;
-  const llcMembershipDetected = llcMemberships.length > 0;
-  const llcPayoutConnected = llcMembershipDetected
-    ? singleLlcMembership?.payoutStripeConnected ??
-      llcMemberships.every((membership) => membership.payoutStripeConnected)
-    : false;
+  const rentCollectionStatus = role === "owner" ? await getRentCollectionConnectStatus(user.id) : null;
   const connectMessage =
     typeof searchParams?.connect === "string"
       ? searchParams.connect
@@ -97,7 +91,9 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
 
         {connectMessage === "ready" ? (
           <Alert variant="success" className="rounded-xl px-4 py-3">
-            Your bank account is already connected and ready to receive payouts.
+            {role === "owner"
+              ? "Rent payments are set up."
+              : "Your payment setup is already ready."}
           </Alert>
         ) : null}
 
@@ -149,10 +145,11 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                   stripeAccountId={profile.stripeAccountId}
                   role={role === "tenant" ? "owner" : role}
                   onGetExpressDashboardUrl={getExpressDashboardUrl}
-                  llcMembershipDetected={llcMembershipDetected}
-                  llcPayoutConnected={llcPayoutConnected}
-                  llcAccountId={singleLlcMembership?.accountId ?? null}
-                  llcAccountName={singleLlcMembership?.accountName ?? null}
+                  rentCollectionConnected={rentCollectionStatus?.connected ?? false}
+                  rentCollectionConnectHref={getRentCollectionConnectHref(rentCollectionStatus)}
+                  rentCollectionAccounts={rentCollectionStatus?.accounts ?? []}
+                  legacyProfileTarget={rentCollectionStatus?.legacyProfileTarget ?? false}
+                  profileConnected={rentCollectionStatus?.profileConnected ?? profile.stripeOnboardingComplete}
                 />
               )
             },

@@ -8,12 +8,7 @@ import { sideEffectError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getStripeConnectOnboardingErrorCopy } from "@/lib/stripe-errors";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
-import {
-  createAccountLink,
-  createExpressAccount,
-  createLoginLink,
-  getAccount
-} from "@/lib/stripe-connect";
+import { createAccountLink, createExpressAccount, createLoginLink, getAccount, hasRentCollectionAuthorityForAccount } from "@/lib/stripe-connect";
 import { parseFormData, updateManagementFeeSchema } from "@/lib/validations";
 import { requireAuth } from "./auth-helpers";
 import type { ActionState } from "./shared";
@@ -33,22 +28,18 @@ export async function initiateStripeConnect(): Promise<ActionState> {
       return { success: false, error: "Too many requests. Please try again later." };
     }
     const admin = createAdminClient();
-
     const { data: profile } = await admin
       .from("profiles")
       .select("stripe_account_id")
       .eq("id", user.id)
       .maybeSingle();
-
     if (!user.email) {
       return { success: false, error: "Your account is missing an email address." };
     }
-
     let stripeAccountId = profile?.stripe_account_id ?? null;
     if (!stripeAccountId) {
       const account = await createExpressAccount(user.email);
       stripeAccountId = account.id;
-
       const { error } = await admin
         .from("profiles")
         .update({
@@ -61,18 +52,9 @@ export async function initiateStripeConnect(): Promise<ActionState> {
         return { success: false, error: "Failed to save your Stripe account." };
       }
     }
-
     const appUrl = getAppUrl();
-    const accountLink = await createAccountLink(
-      stripeAccountId,
-      `${appUrl}/connect/refresh`,
-      `${appUrl}/connect/return`
-    );
-
-    return {
-      success: true,
-      url: accountLink.url
-    };
+    const accountLink = await createAccountLink(stripeAccountId, `${appUrl}/connect/refresh`, `${appUrl}/connect/return`);
+    return { success: true, url: accountLink.url };
   } catch (err) {
     console.error("initiateStripeConnect error:", err);
     return {
@@ -95,33 +77,27 @@ export async function initiateAccountStripeConnect(
     if (!checkRateLimit(`initiateAccountStripeConnect:${user.id}`, 5, 60 * 60 * 1000).allowed) {
       return { success: false, error: "Too many requests. Please try again later." };
     }
-
     const { canUserAdministerOwnershipAccount } = await import("@/lib/ownership");
     const canAdministerAccount = await canUserAdministerOwnershipAccount(user.id, accountId);
     if (!canAdministerAccount) {
       return { success: false, error: "Access denied." };
     }
-
     const admin = createAdminClient();
     const { data: account } = await admin
       .from("ownership_accounts")
       .select("stripe_account_id, display_name")
       .eq("id", accountId)
       .maybeSingle();
-
     if (!account) {
       return { success: false, error: "Account not found." };
     }
-
     let stripeAccountId = account.stripe_account_id ?? null;
     if (!stripeAccountId) {
       if (!user.email) {
         return { success: false, error: "Your account is missing an email address." };
       }
-
       const stripeAccount = await createExpressAccount(user.email);
       stripeAccountId = stripeAccount.id;
-
       const { error } = await admin
         .from("ownership_accounts")
         .update({
@@ -134,14 +110,13 @@ export async function initiateAccountStripeConnect(
         return { success: false, error: "Failed to save Stripe account." };
       }
     }
-
     const appUrl = getAppUrl();
+    const encodedAccountId = encodeURIComponent(accountId);
     const accountLink = await createAccountLink(
       stripeAccountId,
-      `${appUrl}/connect/refresh?accountId=${encodeURIComponent(accountId)}`,
-      `${appUrl}/connect/return?accountId=${encodeURIComponent(accountId)}`
+      `${appUrl}/connect/refresh?accountId=${encodedAccountId}`,
+      `${appUrl}/connect/return?accountId=${encodedAccountId}`
     );
-
     return { success: true, url: accountLink.url };
   } catch (err) {
     console.error("initiateAccountStripeConnect error:", err);
@@ -167,11 +142,8 @@ export async function initiateMemberPayoutConnect(
     if (!checkRateLimit(`initiateMemberPayoutConnect:${user.id}`, 5, 60 * 60 * 1000).allowed) {
       return { success: false, error: "Too many requests. Please try again later." };
     }
-
-    const requestedProfileId =
-      typeof profileId === "string" && profileId.length > 0 ? profileId : user.id;
+    const requestedProfileId = typeof profileId === "string" && profileId.length > 0 ? profileId : user.id;
     const isSelfService = requestedProfileId === user.id;
-
     const { canUserAdministerOwnershipAccount } = await import("@/lib/ownership");
     if (isSelfService) {
       const admin = createAdminClient();
@@ -195,7 +167,6 @@ export async function initiateMemberPayoutConnect(
         return { success: false, error: "Access denied." };
       }
     }
-
     const admin = createAdminClient();
     const { data: membership } = await admin
       .from("ownership_account_members")
@@ -208,7 +179,6 @@ export async function initiateMemberPayoutConnect(
     if (!membership) {
       return { success: false, error: "Member not found in this account." };
     }
-
     let stripeAccountId = membership.payout_stripe_account_id ?? null;
     if (!stripeAccountId) {
       const { data: profile } = await admin
@@ -220,10 +190,8 @@ export async function initiateMemberPayoutConnect(
       if (!profile?.email) {
         return { success: false, error: "Member has no email address on file." };
       }
-
       const stripeAccount = await createExpressAccount(profile.email);
       stripeAccountId = stripeAccount.id;
-
       const { error } = await admin
         .from("ownership_account_members")
         .update({ payout_stripe_account_id: stripeAccountId })
@@ -234,7 +202,6 @@ export async function initiateMemberPayoutConnect(
         return { success: false, error: "Failed to save payout account." };
       }
     }
-
     const appUrl = getAppUrl();
     const encodedAccountId = encodeURIComponent(accountId);
     const payoutQuery = isSelfService
@@ -345,14 +312,47 @@ export async function checkConnectStatus(accountId?: string | null): Promise<Act
 
 export async function getExpressDashboardUrl(
   _prev: ActionState,
-  _formData: FormData
+  formData: FormData
 ): Promise<ActionState> {
   try {
     const { user } = await requireConnectedRole();
-    if (!checkRateLimit(`getExpressDashboardUrl:${user.id}`, 30, 60_000).allowed) {
+    const accountIdValue = formData.get("accountId");
+    const requestedAccountId =
+      typeof accountIdValue === "string" && accountIdValue.length > 0 ? accountIdValue : null;
+    const rateLimitKey = requestedAccountId
+      ? `getExpressDashboardUrl:${user.id}:${requestedAccountId}`
+      : `getExpressDashboardUrl:${user.id}`;
+    if (!checkRateLimit(rateLimitKey, 30, 60_000).allowed) {
       return { success: false, error: "Too many requests. Please try again later." };
     }
     const admin = createAdminClient();
+
+    if (requestedAccountId) {
+      const hasAuthority = await hasRentCollectionAuthorityForAccount(user.id, requestedAccountId);
+      if (!hasAuthority) {
+        return { success: false, error: "Access denied." };
+      }
+
+      const { data: ownershipAccount, error: ownershipAccountError } = await admin
+        .from("ownership_accounts")
+        .select("stripe_account_id")
+        .eq("id", requestedAccountId)
+        .maybeSingle();
+
+      if (ownershipAccountError) {
+        return { success: false, error: "Unable to open Stripe right now. Please try again." };
+      }
+      if (!ownershipAccount?.stripe_account_id) {
+        return { success: false, error: "Set up rent payments first." };
+      }
+
+      const loginLink = await createLoginLink(ownershipAccount.stripe_account_id);
+      return {
+        success: true,
+        url: loginLink.url,
+        message: "Stripe dashboard link ready."
+      };
+    }
 
     const { data: profile } = await admin
       .from("profiles")

@@ -71,7 +71,7 @@ export function useDashboardHomeState(
         id: "bank",
         label: "Connect bank account",
         description: "Link your payout and rent-collection account to finish setup.",
-        completed: props.stripeConnected === true
+        completed: (props.rentCollectionConnected ?? props.stripeConnected) === true
       }
     ];
 
@@ -88,6 +88,7 @@ export function useDashboardHomeState(
   }, [
     isOwnerRole,
     props.activeAccountId,
+    props.rentCollectionConnected,
     props.stripeConnected,
     safeOwnershipAccounts,
     safePortfolio.leases.length,
