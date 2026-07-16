@@ -1,12 +1,52 @@
 # Domus — Agent Handoff Document
 
-Last updated: 2026-03-16
+Last updated: 2026-07-12
 
 ## Production
 - URL: https://domusbase.com
 - Supabase project: `vawqdqkaguhdgfhdebqw`
 - Hosting: Vercel production deployment
 - Primary branch: `main`
+
+## Live Payments Status — Stripe Connect (VERIFIED 2026-07-12)
+
+**Milestone: the platform is approved and live for Stripe Connect.** Domus can now create live connected accounts and move real rent money.
+
+- **Approved:** 2026-07-10 — Stripe email "Your Connect application is approved" (from `accounts@stripe.com`), for platform account **`acct_1T2AgdA8rwK8f30F`** ("Domus").
+- **Verified live via Stripe API (read-only) on 2026-07-12** using the production `sk_live_` key:
+  - `charges_enabled: true`, `payouts_enabled: true`, `details_submitted: true`
+  - `capabilities.transfers: active`, `capabilities.card_payments: active`
+  - No outstanding requirements (`currently_due`, `past_due`, `disabled_reason` all empty)
+  - Live `GET /v1/accounts` (Connect list) returns 200 — live connected-account creation is enabled
+- **Production env is wired for live:** `STRIPE_SECRET_KEY` (sk_live), `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (live), `STRIPE_WEBHOOK_SECRET` all present in Vercel production. (Local `.env.local` is `sk_test_` — correct: test locally, live in prod.)
+- **Backstory:** the 2026-07-08 support ticket "Unable to create live connected accounts" (platform profile stuck under review after identity-doc submission) was **resolved** by the 07-10 approval. Stripe auto-closed that ticket on 07-12 for no reply — benign, not a rejection.
+- **Real onboarding path VERIFIED working (2026-07-12):** created a live connected account with the exact production payload (`createExpressAccount` — `express`, US, `card_payments` + `transfers`, mcc 6513) → success (`acct_...` returned), then deleted it. Live connected-account creation genuinely works for this platform.
+- ~~**Not yet done:** 0 real connected accounts exist.~~ **DONE 2026-07-16 (Sprint 128):** owner onboarded live, real $5.46 payment flowed end-to-end. See Sprint 128 section below.
+
+### Defects found during 07-12 verification — RESOLVED by Sprint 127 (shipped + verified live 2026-07-14)
+
+**Both fixed and verified in production 2026-07-14** (commit `35242f3`, deployed via Vercel CLI): `GET /api/health/stripe` now returns **401 without the bearer** (endpoint no longer public) and **200 with `connectEnabled.ok=true`** (probe reports Connect GREEN). `HEALTH_CHECK_SECRET` set in Vercel prod (secret-first, no uncovered window); `Cache-Control: no-store` confirmed. Codex implementation reviewed + 944/944 tests + prod build verified independently by Claude. Full-platform health endpoint now green (connect + webhook + resend all ok). Historical detail:
+1. **Health-check false-negative (P1).** `apps/web/lib/health.ts:176` `checkStripeConnectEnabled()` requests **`transfers`-only**, a capability combo this platform is NOT approved for, so `/api/health/stripe` returns **503 / "Connect not enabled"** even though onboarding works. The real onboarding path (`apps/web/lib/stripe-connect.ts:37-38`) requests **`card_payments` + `transfers`** and was verified working. Fix: make the probe request the same capability set (+ mcc/url) as the real onboarding path so the "honest check" is actually faithful.
+2. **Unauthenticated health endpoint (security).** `HEALTH_CHECK_SECRET` is unset in Vercel prod, and `apps/web/app/api/health/stripe/route.ts:14` **fails open** (public access when secret unset). A public endpoint that create/deletes a live Stripe account and discloses config health. Fix: set `HEALTH_CHECK_SECRET` in prod and/or fail closed in production.
+
+## Sprint 128 — LIVE end-to-end money test (COMPLETE, 2026-07-16)
+
+**Result: a real $5.46 card payment flowed tenant → Stripe → owner's connected account, and Domus recorded it correctly.** (Depth C used the user's real main account as owner; $5 not $1 because `MIN_ONLINE_PAYMENT_CENTS = 500`.)
+
+- **Owner onboarded live (real ID + bank):** `acct_1TtgYTAUUcWMMedP` on `ownership_accounts` `729c4e55` (owns "1st Home") — charges/payouts enabled, bank attached, payout schedule daily/2-day delay. A second live account `acct_1TtgLnAP3AuU6GWj` sits on `ownership_account_members.payout_stripe_account_id` for LLC `5d3ba8b7` (result of the banner bug below — not wasted; correctly placed for future LLC distributions).
+- **Payment:** charge `072452b7` ($5, category other, lease `5562c951`, alt tenant) paid via live Checkout. PI `pi_3TtgnhA8rwK8f30F0xGVUUFc`: $5.46 succeeded, `application_fee_amount` 46¢, `transfer_data.destination = acct_1TtgYT…`. Net **$5.00 pending payout** to the owner's bank.
+- **DB:** `rent_charges.status = paid`; `payments` row with PI + checkout-session refs, method card, 500¢, `paid_at` stamped.
+- **Remaining leg:** confirm the $5.00 payout lands in the bank (first payout on a new account can take up to ~7 days; check `GET /v1/payouts` on the connected account, then bank statement).
+
+### Critical prod-config defect found & FIXED during the test
+**Webhook secret drift + duplicate endpoints.** TWO live webhook endpoints existed for `https://domusbase.com/api/webhooks/stripe` and prod `STRIPE_WEBHOOK_SECRET` matched **neither** → every live event failed signature verification (`pending_webhooks: 2`), so real payments would succeed at Stripe but stay "pending"/overdue in Domus forever. **Fix (2026-07-16):** consolidated to ONE endpoint `we_1Ttgs5A8rwK8f30FBJwVaR0H` (events: checkout.session.completed, account.updated, payment_intent.succeeded, payment_intent.payment_failed), rotated the new signing secret into Vercel prod, redeployed, then replayed the two real events (correctly signed) through the production route → 200 + correct DB writes. **Rule: any Stripe webhook-endpoint change and the Vercel `STRIPE_WEBHOOK_SECRET` rotation are ONE operation, never separate.**
+
+### Code defects found & LOGGED (L3 — review before dispatch; background task spawned)
+1. **Connect banner mis-routes owners to member-payout** (`apps/web/app/connect/onboard/page.tsx` ~61-68): with no query params, any active LLC member is defaulted into MEMBER-PAYOUT onboarding instead of connecting the account that collects rent — left "1st Home" unpayable until the account-level flow was run manually via `/connect/onboard?accountId=<id>`.
+2. **Profile-vs-account status reads:** the dashboard "Connect Your Bank Account" banner and the owner setup checklist still show "not connected" after a successful ACCOUNT-level connect (they read `profiles.stripe_onboarding_complete` only). Same fix family as #1.
+3. Minor: `payments.platform_fee_cents` recorded 0 (the 46¢ application fee is card-fee pass-through; manager fee was 0) — confirm intended semantics before relying on it for reporting.
+
+**Next step:** Sprint 129 — fix defects 1+2 (Connect onboarding routing + status reads). Then verify the $5 payout arrival. Dispatch to Codex via the CLI (`~/.codex-cli/...`); see memory `project-shell-and-cli-workarounds`.
 
 ## Validation Snapshot
 - Unit tests: `562/562` passing at the latest clean gate baseline
@@ -41,7 +81,7 @@ Last updated: 2026-03-16
 ## Pending User Actions
 - Set `RESEND_API_KEY` and `RESEND_FROM_EMAIL` in Vercel before relying on live outbound email delivery.
 - Set `PLAID_CLIENT_ID`, `PLAID_SECRET`, and `PLAID_ENV` in Vercel before enabling live Plaid account linking.
-- Complete `/Users/courtneysmith/Documents/Codex/Rental Properties/docs/stripe-live-mode-checklist.md` before turning on live Stripe processing.
+- Stripe live processing is now APPROVED and enabled at the platform level (see "Live Payments Status" above, verified 2026-07-12). Remaining: run a real end-to-end live Connect onboarding test with a test owner account before relying on live payouts. Ref: `docs/stripe-live-mode-checklist.md`.
 
 ## Migrations and Schema Notes
 - No known unapplied migrations are required for features shipped through Sprint 52.

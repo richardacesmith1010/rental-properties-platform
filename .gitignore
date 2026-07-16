@@ -18,3 +18,4 @@ coverage
 test-results/
 apps/web/test-results/
 **/test-results/
+.playwright-cli/

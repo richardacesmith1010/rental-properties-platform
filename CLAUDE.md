@@ -220,6 +220,11 @@ Claude must treat every interaction cycle as a learning opportunity. This sectio
 **What was correct:** After every deploy that touches dashboard render paths, Claude must do a real-session render check: log in via Chrome MCP (or curl with a session cookie), load the affected pages, and confirm the rendered HTML contains expected content (not an error boundary). HTTP 200 ≠ "the page rendered correctly."
 **Rule:** Post-deploy verification of UI sprints MUST include a Chrome MCP page-load with a real authenticated session, and a `read_console_messages` check for thrown errors. The current smoke test (status-code only) is insufficient for catching render-time crashes. Until the smoke test is extended, Claude is responsible for this manual check on every UI deploy. Evidence required for sprint completion: a screenshot of the rendered page plus a clean console.
 
+#### L-010 | 2026-07-12 | PROCESS
+**What happened:** Session history for this project grew to 254MB (one session file alone was 167MB). Claude Code loaded it on every prompt and hung with an endless spinner — no error shown. Other projects worked fine. Fixed by archiving `~/.claude/projects/-Users-courtneysmith-Documents-Codex-Rental-Properties/*.jsonl` and starting fresh.
+**What was correct:** Chat history is disposable by design (§13) — all real state lives in the repo. Resuming one ever-growing mega-session has no upside and eventually breaks the tool.
+**Rule (refined 2026-07-14 with the user):** Rotate chats by *threshold, not per sprint*. The real failure mode is transcript file SIZE (the ~167MB single file that hung the app); a heavy multi-sprint session is normally single-digit MB. Wrap up and start a new chat only when ANY of: (a) the session `.jsonl` approaches **~50MB** — at each cycle close Claude runs `du -sh` on the current session transcript and reports the size; (b) the session has been compacted ~2× (compaction also causes context-forgetting, as happened this session); (c) it feels sluggish; (d) work pivots to a genuinely unrelated topic. Per-sprint rotation is NOT required. Regardless of rotation, always keep `docs/agent-handoff.md` + memory current so any new session recovers cleanly.
+
 ## 11) Pre-Flight Lessons Check (Hard Rule)
 
 Before starting ANY work cycle (planning, verification, or especially implementation), Claude must:
@@ -238,6 +243,7 @@ If a planned action matches a pattern from a prior lesson, Claude must stop and 
 - Am I declaring a file orphaned? → L-006 says grep the full tree.
 - Am I about to hypothesize about a production bug? → L-008 says read the actual logs/dashboard first, in order: Vercel logs → third-party dashboard log → direct API query. Hypothesis comes only after data.
 - Am I about to call a UI sprint "shipped" because gate + smoke passed? → L-009 says do a real-session Chrome MCP render check first. HTTP 200 doesn't prove the page actually rendered.
+- Am I ending a cycle report? → L-010 (refined) says keep `docs/agent-handoff.md` + memory current and report the transcript size; only prompt a new chat when a rotation threshold is hit (size ~50MB / compacted ~2× / sluggish / topic pivot) — not every sprint.
 
 This section must be updated whenever a new lesson is added that introduces a new "always check" pattern.
 
@@ -298,6 +304,18 @@ Do NOT ask the user "what were we working on?" — recover context from the repo
 - Sprint acceptance results → `docs/agent-handoff.md`
 
 If important state exists only in chat, persist it to the appropriate file before the session ends.
+
+### Session Hygiene (Rotate by Threshold, Not Per Sprint)
+
+Session history files grow with every message; an oversized transcript (~167MB) once hung Claude Code (L-010). But that is far from normal — even a heavy multi-sprint session is typically single-digit MB. Because all state is repo-persisted, rotating is cheap; but rotating needlessly throws away warm context.
+
+Rotate (persist state → new chat) only when ANY threshold is hit:
+- **Size:** the current session `.jsonl` approaches **~50MB** (a 3× margin under the ~167MB that failed). At each cycle close Claude runs `du -sh ~/.claude/projects/-Users-courtneysmith-Documents-Codex-Rental-Properties/<session>.jsonl` and reports it.
+- **Compaction:** the session has been compacted ~2× (this also limits compaction-induced forgetting).
+- **Sluggishness:** load/response noticeably drags.
+- **Topic pivot:** work moves to genuinely unrelated territory.
+
+Do NOT rotate mechanically per sprint. When no threshold is hit, keep working in the same chat. Always keep `docs/agent-handoff.md` + memory current regardless, so any new session recovers cleanly.
 
 ## 14) Token Discipline
 
