@@ -25,16 +25,33 @@ describe("buildOwnerBundlePlan", () => {
     automationsEnabled: true,
     warnings: {}
   } as const;
+  const sectionAvailability = {
+    hasActivitySection: true,
+    hasAnalyticsSection: true,
+    hasApplicationsSection: true,
+    hasAutomationsSection: true,
+    hasDocumentsSection: true,
+    hasExpensesSection: true,
+    hasInboxSection: true,
+    hasInvitationsSection: true,
+    hasLeasingSection: true,
+    hasManagerPaymentsSection: true,
+    hasMembersSection: true,
+    hasNotificationsSection: true,
+    hasOwnershipSection: true,
+    hasVendorsSection: true
+  } as const;
 
   it("keeps first paint scoped to the owner home bundles", () => {
     const bundlePlan = buildOwnerBundlePlan({
       capabilities,
       initialOwnerHomePage: true,
       initialSectionId: null,
-      isLlcAccount: true
+      isLlcAccount: true,
+      sectionAvailability
     });
 
-    expect(Array.from(bundlePlan).sort()).toEqual([
+    expect(Array.from(bundlePlan.bundles).sort()).toEqual([
       "announcement-properties",
       "dashboard",
       "expenses",
@@ -48,13 +65,17 @@ describe("buildOwnerBundlePlan", () => {
       "rent-collection-status",
       "tickets"
     ]);
-    expect(bundlePlan.has("applications")).toBe(false);
-    expect(bundlePlan.has("automations")).toBe(false);
-    expect(bundlePlan.has("documents")).toBe(false);
-    expect(bundlePlan.has("inbox")).toBe(false);
-    expect(bundlePlan.has("listings")).toBe(false);
-    expect(bundlePlan.has("owner-connected-map")).toBe(false);
-    expect(bundlePlan.has("vendors")).toBe(false);
+    expect(bundlePlan.sectionAvailability).toEqual(sectionAvailability);
+    expect(bundlePlan.bundles.has("analytics")).toBe(false);
+    expect(bundlePlan.bundles.has("applications")).toBe(false);
+    expect(bundlePlan.bundles.has("automations")).toBe(false);
+    expect(bundlePlan.bundles.has("documents")).toBe(false);
+    expect(bundlePlan.bundles.has("inbox")).toBe(false);
+    expect(bundlePlan.bundles.has("listings")).toBe(false);
+    expect(bundlePlan.bundles.has("owner-connected-map")).toBe(false);
+    expect(bundlePlan.bundles.has("vendors")).toBe(false);
+    expect(bundlePlan.sectionAvailability.hasAnalyticsSection).toBe(true);
+    expect(bundlePlan.sectionAvailability.hasManagerPaymentsSection).toBe(true);
   });
 
   it("loads only the section-specific bundles for a deferred records section", () => {
@@ -62,15 +83,21 @@ describe("buildOwnerBundlePlan", () => {
       capabilities,
       initialOwnerHomePage: false,
       initialSectionId: "applications",
-      isLlcAccount: false
+      isLlcAccount: false,
+      sectionAvailability: {
+        ...sectionAvailability,
+        hasManagerPaymentsSection: false,
+        hasMembersSection: false
+      }
     });
 
-    expect(bundlePlan.has("applications")).toBe(true);
-    expect(bundlePlan.has("listings")).toBe(true);
-    expect(bundlePlan.has("expenses")).toBe(false);
-    expect(bundlePlan.has("feedback")).toBe(false);
-    expect(bundlePlan.has("inbox")).toBe(false);
-    expect(bundlePlan.has("manager-payments")).toBe(false);
-    expect(bundlePlan.has("tickets")).toBe(false);
+    expect(bundlePlan.bundles.has("applications")).toBe(true);
+    expect(bundlePlan.bundles.has("listings")).toBe(true);
+    expect(bundlePlan.bundles.has("expenses")).toBe(false);
+    expect(bundlePlan.bundles.has("feedback")).toBe(false);
+    expect(bundlePlan.bundles.has("inbox")).toBe(false);
+    expect(bundlePlan.bundles.has("manager-payments")).toBe(false);
+    expect(bundlePlan.bundles.has("tickets")).toBe(false);
+    expect(bundlePlan.sectionAvailability.hasApplicationsSection).toBe(true);
   });
 });

@@ -48,6 +48,85 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
     maintenanceBadgeCount,
     notificationBadgeCount
   } = kpis;
+  const ownerSectionAvailability = props.capabilities?.ownerSectionAvailability;
+  const navigationAvailability = useMemo(
+    () => ({
+      hasActivitySection:
+        isOwnerRole
+          ? ownerSectionAvailability?.hasActivitySection ?? hasActivitySection
+          : hasActivitySection,
+      hasAnalyticsSection:
+        isOwnerRole
+          ? ownerSectionAvailability?.hasAnalyticsSection ?? hasAnalyticsSection
+          : hasAnalyticsSection,
+      hasApplicationsSection:
+        isOwnerRole
+          ? ownerSectionAvailability?.hasApplicationsSection ?? hasApplicationsSection
+          : hasApplicationsSection,
+      hasAutomationsSection:
+        isOwnerRole
+          ? ownerSectionAvailability?.hasAutomationsSection ?? hasAutomationsSection
+          : hasAutomationsSection,
+      hasDocumentsSection:
+        isOwnerRole
+          ? ownerSectionAvailability?.hasDocumentsSection ?? hasDocumentsSection
+          : hasDocumentsSection,
+      hasExpensesSection:
+        isOwnerRole
+          ? ownerSectionAvailability?.hasExpensesSection ?? hasExpensesSection
+          : hasExpensesSection,
+      hasInboxSection:
+        isOwnerRole
+          ? ownerSectionAvailability?.hasInboxSection ?? hasInboxSection
+          : hasInboxSection,
+      hasInvitationsSection:
+        isOwnerRole
+          ? ownerSectionAvailability?.hasInvitationsSection ?? hasInvitationsSection
+          : hasInvitationsSection,
+      hasLeasingSection:
+        isOwnerRole
+          ? ownerSectionAvailability?.hasLeasingSection ?? hasLeasingSection
+          : hasLeasingSection,
+      hasManagerPaymentsSection:
+        isOwnerRole
+          ? ownerSectionAvailability?.hasManagerPaymentsSection ?? hasManagerPaymentsSection
+          : hasManagerPaymentsSection,
+      hasMembersSection:
+        isOwnerRole
+          ? ownerSectionAvailability?.hasMembersSection ?? hasMembersSection
+          : hasMembersSection,
+      hasNotificationsSection:
+        isOwnerRole
+          ? ownerSectionAvailability?.hasNotificationsSection ?? hasNotificationsSection
+          : hasNotificationsSection,
+      hasOwnershipSection:
+        isOwnerRole
+          ? ownerSectionAvailability?.hasOwnershipSection ?? hasOwnershipSection
+          : hasOwnershipSection,
+      hasVendorsSection:
+        isOwnerRole
+          ? ownerSectionAvailability?.hasVendorsSection ?? hasVendorsSection
+          : hasVendorsSection
+    }),
+    [
+      hasActivitySection,
+      hasAnalyticsSection,
+      hasApplicationsSection,
+      hasAutomationsSection,
+      hasDocumentsSection,
+      hasExpensesSection,
+      hasInboxSection,
+      hasInvitationsSection,
+      hasLeasingSection,
+      hasManagerPaymentsSection,
+      hasMembersSection,
+      hasNotificationsSection,
+      hasOwnershipSection,
+      hasVendorsSection,
+      isOwnerRole,
+      ownerSectionAvailability
+    ]
+  );
 
   const [ownerWorkflowMode, setOwnerWorkflowMode] = useState<OwnerWorkflowMode>(
     props.initialOwnerWorkflowMode ?? "daily_ops"
@@ -93,40 +172,27 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
         maintenanceBadgeCount,
         inboxBadgeCount,
         notificationBadgeCount,
-        hasActivitySection,
-        hasAnalyticsSection,
-        hasLeasingSection,
-        hasApplicationsSection,
-        hasManagerPaymentsSection,
-        hasMembersSection,
-        hasInboxSection,
-        hasAutomationsSection,
-        hasNotificationsSection,
-        hasOwnershipSection,
-        hasInvitationsSection,
-        hasDocumentsSection,
-        hasVendorsSection,
-        hasExpensesSection
+        hasActivitySection: navigationAvailability.hasActivitySection,
+        hasAnalyticsSection: navigationAvailability.hasAnalyticsSection,
+        hasLeasingSection: navigationAvailability.hasLeasingSection,
+        hasApplicationsSection: navigationAvailability.hasApplicationsSection,
+        hasManagerPaymentsSection: navigationAvailability.hasManagerPaymentsSection,
+        hasMembersSection: navigationAvailability.hasMembersSection,
+        hasInboxSection: navigationAvailability.hasInboxSection,
+        hasAutomationsSection: navigationAvailability.hasAutomationsSection,
+        hasNotificationsSection: navigationAvailability.hasNotificationsSection,
+        hasOwnershipSection: navigationAvailability.hasOwnershipSection,
+        hasInvitationsSection: navigationAvailability.hasInvitationsSection,
+        hasDocumentsSection: navigationAvailability.hasDocumentsSection,
+        hasVendorsSection: navigationAvailability.hasVendorsSection,
+        hasExpensesSection: navigationAvailability.hasExpensesSection
       }),
     [
       chargeBadgeCount,
       maintenanceBadgeCount,
       inboxBadgeCount,
       notificationBadgeCount,
-      hasActivitySection,
-      hasAnalyticsSection,
-      hasLeasingSection,
-      hasApplicationsSection,
-      hasManagerPaymentsSection,
-      hasMembersSection,
-      hasInboxSection,
-      hasAutomationsSection,
-      hasNotificationsSection,
-      hasOwnershipSection,
-      hasInvitationsSection,
-      hasDocumentsSection,
-      hasVendorsSection,
-      hasExpensesSection
+      navigationAvailability
     ]
   );
 
@@ -134,12 +200,12 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
     () =>
       isOwnerRole
         ? getOwnerModeNavItems({
-            hasAnalyticsSection,
-            hasManagerPaymentsSection,
-            hasMembersSection
+            hasAnalyticsSection: navigationAvailability.hasAnalyticsSection,
+            hasManagerPaymentsSection: navigationAvailability.hasManagerPaymentsSection,
+            hasMembersSection: navigationAvailability.hasMembersSection
           })
         : [],
-    [hasAnalyticsSection, hasManagerPaymentsSection, hasMembersSection, isOwnerRole]
+    [isOwnerRole, navigationAvailability]
   );
   const managerModeNavItems = useMemo(
     () => (isManagerRole ? getManagerModeNavItems() : []),

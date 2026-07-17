@@ -3,7 +3,10 @@ import { getDashboardData, type DashboardData } from "@/lib/dashboard";
 import { getNewFeedbackCountForOwner } from "@/lib/feedback";
 import { getUserNotificationPreferenceSettings, type NotificationPreferenceSettings } from "@/lib/notification-preferences";
 import { getPortfolioData, type PortfolioData } from "@/lib/portfolio";
-import { getAdministeredPropertyOptions } from "@/lib/property-access";
+import {
+  getAdministeredPropertyIdsForAccount,
+  getAdministeredPropertyOptions
+} from "@/lib/property-access";
 import { getAdminMaintenanceTickets, type MaintenanceTicket } from "@/lib/maintenance";
 import { getOwnerInvitations, type InvitationListItem } from "@/lib/invitations";
 import { getOwnerDocumentsData, type OwnerDocumentsData } from "@/lib/documents";
@@ -47,6 +50,12 @@ import {
   type UserProfileSummary
 } from "@/lib/auth";
 import { logPerfEvent, measurePerf } from "@/lib/logger";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { isMissingSchemaError } from "@/lib/supabase-errors";
+import type {
+  DashboardCapabilities,
+  OwnerDashboardSectionAvailability
+} from "@/components/dashboard/types";
 
 type OwnerWorkflowMode = "daily_ops" | "new_property" | "new_tenant" | "new_manager" | "records";
 export type OwnerBundleId =
@@ -133,7 +142,7 @@ export interface OwnerPageReadyData extends OwnerPageResolvedBase {
   auditLogs?: AuditLogEntry[];
   automationRules?: AutomationRuleDTO[];
   automationTemplates?: AutomationTemplateDTO[];
-  capabilities: FeatureCapabilitiesDTO;
+  capabilities: DashboardCapabilities;
   dashboard: DashboardData;
   distributionHistory?: DistributionHistoryEntry[];
   documents?: OwnerDocumentsData;
@@ -240,7 +249,11 @@ export function buildOwnerBundlePlan(params: {
   initialOwnerHomePage: boolean;
   initialSectionId: string | null;
   isLlcAccount: boolean;
-}): Set<OwnerBundleId> {
+  sectionAvailability: OwnerDashboardSectionAvailability;
+}): {
+  bundles: Set<OwnerBundleId>;
+  sectionAvailability: OwnerDashboardSectionAvailability;
+} {
   const bundles = new Set<OwnerBundleId>([
     "dashboard",
     "portfolio",
@@ -261,7 +274,10 @@ export function buildOwnerBundlePlan(params: {
       bundles.add("ownership-members");
     }
 
-    return bundles;
+    return {
+      bundles,
+      sectionAvailability: params.sectionAvailability
+    };
   }
 
   switch (params.initialSectionId) {
@@ -347,7 +363,85 @@ export function buildOwnerBundlePlan(params: {
       break;
   }
 
-  return bundles;
+  return {
+    bundles,
+    sectionAvailability: params.sectionAvailability
+  };
+}
+
+function buildOwnerSectionAvailability(params: {
+  capabilities: FeatureCapabilitiesDTO;
+  hasManagedProperties: boolean;
+  hasManagerPaymentsSection: boolean;
+  isLlcAccount: boolean;
+}): OwnerDashboardSectionAvailability {
+  return {
+    hasActivitySection: true,
+    hasAnalyticsSection: params.hasManagedProperties,
+    hasApplicationsSection: params.capabilities.leasingPipelineEnabled,
+    hasAutomationsSection: true,
+    hasDocumentsSection: true,
+    hasExpensesSection: true,
+    hasInboxSection: true,
+    hasInvitationsSection: true,
+    hasLeasingSection: true,
+    hasManagerPaymentsSection: params.hasManagerPaymentsSection,
+    hasMembersSection: params.capabilities.ownershipEnabled && params.isLlcAccount,
+    hasNotificationsSection: true,
+    hasOwnershipSection: true,
+    hasVendorsSection: true
+  };
+}
+
+async function hasOwnerManagerPaymentSection(propertyIds: string[]): Promise<boolean> {
+  if (propertyIds.length === 0) {
+    return false;
+  }
+
+  const admin = createAdminClient();
+  const { data: assignments, error: assignmentsError } = await admin
+    .from("property_managers")
+    .select("manager_profile_id")
+    .in("property_id", propertyIds)
+    .eq("active", true);
+
+  if (assignmentsError) {
+    if (isMissingSchemaError(assignmentsError)) {
+      return false;
+    }
+
+    console.error("[owner-page-data] Failed to load manager assignments for section availability:", assignmentsError);
+    return false;
+  }
+
+  const managerIds = Array.from(
+    new Set(
+      (assignments ?? [])
+        .map((assignment) => assignment.manager_profile_id)
+        .filter((managerId): managerId is string => Boolean(managerId))
+    )
+  );
+
+  if (managerIds.length === 0) {
+    return false;
+  }
+
+  const { count, error: profileError } = await admin
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .in("id", managerIds)
+    .not("email", "is", null);
+
+  if (profileError) {
+    if (isMissingSchemaError(profileError)) {
+      return false;
+    }
+
+    console.error("[owner-page-data] Failed to load manager profiles for section availability:", profileError);
+    return false;
+  }
+
+  return (count ?? 0) > 0;
 }
 
 export async function loadOwnerPageData(params: {
@@ -458,13 +552,40 @@ export async function loadOwnerPageData(params: {
   );
   const activeAccount = ownershipAccounts.find((account) => account.id === request.activeAccountId);
   const isLlcAccount = activeAccount?.accountType === "llc";
+  const administeredPropertyIds = request.activeAccountId
+    ? await measureOwnerWithRequest(
+        "properties.administered-ids",
+        () => getAdministeredPropertyIdsForAccount(params.userId, request.activeAccountId!),
+        {
+          activeAccountId: request.activeAccountId
+        }
+      )
+    : [];
+  const hasManagerPaymentsSection = await measureOwnerWithRequest(
+    "manager-payments.visibility",
+    () => hasOwnerManagerPaymentSection(administeredPropertyIds),
+    {
+      propertyCount: administeredPropertyIds.length
+    }
+  );
+  const sectionAvailability = buildOwnerSectionAvailability({
+    capabilities,
+    hasManagedProperties: administeredPropertyIds.length > 0,
+    hasManagerPaymentsSection,
+    isLlcAccount
+  });
   const bundlePlan = buildOwnerBundlePlan({
     capabilities,
     initialOwnerHomePage: request.initialOwnerHomePage,
     initialSectionId: request.initialSectionId,
-    isLlcAccount
+    isLlcAccount,
+    sectionAvailability
   });
-  const hasBundle = (bundleId: OwnerBundleId) => bundlePlan.has(bundleId);
+  const hasBundle = (bundleId: OwnerBundleId) => bundlePlan.bundles.has(bundleId);
+  const capabilitiesWithOwnerSectionAvailability: DashboardCapabilities = {
+    ...capabilities,
+    ownerSectionAvailability: bundlePlan.sectionAvailability
+  };
 
   const [
     dashboard,
@@ -649,7 +770,7 @@ export async function loadOwnerPageData(params: {
 
   finishOwnerPerfWithRequest({
     isLlcAccount,
-    loadedBundles: Array.from(bundlePlan).join(","),
+    loadedBundles: Array.from(bundlePlan.bundles).join(","),
     propertyCount: portfolio.properties.length,
     status: "ready"
   });
@@ -665,7 +786,7 @@ export async function loadOwnerPageData(params: {
     auditLogs,
     automationRules,
     automationTemplates,
-    capabilities,
+    capabilities: capabilitiesWithOwnerSectionAvailability,
     dashboard,
     distributionHistory,
     documents,
@@ -681,7 +802,7 @@ export async function loadOwnerPageData(params: {
     invitations,
     isEmpty,
     listings,
-    loadedBundles: Array.from(bundlePlan),
+    loadedBundles: Array.from(bundlePlan.bundles),
     managerPaymentsData,
     newFeedbackCount,
     notificationPreferenceSettings,

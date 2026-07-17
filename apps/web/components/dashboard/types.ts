@@ -51,6 +51,27 @@ export type TenantActivityLoader = (
   propertyId: string
 ) => Promise<TenantActivityEntry[]>;
 
+export interface OwnerDashboardSectionAvailability {
+  hasActivitySection: boolean;
+  hasAnalyticsSection: boolean;
+  hasApplicationsSection: boolean;
+  hasAutomationsSection: boolean;
+  hasDocumentsSection: boolean;
+  hasExpensesSection: boolean;
+  hasInboxSection: boolean;
+  hasInvitationsSection: boolean;
+  hasLeasingSection: boolean;
+  hasManagerPaymentsSection: boolean;
+  hasMembersSection: boolean;
+  hasNotificationsSection: boolean;
+  hasOwnershipSection: boolean;
+  hasVendorsSection: boolean;
+}
+
+export type DashboardCapabilities = FeatureCapabilitiesDTO & {
+  ownerSectionAvailability?: OwnerDashboardSectionAvailability;
+};
+
 export interface DashboardProps {
   data: DashboardData;
   isEmpty?: boolean;
@@ -68,7 +89,7 @@ export interface DashboardProps {
   automationRules?: AutomationRuleDTO[];
   vendors?: VendorDTO[];
   expensesData?: ExpenseDashboardData;
-  capabilities?: FeatureCapabilitiesDTO;
+  capabilities?: DashboardCapabilities;
   ownershipAccounts?: OwnershipAccountDTO[];
   ownershipMembers?: OwnershipMemberDTO[];
   llcPayoutMemberships?: ActiveLlcMembershipDTO[];

@@ -1,6 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useDashboardNavigation } from "@/components/dashboard/dashboard-section-loaders";
+import { OWNER_DAILY_OPS_SECTION_IDS } from "@/components/dashboard/owner-daily-ops-pagination";
 import type { DashboardProps } from "@/components/dashboard/types";
 
 const replaceMock = vi.fn();
@@ -38,6 +39,34 @@ function NavigationProbe({ initialSectionId }: { initialSectionId: string | null
   const navigation = useDashboardNavigation(
     {
       data: { profileRole: "owner" },
+      capabilities: {
+        documentsEnabled: true,
+        documentAssetAccessEnabled: true,
+        notificationsEnabled: true,
+        vendorWorkflowEnabled: true,
+        photoWorkflowEnabled: true,
+        ownershipEnabled: true,
+        leasingPipelineEnabled: true,
+        inboxThreadsEnabled: true,
+        automationsEnabled: true,
+        warnings: {},
+        ownerSectionAvailability: {
+          hasActivitySection: true,
+          hasAnalyticsSection: true,
+          hasApplicationsSection: true,
+          hasAutomationsSection: true,
+          hasDocumentsSection: true,
+          hasExpensesSection: true,
+          hasInboxSection: true,
+          hasInvitationsSection: true,
+          hasLeasingSection: true,
+          hasManagerPaymentsSection: true,
+          hasMembersSection: true,
+          hasNotificationsSection: true,
+          hasOwnershipSection: true,
+          hasVendorsSection: true
+        }
+      },
       initialOwnerWorkflowMode: "daily_ops",
       initialSectionId,
       userEmail: "owner@example.com"
@@ -46,9 +75,22 @@ function NavigationProbe({ initialSectionId }: { initialSectionId: string | null
   );
 
   return (
-    <div data-testid="navigation-state">
-      {navigation.activeSection}|{navigation.activeSectionLabel}|{String(navigation.isUnknownSection)}
-    </div>
+    <>
+      <div data-testid="navigation-state">
+        {navigation.activeSection}|{navigation.activeSectionLabel}|{String(navigation.isUnknownSection)}
+      </div>
+      <div data-testid="section-ids">{navigation.sectionItems.map((item) => item.id).join(",")}</div>
+      <div data-testid="section-count">{String(navigation.sectionItems.length)}</div>
+      {navigation.sidebarItems.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => navigation.handleSidebarSelect(item.id)}
+        >
+          {item.label}
+        </button>
+      ))}
+    </>
   );
 }
 
@@ -64,5 +106,18 @@ describe("useDashboardNavigation", () => {
     render(<NavigationProbe initialSectionId="foobar" />);
 
     expect(screen.getByTestId("navigation-state")).toHaveTextContent("foobar|Section not found|true");
+  });
+
+  it("keeps owner daily ops navigation complete when deferred data is absent", () => {
+    render(<NavigationProbe initialSectionId="overview" />);
+
+    expect(screen.getByTestId("section-count")).toHaveTextContent(String(OWNER_DAILY_OPS_SECTION_IDS.length));
+    expect(screen.getByTestId("section-ids")).toHaveTextContent(OWNER_DAILY_OPS_SECTION_IDS.join(","));
+
+    const analyticsButton = screen.getByRole("button", { name: "Analytics" });
+    fireEvent.click(analyticsButton);
+
+    expect(screen.getByTestId("navigation-state")).toHaveTextContent("analytics|Analytics|false");
+    expect(replaceMock).toHaveBeenCalledWith("/owner?section=analytics");
   });
 });
