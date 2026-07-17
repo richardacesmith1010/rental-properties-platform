@@ -519,9 +519,12 @@ Dedicated test accounts must exist for every role. Claude uses these for flow wa
 
 | Role | Email | Status |
 |---|---|---|
-| Tenant | richard.ace.smith+alt@gmail.com | Active |
-| Owner | (to be created) | Missing — request creation in a future sprint |
-| Manager | (to be created) | Missing — request creation in a future sprint |
+| Tenant (real data) | richard.ace.smith+alt@gmail.com | Active — real lease on "1st Home"; use for real-data flow walks |
+| Owner (smoke) | richard.ace.smith+smokeowner@gmail.com | Active — isolated smoke graph (Sprint 130) |
+| Manager (smoke) | richard.ace.smith+smokemanager@gmail.com | Active — assigned to Smoke Test Property only |
+| Tenant (smoke) | richard.ace.smith+smoketenant@gmail.com | Active — $1/mo lease (below online-payment minimum) |
+
+Smoke-account credentials live in `apps/web/.env.local` (`SMOKE_*` vars, gitignored); rotation procedure in `docs/smoke-accounts.md`. With those vars set, `APP_URL=https://domusbase.com npm run smoke:web` runs authenticated render checks (3 roles, zero-console-error assertion) — this satisfies the L-009 post-deploy render check for routine deploys; manual Chrome walks remain required for sprints that change specific flows.
 
 If a required test account is missing for a planned flow walk, Claude must request its creation as part of that sprint's scope rather than skipping verification.
 

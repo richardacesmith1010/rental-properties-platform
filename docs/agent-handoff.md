@@ -48,6 +48,15 @@ Last updated: 2026-07-12
 
 **Next step:** Sprint 129 — fix defects 1+2 (Connect onboarding routing + status reads). Then verify the $5 payout arrival. Dispatch to Codex via the CLI (`~/.codex-cli/...`); see memory `project-shell-and-cli-workarounds`.
 
+## Sprint 130 — Authenticated smoke + smoke accounts (SHIPPED 2026-07-17)
+
+The L-009 gap is closed: `npm run smoke:web` now runs **authenticated render checks** for owner/manager/tenant when `SMOKE_*` creds are in env (skips cleanly otherwise). Each check does a real UI login and asserts the dashboard shell renders with **zero console errors** and no error-boundary text.
+
+- Smoke accounts (isolated, additive, idempotent seeding via `scripts/seed-smoke-accounts.mjs` — Claude runs it, never Codex): +smokeowner / +smokemanager / +smoketenant on "Smoke Test Property" (Unit S, $1/mo lease — below the $5 online minimum so it can never be paid). Creds in `apps/web/.env.local`; rotation per `docs/smoke-accounts.md`.
+- Verified against production: seed run (9 entities created) → idempotency re-run (all `existing`) → full smoke **3/3 authenticated passes**.
+- Known wart: seeder reports the 3 profiles as `updated` every run (timestamp format comparison) — harmless, cosmetic fix candidate.
+- **Perf finding:** the suite measured owner dashboard **cold** login→render at >15s in production (warm ~12s total for all 3 roles). Tenant/manager are much faster. Logged as a perf-sprint candidate — the smoke spec doubles as the before/after harness.
+
 ## Validation Snapshot
 - Unit tests: `562/562` passing at the latest clean gate baseline
 - Playwright coverage: `55` tests across `16` spec files (`cd apps/web && APP_URL=https://domusbase.com npx playwright test --reporter=list`)

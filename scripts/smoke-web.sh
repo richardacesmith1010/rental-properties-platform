@@ -86,4 +86,30 @@ if [[ "$GAMIFICATION_STATUS" != "401" ]]; then
   exit 1
 fi
 
+SMOKE_ENV_VARS=(
+  "SMOKE_OWNER_EMAIL"
+  "SMOKE_OWNER_PASSWORD"
+  "SMOKE_MANAGER_EMAIL"
+  "SMOKE_MANAGER_PASSWORD"
+  "SMOKE_TENANT_EMAIL"
+  "SMOKE_TENANT_PASSWORD"
+)
+
+HAS_SMOKE_CREDS=true
+for env_name in "${SMOKE_ENV_VARS[@]}"; do
+  if [[ -z "${!env_name:-}" ]]; then
+    HAS_SMOKE_CREDS=false
+    break
+  fi
+done
+
+if [[ "$HAS_SMOKE_CREDS" == "true" ]]; then
+  echo "[smoke] Running authenticated render checks"
+  pushd apps/web >/dev/null
+  APP_URL="$APP_URL" npx playwright test tests/e2e/smoke-auth.spec.ts --reporter=line
+  popd >/dev/null
+else
+  echo "[smoke] SMOKE_* creds not set; skipping authenticated render checks"
+fi
+
 echo "[smoke] Smoke checks passed"
