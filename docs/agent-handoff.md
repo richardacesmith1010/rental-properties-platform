@@ -69,7 +69,17 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Settings page: h1 renders dark-on-dark (low contrast); "Back to Workspace" pill stays light-styled. (Phase 4 surface — earliest ride-along welcome.)
 - Violet remnants (expected until their phases): settings sub-nav active state, Feedback button, Ask Domus button, mascot imagery in setup/empty content (mascot dies fully in Phase 5).
 
-**Next:** Phase 1 packet — owner surface reskin (dashboard shell content, KPI tiles, sections, drill-down, reports) + the punch-list items reachable from owner surface. Owner cold-load perf finding (>15s, logged 2026-07-17) can pair with Phase 1 since the same loader code is touched.
+## Reskin Phase 1 + owner perf — SHIPPED (Sprint 132, 2026-07-17, commits 4aa00c1 + 56b5c32)
+
+- **Reskin:** owner shell, command-center KPIs (v2 spec, semantic status colors), charges/analytics sections, charts, reports, property drill-down on v2 tokens. `status-colors.ts` now emits token classes platform-wide. Plain-language copy pass on touched labels.
+- **Perf:** permanent `[perf:owner]` telemetry (per-loader JSON timings in Vercel logs); first paint scoped to the visible section; section switches route-driven with labeled skeletons. Warm owner spec runs ~10-13s (was ~12.5s); cold passes within budget. **Top measured offender for a future pass: `ownership.accounts` at ~1,134ms + a sequential auth→profile→ownership prefix (~2.6s total assembly).**
+- **Hotfix during verification (56b5c32):** first-paint scoping initially derived nav items from loaded data, making Analytics unreachable (9→8 sections). Fixed: section availability is server-computed capability flags in the first-paint bundle; test locks nav completeness with deferred data absent. Verified live: 9 of 9, Analytics loads on demand.
+- **Also:** reverted Codex's unused AsyncLocalStorage cookie scaffolding in `lib/supabase/server.ts` (dead, out of scope, zero references).
+- Verified: independent gates green (973/973 then 974/974), smoke 3/3 post-deploy ×2, light-mode walk on real owner, analytics end-to-end.
+
+**Phase 1b backlog (owner files still violet, listed by Codex):** `dashboard/invitations/*`, `maintenance-tracker.tsx`, `maintenance-comment-thread.tsx`, `distribution-config-panel.tsx`, `ownership/*`, `inbox-section.tsx`, `connect-banner.tsx`, `app/owner/error.tsx`, `app/owner/setup/page.tsx`. Plus: strip user email from `[perf:owner]` log metadata (userId only); dark-mode walk of owner surface + real-owner drill-down numbers check pending (user's evening).
+
+**Next:** Phase 1b (finish owner violet remnants + log-metadata cleanup) or Phase 2 (tenant surface) — user's call; then manager (Phase 3), settings (4), de-gamification (5).
 
 ## Validation Snapshot
 - Unit tests: `562/562` passing at the latest clean gate baseline
