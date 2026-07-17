@@ -6,116 +6,125 @@
 
 @layer base {
   :root {
-    --domus-primary: #7c3aed;
-    --domus-primary-light: #a78bfa;
-    --domus-secondary: #10b981;
-    --domus-accent: #f59e0b;
-    --domus-danger: #f43f5e;
-    --domus-body-bg: linear-gradient(180deg, #f8fafc 0%, #f5f3ff 48%, #ffffff 100%);
-    --domus-body-text: #0f172a;
-    --domus-surface-bg: rgba(255, 255, 255, 0.94);
-    --domus-sidebar-bg:
-      radial-gradient(circle at 18% 16%, rgba(167, 139, 250, 0.3), transparent 34%),
-      linear-gradient(180deg, #7c3aed 0%, #5b21b6 40%, #064e3b 100%);
-    --domus-card-bg: rgba(255, 255, 255, 0.98);
-    --domus-card-border: rgba(203, 213, 225, 0.92);
-    --domus-card-hover: rgba(248, 250, 252, 1);
-    --domus-primary-glow: hsl(263 70% 58% / 0.3);
-    --domus-input-bg: #ffffff;
-    --domus-input-border: #cbd5e1;
-    --domus-muted-text: #475569;
-    --domus-heading-text: #0f172a;
-    --domus-divider: rgba(148, 163, 184, 0.34);
-    --domus-badge-bg: rgba(237, 233, 254, 0.95);
-    --domus-badge-text: #5b21b6;
-    --domus-success-bg: rgba(209, 250, 229, 0.96);
-    --domus-success-text: #166534;
-    --domus-warning-bg: rgba(254, 243, 199, 0.96);
-    --domus-warning-text: #92400e;
-    --domus-danger-bg: rgba(254, 226, 226, 0.96);
-    --domus-danger-text: #991b1b;
-    --domus-skeleton: #e2e8f0;
-    --domus-table-row-hover: rgba(237, 233, 254, 0.34);
-    --domus-tooltip-bg: #18181b;
-    --domus-tooltip-text: #fafafa;
-    --domus-shadow-sm: 0 14px 34px -24px rgba(15, 23, 42, 0.16);
-    --domus-shadow-md: 0 22px 48px -28px rgba(15, 23, 42, 0.2);
-    --domus-shadow-lg: 0 28px 62px -32px rgba(15, 23, 42, 0.24);
-    --domus-glow: 0 0 0 rgba(124, 58, 237, 0);
+    --ground: #FBFBF9;
+    --surface: #FFFFFF;
+    --surface-2: #F5F5F1;
+    --surface-3: #EFEFE9;
+    --ink: #191B1E;
+    --ink-2: #3A3F45;
+    --muted: #6F757C;
+    --faint: #9AA0A6;
+    --line: #E6E6E0;
+    --line-2: #EEEEE8;
+    --accent: #1D4ED8;
+    --accent-strong: #1A3FAE;
+    --accent-weak: #E8EEFC;
+    --accent-line: #C7D6F8;
+    --crit: #B91C1C;
+    --crit-bg: #FDE8E8;
+    --warn: #B45309;
+    --warn-bg: #FCF0DC;
+    --pos: #15803D;
+    --pos-bg: #E4F5E9;
+    --shadow-sm: 0 8px 20px -18px rgba(25, 27, 30, 0.16);
+    --shadow-md: 0 18px 40px -28px rgba(25, 27, 30, 0.2);
+    --shadow-lg: 0 28px 64px -36px rgba(25, 27, 30, 0.34);
+    --domus-skeleton-highlight: hsl(0 0% 100% / 0.55);
+
+    --domus-primary: var(--accent);
+    --domus-primary-light: var(--accent-line);
+    --domus-secondary: var(--pos);
+    --domus-accent: var(--accent-strong);
+    --domus-danger: var(--crit);
+    --domus-body-bg: var(--ground);
+    --domus-body-text: var(--ink);
+    --domus-surface-bg: var(--ground);
+    --domus-sidebar-bg: var(--surface);
+    --domus-card-bg: var(--surface);
+    --domus-card-border: var(--line);
+    --domus-card-hover: var(--surface-2);
+    --domus-primary-glow: var(--accent-line);
+    --domus-input-bg: var(--surface);
+    --domus-input-border: var(--line);
+    --domus-muted-text: var(--muted);
+    --domus-heading-text: var(--ink);
+    --domus-divider: var(--line);
+    --domus-badge-bg: var(--accent-weak);
+    --domus-badge-text: var(--accent);
+    --domus-success-bg: var(--pos-bg);
+    --domus-success-text: var(--pos);
+    --domus-warning-bg: var(--warn-bg);
+    --domus-warning-text: var(--warn);
+    --domus-danger-bg: var(--crit-bg);
+    --domus-danger-text: var(--crit);
+    --domus-skeleton: var(--surface-3);
+    --domus-skeleton-bg: var(--surface-3);
+    --domus-table-row-hover: var(--surface-2);
+    --domus-tooltip-bg: var(--ink);
+    --domus-tooltip-text: var(--surface);
+    --domus-shadow-sm: var(--shadow-sm);
+    --domus-shadow-md: var(--shadow-md);
+    --domus-shadow-lg: var(--shadow-lg);
+    --domus-glow: 0 0 0 transparent;
+    color-scheme: light;
   }
 
-  html[data-domus-theme="noctis-neon"] {
-    --domus-body-bg: #060914;
-    --domus-body-text: #e6eefc;
-    --domus-surface-bg:
-      radial-gradient(circle at 14% 8%, rgba(124, 58, 237, 0.18), transparent 28%),
-      radial-gradient(circle at 82% 84%, rgba(16, 185, 129, 0.16), transparent 32%),
-      linear-gradient(180deg, #050912 0%, #0c1020 56%, #071121 100%);
-    --domus-sidebar-bg:
-      radial-gradient(circle at 18% 14%, rgba(124, 58, 237, 0.35), transparent 38%),
-      linear-gradient(180deg, #140c28, #1d1540 46%, #063829 100%);
-    --domus-card-bg: rgba(15, 23, 42, 0.76);
-    --domus-card-border: rgba(148, 163, 184, 0.25);
-    --domus-card-hover: rgba(20, 30, 55, 0.85);
-    --domus-primary-glow: hsl(263 70% 58% / 0.4);
-    --domus-input-bg: rgba(15, 23, 42, 0.6);
-    --domus-input-border: rgba(148, 163, 184, 0.35);
-    --domus-muted-text: #91a0bd;
-    --domus-heading-text: #e7edf8;
-    --domus-divider: rgba(148, 163, 184, 0.2);
-    --domus-badge-bg: rgba(124, 58, 237, 0.2);
-    --domus-badge-text: #c4b5fd;
-    --domus-success-bg: rgba(16, 185, 129, 0.15);
-    --domus-success-text: #6ee7b7;
-    --domus-warning-bg: rgba(245, 158, 11, 0.15);
-    --domus-warning-text: #fcd34d;
-    --domus-danger-bg: rgba(244, 63, 94, 0.15);
-    --domus-danger-text: #fda4af;
-    --domus-skeleton: rgba(51, 65, 85, 0.5);
-    --domus-table-row-hover: rgba(124, 58, 237, 0.1);
-    --domus-tooltip-bg: #1e293b;
-    --domus-tooltip-text: #e2e8f0;
-    --domus-shadow-sm: 0 14px 34px -20px rgba(0, 0, 0, 0.55);
-    --domus-shadow-md: 0 20px 44px -22px rgba(0, 0, 0, 0.6);
-    --domus-shadow-lg: 0 28px 56px -24px rgba(0, 0, 0, 0.68);
-    --domus-glow: 0 0 24px rgba(124, 58, 237, 0.18);
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #121316;
+      --surface: #191B1F;
+      --surface-2: #202328;
+      --surface-3: #272B31;
+      --ink: #ECEDEF;
+      --ink-2: #C5C8CE;
+      --muted: #959AA2;
+      --faint: #6C727B;
+      --line: #282C33;
+      --line-2: #222630;
+      --accent: #7E9FF7;
+      --accent-strong: #9DB5F9;
+      --accent-weak: #182238;
+      --accent-line: #2C3B5C;
+      --crit: #F1867E;
+      --crit-bg: #2C1615;
+      --warn: #E0A34E;
+      --warn-bg: #28200F;
+      --pos: #6BC98B;
+      --pos-bg: #14261A;
+      --shadow-sm: 0 10px 24px -18px rgba(0, 0, 0, 0.24);
+      --shadow-md: 0 22px 48px -28px rgba(0, 0, 0, 0.42);
+      --shadow-lg: 0 30px 68px -34px rgba(0, 0, 0, 0.58);
+      --domus-skeleton-highlight: hsl(0 0% 100% / 0.08);
+      color-scheme: dark;
+    }
   }
 
-  html[data-domus-theme="imperium-night"] {
-    --domus-body-bg: #0f0a16;
-    --domus-body-text: #f2ecff;
-    --domus-surface-bg:
-      radial-gradient(circle at 18% 12%, rgba(124, 58, 237, 0.24), transparent 32%),
-      radial-gradient(circle at 86% 76%, rgba(245, 158, 11, 0.12), transparent 36%),
-      linear-gradient(180deg, #110d1f 0%, #191329 52%, #100d1d 100%);
-    --domus-sidebar-bg:
-      radial-gradient(circle at 18% 16%, rgba(245, 158, 11, 0.2), transparent 40%),
-      linear-gradient(180deg, #251641, #1b1331 46%, #073b2b 100%);
-    --domus-card-bg: rgba(17, 13, 31, 0.85);
-    --domus-card-border: rgba(167, 139, 250, 0.2);
-    --domus-card-hover: rgba(25, 19, 41, 0.9);
-    --domus-primary-glow: hsl(263 70% 58% / 0.35);
-    --domus-input-bg: rgba(17, 13, 31, 0.6);
-    --domus-input-border: rgba(167, 139, 250, 0.25);
-    --domus-muted-text: #a8a0c0;
-    --domus-heading-text: #f2ecff;
-    --domus-divider: rgba(167, 139, 250, 0.15);
-    --domus-badge-bg: rgba(124, 58, 237, 0.25);
-    --domus-badge-text: #ddd6fe;
-    --domus-success-bg: rgba(16, 185, 129, 0.15);
-    --domus-success-text: #6ee7b7;
-    --domus-warning-bg: rgba(245, 158, 11, 0.15);
-    --domus-warning-text: #fcd34d;
-    --domus-danger-bg: rgba(244, 63, 94, 0.15);
-    --domus-danger-text: #fda4af;
-    --domus-skeleton: rgba(37, 22, 65, 0.6);
-    --domus-table-row-hover: rgba(167, 139, 250, 0.1);
-    --domus-tooltip-bg: #1b1331;
-    --domus-tooltip-text: #e8e0ff;
-    --domus-shadow-sm: 0 14px 34px -20px rgba(0, 0, 0, 0.55);
-    --domus-shadow-md: 0 20px 44px -22px rgba(0, 0, 0, 0.6);
-    --domus-shadow-lg: 0 28px 56px -24px rgba(0, 0, 0, 0.68);
-    --domus-glow: 0 0 24px rgba(167, 139, 250, 0.18);
+  :root[data-theme="dark"] {
+    --ground: #121316;
+    --surface: #191B1F;
+    --surface-2: #202328;
+    --surface-3: #272B31;
+    --ink: #ECEDEF;
+    --ink-2: #C5C8CE;
+    --muted: #959AA2;
+    --faint: #6C727B;
+    --line: #282C33;
+    --line-2: #222630;
+    --accent: #7E9FF7;
+    --accent-strong: #9DB5F9;
+    --accent-weak: #182238;
+    --accent-line: #2C3B5C;
+    --crit: #F1867E;
+    --crit-bg: #2C1615;
+    --warn: #E0A34E;
+    --warn-bg: #28200F;
+    --pos: #6BC98B;
+    --pos-bg: #14261A;
+    --shadow-sm: 0 10px 24px -18px rgba(0, 0, 0, 0.24);
+    --shadow-md: 0 22px 48px -28px rgba(0, 0, 0, 0.42);
+    --shadow-lg: 0 30px 68px -34px rgba(0, 0, 0, 0.58);
+    --domus-skeleton-highlight: hsl(0 0% 100% / 0.08);
+    color-scheme: dark;
   }
 
   * {
@@ -123,14 +132,8 @@
   }
 
   html {
-    color-scheme: light;
     max-width: 100%;
     overflow-x: hidden;
-  }
-
-  html[data-domus-theme="noctis-neon"],
-  html[data-domus-theme="imperium-night"] {
-    color-scheme: dark;
   }
 
   body {
@@ -158,64 +161,80 @@
 
   .gradient-sidebar {
     background: var(--domus-sidebar-bg);
+    color: var(--ink-2);
   }
 
   .gradient-btn {
-    @apply bg-gradient-to-r from-violet-500 to-purple-600 font-semibold text-white;
-    box-shadow: 0 10px 24px rgba(124, 58, 237, 0.28);
+    background: var(--accent);
+    color: #ffffff;
+    box-shadow: var(--domus-shadow-sm);
+    @apply font-semibold;
   }
 
   .gradient-btn:hover {
-    @apply from-violet-600 to-purple-700;
+    background: var(--accent-strong);
   }
 
   .domus-card {
     background: var(--domus-card-bg);
     border: 1px solid var(--domus-card-border);
     box-shadow: var(--domus-shadow-sm);
-    @apply rounded-2xl backdrop-blur-sm transition-all duration-150;
+    @apply rounded-2xl transition-[border-color,box-shadow,transform] duration-150;
   }
 
-  .domus-card:hover {
-    border-color: var(--domus-primary-glow);
-    background: var(--domus-card-hover);
+  .domus-card[data-interactive="true"]:hover {
+    border-color: var(--accent-line);
   }
 
   .domus-input {
     background: var(--domus-input-bg);
     border: 1px solid var(--domus-input-border);
     color: var(--domus-heading-text);
-    @apply rounded-xl px-3 py-2 text-sm transition-colors duration-150;
+    @apply rounded-xl px-3 py-2 text-sm transition-[border-color,box-shadow,background-color] duration-150;
   }
 
   .domus-input::placeholder {
-    color: var(--domus-muted-text);
-    opacity: 0.8;
+    color: var(--faint);
+    opacity: 1;
   }
 
-  .domus-input:focus {
-    border-color: var(--domus-primary);
-    @apply outline-none ring-2 ring-violet-500/20;
+  .domus-input:focus-visible {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-line);
+    outline: none;
+  }
+
+  .domus-input[data-invalid="true"] {
+    border-color: var(--domus-danger-text);
+  }
+
+  .domus-input[data-invalid="true"]:focus-visible {
+    border-color: var(--domus-danger-text);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--domus-danger-bg) 90%, transparent);
   }
 
   .domus-badge {
     background: var(--domus-badge-bg);
+    border: 1px solid var(--accent-line);
     color: var(--domus-badge-text);
-    @apply rounded-full px-2.5 py-0.5 text-xs font-medium;
+    @apply rounded-full px-2.5 py-0.5 text-xs font-semibold;
   }
 
   .domus-badge-success {
     background: var(--domus-success-bg);
+    border-color: color-mix(in srgb, var(--domus-success-text) 28%, var(--domus-success-bg));
     color: var(--domus-success-text);
   }
 
   .domus-badge-warning {
     background: var(--domus-warning-bg);
+    border-color: color-mix(in srgb, var(--domus-warning-text) 28%, var(--domus-warning-bg));
     color: var(--domus-warning-text);
   }
 
   .domus-badge-danger {
     background: var(--domus-danger-bg);
+    border-color: color-mix(in srgb, var(--domus-danger-text) 28%, var(--domus-danger-bg));
     color: var(--domus-danger-text);
   }
 
@@ -240,14 +259,16 @@
     background: var(--domus-table-row-hover);
   }
 
-  .domus-skeleton {
-    background: var(--domus-skeleton);
+  .domus-skeleton,
+  .domus-skeleton-shimmer {
+    background: var(--domus-skeleton-bg);
     position: relative;
     overflow: hidden;
     @apply rounded;
   }
 
-  .domus-skeleton::after {
+  .domus-skeleton::after,
+  .domus-skeleton-shimmer::after {
     content: "";
     position: absolute;
     inset: 0;
@@ -255,35 +276,34 @@
     background: linear-gradient(
       90deg,
       transparent 25%,
-      hsl(0 0% 100% / 0.08) 50%,
+      var(--domus-skeleton-highlight) 50%,
       transparent 75%
     );
     animation: shimmer 1.5s ease-in-out infinite;
   }
 
   .domus-glass {
-    background: color-mix(in srgb, var(--domus-card-bg) 76%, transparent);
-    border: 1px solid color-mix(in srgb, var(--domus-card-border) 90%, transparent);
-    box-shadow: var(--domus-shadow-sm), var(--domus-glow);
+    background: color-mix(in srgb, var(--surface) 82%, transparent);
+    border: 1px solid color-mix(in srgb, var(--line) 92%, transparent);
+    box-shadow: var(--domus-shadow-sm);
     @apply rounded-2xl backdrop-blur-md;
   }
 
   .domus-kpi-pill {
-    background: color-mix(in srgb, var(--domus-card-bg) 88%, transparent);
-    border: 1px solid color-mix(in srgb, var(--domus-card-border) 92%, transparent);
+    background: color-mix(in srgb, var(--surface) 94%, transparent);
+    border: 1px solid var(--line);
     color: var(--domus-heading-text);
     box-shadow: var(--domus-shadow-sm);
-    @apply rounded-2xl px-4 py-3 backdrop-blur-sm transition-all duration-200;
+    @apply rounded-2xl px-4 py-3 transition-[border-color,box-shadow,transform] duration-200;
   }
 
   .domus-kpi-pill:hover {
-    transform: translateY(-1px);
-    box-shadow: var(--domus-shadow-md);
+    border-color: var(--accent-line);
   }
-
 }
 
 @layer utilities {
+  .tabular-nums,
   .text-tabular {
     font-variant-numeric: tabular-nums;
   }
@@ -307,376 +327,12 @@
   .animate-domus-think {
     animation: domus-think 2s ease-in-out infinite;
   }
-
-  html[data-domus-theme="noctis-neon"] .bg-white,
-  html[data-domus-theme="imperium-night"] .bg-white {
-    background-color: var(--domus-card-bg);
-  }
-
-  html[data-domus-theme="noctis-neon"] .bg-white\/90,
-  html[data-domus-theme="imperium-night"] .bg-white\/90,
-  html[data-domus-theme="noctis-neon"] .bg-white\/80,
-  html[data-domus-theme="imperium-night"] .bg-white\/80,
-  html[data-domus-theme="noctis-neon"] .bg-white\/70,
-  html[data-domus-theme="imperium-night"] .bg-white\/70,
-  html[data-domus-theme="noctis-neon"] .bg-white\/60,
-  html[data-domus-theme="imperium-night"] .bg-white\/60,
-  html[data-domus-theme="noctis-neon"] .bg-white\/50,
-  html[data-domus-theme="imperium-night"] .bg-white\/50 {
-    background-color: color-mix(in srgb, var(--domus-card-bg) 88%, transparent);
-  }
-
-  html[data-domus-theme="noctis-neon"] .bg-zinc-50,
-  html[data-domus-theme="imperium-night"] .bg-zinc-50,
-  html[data-domus-theme="noctis-neon"] .bg-zinc-100,
-  html[data-domus-theme="imperium-night"] .bg-zinc-100,
-  html[data-domus-theme="noctis-neon"] .bg-zinc-200,
-  html[data-domus-theme="imperium-night"] .bg-zinc-200,
-  html[data-domus-theme="noctis-neon"] .bg-zinc-300,
-  html[data-domus-theme="imperium-night"] .bg-zinc-300,
-  html[data-domus-theme="noctis-neon"] .bg-gray-50,
-  html[data-domus-theme="imperium-night"] .bg-gray-50,
-  html[data-domus-theme="noctis-neon"] .bg-gray-100,
-  html[data-domus-theme="imperium-night"] .bg-gray-100,
-  html[data-domus-theme="noctis-neon"] .bg-gray-200,
-  html[data-domus-theme="imperium-night"] .bg-gray-200,
-  html[data-domus-theme="noctis-neon"] .bg-slate-50,
-  html[data-domus-theme="imperium-night"] .bg-slate-50,
-  html[data-domus-theme="noctis-neon"] .bg-slate-100,
-  html[data-domus-theme="imperium-night"] .bg-slate-100,
-  html[data-domus-theme="noctis-neon"] .bg-stone-50,
-  html[data-domus-theme="imperium-night"] .bg-stone-50,
-  html[data-domus-theme="noctis-neon"] .bg-stone-100,
-  html[data-domus-theme="imperium-night"] .bg-stone-100 {
-    background-color: rgba(30, 41, 59, 0.58);
-  }
-
-  html[data-domus-theme="noctis-neon"] .bg-violet-50,
-  html[data-domus-theme="imperium-night"] .bg-violet-50,
-  html[data-domus-theme="noctis-neon"] .bg-violet-50\/80,
-  html[data-domus-theme="imperium-night"] .bg-violet-50\/80,
-  html[data-domus-theme="noctis-neon"] .bg-violet-50\/60,
-  html[data-domus-theme="imperium-night"] .bg-violet-50\/60,
-  html[data-domus-theme="noctis-neon"] .bg-violet-100,
-  html[data-domus-theme="imperium-night"] .bg-violet-100,
-  html[data-domus-theme="noctis-neon"] .bg-violet-100\/80,
-  html[data-domus-theme="imperium-night"] .bg-violet-100\/80,
-  html[data-domus-theme="noctis-neon"] .bg-violet-100\/60,
-  html[data-domus-theme="imperium-night"] .bg-violet-100\/60,
-  html[data-domus-theme="noctis-neon"] .bg-violet-200,
-  html[data-domus-theme="imperium-night"] .bg-violet-200,
-  html[data-domus-theme="noctis-neon"] .bg-violet-300,
-  html[data-domus-theme="imperium-night"] .bg-violet-300 {
-    background-color: rgba(124, 58, 237, 0.16);
-  }
-
-  html[data-domus-theme="noctis-neon"] .bg-emerald-50,
-  html[data-domus-theme="imperium-night"] .bg-emerald-50,
-  html[data-domus-theme="noctis-neon"] .bg-emerald-100,
-  html[data-domus-theme="imperium-night"] .bg-emerald-100,
-  html[data-domus-theme="noctis-neon"] .bg-emerald-200,
-  html[data-domus-theme="imperium-night"] .bg-emerald-200 {
-    background-color: rgba(16, 185, 129, 0.14);
-  }
-
-  html[data-domus-theme="noctis-neon"] .bg-amber-50,
-  html[data-domus-theme="imperium-night"] .bg-amber-50,
-  html[data-domus-theme="noctis-neon"] .bg-amber-100,
-  html[data-domus-theme="imperium-night"] .bg-amber-100,
-  html[data-domus-theme="noctis-neon"] .bg-amber-200,
-  html[data-domus-theme="imperium-night"] .bg-amber-200 {
-    background-color: rgba(245, 158, 11, 0.14);
-  }
-
-  html[data-domus-theme="noctis-neon"] .bg-red-50,
-  html[data-domus-theme="imperium-night"] .bg-red-50,
-  html[data-domus-theme="noctis-neon"] .bg-red-100,
-  html[data-domus-theme="imperium-night"] .bg-red-100,
-  html[data-domus-theme="noctis-neon"] .bg-red-200,
-  html[data-domus-theme="imperium-night"] .bg-red-200,
-  html[data-domus-theme="noctis-neon"] .bg-rose-50,
-  html[data-domus-theme="imperium-night"] .bg-rose-50,
-  html[data-domus-theme="noctis-neon"] .bg-rose-100,
-  html[data-domus-theme="imperium-night"] .bg-rose-100,
-  html[data-domus-theme="noctis-neon"] .bg-rose-200,
-  html[data-domus-theme="imperium-night"] .bg-rose-200 {
-    background-color: rgba(244, 63, 94, 0.14);
-  }
-
-  html[data-domus-theme="noctis-neon"] .bg-slate-900\/80,
-  html[data-domus-theme="imperium-night"] .bg-slate-900\/80,
-  html[data-domus-theme="noctis-neon"] .bg-slate-950\/80,
-  html[data-domus-theme="imperium-night"] .bg-slate-950\/80 {
-    background-color: rgba(15, 23, 42, 0.82);
-  }
-
-  html[data-domus-theme="noctis-neon"] .text-zinc-950,
-  html[data-domus-theme="imperium-night"] .text-zinc-950,
-  html[data-domus-theme="noctis-neon"] .text-zinc-900,
-  html[data-domus-theme="imperium-night"] .text-zinc-900,
-  html[data-domus-theme="noctis-neon"] .text-zinc-800,
-  html[data-domus-theme="imperium-night"] .text-zinc-800,
-  html[data-domus-theme="noctis-neon"] .text-black,
-  html[data-domus-theme="imperium-night"] .text-black,
-  html[data-domus-theme="noctis-neon"] .text-gray-900,
-  html[data-domus-theme="imperium-night"] .text-gray-900,
-  html[data-domus-theme="noctis-neon"] .text-slate-900,
-  html[data-domus-theme="imperium-night"] .text-slate-900,
-  html[data-domus-theme="noctis-neon"] .text-stone-900,
-  html[data-domus-theme="imperium-night"] .text-stone-900 {
-    color: var(--domus-heading-text);
-  }
-
-  html[data-domus-theme="noctis-neon"] .text-zinc-700,
-  html[data-domus-theme="imperium-night"] .text-zinc-700,
-  html[data-domus-theme="noctis-neon"] .text-zinc-600,
-  html[data-domus-theme="imperium-night"] .text-zinc-600,
-  html[data-domus-theme="noctis-neon"] .text-zinc-500,
-  html[data-domus-theme="imperium-night"] .text-zinc-500,
-  html[data-domus-theme="noctis-neon"] .text-zinc-400,
-  html[data-domus-theme="imperium-night"] .text-zinc-400,
-  html[data-domus-theme="noctis-neon"] .text-zinc-300,
-  html[data-domus-theme="imperium-night"] .text-zinc-300,
-  html[data-domus-theme="noctis-neon"] .text-gray-800,
-  html[data-domus-theme="imperium-night"] .text-gray-800,
-  html[data-domus-theme="noctis-neon"] .text-gray-700,
-  html[data-domus-theme="imperium-night"] .text-gray-700,
-  html[data-domus-theme="noctis-neon"] .text-gray-600,
-  html[data-domus-theme="imperium-night"] .text-gray-600,
-  html[data-domus-theme="noctis-neon"] .text-gray-500,
-  html[data-domus-theme="imperium-night"] .text-gray-500,
-  html[data-domus-theme="noctis-neon"] .text-slate-400,
-  html[data-domus-theme="imperium-night"] .text-slate-400,
-  html[data-domus-theme="noctis-neon"] .text-slate-300,
-  html[data-domus-theme="imperium-night"] .text-slate-300,
-  html[data-domus-theme="noctis-neon"] .text-slate-200,
-  html[data-domus-theme="imperium-night"] .text-slate-200,
-  html[data-domus-theme="noctis-neon"] .text-stone-700,
-  html[data-domus-theme="imperium-night"] .text-stone-700,
-  html[data-domus-theme="noctis-neon"] .text-stone-600,
-  html[data-domus-theme="imperium-night"] .text-stone-600,
-  html[data-domus-theme="noctis-neon"] .text-stone-500,
-  html[data-domus-theme="imperium-night"] .text-stone-500 {
-    color: var(--domus-muted-text);
-  }
-
-  html[data-domus-theme="noctis-neon"] .text-violet-900,
-  html[data-domus-theme="imperium-night"] .text-violet-900,
-  html[data-domus-theme="noctis-neon"] .text-violet-800,
-  html[data-domus-theme="imperium-night"] .text-violet-800,
-  html[data-domus-theme="noctis-neon"] .text-violet-700,
-  html[data-domus-theme="imperium-night"] .text-violet-700,
-  html[data-domus-theme="noctis-neon"] .text-violet-600,
-  html[data-domus-theme="imperium-night"] .text-violet-600,
-  html[data-domus-theme="noctis-neon"] .text-violet-500,
-  html[data-domus-theme="imperium-night"] .text-violet-500,
-  html[data-domus-theme="noctis-neon"] .text-violet-200,
-  html[data-domus-theme="imperium-night"] .text-violet-200,
-  html[data-domus-theme="noctis-neon"] .text-violet-100,
-  html[data-domus-theme="imperium-night"] .text-violet-100,
-  html[data-domus-theme="noctis-neon"] .text-violet-900\/70,
-  html[data-domus-theme="imperium-night"] .text-violet-900\/70 {
-    color: #ddd6fe;
-  }
-
-  html[data-domus-theme="noctis-neon"] .text-emerald-900,
-  html[data-domus-theme="imperium-night"] .text-emerald-900,
-  html[data-domus-theme="noctis-neon"] .text-emerald-800,
-  html[data-domus-theme="imperium-night"] .text-emerald-800,
-  html[data-domus-theme="noctis-neon"] .text-emerald-700,
-  html[data-domus-theme="imperium-night"] .text-emerald-700,
-  html[data-domus-theme="noctis-neon"] .text-emerald-600,
-  html[data-domus-theme="imperium-night"] .text-emerald-600,
-  html[data-domus-theme="noctis-neon"] .text-emerald-500,
-  html[data-domus-theme="imperium-night"] .text-emerald-500 {
-    color: var(--domus-success-text);
-  }
-
-  html[data-domus-theme="noctis-neon"] .text-amber-900,
-  html[data-domus-theme="imperium-night"] .text-amber-900,
-  html[data-domus-theme="noctis-neon"] .text-amber-800,
-  html[data-domus-theme="imperium-night"] .text-amber-800,
-  html[data-domus-theme="noctis-neon"] .text-amber-700,
-  html[data-domus-theme="imperium-night"] .text-amber-700,
-  html[data-domus-theme="noctis-neon"] .text-amber-600,
-  html[data-domus-theme="imperium-night"] .text-amber-600,
-  html[data-domus-theme="noctis-neon"] .text-amber-500,
-  html[data-domus-theme="imperium-night"] .text-amber-500,
-  html[data-domus-theme="noctis-neon"] .text-amber-100,
-  html[data-domus-theme="imperium-night"] .text-amber-100 {
-    color: var(--domus-warning-text);
-  }
-
-  html[data-domus-theme="noctis-neon"] .text-red-900,
-  html[data-domus-theme="imperium-night"] .text-red-900,
-  html[data-domus-theme="noctis-neon"] .text-red-800,
-  html[data-domus-theme="imperium-night"] .text-red-800,
-  html[data-domus-theme="noctis-neon"] .text-red-700,
-  html[data-domus-theme="imperium-night"] .text-red-700,
-  html[data-domus-theme="noctis-neon"] .text-red-600,
-  html[data-domus-theme="imperium-night"] .text-red-600,
-  html[data-domus-theme="noctis-neon"] .text-red-500,
-  html[data-domus-theme="imperium-night"] .text-red-500,
-  html[data-domus-theme="noctis-neon"] .text-rose-700,
-  html[data-domus-theme="imperium-night"] .text-rose-700,
-  html[data-domus-theme="noctis-neon"] .text-rose-600,
-  html[data-domus-theme="imperium-night"] .text-rose-600,
-  html[data-domus-theme="noctis-neon"] .text-rose-500,
-  html[data-domus-theme="imperium-night"] .text-rose-500 {
-    color: var(--domus-danger-text);
-  }
-
-  html[data-domus-theme="noctis-neon"] .border-zinc-100,
-  html[data-domus-theme="imperium-night"] .border-zinc-100,
-  html[data-domus-theme="noctis-neon"] .border-zinc-200,
-  html[data-domus-theme="imperium-night"] .border-zinc-200,
-  html[data-domus-theme="noctis-neon"] .border-zinc-200\/80,
-  html[data-domus-theme="imperium-night"] .border-zinc-200\/80,
-  html[data-domus-theme="noctis-neon"] .border-zinc-300,
-  html[data-domus-theme="imperium-night"] .border-zinc-300,
-  html[data-domus-theme="noctis-neon"] .border-gray-100,
-  html[data-domus-theme="imperium-night"] .border-gray-100,
-  html[data-domus-theme="noctis-neon"] .border-gray-200,
-  html[data-domus-theme="imperium-night"] .border-gray-200,
-  html[data-domus-theme="noctis-neon"] .border-gray-300,
-  html[data-domus-theme="imperium-night"] .border-gray-300,
-  html[data-domus-theme="noctis-neon"] .border-slate-200,
-  html[data-domus-theme="imperium-night"] .border-slate-200,
-  html[data-domus-theme="noctis-neon"] .border-slate-300,
-  html[data-domus-theme="imperium-night"] .border-slate-300 {
-    border-color: var(--domus-card-border);
-  }
-
-  html[data-domus-theme="noctis-neon"] .border-violet-100,
-  html[data-domus-theme="imperium-night"] .border-violet-100,
-  html[data-domus-theme="noctis-neon"] .border-violet-100\/80,
-  html[data-domus-theme="imperium-night"] .border-violet-100\/80,
-  html[data-domus-theme="noctis-neon"] .border-violet-100\/70,
-  html[data-domus-theme="imperium-night"] .border-violet-100\/70,
-  html[data-domus-theme="noctis-neon"] .border-violet-200,
-  html[data-domus-theme="imperium-night"] .border-violet-200,
-  html[data-domus-theme="noctis-neon"] .border-violet-300,
-  html[data-domus-theme="imperium-night"] .border-violet-300,
-  html[data-domus-theme="noctis-neon"] .border-violet-400,
-  html[data-domus-theme="imperium-night"] .border-violet-400 {
-    border-color: rgba(167, 139, 250, 0.36);
-  }
-
-  html[data-domus-theme="noctis-neon"] .border-emerald-200,
-  html[data-domus-theme="imperium-night"] .border-emerald-200,
-  html[data-domus-theme="noctis-neon"] .border-emerald-300,
-  html[data-domus-theme="imperium-night"] .border-emerald-300 {
-    border-color: rgba(16, 185, 129, 0.32);
-  }
-
-  html[data-domus-theme="noctis-neon"] .border-amber-200,
-  html[data-domus-theme="imperium-night"] .border-amber-200,
-  html[data-domus-theme="noctis-neon"] .border-amber-300,
-  html[data-domus-theme="imperium-night"] .border-amber-300 {
-    border-color: rgba(245, 158, 11, 0.32);
-  }
-
-  html[data-domus-theme="noctis-neon"] .border-red-200,
-  html[data-domus-theme="imperium-night"] .border-red-200,
-  html[data-domus-theme="noctis-neon"] .border-red-300,
-  html[data-domus-theme="imperium-night"] .border-red-300,
-  html[data-domus-theme="noctis-neon"] .border-rose-200,
-  html[data-domus-theme="imperium-night"] .border-rose-200 {
-    border-color: rgba(244, 63, 94, 0.32);
-  }
-
-  html[data-domus-theme="noctis-neon"] .divide-zinc-100 > :not([hidden]) ~ :not([hidden]),
-  html[data-domus-theme="imperium-night"] .divide-zinc-100 > :not([hidden]) ~ :not([hidden]),
-  html[data-domus-theme="noctis-neon"] .divide-zinc-200 > :not([hidden]) ~ :not([hidden]),
-  html[data-domus-theme="imperium-night"] .divide-zinc-200 > :not([hidden]) ~ :not([hidden]),
-  html[data-domus-theme="noctis-neon"] .divide-zinc-300 > :not([hidden]) ~ :not([hidden]),
-  html[data-domus-theme="imperium-night"] .divide-zinc-300 > :not([hidden]) ~ :not([hidden]),
-  html[data-domus-theme="noctis-neon"] .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
-  html[data-domus-theme="imperium-night"] .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
-  html[data-domus-theme="noctis-neon"] .divide-gray-200 > :not([hidden]) ~ :not([hidden]),
-  html[data-domus-theme="imperium-night"] .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
-    border-color: var(--domus-divider);
-  }
-
-  html[data-domus-theme="noctis-neon"] .shadow-sm,
-  html[data-domus-theme="imperium-night"] .shadow-sm {
-    box-shadow: var(--domus-shadow-sm);
-  }
-
-  html[data-domus-theme="noctis-neon"] .shadow-md,
-  html[data-domus-theme="imperium-night"] .shadow-md,
-  html[data-domus-theme="noctis-neon"] .shadow-lg,
-  html[data-domus-theme="imperium-night"] .shadow-lg,
-  html[data-domus-theme="noctis-neon"] .shadow-xl,
-  html[data-domus-theme="imperium-night"] .shadow-xl {
-    box-shadow: var(--domus-shadow-lg);
-  }
-
-  html[data-domus-theme="noctis-neon"] .ring-violet-500,
-  html[data-domus-theme="imperium-night"] .ring-violet-500,
-  html[data-domus-theme="noctis-neon"] .ring-violet-500\/30,
-  html[data-domus-theme="imperium-night"] .ring-violet-500\/30,
-  html[data-domus-theme="noctis-neon"] .ring-violet-500\/20,
-  html[data-domus-theme="imperium-night"] .ring-violet-500\/20,
-  html[data-domus-theme="noctis-neon"] .ring-violet-300,
-  html[data-domus-theme="imperium-night"] .ring-violet-300 {
-    --tw-ring-color: rgba(167, 139, 250, 0.55);
-  }
-
-  html[data-domus-theme="noctis-neon"] .ring-emerald-500\/30,
-  html[data-domus-theme="imperium-night"] .ring-emerald-500\/30,
-  html[data-domus-theme="noctis-neon"] .ring-amber-500\/30,
-  html[data-domus-theme="imperium-night"] .ring-amber-500\/30 {
-    --tw-ring-color: rgba(226, 232, 240, 0.35);
-  }
 }
 
-/* ─── Shimmer skeleton ─── */
-.domus-skeleton-shimmer {
-  position: relative;
-  overflow: hidden;
-  background: var(--domus-skeleton-bg, hsl(240 5% 92%));
-  border-radius: 0.5rem;
-}
-
-.domus-skeleton-shimmer::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  transform: translateX(-100%);
-  background: linear-gradient(
-    90deg,
-    transparent 25%,
-    hsl(0 0% 100% / 0.08) 50%,
-    transparent 75%
-  );
-  animation: shimmer 1.5s ease-in-out infinite;
-}
-
-/* Dark theme shimmer */
-[data-domus-theme="noctis-neon"] .domus-skeleton-shimmer,
-[data-domus-theme="imperium-night"] .domus-skeleton-shimmer {
-  background: hsl(240 5% 18%);
-}
-
-[data-domus-theme="noctis-neon"] .domus-skeleton-shimmer::after,
-[data-domus-theme="imperium-night"] .domus-skeleton-shimmer::after,
-[data-domus-theme="noctis-neon"] .domus-skeleton::after,
-[data-domus-theme="imperium-night"] .domus-skeleton::after {
-  background: linear-gradient(
-    90deg,
-    transparent 25%,
-    hsl(0 0% 100% / 0.04) 50%,
-    transparent 75%
-  );
-}
-
-/* ─── Error shake ─── */
 .domus-shake {
   animation: shake 400ms ease-in-out;
 }
 
-/* ─── Form error reveal ─── */
 .domus-error-reveal {
   overflow: hidden;
   transition: max-height 200ms ease, opacity 200ms ease;
@@ -727,7 +383,6 @@
   }
 }
 
-/* ─── Stagger delay utilities ─── */
 .stagger-1 { animation-delay: 50ms; }
 .stagger-2 { animation-delay: 100ms; }
 .stagger-3 { animation-delay: 150ms; }
@@ -740,7 +395,7 @@
 .stagger-10 { animation-delay: 500ms; }
 
 :focus-visible {
-  outline: 2px solid #7c3aed;
+  outline: 2px solid var(--accent-line);
   outline-offset: 2px;
   border-radius: 4px;
 }

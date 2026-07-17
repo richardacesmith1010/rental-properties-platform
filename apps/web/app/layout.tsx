@@ -6,12 +6,38 @@ import { FeedbackButton } from "@/components/feedback/feedback-button";
 import { InstallPromptBanner } from "@/components/pwa/install-prompt";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SonnerProvider } from "@/components/ui/sonner-provider";
+import { DOMUS_THEME_ATTRIBUTE, DOMUS_THEME_KEY } from "@/lib/theme";
 import "./globals.css";
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
 });
+
+const themeInitScript = `
+  try {
+    const legacyLight = ['atlas', 'light'].join('-');
+    const legacyDarkValues = new Set([
+      ['noctis', 'neon'].join('-'),
+      ['imperium', 'night'].join('-')
+    ]);
+    const rawTheme = localStorage.getItem('${DOMUS_THEME_KEY}');
+    const theme =
+      rawTheme === 'light' || rawTheme === 'dark' || rawTheme === 'system'
+        ? rawTheme
+        : rawTheme === legacyLight
+          ? 'light'
+          : legacyDarkValues.has(rawTheme ?? '')
+            ? 'dark'
+            : 'system';
+
+    if (theme === 'system') {
+      document.documentElement.removeAttribute('${DOMUS_THEME_ATTRIBUTE}');
+    } else {
+      document.documentElement.setAttribute('${DOMUS_THEME_ATTRIBUTE}', theme);
+    }
+  } catch (error) {}
+`;
 
 export const metadata: Metadata = {
   title: {
@@ -73,16 +99,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `
-              try {
-                const t = localStorage.getItem('domus-theme');
-                if (t && t !== 'atlas-light') {
-                  document.documentElement.setAttribute('data-domus-theme', t);
-                } else {
-                  document.documentElement.removeAttribute('data-domus-theme');
-                }
-              } catch (e) {}
-            `
+            __html: themeInitScript
           }}
         />
       </head>

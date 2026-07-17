@@ -1,217 +1,339 @@
 .sidebar-shell-panel {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  color: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 18px 44px -34px rgba(15, 23, 42, 0.45);
-  @apply rounded-[10px] backdrop-blur-sm;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+  @apply rounded-[10px];
 }
 
 .sidebar-shell-panel-soft {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.92);
-  @apply rounded-[10px] backdrop-blur-sm;
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  color: var(--ink-2);
+  @apply rounded-[10px];
 }
 
 .sidebar-shell-input {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.98);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
   @apply rounded-[10px] transition-colors duration-150;
 }
 
 .sidebar-shell-input::placeholder {
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--faint);
 }
 
-.sidebar-shell-input:focus {
-  border-color: rgba(255, 255, 255, 0.34);
-  @apply outline-none ring-2 ring-white/20;
+.sidebar-shell-input:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-line);
+  outline: none;
 }
 
 .sidebar-shell-button {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: rgba(255, 255, 255, 0.84);
-  @apply rounded-[10px] transition-all duration-150;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--ink-2);
+  @apply rounded-[10px] transition-colors duration-150;
 }
 
 .sidebar-shell-button:hover {
-  background: rgba(255, 255, 255, 0.14);
-  color: rgba(255, 255, 255, 0.98);
+  background: var(--surface-2);
+  border-color: var(--line);
+  color: var(--ink);
 }
 
 .sidebar-shell-button-active {
-  background: rgba(255, 255, 255, 0.22);
-  border: 1px solid rgba(255, 255, 255, 0.26);
-  color: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 18px 38px -30px rgba(15, 23, 42, 0.45);
+  background: var(--accent-weak);
+  border-color: var(--accent-line);
+  color: var(--accent);
+  box-shadow: none;
 }
 
 .sidebar-shell-muted {
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--muted);
 }
 
 .bg-background {
-  background-color: color-mix(in srgb, var(--domus-card-bg) 82%, white);
+  background-color: var(--ground);
 }
 
 .bg-background\/60 {
-  background-color: color-mix(in srgb, var(--domus-card-bg) 60%, transparent);
+  background-color: color-mix(in srgb, var(--ground) 60%, transparent);
 }
 
 .bg-background\/70 {
-  background-color: color-mix(in srgb, var(--domus-card-bg) 70%, transparent);
+  background-color: color-mix(in srgb, var(--ground) 70%, transparent);
 }
 
 .bg-background\/80 {
-  background-color: color-mix(in srgb, var(--domus-card-bg) 80%, transparent);
+  background-color: color-mix(in srgb, var(--ground) 80%, transparent);
 }
 
 .bg-background\/90 {
-  background-color: color-mix(in srgb, var(--domus-card-bg) 90%, transparent);
+  background-color: color-mix(in srgb, var(--ground) 90%, transparent);
 }
 
 .bg-background\/95 {
-  background-color: color-mix(in srgb, var(--domus-card-bg) 95%, transparent);
+  background-color: color-mix(in srgb, var(--ground) 95%, transparent);
 }
 
 .bg-card {
-  background-color: var(--domus-card-bg);
+  background-color: var(--surface);
+}
+
+.bg-card\/60 {
+  background-color: color-mix(in srgb, var(--surface) 60%, transparent);
 }
 
 .bg-card\/70 {
-  background-color: color-mix(in srgb, var(--domus-card-bg) 70%, transparent);
+  background-color: color-mix(in srgb, var(--surface) 70%, transparent);
 }
 
 .bg-card\/80 {
-  background-color: color-mix(in srgb, var(--domus-card-bg) 80%, transparent);
+  background-color: color-mix(in srgb, var(--surface) 80%, transparent);
 }
 
 .bg-card\/90 {
-  background-color: color-mix(in srgb, var(--domus-card-bg) 90%, transparent);
+  background-color: color-mix(in srgb, var(--surface) 90%, transparent);
 }
 
 .bg-card\/95 {
-  background-color: color-mix(in srgb, var(--domus-card-bg) 95%, transparent);
+  background-color: color-mix(in srgb, var(--surface) 95%, transparent);
 }
 
 .bg-muted {
-  background-color: color-mix(in srgb, white 50%, var(--domus-divider));
+  background-color: var(--surface-2);
 }
 
 .bg-muted\/20 {
-  background-color: color-mix(in srgb, white 20%, transparent);
+  background-color: color-mix(in srgb, var(--surface-2) 20%, transparent);
 }
 
 .bg-muted\/30 {
-  background-color: color-mix(in srgb, var(--domus-divider) 18%, white);
+  background-color: color-mix(in srgb, var(--surface-2) 30%, transparent);
 }
 
 .bg-muted\/40 {
-  background-color: color-mix(in srgb, var(--domus-divider) 24%, white);
+  background-color: color-mix(in srgb, var(--surface-2) 40%, transparent);
 }
 
 .bg-muted\/50 {
-  background-color: color-mix(in srgb, var(--domus-divider) 32%, white);
+  background-color: color-mix(in srgb, var(--surface-2) 50%, transparent);
 }
 
 .bg-muted\/60 {
-  background-color: color-mix(in srgb, var(--domus-divider) 40%, white);
+  background-color: color-mix(in srgb, var(--surface-2) 60%, transparent);
 }
 
 .bg-muted\/70 {
-  background-color: color-mix(in srgb, var(--domus-divider) 48%, white);
+  background-color: color-mix(in srgb, var(--surface-2) 70%, transparent);
 }
 
 .bg-primary {
-  background-color: var(--domus-primary);
+  background-color: var(--accent);
 }
 
 .bg-primary\/5 {
-  background-color: color-mix(in srgb, var(--domus-primary) 5%, transparent);
+  background-color: color-mix(in srgb, var(--accent) 5%, transparent);
 }
 
 .bg-primary\/10 {
-  background-color: color-mix(in srgb, var(--domus-primary) 10%, transparent);
+  background-color: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 .bg-primary\/15 {
-  background-color: color-mix(in srgb, var(--domus-primary) 15%, transparent);
+  background-color: color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
-.bg-primary\/90 {
-  background-color: color-mix(in srgb, var(--domus-primary) 90%, transparent);
+.bg-primary\/20 {
+  background-color: color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .text-foreground {
-  color: var(--domus-heading-text);
+  color: var(--ink);
 }
 
 .text-muted-foreground {
-  color: var(--domus-muted-text);
+  color: var(--muted);
 }
 
 .text-primary {
-  color: var(--domus-primary);
+  color: var(--accent);
 }
 
 .text-primary\/80 {
-  color: color-mix(in srgb, var(--domus-primary) 80%, transparent);
+  color: color-mix(in srgb, var(--accent) 80%, transparent);
 }
 
 .border-border {
-  border-color: var(--domus-card-border);
+  border-color: var(--line);
 }
 
 .border-border\/40 {
-  border-color: color-mix(in srgb, var(--domus-card-border) 40%, transparent);
+  border-color: color-mix(in srgb, var(--line) 40%, transparent);
 }
 
 .border-border\/50 {
-  border-color: color-mix(in srgb, var(--domus-card-border) 50%, transparent);
+  border-color: color-mix(in srgb, var(--line) 50%, transparent);
 }
 
 .border-border\/60 {
-  border-color: color-mix(in srgb, var(--domus-card-border) 60%, transparent);
+  border-color: color-mix(in srgb, var(--line) 60%, transparent);
 }
 
 .border-border\/70 {
-  border-color: color-mix(in srgb, var(--domus-card-border) 70%, transparent);
+  border-color: color-mix(in srgb, var(--line) 70%, transparent);
 }
 
 .border-border\/80 {
-  border-color: color-mix(in srgb, var(--domus-card-border) 80%, transparent);
+  border-color: color-mix(in srgb, var(--line) 80%, transparent);
+}
+
+.border-primary {
+  border-color: var(--accent);
 }
 
 .border-primary\/20 {
-  border-color: color-mix(in srgb, var(--domus-primary) 20%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .border-primary\/30 {
-  border-color: color-mix(in srgb, var(--domus-primary) 30%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 .border-primary\/40 {
-  border-color: color-mix(in srgb, var(--domus-primary) 40%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.ring-primary {
+  --tw-ring-color: var(--accent);
 }
 
 .ring-primary\/20 {
-  --tw-ring-color: color-mix(in srgb, var(--domus-primary) 20%, transparent);
+  --tw-ring-color: color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .ring-primary\/40 {
-  --tw-ring-color: color-mix(in srgb, var(--domus-primary) 40%, transparent);
+  --tw-ring-color: color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
-.text-zinc-400,
-.text-gray-400,
-.text-slate-400 {
-  color: #64748b;
+.ring-primary\/70 {
+  --tw-ring-color: color-mix(in srgb, var(--accent) 70%, transparent);
 }
 
-.text-zinc-500,
-.text-gray-500,
-.text-slate-500 {
-  color: #475569;
+.sidebar-account-switcher .text-white {
+  color: var(--ink);
+}
+
+.sidebar-account-switcher .text-white\/90,
+.sidebar-account-switcher .text-white\/82,
+.sidebar-account-switcher .text-white\/80 {
+  color: var(--ink-2);
+}
+
+.sidebar-account-switcher .text-white\/60,
+.sidebar-account-switcher .text-amber-100 {
+  color: var(--muted);
+}
+
+.sidebar-account-switcher .group:hover .group-hover\:text-white {
+  color: var(--ink);
+}
+
+.sidebar-account-switcher [role="listbox"] {
+  background: var(--surface);
+  border-color: var(--line);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: none;
+}
+
+.sidebar-account-switcher [role="option"] {
+  color: var(--ink-2);
+}
+
+.sidebar-account-switcher [role="option"][aria-selected="true"] {
+  background: var(--accent-weak);
+  color: var(--accent);
+}
+
+.sidebar-account-switcher [role="option"]:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.sidebar-user-footer-shell .shrink-0.border-t {
+  border-color: var(--line);
+}
+
+.sidebar-user-footer-shell .relative > button {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--ink-2);
+}
+
+.sidebar-user-footer-shell .relative > button:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.sidebar-user-footer-shell .relative > button:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent-line);
+  outline: none;
+}
+
+.sidebar-user-footer-shell .relative > button p.text-white {
+  color: var(--ink);
+}
+
+.sidebar-user-footer-shell .relative > button p.text-white\/60,
+.sidebar-user-footer-shell .relative > button p.text-white\/45 {
+  color: var(--muted);
+}
+
+.sidebar-user-footer-shell .relative > .absolute {
+  background: var(--surface);
+  border-color: var(--line);
+  box-shadow: var(--shadow-md);
+}
+
+.sidebar-user-footer-shell .relative > .absolute .border-zinc-100 {
+  border-color: var(--line-2);
+}
+
+.sidebar-user-footer-shell .relative > .absolute .text-zinc-900 {
+  color: var(--ink);
+}
+
+.sidebar-user-footer-shell .relative > .absolute .text-zinc-700 {
+  color: var(--ink-2);
+}
+
+.sidebar-user-footer-shell .relative > .absolute .text-zinc-500 {
+  color: var(--muted);
+}
+
+.sidebar-user-footer-shell .relative > .absolute .hover\:bg-zinc-50:hover {
+  background-color: var(--surface-2);
+}
+
+.sidebar-user-footer-shell .relative > .absolute .hover\:bg-rose-50:hover {
+  background-color: var(--domus-danger-bg);
+}
+
+.sidebar-user-footer-shell .rounded-2xl.border {
+  background: var(--surface);
+  border-color: var(--line);
+}
+
+.sidebar-user-footer-shell .rounded-2xl.border p.text-white {
+  color: var(--ink);
+}
+
+.sidebar-user-footer-shell .rounded-2xl.border p.text-white\/60 {
+  color: var(--muted);
+}
+
+.sidebar-user-footer-shell .rounded-2xl.border svg.text-white\/60 {
+  color: var(--muted);
 }

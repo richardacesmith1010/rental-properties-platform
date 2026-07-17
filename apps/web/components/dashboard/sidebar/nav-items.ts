@@ -8,6 +8,7 @@ import {
   FileSignature,
   FileText,
   LayoutDashboard,
+  Monitor,
   Moon,
   Receipt,
   Settings,
@@ -17,7 +18,7 @@ import {
   Wrench,
   type LucideIcon
 } from "lucide-react";
-import type { DomusTheme } from "@/lib/theme";
+import type { ThemePreference } from "@/lib/theme";
 
 export interface NavItem {
   id: string;
@@ -172,10 +173,15 @@ export const tenantNavItems: NavItem[] = [
   }
 ];
 
-export const themeOptions: Array<{ value: DomusTheme; label: string; icon: typeof SunMedium }> = [
-  { value: "atlas-light", label: "Atlas", icon: SunMedium },
-  { value: "noctis-neon", label: "Noctis", icon: Moon },
-  { value: "imperium-night", label: "Imperium", icon: Moon }
+export const themeOptions: Array<{
+  value: ThemePreference;
+  label: string;
+  title: string;
+  icon: LucideIcon;
+}> = [
+  { value: "light", label: "Light", title: "Use the light theme.", icon: SunMedium },
+  { value: "dark", label: "Dark", title: "Use the dark theme.", icon: Moon },
+  { value: "system", label: "Device", title: "Match your device setting.", icon: Monitor }
 ];
 
 export function getNavTitle(item: NavItem) {

@@ -3,14 +3,18 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/format";
 
 const alertVariants = cva(
-  "rounded-lg border px-3 py-2 text-sm font-medium",
+  "rounded-2xl border px-4 py-3 text-sm font-medium shadow-[var(--domus-shadow-sm)]",
   {
     variants: {
       variant: {
-        error: "border-red-300 bg-red-100 text-red-800",
-        success: "border-emerald-300 bg-emerald-100 text-emerald-800",
-        warning: "border-amber-300 bg-amber-100 text-amber-800",
-        info: "border-blue-300 bg-blue-100 text-blue-800",
+        error:
+          "border-[color:var(--domus-danger-text)] bg-[color:var(--domus-danger-bg)] text-[color:var(--domus-danger-text)]",
+        success:
+          "border-[color:var(--domus-success-text)] bg-[color:var(--domus-success-bg)] text-[color:var(--domus-success-text)]",
+        warning:
+          "border-[color:var(--domus-warning-text)] bg-[color:var(--domus-warning-bg)] text-[color:var(--domus-warning-text)]",
+        info:
+          "border-[color:var(--accent-line)] bg-[color:var(--accent-weak)] text-[color:var(--accent)]",
       },
     },
     defaultVariants: {

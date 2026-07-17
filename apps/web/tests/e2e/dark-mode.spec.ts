@@ -12,18 +12,18 @@ async function applyTheme(page: Page, expectedTheme: string) {
   }, expectedTheme);
 
   await page.goto("/login");
-  await expect(page.locator("html")).toHaveAttribute("data-domus-theme", expectedTheme);
+  await expect(page.locator("html")).toHaveAttribute("data-theme", expectedTheme);
 }
 
 test.describe.serial("Dark mode", () => {
-  test("switches to Noctis Neon theme", async ({ page }) => {
-    await applyTheme(page, "noctis-neon");
+  test("switches to dark mode", async ({ page }) => {
+    await applyTheme(page, "dark");
     await loginOwnerOrSkip(page);
-    await expect(page.locator("html")).toHaveAttribute("data-domus-theme", "noctis-neon");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   });
 
-  test("owner home avoids pure white surfaces in Noctis Neon", async ({ page }) => {
-    await applyTheme(page, "noctis-neon");
+  test("owner home avoids pure white surfaces in dark mode", async ({ page }) => {
+    await applyTheme(page, "dark");
     await loginOwnerOrSkip(page);
 
     await dismissOwnerOnboarding(page, DEMO_USERS.owner.email);
@@ -42,8 +42,8 @@ test.describe.serial("Dark mode", () => {
     expect(colors.background).not.toBe(colors.color);
   });
 
-  test("home headings remain readable in Imperium Night", async ({ page }) => {
-    await applyTheme(page, "imperium-night");
+  test("home headings remain readable in dark mode", async ({ page }) => {
+    await applyTheme(page, "dark");
     await loginOwnerOrSkip(page);
 
     await dismissOwnerOnboarding(page, DEMO_USERS.owner.email);

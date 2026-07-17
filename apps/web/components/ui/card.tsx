@@ -2,13 +2,13 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/format";
 
-const cardVariants = cva("rounded-2xl backdrop-blur-sm transition-all duration-200", {
+const cardVariants = cva("rounded-2xl transition-[border-color,box-shadow,transform] duration-200", {
   variants: {
     variant: {
       default: "domus-card",
-      elevated: "domus-card shadow-lg hover:-translate-y-0.5 hover:shadow-xl",
+      elevated: "domus-card shadow-[var(--domus-shadow-md)]",
       flat: "border-0 bg-transparent shadow-none backdrop-blur-0",
-      glass: "domus-card bg-opacity-60 backdrop-blur-md",
+      glass: "domus-glass",
     },
     padding: {
       none: "",
@@ -25,9 +25,29 @@ const cardVariants = cva("rounded-2xl backdrop-blur-sm transition-all duration-2
 
 interface CardRootProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof cardVariants> {}
 
-const Card = React.forwardRef<HTMLDivElement, CardRootProps>(({ className, variant, padding, ...props }, ref) => (
-  <div ref={ref} className={cn(cardVariants({ variant, padding }), className)} {...props} />
-));
+const Card = React.forwardRef<HTMLDivElement, CardRootProps>(
+  ({ className, variant, padding, onClick, onKeyDown, role, tabIndex, ...props }, ref) => {
+    const isInteractive =
+      Boolean(onClick) ||
+      Boolean(onKeyDown) ||
+      role === "button" ||
+      typeof tabIndex === "number" ||
+      className?.includes("cursor-pointer");
+
+    return (
+      <div
+        ref={ref}
+        role={role}
+        tabIndex={tabIndex}
+        onClick={onClick}
+        onKeyDown={onKeyDown}
+        data-interactive={isInteractive ? "true" : undefined}
+        className={cn(cardVariants({ variant, padding }), className)}
+        {...props}
+      />
+    );
+  }
+);
 Card.displayName = "Card";
 
 const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (

@@ -113,18 +113,24 @@ export function ModalOverlay({ open, onClose, children }: ModalOverlayProps) {
       aria-modal="true"
     >
       <div
-        className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm transition-opacity duration-200"
+        className="absolute inset-0 backdrop-blur-sm transition-opacity duration-200"
+        style={{
+          backgroundColor: "color-mix(in srgb, var(--ground) 20%, rgba(18, 19, 22, 0.62))"
+        }}
         onClick={() => onCloseRef.current?.()}
         aria-hidden="true"
       />
       <div className="relative z-10 flex min-h-full items-end justify-center px-0 py-0 sm:items-center sm:px-4 sm:py-6">
         <div
           ref={containerRef}
-          className="relative z-10 mx-auto max-h-[92svh] w-full max-w-full overflow-y-auto rounded-t-[1.5rem] animate-scale-in scroll-smooth [-webkit-overflow-scrolling:touch] sm:max-h-[calc(100svh-3rem)] sm:max-w-2xl sm:rounded-2xl"
+          className="relative z-10 mx-auto max-h-[92svh] w-full max-w-full overflow-y-auto rounded-t-[1.5rem] shadow-[var(--domus-shadow-lg)] animate-scale-in scroll-smooth [-webkit-overflow-scrolling:touch] sm:max-h-[calc(100svh-3rem)] sm:max-w-2xl sm:rounded-2xl"
           tabIndex={-1}
         >
           <div className="sticky top-0 z-20 flex justify-center bg-transparent pt-3 sm:hidden" aria-hidden="true">
-            <div className="h-1.5 w-12 rounded-full bg-border/80" />
+            <div
+              className="h-1.5 w-12 rounded-full"
+              style={{ backgroundColor: "color-mix(in srgb, var(--line) 80%, transparent)" }}
+            />
           </div>
           {children}
         </div>

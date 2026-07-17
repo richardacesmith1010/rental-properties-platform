@@ -50,19 +50,22 @@ interface SidebarNavProps {
   accountSwitcher?: ReactNode;
 }
 
+const sidebarFocusRing =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]";
+
 function CommandPaletteTrigger({ onOpen }: { onOpen: () => void }) {
   return (
     <button
       type="button"
       onClick={onOpen}
-      className="sidebar-shell-panel flex w-full items-center justify-between px-3 py-2 text-left text-sm shadow-sm transition hover:bg-white/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+      className={`sidebar-shell-panel flex w-full items-center justify-between px-3 py-2 text-left text-sm ${sidebarFocusRing}`}
       title="Open the command palette."
     >
       <span className="flex min-w-0 items-center gap-2">
-        <Search className="h-4 w-4 shrink-0 text-white/80" />
+        <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
         <span className="truncate">Search navigation, properties, tenants...</span>
       </span>
-      <span className="hidden rounded-md border border-white/15 bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-white/80 sm:inline-flex">
+      <span className="tabular-nums hidden rounded-md border border-border bg-background px-2 py-0.5 text-[11px] font-semibold text-muted-foreground sm:inline-flex">
         ⌘K
       </span>
     </button>
@@ -84,13 +87,12 @@ function ThemeToggleGroup() {
               key={option.value}
               type="button"
               onClick={() => setTheme(option.value)}
+              aria-pressed={active}
               className={[
-                "inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition",
-                active
-                  ? "border-white/30 bg-white/20 text-white"
-                  : "border-white/[0.14] bg-white/[0.08] text-white/80 hover:bg-white/[0.14] hover:text-white"
+                "inline-flex items-center justify-center gap-2 rounded-xl px-2 py-2 text-[11px] font-semibold",
+                active ? "sidebar-shell-button sidebar-shell-button-active" : "sidebar-shell-button"
               ].join(" ")}
-              title={`Apply ${option.label} theme.`}
+              title={option.title}
             >
               <Icon className="h-3.5 w-3.5" />
               {option.label}
@@ -115,7 +117,7 @@ function NavList({ navItems, activeItemId, onSelectItem, mobile = false }: NavLi
       {navItems.map((item) => {
         const Icon: LucideIcon = item.icon;
         const isActive = activeItemId === item.id;
-        const className = `${navButtonClasses(isActive, mobile)} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900`;
+        const className = `${navButtonClasses(isActive, mobile)} ${sidebarFocusRing}`;
 
         if (item.href) {
           const content = (
@@ -225,7 +227,7 @@ export function SidebarNav({
       onMarkManagerPaymentPaid={onMarkManagerPaymentPaid}
       onOpenNotifications={onSelectItem ? () => onSelectItem("notifications") : undefined}
       notificationsHref={notificationHref}
-      triggerClassName="sidebar-shell-button relative flex items-center justify-center px-2 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+      triggerClassName={`sidebar-shell-button relative flex items-center justify-center px-2 py-1.5 ${sidebarFocusRing}`}
       iconClassName="h-3.5 w-3.5"
       badgeClassName="absolute -right-1 -top-1 min-w-[1.1rem] px-1 text-[10px]"
       panelClassName="w-[20rem]"
@@ -245,7 +247,7 @@ export function SidebarNav({
             priority
           />
           <div>
-            <div className="text-base font-bold text-white">Domus</div>
+            <div className="text-base font-bold text-foreground">Domus</div>
           </div>
         </div>
         {notificationButton}
@@ -257,11 +259,11 @@ export function SidebarNav({
         ) : searchItems.length > 0 ? (
           <GlobalSearch items={searchItems} />
         ) : null}
-        {accountSwitcher}
+        {accountSwitcher ? <div className="sidebar-account-switcher">{accountSwitcher}</div> : null}
         {showWorkspaceButton ? (
           <Link
             href={workspacePath}
-            className="sidebar-shell-button block px-3 py-2 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+            className={`sidebar-shell-button block px-3 py-2 text-xs font-semibold ${sidebarFocusRing}`}
             title="Return to your main workspace for this role."
           >
             {role === "owner" ? "Owner Workspace" : role === "manager" ? "Manager Workspace" : "Tenant Workspace"}
@@ -273,13 +275,15 @@ export function SidebarNav({
         <NavList navItems={navItems} activeItemId={activeItemId} onSelectItem={onSelectItem} />
       </nav>
 
-      <SidebarUserFooter
-        displayName={displayName}
-        role={role}
-        userEmail={userEmail}
-        avatarUrl={avatarUrl}
-        stripeConnected={stripeConnected}
-      />
+      <div className="sidebar-user-footer-shell">
+        <SidebarUserFooter
+          displayName={displayName}
+          role={role}
+          userEmail={userEmail}
+          avatarUrl={avatarUrl}
+          stripeConnected={stripeConnected}
+        />
+      </div>
     </aside>
   );
 }
@@ -342,7 +346,7 @@ export function MobileTopBar({
   const notificationHref = role === "tenant" ? "/tenant?section=notifications" : `${workspacePath}#notifications`;
 
   return (
-    <div className="gradient-sidebar sticky top-0 z-30 px-3 pb-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] shadow-lg lg:hidden">
+    <div className="gradient-sidebar sticky top-0 z-30 border-b border-border px-3 pb-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] shadow-sm lg:hidden">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <Image
@@ -361,7 +365,7 @@ export function MobileTopBar({
             <button
               type="button"
               onClick={onOpenCommandPalette}
-              className="sidebar-shell-button flex h-11 w-11 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+              className={`sidebar-shell-button flex h-11 w-11 items-center justify-center ${sidebarFocusRing}`}
               title="Search navigation, properties, and tenants."
               aria-label="Open search"
             >
@@ -378,23 +382,25 @@ export function MobileTopBar({
             onMarkManagerPaymentPaid={onMarkManagerPaymentPaid}
             onOpenNotifications={onSelectItem ? () => onSelectItem("notifications") : undefined}
             notificationsHref={notificationHref}
-            triggerClassName="sidebar-shell-button relative flex h-11 w-11 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+            triggerClassName={`sidebar-shell-button relative flex h-11 w-11 items-center justify-center ${sidebarFocusRing}`}
             iconClassName="h-3.5 w-3.5"
             badgeClassName="absolute -right-1 -top-1 min-w-[1rem] px-1 text-[9px]"
             panelClassName="right-0 w-[min(22rem,calc(100vw-1rem))]"
           />
 
-          <MobileUserFooter
-            displayName={displayName}
-            role={role}
-            userEmail={userEmail}
-            avatarUrl={avatarUrl}
-            stripeConnected={stripeConnected}
-            onSignOut={onSignOut}
-          />
+          <div className="sidebar-user-footer-shell">
+            <MobileUserFooter
+              displayName={displayName}
+              role={role}
+              userEmail={userEmail}
+              avatarUrl={avatarUrl}
+              stripeConnected={stripeConnected}
+              onSignOut={onSignOut}
+            />
+          </div>
 
           <MobileDrawer
-            className="gradient-sidebar border-r border-white/10 text-white"
+            className="gradient-sidebar border-r border-border text-foreground"
             trigger={
               <button
                 type="button"
@@ -409,10 +415,10 @@ export function MobileTopBar({
             <div className="flex max-h-[calc(100svh-2rem)] min-h-0 flex-col pr-1">
               <div className="shrink-0 flex items-center justify-between gap-3 pb-1">
                 <div>
-                  <p className="text-sm font-semibold text-white">{displayName}</p>
+                  <p className="text-sm font-semibold text-foreground">{displayName}</p>
                   <p className="text-xs uppercase tracking-[0.18em] sidebar-shell-muted">{role}</p>
                 </div>
-                <Badge variant="outline" className="border-white/20 bg-white/[0.12] text-white">
+                <Badge variant="outline" className="border-border bg-background text-foreground">
                   {unreadNotificationCount} unread
                 </Badge>
               </div>
@@ -423,7 +429,7 @@ export function MobileTopBar({
                 ) : searchItems.length > 0 ? (
                   <GlobalSearch items={searchItems} />
                 ) : null}
-                {accountSwitcher}
+                {accountSwitcher ? <div className="sidebar-account-switcher">{accountSwitcher}</div> : null}
 
                 <div className="grid grid-cols-1 gap-2">
                   {showWorkspaceButton ? (
@@ -441,7 +447,7 @@ export function MobileTopBar({
 
                 <nav
                   aria-label="Main navigation"
-                  className="min-h-0 flex-1 space-y-1 overflow-y-auto rounded-2xl border border-white/[0.12] bg-white/[0.07] p-2"
+                  className="min-h-0 flex-1 space-y-1 overflow-y-auto rounded-2xl border border-border bg-card p-2"
                 >
                   <NavList navItems={navItems} activeItemId={activeItemId} onSelectItem={onSelectItem} mobile />
                 </nav>

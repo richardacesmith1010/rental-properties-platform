@@ -11,11 +11,13 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(({ className, type,
       type={type}
       className={cn(
         "domus-input flex h-10 w-full transition-all duration-150",
-        "focus-visible:ring-2 focus-visible:ring-violet-500/20 focus-visible:ring-offset-1",
+        "focus-visible:outline-none",
         "disabled:cursor-not-allowed disabled:opacity-50",
-        error && "border-red-400 focus-visible:ring-red-500/20 domus-shake",
+        error && "domus-shake",
         className
       )}
+      data-invalid={error ? "true" : undefined}
+      aria-invalid={error || undefined}
       ref={ref}
       {...props}
     />

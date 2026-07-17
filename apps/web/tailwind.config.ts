@@ -12,16 +12,12 @@ const config: Config = {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
       },
       colors: {
-        sidebar: {
-          from: "#7c3aed",
-          to: "#064e3b",
-        },
         domus: {
-          primary: "#7C3AED",
-          "primary-light": "#A78BFA",
-          secondary: "#10B981",
-          accent: "#F59E0B",
-          danger: "#F43F5E",
+          primary: "var(--accent)",
+          "primary-light": "var(--accent-line)",
+          secondary: "var(--pos)",
+          accent: "var(--accent-strong)",
+          danger: "var(--crit)",
         },
       },
       borderRadius: {
