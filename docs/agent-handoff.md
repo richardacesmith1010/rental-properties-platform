@@ -57,6 +57,20 @@ The L-009 gap is closed: `npm run smoke:web` now runs **authenticated render che
 - Known wart: seeder reports the 3 profiles as `updated` every run (timestamp format comparison) — harmless, cosmetic fix candidate.
 - **Perf finding:** the suite measured owner dashboard **cold** login→render at >15s in production (warm ~12s total for all 3 roles). Tenant/manager are much faster. Logged as a perf-sprint candidate — the smoke spec doubles as the before/after harness.
 
+## Reskin Arc — Phase 0 SHIPPED (Sprint 131, 2026-07-17, commit 052638b)
+
+Design source of truth: `docs/design-system.md` **v2** (25-question session). Phase 0 live in production:
+- v2 meridian-blue token layer (light+dark exact hexes), three-hook dark cascade, `color-scheme` hints; every legacy `--domus-*` name aliases to v2 tokens so unreskinned screens inherit the palette.
+- Theme model: light/dark/**system** (device default); legacy stored themes migrate (verified live on the real owner: `atlas-light` → `light`); no-flash init; Settings → Appearance = Light / Dark / Match my device (verified working both directions).
+- Neutral sidebar rail + 8 primitives restyled (button/card/badge/input/select/textarea/alert/modal), tabular numerals in primitives.
+- Verified: independent gate green, 970/970 tests, authenticated smoke 3/3, visual walk (owner light+dark, settings, migration).
+
+**Dark-mode punch-list (unreskinned surfaces lost the old `.bg-white` patch crutch — fix each in its surface's phase; none production-breaking):**
+- Settings page: h1 renders dark-on-dark (low contrast); "Back to Workspace" pill stays light-styled. (Phase 4 surface — earliest ride-along welcome.)
+- Violet remnants (expected until their phases): settings sub-nav active state, Feedback button, Ask Domus button, mascot imagery in setup/empty content (mascot dies fully in Phase 5).
+
+**Next:** Phase 1 packet — owner surface reskin (dashboard shell content, KPI tiles, sections, drill-down, reports) + the punch-list items reachable from owner surface. Owner cold-load perf finding (>15s, logged 2026-07-17) can pair with Phase 1 since the same loader code is touched.
+
 ## Validation Snapshot
 - Unit tests: `562/562` passing at the latest clean gate baseline
 - Playwright coverage: `55` tests across `16` spec files (`cd apps/web && APP_URL=https://domusbase.com npx playwright test --reporter=list`)
