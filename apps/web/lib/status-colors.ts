@@ -54,32 +54,32 @@ export function getStatusClasses(status: string): {
   switch (getStatusCategory(status)) {
     case "success":
       return {
-        text: "text-emerald-800",
-        bg: "bg-emerald-100",
-        border: "border-emerald-300",
-        dot: "bg-emerald-600"
+        text: "text-[var(--pos)]",
+        bg: "bg-[var(--pos-bg)]",
+        border: "border-[color:color-mix(in_srgb,var(--pos)_28%,var(--pos-bg))]",
+        dot: "bg-[var(--pos)]"
       };
     case "warning":
       return {
-        text: "text-amber-800",
-        bg: "bg-amber-100",
-        border: "border-amber-300",
-        dot: "bg-amber-600"
+        text: "text-[var(--warn)]",
+        bg: "bg-[var(--warn-bg)]",
+        border: "border-[color:color-mix(in_srgb,var(--warn)_28%,var(--warn-bg))]",
+        dot: "bg-[var(--warn)]"
       };
     case "danger":
       return {
-        text: "text-red-800",
-        bg: "bg-red-100",
-        border: "border-red-300",
-        dot: "bg-red-600"
+        text: "text-[var(--crit)]",
+        bg: "bg-[var(--crit-bg)]",
+        border: "border-[color:color-mix(in_srgb,var(--crit)_28%,var(--crit-bg))]",
+        dot: "bg-[var(--crit)]"
       };
     case "neutral":
     default:
       return {
-        text: "text-gray-700",
-        bg: "bg-gray-100",
-        border: "border-gray-300",
-        dot: "bg-gray-500"
+        text: "text-[var(--muted)]",
+        bg: "bg-[color:color-mix(in_srgb,var(--surface-2)_72%,transparent)]",
+        border: "border-[color:color-mix(in_srgb,var(--line)_76%,transparent)]",
+        dot: "bg-[var(--muted)]"
       };
   }
 }
@@ -87,7 +87,7 @@ export function getStatusClasses(status: string): {
 export function statusBadgeClasses(status: string): string {
   const { text, bg, border } = getStatusClasses(status);
   return [
-    "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium",
+    "tabular-nums inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.18em]",
     text,
     bg,
     border

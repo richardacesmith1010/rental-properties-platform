@@ -26,25 +26,26 @@ describe("status colors", () => {
 
   it("returns success classes for successful statuses", () => {
     expect(getStatusClasses("paid")).toEqual({
-      text: "text-emerald-800",
-      bg: "bg-emerald-100",
-      border: "border-emerald-300",
-      dot: "bg-emerald-600"
+      text: "text-[var(--pos)]",
+      bg: "bg-[var(--pos-bg)]",
+      border: "border-[color:color-mix(in_srgb,var(--pos)_28%,var(--pos-bg))]",
+      dot: "bg-[var(--pos)]"
     });
   });
 
   it("returns warning and danger classes for the other categories", () => {
-    expect(getStatusClasses("pending").text).toBe("text-amber-800");
-    expect(getStatusClasses("overdue").text).toBe("text-red-800");
-    expect(getStatusClasses("draft").text).toBe("text-gray-700");
+    expect(getStatusClasses("pending").text).toBe("text-[var(--warn)]");
+    expect(getStatusClasses("overdue").text).toBe("text-[var(--crit)]");
+    expect(getStatusClasses("draft").text).toBe("text-[var(--muted)]");
   });
 
   it("builds a combined badge class string", () => {
     const className = statusBadgeClasses("pending");
 
     expect(className).toContain("inline-flex");
-    expect(className).toContain("text-amber-800");
-    expect(className).toContain("border-amber-300");
+    expect(className).toContain("tabular-nums");
+    expect(className).toContain("text-[var(--warn)]");
+    expect(className).toContain("border-[color:color-mix(in_srgb,var(--warn)_28%,var(--warn-bg))]");
   });
 
   it("builds an aria label for status badges", () => {

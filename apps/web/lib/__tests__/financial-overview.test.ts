@@ -99,7 +99,7 @@ describe("DomusFinancialsCard", () => {
       })
     );
 
-    expect(screen.getByText("$2,138.50")).toHaveClass("text-emerald-800");
+    expect(screen.getByText("$2,138.50")).toHaveClass("text-[var(--pos)]");
   });
 
   it("shows negative net income with danger styling", () => {
@@ -115,7 +115,7 @@ describe("DomusFinancialsCard", () => {
       })
     );
 
-    expect(screen.getByText("-$150")).toHaveClass("text-red-800");
+    expect(screen.getByText("-$150")).toHaveClass("text-[var(--crit)]");
   });
 });
 
@@ -153,7 +153,7 @@ describe("FinancialOverviewPanel", () => {
       })
     );
 
-    expect(screen.getByText("Net Income")).toBeInTheDocument();
+    expect(screen.getByText(/Net income/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Bank" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Both" })).not.toBeInTheDocument();
   });
@@ -162,11 +162,13 @@ describe("FinancialOverviewPanel", () => {
     render(React.createElement(FinancialOverviewPanel, baseProps));
 
     fireEvent.click(screen.getByRole("button", { name: "Domus" }));
-    expect(screen.getByText("Traceable from charges and expenses already recorded in Domus.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Live rent and expense totals from the records already in Domus.")
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Both" }));
     expect(screen.getByText("First Federal ••••1234")).toBeInTheDocument();
-    expect(screen.getByText("Net Income")).toBeInTheDocument();
+    expect(screen.getByText(/Net income/i)).toBeInTheDocument();
 
     await waitFor(() => {
       expect(window.localStorage.getItem("domus-finance-view")).toBe("both");

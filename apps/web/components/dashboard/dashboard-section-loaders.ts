@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   buildAllSectionItems,
   getManagerModeNavItems,
@@ -22,6 +23,9 @@ import type { DashboardProps } from "./types";
 import type { DashboardKpiState } from "./dashboard-kpi-loader";
 
 export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpiState) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const {
     chargeBadgeCount,
     hasActivitySection,
@@ -55,6 +59,11 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
   const [isPropertyWizardOpen, setIsPropertyWizardOpen] = useState(false);
   const [isTenantInviteWizardOpen, setIsTenantInviteWizardOpen] = useState(false);
   const [isLeaseWizardOpen, setIsLeaseWizardOpen] = useState(false);
+  const [ownerDailyOpsStartsAtHome, setOwnerDailyOpsStartsAtHome] = useState(
+    props.initialOwnerHomePage ?? false
+  );
+  const [isSectionLoading, setIsSectionLoading] = useState(false);
+  const [, startRouteTransition] = useTransition();
 
   useEffect(() => {
     const nextMode = props.initialOwnerWorkflowMode;
@@ -63,6 +72,11 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
     }
     setOwnerWorkflowMode((current) => (current === nextMode ? current : nextMode));
   }, [props.initialOwnerWorkflowMode]);
+
+  useEffect(() => {
+    setOwnerDailyOpsStartsAtHome(props.initialOwnerHomePage ?? false);
+    setIsSectionLoading(false);
+  }, [props.initialOwnerHomePage, props.initialSectionId]);
 
   useEffect(() => {
     const nextMode = props.initialManagerWorkflowMode;
@@ -188,13 +202,12 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
     currentPageCountLabel: ownerDailyOpsPageCountLabel,
     isHomePage: isOwnerDailyOpsHomePage,
     totalPages: ownerDailyOpsTotalPages,
-    goToHomePage,
-    goToNextPage: goToNextOwnerDailyOpsPage,
-    goToPreviousPage: goToPreviousOwnerDailyOpsPage,
+    goToHomePage: goToOwnerDailyOpsHomePage,
     goToSectionPage
   } = useOwnerDailyOpsPagination({
     enabled: ownerDailyOpsEnabled,
     activeSection,
+    startAtHome: ownerDailyOpsStartsAtHome,
     sectionItems: ownerDailyOpsSectionItems,
     onSelectSection: setActiveSection
   });
@@ -203,44 +216,146 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
   const activeSectionLabel =
     allSectionItems.find((item) => item.id === activeSection)?.label ?? "Section not found";
 
+  const navigateOwnerDashboard = useCallback(
+    (params: {
+      nextOwnerMode: OwnerWorkflowMode;
+      nextSectionId: string;
+      startsAtHome: boolean;
+    }) => {
+      setOwnerWorkflowMode(params.nextOwnerMode);
+      setOwnerDailyOpsStartsAtHome(params.startsAtHome);
+      setActiveSection(params.nextSectionId);
+
+      const nextParams = new URLSearchParams(searchParams.toString());
+      if (params.nextOwnerMode === "daily_ops") {
+        nextParams.delete("mode");
+      } else {
+        nextParams.set("mode", params.nextOwnerMode);
+      }
+
+      if (params.startsAtHome) {
+        nextParams.delete("section");
+      } else {
+        nextParams.set("section", params.nextSectionId);
+      }
+
+      const nextQuery = nextParams.toString();
+      const nextUrl = nextQuery ? `${pathname}?${nextQuery}` : pathname;
+      const currentQuery = searchParams.toString();
+      const currentUrl = currentQuery ? `${pathname}?${currentQuery}` : pathname;
+
+      if (nextUrl === currentUrl) {
+        setIsSectionLoading(false);
+        return;
+      }
+
+      setIsSectionLoading(true);
+      startRouteTransition(() => {
+        router.replace(nextUrl);
+      });
+    },
+    [pathname, router, searchParams, startRouteTransition]
+  );
+
   const goToPreviousSection = () => {
     if (ownerDailyOpsEnabled) {
-      goToPreviousOwnerDailyOpsPage();
+      if (ownerDailyOpsTotalPages === 0) {
+        return;
+      }
+
+      const nextPage =
+        ((ownerDailyOpsPage - 1) % ownerDailyOpsTotalPages + ownerDailyOpsTotalPages) %
+        ownerDailyOpsTotalPages;
+      if (nextPage === 0) {
+        navigateOwnerDashboard({
+          nextOwnerMode: "daily_ops",
+          nextSectionId: "overview",
+          startsAtHome: true
+        });
+        return;
+      }
+
+      const nextSectionId = ownerDailyOpsSectionItems[nextPage - 1]?.id;
+      if (nextSectionId) {
+        navigateOwnerDashboard({
+          nextOwnerMode: "daily_ops",
+          nextSectionId,
+          startsAtHome: false
+        });
+      }
       return;
     }
     if (sectionItems.length === 0) {
+      return;
+    }
+    const nextSectionId =
+      activeSectionIndex < 0
+        ? sectionItems[sectionItems.length - 1].id
+        : sectionItems[(activeSectionIndex - 1 + sectionItems.length) % sectionItems.length].id;
+
+    if (isOwnerRole) {
+      navigateOwnerDashboard({
+        nextOwnerMode: OWNER_SECTION_MODE_BY_ID[nextSectionId] ?? ownerWorkflowMode,
+        nextSectionId,
+        startsAtHome: false
+      });
       return;
     }
     if (activeSectionIndex < 0) {
       setActiveSection(sectionItems[sectionItems.length - 1].id);
       return;
     }
-    setActiveSection(sectionItems[(activeSectionIndex - 1 + sectionItems.length) % sectionItems.length].id);
+    setActiveSection(nextSectionId);
   };
 
   const goToNextSection = () => {
     if (ownerDailyOpsEnabled) {
-      goToNextOwnerDailyOpsPage();
+      if (ownerDailyOpsTotalPages === 0) {
+        return;
+      }
+
+      const nextPage = (ownerDailyOpsPage + 1) % ownerDailyOpsTotalPages;
+      if (nextPage === 0) {
+        navigateOwnerDashboard({
+          nextOwnerMode: "daily_ops",
+          nextSectionId: "overview",
+          startsAtHome: true
+        });
+        return;
+      }
+
+      const nextSectionId = ownerDailyOpsSectionItems[nextPage - 1]?.id;
+      if (nextSectionId) {
+        navigateOwnerDashboard({
+          nextOwnerMode: "daily_ops",
+          nextSectionId,
+          startsAtHome: false
+        });
+      }
       return;
     }
     if (sectionItems.length === 0) {
+      return;
+    }
+    const nextSectionId =
+      activeSectionIndex < 0
+        ? sectionItems[0].id
+        : sectionItems[(activeSectionIndex + 1) % sectionItems.length].id;
+
+    if (isOwnerRole) {
+      navigateOwnerDashboard({
+        nextOwnerMode: OWNER_SECTION_MODE_BY_ID[nextSectionId] ?? ownerWorkflowMode,
+        nextSectionId,
+        startsAtHome: false
+      });
       return;
     }
     if (activeSectionIndex < 0) {
       setActiveSection(sectionItems[0].id);
       return;
     }
-    setActiveSection(sectionItems[(activeSectionIndex + 1) % sectionItems.length].id);
+    setActiveSection(nextSectionId);
   };
-
-  const goToSectionIfVisible = useCallback(
-    (sectionId: string) => {
-      if (allSectionItems.some((item) => item.id === sectionId)) {
-        setActiveSection(sectionId);
-      }
-    },
-    [allSectionItems]
-  );
 
   const openSection = useCallback(
     (sectionId: string) => {
@@ -254,6 +369,15 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
 
       if (isOwnerRole && targetOwnerMode && ownerWorkflowMode !== targetOwnerMode) {
         setOwnerWorkflowMode(targetOwnerMode);
+      }
+
+      if (isOwnerRole) {
+        navigateOwnerDashboard({
+          nextOwnerMode: targetOwnerMode ?? ownerWorkflowMode,
+          nextSectionId: sectionId,
+          startsAtHome: false
+        });
+        return;
       }
 
       if (isManagerRole) {
@@ -275,9 +399,32 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
       isManagerRole,
       isOwnerRole,
       managerWorkflowMode,
+      navigateOwnerDashboard,
       ownerWorkflowMode
     ]
   );
+
+  const goToSectionIfVisible = useCallback(
+    (sectionId: string) => {
+      if (allSectionItems.some((item) => item.id === sectionId)) {
+        openSection(sectionId);
+      }
+    },
+    [allSectionItems, openSection]
+  );
+
+  const goToHomePage = useCallback(() => {
+    if (isOwnerRole) {
+      navigateOwnerDashboard({
+        nextOwnerMode: "daily_ops",
+        nextSectionId: "overview",
+        startsAtHome: true
+      });
+      return;
+    }
+
+    goToOwnerDailyOpsHomePage();
+  }, [goToOwnerDailyOpsHomePage, isOwnerRole, navigateOwnerDashboard]);
 
   useEffect(() => {
     if (!isOwnerRole) {
@@ -394,7 +541,12 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
     }
     if (itemId === "notifications") {
       if (isOwnerRole) {
-        setOwnerWorkflowMode("records");
+        navigateOwnerDashboard({
+          nextOwnerMode: "records",
+          nextSectionId: "notifications",
+          startsAtHome: false
+        });
+        return;
       }
       if (isManagerRole) {
         setManagerWorkflowMode("daily_ops");
@@ -404,10 +556,11 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
     }
     if (isOwnerRole && itemId.startsWith("owner:")) {
       if (itemId === "owner:daily_ops") {
-        if (ownerWorkflowMode !== "daily_ops") {
-          setOwnerWorkflowMode("daily_ops");
-        }
-        goToHomePage();
+        navigateOwnerDashboard({
+          nextOwnerMode: "daily_ops",
+          nextSectionId: "overview",
+          startsAtHome: true
+        });
         return;
       }
       if (itemId === "owner:new_property") {
@@ -418,11 +571,15 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
         setIsTenantInviteWizardOpen(true);
         return;
       }
-      handleModeChange(
-        itemId.replace("owner:", "") as OwnerWorkflowMode,
-        ownerWorkflowModeMeta,
-        setOwnerWorkflowMode
-      );
+      const nextMode = itemId.replace("owner:", "") as OwnerWorkflowMode;
+      const nextSection = ownerWorkflowModeMeta[nextMode].sections[0];
+      if (nextSection) {
+        navigateOwnerDashboard({
+          nextOwnerMode: nextMode,
+          nextSectionId: nextSection,
+          startsAtHome: false
+        });
+      }
       return;
     }
     if (isManagerRole && itemId.startsWith("manager:")) {
@@ -456,6 +613,7 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
     ownerDailyOpsPageCountLabel,
     ownerDailyOpsTotalPages,
     isOwnerDailyOpsHomePage,
+    isSectionLoading,
     sidebarItems,
     sidebarActiveItemId,
     reportsHref,

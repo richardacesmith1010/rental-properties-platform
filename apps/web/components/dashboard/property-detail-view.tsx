@@ -88,25 +88,25 @@ export function PropertyDetailView({
               </Link>
             </Button>
             <div>
-              <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
                 Property Details
               </p>
-              <h1 className="mt-1 text-3xl font-bold text-foreground">
+              <h1 className="mt-1 text-[22px] font-[640] tracking-[-0.02em] text-[var(--ink)] sm:text-[28px]">
                 {data.property.name}
               </h1>
-              <p className="mt-2 text-sm text-muted-foreground">
+              <p className="mt-2 text-sm text-[var(--muted)]">
                 {data.property.addressLine1}, {data.property.city}, {data.property.state}{" "}
                 {data.property.postalCode}
               </p>
             </div>
           </div>
-          <div className="rounded-2xl border border-border/60 bg-card/80 px-4 py-3 text-sm text-muted-foreground shadow-sm">
+          <div className="rounded-2xl border border-[color:color-mix(in_srgb,var(--line)_84%,transparent)] bg-[color:color-mix(in_srgb,var(--surface)_94%,transparent)] px-4 py-3 text-sm text-[var(--muted)] shadow-sm">
             {pluralize(data.units.length, "unit")} • {pluralize(activeLeases.length, "active lease")} •{" "}
             {pluralize(data.charges.length, "charge")}
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 rounded-[16px] border border-[color:color-mix(in_srgb,var(--line)_84%,transparent)] bg-[color:color-mix(in_srgb,var(--surface)_94%,transparent)] p-2 shadow-sm">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -115,6 +115,7 @@ export function PropertyDetailView({
                 type="button"
                 size="sm"
                 variant={activeTab === tab.id ? "default" : "outline"}
+                className={activeTab === tab.id ? "bg-[var(--accent)]" : "border-[var(--line)] bg-[var(--surface)]"}
                 onClick={() => setActiveTab(tab.id)}
                 title={`Open the ${tab.label.toLowerCase()} tab.`}
               >

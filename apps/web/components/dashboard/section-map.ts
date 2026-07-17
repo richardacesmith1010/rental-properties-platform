@@ -217,13 +217,14 @@ export interface SectionRendererProps {
   isOwnerDailyOpsCarousel?: boolean;
 }
 
-function SectionSkeleton() {
+export function SectionSkeleton({ label = "Loading section..." }: { label?: string }) {
   return createElement(
     "div",
     {
-      className: "rounded-xl border border-zinc-200 bg-white p-5 text-sm text-zinc-500 shadow-sm"
+      className:
+        "domus-card flex min-h-[220px] items-center justify-center p-5 text-sm text-[var(--muted)] shadow-sm"
     },
-    "Loading section..."
+    label
   );
 }
 

@@ -93,6 +93,7 @@ export interface DashboardProps {
   auditLogs?: AuditLogEntry[];
   rentIncreaseHistory?: RentIncreaseEntry[];
   generatedMessage?: string | null;
+  initialOwnerHomePage?: boolean;
   initialSectionId?: string | null;
   initialPropertyId?: string | null;
   initialOwnerWorkflowMode?: OwnerWorkflowMode;

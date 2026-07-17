@@ -3,6 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useDashboardNavigation } from "@/components/dashboard/dashboard-section-loaders";
 import type { DashboardProps } from "@/components/dashboard/types";
 
+const replaceMock = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: replaceMock }),
+  usePathname: () => "/owner",
+  useSearchParams: () => new URLSearchParams()
+}));
+
 const kpis = {
   chargeBadgeCount: 0,
   hasActivitySection: false,

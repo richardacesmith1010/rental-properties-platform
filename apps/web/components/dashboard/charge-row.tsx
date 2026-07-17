@@ -222,8 +222,8 @@ export function ChargeRow({
   return (
     <div
       className={cn(
-        "rounded-2xl px-2 py-3 transition-all duration-150 hover:bg-violet-50/60 hover:shadow-sm sm:px-3",
-        last ? "" : "border-b border-violet-100/70"
+        "rounded-2xl px-2 py-3 transition-all duration-150 hover:bg-[color:color-mix(in_srgb,var(--accent-weak)_72%,transparent)] hover:shadow-sm sm:px-3",
+        last ? "" : "border-b border-[color:color-mix(in_srgb,var(--line)_82%,transparent)]"
       )}
     >
       <div className="flex gap-3">
@@ -233,7 +233,7 @@ export function ChargeRow({
               type="checkbox"
               checked={selected}
               onChange={(event) => onToggleSelection(event.target.checked)}
-              className="h-4 w-4 rounded border-zinc-300 text-violet-600 focus:ring-violet-500"
+              className="h-4 w-4 rounded border-[var(--line)] text-[var(--accent)] focus:ring-[var(--accent)]"
               aria-label={`Select charge for ${label}`}
               title={`Select ${label}.`}
             />
@@ -314,7 +314,7 @@ export function ChargeRow({
               {charge.status !== "paid" && charge.status !== "waived" ? (
                 isTenantView ? (
                   <div className="w-full space-y-2 xl:w-[18rem]">
-                    <div className="rounded-2xl border border-violet-200 bg-violet-50/70 p-3">
+                    <div className="rounded-2xl border border-[var(--accent-line)] bg-[color:color-mix(in_srgb,var(--accent-weak)_76%,transparent)] p-3">
                       <p className="text-sm font-semibold text-foreground">
                         Pay with debit or credit card
                       </p>
@@ -352,7 +352,7 @@ export function ChargeRow({
                     <div className="rounded-2xl border border-border bg-background/80 p-3">
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-sm font-semibold text-foreground">Pay from bank account</p>
-                        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--pos)]">
                           FREE
                         </span>
                       </div>
@@ -447,7 +447,7 @@ export function ChargeRow({
             <form action={manualPaymentAction} className="grid gap-3 sm:grid-cols-4">
               <input type="hidden" name="chargeId" value={charge.id} />
               <div className="space-y-1">
-                <label className="block text-xs font-medium text-zinc-600" htmlFor={`manual-payment-amount-${charge.id}`}>
+                <label className="block text-xs font-medium text-[var(--muted)]" htmlFor={`manual-payment-amount-${charge.id}`}>
                   Amount
                 </label>
                 <Input
@@ -461,13 +461,13 @@ export function ChargeRow({
                 />
               </div>
               <div className="space-y-1">
-                <label className="block text-xs font-medium text-zinc-600" htmlFor={`manual-payment-method-${charge.id}`}>
+                <label className="block text-xs font-medium text-[var(--muted)]" htmlFor={`manual-payment-method-${charge.id}`}>
                   Method
                 </label>
                 <select
                   id={`manual-payment-method-${charge.id}`}
                   name="method"
-                  className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm"
+                  className="domus-input h-10 w-full rounded-md px-3 text-sm"
                   defaultValue="cash"
                   title="Select manual payment method."
                 >
@@ -478,7 +478,7 @@ export function ChargeRow({
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="block text-xs font-medium text-zinc-600" htmlFor={`manual-payment-reference-${charge.id}`}>
+                <label className="block text-xs font-medium text-[var(--muted)]" htmlFor={`manual-payment-reference-${charge.id}`}>
                   Reference Note
                 </label>
                 <Input id={`manual-payment-reference-${charge.id}`} name="referenceNote" placeholder="Optional" />

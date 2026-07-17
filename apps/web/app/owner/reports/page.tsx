@@ -70,18 +70,23 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   return (
     <main id="main-content" className="app-surface min-h-screen px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-6">
-        <header className="space-y-2">
+        <header className="domus-card space-y-3 px-5 py-5 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Financial Reports</h1>
-              <p className="text-sm text-zinc-600">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                Reports
+              </p>
+              <h1 className="mt-1 text-[22px] font-[640] tracking-[-0.02em] text-[var(--ink)]">
+                Financial reports
+              </h1>
+              <p className="mt-2 text-sm text-[var(--muted)]">
                 Portfolio reporting for rent, receivables, ledgers, P&amp;L, and tax prep.
               </p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               <Link
                 href={`/api/pdf/receipts?year=${reportYear}`}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-shadow hover:bg-violet-500 hover:shadow-md sm:min-h-0"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-shadow hover:bg-[var(--accent-strong)] hover:shadow-md sm:min-h-0"
                 title={`Download all ${reportYear} rent receipts as a PDF export.`}
               >
                 <Download className="h-4 w-4" />
@@ -89,13 +94,15 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               </Link>
               <Link
                 href={getRoleHomePath(role)}
-                className="inline-flex min-h-11 items-center justify-center rounded-md border border-zinc-200/80 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm transition-shadow hover:bg-zinc-50 hover:shadow-md sm:min-h-0"
+                className="inline-flex min-h-11 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-2)] shadow-sm transition-shadow hover:border-[var(--accent-line)] hover:bg-[var(--accent-weak)] hover:text-[var(--accent)] sm:min-h-0"
                 title="Return to your workspace."
               >
                 Back to Workspace
               </Link>
               <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Year</span>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                  Year
+                </span>
                 <div className="mobile-scroll-x flex gap-2 pb-1 sm:flex-wrap sm:pb-0">
                   {yearOptions.map((year) => (
                     <Link
@@ -103,8 +110,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                       href={`${reportsBasePath}?year=${year}`}
                       className={`inline-flex min-h-11 shrink-0 items-center justify-center rounded-md px-3 py-1.5 text-xs font-semibold sm:min-h-0 ${
                         year === reportYear
-                          ? "bg-violet-600 text-white"
-                          : "border border-zinc-200/80 bg-white text-zinc-700 shadow-sm transition-shadow hover:bg-zinc-50 hover:shadow-md"
+                          ? "bg-[var(--accent)] text-white"
+                          : "border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] shadow-sm transition-shadow hover:border-[var(--accent-line)] hover:bg-[var(--accent-weak)] hover:text-[var(--accent)] hover:shadow-md"
                       }`}
                       title={`View ${year} reports.`}
                     >

@@ -9,14 +9,16 @@ interface OccupancyChartProps {
 
 export function OccupancyChart({ metrics }: OccupancyChartProps) {
   if (metrics.length === 0) {
-    return <div className="flex h-[250px] items-center justify-center text-sm text-zinc-500">No occupancy trend yet.</div>;
+    return <div className="flex h-[250px] items-center justify-center text-sm text-[var(--muted)]">No occupancy trend yet.</div>;
   }
+
+  const lastMetric = metrics[metrics.length - 1];
 
   return (
     <div className="h-[250px] w-full">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={metrics} margin={{ left: 8, right: 12, top: 8, bottom: 0 }}>
-          <CartesianGrid stroke="var(--domus-divider)" strokeDasharray="3 3" />
+          <CartesianGrid stroke="var(--domus-divider)" strokeDasharray="3 3" vertical={false} />
           <XAxis dataKey="month" tick={{ fill: "var(--domus-muted-text)", fontSize: 12 }} />
           <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} tick={{ fill: "var(--domus-muted-text)", fontSize: 12 }} />
           <Tooltip
@@ -44,7 +46,39 @@ export function OccupancyChart({ metrics }: OccupancyChartProps) {
               );
             }}
           />
-          <Area type="monotone" dataKey="rate" stroke="#7c3aed" fill="#7c3aed" fillOpacity={0.2} strokeWidth={2.5} />
+          <Area
+            type="monotone"
+            dataKey="rate"
+            stroke="var(--accent)"
+            fill="var(--accent)"
+            fillOpacity={0.15}
+            strokeWidth={2}
+            dot={false}
+            activeDot={false}
+          />
+          {lastMetric ? (
+            <Area
+              type="monotone"
+              dataKey="rate"
+              stroke="transparent"
+              fill="transparent"
+              dot={(props) =>
+                props.index === metrics.length - 1 ? (
+                  <circle
+                    cx={props.cx}
+                    cy={props.cy}
+                    r={4}
+                    fill="var(--accent)"
+                    stroke="var(--surface)"
+                    strokeWidth={2}
+                  />
+                ) : (
+                  <></>
+                )
+              }
+              activeDot={false}
+            />
+          ) : null}
         </AreaChart>
       </ResponsiveContainer>
     </div>

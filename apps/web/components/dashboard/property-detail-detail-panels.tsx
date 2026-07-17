@@ -81,7 +81,7 @@ export function PropertyDetailPaymentsPanel({
   return (
     <Card className="border border-border/60 shadow-sm">
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle className="text-xl font-semibold">Payments</CardTitle>
+        <CardTitle className="text-[22px] font-[640] tracking-[-0.02em]">Payments</CardTitle>
         <div className="flex flex-wrap gap-2">
           <FilterButton
             active={filter === "all"}
@@ -143,7 +143,7 @@ export function PropertyDetailPaymentsPanel({
                       {chargeCategoryLabel(charge.category)}
                     </td>
                     <td className="px-3 py-3 text-foreground">
-                      {formatCurrency(charge.amountCents)}
+                      <span className="tabular-nums">{formatCurrency(charge.amountCents)}</span>
                     </td>
                     <td className="px-3 py-3 text-muted-foreground">
                       {formatDate(charge.dueDate)}
@@ -198,7 +198,7 @@ export function PropertyDetailMaintenancePanel({
   return (
     <Card className="border border-border/60 shadow-sm">
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle className="text-xl font-semibold">Maintenance</CardTitle>
+        <CardTitle className="text-[22px] font-[640] tracking-[-0.02em]">Maintenance</CardTitle>
         <div className="flex flex-wrap gap-2">
           <Button asChild size="sm" variant="outline">
             <Link
@@ -362,7 +362,7 @@ export function PropertyDetailDocumentsPanel({
       ) : null}
       <Card className="border border-border/60 shadow-sm">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="text-xl font-semibold">Documents</CardTitle>
+          <CardTitle className="text-[22px] font-[640] tracking-[-0.02em]">Documents</CardTitle>
           <Button asChild size="sm" variant="outline">
             <Link
               href={`${dashboardHref}?section=documents&property=${encodeURIComponent(data.property.id)}`}

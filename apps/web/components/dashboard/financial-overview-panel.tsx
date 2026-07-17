@@ -80,10 +80,10 @@ function FinanceViewButton({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors min-h-11 sm:min-h-0 sm:flex-none",
+        "flex-1 rounded-[10px] px-3 py-2 text-sm font-medium transition-colors min-h-11 sm:min-h-0 sm:flex-none",
         active
-          ? "bg-background text-foreground shadow-sm"
-          : "text-muted-foreground hover:text-foreground"
+          ? "bg-[var(--surface)] text-[var(--accent)] shadow-sm ring-1 ring-[var(--accent-line)]"
+          : "text-[var(--muted)] hover:text-[var(--ink)]"
       )}
       title={`Show the ${label} finance view.`}
     >
@@ -211,17 +211,22 @@ export function FinancialOverviewPanel({
   const showAutoRefreshWarning = Boolean(autoRefreshState && !autoRefreshState.success && staleBalance);
 
   return (
-    <div className="overflow-x-hidden rounded-2xl border border-border/60 bg-card/95 p-4 shadow-sm sm:p-5">
-      <div className="flex flex-col gap-4 border-b border-border/60 pb-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="domus-card overflow-x-hidden p-4 shadow-sm sm:p-5">
+      <div className="flex flex-col gap-4 border-b border-[color:color-mix(in_srgb,var(--line)_84%,transparent)] pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-weak)] text-[var(--accent)]">
               <Wallet className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-foreground">Financial Overview</h3>
-              <p className="text-sm text-muted-foreground">
-                Toggle between live bank balances and Domus rent performance.
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                Command center
+              </p>
+              <h3 className="text-[22px] font-[640] tracking-[-0.02em] text-[var(--ink)]">
+                Financial overview
+              </h3>
+              <p className="text-sm text-[var(--muted)]">
+                Switch between your linked bank balance and Domus totals.
               </p>
             </div>
           </div>
@@ -233,7 +238,7 @@ export function FinancialOverviewPanel({
           ) : null}
         </div>
 
-        <div className="inline-flex w-full rounded-lg border border-border bg-muted/50 p-1 sm:w-fit">
+        <div className="inline-flex w-full rounded-[12px] border border-[color:color-mix(in_srgb,var(--line)_84%,transparent)] bg-[var(--surface-2)] p-1 sm:w-fit">
           <FinanceViewButton
             active={activeTab === "bank"}
             label="Bank"

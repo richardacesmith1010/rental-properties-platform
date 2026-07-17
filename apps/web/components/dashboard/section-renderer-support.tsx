@@ -93,11 +93,18 @@ function OverviewSummaryStrip({ props }: { props: SectionRendererProps }) {
   ];
 
   return (
-    <div className="rounded-2xl border border-border bg-card/90 px-4 py-3 shadow-sm">
+    <div className="domus-card px-4 py-4 shadow-sm">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <p className="text-sm font-semibold text-foreground">{title}</p>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                Property scope
+              </p>
+              <p className="mt-1 text-[22px] font-[640] tracking-[-0.02em] text-[var(--ink)]">
+                {title}
+              </p>
+            </div>
             {props.canManagePortfolio && props.onUpdateProperty && editableProperty ? (
               <Button
                 type="button"
@@ -112,19 +119,26 @@ function OverviewSummaryStrip({ props }: { props: SectionRendererProps }) {
               </Button>
             ) : null}
           </div>
-          <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+          <p className="mt-2 flex items-center gap-1.5 text-sm text-[var(--muted)]">
             {summary?.property.address ? <MapPin className="h-3.5 w-3.5 shrink-0" /> : null}
             <span className="truncate">{subtitle}</span>
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           {items.map(({ label, value, icon: Icon }) => (
-            <div key={label} className="rounded-full border border-border/80 bg-background/70 px-3 py-1.5 text-sm">
-              <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+            <div
+              key={label}
+              className="rounded-full border border-[color:color-mix(in_srgb,var(--line)_84%,transparent)] bg-[color:color-mix(in_srgb,var(--surface)_94%,transparent)] px-3 py-2 text-sm"
+            >
+              <span className="inline-flex items-center gap-1.5 text-[var(--muted)]">
                 {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
-                <span className="font-medium">{label}</span>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.18em]">
+                  {label}
+                </span>
               </span>
-              <span className="ml-2 font-semibold text-foreground">{value}</span>
+              <span className="ml-2 tabular-nums font-semibold text-[var(--ink)]">
+                {value}
+              </span>
             </div>
           ))}
         </div>

@@ -70,8 +70,8 @@ function HeaderStat({
   decimals?: number;
 }) {
   return (
-    <div className="domus-kpi-pill flex min-w-[150px] flex-1 items-start gap-3">
-      <div className="rounded-2xl bg-violet-500/10 p-2 text-violet-600">
+    <div className="domus-card flex min-w-[150px] flex-1 items-start gap-3 px-4 py-4 shadow-sm">
+      <div className="rounded-2xl bg-[var(--surface-2)] p-2 text-[var(--accent)]">
         <Icon className="h-4 w-4" />
       </div>
       <div className="min-w-0">
@@ -81,9 +81,11 @@ function HeaderStat({
           suffix={suffix}
           decimals={decimals}
           duration={1200}
-          className="text-tabular domus-heading text-base font-bold"
+          className="tabular-nums text-[25px] font-[660] tracking-[-0.025em] text-[var(--ink)]"
         />
-        <p className="mt-1 text-xs uppercase tracking-[0.16em] domus-muted">{label}</p>
+        <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+          {label}
+        </p>
       </div>
     </div>
   );
@@ -163,7 +165,7 @@ export function DashboardHeader({
             </Badge>
             <span
               suppressHydrationWarning
-              className="inline-flex items-center gap-2 rounded-full border border-zinc-200/80 bg-white/70 px-3 py-1 text-xs font-medium domus-muted shadow-sm backdrop-blur-sm"
+              className="inline-flex items-center gap-2 rounded-full border border-[color:color-mix(in_srgb,var(--line)_84%,transparent)] bg-[color:color-mix(in_srgb,var(--surface)_94%,transparent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)] shadow-sm backdrop-blur-sm"
             >
               <CalendarClock className="h-3.5 w-3.5" />
               {formatHeaderDate(now)}
@@ -171,10 +173,10 @@ export function DashboardHeader({
           </div>
           {greetingContent ?? (
             <>
-              <h1 className="domus-heading text-3xl font-bold tracking-tight">
+              <h1 className="text-[22px] font-[640] tracking-[-0.02em] text-[var(--ink)] sm:text-[28px]">
                 {greeting ? `${greeting}, ${displayName}` : displayName}
               </h1>
-              <p className="mt-2 max-w-2xl text-sm domus-muted">
+              <p className="mt-2 max-w-2xl text-sm text-[var(--muted)]">
                 Keep revenue, maintenance, and resident activity moving without leaving the dashboard.
               </p>
             </>

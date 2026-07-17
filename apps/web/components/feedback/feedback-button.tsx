@@ -54,7 +54,7 @@ export function FeedbackButton({ onSubmit }: FeedbackButtonProps) {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+4.75rem)] right-3 z-40 inline-flex h-14 min-w-[56px] items-center justify-center gap-2 rounded-2xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-violet-700 hover:shadow-xl sm:bottom-6 sm:right-6 sm:h-auto sm:min-h-12 sm:min-w-12 sm:rounded-full"
+          className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+4.75rem)] right-3 z-40 inline-flex h-14 min-w-[56px] items-center justify-center gap-2 rounded-2xl border border-[var(--accent-line)] bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-[var(--accent-strong)] hover:shadow-xl sm:bottom-6 sm:right-6 sm:h-auto sm:min-h-12 sm:min-w-12 sm:rounded-full"
           title="Send feedback to the Domus team."
           aria-label="Send feedback"
         >

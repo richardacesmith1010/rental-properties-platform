@@ -52,15 +52,17 @@ export function BankBalanceCard({
     typeof balanceCents === "number" ? formatCurrency(balanceCents) : "Balance unavailable";
 
   return (
-    <div className={cn("mt-3 rounded-xl border border-border bg-card px-4 py-4", className)}>
+    <div className={cn("domus-card mt-3 px-4 py-4 shadow-sm", className)}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-foreground">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
             {bankName ?? "Connected bank"}
             {bankMask ? ` ••••${bankMask}` : ""}
           </p>
-          <p className="mt-1 text-2xl font-semibold text-foreground">{balanceLabel}</p>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="tabular-nums mt-2 text-[25px] font-[660] tracking-[-0.025em] text-[var(--ink)]">
+            {balanceLabel}
+          </p>
+          <p className="mt-2 text-sm text-[var(--muted)]">
             {balanceUpdatedAt ? (
               <>
                 Updated{" "}
@@ -99,7 +101,7 @@ export function BankBalanceCard({
       </div>
 
       {showDisconnect ? (
-        <div className="mt-3 border-t border-border pt-3">
+        <div className="mt-3 border-t border-[color:color-mix(in_srgb,var(--line)_84%,transparent)] pt-3">
           {!showDisconnectConfirm ? (
             <Button
               type="button"

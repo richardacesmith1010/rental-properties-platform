@@ -346,7 +346,7 @@ export function ChargesSection({
           {onGenerateChargesHref ? (
             <Link
               href={onGenerateChargesHref}
-              className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-800 transition-colors hover:bg-zinc-50 sm:min-h-0 sm:w-auto"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--ink-2)] transition-colors hover:border-[var(--accent-line)] hover:bg-[var(--accent-weak)] hover:text-[var(--accent)] sm:min-h-0 sm:w-auto"
               title="Generate rent charges for the current billing period."
             >
               Generate This Month Charges
@@ -391,14 +391,14 @@ export function ChargesSection({
           </AnimatedList>
         ) : null}
 
-        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm shadow-sm">
-          <Badge className="border-amber-300 bg-amber-100 px-3 py-1 text-amber-800">
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[color:color-mix(in_srgb,var(--line)_84%,transparent)] bg-[color:color-mix(in_srgb,var(--surface)_94%,transparent)] px-3 py-2 text-sm shadow-sm">
+          <Badge variant="warning" className="px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
             {pendingCount} pending
           </Badge>
-          <Badge className="border-red-300 bg-red-100 px-3 py-1 text-red-800">
+          <Badge variant="destructive" className="px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
             {lateCount} late
           </Badge>
-          <Badge className="border-emerald-300 bg-emerald-100 px-3 py-1 text-emerald-800">
+          <Badge variant="success" className="px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
             {paidThisMonthCount} paid this month
           </Badge>
         </div>
@@ -443,17 +443,17 @@ export function ChargesSection({
               sendingReminders={isSendingReminders}
             />
             <div className="mb-3 flex flex-col gap-2 rounded-xl border border-border/50 bg-background px-3 py-2 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-              <label className="flex items-center gap-2 text-sm text-zinc-700">
+              <label className="flex items-center gap-2 text-sm text-[var(--ink-2)]">
                 <input
                   type="checkbox"
                   checked={allVisibleSelected}
                   onChange={(event) => toggleAllVisibleCharges(event.target.checked)}
-                  className="h-4 w-4 rounded border-zinc-300 text-violet-600 focus:ring-violet-500"
+                  className="h-4 w-4 rounded border-[var(--line)] text-[var(--accent)] focus:ring-[var(--accent)]"
                   aria-label="Select all visible charges"
                 />
                 Select all visible
               </label>
-              <span className="text-xs text-zinc-600">
+              <span className="text-xs text-[var(--muted)]">
                 {selectedVisibleCharges.length} of {visibleCharges.length} visible selected
               </span>
             </div>

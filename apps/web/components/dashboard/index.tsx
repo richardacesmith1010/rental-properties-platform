@@ -29,6 +29,7 @@ import { DashboardLayout } from "./dashboard-layout";
 import { useDashboardData } from "./dashboard-data-loader";
 import type { OperationTask } from "./operations-section";
 import { SectionRenderer } from "./section-renderer";
+import { SectionSkeleton } from "./section-map";
 import type { DashboardProps } from "./types";
 
 const AiAssistant = dynamic(
@@ -80,10 +81,16 @@ function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex shrink-0 flex-col gap-3 border-b border-border/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-      <div className="min-w-0">
-        <h2 className="truncate text-xl font-bold text-foreground sm:text-[1.9rem]">{title}</h2>
-        {pageCountLabel ? <p className="mt-1 text-sm text-muted-foreground">{pageCountLabel}</p> : null}
+    <div className="flex shrink-0 flex-col gap-4 border-b border-[color:color-mix(in_srgb,var(--line)_84%,transparent)] px-4 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-6">
+      <div className="min-w-0 space-y-1">
+        {pageCountLabel ? (
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+            {pageCountLabel}
+          </p>
+        ) : null}
+        <h2 className="truncate text-[22px] font-[640] tracking-[-0.02em] text-[var(--ink)]">
+          {title}
+        </h2>
       </div>
       <div className="flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto">
         {actions}
@@ -91,7 +98,7 @@ function PageHeader({
           type="button"
           variant="outline"
           size="icon"
-          className="h-11 w-11 rounded-full"
+          className="h-11 w-11 rounded-full border-[color:var(--line)] bg-[color:color-mix(in_srgb,var(--surface)_94%,transparent)]"
           onClick={onPrevious}
           title="Previous section"
           aria-label="Previous section"
@@ -102,7 +109,7 @@ function PageHeader({
           type="button"
           variant="outline"
           size="icon"
-          className="h-11 w-11 rounded-full"
+          className="h-11 w-11 rounded-full border-[color:var(--line)] bg-[color:color-mix(in_srgb,var(--surface)_94%,transparent)]"
           onClick={onNext}
           title="Next section"
           aria-label="Next section"
@@ -155,6 +162,7 @@ export function Dashboard(props: DashboardProps) {
     safePortfolio,
     sectionItems,
     sectionRendererProps,
+    isSectionLoading,
     showOnboardingWizard
   } = useDashboardData(props);
 
@@ -284,6 +292,58 @@ export function Dashboard(props: DashboardProps) {
         sectionRendererProps.openSection("overview");
     }
   };
+
+  const renderedSectionContent = isSectionLoading ? (
+    <SectionSkeleton
+      label={isOwnerDailyOpsHomePage ? "Loading home..." : `Loading ${activeSectionLabel.toLowerCase()}...`}
+    />
+  ) : showOwnerOnboarding ? (
+    <div className="flex h-full items-center justify-center">
+      <WelcomeCard
+        displayName={displayName}
+        steps={ownerOnboarding.steps}
+        onContinue={handleContinueOwnerOnboarding}
+        onSkip={handleDismissOnboarding}
+      />
+    </div>
+  ) : isOwnerDailyOpsHomePage ? (
+    <OwnerDailyOpsHome
+      actionItems={homeActionItems}
+      nextCollectionLabel={nextRentCollectionLabel}
+      onOpenSection={sectionRendererProps.openSection}
+      onSendBatchPaymentReminder={props.onSendBatchPaymentReminder}
+      onWaiveCharge={props.onWaiveCharge}
+      onMarkManagerPaymentPaid={props.onMarkManagerPaymentPaid}
+      financialOverview={financialOverviewData}
+      llcSetupPrompt={
+        showLlcSetupPrompt
+          ? {
+              accountName: llcSetupPrompt.accountName,
+              memberCount: llcSetupPrompt.memberCount,
+              propertyCount: llcSetupPrompt.propertyCount,
+              onInviteMembers: () => sectionRendererProps.openSection("members"),
+              onAddProperty: openPropertyWizard
+            }
+          : null
+      }
+      onInitiatePlaidLink={props.onInitiatePlaidLink}
+      onCompletePlaidLink={props.onCompletePlaidLink}
+      onRefreshPlaidBalance={props.onRefreshPlaidBalance}
+      onDisconnectPlaid={props.onDisconnectPlaid}
+    />
+  ) : (
+    <div className="min-h-full">
+      <SectionRenderer
+        {...sectionRendererProps}
+        initialOperationsTask={initialOperationsTask}
+        initialOperationsPropertyId={initialOperationsPropertyId}
+        onInitialOperationsStateConsumed={() => {
+          setInitialOperationsTask(undefined);
+          setInitialOperationsPropertyId(null);
+        }}
+      />
+    </div>
+  );
 
   if (isEmptyOwner && showOwnerOnboarding) {
     return (
@@ -456,7 +516,7 @@ export function Dashboard(props: DashboardProps) {
               onOpenSettings={() => router.push("/settings")}
               onOpenNotifications={() => sectionRendererProps.openSection("notifications")}
             />
-            <div className="mt-3 flex min-h-0 flex-1 flex-col rounded-[24px] border border-border/50 bg-background/80 shadow-sm sm:rounded-[28px]">
+            <div className="domus-card mt-3 flex min-h-0 flex-1 flex-col overflow-hidden shadow-sm sm:rounded-[28px]">
               <PageHeader
                 title={ownerDailyOpsPageLabel}
                 pageCountLabel={ownerDailyOpsPageCountLabel}
@@ -502,53 +562,7 @@ export function Dashboard(props: DashboardProps) {
                   id={isOwnerDailyOpsHomePage ? "daily-ops-home" : activeSection}
                   className="min-h-full"
                 >
-                  {showOwnerOnboarding ? (
-                    <div className="flex h-full items-center justify-center">
-                      <WelcomeCard
-                        displayName={displayName}
-                        steps={ownerOnboarding.steps}
-                        onContinue={handleContinueOwnerOnboarding}
-                        onSkip={handleDismissOnboarding}
-                      />
-                    </div>
-                  ) : isOwnerDailyOpsHomePage ? (
-                    <OwnerDailyOpsHome
-                      actionItems={homeActionItems}
-                      nextCollectionLabel={nextRentCollectionLabel}
-                      onOpenSection={sectionRendererProps.openSection}
-                      onSendBatchPaymentReminder={props.onSendBatchPaymentReminder}
-                      onWaiveCharge={props.onWaiveCharge}
-                      onMarkManagerPaymentPaid={props.onMarkManagerPaymentPaid}
-                      financialOverview={financialOverviewData}
-                      llcSetupPrompt={
-                        showLlcSetupPrompt
-                          ? {
-                              accountName: llcSetupPrompt.accountName,
-                              memberCount: llcSetupPrompt.memberCount,
-                              propertyCount: llcSetupPrompt.propertyCount,
-                              onInviteMembers: () => sectionRendererProps.openSection("members"),
-                              onAddProperty: openPropertyWizard
-                            }
-                          : null
-                      }
-                      onInitiatePlaidLink={props.onInitiatePlaidLink}
-                      onCompletePlaidLink={props.onCompletePlaidLink}
-                      onRefreshPlaidBalance={props.onRefreshPlaidBalance}
-                      onDisconnectPlaid={props.onDisconnectPlaid}
-                    />
-                  ) : (
-                    <div className="min-h-full">
-                      <SectionRenderer
-                        {...sectionRendererProps}
-                        initialOperationsTask={initialOperationsTask}
-                        initialOperationsPropertyId={initialOperationsPropertyId}
-                        onInitialOperationsStateConsumed={() => {
-                          setInitialOperationsTask(undefined);
-                          setInitialOperationsPropertyId(null);
-                        }}
-                      />
-                    </div>
-                  )}
+                  {renderedSectionContent}
                 </section>
               </div>
             </div>
@@ -604,14 +618,18 @@ export function Dashboard(props: DashboardProps) {
                 />
               ) : null}
               {(isOwnerRole || isManagerRole) && activeWorkflowMeta && !showOwnerOnboarding ? (
-                <div className="domus-glass flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm font-semibold text-foreground">{activeWorkflowMeta.label}</p>
-                  <p className="text-sm text-muted-foreground">{activeWorkflowMeta.description}</p>
+                <div className="rounded-[16px] border border-[color:color-mix(in_srgb,var(--line)_82%,transparent)] bg-[color:color-mix(in_srgb,var(--surface)_94%,transparent)] px-4 py-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                    {activeWorkflowMeta.label}
+                  </p>
+                  <p className="mt-1 text-sm text-[var(--ink-2)]">
+                    {activeWorkflowMeta.description}
+                  </p>
                 </div>
               ) : null}
             </div>
 
-            <div className="mt-4 flex min-h-0 flex-1 flex-col rounded-[24px] border border-border/50 bg-background/80 shadow-sm sm:rounded-[28px]">
+            <div className="domus-card mt-4 flex min-h-0 flex-1 flex-col overflow-hidden shadow-sm sm:rounded-[28px]">
               <PageHeader
                 title={contentZoneTitle}
                 pageCountLabel={contentZoneLabel}
@@ -635,28 +653,7 @@ export function Dashboard(props: DashboardProps) {
 
               <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scroll-smooth px-3 pb-3 pt-3 sm:px-5 sm:pb-4 [-webkit-overflow-scrolling:touch]">
                 <section id={activeSection} className="min-h-full">
-                  {showOwnerOnboarding ? (
-                    <div className="flex h-full items-center justify-center">
-                      <WelcomeCard
-                        displayName={displayName}
-                        steps={ownerOnboarding.steps}
-                        onContinue={handleContinueOwnerOnboarding}
-                        onSkip={handleDismissOnboarding}
-                      />
-                    </div>
-                  ) : (
-                    <div className="min-h-full">
-                      <SectionRenderer
-                        {...sectionRendererProps}
-                        initialOperationsTask={initialOperationsTask}
-                        initialOperationsPropertyId={initialOperationsPropertyId}
-                        onInitialOperationsStateConsumed={() => {
-                          setInitialOperationsTask(undefined);
-                          setInitialOperationsPropertyId(null);
-                        }}
-                      />
-                    </div>
-                  )}
+                  {renderedSectionContent}
                 </section>
               </div>
             </div>

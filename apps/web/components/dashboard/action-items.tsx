@@ -21,9 +21,12 @@ interface ActionItemsProps {
 }
 
 const severityClasses: Record<ActionItem["severity"], string> = {
-  urgent: "border-l-red-500 bg-red-500/[0.04]",
-  attention: "border-l-amber-500 bg-amber-500/[0.04]",
-  info: "border-l-blue-500 bg-blue-500/[0.04]"
+  urgent:
+    "border-l-[var(--crit)] bg-[color:color-mix(in_srgb,var(--crit-bg)_88%,transparent)]",
+  attention:
+    "border-l-[var(--warn)] bg-[color:color-mix(in_srgb,var(--warn-bg)_88%,transparent)]",
+  info:
+    "border-l-[var(--accent)] bg-[color:color-mix(in_srgb,var(--accent-weak)_92%,transparent)]"
 };
 
 const severityLabels: Record<ActionItem["severity"], string> = {
@@ -159,13 +162,18 @@ export function ActionItems({
 
   if (items.length === 0) {
     return (
-      <section className="domus-card flex min-h-[420px] flex-col items-center justify-center gap-5 px-6 py-10 text-center">
-        <Badge variant="success" className="px-3 py-1 text-sm">
+      <section className="domus-card flex min-h-[420px] flex-col items-center justify-center gap-5 px-6 py-10 text-center shadow-sm">
+        <Badge
+          variant="success"
+          className="px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
+        >
           Everything looks good
         </Badge>
         <div className="space-y-2">
-          <h2 className="text-3xl font-semibold tracking-tight text-foreground">No action items right now.</h2>
-          <p className="mx-auto max-w-xl text-base leading-7 text-muted-foreground">
+          <h2 className="text-[22px] font-[640] tracking-[-0.02em] text-[var(--ink)]">
+            No action items right now.
+          </h2>
+          <p className="mx-auto max-w-xl text-sm leading-6 text-[var(--muted)]">
             {nextCollectionLabel ?? "Your portfolio is caught up. The next important change will appear here automatically."}
           </p>
         </div>
@@ -177,12 +185,17 @@ export function ActionItems({
   return (
     <section className="space-y-4">
       <div className="space-y-2 px-0.5 sm:px-1">
-        <Badge variant="outline" className="px-3 py-1 text-sm">
-          What needs attention
+        <Badge
+          variant="outline"
+          className="px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
+        >
+          Needs attention
         </Badge>
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{attentionLabel}</h2>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-          Start with the top card. Domus sorted everything by urgency so you can clear the queue without hunting through sections.
+        <h2 className="text-[22px] font-[640] tracking-[-0.02em] text-[var(--ink)]">
+          {attentionLabel}
+        </h2>
+        <p className="max-w-2xl text-sm leading-6 text-[var(--muted)]">
+          Start with the first card. These items are sorted by urgency.
         </p>
       </div>
 
@@ -206,7 +219,7 @@ export function ActionItems({
                 }
               }}
               className={cn(
-                "domus-card cursor-pointer border-l-4 px-4 py-4 transition hover:-translate-y-0.5 hover:shadow-md sm:px-5",
+                "domus-card cursor-pointer border-l-[3px] px-4 py-4 transition hover:-translate-y-0.5 hover:border-[var(--accent-line)] hover:shadow-md sm:px-5",
                 severityClasses[item.severity]
               )}
               title={`Open ${item.linkTo.replace(/-/g, " ")}.`}
@@ -219,7 +232,7 @@ export function ActionItems({
                     </Badge>
                     <span className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
                       <Icon className="h-4 w-4" />
-                      Needs attention
+                      Review
                     </span>
                   </div>
                   <div className="space-y-1">

@@ -32,7 +32,7 @@ function toNumber(
 
 export function RentCollectionChart({ metrics }: RentCollectionChartProps) {
   if (metrics.length === 0) {
-    return <div className="flex h-[300px] items-center justify-center text-sm text-zinc-500">No rent history yet.</div>;
+    return <div className="flex h-[300px] items-center justify-center text-sm text-[var(--muted)]">No rent history yet.</div>;
   }
 
   const chartData = metrics.map((metric) => ({
@@ -46,7 +46,7 @@ export function RentCollectionChart({ metrics }: RentCollectionChartProps) {
     <div className="h-[300px] w-full">
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={chartData} margin={{ left: 8, right: 12, top: 8, bottom: 0 }}>
-          <CartesianGrid stroke="var(--domus-divider)" strokeDasharray="3 3" />
+          <CartesianGrid stroke="var(--domus-divider)" strokeDasharray="3 3" vertical={false} />
           <XAxis dataKey="month" tick={{ fill: "var(--domus-muted-text)", fontSize: 12 }} />
           <YAxis tickFormatter={(value) => `$${value}`} tick={{ fill: "var(--domus-muted-text)", fontSize: 12 }} />
           <Tooltip
@@ -61,16 +61,49 @@ export function RentCollectionChart({ metrics }: RentCollectionChartProps) {
             formatter={(value, name) => [formatDollars(toNumber(value)), name]}
             labelFormatter={(label) => `Month: ${label}`}
           />
-          <Bar dataKey="collected" stackId="rent" fill="#059669" radius={[4, 4, 0, 0]} name="Collected" />
-          <Bar dataKey="late" stackId="rent" fill="#e11d48" radius={[4, 4, 0, 0]} name="Late" />
+          <Bar
+            dataKey="collected"
+            stackId="rent"
+            fill="color-mix(in srgb, var(--accent) 82%, var(--surface))"
+            radius={[4, 4, 0, 0]}
+            name="Collected"
+          />
+          <Bar
+            dataKey="late"
+            stackId="rent"
+            fill="color-mix(in srgb, var(--accent) 28%, var(--surface-3))"
+            radius={[4, 4, 0, 0]}
+            name="Late"
+          />
           <Line
             type="monotone"
             dataKey="due"
-            stroke="#7c3aed"
-            strokeDasharray="6 4"
+            stroke="var(--accent)"
             strokeWidth={2}
-            dot={{ r: 2 }}
+            dot={{ r: 0 }}
+            activeDot={{ r: 0 }}
             name="Due"
+          />
+          <Line
+            type="monotone"
+            dataKey="due"
+            stroke="transparent"
+            dot={(props) =>
+              props.index === chartData.length - 1 ? (
+                <circle
+                  cx={props.cx}
+                  cy={props.cy}
+                  r={4}
+                  fill="var(--accent)"
+                  stroke="var(--surface)"
+                  strokeWidth={2}
+                />
+              ) : (
+                <></>
+              )
+            }
+            activeDot={false}
+            name=""
           />
         </ComposedChart>
       </ResponsiveContainer>

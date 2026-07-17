@@ -26,9 +26,9 @@ const starterPrompts = [
 function LoadingDots() {
   return (
     <div className="flex items-center gap-1 px-1 py-1">
-      <span className="h-2 w-2 animate-bounce rounded-full bg-zinc-400 [animation-delay:-0.3s]" />
-      <span className="h-2 w-2 animate-bounce rounded-full bg-zinc-400 [animation-delay:-0.15s]" />
-      <span className="h-2 w-2 animate-bounce rounded-full bg-zinc-400" />
+      <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--faint)] [animation-delay:-0.3s]" />
+      <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--faint)] [animation-delay:-0.15s]" />
+      <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--faint)]" />
     </div>
   );
 }
@@ -205,7 +205,7 @@ export function AiAssistant({ accountId, ownerName }: AiAssistantProps) {
           ref={triggerRef}
           type="button"
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+9rem)] right-3 z-30 inline-flex min-h-12 items-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-700 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:shadow-xl sm:bottom-24 sm:right-6"
+          className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+9rem)] right-3 z-30 inline-flex min-h-12 items-center gap-2 rounded-2xl border border-[var(--accent-line)] bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-[var(--accent-strong)] hover:shadow-xl sm:bottom-24 sm:right-6"
           title={helperText}
           aria-label="Ask Domus"
         >
@@ -279,12 +279,12 @@ export function AiAssistant({ accountId, ownerName }: AiAssistantProps) {
                     ) : null}
 
                     <div
-                      className={cn(
-                        "max-w-[85%] whitespace-pre-wrap px-4 py-2 text-sm shadow-sm",
-                        message.role === "user"
-                          ? "rounded-2xl rounded-br-sm bg-violet-600 text-white"
+                        className={cn(
+                          "max-w-[85%] whitespace-pre-wrap px-4 py-2 text-sm shadow-sm",
+                          message.role === "user"
+                          ? "rounded-2xl rounded-br-sm bg-[var(--accent)] text-white"
                           : "rounded-2xl rounded-bl-sm bg-muted text-foreground"
-                      )}
+                        )}
                     >
                       {message.role === "assistant" && message.content.length === 0 && isLoading ? (
                         <LoadingDots />
@@ -322,7 +322,7 @@ export function AiAssistant({ accountId, ownerName }: AiAssistantProps) {
                   }
                 }}
                 placeholder="Ask anything about your properties..."
-                className="min-h-11 flex-1 resize-none rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
+                className="min-h-11 flex-1 resize-none rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-line)]"
                 rows={1}
                 disabled={isLoading}
               />

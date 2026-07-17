@@ -8,7 +8,14 @@ interface ExpenseBreakdownChartProps {
   categories: ExpenseCategoryMetric[];
 }
 
-const COLORS = ["#7c3aed", "#059669", "#d97706", "#e11d48", "#0ea5e9", "#8b5cf6", "#14b8a6", "#f59e0b", "#ef4444", "#6366f1"];
+const COLORS = [
+  "var(--accent)",
+  "color-mix(in srgb, var(--accent) 82%, var(--surface))",
+  "color-mix(in srgb, var(--accent) 66%, var(--surface))",
+  "color-mix(in srgb, var(--accent) 52%, var(--surface))",
+  "color-mix(in srgb, var(--accent) 40%, var(--surface))",
+  "color-mix(in srgb, var(--accent) 30%, var(--surface-2))"
+];
 
 function formatCategory(value: string) {
   return value
@@ -28,7 +35,7 @@ function toNumber(
 
 export function ExpenseBreakdownChart({ categories }: ExpenseBreakdownChartProps) {
   if (categories.length === 0) {
-    return <div className="flex h-[300px] items-center justify-center text-sm text-zinc-500">No expense data yet.</div>;
+    return <div className="flex h-[300px] items-center justify-center text-sm text-[var(--muted)]">No expense data yet.</div>;
   }
 
   const total = categories.reduce((sum, category) => sum + category.totalCents, 0);
@@ -69,7 +76,9 @@ export function ExpenseBreakdownChart({ categories }: ExpenseBreakdownChartProps
           <Legend wrapperStyle={{ color: "var(--domus-muted-text)", fontSize: 12 }} />
         </PieChart>
       </ResponsiveContainer>
-      <p className="mt-2 text-center text-xs font-medium text-zinc-500">Total: {formatCurrency(total)}</p>
+      <p className="mt-2 text-center text-xs font-medium text-[var(--muted)]">
+        Total: {formatCurrency(total)}
+      </p>
     </div>
   );
 }

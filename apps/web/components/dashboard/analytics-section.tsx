@@ -26,15 +26,17 @@ function KpiMiniCard({
   positive?: boolean;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-3 shadow-sm">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+    <div className="domus-card p-4 shadow-sm">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+        {label}
+      </p>
       <p
-        className={`mt-1 text-lg font-bold ${
+        className={`tabular-nums mt-3 text-[25px] font-[660] tracking-[-0.025em] ${
           positive === false
-            ? "text-rose-500"
+            ? "text-[var(--crit)]"
             : positive === true
-              ? "text-emerald-500"
-              : "text-foreground"
+              ? "text-[var(--pos)]"
+              : "text-[var(--ink)]"
         }`}
       >
         {value}
@@ -53,9 +55,12 @@ function ChartCard({
   children: ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-      <p className="text-xs text-muted-foreground">{description}</p>
+    <div className="domus-card p-5 shadow-sm">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+        Analytics
+      </p>
+      <h3 className="mt-1 text-base font-semibold text-[var(--ink)]">{title}</h3>
+      <p className="text-sm text-[var(--muted)]">{description}</p>
       <div className="mt-4">{children}</div>
     </div>
   );

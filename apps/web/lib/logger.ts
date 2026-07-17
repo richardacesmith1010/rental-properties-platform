@@ -12,6 +12,13 @@ export interface LogContext {
   entityId?: string;
 }
 
+export interface PerfLogContext {
+  scope: string;
+  name: string;
+  durationMs: number;
+  meta?: Record<string, unknown>;
+}
+
 export function logFailedSideEffect(ctx: LogContext, error: unknown): void {
   const message = error instanceof Error ? error.message : String(error);
 
@@ -45,4 +52,55 @@ export function sideEffectError(
       error
     );
   };
+}
+
+function normalizePerfDuration(durationMs: number) {
+  return Number(durationMs.toFixed(1));
+}
+
+export function logPerfEvent({ scope, name, durationMs, meta }: PerfLogContext): void {
+  console.info(
+    `[perf:${scope}] ${JSON.stringify({
+      timestamp: new Date().toISOString(),
+      scope,
+      name,
+      durationMs: normalizePerfDuration(durationMs),
+      ...(meta ?? {})
+    })}`
+  );
+}
+
+export async function measurePerf<T>(
+  scope: string,
+  name: string,
+  work: () => Promise<T>,
+  meta?: Record<string, unknown>
+): Promise<T> {
+  const startedAt = performance.now();
+
+  try {
+    const result = await work();
+    logPerfEvent({
+      scope,
+      name,
+      durationMs: performance.now() - startedAt,
+      meta: {
+        status: "ok",
+        ...(meta ?? {})
+      }
+    });
+    return result;
+  } catch (error) {
+    logPerfEvent({
+      scope,
+      name,
+      durationMs: performance.now() - startedAt,
+      meta: {
+        status: "error",
+        ...(meta ?? {}),
+        error: error instanceof Error ? error.message : String(error)
+      }
+    });
+    throw error;
+  }
 }

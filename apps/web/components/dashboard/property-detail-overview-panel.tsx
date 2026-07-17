@@ -38,7 +38,7 @@ export function PropertyDetailOverviewPanel({
     <div className="space-y-4">
       <Card className="border border-border/60 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold">
+          <CardTitle className="text-[22px] font-[640] tracking-[-0.02em]">
             {data.property.name}
           </CardTitle>
         </CardHeader>
@@ -52,20 +52,26 @@ export function PropertyDetailOverviewPanel({
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl border border-border/60 bg-card/70 p-4">
-              <p className="text-sm text-muted-foreground">Monthly revenue</p>
-              <p className="mt-1 text-2xl font-semibold text-foreground">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                Monthly revenue
+              </p>
+              <p className="tabular-nums mt-3 text-[25px] font-[660] tracking-[-0.025em] text-[var(--ink)]">
                 {formatCurrency(monthlyRevenueCents)}
               </p>
             </div>
             <div className="rounded-2xl border border-border/60 bg-card/70 p-4">
-              <p className="text-sm text-muted-foreground">Outstanding balance</p>
-              <p className="mt-1 text-2xl font-semibold text-foreground">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                Outstanding balance
+              </p>
+              <p className="tabular-nums mt-3 text-[25px] font-[660] tracking-[-0.025em] text-[var(--ink)]">
                 {formatCurrency(outstandingBalanceCents)}
               </p>
             </div>
             <div className="rounded-2xl border border-border/60 bg-card/70 p-4">
-              <p className="text-sm text-muted-foreground">Units</p>
-              <p className="mt-1 text-2xl font-semibold text-foreground">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                Units
+              </p>
+              <p className="tabular-nums mt-3 text-[25px] font-[660] tracking-[-0.025em] text-[var(--ink)]">
                 {data.units.length}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
@@ -73,8 +79,10 @@ export function PropertyDetailOverviewPanel({
               </p>
             </div>
             <div className="rounded-2xl border border-border/60 bg-card/70 p-4">
-              <p className="text-sm text-muted-foreground">Quick stats</p>
-              <p className="mt-1 text-2xl font-semibold text-foreground">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                Open maintenance
+              </p>
+              <p className="tabular-nums mt-3 text-[25px] font-[660] tracking-[-0.025em] text-[var(--ink)]">
                 {openMaintenanceCount}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
@@ -87,7 +95,7 @@ export function PropertyDetailOverviewPanel({
 
       <Card className="border border-border/60 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-lg font-semibold">Recent activity</CardTitle>
+          <CardTitle className="text-[22px] font-[640] tracking-[-0.02em]">Recent activity</CardTitle>
         </CardHeader>
         <CardContent>
           {data.activity.length === 0 ? (

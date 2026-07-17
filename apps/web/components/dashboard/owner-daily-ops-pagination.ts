@@ -18,6 +18,7 @@ export const OWNER_DAILY_OPS_SECTION_IDS = [
 interface UseOwnerDailyOpsPaginationArgs {
   enabled: boolean;
   activeSection: string;
+  startAtHome: boolean;
   sectionItems: NavItem[];
   onSelectSection: (sectionId: string) => void;
 }
@@ -25,11 +26,23 @@ interface UseOwnerDailyOpsPaginationArgs {
 export function useOwnerDailyOpsPagination({
   enabled,
   activeSection,
+  startAtHome,
   sectionItems,
   onSelectSection
 }: UseOwnerDailyOpsPaginationArgs) {
   const totalPages = enabled ? sectionItems.length + 1 : 0;
-  const [currentPage, setCurrentPage] = useState(0);
+  const [currentPage, setCurrentPage] = useState(() => {
+    if (!enabled) {
+      return 0;
+    }
+
+    if (startAtHome) {
+      return 0;
+    }
+
+    const matchingIndex = sectionItems.findIndex((item) => item.id === activeSection);
+    return matchingIndex >= 0 ? matchingIndex + 1 : 0;
+  });
 
   const currentSectionItem = useMemo(
     () => (currentPage > 0 ? sectionItems[currentPage - 1] ?? null : null),
@@ -42,12 +55,15 @@ export function useOwnerDailyOpsPagination({
       return;
     }
 
-    const matchingIndex = sectionItems.findIndex((item) => item.id === activeSection);
-    if (matchingIndex < 0) {
+    if (startAtHome) {
+      if (currentPage !== 0) {
+        setCurrentPage(0);
+      }
       return;
     }
 
-    if (currentPage === 0 && activeSection === "overview") {
+    const matchingIndex = sectionItems.findIndex((item) => item.id === activeSection);
+    if (matchingIndex < 0) {
       return;
     }
 
@@ -55,7 +71,7 @@ export function useOwnerDailyOpsPagination({
     if (currentPage !== nextPage) {
       setCurrentPage(nextPage);
     }
-  }, [activeSection, currentPage, enabled, sectionItems]);
+  }, [activeSection, currentPage, enabled, sectionItems, startAtHome]);
 
   useEffect(() => {
     if (!enabled) {

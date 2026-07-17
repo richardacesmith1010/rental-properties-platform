@@ -63,17 +63,22 @@ export function ReportCard({ id, icon: Icon, title, description }: ReportCardPro
   return (
     <a
       href={`#${id}`}
-      className="domus-card block p-5 shadow-sm transition hover:border-violet-200 hover:shadow-md"
+      className="domus-card block p-5 shadow-sm transition hover:border-[var(--accent-line)] hover:bg-[color:color-mix(in_srgb,var(--surface)_96%,transparent)] hover:shadow-md"
       title={`Jump to the ${title} report.`}
     >
       <div className="flex items-start gap-3">
-        <div className="rounded-lg bg-violet-50 p-2 text-violet-700">
+        <div className="rounded-lg bg-[var(--accent-weak)] p-2 text-[var(--accent)]">
           <ResolvedIcon className="h-5 w-5" />
         </div>
         <div>
-          <h2 className="text-base font-medium text-zinc-900">{title}</h2>
-          <p className="mt-1 text-sm text-zinc-500">{description}</p>
-          <span className="mt-3 inline-flex text-sm font-medium text-violet-700">View report</span>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+            Jump to section
+          </p>
+          <h2 className="mt-1 text-base font-medium text-[var(--ink)]">{title}</h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">{description}</p>
+          <span className="mt-3 inline-flex text-sm font-medium text-[var(--accent)]">
+            View report
+          </span>
         </div>
       </div>
     </a>
@@ -150,11 +155,16 @@ export function ReportSection<T>({
   }
 
   return (
-      <section id={id} className="domus-card scroll-mt-24 p-5 shadow-sm">
+    <section id={id} className="domus-card scroll-mt-24 p-5 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="text-xl font-semibold text-zinc-900">{title}</h3>
-          <p className="mt-1 text-sm text-zinc-500">{description}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+            Report details
+          </p>
+          <h3 className="mt-1 text-[22px] font-[640] tracking-[-0.02em] text-[var(--ink)]">
+            {title}
+          </h3>
+          <p className="mt-1 text-sm text-[var(--muted)]">{description}</p>
         </div>
         <Button
           type="button"
@@ -174,15 +184,18 @@ export function ReportSection<T>({
         </div>
       ) : (
         <div className="mt-6 overflow-x-auto [-webkit-overflow-scrolling:touch]">
-          <table className="min-w-full divide-y divide-zinc-200 text-sm">
+          <table className="min-w-full divide-y divide-[var(--line)] text-sm">
             <thead>
               <tr>
                 {columns.map((column) => (
-                  <th key={column.key} className={`px-3 py-2 text-left font-semibold text-zinc-600 ${column.className ?? ""}`}>
+                  <th
+                    key={column.key}
+                    className={`px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)] ${column.className ?? ""}`}
+                  >
                     {column.sortValue ? (
                       <button
                         type="button"
-                        className="inline-flex items-center gap-1 hover:text-zinc-900"
+                        className="inline-flex items-center gap-1 hover:text-[var(--ink)]"
                         onClick={() => handleSort(column)}
                         title={`Sort ${title} by ${column.label}.`}
                       >
@@ -208,7 +221,7 @@ export function ReportSection<T>({
                       title={renderExpandedContent ? `Expand ${title} details for this row.` : undefined}
                     >
                       {columns.map((column) => (
-                        <td key={column.key} className={`px-3 py-2 text-zinc-700 ${column.className ?? ""}`}>
+                        <td key={column.key} className={`px-3 py-2 text-[var(--ink-2)] ${column.className ?? ""}`}>
                           {column.render(row)}
                         </td>
                       ))}
