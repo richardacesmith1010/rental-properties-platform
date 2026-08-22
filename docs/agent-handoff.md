@@ -79,7 +79,14 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 **Phase 1b backlog (owner files still violet, listed by Codex):** `dashboard/invitations/*`, `maintenance-tracker.tsx`, `maintenance-comment-thread.tsx`, `distribution-config-panel.tsx`, `ownership/*`, `inbox-section.tsx`, `connect-banner.tsx`, `app/owner/error.tsx`, `app/owner/setup/page.tsx`. Plus: strip user email from `[perf:owner]` log metadata (userId only); dark-mode walk of owner surface + real-owner drill-down numbers check pending (user's evening).
 
-**Next:** Phase 1b (finish owner violet remnants + log-metadata cleanup) or Phase 2 (tenant surface) — user's call; then manager (Phase 3), settings (4), de-gamification (5).
+## Reskin Phase 1b — SHIPPED (Sprint 133, 2026-08-22, commit 34433df)
+
+- **Owner surface is 100% off legacy purple**: 45 dashboard/owner files converted; independent sweep (`violet-|purple-|indigo-` under `components/dashboard` + `app/owner`) returns ZERO lines. Settings dark-mode bugs fixed (h1 + Back pill via Button primitive). `[perf:owner]` logs userId, never email.
+- Codex self-flagged `no_out_of_scope_diffs=false`: my packet's sweep criterion spanned more than its file list (L-011 added to CLAUDE.md). Extras reviewed and accepted — incl. a cosmetic-only token retone of `pay-rent-card.tsx` (tenant money-UI; behavior untouched; helps Phase 2).
+- Verified: independent gate green, 974/974, smoke 3/3, scripted Playwright visual walk (zero console errors across 12 captures; Home/Maintenance/Settings confirmed v2 in both themes). Ownership/inbox/invitations section visuals need real-account data to render — covered by the user's next real-data walk.
+- **Tooling (2026-08-22):** Codex CLI upgraded to 0.149 (`--full-auto` removed → `--sandbox workspace-write`; account model now gpt-5.6-terra); Vercel creds re-authed after expiry. Both recorded in memory.
+
+**Next:** Phase 2 — tenant surface (pay-rent flow, the highest-trust screens; partially pre-toned via pay-rent-card). Then manager (3), settings components (4), de-gamification (5). Still pending user: J&MSP LLC bank connect (~3 min); real-data owner walk incl. drill-down numbers; tenant-adoption conversation (Angel has 2 months rent open, has never paid through Domus).
 
 ## Validation Snapshot
 - Unit tests: `562/562` passing at the latest clean gate baseline
