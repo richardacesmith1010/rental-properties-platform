@@ -108,11 +108,11 @@ export function DistributionApprovalCard({
         <div className="grid gap-3 md:grid-cols-2">
           <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Current</p>
-            <p className="mt-2 text-sm text-zinc-800">{describeConfig(request.currentConfig)}</p>
+            <p className="mt-2 text-sm text-[var(--ink)]">{describeConfig(request.currentConfig)}</p>
           </div>
           <div className="rounded-xl border border-[var(--accent-line)] bg-[var(--surface)] px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Proposed</p>
-            <p className="mt-2 text-sm text-zinc-800">{describeConfig(request.proposedConfig)}</p>
+            <p className="mt-2 text-sm text-[var(--ink)]">{describeConfig(request.proposedConfig)}</p>
           </div>
         </div>
 
@@ -129,7 +129,7 @@ export function DistributionApprovalCard({
                 key={`${request.id}:${vote.voterId}`}
                 className="flex items-center justify-between rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm"
               >
-                <span className="text-zinc-800">{vote.voterName ?? "Unknown member"}</span>
+                <span className="text-[var(--ink)]">{vote.voterName ?? "Unknown member"}</span>
                 <Badge variant={vote.vote === "approve" ? "success" : "destructive"}>
                   {vote.vote}
                 </Badge>

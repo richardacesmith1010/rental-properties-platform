@@ -118,7 +118,7 @@ function ApplicationCard({
       <CardContent className="space-y-3 pt-5">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <p className="text-sm font-semibold text-zinc-900">
+            <p className="text-sm font-semibold text-[var(--ink)]">
               {application.applicantName?.trim() || application.applicantEmail}
             </p>
             <p className="text-xs text-zinc-500">{application.applicantEmail}</p>

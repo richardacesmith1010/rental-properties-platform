@@ -82,7 +82,7 @@ export function MaintenanceCommentThread({
               }`}
             >
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-sm font-semibold text-zinc-900">{comment.authorName}</p>
+                <p className="text-sm font-semibold text-[var(--ink)]">{comment.authorName}</p>
                 <Badge variant="outline">{roleLabel(comment.authorRole)}</Badge>
                 {comment.isInternal ? <Badge variant="warning">Internal</Badge> : null}
                 <p className="text-xs text-zinc-500">{formatDateTime(comment.createdAt)}</p>

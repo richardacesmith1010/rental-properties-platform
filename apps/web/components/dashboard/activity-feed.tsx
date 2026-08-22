@@ -59,7 +59,7 @@ export function ActivityFeed({ logs, limit = 20 }: ActivityFeedProps) {
                     <Icon className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-zinc-900">
+                    <p className="text-sm font-medium text-[var(--ink)]">
                       {formatAuditAction(log.action, log.entityType, log.metadata)}
                     </p>
                     <p className="mt-1 text-xs text-zinc-500">

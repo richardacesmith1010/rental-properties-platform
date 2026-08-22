@@ -161,7 +161,7 @@ export function UserMenuPopover({
           )}
         >
           <div className="border-b border-zinc-100 px-4 py-3">
-            <p className="text-sm font-semibold text-zinc-900">{displayName}</p>
+            <p className="text-sm font-semibold text-[var(--ink)]">{displayName}</p>
             <p className="mt-0.5 text-xs text-zinc-500">{userEmail}</p>
           </div>
 

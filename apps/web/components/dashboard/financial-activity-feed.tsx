@@ -81,7 +81,7 @@ export function FinancialActivityFeed({ events }: FinancialActivityFeedProps) {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-zinc-900">{event.title}</p>
+                      <p className="text-sm font-semibold text-[var(--ink)]">{event.title}</p>
                       {event.status ? (
                         <Badge variant={badgeVariant(event.status)} className="capitalize">
                           {event.status}

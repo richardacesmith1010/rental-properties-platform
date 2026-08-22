@@ -63,7 +63,7 @@ export function RenameRequestBanner({
     <Card className="mt-3 border-amber-200/80 bg-amber-50/20">
       <CardContent className="space-y-3 pt-4">
         <div className="space-y-1">
-          <p className="text-sm font-semibold text-zinc-900">
+          <p className="text-sm font-semibold text-[var(--ink)]">
             Rename to &quot;{request.proposedName}&quot; — {request.votesReceived}/{request.votesRequired} votes
           </p>
           <p className="text-xs text-zinc-600">Requested by {request.requestedByName}</p>
@@ -111,7 +111,7 @@ export function DeleteRequestBanner({
     <Card className="mt-3 border-red-200/80 bg-red-50/30">
       <CardContent className="space-y-3 pt-4">
         <div className="space-y-1">
-          <p className="text-sm font-semibold text-zinc-900">
+          <p className="text-sm font-semibold text-[var(--ink)]">
             Deletion requested — {request.votesReceived}/{request.votesRequired} votes
           </p>
           <p className="text-xs text-zinc-600">Requested by {request.requestedByName}</p>

@@ -75,7 +75,7 @@ function AutomationToggleRow({
   return (
     <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-zinc-900">{template.name}</p>
+        <p className="text-sm font-semibold text-[var(--ink)]">{template.name}</p>
         <Badge variant={enabled ? "success" : "outline"}>{enabled ? "Enabled" : "Disabled"}</Badge>
       </div>
       <p className="mt-1 text-xs text-zinc-600">

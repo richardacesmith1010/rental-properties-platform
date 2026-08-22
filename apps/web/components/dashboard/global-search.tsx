@@ -107,7 +107,7 @@ export function GlobalSearch({ items, placeholder = "Search..." }: GlobalSearchP
                           onClick={() => setOpen(false)}
                           title={`Open ${item.label}.`}
                         >
-                          <p className="text-sm font-medium text-zinc-900">{item.label}</p>
+                          <p className="text-sm font-medium text-[var(--ink)]">{item.label}</p>
                           {item.description ? (
                             <p className="text-xs text-zinc-500">{item.description}</p>
                           ) : null}

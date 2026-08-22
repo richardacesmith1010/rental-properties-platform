@@ -87,7 +87,7 @@ function InboxNotificationRow({
   return (
     <DataRow last={last}>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-zinc-900">{notification.title}</p>
+        <p className="text-sm font-semibold text-[var(--ink)]">{notification.title}</p>
         <p className="mt-0.5 text-xs text-zinc-500">{notification.body}</p>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           <Badge variant="outline" className="uppercase">
@@ -386,7 +386,7 @@ export function InboxSection({
                       title="Open this conversation thread."
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <p className="truncate text-base font-medium text-zinc-900">{thread.subject}</p>
+                        <p className="truncate text-base font-medium text-[var(--ink)]">{thread.subject}</p>
                         <Badge variant="outline">{thread.messageCount} msg</Badge>
                       </div>
                       <p className="mt-0.5 text-sm text-zinc-500">{thread.propertyName}</p>
@@ -402,7 +402,7 @@ export function InboxSection({
                   {selectedThread ? (
                     <div className="space-y-3">
                       <div>
-                        <p className="text-base font-medium text-zinc-900">{selectedThread.subject}</p>
+                        <p className="text-base font-medium text-[var(--ink)]">{selectedThread.subject}</p>
                         <p className="text-sm text-zinc-500">{selectedThread.propertyName}</p>
                         <div className="mt-1 flex flex-wrap gap-2">
                           <Badge variant="outline">{typeLabel(selectedThread.entityType)}</Badge>
@@ -430,7 +430,7 @@ export function InboxSection({
                               <p className="text-sm text-zinc-500">
                                 {message.senderEmail ?? "System"} • {formatTimestamp(message.createdAt)}
                               </p>
-                              <p className="mt-1 text-sm text-zinc-800">{message.body}</p>
+                              <p className="mt-1 text-sm text-[var(--ink)]">{message.body}</p>
                             </div>
                           ))}
                           </AnimatedList>

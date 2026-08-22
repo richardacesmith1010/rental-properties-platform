@@ -150,7 +150,7 @@ export function DistributionConfigPanel({
                 title="Keep all rent funds in the LLC Stripe account."
               />
               <div>
-                <p className="text-sm font-semibold text-zinc-900">Retain All</p>
+                <p className="text-sm font-semibold text-[var(--ink)]">Retain All</p>
                 <p className="text-xs text-zinc-500">Keep all money in the LLC.</p>
               </div>
             </label>
@@ -165,7 +165,7 @@ export function DistributionConfigPanel({
                 title="Split rent evenly across all active LLC members."
               />
               <div>
-                <p className="text-sm font-semibold text-zinc-900">Split Equally</p>
+                <p className="text-sm font-semibold text-[var(--ink)]">Split Equally</p>
                 <p className="text-xs text-zinc-500">Everyone gets the same amount.</p>
               </div>
             </label>
@@ -180,7 +180,7 @@ export function DistributionConfigPanel({
                 title="Set custom percentages per active LLC member."
               />
               <div>
-                <p className="text-sm font-semibold text-zinc-900">Custom Split</p>
+                <p className="text-sm font-semibold text-[var(--ink)]">Custom Split</p>
                 <p className="text-xs text-zinc-500">You pick who gets what.</p>
               </div>
             </label>
@@ -201,10 +201,10 @@ export function DistributionConfigPanel({
                 activeMembers.map((member, index) => (
                   <DataRow key={member.profileId} last={index === activeMembers.length - 1}>
                     <div>
-                      <p className="text-sm font-semibold text-zinc-900">{member.fullName}</p>
+                      <p className="text-sm font-semibold text-[var(--ink)]">{member.fullName}</p>
                       <p className="text-xs text-zinc-500">{member.email}</p>
                     </div>
-                    <span className="text-sm font-semibold text-zinc-900">
+                    <span className="text-sm font-semibold text-[var(--ink)]">
                       {equalShare.toFixed(2)}%
                     </span>
                   </DataRow>
@@ -220,7 +220,7 @@ export function DistributionConfigPanel({
                 return (
                   <DataRow key={member.profileId} last={index === activeMembers.length - 1}>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-zinc-900">{member.fullName}</p>
+                      <p className="truncate text-sm font-semibold text-[var(--ink)]">{member.fullName}</p>
                       <p className="truncate text-xs text-zinc-500">{member.email}</p>
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">

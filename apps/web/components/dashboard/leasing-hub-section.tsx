@@ -152,7 +152,7 @@ function ListingRow({
     <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="text-sm font-semibold text-zinc-900">{listing.headline}</p>
+          <p className="text-sm font-semibold text-[var(--ink)]">{listing.headline}</p>
           <p className="text-xs text-zinc-500">{listing.propertyName}</p>
         </div>
         <Badge variant={listingStatusBadgeVariant(listing.status)} className="uppercase">
@@ -254,7 +254,7 @@ export function LeasingHubSection({
           <Card key={stage.id}>
             <CardContent className="space-y-3 pt-5">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-zinc-900">{stage.label}</p>
+                <p className="text-sm font-semibold text-[var(--ink)]">{stage.label}</p>
                 <Badge variant={stage.done ? "success" : "outline"}>{stage.done ? "Done" : "Pending"}</Badge>
               </div>
               <p className="text-xs text-zinc-600">{stage.description}</p>

@@ -122,7 +122,7 @@ export function OperationsSection({
               className="domus-card p-5 text-left transition-transform duration-150 hover:-translate-y-0.5"
               title={item.description}
             >
-              <p className="text-sm font-semibold text-zinc-900">{item.title}</p>
+              <p className="text-sm font-semibold text-[var(--ink)]">{item.title}</p>
               <p className="mt-2 text-sm text-zinc-600">{item.description}</p>
             </button>
           ))}
