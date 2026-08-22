@@ -313,7 +313,7 @@ function ApplicationCard({
             ) : (
               <div className="space-y-2">
                 {application.events.map((event) => (
-                  <div key={event.id} className="rounded-md border border-zinc-200 bg-white px-3 py-2">
+                  <div key={event.id} className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <Badge variant="outline" className="uppercase">
                         {event.eventType.replaceAll("_", " ")}

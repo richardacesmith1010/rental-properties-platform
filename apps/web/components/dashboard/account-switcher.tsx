@@ -309,7 +309,9 @@ export function AccountSwitcher({
                   aria-selected={isActive}
                   onClick={() => handleAccountChange(account.id)}
                   className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-[10px] px-3 py-2 text-left text-sm transition sm:min-h-0 ${
-                    isActive ? "bg-white/14 text-white" : "text-white/82 hover:bg-white/10 hover:text-white"
+                    isActive
+                      ? "bg-[var(--surface-3)] text-[var(--ink)]"
+                      : "text-[var(--ink-2)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"
                   }`}
                   title={`Switch to ${account.displayName}.`}
                 >

@@ -680,7 +680,7 @@ export async function loadOwnerPageData(params: {
       : Promise.resolve(undefined),
     hasBundle("feedback")
       ? measureOwnerWithRequest("feedback.new-count", () => getNewFeedbackCountForOwner(params.userEmail), {
-          userEmail: params.userEmail
+          userId: params.userId
         })
       : Promise.resolve(undefined),
     measureOwnerWithRequest("stripe-connect.status", () => getRentCollectionConnectStatus(params.userId))

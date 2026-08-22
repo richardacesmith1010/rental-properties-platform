@@ -92,7 +92,7 @@ export function DistributionApprovalCard({
   const currentUserVote = request.votes.find((vote) => vote.voterId === currentUserId);
 
   return (
-    <Card className="border-violet-200/80 bg-violet-50/30">
+    <Card className="border-[var(--accent-line)] bg-[var(--accent-weak)]">
       <CardHeader className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle className="text-base">Distribution Approval</CardTitle>
@@ -106,17 +106,17 @@ export function DistributionApprovalCard({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3 md:grid-cols-2">
-          <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3">
+          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Current</p>
             <p className="mt-2 text-sm text-zinc-800">{describeConfig(request.currentConfig)}</p>
           </div>
-          <div className="rounded-xl border border-violet-200 bg-white px-4 py-3">
+          <div className="rounded-xl border border-[var(--accent-line)] bg-[var(--surface)] px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Proposed</p>
             <p className="mt-2 text-sm text-zinc-800">{describeConfig(request.proposedConfig)}</p>
           </div>
         </div>
 
-        <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700">
+        <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--ink-2)]">
           {request.votesReceived} vote{request.votesReceived === 1 ? "" : "s"} cast · {request.votesRequired} required
         </div>
 
@@ -127,7 +127,7 @@ export function DistributionApprovalCard({
             request.votes.map((vote) => (
               <div
                 key={`${request.id}:${vote.voterId}`}
-                className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm"
+                className="flex items-center justify-between rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm"
               >
                 <span className="text-zinc-800">{vote.voterName ?? "Unknown member"}</span>
                 <Badge variant={vote.vote === "approve" ? "success" : "destructive"}>

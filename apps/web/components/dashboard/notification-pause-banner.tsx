@@ -52,7 +52,7 @@ export function NotificationPauseBanner({
         <SubmitButton
           size="sm"
           variant="outline"
-          className="w-full border-amber-300 bg-white text-amber-900 hover:bg-amber-100 sm:w-auto"
+          className="w-full border-[var(--warn)] bg-[var(--surface)] text-[var(--warn)] hover:bg-[var(--warn-bg)] sm:w-auto"
           title="Resume email notifications immediately."
         >
           Resume now

@@ -51,7 +51,7 @@ function RenameAccountForm({
   }, [onCancel, state]);
 
   return (
-    <Card className="mt-3 border-violet-200/80 bg-violet-50/20">
+    <Card className="mt-3 border-[var(--accent-line)] bg-[var(--accent-weak)]">
       <CardContent className="space-y-4 pt-4">
         {state && !state.success ? <Alert variant="error">{state.error}</Alert> : null}
         {state?.success ? <Alert variant="success">{state.message ?? "Account updated."}</Alert> : null}

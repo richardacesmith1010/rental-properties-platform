@@ -32,6 +32,7 @@ import { SettingsLayout } from "@/components/settings/settings-layout";
 import { AccountDataSettings } from "@/components/settings/account-data-settings";
 import { InstallDomusSettingsCard } from "@/components/pwa/install-prompt";
 import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   getUserNotificationPreferenceSettings,
   NOTIFICATION_EMAIL_PREFERENCE_OPTIONS
@@ -74,18 +75,16 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     <main id="main-content" className="app-surface min-h-screen px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
       <div className="mx-auto max-w-4xl space-y-6">
         <header className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Settings</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--ink)]">Settings</h1>
           <p className="text-sm text-zinc-600">
             Manage your Domus experience and preferences.
           </p>
           <div className="flex flex-wrap gap-2">
-            <Link
-              href={workspacePath}
-              className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2"
-              title="Return to your main workspace."
-            >
-              Back to Workspace
-            </Link>
+            <Button asChild size="sm" variant="outline">
+              <Link href={workspacePath} title="Return to your main workspace.">
+                Back to Workspace
+              </Link>
+            </Button>
           </div>
         </header>
 

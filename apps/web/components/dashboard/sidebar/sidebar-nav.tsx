@@ -243,7 +243,7 @@ export function SidebarNav({
             alt="Domus"
             width={32}
             height={32}
-            className="rounded-xl shadow-lg shadow-violet-950/25"
+            className="rounded-xl shadow-[var(--domus-shadow-md)]"
             priority
           />
           <div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
 interface ConnectBannerProps {
   connected: boolean;
   role: "owner" | "manager";
@@ -41,12 +43,9 @@ export function ConnectBanner({ connected, role, href = "/connect/onboard" }: Co
               : "Finish Stripe setup so you can receive management fee payments."}
           </p>
         </div>
-        <a
-          href={href}
-          className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-700"
-        >
-          Set up now
-        </a>
+        <Button asChild variant="outline" className="border-[var(--warn)] bg-[var(--warn-bg)] text-[var(--warn)] hover:bg-[var(--warn-bg)] hover:brightness-95">
+          <a href={href} title="Set up Stripe payments.">Set up now</a>
+        </Button>
       </div>
     </div>
   );

@@ -149,7 +149,7 @@ function ListingRow({
   const [state, action] = useFormState(onUpdateListingStatus ?? unavailableAction, null);
 
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-3">
+    <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-sm font-semibold text-zinc-900">{listing.headline}</p>

@@ -27,7 +27,7 @@ const PACKET_STEPS = ["Select Template", "Select Lease", "Review & Save"] as con
 
 function StepPill({ label, active, done, skipped }: { label: string; active: boolean; done: boolean; skipped: boolean }) {
   const className = active
-    ? "border-violet-300 bg-violet-50 text-violet-700"
+    ? "border-[var(--accent-line)] bg-[var(--accent-weak)] text-[var(--accent)]"
     : done
       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
       : skipped

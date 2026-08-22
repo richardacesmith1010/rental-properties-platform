@@ -371,7 +371,7 @@ export function InboxSection({
               />
             ) : (
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                <div className="rounded-2xl border border-border/50 bg-white p-2 shadow-sm">
+                <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-[var(--domus-shadow-sm)]">
                   <AnimatedList className="space-y-2">
                   {threads.map((thread) => (
                     <button
@@ -380,7 +380,7 @@ export function InboxSection({
                       onClick={() => setSelectedThreadId(thread.id)}
                       className={`w-full rounded-md border px-3 py-2 text-left transition ${
                         selectedThreadId === thread.id
-                          ? "border-violet-300 bg-violet-50"
+                          ? "border-[var(--accent-line)] bg-[var(--accent-weak)]"
                           : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100"
                       }`}
                       title="Open this conversation thread."
@@ -398,7 +398,7 @@ export function InboxSection({
                   </AnimatedList>
                 </div>
 
-                <div className="rounded-2xl border border-border/50 bg-white p-3 shadow-sm">
+                <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-[var(--domus-shadow-sm)]">
                   {selectedThread ? (
                     <div className="space-y-3">
                       <div>

@@ -88,7 +88,7 @@ export function GlobalSearch({ items, placeholder = "Search..." }: GlobalSearchP
       </div>
 
       {showResults ? (
-        <div className="absolute z-50 mt-2 max-h-96 w-full overflow-y-auto rounded-xl border border-zinc-200 bg-white p-2 shadow-xl">
+        <div className="absolute z-50 mt-2 max-h-96 w-full overflow-y-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-[var(--domus-shadow-md)]">
           <ul id="search-results" role="listbox" aria-label="Search results" className="space-y-3">
             {groupedItems.length === 0 ? (
               <li className="px-3 py-2 text-sm text-zinc-500">No matching results.</li>
@@ -103,7 +103,7 @@ export function GlobalSearch({ items, placeholder = "Search..." }: GlobalSearchP
                       <li key={item.id} role="option" aria-selected="false">
                         <Link
                           href={item.href}
-                          className="block rounded-lg px-3 py-2 hover:bg-violet-50"
+                          className="block rounded-lg px-3 py-2 hover:bg-[var(--accent-weak)]"
                           onClick={() => setOpen(false)}
                           title={`Open ${item.label}.`}
                         >

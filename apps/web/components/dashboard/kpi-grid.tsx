@@ -13,14 +13,14 @@ interface KpiGridProps {
   cashFlowTrend?: "up" | "down" | "flat" | null;
 }
 
-function occupancyGradient(occupancy: number) {
+function occupancyAccent(occupancy: number) {
   if (occupancy >= 90) {
-    return "linear-gradient(135deg, #10b981, #34d399)";
+    return "var(--pos-bg)";
   }
   if (occupancy >= 70) {
-    return "linear-gradient(135deg, #f59e0b, #fbbf24)";
+    return "var(--warn-bg)";
   }
-  return "linear-gradient(135deg, #ef4444, #f87171)";
+  return "var(--crit-bg)";
 }
 
 export function KpiGrid({
@@ -44,7 +44,7 @@ export function KpiGrid({
         title="Monthly Revenue"
         value={formatCurrency(kpis.monthlyGrossRentCents)}
         subtitle={`${kpis.activeLeaseCount} active lease${kpis.activeLeaseCount === 1 ? "" : "s"}`}
-        gradient="linear-gradient(135deg, #7c3aed, #10b981)"
+        gradient="var(--accent-weak)"
         trend={revenueTrend}
         ariaLabel={`Monthly Revenue: ${formatCurrency(kpis.monthlyGrossRentCents)}. ${kpis.activeLeaseCount} active lease${kpis.activeLeaseCount === 1 ? "" : "s"}.`}
       />
@@ -52,7 +52,7 @@ export function KpiGrid({
         title="Occupancy"
         value={`${occupancy}%`}
         subtitle={`${kpis.occupiedUnits}/${kpis.totalUnits} ${kpis.totalUnits === 1 ? "unit" : "units"}`}
-        gradient={occupancyGradient(occupancy)}
+        gradient={occupancyAccent(occupancy)}
         trend={occupancyTrend}
         ariaLabel={`Occupancy: ${occupancy}%. ${kpis.occupiedUnits} of ${pluralize(kpis.totalUnits, "unit")} occupied.`}
       />
@@ -60,7 +60,7 @@ export function KpiGrid({
         title="Rent Collection"
         value={`${Math.round(kpis.collectionRate)}%`}
         subtitle={`${formatCurrency(kpis.collectedRentCents)} of ${formatCurrency(totalDueCents)}`}
-        gradient="linear-gradient(135deg, #3b82f6, #06b6d4)"
+        gradient="var(--accent-weak)"
         trend={collectionTrend}
         ariaLabel={`Rent Collection: ${Math.round(kpis.collectionRate)}%. ${formatCurrency(kpis.collectedRentCents)} collected out of ${formatCurrency(totalDueCents)} due.`}
       />
@@ -70,8 +70,8 @@ export function KpiGrid({
         subtitle={outstandingSubtitleCount}
         gradient={
           kpis.outstandingCents > 0
-            ? "linear-gradient(135deg, #f59e0b, #ef4444)"
-            : "linear-gradient(135deg, #10b981, #34d399)"
+            ? "var(--warn-bg)"
+            : "var(--pos-bg)"
         }
         alert={kpis.outstandingCents > 0}
         ariaLabel={`Outstanding Balance: ${formatCurrency(kpis.outstandingCents)} across ${outstandingSubtitleCount}.`}
@@ -84,7 +84,7 @@ export function KpiGrid({
             ? `${kpis.highPriorityMaintenanceCount} high priority`
             : "No urgent issues"
         }
-        gradient="linear-gradient(135deg, #f59e0b, #ef4444)"
+        gradient="var(--warn-bg)"
         trend={maintenanceTrend}
         ariaLabel={`Open Tickets: ${kpis.openMaintenanceCount}. ${kpis.highPriorityMaintenanceCount > 0 ? `${kpis.highPriorityMaintenanceCount} high priority.` : "No urgent issues."}`}
       />
@@ -94,8 +94,8 @@ export function KpiGrid({
         subtitle={netCashFlowCents >= 0 ? "YTD Profit" : "YTD Loss"}
         gradient={
           netCashFlowCents >= 0
-            ? "linear-gradient(135deg, #10b981, #059669)"
-            : "linear-gradient(135deg, #ef4444, #dc2626)"
+            ? "var(--pos-bg)"
+            : "var(--crit-bg)"
         }
         trend={cashFlowTrend}
         prefix={netCashFlowCents < 0 ? "-" : "+"}

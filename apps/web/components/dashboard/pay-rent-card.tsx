@@ -96,13 +96,13 @@ export function PayRentCard({
     return (
       <Card className="overflow-hidden border border-emerald-200/80 bg-emerald-50/70 shadow-lg">
         <CardContent className="flex min-h-[220px] flex-col items-center justify-center gap-4 p-5 text-center sm:min-h-[260px] sm:gap-5 sm:p-8">
-          <div className="rounded-full bg-white/90 p-4 shadow-sm ring-1 ring-emerald-200/80">
+          <div className="rounded-full bg-[var(--surface)] p-4 shadow-[var(--domus-shadow-sm)] ring-1 ring-emerald-200/80">
             <DomMascot size="lg" mood="celebrating" animate />
           </div>
           <div className="space-y-2">
             {hasActiveLease ? (
               <>
-                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/80 bg-white/90 px-3 py-1 text-sm font-medium text-emerald-700">
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/80 bg-[var(--surface)] px-3 py-1 text-sm font-medium text-emerald-700">
                   <CheckCircle2 className="h-4 w-4" />
                   You&apos;re all set
                 </div>
@@ -124,7 +124,7 @@ export function PayRentCard({
           </div>
           <Link
             href={chargesHref}
-            className="text-sm font-medium text-violet-700 underline-offset-4 hover:underline"
+            className="text-sm font-medium text-[var(--accent)] underline-offset-4 hover:underline"
             title="Open your charges and payment history."
           >
             View payment history
@@ -155,14 +155,14 @@ export function PayRentCard({
         "overflow-hidden shadow-xl",
         isLate
           ? "border border-red-200/80 bg-red-50/40"
-          : "border border-violet-200/80 bg-violet-50/40"
+          : "border border-[var(--accent-line)] bg-[var(--accent-weak)]"
       )}
     >
       <CardContent className="min-h-[240px] p-0 sm:min-h-[280px]">
         <div
           className={cn(
             "h-full border-l-[8px] px-4 py-5 sm:border-l-[10px] sm:px-8 sm:py-8",
-            isLate ? "border-l-red-500" : "border-l-violet-600"
+            isLate ? "border-l-red-500" : "border-l-[var(--accent)]"
           )}
         >
           <div className="flex h-full flex-col justify-between gap-6">
@@ -180,7 +180,7 @@ export function PayRentCard({
                   variant={isLate ? "destructive" : "outline"}
                   className={cn(
                     "rounded-full px-3 py-1 text-sm",
-                    !isLate && "border-violet-200 bg-white/80 text-violet-700"
+                    !isLate && "border-[var(--accent-line)] bg-[var(--surface)] text-[var(--accent)]"
                   )}
                 >
                   <Icon className="mr-1.5 h-4 w-4" />
@@ -214,7 +214,7 @@ export function PayRentCard({
 
             <div className="space-y-3">
               <div className="space-y-3">
-                <div className="rounded-2xl border border-violet-200 bg-white/90 p-4 shadow-sm">
+                <div className="rounded-2xl border border-[var(--accent-line)] bg-[var(--surface)] p-4 shadow-[var(--domus-shadow-sm)]">
                   <p className="text-sm font-semibold text-foreground">Pay with debit or credit card</p>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Includes {formatCentsAsDollars(cardPayment.feeCents)} processing fee
@@ -283,7 +283,7 @@ export function PayRentCard({
                     <span>or</span>
                     <span className="h-px flex-1 bg-border" />
                   </div>
-                  <div className="rounded-2xl border border-border bg-white/90 p-4 text-left shadow-sm">
+                  <div className="rounded-2xl border border-border bg-[var(--surface)] p-4 text-left shadow-[var(--domus-shadow-sm)]">
                     <p className="text-sm font-semibold text-foreground">
                       {autopayPaused
                         ? "Autopay paused — update your card to re-enable"

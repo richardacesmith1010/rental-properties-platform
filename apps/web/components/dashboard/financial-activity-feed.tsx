@@ -74,9 +74,9 @@ export function FinancialActivityFeed({ events }: FinancialActivityFeedProps) {
               return (
                 <div
                   key={event.id}
-                  className="flex items-start gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3"
+                  className="flex items-start gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3"
                 >
-                  <div className="rounded-lg bg-violet-50 p-2 text-violet-700">
+                  <div className="rounded-lg bg-[var(--accent-weak)] p-2 text-[var(--accent)]">
                     <Icon className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">

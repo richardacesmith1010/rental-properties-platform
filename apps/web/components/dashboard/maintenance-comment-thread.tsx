@@ -63,7 +63,7 @@ export function MaintenanceCommentThread({
   );
 
   return (
-    <div className="space-y-4 rounded-xl border border-zinc-200 bg-white p-4">
+    <div className="space-y-4 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4">
       <div className="space-y-3">
         {orderedComments.length === 0 ? (
           <EmptyState
@@ -115,7 +115,7 @@ export function MaintenanceCommentThread({
               type="checkbox"
               checked={isInternal}
               onChange={(event) => setIsInternal(event.target.checked)}
-              className="h-4 w-4 rounded border-zinc-300 text-violet-600 focus:ring-violet-500"
+              className="h-4 w-4 rounded border-[var(--line)] text-[var(--accent)] focus:ring-[var(--accent-line)]"
             />
             <span>Internal note (visible only to owner/manager)</span>
           </label>

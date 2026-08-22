@@ -168,12 +168,12 @@ export function WithdrawalRequestCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3">
+        <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
           <p className="text-lg font-semibold text-zinc-900">{formatCurrency(request.amountCents)}</p>
           <p className="mt-1 text-sm text-zinc-600">{request.reason ?? "No reason provided."}</p>
         </div>
 
-        <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700">
+        <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--ink-2)]">
           {request.votesReceived} votes cast · {request.votesRequired} required
         </div>
 
@@ -184,7 +184,7 @@ export function WithdrawalRequestCard({
             request.votes.map((vote) => (
               <div
                 key={`${request.id}:${vote.voterId}`}
-                className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm"
+                className="flex items-center justify-between rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm"
               >
                 <span className="text-zinc-800">{vote.voterName ?? "Unknown member"}</span>
                 <Badge variant={vote.vote === "approve" ? "success" : "destructive"}>

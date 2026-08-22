@@ -119,7 +119,7 @@ export function DeleteRequestBanner({
         <Alert variant="error" className="text-xs font-normal">
           Approving this request will unlink all properties from the LLC account and permanently delete it.
         </Alert>
-        <div className="rounded-xl border border-red-100 bg-white px-4 py-3 text-sm text-zinc-700">
+        <div className="rounded-xl border border-[var(--crit)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--ink-2)]">
           {request.reason?.trim() ? request.reason : "No reason provided."}
         </div>
         {request.status === "pending" && onVote && !currentUserVote ? (

@@ -225,6 +225,11 @@ Claude must treat every interaction cycle as a learning opportunity. This sectio
 **What was correct:** Chat history is disposable by design (§13) — all real state lives in the repo. Resuming one ever-growing mega-session has no upside and eventually breaks the tool.
 **Rule (refined 2026-07-14 with the user):** Rotate chats by *threshold, not per sprint*. The real failure mode is transcript file SIZE (the ~167MB single file that hung the app); a heavy multi-sprint session is normally single-digit MB. Wrap up and start a new chat only when ANY of: (a) the session `.jsonl` approaches **~50MB** — at each cycle close Claude runs `du -sh` on the current session transcript and reports the size; (b) the session has been compacted ~2× (compaction also causes context-forgetting, as happened this session); (c) it feels sluggish; (d) work pivots to a genuinely unrelated topic. Per-sprint rotation is NOT required. Regardless of rotation, always keep `docs/agent-handoff.md` + memory current so any new session recovers cleanly.
 
+#### L-011 | 2026-08-22 | PROCESS
+**What happened:** Sprint 133's packet listed ~20 exact files (§5) but its acceptance criterion demanded a zero-remnant grep sweep across ALL of `components/dashboard/` — a superset including explicitly-excluded files (`pay-rent-card.tsx`, tenant money-UI). Codex had to choose; it satisfied the sweep and self-flagged `no_out_of_scope_diffs=false`, touching 45 files.
+**What was correct:** A packet's scope list, exclusions, and acceptance criteria must be mutually consistent — an acceptance criterion IS a scope statement. When they conflict, the implementer is forced to improvise.
+**Rule:** Before dispatching any packet, cross-check: does every acceptance criterion's blast radius stay inside §5's file list plus §4's exclusions? If a sweep/grep criterion spans a directory, either scope §5 to that directory or scope the sweep to §5's files.
+
 ## 11) Pre-Flight Lessons Check (Hard Rule)
 
 Before starting ANY work cycle (planning, verification, or especially implementation), Claude must:

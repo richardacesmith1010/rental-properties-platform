@@ -53,7 +53,7 @@ export function MobileUserFooter({
         compact
       />
 
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+      <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface-2)] p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-white">Signed in as</p>

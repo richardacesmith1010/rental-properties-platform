@@ -116,7 +116,7 @@ function WithdrawalRequestForm({
               value={reason}
               onChange={(event) => setReason(event.target.value)}
               rows={3}
-              className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm transition-all duration-150 placeholder:text-zinc-400 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+              className="domus-input w-full rounded-xl px-3 py-2 text-sm shadow-[var(--domus-shadow-sm)]"
               placeholder="Optional context for other members."
               title="Explain why this withdrawal is needed."
             />

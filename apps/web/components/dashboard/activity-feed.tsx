@@ -55,7 +55,7 @@ export function ActivityFeed({ logs, limit = 20 }: ActivityFeedProps) {
               const Icon = iconForEntity(log.entityType);
               return (
                 <div key={log.id} className="flex items-start gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
-                  <div className="rounded-lg bg-white p-2 text-violet-700 shadow-sm">
+                  <div className="rounded-lg bg-[var(--surface)] p-2 text-[var(--accent)] shadow-[var(--domus-shadow-sm)]">
                     <Icon className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">

@@ -64,7 +64,7 @@ export function TenantLeaseDetails({ leases }: TenantLeaseDetailsProps) {
                       {formatDate(lease.startDate)} to {formatDate(lease.endDate)}
                     </p>
                   </div>
-                  <div className="rounded-lg bg-white px-3 py-2 text-right shadow-sm">
+                  <div className="rounded-lg bg-[var(--surface)] px-3 py-2 text-right shadow-[var(--domus-shadow-sm)]">
                     <p className="text-xs uppercase tracking-wide text-zinc-400">Days Remaining</p>
                     <p className="text-lg font-semibold text-zinc-900">{lease.daysRemaining}</p>
                   </div>
@@ -92,7 +92,7 @@ export function TenantLeaseDetails({ leases }: TenantLeaseDetailsProps) {
                     <p className="mt-1 font-semibold text-zinc-900">{lease.gracePeriodDays} days</p>
                   </div>
                   <div className="flex items-end">
-                    <div className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-500">
+                    <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--muted)]">
                       <CalendarClock className="mr-2 inline h-4 w-4 text-zinc-400" />
                       Ends {formatDate(lease.endDate)}
                     </div>

@@ -133,7 +133,7 @@ export function PortfolioSection({
                 tabIndex={onSelectProperty && activeEditPropertyId !== property.id ? 0 : undefined}
                 className={
                   onSelectProperty && activeEditPropertyId !== property.id
-                    ? "rounded-2xl border border-border/40 bg-card/80 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 focus-visible:ring-offset-2"
+                    ? "rounded-2xl border border-border/40 bg-card/80 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2"
                     : undefined
                 }
                 onClick={() => {

@@ -42,7 +42,7 @@ function Avatar({
   return (
     <div
       className={cn(
-        "flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-emerald-400 text-xs font-semibold text-white",
+        "flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent)] text-xs font-semibold text-white",
         className
       )}
     >
@@ -118,10 +118,10 @@ export function UserMenuPopover({
         type="button"
         onClick={handleToggle}
         className={cn(
-          "flex items-center gap-2.5 rounded-xl border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2",
+          "flex items-center gap-2.5 rounded-xl border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2",
           compact
-            ? "border-white/10 bg-white/5 px-2.5 py-1.5 text-left text-white hover:bg-white/10 focus-visible:ring-offset-slate-900"
-            : "w-full border-white/15 bg-white/5 px-3 py-2.5 text-left text-white/85 hover:bg-white/12 focus-visible:ring-offset-slate-900"
+            ? "border-[var(--line)] bg-[var(--surface-2)] px-2.5 py-1.5 text-left text-[var(--ink)] hover:bg-[var(--surface-3)] focus-visible:ring-offset-[var(--ground)]"
+            : "w-full border-[var(--line)] bg-[var(--surface-2)] px-3 py-2.5 text-left text-[var(--ink-2)] hover:bg-[var(--surface-3)] focus-visible:ring-offset-[var(--ground)]"
         )}
         title="Open user menu."
         aria-expanded={open}
@@ -156,7 +156,7 @@ export function UserMenuPopover({
       {open ? (
         <div
           className={cn(
-            "absolute z-50 min-w-[220px] overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg",
+            "absolute z-50 min-w-[220px] overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-[var(--domus-shadow-md)]",
             panelClassName
           )}
         >

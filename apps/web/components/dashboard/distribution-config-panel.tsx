@@ -119,7 +119,7 @@ export function DistributionConfigPanel({
     (mode === "split_equal" && activeMembers.length === 0);
 
   return (
-    <Card className="mt-3 border-violet-200/80 bg-violet-50/40">
+    <Card className="mt-3 border-[var(--accent-line)] bg-[var(--accent-weak)]">
       <CardHeader>
         <CardTitle>Distribution Settings</CardTitle>
         <p className="text-sm text-zinc-600">
@@ -140,7 +140,7 @@ export function DistributionConfigPanel({
           <input type="hidden" name="mode" value={mode} />
 
           <div className="space-y-3">
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3">
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-3">
               <input
                 type="radio"
                 name="distribution-mode"
@@ -155,7 +155,7 @@ export function DistributionConfigPanel({
               </div>
             </label>
 
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3">
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-3">
               <input
                 type="radio"
                 name="distribution-mode"
@@ -170,7 +170,7 @@ export function DistributionConfigPanel({
               </div>
             </label>
 
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3">
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-3">
               <input
                 type="radio"
                 name="distribution-mode"
@@ -187,13 +187,13 @@ export function DistributionConfigPanel({
           </div>
 
           {mode === "retain" ? (
-            <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-600">
+            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--muted)]">
               Keep all money in the LLC.
             </div>
           ) : null}
 
           {mode === "split_equal" ? (
-            <div className="space-y-2 rounded-xl border border-zinc-200 bg-white px-4 py-3">
+            <div className="space-y-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
               <p className="text-sm font-medium text-zinc-700">Everyone gets the same amount.</p>
               {activeMembers.length === 0 ? (
                 <p className="text-sm text-red-600">No active members are available for distribution.</p>
@@ -214,7 +214,7 @@ export function DistributionConfigPanel({
           ) : null}
 
           {mode === "split_custom" ? (
-            <div className="space-y-3 rounded-xl border border-zinc-200 bg-white px-4 py-3">
+            <div className="space-y-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
               {activeMembers.map((member, index) => {
                 const currentPct = memberPcts.get(member.profileId) ?? 0;
                 return (

@@ -92,9 +92,9 @@ export function MaintenanceTracker({
                 className={[
                   "relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-bold transition-all",
                   isCurrent
-                    ? "border-violet-400 bg-violet-500 text-white shadow-[0_0_0_6px_rgba(124,58,237,0.12)] animate-pulse"
+                    ? "border-[var(--accent-line)] bg-[var(--accent)] text-white shadow-[0_0_0_6px_var(--accent-weak)] animate-pulse"
                     : isCompleted
-                      ? "border-violet-500 bg-violet-500 text-white"
+                      ? "border-[var(--accent)] bg-[var(--accent)] text-white"
                       : "border-border bg-background text-muted-foreground"
                 ].join(" ")}
               >
@@ -111,7 +111,7 @@ export function MaintenanceTracker({
                   {entry ? entry.changedByName : isFuture ? "Pending" : "Awaiting update"}
                 </p>
                 {entry?.notes ? (
-                  <div className="mt-2 rounded-xl border border-violet-200 bg-violet-50/70 px-3 py-2 text-left text-xs text-violet-800 md:text-center">
+                  <div className="mt-2 rounded-xl border border-[var(--accent-line)] bg-[var(--accent-weak)] px-3 py-2 text-left text-xs text-[var(--accent)] md:text-center">
                     {entry.notes}
                   </div>
                 ) : null}

@@ -47,7 +47,7 @@ interface LeaseFormProps {
 
 function StepPill({ label, active, done, skipped }: { label: string; active: boolean; done: boolean; skipped: boolean }) {
   const className = active
-    ? "border-violet-300 bg-violet-50 text-violet-700"
+    ? "border-[var(--accent-line)] bg-[var(--accent-weak)] text-[var(--accent)]"
     : done
       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
       : skipped
@@ -224,7 +224,7 @@ export function LeaseForm({
         return (
           <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-5">
             <div className="flex items-start gap-3">
-              <ClipboardList className="mt-0.5 h-5 w-5 text-violet-600" />
+              <ClipboardList className="mt-0.5 h-5 w-5 text-[var(--accent)]" />
               <div className="space-y-4">
                 <div>
                   <p className="font-semibold text-zinc-900">No properties found</p>
@@ -292,7 +292,7 @@ export function LeaseForm({
         return (
           <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-5">
             <div className="flex items-start gap-3">
-              <Building2 className="mt-0.5 h-5 w-5 text-violet-600" />
+              <Building2 className="mt-0.5 h-5 w-5 text-[var(--accent)]" />
               <div className="space-y-4">
                 <div>
                   <p className="font-semibold text-zinc-900">{selectedProperty.name} has no units</p>
@@ -337,7 +337,7 @@ export function LeaseForm({
         return (
           <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-5">
             <div className="flex items-start gap-3">
-              <UserRound className="mt-0.5 h-5 w-5 text-violet-600" />
+              <UserRound className="mt-0.5 h-5 w-5 text-[var(--accent)]" />
               <div className="space-y-4">
                 <div>
                   <p className="font-semibold text-zinc-900">No tenants available</p>
