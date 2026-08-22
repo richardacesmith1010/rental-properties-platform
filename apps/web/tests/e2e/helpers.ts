@@ -31,7 +31,7 @@ export async function loginAsRole(
   password: string
 ) {
   await page.goto("/login");
-  await page.getByRole("button", { name: role }).click();
+  await page.getByRole("button", { name: new RegExp("^" + role) }).click();
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign In" }).click();
