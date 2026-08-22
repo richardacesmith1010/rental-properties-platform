@@ -86,7 +86,14 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Verified: independent gate green, 974/974, smoke 3/3, scripted Playwright visual walk (zero console errors across 12 captures; Home/Maintenance/Settings confirmed v2 in both themes). Ownership/inbox/invitations section visuals need real-account data to render — covered by the user's next real-data walk.
 - **Tooling (2026-08-22):** Codex CLI upgraded to 0.149 (`--full-auto` removed → `--sandbox workspace-write`; account model now gpt-5.6-terra); Vercel creds re-authed after expiry. Both recorded in memory.
 
-**Next:** Phase 2 — tenant surface (pay-rent flow, the highest-trust screens; partially pre-toned via pay-rent-card). Then manager (3), settings components (4), de-gamification (5). Still pending user: J&MSP LLC bank connect (~3 min); real-data owner walk incl. drill-down numbers.
+## Reskin Phase 2 — SHIPPED (Sprint 134, 2026-08-22, commits fa556e8→52219d7; first Sol-mode sprint)
+
+- Tenant surface + first-run path on v2 (both themes): tenant shell/error, complete-profile, onboarding forms, role-selector, pay-rent-card to the v2 money-screen spec (hero amount, CSS-only radio-card methods, free option leads, fees+totals plain). Gamification containers retoned; shared/ui 1b escapees converted. 974/974; scoped sweep zero.
+- Micro-fixes during verification: phantom `--ink-3` (38×→`--muted`); e2e role selector anchored (plain-language copy made "Tenant" ambiguous); **33 dark-on-dark landmines** (`text-zinc/slate/gray-800/900` on token surfaces) fixed across 15 files after the walk caught "Days Remaining" invisible in dark.
+- **First-run walk EXECUTED end-to-end** (smoke owner → wizard invite → Resend email → magic link → complete-profile → first login → onboarding): every screen v2, zero console errors. New fixture: +smoketenant2 (creds in .env.local).
+- Findings logged for follow-up: (1) onboarding context card shows "your landlord"/"Your rental home" fallbacks instead of real inviter/property names (Unit resolves; trust miss); (2) invite EMAIL is still old-purple brand (Phase 7 — consider promoting, it's the literal first touch); (3) login page left panel still purple marketing hero (Phase 6).
+
+**Next:** Phase 3 manager surface, or promote Phase 6/7 first-touch surfaces (login hero + emails) per first-run strategy — user's call. Then settings components (4), de-gamification (5). Still pending user: J&MSP bank connect; real-data owner walk. Still pending user: J&MSP LLC bank connect (~3 min); real-data owner walk incl. drill-down numbers.
 
 **Tenant strategy (user-stated 2026-08-22):** Angel (current tenant, "1st Home") pays rent OUTSIDE Domus by deliberate choice — he is NOT the adoption target, so his in-app "overdue" charges are bookkeeping artifacts, not real delinquency (user may want to record manual payments or waive them eventually). The Domus-native tenant will be the NEXT one onboarded. Phase 2 (tenant surface) should therefore optimize for a brand-new tenant's first-run experience: invite → account → first rent payment.
 
