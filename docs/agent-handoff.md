@@ -86,7 +86,9 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Verified: independent gate green, 974/974, smoke 3/3, scripted Playwright visual walk (zero console errors across 12 captures; Home/Maintenance/Settings confirmed v2 in both themes). Ownership/inbox/invitations section visuals need real-account data to render — covered by the user's next real-data walk.
 - **Tooling (2026-08-22):** Codex CLI upgraded to 0.149 (`--full-auto` removed → `--sandbox workspace-write`; account model now gpt-5.6-terra); Vercel creds re-authed after expiry. Both recorded in memory.
 
-**Next:** Phase 2 — tenant surface (pay-rent flow, the highest-trust screens; partially pre-toned via pay-rent-card). Then manager (3), settings components (4), de-gamification (5). Still pending user: J&MSP LLC bank connect (~3 min); real-data owner walk incl. drill-down numbers; tenant-adoption conversation (Angel has 2 months rent open, has never paid through Domus).
+**Next:** Phase 2 — tenant surface (pay-rent flow, the highest-trust screens; partially pre-toned via pay-rent-card). Then manager (3), settings components (4), de-gamification (5). Still pending user: J&MSP LLC bank connect (~3 min); real-data owner walk incl. drill-down numbers.
+
+**Tenant strategy (user-stated 2026-08-22):** Angel (current tenant, "1st Home") pays rent OUTSIDE Domus by deliberate choice — he is NOT the adoption target, so his in-app "overdue" charges are bookkeeping artifacts, not real delinquency (user may want to record manual payments or waive them eventually). The Domus-native tenant will be the NEXT one onboarded. Phase 2 (tenant surface) should therefore optimize for a brand-new tenant's first-run experience: invite → account → first rent payment.
 
 ## Validation Snapshot
 - Unit tests: `562/562` passing at the latest clean gate baseline

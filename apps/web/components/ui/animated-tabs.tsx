@@ -24,9 +24,9 @@ export function AnimatedTabs({
   activeTab,
   onTabChange,
   className,
-  activeClassName = "text-violet-700 dark:text-violet-300",
-  inactiveClassName = "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200",
-  indicatorClassName = "bg-violet-500",
+  activeClassName = "text-[var(--accent)]",
+  inactiveClassName = "text-[var(--muted)] hover:text-[var(--ink)]",
+  indicatorClassName = "bg-[var(--accent)]",
 }: AnimatedTabsProps) {
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const [indicator, setIndicator] = useState({ left: 0, width: 0 });
@@ -51,7 +51,7 @@ export function AnimatedTabs({
             aria-selected={tab.id === activeTab}
             onClick={() => onTabChange(tab.id)}
             className={cn(
-              "relative z-10 inline-flex items-center gap-2 px-3 py-2 text-sm font-medium transition-colors duration-150",
+              "relative z-10 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ground)]",
               tab.id === activeTab ? activeClassName : inactiveClassName
             )}
           >

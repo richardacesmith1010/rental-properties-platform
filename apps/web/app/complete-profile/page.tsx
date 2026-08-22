@@ -24,22 +24,22 @@ export default async function CompleteProfilePage() {
 
   return (
     <main className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
-      <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 shadow-sm">
+      <div className="domus-card w-full max-w-lg p-8 shadow-[var(--domus-shadow-md)]">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4">
             <DomMascot size="xl" mood="waving" animate />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Welcome to Domus!</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--ink)]">Welcome to Domus!</h1>
+          <p className="mt-2 text-sm text-[var(--muted)]">
             {inviteContext?.propertyAddress
               ? `${inviteContext.ownerName ?? "Your landlord"} invited you to ${inviteContext.propertyAddress}${inviteContext.unitLabel ? `, ${inviteContext.unitLabel}` : ""}. Set your password to continue.`
               : "Set your password to complete your account setup."}
           </p>
         </div>
 
-        <div className="mb-6 rounded-xl border border-border bg-muted/60 px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Email</p>
-          <p className="mt-1 text-sm font-medium text-foreground">{user.email ?? "unknown"}</p>
+        <div className="mb-6 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Email</p>
+          <p className="mt-1 text-sm font-medium text-[var(--ink)]">{user.email ?? "unknown"}</p>
         </div>
 
         <CompleteProfileForm email={user.email ?? ""} />

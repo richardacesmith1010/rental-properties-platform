@@ -13,10 +13,10 @@ const LEVEL_TITLES: Record<"owner" | "manager" | "tenant", string[]> = {
 };
 
 const levelClasses: Record<number, string> = {
-  1: "border border-violet-200 bg-violet-100 text-violet-700",
-  2: "border border-emerald-200 bg-emerald-100 text-emerald-700",
-  3: "border border-amber-200 bg-amber-100 text-amber-700",
-  4: "bg-gradient-to-r from-amber-400 to-yellow-300 text-amber-900 shadow-sm"
+  1: "border border-[var(--accent-line)] bg-[var(--accent-weak)] text-[var(--accent)]",
+  2: "border border-[var(--pos)] bg-[var(--pos-bg)] text-[var(--pos)]",
+  3: "border border-[var(--warn)] bg-[var(--warn-bg)] text-[var(--warn)]",
+  4: "border border-[var(--warn)] bg-[var(--warn-bg)] text-[var(--warn)] shadow-[var(--domus-shadow-sm)]"
 };
 
 export function LevelBadge({ level, role, size = "md" }: LevelBadgeProps) {

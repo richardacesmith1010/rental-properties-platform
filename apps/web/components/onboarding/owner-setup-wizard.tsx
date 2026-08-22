@@ -53,13 +53,13 @@ function ChoiceCard({
       type="button"
       onClick={onClick}
       title={`Choose ${title}.`}
-      className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-6 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2"
+      className="flex flex-col items-center rounded-xl border border-[var(--line)] bg-[var(--surface)] p-6 text-center shadow-[var(--domus-shadow-sm)] transition hover:-translate-y-0.5 hover:border-[var(--accent-line)] hover:bg-[var(--surface-2)] hover:shadow-[var(--domus-shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ground)]"
     >
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50 text-violet-600">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--accent-weak)] text-[var(--accent)]">
         {icon}
       </div>
-      <h2 className="text-base font-semibold text-zinc-900">{title}</h2>
-      <p className="mt-2 text-sm text-zinc-500">{description}</p>
+      <h2 className="text-base font-semibold text-[var(--ink)]">{title}</h2>
+      <p className="mt-2 text-sm text-[var(--muted)]">{description}</p>
     </button>
   );
 }
@@ -129,7 +129,7 @@ export function OwnerSetupWizard({
           <ChoiceCard
             icon={<Building2 className="h-7 w-7" />}
             title="Create LLC"
-            description="I'm setting up a shared ownership entity."
+            description="I'm setting up an LLC with other owners."
             onClick={() => setMode("create_llc")}
           />
           <ChoiceCard
@@ -142,14 +142,14 @@ export function OwnerSetupWizard({
       )}
 
       {mode === "individual" && (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-8 shadow-[var(--domus-shadow-sm)]">
           <form ref={individualFormRef} action={individualAction}>
             <div className="flex flex-col items-center text-center">
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-violet-50 text-violet-600">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent-weak)] text-[var(--accent)]">
                 <Loader2 className={`h-7 w-7 ${individualPending ? "animate-spin" : ""}`} />
               </div>
-              <h2 className="text-xl font-semibold text-zinc-900">Creating your individual account</h2>
-              <p className="mt-2 max-w-md text-sm text-zinc-500">
+              <h2 className="text-xl font-semibold text-[var(--ink)]">Creating your individual account</h2>
+              <p className="mt-2 max-w-md text-sm text-[var(--muted)]">
                 Domus is preparing your owner account now. This should only take a moment.
               </p>
               {individualState && !individualState.success && (
@@ -176,16 +176,16 @@ export function OwnerSetupWizard({
       )}
 
       {mode === "create_llc" && (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-8 shadow-[var(--domus-shadow-sm)]">
           <div className="mb-6">
-            <h2 className="text-xl font-semibold text-zinc-900">Create your LLC</h2>
-            <p className="mt-2 text-sm text-zinc-500">
-              Give your ownership account a name that you and your co-owners will recognize.
+            <h2 className="text-xl font-semibold text-[var(--ink)]">Create your LLC</h2>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              Give your LLC account a name that you and the other owners will recognize.
             </p>
           </div>
           <form action={llcAction} className="space-y-4">
             <div>
-              <label htmlFor="llc-display-name" className="mb-1.5 block text-sm font-medium text-zinc-700">
+              <label htmlFor="llc-display-name" className="mb-1.5 block text-sm font-medium text-[var(--ink-2)]">
                 LLC Display Name
               </label>
               <Input
@@ -216,16 +216,16 @@ export function OwnerSetupWizard({
       )}
 
       {mode === "join_llc" && (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-8 shadow-[var(--domus-shadow-sm)]">
           <div className="mb-6">
-            <h2 className="text-xl font-semibold text-zinc-900">Join an existing LLC</h2>
-            <p className="mt-2 text-sm text-zinc-500">
+            <h2 className="text-xl font-semibold text-[var(--ink)]">Join an existing LLC</h2>
+            <p className="mt-2 text-sm text-[var(--muted)]">
               Enter the 6-character join code that another LLC member shared with you.
             </p>
           </div>
           <form action={joinAction} className="space-y-4">
             <div>
-              <label htmlFor="llc-join-code" className="mb-1.5 block text-sm font-medium text-zinc-700">
+              <label htmlFor="llc-join-code" className="mb-1.5 block text-sm font-medium text-[var(--ink-2)]">
                 Join Code
               </label>
               <Input
@@ -257,17 +257,17 @@ export function OwnerSetupWizard({
       )}
 
       {mode === "llc_created" && createdLlc && (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-8 shadow-[var(--domus-shadow-sm)]">
           <div className="mb-6">
-            <h2 className="text-xl font-semibold text-zinc-900">Your LLC is ready</h2>
-            <p className="mt-2 text-sm text-zinc-500">
+            <h2 className="text-xl font-semibold text-[var(--ink)]">Your LLC is ready</h2>
+            <p className="mt-2 text-sm text-[var(--muted)]">
               Share this join code with your LLC members so they can join your account.
             </p>
           </div>
-          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-5">
-            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Join Code</p>
+          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-5">
+            <p className="text-xs uppercase tracking-[0.2em] text-[var(--muted)]">Join Code</p>
             <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-3xl font-bold tracking-[0.35em] text-zinc-900">
+              <p className="tabular-nums text-3xl font-bold tracking-[0.35em] text-[var(--ink)]">
                 {createdLlc.joinCode}
               </p>
               <Button
@@ -283,7 +283,7 @@ export function OwnerSetupWizard({
                 {copied ? "Copied" : "Copy"}
               </Button>
             </div>
-            <p className="mt-3 text-xs text-zinc-500">Account ID: {createdLlc.accountId}</p>
+            <p className="mt-3 text-xs tabular-nums text-[var(--muted)]">Account ID: {createdLlc.accountId}</p>
           </div>
           <div className="mt-6 flex gap-3">
             <Button

@@ -100,7 +100,7 @@ export function OnboardingWizard({
 
   return (
     <ModalOverlay open={open}>
-      <div className="mx-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl sm:mx-0">
+      <div className="mx-4 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6 shadow-[var(--domus-shadow-lg)] sm:mx-0">
         {/* Step indicator */}
         <div className="mb-6 flex items-center justify-center gap-2">
           {steps.map((step, i) => (
@@ -108,10 +108,10 @@ export function OnboardingWizard({
               <div
                 className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${
                   i < currentStepIndex
-                    ? "bg-emerald-100 text-emerald-700"
+                    ? "bg-[var(--pos-bg)] text-[var(--pos)]"
                     : i === currentStepIndex
-                      ? "bg-violet-600 text-white"
-                      : "bg-zinc-100 text-zinc-400"
+                      ? "bg-[var(--accent)] text-white"
+                      : "bg-[var(--surface-2)] text-[var(--muted)]"
                 }`}
               >
                 {i < currentStepIndex ? "\u2713" : i + 1}
@@ -119,7 +119,7 @@ export function OnboardingWizard({
               {i < steps.length - 1 && (
                 <div
                   className={`h-0.5 w-6 ${
-                    i < currentStepIndex ? "bg-emerald-300" : "bg-zinc-200"
+                    i < currentStepIndex ? "bg-[var(--pos)]" : "bg-[var(--line)]"
                   }`}
                 />
               )}

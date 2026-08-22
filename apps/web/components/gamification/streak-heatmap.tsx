@@ -77,12 +77,12 @@ export function StreakHeatmap({ events }: StreakHeatmapProps) {
                 className={[
                   "h-3 w-3 rounded-[4px] border",
                   cell.tone === "achievement"
-                    ? "border-violet-300 bg-violet-500/80"
+                    ? "border-[var(--accent-line)] bg-[var(--accent)]"
                     : cell.tone === "warning"
-                      ? "border-amber-300 bg-amber-400/80"
+                      ? "border-[var(--warn)] bg-[var(--warn-bg)]"
                       : cell.tone === "success"
-                        ? "border-emerald-300 bg-emerald-400/80"
-                        : "border-zinc-200 bg-zinc-100"
+                        ? "border-[var(--pos)] bg-[var(--pos-bg)]"
+                        : "border-[var(--line)] bg-[var(--surface-2)]"
                 ].join(" ")}
                 title={cell.title}
                 aria-label={cell.title}
@@ -91,11 +91,11 @@ export function StreakHeatmap({ events }: StreakHeatmapProps) {
           </div>
         ))}
       </div>
-      <div className="mt-3 flex flex-wrap gap-3 text-xs text-zinc-500">
-        <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-emerald-400/80" /> On-time payment</span>
-        <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-amber-400/80" /> Late payment</span>
-        <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-violet-500/80" /> Achievement</span>
-        <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-zinc-100" /> No activity</span>
+      <div className="mt-3 flex flex-wrap gap-3 text-xs text-[var(--muted)]">
+        <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-[var(--pos-bg)] ring-1 ring-[var(--pos)]" /> On-time payment</span>
+        <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-[var(--warn-bg)] ring-1 ring-[var(--warn)]" /> Late payment</span>
+        <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-[var(--accent)]" /> Achievement</span>
+        <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-[var(--surface-2)]" /> No activity</span>
       </div>
     </div>
   );

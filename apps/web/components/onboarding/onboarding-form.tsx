@@ -119,14 +119,14 @@ export function OnboardingForm({
 
   return (
     <form action={formAction} className="space-y-5">
-      <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Email</p>
-        <p className="mt-1 text-sm font-medium text-zinc-900">{email}</p>
+      <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-4 py-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Email</p>
+        <p className="mt-1 text-sm font-medium text-[var(--ink)]">{email}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <label htmlFor="onboarding-first-name" className="block text-sm font-medium text-zinc-700">
+          <label htmlFor="onboarding-first-name" className="block text-sm font-medium text-[var(--ink-2)]">
             First Name
           </label>
           <Input
@@ -140,7 +140,7 @@ export function OnboardingForm({
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="onboarding-last-name" className="block text-sm font-medium text-zinc-700">
+          <label htmlFor="onboarding-last-name" className="block text-sm font-medium text-[var(--ink-2)]">
             Last Name
           </label>
           <Input
@@ -155,7 +155,7 @@ export function OnboardingForm({
       </div>
 
       <div className="space-y-2">
-        <label htmlFor="onboarding-nickname" className="block text-sm font-medium text-zinc-700">
+        <label htmlFor="onboarding-nickname" className="block text-sm font-medium text-[var(--ink-2)]">
           Nickname
         </label>
         <Input
@@ -168,11 +168,11 @@ export function OnboardingForm({
       </div>
 
       <div className="space-y-3">
-        <label htmlFor="onboarding-avatar" className="block text-sm font-medium text-zinc-700">
+        <label htmlFor="onboarding-avatar" className="block text-sm font-medium text-[var(--ink-2)]">
           Profile Photo
         </label>
         <div className="flex items-center gap-4">
-          <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-zinc-200 bg-zinc-100">
+          <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-[var(--line)] bg-[var(--surface-2)]">
             {previewUrl ? (
               <Image
                 src={previewUrl}
@@ -184,7 +184,7 @@ export function OnboardingForm({
                 unoptimized
               />
             ) : (
-              <UserCircle2 className="h-10 w-10 text-zinc-400" />
+              <UserCircle2 className="h-10 w-10 text-[var(--muted)]" />
             )}
           </div>
           <div className="space-y-2">
@@ -195,17 +195,17 @@ export function OnboardingForm({
               type="file"
               accept="image/jpeg,image/png,image/webp"
               onChange={handleAvatarChange}
-              className="block text-sm text-zinc-600 file:mr-3 file:rounded-md file:border-0 file:bg-violet-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-violet-700 hover:file:bg-violet-100"
+              className="block text-sm text-[var(--ink-2)] file:mr-3 file:rounded-xl file:border file:border-[var(--line)] file:bg-[var(--surface)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[var(--accent)] hover:file:border-[var(--accent-line)] hover:file:bg-[var(--accent-weak)]"
             />
             <p className="mt-1 text-xs domus-muted">JPG, PNG, or WebP. Max 5 MB.</p>
             {avatarError ? (
-              <p className="mt-1 text-xs text-red-600">{avatarError}</p>
+              <p className="mt-1 text-xs text-[var(--crit)]">{avatarError}</p>
             ) : null}
             {previewUrl ? (
               <button
                 type="button"
                 onClick={clearAvatar}
-                className="inline-flex items-center gap-1 text-sm font-medium text-zinc-600 underline"
+                className="inline-flex items-center gap-1 rounded-lg text-sm font-medium text-[var(--ink-2)] underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ground)]"
                 title="Remove the selected profile photo."
               >
                 <X className="h-3.5 w-3.5" />
@@ -216,14 +216,14 @@ export function OnboardingForm({
         </div>
       </div>
 
-      <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3">
+      <div className="rounded-xl border border-[var(--accent-line)] bg-[var(--accent-weak)] px-4 py-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-violet-600 shadow-sm">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--surface)] text-[var(--accent)] shadow-[var(--domus-shadow-sm)]">
             <RoleIcon className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-zinc-900">{roleMeta.description} <span className="text-emerald-600">✓</span></p>
-            <p className="text-xs text-zinc-600">Role changes are handled by invitations and account setup.</p>
+            <p className="text-sm font-semibold text-[var(--ink)]">{roleMeta.description} <span className="text-[var(--pos)]">✓</span></p>
+            <p className="text-xs text-[var(--ink-2)]">Role changes are handled by invitations and account setup.</p>
           </div>
         </div>
       </div>

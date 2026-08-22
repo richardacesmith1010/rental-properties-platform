@@ -21,7 +21,7 @@ export function GamificationSummary({
   className
 }: GamificationSummaryProps) {
   return (
-    <div className={cn("domus-glass w-full px-4 py-3", className)}>
+    <div className={cn("w-full rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 shadow-[var(--domus-shadow-sm)]", className)}>
       <div className="mb-2 flex items-center justify-between gap-3">
         <span className="text-[11px] font-semibold uppercase tracking-[0.18em] domus-muted">
           Progress

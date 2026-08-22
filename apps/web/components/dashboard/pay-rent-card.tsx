@@ -94,15 +94,15 @@ export function PayRentCard({
 
   if (!charge) {
     return (
-      <Card className="overflow-hidden border border-emerald-200/80 bg-emerald-50/70 shadow-lg">
+      <Card className="overflow-hidden border border-[var(--pos)] bg-[var(--pos-bg)] shadow-[var(--domus-shadow-md)]">
         <CardContent className="flex min-h-[220px] flex-col items-center justify-center gap-4 p-5 text-center sm:min-h-[260px] sm:gap-5 sm:p-8">
-          <div className="rounded-full bg-[var(--surface)] p-4 shadow-[var(--domus-shadow-sm)] ring-1 ring-emerald-200/80">
+          <div className="rounded-full bg-[var(--surface)] p-4 shadow-[var(--domus-shadow-sm)] ring-1 ring-[var(--pos)]">
             <DomMascot size="lg" mood="celebrating" animate />
           </div>
           <div className="space-y-2">
             {hasActiveLease ? (
               <>
-                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/80 bg-[var(--surface)] px-3 py-1 text-sm font-medium text-emerald-700">
+                <div className="inline-flex items-center gap-2 rounded-full border border-[var(--pos)] bg-[var(--pos-bg)] px-3 py-1 text-sm font-medium text-[var(--pos)]">
                   <CheckCircle2 className="h-4 w-4" />
                   You&apos;re all set
                 </div>
@@ -154,7 +154,7 @@ export function PayRentCard({
       className={cn(
         "overflow-hidden shadow-xl",
         isLate
-          ? "border border-red-200/80 bg-red-50/40"
+          ? "border border-[var(--crit)] bg-[var(--crit-bg)]"
           : "border border-[var(--accent-line)] bg-[var(--accent-weak)]"
       )}
     >
@@ -162,7 +162,7 @@ export function PayRentCard({
         <div
           className={cn(
             "h-full border-l-[8px] px-4 py-5 sm:border-l-[10px] sm:px-8 sm:py-8",
-            isLate ? "border-l-red-500" : "border-l-[var(--accent)]"
+            isLate ? "border-l-[var(--crit)]" : "border-l-[var(--accent)]"
           )}
         >
           <div className="flex h-full flex-col justify-between gap-6">
@@ -172,15 +172,17 @@ export function PayRentCard({
                   <p className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                     Your Rent
                   </p>
-                  <h2 className="text-[2rem] font-bold tracking-tight text-foreground sm:text-4xl">
+                  <h2 className="tabular-nums text-[34px] font-bold leading-none tracking-[-0.03em] text-[var(--ink)] sm:text-[38px]">
                     {formatCurrency(charge.amountCents)}
                   </h2>
                 </div>
                 <Badge
-                  variant={isLate ? "destructive" : "outline"}
+                  variant="outline"
                   className={cn(
                     "rounded-full px-3 py-1 text-sm",
-                    !isLate && "border-[var(--accent-line)] bg-[var(--surface)] text-[var(--accent)]"
+                    isLate
+                      ? "border-[var(--crit)] bg-[var(--crit-bg)] text-[var(--crit)]"
+                      : "border-[var(--accent-line)] bg-[var(--surface)] text-[var(--accent)]"
                   )}
                 >
                   <Icon className="mr-1.5 h-4 w-4" />
@@ -189,7 +191,7 @@ export function PayRentCard({
               </div>
 
               <div className="space-y-2 text-center sm:text-left">
-                <p className="text-base font-medium text-foreground sm:text-lg">
+                <p className="text-base font-medium tabular-nums text-[var(--ink)] sm:text-lg">
                   {isLate
                     ? `Your rent of ${formatCurrency(charge.amountCents)} was due ${getRelativeDueText(charge.dueDate)}. Please pay as soon as possible to avoid late fees.`
                     : `Due ${formatDate(charge.dueDate)} (${getRelativeDueText(charge.dueDate)})`}
@@ -207,42 +209,35 @@ export function PayRentCard({
               {additionalCharges.length > 0 ? (
                 <p className="text-sm text-muted-foreground">
                   {additionalCharges.length} more open charge{additionalCharges.length === 1 ? "" : "s"} waiting in
-                  your ledger.
+                  your payment history.
                 </p>
               ) : null}
             </div>
 
             <div className="space-y-3">
-              <div className="space-y-3">
-                <div className="rounded-2xl border border-[var(--accent-line)] bg-[var(--surface)] p-4 shadow-[var(--domus-shadow-sm)]">
-                  <p className="text-sm font-semibold text-foreground">Pay with debit or credit card</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Includes {formatCentsAsDollars(cardPayment.feeCents)} processing fee
-                  </p>
-                  <form action={onPayCharge} className="mt-3">
-                    <input type="hidden" name="chargeId" value={charge.id} />
-                    <SubmitButton
-                      className="h-14 w-full rounded-2xl text-base font-bold"
-                      title={`Pay ${formatCentsAsDollars(cardPayment.totalCents)} with debit or credit card.`}
-                    >
-                      Pay {formatCentsAsDollars(cardPayment.totalCents)}
-                    </SubmitButton>
-                  </form>
-                </div>
-
-                <div className="rounded-2xl border border-border bg-background/80 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-foreground">Pay from bank account</p>
-                    <span className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
-                      FREE
+              <div className="space-y-3" role="radiogroup" aria-label="Payment method">
+                <div className="relative rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[var(--domus-shadow-sm)] has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent-weak)]">
+                  <input
+                    type="radio"
+                    id={`bank-${charge.id}`}
+                    name="paymentMethod"
+                    value="bank"
+                    className="absolute left-4 top-[18px] h-5 w-5 accent-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2"
+                    defaultChecked
+                  />
+                  <label htmlFor={`bank-${charge.id}`} className="flex cursor-pointer items-start gap-3 pl-8">
+                    <span className="min-w-0 flex-1">
+                      <span className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-sm font-semibold text-[var(--ink)]">Bank account</span>
+                        <Badge variant="success">Recommended · Free</Badge>
+                      </span>
+                      <span className="mt-1 block text-sm text-[var(--muted)]">No processing fee. Pay {formatCentsAsDollars(charge.amountCents)} total.</span>
                     </span>
-                  </div>
-                  <p className="mt-1 text-sm text-muted-foreground">No extra fees</p>
+                  </label>
                   {onPayWithACH ? (
                     <form action={onPayWithACH} className="mt-3">
                       <input type="hidden" name="chargeId" value={charge.id} />
                       <SubmitButton
-                        variant="outline"
                         className="h-12 w-full rounded-2xl text-sm font-semibold"
                         title={`Pay ${formatCentsAsDollars(charge.amountCents)} from your bank account.`}
                       >
@@ -252,7 +247,7 @@ export function PayRentCard({
                   ) : (
                     <button
                       type="button"
-                      className="mt-3 flex h-12 w-full items-center justify-center rounded-2xl border border-border bg-muted px-4 text-sm font-semibold text-muted-foreground"
+                      className="mt-3 flex h-12 w-full items-center justify-center rounded-2xl border border-[var(--line)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--muted)]"
                       disabled
                       title="Bank account payments are unavailable right now."
                     >
@@ -260,19 +255,47 @@ export function PayRentCard({
                     </button>
                   )}
                 </div>
+
+                <div className="relative rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent-weak)]">
+                  <input
+                    type="radio"
+                    id={`card-${charge.id}`}
+                    name="paymentMethod"
+                    value="card"
+                    className="absolute left-4 top-[18px] h-5 w-5 accent-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2"
+                  />
+                  <label htmlFor={`card-${charge.id}`} className="flex cursor-pointer items-start gap-3 pl-8">
+                    <span className="min-w-0 flex-1">
+                      <span className="text-sm font-semibold text-[var(--ink)]">Debit or credit card</span>
+                      <span className="mt-1 block text-sm tabular-nums text-[var(--muted)]">
+                        Card fee: {formatCentsAsDollars(cardPayment.feeCents)}. Total today: {formatCentsAsDollars(cardPayment.totalCents)}.
+                      </span>
+                    </span>
+                  </label>
+                  <form action={onPayCharge} className="mt-3">
+                    <input type="hidden" name="chargeId" value={charge.id} />
+                    <SubmitButton
+                      variant="outline"
+                      className="h-12 w-full rounded-2xl text-sm font-semibold"
+                      title={`Pay ${formatCentsAsDollars(cardPayment.totalCents)} with debit or credit card.`}
+                    >
+                      Pay {formatCentsAsDollars(cardPayment.totalCents)}
+                    </SubmitButton>
+                  </form>
+                </div>
               </div>
 
               {autopayEnabled && enrollment ? (
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 text-left">
+                <div className="rounded-2xl border border-[var(--pos)] bg-[var(--pos-bg)] p-4 text-left">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge className="border-emerald-300 bg-emerald-100 text-emerald-800">
+                    <Badge variant="success">
                       Autopay is on
                     </Badge>
-                    <span className="text-sm font-medium text-emerald-900">
+                    <span className="text-sm font-medium text-[var(--pos)]">
                       {formatAutopayCardLabel(enrollment)}
                     </span>
                   </div>
-                  <p className="mt-2 text-sm text-emerald-900">
+                  <p className="mt-2 text-sm text-[var(--pos)]">
                     Your card will be charged automatically each month.
                   </p>
                 </div>
@@ -286,8 +309,8 @@ export function PayRentCard({
                   <div className="rounded-2xl border border-border bg-[var(--surface)] p-4 text-left shadow-[var(--domus-shadow-sm)]">
                     <p className="text-sm font-semibold text-foreground">
                       {autopayPaused
-                        ? "Autopay paused — update your card to re-enable"
-                        : "Set up autopay — never think about rent again."}
+                        ? "Autopay paused — update your card to turn it back on"
+                        : "Set up autopay so rent is paid automatically."}
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">
                       Your card will be charged automatically each month.
@@ -303,7 +326,7 @@ export function PayRentCard({
                       </SubmitButton>
                     </form>
                     {autopayState && !autopayState.success && "error" in autopayState ? (
-                      <p className="mt-2 text-sm text-red-600">{autopayState.error}</p>
+                      <p className="mt-2 text-sm text-[var(--crit)]">{autopayState.error}</p>
                     ) : null}
                   </div>
                 </div>
@@ -319,10 +342,10 @@ export function PayRentCard({
                   Already paid? Mark as paid manually
                 </SubmitButton>
                 {manualState && !manualState.success ? (
-                  <p className="mt-2 text-sm text-red-600">{manualState.error}</p>
+                  <p className="mt-2 text-sm text-[var(--crit)]">{manualState.error}</p>
                 ) : null}
                 {manualState && manualState.success ? (
-                  <p className="mt-2 text-sm text-emerald-700">
+                  <p className="mt-2 text-sm text-[var(--pos)]">
                     {manualState.message ?? "Manual payment request sent for owner confirmation."}
                   </p>
                 ) : null}

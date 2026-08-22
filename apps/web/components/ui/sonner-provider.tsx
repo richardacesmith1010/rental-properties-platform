@@ -7,7 +7,7 @@ export function SonnerProvider() {
     <Toaster
       position="bottom-right"
       toastOptions={{
-        className: "domus-card !border-violet-200/50 !shadow-lg",
+        className: "domus-card !border-[var(--line)] !shadow-[var(--domus-shadow-lg)]",
         duration: 4000,
       }}
       richColors

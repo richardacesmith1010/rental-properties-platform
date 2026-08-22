@@ -16,13 +16,13 @@ export function ConnectBankStep({ alreadyConnected, onSkip }: ConnectBankStepPro
   return (
     <div className="space-y-4">
       <div className="text-center">
-        <h3 className="text-lg font-semibold text-zinc-900">Connect your bank</h3>
-        <p className="mt-1 text-sm text-zinc-500">
+        <h3 className="text-lg font-semibold text-[var(--ink)]">Connect your bank</h3>
+        <p className="mt-1 text-sm text-[var(--muted)]">
           Connect a bank account to receive rent payments securely through Stripe.
         </p>
       </div>
 
-      <div className="rounded-lg border border-violet-100 bg-violet-50/50 p-4 text-sm text-zinc-600">
+      <div className="rounded-xl border border-[var(--accent-line)] bg-[var(--accent-weak)] p-4 text-sm text-[var(--ink-2)]">
         <p>Domus uses Stripe to handle payments. Connecting your bank lets tenants pay rent online, and funds are deposited directly into your account.</p>
       </div>
 
@@ -36,7 +36,7 @@ export function ConnectBankStep({ alreadyConnected, onSkip }: ConnectBankStepPro
       <button
         type="button"
         onClick={onSkip}
-        className="block w-full text-center text-sm text-zinc-400 hover:text-zinc-600"
+        className="block w-full rounded-xl text-center text-sm text-[var(--muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ground)] hover:text-[var(--ink)]"
       >
         Skip for now
       </button>

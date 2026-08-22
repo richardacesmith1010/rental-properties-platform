@@ -64,12 +64,12 @@ describe("PayRentCard", () => {
     expect(screen.getByText(formatCurrency(charges[1].amountCents))).toBeInTheDocument();
     expect(screen.getByText("Roman Court")).toBeInTheDocument();
     expect(screen.getByText("Unit 2B")).toBeInTheDocument();
-    expect(screen.getByText(`Includes ${formatCentsAsDollars(lateChargePayment.feeCents)} processing fee`)).toBeInTheDocument();
+    expect(screen.getByText(`Card fee: ${formatCentsAsDollars(lateChargePayment.feeCents)}. Total today: ${formatCentsAsDollars(lateChargePayment.totalCents)}.`)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: `Pay ${formatCentsAsDollars(lateChargePayment.totalCents)}` })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: `Pay ${formatCentsAsDollars(charges[1].amountCents)}` })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Enable Autopay" })).toBeInTheDocument();
-    expect(screen.getByText("No extra fees")).toBeInTheDocument();
-    expect(screen.getByText("FREE")).toBeInTheDocument();
+    expect(screen.getByText(`No processing fee. Pay ${formatCentsAsDollars(charges[1].amountCents)} total.`)).toBeInTheDocument();
+    expect(screen.getByText("Recommended · Free")).toBeInTheDocument();
   });
 
   it("shows the fee-inclusive card payment amount", () => {
@@ -142,7 +142,7 @@ describe("PayRentCard", () => {
       />
     );
 
-    expect(screen.getByText("Autopay paused — update your card to re-enable")).toBeInTheDocument();
+    expect(screen.getByText("Autopay paused — update your card to turn it back on")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Update Card" })).toBeInTheDocument();
   });
 

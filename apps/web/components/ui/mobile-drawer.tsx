@@ -18,7 +18,7 @@ export function MobileDrawer({ trigger, children, className }: MobileDrawerProps
         <Drawer.Overlay className="fixed inset-0 z-40 bg-black/45 backdrop-blur-[2px]" />
         <Drawer.Content
           className={cn(
-            "fixed inset-y-0 left-0 z-50 flex h-full w-[min(88vw,22rem)] max-w-[22rem] flex-col overflow-hidden border-r border-white/10 bg-white text-foreground shadow-2xl dark:bg-zinc-900",
+            "fixed inset-y-0 left-0 z-50 flex h-full w-[min(88vw,22rem)] max-w-[22rem] flex-col overflow-hidden border-r border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] shadow-[var(--domus-shadow-lg)]",
             className
           )}
         >

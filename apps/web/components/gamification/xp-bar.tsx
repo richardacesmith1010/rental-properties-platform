@@ -21,26 +21,26 @@ export function XpBar({ currentXp, currentLevel, className }: XpBarProps) {
 
   return (
     <div className={cn("w-full min-w-0 space-y-2", className)}>
-      <div className="flex items-center justify-between gap-3 text-[11px] font-medium text-zinc-600">
+      <div className="flex items-center justify-between gap-3 text-[11px] font-medium text-[var(--ink-2)]">
         <span>Level {currentLevel}</span>
         <span className="text-tabular">
           <CountUp target={currentXp} duration={1200} />
           {isMaxLevel ? " XP" : ` / ${nextThreshold.toLocaleString()} XP`}
         </span>
       </div>
-      <div className="relative h-2 rounded-full bg-violet-100">
+      <div className="relative h-2 rounded-full bg-[var(--accent-weak)]">
         {[25, 50, 75].map((marker) => (
           <span
             key={marker}
-            className="absolute top-1/2 h-3 w-px -translate-y-1/2 bg-white/70"
+            className="absolute top-1/2 h-3 w-px -translate-y-1/2 bg-[var(--surface)]/70"
             style={{ left: `${marker}%` }}
             aria-hidden="true"
           />
         ))}
         <div
           className={cn(
-            "h-2 rounded-full bg-gradient-to-r from-violet-500 to-emerald-500 transition-all duration-500",
-            nearLevelUp ? "animate-pulse shadow-[0_0_16px_rgba(124,58,237,0.35)]" : ""
+            "h-2 rounded-full bg-[var(--accent)] transition-all duration-500",
+            nearLevelUp ? "animate-pulse shadow-[var(--domus-shadow-sm)]" : ""
           )}
           style={{
             width: `${progress}%`,
@@ -53,11 +53,11 @@ export function XpBar({ currentXp, currentLevel, className }: XpBarProps) {
         />
       </div>
       {!isMaxLevel ? (
-        <p className="text-[11px] text-zinc-500">
+        <p className="text-[11px] text-[var(--muted)]">
           <CountUp target={xpToNextLevel} duration={1000} /> XP to next level
         </p>
       ) : (
-        <p className="text-[11px] text-zinc-500">Max level reached</p>
+        <p className="text-[11px] text-[var(--muted)]">Max level reached</p>
       )}
     </div>
   );

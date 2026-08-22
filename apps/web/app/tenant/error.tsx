@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { DomMascot } from "@/components/gamification/dom-mascot";
+import { Button } from "@/components/ui/button";
 
 export default function TenantError({
   error,
@@ -12,31 +13,28 @@ export default function TenantError({
 }) {
   return (
     <div className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md rounded-3xl border border-zinc-200 bg-white/95 p-8 text-center shadow-xl shadow-violet-500/10">
-        <div className="mx-auto mb-4 flex w-fit items-center justify-center rounded-3xl bg-violet-50 px-4 py-3">
+      <div className="domus-card w-full max-w-md p-8 text-center shadow-[var(--domus-shadow-lg)]">
+        <div className="mx-auto mb-4 flex w-fit items-center justify-center rounded-3xl bg-[var(--accent-weak)] px-4 py-3">
           <DomMascot size="lg" mood="sleeping" />
         </div>
-        <h1 className="text-2xl font-semibold text-zinc-900">Tenant dashboard error</h1>
-        <p className="mt-2 text-sm text-zinc-500">
-          Domus couldn&apos;t finish loading the tenant workspace.
+        <h1 className="text-2xl font-semibold text-[var(--ink)]">We couldn&apos;t load your tenant dashboard</h1>
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          Try again, or return to your dashboard.
         </p>
         {error.digest ? (
-          <p className="mt-3 text-xs text-zinc-400">Ref: {error.digest}</p>
+          <p className="mt-3 text-xs tabular-nums text-[var(--muted)]">Reference: {error.digest}</p>
         ) : null}
         <div className="mt-6 flex items-center justify-center gap-3">
-          <button
+          <Button
             type="button"
             onClick={reset}
-            className="rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-500"
+            title="Try loading your tenant dashboard again."
           >
             Try again
-          </button>
-          <Link
-            href="/tenant"
-            className="rounded-xl border border-zinc-200 px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
-          >
-            Back to dashboard
-          </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/tenant" title="Return to your tenant dashboard.">Back to dashboard</Link>
+          </Button>
         </div>
       </div>
     </div>

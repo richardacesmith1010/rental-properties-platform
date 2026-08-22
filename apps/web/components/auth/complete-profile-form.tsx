@@ -67,7 +67,7 @@ export function CompleteProfileForm({ email }: CompleteProfileFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-zinc-700" htmlFor="complete-profile-password">
+        <label className="mb-1.5 block text-sm font-medium text-[var(--ink-2)]" htmlFor="complete-profile-password">
           Password
         </label>
         <Input
@@ -83,7 +83,7 @@ export function CompleteProfileForm({ email }: CompleteProfileFormProps) {
       </div>
 
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-zinc-700" htmlFor="complete-profile-confirm-password">
+        <label className="mb-1.5 block text-sm font-medium text-[var(--ink-2)]" htmlFor="complete-profile-confirm-password">
           Confirm Password
         </label>
         <Input
@@ -96,7 +96,7 @@ export function CompleteProfileForm({ email }: CompleteProfileFormProps) {
           required
         />
         {confirmPassword.length > 0 && !passwordsMatch ? (
-          <p className="mt-2 text-xs font-medium text-red-600">Passwords do not match yet.</p>
+          <p className="mt-2 text-xs font-medium text-[var(--crit)]">Passwords do not match yet.</p>
         ) : null}
       </div>
 

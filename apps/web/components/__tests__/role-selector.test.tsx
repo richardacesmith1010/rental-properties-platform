@@ -30,13 +30,13 @@ describe("RoleSelector", () => {
   it("renders role descriptions", () => {
     render(<RoleSelector />);
     expect(
-      screen.getByText("Portfolio control, rent operations, and full reporting.")
+      screen.getByText("Manage properties, rent, and reports.")
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Property operations for assigned portfolios.")
+      screen.getByText("Manage assigned properties and tenant needs.")
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Rent payments, maintenance requests, and documents.")
+      screen.getByText("Pay rent, report problems, and view lease documents.")
     ).toBeInTheDocument();
   });
 

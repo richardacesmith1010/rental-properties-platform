@@ -8,35 +8,23 @@ const roles = [
   {
     id: "owner" as const,
     label: "Owner",
-    description: "Portfolio control, rent operations, and full reporting.",
+    description: "Manage properties, rent, and reports.",
     icon: Building2,
     nextPath: "/owner",
-    gradient: "from-violet-500 to-purple-600",
-    glowColor: "ring-violet-500/30 shadow-violet-500/20",
-    bgLight: "bg-violet-50",
-    iconColor: "text-violet-600",
   },
   {
     id: "manager" as const,
     label: "Manager",
-    description: "Property operations for assigned portfolios.",
+    description: "Manage assigned properties and tenant needs.",
     icon: Briefcase,
     nextPath: "/manager",
-    gradient: "from-emerald-500 to-teal-500",
-    glowColor: "ring-emerald-500/30 shadow-emerald-500/20",
-    bgLight: "bg-emerald-50",
-    iconColor: "text-emerald-600",
   },
   {
     id: "tenant" as const,
     label: "Tenant",
-    description: "Rent payments, maintenance requests, and documents.",
+    description: "Pay rent, report problems, and view lease documents.",
     icon: Home,
     nextPath: "/tenant",
-    gradient: "from-amber-400 to-rose-500",
-    glowColor: "ring-amber-500/30 shadow-amber-500/20",
-    bgLight: "bg-amber-50",
-    iconColor: "text-amber-600",
   },
 ];
 
@@ -71,14 +59,14 @@ export function RoleSelector() {
                     : `Select ${role.label} and open its login options.`
                 }
                 className={`
-                  group relative flex flex-col items-center rounded-2xl border bg-card p-6 text-center shadow-sm
-                  transition-all duration-300 ease-out
-                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2
+                  group relative flex flex-col items-center rounded-2xl border p-6 text-center shadow-[var(--domus-shadow-sm)]
+                  transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2
+                  focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ground)]
                   ${isSelected
-                    ? `ring-2 ${role.glowColor} shadow-lg border-transparent scale-[1.02]`
+                    ? "scale-[1.02] border-[var(--accent-line)] bg-[var(--accent-weak)] shadow-[var(--domus-shadow-md)]"
                     : isOther
-                      ? "opacity-40 scale-95 border-border/60 pointer-events-none"
-                      : `border-border/70 hover:border-transparent hover:ring-2 hover:${role.glowColor} hover:shadow-lg hover:scale-105 cursor-pointer`
+                      ? "pointer-events-none scale-95 border-[var(--line)] bg-[var(--surface)] opacity-40"
+                      : "cursor-pointer border-[var(--line)] bg-[var(--surface)] hover:scale-[1.02] hover:border-[var(--accent-line)] hover:bg-[var(--surface-2)] hover:shadow-[var(--domus-shadow-md)]"
                   }
                 `}
               >
@@ -87,15 +75,15 @@ export function RoleSelector() {
                   className={`
                     mb-4 flex h-16 w-16 items-center justify-center rounded-2xl transition-all duration-300
                     ${isSelected || isHovered
-                      ? `bg-gradient-to-br ${role.gradient} shadow-lg`
-                      : `${role.bgLight}`
+                      ? "bg-[var(--accent)] text-white shadow-[var(--domus-shadow-sm)]"
+                      : "bg-[var(--accent-weak)] text-[var(--accent)]"
                     }
                   `}
                 >
                   <Icon
                     className={`
                       h-8 w-8 transition-all duration-300
-                      ${isSelected || isHovered ? "text-white" : role.iconColor}
+                      ${isSelected || isHovered ? "text-white" : "text-[var(--accent)]"}
                       ${isHovered && !selectedRole ? "animate-[bounce_0.6s_ease-in-out]" : ""}
                     `}
                   />
@@ -114,7 +102,7 @@ export function RoleSelector() {
                 `}
               >
                 {isSelected && (
-                  <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                  <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--domus-shadow-sm)]">
                     <LoginForm nextPath={role.nextPath} role={role.id} />
                   </div>
                 )}
