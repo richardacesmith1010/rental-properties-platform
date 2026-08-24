@@ -96,12 +96,13 @@ export function buildBrandedEmailShell({
   const safePreferencesUrl = footerPreferencesUrl ? escapeHtml(footerPreferencesUrl) : null;
   const safePreheaderText = preheaderText ? escapeHtml(preheaderText) : null;
 
+  // Hex values mirror docs/design-system.md v2 light tokens.
   return `
 <!DOCTYPE html>
 <html lang="en">
-  <body style="margin:0;padding:24px;background-color:#f5f3ff;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+  <body style="margin:0;padding:24px;background-color:#FBFBF9;font-family:Arial,Helvetica,sans-serif;color:#191B1E;">
     ${safePreheaderText ? `
-    <span style="display:none;font-size:1px;color:#f5f3ff;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    <span style="display:none;font-size:1px;color:#FBFBF9;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
       ${safePreheaderText}
     </span>` : ""}
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
@@ -109,21 +110,12 @@ export function buildBrandedEmailShell({
         <td align="center">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;border-collapse:collapse;">
             <tr>
-              <td style="padding:20px 24px;background:linear-gradient(135deg,#7C3AED 0%,#5B21B6 100%);border-radius:20px 20px 0 0;">
+              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-bottom:none;border-radius:16px 16px 0 0;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
                   <tr>
                     <td style="vertical-align:middle;">
-                      <img
-                        src="https://domusbase.com/images/mascot/poses/happy.png"
-                        alt="Domus mascot"
-                        width="72"
-                        height="48"
-                        style="display:block;border:0;outline:none;text-decoration:none;"
-                      />
-                    </td>
-                    <td style="padding-left:12px;vertical-align:middle;">
-                      <div style="font-size:20px;font-weight:700;line-height:1.2;color:#ffffff;">Domus</div>
-                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:rgba(255,255,255,0.78);">
+                      <div style="font-size:20px;font-weight:700;line-height:1.2;color:#191B1E;">Domus</div>
+                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#6F757C;">
                         Rental Property Management
                       </div>
                     </td>
@@ -132,17 +124,17 @@ export function buildBrandedEmailShell({
               </td>
             </tr>
             <tr>
-              <td style="padding:32px 24px;background-color:#ffffff;border-left:1px solid #ddd6fe;border-right:1px solid #ddd6fe;">
-                <div style="font-size:24px;font-weight:700;line-height:1.3;color:#111827;">${titleHtml}</div>
-                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#475569;">
+              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #E6E6E0;border-right:1px solid #E6E6E0;">
+                <div style="font-size:24px;font-weight:700;line-height:1.3;color:#191B1E;">${titleHtml}</div>
+                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#3A3F45;">
                   ${bodyHtml}
                 </div>
                 <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:24px;border-collapse:collapse;">
                   <tr>
-                    <td align="center" bgcolor="#10B981" style="border-radius:999px;">
+                    <td align="center" bgcolor="#1D4ED8" style="border-radius:999px;">
                       <a
                         href="${safeCtaUrl}"
-                        style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:700;line-height:1;text-decoration:none;color:#ffffff;"
+                        style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:700;line-height:1;text-decoration:none;color:#FFFFFF;"
                       >
                         ${safeCtaText}
                       </a>
@@ -152,14 +144,14 @@ export function buildBrandedEmailShell({
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 24px;background-color:#f8fafc;border:1px solid #ddd6fe;border-top:none;border-radius:0 0 20px 20px;">
-                <div style="font-size:12px;line-height:1.6;color:#64748b;">
+              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-top:none;border-radius:0 0 16px 16px;">
+                <div style="font-size:12px;line-height:1.6;color:#6F757C;">
                   Domus - Rental Property Management<br />
                   Manage rent, maintenance, documents, and notifications in one place.
                 </div>
                 ${safePreferencesUrl ? `
-                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#64748b;">
-                  <a href="${safePreferencesUrl}" style="color:#7C3AED;text-decoration:underline;">
+                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#6F757C;">
+                  <a href="${safePreferencesUrl}" style="color:#1D4ED8;text-decoration:underline;">
                     Manage notification preferences
                   </a>
                 </div>` : ""}
@@ -208,7 +200,7 @@ export function buildPropertyMessageEmail({
   const bodyHtml = [
     `<p style="margin:0;">Hi ${escapeHtml(recipientName)},</p>`,
     `<p style="margin:16px 0 0 0;">${escapeHtml(senderName)} sent you a message about <strong>${escapeHtml(propertyName)}</strong>.</p>`,
-    `<div style="margin:16px 0 0 0;padding:16px;border-radius:16px;background-color:#f8fafc;border:1px solid #e2e8f0;color:#334155;">"${safeMessage}"</div>`,
+    `<div style="margin:16px 0 0 0;padding:16px;border-radius:16px;background-color:#F5F5F1;border:1px solid #E6E6E0;color:#3A3F45;">"${safeMessage}"</div>`,
     `<p style="margin:16px 0 0 0;">Open Domus to reply or review the conversation.</p>`
   ].join("");
 
@@ -484,21 +476,21 @@ export function buildFeedbackEmail({
   const html = `
 <!DOCTYPE html>
 <html lang="en">
-  <body style="margin:0;padding:24px;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+  <body style="margin:0;padding:24px;background:#FBFBF9;font-family:Arial,Helvetica,sans-serif;color:#191B1E;">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;margin:0 auto;border-collapse:collapse;">
       <tr>
-        <td style="padding:24px;border:1px solid #e2e8f0;border-radius:20px;background:#ffffff;">
-          <div style="font-size:20px;font-weight:700;color:#111827;">${typeMeta.emoji} ${escapeHtml(subjectLabel)}</div>
-          <div style="margin-top:16px;font-size:14px;line-height:1.7;color:#334155;">
+        <td style="padding:24px;border:1px solid #E6E6E0;border-radius:16px;background:#FFFFFF;">
+          <div style="font-size:20px;font-weight:700;color:#191B1E;">${typeMeta.emoji} ${escapeHtml(subjectLabel)}</div>
+          <div style="margin-top:16px;font-size:14px;line-height:1.7;color:#3A3F45;">
             <p style="margin:0;"><strong>From:</strong> ${escapeHtml(submitter)}${fromLine ? ` - ${escapeHtml(fromLine)}` : ""}</p>
             <p style="margin:8px 0 0 0;"><strong>Page:</strong> ${escapeHtml(pageUrl)}</p>
             <p style="margin:8px 0 0 0;"><strong>Type:</strong> ${escapeHtml(typeMeta.label)}</p>
           </div>
-          <div style="margin-top:20px;padding:16px;border-radius:16px;border:1px solid #e2e8f0;background:#f8fafc;font-size:14px;line-height:1.7;color:#0f172a;">
+          <div style="margin-top:20px;padding:16px;border-radius:16px;border:1px solid #E6E6E0;background:#F5F5F1;font-size:14px;line-height:1.7;color:#191B1E;">
             ${safeMessage}
           </div>
           <div style="margin-top:24px;">
-            <a href="${escapeHtml(opsUrl)}" style="display:inline-block;border-radius:999px;background:#7c3aed;padding:12px 20px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;">
+            <a href="${escapeHtml(opsUrl)}" style="display:inline-block;border-radius:999px;background:#1D4ED8;padding:12px 20px;font-size:14px;font-weight:700;color:#FFFFFF;text-decoration:none;">
               View all feedback
             </a>
           </div>

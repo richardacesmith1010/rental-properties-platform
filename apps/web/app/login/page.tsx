@@ -1,11 +1,9 @@
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BarChart3, ShieldCheck, Sparkles } from "lucide-react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { RoleSelector } from "@/components/auth/role-selector";
-import { DomMascot } from "@/components/gamification/dom-mascot";
 import { Alert } from "@/components/ui/alert";
 import { getCurrentUserRole, getRoleHomePath } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -49,26 +47,17 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   return (
     <div className="app-surface min-h-screen">
       <div className="flex min-h-screen flex-col lg:grid lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(196,181,253,0.45),transparent_30%),linear-gradient(135deg,#5b21b6_0%,#7c3aed_42%,#0f172a_100%)] px-5 py-8 text-white sm:px-8 lg:flex lg:flex-col lg:justify-between lg:px-12 lg:py-12">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_18%,rgba(255,255,255,0.12),transparent_24%),radial-gradient(circle_at_20%_85%,rgba(52,211,153,0.16),transparent_22%)]" />
+        <section className="relative overflow-hidden border-b border-[var(--line)] bg-[var(--ground)] px-5 py-8 text-[var(--ink)] sm:px-8 lg:flex lg:flex-col lg:justify-between lg:border-b-0 lg:border-r lg:px-12 lg:py-12">
           <div className="relative z-10 flex items-center justify-between">
-            <Link href="/marketing" className="inline-flex items-center gap-3" title="Return to the Domus marketing page.">
-              <Image
-                src="/images/mascot/icons/head.png"
-                alt="Domus"
-                width={44}
-                height={44}
-                className="rounded-2xl shadow-lg shadow-slate-950/25"
-                priority
-              />
+            <Link href="/marketing" className="inline-flex items-center" title="Return to the Domus marketing page.">
               <div>
-                <p className="text-lg font-semibold tracking-tight">Domus</p>
-                <p className="text-xs uppercase tracking-[0.2em] text-white/70">Rental operations</p>
+                <p className="text-xl font-bold tracking-tight text-[var(--ink)]">Domus</p>
+                <p className="text-xs text-[var(--muted)]">Rental Property Management</p>
               </div>
             </Link>
             <Link
               href="/marketing"
-              className="hidden items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white/90 transition hover:bg-white/15 lg:inline-flex"
+              className="hidden items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--ink-2)] transition hover:border-[var(--accent-line)] hover:bg-[var(--accent-weak)] hover:text-[var(--accent)] lg:inline-flex"
               title="Explore Domus features and pricing."
             >
               Product Tour
@@ -78,7 +67,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
           <div className="relative z-10 mt-8 grid gap-6 lg:mt-16 lg:grid-cols-[1fr_auto] lg:items-center lg:gap-10">
             <div className="max-w-2xl space-y-5">
-              <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-white/85">
+              <p className="inline-flex items-center gap-2 rounded-full border border-[var(--accent-line)] bg-[var(--accent-weak)] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
                 <Sparkles className="h-3.5 w-3.5" />
                 Premium landlord workspace
               </p>
@@ -86,7 +75,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-5xl">
                   Manage your rentals like a pro.
                 </h1>
-                <p className="max-w-xl text-base leading-7 text-white/78 sm:text-lg">
+                <p className="max-w-xl text-base leading-7 text-[var(--ink-2)] sm:text-lg">
                   Domus brings rent collection, maintenance, documents, and tenant communication into one polished command center for owners, managers, and tenants.
                 </p>
               </div>
@@ -95,41 +84,36 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 {proofPoints.map((item) => (
                   <div
                     key={item.label}
-                    className="rounded-2xl border border-white/[0.14] bg-white/10 px-4 py-4 shadow-lg shadow-slate-950/10 backdrop-blur-sm"
+                    className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-4 shadow-[var(--domus-shadow-sm)]"
                   >
-                    <p className="text-2xl font-semibold">{item.value}</p>
-                    <p className="mt-1 text-sm text-white/72">{item.label}</p>
+                    <p className="tabular-nums text-2xl font-semibold text-[var(--ink)]">{item.value}</p>
+                    <p className="mt-1 text-sm text-[var(--muted)]">{item.label}</p>
                   </div>
                 ))}
               </div>
 
-              <div className="hidden gap-3 text-sm text-white/82 sm:grid sm:grid-cols-2">
-                <div className="rounded-2xl border border-white/[0.14] bg-white/10 px-4 py-4 backdrop-blur-sm">
-                  <div className="flex items-center gap-2 font-semibold">
+              <div className="hidden gap-3 text-sm text-[var(--ink-2)] sm:grid sm:grid-cols-2">
+                <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-4">
+                  <div className="flex items-center gap-2 font-semibold text-[var(--ink)]">
                     <BarChart3 className="h-4 w-4" />
                     See what matters first
                   </div>
-                  <p className="mt-2 leading-6 text-white/72">
+                  <p className="mt-2 leading-6 text-[var(--muted)]">
                     Revenue, occupancy, open tickets, and overdue balances stay visible without a spreadsheet.
                   </p>
                 </div>
-                <div className="rounded-2xl border border-white/[0.14] bg-white/10 px-4 py-4 backdrop-blur-sm">
-                  <div className="flex items-center gap-2 font-semibold">
+                <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-4">
+                  <div className="flex items-center gap-2 font-semibold text-[var(--ink)]">
                     <ShieldCheck className="h-4 w-4" />
                     Built for real operations
                   </div>
-                  <p className="mt-2 leading-6 text-white/72">
+                  <p className="mt-2 leading-6 text-[var(--muted)]">
                     Role-aware access, branded emails, invoices, and real payment workflows are already wired in.
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="mx-auto hidden lg:mx-0 lg:block">
-              <div className="rounded-[32px] border border-white/[0.14] bg-white/10 p-6 shadow-2xl shadow-slate-950/30 backdrop-blur-md">
-                <DomMascot size="xl" mood="waving" className="mx-auto" />
-              </div>
-            </div>
           </div>
         </section>
 
@@ -137,18 +121,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <div className="w-full max-w-xl">
             <div className="domus-card overflow-hidden border border-border/60 shadow-[0_30px_90px_-45px_rgba(15,23,42,0.35)]">
               <div className="border-b border-border/60 bg-background/90 px-6 py-6 sm:px-8">
-                <div className="mb-5 flex items-center gap-3 lg:hidden">
-                  <Image
-                    src="/images/mascot/icons/head.png"
-                    alt="Domus"
-                    width={40}
-                    height={40}
-                    className="rounded-2xl"
-                    priority
-                  />
+                <div className="mb-5 lg:hidden">
                   <div>
                     <p className="text-lg font-semibold text-foreground">Domus</p>
-                    <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Rental operations</p>
+                    <p className="text-xs text-muted-foreground">Rental Property Management</p>
                   </div>
                 </div>
 

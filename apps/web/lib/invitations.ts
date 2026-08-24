@@ -47,6 +47,16 @@ function readInviteMetadataNumber(
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+export function extractTenantInviteNames(
+  metadata: Record<string, unknown> | undefined
+) {
+  return {
+    ownerName: readInviteMetadataString(metadata, "owner_name"),
+    propertyName: readInviteMetadataString(metadata, "property_name"),
+    propertyAddress: readInviteMetadataString(metadata, "property_address")
+  };
+}
+
 function buildPropertyAddress(row: {
   address_line1?: string | null;
   city?: string | null;
@@ -189,6 +199,7 @@ export async function getTenantInviteOnboardingContext(params: {
   const propertyId =
     invitation?.property_id ?? readInviteMetadataString(params.userMetadata, "property_id");
   const unitId = readInviteMetadataString(params.userMetadata, "unit_id");
+  const inviteNames = extractTenantInviteNames(params.userMetadata);
   const unitLabelFromMetadata = readInviteMetadataString(params.userMetadata, "unit_label");
   const monthlyRentCents = readInviteMetadataNumber(params.userMetadata, "monthly_rent_cents");
   const leaseStartDate = readInviteMetadataString(params.userMetadata, "lease_start_date");
@@ -228,9 +239,11 @@ export async function getTenantInviteOnboardingContext(params: {
       readInviteMetadataString(params.userMetadata, "full_name") ??
       invitation?.full_name ??
       null,
-    ownerName: inviterProfile?.full_name ?? inviterProfile?.email ?? "your landlord",
-    propertyName: property?.name ?? null,
-    propertyAddress: property ? buildPropertyAddress(property) : null,
+    ownerName:
+      inviteNames.ownerName ?? inviterProfile?.full_name ?? inviterProfile?.email ?? null,
+    propertyName: inviteNames.propertyName ?? property?.name ?? null,
+    propertyAddress:
+      inviteNames.propertyAddress ?? (property ? buildPropertyAddress(property) : null),
     unitLabel: unitLabelFromMetadata ?? unit?.unit_number ?? null,
     monthlyRentLabel:
       monthlyRentCents != null && monthlyRentCents > 0 ? formatCurrency(monthlyRentCents) : null,

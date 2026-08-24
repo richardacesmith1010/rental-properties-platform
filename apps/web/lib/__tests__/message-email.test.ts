@@ -18,6 +18,9 @@ describe("message email templates", () => {
     expect(result.html).toContain("Rent is due tomorrow.");
     expect(result.html).toContain("View in Domus");
     expect(result.html).toContain("https://domusbase.com/tenant?section=notifications");
+    expect(result.html).toContain("background-color:#FBFBF9");
+    expect(result.html).toContain('bgcolor="#1D4ED8"');
+    expect(result.html).not.toContain("mascot");
   });
 
   it("builds a generic property message email for owner inbox replies", () => {

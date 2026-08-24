@@ -51,7 +51,7 @@ export default async function OnboardingPage() {
           {role === "tenant" && inviteContext ? (
             <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-4 text-left text-sm">
               <p><span className="font-semibold text-foreground">Invited by:</span> <span className="text-muted-foreground">{inviteContext.ownerName ?? "Your landlord"}</span></p>
-              <p className="mt-2"><span className="font-semibold text-foreground">Property:</span> <span className="text-muted-foreground">{inviteContext.propertyAddress ?? inviteContext.propertyName ?? "Your rental home"}</span></p>
+              <p className="mt-2"><span className="font-semibold text-foreground">Property:</span> <span className="text-muted-foreground">{inviteContext.propertyName ?? inviteContext.propertyAddress ?? "Your rental home"}</span></p>
               {inviteContext.unitLabel ? (
                 <p className="mt-2"><span className="font-semibold text-foreground">Unit:</span> <span className="text-muted-foreground">{inviteContext.unitLabel}</span></p>
               ) : null}
