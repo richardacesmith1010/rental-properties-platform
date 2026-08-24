@@ -93,7 +93,15 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - **First-run walk EXECUTED end-to-end** (smoke owner → wizard invite → Resend email → magic link → complete-profile → first login → onboarding): every screen v2, zero console errors. New fixture: +smoketenant2 (creds in .env.local).
 - Findings logged for follow-up: (1) onboarding context card shows "your landlord"/"Your rental home" fallbacks instead of real inviter/property names (Unit resolves; trust miss); (2) invite EMAIL is still old-purple brand (Phase 7 — consider promoting, it's the literal first touch); (3) login page left panel still purple marketing hero (Phase 6).
 
-**Next:** Phase 3 manager surface, or promote Phase 6/7 first-touch surfaces (login hero + emails) per first-run strategy — user's call. Then settings components (4), de-gamification (5). Still pending user: J&MSP bank connect; real-data owner walk. Still pending user: J&MSP LLC bank connect (~3 min); real-data owner walk incl. drill-down numbers.
+## Reskin First-Touch — SHIPPED (Sprint 135, 2026-08-23, commit d697909; Sol-mode)
+
+- **Every outbound email now v2-branded** via the shared `buildBrandedEmailShell` + 8-builder sweep (wordmark header, no gradient/mascot, #1D4ED8 CTA, client-safe hexes). Verified live: fresh invite email received in Gmail on the new brand.
+- **Login hero v2 both themes**, mascot removed (flagged login-only exception ahead of Phase 5).
+- **Invite-names bug fixed at root**: `getTenantInviteOnboardingContext` (lib/invitations.ts) ignored stored metadata and used RLS-hidden tenant-side reads; now metadata-first with fallbacks + tests. Verified live: +smoketenant3 first-run shows "Smoke Owner" / "Smoke Test Property" on onboarding.
+- 978/978; independent gate green; email sweep zero; smoke 3/3; full fresh first-run walk zero console errors.
+- Fixtures now: +smoketenant2, +smoketenant3 (creds in .env.local).
+
+**Next:** Phase 3 (manager surface) → settings components (4) → de-gamification (5) → marketing/landing (6) → any remaining email/PDF surfaces (7). Still pending user: J&MSP bank connect; real-data owner walk. Still pending user: J&MSP LLC bank connect (~3 min); real-data owner walk incl. drill-down numbers.
 
 **Tenant strategy (user-stated 2026-08-22):** Angel (current tenant, "1st Home") pays rent OUTSIDE Domus by deliberate choice — he is NOT the adoption target, so his in-app "overdue" charges are bookkeeping artifacts, not real delinquency (user may want to record manual payments or waive them eventually). The Domus-native tenant will be the NEXT one onboarded. Phase 2 (tenant surface) should therefore optimize for a brand-new tenant's first-run experience: invite → account → first rent payment.
 
