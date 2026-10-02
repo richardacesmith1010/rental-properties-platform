@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, formatUnitLabel } from "@/lib/format";
 import { type ChargeDetailRecordDTO, type ExpenseLineItemDTO, chargeCategoryLabel } from "@/lib/charge-audit";
 import { getStatusClasses, statusAriaLabel, statusBadgeClasses } from "@/lib/status-colors";
 
@@ -135,7 +135,7 @@ function ChargeActionList({
                 ) : null}
               </div>
               <p className="text-sm text-muted-foreground">
-                {charge.propertyName} • Unit {charge.unitNumber}
+                {charge.propertyName} • {formatUnitLabel(charge.unitNumber)}
               </p>
               <p className="text-sm text-muted-foreground">
                 Due {formatDate(charge.dueDate)}

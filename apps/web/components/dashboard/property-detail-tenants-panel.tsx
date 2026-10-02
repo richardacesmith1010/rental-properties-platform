@@ -5,7 +5,7 @@ import type { TenantActivityEntry } from "@/app/actions/tenant-activity";
 import type { ActionState } from "@/app/actions";
 import type { LeaseListItem } from "@/lib/portfolio";
 import type { PropertyDetailData } from "@/lib/property-detail";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatUnitLabel } from "@/lib/format";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { TenantActivityTimeline } from "@/components/dashboard/tenant-activity-timeline";
 import { Badge } from "@/components/ui/badge";
@@ -86,7 +86,7 @@ export function PropertyDetailTenantsPanel({
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        Unit {unitNumberById.get(lease.unitId) ?? lease.unitLabel}
+                        {formatUnitLabel(unitNumberById.get(lease.unitId) ?? lease.unitLabel)}
                       </p>
                       <p className="text-sm text-muted-foreground">{lease.tenantEmail}</p>
                       <p className="text-sm text-muted-foreground">

@@ -11,6 +11,7 @@ import type { ActionState } from "@/app/actions";
 import type { TenantUnit } from "@/lib/maintenance";
 import { Alert } from "@/components/ui/alert";
 import { PhotoUpload } from "@/components/dashboard/maintenance/photo-upload";
+import { formatUnitLabel } from "@/lib/format";
 
 type StatefulAction = (
   prev: ActionState,
@@ -174,7 +175,7 @@ export function TicketForm({
 
           {activeUnit ? (
             <div className="rounded-xl border border-border/60 bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-              Reporting for <span className="font-semibold text-foreground">{activeUnit.propertyName}</span> · Unit {activeUnit.unitNumber}
+              Reporting for <span className="font-semibold text-foreground">{activeUnit.propertyName}</span> · {formatUnitLabel(activeUnit.unitNumber)}
             </div>
           ) : null}
 
@@ -259,7 +260,7 @@ export function TicketForm({
               <option value="">Select unit</option>
               {units.map((unit) => (
                 <option key={unit.id} value={unit.id}>
-                  {unit.propertyName} &bull; Unit {unit.unitNumber}
+                  {unit.propertyName} &bull; {formatUnitLabel(unit.unitNumber)}
                 </option>
               ))}
             </Select>

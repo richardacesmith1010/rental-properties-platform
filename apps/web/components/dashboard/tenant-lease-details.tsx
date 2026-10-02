@@ -1,6 +1,6 @@
 import { Home, CalendarClock } from "lucide-react";
 import type { TenantLeaseDetails as TenantLeaseDetailsItem } from "@/lib/leases";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, formatUnitLabel } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -56,7 +56,7 @@ export function TenantLeaseDetails({ leases }: TenantLeaseDetailsProps) {
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-base font-semibold text-[var(--ink)]">
-                        {lease.propertyName} • Unit {lease.unitNumber}
+                        {lease.propertyName} • {formatUnitLabel(lease.unitNumber)}
                       </h3>
                       <LeaseStatusBadge status={lease.leaseStatus} daysRemaining={lease.daysRemaining} />
                     </div>

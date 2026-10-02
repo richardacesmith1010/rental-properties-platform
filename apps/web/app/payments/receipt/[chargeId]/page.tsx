@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { withChargeEditingFallback } from "@/lib/charge-audit";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserRole } from "@/lib/auth";
-import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
+import { formatCurrency, formatDate, formatDateTime, formatUnitLabel } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
 import { PrintButton } from "./print-button";
@@ -134,7 +134,7 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
               <div className="space-y-1">
                 <p className="text-xs uppercase tracking-wide text-zinc-400">Property</p>
                 <p className="font-medium text-zinc-900">{property.name}</p>
-                <p className="text-sm text-zinc-500">Unit {unit.unit_number}</p>
+                <p className="text-sm text-zinc-500">{formatUnitLabel(unit.unit_number)}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-xs uppercase tracking-wide text-zinc-400">Receipt Timestamp</p>

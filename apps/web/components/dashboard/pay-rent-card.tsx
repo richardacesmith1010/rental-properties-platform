@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { getChargeUrgency } from "@/lib/rent-urgency";
 import type { TenantCharge } from "@/lib/tenant-payments";
-import { cn, formatCurrency, formatDate } from "@/lib/format";
+import { cn, formatCurrency, formatDate, formatUnitLabel } from "@/lib/format";
 import { calculateCardFee, formatCentsAsDollars } from "@/lib/payment-fees";
 
 type StatefulAction = (
@@ -198,7 +198,7 @@ export function PayRentCard({
                 <p className="text-sm text-muted-foreground sm:text-base">
                   <span className="block sm:inline">{charge.propertyName}</span>
                   <span className="hidden sm:inline"> · </span>
-                  <span className="block sm:inline">Unit {charge.unitNumber}</span>
+                  <span className="block sm:inline">{formatUnitLabel(charge.unitNumber)}</span>
                 </p>
                 <p className="text-sm text-muted-foreground">
                   You&apos;ll get a receipt by email after you pay.
