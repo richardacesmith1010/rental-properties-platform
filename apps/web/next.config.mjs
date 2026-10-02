@@ -1,3 +1,7 @@
+import sentryConfig from "@sentry/nextjs/config";
+
+const { withSentryConfig } = sentryConfig;
+
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -19,7 +23,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://vawqdqkaguhdgfhdebqw.supabase.co https://*.supabase.co https://*.stripe.com https://cdn.plaid.com",
       "font-src 'self' data:",
-      "connect-src 'self' https://vawqdqkaguhdgfhdebqw.supabase.co https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.stripe.com https://m.stripe.network https://cdn.plaid.com https://*.plaid.com",
+      "connect-src 'self' https://vawqdqkaguhdgfhdebqw.supabase.co https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.stripe.com https://m.stripe.network https://cdn.plaid.com https://*.plaid.com https://*.ingest.us.sentry.io",
       "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://cdn.plaid.com https://*.plaid.com",
       "object-src 'none'",
       "base-uri 'self'",
@@ -31,6 +35,9 @@ const securityHeaders = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    instrumentationHook: true
+  },
   images: {
     remotePatterns: [
       {
@@ -56,4 +63,11 @@ const nextConfig = {
   }
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  silent: true,
+  telemetry: false,
+  sourcemaps: {
+    disable: true
+  },
+  disableLogger: true
+});

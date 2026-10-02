@@ -17,6 +17,7 @@
     "@anthropic-ai/sdk": "^0.80.0",
     "@radix-ui/react-slot": "^1.2.4",
     "@react-pdf/renderer": "^4.3.2",
+    "@sentry/nextjs": "^11.4.0",
     "@supabase/ssr": "0.5.2",
     "@supabase/supabase-js": "2.49.1",
     "@vercel/analytics": "^2.0.1",
