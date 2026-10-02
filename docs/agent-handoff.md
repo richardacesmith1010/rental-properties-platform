@@ -105,6 +105,14 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 **Tenant strategy (user-stated 2026-08-22):** Angel (current tenant, "1st Home") pays rent OUTSIDE Domus by deliberate choice — he is NOT the adoption target, so his in-app "overdue" charges are bookkeeping artifacts, not real delinquency (user may want to record manual payments or waive them eventually). The Domus-native tenant will be the NEXT one onboarded. Phase 2 (tenant surface) should therefore optimize for a brand-new tenant's first-run experience: invite → account → first rent payment.
 
+## Reskin Phases 3+4 — SHIPPED (Sprint 136, 2026-10-02)
+
+- Manager surface (error + role shell; rest reuses converted dashboard parts) and all settings components on v2. Sweep zero; every referenced CSS var defined; 978/978; smoke 3/3; walk: manager light + settings Profile/Bank/Notifications/Appearance both themes, clean.
+- **Codex capability upgrade (CLI 0.160, models gpt-6-astra default / gpt-5.6-sol):** first sprint with network-enabled sandbox → Codex's own full gate ran green incl. live runtime probe; schema-validated JSON report (`docs/codex-report-schema.json`); reference image via `-i` (pipe prompt on stdin when using `-i`). Browser self-check is unavailable headless — future packets should have Codex use the repo's Playwright instead.
+- Minor finding: notification toggles' "on" knob is low-contrast in dark (fold into Phase 5).
+
+**Next:** Phase 5 — de-gamification UI (remove mascot, XP/level widgets, streaks, achievements, celebration toasts); backend table/cron cleanup is a separate later L3 sprint. Then marketing landing (6), PDFs (7).
+
 ## Validation Snapshot
 - Unit tests: `562/562` passing at the latest clean gate baseline
 - Playwright coverage: `55` tests across `16` spec files (`cd apps/web && APP_URL=https://domusbase.com npx playwright test --reporter=list`)
