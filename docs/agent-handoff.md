@@ -122,6 +122,15 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 **Next:** Phase 6 marketing landing (remove game pitch, v2 look) + "Unit Unit S" fix. Later: L3 backend gamification removal (tables, RPCs, XP calls, API route, cron) — needs ChatGPT review. Then Phase 7 PDFs.
 
+## Ops & Observability (2026-10-02)
+
+- **Deploys:** Vercel is git-connected — push to `main` auto-deploys production. CLI `vercel deploy` is optional.
+- **Sentry SHIPPED (Sprint 138, `9fcf536`):** `@sentry/nextjs` 11.4.0, org `domus-z1`, project `domus-web`. Errors only (no tracing/replay), `sendDefaultPii:false`, shared scrubber `lib/sentry-scrub.ts`, all 5 error boundaries capture. DSN in Vercel env `NEXT_PUBLIC_SENTRY_DSN` (Prod+Preview); no source-map upload (no auth token). Verified: gate green, auth smoke 3/3, browser test error arrived in Sentry (resolved), cookies/headers/body scrubbed.
+- **Sentry follow-ups:** (1) browser events tag `environment=development` — client reads `VERCEL_ENV`, which isn't exposed to the browser; use `NEXT_PUBLIC_VERCEL_ENV`. (2) Sentry stores the user's IP — turn on project setting "Prevent Storing of IP Addresses". (3) Server and edge configs are identical files — could share one module.
+- **Stripe Connect fees:** platform balance −$2.24 from Connect account fees (~$2/mo per paid-out owner account). Expected; watch as owners grow.
+- **Connectors:** Claude — Vercel ✓, Stripe ✓, Sentry pending; GitHub skipped (git over SSH works). Codex — Figma MCP removed; Supabase read-only MCP pending (needs a Supabase access token).
+- **Weekly health check:** scheduled task `domus-weekly-health`, Mondays 9am, read-only, pushes a notification only on failure, logs to `docs/health-log.md`.
+
 ## Validation Snapshot
 - Unit tests: `562/562` passing at the latest clean gate baseline
 - Playwright coverage: `55` tests across `16` spec files (`cd apps/web && APP_URL=https://domusbase.com npx playwright test --reporter=list`)
