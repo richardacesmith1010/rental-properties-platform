@@ -53,16 +53,16 @@ function PreferenceSwitch({
       disabled={disabled}
       onClick={onToggle}
       className={cn(
-        "relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60",
+        "relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ground)] disabled:cursor-not-allowed disabled:opacity-60",
         checked
-          ? "border-primary/40 bg-primary/20"
-          : "border-border bg-muted"
+          ? "border-[var(--accent)] bg-[var(--accent-weak)]"
+          : "border-[var(--line)] bg-[var(--surface-3)]"
       )}
       title={checked ? "Disable this email type." : "Enable this email type."}
     >
       <span
         className={cn(
-          "inline-block h-5 w-5 rounded-full bg-background shadow-sm transition-transform",
+          "inline-block h-5 w-5 rounded-full bg-[var(--surface)] shadow-[var(--shadow-sm)] transition-transform",
           checked ? "translate-x-6" : "translate-x-1"
         )}
       />
@@ -225,27 +225,27 @@ export function NotificationPreferences({
           return (
             <div
               key={option.key}
-              className="rounded-2xl border border-border/60 bg-card/70 px-4 py-4 shadow-sm"
+              className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-4 shadow-[var(--shadow-sm)]"
             >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0 space-y-1">
                   <div className="flex items-center gap-2">
                     {enabled ? (
-                      <BellRing className="h-4 w-4 text-emerald-600" />
+                      <BellRing className="h-4 w-4 text-[var(--pos)]" />
                     ) : (
-                      <BellOff className="h-4 w-4 text-muted-foreground" />
+                      <BellOff className="h-4 w-4 text-[var(--muted)]" />
                     )}
-                    <p className="text-sm font-semibold text-foreground">
+                    <p className="text-sm font-semibold text-[var(--ink)]">
                       {option.label}
                     </p>
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-[var(--muted)]">
                     {option.description}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
                   {rowPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    <Loader2 className="h-4 w-4 animate-spin text-[var(--muted)]" />
                   ) : null}
                   <PreferenceSwitch
                     checked={enabled}
@@ -259,27 +259,27 @@ export function NotificationPreferences({
         })}
       </div>
 
-      <div className="rounded-2xl border border-amber-200/70 bg-amber-50/70 px-4 py-4 shadow-sm">
+      <div className="rounded-2xl border border-[var(--warn)] bg-[var(--warn-bg)] px-4 py-4 shadow-[var(--shadow-sm)]">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <PauseCircle className="h-4 w-4 text-amber-700" />
-              <p className="text-sm font-semibold text-amber-900">
+              <PauseCircle className="h-4 w-4 text-[var(--warn)]" />
+              <p className="text-sm font-semibold text-[var(--warn)]">
                 Pause all notifications
               </p>
             </div>
-            <p className="text-sm text-amber-900/80">
+            <p className="text-sm text-[var(--warn)]">
               Stop all email notifications temporarily. In-app notifications will still appear.
             </p>
             {emailsPaused && pausedLabel ? (
-              <p className="inline-flex items-center gap-2 text-sm font-medium text-amber-900">
+              <p className="inline-flex items-center gap-2 text-sm font-medium text-[var(--warn)]">
                 <Clock3 className="h-4 w-4" />
                 Notifications are paused {pausedLabel}.
               </p>
             ) : null}
           </div>
           {pendingPauseAction ? (
-            <Loader2 className="h-4 w-4 animate-spin text-amber-700" />
+            <Loader2 className="h-4 w-4 animate-spin text-[var(--warn)]" />
           ) : null}
         </div>
 
@@ -287,7 +287,7 @@ export function NotificationPreferences({
           <Button
             type="button"
             variant="outline"
-            className="border-amber-300 bg-white/90 text-amber-900 hover:bg-amber-100"
+            className="border-[var(--warn)] bg-[var(--surface)] text-[var(--warn)] hover:bg-[var(--surface-2)]"
             onClick={() => handlePause("24_hours")}
             disabled={!settings.schemaReady || pendingPauseAction !== null}
             title="Pause all email notifications for 24 hours."
@@ -297,7 +297,7 @@ export function NotificationPreferences({
           <Button
             type="button"
             variant="outline"
-            className="border-amber-300 bg-white/90 text-amber-900 hover:bg-amber-100"
+            className="border-[var(--warn)] bg-[var(--surface)] text-[var(--warn)] hover:bg-[var(--surface-2)]"
             onClick={() => handlePause("1_week")}
             disabled={!settings.schemaReady || pendingPauseAction !== null}
             title="Pause all email notifications for one week."
@@ -307,7 +307,7 @@ export function NotificationPreferences({
           <Button
             type="button"
             variant="outline"
-            className="border-amber-300 bg-white/90 text-amber-900 hover:bg-amber-100"
+            className="border-[var(--warn)] bg-[var(--surface)] text-[var(--warn)] hover:bg-[var(--surface-2)]"
             onClick={() => handlePause("until_resumed")}
             disabled={!settings.schemaReady || pendingPauseAction !== null}
             title="Pause all email notifications until you resume them."
@@ -317,7 +317,7 @@ export function NotificationPreferences({
           {emailsPaused ? (
             <Button
               type="button"
-              className="bg-amber-900 text-white hover:bg-amber-950"
+              className="bg-[var(--warn)] text-white hover:opacity-90"
               onClick={handleResume}
               disabled={!settings.schemaReady || pendingPauseAction !== null}
               title="Resume all email notifications immediately."
@@ -328,8 +328,8 @@ export function NotificationPreferences({
           ) : null}
         </div>
 
-        <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-200/80 bg-white/75 px-3 py-3 text-sm text-amber-900/80">
-          <MailWarning className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+        <div className="mt-4 flex items-start gap-2 rounded-xl border border-[var(--warn)] bg-[var(--surface)] px-3 py-3 text-sm text-[var(--warn)]">
+          <MailWarning className="mt-0.5 h-4 w-4 shrink-0 text-[var(--warn)]" />
           <p>
             Use pause when you are setting up sample leases or charges and want to suppress outbound email while keeping in-app alerts intact.
           </p>

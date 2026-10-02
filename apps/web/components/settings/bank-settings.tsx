@@ -5,6 +5,7 @@ import { useFormState } from "react-dom";
 import { SubmitButton } from "@/components/shared/submit-button";
 import type { ActionState } from "@/app/actions";
 import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -58,21 +59,18 @@ export function BankSettings({
     return (
       <div className="space-y-4">
         <Alert variant={rentCollectionConnected ? "success" : "warning"} className="rounded-xl px-4 py-4">
-          <p className={`text-sm font-semibold ${rentCollectionConnected ? "text-emerald-900" : "text-amber-900"}`}>
+          <p className="text-sm font-semibold">
             {rentCollectionConnected ? "Rent payments are set up." : "Set up rent payments."}
           </p>
-          <p className={`mt-1 text-sm ${rentCollectionConnected ? "text-emerald-700" : "text-amber-700"}`}>
+          <p className="mt-1 text-sm">
             {rentCollectionConnected
               ? "Stripe is ready to collect rent for your properties."
               : "Finish Stripe setup so your properties can collect rent."}
           </p>
           {!rentCollectionConnected ? (
-            <a
-              href={rentCollectionConnectHref}
-              className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-700"
-            >
-              Set up rent payments
-            </a>
+            <Button asChild className="mt-4">
+              <a href={rentCollectionConnectHref}>Set up rent payments</a>
+            </Button>
           ) : null}
         </Alert>
         {connectedAccounts.length > 0 || showProfileManage ? (
@@ -89,17 +87,17 @@ export function BankSettings({
               return (
                 <div
                   key={account.accountId}
-                  className="rounded-xl border border-border/60 bg-card px-4 py-3"
+                  className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3"
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-semibold text-foreground">{account.accountName}</p>
-                        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                        <p className="text-sm font-semibold text-[var(--ink)]">{account.accountName}</p>
+                        <span className="rounded-full bg-[var(--pos-bg)] px-2 py-0.5 text-xs font-semibold text-[var(--pos)]">
                           Connected for rent.
                         </span>
                       </div>
-                      <p className="text-sm text-muted-foreground">{propertySummary}</p>
+                      <p className="text-sm text-[var(--muted)]">{propertySummary}</p>
                     </div>
                     <form action={action}>
                       <input type="hidden" name="accountId" value={account.accountId} />
@@ -112,20 +110,20 @@ export function BankSettings({
               );
             })}
             {showProfileManage ? (
-              <div className="rounded-xl border border-border/60 bg-card px-4 py-3">
+              <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-semibold text-foreground">Your personal properties</p>
-                      <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                      <p className="text-sm font-semibold text-[var(--ink)]">Your personal properties</p>
+                      <span className="rounded-full bg-[var(--pos-bg)] px-2 py-0.5 text-xs font-semibold text-[var(--pos)]">
                         Connected for rent.
                       </span>
                     </div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-[var(--muted)]">
                       Stripe is ready to collect rent for properties tied to your profile.
                     </p>
                     {stripeAccountId ? (
-                      <p className="text-xs text-muted-foreground">Account ID: {stripeAccountId}</p>
+                      <p className="text-xs tabular-nums text-[var(--muted)]">Account ID: {stripeAccountId}</p>
                     ) : null}
                   </div>
                   <form action={action}>
@@ -151,12 +149,12 @@ export function BankSettings({
     return (
       <div className="space-y-4">
         <Alert variant="success" className="rounded-xl px-4 py-3">
-          <p className="text-sm font-semibold text-emerald-900">Management fee payments are set up.</p>
-          <p className="mt-1 text-sm text-emerald-700">
+          <p className="text-sm font-semibold">Management fee payments are set up.</p>
+          <p className="mt-1 text-sm">
             Stripe is ready to send your management fee payments.
           </p>
           {stripeAccountId ? (
-            <p className="mt-2 text-xs text-emerald-800">Account ID: {stripeAccountId}</p>
+            <p className="mt-2 text-xs tabular-nums">Account ID: {stripeAccountId}</p>
           ) : null}
         </Alert>
         <form action={action}>
@@ -171,16 +169,13 @@ export function BankSettings({
 
   return (
     <Alert variant="warning" className="rounded-xl px-4 py-4">
-      <p className="text-sm font-semibold text-amber-900">Set up management fee payments.</p>
-      <p className="mt-1 text-sm text-amber-700">
+      <p className="text-sm font-semibold">Set up management fee payments.</p>
+      <p className="mt-1 text-sm">
         Finish Stripe setup so you can receive management fee payments.
       </p>
-      <a
-        href="/connect/onboard"
-        className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-700"
-      >
-        Set up now
-      </a>
+      <Button asChild className="mt-4">
+        <a href="/connect/onboard">Set up now</a>
+      </Button>
     </Alert>
   );
 }

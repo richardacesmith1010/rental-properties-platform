@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["gate_passed", "gate_stage_results", "sweep_zero", "tokens_all_defined", "no_out_of_scope_diffs", "tests_passed", "tests_total", "self_verification", "files_changed", "tests_updated", "copy_changes", "deviations", "manual_verification_path"],
+  "properties": {
+    "gate_passed": { "type": "boolean" },
+    "gate_stage_results": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["stage", "passed", "note"], "properties": { "stage": { "type": "string" }, "passed": { "type": "boolean" }, "note": { "type": "string" } } } },
+    "sweep_zero": { "type": "boolean" },
+    "tokens_all_defined": { "type": "boolean" },
+    "no_out_of_scope_diffs": { "type": "boolean" },
+    "tests_passed": { "type": "integer" },
+    "tests_total": { "type": "integer" },
+    "self_verification": { "type": "object", "additionalProperties": false, "required": ["attempted", "blocked_reason", "findings"], "properties": { "attempted": { "type": "boolean" }, "blocked_reason": { "type": "string" }, "findings": { "type": "array", "items": { "type": "string" } } } },
+    "files_changed": { "type": "array", "items": { "type": "string" } },
+    "tests_updated": { "type": "array", "items": { "type": "string" } },
+    "copy_changes": { "type": "array", "items": { "type": "string" } },
+    "deviations": { "type": "array", "items": { "type": "string" } },
+    "manual_verification_path": { "type": "array", "items": { "type": "string" } }
+  }
+}

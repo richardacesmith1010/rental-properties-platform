@@ -69,10 +69,10 @@ export function SettingsLayout({ role, sections }: SettingsLayoutProps) {
                   type="button"
                   onClick={() => setActiveSection(item.id)}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-xl border-l-2 px-3 py-2.5 text-left text-sm font-medium transition-colors",
+                    "flex w-full items-center gap-3 rounded-xl border-l-2 px-3 py-2.5 text-left text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ground)]",
                     isActive
-                      ? "border-violet-500 bg-violet-50 text-violet-700"
-                      : "border-transparent text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                      ? "border-[var(--accent)] bg-[var(--accent-weak)] text-[var(--accent)]"
+                      : "border-transparent text-[var(--ink-2)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"
                   )}
                   title={`Open ${item.label} settings.`}
                 >
@@ -95,10 +95,10 @@ export function SettingsLayout({ role, sections }: SettingsLayoutProps) {
                   type="button"
                   onClick={() => setActiveSection(item.id)}
                   className={cn(
-                    "inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition-colors",
+                    "inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ground)]",
                     isActive
-                      ? "border-violet-500 bg-violet-50 text-violet-700"
-                      : "border-[var(--domus-card-border)] bg-[var(--domus-card-bg)] text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                      ? "border-[var(--accent)] bg-[var(--accent-weak)] text-[var(--accent)]"
+                      : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"
                   )}
                   title={`Open ${item.label} settings.`}
                 >
