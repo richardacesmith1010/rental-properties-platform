@@ -1,11 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { Drawer } from "vaul";
-import { Menu, Search, type LucideIcon } from "lucide-react";
+import { Landmark, Menu, Search, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GlobalSearch, type GlobalSearchItem } from "@/components/dashboard/global-search";
 import { NotificationBellMenu } from "@/components/dashboard/notification-bell-menu";
@@ -238,14 +237,7 @@ export function SidebarNav({
     <aside className="gradient-sidebar hidden min-h-0 lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-[260px] lg:flex-shrink-0 lg:flex-col">
       <div className="shrink-0 flex items-center justify-between gap-3 px-5 pb-4 pt-6">
         <div className="flex items-center gap-3">
-          <Image
-            src="/images/mascot/icons/head.png"
-            alt="Domus"
-            width={32}
-            height={32}
-            className="rounded-xl shadow-[var(--domus-shadow-md)]"
-            priority
-          />
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--surface-2)] ring-1 ring-[var(--line)]"><Landmark className="h-4 w-4 text-[var(--accent)]" /></span>
           <div>
             <div className="text-base font-bold text-foreground">Domus</div>
           </div>
@@ -349,14 +341,7 @@ export function MobileTopBar({
     <div className="gradient-sidebar sticky top-0 z-30 border-b border-border px-3 pb-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] shadow-sm lg:hidden">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <Image
-            src="/images/mascot/icons/head.png"
-            alt="Domus"
-            width={28}
-            height={28}
-            className="rounded-lg"
-            priority
-          />
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--surface-2)] ring-1 ring-[var(--line)]"><Landmark className="h-4 w-4 text-[var(--accent)]" /></span>
           <span className="sr-only">Domus</span>
         </div>
 

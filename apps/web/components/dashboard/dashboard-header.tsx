@@ -23,7 +23,6 @@ interface DashboardHeaderProps {
   userEmail: string;
   nickname?: string | null;
   fullName?: string | null;
-  gamificationSummary?: ReactNode;
   greetingContent?: ReactNode;
 }
 
@@ -99,7 +98,6 @@ export function DashboardHeader({
   userEmail,
   nickname,
   fullName,
-  gamificationSummary,
   greetingContent,
 }: DashboardHeaderProps) {
   const displayName = getDisplayName({ nickname, fullName, userEmail });
@@ -182,7 +180,6 @@ export function DashboardHeader({
             </>
           )}
         </div>
-        {gamificationSummary ? <div className="w-full xl:max-w-md">{gamificationSummary}</div> : null}
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-4">

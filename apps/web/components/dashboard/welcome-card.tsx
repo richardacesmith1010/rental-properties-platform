@@ -10,7 +10,6 @@ import {
   Plus,
   type LucideIcon
 } from "lucide-react";
-import { DomMascot } from "@/components/gamification/dom-mascot";
 import { Button } from "@/components/ui/button";
 import {
   OnboardingChecklist,
@@ -57,10 +56,8 @@ export function WelcomeCard({
 
   return (
     <div className="mx-auto w-full max-w-3xl rounded-2xl border border-border/60 bg-card px-6 py-8 text-center shadow-sm sm:px-8">
-      <div className="mx-auto mb-5 flex h-32 w-32 items-center justify-center rounded-full bg-primary/10">
-        <div className="animate-domus-bob">
-          <DomMascot size="xl" mood="waving" animate />
-        </div>
+      <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--line)]">
+        <Landmark className="h-7 w-7 text-[var(--accent)]" />
       </div>
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
         Owner setup

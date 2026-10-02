@@ -3,8 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowRight, Bell, Building2, Clock3, ShieldAlert, Wrench } from "lucide-react";
-import { DomMascot } from "@/components/gamification/dom-mascot";
+import { ArrowRight, Bell, Building2, CheckCircle2, Clock3, ShieldAlert, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { ActionItem } from "@/lib/action-items";
@@ -177,7 +176,7 @@ export function ActionItems({
             {nextCollectionLabel ?? "Your portfolio is caught up. The next important change will appear here automatically."}
           </p>
         </div>
-        <DomMascot size="lg" mood="celebrating" animate />
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--line)]"><CheckCircle2 className="h-8 w-8 text-[var(--pos)]" /></div>
       </section>
     );
   }

@@ -62,7 +62,8 @@ function PreferenceSwitch({
     >
       <span
         className={cn(
-          "inline-block h-5 w-5 rounded-full bg-[var(--surface)] shadow-[var(--shadow-sm)] transition-transform",
+          "inline-block h-5 w-5 rounded-full shadow-[var(--shadow-sm)] ring-1 ring-[var(--line)] transition-transform",
+          checked ? "bg-[var(--ink)]" : "bg-[var(--surface)]",
           checked ? "translate-x-6" : "translate-x-1"
         )}
       />

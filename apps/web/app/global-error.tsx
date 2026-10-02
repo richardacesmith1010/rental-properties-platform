@@ -1,6 +1,6 @@
 "use client";
 
-import { DomMascot } from "@/components/gamification/dom-mascot";
+import { TriangleAlert } from "lucide-react";
 
 export default function GlobalError({
   error,
@@ -13,8 +13,8 @@ export default function GlobalError({
     <html lang="en">
       <body className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
         <div className="mx-auto max-w-md px-6 text-center">
-          <div className="mx-auto flex w-fit items-center justify-center rounded-3xl bg-white/10 px-4 py-3">
-            <DomMascot size="lg" mood="sleeping" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/10">
+            <TriangleAlert className="h-7 w-7 text-violet-300" />
           </div>
           <p className="mt-4 text-6xl font-bold text-violet-400">Oops</p>
           <h1 className="mt-4 text-2xl font-semibold">Something went wrong</h1>

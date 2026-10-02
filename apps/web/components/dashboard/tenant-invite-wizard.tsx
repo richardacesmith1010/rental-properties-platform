@@ -2,9 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, UserRoundPlus } from "lucide-react";
 import type { ActionState } from "@/app/actions";
-import { DomMascot } from "@/components/gamification/dom-mascot";
 import { Button } from "@/components/ui/button";
 import { ModalOverlay } from "@/components/ui/modal-overlay";
 import type { PropertyListItem, UnitListItem } from "@/lib/portfolio";
@@ -203,7 +202,7 @@ export function TenantInviteWizard({
                 Pick the home, add tenant details, optionally include rent context, and Domus will send a branded invitation.
               </p>
             </div>
-            <DomMascot size="lg" mood="waving" animate className="self-center sm:self-start" />
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center self-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--line)] sm:self-start"><UserRoundPlus className="h-6 w-6 text-[var(--accent)]" /></div>
           </div>
           <TenantInviteWizardProgress step={step} />
         </div>

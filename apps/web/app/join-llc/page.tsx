@@ -8,7 +8,6 @@ import {
   signInToJoinLLC,
   signOut
 } from "@/app/actions";
-import { DomMascot } from "@/components/gamification/dom-mascot";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -207,7 +206,7 @@ export default async function JoinLlcPage({ searchParams }: JoinLlcPageProps) {
 
             <div className="mx-auto hidden lg:mx-0 lg:block">
               <div className="rounded-[32px] border border-white/[0.14] bg-white/10 p-6 shadow-2xl shadow-slate-950/30 backdrop-blur-md">
-                <DomMascot size="xl" mood="waving" className="mx-auto" />
+                <Building2 className="mx-auto h-16 w-16 text-white" />
               </div>
             </div>
           </div>

@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, FileText } from "lucide-react";
 import { toast } from "sonner";
 import type { ActionState } from "@/app/actions";
-import { DomMascot } from "@/components/gamification/dom-mascot";
 import { Button } from "@/components/ui/button";
 import { ModalOverlay } from "@/components/ui/modal-overlay";
 import { formatDate } from "@/lib/format";
@@ -419,7 +418,7 @@ export function LeaseWizard({
                 Pick the home, set the terms, attach a tenant, and create the lease in one guided flow.
               </p>
             </div>
-            <DomMascot size="lg" mood="thinking" animate className="self-center sm:self-start" />
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center self-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--line)] sm:self-start"><FileText className="h-6 w-6 text-[var(--accent)]" /></div>
           </div>
           <LeaseWizardProgress step={step} />
         </div>

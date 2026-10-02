@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useFormState } from "react-dom";
 import { AlertTriangle, CheckCircle2, Clock3 } from "lucide-react";
 import type { ActionState } from "@/app/actions";
-import { DomMascot } from "@/components/gamification/dom-mascot";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -97,7 +96,7 @@ export function PayRentCard({
       <Card className="overflow-hidden border border-[var(--pos)] bg-[var(--pos-bg)] shadow-[var(--domus-shadow-md)]">
         <CardContent className="flex min-h-[220px] flex-col items-center justify-center gap-4 p-5 text-center sm:min-h-[260px] sm:gap-5 sm:p-8">
           <div className="rounded-full bg-[var(--surface)] p-4 shadow-[var(--domus-shadow-sm)] ring-1 ring-[var(--pos)]">
-            <DomMascot size="lg" mood="celebrating" animate />
+            <CheckCircle2 className="h-8 w-8 text-[var(--pos)]" />
           </div>
           <div className="space-y-2">
             {hasActiveLease ? (

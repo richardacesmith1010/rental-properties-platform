@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Building2, CheckCircle2, Home, UserRoundPlus } from "lucide-react";
 import { toast } from "sonner";
 import type { ActionState } from "@/app/actions";
-import { DomMascot } from "@/components/gamification/dom-mascot";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -729,7 +728,7 @@ export function UnifiedPropertyWizard({
           {step === "success" ? (
             <div className="flex min-h-[420px] flex-col items-center justify-center gap-5 px-4 py-8 text-center">
               <Badge variant="success" className="px-3 py-1 text-sm">Setup complete</Badge>
-              <DomMascot size="lg" mood="celebrating" animate />
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--line)]"><CheckCircle2 className="h-8 w-8 text-[var(--pos)]" /></div>
               <div className="space-y-2">
                 <h3 className="text-3xl font-semibold tracking-tight text-foreground">Your property is set up.</h3>
                 <p className="mx-auto max-w-2xl text-base leading-7 text-muted-foreground">

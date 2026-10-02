@@ -216,7 +216,6 @@ export function TenantsSection({
             icon={Users}
             title="No tenants yet"
             description="Invite a tenant from the Leases section."
-            showDom={false}
           />
         </CardContent>
       </Card>

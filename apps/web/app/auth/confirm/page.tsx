@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { DomMascot } from "@/components/gamification/dom-mascot";
+import { MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 function getHeading(type: string | null) {
@@ -49,7 +49,7 @@ function ConfirmContent() {
     return (
       <div className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
         <div className="domus-card w-full max-w-lg border border-border/70 p-8 text-center shadow-xl">
-          <DomMascot size="lg" mood="waving" className="mx-auto" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--line)]"><MailCheck className="h-7 w-7 text-[var(--accent)]" /></div>
           <h1 className="mt-6 text-3xl font-semibold tracking-tight text-foreground">
             This link looks broken.
           </h1>
@@ -67,7 +67,7 @@ function ConfirmContent() {
   return (
     <div className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
       <div className="domus-card w-full max-w-lg border border-border/70 p-8 text-center shadow-xl">
-        <DomMascot size="lg" mood="waving" className="mx-auto" />
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--line)]"><MailCheck className="h-7 w-7 text-[var(--accent)]" /></div>
         <h1 className="mt-6 text-3xl font-semibold tracking-tight text-foreground">
           {getHeading(type)}
         </h1>
@@ -96,7 +96,7 @@ export default function ConfirmPage() {
       fallback={
         <div className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
           <div className="domus-card w-full max-w-lg border border-border/70 p-8 text-center shadow-xl">
-            <DomMascot size="lg" mood="waving" className="mx-auto" />
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--line)]"><MailCheck className="h-7 w-7 text-[var(--accent)]" /></div>
             <h1 className="mt-6 text-3xl font-semibold tracking-tight text-foreground">
               Continue to Domus
             </h1>

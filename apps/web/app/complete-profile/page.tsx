@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
+import { UserRoundCheck } from "lucide-react";
 import { getAuthState, getAuthenticatedUser } from "@/lib/auth";
-import { DomMascot } from "@/components/gamification/dom-mascot";
 import { CompleteProfileForm } from "@/components/auth/complete-profile-form";
 import { getTenantInviteOnboardingContext } from "@/lib/invitations";
 import { resolveAuthRoute } from "@/lib/route-resolver";
@@ -26,8 +26,8 @@ export default async function CompleteProfilePage() {
     <main className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
       <div className="domus-card w-full max-w-lg p-8 shadow-[var(--domus-shadow-md)]">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4">
-            <DomMascot size="xl" mood="waving" animate />
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--line)]">
+            <UserRoundCheck className="h-7 w-7 text-[var(--accent)]" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-[var(--ink)]">Welcome to Domus!</h1>
           <p className="mt-2 text-sm text-[var(--muted)]">

@@ -4,9 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { AchievementChecker } from "@/components/gamification/achievement-checker";
 import { AnnouncementComposer } from "@/components/dashboard/announcement-composer";
-import { GamificationSummary } from "@/components/gamification/gamification-summary";
 import { CompactGreetingBar } from "@/components/dashboard/compact-greeting-bar";
 import { ConnectBanner } from "@/components/dashboard/connect-banner";
 import { CommandPalette } from "@/components/dashboard/command-palette";
@@ -158,7 +156,6 @@ export function Dashboard(props: DashboardProps) {
     ownerDailyOpsPageCountLabel,
     ownerDailyOpsPageLabel,
     nextRentCollectionLabel,
-    resolvedGamification,
     safePortfolio,
     sectionItems,
     sectionRendererProps,
@@ -351,7 +348,6 @@ export function Dashboard(props: DashboardProps) {
         {...layoutProps}
         mainClassName="flex flex-1 flex-col items-center justify-center px-6 py-12 lg:ml-[260px]"
       >
-        <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
         <div className="w-full max-w-3xl space-y-4">
           {connectBannerConnected === false ? (
             <ConnectBanner
@@ -477,7 +473,6 @@ export function Dashboard(props: DashboardProps) {
         </>
       }
     >
-      <AchievementChecker currentLevel={resolvedGamification.currentLevel} />
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 pb-3 pt-3 sm:px-4 sm:pb-4 sm:pt-4 lg:px-8 lg:pb-8 lg:pt-8">
         {(isOwnerRole || isManagerRole) && connectBannerConnected === false ? (
           <ConnectBanner
@@ -587,15 +582,6 @@ export function Dashboard(props: DashboardProps) {
                       openTicketCount={openTicketCount}
                     />
                   }
-                  gamificationSummary={
-                    <GamificationSummary
-                      totalXp={resolvedGamification.totalXp}
-                      currentLevel={resolvedGamification.currentLevel}
-                      streakCount={resolvedGamification.streakCount}
-                      role={props.data.profileRole}
-                      className="w-full"
-                    />
-                  }
                 />
               ) : activeSection === "overview" ? (
                 <DashboardHeader
@@ -606,15 +592,6 @@ export function Dashboard(props: DashboardProps) {
                   userEmail={props.userEmail}
                   nickname={props.nickname}
                   fullName={props.fullName}
-                  gamificationSummary={
-                    <GamificationSummary
-                      totalXp={resolvedGamification.totalXp}
-                      currentLevel={resolvedGamification.currentLevel}
-                      streakCount={resolvedGamification.streakCount}
-                      role={props.data.profileRole}
-                      className="w-full"
-                    />
-                  }
                 />
               ) : null}
               {(isOwnerRole || isManagerRole) && activeWorkflowMeta && !showOwnerOnboarding ? (

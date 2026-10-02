@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { DomMascot } from "@/components/gamification/dom-mascot";
 import { CheckCircle } from "lucide-react";
 
 interface CompletionStepProps {
@@ -12,8 +11,8 @@ interface CompletionStepProps {
 export function CompletionStep({ stepsCompleted, onFinish }: CompletionStepProps) {
   return (
     <div className="space-y-5 text-center">
-      <div className="mx-auto flex w-fit items-center justify-center rounded-3xl bg-emerald-50/80 px-6 py-4">
-        <DomMascot size="lg" mood="celebrating" />
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--line)]">
+        <CheckCircle className="h-8 w-8 text-[var(--pos)]" />
       </div>
 
       <div>

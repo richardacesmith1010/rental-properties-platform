@@ -5,9 +5,6 @@ const getTenantInviteOnboardingContextMock = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 vi.mock("@/app/actions", () => ({ completeOnboarding: vi.fn() }));
-vi.mock("@/components/gamification/dom-mascot", () => ({
-  DomMascot: () => <div>Domus welcome</div>
-}));
 vi.mock("@/components/onboarding/onboarding-form", () => ({
   OnboardingForm: () => <div>Onboarding form</div>
 }));

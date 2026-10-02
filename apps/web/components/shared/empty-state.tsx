@@ -1,6 +1,5 @@
 import type { LucideIcon } from "lucide-react";
 import { InboxIcon } from "lucide-react";
-import { DomMascot, type DomMascotProps } from "@/components/gamification/dom-mascot";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/format";
 
@@ -13,9 +12,6 @@ interface EmptyStateProps {
   onAction?: () => void;
   actionVariant?: ButtonProps["variant"];
   className?: string;
-  showDom?: boolean;
-  domMood?: DomMascotProps["mood"];
-  domSize?: DomMascotProps["size"];
 }
 
 export function EmptyState({
@@ -26,29 +22,13 @@ export function EmptyState({
   actionLabel,
   onAction,
   actionVariant = "outline",
-  className,
-  showDom = true,
-  domMood = "pointing",
-  domSize = "lg"
+  className
 }: EmptyStateProps) {
   const body = message ?? description ?? "";
-  const hasCustomIcon = Icon !== InboxIcon;
-
   return (
     <div className={cn("domus-card mx-auto max-w-2xl px-6 py-12 text-center opacity-95", className)}>
-      <div className="relative mx-auto flex h-36 w-36 items-center justify-center rounded-full bg-[var(--accent-weak)] shadow-[var(--domus-shadow-sm)] ring-1 ring-[var(--accent-line)]">
-        {showDom ? (
-          <>
-            <DomMascot size={domSize} mood={domMood} className="animate-domus-bob" />
-            {hasCustomIcon ? (
-              <span className="absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] shadow-[var(--domus-shadow-sm)]">
-                <Icon className="h-4 w-4 text-[var(--accent)]" />
-              </span>
-            ) : null}
-          </>
-        ) : (
-          <Icon className="h-7 w-7 text-[var(--accent)]" />
-        )}
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-2)] shadow-[var(--domus-shadow-sm)] ring-1 ring-[var(--line)]">
+        <Icon className="h-7 w-7 text-[var(--accent)]" />
       </div>
       {title ? <h3 className="mt-4 text-lg font-semibold domus-heading">{title}</h3> : null}
       <p className={cn("mx-auto max-w-md text-sm leading-6 domus-muted", title ? "mt-2" : "mt-4")}>

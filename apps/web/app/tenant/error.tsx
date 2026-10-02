@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { DomMascot } from "@/components/gamification/dom-mascot";
+import { TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function TenantError({
@@ -14,8 +14,8 @@ export default function TenantError({
   return (
     <div className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
       <div className="domus-card w-full max-w-md p-8 text-center shadow-[var(--domus-shadow-lg)]">
-        <div className="mx-auto mb-4 flex w-fit items-center justify-center rounded-3xl bg-[var(--accent-weak)] px-4 py-3">
-          <DomMascot size="lg" mood="sleeping" />
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-2)]">
+          <TriangleAlert className="h-7 w-7 text-[var(--accent)]" />
         </div>
         <h1 className="text-2xl font-semibold text-[var(--ink)]">We couldn&apos;t load your tenant dashboard</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">

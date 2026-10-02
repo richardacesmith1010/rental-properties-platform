@@ -215,7 +215,6 @@ export function FeedbackViewer({ items, warning, onUpdateStatus }: FeedbackViewe
               icon={MessageCircleMore}
               title="No feedback matches"
               description="Adjust the filters to see other feedback records."
-              showDom={false}
             />
           ) : (
             <div className="space-y-3">

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
+import { ClipboardCheck } from "lucide-react";
 import { completeOnboarding } from "@/app/actions";
-import { DomMascot } from "@/components/gamification/dom-mascot";
 import { OnboardingForm } from "@/components/onboarding/onboarding-form";
 import { getAuthenticatedUser, getCurrentUserRole, getRoleHomePath } from "@/lib/auth";
 import { getTenantInviteOnboardingContext } from "@/lib/invitations";
@@ -35,8 +35,8 @@ export default async function OnboardingPage() {
     <main className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
       <div className="w-full max-w-2xl rounded-2xl border border-border bg-card p-8 shadow-sm">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4">
-            <DomMascot size="xl" mood="waving" animate />
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--line)]">
+            <ClipboardCheck className="h-7 w-7 text-[var(--accent)]" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
             {role === "tenant" && inviteContext?.propertyAddress

@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, Circle } from "lucide-react";
-import { DomMascot } from "@/components/gamification/dom-mascot";
+import { CheckCircle2, Circle, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/format";
 
 export type OnboardingStepId = "profile" | "account" | "property" | "unit" | "lease" | "bank";
@@ -55,7 +54,7 @@ export function OnboardingChecklist({ steps, className }: OnboardingChecklistPro
     <div className={cn("space-y-4 text-left", className)}>
       <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/30 p-3">
         <div className="shrink-0 rounded-full bg-primary/10 p-2">
-          <DomMascot size="md" mood="waving" animate />
+          <ClipboardList className="h-5 w-5 text-[var(--accent)]" />
         </div>
         <div className="min-w-0 flex-1 space-y-2">
           <p className="sr-only" aria-live="polite" aria-atomic="true">

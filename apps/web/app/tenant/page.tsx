@@ -42,10 +42,7 @@ import { TenantLeaseDetails } from "@/components/dashboard/tenant-lease-details"
 import { TenantOverview } from "@/components/dashboard/tenant-overview";
 import { EmptyState as DashboardEmptyState } from "@/components/shared/empty-state";
 import { StripeTestModeBanner } from "@/components/shared/stripe-test-mode-banner";
-import { GamificationSummary } from "@/components/gamification/gamification-summary";
-import { AchievementChecker } from "@/components/gamification/achievement-checker";
 import { formatCurrency, formatDate, formatDateTime, formatUnitLabel } from "@/lib/format";
-import { getUserGamification } from "@/lib/gamification";
 import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
 import { ChevronLeft, ChevronRight, CreditCard } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -150,7 +147,6 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
     documentsData,
     notifications,
     inboxThreads,
-    gamification,
     autopayEnrollments
   ] = await Promise.all([
     getTenantPaymentData(user.id),
@@ -171,7 +167,6 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
     capabilities.inboxThreadsEnabled
       ? getInboxThreadsForUser(user.id)
       : Promise.resolve([]),
-    getUserGamification(user.id),
     getAutopayEnrollments(user.id)
   ]);
 
@@ -297,7 +292,6 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
       />
 
       <main id="main-content" className="relative flex-1 lg:ml-[260px]">
-        <AchievementChecker currentLevel={gamification.currentLevel} />
         <div className="flex flex-col gap-4 px-6 pt-6 sm:flex-row sm:items-start sm:justify-between lg:px-8 lg:pt-8">
           <div id="overview">
             <h1 className="text-2xl font-bold tracking-tight text-[var(--ink)]">
@@ -309,17 +303,6 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
               </p>
             )}
           </div>
-          {activeSection !== "overview" ? (
-            <div className="flex w-full flex-col gap-3 sm:max-w-md sm:items-end">
-              <GamificationSummary
-                totalXp={gamification.totalXp}
-                currentLevel={gamification.currentLevel}
-                streakCount={gamification.streakCount}
-                role="tenant"
-                className="w-full"
-              />
-            </div>
-          ) : null}
         </div>
 
         <div className="space-y-6 px-6 pb-8 pt-6 lg:px-8">

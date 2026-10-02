@@ -82,7 +82,7 @@ export function AnalyticsSection({ data }: AnalyticsSectionProps) {
     );
 
   if (!data.enabled) {
-    return <EmptyState message="Analytics become available after you have live portfolio activity to measure." showDom />;
+    return <EmptyState message="Analytics become available after you have live portfolio activity to measure." />;
   }
 
   if (!hasAnalyticsValues) {
@@ -92,8 +92,6 @@ export function AnalyticsSection({ data }: AnalyticsSectionProps) {
           title="No analytics data yet"
           description="Analytics will populate as charges and payments are recorded."
           className="max-w-xl"
-          domMood="thinking"
-          domSize="lg"
         />
       </div>
     );

@@ -65,16 +65,6 @@ export const metadata: Metadata = {
     copyright: `© ${new Date().getFullYear()} Domus. All rights reserved.`
   },
   manifest: "/manifest.json",
-  icons: {
-    icon: [
-      { url: "/images/mascot/icons/head.png", type: "image/png", sizes: "32x32" },
-      { url: "/images/mascot/icons/head.png", type: "image/png", sizes: "192x192" },
-      { url: "/images/mascot/icons/head.png", type: "image/png", sizes: "512x512" }
-    ],
-    apple: [
-      { url: "/images/mascot/icons/head.png", type: "image/png", sizes: "180x180" }
-    ]
-  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

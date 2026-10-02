@@ -69,7 +69,6 @@ export function MembersSection({
         icon={ShieldCheck}
         title="No members page here"
         description="Members only shows up for LLC accounts."
-        showDom={false}
       />
     );
   }
@@ -144,7 +143,6 @@ export function MembersSection({
               icon={UserRound}
               title="No active members"
               description="You're the only member. Invite your co-owners above."
-              showDom={false}
             />
           ) : (
             <div className="space-y-3">
