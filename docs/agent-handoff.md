@@ -122,6 +122,17 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 **Next:** Phase 6 marketing landing (remove game pitch, v2 look) + "Unit Unit S" fix. Later: L3 backend gamification removal (tables, RPCs, XP calls, API route, cron) — needs ChatGPT review. Then Phase 7 PDFs.
 
+## Reskin Phase 6 — Honest v2 landing SHIPPED (Sprint 139 + 139b, 2026-10-02)
+
+- Landing rebuilt to user-approved mockup (`docs/design/landing-v2-mockup.html`; canvas https://claude.ai/artifact/Unb5KPJ86ueWf6VajixZjc). v2 tokens, light+dark, content visible without JS, reduced-motion respected.
+- Removed untrue claims: "500+ landlords", 3 invented testimonials, "99.9% uptime", fictional $29/$79/Custom tiers + 3-unit limit, gamification tab. Replaced with "Free while Domus is in early access." Every remaining feature claim verified against code.
+- "Unit Unit S" fixed: 7 raw `Unit {…}` renders → `formatUnitLabel()`. Verified as smoke tenant (Unit S).
+- Sentry: shared `lib/sentry-options.ts`; browser events now tagged `production` (verified). Sentry IP storage off.
+- 139b: Codex invented `support@domus.app` for footer Help → fixed to `support@domusbase.com`. Lesson: packets that add contact info/links must name the exact values.
+- Verified: gate green, auth smoke 3/3, Playwright 1280/375 × light/dark — no overflow, no hidden content, no false-claim text, zero page errors.
+
+**Next candidates:** L3 backend gamification removal (ChatGPT review first); Phase 7 emails/PDFs to v2; Codex read-only Supabase MCP (needs token). Landing visual polish deferred by user ("plain is fine for now").
+
 ## Ops & Observability (2026-10-02)
 
 - **Deploys:** Vercel is git-connected — push to `main` auto-deploys production. CLI `vercel deploy` is optional.
