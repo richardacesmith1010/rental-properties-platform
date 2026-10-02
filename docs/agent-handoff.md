@@ -113,6 +113,15 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 **Next:** Phase 5 — de-gamification UI (remove mascot, XP/level widgets, streaks, achievements, celebration toasts); backend table/cron cleanup is a separate later L3 sprint. Then marketing landing (6), PDFs (7).
 
+## Reskin Phase 5 — De-gamification UI SHIPPED (Sprint 137, 2026-10-02)
+
+- Mascot, XP/levels, streaks, achievements, celebration toasts gone from every surface (−1157 lines; 9 components + mascot images + canvas-confetti deleted with zero-importer proof). Neutral landmark icon + Domus wordmark. `/achievements` redirects to role home. Dark toggle contrast fixed.
+- Verified: Codex network gate + independent gate green; backend XP files byte-identical; walk owner/tenant/manager both themes — no mascot/XP/achievement text, redirects correct, zero page errors.
+- Codex sandbox cannot launch any browser (Playwright Chromium MachPort denied) — visual verification is Claude's job; don't require it in packets.
+- Findings: tenant rent card reads "Unit Unit S" (label duplicated — pre-existing); marketing landing still pitches XP/streaks/achievements (Phase 6).
+
+**Next:** Phase 6 marketing landing (remove game pitch, v2 look) + "Unit Unit S" fix. Later: L3 backend gamification removal (tables, RPCs, XP calls, API route, cron) — needs ChatGPT review. Then Phase 7 PDFs.
+
 ## Validation Snapshot
 - Unit tests: `562/562` passing at the latest clean gate baseline
 - Playwright coverage: `55` tests across `16` spec files (`cd apps/web && APP_URL=https://domusbase.com npx playwright test --reporter=list`)
