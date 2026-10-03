@@ -253,6 +253,7 @@ If a planned action matches a pattern from a prior lesson, Claude must stop and 
 - Am I declaring a file orphaned? → L-006 says grep the full tree.
 - Am I about to hypothesize about a production bug? → L-008 says read the actual logs/dashboard first, in order: Vercel logs → third-party dashboard log → direct API query. Hypothesis comes only after data.
 - Am I about to call a UI sprint "shipped" because gate + smoke passed? → L-009 says do a real-session Chrome MCP render check first. HTTP 200 doesn't prove the page actually rendered.
+- Am I applying a migration that recreates a constraint/policy/function? → L-012 says diff against the live definition first. Does a packet add links or contact info? → name exact values.
 - Am I ending a cycle report? → L-010 (refined) says keep `docs/agent-handoff.md` + memory current and report the transcript size; only prompt a new chat when a rotation threshold is hit (size ~50MB / compacted ~2× / sluggish / topic pivot) — not every sprint.
 
 This section must be updated whenever a new lesson is added that introduces a new "always check" pattern.
