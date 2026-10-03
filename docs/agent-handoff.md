@@ -158,6 +158,12 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Crawl detector fix: `color(srgb …)` values (from `color-mix`) are 0–1 scale — the first version misread them. Script: scratchpad `dark-crawl.spec.ts` (copy into `tests/e2e/` temporarily; env DARK_OUT/DARK_TAG). Worth promoting into the repo smoke suite.
 - First dispatch hit the Codex usage limit (likely drained by Sprint 141's Astra/high run); retried automatically after reset.
 
+## Sprint 143 — Theme contrast smoke check (`806c338`, 2026-10-02)
+
+- New `apps/web/tests/e2e/smoke-theme.spec.ts` (5 math self-tests + Owner/Manager/Tenant views; dark + light; WCAG contrast < 2.0 = near-invisible, light box in dark = fail). Wired into `scripts/smoke-web.sh` after the render check; `npm run smoke:theme` (`SMOKE_THEME_FULL=1` = every section, both themes). ~48 s.
+- Verified: 10/10 pass on prod standalone; negative test (injected white-on-white box) fails with a clear message (ratio 1.04).
+- **Finding:** `app/actions/login.ts:31` rate limit = 5 attempts / 15 min per email and counts SUCCESSFUL sign-ins too. Locked out the smoke owner mid-run ("Too many sign-in attempts"). Real-user impact: 6 correct sign-ins in 15 min → locked out. Fix candidates: count only failed attempts (auth = L3) and make the theme spec sign in once per role.
+
 ## Ops & Observability (2026-10-02)
 
 - **Deploys:** Vercel is git-connected — push to `main` auto-deploys production. CLI `vercel deploy` is optional.
