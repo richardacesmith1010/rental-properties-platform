@@ -150,11 +150,13 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - DB (`20261003_sprint141_drop_gamification.sql`, applied live after code verify): both functions + 4 tables dropped (no CASCADE); `notifications_type_check` recreated = live def minus `achievement_unlocked` (diffed against live, 0 rows used it).
 - Verified: gate green; smoke 3/3 before and after migration; owner banner/overdue/analytics + manager render with 0 page errors; `/api/gamification/check` 404; `/achievements` → login; Sentry 0 unresolved; phase9/phase10 runtime checks ok.
 
-## Sprint 142 — legacy palette sweep (IN PROGRESS, 2026-10-02)
+## Sprint 142 — Legacy palette sweep SHIPPED (`d4c0b56`, 2026-10-02)
 
-- Packet `docs/sprint142-codex-prompt.md` (98 files / ~800 hits, none had `dark:` handling). Correction: earlier reports said these files "carry dark pairs" — false.
-- Baseline dark crawl on prod (smoke owner, before): light boxes / near-invisible text on Payments, Leasing Hub, Applications, Activity, Ownership, Invitations, Documents, Expenses (24 dark-text), Operations, Portfolio, Units, Leases, Tenants. Crawl script: scratchpad `dark-crawl.spec.ts` (copy into `tests/e2e/` temporarily; env DARK_OUT/DARK_TAG).
-- First dispatch hit the Codex usage limit (no changes made); auto-retry scheduled for 20:17 MDT via detached `nohup` script.
+- 99 files (~800 legacy classes: zinc/violet/red/amber/emerald/…/bg-white) → v2 tokens via a fixed mapping table; Codex split across 3 parallel workers + 1 integration audit (~10 min). Dead sidebar overrides removed from `theme-utilities.css`; Feedback button `print:hidden`. Zero copy/logic/link diffs.
+- Correction on record: before this sprint none of those files had `dark:` handling (earlier claim of "dark pairs" was wrong).
+- Verified with a dark-mode crawl (smoke owner 22 sections + manager + tenant): BEFORE = light boxes/near-invisible text on 13 owner screens; AFTER = 26/26 views clean. Light-mode crawl: only white-on-accent button labels (correct). Gate green, smoke 3/3.
+- Crawl detector fix: `color(srgb …)` values (from `color-mix`) are 0–1 scale — the first version misread them. Script: scratchpad `dark-crawl.spec.ts` (copy into `tests/e2e/` temporarily; env DARK_OUT/DARK_TAG). Worth promoting into the repo smoke suite.
+- First dispatch hit the Codex usage limit (likely drained by Sprint 141's Astra/high run); retried automatically after reset.
 
 ## Ops & Observability (2026-10-02)
 
