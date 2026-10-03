@@ -150,6 +150,12 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - DB (`20261003_sprint141_drop_gamification.sql`, applied live after code verify): both functions + 4 tables dropped (no CASCADE); `notifications_type_check` recreated = live def minus `achievement_unlocked` (diffed against live, 0 rows used it).
 - Verified: gate green; smoke 3/3 before and after migration; owner banner/overdue/analytics + manager render with 0 page errors; `/api/gamification/check` 404; `/achievements` → login; Sentry 0 unresolved; phase9/phase10 runtime checks ok.
 
+## Sprint 142 — legacy palette sweep (IN PROGRESS, 2026-10-02)
+
+- Packet `docs/sprint142-codex-prompt.md` (98 files / ~800 hits, none had `dark:` handling). Correction: earlier reports said these files "carry dark pairs" — false.
+- Baseline dark crawl on prod (smoke owner, before): light boxes / near-invisible text on Payments, Leasing Hub, Applications, Activity, Ownership, Invitations, Documents, Expenses (24 dark-text), Operations, Portfolio, Units, Leases, Tenants. Crawl script: scratchpad `dark-crawl.spec.ts` (copy into `tests/e2e/` temporarily; env DARK_OUT/DARK_TAG).
+- First dispatch hit the Codex usage limit (no changes made); auto-retry scheduled for 20:17 MDT via detached `nohup` script.
+
 ## Ops & Observability (2026-10-02)
 
 - **Deploys:** Vercel is git-connected — push to `main` auto-deploys production. CLI `vercel deploy` is optional.
