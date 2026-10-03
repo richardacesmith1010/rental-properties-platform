@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const revalidatePathMock = vi.hoisted(() => vi.fn());
 const createAdminClientMock = vi.hoisted(() => vi.fn());
@@ -106,6 +106,7 @@ function createAnnouncementAdminClient(config: AnnouncementAdminConfig): Supabas
 describe("announcement actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv("DOMUS_NOTIFICATIONS_ENABLED", "true");
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.spyOn(console, "warn").mockImplementation(() => {});
     checkRateLimitMock.mockReturnValue({ allowed: true, remaining: 9 });
@@ -131,6 +132,10 @@ describe("announcement actions", () => {
         ]
       })
     );
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it("returns a deduplicated recipient count for verified properties", async () => {
@@ -177,6 +182,29 @@ describe("announcement actions", () => {
       })
     );
     expect(revalidatePathMock).toHaveBeenCalledWith("/tenant");
+  });
+
+  it("saves the announcement without notification delivery while notifications are off", async () => {
+    vi.stubEnv("DOMUS_NOTIFICATIONS_ENABLED", "false");
+    const admin = createAnnouncementAdminClient({
+      units: [{ id: "unit-1" }],
+      leases: [{ tenant_profile_id: "tenant-1" }],
+      tenantProfiles: [{ id: "tenant-1", email: "tenant1@example.com", role: "tenant" }]
+    });
+    createAdminClientMock.mockReturnValue(admin);
+    const formData = new FormData();
+    formData.set("scope", "all_administered");
+    formData.set("title", "Boil water advisory");
+    formData.set("body", "Please boil tap water until further notice.");
+
+    const result = await createAnnouncement(null, formData);
+
+    expect(result).toEqual({
+      success: true,
+      message: "Saved. Notifications are off until launch, so no one was notified."
+    });
+    expect(admin.from).toHaveBeenCalledWith("announcements");
+    expect(createNotificationWithDeliveryMock).not.toHaveBeenCalled();
   });
 
   it("rejects selected properties outside the caller's administered scope", async () => {

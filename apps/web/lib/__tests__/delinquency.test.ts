@@ -233,6 +233,7 @@ function buildDelinquencyConfig(overrides: Partial<DelinquencySupabaseConfig> = 
 describe("delinquency notifications", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv("DOMUS_NOTIFICATIONS_ENABLED", "true");
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-03T12:00:00.000Z"));
     buildRentReminderEmailMock.mockReturnValue({
@@ -250,7 +251,20 @@ describe("delinquency notifications", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
   });
+
+  it.each([sendDelinquencyEscalations, sendRentDueReminders])(
+    "returns before querying when notifications are off",
+    async (sendNotifications) => {
+      vi.stubEnv("DOMUS_NOTIFICATIONS_ENABLED", "false");
+      const supabase = { from: vi.fn() } as unknown as SupabaseClient;
+
+      await expect(sendNotifications(supabase)).resolves.toContain("Notifications off");
+      expect(supabase.from).not.toHaveBeenCalled();
+      expect(createNotificationWithDeliveryMock).not.toHaveBeenCalled();
+    }
+  );
 
   it("excludes soft-deleted charges from delinquency escalations while still notifying on active charges", async () => {
     const supabase = createSupabaseMock(

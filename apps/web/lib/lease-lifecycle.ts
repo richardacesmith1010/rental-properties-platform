@@ -7,6 +7,7 @@ import {
 import {
   getPropertyNotificationDeliveryPreferences
 } from "@/lib/notification-preferences";
+import { notificationsEnabled } from "@/lib/notifications-switch";
 
 export async function detectExpiredLeases(supabase: SupabaseClient): Promise<string> {
   const todayIso = new Date().toISOString().slice(0, 10);
@@ -127,6 +128,10 @@ export async function detectExpiredLeases(supabase: SupabaseClient): Promise<str
 }
 
 export async function sendLeaseExpirationWarnings(supabase: SupabaseClient): Promise<string> {
+  if (!notificationsEnabled()) {
+    return "Notifications off: 0 sent.";
+  }
+
   const today = new Date();
   const todayIso = today.toISOString().slice(0, 10);
   const warningDate = new Date(today);

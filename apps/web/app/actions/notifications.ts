@@ -11,6 +11,7 @@ import {
   markNotificationReadForUser
 } from "@/lib/notifications";
 import { updateNotificationPreference } from "@/lib/notification-preferences";
+import { notificationsEnabled } from "@/lib/notifications-switch";
 import { getAdministeredPropertyIds } from "@/lib/property-access";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
@@ -270,8 +271,8 @@ export async function sendBatchPaymentReminder(
     return { success: false, error: "Selected charges do not have eligible tenants for reminders." };
   }
 
-  await Promise.all(
-    notifications.map(async (notification) => {
+  if (notificationsEnabled()) {
+    await Promise.all(notifications.map(async (notification) => {
       const tenantProfile = tenantProfileById.get(notification.recipient_profile_id);
       await createNotificationWithDelivery({
         recipientProfileId: notification.recipient_profile_id,
@@ -286,8 +287,8 @@ export async function sendBatchPaymentReminder(
         entityType: notification.entity_type,
         entityId: notification.entity_id
       });
-    })
-  );
+    }));
+  }
 
   void logAudit({
     userId: user.id,
@@ -308,7 +309,9 @@ export async function sendBatchPaymentReminder(
   revalidatePath("/tenant");
   return {
     success: true,
-    message: `${notifications.length} reminder${notifications.length === 1 ? "" : "s"} sent.`
+    message: notificationsEnabled()
+      ? `${notifications.length} reminder${notifications.length === 1 ? "" : "s"} sent.`
+      : "Saved. Notifications are off until launch, so no one was notified."
   };
 }
 

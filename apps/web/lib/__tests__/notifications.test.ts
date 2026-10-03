@@ -115,6 +115,7 @@ function createNotificationAdminClient(config: NotificationAdminConfig): Supabas
 describe("notifications utilities", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv("DOMUS_NOTIFICATIONS_ENABLED", "true");
     vi.spyOn(console, "error").mockImplementation(() => {});
     buildNotificationEmailMock.mockReturnValue("<p>Email</p>");
     shouldRecordSuccessfulDeliveryMock.mockReturnValue(true);
@@ -192,6 +193,31 @@ describe("notifications utilities", () => {
     expect(admin.from).toHaveBeenCalledWith("notifications");
     expect(admin.from).toHaveBeenCalledWith("notification_deliveries");
   });
+
+  it.each(["late_rent", "announcement"] as const)(
+    "makes no database or fetch calls for %s when notifications are off",
+    async (type) => {
+      vi.stubEnv("DOMUS_NOTIFICATIONS_ENABLED", "false");
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+      vi.spyOn(console, "info").mockImplementation(() => {});
+
+      await createNotificationWithDelivery({
+        recipientProfileId: "user-1",
+        recipientEmail: "user@example.com",
+        type,
+        title: "Skipped",
+        body: "Skipped",
+        entityType: "test",
+        entityId: "entity-1"
+      });
+
+      expect(createAdminClientMock).not.toHaveBeenCalled();
+      expect(getNotificationPreferenceMock).not.toHaveBeenCalled();
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(console.info).toHaveBeenCalledWith(`[notifications] off: skipped ${type}`);
+    }
+  );
 
   it("handles missing email gracefully", async () => {
     const admin = createNotificationAdminClient({ existingDeliveries: [] });

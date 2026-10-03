@@ -9,6 +9,7 @@ import {
 } from "@/lib/announcements";
 import type { NotificationRecipientRole } from "@/lib/notification-actions";
 import { createNotificationWithDelivery } from "@/lib/notifications";
+import { notificationsEnabled } from "@/lib/notifications-switch";
 import {
   getAdministeredPropertyIds
 } from "@/lib/property-access";
@@ -273,7 +274,12 @@ export async function createAnnouncement(
 
   if (insertError) {
     if (insertError.code === "23505") {
-      return { success: true, message: "This announcement was already sent." };
+      return {
+        success: true,
+        message: notificationsEnabled()
+          ? "This announcement was already sent."
+          : "Saved. Notifications are off until launch, so no one was notified."
+      };
     }
 
     if (isMissingSchemaError(insertError)) {
@@ -309,8 +315,8 @@ export async function createAnnouncement(
     (tenantProfiles ?? []).map((profile) => [profile.id, profile])
   );
 
-  const deliveryResults = await Promise.allSettled(
-    tenantLookup.tenantIds.map((tenantId) => {
+  const deliveryResults = notificationsEnabled()
+    ? await Promise.allSettled(tenantLookup.tenantIds.map((tenantId) => {
       const tenantProfile = tenantProfileById.get(tenantId);
       const recipientRole: NotificationRecipientRole =
         tenantProfile?.role === "owner" ||
@@ -329,8 +335,8 @@ export async function createAnnouncement(
         entityType: ANNOUNCEMENT_ENTITY_TYPE,
         entityId: announcement.id
       });
-    })
-  );
+      }))
+    : [];
 
   const failedDeliveries = deliveryResults.filter((result) => result.status === "rejected").length;
   if (failedDeliveries > 0) {
@@ -345,6 +351,8 @@ export async function createAnnouncement(
 
   return {
     success: true,
-    message: `Announcement sent to ${tenantLookup.tenantIds.length} tenant${tenantLookup.tenantIds.length === 1 ? "" : "s"}.`
+    message: notificationsEnabled()
+      ? `Announcement sent to ${tenantLookup.tenantIds.length} tenant${tenantLookup.tenantIds.length === 1 ? "" : "s"}.`
+      : "Saved. Notifications are off until launch, so no one was notified."
   };
 }

@@ -19,6 +19,7 @@ import {
   type NotificationRecipientRole
 } from "@/lib/notification-actions";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
+import { notificationsEnabled } from "@/lib/notifications-switch";
 export {
   formatRelativeNotificationTime,
   getNotificationActionLink,
@@ -175,6 +176,11 @@ async function resolveRecipientRole(
 }
 
 export async function createNotificationWithDelivery(params: CreateNotificationParams) {
+  if (!notificationsEnabled()) {
+    console.info(`[notifications] off: skipped ${params.type}`);
+    return;
+  }
+
   try {
     const admin = createAdminClient();
     const preference =

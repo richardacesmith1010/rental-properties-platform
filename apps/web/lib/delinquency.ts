@@ -8,6 +8,7 @@ import {
 import {
   getPropertyNotificationDeliveryPreferences,
 } from "@/lib/notification-preferences";
+import { notificationsEnabled } from "@/lib/notifications-switch";
 
 function differenceInDays(fromDate: string, toDate: string) {
   const from = new Date(`${fromDate}T00:00:00.000Z`);
@@ -30,6 +31,10 @@ function getTenantDisplayName(profile: { full_name?: string | null; email?: stri
 }
 
 export async function sendDelinquencyEscalations(supabase: SupabaseClient): Promise<string> {
+  if (!notificationsEnabled()) {
+    return "Notifications off: 0 sent.";
+  }
+
   const today = new Date();
   const todayIso = today.toISOString().slice(0, 10);
   const recentThreshold = new Date(today);
@@ -200,6 +205,10 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
 }
 
 export async function sendRentDueReminders(supabase: SupabaseClient): Promise<string> {
+  if (!notificationsEnabled()) {
+    return "Notifications off: 0 sent.";
+  }
+
   const targetDate = new Date();
   targetDate.setUTCDate(targetDate.getUTCDate() + 3);
   const targetDueDateIso = targetDate.toISOString().slice(0, 10);
