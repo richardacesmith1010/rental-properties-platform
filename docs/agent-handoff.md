@@ -173,6 +173,10 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Pending L1 (split out by review): theme smoke spec signs in once per role.
 - Post-deploy smoke: render 3/3 green, Sentry clean. Theme check now FAILS on a false positive: owner home in dark shows `StripeHealthBanner` (`components/dashboard/stripe-health-banner.tsx:40`) "Reconnect bank" — an intentionally inverted light button with dark text (readable). It appeared because the smoke owner's Stripe status is now restricted/missing. Fix in the L1 sprint: exempt `a`/`button` elements whose own text contrast is ≥ 4.5 from the light-box rule.
 
+## Sprint 145 — Theme smoke hardening (2026-10-03)
+
+- `smoke-theme.spec.ts`: interactive controls whose own text contrast ≥ 4.5 are exempt from the dark-mode light-box rule (fixes the "Reconnect bank" false positive); one sign-in per role (3 per run, was 5). Verified: 11/11 pass on prod with the banner present; negative test (injected light box + faint button) fails with 3 findings.
+
 ## Ops & Observability (2026-10-02)
 
 - **Deploys:** Vercel is git-connected — push to `main` auto-deploys production. CLI `vercel deploy` is optional.
