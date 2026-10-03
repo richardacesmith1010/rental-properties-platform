@@ -181,7 +181,8 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 - Tenant Angel Hernandez (he/him), 1st Home Unit A, lease `b9c47e88…`, $2,350/mo, pays the owner outside Domus — owner confirmed every month paid, nothing late.
 - One atomic SQL block: Aug/Sep/Oct rent → manual payments (method `other`, paid_at = due date, note "Paid outside Domus on time (owner-confirmed 2026-10-03)") + status `paid`; Aug/Sep late fees → `waived`; `charge_edit_history` + `audit_logs` rows written as owner; 15 overdue/reminder notifications marked read. No tenant notifications sent. Verified after.
-- **Open:** May + Jul late fees ($117.50 each) are recorded as PAID (manual "other", 2026-07-08) though owner says nothing was late — awaiting owner decision. Nov 1 rent (and every future month) will go late again → needs a "pays outside Domus" lease setting (proposed Sprint 146). Data oddity: 6 property rows named "1st Home" under the owner.
+- May + Jul late fees: owner-approved reversal done — their payments `reversed_at` set, charges → `waived`, history + audit rows (`reverse_payment`). All 4 of Angel's late fees now waived with $0 active payments.
+- Owner direction: **no notifications to anyone until the owner says real people use the app** (memory: no-notifications-until-launch). Sprint 146 (L3, rev 3 ChatGPT-approved-with-changes, adopted) = notifications master switch default OFF + "Tenant pays outside Domus" lease flag. Rollout: apply column migration FIRST, verify, then deploy code. Nov 1 rent (and every future month) will go late again → needs a "pays outside Domus" lease setting (proposed Sprint 146). Data oddity: 6 property rows named "1st Home" under the owner.
 
 ## Ops & Observability (2026-10-02)
 
