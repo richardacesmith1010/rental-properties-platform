@@ -184,6 +184,14 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - May + Jul late fees: owner-approved reversal done — their payments `reversed_at` set, charges → `waived`, history + audit rows (`reverse_payment`). All 4 of Angel's late fees now waived with $0 active payments.
 - Owner direction: **no notifications to anyone until the owner says real people use the app** (memory: no-notifications-until-launch). Sprint 146 (L3, rev 3 ChatGPT-approved-with-changes, adopted) = notifications master switch default OFF + "Tenant pays outside Domus" lease flag. Rollout: apply column migration FIRST, verify, then deploy code. Nov 1 rent (and every future month) will go late again → needs a "pays outside Domus" lease setting (proposed Sprint 146). Data oddity: 6 property rows named "1st Home" under the owner.
 
+## Sprint 146a — Notifications master switch SHIPPED (L3, `839f687`, 2026-10-03)
+
+- Option A (owner choice): env `DOMUS_NOTIFICATIONS_ENABLED` — only exact `"true"` enables; **unset in Vercel = OFF**. `createNotificationWithDelivery` (the only notifications-table writer + Resend notification sender) returns early when OFF; `sendDelinquencyEscalations`, `sendRentDueReminders`, `sendLeaseExpirationWarnings` return "Notifications off: 0 sent." Announcement + bulk-reminder success text: "Saved. Notifications are off until launch, so no one was notified." Invites/invoices/ops/feedback/auth emails untouched (empty diff). Codex checked live DB: no triggers/RPCs/Edge Functions bypass it.
+- ChatGPT L3 review: approve with changes (all adopted). Original intent-based Sprint 146 design stopped at Codex inventory (45+ files) → split into 146a/146b.
+- Verified live: smoke-owner announcement saved (recipient_count 1) with **0** new notifications/deliveries (78/136 before and after). 957 tests, gate green.
+- **To launch notifications later:** set `DOMUS_NOTIFICATIONS_ENABLED=true` in Vercel (Production) and redeploy — only when the owner says real people use the app.
+- Column `leases.collects_outside_domus` already applied live (2026-10-03) for Sprint 146b.
+
 ## Ops & Observability (2026-10-02)
 
 - **Deploys:** Vercel is git-connected — push to `main` auto-deploys production. CLI `vercel deploy` is optional.
