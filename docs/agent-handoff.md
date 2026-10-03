@@ -138,7 +138,9 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - PDFs (receipt, receipts bundle, lease summary, manager invoice): violet palette → v2 paper palette in `lib/pdf/pdf-styles.ts`; text wordmark, neutral rules. New render test `lib/__tests__/pdf-templates-render.test.tsx`.
 - Pages with no dark handling before → v2 tokens: `/payments/receipt/[id]` (prints light), `/payments/success`, `/payments/cancel`, `/connect/onboard`. Copy: "No charge was applied" → "No payment was made"; "Charge Details" → "Rent Details".
 - Verified: gate green (979 tests), auth smoke 3/3, success/cancel walked light+dark (0 page errors), lease-summary PDF downloaded live and inspected. `pdf-data.ts` + `app/api/**` untouched.
-- **Gap:** receipt page + receipt PDFs not walked live — smoke tenant has no paid charge ($1 rent is below online minimum). Covered only by Codex fixture renders. Fix later: seed one manual "paid" record in the smoke graph.
+- Receipt gap closed: user-approved $1 cash record on smoke tenant's Nov 1 charge (`279fe10d…`, reference "Smoke test receipt (Sprint 140 verification)") — use it for future receipt checks. Receipt page (light/dark) + receipt PDF verified live.
+- **140b (`ebe70ef`):** printing the receipt in dark theme came out dark/invisible → print block now forces the full light palette; verified live (card bg white, all text visible). Minor leftover: floating Feedback button prints.
+- **Security finding (2026-10-02):** `award_xp` / `update_streak` are SECURITY DEFINER, no search_path, EXECUTE granted to `anon` + `authenticated` → anyone with the public key can write XP rows for any user. App calls them only via service role. Fix = Sprint 141 (L3, `docs/sprint141-codex-prompt.md`, pending ChatGPT review); stopgap REVOKE pending user OK.
 - Emails were already v2 before this sprint. 87 dashboard files still use legacy palette classes. Spot checks (owner home, Records, New Property wizard, Analytics in dark) showed no light boxes, but the 87 were not audited one by one — treat as cleanup debt with possible hidden dark-mode gaps.
 
 ## Ops & Observability (2026-10-02)
