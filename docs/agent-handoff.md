@@ -192,6 +192,12 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - **To launch notifications later:** set `DOMUS_NOTIFICATIONS_ENABLED=true` in Vercel (Production) and redeploy — only when the owner says real people use the app.
 - Column `leases.collects_outside_domus` already applied live (2026-10-03) for Sprint 146b.
 
+## Sprint 146b — "Tenant pays outside Domus" SHIPPED (L3, `f2ef917`, 2026-10-03)
+
+- ChatGPT L3 review: approve with changes (all adopted). Codex fresh inventory: only late writer = `applyLateFeesToOverdueCharges`; no SQL/RPC/trigger late logic. Central predicate `lib/lease-collection.ts` `isCollectedOutsideDomus`; late status + late fee gated independently; overdue readers (delinquency, aging report, dashboard, manager dashboard, analytics lateCents, action items, tenant payments, rent urgency, tenant overview) exclude flagged leases; receivables/rent roll/outstanding/ledger/P&L/collection unchanged (tests). Lease form checkbox (unchecked → false normalized) incl. partial-edit path `app/actions/entity-updates*.ts`; badge "Pays outside Domus" on lease list. 983 tests, gate green.
+- Verified live with the smoke owner (temporarily flagged, then restored): home went from "2 overdue charges" to "Everything looks good" / 0 overdue; Leases shows the badge. Smoke 3/3 + theme 11/11.
+- **Angel Hernandez's lease `b9c47e88…` is now `collects_outside_domus = true`** (owner-confirmed; audit_logs `update_lease`). His future months won't go late or get fees; owner marks months paid (method ACH, note "Fidelity") or asks Claude to record quietly.
+
 ## Ops & Observability (2026-10-02)
 
 - **Deploys:** Vercel is git-connected — push to `main` auto-deploys production. CLI `vercel deploy` is optional.
