@@ -227,7 +227,6 @@ export const updateNotificationPreferenceSchema = z.object({
     "application_reviewed",
     "rent_due_reminder",
     "invite_accepted",
-    "achievement_unlocked",
     "owner_message",
     "announcement",
     "lease_expiring_soon",

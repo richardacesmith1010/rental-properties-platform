@@ -34,10 +34,6 @@ interface DemoUserSpec {
   fullName: string;
   nickname: string;
   role: DemoRole;
-  totalXp: number;
-  currentLevel: number;
-  streakCount: number;
-  streakLastDate: string | null;
 }
 
 interface DemoUser extends DemoUserSpec {
@@ -51,10 +47,6 @@ const demoUsers: DemoUserSpec[] = [
     fullName: "Alex Rivera",
     nickname: "Alex",
     role: "owner",
-    totalXp: 2500,
-    currentLevel: 3,
-    streakCount: 0,
-    streakLastDate: null
   },
   {
     key: "manager",
@@ -62,10 +54,6 @@ const demoUsers: DemoUserSpec[] = [
     fullName: "Jordan Kim",
     nickname: "Jordan",
     role: "manager",
-    totalXp: 800,
-    currentLevel: 2,
-    streakCount: 0,
-    streakLastDate: null
   },
   {
     key: "tenant1",
@@ -73,10 +61,6 @@ const demoUsers: DemoUserSpec[] = [
     fullName: "Sam Johnson",
     nickname: "Sam",
     role: "tenant",
-    totalXp: 1200,
-    currentLevel: 2,
-    streakCount: 6,
-    streakLastDate: isoDate(new Date())
   },
   {
     key: "tenant2",
@@ -84,10 +68,6 @@ const demoUsers: DemoUserSpec[] = [
     fullName: "Pat Williams",
     nickname: "Pat",
     role: "tenant",
-    totalXp: 300,
-    currentLevel: 1,
-    streakCount: 1,
-    streakLastDate: isoDate(monthsAgo(1))
   },
   {
     key: "tenant3",
@@ -95,10 +75,6 @@ const demoUsers: DemoUserSpec[] = [
     fullName: "Casey Brown",
     nickname: "Casey",
     role: "tenant",
-    totalXp: 50,
-    currentLevel: 1,
-    streakCount: 0,
-    streakLastDate: null
   }
 ];
 
@@ -263,19 +239,6 @@ async function upsertByConflict(
   if (error) {
     throw new Error(`Failed to upsert ${table}: ${error.message}`);
   }
-}
-
-async function fetchAchievementIds(admin: AdminClient, slugs: string[]) {
-  const { data, error } = await admin
-    .from("achievements")
-    .select("id, slug")
-    .in("slug", slugs);
-
-  if (error) {
-    throw new Error(`Failed to fetch achievements: ${error.message}`);
-  }
-
-  return new Map((data ?? []).map((row) => [row.slug, row.id]));
 }
 
 async function main() {
@@ -945,7 +908,7 @@ async function main() {
       recipient_profile_id: casey.id,
       type: "rent_due_reminder",
       title: "Rent due soon",
-      body: "Your rent is due in 3 days. Pay now to keep your streak going.",
+      body: "Your rent is due in 3 days. Pay now so you stay on track.",
       entity_type: "rent_charge",
       entity_id: deterministicUuid("charge:casey:pending"),
       created_at: isoTimestamp(new Date()),
@@ -964,160 +927,10 @@ async function main() {
     }
   ]);
 
-  const xpEvents = [
-    ...samChargeMonths.map((dueDate, index) => ({
-      id: deterministicUuid(`xp:sam:rent:${index + 1}`),
-      user_id: sam.id,
-      event_type: "rent_paid_on_time",
-      xp_amount: 100,
-      description: "Rent paid on time.",
-      metadata: { charge_id: deterministicUuid(`charge:sam:${index + 1}`) },
-      created_at: isoTimestamp(dueDate)
-    })),
-    {
-      id: deterministicUuid("xp:sam:first-ticket"),
-      user_id: sam.id,
-      event_type: "ticket_submitted",
-      xp_amount: 25,
-      description: "Submitted first maintenance ticket.",
-      metadata: { ticket_id: tickets[0].id },
-      created_at: isoTimestamp(daysAgo(14))
-    },
-    {
-      id: deterministicUuid("xp:sam:achievement:first-payment"),
-      user_id: sam.id,
-      event_type: "achievement_first_payment",
-      xp_amount: 100,
-      description: "Achievement unlocked: First Payment.",
-      metadata: {},
-      created_at: isoTimestamp(daysAgo(150))
-    },
-    {
-      id: deterministicUuid("xp:sam:achievement:streak-3"),
-      user_id: sam.id,
-      event_type: "achievement_streak_3",
-      xp_amount: 200,
-      description: "Achievement unlocked: Hot Streak.",
-      metadata: {},
-      created_at: isoTimestamp(daysAgo(90))
-    },
-    {
-      id: deterministicUuid("xp:sam:achievement:streak-6"),
-      user_id: sam.id,
-      event_type: "achievement_streak_6",
-      xp_amount: 500,
-      description: "Achievement unlocked: On Fire.",
-      metadata: {},
-      created_at: isoTimestamp(daysAgo(1))
-    },
-    {
-      id: deterministicUuid("xp:sam:achievement:first-ticket"),
-      user_id: sam.id,
-      event_type: "achievement_first_ticket",
-      xp_amount: 50,
-      description: "Achievement unlocked: First Report.",
-      metadata: {},
-      created_at: isoTimestamp(daysAgo(14))
-    },
-    {
-      id: deterministicUuid("xp:pat:rent"),
-      user_id: pat.id,
-      event_type: "rent_paid_on_time",
-      xp_amount: 100,
-      description: "Rent paid on time.",
-      metadata: { charge_id: deterministicUuid("charge:pat:paid") },
-      created_at: isoTimestamp(lastMonthPatDue)
-    },
-    {
-      id: deterministicUuid("xp:pat:achievement:first-payment"),
-      user_id: pat.id,
-      event_type: "achievement_first_payment",
-      xp_amount: 100,
-      description: "Achievement unlocked: First Payment.",
-      metadata: {},
-      created_at: isoTimestamp(lastMonthPatDue)
-    },
-    {
-      id: deterministicUuid("xp:casey:first-ticket"),
-      user_id: casey.id,
-      event_type: "ticket_submitted",
-      xp_amount: 25,
-      description: "Submitted first maintenance ticket.",
-      metadata: { ticket_id: tickets[2].id },
-      created_at: isoTimestamp(daysAgo(1))
-    },
-    {
-      id: deterministicUuid("xp:owner:first-property"),
-      user_id: owner.id,
-      event_type: "property_added",
-      xp_amount: 200,
-      description: "First property added.",
-      metadata: { property_id: properties[0].id },
-      created_at: isoTimestamp(daysAgo(180))
-    }
-  ];
-  await upsertById(admin, "xp_events", xpEvents);
-
-  await upsertByConflict(admin, "user_gamification", ensuredUsers.map((user) => ({
-    user_id: user.id,
-    total_xp: user.totalXp,
-    current_level: user.currentLevel,
-    streak_count: user.streakCount,
-    streak_last_date: user.streakLastDate
-  })), "user_id");
-
-  const achievementIds = await fetchAchievementIds(admin, [
-    "first_payment",
-    "streak_3",
-    "streak_6",
-    "first_ticket",
-    "first_property"
-  ]);
-
-  await upsertByConflict(admin, "user_achievements", [
-    {
-      id: deterministicUuid("user-achievement:sam:first-payment"),
-      user_id: sam.id,
-      achievement_id: achievementIds.get("first_payment"),
-      earned_at: isoTimestamp(daysAgo(150))
-    },
-    {
-      id: deterministicUuid("user-achievement:sam:streak-3"),
-      user_id: sam.id,
-      achievement_id: achievementIds.get("streak_3"),
-      earned_at: isoTimestamp(daysAgo(90))
-    },
-    {
-      id: deterministicUuid("user-achievement:sam:streak-6"),
-      user_id: sam.id,
-      achievement_id: achievementIds.get("streak_6"),
-      earned_at: isoTimestamp(daysAgo(1))
-    },
-    {
-      id: deterministicUuid("user-achievement:sam:first-ticket"),
-      user_id: sam.id,
-      achievement_id: achievementIds.get("first_ticket"),
-      earned_at: isoTimestamp(daysAgo(14))
-    },
-    {
-      id: deterministicUuid("user-achievement:pat:first-payment"),
-      user_id: pat.id,
-      achievement_id: achievementIds.get("first_payment"),
-      earned_at: isoTimestamp(lastMonthPatDue)
-    },
-    {
-      id: deterministicUuid("user-achievement:owner:first-property"),
-      user_id: owner.id,
-      achievement_id: achievementIds.get("first_property"),
-      earned_at: isoTimestamp(daysAgo(180))
-    }
-  ].filter((row) => row.achievement_id), "user_id,achievement_id");
-
   console.log(`${colors.green}Demo data ready.${colors.reset}`);
   console.log(`${colors.magenta}Users:${colors.reset} 5 demo accounts (password: ${DEMO_PASSWORD})`);
   console.log(`${colors.magenta}Portfolio:${colors.reset} 2 properties, 6 units, 4 leases`);
   console.log(`${colors.magenta}Financials:${colors.reset} ${rentCharges.length} charges, ${payments.length} payments, 6 expenses`);
-  console.log(`${colors.magenta}Operations:${colors.reset} 4 maintenance tickets, 10 notifications, ${xpEvents.length} XP events`);
 }
 
 main().catch((error) => {

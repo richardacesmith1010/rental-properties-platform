@@ -56,7 +56,6 @@ describe("buildOwnerBundlePlan", () => {
       "dashboard",
       "expenses",
       "feedback",
-      "gamification",
       "manager-payments",
       "notification-preferences",
       "notifications",

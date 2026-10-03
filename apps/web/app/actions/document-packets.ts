@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { awardXp, XP_VALUES } from "@/lib/gamification";
 import { shouldThrottleDocumentPacketSend } from "@/lib/idempotency";
 import { sideEffectError } from "@/lib/logger";
 import {
@@ -247,10 +246,6 @@ export async function signDocumentPacket(_prev: ActionState, formData: FormData)
     }
   }
 
-  void awardXp(user.id, "document_signed", XP_VALUES.document_signed, "Document signed successfully.", {
-    packet_id: packetId,
-    signer_id: signer.id
-  }).catch(sideEffectError("signDocumentPacket", "award_xp", { userId: user.id, entityType: "xp_event", entityId: packetId }));
 
   revalidatePath("/tenant");
   revalidatePath("/owner");

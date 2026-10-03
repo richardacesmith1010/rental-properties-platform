@@ -771,9 +771,6 @@ export async function fullAccountWipe(
     await deleteByIds("inbox_messages", "id", scope.messageIds, "Delete inbox messages");
     await deleteByIds("inbox_threads", "id", scope.threadIds, "Delete inbox threads");
     await executeMutation(admin.from("notification_preferences").delete().eq("profile_id", auth.userId), "Delete notification preferences");
-    await executeMutation(admin.from("user_achievements").delete().eq("user_id", auth.userId), "Delete achievements");
-    await executeMutation(admin.from("xp_events").delete().eq("user_id", auth.userId), "Delete XP events");
-    await executeMutation(admin.from("user_gamification").delete().eq("user_id", auth.userId), "Delete gamification state");
     await revalidateSettingsSurfaces();
     return { success: true, message: "Your Domus account data has been wiped." };
   } catch (error) {

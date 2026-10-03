@@ -106,12 +106,6 @@ export function computeFilteredKpis(params: {
 }
 
 export function useDashboardCollections(props: DashboardProps) {
-  const resolvedGamification = props.gamification ?? {
-    totalXp: 0,
-    currentLevel: 1,
-    streakCount: 0,
-    streakLastDate: null
-  };
   const safePortfolio = useMemo<PortfolioData>(
     () => props.portfolio ?? { properties: [], units: [], leases: [], tenants: [] },
     [props.portfolio]
@@ -188,7 +182,6 @@ export function useDashboardCollections(props: DashboardProps) {
   );
 
   return {
-    resolvedGamification,
     safePortfolio,
     safeDocuments,
     safeTickets,

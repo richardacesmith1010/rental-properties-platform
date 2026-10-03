@@ -68,11 +68,10 @@ test.describe("Tenant flows", () => {
     await expect(page.getByText(/payment received|maintenance request resolved/i).first()).toBeVisible();
   });
 
-  test("opens achievements page", async ({ page }) => {
+  test("redirects legacy achievements links to the tenant role home", async ({ page }) => {
     await loginTenantOrSkip(page);
     await page.goto("/achievements");
 
-    await expect(page.getByRole("heading", { name: "Achievement gallery" })).toBeVisible();
-    await expect(page.getByText(/achievements unlocked/i)).toBeVisible();
+    await expect(page).toHaveURL(/\/tenant$/);
   });
 });

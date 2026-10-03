@@ -21,7 +21,6 @@ export function useDashboardData(props: DashboardProps) {
   const commandState = useDashboardCommandState(props, collections, kpis, navigation);
 
   const {
-    resolvedGamification,
     safeAnalytics,
     safeAuditLogs,
     safeAutomationRules,
@@ -243,7 +242,6 @@ export function useDashboardData(props: DashboardProps) {
     homeActionItems: homeState.homeActionItems,
     nextRentCollectionLabel: homeState.nextRentCollectionLabel,
     ownerWorkflowMode,
-    resolvedGamification,
     selectedPropertyId,
     selectedPropertySummary,
     financialOverviewData,

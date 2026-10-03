@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { logAudit } from "@/lib/audit";
-import { awardXp, XP_VALUES } from "@/lib/gamification";
 import { sendTenantInviteEmail } from "@/lib/invite-email";
 import { sideEffectError } from "@/lib/logger";
 import { notifyOwnerMembersOfAcceptedTenantInvite } from "@/lib/notifications";
@@ -121,19 +120,6 @@ export async function inviteTenant(
           sideEffectError("inviteTenant", "create_notification", {
             userId: user.id,
             entityType: "invitation",
-            entityId: existingProfile.id
-          })
-        );
-        void awardXp(
-          user.id,
-          "tenant_invited",
-          XP_VALUES.tenant_invited,
-          "Tenant linked to property.",
-          { property_id: propertyId, tenant_profile_id: existingProfile.id }
-        ).catch(
-          sideEffectError("inviteTenant", "award_xp", {
-            userId: user.id,
-            entityType: "xp_event",
             entityId: existingProfile.id
           })
         );
@@ -270,19 +256,6 @@ export async function inviteTenant(
     })
   );
 
-  void awardXp(
-    user.id,
-    "tenant_invited",
-    XP_VALUES.tenant_invited,
-    "Tenant invitation sent.",
-    { property_id: propertyId, email: normalizedEmail }
-  ).catch(
-    sideEffectError("inviteTenant", "award_xp", {
-      userId: user.id,
-      entityType: "xp_event",
-      entityId: propertyId
-    })
-  );
 
   revalidatePath("/owner");
   revalidatePath("/manager");

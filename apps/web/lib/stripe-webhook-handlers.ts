@@ -6,7 +6,6 @@ import {
   recordPaymentDistribution
 } from "@/lib/distributions";
 import { formatCurrency, formatUnitLabel } from "@/lib/format";
-import { awardXp, XP_VALUES } from "@/lib/gamification";
 import { sideEffectError } from "@/lib/logger";
 import {
   createStripeTransfer,
@@ -54,7 +53,6 @@ interface PaymentParams {
   stripePaymentIntentId?: string | null;
   requireAuthorizedUser?: boolean;
   resetAutopay?: boolean;
-  queueXp?: boolean;
   transferMode?: string | null;
   baseAmountCents?: number | null;
   managerFeeCents?: number | null;
@@ -492,21 +490,6 @@ function queuePaymentNotifications(ctx: Ctx, amountCents: number) {
   }
 }
 
-function queuePaymentXp(ctx: Ctx, userId: string, method: string) {
-  const isOnTime = new Date().toISOString().slice(0, 10) <= ctx.charge.due_date;
-  void awardXp(
-    userId,
-    isOnTime ? "rent_paid_on_time" : "rent_paid_late",
-    isOnTime ? XP_VALUES.rent_paid_on_time : XP_VALUES.rent_paid_late,
-    isOnTime ? "Rent payment recorded on time." : "Rent payment recorded after the due date.",
-    { charge_id: ctx.charge.id, method }
-  ).catch(sideEffectError("handlePaymentSucceeded", "award_xp", {
-    userId,
-    entityType: "xp_event",
-    entityId: ctx.charge.id
-  }));
-}
-
 function queueAutopayFailure(
   context: Ctx | null,
   tenantProfile: { id: string; email: string | null } | null,
@@ -559,7 +542,6 @@ async function recordPayment({
   stripePaymentIntentId,
   requireAuthorizedUser = false,
   resetAutopay = false,
-  queueXp = false,
   transferMode = null,
   baseAmountCents = null,
   managerFeeCents = null
@@ -706,9 +688,6 @@ async function recordPayment({
   }
 
   queuePaymentNotifications(ctx, recordedAmountCents);
-  if (queueXp) {
-    queuePaymentXp(ctx, userId, method);
-  }
 
   return received(method === "autopay" ? "autopay_payment_recorded" : "payment_recorded");
 }
@@ -761,7 +740,6 @@ export async function handlePaymentIntentSucceeded(supabase: AdminClient, paymen
         : `charge_${chargeId}`,
     stripePaymentIntentId: paymentIntent.id,
     resetAutopay: true,
-    queueXp: true
   });
 }
 

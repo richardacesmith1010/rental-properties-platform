@@ -157,7 +157,6 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         applications={ownerPage.applications}
         applicationCount={ownerPage.applicationCount}
         approvedApplicationCount={ownerPage.approvedApplicationCount}
-        gamification={ownerPage.gamification}
         analyticsData={ownerPage.analytics}
         auditLogs={ownerPage.auditLogs}
         rentIncreaseHistory={ownerPage.rentIncreaseHistory}

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthState } from "@/lib/auth";
-import { updateUserStreak } from "@/lib/gamification";
 import { markTenantInvitationAccepted } from "@/lib/invitations";
 import { sideEffectError } from "@/lib/logger";
 import { notifyOwnerMembersOfAcceptedTenantInvite } from "@/lib/notifications";
@@ -92,13 +91,6 @@ async function trackAuthenticatedUser(params: {
     await markTenantInvitationAccepted(user.id);
   }
 
-  void updateUserStreak(user.id, "increment").catch(
-    sideEffectError("authCallback", "update_streak", {
-      userId: user.id,
-      entityType: "profile",
-      entityId: user.id
-    })
-  );
   void notifyOwnerMembersOfAcceptedTenantInvite(user.id).catch(
     sideEffectError("authCallback", "create_notification", {
       userId: user.id,

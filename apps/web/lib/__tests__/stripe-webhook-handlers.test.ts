@@ -10,7 +10,6 @@ const getDistributionMembersForAccountMock = vi.hoisted(() => vi.fn());
 const planEqualDistributionTransfersMock = vi.hoisted(() => vi.fn());
 const planCustomDistributionTransfersMock = vi.hoisted(() => vi.fn());
 const recordPaymentDistributionMock = vi.hoisted(() => vi.fn());
-const awardXpMock = vi.hoisted(() => vi.fn());
 const sideEffectErrorMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/distributions", () => ({
@@ -20,10 +19,6 @@ vi.mock("@/lib/distributions", () => ({
   recordPaymentDistribution: recordPaymentDistributionMock
 }));
 
-vi.mock("@/lib/gamification", () => ({
-  awardXp: awardXpMock,
-  XP_VALUES: { rent_paid_on_time: 10, rent_paid_late: 5 }
-}));
 
 vi.mock("@/lib/logger", () => ({
   sideEffectError: sideEffectErrorMock
@@ -231,7 +226,6 @@ describe("stripe webhook handlers", () => {
     planEqualDistributionTransfersMock.mockReturnValue({ memberShares: [], llcFallbackAmount: 0 });
     planCustomDistributionTransfersMock.mockReturnValue({ memberShares: [], llcFallbackAmount: 0 });
     recordPaymentDistributionMock.mockResolvedValue(undefined);
-    awardXpMock.mockResolvedValue(undefined);
     sideEffectErrorMock.mockReturnValue(() => undefined);
   });
 

@@ -119,9 +119,7 @@ Default = follow the device; one-click override in Settings persists to localSto
 - **Ledgers/history:** plain fact tables — date, amount, method, receipt. On-time-ness is data, never a score.
 - **Confirmations:** inline plain success ("Rent paid. Receipt sent."), green check allowed, zero motion beyond a standard fade.
 
-## De-gamification (one-shot sprint)
-
-All gamification dies in a single dedicated sprint (v2 change): UI (XP widgets, levels, streak flames, achievements page, celebration toasts, AchievementChecker) **and** backend (achievements/user_achievements/user_gamification/xp_events tables, award_xp/update_streak RPCs, gamification cron + API route). Schema drops = migration work owned by Claude; treat the sprint as L3.
+Removed in Sprints 137 and 141.
 
 ## Scope & rollout (v2)
 

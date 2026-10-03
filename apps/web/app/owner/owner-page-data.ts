@@ -30,7 +30,6 @@ import {
 } from "@/lib/ownership";
 import { getPendingLLCInvitationsForAccount, type LLCInvitationDTO } from "@/lib/llc-invitations";
 import { getOwnerExpenseData, type ExpenseDashboardData } from "@/lib/expenses";
-import { getUserGamification, type UserGamificationData } from "@/lib/gamification";
 import { getOwnerAnalyticsData, type AnalyticsDashboardData } from "@/lib/analytics";
 import { getRecentAuditLogs, type AuditLogEntry } from "@/lib/audit";
 import { getRentIncreaseHistory, type RentIncreaseEntry } from "@/lib/rent-increases";
@@ -68,7 +67,6 @@ export type OwnerBundleId =
   | "documents"
   | "expenses"
   | "feedback"
-  | "gamification"
   | "inbox"
   | "invitations"
   | "manager-payments"
@@ -148,7 +146,6 @@ export interface OwnerPageReadyData extends OwnerPageResolvedBase {
   documents?: OwnerDocumentsData;
   expenses?: ExpenseDashboardData;
   financialActivityFeed?: FinancialActivityEvent[];
-  gamification?: UserGamificationData;
   inboxThreads?: InboxThreadDTO[];
   invitations?: InvitationListItem[];
   isEmpty: boolean;
@@ -261,7 +258,6 @@ export function buildOwnerBundlePlan(params: {
     "notifications",
     "notification-preferences",
     "rent-collection-status",
-    "gamification"
   ]);
 
   if (params.initialOwnerHomePage) {
@@ -604,7 +600,6 @@ export async function loadOwnerPageData(params: {
     vendors,
     expenses,
     managerPaymentsData,
-    gamification,
     analytics,
     auditLogs,
     rentIncreaseHistory,
@@ -665,9 +660,6 @@ export async function loadOwnerPageData(params: {
           "manager-payments.dashboard",
           () => getManagerPaymentsDashboardData(params.userId, request.activeAccountId)
         )
-      : Promise.resolve(undefined),
-    hasBundle("gamification")
-      ? measureOwnerWithRequest("gamification.user", () => getUserGamification(params.userId))
       : Promise.resolve(undefined),
     hasBundle("analytics")
       ? measureOwnerWithRequest("analytics.owner", () => getOwnerAnalyticsData(params.userId, request.activeAccountId))
@@ -792,7 +784,6 @@ export async function loadOwnerPageData(params: {
     documents,
     expenses,
     financialActivityFeed,
-    gamification,
     generatedMessage: request.generatedMessage,
     inboxThreads,
     initialOwnerHomePage: request.initialOwnerHomePage,

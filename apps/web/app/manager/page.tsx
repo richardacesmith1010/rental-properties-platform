@@ -18,7 +18,6 @@ import {
   getActiveLlcMembershipsForUser,
   getOwnershipAccountsForUser
 } from "@/lib/ownership";
-import { getUserGamification } from "@/lib/gamification";
 import { getRecentAuditLogs } from "@/lib/audit";
 import { getRentIncreaseHistory } from "@/lib/rent-increases";
 import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
@@ -175,7 +174,6 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
     vendors,
     ownershipAccounts,
     llcPayoutMemberships,
-    gamification,
     expenses,
     analytics,
     auditLogs,
@@ -221,7 +219,6 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
         ? getOwnershipAccountsForUser(user.id)
         : Promise.resolve([]),
       getActiveLlcMembershipsForUser(user.id),
-      getUserGamification(user.id),
       getOwnerExpenseData(user.id),
       getOwnerAnalyticsData(user.id),
       getRecentAuditLogs(user.id),
@@ -251,7 +248,6 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       applications={applications}
       applicationCount={applications.length}
       approvedApplicationCount={approvedApplicationCount}
-      gamification={gamification}
       vendors={vendors}
       ownershipAccounts={ownershipAccounts}
       llcPayoutMemberships={llcPayoutMemberships}

@@ -22,7 +22,6 @@ import {
 } from "@/lib/notifications";
 import { logAudit } from "@/lib/audit";
 import { formatCurrency, formatUnitLabel } from "@/lib/format";
-import { awardXp, XP_VALUES } from "@/lib/gamification";
 import { isStripeConfigured } from "@/lib/env";
 import { sideEffectError } from "@/lib/logger";
 import { sendPlatformAlert } from "@/lib/platform-alerts";
@@ -531,25 +530,6 @@ export async function recordManualPayment(
       sideEffectError("recordManualPayment", "notify_tenant", {
         userId: user.id,
         entityType: "rent_charge",
-        entityId: charge.id
-      })
-    );
-
-    const isOnTime = paidAt.slice(0, 10) <= charge.due_date;
-    void awardXp(
-      tenantProfile.id,
-      isOnTime ? "rent_paid_on_time" : "rent_paid_late",
-      isOnTime ? XP_VALUES.rent_paid_on_time : XP_VALUES.rent_paid_late,
-      isOnTime ? "Rent payment recorded on time." : "Rent payment recorded after the due date.",
-      {
-        charge_id: charge.id,
-        recorded_by: user.id,
-        method
-      }
-    ).catch(
-      sideEffectError("recordManualPayment", "award_xp", {
-        userId: user.id,
-        entityType: "xp_event",
         entityId: charge.id
       })
     );

@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { logAudit } from "@/lib/audit";
-import { awardXp, XP_VALUES } from "@/lib/gamification";
 import { sideEffectError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
@@ -61,19 +60,6 @@ export async function createUnit(_prev: ActionState, formData: FormData): Promis
   }
 
   if (createdUnit?.id) {
-    void awardXp(
-      user.id,
-      "unit_added",
-      XP_VALUES.unit_added,
-      "Unit added to property.",
-      { unit_id: createdUnit.id, property_id: propertyId }
-    ).catch(
-      sideEffectError("createUnit", "award_xp", {
-        userId: user.id,
-        entityType: "xp_event",
-        entityId: createdUnit.id
-      })
-    );
 
     void logAudit({
       userId: user.id,

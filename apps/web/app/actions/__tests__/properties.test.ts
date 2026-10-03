@@ -8,7 +8,6 @@ const canUserAdministerPropertyMock = vi.hoisted(() => vi.fn());
 const canUserAdministerOwnershipAccountMock = vi.hoisted(() => vi.fn());
 const getOrCreateIndividualOwnershipAccountMock = vi.hoisted(() => vi.fn());
 const logAuditMock = vi.hoisted(() => vi.fn());
-const awardXpMock = vi.hoisted(() => vi.fn());
 const checkRateLimitMock = vi.hoisted(() => vi.fn());
 const parseFormDataMock = vi.hoisted(() => vi.fn());
 const requireAuthMock = vi.hoisted(() => vi.fn());
@@ -23,10 +22,6 @@ vi.mock("@/lib/ownership", () => ({
   getOrCreateIndividualOwnershipAccount: getOrCreateIndividualOwnershipAccountMock
 }));
 vi.mock("@/lib/audit", () => ({ logAudit: logAuditMock }));
-vi.mock("@/lib/gamification", () => ({
-  awardXp: awardXpMock,
-  XP_VALUES: { property_added: 25 }
-}));
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: checkRateLimitMock }));
 vi.mock("@/lib/validations", () => ({
   createPropertySchema: {},
@@ -146,7 +141,6 @@ describe("properties actions", () => {
     });
     createAdminClientMock.mockReturnValue(createPropertiesAdminClient({ propertyId: "property-1" }));
     logAuditMock.mockResolvedValue(undefined);
-    awardXpMock.mockResolvedValue(undefined);
     isMissingSchemaErrorMock.mockResolvedValue(false);
   });
 

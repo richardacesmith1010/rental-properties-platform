@@ -24,7 +24,6 @@ import type { AutomationRuleDTO, AutomationTemplateDTO } from "@/lib/automations
 import type { InboxThreadDTO } from "@/lib/inbox";
 import type { RentalListingDTO } from "@/lib/leasing";
 import type { ApplicationDTO } from "@/lib/applications";
-import type { UserGamificationData } from "@/lib/gamification";
 import type { AnalyticsDashboardData } from "@/lib/analytics";
 import type { AuditLogEntry } from "@/lib/audit";
 import type { RentIncreaseEntry } from "@/lib/rent-increases";
@@ -109,7 +108,6 @@ export interface DashboardProps {
   managerPaymentsWarning?: string | null;
   applicationCount?: number;
   approvedApplicationCount?: number;
-  gamification?: UserGamificationData;
   analyticsData?: AnalyticsDashboardData;
   auditLogs?: AuditLogEntry[];
   rentIncreaseHistory?: RentIncreaseEntry[];

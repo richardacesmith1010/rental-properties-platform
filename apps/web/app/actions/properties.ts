@@ -9,7 +9,6 @@ import {
   getOrCreateIndividualOwnershipAccount
 } from "@/lib/ownership";
 import { logAudit } from "@/lib/audit";
-import { awardXp, XP_VALUES } from "@/lib/gamification";
 import { sideEffectError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
@@ -115,19 +114,6 @@ export async function createProperty(_prev: ActionState, formData: FormData): Pr
   }
 
   if (property?.id) {
-    void awardXp(
-      user.id,
-      "property_added",
-      XP_VALUES.property_added,
-      "Property added to portfolio.",
-      { property_id: property.id }
-    ).catch(
-      sideEffectError("createProperty", "award_xp", {
-        userId: user.id,
-        entityType: "xp_event",
-        entityId: property.id
-      })
-    );
 
     void logAudit({
       userId: user.id,

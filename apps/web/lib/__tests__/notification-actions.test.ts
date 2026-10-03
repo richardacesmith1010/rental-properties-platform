@@ -74,7 +74,7 @@ describe("notification actions", () => {
   it("falls back to content matching when a notification title describes a payment", () => {
     const actions = getNotificationActions(
       {
-        type: "achievement_unlocked",
+        type: "unsupported_notification_type",
         title: "Payment received",
         body: "Payment received for Unit 1A.",
         entityType: "note",
@@ -89,7 +89,7 @@ describe("notification actions", () => {
   it("uses a generic details action for unknown notifications", () => {
     const actions = getNotificationActions(
       {
-        type: "achievement_unlocked",
+        type: "unsupported_notification_type",
         title: "System update",
         body: "A new update is available.",
         entityType: "system",

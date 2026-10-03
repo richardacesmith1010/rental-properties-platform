@@ -14,7 +14,6 @@ const createNotificationWithDeliveryMock = vi.hoisted(() => vi.fn());
 const notifyOwnerMembersForPropertyMock = vi.hoisted(() => vi.fn());
 const notifyOwnerOfStripeIssueMock = vi.hoisted(() => vi.fn());
 const logAuditMock = vi.hoisted(() => vi.fn());
-const awardXpMock = vi.hoisted(() => vi.fn());
 const checkRateLimitMock = vi.hoisted(() => vi.fn());
 const parseFormDataMock = vi.hoisted(() => vi.fn());
 const requireAuthMock = vi.hoisted(() => vi.fn());
@@ -41,10 +40,6 @@ vi.mock("@/lib/notifications", () => ({
   notifyOwnerOfStripeIssue: notifyOwnerOfStripeIssueMock
 }));
 vi.mock("@/lib/audit", () => ({ logAudit: logAuditMock }));
-vi.mock("@/lib/gamification", () => ({
-  awardXp: awardXpMock,
-  XP_VALUES: { rent_paid_on_time: 10, rent_paid_late: 5 }
-}));
 vi.mock("@/lib/logger", () => ({ sideEffectError: sideEffectErrorMock }));
 vi.mock("@/lib/platform-alerts", () => ({ sendPlatformAlert: sendPlatformAlertMock }));
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: checkRateLimitMock }));
@@ -221,7 +216,6 @@ describe("charges actions", () => {
     notifyOwnerOfStripeIssueMock.mockResolvedValue(undefined);
     createNotificationWithDeliveryMock.mockResolvedValue(undefined);
     logAuditMock.mockResolvedValue(undefined);
-    awardXpMock.mockResolvedValue(undefined);
     sendPlatformAlertMock.mockResolvedValue({ sent: true });
     sideEffectErrorMock.mockReturnValue(() => undefined);
   });

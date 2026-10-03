@@ -37,7 +37,6 @@ export type NotificationType =
   | "application_reviewed"
   | "rent_due_reminder"
   | "invite_accepted"
-  | "achievement_unlocked"
   | "owner_message"
   | "lease_expiring_soon"
   | "lease_expired"

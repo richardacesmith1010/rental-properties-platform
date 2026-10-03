@@ -9,7 +9,6 @@ const protectedRoutePrefixes = [
   "/complete-profile",
   "/reset-password",
   "/settings",
-  "/achievements"
 ] as const;
 
 function isProtectedRoute(pathname: string) {

@@ -10,7 +10,6 @@ import {
   createNotificationWithDelivery,
   notifyOwnerMembersForProperty
 } from "@/lib/notifications";
-import { awardXp, XP_VALUES } from "@/lib/gamification";
 import {
   createLeaseSchema,
   updateLeaseSchema,
@@ -105,11 +104,6 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
     })
   );
 
-  void awardXp(user.id, "lease_created", XP_VALUES.lease_created, "Lease created for a unit.", {
-    lease_id: createdLease.id,
-    property_id: unit.property_id,
-    tenant_profile_id: tenantProfile.id
-  }).catch(sideEffectError("createLease", "award_xp", { userId: user.id, entityType: "xp_event", entityId: createdLease.id }));
 
   void logAudit({
     userId: user.id,

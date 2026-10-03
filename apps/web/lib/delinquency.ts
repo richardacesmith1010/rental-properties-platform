@@ -310,7 +310,7 @@ export async function sendRentDueReminders(supabase: SupabaseClient): Promise<st
         recipientEmail: profile?.email ?? null,
         type: "rent_due_reminder",
         title: "Rent Due Soon",
-        body: `Your rent of ${formatCurrency(charge.amount_cents)} is due on ${formatDate(charge.due_date)}. Pay now to keep your streak going!`,
+        body: `Your rent of ${formatCurrency(charge.amount_cents)} is due on ${formatDate(charge.due_date)}. Pay now so you stay on track.`,
         entityType: "rent_charge",
         entityId: charge.id,
         propertyId: unit.property_id,

@@ -16,7 +16,7 @@ describe("logFailedSideEffect", () => {
     logFailedSideEffect(
       {
         action: "createProperty",
-        operation: "award_xp",
+        operation: "sample_operation",
         userId: "user-123",
         entityType: "property",
         entityId: "prop-456"
@@ -29,7 +29,7 @@ describe("logFailedSideEffect", () => {
     expect(logged.level).toBe("warn");
     expect(logged.type).toBe("failed_side_effect");
     expect(logged.action).toBe("createProperty");
-    expect(logged.operation).toBe("award_xp");
+    expect(logged.operation).toBe("sample_operation");
     expect(logged.userId).toBe("user-123");
     expect(logged.entityType).toBe("property");
     expect(logged.entityId).toBe("prop-456");

@@ -79,13 +79,6 @@ if [[ "$HEALTH_STATUS" != "200" ]]; then
   exit 1
 fi
 
-echo "[smoke] Checking gamification API auth guard"
-GAMIFICATION_STATUS="$(curl -s -o /dev/null -w "%{http_code}" -X POST "$APP_URL/api/gamification/check")"
-if [[ "$GAMIFICATION_STATUS" != "401" ]]; then
-  echo "[smoke] Expected 401 from unauthenticated /api/gamification/check, got $GAMIFICATION_STATUS"
-  exit 1
-fi
-
 SMOKE_ENV_VARS=(
   "SMOKE_OWNER_EMAIL"
   "SMOKE_OWNER_PASSWORD"
