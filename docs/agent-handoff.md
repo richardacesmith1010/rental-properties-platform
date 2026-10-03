@@ -133,6 +133,14 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 **Next candidates:** L3 backend gamification removal (ChatGPT review first); Phase 7 emails/PDFs to v2; Codex read-only Supabase MCP (needs token). Landing visual polish deferred by user ("plain is fine for now").
 
+## Reskin Phase 7 — PDFs + money pages SHIPPED (Sprint 140, `3625fa0`, 2026-10-02)
+
+- PDFs (receipt, receipts bundle, lease summary, manager invoice): violet palette → v2 paper palette in `lib/pdf/pdf-styles.ts`; text wordmark, neutral rules. New render test `lib/__tests__/pdf-templates-render.test.tsx`.
+- Pages with no dark handling before → v2 tokens: `/payments/receipt/[id]` (prints light), `/payments/success`, `/payments/cancel`, `/connect/onboard`. Copy: "No charge was applied" → "No payment was made"; "Charge Details" → "Rent Details".
+- Verified: gate green (979 tests), auth smoke 3/3, success/cancel walked light+dark (0 page errors), lease-summary PDF downloaded live and inspected. `pdf-data.ts` + `app/api/**` untouched.
+- **Gap:** receipt page + receipt PDFs not walked live — smoke tenant has no paid charge ($1 rent is below online minimum). Covered only by Codex fixture renders. Fix later: seed one manual "paid" record in the smoke graph.
+- Emails were already v2 before this sprint. 87 dashboard files still use legacy palette classes but carry `dark:` pairs and render fine — cleanup debt, not visible breakage.
+
 ## Ops & Observability (2026-10-02)
 
 - **Deploys:** Vercel is git-connected — push to `main` auto-deploys production. CLI `vercel deploy` is optional.
