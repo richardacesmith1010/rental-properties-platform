@@ -198,6 +198,12 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Verified live with the smoke owner (temporarily flagged, then restored): home went from "2 overdue charges" to "Everything looks good" / 0 overdue; Leases shows the badge. Smoke 3/3 + theme 11/11.
 - **Angel Hernandez's lease `b9c47e88…` is now `collects_outside_domus = true`** (owner-confirmed; audit_logs `update_lease`). His future months won't go late or get fees; owner marks months paid (method ACH, note "Fidelity") or asks Claude to record quietly.
 
+## Owner walk-through + data cleanup (2026-10-03)
+
+- Findings ranked in `docs/walkthrough-2026-10-03.md` (overdue count mismatch, floating buttons covering controls, mobile account menu open on load, ~3 s section loads, triple bank-setup ask, carousel nav, jargon, owner "Pay now").
+- Owner-approved permanent delete of 7 empty archived properties on the owner's account (5× "1st Home", "Mom's Home", "Sunset Apartments"): verified 0 rows in all 17 referencing tables first; one guarded transaction; `audit_logs` `delete_property` row per property. Remaining: 1st Home (Goose Creek, active) and Mom's House (Ardmore, active).
+- Sprint 147 (L2) dispatched for findings #1, #2, #3, #8.
+
 ## Ops & Observability (2026-10-02)
 
 - **Deploys:** Vercel is git-connected — push to `main` auto-deploys production. CLI `vercel deploy` is optional.
