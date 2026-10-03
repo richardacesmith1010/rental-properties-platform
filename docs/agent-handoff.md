@@ -171,6 +171,7 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Verified: 12 login scenarios + limiter tests (942 total), gate green; LIVE: 7 consecutive correct owner sign-ins never locked; 5 wrong manager passwords → normal message, 6th → locked.
 - Known limitation: per server instance (in-memory); Supabase Auth limits are the backstop.
 - Pending L1 (split out by review): theme smoke spec signs in once per role.
+- Post-deploy smoke: render 3/3 green, Sentry clean. Theme check now FAILS on a false positive: owner home in dark shows `StripeHealthBanner` (`components/dashboard/stripe-health-banner.tsx:40`) "Reconnect bank" — an intentionally inverted light button with dark text (readable). It appeared because the smoke owner's Stripe status is now restricted/missing. Fix in the L1 sprint: exempt `a`/`button` elements whose own text contrast is ≥ 4.5 from the light-box rule.
 
 ## Ops & Observability (2026-10-02)
 
