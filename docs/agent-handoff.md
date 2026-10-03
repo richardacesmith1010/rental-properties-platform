@@ -139,7 +139,7 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Pages with no dark handling before → v2 tokens: `/payments/receipt/[id]` (prints light), `/payments/success`, `/payments/cancel`, `/connect/onboard`. Copy: "No charge was applied" → "No payment was made"; "Charge Details" → "Rent Details".
 - Verified: gate green (979 tests), auth smoke 3/3, success/cancel walked light+dark (0 page errors), lease-summary PDF downloaded live and inspected. `pdf-data.ts` + `app/api/**` untouched.
 - **Gap:** receipt page + receipt PDFs not walked live — smoke tenant has no paid charge ($1 rent is below online minimum). Covered only by Codex fixture renders. Fix later: seed one manual "paid" record in the smoke graph.
-- Emails were already v2 before this sprint. 87 dashboard files still use legacy palette classes but carry `dark:` pairs and render fine — cleanup debt, not visible breakage.
+- Emails were already v2 before this sprint. 87 dashboard files still use legacy palette classes. Spot checks (owner home, Records, New Property wizard, Analytics in dark) showed no light boxes, but the 87 were not audited one by one — treat as cleanup debt with possible hidden dark-mode gaps.
 
 ## Ops & Observability (2026-10-02)
 
