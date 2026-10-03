@@ -164,6 +164,14 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Verified: 10/10 pass on prod standalone; negative test (injected white-on-white box) fails with a clear message (ratio 1.04).
 - **Finding:** `app/actions/login.ts:31` rate limit = 5 attempts / 15 min per email and counts SUCCESSFUL sign-ins too. Locked out the smoke owner mid-run ("Too many sign-in attempts"). Real-user impact: 6 correct sign-ins in 15 min → locked out. Fix candidates: count only failed attempts (auth = L3) and make the theme spec sign in once per role.
 
+## Sprint 144 — Login lockout fix SHIPPED (L3, `b3ac3e6`, 2026-10-03)
+
+- L3 review run by Claude in the Domus ChatGPT project (chat "Review Login Throttling"): rev 1 REJECTED (outages would count, concurrent-guess race, theme refactor out of scope) → rev 2 APPROVE WITH CHANGES (stale completions after window expiry/success) → rev 3 adopted. Sprint 141 had skipped this review (user relay mistake) — noted.
+- `lib/rate-limit.ts`: new failure limiter (`reserveFailureAttempt` / `completeFailureAttempt` with per-window reservation tokens); `checkRateLimit` untouched. `app/actions/login.ts`: only `error.code === "invalid_credentials"` counts; success clears; completion in `finally` before redirect.
+- Verified: 12 login scenarios + limiter tests (942 total), gate green; LIVE: 7 consecutive correct owner sign-ins never locked; 5 wrong manager passwords → normal message, 6th → locked.
+- Known limitation: per server instance (in-memory); Supabase Auth limits are the backstop.
+- Pending L1 (split out by review): theme smoke spec signs in once per role.
+
 ## Ops & Observability (2026-10-02)
 
 - **Deploys:** Vercel is git-connected — push to `main` auto-deploys production. CLI `vercel deploy` is optional.
