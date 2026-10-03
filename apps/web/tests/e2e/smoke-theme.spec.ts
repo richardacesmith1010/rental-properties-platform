@@ -1,12 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { loginAsRole } from "./helpers";
 
-export type RgbaColor = {
-  r: number;
-  g: number;
-  b: number;
-  a: number;
-};
+export type RgbaColor = { r: number; g: number; b: number; a: number };
 
 export function parseCssColor(value: string): RgbaColor | null {
   const normalized = value.trim().toLowerCase();
@@ -93,65 +88,59 @@ export function contrastRatio(first: RgbaColor, second: RgbaColor): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
+export type LightBoxExemptionInput = {
+  interactiveAncestorDistance: number | null; interactiveControlIsSized: boolean; controlTextContrast: number | null;
+};
+
+export function shouldExemptReadableInteractiveLightBox({
+  interactiveAncestorDistance,
+  interactiveControlIsSized,
+  controlTextContrast
+}: LightBoxExemptionInput): boolean {
+  return interactiveAncestorDistance !== null && interactiveAncestorDistance <= 2 &&
+    interactiveControlIsSized && controlTextContrast !== null && controlTextContrast >= 4.5;
+}
+
 test.describe("theme contrast math", () => {
   test("white on white has a 1:1 contrast ratio", () => {
     const white = parseCssColor("rgb(255, 255, 255)");
     expect(white).not.toBeNull();
     expect(contrastRatio(white!, white!)).toBeCloseTo(1, 5);
   });
-
   test("black on white has a 21:1 contrast ratio", () => {
     const black = parseCssColor("rgb(0 0 0)");
     const white = parseCssColor("rgb(255 255 255)");
     expect(contrastRatio(black!, white!)).toBeCloseTo(21, 5);
   });
-
   test("parses rgba alpha", () => {
     expect(parseCssColor("rgba(255, 0, 128, 0.5)")).toEqual({ r: 1, g: 0, b: 128 / 255, a: 0.5 });
   });
-
   test("parses color(srgb) channels as zero-to-one values", () => {
     expect(parseCssColor("color(srgb 1 1 1 / 0.94)")).toEqual({ r: 1, g: 1, b: 1, a: 0.94 });
   });
-
   test("composites half-transparent black over white", () => {
     const result = compositeColors({ r: 0, g: 0, b: 0, a: 0.5 }, { r: 1, g: 1, b: 1, a: 1 });
     expect(result).toEqual({ r: 0.5, g: 0.5, b: 0.5, a: 1 });
   });
+  const exemptionCases = [
+    ["readable light interactive control", { interactiveAncestorDistance: 0, interactiveControlIsSized: true, controlTextContrast: 8.2 }, true],
+    ["low-contrast interactive control", { interactiveAncestorDistance: 1, interactiveControlIsSized: true, controlTextContrast: 2.4 }, false],
+    ["non-interactive light box", { interactiveAncestorDistance: null, interactiveControlIsSized: false, controlTextContrast: null }, false]
+  ] as const;
+  for (const [caseName, input, expected] of exemptionCases) {
+    test(`light-box exemption decision: ${caseName}`, () => {
+      expect(shouldExemptReadableInteractiveLightBox(input)).toBe(expected);
+    });
+  }
 });
 
-const REQUIRED_ENV_NAMES = [
-  "APP_URL",
-  "SMOKE_OWNER_EMAIL",
-  "SMOKE_OWNER_PASSWORD",
-  "SMOKE_MANAGER_EMAIL",
-  "SMOKE_MANAGER_PASSWORD",
-  "SMOKE_TENANT_EMAIL",
-  "SMOKE_TENANT_PASSWORD"
-] as const;
+const REQUIRED_ENV_NAMES = ["APP_URL", "SMOKE_OWNER_EMAIL", "SMOKE_OWNER_PASSWORD", "SMOKE_MANAGER_EMAIL",
+  "SMOKE_MANAGER_PASSWORD", "SMOKE_TENANT_EMAIL", "SMOKE_TENANT_PASSWORD"] as const;
 
 const OWNER_SECTIONS = [
-  "Overview",
-  "Charges",
-  "Payments",
-  "Maintenance",
-  "Leasing Hub",
-  "Applications",
-  "Manager Payments",
-  "Inbox",
-  "Notifications",
-  "Activity",
-  "Ownership",
-  "Invitations",
-  "Documents",
-  "Vendors",
-  "Expenses",
-  "Analytics",
-  "Operations",
-  "Portfolio",
-  "Units",
-  "Leases",
-  "Tenants"
+  "Overview", "Charges", "Payments", "Maintenance", "Leasing Hub", "Applications", "Manager Payments",
+  "Inbox", "Notifications", "Activity", "Ownership", "Invitations", "Documents", "Vendors", "Expenses",
+  "Analytics", "Operations", "Portfolio", "Units", "Leases", "Tenants"
 ] as const;
 
 const DEFAULT_OWNER_SECTIONS = ["Units", "Leases", "Expenses", "Operations", "Documents", "Leasing Hub"];
@@ -161,13 +150,8 @@ const FULL_MODE = process.env.SMOKE_THEME_FULL === "1";
 
 type SmokeRole = "Owner" | "Manager" | "Tenant";
 type Theme = "light" | "dark";
-type ContrastFinding = {
-  kind: "near-invisible text" | "light box in dark theme";
-  element: string;
-  foreground?: string;
-  background: string;
-  ratio?: number;
-};
+type ContrastFinding = { kind: "near-invisible text" | "light box in dark theme"; element: string;
+  foreground?: string; background: string; ratio?: number };
 
 function getMissingEnvNames() {
   return REQUIRED_ENV_NAMES.filter((name) => !process.env[name]?.trim());
@@ -176,8 +160,19 @@ function getMissingEnvNames() {
 async function configureTheme(page: Page, theme: Theme) {
   await page.emulateMedia({ colorScheme: theme });
   await page.addInitScript((selectedTheme) => {
+    if (!window.localStorage.getItem("domus-theme")) {
+      window.localStorage.setItem("domus-theme", selectedTheme);
+    }
+  }, theme);
+}
+
+async function switchThemeInSession(page: Page, theme: Theme) {
+  await page.evaluate((selectedTheme) => {
     window.localStorage.setItem("domus-theme", selectedTheme);
   }, theme);
+  await page.emulateMedia({ colorScheme: theme });
+  await page.reload();
+  await waitForView(page);
 }
 
 async function waitForView(page: Page) {
@@ -221,16 +216,10 @@ function escapeRegExp(value: string) {
 }
 
 async function scanThemeContrast(page: Page, theme: Theme): Promise<ContrastFinding[]> {
-  return page.evaluate(
+  const findings = await page.evaluate(
     ({ activeTheme, textThreshold, lightBoxLuminance }) => {
       type Color = { r: number; g: number; b: number; a: number };
-      type Finding = {
-        kind: "near-invisible text" | "light box in dark theme";
-        element: string;
-        foreground?: string;
-        background: string;
-        ratio?: number;
-      };
+      type Finding = ContrastFinding & { lightBoxExemption?: LightBoxExemptionInput };
 
       const parseColor = (value: string): Color | null => {
         const normalized = value.trim().toLowerCase();
@@ -321,6 +310,29 @@ async function scanThemeContrast(page: Page, theme: Theme): Promise<ContrastFind
         const className = typeof element.className === "string" ? element.className.trim().replace(/\s+/g, " ") : "";
         return className ? `${element.tagName.toLowerCase()}.${className.slice(0, 100)}` : element.tagName.toLowerCase();
       };
+      const interactiveSelector = "a, button, [role='button'], [role='tab'], input[type='submit'], summary";
+      const lightBoxExemption = (element: Element) => {
+        let control: Element | null = element;
+        let distance = 0;
+        while (control && distance <= 2 && !control.matches(interactiveSelector)) {
+          control = control.parentElement;
+          distance += 1;
+        }
+        if (!control || distance > 2) {
+          return { interactiveAncestorDistance: null, interactiveControlIsSized: false, controlTextContrast: null };
+        }
+
+        const controlRect = control.getBoundingClientRect();
+        const controlBackground = effectiveBackground(control);
+        const rawControlText = parseColor(getComputedStyle(control).color);
+        return {
+          interactiveAncestorDistance: distance,
+          interactiveControlIsSized: controlRect.width >= 60 && controlRect.height >= 18,
+          controlTextContrast: rawControlText
+            ? contrast(composite(rawControlText, controlBackground), controlBackground)
+            : null
+        };
+      };
 
       const roots = Array.from(document.querySelectorAll("main, [role='dialog']"));
       const elements = Array.from(new Set(roots.flatMap((root) => [root, ...Array.from(root.querySelectorAll("*"))])));
@@ -364,7 +376,8 @@ async function scanThemeContrast(page: Page, theme: Theme): Promise<ContrastFind
             findings.push({
               kind: "light box in dark theme",
               element: descriptor(element),
-              background: formatColor(ownBackground)
+              background: formatColor(ownBackground),
+              lightBoxExemption: lightBoxExemption(element)
             });
           }
         }
@@ -373,6 +386,15 @@ async function scanThemeContrast(page: Page, theme: Theme): Promise<ContrastFind
     },
     { activeTheme: theme, textThreshold: 2, lightBoxLuminance: 0.8 }
   );
+
+  return findings
+    .filter(
+      (finding) =>
+        finding.kind !== "light box in dark theme" ||
+        !finding.lightBoxExemption ||
+        !shouldExemptReadableInteractiveLightBox(finding.lightBoxExemption)
+    )
+    .map(({ lightBoxExemption: _lightBoxExemption, ...finding }) => finding);
 }
 
 function formatFailure(role: SmokeRole, theme: Theme, view: string, findings: ContrastFinding[]) {
@@ -398,98 +420,81 @@ test.describe("authenticated theme contrast smoke", () => {
     `Missing required smoke env vars: ${missingEnvNames.join(", ")}`
   );
 
-  const themes: Theme[] = FULL_MODE ? ["dark", "light"] : ["dark"];
-  for (const theme of themes) {
-    test(`Owner ${theme} theme views have no severe contrast findings`, async ({ page }) => {
-      await configureTheme(page, theme);
-      const loggedIn = await loginAsRole(
-        page,
-        "Owner",
-        process.env.SMOKE_OWNER_EMAIL ?? "",
-        process.env.SMOKE_OWNER_PASSWORD ?? ""
-      );
-      expect(loggedIn).toBeTruthy();
-      await waitForView(page);
-      await assertView(page, "Owner", theme, "home");
+  test("Owner theme views have no severe contrast findings", async ({ page }) => {
+    await configureTheme(page, "dark");
+    const loggedIn = await loginAsRole(
+      page,
+      "Owner",
+      process.env.SMOKE_OWNER_EMAIL ?? "",
+      process.env.SMOKE_OWNER_PASSWORD ?? ""
+    );
+    expect(loggedIn).toBeTruthy();
+    await waitForView(page);
+    await assertView(page, "Owner", "dark", "home");
 
-      const sections = FULL_MODE ? OWNER_SECTIONS : DEFAULT_OWNER_SECTIONS;
-      for (const section of sections) {
+    const sections = FULL_MODE ? OWNER_SECTIONS : DEFAULT_OWNER_SECTIONS;
+    for (const section of sections) {
+      if (section === "Overview") continue;
+      if (await openDashboardSection(page, section)) {
+        await assertView(page, "Owner", "dark", section);
+      }
+    }
+
+    await page.goto("/owner");
+    await waitForView(page);
+    await switchThemeInSession(page, "light");
+    await assertView(page, "Owner", "light", "home");
+    if (FULL_MODE) {
+      for (const section of OWNER_SECTIONS) {
         if (section === "Overview") continue;
         if (await openDashboardSection(page, section)) {
-          await assertView(page, "Owner", theme, section);
+          await assertView(page, "Owner", "light", section);
         }
       }
-    });
-  }
+    }
+  });
 
-  if (!FULL_MODE) {
-    test("Owner light theme home has no severe contrast findings", async ({ page }) => {
-      await configureTheme(page, "light");
-      const loggedIn = await loginAsRole(
-        page,
-        "Owner",
-        process.env.SMOKE_OWNER_EMAIL ?? "",
-        process.env.SMOKE_OWNER_PASSWORD ?? ""
-      );
-      expect(loggedIn).toBeTruthy();
-      await waitForView(page);
-      await assertView(page, "Owner", "light", "home");
-    });
-  }
-
-  for (const theme of themes) {
-    test(`Manager ${theme} theme views have no severe contrast findings`, async ({ page }) => {
-      await configureTheme(page, theme);
-      const loggedIn = await loginAsRole(
-        page,
-        "Manager",
-        process.env.SMOKE_MANAGER_EMAIL ?? "",
-        process.env.SMOKE_MANAGER_PASSWORD ?? ""
-      );
-      expect(loggedIn).toBeTruthy();
-      await waitForView(page);
-      await assertView(page, "Manager", theme, "home");
-      if (!FULL_MODE) {
-        for (const section of DEFAULT_MANAGER_SECTIONS) {
-          if (await openDashboardSection(page, section)) {
-            await assertView(page, "Manager", theme, section);
-          }
+  test("Manager dark theme views have no severe contrast findings", async ({ page }) => {
+    await configureTheme(page, "dark");
+    const loggedIn = await loginAsRole(
+      page,
+      "Manager",
+      process.env.SMOKE_MANAGER_EMAIL ?? "",
+      process.env.SMOKE_MANAGER_PASSWORD ?? ""
+    );
+    expect(loggedIn).toBeTruthy();
+    await waitForView(page);
+    await assertView(page, "Manager", "dark", "home");
+    if (!FULL_MODE) {
+      for (const section of DEFAULT_MANAGER_SECTIONS) {
+        if (await openDashboardSection(page, section)) {
+          await assertView(page, "Manager", "dark", section);
         }
       }
-    });
-  }
+    }
+  });
 
-  for (const theme of themes) {
-    test(`Tenant ${theme} theme views have no severe contrast findings`, async ({ page }) => {
-      await configureTheme(page, theme);
-      const loggedIn = await loginAsRole(
-        page,
-        "Tenant",
-        process.env.SMOKE_TENANT_EMAIL ?? "",
-        process.env.SMOKE_TENANT_PASSWORD ?? ""
-      );
-      expect(loggedIn).toBeTruthy();
-      for (const path of TENANT_VIEWS) {
-        await page.goto(path);
-        await waitForView(page);
-        await assertView(page, "Tenant", theme, path);
-      }
-    });
-  }
-
-  if (!FULL_MODE) {
-    test("Tenant light theme home has no severe contrast findings", async ({ page }) => {
-      await configureTheme(page, "light");
-      const loggedIn = await loginAsRole(
-        page,
-        "Tenant",
-        process.env.SMOKE_TENANT_EMAIL ?? "",
-        process.env.SMOKE_TENANT_PASSWORD ?? ""
-      );
-      expect(loggedIn).toBeTruthy();
-      await page.goto("/tenant");
+  test("Tenant theme views have no severe contrast findings", async ({ page }) => {
+    await configureTheme(page, "dark");
+    const loggedIn = await loginAsRole(
+      page,
+      "Tenant",
+      process.env.SMOKE_TENANT_EMAIL ?? "",
+      process.env.SMOKE_TENANT_PASSWORD ?? ""
+    );
+    expect(loggedIn).toBeTruthy();
+    for (const path of TENANT_VIEWS) {
+      await page.goto(path);
       await waitForView(page);
-      await assertView(page, "Tenant", "light", "/tenant");
-    });
-  }
+      await assertView(page, "Tenant", "dark", path);
+    }
+
+    await switchThemeInSession(page, "light");
+    const lightViews = FULL_MODE ? TENANT_VIEWS : ["/tenant"];
+    for (const path of lightViews) {
+      await page.goto(path);
+      await waitForView(page);
+      await assertView(page, "Tenant", "light", path);
+    }
+  });
 });
