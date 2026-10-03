@@ -104,7 +104,7 @@ export function TenantInviteWizardProgress({ step }: { step: WizardStep }) {
               step === index
                 ? "border-primary/40 bg-primary/10 text-foreground"
                 : step > index
-                  ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-700"
+                  ? "border-[var(--pos)] bg-[var(--pos-bg)] text-[var(--pos)]"
                   : "border-border bg-card text-muted-foreground"
             ].join(" ")}
           >
@@ -175,7 +175,7 @@ export function TenantInviteStepOne({
             ))}
           </Select>
           {draft.propertyId && availableUnits.length === 0 ? (
-            <p className="text-xs text-amber-600">Add a unit to this property before sending an invitation.</p>
+            <p className="text-xs text-[var(--warn)]">Add a unit to this property before sending an invitation.</p>
           ) : null}
         </div>
       </div>
@@ -338,7 +338,7 @@ export function TenantInviteSuccess({
   return (
     <div className="space-y-5 text-center">
       {successMessage ? <Alert variant="success">{successMessage}</Alert> : null}
-      <div className="mx-auto inline-flex rounded-full bg-emerald-500/12 p-4 text-emerald-600">
+      <div className="mx-auto inline-flex rounded-full bg-[var(--pos-bg)] p-4 text-[var(--pos)]">
         <CheckCircle2 className="h-8 w-8" />
       </div>
       <div>

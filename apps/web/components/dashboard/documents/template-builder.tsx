@@ -32,10 +32,10 @@ function StepPill({ label, active, done, skipped }: { label: string; active: boo
   const className = active
     ? "border-[var(--accent-line)] bg-[var(--accent-weak)] text-[var(--accent)]"
     : done
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      ? "border-[var(--pos)] bg-[var(--pos-bg)] text-[var(--pos)]"
       : skipped
-        ? "border-amber-200 bg-amber-50 text-amber-700"
-        : "border-zinc-200 bg-zinc-50 text-zinc-500";
+        ? "border-[var(--warn)] bg-[var(--warn-bg)] text-[var(--warn)]"
+        : "border-[var(--line)] bg-[var(--surface-2)] text-[var(--muted)]";
 
   return <div className={`rounded-md border px-2 py-2 text-xs ${className}`}>{label}</div>;
 }
@@ -88,7 +88,7 @@ export function TemplateBuilder({ existingTemplate, ownershipAccounts, onSave, o
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-zinc-600">One step at a time. Press Enter or Next to continue. Skip is available when it makes sense.</p>
+        <p className="text-sm text-[var(--ink-2)]">One step at a time. Press Enter or Next to continue. Skip is available when it makes sense.</p>
         <FormError state={state} />
         <FormSuccess state={state} message="Template saved." />
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
@@ -98,19 +98,19 @@ export function TemplateBuilder({ existingTemplate, ownershipAccounts, onSave, o
         </div>
         {step === 0 ? (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Step 1: Enter a template name.</p>
+            <p className="text-sm text-[var(--ink-2)]">Step 1: Enter a template name.</p>
             <Input value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} onKeyDown={(event) => onEnterNext(event, stepComplete(step), 1)} placeholder="Template name" required />
           </div>
         ) : null}
         {step === 1 ? (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Step 2: Enter template category (Lease, Notice, Addendum).</p>
+            <p className="text-sm text-[var(--ink-2)]">Step 2: Enter template category (Lease, Notice, Addendum).</p>
             <Input value={draft.category} onChange={(event) => setDraft((current) => ({ ...current, category: event.target.value }))} onKeyDown={(event) => onEnterNext(event, stepComplete(step), 2)} placeholder="Category" required />
           </div>
         ) : null}
         {step === 2 ? (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Step 3: Choose ownership account (optional).</p>
+            <p className="text-sm text-[var(--ink-2)]">Step 3: Choose ownership account (optional).</p>
             <Select value={draft.ownerAccountId} onChange={(event) => setDraft((current) => ({ ...current, ownerAccountId: event.target.value }))}>
               <option value="">Default ownership account</option>
               {ownershipAccounts.map((account) => (
@@ -121,14 +121,14 @@ export function TemplateBuilder({ existingTemplate, ownershipAccounts, onSave, o
         ) : null}
         {step === 3 ? (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Step 4: Write the template body text.</p>
+            <p className="text-sm text-[var(--ink-2)]">Step 4: Write the template body text.</p>
             <Textarea value={draft.bodyMarkdown} onChange={(event) => setDraft((current) => ({ ...current, bodyMarkdown: event.target.value }))} onKeyDown={(event) => onEnterNext(event, stepComplete(step), 4)} rows={6} placeholder="Template body (markdown/text)" required />
           </div>
         ) : null}
         {step === 4 ? (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Final step: review and save template.</p>
-            <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-700">
+            <p className="text-sm text-[var(--ink-2)]">Final step: review and save template.</p>
+            <div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-3 py-3 text-sm text-[var(--ink-2)]">
               <p><span className="font-semibold">Name:</span> {draft.name || "Not set"}</p>
               <p><span className="font-semibold">Category:</span> {draft.category || "Not set"}</p>
               <p><span className="font-semibold">Owner Account:</span> {ownershipAccounts.find((account) => account.id === draft.ownerAccountId)?.displayName ?? "Default ownership account"}</p>

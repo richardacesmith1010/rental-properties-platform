@@ -41,10 +41,10 @@ function StepPill({ label, active, done, skipped }: { label: string; active: boo
   const className = active
     ? "border-[var(--accent-line)] bg-[var(--accent-weak)] text-[var(--accent)]"
     : done
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      ? "border-[var(--pos)] bg-[var(--pos-bg)] text-[var(--pos)]"
       : skipped
-        ? "border-amber-200 bg-amber-50 text-amber-700"
-        : "border-zinc-200 bg-zinc-50 text-zinc-500";
+        ? "border-[var(--warn)] bg-[var(--warn-bg)] text-[var(--warn)]"
+        : "border-[var(--line)] bg-[var(--surface-2)] text-[var(--muted)]";
 
   return <div className={`rounded-md border px-2 py-2 text-xs ${className}`}>{label}</div>;
 }
@@ -111,7 +111,7 @@ export function PropertyForm({
     if (stepIndex === 0) {
       return (
         <div className="space-y-3">
-          <p className="text-sm text-zinc-600">
+          <p className="text-sm text-[var(--ink-2)]">
             Step 1: Property name. This is the label owners and managers will see everywhere.
           </p>
           <FieldLabel htmlFor="property-name" required>
@@ -132,7 +132,7 @@ export function PropertyForm({
     if (stepIndex === 1) {
       return (
         <div className="space-y-3">
-          <p className="text-sm text-zinc-600">Step 2: Street address (optional).</p>
+          <p className="text-sm text-[var(--ink-2)]">Step 2: Street address (optional).</p>
           <FieldLabel htmlFor="property-address">Street Address</FieldLabel>
           <Input
             id="property-address"
@@ -148,7 +148,7 @@ export function PropertyForm({
     if (stepIndex === 2) {
       return (
         <div className="space-y-3">
-          <p className="text-sm text-zinc-600">Step 3: City (optional).</p>
+          <p className="text-sm text-[var(--ink-2)]">Step 3: City (optional).</p>
           <FieldLabel htmlFor="property-city">City</FieldLabel>
           <Input
             id="property-city"
@@ -164,7 +164,7 @@ export function PropertyForm({
     if (stepIndex === 3) {
       return (
         <div className="space-y-3">
-          <p className="text-sm text-zinc-600">Step 4: State abbreviation (optional), for example CO.</p>
+          <p className="text-sm text-[var(--ink-2)]">Step 4: State abbreviation (optional), for example CO.</p>
           <FieldLabel htmlFor="property-state">State</FieldLabel>
           <Input
             id="property-state"
@@ -183,7 +183,7 @@ export function PropertyForm({
     if (stepIndex === 4) {
       return (
         <div className="space-y-3">
-          <p className="text-sm text-zinc-600">Step 5: ZIP code (optional).</p>
+          <p className="text-sm text-[var(--ink-2)]">Step 5: ZIP code (optional).</p>
           <FieldLabel htmlFor="property-zip">ZIP Code</FieldLabel>
           <Input
             id="property-zip"
@@ -199,7 +199,7 @@ export function PropertyForm({
     if (stepIndex === 5) {
       return (
         <div className="space-y-3">
-          <p className="text-sm text-zinc-600">Step 6: Ownership account (optional).</p>
+          <p className="text-sm text-[var(--ink-2)]">Step 6: Ownership account (optional).</p>
           <FieldLabel htmlFor="property-owner-account">Ownership Account</FieldLabel>
           <Select
             id="property-owner-account"
@@ -220,8 +220,8 @@ export function PropertyForm({
 
     return (
       <div className="space-y-3">
-        <p className="text-sm text-zinc-600">Final step: review and save the property.</p>
-        <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-700">
+        <p className="text-sm text-[var(--ink-2)]">Final step: review and save the property.</p>
+        <div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-3 py-3 text-sm text-[var(--ink-2)]">
           <p><span className="font-semibold">Name:</span> {draft.name || "Not set"}</p>
           <p><span className="font-semibold">Address:</span> {draft.addressLine1 || "Not set"}</p>
           <p><span className="font-semibold">City:</span> {draft.city || "Not set"}</p>
@@ -232,7 +232,7 @@ export function PropertyForm({
             {ownershipAccounts.find((account) => account.id === draft.ownerAccountId)?.displayName ?? "Default ownership account"}
           </p>
         </div>
-        {!requiredComplete && <p className="text-xs text-amber-700">Property name is still required before save.</p>}
+        {!requiredComplete && <p className="text-xs text-[var(--warn)]">Property name is still required before save.</p>}
         <form className="space-y-2" action={action}>
           <input type="hidden" name="name" value={draft.name} />
           <input type="hidden" name="addressLine1" value={draft.addressLine1} />
@@ -254,7 +254,7 @@ export function PropertyForm({
         <div className="flex items-center justify-between gap-3">
           <div>
             <CardTitle>Add Property</CardTitle>
-            <p className="text-xs text-zinc-500">One field at a time. Press Enter or click Next.</p>
+            <p className="text-xs text-[var(--muted)]">One field at a time. Press Enter or click Next.</p>
           </div>
           <Button type="button" variant="outline" size="sm" onClick={onBack} title="Return to setup options.">
             Back to tasks

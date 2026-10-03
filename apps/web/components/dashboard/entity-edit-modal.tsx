@@ -192,7 +192,7 @@ export function EntityEditModal({
                 {renderFieldInput(field, draftValues[field.key] ?? "", errors[field.key] ?? null, (nextValue) =>
                   handleChange(field.key, nextValue)
                 )}
-                {errors[field.key] ? <p className="text-sm text-red-600">{errors[field.key]}</p> : null}
+                {errors[field.key] ? <p className="text-sm text-[var(--crit)]">{errors[field.key]}</p> : null}
               </div>
             ))}
           </div>

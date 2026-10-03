@@ -88,11 +88,11 @@ export function FinancialActivityFeed({ events }: FinancialActivityFeedProps) {
                         </Badge>
                       ) : null}
                     </div>
-                    <p className="mt-1 text-sm text-zinc-600">{event.description}</p>
-                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
+                    <p className="mt-1 text-sm text-[var(--ink-2)]">{event.description}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-[var(--muted)]">
                       <span>{formatTimestamp(event.createdAt)}</span>
                       {event.amountCents !== null ? (
-                        <span className="font-semibold text-zinc-700">{formatCurrency(event.amountCents)}</span>
+                        <span className="font-semibold text-[var(--ink-2)]">{formatCurrency(event.amountCents)}</span>
                       ) : null}
                     </div>
                   </div>

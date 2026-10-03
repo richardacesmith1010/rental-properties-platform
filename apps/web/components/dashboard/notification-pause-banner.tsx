@@ -31,19 +31,19 @@ export function NotificationPauseBanner({
   return (
     <Alert
       variant="warning"
-      className="mt-3 flex flex-col gap-3 rounded-2xl border-amber-300/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+      className="mt-3 flex flex-col gap-3 rounded-2xl border-[var(--warn)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
     >
       <div className="flex items-start gap-3">
-        <PauseCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
+        <PauseCircle className="mt-0.5 h-5 w-5 shrink-0 text-[var(--warn)]" />
         <div className="space-y-1">
-          <p className="text-sm font-semibold text-amber-950">
+          <p className="text-sm font-semibold text-[var(--warn)]">
             Notifications paused {pausedLabel}
           </p>
-          <p className="text-sm text-amber-900/80">
+          <p className="text-sm text-[var(--warn)]">
             Email delivery is paused. In-app notifications still appear normally.
           </p>
           {state && !state.success ? (
-            <p className="text-sm text-red-700">{state.error}</p>
+            <p className="text-sm text-[var(--crit)]">{state.error}</p>
           ) : null}
         </div>
       </div>

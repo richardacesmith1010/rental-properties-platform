@@ -84,10 +84,10 @@ function StepPill({
   const className = active
     ? "border-[var(--accent-line)] bg-[var(--accent-weak)] text-[var(--accent)]"
     : done
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      ? "border-[var(--pos)] bg-[var(--pos-bg)] text-[var(--pos)]"
       : skipped
-        ? "border-amber-200 bg-amber-50 text-amber-700"
-        : "border-zinc-200 bg-zinc-50 text-zinc-500";
+        ? "border-[var(--warn)] bg-[var(--warn-bg)] text-[var(--warn)]"
+        : "border-[var(--line)] bg-[var(--surface-2)] text-[var(--muted)]";
   return <div className={`rounded-md border px-2 py-2 text-xs ${className}`}>{label}</div>;
 }
 
@@ -171,7 +171,7 @@ export function VendorsSection({
       <CardContent>
         {showCreateWorkflow ? (
           <div className="mb-4 space-y-4">
-          <p className="text-sm text-zinc-600">
+          <p className="text-sm text-[var(--ink-2)]">
             One field at a time. Press Enter or Next to continue. Optional steps can be skipped.
           </p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
@@ -188,7 +188,7 @@ export function VendorsSection({
 
           {createStep === 0 && (
             <div className="space-y-3">
-              <p className="text-sm text-zinc-600">Step 1: Enter the vendor business name.</p>
+              <p className="text-sm text-[var(--ink-2)]">Step 1: Enter the vendor business name.</p>
               <Input
                 value={vendorDraft.name}
                 onChange={(event) =>
@@ -205,7 +205,7 @@ export function VendorsSection({
 
           {createStep === 1 && (
             <div className="space-y-3">
-              <p className="text-sm text-zinc-600">Step 2: Enter contact email (optional).</p>
+              <p className="text-sm text-[var(--ink-2)]">Step 2: Enter contact email (optional).</p>
               <Input
                 value={vendorDraft.email}
                 onChange={(event) =>
@@ -222,7 +222,7 @@ export function VendorsSection({
 
           {createStep === 2 && (
             <div className="space-y-3">
-              <p className="text-sm text-zinc-600">Step 3: Enter contact phone (optional).</p>
+              <p className="text-sm text-[var(--ink-2)]">Step 3: Enter contact phone (optional).</p>
               <Input
                 value={vendorDraft.phone}
                 onChange={(event) =>
@@ -238,7 +238,7 @@ export function VendorsSection({
 
           {createStep === 3 && (
             <div className="space-y-3">
-              <p className="text-sm text-zinc-600">Step 4: Choose the trade category.</p>
+              <p className="text-sm text-[var(--ink-2)]">Step 4: Choose the trade category.</p>
               <Select
                 value={vendorDraft.tradeCategory}
                 onChange={(event) =>
@@ -256,7 +256,7 @@ export function VendorsSection({
 
           {createStep === 4 && (
             <div className="space-y-3">
-              <p className="text-sm text-zinc-600">Step 5: Choose ownership account (optional).</p>
+              <p className="text-sm text-[var(--ink-2)]">Step 5: Choose ownership account (optional).</p>
               <Select
                 value={vendorDraft.ownerAccountId}
                 onChange={(event) =>
@@ -278,8 +278,8 @@ export function VendorsSection({
 
           {createStep === 5 && (
             <div className="space-y-3">
-              <p className="text-sm text-zinc-600">Step 6: Mark as preferred vendor (optional).</p>
-              <label className="flex items-center gap-2 text-xs text-zinc-600">
+              <p className="text-sm text-[var(--ink-2)]">Step 6: Mark as preferred vendor (optional).</p>
+              <label className="flex items-center gap-2 text-xs text-[var(--ink-2)]">
                 <input
                   type="checkbox"
                   checked={vendorDraft.preferred}
@@ -294,8 +294,8 @@ export function VendorsSection({
 
           {createStep === 6 && (
             <div className="space-y-3">
-              <p className="text-sm text-zinc-600">Final step: review and save vendor.</p>
-              <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-700">
+              <p className="text-sm text-[var(--ink-2)]">Final step: review and save vendor.</p>
+              <div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-3 py-3 text-sm text-[var(--ink-2)]">
                 <p><span className="font-semibold">Name:</span> {vendorDraft.name || "Not set"}</p>
                 <p><span className="font-semibold">Trade:</span> {tradeLabel(vendorDraft.tradeCategory)}</p>
                 <p><span className="font-semibold">Email:</span> {vendorDraft.email || "Not set"}</p>
@@ -380,7 +380,7 @@ export function VendorsSection({
 
         {vendors.length > 0 ? (
           <div className="mb-3 flex items-center gap-2">
-            <span className="text-xs font-medium text-zinc-500">Filter by trade:</span>
+            <span className="text-xs font-medium text-[var(--muted)]">Filter by trade:</span>
             <Select value={tradeFilter} onChange={(event) => setTradeFilter(event.target.value)} className="h-8 w-44 text-xs">
               <option value="all">All trades</option>
               {tradeOptions.map((option) => (
@@ -445,8 +445,8 @@ function VendorRow({
   return (
     <DataRow last={last}>
       <div className="min-w-0 flex-1">
-        <p className="text-base font-medium text-zinc-900">{vendor.name}</p>
-        <p className="mt-0.5 text-sm text-zinc-500">
+        <p className="text-base font-medium text-[var(--ink)]">{vendor.name}</p>
+        <p className="mt-0.5 text-sm text-[var(--muted)]">
           {tradeLabel(vendor.tradeCategory)}
           {vendor.email ? ` • ${vendor.email}` : ""}
           {vendor.phone ? ` • ${vendor.phone}` : ""}
@@ -464,7 +464,7 @@ function VendorRow({
                 </option>
               ))}
             </Select>
-            <label className="sm:col-span-2 flex items-center gap-2 text-xs text-zinc-600">
+            <label className="sm:col-span-2 flex items-center gap-2 text-xs text-[var(--ink-2)]">
               <input type="checkbox" name="preferred" value="true" defaultChecked={vendor.preferred} />
               Preferred vendor
             </label>
@@ -472,8 +472,8 @@ function VendorRow({
               <SubmitButton size="sm" variant="outline" title="Save updates for this vendor.">
                 Save Vendor
               </SubmitButton>
-              {state && !state.success && <p className="mt-1 text-xs text-red-500">{state.error}</p>}
-              {state && state.success && <p className="mt-1 text-xs text-emerald-600">Vendor updated.</p>}
+              {state && !state.success && <p className="mt-1 text-xs text-[var(--crit)]">{state.error}</p>}
+              {state && state.success && <p className="mt-1 text-xs text-[var(--pos)]">Vendor updated.</p>}
             </div>
           </form>
         )}

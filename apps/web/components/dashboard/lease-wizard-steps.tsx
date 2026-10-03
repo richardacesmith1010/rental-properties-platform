@@ -46,7 +46,7 @@ export function LeaseWizardProgress({ step }: { step: LeaseWizardStep }) {
               step === index
                 ? "border-primary/40 bg-primary/10 text-foreground"
                 : step > index
-                  ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-700"
+                  ? "border-[var(--pos)] bg-[var(--pos-bg)] text-[var(--pos)]"
                   : "border-border bg-card text-muted-foreground"
             ].join(" ")}
           >
@@ -477,7 +477,7 @@ export function LeaseWizardStepThree({
           {selectedTenant ? (
             <div className="rounded-2xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
               <div className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
+                <CheckCircle2 className="mt-0.5 h-4 w-4 text-[var(--pos)]" />
                 <div>
                   <p className="font-medium text-foreground">Tenant selected</p>
                   <p className="mt-1">{selectedTenant.fullName}</p>

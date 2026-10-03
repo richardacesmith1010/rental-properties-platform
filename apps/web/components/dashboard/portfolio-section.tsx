@@ -200,13 +200,13 @@ export function PortfolioSection({
                         </Button>
                       ) : null}
                     </div>
-                    <p className="mt-0.5 text-sm text-zinc-500">{property.addressLine1}</p>
-                    <p className="mt-0.5 text-sm text-zinc-500">
+                    <p className="mt-0.5 text-sm text-[var(--muted)]">{property.addressLine1}</p>
+                    <p className="mt-0.5 text-sm text-[var(--muted)]">
                       {property.city}, {property.state} {property.postalCode}
                     </p>
-                    <p className="mt-0.5 text-sm text-zinc-500">{property.ownerAccountName}</p>
+                    <p className="mt-0.5 text-sm text-[var(--muted)]">{property.ownerAccountName}</p>
                     {property.managementFeeCents > 0 ? (
-                      <p className="mt-0.5 text-sm text-zinc-500">
+                      <p className="mt-0.5 text-sm text-[var(--muted)]">
                         Management fee: ${(property.managementFeeCents / 100).toFixed(2)}
                       </p>
                     ) : null}
@@ -229,7 +229,7 @@ export function PortfolioSection({
                           <form action={managementFeeAction} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
                             <input type="hidden" name="propertyId" value={property.id} />
                             <div className="space-y-1">
-                              <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500">
+                              <label className="block text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
                                 Management fee (USD)
                               </label>
                               <Input
@@ -257,7 +257,7 @@ export function PortfolioSection({
                     className="flex flex-col items-stretch gap-2 sm:items-end"
                     onClick={(event) => event.stopPropagation()}
                   >
-                    <p className="text-sm text-zinc-500">{pluralize(property.unitCount, "unit")}</p>
+                    <p className="text-sm text-[var(--muted)]">{pluralize(property.unitCount, "unit")}</p>
                     {getPropertyDetailHref ? (
                       <Button asChild size="sm" variant="outline">
                         <Link

@@ -63,8 +63,8 @@ function StepPill({
   const className = active
     ? "border-[var(--accent-line)] bg-[var(--accent-weak)] text-[var(--accent)]"
     : done
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-      : "border-zinc-200 bg-zinc-50 text-zinc-500";
+      ? "border-[var(--pos)] bg-[var(--pos-bg)] text-[var(--pos)]"
+      : "border-[var(--line)] bg-[var(--surface-2)] text-[var(--muted)]";
   return <div className={`rounded-md border px-2 py-2 text-xs ${className}`}>{label}</div>;
 }
 
@@ -163,7 +163,7 @@ export function TicketForm({
           <CardTitle>Report a Problem</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-zinc-600">
+          <p className="text-sm text-[var(--ink-2)]">
             Describe what&apos;s wrong and we&apos;ll notify your landlord right away.
           </p>
 
@@ -230,7 +230,7 @@ export function TicketForm({
         <CardTitle>Send Maintenance Request</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-zinc-600">
+        <p className="text-sm text-[var(--ink-2)]">
           One field at a time. Press Enter or Next to continue.
         </p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
@@ -249,7 +249,7 @@ export function TicketForm({
 
         {step === 0 && (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Step 1: Select the unit with the issue.</p>
+            <p className="text-sm text-[var(--ink-2)]">Step 1: Select the unit with the issue.</p>
             <Select
               value={draft.unitId}
               onChange={(event) =>
@@ -269,7 +269,7 @@ export function TicketForm({
 
         {step === 1 && (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Step 2: Enter a short issue summary.</p>
+            <p className="text-sm text-[var(--ink-2)]">Step 2: Enter a short issue summary.</p>
             <Input
               value={draft.title}
               onChange={(event) =>
@@ -284,7 +284,7 @@ export function TicketForm({
 
         {step === 2 && (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Step 3: Describe the issue in detail.</p>
+            <p className="text-sm text-[var(--ink-2)]">Step 3: Describe the issue in detail.</p>
             <Textarea
               value={draft.description}
               onChange={(event) =>
@@ -299,7 +299,7 @@ export function TicketForm({
 
         {step === 3 && (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Step 4: Set priority level.</p>
+            <p className="text-sm text-[var(--ink-2)]">Step 4: Set priority level.</p>
             <Select
               value={draft.priority}
               onChange={(event) =>
@@ -315,19 +315,19 @@ export function TicketForm({
               <option value="high">High</option>
               <option value="urgent">Urgent</option>
             </Select>
-            <div className="space-y-1 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-xs text-zinc-600">
-              <p><span className="font-semibold text-zinc-800">Low:</span> {PRIORITY_HELP.low}</p>
-              <p><span className="font-semibold text-zinc-800">Medium:</span> {PRIORITY_HELP.medium}</p>
-              <p><span className="font-semibold text-zinc-800">High:</span> {PRIORITY_HELP.high}</p>
-              <p><span className="font-semibold text-zinc-800">Urgent:</span> {PRIORITY_HELP.urgent}</p>
+            <div className="space-y-1 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-3 py-3 text-xs text-[var(--ink-2)]">
+              <p><span className="font-semibold text-[var(--ink)]">Low:</span> {PRIORITY_HELP.low}</p>
+              <p><span className="font-semibold text-[var(--ink)]">Medium:</span> {PRIORITY_HELP.medium}</p>
+              <p><span className="font-semibold text-[var(--ink)]">High:</span> {PRIORITY_HELP.high}</p>
+              <p><span className="font-semibold text-[var(--ink)]">Urgent:</span> {PRIORITY_HELP.urgent}</p>
             </div>
           </div>
         )}
 
         {step === 4 && (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Final step: review and send the request.</p>
-            <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-700">
+            <p className="text-sm text-[var(--ink-2)]">Final step: review and send the request.</p>
+            <div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-3 py-3 text-sm text-[var(--ink-2)]">
               <p>
                 <span className="font-semibold">Unit:</span>{" "}
                 {units.find((unit) => unit.id === draft.unitId)?.unitNumber ?? "Not set"}

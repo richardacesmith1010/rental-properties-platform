@@ -40,10 +40,10 @@ function StepPill({ label, active, done, skipped }: { label: string; active: boo
   const className = active
     ? "border-[var(--accent-line)] bg-[var(--accent-weak)] text-[var(--accent)]"
     : done
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      ? "border-[var(--pos)] bg-[var(--pos-bg)] text-[var(--pos)]"
       : skipped
-        ? "border-amber-200 bg-amber-50 text-amber-700"
-        : "border-zinc-200 bg-zinc-50 text-zinc-500";
+        ? "border-[var(--warn)] bg-[var(--warn-bg)] text-[var(--warn)]"
+        : "border-[var(--line)] bg-[var(--surface-2)] text-[var(--muted)]";
 
   return <div className={`rounded-md border px-2 py-2 text-xs ${className}`}>{label}</div>;
 }
@@ -132,7 +132,7 @@ export function UnitForm({
     if (stepIndex === 0) {
       return (
         <div className="space-y-3">
-          <p className="text-sm text-zinc-600">Step 1: Pick the property this unit belongs to.</p>
+          <p className="text-sm text-[var(--ink-2)]">Step 1: Pick the property this unit belongs to.</p>
           <FieldLabel htmlFor="unit-property">Property</FieldLabel>
           <Select
             id="unit-property"
@@ -155,7 +155,7 @@ export function UnitForm({
     if (stepIndex === 1) {
       return (
         <div className="space-y-3">
-          <p className="text-sm text-zinc-600">Step 2: Unit label. This is what tenants and staff will reference.</p>
+          <p className="text-sm text-[var(--ink-2)]">Step 2: Unit label. This is what tenants and staff will reference.</p>
           <FieldLabel htmlFor="unit-number" required>Unit Number</FieldLabel>
           <Input
             id="unit-number"
@@ -172,7 +172,7 @@ export function UnitForm({
     if (stepIndex === 2) {
       return (
         <div className="space-y-3">
-          <p className="text-sm text-zinc-600">Step 3: Bedrooms count.</p>
+          <p className="text-sm text-[var(--ink-2)]">Step 3: Bedrooms count.</p>
           <FieldLabel htmlFor="unit-bedrooms">Bedrooms</FieldLabel>
           <Input
             id="unit-bedrooms"
@@ -190,7 +190,7 @@ export function UnitForm({
     if (stepIndex === 3) {
       return (
         <div className="space-y-3">
-          <p className="text-sm text-zinc-600">Step 4: Bathrooms count. Decimals are allowed.</p>
+          <p className="text-sm text-[var(--ink-2)]">Step 4: Bathrooms count. Decimals are allowed.</p>
           <FieldLabel htmlFor="unit-bathrooms">Bathrooms</FieldLabel>
           <Input
             id="unit-bathrooms"
@@ -209,7 +209,7 @@ export function UnitForm({
     if (stepIndex === 4) {
       return (
         <div className="space-y-3">
-          <p className="text-sm text-zinc-600">Step 5: Default monthly rent for this unit.</p>
+          <p className="text-sm text-[var(--ink-2)]">Step 5: Default monthly rent for this unit.</p>
           <FieldLabel htmlFor="unit-rent">Default Rent</FieldLabel>
           <Input
             id="unit-rent"
@@ -228,8 +228,8 @@ export function UnitForm({
 
     return (
       <div className="space-y-3">
-        <p className="text-sm text-zinc-600">Final step: review and save the unit.</p>
-        <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-700">
+        <p className="text-sm text-[var(--ink-2)]">Final step: review and save the unit.</p>
+        <div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-3 py-3 text-sm text-[var(--ink-2)]">
           <p><span className="font-semibold">Property:</span> {portfolio.properties.find((property) => property.id === draft.propertyId)?.name ?? "Not set"}</p>
           <p><span className="font-semibold">Unit Label:</span> {draft.unitNumber || "Not set"}</p>
           <p><span className="font-semibold">Bedrooms:</span> {draft.bedrooms || "Not set"}</p>
@@ -237,7 +237,7 @@ export function UnitForm({
           <p><span className="font-semibold">Default Rent:</span> {draft.monthlyRentDollars ? `$${draft.monthlyRentDollars}` : "Not set"}</p>
         </div>
         {!requiredComplete && (
-          <p className="text-xs text-amber-700">Required details are still missing. Complete all required steps before save.</p>
+          <p className="text-xs text-[var(--warn)]">Required details are still missing. Complete all required steps before save.</p>
         )}
         <form className="space-y-2" action={action}>
           <input type="hidden" name="propertyId" value={draft.propertyId} />
@@ -259,7 +259,7 @@ export function UnitForm({
         <div className="flex items-center justify-between gap-3">
           <div>
             <CardTitle>Add Unit</CardTitle>
-            <p className="text-xs text-zinc-500">One field at a time. Press Enter or click Next.</p>
+            <p className="text-xs text-[var(--muted)]">One field at a time. Press Enter or click Next.</p>
           </div>
           <Button type="button" variant="outline" size="sm" onClick={onBack} title="Return to setup options.">
             Back to tasks

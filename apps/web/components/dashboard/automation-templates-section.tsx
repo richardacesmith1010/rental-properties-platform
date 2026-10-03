@@ -78,10 +78,10 @@ function AutomationToggleRow({
         <p className="text-sm font-semibold text-[var(--ink)]">{template.name}</p>
         <Badge variant={enabled ? "success" : "outline"}>{enabled ? "Enabled" : "Disabled"}</Badge>
       </div>
-      <p className="mt-1 text-xs text-zinc-600">
+      <p className="mt-1 text-xs text-[var(--ink-2)]">
         <span className="font-semibold">Trigger:</span> {triggerLabel(template.key)}
       </p>
-      <p className="mt-1 text-xs text-zinc-600">
+      <p className="mt-1 text-xs text-[var(--ink-2)]">
         <span className="font-semibold">Actions:</span> {template.description ?? "Execute configured flow actions."}
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
@@ -108,10 +108,10 @@ function AutomationToggleRow({
         </Button>
       </div>
       {state && !state.success && (
-        <p className="mt-2 text-xs text-red-600">{state.error}</p>
+        <p className="mt-2 text-xs text-[var(--crit)]">{state.error}</p>
       )}
       {state && state.success && (
-        <p className="mt-2 text-xs text-emerald-600">
+        <p className="mt-2 text-xs text-[var(--pos)]">
           {enabled ? "Automation disabled." : "Automation enabled."}
         </p>
       )}
@@ -174,7 +174,7 @@ export function AutomationTemplatesSection({
         <Badge variant={enabledCount > 0 ? "success" : "outline"}>{enabledCount} enabled</Badge>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-sm text-zinc-600">
+        <p className="text-sm text-[var(--ink-2)]">
           Automation templates are now persisted per property. Toggle each workflow to create or update a live automation rule.
         </p>
         {!runtimeReady && (
@@ -188,7 +188,7 @@ export function AutomationTemplatesSection({
         ) : (
           <div className="space-y-3">
             <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Property scope</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Property scope</p>
               <Select
                 value={selectedPropertyId}
                 onChange={(event) => setSelectedPropertyId(event.target.value)}

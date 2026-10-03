@@ -50,8 +50,8 @@ function StepPill({
   const className = active
     ? "border-[var(--accent-line)] bg-[var(--accent-weak)] text-[var(--accent)]"
     : done
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-      : "border-zinc-200 bg-zinc-50 text-zinc-500";
+      ? "border-[var(--pos)] bg-[var(--pos-bg)] text-[var(--pos)]"
+      : "border-[var(--line)] bg-[var(--surface-2)] text-[var(--muted)]";
   return <div className={`rounded-md border px-2 py-2 text-xs ${className}`}>{label}</div>;
 }
 
@@ -109,7 +109,7 @@ export function CreateAccountWorkflowCard({
 
         {createStep === 0 ? (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Step 1: Choose account type.</p>
+            <p className="text-sm text-[var(--ink-2)]">Step 1: Choose account type.</p>
             <Select
               value={createDraft.accountType}
               onChange={(event) =>
@@ -128,7 +128,7 @@ export function CreateAccountWorkflowCard({
 
         {createStep === 1 ? (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Step 2: Enter display name.</p>
+            <p className="text-sm text-[var(--ink-2)]">Step 2: Enter display name.</p>
             <Input
               value={createDraft.displayName}
               onChange={(event) =>
@@ -148,8 +148,8 @@ export function CreateAccountWorkflowCard({
 
         {createStep === 2 ? (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Final step: review and create account.</p>
-            <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-700">
+            <p className="text-sm text-[var(--ink-2)]">Final step: review and create account.</p>
+            <div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-3 py-3 text-sm text-[var(--ink-2)]">
               <p>
                 <span className="font-semibold">Type:</span>{" "}
                 {createDraft.accountType === "llc" ? "LLC" : "Individual"}
@@ -249,7 +249,7 @@ export function LinkPropertyWorkflowCard({
 
         {linkStep === 0 ? (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Step 1: Choose the property to link.</p>
+            <p className="text-sm text-[var(--ink-2)]">Step 1: Choose the property to link.</p>
             <Select
               value={linkDraft.propertyId}
               onChange={(event) =>
@@ -272,7 +272,7 @@ export function LinkPropertyWorkflowCard({
 
         {linkStep === 1 ? (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Step 2: Choose the ownership account.</p>
+            <p className="text-sm text-[var(--ink-2)]">Step 2: Choose the ownership account.</p>
             <Select
               value={linkDraft.ownershipAccountId}
               onChange={(event) =>
@@ -295,8 +295,8 @@ export function LinkPropertyWorkflowCard({
 
         {linkStep === 2 ? (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Final step: review and link the property.</p>
-            <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-700">
+            <p className="text-sm text-[var(--ink-2)]">Final step: review and link the property.</p>
+            <div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-3 py-3 text-sm text-[var(--ink-2)]">
               <p>
                 <span className="font-semibold">Property:</span>{" "}
                 {selectedProperty?.name ?? "Not selected"}

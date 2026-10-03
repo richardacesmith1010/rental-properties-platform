@@ -179,7 +179,7 @@ export function InlineEdit({
         />
         {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" /> : null}
       </div>
-      {error ? <span className="text-xs text-red-600">{error}</span> : null}
+      {error ? <span className="text-xs text-[var(--crit)]">{error}</span> : null}
     </div>
   );
 }

@@ -86,10 +86,10 @@ export function NotificationsSection({
       </CardHeader>
       <CardContent>
         {markAllState && !markAllState.success && (
-          <p className="mb-3 text-sm text-red-600">{markAllState.error}</p>
+          <p className="mb-3 text-sm text-[var(--crit)]">{markAllState.error}</p>
         )}
         {markAllState && markAllState.success && markAllState.message && (
-          <p className="mb-3 text-sm text-emerald-600">{markAllState.message}</p>
+          <p className="mb-3 text-sm text-[var(--pos)]">{markAllState.message}</p>
         )}
         {notifications.length === 0 ? (
           <EmptyState icon={Bell} title="No notifications" description="You're all caught up!" />

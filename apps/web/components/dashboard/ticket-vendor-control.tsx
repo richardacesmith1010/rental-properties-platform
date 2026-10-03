@@ -41,10 +41,10 @@ export function TicketVendorControl({
         Assign
       </SubmitButton>
       {state && !state.success && (
-        <span className="text-xs text-red-500">{state.error}</span>
+        <span className="text-xs text-[var(--crit)]">{state.error}</span>
       )}
       {state && state.success && (
-        <span className="text-xs text-emerald-600">Assigned.</span>
+        <span className="text-xs text-[var(--pos)]">Assigned.</span>
       )}
     </form>
   );

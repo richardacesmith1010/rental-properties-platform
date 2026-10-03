@@ -49,10 +49,10 @@ function StepPill({ label, active, done, skipped }: { label: string; active: boo
   const className = active
     ? "border-[var(--accent-line)] bg-[var(--accent-weak)] text-[var(--accent)]"
     : done
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      ? "border-[var(--pos)] bg-[var(--pos-bg)] text-[var(--pos)]"
       : skipped
-        ? "border-amber-200 bg-amber-50 text-amber-700"
-        : "border-zinc-200 bg-zinc-50 text-zinc-500";
+        ? "border-[var(--warn)] bg-[var(--warn-bg)] text-[var(--warn)]"
+        : "border-[var(--line)] bg-[var(--surface-2)] text-[var(--muted)]";
 
   return <div className={`rounded-md border px-2 py-2 text-xs ${className}`}>{label}</div>;
 }
@@ -222,13 +222,13 @@ export function LeaseForm({
     if (stepIndex === 0) {
       if (hasNoProperties) {
         return (
-          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-5">
+          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-5">
             <div className="flex items-start gap-3">
               <ClipboardList className="mt-0.5 h-5 w-5 text-[var(--accent)]" />
               <div className="space-y-4">
                 <div>
-                  <p className="font-semibold text-zinc-900">No properties found</p>
-                  <p className="mt-1 text-sm text-zinc-600">
+                  <p className="font-semibold text-[var(--ink)]">No properties found</p>
+                  <p className="mt-1 text-sm text-[var(--ink-2)]">
                     You need to create a property before you can set up a lease.
                   </p>
                 </div>
@@ -243,7 +243,7 @@ export function LeaseForm({
 
       return (
         <div className="space-y-3">
-          <p className="text-sm text-zinc-600">Step 1: Select the property first. Everything else depends on this.</p>
+          <p className="text-sm text-[var(--ink-2)]">Step 1: Select the property first. Everything else depends on this.</p>
           <FieldLabel htmlFor="lease-property">Property</FieldLabel>
           <Select
             id="lease-property"
@@ -290,13 +290,13 @@ export function LeaseForm({
     if (stepIndex === 1) {
       if (hasNoUnitsForSelectedProperty && selectedProperty) {
         return (
-          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-5">
+          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-5">
             <div className="flex items-start gap-3">
               <Building2 className="mt-0.5 h-5 w-5 text-[var(--accent)]" />
               <div className="space-y-4">
                 <div>
-                  <p className="font-semibold text-zinc-900">{selectedProperty.name} has no units</p>
-                  <p className="mt-1 text-sm text-zinc-600">
+                  <p className="font-semibold text-[var(--ink)]">{selectedProperty.name} has no units</p>
+                  <p className="mt-1 text-sm text-[var(--ink-2)]">
                     Add a unit to this property before creating a lease.
                   </p>
                 </div>
@@ -311,7 +311,7 @@ export function LeaseForm({
 
       return (
         <div className="space-y-3">
-          <p className="text-sm text-zinc-600">Step 2: Select the unit for this lease.</p>
+          <p className="text-sm text-[var(--ink-2)]">Step 2: Select the unit for this lease.</p>
           <FieldLabel htmlFor="lease-unit" required>Unit</FieldLabel>
           <Select
             id="lease-unit"
@@ -327,7 +327,7 @@ export function LeaseForm({
               </option>
             ))}
           </Select>
-          {!draft.propertyId && <p className="text-xs text-amber-700">Pick a property first.</p>}
+          {!draft.propertyId && <p className="text-xs text-[var(--warn)]">Pick a property first.</p>}
         </div>
       );
     }
@@ -335,13 +335,13 @@ export function LeaseForm({
     if (stepIndex === 2) {
       if (hasNoTenantsForSelectedProperty) {
         return (
-          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-5">
+          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-5">
             <div className="flex items-start gap-3">
               <UserRound className="mt-0.5 h-5 w-5 text-[var(--accent)]" />
               <div className="space-y-4">
                 <div>
-                  <p className="font-semibold text-zinc-900">No tenants available</p>
-                  <p className="mt-1 text-sm text-zinc-600">
+                  <p className="font-semibold text-[var(--ink)]">No tenants available</p>
+                  <p className="mt-1 text-sm text-[var(--ink-2)]">
                     Invite a tenant to this property first. They&apos;ll receive an email to set up their account.
                   </p>
                 </div>
@@ -356,7 +356,7 @@ export function LeaseForm({
 
       return (
         <div className="space-y-3">
-          <p className="text-sm text-zinc-600">Step 3: Select a tenant linked to this property.</p>
+          <p className="text-sm text-[var(--ink-2)]">Step 3: Select a tenant linked to this property.</p>
           <FieldLabel htmlFor="lease-tenant" required>Tenant</FieldLabel>
           <Select
             id="lease-tenant"
@@ -373,7 +373,7 @@ export function LeaseForm({
             ))}
           </Select>
           {draft.propertyId && tenantsForSelectedProperty.length === 0 && (
-            <p className="text-xs text-amber-700">No tenants are linked to this property yet. Invite a tenant first.</p>
+            <p className="text-xs text-[var(--warn)]">No tenants are linked to this property yet. Invite a tenant first.</p>
           )}
         </div>
       );
@@ -382,7 +382,7 @@ export function LeaseForm({
     if (stepIndex === 3) {
       return (
         <div className="space-y-3">
-          <p className="text-sm text-zinc-600">Step 4: Enter lease start and end dates.</p>
+          <p className="text-sm text-[var(--ink-2)]">Step 4: Enter lease start and end dates.</p>
           <FieldLabel htmlFor="lease-start-date" required>Start Date</FieldLabel>
           <Input
             id="lease-start-date"
@@ -406,7 +406,7 @@ export function LeaseForm({
     if (stepIndex === 4) {
       return (
         <div className="space-y-3">
-          <p className="text-sm text-zinc-600">Step 5: Enter billing terms.</p>
+          <p className="text-sm text-[var(--ink-2)]">Step 5: Enter billing terms.</p>
           <FieldLabel htmlFor="lease-due-day">Due Day of Month</FieldLabel>
           <Input
             id="lease-due-day"
@@ -468,8 +468,8 @@ export function LeaseForm({
 
     return (
       <div className="space-y-3">
-        <p className="text-sm text-zinc-600">Final step: review and save the lease.</p>
-        <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-700">
+        <p className="text-sm text-[var(--ink-2)]">Final step: review and save the lease.</p>
+        <div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-3 py-3 text-sm text-[var(--ink-2)]">
           <p><span className="font-semibold">Property:</span> {portfolio.properties.find((property) => property.id === draft.propertyId)?.name ?? "Not set"}</p>
           <p><span className="font-semibold">Unit:</span> {portfolio.units.find((unit) => unit.id === draft.unitId)?.unitNumber ?? "Not set"}</p>
           <p><span className="font-semibold">Tenant:</span> {portfolio.tenants.find((tenant) => tenant.id === draft.tenantProfileId)?.email ?? "Not set"}</p>
@@ -479,7 +479,7 @@ export function LeaseForm({
           <p><span className="font-semibold">Grace Period:</span> {draft.gracePeriodDays || "5"} days</p>
         </div>
         {!requiredComplete && (
-          <p className="text-xs text-amber-700">You can skip steps, but lease save stays disabled until required details are completed.</p>
+          <p className="text-xs text-[var(--warn)]">You can skip steps, but lease save stays disabled until required details are completed.</p>
         )}
         <form className="space-y-2" action={action}>
           <input type="hidden" name="unitId" value={draft.unitId} />
@@ -505,7 +505,7 @@ export function LeaseForm({
         <div className="flex items-center justify-between gap-3">
           <div>
             <CardTitle>Create Lease</CardTitle>
-            <p className="text-xs text-zinc-500">One step at a time. Final save requires all required details.</p>
+            <p className="text-xs text-[var(--muted)]">One step at a time. Final save requires all required details.</p>
           </div>
           <Button type="button" variant="outline" size="sm" onClick={onBack} title="Return to setup options.">
             Back to tasks

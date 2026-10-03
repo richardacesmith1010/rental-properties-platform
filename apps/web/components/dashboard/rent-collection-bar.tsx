@@ -40,19 +40,19 @@ export function RentCollectionBar({
       >
         {collectedPct > 0 ? (
           <div
-            className="bg-emerald-500 transition-all duration-500"
+            className="bg-[var(--pos)] transition-all duration-500"
             style={{ width: `${collectedPct}%` }}
           />
         ) : null}
         {pendingPct > 0 ? (
           <div
-            className="bg-amber-500 transition-all duration-500"
+            className="bg-[var(--warn)] transition-all duration-500"
             style={{ width: `${pendingPct}%` }}
           />
         ) : null}
         {overduePct > 0 ? (
           <div
-            className="bg-red-500 transition-all duration-500"
+            className="bg-[var(--crit)] transition-all duration-500"
             style={{ width: `${overduePct}%` }}
           />
         ) : null}
@@ -63,16 +63,16 @@ export function RentCollectionBar({
         className="mt-3 flex flex-col gap-1 text-sm text-muted-foreground sm:flex-row sm:flex-wrap sm:gap-4"
       >
         <div className="flex items-center gap-1.5">
-          <div aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+          <div aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-[var(--pos)]" />
           <span>Collected {formatCurrency(collectedCents)}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+          <div aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-[var(--warn)]" />
           <span>Pending {formatCurrency(pendingCents)}</span>
         </div>
         {overdueCents > 0 ? (
           <div className="flex items-center gap-1.5">
-            <div aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-red-500" />
+            <div aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-[var(--crit)]" />
             <span>Overdue {formatCurrency(overdueCents)}</span>
           </div>
         ) : null}

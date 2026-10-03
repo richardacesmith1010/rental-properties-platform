@@ -87,7 +87,7 @@ export function TenantDocumentsSection({
         )}
 
         <div className="mt-6">
-          <h3 className="mb-2 text-sm font-semibold text-zinc-900">Shared Property Files</h3>
+          <h3 className="mb-2 text-sm font-semibold text-[var(--ink)]">Shared Property Files</h3>
           {!propertyFilesEnabled ? (
             <EmptyState message="Shared files are not available yet." />
           ) : files.length === 0 ? (
@@ -97,19 +97,19 @@ export function TenantDocumentsSection({
               {files.map((file, i) => (
                 <DataRow key={file.id} last={i === files.length - 1}>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-zinc-900">{file.fileName}</p>
-                    <p className="mt-0.5 text-xs text-zinc-500">
+                    <p className="text-sm font-semibold text-[var(--ink)]">{file.fileName}</p>
+                    <p className="mt-0.5 text-xs text-[var(--muted)]">
                       {file.propertyLabel} • {file.category.replaceAll("_", " ")}
                     </p>
                     {file.description && (
-                      <p className="mt-0.5 text-xs text-zinc-500">{file.description}</p>
+                      <p className="mt-0.5 text-xs text-[var(--muted)]">{file.description}</p>
                     )}
                   </div>
                   <Link
                     href={`/api/assets/property-file/${file.id}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center rounded-md border border-zinc-200 px-2 py-1 text-[11px] font-medium text-zinc-700 hover:bg-zinc-50"
+                    className="inline-flex items-center rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-medium text-[var(--ink-2)] hover:bg-[var(--surface-2)]"
                     title="Open this shared property file."
                   >
                     Open File
@@ -140,8 +140,8 @@ function PacketSignRow({
   return (
     <DataRow last={last}>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-zinc-900">{packet.templateName}</p>
-        <p className="mt-0.5 text-xs text-zinc-500">{packet.propertyLabel}</p>
+        <p className="text-sm font-semibold text-[var(--ink)]">{packet.templateName}</p>
+        <p className="mt-0.5 text-xs text-[var(--muted)]">{packet.propertyLabel}</p>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           <Badge variant={packet.status === "signed" ? "success" : "warning"}>
             Packet: {packet.status.toUpperCase()}
@@ -154,7 +154,7 @@ function PacketSignRow({
               href={`/api/assets/document-packet/${packet.id}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center rounded-md border border-zinc-200 px-2 py-1 text-[11px] font-medium text-zinc-700 hover:bg-zinc-50"
+              className="inline-flex items-center rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-medium text-[var(--ink-2)] hover:bg-[var(--surface-2)]"
               title="Open this document packet file."
             >
               Open File
@@ -169,8 +169,8 @@ function PacketSignRow({
           <SubmitButton size="sm" title="Sign this packet with the entered legal name.">
             Sign
           </SubmitButton>
-          {state && !state.success && <p className="text-xs text-red-500">{state.error}</p>}
-          {state && state.success && <p className="text-xs text-emerald-600">Signed.</p>}
+          {state && !state.success && <p className="text-xs text-[var(--crit)]">{state.error}</p>}
+          {state && state.success && <p className="text-xs text-[var(--pos)]">Signed.</p>}
         </form>
       ) : (
         <Badge variant="outline">Complete</Badge>

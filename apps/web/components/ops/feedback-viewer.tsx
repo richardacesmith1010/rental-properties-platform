@@ -285,8 +285,8 @@ export function FeedbackViewer({ items, warning, onUpdateStatus }: FeedbackViewe
                         >
                           {copiedId === entry.id ? (
                             <>
-                              <Check className="h-3.5 w-3.5 text-emerald-600" />
-                              <span className="text-emerald-700">Copied</span>
+                              <Check className="h-3.5 w-3.5 text-[var(--pos)]" />
+                              <span className="text-[var(--pos)]">Copied</span>
                             </>
                           ) : (
                             <>
@@ -323,7 +323,7 @@ export function FeedbackViewer({ items, warning, onUpdateStatus }: FeedbackViewe
                                   href={entry.pageUrl}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="inline-flex items-center gap-1 text-violet-700 hover:text-violet-800"
+                                  className="inline-flex items-center gap-1 text-[var(--accent)] hover:text-[var(--accent-strong)]"
                                 >
                                   {entry.pageUrl}
                                   <ExternalLink className="h-3.5 w-3.5" />

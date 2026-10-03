@@ -88,14 +88,14 @@ function InboxNotificationRow({
     <DataRow last={last}>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-[var(--ink)]">{notification.title}</p>
-        <p className="mt-0.5 text-xs text-zinc-500">{notification.body}</p>
+        <p className="mt-0.5 text-xs text-[var(--muted)]">{notification.body}</p>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           <Badge variant="outline" className="uppercase">
             {typeLabel(notification.type)}
           </Badge>
           {notification.readAt ? <Badge variant="outline">Read</Badge> : <Badge variant="warning">Unread</Badge>}
         </div>
-        <p className="mt-1 text-[11px] text-zinc-400">{formatTimestamp(notification.createdAt)}</p>
+        <p className="mt-1 text-[11px] text-[var(--faint)]">{formatTimestamp(notification.createdAt)}</p>
       </div>
       <div className="flex flex-col items-end gap-2">
         {!notification.readAt && (
@@ -104,8 +104,8 @@ function InboxNotificationRow({
             <SubmitButton size="sm" variant="outline" title="Mark this inbox item as read.">
               Mark read
             </SubmitButton>
-            {state && !state.success && <p className="mt-1 text-xs text-red-500">{state.error}</p>}
-            {state && state.success && <p className="mt-1 text-xs text-emerald-600">Marked read.</p>}
+            {state && !state.success && <p className="mt-1 text-xs text-[var(--crit)]">{state.error}</p>}
+            {state && state.success && <p className="mt-1 text-xs text-[var(--pos)]">Marked read.</p>}
           </form>
         )}
         {onOpenSection ? (
@@ -227,12 +227,12 @@ export function InboxSection({
       </CardHeader>
       <CardContent className="space-y-3">
         {markAllState && !markAllState.success ? (
-          <p className="text-sm text-red-600">{markAllState.error}</p>
+          <p className="text-sm text-[var(--crit)]">{markAllState.error}</p>
         ) : null}
         {markAllState && markAllState.success && markAllState.message ? (
-          <p className="text-sm text-emerald-600">{markAllState.message}</p>
+          <p className="text-sm text-[var(--pos)]">{markAllState.message}</p>
         ) : null}
-        <p className="text-sm text-zinc-600">
+        <p className="text-sm text-[var(--ink-2)]">
           Central communication timeline for rent, maintenance, lease, and document events.
         </p>
 
@@ -261,7 +261,7 @@ export function InboxSection({
           <>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <div className="relative sm:col-span-1">
-                <Search className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-zinc-400" />
+                <Search className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-[var(--faint)]" />
                 <Input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
@@ -322,8 +322,8 @@ export function InboxSection({
         ) : (
           <div className="space-y-3">
             {onCreateThread ? (
-              <form action={createThreadAction} className="rounded-2xl border border-border/50 bg-zinc-50 p-3 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Create thread</p>
+              <form action={createThreadAction} className="rounded-2xl border border-border/50 bg-[var(--surface-2)] p-3 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Create thread</p>
                 <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <Select
                     name="propertyId"
@@ -355,10 +355,10 @@ export function InboxSection({
                   </SubmitButton>
                 </div>
                 {createThreadState && !createThreadState.success && (
-                  <p className="mt-2 text-xs text-red-600">{createThreadState.error}</p>
+                  <p className="mt-2 text-xs text-[var(--crit)]">{createThreadState.error}</p>
                 )}
                 {createThreadState && createThreadState.success && (
-                  <p className="mt-2 text-xs text-emerald-600">Thread created.</p>
+                  <p className="mt-2 text-xs text-[var(--pos)]">Thread created.</p>
                 )}
               </form>
             ) : null}
@@ -381,7 +381,7 @@ export function InboxSection({
                       className={`w-full rounded-md border px-3 py-2 text-left transition ${
                         selectedThreadId === thread.id
                           ? "border-[var(--accent-line)] bg-[var(--accent-weak)]"
-                          : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100"
+                          : "border-[var(--line)] bg-[var(--surface-2)] hover:bg-[var(--surface-3)]"
                       }`}
                       title="Open this conversation thread."
                     >
@@ -389,8 +389,8 @@ export function InboxSection({
                         <p className="truncate text-base font-medium text-[var(--ink)]">{thread.subject}</p>
                         <Badge variant="outline">{thread.messageCount} msg</Badge>
                       </div>
-                      <p className="mt-0.5 text-sm text-zinc-500">{thread.propertyName}</p>
-                      <p className="mt-0.5 truncate text-sm text-zinc-600">
+                      <p className="mt-0.5 text-sm text-[var(--muted)]">{thread.propertyName}</p>
+                      <p className="mt-0.5 truncate text-sm text-[var(--ink-2)]">
                         {thread.latestMessagePreview ?? "No messages yet."}
                       </p>
                     </button>
@@ -403,7 +403,7 @@ export function InboxSection({
                     <div className="space-y-3">
                       <div>
                         <p className="text-base font-medium text-[var(--ink)]">{selectedThread.subject}</p>
-                        <p className="text-sm text-zinc-500">{selectedThread.propertyName}</p>
+                        <p className="text-sm text-[var(--muted)]">{selectedThread.propertyName}</p>
                         <div className="mt-1 flex flex-wrap gap-2">
                           <Badge variant="outline">{typeLabel(selectedThread.entityType)}</Badge>
                           {onOpenSection ? (
@@ -426,8 +426,8 @@ export function InboxSection({
                         ) : (
                           <AnimatedList className="space-y-2">
                           {selectedThread.messages.map((message) => (
-                            <div key={message.id} className="rounded-xl border border-border/50 bg-zinc-50 px-3 py-2 shadow-sm">
-                              <p className="text-sm text-zinc-500">
+                            <div key={message.id} className="rounded-xl border border-border/50 bg-[var(--surface-2)] px-3 py-2 shadow-sm">
+                              <p className="text-sm text-[var(--muted)]">
                                 {message.senderEmail ?? "System"} • {formatTimestamp(message.createdAt)}
                               </p>
                               <p className="mt-1 text-sm text-[var(--ink)]">{message.body}</p>
@@ -446,10 +446,10 @@ export function InboxSection({
                           </SubmitButton>
                         </div>
                         {sendMessageState && !sendMessageState.success && (
-                          <p className="text-xs text-red-600">{sendMessageState.error}</p>
+                          <p className="text-xs text-[var(--crit)]">{sendMessageState.error}</p>
                         )}
                         {sendMessageState && sendMessageState.success && (
-                          <p className="text-xs text-emerald-600">Message sent.</p>
+                          <p className="text-xs text-[var(--pos)]">Message sent.</p>
                         )}
                       </form>
                     </div>

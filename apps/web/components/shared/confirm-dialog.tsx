@@ -48,11 +48,11 @@ export function ConfirmDialog({
       onClick={() => onOpenChange(false)}
     >
       <div
-        className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-5 shadow-lg"
+        className="w-full max-w-md rounded-xl border border-[var(--line)] bg-[var(--surface)] p-5 shadow-lg"
         onClick={(event) => event.stopPropagation()}
       >
-        <h3 className="text-base font-semibold text-zinc-900">{title}</h3>
-        <p className="mt-2 text-sm text-zinc-600">{description}</p>
+        <h3 className="text-base font-semibold text-[var(--ink)]">{title}</h3>
+        <p className="mt-2 text-sm text-[var(--ink-2)]">{description}</p>
         <div className="mt-5 flex justify-end gap-2">
           <Button
             type="button"

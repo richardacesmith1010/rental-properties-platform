@@ -30,9 +30,9 @@ interface ActionableNotificationProps {
 }
 
 const severityClasses = {
-  urgent: "border-l-red-500 bg-red-500/[0.04]",
-  attention: "border-l-amber-500 bg-amber-500/[0.04]",
-  info: "border-l-blue-500 bg-blue-500/[0.04]"
+  urgent: "border-l-[var(--crit)] bg-[var(--crit-bg)]",
+  attention: "border-l-[var(--warn)] bg-[var(--warn-bg)]",
+  info: "border-l-[var(--accent-line)] bg-[var(--accent-weak)]"
 } as const;
 
 export function ActionableNotification({

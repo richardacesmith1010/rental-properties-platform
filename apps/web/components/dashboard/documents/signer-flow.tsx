@@ -36,10 +36,10 @@ function StepPill({ label, active, done, skipped }: { label: string; active: boo
   const className = active
     ? "border-[var(--accent-line)] bg-[var(--accent-weak)] text-[var(--accent)]"
     : done
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      ? "border-[var(--pos)] bg-[var(--pos-bg)] text-[var(--pos)]"
       : skipped
-        ? "border-amber-200 bg-amber-50 text-amber-700"
-        : "border-zinc-200 bg-zinc-50 text-zinc-500";
+        ? "border-[var(--warn)] bg-[var(--warn-bg)] text-[var(--warn)]"
+        : "border-[var(--line)] bg-[var(--surface-2)] text-[var(--muted)]";
 
   return <div className={`rounded-md border px-2 py-2 text-xs ${className}`}>{label}</div>;
 }
@@ -91,7 +91,7 @@ export function SignerFlow({ properties, propertyFilesEnabled = true, onUploadPr
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-zinc-600">One step at a time. Press Enter or Next to continue. Skip is available when it makes sense.</p>
+        <p className="text-sm text-[var(--ink-2)]">One step at a time. Press Enter or Next to continue. Skip is available when it makes sense.</p>
         <FormError state={state} />
         <FormSuccess state={state} />
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
@@ -101,7 +101,7 @@ export function SignerFlow({ properties, propertyFilesEnabled = true, onUploadPr
         </div>
         {step === 0 ? (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Step 1: Select property for the file.</p>
+            <p className="text-sm text-[var(--ink-2)]">Step 1: Select property for the file.</p>
             <Select value={draft.propertyId} onChange={(event) => setDraft((current) => ({ ...current, propertyId: event.target.value }))}>
               <option value="">Select property</option>
               {properties.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}
@@ -110,7 +110,7 @@ export function SignerFlow({ properties, propertyFilesEnabled = true, onUploadPr
         ) : null}
         {step === 1 ? (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Step 2: Select file category.</p>
+            <p className="text-sm text-[var(--ink-2)]">Step 2: Select file category.</p>
             <Select value={draft.category} onChange={(event) => setDraft((current) => ({ ...current, category: event.target.value }))}>
               <option value="">Select category</option>
               <option value="lease_agreement">Lease Agreement</option>
@@ -124,7 +124,7 @@ export function SignerFlow({ properties, propertyFilesEnabled = true, onUploadPr
         ) : null}
         {step === 2 ? (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Step 3: Choose visibility level.</p>
+            <p className="text-sm text-[var(--ink-2)]">Step 3: Choose visibility level.</p>
             <Select value={draft.visibility} onChange={(event) => setDraft((current) => ({ ...current, visibility: event.target.value as FileDraft["visibility"] }))}>
               <option value="owner_manager">Owner + Manager only</option>
               <option value="all">Visible to tenant</option>
@@ -133,14 +133,14 @@ export function SignerFlow({ properties, propertyFilesEnabled = true, onUploadPr
         ) : null}
         {step === 3 ? (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Step 4: Add description (optional).</p>
+            <p className="text-sm text-[var(--ink-2)]">Step 4: Add description (optional).</p>
             <Input value={draft.description} onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))} placeholder="Description (optional)" />
           </div>
         ) : null}
         {step === 4 ? (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Final step: choose file and upload.</p>
-            <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-700">
+            <p className="text-sm text-[var(--ink-2)]">Final step: choose file and upload.</p>
+            <div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-3 py-3 text-sm text-[var(--ink-2)]">
               <p><span className="font-semibold">Property:</span> {properties.find((property) => property.id === draft.propertyId)?.name ?? "Not set"}</p>
               <p><span className="font-semibold">Category:</span> {draft.category || "Not set"}</p>
               <p><span className="font-semibold">Visibility:</span> {draft.visibility === "all" ? "Tenant visible" : "Owner/Manager only"}</p>

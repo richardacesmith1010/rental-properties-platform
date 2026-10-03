@@ -23,13 +23,13 @@ export function OwnershipAccountSummary({
   return (
     <div>
       <div className="flex items-center gap-2">
-        <p className="text-sm font-semibold text-zinc-900">{account.displayName}</p>
+        <p className="text-sm font-semibold text-[var(--ink)]">{account.displayName}</p>
         <Badge variant="outline" className="capitalize">
           {account.accountType}
         </Badge>
         {isActive ? <Badge variant="default">Active</Badge> : null}
       </div>
-      <p className="mt-0.5 text-xs text-zinc-500 capitalize">
+      <p className="mt-0.5 text-xs text-[var(--muted)] capitalize">
         {account.memberCount} member{account.memberCount === 1 ? "" : "s"} • distribution{" "}
         {account.distributionMode.replace(/_/g, " ")}
       </p>

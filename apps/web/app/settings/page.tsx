@@ -76,7 +76,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       <div className="mx-auto max-w-4xl space-y-6">
         <header className="space-y-2">
           <h1 className="text-2xl font-bold tracking-tight text-[var(--ink)]">Settings</h1>
-          <p className="text-sm text-zinc-600">
+          <p className="text-sm text-[var(--ink-2)]">
             Manage your Domus experience and preferences.
           </p>
           <div className="flex flex-wrap gap-2">

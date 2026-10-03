@@ -153,7 +153,7 @@ export function UnitsSection({
                       </Button>
                     ) : null}
                   </div>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-zinc-500">
+                  <div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-[var(--muted)]">
                     <span>{unit.bedrooms} bd / {unit.bathrooms} ba</span>
                     <Badge variant={unit.occupied ? "success" : "outline"}>
                       {unit.occupied ? "Occupied" : "Vacant"}
@@ -207,7 +207,7 @@ export function UnitsSection({
                       })}
                       inputType="number"
                       prefix="$"
-                      className="text-sm text-zinc-500"
+                      className="text-sm text-[var(--muted)]"
                       successMessage="Unit rent updated."
                       title={`Update rent for ${unit.unitNumber}.`}
                       validate={(nextValue) => {
@@ -234,7 +234,7 @@ export function UnitsSection({
                       }}
                     />
                   ) : (
-                    <p className="text-sm text-zinc-500">{formatCurrency(unit.monthlyRentCents)}</p>
+                    <p className="text-sm text-[var(--muted)]">{formatCurrency(unit.monthlyRentCents)}</p>
                   )}
                   {showControls && (
                     <>

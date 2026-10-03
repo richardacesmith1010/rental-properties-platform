@@ -62,10 +62,10 @@ function StepPill({ label, active, done, skipped }: { label: string; active: boo
   const className = active
     ? "border-[var(--accent-line)] bg-[var(--accent-weak)] text-[var(--accent)]"
     : done
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      ? "border-[var(--pos)] bg-[var(--pos-bg)] text-[var(--pos)]"
       : skipped
-        ? "border-amber-200 bg-amber-50 text-amber-700"
-        : "border-zinc-200 bg-zinc-50 text-zinc-500";
+        ? "border-[var(--warn)] bg-[var(--warn-bg)] text-[var(--warn)]"
+        : "border-[var(--line)] bg-[var(--surface-2)] text-[var(--muted)]";
   return <div className={`rounded-md border px-2 py-2 text-xs ${className}`}>{label}</div>;
 }
 
@@ -98,16 +98,16 @@ export function InvitationsSection({ ownershipAccounts, properties, invitations,
 
   const renderOwnerStep = () => {
     if (ownerStep === 0) {
-      return <div className="space-y-3"><p className="text-sm text-zinc-600">Step 1: Pick ownership account for co-owner access.</p><Select value={ownerDraft.ownershipAccountId} onChange={(event) => setOwnerDraft((current) => ({ ...current, ownershipAccountId: event.target.value }))} onKeyDown={(event) => onEnterNext(event, ownerStepComplete(ownerStep), 1)} required><option value="">Select ownership account</option>{ownershipAccounts.map((account) => <option key={account.id} value={account.id}>{account.displayName}</option>)}</Select></div>;
+      return <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Step 1: Pick ownership account for co-owner access.</p><Select value={ownerDraft.ownershipAccountId} onChange={(event) => setOwnerDraft((current) => ({ ...current, ownershipAccountId: event.target.value }))} onKeyDown={(event) => onEnterNext(event, ownerStepComplete(ownerStep), 1)} required><option value="">Select ownership account</option>{ownershipAccounts.map((account) => <option key={account.id} value={account.id}>{account.displayName}</option>)}</Select></div>;
     }
     if (ownerStep === 1) {
-      return <div className="space-y-3"><p className="text-sm text-zinc-600">Step 2: Enter co-owner email address.</p><Input type="email" value={ownerDraft.email} onChange={(event) => setOwnerDraft((current) => ({ ...current, email: event.target.value }))} onKeyDown={(event) => onEnterNext(event, ownerStepComplete(ownerStep), 2)} placeholder="co-owner@email.com" required /></div>;
+      return <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Step 2: Enter co-owner email address.</p><Input type="email" value={ownerDraft.email} onChange={(event) => setOwnerDraft((current) => ({ ...current, email: event.target.value }))} onKeyDown={(event) => onEnterNext(event, ownerStepComplete(ownerStep), 2)} placeholder="co-owner@email.com" required /></div>;
     }
     if (ownerStep === 2) {
-      return <div className="space-y-3"><p className="text-sm text-zinc-600">Step 3: Enter co-owner full name.</p><Input value={ownerDraft.fullName} onChange={(event) => setOwnerDraft((current) => ({ ...current, fullName: event.target.value }))} onKeyDown={(event) => onEnterNext(event, ownerStepComplete(ownerStep), 3)} placeholder="Co-owner full name" required /></div>;
+      return <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Step 3: Enter co-owner full name.</p><Input value={ownerDraft.fullName} onChange={(event) => setOwnerDraft((current) => ({ ...current, fullName: event.target.value }))} onKeyDown={(event) => onEnterNext(event, ownerStepComplete(ownerStep), 3)} placeholder="Co-owner full name" required /></div>;
     }
 
-    return <div className="space-y-3"><p className="text-sm text-zinc-600">Final step: review and send co-owner invite.</p><div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-700"><p><span className="font-semibold">Account:</span> {ownershipAccounts.find((account) => account.id === ownerDraft.ownershipAccountId)?.displayName ?? "Not set"}</p><p><span className="font-semibold">Email:</span> {ownerDraft.email || "Not set"}</p><p><span className="font-semibold">Name:</span> {ownerDraft.fullName || "Not set"}</p></div><form className="space-y-2" action={ownerAction}><input type="hidden" name="ownershipAccountId" value={ownerDraft.ownershipAccountId} /><input type="hidden" name="email" value={ownerDraft.email} /><input type="hidden" name="fullName" value={ownerDraft.fullName} /><SubmitButton className="w-full" disabled={!ownerRequiredComplete} title="Send co-owner invitation.">Send Co-owner Invite</SubmitButton></form></div>;
+    return <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Final step: review and send co-owner invite.</p><div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-3 py-3 text-sm text-[var(--ink-2)]"><p><span className="font-semibold">Account:</span> {ownershipAccounts.find((account) => account.id === ownerDraft.ownershipAccountId)?.displayName ?? "Not set"}</p><p><span className="font-semibold">Email:</span> {ownerDraft.email || "Not set"}</p><p><span className="font-semibold">Name:</span> {ownerDraft.fullName || "Not set"}</p></div><form className="space-y-2" action={ownerAction}><input type="hidden" name="ownershipAccountId" value={ownerDraft.ownershipAccountId} /><input type="hidden" name="email" value={ownerDraft.email} /><input type="hidden" name="fullName" value={ownerDraft.fullName} /><SubmitButton className="w-full" disabled={!ownerRequiredComplete} title="Send co-owner invitation.">Send Co-owner Invite</SubmitButton></form></div>;
   };
 
   return (
@@ -116,7 +116,7 @@ export function InvitationsSection({ ownershipAccounts, properties, invitations,
       <Card>
         <CardHeader><CardTitle>Invitation Workflow</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-zinc-600">One invitation at a time. Use Next or Enter to move forward. Skip is available, but send stays locked until required data is complete.</p>
+          <p className="text-sm text-[var(--ink-2)]">One invitation at a time. Use Next or Enter to move forward. Skip is available, but send stays locked until required data is complete.</p>
           <div className="flex flex-wrap gap-2">
             <Button type="button" size="sm" variant={activeFlow === "tenant" ? "default" : "outline"} onClick={() => setActiveFlow("tenant")} title="Start tenant invitation workflow.">Tenant Invite</Button>
             <Button type="button" size="sm" variant={activeFlow === "manager" ? "default" : "outline"} onClick={() => setActiveFlow("manager")} title="Start manager invitation workflow.">Manager Invite</Button>
@@ -171,15 +171,15 @@ function InvitationRow({ invitation, last, onResendInvite, onRevokeInvite }: { i
   return (
     <DataRow last={last}>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-zinc-900">{invitation.fullName}</p>
-        <p className="mt-0.5 text-xs text-zinc-500">{invitation.email}</p>
+        <p className="text-sm font-semibold text-[var(--ink)]">{invitation.fullName}</p>
+        <p className="mt-0.5 text-xs text-[var(--muted)]">{invitation.email}</p>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           <Badge variant={statusVariant[invitation.status] ?? "outline"}>{invitation.status.charAt(0).toUpperCase() + invitation.status.slice(1)}</Badge>
           <Badge variant="outline">{invitation.role.charAt(0).toUpperCase() + invitation.role.slice(1)}</Badge>
           {invitation.propertyName ? <Badge variant="outline">{invitation.propertyName}</Badge> : null}
           {invitation.ownershipAccountName ? <Badge variant="outline">{invitation.ownershipAccountName}</Badge> : null}
         </div>
-        <p className="mt-1 text-[11px] text-zinc-400">Sent {formatDate(invitation.createdAt)}{invitation.acceptedAt ? ` · Accepted ${formatDate(invitation.acceptedAt)}` : ""}</p>
+        <p className="mt-1 text-[11px] text-[var(--faint)]">Sent {formatDate(invitation.createdAt)}{invitation.acceptedAt ? ` · Accepted ${formatDate(invitation.acceptedAt)}` : ""}</p>
       </div>
       {invitation.status === "pending" ? (
         <div className="flex-shrink-0">

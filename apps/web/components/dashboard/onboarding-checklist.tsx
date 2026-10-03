@@ -94,7 +94,7 @@ export function OnboardingChecklist({ steps, className }: OnboardingChecklistPro
                 className={cn(
                   "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-all duration-300",
                   step.completed
-                    ? "bg-emerald-500/15 text-emerald-600"
+                    ? "bg-[var(--pos-bg)] text-[var(--pos)]"
                     : isActive
                       ? "bg-primary/10 text-primary"
                       : "border border-border bg-muted/50 text-muted-foreground",

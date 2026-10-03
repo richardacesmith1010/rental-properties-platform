@@ -122,7 +122,7 @@ export function DistributionConfigPanel({
     <Card className="mt-3 border-[var(--accent-line)] bg-[var(--accent-weak)]">
       <CardHeader>
         <CardTitle>Distribution Settings</CardTitle>
-        <p className="text-sm text-zinc-600">
+        <p className="text-sm text-[var(--ink-2)]">
           How should rent money be split for {accountDisplayName}?
         </p>
       </CardHeader>
@@ -151,7 +151,7 @@ export function DistributionConfigPanel({
               />
               <div>
                 <p className="text-sm font-semibold text-[var(--ink)]">Retain All</p>
-                <p className="text-xs text-zinc-500">Keep all money in the LLC.</p>
+                <p className="text-xs text-[var(--muted)]">Keep all money in the LLC.</p>
               </div>
             </label>
 
@@ -166,7 +166,7 @@ export function DistributionConfigPanel({
               />
               <div>
                 <p className="text-sm font-semibold text-[var(--ink)]">Split Equally</p>
-                <p className="text-xs text-zinc-500">Everyone gets the same amount.</p>
+                <p className="text-xs text-[var(--muted)]">Everyone gets the same amount.</p>
               </div>
             </label>
 
@@ -181,7 +181,7 @@ export function DistributionConfigPanel({
               />
               <div>
                 <p className="text-sm font-semibold text-[var(--ink)]">Custom Split</p>
-                <p className="text-xs text-zinc-500">You pick who gets what.</p>
+                <p className="text-xs text-[var(--muted)]">You pick who gets what.</p>
               </div>
             </label>
           </div>
@@ -194,15 +194,15 @@ export function DistributionConfigPanel({
 
           {mode === "split_equal" ? (
             <div className="space-y-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
-              <p className="text-sm font-medium text-zinc-700">Everyone gets the same amount.</p>
+              <p className="text-sm font-medium text-[var(--ink-2)]">Everyone gets the same amount.</p>
               {activeMembers.length === 0 ? (
-                <p className="text-sm text-red-600">No active members are available for distribution.</p>
+                <p className="text-sm text-[var(--crit)]">No active members are available for distribution.</p>
               ) : (
                 activeMembers.map((member, index) => (
                   <DataRow key={member.profileId} last={index === activeMembers.length - 1}>
                     <div>
                       <p className="text-sm font-semibold text-[var(--ink)]">{member.fullName}</p>
-                      <p className="text-xs text-zinc-500">{member.email}</p>
+                      <p className="text-xs text-[var(--muted)]">{member.email}</p>
                     </div>
                     <span className="text-sm font-semibold text-[var(--ink)]">
                       {equalShare.toFixed(2)}%
@@ -221,7 +221,7 @@ export function DistributionConfigPanel({
                   <DataRow key={member.profileId} last={index === activeMembers.length - 1}>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-[var(--ink)]">{member.fullName}</p>
-                      <p className="truncate text-xs text-zinc-500">{member.email}</p>
+                      <p className="truncate text-xs text-[var(--muted)]">{member.email}</p>
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">
                       <Input
@@ -258,7 +258,7 @@ export function DistributionConfigPanel({
               })}
               <div
                 className={`rounded-lg px-3 py-2 text-sm font-semibold ${
-                  customTotalValid ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
+                  customTotalValid ? "bg-[var(--pos-bg)] text-[var(--pos)]" : "bg-[var(--crit-bg)] text-[var(--crit)]"
                 }`}
               >
                 Total: {customTotal.toFixed(2)}%
@@ -267,7 +267,7 @@ export function DistributionConfigPanel({
           ) : null}
 
           <div className="flex items-center justify-between gap-3">
-            <div className="text-xs text-zinc-500">
+            <div className="text-xs text-[var(--muted)]">
               If someone hasn&apos;t linked their bank, their share stays in the LLC.
             </div>
             <SubmitButton

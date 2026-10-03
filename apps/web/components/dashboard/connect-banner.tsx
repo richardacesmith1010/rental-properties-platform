@@ -11,7 +11,7 @@ interface ConnectBannerProps {
 export function ConnectBanner({ connected, role, href = "/connect/onboard" }: ConnectBannerProps) {
   if (connected) {
     return (
-      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+      <div className="rounded-xl border border-[var(--pos)] bg-[var(--pos-bg)] p-4">
         <div className="flex items-center gap-3">
           <span className="text-2xl">✅</span>
           <div className="flex-1">
@@ -30,7 +30,7 @@ export function ConnectBanner({ connected, role, href = "/connect/onboard" }: Co
   }
 
   return (
-    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+    <div className="rounded-xl border border-[var(--warn)] bg-[var(--warn-bg)] p-4">
       <div className="flex items-center gap-3">
         <span className="text-2xl">🏦</span>
         <div className="flex-1">

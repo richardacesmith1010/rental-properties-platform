@@ -238,7 +238,7 @@ export function AccountSwitcher({
           {nameRow}
         </div>
         {activePendingRenameRequest ? (
-          <p className="mt-2 text-xs text-amber-100">
+          <p className="mt-2 text-xs text-[var(--warn)]">
             Rename pending • {activePendingRenameRequest.votesReceived}/{activePendingRenameRequest.votesRequired} votes
           </p>
         ) : null}
@@ -262,7 +262,7 @@ export function AccountSwitcher({
         {nameRow}
       </div>
       {activePendingRenameRequest ? (
-        <p className="mt-2 text-xs text-amber-100">
+        <p className="mt-2 text-xs text-[var(--warn)]">
           Rename pending • {activePendingRenameRequest.votesReceived}/{activePendingRenameRequest.votesRequired} votes
         </p>
       ) : null}
@@ -297,7 +297,7 @@ export function AccountSwitcher({
             ref={menuRef}
             role="listbox"
             aria-label="Available ownership accounts"
-            className="z-[60] mt-3 overflow-hidden rounded-[12px] border border-white/18 bg-slate-950/95 p-1 shadow-[0_20px_44px_-24px_rgba(15,23,42,0.7)] backdrop-blur sm:absolute sm:left-0 sm:right-0 sm:mt-2"
+            className="z-[60] mt-3 overflow-hidden rounded-[12px] border border-white/18 bg-[var(--ink)] p-1 shadow-[var(--shadow-lg)] backdrop-blur sm:absolute sm:left-0 sm:right-0 sm:mt-2"
           >
             {accounts.map((account) => {
               const isActive = account.id === activeAccount.id;

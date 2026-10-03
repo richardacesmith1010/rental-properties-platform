@@ -41,8 +41,8 @@ export function TaxSummaryReport({ data }: TaxSummaryReportProps) {
       emptyDescription="Income and expense deductions will appear here once the portfolio has activity."
       footer={
         data.length > 0 ? (
-          <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
-            <span className="font-semibold text-zinc-900">Total Portfolio:</span>{" "}
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--ink-2)]">
+            <span className="font-semibold text-[var(--ink)]">Total Portfolio:</span>{" "}
             Income {formatCurrency(portfolioTotals.income)} · Expenses {formatCurrency(portfolioTotals.expenses)} · Net {formatCurrency(portfolioTotals.net)}
           </div>
         ) : null

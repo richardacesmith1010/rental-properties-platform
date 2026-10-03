@@ -143,8 +143,8 @@ export function FeedbackModal({ open, onClose, onSubmit, defaultEmail }: Feedbac
                       "rounded-2xl border px-4 py-3 text-left transition",
                       "min-h-11",
                       selected
-                        ? "border-violet-500 bg-violet-50 text-violet-900 shadow-sm"
-                        : "border-border/70 bg-card text-foreground hover:border-violet-300 hover:bg-muted/50"
+                        ? "border-[var(--accent)] bg-[var(--accent-weak)] text-[var(--accent)] shadow-sm"
+                        : "border-border/70 bg-card text-foreground hover:border-[var(--accent-line)] hover:bg-muted/50"
                     )}
                     title={`Choose ${option.label.toLowerCase()} feedback.`}
                   >
@@ -195,7 +195,7 @@ export function FeedbackModal({ open, onClose, onSubmit, defaultEmail }: Feedbac
             />
           </div>
 
-          {clientError ? <p className="text-sm text-red-600">{clientError}</p> : null}
+          {clientError ? <p className="text-sm text-[var(--crit)]">{clientError}</p> : null}
 
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button type="button" variant="outline" onClick={onClose} title="Cancel feedback submission.">

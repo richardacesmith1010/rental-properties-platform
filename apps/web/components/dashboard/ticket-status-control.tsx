@@ -36,10 +36,10 @@ export function TicketStatusControl({
         Update
       </SubmitButton>
       {state && !state.success && (
-        <span className="text-xs text-red-500">{state.error}</span>
+        <span className="text-xs text-[var(--crit)]">{state.error}</span>
       )}
       {state && state.success && (
-        <span className="text-xs text-emerald-600">Saved.</span>
+        <span className="text-xs text-[var(--pos)]">Saved.</span>
       )}
     </form>
   );

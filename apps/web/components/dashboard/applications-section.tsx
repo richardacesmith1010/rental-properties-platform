@@ -121,9 +121,9 @@ function ApplicationCard({
             <p className="text-sm font-semibold text-[var(--ink)]">
               {application.applicantName?.trim() || application.applicantEmail}
             </p>
-            <p className="text-xs text-zinc-500">{application.applicantEmail}</p>
+            <p className="text-xs text-[var(--muted)]">{application.applicantEmail}</p>
             {application.applicantPhone && (
-              <p className="text-xs text-zinc-500">{application.applicantPhone}</p>
+              <p className="text-xs text-[var(--muted)]">{application.applicantPhone}</p>
             )}
           </div>
           <Badge variant={statusVariant(application.status)} className="uppercase">
@@ -131,7 +131,7 @@ function ApplicationCard({
           </Badge>
         </div>
 
-        <div className="text-xs text-zinc-600">
+        <div className="text-xs text-[var(--ink-2)]">
           <p>
             <span className="font-semibold">Listing:</span> {application.listingHeadline}
           </p>
@@ -164,8 +164,8 @@ function ApplicationCard({
         </div>
 
         {application.status === "submitted" && (
-          <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Review actions</p>
+          <div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Review actions</p>
             <Input
               value={reviewNotes}
               onChange={(event) => setReviewNotes(event.target.value)}
@@ -180,17 +180,17 @@ function ApplicationCard({
               </SubmitButton>
             </form>
             {reviewState && !reviewState.success && (
-              <p className="text-xs text-red-600">{reviewState.error}</p>
+              <p className="text-xs text-[var(--crit)]">{reviewState.error}</p>
             )}
             {reviewState && reviewState.success && (
-              <p className="text-xs text-emerald-600">Application moved to in review.</p>
+              <p className="text-xs text-[var(--pos)]">Application moved to in review.</p>
             )}
           </div>
         )}
 
         {application.status === "in_review" && (
-          <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Decision</p>
+          <div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Decision</p>
             <Input
               value={reviewNotes}
               onChange={(event) => setReviewNotes(event.target.value)}
@@ -215,10 +215,10 @@ function ApplicationCard({
               </form>
             </div>
             {reviewState && !reviewState.success && (
-              <p className="text-xs text-red-600">{reviewState.error}</p>
+              <p className="text-xs text-[var(--crit)]">{reviewState.error}</p>
             )}
             {reviewState && reviewState.success && (
-              <p className="text-xs text-emerald-600">Application review decision saved.</p>
+              <p className="text-xs text-[var(--pos)]">Application review decision saved.</p>
             )}
           </div>
         )}
@@ -261,7 +261,7 @@ function ApplicationCard({
         </div>
 
         {showNoteForm && (
-          <form action={noteAction} className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+          <form action={noteAction} className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] p-3">
             <input type="hidden" name="applicationId" value={application.id} />
             <Textarea name="message" placeholder="Add context for your team" required />
             <div className="flex justify-end">
@@ -269,15 +269,15 @@ function ApplicationCard({
                 Save note
               </SubmitButton>
             </div>
-            {noteState && !noteState.success && <p className="text-xs text-red-600">{noteState.error}</p>}
+            {noteState && !noteState.success && <p className="text-xs text-[var(--crit)]">{noteState.error}</p>}
             {noteState && noteState.success && (
-              <p className="text-xs text-emerald-600">Application note saved.</p>
+              <p className="text-xs text-[var(--pos)]">Application note saved.</p>
             )}
           </form>
         )}
 
         {showScoreForm && (
-          <form action={scoreAction} className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+          <form action={scoreAction} className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] p-3">
             <input type="hidden" name="applicationId" value={application.id} />
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <Input
@@ -297,17 +297,17 @@ function ApplicationCard({
               </SubmitButton>
             </div>
             {scoreState && !scoreState.success && (
-              <p className="text-xs text-red-600">{scoreState.error}</p>
+              <p className="text-xs text-[var(--crit)]">{scoreState.error}</p>
             )}
             {scoreState && scoreState.success && (
-              <p className="text-xs text-emerald-600">Screening score saved.</p>
+              <p className="text-xs text-[var(--pos)]">Screening score saved.</p>
             )}
           </form>
         )}
 
         {showEvents && (
-          <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Event timeline</p>
+          <div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Event timeline</p>
             {application.events.length === 0 ? (
               <EmptyState message="No timeline events recorded yet for this application." />
             ) : (
@@ -318,12 +318,12 @@ function ApplicationCard({
                       <Badge variant="outline" className="uppercase">
                         {event.eventType.replaceAll("_", " ")}
                       </Badge>
-                      <p className="text-[11px] text-zinc-500">{formatDateTime(event.createdAt)}</p>
+                      <p className="text-[11px] text-[var(--muted)]">{formatDateTime(event.createdAt)}</p>
                     </div>
-                    <p className="mt-1 text-xs text-zinc-600">
+                    <p className="mt-1 text-xs text-[var(--ink-2)]">
                       {event.actorEmail ? `By ${event.actorEmail}` : "System event"}
                     </p>
-                    {event.message && <p className="mt-1 text-xs text-zinc-700">{event.message}</p>}
+                    {event.message && <p className="mt-1 text-xs text-[var(--ink-2)]">{event.message}</p>}
                   </div>
                 ))}
               </div>
@@ -378,7 +378,7 @@ export function ApplicationsSection({
           <CardTitle>Applications</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="text-sm text-zinc-600">
+          <p className="text-sm text-[var(--ink-2)]">
             Review tenant applications, track screening outcomes, and document decisions before lease creation.
           </p>
           {!pipelineReady && (
@@ -386,8 +386,8 @@ export function ApplicationsSection({
               {pipelineWarning ?? "Application pipeline requires a database update before it can be used."}
             </Alert>
           )}
-          <form action={createAction} className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Create application</p>
+          <form action={createAction} className="rounded-lg border border-[var(--line)] bg-[var(--surface-2)] p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Create application</p>
             <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <Select
                 name="listingId"
@@ -415,10 +415,10 @@ export function ApplicationsSection({
               </SubmitButton>
             </div>
             {createState && !createState.success && (
-              <p className="mt-2 text-xs text-red-600">{createState.error}</p>
+              <p className="mt-2 text-xs text-[var(--crit)]">{createState.error}</p>
             )}
             {createState && createState.success && (
-              <p className="mt-2 text-xs text-emerald-600">Application created.</p>
+              <p className="mt-2 text-xs text-[var(--pos)]">Application created.</p>
             )}
           </form>
         </CardContent>
@@ -460,7 +460,7 @@ export function ApplicationsSection({
         </div>
       )}
 
-      <div className="text-xs text-zinc-500">
+      <div className="text-xs text-[var(--muted)]">
         <p>
           Screening scores are manually recorded (0-1000). Use timeline notes to document reviewer rationale.
         </p>

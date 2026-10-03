@@ -37,15 +37,15 @@ export function PaymentsSection({ payments }: PaymentsSectionProps) {
             {payments.map((payment, i) => (
               <DataRow key={payment.id} last={i === payments.length - 1}>
                 <div>
-                  <p className="text-sm font-semibold text-zinc-900">
+                  <p className="text-sm font-semibold text-[var(--ink)]">
                     {formatCurrency(payment.amountCents)}
                   </p>
-                  <p className="mt-0.5 text-xs text-zinc-500">{formatDateTime(payment.paidAt)}</p>
-                  <p className="mt-0.5 text-xs text-zinc-500">
+                  <p className="mt-0.5 text-xs text-[var(--muted)]">{formatDateTime(payment.paidAt)}</p>
+                  <p className="mt-0.5 text-xs text-[var(--muted)]">
                     {payment.propertyName} • {payment.unitNumber}
                   </p>
                   {payment.chargeDueDate && (
-                    <p className="mt-0.5 text-xs text-zinc-500">Charge due {formatDate(payment.chargeDueDate)}</p>
+                    <p className="mt-0.5 text-xs text-[var(--muted)]">Charge due {formatDate(payment.chargeDueDate)}</p>
                   )}
                 </div>
                 <Badge variant="outline">{payment.method.toUpperCase()}</Badge>

@@ -40,8 +40,8 @@ export function RentRollReport({
           sortValue: (row) => row.tenantName ?? row.tenantEmail ?? "",
           render: (row) => (
             <div>
-              <div className="font-medium text-zinc-900">{row.tenantName ?? "Vacant"}</div>
-              <div className="text-xs text-zinc-500">{row.tenantEmail ?? "—"}</div>
+              <div className="font-medium text-[var(--ink)]">{row.tenantName ?? "Vacant"}</div>
+              <div className="text-xs text-[var(--muted)]">{row.tenantEmail ?? "—"}</div>
             </div>
           )
         },

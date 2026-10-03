@@ -58,13 +58,13 @@ export function PasswordSettings() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <p className="text-sm text-zinc-600">
+      <p className="text-sm text-[var(--ink-2)]">
         Set a new password for your Domus account. Use at least 8 characters with a capital letter and a number.
       </p>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-zinc-700" htmlFor="settings-new-password">
+          <label className="mb-1.5 block text-sm font-medium text-[var(--ink-2)]" htmlFor="settings-new-password">
             New Password
           </label>
           <Input
@@ -80,7 +80,7 @@ export function PasswordSettings() {
         </div>
 
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-zinc-700" htmlFor="settings-confirm-password">
+          <label className="mb-1.5 block text-sm font-medium text-[var(--ink-2)]" htmlFor="settings-confirm-password">
             Confirm Password
           </label>
           <Input
@@ -93,7 +93,7 @@ export function PasswordSettings() {
             required
           />
           {confirmPassword.length > 0 && !passwordsMatch ? (
-            <p className="mt-2 text-xs font-medium text-red-600">Passwords do not match yet.</p>
+            <p className="mt-2 text-xs font-medium text-[var(--crit)]">Passwords do not match yet.</p>
           ) : null}
         </div>
       </div>

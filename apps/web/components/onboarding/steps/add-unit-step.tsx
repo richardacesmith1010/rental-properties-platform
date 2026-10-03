@@ -28,9 +28,9 @@ export function AddUnitStep({ propertyId, propertyName, onCreateUnit, onComplete
   return (
     <div className="space-y-4">
       <div className="text-center">
-        <h3 className="text-lg font-semibold text-zinc-900">Add your first unit</h3>
-        <p className="mt-1 text-sm text-zinc-500">
-          Add a unit to <span className="font-medium text-zinc-700">{propertyName}</span>.
+        <h3 className="text-lg font-semibold text-[var(--ink)]">Add your first unit</h3>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          Add a unit to <span className="font-medium text-[var(--ink-2)]">{propertyName}</span>.
         </p>
       </div>
 
@@ -42,7 +42,7 @@ export function AddUnitStep({ propertyId, propertyName, onCreateUnit, onComplete
         <input type="hidden" name="propertyId" value={propertyId} />
 
         <div>
-          <label htmlFor="wiz-unitNumber" className="mb-1 block text-sm font-medium text-zinc-700">
+          <label htmlFor="wiz-unitNumber" className="mb-1 block text-sm font-medium text-[var(--ink-2)]">
             Unit Number
           </label>
           <Input id="wiz-unitNumber" name="unitNumber" placeholder="e.g. 101, A, Ground Floor" required />
@@ -50,13 +50,13 @@ export function AddUnitStep({ propertyId, propertyName, onCreateUnit, onComplete
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label htmlFor="wiz-bedrooms" className="mb-1 block text-sm font-medium text-zinc-700">
+            <label htmlFor="wiz-bedrooms" className="mb-1 block text-sm font-medium text-[var(--ink-2)]">
               Bedrooms
             </label>
             <Input id="wiz-bedrooms" name="bedrooms" type="number" min={0} defaultValue={1} required />
           </div>
           <div>
-            <label htmlFor="wiz-bathrooms" className="mb-1 block text-sm font-medium text-zinc-700">
+            <label htmlFor="wiz-bathrooms" className="mb-1 block text-sm font-medium text-[var(--ink-2)]">
               Bathrooms
             </label>
             <Input id="wiz-bathrooms" name="bathrooms" type="number" min={0} defaultValue={1} required />
@@ -64,7 +64,7 @@ export function AddUnitStep({ propertyId, propertyName, onCreateUnit, onComplete
         </div>
 
         <div>
-          <label htmlFor="wiz-monthlyRent" className="mb-1 block text-sm font-medium text-zinc-700">
+          <label htmlFor="wiz-monthlyRent" className="mb-1 block text-sm font-medium text-[var(--ink-2)]">
             Monthly Rent ($)
           </label>
           <Input id="wiz-monthlyRent" name="monthlyRentDollars" type="number" min={1} step="0.01" placeholder="1500" required />
@@ -78,7 +78,7 @@ export function AddUnitStep({ propertyId, propertyName, onCreateUnit, onComplete
       <button
         type="button"
         onClick={onSkip}
-        className="block w-full text-center text-sm text-zinc-400 hover:text-zinc-600"
+        className="block w-full text-center text-sm text-[var(--faint)] hover:text-[var(--ink-2)]"
       >
         Skip for now
       </button>

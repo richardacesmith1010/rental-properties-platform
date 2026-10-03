@@ -232,8 +232,7 @@
   color: var(--ink-2);
 }
 
-.sidebar-account-switcher .text-white\/60,
-.sidebar-account-switcher .text-amber-100 {
+.sidebar-account-switcher .text-white\/60 {
   color: var(--muted);
 }
 
@@ -295,30 +294,6 @@
   background: var(--surface);
   border-color: var(--line);
   box-shadow: var(--shadow-md);
-}
-
-.sidebar-user-footer-shell .relative > .absolute .border-zinc-100 {
-  border-color: var(--line-2);
-}
-
-.sidebar-user-footer-shell .relative > .absolute .text-zinc-900 {
-  color: var(--ink);
-}
-
-.sidebar-user-footer-shell .relative > .absolute .text-zinc-700 {
-  color: var(--ink-2);
-}
-
-.sidebar-user-footer-shell .relative > .absolute .text-zinc-500 {
-  color: var(--muted);
-}
-
-.sidebar-user-footer-shell .relative > .absolute .hover\:bg-zinc-50:hover {
-  background-color: var(--surface-2);
-}
-
-.sidebar-user-footer-shell .relative > .absolute .hover\:bg-rose-50:hover {
-  background-color: var(--domus-danger-bg);
 }
 
 .sidebar-user-footer-shell .rounded-2xl.border {

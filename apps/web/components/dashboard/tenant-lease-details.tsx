@@ -51,7 +51,7 @@ export function TenantLeaseDetails({ leases }: TenantLeaseDetailsProps) {
         ) : (
           <div className="space-y-4">
             {leases.map((lease) => (
-              <div key={lease.leaseId} className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+              <div key={lease.leaseId} className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -60,40 +60,40 @@ export function TenantLeaseDetails({ leases }: TenantLeaseDetailsProps) {
                       </h3>
                       <LeaseStatusBadge status={lease.leaseStatus} daysRemaining={lease.daysRemaining} />
                     </div>
-                    <p className="mt-1 text-sm text-zinc-500">
+                    <p className="mt-1 text-sm text-[var(--muted)]">
                       {formatDate(lease.startDate)} to {formatDate(lease.endDate)}
                     </p>
                   </div>
                   <div className="rounded-lg bg-[var(--surface)] px-3 py-2 text-right shadow-[var(--domus-shadow-sm)]">
-                    <p className="text-xs uppercase tracking-wide text-zinc-400">Days Remaining</p>
+                    <p className="text-xs uppercase tracking-wide text-[var(--faint)]">Days Remaining</p>
                     <p className="text-lg font-semibold text-[var(--ink)]">{lease.daysRemaining}</p>
                   </div>
                 </div>
 
-                <div className="mt-4 grid gap-3 text-sm text-zinc-600 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="mt-4 grid gap-3 text-sm text-[var(--ink-2)] sm:grid-cols-2 xl:grid-cols-3">
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-zinc-400">Monthly Rent</p>
+                    <p className="text-xs uppercase tracking-wide text-[var(--faint)]">Monthly Rent</p>
                     <p className="mt-1 font-semibold text-[var(--ink)]">{formatCurrency(lease.monthlyRentCents)}</p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-zinc-400">Security Deposit</p>
+                    <p className="text-xs uppercase tracking-wide text-[var(--faint)]">Security Deposit</p>
                     <p className="mt-1 font-semibold text-[var(--ink)]">{formatCurrency(lease.depositCents)}</p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-zinc-400">Due Day</p>
+                    <p className="text-xs uppercase tracking-wide text-[var(--faint)]">Due Day</p>
                     <p className="mt-1 font-semibold text-[var(--ink)]">Day {lease.dueDayOfMonth}</p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-zinc-400">Late Fee</p>
+                    <p className="text-xs uppercase tracking-wide text-[var(--faint)]">Late Fee</p>
                     <p className="mt-1 font-semibold text-[var(--ink)]">{formatCurrency(lease.lateFeeCents)}</p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-zinc-400">Grace Period</p>
+                    <p className="text-xs uppercase tracking-wide text-[var(--faint)]">Grace Period</p>
                     <p className="mt-1 font-semibold text-[var(--ink)]">{lease.gracePeriodDays} days</p>
                   </div>
                   <div className="flex items-end">
                     <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--muted)]">
-                      <CalendarClock className="mr-2 inline h-4 w-4 text-zinc-400" />
+                      <CalendarClock className="mr-2 inline h-4 w-4 text-[var(--faint)]" />
                       Ends {formatDate(lease.endDate)}
                     </div>
                   </div>

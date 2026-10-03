@@ -285,7 +285,7 @@ export function AnnouncementComposer({
               {recipientCountPending ? (
                 <p className="text-muted-foreground">Checking how many tenants will receive this.</p>
               ) : recipientCountError ? (
-                <p className="text-red-600">{recipientCountError}</p>
+                <p className="text-[var(--crit)]">{recipientCountError}</p>
               ) : !hasProperties ? (
                 <p className="text-muted-foreground">
                   You do not have any properties available for announcements yet.
@@ -304,7 +304,7 @@ export function AnnouncementComposer({
             </div>
 
             {submittedRef.current && state && !state.success ? (
-              <p className="text-sm text-red-600">{state.error ?? "Unable to send this announcement."}</p>
+              <p className="text-sm text-[var(--crit)]">{state.error ?? "Unable to send this announcement."}</p>
             ) : null}
 
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

@@ -118,7 +118,7 @@ export function ComposeMessageModal({
             </div>
 
             {state && !state.success ? (
-              <p className="text-sm text-red-600">{state.error ?? "Unable to send message."}</p>
+              <p className="text-sm text-[var(--crit)]">{state.error ?? "Unable to send message."}</p>
             ) : null}
 
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

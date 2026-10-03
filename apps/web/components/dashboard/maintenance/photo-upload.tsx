@@ -136,7 +136,7 @@ export function PhotoUpload({
         </Button>
       </div>
 
-      {error ? <p className="text-xs text-red-600">{error}</p> : null}
+      {error ? <p className="text-xs text-[var(--crit)]">{error}</p> : null}
 
       {selectedPhotos.length > 0 ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

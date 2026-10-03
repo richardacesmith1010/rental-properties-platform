@@ -48,8 +48,8 @@ export function MonthlyPnLReport({ data, onEditCharge, onUpdateExpense }: Monthl
       emptyDescription="Income and expense data will populate this report once transactions exist."
       footer={
         data.length > 0 ? (
-          <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
-            <span className="font-semibold text-zinc-900">Portfolio Summary:</span>{" "}
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--ink-2)]">
+            <span className="font-semibold text-[var(--ink)]">Portfolio Summary:</span>{" "}
             Income {formatCurrency(portfolioSummary.totalIncome)} · Expenses {formatCurrency(portfolioSummary.expenses)} · Net {formatCurrency(portfolioSummary.netIncome)}
           </div>
         ) : null

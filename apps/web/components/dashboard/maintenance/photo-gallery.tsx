@@ -57,7 +57,7 @@ export function PhotoGallery({ photos, canDeletePhoto, onDelete }: PhotoGalleryP
   return (
     <>
       <div className="space-y-2">
-        {deleteError ? <p className="text-xs text-red-600">{deleteError}</p> : null}
+        {deleteError ? <p className="text-xs text-[var(--crit)]">{deleteError}</p> : null}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {photos.map((photo) => {
             const canDelete = canDeletePhoto?.(photo) ?? false;

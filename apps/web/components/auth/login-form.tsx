@@ -37,8 +37,8 @@ function ForgotPasswordPanel({
   if (state?.success) {
     return (
       <div className="flex flex-col items-center py-4 text-center">
-        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
-          <CheckCircle className="h-7 w-7 text-emerald-600" />
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--pos-bg)]">
+          <CheckCircle className="h-7 w-7 text-[var(--pos)]" />
         </div>
         <h3 className="text-lg font-semibold text-foreground">Check your email</h3>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -163,11 +163,11 @@ function SignInPanel({
       {state.error ? <Alert variant="error">{state.error}</Alert> : null}
 
       {state.blocked ? (
-        <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+        <div className="rounded-xl border border-[var(--warn)] bg-[var(--warn-bg)] p-3 text-sm text-[var(--warn)]">
           <p className="font-semibold">Need help getting back in?</p>
           <button
             type="button"
-            className="mt-2 font-semibold text-amber-900 underline underline-offset-4 hover:text-amber-700"
+            className="mt-2 font-semibold text-[var(--warn)] underline underline-offset-4 hover:text-[var(--warn)]"
             onClick={onForgotPassword}
           >
             Reset your password
@@ -267,8 +267,8 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
   if (signupComplete) {
     return (
       <div className="flex flex-col items-center py-4 text-center">
-        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
-          <CheckCircle className="h-7 w-7 text-emerald-600" />
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--pos-bg)]">
+          <CheckCircle className="h-7 w-7 text-[var(--pos)]" />
         </div>
         <h3 className="text-lg font-semibold text-foreground">Check your email</h3>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -375,7 +375,7 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
           required
         />
         {confirmPassword.length > 0 && !passwordsMatch ? (
-          <p className="mt-2 text-xs font-medium text-red-600">Passwords do not match yet.</p>
+          <p className="mt-2 text-xs font-medium text-[var(--crit)]">Passwords do not match yet.</p>
         ) : null}
       </div>
 

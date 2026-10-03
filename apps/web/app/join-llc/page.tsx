@@ -158,7 +158,7 @@ export default async function JoinLlcPage({ searchParams }: JoinLlcPageProps) {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_18%,rgba(255,255,255,0.12),transparent_24%),radial-gradient(circle_at_20%_85%,rgba(52,211,153,0.16),transparent_22%)]" />
           <div className="relative z-10 flex items-center justify-between">
             <Link href="/marketing" className="inline-flex items-center gap-3" title="Return to the Domus marketing page.">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 text-lg font-bold shadow-lg shadow-slate-950/25 backdrop-blur-sm">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--surface)_15%,transparent)] text-lg font-bold shadow-lg backdrop-blur-sm">
                 D
               </div>
               <div>
@@ -166,14 +166,14 @@ export default async function JoinLlcPage({ searchParams }: JoinLlcPageProps) {
                 <p className="text-xs uppercase tracking-[0.2em] text-white/70">Rental operations</p>
               </div>
             </Link>
-            <div className="hidden rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white/90 lg:inline-flex">
+            <div className="hidden rounded-full border border-white/15 bg-[color-mix(in_srgb,var(--surface)_10%,transparent)] px-4 py-2 text-sm font-medium text-white/90 lg:inline-flex">
               LLC invitation
             </div>
           </div>
 
           <div className="relative z-10 mt-8 grid gap-6 lg:mt-16 lg:grid-cols-[1fr_auto] lg:items-center lg:gap-10">
             <div className="max-w-2xl space-y-5">
-              <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-white/85">
+              <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-[color-mix(in_srgb,var(--surface)_10%,transparent)] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-white/85">
                 <Users className="h-3.5 w-3.5" />
                 Shared ownership workspace
               </p>
@@ -187,14 +187,14 @@ export default async function JoinLlcPage({ searchParams }: JoinLlcPageProps) {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-white/[0.14] bg-white/10 px-4 py-4 backdrop-blur-sm">
+                <div className="rounded-2xl border border-white/[0.14] bg-[color-mix(in_srgb,var(--surface)_10%,transparent)] px-4 py-4 backdrop-blur-sm">
                   <div className="flex items-center gap-2 font-semibold">
                     <Building2 className="h-4 w-4" />
                     LLC account
                   </div>
                   <p className="mt-2 text-sm text-white/72">{invitation.accountName}</p>
                 </div>
-                <div className="rounded-2xl border border-white/[0.14] bg-white/10 px-4 py-4 backdrop-blur-sm">
+                <div className="rounded-2xl border border-white/[0.14] bg-[color-mix(in_srgb,var(--surface)_10%,transparent)] px-4 py-4 backdrop-blur-sm">
                   <div className="flex items-center gap-2 font-semibold">
                     <ShieldCheck className="h-4 w-4" />
                     Invited email
@@ -205,7 +205,7 @@ export default async function JoinLlcPage({ searchParams }: JoinLlcPageProps) {
             </div>
 
             <div className="mx-auto hidden lg:mx-0 lg:block">
-              <div className="rounded-[32px] border border-white/[0.14] bg-white/10 p-6 shadow-2xl shadow-slate-950/30 backdrop-blur-md">
+              <div className="rounded-[32px] border border-white/[0.14] bg-[color-mix(in_srgb,var(--surface)_10%,transparent)] p-6 shadow-2xl backdrop-blur-md">
                 <Building2 className="mx-auto h-16 w-16 text-white" />
               </div>
             </div>

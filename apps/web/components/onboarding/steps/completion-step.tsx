@@ -16,8 +16,8 @@ export function CompletionStep({ stepsCompleted, onFinish }: CompletionStepProps
       </div>
 
       <div>
-        <h3 className="text-xl font-bold text-zinc-900">You&apos;re all set!</h3>
-        <p className="mt-1 text-sm text-zinc-500">
+        <h3 className="text-xl font-bold text-[var(--ink)]">You&apos;re all set!</h3>
+        <p className="mt-1 text-sm text-[var(--muted)]">
           Great start! Your property is ready to go.
         </p>
       </div>
@@ -25,7 +25,7 @@ export function CompletionStep({ stepsCompleted, onFinish }: CompletionStepProps
       {stepsCompleted.length > 0 && (
         <div className="mx-auto max-w-xs space-y-2 text-left">
           {stepsCompleted.map((label) => (
-            <div key={label} className="flex items-center gap-2 text-sm text-emerald-700">
+            <div key={label} className="flex items-center gap-2 text-sm text-[var(--pos)]">
               <CheckCircle className="h-4 w-4 flex-shrink-0" />
               <span>{label}</span>
             </div>

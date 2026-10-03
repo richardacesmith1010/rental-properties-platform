@@ -460,9 +460,9 @@ export function LeasesSection({
                                 ) : null}
                               </div>
 
-                              <div className="rounded-2xl border border-rose-200/80 bg-rose-50 p-4 shadow-sm">
+                              <div className="rounded-2xl border border-[var(--crit)] bg-[var(--crit-bg)] p-4 shadow-sm">
                                 <div className="mb-3 flex items-center justify-between gap-2">
-                                  <p className="text-base font-medium text-rose-900">End Lease</p>
+                                  <p className="text-base font-medium text-[var(--crit)]">End Lease</p>
                                   <Button
                                     type="button"
                                     size="sm"
@@ -635,7 +635,7 @@ export function LeasesSection({
                         </p>
                         <p
                           className={`text-xs font-medium ${
-                            entry.changePercent >= 0 ? "text-emerald-600" : "text-rose-600"
+                            entry.changePercent >= 0 ? "text-[var(--pos)]" : "text-[var(--crit)]"
                           }`}
                         >
                           {entry.changePercent >= 0 ? "+" : ""}

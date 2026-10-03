@@ -425,7 +425,7 @@ export function LeaseWizard({
 
         <div className="mt-6 min-h-0 flex-1 space-y-5 overflow-y-auto pr-1 scroll-smooth [-webkit-overflow-scrolling:touch]">
           {errorMessage ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="rounded-xl border border-[var(--crit)] bg-[var(--crit-bg)] px-4 py-3 text-sm text-[var(--crit)]">
               {errorMessage}
             </div>
           ) : null}

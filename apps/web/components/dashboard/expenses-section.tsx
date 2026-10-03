@@ -43,25 +43,25 @@ export function ExpensesSection({ data, vendors, propertyFiles, onCreateExpense,
             {selectedSummary ? (
               <>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                  <div className="rounded-xl border border-border bg-card px-3 py-2 shadow-sm"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Income</p><p className="text-lg font-semibold text-emerald-600">{formatCurrency(selectedSummary.incomeCents)}</p></div>
-                  <div className="rounded-xl border border-border bg-card px-3 py-2 shadow-sm"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Expenses</p><p className="text-lg font-semibold text-rose-600">{formatCurrency(selectedSummary.expenseCents)}</p></div>
+                  <div className="rounded-xl border border-border bg-card px-3 py-2 shadow-sm"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Income</p><p className="text-lg font-semibold text-[var(--pos)]">{formatCurrency(selectedSummary.incomeCents)}</p></div>
+                  <div className="rounded-xl border border-border bg-card px-3 py-2 shadow-sm"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Expenses</p><p className="text-lg font-semibold text-[var(--crit)]">{formatCurrency(selectedSummary.expenseCents)}</p></div>
                   <div className="rounded-xl border border-border bg-card px-3 py-2 shadow-sm"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Net Cashflow</p><p className="text-lg font-semibold text-primary">{formatCurrency(selectedSummary.netCents)}</p></div>
                 </div>
                 <div>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">Last 12 Months</p>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Last 12 Months</p>
                   <div className="space-y-1">
                     {(data.monthlyByProperty[selectedPropertyId] ?? []).map((row) => (
                       <div key={row.month} className="flex items-center justify-between rounded-xl border border-border/50 px-3 py-2 text-xs shadow-sm">
-                        <span className="font-medium text-zinc-700">{row.month}</span>
-                        <span className="text-zinc-500">Income {formatCurrency(row.incomeCents)}</span>
-                        <span className="text-zinc-500">Expense {formatCurrency(row.expenseCents)}</span>
-                        <span className="font-semibold text-zinc-900">Net {formatCurrency(row.netCents)}</span>
+                        <span className="font-medium text-[var(--ink-2)]">{row.month}</span>
+                        <span className="text-[var(--muted)]">Income {formatCurrency(row.incomeCents)}</span>
+                        <span className="text-[var(--muted)]">Expense {formatCurrency(row.expenseCents)}</span>
+                        <span className="font-semibold text-[var(--ink)]">Net {formatCurrency(row.netCents)}</span>
                       </div>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">Expense Categories</p>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Expense Categories</p>
                   {(data.categoryByProperty[selectedPropertyId] ?? []).length === 0 ? (
                     <EmptyState message="No expenses yet for this property. Add one to start category tracking." />
                   ) : (

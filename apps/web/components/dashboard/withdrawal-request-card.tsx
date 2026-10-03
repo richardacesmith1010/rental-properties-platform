@@ -95,15 +95,15 @@ function ExecuteWithdrawalForm({
           type="button"
           size="sm"
           variant="destructive"
-          className="bg-emerald-600 hover:bg-emerald-700"
+          className="bg-[var(--pos)] hover:bg-[var(--pos)]"
           onClick={() => setShowConfirm(true)}
           title={`Execute a live Stripe payout of ${formatCurrency(request.amountCents)}.`}
         >
           Execute Payout - {formatCurrency(request.amountCents)}
         </Button>
       ) : (
-        <div className="space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/50 px-4 py-3">
-          <p className="text-sm text-emerald-900">
+        <div className="space-y-2 rounded-xl border border-[var(--pos)] bg-[var(--pos-bg)] px-4 py-3">
+          <p className="text-sm text-[var(--pos)]">
             Are you sure? This will transfer {formatCurrency(request.amountCents)} to{" "}
             {request.requestedByName ?? "the requester"}.
           </p>
@@ -113,7 +113,7 @@ function ExecuteWithdrawalForm({
               <SubmitButton
                 size="sm"
                 variant="destructive"
-                className="bg-emerald-600 hover:bg-emerald-700"
+                className="bg-[var(--pos)] hover:bg-[var(--pos)]"
                 title={`Confirm the live payout for ${request.requestedByName ?? "this member"}.`}
               >
                 Confirm Payout
@@ -155,7 +155,7 @@ export function WithdrawalRequestCard({
   const currentUserVote = request.votes.find((vote) => vote.voterId === currentUserId);
 
   return (
-    <Card className="border-amber-200/80 bg-amber-50/20">
+    <Card className="border-[var(--warn)] bg-[var(--warn-bg)]">
       <CardHeader className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle className="text-base">Withdrawal Request</CardTitle>
@@ -163,14 +163,14 @@ export function WithdrawalRequestCard({
             {request.status}
           </Badge>
         </div>
-        <div className="text-sm text-zinc-600">
+        <div className="text-sm text-[var(--ink-2)]">
           Requested by {request.requestedByName ?? "Unknown"} · {formatTimestamp(request.createdAt)}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
           <p className="text-lg font-semibold text-[var(--ink)]">{formatCurrency(request.amountCents)}</p>
-          <p className="mt-1 text-sm text-zinc-600">{request.reason ?? "No reason provided."}</p>
+          <p className="mt-1 text-sm text-[var(--ink-2)]">{request.reason ?? "No reason provided."}</p>
         </div>
 
         <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--ink-2)]">
@@ -179,7 +179,7 @@ export function WithdrawalRequestCard({
 
         <div className="space-y-2">
           {request.votes.length === 0 ? (
-            <p className="text-sm text-zinc-500">No votes recorded yet.</p>
+            <p className="text-sm text-[var(--muted)]">No votes recorded yet.</p>
           ) : (
             request.votes.map((vote) => (
               <div

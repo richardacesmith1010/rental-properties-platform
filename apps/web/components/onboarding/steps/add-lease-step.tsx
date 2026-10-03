@@ -48,8 +48,8 @@ export function AddLeaseStep({ unitId, monthlyRentDollars, onCreateLease, onComp
   return (
     <div className="space-y-4">
       <div className="text-center">
-        <h3 className="text-lg font-semibold text-zinc-900">Create a lease</h3>
-        <p className="mt-1 text-sm text-zinc-500">
+        <h3 className="text-lg font-semibold text-[var(--ink)]">Create a lease</h3>
+        <p className="mt-1 text-sm text-[var(--muted)]">
           Set up a lease for your new unit. You can always edit this later.
         </p>
       </div>
@@ -68,7 +68,7 @@ export function AddLeaseStep({ unitId, monthlyRentDollars, onCreateLease, onComp
         <input type="hidden" name="unitId" value={unitId} />
 
         <div>
-          <label htmlFor="wiz-tenantProfileId" className="mb-1 block text-sm font-medium text-zinc-700">
+          <label htmlFor="wiz-tenantProfileId" className="mb-1 block text-sm font-medium text-[var(--ink-2)]">
             Tenant Profile ID
           </label>
           <Input
@@ -77,20 +77,20 @@ export function AddLeaseStep({ unitId, monthlyRentDollars, onCreateLease, onComp
             placeholder="550e8400-e29b-41d4-a716-446655440000"
             required
           />
-          <p className="mt-0.5 text-xs text-zinc-400">
+          <p className="mt-0.5 text-xs text-[var(--faint)]">
             The tenant must already have a Domus profile. Enter their profile ID.
           </p>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label htmlFor="wiz-startDate" className="mb-1 block text-sm font-medium text-zinc-700">
+            <label htmlFor="wiz-startDate" className="mb-1 block text-sm font-medium text-[var(--ink-2)]">
               Start Date
             </label>
             <Input id="wiz-startDate" name="startDate" type="date" defaultValue={defaultStartDate()} required />
           </div>
           <div>
-            <label htmlFor="wiz-endDate" className="mb-1 block text-sm font-medium text-zinc-700">
+            <label htmlFor="wiz-endDate" className="mb-1 block text-sm font-medium text-[var(--ink-2)]">
               End Date
             </label>
             <Input id="wiz-endDate" name="endDate" type="date" defaultValue={defaultEndDate()} required />
@@ -99,7 +99,7 @@ export function AddLeaseStep({ unitId, monthlyRentDollars, onCreateLease, onComp
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label htmlFor="wiz-leaseRent" className="mb-1 block text-sm font-medium text-zinc-700">
+            <label htmlFor="wiz-leaseRent" className="mb-1 block text-sm font-medium text-[var(--ink-2)]">
               Monthly Rent ($)
             </label>
             <Input
@@ -113,7 +113,7 @@ export function AddLeaseStep({ unitId, monthlyRentDollars, onCreateLease, onComp
             />
           </div>
           <div>
-            <label htmlFor="wiz-dueDay" className="mb-1 block text-sm font-medium text-zinc-700">
+            <label htmlFor="wiz-dueDay" className="mb-1 block text-sm font-medium text-[var(--ink-2)]">
               Due Day of Month
             </label>
             <Input id="wiz-dueDay" name="dueDayOfMonth" type="number" min={1} max={28} defaultValue={1} required />
@@ -121,7 +121,7 @@ export function AddLeaseStep({ unitId, monthlyRentDollars, onCreateLease, onComp
         </div>
 
         <div>
-          <label htmlFor="wiz-deposit" className="mb-1 block text-sm font-medium text-zinc-700">
+          <label htmlFor="wiz-deposit" className="mb-1 block text-sm font-medium text-[var(--ink-2)]">
             Security Deposit ($)
           </label>
           <Input id="wiz-deposit" name="depositDollars" type="number" min={0} step="0.01" defaultValue={0} />
@@ -129,7 +129,7 @@ export function AddLeaseStep({ unitId, monthlyRentDollars, onCreateLease, onComp
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label htmlFor="wiz-lateFee" className="mb-1 block text-sm font-medium text-zinc-700">
+            <label htmlFor="wiz-lateFee" className="mb-1 block text-sm font-medium text-[var(--ink-2)]">
               Late Fee ($)
             </label>
             <Input
@@ -140,10 +140,10 @@ export function AddLeaseStep({ unitId, monthlyRentDollars, onCreateLease, onComp
               step="0.01"
               defaultValue={suggestedLateFee}
             />
-            <p className="mt-0.5 text-xs text-zinc-400">Suggested default is 5% of monthly rent.</p>
+            <p className="mt-0.5 text-xs text-[var(--faint)]">Suggested default is 5% of monthly rent.</p>
           </div>
           <div>
-            <label htmlFor="wiz-gracePeriodDays" className="mb-1 block text-sm font-medium text-zinc-700">
+            <label htmlFor="wiz-gracePeriodDays" className="mb-1 block text-sm font-medium text-[var(--ink-2)]">
               Grace Period (days)
             </label>
             <Input
@@ -165,7 +165,7 @@ export function AddLeaseStep({ unitId, monthlyRentDollars, onCreateLease, onComp
       <button
         type="button"
         onClick={onSkip}
-        className="block w-full text-center text-sm text-zinc-400 hover:text-zinc-600"
+        className="block w-full text-center text-sm text-[var(--faint)] hover:text-[var(--ink-2)]"
       >
         Skip for now
       </button>

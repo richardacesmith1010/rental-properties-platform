@@ -33,22 +33,22 @@ const activityTypeConfig: Record<
 > = {
   infraction: {
     label: "Infraction",
-    badgeClassName: "border-rose-200 bg-rose-50 text-rose-700",
+    badgeClassName: "border-[var(--crit)] bg-[var(--crit-bg)] text-[var(--crit)]",
     icon: ShieldAlert
   },
   notice: {
     label: "Notice Sent",
-    badgeClassName: "border-amber-200 bg-amber-50 text-amber-700",
+    badgeClassName: "border-[var(--warn)] bg-[var(--warn-bg)] text-[var(--warn)]",
     icon: BellRing
   },
   warning: {
     label: "Warning",
-    badgeClassName: "border-orange-200 bg-orange-50 text-orange-700",
+    badgeClassName: "border-[var(--warn)] bg-[var(--warn-bg)] text-[var(--warn)]",
     icon: AlertTriangle
   },
   note: {
     label: "Note",
-    badgeClassName: "border-sky-200 bg-sky-50 text-sky-700",
+    badgeClassName: "border-[var(--accent-line)] bg-[var(--accent-weak)] text-[var(--accent)]",
     icon: FileText
   }
 };

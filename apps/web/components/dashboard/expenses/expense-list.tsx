@@ -109,9 +109,9 @@ function ExpenseRow({ expense, vendors, receiptFiles, onUpdateExpense, onDeleteE
   return (
     <DataRow last={last}>
       <div className="min-w-0 flex-1">
-        <p className="text-base font-medium text-zinc-900">{expense.propertyName} • {formatCategory(expense.category)}</p>
-        <p className="mt-0.5 text-sm text-zinc-500">{formatDate(expense.expenseDate)}{expense.vendorName ? ` • ${expense.vendorName}` : ""}{expense.recurring ? ` • Recurs ${expense.recurringFrequency ?? "monthly"}` : ""}</p>
-        {expense.description ? <p className="mt-0.5 text-sm text-zinc-500">{expense.description}</p> : null}
+        <p className="text-base font-medium text-[var(--ink)]">{expense.propertyName} • {formatCategory(expense.category)}</p>
+        <p className="mt-0.5 text-sm text-[var(--muted)]">{formatDate(expense.expenseDate)}{expense.vendorName ? ` • ${expense.vendorName}` : ""}{expense.recurring ? ` • Recurs ${expense.recurringFrequency ?? "monthly"}` : ""}</p>
+        {expense.description ? <p className="mt-0.5 text-sm text-[var(--muted)]">{expense.description}</p> : null}
         {isManaging ? (
           <>
             <form action={updateAction} className="mt-3 grid gap-2 sm:grid-cols-3">
@@ -120,20 +120,20 @@ function ExpenseRow({ expense, vendors, receiptFiles, onUpdateExpense, onDeleteE
               <Input name="amountDollars" type="number" min={0.01} step="0.01" defaultValue={expense.amountCents / 100} required />
               <Input name="expenseDate" type="date" defaultValue={expense.expenseDate} required />
               <Textarea name="description" rows={2} defaultValue={expense.description ?? ""} placeholder="Description" className="sm:col-span-3" />
-              <label className="flex items-center gap-2 text-xs text-zinc-600"><input type="checkbox" name="recurring" value="true" defaultChecked={expense.recurring} />Recurring</label>
+              <label className="flex items-center gap-2 text-xs text-[var(--ink-2)]"><input type="checkbox" name="recurring" value="true" defaultChecked={expense.recurring} />Recurring</label>
               <Select name="recurringFrequency" defaultValue={expense.recurringFrequency ?? ""}><option value="">Not recurring</option>{recurringFrequencies.map((frequency) => <option key={frequency} value={frequency}>{formatCategory(frequency)}</option>)}</Select>
               <Select name="vendorId" defaultValue={expense.vendorId ?? ""}><option value="">No vendor linked</option>{vendors.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.name}</option>)}</Select>
               <Select name="receiptFileId" defaultValue={expense.receiptFileId ?? ""}><option value="">No receipt file</option>{receiptFiles.map((file) => <option key={file.id} value={file.id}>{file.fileName}</option>)}</Select>
               <Input name="receiptFile" type="file" className="sm:col-span-2" />
               <div className="sm:col-span-3 flex items-center gap-2"><SubmitButton size="sm" variant="outline" title="Save updates to this expense.">Save Expense</SubmitButton><Badge variant="outline">{formatCurrency(expense.amountCents)}</Badge></div>
-              {updateState && !updateState.success ? <p className="sm:col-span-3 text-xs text-red-500">{updateState.error}</p> : null}
-              {updateState && updateState.success ? <p className="sm:col-span-3 text-xs text-emerald-600">Expense updated.</p> : null}
+              {updateState && !updateState.success ? <p className="sm:col-span-3 text-xs text-[var(--crit)]">{updateState.error}</p> : null}
+              {updateState && updateState.success ? <p className="sm:col-span-3 text-xs text-[var(--pos)]">Expense updated.</p> : null}
             </form>
             <form action={deleteAction} className="mt-2" ref={deleteFormRef}>
               <input type="hidden" name="expenseId" value={expense.id} />
               <SubmitButton size="sm" variant="destructive" onClick={(event) => { event.preventDefault(); setConfirmDeleteOpen(true); }} title="Delete this expense record permanently.">Delete</SubmitButton>
-              {deleteState && !deleteState.success ? <p className="mt-1 text-xs text-red-500">{deleteState.error}</p> : null}
-              {deleteState && deleteState.success ? <p className="mt-1 text-xs text-emerald-600">Expense deleted.</p> : null}
+              {deleteState && !deleteState.success ? <p className="mt-1 text-xs text-[var(--crit)]">{deleteState.error}</p> : null}
+              {deleteState && deleteState.success ? <p className="mt-1 text-xs text-[var(--pos)]">Expense deleted.</p> : null}
             </form>
           </>
         ) : null}

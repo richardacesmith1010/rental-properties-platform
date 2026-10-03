@@ -383,7 +383,7 @@ export function InstallDomusSettingsCard() {
 
         {isInstalled ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+            <CheckCircle2 className="h-4 w-4 text-[var(--pos)]" />
             Standalone mode is active for this device.
           </div>
         ) : null}

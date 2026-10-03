@@ -89,7 +89,7 @@ export function OperationsSection({
   return (
     <div id="operations" className="space-y-4">
       <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
-        <p className="text-xs uppercase tracking-wide text-zinc-500">Operations Workflow</p>
+        <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Operations Workflow</p>
         <div className="mt-2 flex flex-wrap gap-2">
           {tasks.map((item) => (
             <Button
@@ -123,7 +123,7 @@ export function OperationsSection({
               title={item.description}
             >
               <p className="text-sm font-semibold text-[var(--ink)]">{item.title}</p>
-              <p className="mt-2 text-sm text-zinc-600">{item.description}</p>
+              <p className="mt-2 text-sm text-[var(--ink-2)]">{item.description}</p>
             </button>
           ))}
         </AnimatedList>

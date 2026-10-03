@@ -87,7 +87,7 @@ function WithdrawalRequestForm({
   }, [state]);
 
   return (
-    <Card className="mt-3 border-amber-200/80 bg-amber-50/20">
+    <Card className="mt-3 border-[var(--warn)] bg-[var(--warn-bg)]">
       <CardHeader>
         <CardTitle>Request Withdrawal</CardTitle>
       </CardHeader>
@@ -97,7 +97,7 @@ function WithdrawalRequestForm({
         <form action={formAction} className="space-y-4">
           <input type="hidden" name="accountId" value={accountId} />
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-zinc-700">Amount</label>
+            <label className="block text-sm font-medium text-[var(--ink-2)]">Amount</label>
             <Input
               name="amountDollars"
               type="number"
@@ -110,7 +110,7 @@ function WithdrawalRequestForm({
             />
           </div>
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-zinc-700">Reason</label>
+            <label className="block text-sm font-medium text-[var(--ink-2)]">Reason</label>
             <textarea
               name="reason"
               value={reason}
@@ -209,7 +209,7 @@ export function OwnershipSection(props: OwnershipSectionProps) {
           <CardTitle>Ownership Workflow</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-zinc-600">One field at a time. Press Enter or Next to continue.</p>
+          <p className="text-sm text-[var(--ink-2)]">One field at a time. Press Enter or Next to continue.</p>
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"

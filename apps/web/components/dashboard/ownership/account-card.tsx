@@ -58,7 +58,7 @@ function RenameAccountForm({
         <form action={formAction} className="space-y-4">
           <input type="hidden" name="accountId" value={account.id} />
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-zinc-700">Account name</label>
+            <label className="block text-sm font-medium text-[var(--ink-2)]">Account name</label>
             <Input
               name="newName"
               value={newName}

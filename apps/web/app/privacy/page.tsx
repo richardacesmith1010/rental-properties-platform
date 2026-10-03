@@ -12,13 +12,13 @@ export default function PrivacyPage() {
       <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 pb-16 pt-10 md:px-10">
         <header className="space-y-3">
           <h1 className="text-3xl font-semibold tracking-tight text-white">Privacy Policy</h1>
-          <p className="text-sm text-slate-300">Last updated: March 4, 2026</p>
-          <p className="rounded-xl border border-amber-300/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+          <p className="text-sm text-[var(--faint)]">Last updated: March 4, 2026</p>
+          <p className="rounded-xl border border-[var(--warn)] bg-[var(--warn-bg)] px-4 py-3 text-sm text-[var(--warn)]">
             This document was last updated on March 4, 2026. Please review periodically for changes.
           </p>
         </header>
 
-        <section className="space-y-6 rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm leading-7 text-slate-300">
+        <section className="space-y-6 rounded-2xl border border-white/10 bg-[color-mix(in_srgb,var(--surface)_3%,transparent)] p-6 text-sm leading-7 text-[var(--faint)]">
           <article className="space-y-2">
             <h2 className="text-base font-semibold text-white">Information We Collect</h2>
             <p>
@@ -71,7 +71,7 @@ export default function PrivacyPage() {
             <h2 className="text-base font-semibold text-white">Contact Information</h2>
             <p>
               Questions about this policy can be sent to
-              {" "}<a className="text-violet-200 underline-offset-4 hover:underline" href="mailto:privacy@domusbase.com">privacy@domusbase.com</a>.
+              {" "}<a className="text-[var(--accent)] underline-offset-4 hover:underline" href="mailto:privacy@domusbase.com">privacy@domusbase.com</a>.
             </p>
           </article>
         </section>

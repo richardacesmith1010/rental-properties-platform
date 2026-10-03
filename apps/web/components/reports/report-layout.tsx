@@ -209,7 +209,7 @@ export function ReportSection<T>({
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100">
+            <tbody className="divide-y divide-[var(--line)]">
               {sortedRows.map((row, index) => {
                 const rowId = getRowId?.(row, index) ?? `${id}-${index}`;
                 const expanded = expandedRowIds.has(rowId);

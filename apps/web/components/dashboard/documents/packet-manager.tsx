@@ -29,10 +29,10 @@ function StepPill({ label, active, done, skipped }: { label: string; active: boo
   const className = active
     ? "border-[var(--accent-line)] bg-[var(--accent-weak)] text-[var(--accent)]"
     : done
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      ? "border-[var(--pos)] bg-[var(--pos-bg)] text-[var(--pos)]"
       : skipped
-        ? "border-amber-200 bg-amber-50 text-amber-700"
-        : "border-zinc-200 bg-zinc-50 text-zinc-500";
+        ? "border-[var(--warn)] bg-[var(--warn-bg)] text-[var(--warn)]"
+        : "border-[var(--line)] bg-[var(--surface-2)] text-[var(--muted)]";
 
   return <div className={`rounded-md border px-2 py-2 text-xs ${className}`}>{label}</div>;
 }
@@ -66,7 +66,7 @@ export function PacketManager({ templates, leases, onCreatePacket, onCancel }: P
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-zinc-600">One step at a time. Press Enter or Next to continue. Skip is available when it makes sense.</p>
+        <p className="text-sm text-[var(--ink-2)]">One step at a time. Press Enter or Next to continue. Skip is available when it makes sense.</p>
         <FormError state={state} />
         <FormSuccess state={state} message="Packet created as draft." />
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -76,7 +76,7 @@ export function PacketManager({ templates, leases, onCreatePacket, onCancel }: P
         </div>
         {step === 0 ? (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Step 1: Select source template.</p>
+            <p className="text-sm text-[var(--ink-2)]">Step 1: Select source template.</p>
             <Select value={draft.templateId} onChange={(event) => setDraft((current) => ({ ...current, templateId: event.target.value }))}>
               <option value="">Select template</option>
               {templates.map((template) => (
@@ -87,7 +87,7 @@ export function PacketManager({ templates, leases, onCreatePacket, onCancel }: P
         ) : null}
         {step === 1 ? (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Step 2: Select lease to attach this packet.</p>
+            <p className="text-sm text-[var(--ink-2)]">Step 2: Select lease to attach this packet.</p>
             <Select value={draft.leaseId} onChange={(event) => setDraft((current) => ({ ...current, leaseId: event.target.value }))}>
               <option value="">Select lease</option>
               {activeLeases.map((lease) => (
@@ -98,8 +98,8 @@ export function PacketManager({ templates, leases, onCreatePacket, onCancel }: P
         ) : null}
         {step === 2 ? (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">Final step: review and create draft packet.</p>
-            <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-700">
+            <p className="text-sm text-[var(--ink-2)]">Final step: review and create draft packet.</p>
+            <div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-3 py-3 text-sm text-[var(--ink-2)]">
               <p><span className="font-semibold">Template:</span> {templates.find((template) => template.id === draft.templateId)?.name ?? "Not set"}</p>
               <p><span className="font-semibold">Lease:</span> {activeLeases.find((lease) => lease.id === draft.leaseId)?.unitLabel ?? "Not set"}</p>
             </div>

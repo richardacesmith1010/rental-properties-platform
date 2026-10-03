@@ -63,7 +63,7 @@ export function AutopayCard({
           </form>
         </div>
         {feedbackState && !feedbackState.success ? (
-          <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700">
+          <p className="mt-3 rounded-lg border border-[var(--crit)] bg-[var(--crit-bg)] px-3 py-2 text-sm text-[var(--crit)]">
             {feedbackState.error}
           </p>
         ) : null}
@@ -73,7 +73,7 @@ export function AutopayCard({
 
   if (!enrollment.enabled) {
     return (
-      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+      <div className="rounded-xl border border-[var(--warn)] bg-[var(--warn-bg)] p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-semibold text-foreground">Autopay Paused</p>
@@ -93,7 +93,7 @@ export function AutopayCard({
           Saved method: {enrollment.brand ? `${enrollment.brand.toUpperCase()} ` : ""}•••• {enrollment.last4}
         </p>
         {feedbackState && !feedbackState.success ? (
-          <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700">
+          <p className="mt-3 rounded-lg border border-[var(--crit)] bg-[var(--crit-bg)] px-3 py-2 text-sm text-[var(--crit)]">
             {feedbackState.error}
           </p>
         ) : null}
@@ -102,7 +102,7 @@ export function AutopayCard({
   }
 
   return (
-    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+    <div className="rounded-xl border border-[var(--pos)] bg-[var(--pos-bg)] p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm font-semibold text-foreground">Autopay Active</p>
@@ -124,7 +124,7 @@ export function AutopayCard({
         </form>
       </div>
       {disableState && !disableState.success ? (
-        <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700">
+        <p className="mt-3 rounded-lg border border-[var(--crit)] bg-[var(--crit-bg)] px-3 py-2 text-sm text-[var(--crit)]">
           {disableState.error}
         </p>
       ) : null}

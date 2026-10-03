@@ -27,8 +27,8 @@ export function InviteTenantStep({ propertyId, onInviteTenant, onComplete, onSki
   return (
     <div className="space-y-4">
       <div className="text-center">
-        <h3 className="text-lg font-semibold text-zinc-900">Invite a tenant</h3>
-        <p className="mt-1 text-sm text-zinc-500">
+        <h3 className="text-lg font-semibold text-[var(--ink)]">Invite a tenant</h3>
+        <p className="mt-1 text-sm text-[var(--muted)]">
           Send an invite so your tenant can sign up and view their dashboard.
         </p>
       </div>
@@ -41,14 +41,14 @@ export function InviteTenantStep({ propertyId, onInviteTenant, onComplete, onSki
         <input type="hidden" name="propertyId" value={propertyId} />
 
         <div>
-          <label htmlFor="wiz-inviteEmail" className="mb-1 block text-sm font-medium text-zinc-700">
+          <label htmlFor="wiz-inviteEmail" className="mb-1 block text-sm font-medium text-[var(--ink-2)]">
             Tenant Email
           </label>
           <Input id="wiz-inviteEmail" name="email" type="email" placeholder="tenant@example.com" required />
         </div>
 
         <div>
-          <label htmlFor="wiz-inviteName" className="mb-1 block text-sm font-medium text-zinc-700">
+          <label htmlFor="wiz-inviteName" className="mb-1 block text-sm font-medium text-[var(--ink-2)]">
             Full Name
           </label>
           <Input id="wiz-inviteName" name="fullName" placeholder="Jane Doe" required />
@@ -62,7 +62,7 @@ export function InviteTenantStep({ propertyId, onInviteTenant, onComplete, onSki
       <button
         type="button"
         onClick={onSkip}
-        className="block w-full text-center text-sm text-zinc-400 hover:text-zinc-600"
+        className="block w-full text-center text-sm text-[var(--faint)] hover:text-[var(--ink-2)]"
       >
         Skip for now
       </button>

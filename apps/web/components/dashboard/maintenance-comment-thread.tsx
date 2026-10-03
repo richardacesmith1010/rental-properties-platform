@@ -77,28 +77,28 @@ export function MaintenanceCommentThread({
               key={comment.id}
               className={`rounded-xl border px-4 py-3 ${
                 comment.isInternal
-                  ? "border-amber-200 bg-amber-50"
-                  : "border-zinc-200 bg-zinc-50/80"
+                  ? "border-[var(--warn)] bg-[var(--warn-bg)]"
+                  : "border-[var(--line)] bg-[var(--surface-2)]"
               }`}
             >
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-sm font-semibold text-[var(--ink)]">{comment.authorName}</p>
                 <Badge variant="outline">{roleLabel(comment.authorRole)}</Badge>
                 {comment.isInternal ? <Badge variant="warning">Internal</Badge> : null}
-                <p className="text-xs text-zinc-500">{formatDateTime(comment.createdAt)}</p>
+                <p className="text-xs text-[var(--muted)]">{formatDateTime(comment.createdAt)}</p>
               </div>
-              <p className="mt-2 whitespace-pre-wrap text-sm text-zinc-700">{comment.body}</p>
+              <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--ink-2)]">{comment.body}</p>
             </div>
           ))
         )}
       </div>
 
-      <form action={action} className="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+      <form action={action} className="space-y-3 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-4">
         <input type="hidden" name="ticketId" value={ticketId} />
         <input type="hidden" name="isInternal" value={isInternal ? "true" : "false"} />
         <CommentState state={state} />
         <div className="space-y-2">
-          <label htmlFor={`ticket-comment-${ticketId}`} className="text-sm font-medium text-zinc-700">
+          <label htmlFor={`ticket-comment-${ticketId}`} className="text-sm font-medium text-[var(--ink-2)]">
             Add Comment
           </label>
           <Textarea
@@ -110,7 +110,7 @@ export function MaintenanceCommentThread({
           />
         </div>
         {canAddInternal ? (
-          <label className="flex items-center gap-2 text-sm text-zinc-600">
+          <label className="flex items-center gap-2 text-sm text-[var(--ink-2)]">
             <input
               type="checkbox"
               checked={isInternal}

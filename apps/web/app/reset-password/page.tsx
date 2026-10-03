@@ -20,10 +20,10 @@ export default async function ResetPasswordPage() {
     <div className="app-surface flex min-h-screen flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--ink)]">
             Reset Your Password
           </h1>
-          <p className="mt-2 text-sm text-zinc-500">
+          <p className="mt-2 text-sm text-[var(--muted)]">
             Enter a new password for your Domus account.
           </p>
         </div>

@@ -153,18 +153,18 @@ function ListingRow({
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-sm font-semibold text-[var(--ink)]">{listing.headline}</p>
-          <p className="text-xs text-zinc-500">{listing.propertyName}</p>
+          <p className="text-xs text-[var(--muted)]">{listing.propertyName}</p>
         </div>
         <Badge variant={listingStatusBadgeVariant(listing.status)} className="uppercase">
           {listing.status}
         </Badge>
       </div>
-      <p className="mt-1 text-xs text-zinc-600">{listing.description ?? "No description provided."}</p>
-      <p className="mt-1 text-xs text-zinc-600">
+      <p className="mt-1 text-xs text-[var(--ink-2)]">{listing.description ?? "No description provided."}</p>
+      <p className="mt-1 text-xs text-[var(--ink-2)]">
         <span className="font-semibold">Rent:</span> {formatCurrency(listing.askingRentCents)}
         {listing.availableOn ? ` • Available ${formatDate(listing.availableOn)}` : ""}
       </p>
-      <div className="mt-2 flex flex-wrap gap-2 text-xs text-zinc-600">
+      <div className="mt-2 flex flex-wrap gap-2 text-xs text-[var(--ink-2)]">
         <span>{listing.bedroomCount ?? "?"} beds</span>
         <span>{listing.bathroomCount ?? "?"} baths</span>
       </div>
@@ -181,8 +181,8 @@ function ListingRow({
           Update status
         </SubmitButton>
       </form>
-      {state && !state.success && <p className="mt-2 text-xs text-red-600">{state.error}</p>}
-      {state && state.success && <p className="mt-2 text-xs text-emerald-600">Listing status updated.</p>}
+      {state && !state.success && <p className="mt-2 text-xs text-[var(--crit)]">{state.error}</p>}
+      {state && state.success && <p className="mt-2 text-xs text-[var(--pos)]">Listing status updated.</p>}
     </div>
   );
 }
@@ -257,8 +257,8 @@ export function LeasingHubSection({
                 <p className="text-sm font-semibold text-[var(--ink)]">{stage.label}</p>
                 <Badge variant={stage.done ? "success" : "outline"}>{stage.done ? "Done" : "Pending"}</Badge>
               </div>
-              <p className="text-xs text-zinc-600">{stage.description}</p>
-              <p className="text-xs font-medium text-zinc-700">{stage.metric}</p>
+              <p className="text-xs text-[var(--ink-2)]">{stage.description}</p>
+              <p className="text-xs font-medium text-[var(--ink-2)]">{stage.metric}</p>
               <Button
                 type="button"
                 size="sm"
@@ -284,8 +284,8 @@ export function LeasingHubSection({
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          <form action={createListingAction} className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Create listing</p>
+          <form action={createListingAction} className="rounded-lg border border-[var(--line)] bg-[var(--surface-2)] p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Create listing</p>
             <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <Select name="propertyId" required>
                 <option value="">Select property</option>
@@ -308,10 +308,10 @@ export function LeasingHubSection({
               </SubmitButton>
             </div>
               {createListingState && !createListingState.success && (
-                <p className="mt-2 text-xs text-red-600">{createListingState.error}</p>
+                <p className="mt-2 text-xs text-[var(--crit)]">{createListingState.error}</p>
               )}
               {createListingState && createListingState.success && (
-                <p className="mt-2 text-xs text-emerald-600">Listing created in draft status.</p>
+                <p className="mt-2 text-xs text-[var(--pos)]">Listing created in draft status.</p>
               )}
             </form>
 

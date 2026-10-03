@@ -118,8 +118,8 @@ export function OpsDashboard({
       <div className="mx-auto max-w-6xl space-y-6">
         <header className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Ops Status</h1>
-            <p className="text-sm text-zinc-600">
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--ink)]">Ops Status</h1>
+            <p className="text-sm text-[var(--ink-2)]">
               Monitor service health, environment readiness, and scheduled job history.
             </p>
           </div>
@@ -127,7 +127,7 @@ export function OpsDashboard({
             <button
               type="button"
               onClick={() => void fetchHealth()}
-              className="inline-flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+              className="inline-flex items-center gap-2 rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--ink-2)] transition hover:bg-[var(--surface-2)]"
               title="Run the health checks again."
               disabled={loading}
             >
@@ -136,7 +136,7 @@ export function OpsDashboard({
             </button>
             <Link
               href="/owner"
-              className="inline-flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+              className="inline-flex items-center gap-2 rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--ink-2)] transition hover:bg-[var(--surface-2)]"
               title="Return to the owner dashboard."
             >
               Back to Owner Dashboard
@@ -175,7 +175,7 @@ export function OpsDashboard({
             <CardHeader className="flex flex-row items-start justify-between gap-3">
               <div>
                 <CardTitle>System Health</CardTitle>
-                <p className="mt-1 text-sm text-zinc-500">
+                <p className="mt-1 text-sm text-[var(--muted)]">
                   Live checks against Supabase and Stripe with per-service latency.
                 </p>
               </div>
@@ -188,13 +188,13 @@ export function OpsDashboard({
                 <>
                   <div className="grid gap-3 md:grid-cols-2">
                     {Object.entries(health.services).map(([name, service]) => (
-                      <div key={name} className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                      <div key={name} className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-4">
                         <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2 text-sm font-semibold capitalize text-zinc-800">
+                          <div className="flex items-center gap-2 text-sm font-semibold capitalize text-[var(--ink)]">
                             {service.ok ? (
-                              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                              <CheckCircle2 className="h-4 w-4 text-[var(--pos)]" />
                             ) : (
-                              <XCircle className="h-4 w-4 text-red-600" />
+                              <XCircle className="h-4 w-4 text-[var(--crit)]" />
                             )}
                             {name}
                           </div>
@@ -202,14 +202,14 @@ export function OpsDashboard({
                             {service.ok ? "OK" : "Down"}
                           </Badge>
                         </div>
-                        <p className="mt-3 text-sm text-zinc-600">Latency: {service.latencyMs} ms</p>
+                        <p className="mt-3 text-sm text-[var(--ink-2)]">Latency: {service.latencyMs} ms</p>
                         {service.error ? (
-                          <p className="mt-2 text-xs text-red-600">{service.error}</p>
+                          <p className="mt-2 text-xs text-[var(--crit)]">{service.error}</p>
                         ) : null}
                       </div>
                     ))}
                   </div>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-[var(--muted)]">
                     Last checked{" "}
                     <RelativeTime
                       value={health.timestamp}
@@ -220,7 +220,7 @@ export function OpsDashboard({
                   </p>
                 </>
               ) : (
-                <div className="rounded-xl border border-dashed border-zinc-200 p-6 text-sm text-zinc-500">
+                <div className="rounded-xl border border-dashed border-[var(--line)] p-6 text-sm text-[var(--muted)]">
                   Loading live health data...
                 </div>
               )}
@@ -236,7 +236,7 @@ export function OpsDashboard({
                 href="https://supabase.com/dashboard/project/vawqdqkaguhdgfhdebqw"
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 transition hover:bg-zinc-50"
+                className="flex items-center justify-between rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--ink-2)] transition hover:bg-[var(--surface-2)]"
                 title="Open the Supabase project dashboard in a new tab."
               >
                 Supabase Dashboard
@@ -246,7 +246,7 @@ export function OpsDashboard({
                 href="https://vercel.com/dashboard"
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 transition hover:bg-zinc-50"
+                className="flex items-center justify-between rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--ink-2)] transition hover:bg-[var(--surface-2)]"
                 title="Open the Vercel dashboard in a new tab."
               >
                 Vercel Dashboard
@@ -256,7 +256,7 @@ export function OpsDashboard({
                 href="/api/health"
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 transition hover:bg-zinc-50"
+                className="flex items-center justify-between rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--ink-2)] transition hover:bg-[var(--surface-2)]"
                 title="Open the raw health endpoint in a new tab."
               >
                 Raw Health Endpoint
@@ -269,24 +269,24 @@ export function OpsDashboard({
             <Card>
           <CardHeader>
             <CardTitle>Environment Status</CardTitle>
-            <p className="mt-1 text-sm text-zinc-500">
+            <p className="mt-1 text-sm text-[var(--muted)]">
               Grouped readiness view for required runtime configuration.
             </p>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
               {Object.entries(envSummary).map(([serviceName, group]) => (
-                <div key={serviceName} className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                <div key={serviceName} className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-4">
                   <div className="flex items-center justify-between gap-3">
-                    <div className="text-sm font-semibold capitalize text-zinc-800">{serviceName}</div>
+                    <div className="text-sm font-semibold capitalize text-[var(--ink)]">{serviceName}</div>
                     <Badge variant={group.configured ? "success" : "destructive"}>
                       {group.configured ? "Configured" : "Missing"}
                     </Badge>
                   </div>
                   {serviceName === "stripe" && group.mode ? (
-                    <p className="mt-2 text-xs uppercase tracking-wide text-zinc-500">Mode: {group.mode}</p>
+                    <p className="mt-2 text-xs uppercase tracking-wide text-[var(--muted)]">Mode: {group.mode}</p>
                   ) : null}
-                  <ul className="mt-3 space-y-2 text-xs text-zinc-600">
+                  <ul className="mt-3 space-y-2 text-xs text-[var(--ink-2)]">
                     {Object.entries(group.vars).map(([name, configured]) => (
                       <li key={name} className="flex items-center justify-between gap-3">
                         <span className="truncate">{name}</span>
@@ -307,7 +307,7 @@ export function OpsDashboard({
             <div className="flex items-center justify-between gap-3">
               <div>
                 <CardTitle>Cron Run History</CardTitle>
-                <p className="mt-1 text-sm text-zinc-500">
+                <p className="mt-1 text-sm text-[var(--muted)]">
                   Last 10 scheduled charge-generation runs with per-operation timing.
                 </p>
               </div>
@@ -324,14 +324,14 @@ export function OpsDashboard({
             ) : (
               <div className="space-y-3">
                 {initialCronRuns.map((run) => (
-                  <div key={run.id} className="rounded-xl border border-zinc-200 bg-white p-4">
+                  <div key={run.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-zinc-800">{run.job_name}</p>
+                          <p className="text-sm font-semibold text-[var(--ink)]">{run.job_name}</p>
                           <Badge variant={statusVariant(run.status)}>{run.status.replace(/_/g, " ")}</Badge>
                         </div>
-                        <p className="mt-2 text-xs text-zinc-500">
+                        <p className="mt-2 text-xs text-[var(--muted)]">
                           Started {formatDateTime(run.started_at)} (
                           <RelativeTime
                             value={run.started_at}
@@ -341,7 +341,7 @@ export function OpsDashboard({
                           )
                         </p>
                         {run.completed_at ? (
-                          <p className="mt-1 text-xs text-zinc-500">
+                          <p className="mt-1 text-xs text-[var(--muted)]">
                             Completed {formatDateTime(run.completed_at)} (
                             <RelativeTime
                               value={run.completed_at}
@@ -351,35 +351,35 @@ export function OpsDashboard({
                             )
                           </p>
                         ) : null}
-                        {run.error ? <p className="mt-2 text-xs text-red-600">{run.error}</p> : null}
+                        {run.error ? <p className="mt-2 text-xs text-[var(--crit)]">{run.error}</p> : null}
                       </div>
-                      <div className="text-xs text-zinc-500">
+                      <div className="text-xs text-[var(--muted)]">
                         {run.operations.length} operation{run.operations.length === 1 ? "" : "s"}
                       </div>
                     </div>
 
-                    <details className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
-                      <summary className="cursor-pointer list-none text-sm font-medium text-zinc-700">
+                    <details className="mt-4 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-3 py-2">
+                      <summary className="cursor-pointer list-none text-sm font-medium text-[var(--ink-2)]">
                         View operation details
                       </summary>
                       <div className="mt-3 space-y-2">
                         {run.operations.length === 0 ? (
-                          <p className="text-xs text-zinc-500">No operation details recorded.</p>
+                          <p className="text-xs text-[var(--muted)]">No operation details recorded.</p>
                         ) : (
                           run.operations.map((operation) => (
                             <div
                               key={`${run.id}-${operation.name}`}
-                              className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+                              className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2"
                             >
                               <div className="flex items-center justify-between gap-3">
-                                <div className="text-sm font-medium text-zinc-800">{operation.name}</div>
+                                <div className="text-sm font-medium text-[var(--ink)]">{operation.name}</div>
                                 <div className="flex items-center gap-2">
                                   <Badge variant={statusVariant(operation.status)}>{operation.status}</Badge>
-                                  <span className="text-xs text-zinc-500">{operation.durationMs} ms</span>
+                                  <span className="text-xs text-[var(--muted)]">{operation.durationMs} ms</span>
                                 </div>
                               </div>
                               {operation.error ? (
-                                <p className="mt-2 text-xs text-red-600">{operation.error}</p>
+                                <p className="mt-2 text-xs text-[var(--crit)]">{operation.error}</p>
                               ) : null}
                             </div>
                           ))

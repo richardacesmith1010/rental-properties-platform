@@ -179,7 +179,7 @@ function ChargeMoreMenu({
                   setOpen(false);
                   onDelete();
                 }}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-[var(--crit)] transition hover:bg-[var(--crit-bg)]"
                 title="Delete this charge."
               >
                 <Trash2 className="h-4 w-4" />

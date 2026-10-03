@@ -69,7 +69,7 @@ export function GlobalSearch({ items, placeholder = "Search..." }: GlobalSearchP
   return (
     <div ref={containerRef} className="relative">
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--faint)]" />
         <Input
           value={query}
           onChange={(event) => {
@@ -91,11 +91,11 @@ export function GlobalSearch({ items, placeholder = "Search..." }: GlobalSearchP
         <div className="absolute z-50 mt-2 max-h-96 w-full overflow-y-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-[var(--domus-shadow-md)]">
           <ul id="search-results" role="listbox" aria-label="Search results" className="space-y-3">
             {groupedItems.length === 0 ? (
-              <li className="px-3 py-2 text-sm text-zinc-500">No matching results.</li>
+              <li className="px-3 py-2 text-sm text-[var(--muted)]">No matching results.</li>
             ) : (
               groupedItems.map(([category, group]) => (
                 <li key={category} role="presentation">
-                  <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                  <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--faint)]">
                     {category}
                   </p>
                   <ul className="space-y-1">
@@ -109,7 +109,7 @@ export function GlobalSearch({ items, placeholder = "Search..." }: GlobalSearchP
                         >
                           <p className="text-sm font-medium text-[var(--ink)]">{item.label}</p>
                           {item.description ? (
-                            <p className="text-xs text-zinc-500">{item.description}</p>
+                            <p className="text-xs text-[var(--muted)]">{item.description}</p>
                           ) : null}
                         </Link>
                       </li>

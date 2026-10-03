@@ -139,7 +139,7 @@ export function NotificationBellMenu({
           {unreadCount > 0 ? (
             <span
               className={cn(
-                "absolute -right-1.5 -top-1.5 inline-flex min-w-[1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-semibold text-white",
+                "absolute -right-1.5 -top-1.5 inline-flex min-w-[1rem] items-center justify-center rounded-full bg-[var(--crit)] px-1 text-[9px] font-semibold text-white",
                 badgeClassName
               )}
             >

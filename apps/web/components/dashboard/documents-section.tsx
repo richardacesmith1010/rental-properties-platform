@@ -152,15 +152,15 @@ function TemplateRow({ template, last, onDeleteTemplate }: { template: DocumentT
   return (
     <DataRow last={last}>
       <div>
-        <p className="text-base font-medium text-zinc-900">{template.name}</p>
-        <p className="mt-0.5 text-sm text-zinc-500">{template.category}</p>
-        <p className="mt-0.5 text-sm text-zinc-400">Created {formatDate(template.createdAt)}</p>
+        <p className="text-base font-medium text-[var(--ink)]">{template.name}</p>
+        <p className="mt-0.5 text-sm text-[var(--muted)]">{template.category}</p>
+        <p className="mt-0.5 text-sm text-[var(--faint)]">Created {formatDate(template.createdAt)}</p>
       </div>
       <form action={action} ref={formRef}>
         <input type="hidden" name="templateId" value={template.id} />
         <SubmitButton size="sm" variant="outline" onClick={(event) => { event.preventDefault(); setConfirmOpen(true); }} title="Delete this template.">Delete</SubmitButton>
-        {state && !state.success ? <p className="mt-1 text-xs text-red-500">{state.error}</p> : null}
-        {state && state.success ? <p className="mt-1 text-xs text-emerald-600">Template deleted.</p> : null}
+        {state && !state.success ? <p className="mt-1 text-xs text-[var(--crit)]">{state.error}</p> : null}
+        {state && state.success ? <p className="mt-1 text-xs text-[var(--pos)]">Template deleted.</p> : null}
       </form>
       <ConfirmDialog title="Delete Template?" description="Are you sure? This permanently removes this document template." confirmLabel="Delete Template" open={confirmOpen} onOpenChange={setConfirmOpen} onConfirm={() => formRef.current?.requestSubmit()} />
     </DataRow>
@@ -173,12 +173,12 @@ function PacketRow({ packet, last, onSendPacket, assetAccessEnabled }: { packet:
   return (
     <DataRow last={last}>
       <div className="min-w-0 flex-1">
-        <p className="text-base font-medium text-zinc-900">{packet.templateName}</p>
-        <p className="mt-0.5 text-sm text-zinc-500">{packet.propertyLabel}</p>
-        <p className="mt-0.5 text-sm text-zinc-400">Created {formatDate(packet.createdAt)}</p>
+        <p className="text-base font-medium text-[var(--ink)]">{packet.templateName}</p>
+        <p className="mt-0.5 text-sm text-[var(--muted)]">{packet.propertyLabel}</p>
+        <p className="mt-0.5 text-sm text-[var(--faint)]">Created {formatDate(packet.createdAt)}</p>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           <Badge variant={packet.status === "signed" ? "success" : packet.status === "sent" ? "warning" : "outline"}>{packet.status.toUpperCase()}</Badge>
-          {assetAccessEnabled ? <Link href={`/api/assets/document-packet/${packet.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center rounded-md border border-zinc-200 px-2 py-1 text-[11px] font-medium text-zinc-700 hover:bg-zinc-50" title="Open this document packet file.">Open File</Link> : null}
+          {assetAccessEnabled ? <Link href={`/api/assets/document-packet/${packet.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-medium text-[var(--ink-2)] hover:bg-[var(--surface-2)]" title="Open this document packet file.">Open File</Link> : null}
           {packet.signers.map((signer) => <Badge key={`${packet.id}-${signer.email}`} variant={signer.status === "signed" ? "success" : "outline"}>{signer.role}: {signer.status}</Badge>)}
         </div>
       </div>
@@ -186,8 +186,8 @@ function PacketRow({ packet, last, onSendPacket, assetAccessEnabled }: { packet:
         <form action={action}>
           <input type="hidden" name="packetId" value={packet.id} />
           <SubmitButton size="sm" variant="outline" title={packet.status === "draft" ? "Send this packet to signers." : "Resend this packet to signers."}>{packet.status === "draft" ? "Send" : "Resend"}</SubmitButton>
-          {state && !state.success ? <p className="mt-1 text-xs text-red-500">{state.error}</p> : null}
-          {state && state.success ? <p className="mt-1 text-xs text-emerald-600">{packet.status === "draft" ? "Packet sent." : "Packet resent."}</p> : null}
+          {state && !state.success ? <p className="mt-1 text-xs text-[var(--crit)]">{state.error}</p> : null}
+          {state && state.success ? <p className="mt-1 text-xs text-[var(--pos)]">{packet.status === "draft" ? "Packet sent." : "Packet resent."}</p> : null}
         </form>
       ) : null}
     </DataRow>
@@ -204,13 +204,13 @@ function PropertyFileRow({ file, last, onDeletePropertyFile, onUpdateFileVisibil
   return (
     <DataRow last={last}>
       <div className="min-w-0 flex-1">
-        <p className="text-base font-medium text-zinc-900">{file.fileName}</p>
-        <p className="mt-0.5 text-sm text-zinc-500">{file.propertyLabel} • {file.category.replaceAll("_", " ")} • {file.fileType}</p>
-        <p className="mt-0.5 text-sm text-zinc-400">Uploaded {formatDate(file.createdAt)}</p>
-        {file.description ? <p className="mt-0.5 text-sm text-zinc-500">{file.description}</p> : null}
+        <p className="text-base font-medium text-[var(--ink)]">{file.fileName}</p>
+        <p className="mt-0.5 text-sm text-[var(--muted)]">{file.propertyLabel} • {file.category.replaceAll("_", " ")} • {file.fileType}</p>
+        <p className="mt-0.5 text-sm text-[var(--faint)]">Uploaded {formatDate(file.createdAt)}</p>
+        {file.description ? <p className="mt-0.5 text-sm text-[var(--muted)]">{file.description}</p> : null}
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           <Badge variant={file.visibility === "all" ? "success" : "outline"}>{file.visibility === "all" ? "Tenant visible" : "Owner/Manager only"}</Badge>
-          <Link href={`/api/assets/property-file/${file.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center rounded-md border border-zinc-200 px-2 py-1 text-[11px] font-medium text-zinc-700 hover:bg-zinc-50" title="Open this property file.">Open File</Link>
+          <Link href={`/api/assets/property-file/${file.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-medium text-[var(--ink-2)] hover:bg-[var(--surface-2)]" title="Open this property file.">Open File</Link>
         </div>
       </div>
       <div className="flex flex-col items-end gap-2">
@@ -218,14 +218,14 @@ function PropertyFileRow({ file, last, onDeletePropertyFile, onUpdateFileVisibil
           <input type="hidden" name="fileId" value={file.id} />
           <input type="hidden" name="visibility" value={nextVisibility} />
           <SubmitButton size="sm" variant="outline" title={file.visibility === "all" ? "Hide this file from tenant view." : "Make this file visible to tenant view."}>{file.visibility === "all" ? "Hide from tenant" : "Show to tenant"}</SubmitButton>
-          {visibilityState && !visibilityState.success ? <p className="mt-1 text-xs text-red-500">{visibilityState.error}</p> : null}
-          {visibilityState && visibilityState.success ? <p className="mt-1 text-xs text-emerald-600">Visibility updated.</p> : null}
+          {visibilityState && !visibilityState.success ? <p className="mt-1 text-xs text-[var(--crit)]">{visibilityState.error}</p> : null}
+          {visibilityState && visibilityState.success ? <p className="mt-1 text-xs text-[var(--pos)]">Visibility updated.</p> : null}
         </form>
         <form action={deleteAction} ref={deleteFormRef}>
           <input type="hidden" name="fileId" value={file.id} />
           <SubmitButton size="sm" variant="outline" onClick={(event) => { event.preventDefault(); setConfirmDeleteOpen(true); }} title="Delete this file from the vault.">Delete</SubmitButton>
-          {deleteState && !deleteState.success ? <p className="mt-1 text-xs text-red-500">{deleteState.error}</p> : null}
-          {deleteState && deleteState.success ? <p className="mt-1 text-xs text-emerald-600">File deleted.</p> : null}
+          {deleteState && !deleteState.success ? <p className="mt-1 text-xs text-[var(--crit)]">{deleteState.error}</p> : null}
+          {deleteState && deleteState.success ? <p className="mt-1 text-xs text-[var(--pos)]">File deleted.</p> : null}
         </form>
       </div>
       <ConfirmDialog title="Delete File?" description="Are you sure? This permanently removes the file from the property vault." confirmLabel="Delete File" open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen} onConfirm={() => deleteFormRef.current?.requestSubmit()} />

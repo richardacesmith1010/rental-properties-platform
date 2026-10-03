@@ -58,9 +58,9 @@ function StatusCard({
   ctaLabel: string;
 }) {
   const tones = {
-    emerald: "border-emerald-200 bg-emerald-50 text-emerald-900",
-    amber: "border-amber-200 bg-amber-50 text-amber-900",
-    zinc: "border-zinc-200 bg-white text-zinc-900"
+    emerald: "border-[var(--pos)] bg-[var(--pos-bg)] text-[var(--pos)]",
+    amber: "border-[var(--warn)] bg-[var(--warn-bg)] text-[var(--warn)]",
+    zinc: "border-[var(--line)] bg-[var(--surface)] text-[var(--ink)]"
   } as const;
 
   return (
@@ -70,7 +70,7 @@ function StatusCard({
         <p className="mt-3 text-sm opacity-90">{description}</p>
         <Link
           href={href}
-          className="mt-6 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-700"
+          className="mt-6 inline-flex rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]"
         >
           {ctaLabel}
         </Link>

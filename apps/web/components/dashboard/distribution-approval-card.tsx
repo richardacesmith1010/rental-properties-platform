@@ -100,18 +100,18 @@ export function DistributionApprovalCard({
             {request.status}
           </Badge>
         </div>
-        <div className="text-sm text-zinc-600">
+        <div className="text-sm text-[var(--ink-2)]">
           Proposed by {request.requestedByName ?? "Unknown"} · {formatTimestamp(request.createdAt)}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3 md:grid-cols-2">
           <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Current</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Current</p>
             <p className="mt-2 text-sm text-[var(--ink)]">{describeConfig(request.currentConfig)}</p>
           </div>
           <div className="rounded-xl border border-[var(--accent-line)] bg-[var(--surface)] px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Proposed</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Proposed</p>
             <p className="mt-2 text-sm text-[var(--ink)]">{describeConfig(request.proposedConfig)}</p>
           </div>
         </div>
@@ -122,7 +122,7 @@ export function DistributionApprovalCard({
 
         <div className="space-y-2">
           {request.votes.length === 0 ? (
-            <p className="text-sm text-zinc-500">No votes recorded yet.</p>
+            <p className="text-sm text-[var(--muted)]">No votes recorded yet.</p>
           ) : (
             request.votes.map((vote) => (
               <div

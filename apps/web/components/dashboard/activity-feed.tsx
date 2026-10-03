@@ -54,7 +54,7 @@ export function ActivityFeed({ logs, limit = 20 }: ActivityFeedProps) {
             {visibleLogs.map((log) => {
               const Icon = iconForEntity(log.entityType);
               return (
-                <div key={log.id} className="flex items-start gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+                <div key={log.id} className="flex items-start gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-4 py-3">
                   <div className="rounded-lg bg-[var(--surface)] p-2 text-[var(--accent)] shadow-[var(--domus-shadow-sm)]">
                     <Icon className="h-4 w-4" />
                   </div>
@@ -62,7 +62,7 @@ export function ActivityFeed({ logs, limit = 20 }: ActivityFeedProps) {
                     <p className="text-sm font-medium text-[var(--ink)]">
                       {formatAuditAction(log.action, log.entityType, log.metadata)}
                     </p>
-                    <p className="mt-1 text-xs text-zinc-500">
+                    <p className="mt-1 text-xs text-[var(--muted)]">
                       {log.userName} · {formatAuditTimestamp(log.createdAt)}
                     </p>
                   </div>

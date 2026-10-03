@@ -135,7 +135,7 @@ export function UserMenuPopover({
                 <span
                   className={cn(
                     "h-2 w-2 shrink-0 rounded-full",
-                    stripeConnected ? "bg-emerald-400" : "bg-rose-400"
+                    stripeConnected ? "bg-[var(--pos)]" : "bg-[var(--crit)]"
                   )}
                   title={stripeConnected ? "Bank connected" : "Bank not connected"}
                 />
@@ -160,16 +160,16 @@ export function UserMenuPopover({
             panelClassName
           )}
         >
-          <div className="border-b border-zinc-100 px-4 py-3">
+          <div className="border-b border-[var(--line)] px-4 py-3">
             <p className="text-sm font-semibold text-[var(--ink)]">{displayName}</p>
-            <p className="mt-0.5 text-xs text-zinc-500">{userEmail}</p>
+            <p className="mt-0.5 text-xs text-[var(--muted)]">{userEmail}</p>
           </div>
 
           <div className="p-2">
             <Link
               href="/settings"
               onClick={() => setOpen(false)}
-              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-[var(--ink-2)] transition hover:bg-[var(--surface-2)]"
               title="Open your account settings."
             >
               <Settings className="h-4 w-4" />
@@ -179,20 +179,20 @@ export function UserMenuPopover({
             <a
               href="mailto:support@domusbase.com"
               onClick={() => setOpen(false)}
-              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-[var(--ink-2)] transition hover:bg-[var(--surface-2)]"
               title="Email Domus support."
             >
               <LifeBuoy className="h-4 w-4" />
               Help &amp; Support
             </a>
 
-            <div className="my-2 h-px bg-zinc-100" />
+            <div className="my-2 h-px bg-[var(--surface-3)]" />
 
             <button
               type="button"
               onClick={handleSignOut}
               disabled={signingOut}
-              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-70"
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-[var(--crit)] transition hover:bg-[var(--crit-bg)] disabled:cursor-not-allowed disabled:opacity-70"
               title="Sign out and return to the login page."
             >
               <LogOut className="h-4 w-4" />

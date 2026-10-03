@@ -22,7 +22,7 @@ function StepRow({
   const Icon = completed ? CheckCircle2 : Circle;
   return (
     <div className="flex items-center gap-3 text-sm">
-      <Icon className={completed ? "h-4 w-4 text-emerald-600" : "h-4 w-4 text-muted-foreground"} />
+      <Icon className={completed ? "h-4 w-4 text-[var(--pos)]" : "h-4 w-4 text-muted-foreground"} />
       <span className={completed ? "font-medium text-foreground" : "text-muted-foreground"}>{label}</span>
     </div>
   );

@@ -42,17 +42,17 @@ export function DistributionHistory({ entries }: DistributionHistoryProps) {
             {visibleEntries.map((entry, index) => (
               <DataRow key={entry.id} last={index === visibleEntries.length - 1}>
                 <div>
-                  <p className="text-sm font-semibold text-zinc-900">{entry.memberName}</p>
-                  <p className="mt-0.5 text-xs text-zinc-500">
+                  <p className="text-sm font-semibold text-[var(--ink)]">{entry.memberName}</p>
+                  <p className="mt-0.5 text-xs text-[var(--muted)]">
                     {formatDate(entry.createdAt)} • {entry.memberEmail}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 text-right">
                   <div>
-                    <p className="text-sm font-semibold text-zinc-900">
+                    <p className="text-sm font-semibold text-[var(--ink)]">
                       {formatCurrency(entry.amountCents)}
                     </p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-[var(--muted)]">
                       {entry.distributionPct !== null ? `${entry.distributionPct.toFixed(2)}%` : "Retained"}
                     </p>
                   </div>
