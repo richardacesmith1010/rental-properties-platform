@@ -1,14 +1,14 @@
 import { StyleSheet } from "@react-pdf/renderer";
 
 export const colors = {
-  primary: "#7c3aed",
-  primaryLight: "#ede9fe",
-  success: "#10b981",
-  text: "#1f2937",
-  textMuted: "#6b7280",
-  border: "#e5e7eb",
-  white: "#ffffff",
-  danger: "#dc2626"
+  text: "#191B1E",
+  textMuted: "#6F757C",
+  border: "#E6E6E0",
+  white: "#FFFFFF",
+  surface2: "#F5F5F1",
+  accent: "#1D4ED8",
+  success: "#15803D",
+  danger: "#B91C1C"
 };
 
 export const styles = StyleSheet.create({
@@ -27,31 +27,17 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 24,
     paddingBottom: 14,
-    borderBottomWidth: 2,
-    borderBottomColor: colors.primary
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border
   },
   brandRow: {
     flexDirection: "row",
     alignItems: "center"
   },
-  brandMark: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10
-  },
-  brandMarkText: {
-    color: colors.white,
-    fontSize: 14,
-    fontFamily: "Helvetica-Bold"
-  },
   brandName: {
     fontSize: 24,
     fontFamily: "Helvetica-Bold",
-    color: colors.primary
+    color: colors.text
   },
   brandSubtitle: {
     fontSize: 8,
@@ -99,7 +85,7 @@ export const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 11,
     fontFamily: "Helvetica-Bold",
-    color: colors.primary,
+    color: colors.text,
     marginBottom: 8,
     textTransform: "uppercase"
   },
@@ -113,11 +99,11 @@ export const styles = StyleSheet.create({
   },
   accentPanel: {
     borderWidth: 1,
-    borderColor: colors.primaryLight,
+    borderColor: colors.border,
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 14,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.surface2,
     marginBottom: 18
   },
   row: {
@@ -148,7 +134,7 @@ export const styles = StyleSheet.create({
     paddingTop: 10,
     marginTop: 10,
     borderTopWidth: 2,
-    borderTopColor: colors.primary
+    borderTopColor: colors.border
   },
   totalLabel: {
     fontSize: 13,
@@ -157,7 +143,7 @@ export const styles = StyleSheet.create({
   totalValue: {
     fontSize: 13,
     fontFamily: "Helvetica-Bold",
-    color: colors.primary
+    color: colors.text
   },
   twoColumnRow: {
     flexDirection: "row",

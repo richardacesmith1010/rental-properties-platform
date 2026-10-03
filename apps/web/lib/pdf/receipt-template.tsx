@@ -13,9 +13,6 @@ function BrandHeader({ generatedAt, exportLabel }: { generatedAt: string; export
   return (
     <View style={styles.header}>
       <View style={styles.brandRow}>
-        <View style={styles.brandMark}>
-          <Text style={styles.brandMarkText}>D</Text>
-        </View>
         <View>
           <Text style={styles.brandName}>Domus</Text>
           <Text style={styles.brandSubtitle}>RENTAL COMMAND CENTER</Text>

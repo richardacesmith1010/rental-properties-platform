@@ -35,17 +35,17 @@ function StatusCard({
   buttonVariant?: "default" | "outline";
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#fafafa] px-4">
-      <Card className="w-full max-w-lg text-center">
+    <main className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
+      <Card variant="elevated" className="w-full max-w-lg text-center">
         <CardContent className="pt-8 pb-8">
           <div className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full ${iconBg}`}>
             {icon}
           </div>
-          <h1 className="text-lg font-bold text-zinc-900">{title}</h1>
-          <p className="mt-2 text-sm text-zinc-500">{body}</p>
+          <h1 className="text-lg font-bold text-[var(--ink)]">{title}</h1>
+          <p className="mt-2 text-sm text-[var(--muted)]">{body}</p>
           {redirectMessage && (
             <>
-              <p id="payment-redirect-countdown" className="mt-4 text-sm text-zinc-500">
+              <p id="payment-redirect-countdown" className="mt-4 text-sm text-[var(--muted)]">
                 {redirectMessage.replace("{seconds}", String(redirectDelaySeconds))}
               </p>
               <Script id="payment-redirect-script" strategy="afterInteractive">
@@ -80,7 +80,7 @@ function StatusCard({
           </Button>
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 }
 
@@ -92,8 +92,8 @@ export default async function PaymentSuccessPage({ searchParams }: SuccessPagePr
   if (!sessionId) {
     return (
       <StatusCard
-        icon={<AlertCircle className="h-7 w-7 text-red-500" />}
-        iconBg="bg-red-50"
+        icon={<AlertCircle className="h-7 w-7 text-[var(--crit)]" />}
+        iconBg="bg-[var(--crit-bg)]"
         title="Payment Session Missing"
         body="We could not verify your payment session."
         redirectMessage="Returning to dashboard in {seconds} seconds..."
@@ -105,8 +105,8 @@ export default async function PaymentSuccessPage({ searchParams }: SuccessPagePr
   if (method === "ach") {
     return (
       <StatusCard
-        icon={<Clock className="h-7 w-7 text-amber-500" />}
-        iconBg="bg-amber-50"
+        icon={<Clock className="h-7 w-7 text-[var(--warn)]" />}
+        iconBg="bg-[var(--warn-bg)]"
         title="Payment processing"
         body="Your bank is processing this payment. This usually takes 4-5 business days. We'll update your account when it clears."
         buttonLabel="Back to Dashboard"
@@ -126,8 +126,8 @@ export default async function PaymentSuccessPage({ searchParams }: SuccessPagePr
   if (existingPayment) {
     return (
       <StatusCard
-        icon={<CheckCircle2 className="h-7 w-7 text-emerald-500" />}
-        iconBg="bg-emerald-50"
+        icon={<CheckCircle2 className="h-7 w-7 text-[var(--pos)]" />}
+        iconBg="bg-[var(--pos-bg)]"
         title="Payment Received"
         body="Your payment has been processed and recorded in your rental ledger."
         redirectMessage="Returning to dashboard in {seconds} seconds..."
@@ -138,8 +138,8 @@ export default async function PaymentSuccessPage({ searchParams }: SuccessPagePr
   // Payment not yet recorded — webhook may still be processing
   return (
     <StatusCard
-      icon={<Clock className="h-7 w-7 text-amber-500" />}
-      iconBg="bg-amber-50"
+      icon={<Clock className="h-7 w-7 text-[var(--warn)]" />}
+      iconBg="bg-[var(--warn-bg)]"
       title="Payment Processing"
       body="Your payment is being confirmed. This usually takes a few seconds. Please check your dashboard shortly."
       buttonLabel="Return to Dashboard"

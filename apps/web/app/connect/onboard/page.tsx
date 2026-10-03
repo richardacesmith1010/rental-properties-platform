@@ -6,6 +6,8 @@ import {
   initiateMemberPayoutConnect,
   initiateStripeConnect
 } from "@/app/actions";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getActiveLlcMembershipsForUser } from "@/lib/ownership";
 import { getAuthenticatedUser, getCurrentUserRole, getRoleHomePath } from "@/lib/auth";
 import { isStripeConfigured } from "@/lib/env";
@@ -45,20 +47,21 @@ function readSingleQueryParam(value: string | string[] | undefined): {
 function renderSafeErrorState() {
   return (
     <main className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
-      <div className="w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-          We can&apos;t check your payment setup right now.
-        </h1>
-        <p className="mt-2 text-sm text-zinc-600">
-          We can&apos;t check your payment setup right now. Please try again in a minute.
-        </p>
-        <Link
-          href="/connect/onboard"
-          className="mt-6 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-700"
-        >
-          Try again
-        </Link>
-      </div>
+      <Card variant="elevated" className="w-full max-w-lg">
+        <CardHeader>
+          <CardTitle className="text-2xl">
+            We can&apos;t check your payment setup right now.
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-[var(--muted)]">
+            We can&apos;t check your payment setup right now. Please try again in a minute.
+          </p>
+          <Button asChild className="mt-6">
+            <Link href="/connect/onboard">Try again</Link>
+          </Button>
+        </CardContent>
+      </Card>
     </main>
   );
 }
@@ -77,29 +80,30 @@ function getAccountPropertySummary(account: RentCollectionConnectStatus["account
 function renderTargetChooser(status: RentCollectionConnectStatus) {
   return (
     <main className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
-      <div className="w-full max-w-2xl rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-          Which account should receive rent?
-        </h1>
-        <p className="mt-2 text-sm text-zinc-600">
-          Pick the rent setup you want to finish.
-        </p>
-        <div className="mt-6 space-y-3">
-          {status.targets.map((target) => {
+      <Card variant="elevated" className="w-full max-w-2xl">
+        <CardHeader>
+          <CardTitle className="text-2xl">Which account should receive rent?</CardTitle>
+          <p className="text-sm text-[var(--muted)]">
+            Pick the rent setup you want to finish.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {status.targets.map((target) => {
             if (target.kind === "profile") {
               return (
                 <Link
                   key="profile"
                   href="/connect/onboard?profile=true"
-                  className="flex items-center justify-between rounded-xl border border-zinc-200 px-4 py-3 text-left transition hover:border-violet-300 hover:bg-violet-50"
+                  className="flex items-center justify-between rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-left transition hover:border-[var(--accent-line)] hover:bg-[var(--surface-2)]"
                 >
                   <div>
-                    <p className="font-semibold text-zinc-900">Your personal properties</p>
-                    <p className="mt-1 text-sm text-zinc-600">
+                    <p className="font-semibold text-[var(--ink)]">Your personal properties</p>
+                    <p className="mt-1 text-sm text-[var(--muted)]">
                       Set up rent payments for properties tied to your profile.
                     </p>
                   </div>
-                  <span className="text-sm font-semibold text-violet-700">Set up</span>
+                  <span className="text-sm font-semibold text-[var(--accent)]">Set up</span>
                 </Link>
               );
             }
@@ -113,18 +117,19 @@ function renderTargetChooser(status: RentCollectionConnectStatus) {
               <Link
                 key={account.accountId}
                 href={`/connect/onboard?accountId=${encodeURIComponent(account.accountId)}`}
-                className="flex items-center justify-between rounded-xl border border-zinc-200 px-4 py-3 text-left transition hover:border-violet-300 hover:bg-violet-50"
+                className="flex items-center justify-between rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-left transition hover:border-[var(--accent-line)] hover:bg-[var(--surface-2)]"
               >
                 <div>
-                  <p className="font-semibold text-zinc-900">{account.accountName}</p>
-                  <p className="mt-1 text-sm text-zinc-600">{getAccountPropertySummary(account)}</p>
+                  <p className="font-semibold text-[var(--ink)]">{account.accountName}</p>
+                  <p className="mt-1 text-sm text-[var(--muted)]">{getAccountPropertySummary(account)}</p>
                 </div>
-                <span className="text-sm font-semibold text-violet-700">Set up</span>
+                <span className="text-sm font-semibold text-[var(--accent)]">Set up</span>
               </Link>
             );
-          })}
-        </div>
-      </div>
+            })}
+          </div>
+        </CardContent>
+      </Card>
     </main>
   );
 }
@@ -134,35 +139,37 @@ function renderMemberPayoutChooser(
 ) {
   return (
     <main className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
-      <div className="w-full max-w-2xl rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-          Which account are you connecting for?
-        </h1>
-        <p className="mt-2 text-sm text-zinc-600">
-          Pick the LLC that should receive your rent payouts.
-        </p>
-        <div className="mt-6 space-y-3">
-          {memberships.map((membership) => (
+      <Card variant="elevated" className="w-full max-w-2xl">
+        <CardHeader>
+          <CardTitle className="text-2xl">Which account are you connecting for?</CardTitle>
+          <p className="text-sm text-[var(--muted)]">
+            Pick the LLC that should receive your rent payouts.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {memberships.map((membership) => (
             <Link
               key={membership.accountId}
               href={`/connect/onboard?accountId=${encodeURIComponent(membership.accountId)}&memberPayout=true`}
-              className="flex items-center justify-between rounded-xl border border-zinc-200 px-4 py-3 text-left transition hover:border-violet-300 hover:bg-violet-50"
+              className="flex items-center justify-between rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-left transition hover:border-[var(--accent-line)] hover:bg-[var(--surface-2)]"
             >
               <div>
-                <p className="font-semibold text-zinc-900">{membership.accountName}</p>
-                <p className="mt-1 text-sm text-zinc-600">
+                <p className="font-semibold text-[var(--ink)]">{membership.accountName}</p>
+                <p className="mt-1 text-sm text-[var(--muted)]">
                   {membership.payoutStripeConnected
                     ? "Your payout account is connected."
                     : "Connect your bank account to receive your share of rent."}
                 </p>
               </div>
-              <span className="text-sm font-semibold text-violet-700">
+              <span className="text-sm font-semibold text-[var(--accent)]">
                 {membership.payoutStripeConnected ? "Manage" : "Connect"}
               </span>
             </Link>
-          ))}
-        </div>
-      </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </main>
   );
 }
@@ -191,14 +198,16 @@ export default async function ConnectOnboardPage({ searchParams }: ConnectOnboar
   if (!isStripeConfigured()) {
     return (
       <main className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
-        <div className="w-full max-w-lg rounded-2xl border border-amber-200 bg-white p-8 shadow-sm">
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-            Bank connection unavailable
-          </h1>
-          <p className="mt-2 text-sm text-zinc-600">
-            Payment processing is temporarily unavailable. Please try again later.
-          </p>
-        </div>
+        <Card variant="elevated" className="w-full max-w-lg border-[var(--warn)]">
+          <CardHeader>
+            <CardTitle className="text-2xl">Bank connection unavailable</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-[var(--muted)]">
+              Payment processing is temporarily unavailable. Please try again later.
+            </p>
+          </CardContent>
+        </Card>
       </main>
     );
   }
@@ -295,10 +304,14 @@ export default async function ConnectOnboardPage({ searchParams }: ConnectOnboar
 
   return (
     <main className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
-      <div className="w-full max-w-lg rounded-2xl border border-red-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{errorCopy.title}</h1>
-        <p className="mt-2 text-sm text-zinc-600">{errorCopy.description}</p>
-      </div>
+      <Card variant="elevated" className="w-full max-w-lg border-[var(--crit)]">
+        <CardHeader>
+          <CardTitle className="text-2xl">{errorCopy.title}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-[var(--muted)]">{errorCopy.description}</p>
+        </CardContent>
+      </Card>
     </main>
   );
 }

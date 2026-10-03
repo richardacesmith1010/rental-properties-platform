@@ -99,8 +99,20 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
               [data-print-controls="receipt"] {
                 display: none !important;
               }
-              body {
+              body, .app-surface {
                 background: white !important;
+                color: #191B1E !important;
+              }
+              [data-print-document="receipt"] {
+                --surface: #FFFFFF;
+                --surface-2: #F5F5F1;
+                --ink: #191B1E;
+                --ink-2: #3A3F45;
+                --muted: #6F757C;
+                --line: #E6E6E0;
+                --pos: #15803D;
+                --pos-bg: #E4F5E9;
+                box-shadow: none !important;
               }
             }
           `
@@ -109,13 +121,13 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
       <div className="mx-auto max-w-3xl space-y-4">
         <div className="flex items-start justify-between gap-3" data-print-controls="receipt">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-violet-500">Domus</p>
-            <h1 className="mt-2 text-2xl font-semibold text-zinc-900">Payment Receipt</h1>
+            <p className="text-xs uppercase tracking-[0.3em] text-[var(--accent)]">Domus</p>
+            <h1 className="mt-2 text-2xl font-semibold text-[var(--ink)]">Payment Receipt</h1>
           </div>
           <div className="flex items-center gap-2">
             <Link
               href={`/api/pdf/receipt/${params.chargeId}`}
-              className="inline-flex items-center gap-2 rounded-md bg-violet-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-violet-500"
+              className="inline-flex h-11 items-center gap-2 rounded-xl border border-transparent bg-[var(--accent)] px-5 py-2 text-sm font-semibold text-white shadow-[var(--domus-shadow-sm)] transition hover:bg-[var(--accent-strong)] sm:h-10"
               title="Download this receipt as a PDF."
             >
               <Download className="h-4 w-4" />
@@ -125,45 +137,45 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
           </div>
         </div>
 
-        <Card>
+        <Card data-print-document="receipt">
           <CardHeader>
             <CardTitle>Receipt Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1">
-                <p className="text-xs uppercase tracking-wide text-zinc-400">Property</p>
-                <p className="font-medium text-zinc-900">{property.name}</p>
-                <p className="text-sm text-zinc-500">{formatUnitLabel(unit.unit_number)}</p>
+                <p className="text-xs uppercase tracking-wide text-[var(--faint)]">Property</p>
+                <p className="font-medium text-[var(--ink)]">{property.name}</p>
+                <p className="text-sm text-[var(--muted)]">{formatUnitLabel(unit.unit_number)}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs uppercase tracking-wide text-zinc-400">Receipt Timestamp</p>
-                <p className="font-medium text-zinc-900">{formatDateTime(new Date())}</p>
-                <p className="text-sm text-zinc-500">Receipt #{payment.id.slice(0, 8).toUpperCase()}</p>
+                <p className="text-xs uppercase tracking-wide text-[var(--faint)]">Receipt Timestamp</p>
+                <p className="font-medium text-[var(--ink)]">{formatDateTime(new Date())}</p>
+                <p className="text-sm text-[var(--muted)]">Receipt #{payment.id.slice(0, 8).toUpperCase()}</p>
               </div>
             </div>
 
-            <div className="grid gap-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 sm:grid-cols-2">
+            <div className="grid gap-4 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-4 sm:grid-cols-2">
               <div className="space-y-1">
-                <p className="text-xs uppercase tracking-wide text-zinc-400">Charge Details</p>
-                <p className="font-medium text-zinc-900">
+                <p className="text-xs uppercase tracking-wide text-[var(--faint)]">Rent Details</p>
+                <p className="font-medium text-[var(--ink)]">
                   {charge.category === "late_fee" ? "Late Fee" : "Rent"} • Due {formatDate(charge.due_date)}
                 </p>
-                <p className="text-sm text-zinc-500">{formatCurrency(charge.amount_cents)}</p>
+                <p className="text-sm text-[var(--muted)]">{formatCurrency(charge.amount_cents)}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs uppercase tracking-wide text-zinc-400">Payment Details</p>
-                <p className="font-medium text-zinc-900">{formatDateTime(payment.paid_at)}</p>
-                <p className="text-sm text-zinc-500">Method: {payment.method.toUpperCase()}</p>
+                <p className="text-xs uppercase tracking-wide text-[var(--faint)]">Payment Details</p>
+                <p className="font-medium text-[var(--ink)]">{formatDateTime(payment.paid_at)}</p>
+                <p className="text-sm text-[var(--muted)]">Method: {payment.method.toUpperCase()}</p>
                 {payment.reference_note ? (
-                  <p className="text-sm text-zinc-500">Reference: {payment.reference_note}</p>
+                  <p className="text-sm text-[var(--muted)]">Reference: {payment.reference_note}</p>
                 ) : null}
               </div>
             </div>
 
             <Alert variant="success" className="rounded-xl p-4">
-              <p className="text-sm font-semibold text-emerald-800">Thank you for your payment.</p>
-              <p className="mt-1 text-sm text-emerald-700">
+              <p className="text-sm font-semibold text-[var(--pos)]">Thank you for your payment.</p>
+              <p className="mt-1 text-sm text-[var(--pos)]">
                 Paid {formatCurrency(payment.amount_cents)} on {formatDate(payment.paid_at)}.
               </p>
             </Alert>

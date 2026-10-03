@@ -17,7 +17,7 @@ function DetailRow({ label, value, last = false }: { label: string; value: strin
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const backgroundColor = status.toLowerCase() === "paid" ? colors.success : colors.primary;
+  const backgroundColor = status.toLowerCase() === "paid" ? colors.success : colors.danger;
 
   return <Text style={[styles.badge, { backgroundColor }]}>{status.toUpperCase()}</Text>;
 }
@@ -28,9 +28,6 @@ export function InvoicePdfDocument({ invoice }: InvoiceDocumentProps) {
       <Page size="LETTER" style={styles.page}>
         <View style={styles.header}>
           <View style={styles.brandRow}>
-            <View style={styles.brandMark}>
-              <Text style={styles.brandMarkText}>D</Text>
-            </View>
             <View>
               <Text style={styles.brandName}>Domus</Text>
               <Text style={styles.brandSubtitle}>MANAGER PAYMENT INVOICE</Text>

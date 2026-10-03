@@ -24,9 +24,6 @@ export function LeaseSummaryPdfDocument({ data }: LeaseSummaryPdfDocumentProps) 
       <Page size="LETTER" style={styles.page}>
         <View style={styles.header}>
           <View style={styles.brandRow}>
-            <View style={styles.brandMark}>
-              <Text style={styles.brandMarkText}>D</Text>
-            </View>
             <View>
               <Text style={styles.brandName}>Domus</Text>
               <Text style={styles.brandSubtitle}>LEASE SUMMARY</Text>
