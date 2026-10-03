@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "seed:demo": "npx tsx ../../scripts/seed-demo.ts",
+    "smoke:theme": "playwright test tests/e2e/smoke-theme.spec.ts --reporter=line",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed"
   },

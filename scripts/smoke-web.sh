@@ -100,6 +100,8 @@ if [[ "$HAS_SMOKE_CREDS" == "true" ]]; then
   echo "[smoke] Running authenticated render checks"
   pushd apps/web >/dev/null
   APP_URL="$APP_URL" npx playwright test tests/e2e/smoke-auth.spec.ts --reporter=line
+  echo "[smoke] Checking theme contrast"
+  APP_URL="$APP_URL" npx playwright test tests/e2e/smoke-theme.spec.ts --reporter=line
   popd >/dev/null
 else
   echo "[smoke] SMOKE_* creds not set; skipping authenticated render checks"
