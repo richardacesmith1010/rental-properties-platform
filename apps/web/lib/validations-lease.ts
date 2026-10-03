@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  checkboxBooleanSchema,
   hasChangedFields,
   isoDateSchema,
   optionalNullableStringUpdateSchema,
@@ -22,7 +23,8 @@ export const createLeaseSchema = z
     monthlyRentDollars: z.coerce.number().positive("Monthly rent must be greater than $0."),
     depositDollars: z.coerce.number().min(0, "Deposit cannot be negative."),
     gracePeriodDays: z.coerce.number().int().min(0).max(30).optional().default(5),
-    lateFeeDollars: z.coerce.number().min(0).optional().default(0)
+    lateFeeDollars: z.coerce.number().min(0).optional().default(0),
+    collectsOutsideDomus: checkboxBooleanSchema.optional().default(false)
   })
   .refine((data) => data.endDate > data.startDate, {
     message: "End date must be after start date.",
@@ -173,7 +175,8 @@ export const updateLeaseSchema = z.object({
   monthlyRentDollars: z.coerce.number().positive("Monthly rent must be greater than $0."),
   depositDollars: z.coerce.number().min(0, "Deposit cannot be negative."),
   gracePeriodDays: z.coerce.number().int().min(0).max(30).optional().default(5),
-  lateFeeDollars: z.coerce.number().min(0).optional().default(0)
+  lateFeeDollars: z.coerce.number().min(0).optional().default(0),
+  collectsOutsideDomus: checkboxBooleanSchema.optional().default(false)
 });
 
 export const deleteLeaseSchema = z.object({
@@ -214,6 +217,7 @@ export const updateLeaseDetailsSchema = z
       z.coerce.number().int().min(0, "Grace period must be 0 or more.").max(30, "Grace period must be 30 days or less.")
     ),
     lateFeeDollars: optionalNumberUpdateSchema(z.coerce.number().min(0, "Late fee cannot be negative.")),
+    collectsOutsideDomus: checkboxBooleanSchema.optional(),
     notes: optionalNullableStringUpdateSchema(1500, "Lease notes")
   })
   .refine((data) => hasChangedFields(data, ["leaseId"]), {

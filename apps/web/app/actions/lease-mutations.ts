@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAudit } from "@/lib/audit";
 import { canUserAdministerProperty } from "@/lib/property-access";
@@ -21,6 +22,38 @@ import { requireAuth } from "./auth-helpers";
 import { updateLeaseRentAmount } from "./charge-management";
 import type { ActionState } from "./shared";
 
+type CreateLeaseData = z.infer<typeof createLeaseSchema>;
+type UpdateLeaseData = z.infer<typeof updateLeaseSchema>;
+
+function buildCreateLeaseInsert(data: CreateLeaseData) {
+  return {
+    unit_id: data.unitId,
+    tenant_profile_id: data.tenantProfileId,
+    start_date: data.startDate,
+    end_date: data.endDate,
+    due_day_of_month: data.dueDayOfMonth,
+    monthly_rent_cents: Math.round(data.monthlyRentDollars * 100),
+    deposit_cents: Math.round(data.depositDollars * 100),
+    grace_period_days: data.gracePeriodDays,
+    late_fee_cents: Math.round(data.lateFeeDollars * 100),
+    collects_outside_domus: data.collectsOutsideDomus,
+    lease_status: "active" as const,
+    active: true
+  };
+}
+
+function buildUpdateLeaseMutation(data: UpdateLeaseData) {
+  return {
+    end_date: data.endDate,
+    due_day_of_month: data.dueDayOfMonth,
+    monthly_rent_cents: Math.round(data.monthlyRentDollars * 100),
+    deposit_cents: Math.round(data.depositDollars * 100),
+    grace_period_days: data.gracePeriodDays,
+    late_fee_cents: Math.round(data.lateFeeDollars * 100),
+    collects_outside_domus: data.collectsOutsideDomus
+  };
+}
+
 export async function createLease(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const { user, supabase } = await requireAuth("owner", "manager");
   if (!checkRateLimit(`createLease:${user.id}`, 30, 60_000).allowed) {
@@ -30,7 +63,7 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
   const parsed = parseFormData(createLeaseSchema, formData);
   if (!parsed.success) return parsed;
 
-  const { unitId, tenantProfileId, startDate, endDate, dueDayOfMonth, monthlyRentDollars, depositDollars, gracePeriodDays, lateFeeDollars } = parsed.data;
+  const { unitId, tenantProfileId } = parsed.data;
   const { data: unit } = await supabase.from("units").select("id, property_id").eq("id", unitId).single();
   if (!unit) return { success: false, error: "Unit not found." };
   if (!(await canUserAdministerProperty(user.id, unit.property_id))) return { success: false, error: "You do not have access to this unit." };
@@ -54,19 +87,11 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
     return { success: false, error: "Tenant is not linked to this property. Invite the tenant to this property first." };
   }
 
-  const { data: createdLease, error } = await supabase.from("leases").insert({
-    unit_id: unitId,
-    tenant_profile_id: tenantProfileId,
-    start_date: startDate,
-    end_date: endDate,
-    due_day_of_month: dueDayOfMonth,
-    monthly_rent_cents: Math.round(monthlyRentDollars * 100),
-    deposit_cents: Math.round(depositDollars * 100),
-    grace_period_days: typeof gracePeriodDays === "number" ? gracePeriodDays : 5,
-    late_fee_cents: typeof lateFeeDollars === "number" ? Math.round(lateFeeDollars * 100) : 0,
-    lease_status: "active",
-    active: true
-  }).select("id").single();
+  const { data: createdLease, error } = await supabase
+    .from("leases")
+    .insert(buildCreateLeaseInsert(parsed.data))
+    .select("id")
+    .single();
   if (error || !createdLease?.id) return { success: false, error: "Failed to create lease. Please try again." };
 
   const { error: unitUpdateError } = await supabase.from("units").update({ occupied: true }).eq("id", unitId);
@@ -128,7 +153,7 @@ export async function updateLease(_prev: ActionState, formData: FormData): Promi
   const parsed = parseFormData(updateLeaseSchema, formData);
   if (!parsed.success) return parsed;
 
-  const { leaseId, endDate, dueDayOfMonth, monthlyRentDollars, depositDollars, gracePeriodDays, lateFeeDollars } = parsed.data;
+  const { leaseId } = parsed.data;
   const { data: lease } = await supabase.from("leases").select("id, unit_id, tenant_profile_id").eq("id", leaseId).single();
   if (!lease) return { success: false, error: "Lease not found." };
 
@@ -136,14 +161,7 @@ export async function updateLease(_prev: ActionState, formData: FormData): Promi
   if (!unit) return { success: false, error: "Unit not found for this lease." };
   if (!(await canUserAdministerProperty(user.id, unit.property_id))) return { success: false, error: "You do not have access to this lease." };
 
-  const updates: Record<string, unknown> = {
-    end_date: endDate,
-    due_day_of_month: dueDayOfMonth,
-    monthly_rent_cents: Math.round(monthlyRentDollars * 100),
-    deposit_cents: Math.round(depositDollars * 100)
-  };
-  if (typeof gracePeriodDays === "number") updates.grace_period_days = gracePeriodDays;
-  if (typeof lateFeeDollars === "number") updates.late_fee_cents = Math.round(lateFeeDollars * 100);
+  const updates = buildUpdateLeaseMutation(parsed.data);
 
   const { error } = await supabase.from("leases").update(updates).eq("id", leaseId);
   if (error) return { success: false, error: "Failed to update lease. Please try again." };

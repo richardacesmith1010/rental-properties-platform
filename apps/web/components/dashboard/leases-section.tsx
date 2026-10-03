@@ -18,6 +18,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { AnimatedList } from "@/components/ui/animated-list";
+import {
+  LeaseCollectionSetting,
+  PaysOutsideDomusBadge
+} from "@/components/dashboard/lease-collection-setting";
 import type { LeaseListItem } from "@/lib/portfolio";
 import type { RentIncreaseEntry } from "@/lib/rent-increases";
 import type { ActionState } from "@/app/actions";
@@ -243,6 +247,7 @@ export function LeasesSection({
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-base font-medium text-foreground">{lease.unitLabel}</p>
                         <LeaseStatusBadge status={lease.leaseStatus} endDate={lease.endDate} />
+                        {lease.collectsOutsideDomus ? <PaysOutsideDomusBadge /> : null}
                         {showControls && onUpdateLease ? (
                           <Button
                             type="button"
@@ -398,6 +403,13 @@ export function LeasesSection({
                               defaultValue={lease.endDate}
                               required
                             />
+                            <div className="sm:col-span-3">
+                              <LeaseCollectionSetting
+                                id={`lease-collects-outside-domus-${lease.id}`}
+                                name="collectsOutsideDomus"
+                                defaultChecked={lease.collectsOutsideDomus}
+                              />
+                            </div>
                             <div className="sm:col-span-3">
                               <SubmitButton size="sm" variant="outline" title="Save lease term updates for this tenant.">
                                 Save Lease Changes

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { withChargeEditingFallback } from "@/lib/charge-audit";
 import { formatUnitLabel } from "@/lib/format";
+import { isCollectedOutsideDomus } from "@/lib/lease-collection";
 
 export interface TenantCharge {
   id: string;
@@ -12,10 +13,18 @@ export interface TenantCharge {
   dueDate: string;
   amountCents: number;
   status: "pending" | "late";
+  collectsOutsideDomus?: boolean;
 }
 
 export interface TenantPaymentData {
   charges: TenantCharge[];
+}
+
+export function getTenantChargeStatus(
+  status: "pending" | "late",
+  lease: { collects_outside_domus?: boolean | null } | null | undefined
+): "pending" | "late" {
+  return status === "late" && isCollectedOutsideDomus(lease) ? "pending" : status;
 }
 
 export async function getTenantPaymentData(userId: string): Promise<TenantPaymentData> {
@@ -23,7 +32,7 @@ export async function getTenantPaymentData(userId: string): Promise<TenantPaymen
 
   const { data: leases } = await supabase
     .from("leases")
-    .select("id, unit_id")
+    .select("id, unit_id, collects_outside_domus")
     .eq("tenant_profile_id", userId)
     .eq("active", true);
 
@@ -87,7 +96,8 @@ export async function getTenantPaymentData(userId: string): Promise<TenantPaymen
         unitNumber: unit?.unit_number ?? "?",
         dueDate: charge.due_date,
         amountCents: charge.amount_cents,
-        status: charge.status as "pending" | "late"
+        status: getTenantChargeStatus(charge.status as "pending" | "late", lease),
+        collectsOutsideDomus: isCollectedOutsideDomus(lease)
       };
     })
   };

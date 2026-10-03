@@ -1,9 +1,130 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const createNotificationWithDeliveryMock = vi.hoisted(() => vi.fn());
+const notifyOwnerMembersForPropertyMock = vi.hoisted(() => vi.fn());
+const getPropertyNotificationDeliveryPreferencesMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/notifications", () => ({
+  createNotificationWithDelivery: createNotificationWithDeliveryMock,
+  notifyOwnerMembersForProperty: notifyOwnerMembersForPropertyMock
+}));
+vi.mock("@/lib/notification-preferences", () => ({
+  getPropertyNotificationDeliveryPreferences: getPropertyNotificationDeliveryPreferencesMock
+}));
 import {
   buildDueDatesByLeaseId,
   getCandidateMonths,
-  isLeaseActiveForChargeMonth
+  isLeaseActiveForChargeMonth,
+  applyLateFeesToOverdueCharges
 } from "@/lib/charge-generation";
+
+function createLateFeeSupabaseMock(params: {
+  collectsOutsideDomus: boolean;
+  existingLateFee?: boolean;
+}) {
+  const update = vi.fn(() => {
+    const builder = {
+      in: vi.fn(() => builder),
+      then: (resolve: (value: { error: null }) => unknown) =>
+        Promise.resolve({ error: null }).then(resolve)
+    };
+    return builder;
+  });
+  const insert = vi.fn(async () => ({ error: null }));
+  const candidate = {
+    id: "charge-1",
+    lease_id: "lease-1",
+    due_date: "2026-09-01",
+    status: "pending",
+    category: "rent"
+  };
+
+  const client = {
+    from: vi.fn((table: string) => {
+      if (table === "rent_charges") {
+        return {
+          select: vi.fn((columns: string) => {
+            if (columns.includes("parent_charge_id")) {
+              const builder = {
+                in: vi.fn(() => builder),
+                eq: vi.fn(() => builder),
+                is: vi.fn(async () => ({
+                  data: params.existingLateFee
+                    ? [{ id: "late-fee-1", parent_charge_id: "charge-1" }]
+                    : [],
+                  error: null
+                }))
+              };
+              return builder;
+            }
+
+            const builder = {
+              in: vi.fn(() => builder),
+              eq: vi.fn(() => builder),
+              lt: vi.fn(() => builder),
+              is: vi.fn(async () => ({ data: [candidate], error: null }))
+            };
+            return builder;
+          }),
+          update,
+          insert
+        };
+      }
+
+      if (table === "leases") {
+        return {
+          select: vi.fn(() => ({
+            in: vi.fn(async () => ({
+              data: [
+                {
+                  id: "lease-1",
+                  tenant_profile_id: "tenant-1",
+                  unit_id: "unit-1",
+                  grace_period_days: 5,
+                  late_fee_cents: 5000,
+                  lease_status: "active",
+                  collects_outside_domus: params.collectsOutsideDomus
+                }
+              ],
+              error: null
+            }))
+          }))
+        };
+      }
+
+      if (table === "units") {
+        return {
+          select: vi.fn(() => ({
+            in: vi.fn(async () => ({
+              data: [{ id: "unit-1", property_id: "property-1" }],
+              error: null
+            }))
+          }))
+        };
+      }
+
+      if (table === "profiles") {
+        return {
+          select: vi.fn(() => ({
+            in: vi.fn(async () => ({
+              data: [{ id: "tenant-1", email: "tenant@example.com" }],
+              error: null
+            }))
+          }))
+        };
+      }
+
+      throw new Error(`Unexpected table ${table}`);
+    })
+  };
+
+  return {
+    supabase: client as unknown as SupabaseClient,
+    update,
+    insert
+  };
+}
 
 function setToday(isoDateTime: string) {
   vi.useFakeTimers();
@@ -11,6 +132,12 @@ function setToday(isoDateTime: string) {
 }
 
 describe("charge generation", () => {
+  beforeEach(() => {
+    createNotificationWithDeliveryMock.mockResolvedValue(undefined);
+    notifyOwnerMembersForPropertyMock.mockResolvedValue(undefined);
+    getPropertyNotificationDeliveryPreferencesMock.mockResolvedValue(new Map());
+  });
+
   afterEach(() => {
     vi.useRealTimers();
   });
@@ -190,5 +317,51 @@ describe("charge generation", () => {
     );
 
     expect(dueDates.has("lease-ended")).toBe(false);
+  });
+
+  it("does not mark or fee a past-grace charge collected outside Domus", async () => {
+    setToday("2026-10-03T12:00:00.000Z");
+    const { supabase, update, insert } = createLateFeeSupabaseMock({
+      collectsOutsideDomus: true
+    });
+
+    await expect(
+      applyLateFeesToOverdueCharges(supabase, ["lease-1"], "2026-10-03")
+    ).resolves.toBe(0);
+    expect(update).not.toHaveBeenCalled();
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("remains idempotent when the flagged late job runs repeatedly", async () => {
+    setToday("2026-10-03T12:00:00.000Z");
+    const { supabase, update, insert } = createLateFeeSupabaseMock({
+      collectsOutsideDomus: true
+    });
+
+    await applyLateFeesToOverdueCharges(supabase, ["lease-1"], "2026-10-03");
+    await applyLateFeesToOverdueCharges(supabase, ["lease-1"], "2026-10-03");
+
+    expect(update).not.toHaveBeenCalled();
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("preserves late status and late-fee behavior for unflagged leases", async () => {
+    setToday("2026-10-03T12:00:00.000Z");
+    const { supabase, update, insert } = createLateFeeSupabaseMock({
+      collectsOutsideDomus: false
+    });
+
+    await expect(
+      applyLateFeesToOverdueCharges(supabase, ["lease-1"], "2026-10-03")
+    ).resolves.toBe(1);
+    expect(update).toHaveBeenCalledWith({ status: "late" });
+    expect(insert).toHaveBeenCalledWith([
+      expect.objectContaining({
+        lease_id: "lease-1",
+        parent_charge_id: "charge-1",
+        category: "late_fee",
+        amount_cents: 5000
+      })
+    ]);
   });
 });

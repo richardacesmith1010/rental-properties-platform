@@ -12,6 +12,7 @@ import {
   getAdministeredPropertyIds,
   getAdministeredPropertyIdsForAccount
 } from "@/lib/property-access";
+import { isCollectedOutsideDomus, type LeaseCollectionPreference } from "@/lib/lease-collection";
 
 export interface DashboardKpis {
   monthlyGrossRentCents: number;
@@ -49,6 +50,14 @@ export interface DashboardCharge {
   latestEditedAt?: string | null;
   latestEditedByName?: string | null;
   editedCount?: number;
+  collectsOutsideDomus?: boolean;
+}
+
+export function getDashboardChargeStatus(
+  status: ChargeStatus,
+  lease: LeaseCollectionPreference | null | undefined
+): ChargeStatus {
+  return status === "late" && isCollectedOutsideDomus(lease) ? "pending" : status;
 }
 
 interface RecentPayment {
@@ -163,7 +172,7 @@ export async function getDashboardData(
 
   const { data: leaseRows } = await admin
     .from("leases")
-    .select("id, monthly_rent_cents, active, unit_id, tenant_profile_id")
+    .select("id, monthly_rent_cents, active, unit_id, tenant_profile_id, collects_outside_domus")
     .in("unit_id", unitIds);
 
   const leases = leaseRows ?? [];
@@ -179,6 +188,9 @@ export async function getDashboardData(
   const propertyNameById = new Map(properties.map((property) => [property.id, property.name]));
   const unitById = new Map(unitsRows.map((unit) => [unit.id, unit]));
   const leaseById = new Map(leases.map((lease) => [lease.id, lease]));
+  const lateEligibleLeaseIds = leases
+    .filter((lease) => !isCollectedOutsideDomus(lease))
+    .map((lease) => lease.id);
 
   const tenantIds = Array.from(
     new Set(
@@ -228,22 +240,29 @@ export async function getDashboardData(
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30);
 
+    const lateChargeRowsPromise = lateEligibleLeaseIds.length > 0
+      ? withChargeEditingFallback(
+          () =>
+            admin
+              .from("rent_charges")
+              .select("amount_cents, lease_id")
+              .in("lease_id", lateEligibleLeaseIds)
+              .eq("status", "late")
+              .is("deleted_at", null),
+          () =>
+            admin
+              .from("rent_charges")
+              .select("amount_cents, lease_id")
+              .in("lease_id", lateEligibleLeaseIds)
+              .eq("status", "late")
+        )
+      : Promise.resolve({
+          data: [] as Array<{ amount_cents: number; lease_id: string }>,
+          error: null
+        });
+
     const [lateChargeRows, pendingLateChargeRows, leaseChargeIdRows] = await Promise.all([
-      withChargeEditingFallback(
-        () =>
-          admin
-            .from("rent_charges")
-            .select("amount_cents, lease_id")
-            .in("lease_id", leaseIds)
-            .eq("status", "late")
-            .is("deleted_at", null),
-        () =>
-          admin
-            .from("rent_charges")
-            .select("amount_cents, lease_id")
-            .in("lease_id", leaseIds)
-            .eq("status", "late")
-      ),
+      lateChargeRowsPromise,
       withChargeEditingFallback(
         () =>
           admin
@@ -436,10 +455,16 @@ export async function getDashboardData(
     .filter((charge) => charge.status === "paid")
     .reduce((sum, charge) => sum + charge.amount_cents, 0);
   const pendingRentCents = currentMonthCharges
-    .filter((charge) => charge.status === "pending")
+    .filter(
+      (charge) =>
+        getDashboardChargeStatus(charge.status, leaseById.get(charge.lease_id)) === "pending"
+    )
     .reduce((sum, charge) => sum + charge.amount_cents, 0);
   const overdueRentCents = currentMonthCharges
-    .filter((charge) => charge.status === "late")
+    .filter(
+      (charge) =>
+        getDashboardChargeStatus(charge.status, leaseById.get(charge.lease_id)) === "late"
+    )
     .reduce((sum, charge) => sum + charge.amount_cents, 0);
   const totalDueCents = collectedRentCents + pendingRentCents + overdueRentCents;
   const outstandingCharges = charges.filter(
@@ -488,7 +513,7 @@ export async function getDashboardData(
         tenantProfileId: lease?.tenant_profile_id ?? null,
         dueDate: charge.due_date,
         amountCents: charge.amount_cents,
-        status: charge.status,
+        status: getDashboardChargeStatus(charge.status, lease),
         propertyName,
         unitNumber,
         tenantName,
@@ -498,7 +523,8 @@ export async function getDashboardData(
         category: charge.category,
         notes: charge.notes ?? null,
         reminderSentAt: reminderSentAtByChargeId.get(charge.id) ?? null,
-        ...getChargeAuditSummary(chargeHistoryById.get(charge.id) ?? [])
+        ...getChargeAuditSummary(chargeHistoryById.get(charge.id) ?? []),
+        collectsOutsideDomus: isCollectedOutsideDomus(lease)
       };
     }),
     recentPayments: recentPayments.map((payment) => {

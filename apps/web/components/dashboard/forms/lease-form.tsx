@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/shared/submit-button";
+import { LeaseCollectionSetting } from "@/components/dashboard/lease-collection-setting";
 import { FieldLabel, FormError, FormSuccess } from "./form-helpers";
 
 interface LeaseDraft {
@@ -24,6 +25,7 @@ interface LeaseDraft {
   depositDollars: string;
   gracePeriodDays: string;
   lateFeeDollars: string;
+  collectsOutsideDomus: boolean;
 }
 
 const LEASE_STEP_LABELS = [
@@ -82,7 +84,8 @@ export function LeaseForm({
     monthlyRentDollars: "",
     depositDollars: "0",
     gracePeriodDays: "5",
-    lateFeeDollars: ""
+    lateFeeDollars: "",
+    collectsOutsideDomus: false
   });
   const [lateFeeTouched, setLateFeeTouched] = useState(false);
 
@@ -137,7 +140,8 @@ export function LeaseForm({
       monthlyRentDollars: "",
       depositDollars: "0",
       gracePeriodDays: "5",
-      lateFeeDollars: ""
+      lateFeeDollars: "",
+      collectsOutsideDomus: false
     });
     onLeaseCreated?.();
   }, [onLeaseCreated, state]);
@@ -462,6 +466,15 @@ export function LeaseForm({
             onChange={(event) => setDraft((current) => ({ ...current, gracePeriodDays: event.target.value }))}
             placeholder="Days before the late fee applies"
           />
+          <LeaseCollectionSetting
+            checked={draft.collectsOutsideDomus}
+            onChange={(event) =>
+              setDraft((current) => ({
+                ...current,
+                collectsOutsideDomus: event.target.checked
+              }))
+            }
+          />
         </div>
       );
     }
@@ -477,6 +490,7 @@ export function LeaseForm({
           <p><span className="font-semibold">Billing:</span> day {draft.dueDayOfMonth || "?"}, ${draft.monthlyRentDollars || "?"}/month</p>
           <p><span className="font-semibold">Late Fee:</span> ${effectiveLateFeeDollars || "0.00"}</p>
           <p><span className="font-semibold">Grace Period:</span> {draft.gracePeriodDays || "5"} days</p>
+          <p><span className="font-semibold">Payment tracking:</span> {draft.collectsOutsideDomus ? "Tenant pays outside Domus" : "Managed in Domus"}</p>
         </div>
         {!requiredComplete && (
           <p className="text-xs text-[var(--warn)]">You can skip steps, but lease save stays disabled until required details are completed.</p>
@@ -491,6 +505,7 @@ export function LeaseForm({
           <input type="hidden" name="depositDollars" value={draft.depositDollars} />
           <input type="hidden" name="lateFeeDollars" value={effectiveLateFeeDollars} />
           <input type="hidden" name="gracePeriodDays" value={draft.gracePeriodDays} />
+          <input type="hidden" name="collectsOutsideDomus" value={String(draft.collectsOutsideDomus)} />
           <SubmitButton className="w-full" title="Save this lease with the details above." disabled={!requiredComplete}>
             Save Lease
           </SubmitButton>

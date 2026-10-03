@@ -48,6 +48,9 @@ function createEntityAdminClient(config: {
   unit?: Record<string, unknown> | null;
   lease?: Record<string, unknown> | null;
 }) {
+  const leaseUpdateMock = vi.fn(() => ({
+    eq: vi.fn().mockResolvedValue({ error: null })
+  }));
   const fromMock = vi.fn((table: string) => {
     if (table === "properties") {
       return {
@@ -82,9 +85,7 @@ function createEntityAdminClient(config: {
             maybeSingle: vi.fn().mockResolvedValue({ data: config.lease ?? null, error: null })
           }))
         })),
-        update: vi.fn(() => ({
-          eq: vi.fn().mockResolvedValue({ error: null })
-        }))
+        update: leaseUpdateMock
       };
     }
 
@@ -102,7 +103,8 @@ function createEntityAdminClient(config: {
 
   return {
     client: { from: fromMock } as unknown as SupabaseClient,
-    fromMock
+    fromMock,
+    leaseUpdateMock
   };
 }
 
@@ -178,6 +180,7 @@ describe("entity update actions", () => {
           due_day_of_month: 1,
           grace_period_days: 5,
           late_fee_cents: 5000,
+          collects_outside_domus: false,
           tenant_profile_id: "tenant-1",
           notes: null
         },
@@ -224,6 +227,7 @@ describe("entity update actions", () => {
         due_day_of_month: 1,
         grace_period_days: 5,
         late_fee_cents: 5000,
+        collects_outside_domus: false,
         tenant_profile_id: "tenant-1",
         notes: "Original"
       },
@@ -244,5 +248,53 @@ describe("entity update actions", () => {
     expect(result).toEqual({ success: true, message: "Lease updated." });
     expect(admin.fromMock).not.toHaveBeenCalledWith("rent_charges");
     expect(revalidatePathMock).toHaveBeenCalledWith("/owner");
+  });
+
+  it.each([
+    [false, true],
+    [true, false]
+  ])("persists outside-Domus lease changes from %s to %s", async (current, next) => {
+    parseFormDataMock.mockReturnValueOnce({
+      success: true,
+      data: {
+        leaseId: "lease-1",
+        collectsOutsideDomus: next
+      }
+    });
+    getAdministeredPropertyIdsMock.mockResolvedValueOnce(["property-1"]);
+    const admin = createEntityAdminClient({
+      lease: {
+        id: "lease-1",
+        unit_id: "unit-1",
+        start_date: "2026-01-01",
+        end_date: "2026-12-31",
+        monthly_rent_cents: 180000,
+        deposit_cents: 90000,
+        due_day_of_month: 1,
+        grace_period_days: 5,
+        late_fee_cents: 5000,
+        collects_outside_domus: current,
+        tenant_profile_id: "tenant-1",
+        notes: null
+      },
+      unit: {
+        id: "unit-1",
+        property_id: "property-1",
+        unit_number: "1A",
+        bedrooms: 2,
+        bathrooms: 1,
+        monthly_rent_cents: 180000,
+        square_feet: 900
+      }
+    });
+    createAdminClientMock.mockReturnValue(admin.client);
+
+    await expect(updateLeaseDetails(null, new FormData())).resolves.toEqual({
+      success: true,
+      message: "Lease updated."
+    });
+    expect(admin.leaseUpdateMock).toHaveBeenCalledWith({
+      collects_outside_domus: next
+    });
   });
 });

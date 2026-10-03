@@ -5,6 +5,7 @@ import {
 } from "@/lib/property-access";
 import { withChargeEditingFallback } from "@/lib/charge-audit";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
+import { isCollectedOutsideDomus, type LeaseCollectionPreference } from "@/lib/lease-collection";
 
 export interface MonthlyRentMetric {
   month: string;
@@ -92,6 +93,7 @@ export interface AnalyticsLeaseRow {
   unit_id: string;
   start_date: string;
   end_date: string;
+  collects_outside_domus?: boolean;
 }
 
 export interface AnalyticsTicketRow {
@@ -171,7 +173,8 @@ export function buildRentMetrics(
   charges: AnalyticsChargeRow[],
   months: MonthWindow[],
   currentYearStart: string,
-  currentMonthKey: string | null
+  currentMonthKey: string | null,
+  leaseById: ReadonlyMap<string, LeaseCollectionPreference> = new Map()
 ): {
   rentMetrics: MonthlyRentMetric[];
   totalIncomeCentsYtd: number;
@@ -198,7 +201,10 @@ export function buildRentMetrics(
       if (charge.status === "paid") {
         metric.collectedCents += charge.amount_cents;
       }
-      if (charge.status === "late") {
+      if (
+        charge.status === "late" &&
+        !isCollectedOutsideDomus(leaseById.get(charge.lease_id))
+      ) {
         metric.lateCents += charge.amount_cents;
       }
     }
@@ -364,9 +370,9 @@ export async function getOwnerAnalyticsData(
     const leasesQuery = unitIds.length
       ? await admin
           .from("leases")
-          .select("id, unit_id, start_date, end_date")
+          .select("id, unit_id, start_date, end_date, collects_outside_domus")
           .in("unit_id", unitIds)
-      : { data: [] as Array<{ id: string; unit_id: string; start_date: string; end_date: string }>, error: null };
+      : { data: [] as AnalyticsLeaseRow[], error: null };
 
     if (leasesQuery.error) {
       if (isMissingSchemaError(leasesQuery.error)) {
@@ -493,7 +499,13 @@ export async function getOwnerAnalyticsData(
       rentMetrics,
       totalIncomeCentsYtd,
       collectionRate
-    } = buildRentMetrics(chargeRows, lastTwelveMonths, currentYearStart, currentMonthKey);
+    } = buildRentMetrics(
+      chargeRows,
+      lastTwelveMonths,
+      currentYearStart,
+      currentMonthKey,
+      new Map(leaseRows.map((lease) => [lease.id, lease]))
+    );
 
     const paymentsByChargeId = new Map<string, { rent_charge_id: string; paid_at: string }>();
     for (const payment of paymentQuery.data ?? []) {

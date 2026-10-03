@@ -266,6 +266,12 @@ export async function updateLeaseDetails(
     } else if (updates.lateFeeDollars === null && lease.late_fee_cents !== 0) {
       updatePayload.late_fee_cents = 0;
     }
+    if (
+      updates.collectsOutsideDomus !== undefined &&
+      updates.collectsOutsideDomus !== lease.collects_outside_domus
+    ) {
+      updatePayload.collects_outside_domus = updates.collectsOutsideDomus;
+    }
     if (updates.notes !== undefined && updates.notes !== lease.notes) {
       updatePayload.notes = updates.notes;
     }

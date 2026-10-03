@@ -1,6 +1,8 @@
+import { isCollectedOutsideDomus, type LeaseCollectionPreference } from "@/lib/lease-collection";
+
 export type ChargeUrgencyLevel = "none" | "upcoming" | "due_today" | "overdue";
 
-export interface ChargeUrgencyInput {
+export interface ChargeUrgencyInput extends LeaseCollectionPreference {
   status: string;
   dueDate: string;
 }
@@ -39,6 +41,10 @@ export function getChargeUrgency(
 
   if (daysUntilDue === 0) {
     return { level: "due_today", daysUntilDue };
+  }
+
+  if (isCollectedOutsideDomus(charge)) {
+    return { level: "none", daysUntilDue };
   }
 
   return { level: "overdue", daysUntilDue };

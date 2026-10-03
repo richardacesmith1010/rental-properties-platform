@@ -51,6 +51,7 @@ export interface LeaseListItem {
   leaseStatus: "active" | "expiring_soon" | "expired" | "terminated" | "renewed";
   gracePeriodDays: number;
   lateFeeCents: number;
+  collectsOutsideDomus?: boolean;
   notes: string | null;
   active: boolean;
 }
@@ -321,6 +322,7 @@ export async function getPortfolioData(
     lease_status: "active" | "expiring_soon" | "expired" | "terminated" | "renewed" | null;
     grace_period_days: number | null;
     late_fee_cents: number | null;
+    collects_outside_domus: boolean;
     notes: string | null;
     active: boolean;
   }> = [];
@@ -329,7 +331,7 @@ export async function getPortfolioData(
     const leaseResult = await admin
       .from("leases")
       .select(
-        "id, unit_id, tenant_profile_id, monthly_rent_cents, deposit_cents, due_day_of_month, start_date, end_date, lease_status, grace_period_days, late_fee_cents, notes, active"
+        "id, unit_id, tenant_profile_id, monthly_rent_cents, deposit_cents, due_day_of_month, start_date, end_date, lease_status, grace_period_days, late_fee_cents, collects_outside_domus, notes, active"
       )
       .in("unit_id", unitIds)
       .order("start_date", { ascending: false });
@@ -338,7 +340,7 @@ export async function getPortfolioData(
       const fallback = await admin
         .from("leases")
         .select(
-          "id, unit_id, tenant_profile_id, monthly_rent_cents, deposit_cents, due_day_of_month, start_date, end_date, lease_status, grace_period_days, late_fee_cents, active"
+          "id, unit_id, tenant_profile_id, monthly_rent_cents, deposit_cents, due_day_of_month, start_date, end_date, lease_status, grace_period_days, late_fee_cents, collects_outside_domus, active"
         )
         .in("unit_id", unitIds)
         .order("start_date", { ascending: false });
@@ -412,6 +414,7 @@ export async function getPortfolioData(
       leaseStatus: lease.lease_status ?? "active",
       gracePeriodDays: lease.grace_period_days ?? 5,
       lateFeeCents: lease.late_fee_cents ?? 0,
+      collectsOutsideDomus: lease.collects_outside_domus,
       notes: lease.notes ?? null,
       active: lease.active
     };

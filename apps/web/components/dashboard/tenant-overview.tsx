@@ -8,6 +8,7 @@ import type { TenantCharge } from "@/lib/tenant-payments";
 import { Card, CardContent } from "@/components/ui/card";
 import { PayRentCard, type AutopayEnrollmentView } from "@/components/dashboard/pay-rent-card";
 import { useTimeOfDayGreeting } from "./use-time-of-day-greeting";
+import { isCollectedOutsideDomus } from "@/lib/lease-collection";
 
 type TenantOverviewSection = "charges" | "maintenance" | "documents" | "notifications";
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
@@ -68,6 +69,9 @@ export function TenantOverview({
 
     const daysUntil = getDaysUntil(nextCharge.dueDate);
     if (daysUntil < 0) {
+      if (isCollectedOutsideDomus(charges[0])) {
+        return `You have a payment of ${formatCurrency(nextCharge.amountCents)} due ${formatDate(nextCharge.dueDate)}.`;
+      }
       return `You have a payment of ${formatCurrency(nextCharge.amountCents)} that is overdue.`;
     }
     if (daysUntil === 0) {

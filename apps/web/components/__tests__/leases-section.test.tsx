@@ -39,6 +39,7 @@ describe("LeasesSection", () => {
     leaseStatus: "active" as const,
     gracePeriodDays: 5,
     lateFeeCents: 5000,
+    collectsOutsideDomus: false,
     notes: "No smoking.",
     active: true
   };
@@ -143,6 +144,28 @@ describe("LeasesSection", () => {
 
     expect(screen.getByRole("button", { name: "Renew" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "End Lease" })).toBeInTheDocument();
+  });
+
+  it("shows the outside-Domus badge and normalizes an unchecked update to false", () => {
+    render(
+      <LeasesSection
+        leases={[{ ...activeLease, collectsOutsideDomus: true }]}
+        showControls
+        onUpdateLease={async () => ({ success: true })}
+      />
+    );
+
+    expect(screen.getByText("Pays outside Domus")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Manage" }));
+    const checkbox = screen.getByRole("checkbox", {
+      name: /Tenant pays outside Domus/i
+    }) as HTMLInputElement;
+    expect(checkbox).toBeChecked();
+
+    fireEvent.click(checkbox);
+    const form = checkbox.closest("form");
+    expect(form).not.toBeNull();
+    expect(new FormData(form!).get("collectsOutsideDomus")).toBe("false");
   });
 
   it("renders rent increase history when entries exist", () => {

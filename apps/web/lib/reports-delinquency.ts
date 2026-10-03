@@ -63,10 +63,23 @@ export async function getDelinquencyReport(userId: string): Promise<DelinquencyI
       return [];
     }
 
+    const { data: delinquencyLeases, error: delinquencyLeasesError } = await admin
+      .from("leases")
+      .select("id")
+      .in("id", leaseIds)
+      .eq("collects_outside_domus", false);
+    if (delinquencyLeasesError) {
+      throw delinquencyLeasesError;
+    }
+    const delinquencyLeaseIds = new Set((delinquencyLeases ?? []).map((lease) => lease.id));
+
     const todayIso = new Date().toISOString().slice(0, 10);
     const grouped = new Map<string, DelinquencyItem>();
 
     for (const [leaseId, chargeDetails] of detailsByLeaseId.entries()) {
+      if (!delinquencyLeaseIds.has(leaseId)) {
+        continue;
+      }
       const lease = leaseById.get(leaseId);
       if (!lease || !lease.tenant_profile_id) {
         continue;

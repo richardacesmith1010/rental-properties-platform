@@ -33,6 +33,7 @@ interface LeaseRow {
   id: string;
   tenant_profile_id: string | null;
   unit_id: string;
+  collects_outside_domus: boolean;
 }
 
 interface UnitRow {
@@ -221,7 +222,7 @@ function createSupabaseMock(config: DelinquencySupabaseConfig): SupabaseClient {
 function buildDelinquencyConfig(overrides: Partial<DelinquencySupabaseConfig> = {}): DelinquencySupabaseConfig {
   return {
     charges: [],
-    leases: [{ id: "lease-1", tenant_profile_id: "tenant-1", unit_id: "unit-1" }],
+    leases: [{ id: "lease-1", tenant_profile_id: "tenant-1", unit_id: "unit-1", collects_outside_domus: false }],
     units: [{ id: "unit-1", property_id: "property-1", unit_number: "101" }],
     properties: [{ id: "property-1", name: "Domus Heights" }],
     profiles: [{ id: "tenant-1", email: "tenant@example.com", full_name: "Cassius Bell" }],
@@ -299,6 +300,38 @@ describe("delinquency notifications", () => {
     expect(createNotificationWithDeliveryMock).toHaveBeenCalledWith(
       expect.objectContaining({ entityId: "charge-active" })
     );
+    expect(notifyOwnerMembersForPropertyMock).not.toHaveBeenCalled();
+  });
+
+  it("excludes historical late charges for leases collected outside Domus", async () => {
+    const supabase = createSupabaseMock(
+      buildDelinquencyConfig({
+        charges: [
+          {
+            id: "charge-outside",
+            lease_id: "lease-1",
+            due_date: "2026-03-01",
+            amount_cents: 150000,
+            status: "late",
+            category: "rent",
+            deleted_at: null
+          }
+        ],
+        leases: [
+          {
+            id: "lease-1",
+            tenant_profile_id: "tenant-1",
+            unit_id: "unit-1",
+            collects_outside_domus: true
+          }
+        ]
+      })
+    );
+
+    await expect(sendDelinquencyEscalations(supabase)).resolves.toBe(
+      "Overdue rent follow-ups sent: 0."
+    );
+    expect(createNotificationWithDeliveryMock).not.toHaveBeenCalled();
     expect(notifyOwnerMembersForPropertyMock).not.toHaveBeenCalled();
   });
 

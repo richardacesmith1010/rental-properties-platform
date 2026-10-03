@@ -59,7 +59,7 @@ export async function getLeaseRecord(admin: ReturnType<typeof createAdminClient>
   const result = await admin
     .from("leases")
     .select(
-      "id, unit_id, start_date, end_date, monthly_rent_cents, deposit_cents, due_day_of_month, grace_period_days, late_fee_cents, tenant_profile_id, notes"
+      "id, unit_id, start_date, end_date, monthly_rent_cents, deposit_cents, due_day_of_month, grace_period_days, late_fee_cents, collects_outside_domus, tenant_profile_id, notes"
     )
     .eq("id", leaseId)
     .maybeSingle();
@@ -68,7 +68,7 @@ export async function getLeaseRecord(admin: ReturnType<typeof createAdminClient>
     const fallback = await admin
       .from("leases")
       .select(
-        "id, unit_id, start_date, end_date, monthly_rent_cents, deposit_cents, due_day_of_month, grace_period_days, late_fee_cents, tenant_profile_id"
+        "id, unit_id, start_date, end_date, monthly_rent_cents, deposit_cents, due_day_of_month, grace_period_days, late_fee_cents, collects_outside_domus, tenant_profile_id"
       )
       .eq("id", leaseId)
       .maybeSingle();

@@ -9,6 +9,7 @@ import {
   getPropertyNotificationDeliveryPreferences,
 } from "@/lib/notification-preferences";
 import { notificationsEnabled } from "@/lib/notifications-switch";
+import { isCollectedOutsideDomus } from "@/lib/lease-collection";
 
 function differenceInDays(fromDate: string, toDate: string) {
   const from = new Date(`${fromDate}T00:00:00.000Z`);
@@ -50,7 +51,7 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
     throw chargesError;
   }
 
-  const candidates = ((charges ?? []) as Array<{
+  let candidates = ((charges ?? []) as Array<{
     id: string;
     lease_id: string;
     due_date: string;
@@ -59,6 +60,31 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
   }>)
     .map((charge) => ({ ...charge, daysPastDue: differenceInDays(charge.due_date, todayIso) }))
     .filter((charge) => charge.daysPastDue >= 30);
+
+  if (candidates.length === 0) {
+    return "Overdue rent follow-ups sent: 0.";
+  }
+
+  const leaseIds = Array.from(new Set(candidates.map((charge) => charge.lease_id)));
+  const { data: leases, error: leasesError } = await supabase
+    .from("leases")
+    .select("id, unit_id, tenant_profile_id, collects_outside_domus")
+    .in("id", leaseIds);
+  if (leasesError) {
+    throw leasesError;
+  }
+
+  const leaseById = new Map(
+    ((leases ?? []) as Array<{
+      id: string;
+      unit_id: string;
+      tenant_profile_id: string | null;
+      collects_outside_domus: boolean;
+    }>).map((lease) => [lease.id, lease])
+  );
+  candidates = candidates.filter(
+    (charge) => !isCollectedOutsideDomus(leaseById.get(charge.lease_id))
+  );
 
   if (candidates.length === 0) {
     return "Overdue rent follow-ups sent: 0.";
@@ -79,19 +105,6 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
     ((existingNotifications ?? []) as Array<{ entity_id: string | null }>)
       .map((row) => row.entity_id)
       .filter((entityId): entityId is string => Boolean(entityId))
-  );
-
-  const leaseIds = Array.from(new Set(candidates.map((charge) => charge.lease_id)));
-  const { data: leases, error: leasesError } = await supabase
-    .from("leases")
-    .select("id, unit_id, tenant_profile_id")
-    .in("id", leaseIds);
-  if (leasesError) {
-    throw leasesError;
-  }
-
-  const leaseById = new Map(
-    ((leases ?? []) as Array<{ id: string; unit_id: string; tenant_profile_id: string | null }>).map((lease) => [lease.id, lease])
   );
 
   const unitIds = Array.from(new Set((leases ?? []).map((lease) => lease.unit_id)));
