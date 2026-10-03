@@ -177,6 +177,12 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 - `smoke-theme.spec.ts`: interactive controls whose own text contrast ≥ 4.5 are exempt from the dark-mode light-box rule (fixes the "Reconnect bank" false positive); one sign-in per role (3 per run, was 5). Verified: 11/11 pass on prod with the banner present; negative test (injected light box + faint button) fails with 3 findings.
 
+## Data correction — Angel Hernandez (2026-10-03, owner-approved)
+
+- Tenant Angel Hernandez (he/him), 1st Home Unit A, lease `b9c47e88…`, $2,350/mo, pays the owner outside Domus — owner confirmed every month paid, nothing late.
+- One atomic SQL block: Aug/Sep/Oct rent → manual payments (method `other`, paid_at = due date, note "Paid outside Domus on time (owner-confirmed 2026-10-03)") + status `paid`; Aug/Sep late fees → `waived`; `charge_edit_history` + `audit_logs` rows written as owner; 15 overdue/reminder notifications marked read. No tenant notifications sent. Verified after.
+- **Open:** May + Jul late fees ($117.50 each) are recorded as PAID (manual "other", 2026-07-08) though owner says nothing was late — awaiting owner decision. Nov 1 rent (and every future month) will go late again → needs a "pays outside Domus" lease setting (proposed Sprint 146). Data oddity: 6 property rows named "1st Home" under the owner.
+
 ## Ops & Observability (2026-10-02)
 
 - **Deploys:** Vercel is git-connected — push to `main` auto-deploys production. CLI `vercel deploy` is optional.
