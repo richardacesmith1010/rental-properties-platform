@@ -230,6 +230,11 @@ Claude must treat every interaction cycle as a learning opportunity. This sectio
 **What was correct:** A packet's scope list, exclusions, and acceptance criteria must be mutually consistent — an acceptance criterion IS a scope statement. When they conflict, the implementer is forced to improvise.
 **Rule:** Before dispatching any packet, cross-check: does every acceptance criterion's blast radius stay inside §5's file list plus §4's exclusions? If a sweep/grep criterion spans a directory, either scope §5 to that directory or scope the sweep to §5's files.
 
+#### L-012 | 2026-10-03 | TECHNICAL
+**What happened:** Sprint 141's migration recreated `notifications_type_check` by copying an old migration file's definition. It happened to match live, but later migrations could have added types — copying from a file would then have silently blocked live notification inserts. Separately, Codex invented a contact email (`support@domus.app`) when a packet left it unspecified (Sprint 139).
+**What was correct:** Any migration that DROPs and recreates a constraint, policy, or function must be diffed against the LIVE definition (`pg_get_constraintdef` / `pg_get_functiondef`) before apply. Packets that add links/contact info must name exact values.
+**Rule:** Before applying a migration that recreates an existing DB object, query its live definition and confirm the new one equals live ± the intended change. In packets, forbid inventing URLs/emails and supply the exact values.
+
 ## 11) Pre-Flight Lessons Check (Hard Rule)
 
 Before starting ANY work cycle (planning, verification, or especially implementation), Claude must:

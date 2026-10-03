@@ -143,6 +143,13 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - **Security finding (2026-10-02):** `award_xp` / `update_streak` are SECURITY DEFINER, no search_path, EXECUTE granted to `anon` + `authenticated` → anyone with the public key can write XP rows for any user. App calls them only via service role. Fix = Sprint 141 (L3, `docs/sprint141-codex-prompt.md`, pending ChatGPT review); stopgap REVOKE pending user OK.
 - Emails were already v2 before this sprint. 87 dashboard files still use legacy palette classes. Spot checks (owner home, Records, New Property wizard, Analytics in dark) showed no light boxes, but the 87 were not audited one by one — treat as cleanup debt with possible hidden dark-mode gaps.
 
+## Gamification backend REMOVED (Sprint 141, L3, 2026-10-03)
+
+- Security stopgap first (`8c6e09c`, applied live): `award_xp`/`update_streak` were SECURITY DEFINER + executable by anon/authenticated → revoked; anon call verified 401.
+- Code (`260995f`, Codex on gpt-6-astra/high): XP awards removed from 9 call sites, streak from auth callback, XP helper from Stripe webhook; `lib/gamification.ts`, `/api/gamification/check`, achievements skeleton deleted; `/achievements` redirect kept; owner/manager `Promise.all` entries removed with AST-proven alignment; smoke script, e2e, seed, notifications type, account-wipe, design doc updated. Rent reminder copy "keep your streak going!" → "Pay now so you stay on track." Critical diffs (webhook, charges, auth callback, all actions) verified removal-only. Tests 979→922 (all 57 removed were gamification-only).
+- DB (`20261003_sprint141_drop_gamification.sql`, applied live after code verify): both functions + 4 tables dropped (no CASCADE); `notifications_type_check` recreated = live def minus `achievement_unlocked` (diffed against live, 0 rows used it).
+- Verified: gate green; smoke 3/3 before and after migration; owner banner/overdue/analytics + manager render with 0 page errors; `/api/gamification/check` 404; `/achievements` → login; Sentry 0 unresolved; phase9/phase10 runtime checks ok.
+
 ## Ops & Observability (2026-10-02)
 
 - **Deploys:** Vercel is git-connected — push to `main` auto-deploys production. CLI `vercel deploy` is optional.
