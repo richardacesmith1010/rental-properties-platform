@@ -25,7 +25,8 @@ const ownerLoadMocks = vi.hoisted(() => ({
   profile: vi.fn(),
   renameRequests: vi.fn(),
   rentCollectionStatus: vi.fn(),
-  role: vi.fn()
+  role: vi.fn(),
+  logPerf: vi.fn()
 }));
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: () => ({ auth: { getUser: ownerLoadMocks.getUser } }) }));
@@ -46,7 +47,7 @@ vi.mock("@/lib/feature-capabilities", () => ({
   getFeatureCapabilities: ownerLoadMocks.capabilities
 }));
 vi.mock("@/lib/logger", () => ({
-  logPerfEvent: vi.fn(),
+  logPerfEvent: ownerLoadMocks.logPerf,
   measurePerf: async (_scope: string, _name: string, work: () => Promise<unknown>) => work()
 }));
 vi.mock("@/lib/dashboard", () => ({ getDashboardData: ownerLoadMocks.dashboard }));
@@ -180,7 +181,7 @@ describe("loadOwnerPageData orchestration", () => {
     expect(helper).toHaveBeenCalledWith(expect.objectContaining({ request: expect.objectContaining({
       initialPropertyId: null, requestedPropertyId: null
     }) }));
-    expect(ownerLoadMocks.tickets).toHaveBeenCalledWith("user-1", "account-1");
+    expect(ownerLoadMocks.tickets).toHaveBeenCalledWith("user-1", "account-1", ["property-1"]);
     expect(JSON.stringify(result)).not.toContain("foreign-property");
     helper.mockRestore();
   });
@@ -194,6 +195,28 @@ describe("loadOwnerPageData orchestration", () => {
       ownerLoadMocks.notifications, ownerLoadMocks.notificationPreferences, ownerLoadMocks.rentCollectionStatus]) {
       expect(mock).not.toHaveBeenCalled();
     }
+  });
+
+  it("treats preload as perf metadata only without changing auth, scope, or data", async () => {
+    ownerLoadMocks.administeredIds.mockResolvedValue(["property-1"]);
+    const normal = await loadOwnerSectionData({ section: "maintenance", account: "account-1" });
+    const normalCalls = {
+      auth: ownerLoadMocks.getUser.mock.calls.length,
+      role: ownerLoadMocks.role.mock.calls.length,
+      scope: ownerLoadMocks.administeredIds.mock.calls.length
+    };
+    ownerLoadMocks.logPerf.mockClear();
+
+    const preloaded = await loadOwnerSectionData({ section: "maintenance", account: "account-1", preload: true });
+
+    expect(preloaded).toEqual(normal);
+    expect(ownerLoadMocks.getUser).toHaveBeenCalledTimes(normalCalls.auth + 1);
+    expect(ownerLoadMocks.role).toHaveBeenCalledTimes(normalCalls.role + 1);
+    expect(ownerLoadMocks.administeredIds).toHaveBeenCalledTimes(normalCalls.scope + 1);
+    expect(ownerLoadMocks.tickets).toHaveBeenLastCalledWith("user-1", "account-1", ["property-1"]);
+    expect(ownerLoadMocks.logPerf).toHaveBeenCalledWith(expect.objectContaining({
+      meta: { route: "owner-section-action", preload: true }
+    }));
   });
 
   it.each(["documents", "vendors", "inbox", "automations", "applications"])("respects disabled capability gates for %s", async section => {

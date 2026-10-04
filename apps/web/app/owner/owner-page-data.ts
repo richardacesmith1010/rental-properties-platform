@@ -483,7 +483,11 @@ export async function loadOwnerSectionBundles(params: {
     ownerConnectedMap
   ] = await Promise.all([
     hasBundle("tickets")
-      ? measureOwnerWithRequest("maintenance.admin-tickets", () => getAdminMaintenanceTickets(params.userId, request.activeAccountId))
+      ? measureOwnerWithRequest("maintenance.admin-tickets", async () => getAdminMaintenanceTickets(
+          params.userId,
+          request.activeAccountId,
+          await params.connectedPropertyIds
+        ))
       : Promise.resolve(undefined),
     hasBundle("invitations")
       ? measureOwnerWithRequest("invitations.owner", () => getOwnerInvitations(params.userId, request.activeAccountId))

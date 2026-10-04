@@ -18,7 +18,8 @@ const inputSchema = z.object({
   section: z.string().refine(value => OWNER_SECTION_IDS.includes(value)),
   account: z.string().optional(),
   property: z.string().optional(),
-  mode: z.string().optional()
+  mode: z.string().optional(),
+  preload: z.boolean().optional()
 }).strict();
 export type OwnerSectionInput = z.infer<typeof inputSchema>;
 export type OwnerSectionData = Partial<Awaited<ReturnType<typeof loadOwnerSectionBundles>>> & {
@@ -31,6 +32,7 @@ export type OwnerSectionResult =
 
 export async function loadOwnerSectionData(input: OwnerSectionInput): Promise<OwnerSectionResult> {
   const startedAt = performance.now();
+  let isPreload = false;
   // requireAuth redirects and checks role before validation, so cannot serve this fetch contract.
   try {
     const supabase = createClient();
@@ -38,6 +40,7 @@ export async function loadOwnerSectionData(input: OwnerSectionInput): Promise<Ow
     if (!user) return { error: "Authentication required." };
     const parsed = inputSchema.safeParse(input);
     if (!parsed.success) return { error: "Invalid section request." };
+    isPreload = parsed.data.preload === true;
     const role = await getCurrentUserRole(user.id);
     if (role !== "owner") return { status: "role-mismatch" };
     const [profile, ownershipAccounts, capabilities] = await Promise.all([
@@ -73,7 +76,7 @@ export async function loadOwnerSectionData(input: OwnerSectionInput): Promise<Ow
         try { return await work(); }
         finally {
           logPerfEvent({ scope: "owner", name, durationMs: performance.now() - start,
-            meta: { route: "owner-section-action" } });
+            meta: { route: "owner-section-action", ...(isPreload ? { preload: true } : {}) } });
         }
       }
     });
@@ -85,6 +88,6 @@ export async function loadOwnerSectionData(input: OwnerSectionInput): Promise<Ow
     return { error: "Unable to load this section." };
   } finally {
     logPerfEvent({ scope: "owner", name: "data-assembly.total", durationMs: performance.now() - startedAt,
-      meta: { route: "owner-section-action" } });
+      meta: { route: "owner-section-action", ...(isPreload ? { preload: true } : {}) } });
   }
 }

@@ -25,6 +25,9 @@ function deferred() {
 function ready(id: string): OwnerSectionResult {
   return { status: "ready", data: { tickets: [{ id } as never], loadedBundles: ["tickets"] } };
 }
+function readyBundle(bundle: "tickets" | "owner-connected-map", id: string): OwnerSectionResult {
+  return { status: "ready", data: { tickets: [{ id } as never], loadedBundles: [bundle] } };
+}
 function fixture(): OwnerSectionCacheProps {
   return {
     account: "account-a", property: null, loadedBundles: ["dashboard", "portfolio"],
@@ -66,6 +69,108 @@ describe("owner section cache", () => {
     vi.clearAllMocks();
     window.history.replaceState(null, "", "/owner?section=portfolio");
     window.scrollTo = vi.fn();
+  });
+
+  it("preloads the next neighbour before the previous with one request in flight", async () => {
+    vi.useFakeTimers();
+    const next = deferred(), previous = deferred();
+    const props = fixture();
+    props.requirements = { portfolio: [], maintenance: ["tickets"], charges: ["owner-connected-map"] };
+    props.loadSection = vi.fn().mockReturnValueOnce(next.promise).mockReturnValueOnce(previous.promise);
+    const { result } = renderHook(() => useOwnerSectionCache(props));
+
+    act(() => result.current.preloadNeighbours("portfolio", ["charges", "portfolio", "maintenance"]));
+    await act(async () => vi.advanceTimersByTimeAsync(300));
+    expect(props.loadSection).toHaveBeenCalledTimes(1);
+    expect(props.loadSection).toHaveBeenNthCalledWith(1, expect.objectContaining({ section: "maintenance", preload: true }));
+
+    await act(async () => next.resolve(readyBundle("tickets", "next")));
+    expect(props.loadSection).toHaveBeenCalledTimes(2);
+    expect(props.loadSection).toHaveBeenNthCalledWith(2, expect.objectContaining({ section: "charges", preload: true }));
+    await act(async () => previous.resolve(readyBundle("owner-connected-map", "previous")));
+    vi.useRealTimers();
+  });
+
+  it("skips loaded neighbours and respects wrap-around in the supplied available list", async () => {
+    vi.useFakeTimers();
+    const props = fixture();
+    props.requirements = { overview: ["tickets"], portfolio: [], charges: ["owner-connected-map"] };
+    props.loadedBundles.push("owner-connected-map");
+    const { result } = renderHook(() => useOwnerSectionCache(props));
+    act(() => result.current.preloadNeighbours("charges", ["overview", "portfolio", "charges"]));
+    await act(async () => vi.advanceTimersByTimeAsync(300));
+    expect(props.loadSection).toHaveBeenCalledOnce();
+    expect(props.loadSection).toHaveBeenCalledWith(expect.objectContaining({ section: "overview", preload: true }));
+    vi.useRealTimers();
+  });
+
+  it("does not preload during a click load, with data saver, or while hidden", async () => {
+    vi.useFakeTimers();
+    const click = deferred();
+    const props = fixture();
+    props.loadSection = vi.fn().mockReturnValue(click.promise);
+    const { result } = renderHook(() => useOwnerSectionCache(props));
+    act(() => result.current.navigate("/owner?section=maintenance", "maintenance"));
+    act(() => result.current.preloadNeighbours("portfolio", ["charges", "portfolio", "maintenance"]));
+    await act(async () => vi.advanceTimersByTimeAsync(300));
+    expect(props.loadSection).toHaveBeenCalledOnce();
+    await act(async () => click.resolve(ready("click")));
+
+    Object.defineProperty(navigator, "connection", { configurable: true, value: { saveData: true } });
+    act(() => result.current.preloadNeighbours("portfolio", ["charges", "portfolio", "maintenance"]));
+    await act(async () => vi.advanceTimersByTimeAsync(300));
+    expect(props.loadSection).toHaveBeenCalledOnce();
+    Object.defineProperty(navigator, "connection", { configurable: true, value: undefined });
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+    act(() => result.current.preloadNeighbours("portfolio", ["charges", "portfolio", "maintenance"]));
+    await act(async () => vi.advanceTimersByTimeAsync(300));
+    expect(props.loadSection).toHaveBeenCalledOnce();
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+    vi.useRealTimers();
+  });
+
+  it("reuses an in-flight preload when clicked and renders its data", async () => {
+    vi.useFakeTimers();
+    const preload = deferred();
+    const props = fixture();
+    props.loadSection = vi.fn().mockReturnValue(preload.promise);
+    const { result } = renderHook(() => useOwnerSectionCache(props));
+    act(() => result.current.preloadNeighbours("portfolio", ["charges", "portfolio", "maintenance"]));
+    await act(async () => vi.advanceTimersByTimeAsync(300));
+    act(() => result.current.navigate("/owner?section=maintenance", "maintenance"));
+    expect(props.loadSection).toHaveBeenCalledOnce();
+    await act(async () => preload.resolve(ready("preloaded")));
+    expect(result.current.data.tickets?.[0].id).toBe("preloaded");
+    expect(result.current.loading).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it("silently discards failed or stale preloads after server props and scope changes", async () => {
+    vi.useFakeTimers();
+    const stale = deferred();
+    const props = fixture();
+    props.loadSection = vi.fn().mockReturnValue(stale.promise);
+    const { result, rerender } = renderHook(
+      (input: OwnerSectionCacheProps) => useOwnerSectionCache(input), { initialProps: props }
+    );
+    act(() => result.current.preloadNeighbours("portfolio", ["charges", "portfolio", "maintenance"]));
+    await act(async () => vi.advanceTimersByTimeAsync(300));
+    rerender({ ...props, loadedBundles: [...props.loadedBundles] });
+    await act(async () => stale.resolve(ready("stale")));
+    expect(result.current.data).toEqual({});
+    expect(router.refresh).not.toHaveBeenCalled();
+
+    const rejected = deferred();
+    const scopedProps = { ...props, loadSection: vi.fn().mockReturnValue(rejected.promise) };
+    rerender(scopedProps);
+    act(() => result.current.preloadNeighbours("portfolio", ["charges", "portfolio", "maintenance"]));
+    await act(async () => vi.advanceTimersByTimeAsync(300));
+    window.history.replaceState(null, "", "/owner?account=account-b&section=portfolio");
+    rerender(scopedProps);
+    await act(async () => rejected.reject(new Error("offline")));
+    expect(result.current.data).toEqual({});
+    expect(router.refresh).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 
   it("uses zero requests for server-loaded bundles", () => {

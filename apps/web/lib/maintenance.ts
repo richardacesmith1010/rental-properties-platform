@@ -549,44 +549,40 @@ export async function getTenantMaintenanceData(
 
 export async function getAdminMaintenanceTickets(
   userId: string,
-  accountId?: string | null
+  accountId?: string | null,
+  resolvedPropertyIds?: string[]
 ): Promise<MaintenanceTicket[]> {
   const supabase = createAdminClient();
-  const propertyIds = accountId
+  const propertyIds = resolvedPropertyIds ?? (accountId
     ? await getAdministeredPropertyIdsForAccount(userId, accountId)
-    : await getAdministeredPropertyIds(userId);
+    : await getAdministeredPropertyIds(userId));
 
   if (propertyIds.length === 0) {
     return [];
   }
 
-  const { data: properties } = await supabase
-    .from("properties")
-    .select("id, name")
-    .in("id", propertyIds);
+  const [propertiesResult, unitsResult, ticketsResult] = await Promise.all([
+    supabase.from("properties").select("id, name").in("id", propertyIds),
+    supabase.from("units").select("id, unit_number").in("property_id", propertyIds),
+    supabase
+      .from("maintenance_tickets")
+      .select(
+        "id, property_id, unit_id, tenant_profile_id, title, description, status, priority, actual_cost_cents, created_at, resolved_at"
+      )
+      .in("property_id", propertyIds)
+      .order("created_at", { ascending: false })
+  ]);
+  const properties = propertiesResult.data;
+  const units = unitsResult.data;
+  const tickets = ticketsResult.data;
 
   const propertyById = new Map(
     (properties ?? []).map((p) => [p.id, p])
   );
 
-  // Fetch units for label display
-  const { data: units } = await supabase
-    .from("units")
-    .select("id, unit_number")
-    .in("property_id", propertyIds);
-
   const unitById = new Map(
     (units ?? []).map((u) => [u.id, u])
   );
-
-  // Fetch tickets
-  const { data: tickets } = await supabase
-    .from("maintenance_tickets")
-    .select(
-      "id, property_id, unit_id, tenant_profile_id, title, description, status, priority, actual_cost_cents, created_at, resolved_at"
-    )
-    .in("property_id", propertyIds)
-    .order("created_at", { ascending: false });
 
   // Fetch tenant emails for context
   const tenantIds = Array.from(
@@ -597,41 +593,31 @@ export async function getAdminMaintenanceTickets(
     )
   );
 
-  let profileById = new Map<string, { email: string }>();
-  if (tenantIds.length > 0) {
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, email")
-      .in("id", tenantIds);
-
-    profileById = new Map(
-      (profiles ?? []).map((p) => [p.id, p])
-    );
-  }
-
   const ticketRows = tickets ?? [];
+  const ticketIds = ticketRows.map((ticket) => ticket.id);
+  const [profilesResult, enhancementMaps, commentMaps, timelineMaps] = await Promise.all([
+    tenantIds.length > 0
+      ? supabase.from("profiles").select("id, email").in("id", tenantIds)
+      : Promise.resolve({ data: [] }),
+    buildTicketEnhancementMaps(supabase, ticketIds),
+    buildCommentMaps(supabase, ticketIds),
+    buildTimelineMaps(supabase, ticketIds)
+  ]);
+  const profileById = new Map<string, { email: string }>(
+    (profilesResult.data ?? []).map((profile) => [profile.id, profile])
+  );
   const {
     assignmentByTicketId,
     vendorNameById,
     photoCountByTicketId,
     latestPhotoIdByTicketId,
     photosByTicketId
-  } =
-    await buildTicketEnhancementMaps(
-      supabase,
-      ticketRows.map((ticket) => ticket.id)
-    );
+  } = enhancementMaps;
   const {
     commentCountByTicketId,
     commentsByTicketId
-  } = await buildCommentMaps(
-    supabase,
-    ticketRows.map((ticket) => ticket.id)
-  );
-  const { timelineByTicketId } = await buildTimelineMaps(
-    supabase,
-    ticketRows.map((ticket) => ticket.id)
-  );
+  } = commentMaps;
+  const { timelineByTicketId } = timelineMaps;
 
   return ticketRows.map((ticket) => {
     const property = propertyById.get(ticket.property_id);
