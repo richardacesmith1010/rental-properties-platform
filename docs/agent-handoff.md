@@ -211,6 +211,21 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Verified live: header "1 tenant behind", old wording gone, one Help button + menu, Charges shows 3 Record buttons and no Pay, mobile signed-in card hidden on load + sign-out reachable, 0 page errors; smoke 3/3, theme 11/11.
 - Next: Sprint 148 — the ~3 s section load floor (walkthrough #4).
 
+## Sprint 148/149 — Owner section load speed (2026-10-04)
+
+- 148 (diagnosis, no code): section switch = `router.replace` → full force-dynamic `/owner` RSC reload, 65–78 Supabase requests in sequential waves (~2.57 s server path); DB itself ~3–4 ms/request. Causes: 24 capability probes per load, serial profile/ownership/capability reads, property access resolved 3–4×, dashboard/portfolio internal waterfalls, per-property Stripe lookups (Charges).
+- 149 (`c8c7493`, L2): capability probes cached 300 s via `unstable_cache` (admin client, tag `feature-capabilities`, failed probes never cached); profile/ownership/capabilities run in parallel after the role check; property IDs resolved once and passed to dashboard/portfolio. 998 tests, gate green, smoke 3/3, theme 11/11.
+- **Measured (prod, smoke owner):** before ≈3,050 ms (Charges ≈3,560). After, warm: Maintenance 2,836 · Portfolio 2,595 · Expenses 2,570 · Leases 2,590 · Charges 3,086 (≈0.45 s faster; less than the projected ~1 s). First pass right after deploy was slower (cold caches, 3.1–4.4 s).
+- **Next for speed (Sprint 150 candidate, "fix 3"):** collapse `getDashboardData`/`getPortfolioData` internal waves, batch the per-property Stripe lookup (`lib/stripe-connect.ts:473-477`), and/or stop refetching the shared bundle on every section switch (client-side section cache). Real target needs the navigation model change.
+
+## ▶ START HERE (next session, written 2026-10-04)
+
+- Last shipped: Sprint 149 (`c8c7493`). Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
+- Owner-approved queue, in order: (1) Sprint 150 speed fix 3 (see above); (2) clarity cleanup from `docs/walkthrough-2026-10-03.md` #5–#7, #9 — one bank-setup prompt, simpler navigation (replace "N OF M" carousel), plain-language sweep — **mockup first** (Design canvas, like the landing), L2/L3 TBD.
+- Standing rules: notifications OFF until owner says real users (env `DOMUS_NOTIFICATIONS_ENABLED` unset); L3 packets → Claude sends to Domus ChatGPT project via Claude-in-Chrome (memory: feedback-prompt-severity-chatgpt-workflow); Codex default Sol/medium, watch usage limits (detached nohup re-run after reset); verify every UI sprint live with Playwright (temp specs in `apps/web/tests/e2e/zz-*.tmp.spec.ts`, smoke creds from `.env.local`).
+- Owner action items still open: J&MSP LLC bank connection (Stripe; owner must enter bank details). Codex Supabase token expires ~2027-01-01.
+- Angel Hernandez (he/him): lease flagged "Pays outside Domus"; owner records Fidelity payments (Charges → Record → ACH, note "Fidelity") or asks Claude to record quietly.
+
 ## Ops & Observability (2026-10-02)
 
 - **Deploys:** Vercel is git-connected — push to `main` auto-deploys production. CLI `vercel deploy` is optional.
