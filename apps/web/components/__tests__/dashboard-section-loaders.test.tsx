@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useDashboardNavigation } from "@/components/dashboard/dashboard-section-loaders";
-import { OWNER_DAILY_OPS_SECTION_IDS } from "@/components/dashboard/owner-daily-ops-pagination";
+import { ownerMenuGroups } from "@/components/dashboard/dashboard-config";
 import type { DashboardProps } from "@/components/dashboard/types";
 
 const replaceMock = vi.fn();
@@ -108,16 +108,18 @@ describe("useDashboardNavigation", () => {
     expect(screen.getByTestId("navigation-state")).toHaveTextContent("foobar|Section not found|true");
   });
 
-  it("keeps owner daily ops navigation complete when deferred data is absent", () => {
+  it("keeps owner grouped navigation complete when deferred data is absent", () => {
     render(<NavigationProbe initialSectionId="overview" />);
 
-    expect(screen.getByTestId("section-count")).toHaveTextContent(String(OWNER_DAILY_OPS_SECTION_IDS.length));
-    expect(screen.getByTestId("section-ids")).toHaveTextContent(OWNER_DAILY_OPS_SECTION_IDS.join(","));
+    expect(screen.getByTestId("section-count")).toHaveTextContent(String(ownerMenuGroups.reduce((sum, group) => sum + group.items.length, 0) + 1));
+    for (const group of ownerMenuGroups) for (const [, label] of group.items) {
+      expect(screen.getByRole("button", { name: label })).toBeVisible();
+    }
 
-    const analyticsButton = screen.getByRole("button", { name: "Analytics" });
+    const analyticsButton = screen.getByRole("button", { name: "Charts" });
     fireEvent.click(analyticsButton);
 
-    expect(screen.getByTestId("navigation-state")).toHaveTextContent("analytics|Analytics|false");
+    expect(screen.getByTestId("navigation-state")).toHaveTextContent("analytics|Charts|false");
     expect(replaceMock).toHaveBeenCalledWith("/owner?section=analytics");
   });
 });

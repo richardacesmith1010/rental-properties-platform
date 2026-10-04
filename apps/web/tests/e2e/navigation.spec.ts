@@ -20,7 +20,7 @@ test.describe.serial("Owner navigation", () => {
     await cleanupAllTestData().catch(() => {});
   });
 
-  test("owner can open the property wizard and move page-by-page", async ({ page }) => {
+  test("owner can open the property wizard and select sections directly", async ({ page }) => {
     const email = buildTestEmail("owner-navigation");
     const user = await createTestUser({ email, password, role: "owner", fullName: "E2E Navigation Owner" });
     createdUser = { id: user.id, email };
@@ -35,19 +35,24 @@ test.describe.serial("Owner navigation", () => {
 
     await expect(page.getByRole("heading", { name: "Home", exact: true })).toBeVisible();
 
-    await page.getByRole("button", { name: /^New Property$/ }).click();
+    await page.getByRole("button", { name: "Add", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Add a home", exact: true }).click();
     const wizard = page.getByRole("dialog");
     await expect(wizard.getByText(/set up the property, units, lease, and tenant in one flow/i)).toBeVisible();
     await wizard.getByRole("button", { name: "Close", exact: true }).click();
     await expect(wizard).toHaveCount(0);
 
-    await page.getByRole("button", { name: "Next section" }).click();
-    await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
-
-    await page.getByRole("button", { name: "Next section" }).click();
-    await expect(page.getByRole("heading", { name: "Charges", exact: true })).toBeVisible();
-
-    await page.getByRole("button", { name: "Previous section" }).click();
-    await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
+    const nav = page.getByRole("navigation", { name: "Main navigation" });
+    await nav.getByRole("button", { name: /^Rent(?: \d+)?$/ }).click();
+    await expect(page.getByRole("heading", { name: "Rent", exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/section=charges/);
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("ArrowLeft");
+    await expect(page).toHaveURL(/section=charges/);
+    await expect(page.getByRole("button", { name: "Previous section" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Next section" })).toHaveCount(0);
+    await nav.getByRole("button", { name: "Home", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Home", exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/owner$/);
   });
 });

@@ -21,6 +21,7 @@ import {
 import type { ThemePreference } from "@/lib/theme";
 
 export interface NavItem {
+  group?: string;
   id: string;
   label: string;
   icon: LucideIcon;
@@ -221,17 +222,22 @@ export function injectReportsNavItem(navItems: NavItem[], reportsHref: string | 
     return navItems;
   }
 
-  return [
-    ...navItems,
-    {
-      id: "reports",
-      label: "Reports",
-      icon: BarChart3,
-      href: reportsHref,
-      description: "Financial reports and analytics.",
-      clickHint: "open financial reports"
-    }
-  ];
+  const reports: NavItem = {
+    id: "reports", label: "Reports", icon: BarChart3, href: reportsHref,
+    description: "View your financial reports."
+  };
+  if (navItems.some(item => item.group)) {
+    reports.group = "Money";
+    const next = [...navItems];
+    const insertAt = next.findIndex(item => item.id === "manager-payments" || item.group === "More");
+    next.splice(insertAt < 0 ? next.length : insertAt, 0, reports);
+    return next;
+  }
+  return [...navItems, {
+    ...reports,
+    description: "Financial reports and analytics.",
+    clickHint: "open financial reports"
+  }];
 }
 
 export function navButtonClasses(isActive: boolean, mobile = false) {

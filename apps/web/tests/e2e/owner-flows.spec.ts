@@ -19,7 +19,7 @@ test.describe("Owner flows", () => {
     await openOwnerWorkspace(page);
 
     await expect(page.getByRole("heading", { name: "Home", exact: true })).toBeVisible();
-    await expect(page.getByText(/good (morning|afternoon|evening),/i)).toBeVisible();
+    await expect(page.getByText("See what needs your attention today.")).toBeVisible();
     await expect(page.getByRole("heading", { name: /financial overview/i })).toBeVisible();
 
     const actionCenterVisible =
@@ -34,7 +34,7 @@ test.describe("Owner flows", () => {
     await loginOwnerOrSkip(page);
     await openOwnerWorkspace(page, "/owner?section=portfolio");
 
-    await expect(page.getByRole("heading", { name: "Portfolio", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Homes", exact: true })).toBeVisible();
     const portfolio = page.locator("#portfolio");
     await expect(portfolio.getByRole("button", { name: "Rename Riverside Apartments.", exact: true })).toBeVisible();
     await expect(portfolio.getByRole("button", { name: "Rename Oak Park Duplex.", exact: true })).toBeVisible();
@@ -44,7 +44,7 @@ test.describe("Owner flows", () => {
     await loginOwnerOrSkip(page);
     await openOwnerWorkspace(page, "/owner?section=manager-payments");
 
-    await expect(page.getByRole("heading", { name: "Manager Payments" }).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Manager pay", exact: true }).first()).toBeVisible();
     const paymentStateVisible =
       (await page.getByText(/pay manager|record payment|no manager payments|manager payments unavailable/i).count()) >
       0;
@@ -55,19 +55,20 @@ test.describe("Owner flows", () => {
     await loginOwnerOrSkip(page);
     await openOwnerWorkspace(page, "/owner?section=analytics");
 
-    await expect(page.getByRole("heading", { name: "Analytics" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Charts", exact: true })).toBeVisible();
     await expect(page.getByText(/rent collection|collected/i).first()).toBeVisible();
     await expect(page.getByText(/expense breakdown|maintenance/i).first()).toBeVisible();
   });
 
-  test("shows the compact greeting summary on the home page", async ({ page }) => {
+  test("shows a clear home header and Add menu", async ({ page }) => {
     await loginOwnerOrSkip(page);
     await openOwnerWorkspace(page);
 
-    await expect(page.getByText(/good (morning|afternoon|evening),/i)).toBeVisible();
-    const summaryVisible =
-      (await page.getByText(/everything looks good|overdue charge|open ticket|urgent ticket/i).count()) > 0;
-    expect(summaryVisible).toBeTruthy();
+    await expect(page.getByText("See what needs your attention today.")).toBeVisible();
+    await page.getByRole("button", { name: "Add", exact: true }).click();
+    for (const name of ["Add a home", "Add a tenant", "Add a manager"]) {
+      await expect(page.getByRole("menuitem", { name, exact: true })).toBeVisible();
+    }
   });
 
   test("shows inline edit affordance on portfolio", async ({ page }) => {

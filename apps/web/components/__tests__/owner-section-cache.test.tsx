@@ -56,7 +56,7 @@ function NavigationContent({ serverTickets }: { serverTickets: string }) {
     }}>Property then section</button>
     <div data-testid="visible">{navigation.isSectionLoading ? "loading" : cache.data.tickets?.[0].id ?? serverTickets}</div>
     <div data-testid="section">{navigation.activeSection}</div>
-    <div data-testid="mode">{navigation.ownerWorkflowMode}|{String(navigation.isOwnerDailyOpsHomePage)}</div>
+    <div data-testid="mode">{String(navigation.isOwnerDailyOpsHomePage)}</div>
   </>;
 }
 function NavigationHarness(props: OwnerSectionCacheProps & { serverTickets: string }) {
@@ -81,7 +81,7 @@ describe("owner section cache", () => {
     window.scrollTo = vi.fn();
   });
 
-  it("preloads the next neighbour before the previous with one request in flight", async () => {
+  it("preloads hovered sections serially with one request in flight", async () => {
     vi.useFakeTimers();
     const next = deferred(), previous = deferred();
     const props = fixture();
@@ -89,11 +89,14 @@ describe("owner section cache", () => {
     sectionLoad = vi.fn().mockReturnValueOnce(next.promise).mockReturnValueOnce(previous.promise);
     const { result } = renderHook(() => useOwnerSectionCache(props));
 
-    act(() => result.current.preloadNeighbours("portfolio", ["charges", "portfolio", "maintenance"]));
+    act(() => result.current.preloadSection("maintenance", 150));
     await act(async () => vi.advanceTimersByTimeAsync(300));
     expect(sectionLoad).toHaveBeenCalledTimes(1);
     expect(sectionLoad).toHaveBeenNthCalledWith(1, expect.objectContaining({ section: "maintenance", preload: true }));
 
+    act(() => result.current.preloadSection("charges"));
+    await act(async () => vi.advanceTimersByTimeAsync(0));
+    expect(sectionLoad).toHaveBeenCalledTimes(1);
     await act(async () => next.resolve(readyBundle("tickets", "next")));
     expect(sectionLoad).toHaveBeenCalledTimes(2);
     expect(sectionLoad).toHaveBeenNthCalledWith(2, expect.objectContaining({ section: "charges", preload: true }));
@@ -101,16 +104,54 @@ describe("owner section cache", () => {
     vi.useRealTimers();
   });
 
-  it("skips loaded neighbours and respects wrap-around in the supplied available list", async () => {
+  it("waits 150 ms, cancels a short hover, and deduplicates focus", async () => {
     vi.useFakeTimers();
     const props = fixture();
-    props.requirements = { overview: ["tickets"], portfolio: [], charges: ["owner-connected-map"] };
+    const { result } = renderHook(() => useOwnerSectionCache(props));
+    act(() => result.current.preloadSection("maintenance", 150));
+    await act(async () => vi.advanceTimersByTimeAsync(149));
+    expect(sectionLoad).not.toHaveBeenCalled();
+    act(() => result.current.cancelScheduledPreload());
+    await act(async () => vi.advanceTimersByTimeAsync(1));
+    expect(sectionLoad).not.toHaveBeenCalled();
+    act(() => result.current.preloadSection("maintenance", 150));
+    await act(async () => vi.advanceTimersByTimeAsync(150));
+    expect(sectionLoad).toHaveBeenCalledOnce();
+    act(() => result.current.preloadSection("maintenance"));
+    await act(async () => vi.advanceTimersByTimeAsync(0));
+    expect(sectionLoad).toHaveBeenCalledOnce();
+    vi.useRealTimers();
+  });
+
+  it("cancels a queued focus preload while another request finishes", async () => {
+    vi.useFakeTimers();
+    const props = fixture();
+    const pending = deferred();
+    sectionLoad = vi.fn().mockReturnValue(pending.promise);
+    const { result } = renderHook(() => useOwnerSectionCache(props));
+    act(() => result.current.preloadSection("maintenance"));
+    await act(async () => vi.advanceTimersByTimeAsync(0));
+    act(() => result.current.preloadSection("charges"));
+    await act(async () => vi.advanceTimersByTimeAsync(0));
+    act(() => result.current.cancelScheduledPreload());
+    await act(async () => pending.resolve(ready("preloaded")));
+    expect(sectionLoad).toHaveBeenCalledOnce();
+    vi.useRealTimers();
+  });
+
+  it("skips loaded sections and preloads focused Home", async () => {
+    vi.useFakeTimers();
+    const props = fixture();
+    props.requirements = { "daily-ops-home": ["tickets"], portfolio: [], charges: ["owner-connected-map"] };
     props.loadedBundles.push("owner-connected-map");
     const { result } = renderHook(() => useOwnerSectionCache(props));
-    act(() => result.current.preloadNeighbours("charges", ["overview", "portfolio", "charges"]));
+    act(() => result.current.preloadSection("charges"));
     await act(async () => vi.advanceTimersByTimeAsync(300));
+    expect(sectionLoad).not.toHaveBeenCalled();
+    act(() => result.current.preloadSection("overview"));
+    await act(async () => vi.advanceTimersByTimeAsync(0));
     expect(sectionLoad).toHaveBeenCalledOnce();
-    expect(sectionLoad).toHaveBeenCalledWith(expect.objectContaining({ section: "overview", preload: true }));
+    expect(sectionLoad).toHaveBeenCalledWith(expect.objectContaining({ section: "daily-ops-home", preload: true }));
     vi.useRealTimers();
   });
 
@@ -121,18 +162,18 @@ describe("owner section cache", () => {
     sectionLoad = vi.fn().mockReturnValue(click.promise);
     const { result } = renderHook(() => useOwnerSectionCache(props));
     act(() => result.current.navigate("/owner?section=maintenance", "maintenance"));
-    act(() => result.current.preloadNeighbours("portfolio", ["charges", "portfolio", "maintenance"]));
+    act(() => result.current.preloadSection("maintenance", 150));
     await act(async () => vi.advanceTimersByTimeAsync(300));
     expect(sectionLoad).toHaveBeenCalledOnce();
     await act(async () => click.resolve(ready("click")));
 
     Object.defineProperty(navigator, "connection", { configurable: true, value: { saveData: true } });
-    act(() => result.current.preloadNeighbours("portfolio", ["charges", "portfolio", "maintenance"]));
+    act(() => result.current.preloadSection("maintenance", 150));
     await act(async () => vi.advanceTimersByTimeAsync(300));
     expect(sectionLoad).toHaveBeenCalledOnce();
     Object.defineProperty(navigator, "connection", { configurable: true, value: undefined });
     Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
-    act(() => result.current.preloadNeighbours("portfolio", ["charges", "portfolio", "maintenance"]));
+    act(() => result.current.preloadSection("maintenance", 150));
     await act(async () => vi.advanceTimersByTimeAsync(300));
     expect(sectionLoad).toHaveBeenCalledOnce();
     Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
@@ -145,7 +186,7 @@ describe("owner section cache", () => {
     const props = fixture();
     sectionLoad = vi.fn().mockReturnValue(preload.promise);
     const { result } = renderHook(() => useOwnerSectionCache(props));
-    act(() => result.current.preloadNeighbours("portfolio", ["charges", "portfolio", "maintenance"]));
+    act(() => result.current.preloadSection("maintenance", 150));
     await act(async () => vi.advanceTimersByTimeAsync(300));
     act(() => result.current.navigate("/owner?section=maintenance", "maintenance"));
     expect(sectionLoad).toHaveBeenCalledOnce();
@@ -163,7 +204,7 @@ describe("owner section cache", () => {
     const { result, rerender } = renderHook(
       (input: OwnerSectionCacheProps) => useOwnerSectionCache(input), { initialProps: props }
     );
-    act(() => result.current.preloadNeighbours("portfolio", ["charges", "portfolio", "maintenance"]));
+    act(() => result.current.preloadSection("maintenance", 150));
     await act(async () => vi.advanceTimersByTimeAsync(300));
     rerender({ ...props, loadedBundles: [...props.loadedBundles] });
     await act(async () => stale.resolve(ready("stale")));
@@ -174,7 +215,7 @@ describe("owner section cache", () => {
     sectionLoad = vi.fn().mockReturnValue(rejected.promise);
     const scopedProps = { ...props };
     rerender(scopedProps);
-    act(() => result.current.preloadNeighbours("portfolio", ["charges", "portfolio", "maintenance"]));
+    act(() => result.current.preloadSection("maintenance", 150));
     await act(async () => vi.advanceTimersByTimeAsync(300));
     window.history.replaceState(null, "", "/owner?account=account-b&section=portfolio");
     rerender(scopedProps);
@@ -251,7 +292,6 @@ describe("owner section cache", () => {
 
   it.each([
     "/owner?account=account-b&section=maintenance",
-    "/owner?mode=records&section=expenses",
     "/owner?property=property-b&section=maintenance"
   ])("clears synchronously before full navigation to %s and does not reuse bundles", async url => {
     const props = fixture();
@@ -332,13 +372,13 @@ describe("owner section cache", () => {
     expect(router.replace).not.toHaveBeenCalled();
   });
 
-  it("keeps workflow mode changes on full server navigation", () => {
+  it("opens Expenses without a mode or full server navigation", async () => {
     const props = fixture();
     render(<NavigationHarness {...props} serverTickets="server" />);
     fireEvent.click(screen.getByRole("button", { name: "Expenses" }));
-    expect(router.replace).toHaveBeenCalledWith("/owner?section=expenses&mode=records");
-    expect(sectionLoad).not.toHaveBeenCalled();
-    expect(screen.getByTestId("visible")).toHaveTextContent("loading");
+    expect(router.replace).not.toHaveBeenCalled();
+    expect(window.location.search).toBe("?section=expenses");
+    await waitFor(() => expect(sectionLoad).toHaveBeenCalledOnce());
   });
 
   it("uses initial deep-link data without a section action", () => {
@@ -351,12 +391,34 @@ describe("owner section cache", () => {
     expect(sectionLoad).not.toHaveBeenCalled();
   });
 
-  it.each(["daily_ops", "unknown", "__proto__"])("preserves home deep links with mode=%s", mode => {
+  it.each(["new_tenant", "records", "daily_ops", "unknown", "__proto__"])("preserves home deep links with mode=%s", mode => {
     window.history.replaceState(null, "", `/owner?mode=${mode}`);
     const props = fixture();
     render(<NavigationHarness {...props} serverTickets="server" />);
-    expect(screen.getByTestId("mode")).toHaveTextContent("daily_ops|true");
+    expect(screen.getByTestId("mode")).toHaveTextContent("true");
+    expect(window.location.search).toBe("");
     expect(sectionLoad).not.toHaveBeenCalled();
+  });
+
+  it("opens legacy Expenses links and removes only mode", () => {
+    window.history.replaceState(null, "", "/owner?mode=records&section=expenses&account=account-a&property=property-a");
+    render(<NavigationHarness {...fixture()} serverTickets="server" />);
+    expect(screen.getByTestId("section")).toHaveTextContent("expenses");
+    expect(window.location.search).toBe("?section=expenses&account=account-a&property=property-a");
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  it("reuses cached bundles when only legacy mode changes", async () => {
+    const props = fixture();
+    const { result, rerender } = renderHook(() => useOwnerSectionCache(props));
+    act(() => result.current.navigate("/owner?section=maintenance", "maintenance"));
+    await waitFor(() => expect(result.current.data.tickets).toHaveLength(1));
+    window.history.replaceState(null, "", "/owner?mode=records&section=maintenance");
+    rerender();
+    act(() => result.current.navigate("/owner?section=maintenance", "maintenance"));
+    expect(sectionLoad).toHaveBeenCalledOnce();
+    expect(router.replace).not.toHaveBeenCalled();
+    expect(result.current.data.tickets).toHaveLength(1);
   });
 
   it("preserves a pending property scope when a command also opens a section", () => {

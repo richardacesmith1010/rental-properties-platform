@@ -62,26 +62,24 @@ test.describe.serial("Mobile viewport", () => {
     await expect(page.getByRole("dialog", { name: /search commands/i })).toBeVisible();
   });
 
-  test("pagination controls stay thumb-sized on mobile", async ({ page }) => {
+  test("Add and drawer links stay thumb-sized on mobile", async ({ page }) => {
     await loginOwnerOrSkip(page);
     await dismissOwnerOnboarding(page, DEMO_USERS.owner.email);
     await page.goto("/owner?section=charges");
     await page.waitForLoadState("networkidle").catch(() => {});
 
-    const previousButton = page.getByRole("button", { name: "Previous section" });
-    const nextButton = page.getByRole("button", { name: "Next section" });
-
-    const previousBox = await previousButton.boundingBox();
-    const nextBox = await nextButton.boundingBox();
-
-    if (!previousBox || !nextBox) {
-      test.skip(true, "Unable to measure pagination controls.");
-      return;
-    }
-
-    expect(previousBox.width).toBeGreaterThanOrEqual(44);
-    expect(previousBox.height).toBeGreaterThanOrEqual(44);
-    expect(nextBox.width).toBeGreaterThanOrEqual(44);
-    expect(nextBox.height).toBeGreaterThanOrEqual(44);
+    const add = page.getByRole("button", { name: "Add", exact: true });
+    const box = await add.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.width).toBeGreaterThanOrEqual(44);
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+    await page.getByRole("button", { name: /open navigation/i }).click();
+    const rent = page.getByRole("dialog").getByRole("button", { name: /^Rent(?: \d+)?$/ });
+    const rentBox = await rent.boundingBox();
+    expect(rentBox).not.toBeNull();
+    expect(rentBox!.height).toBeGreaterThanOrEqual(44);
+    await rent.click();
+    await expect(page.getByRole("heading", { name: "Rent", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Next section" })).toHaveCount(0);
   });
 });

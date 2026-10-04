@@ -96,7 +96,6 @@ export function SectionRenderer(props: SectionRendererComponentProps) {
           onGenerateChargesHref={props.onGenerateChargesHref}
           ownerConnectedMap={props.ownerConnectedMap}
           stripeConnected={props.stripeConnected}
-          previewCount={props.isOwnerDailyOpsCarousel ? 5 : undefined}
           availableLeases={props.safePortfolio.leases
             .filter((lease) => lease.active)
             .map((lease) => ({
@@ -134,7 +133,6 @@ export function SectionRenderer(props: SectionRendererComponentProps) {
           photoWorkflowEnabled={props.safeCapabilities.photoWorkflowEnabled}
           vendorWorkflowWarning={props.safeCapabilities.warnings.vendorWorkflow}
           photoWorkflowWarning={props.safeCapabilities.warnings.photoWorkflow}
-          previewCount={props.isOwnerDailyOpsCarousel ? 4 : undefined}
         />
       );
 
@@ -475,7 +473,6 @@ export function SectionRenderer(props: SectionRendererComponentProps) {
           onGetTenantActivityLog={props.onGetTenantActivityLog}
           onGoToOperations={() => props.goToSectionIfVisible("operations")}
           onOpenLeaseWizard={props.openLeaseWizard}
-          previewCount={props.isOwnerDailyOpsCarousel ? 4 : undefined}
         />
       );
 
@@ -495,7 +492,6 @@ export function SectionRenderer(props: SectionRendererComponentProps) {
           onMarkManagerPaymentPaid={props.onMarkManagerPaymentPaid}
           onCancelManagerPayment={props.onCancelManagerPayment}
           onGenerateMonthlyManagerPayments={props.onGenerateMonthlyManagerPayments}
-          previewCount={props.isOwnerDailyOpsCarousel ? 4 : undefined}
         />
       );
 

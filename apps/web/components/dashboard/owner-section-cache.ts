@@ -5,7 +5,6 @@ import type { OwnerSectionData, OwnerSectionInput, OwnerSectionResult } from "@/
 import { decodeOwnerSectionResult } from "@/lib/owner-section-transport";
 import { createContext, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ownerWorkflowModeMeta, type OwnerWorkflowMode } from "./dashboard-config";
 
 export interface OwnerSectionCacheProps {
   loadedBundles: OwnerBundleId[];
@@ -38,27 +37,23 @@ function abortRequests(cache: {
   cache.attemptedPreloads.clear();
 }
 
-export function resolveOwnerMode(mode: string | null): OwnerWorkflowMode {
-  return mode && Object.prototype.hasOwnProperty.call(ownerWorkflowModeMeta, mode)
-    ? mode as OwnerWorkflowMode : "daily_ops";
-}
-
-function ownerScope(account: string | null, mode: string | null, property: string | null) {
-  return JSON.stringify([account, resolveOwnerMode(mode), property || null]);
+function ownerScope(account: string | null, property: string | null) {
+  return JSON.stringify([account, property || null]);
 }
 
 export function useOwnerSectionCache(props: OwnerSectionCacheProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [, redraw] = useState(0);
-  const serverScope = ownerScope(props.account, props.mode ?? null, props.property);
+  const serverScope = ownerScope(props.account, props.property);
   const scope = ownerScope(searchParams.get("account") ?? props.account,
-    searchParams.get("mode"), searchParams.get("property"));
+    searchParams.get("property"));
   const state = useRef({
     server: props.loadedBundles, scope, epoch: 0, request: 0, pendingUrl: null as string | null,
     overlay: new Map<OwnerBundleId, OwnerSectionData>(), loading: false, waitingForServer: false,
     controllers: new Set<AbortController>(), clickController: null as AbortController | null,
     attemptedPreloads: new Set<string>(),
+    preloadSchedule: 0,
     preloadIdle: null as number | null,
     preloadFlight: null as null | {
       section: string;
@@ -91,9 +86,9 @@ export function useOwnerSectionCache(props: OwnerSectionCacheProps) {
 
   const cancelScheduledPreload = useCallback(() => {
     const current = state.current;
+    current.preloadSchedule++;
     if (current.preloadIdle === null) return;
-    if (typeof window.requestIdleCallback === "function") window.cancelIdleCallback(current.preloadIdle);
-    else globalThis.clearTimeout(current.preloadIdle);
+    globalThis.clearTimeout(current.preloadIdle);
     current.preloadIdle = null;
   }, []);
 
@@ -132,7 +127,7 @@ export function useOwnerSectionCache(props: OwnerSectionCacheProps) {
   const navigate = useCallback((url: string, section: string) => {
     const next = new URL(url, window.location.origin);
     const nextScope = ownerScope(next.searchParams.get("account") ?? props.account,
-      next.searchParams.get("mode"), next.searchParams.get("property"));
+      next.searchParams.get("property"));
     const current = state.current;
     if (current.waitingForServer || nextScope !== current.scope || nextScope !== serverScope) {
       fullNavigate(url);
@@ -165,7 +160,6 @@ export function useOwnerSectionCache(props: OwnerSectionCacheProps) {
       ? preloadFlight.promise
       : loadSection({
         section, account: next.searchParams.get("account") ?? props.account ?? undefined,
-        mode: next.searchParams.get("mode") ?? undefined,
         property: next.searchParams.get("property") ?? undefined
       }, controller!.signal);
     void requestPromise.then(result => {
@@ -191,12 +185,14 @@ export function useOwnerSectionCache(props: OwnerSectionCacheProps) {
     });
   }, [fullNavigate, invalidate, props, router, serverScope]);
 
-  const preloadNeighbours = useCallback((activeSection: string, sectionIds: string[]) => {
+  const preloadSection = useCallback((sectionId: string, delay = 0) => {
     const current = state.current;
     cancelScheduledPreload();
+    const scheduledId = current.preloadSchedule;
     const scheduledScope = current.scope;
     const scheduledEpoch = current.epoch;
     const run = () => {
+      if (current.preloadSchedule !== scheduledId) return;
       current.preloadIdle = null;
       const connection = navigator as Navigator & { connection?: { saveData?: boolean } };
       if (connection.connection?.saveData || document.visibilityState === "hidden" || current.loading ||
@@ -206,12 +202,7 @@ export function useOwnerSectionCache(props: OwnerSectionCacheProps) {
         void existingFlight.promise.catch(() => undefined).then(run);
         return;
       }
-      const activeIndex = sectionIds.indexOf(activeSection);
-      if (activeIndex < 0 || sectionIds.length < 2) return;
-      const candidates = [
-        sectionIds[(activeIndex + 1) % sectionIds.length],
-        sectionIds[(activeIndex - 1 + sectionIds.length) % sectionIds.length]
-      ].filter((section, index, values) => values.indexOf(section) === index);
+      const candidates = [sectionId === "overview" ? "daily-ops-home" : sectionId];
       const preload = async () => {
         for (const section of candidates) {
           if (connection.connection?.saveData || document.visibilityState === "hidden" || current.loading ||
@@ -228,7 +219,6 @@ export function useOwnerSectionCache(props: OwnerSectionCacheProps) {
           const promise = loadSection({
             section,
             account: params.get("account") ?? latestProps.account ?? undefined,
-            mode: params.get("mode") ?? undefined,
             property: params.get("property") ?? undefined,
             preload: true
           }, controller.signal);
@@ -253,16 +243,14 @@ export function useOwnerSectionCache(props: OwnerSectionCacheProps) {
       };
       void preload();
     };
-    current.preloadIdle = typeof window.requestIdleCallback === "function"
-      ? window.requestIdleCallback(run)
-      : globalThis.setTimeout(run, 300) as unknown as number;
+    current.preloadIdle = globalThis.setTimeout(run, delay) as unknown as number;
   }, [cancelScheduledPreload]);
 
   const navigationParams = () => new URL(
     state.current.pendingUrl ?? window.location.href, window.location.origin
   ).searchParams;
   const data: Partial<OwnerSectionData> = Object.assign({}, ...cache.overlay.values());
-  return { data, loading: cache.loading, navigate, fullNavigate, navigationParams, preloadNeighbours };
+  return { data, loading: cache.loading, navigate, fullNavigate, navigationParams, preloadSection, cancelScheduledPreload };
 }
 
 export const OwnerSectionCacheContext = createContext<ReturnType<typeof useOwnerSectionCache> | null>(null);

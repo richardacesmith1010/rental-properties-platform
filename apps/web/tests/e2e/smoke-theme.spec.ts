@@ -138,12 +138,11 @@ const REQUIRED_ENV_NAMES = ["APP_URL", "SMOKE_OWNER_EMAIL", "SMOKE_OWNER_PASSWOR
   "SMOKE_MANAGER_PASSWORD", "SMOKE_TENANT_EMAIL", "SMOKE_TENANT_PASSWORD"] as const;
 
 const OWNER_SECTIONS = [
-  "Overview", "Charges", "Payments", "Maintenance", "Leasing Hub", "Applications", "Manager Payments",
-  "Inbox", "Notifications", "Activity", "Ownership", "Invitations", "Documents", "Vendors", "Expenses",
-  "Analytics", "Operations", "Portfolio", "Units", "Leases", "Tenants"
+  "Home", "Rent", "Repairs", "Messages", "Homes", "Units", "Leases", "Tenants",
+  "Find a tenant", "Applications", "Invites", "Payments", "Expenses", "Charts", "Manager pay",
+  "Documents", "Vendors", "Owners", "Members", "Automations", "Activity", "Alerts"
 ] as const;
-
-const DEFAULT_OWNER_SECTIONS = ["Units", "Leases", "Expenses", "Operations", "Documents", "Leasing Hub"];
+const DEFAULT_OWNER_SECTIONS = ["Units", "Leases", "Expenses", "Documents", "Find a tenant"];
 const DEFAULT_MANAGER_SECTIONS = ["Vendors", "Maintenance"];
 const TENANT_VIEWS = ["/tenant", "/tenant?section=notifications", "/settings"];
 const FULL_MODE = process.env.SMOKE_THEME_FULL === "1";
@@ -181,6 +180,14 @@ async function waitForView(page: Page) {
 }
 
 async function openDashboardSection(page: Page, label: string): Promise<boolean> {
+  if (new URL(page.url()).pathname === "/owner") {
+    const item = page.getByRole("navigation", { name: "Main navigation" })
+      .getByRole("button", { name: new RegExp(`^${escapeRegExp(label)}(?:\\s|$)`, "i") }).first();
+    if (!(await item.isVisible().catch(() => false))) return false;
+    await item.click();
+    await waitForView(page);
+    return true;
+  }
   const paletteTrigger = page.getByText("Search navigation", { exact: false }).first();
   if (await paletteTrigger.isVisible().catch(() => false)) {
     await paletteTrigger.click();
@@ -434,7 +441,7 @@ test.describe("authenticated theme contrast smoke", () => {
 
     const sections = FULL_MODE ? OWNER_SECTIONS : DEFAULT_OWNER_SECTIONS;
     for (const section of sections) {
-      if (section === "Overview") continue;
+      if (section === "Home") continue;
       if (await openDashboardSection(page, section)) {
         await assertView(page, "Owner", "dark", section);
       }
@@ -446,7 +453,7 @@ test.describe("authenticated theme contrast smoke", () => {
     await assertView(page, "Owner", "light", "home");
     if (FULL_MODE) {
       for (const section of OWNER_SECTIONS) {
-        if (section === "Overview") continue;
+        if (section === "Home") continue;
         if (await openDashboardSection(page, section)) {
           await assertView(page, "Owner", "light", section);
         }

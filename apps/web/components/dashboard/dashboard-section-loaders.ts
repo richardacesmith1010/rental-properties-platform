@@ -3,25 +3,18 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   buildAllSectionItems,
   getManagerModeNavItems,
-  getOwnerModeNavItems,
+  getOwnerNavItems,
   managerWorkflowModeMeta,
-  ownerWorkflowModeMeta,
-  type ManagerWorkflowMode,
-  type OwnerWorkflowMode
+  type ManagerWorkflowMode
 } from "./dashboard-config";
 import {
-  MANAGER_SECTION_MODE_BY_ID,
-  OWNER_SECTION_MODE_BY_ID
+  MANAGER_SECTION_MODE_BY_ID
 } from "./dashboard-workflow-modes";
 import { useDashboardWorkflowHandlers } from "./dashboard-workflow-handlers";
-import {
-  OWNER_DAILY_OPS_SECTION_IDS,
-  useOwnerDailyOpsPagination
-} from "./owner-daily-ops-pagination";
 import type { NavItem } from "./sidebar-nav";
 import type { DashboardProps } from "./types";
 import type { DashboardKpiState } from "./dashboard-kpi-loader";
-import { OwnerSectionCacheContext, resolveOwnerMode } from "./owner-section-cache";
+import { OwnerSectionCacheContext } from "./owner-section-cache";
 export { OwnerSectionCacheContext, useOwnerSectionCache } from "./owner-section-cache";
 export type { OwnerSectionCacheProps } from "./owner-section-cache";
 
@@ -132,9 +125,6 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
     ]
   );
 
-  const [ownerWorkflowMode, setOwnerWorkflowMode] = useState<OwnerWorkflowMode>(
-    props.initialOwnerWorkflowMode ?? "daily_ops"
-  );
   const [managerWorkflowMode, setManagerWorkflowMode] = useState<ManagerWorkflowMode>(
     props.initialManagerWorkflowMode ?? "daily_ops"
   );
@@ -142,24 +132,8 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
   const [isPropertyWizardOpen, setIsPropertyWizardOpen] = useState(false);
   const [isTenantInviteWizardOpen, setIsTenantInviteWizardOpen] = useState(false);
   const [isLeaseWizardOpen, setIsLeaseWizardOpen] = useState(false);
-  const [ownerDailyOpsStartsAtHome, setOwnerDailyOpsStartsAtHome] = useState(
-    props.initialOwnerHomePage ?? false
-  );
-  const [isSectionLoading, setIsSectionLoading] = useState(false);
+
   const [, startRouteTransition] = useTransition();
-
-  useEffect(() => {
-    const nextMode = props.initialOwnerWorkflowMode;
-    if (!nextMode) {
-      return;
-    }
-    setOwnerWorkflowMode((current) => (current === nextMode ? current : nextMode));
-  }, [props.initialOwnerWorkflowMode]);
-
-  useEffect(() => {
-    setOwnerDailyOpsStartsAtHome(props.initialOwnerHomePage ?? false);
-    setIsSectionLoading(false);
-  }, [props.initialOwnerHomePage, props.initialSectionId]);
 
   useEffect(() => {
     const nextMode = props.initialManagerWorkflowMode;
@@ -200,31 +174,18 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
     ]
   );
 
-  const ownerModeNavItems = useMemo(
-    () =>
-      isOwnerRole
-        ? getOwnerModeNavItems({
-            hasAnalyticsSection: navigationAvailability.hasAnalyticsSection,
-            hasManagerPaymentsSection: navigationAvailability.hasManagerPaymentsSection,
-            hasMembersSection: navigationAvailability.hasMembersSection
-          })
-        : [],
-    [isOwnerRole, navigationAvailability]
-  );
+  const ownerNavItems = useMemo(() => getOwnerNavItems(allSectionItems), [allSectionItems]);
   const managerModeNavItems = useMemo(
     () => (isManagerRole ? getManagerModeNavItems() : []),
     [isManagerRole]
   );
 
   const activeWorkflowMeta = useMemo(() => {
-    if (isOwnerRole) {
-      return ownerWorkflowModeMeta[ownerWorkflowMode];
-    }
     if (isManagerRole) {
       return managerWorkflowModeMeta[managerWorkflowMode];
     }
     return null;
-  }, [isManagerRole, isOwnerRole, managerWorkflowMode, ownerWorkflowMode]);
+  }, [isManagerRole, managerWorkflowMode]);
 
   const workflowSectionItems = useMemo<NavItem[]>(() => {
     if (!activeWorkflowMeta) {
@@ -235,21 +196,7 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
     return filtered.length > 0 ? filtered : allSectionItems;
   }, [activeWorkflowMeta, allSectionItems]);
 
-  const ownerDailyOpsSectionItems = useMemo<NavItem[]>(
-    () =>
-      OWNER_DAILY_OPS_SECTION_IDS.map((sectionId) =>
-        allSectionItems.find((item) => item.id === sectionId)
-      ).filter((item): item is NavItem => Boolean(item)),
-    [allSectionItems]
-  );
-
-  const sectionItems = useMemo<NavItem[]>(
-    () =>
-      isOwnerRole && ownerWorkflowMode === "daily_ops"
-        ? ownerDailyOpsSectionItems
-        : workflowSectionItems,
-    [isOwnerRole, ownerDailyOpsSectionItems, ownerWorkflowMode, workflowSectionItems]
-  );
+  const sectionItems = isOwnerRole ? allSectionItems : workflowSectionItems;
 
   const [activeSection, setActiveSection] = useState(() => {
     return props.initialSectionId ?? "overview";
@@ -262,13 +209,14 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
   const usesOwnerCache = ownerCache !== null;
   const ownerQuery = searchParams.toString();
   useEffect(() => {
-    if (!usesOwnerCache) return;
+    if (!isOwnerRole) return;
     const params = new URLSearchParams(ownerQuery);
-    const mode = resolveOwnerMode(params.get("mode"));
-    setActiveSection(params.get("section") ?? "overview");
-    setOwnerDailyOpsStartsAtHome(!params.has("section") && mode === "daily_ops");
-    setOwnerWorkflowMode(mode);
-  }, [ownerQuery, usesOwnerCache]);
+    setActiveSection(params.get("section") ?? (params.has("mode") || usesOwnerCache ? "overview" : props.initialSectionId ?? "overview"));
+    if (params.has("mode")) {
+      params.delete("mode");
+      window.history.replaceState(null, "", `${pathname}${params.size ? `?${params}` : ""}`);
+    }
+  }, [isOwnerRole, ownerQuery, pathname, props.initialSectionId, usesOwnerCache]);
 
   const isUnknownSection = !allSectionItems.some((item) => item.id === activeSection);
 
@@ -276,252 +224,49 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [activeSection]);
 
-  const ownerDailyOpsEnabled = isOwnerRole && ownerWorkflowMode === "daily_ops";
-  const {
-    currentPage: ownerDailyOpsPage,
-    currentPageLabel: ownerDailyOpsPageLabel,
-    currentPageCountLabel: ownerDailyOpsPageCountLabel,
-    isHomePage: isOwnerDailyOpsHomePage,
-    totalPages: ownerDailyOpsTotalPages,
-    goToHomePage: goToOwnerDailyOpsHomePage,
-    goToSectionPage
-  } = useOwnerDailyOpsPagination({
-    enabled: ownerDailyOpsEnabled,
-    activeSection,
-    startAtHome: ownerDailyOpsStartsAtHome,
-    sectionItems: ownerDailyOpsSectionItems,
-    onSelectSection: setActiveSection
-  });
+  const isOwnerDailyOpsHomePage = isOwnerRole && activeSection === "overview";
+  const activeSectionIndex = sectionItems.findIndex(item => item.id === activeSection);
+  const activeSectionLabel = (isOwnerRole ? ownerNavItems : allSectionItems)
+    .find(item => item.id === activeSection)?.label ??
+    (isOwnerRole && activeSection === "operations" ? "Add" : "Section not found");
 
-  const activeSectionIndex = sectionItems.findIndex((item) => item.id === activeSection);
-  const activeSectionLabel =
-    allSectionItems.find((item) => item.id === activeSection)?.label ?? "Section not found";
-
-  const preloadSectionIds = useMemo(
-    () => (ownerDailyOpsEnabled ? ownerDailyOpsSectionItems : sectionItems).map(item => item.id),
-    [ownerDailyOpsEnabled, ownerDailyOpsSectionItems, sectionItems]
-  );
-  const preloadNeighbours = ownerCache?.preloadNeighbours;
-  const ownerCacheLoading = ownerCache?.loading;
-  useEffect(() => {
-    if (!isOwnerRole || !preloadNeighbours || ownerCacheLoading) return;
-    preloadNeighbours(activeSection, preloadSectionIds);
-  }, [activeSection, isOwnerRole, ownerCacheLoading, preloadNeighbours, preloadSectionIds]);
-
-  const navigateOwnerDashboard = useCallback(
-    (params: {
-      nextOwnerMode: OwnerWorkflowMode;
-      nextSectionId: string;
-      startsAtHome: boolean;
-    }) => {
-      setOwnerWorkflowMode(params.nextOwnerMode);
-      setOwnerDailyOpsStartsAtHome(params.startsAtHome);
-      setActiveSection(params.nextSectionId);
-
-      const nextParams = ownerCache?.navigationParams() ?? new URLSearchParams(searchParams.toString());
-      if (params.nextOwnerMode === "daily_ops") {
-        nextParams.delete("mode");
-      } else {
-        nextParams.set("mode", params.nextOwnerMode);
-      }
-
-      if (params.startsAtHome) {
-        nextParams.delete("section");
-      } else {
-        nextParams.set("section", params.nextSectionId);
-      }
-
-      const nextQuery = nextParams.toString();
-      const nextUrl = nextQuery ? `${pathname}?${nextQuery}` : pathname;
-      const currentQuery = searchParams.toString();
-      const currentUrl = currentQuery ? `${pathname}?${currentQuery}` : pathname;
-
-      if (nextUrl === currentUrl) {
-        setIsSectionLoading(false);
-        return;
-      }
-
-      if (ownerCache) {
-        setIsSectionLoading(false);
-        ownerCache.navigate(nextUrl, params.startsAtHome ? "daily-ops-home" : params.nextSectionId);
-        return;
-      }
-      setIsSectionLoading(true);
-      startRouteTransition(() => {
-        router.replace(nextUrl);
-      });
-    },
-    [ownerCache, pathname, router, searchParams, startRouteTransition]
-  );
+  const navigateOwnerDashboard = useCallback((section: string) => {
+    setActiveSection(section);
+    const params = ownerCache?.navigationParams() ?? new URLSearchParams(searchParams.toString());
+    params.delete("mode");
+    if (section === "overview") params.delete("section");
+    else params.set("section", section);
+    const url = `${pathname}${params.size ? `?${params}` : ""}`;
+    if (ownerCache) {
+      ownerCache.navigate(url, section === "overview" ? "daily-ops-home" : section);
+    } else {
+      startRouteTransition(() => router.replace(url));
+    }
+  }, [ownerCache, pathname, router, searchParams]);
 
   const goToPreviousSection = () => {
-    if (ownerDailyOpsEnabled) {
-      if (ownerDailyOpsTotalPages === 0) {
-        return;
-      }
-
-      const nextPage =
-        ((ownerDailyOpsPage - 1) % ownerDailyOpsTotalPages + ownerDailyOpsTotalPages) %
-        ownerDailyOpsTotalPages;
-      if (nextPage === 0) {
-        navigateOwnerDashboard({
-          nextOwnerMode: "daily_ops",
-          nextSectionId: "overview",
-          startsAtHome: true
-        });
-        return;
-      }
-
-      const nextSectionId = ownerDailyOpsSectionItems[nextPage - 1]?.id;
-      if (nextSectionId) {
-        navigateOwnerDashboard({
-          nextOwnerMode: "daily_ops",
-          nextSectionId,
-          startsAtHome: false
-        });
-      }
-      return;
-    }
-    if (sectionItems.length === 0) {
-      return;
-    }
-    const nextSectionId =
-      activeSectionIndex < 0
-        ? sectionItems[sectionItems.length - 1].id
-        : sectionItems[(activeSectionIndex - 1 + sectionItems.length) % sectionItems.length].id;
-
-    if (isOwnerRole) {
-      navigateOwnerDashboard({
-        nextOwnerMode: OWNER_SECTION_MODE_BY_ID[nextSectionId] ?? ownerWorkflowMode,
-        nextSectionId,
-        startsAtHome: false
-      });
-      return;
-    }
-    if (activeSectionIndex < 0) {
-      setActiveSection(sectionItems[sectionItems.length - 1].id);
-      return;
-    }
-    setActiveSection(nextSectionId);
+    if (isOwnerRole || !sectionItems.length) return;
+    setActiveSection(sectionItems[activeSectionIndex < 0 ? sectionItems.length - 1 :
+      (activeSectionIndex - 1 + sectionItems.length) % sectionItems.length].id);
   };
-
   const goToNextSection = () => {
-    if (ownerDailyOpsEnabled) {
-      if (ownerDailyOpsTotalPages === 0) {
-        return;
-      }
-
-      const nextPage = (ownerDailyOpsPage + 1) % ownerDailyOpsTotalPages;
-      if (nextPage === 0) {
-        navigateOwnerDashboard({
-          nextOwnerMode: "daily_ops",
-          nextSectionId: "overview",
-          startsAtHome: true
-        });
-        return;
-      }
-
-      const nextSectionId = ownerDailyOpsSectionItems[nextPage - 1]?.id;
-      if (nextSectionId) {
-        navigateOwnerDashboard({
-          nextOwnerMode: "daily_ops",
-          nextSectionId,
-          startsAtHome: false
-        });
-      }
-      return;
-    }
-    if (sectionItems.length === 0) {
-      return;
-    }
-    const nextSectionId =
-      activeSectionIndex < 0
-        ? sectionItems[0].id
-        : sectionItems[(activeSectionIndex + 1) % sectionItems.length].id;
-
-    if (isOwnerRole) {
-      navigateOwnerDashboard({
-        nextOwnerMode: OWNER_SECTION_MODE_BY_ID[nextSectionId] ?? ownerWorkflowMode,
-        nextSectionId,
-        startsAtHome: false
-      });
-      return;
-    }
-    if (activeSectionIndex < 0) {
-      setActiveSection(sectionItems[0].id);
-      return;
-    }
-    setActiveSection(nextSectionId);
+    if (isOwnerRole || !sectionItems.length) return;
+    setActiveSection(sectionItems[activeSectionIndex < 0 ? 0 :
+      (activeSectionIndex + 1) % sectionItems.length].id);
   };
-
-  const openSection = useCallback(
-    (sectionId: string) => {
-      if (!allSectionItems.some((item) => item.id === sectionId)) {
-        return;
-      }
-
-      const targetOwnerMode = isOwnerRole ? OWNER_SECTION_MODE_BY_ID[sectionId] : null;
-      const usesOwnerDailyOps =
-        isOwnerRole && (targetOwnerMode ?? ownerWorkflowMode) === "daily_ops";
-
-      if (isOwnerRole && targetOwnerMode && ownerWorkflowMode !== targetOwnerMode) {
-        setOwnerWorkflowMode(targetOwnerMode);
-      }
-
-      if (isOwnerRole) {
-        navigateOwnerDashboard({
-          nextOwnerMode: targetOwnerMode ?? ownerWorkflowMode,
-          nextSectionId: sectionId,
-          startsAtHome: false
-        });
-        return;
-      }
-
-      if (isManagerRole) {
-        const targetMode = MANAGER_SECTION_MODE_BY_ID[sectionId];
-        if (targetMode && managerWorkflowMode !== targetMode) {
-          setManagerWorkflowMode(targetMode);
-        }
-      }
-
-      if (usesOwnerDailyOps && goToSectionPage(sectionId)) {
-        return;
-      }
-
-      setActiveSection(sectionId);
-    },
-    [
-      allSectionItems,
-      goToSectionPage,
-      isManagerRole,
-      isOwnerRole,
-      managerWorkflowMode,
-      navigateOwnerDashboard,
-      ownerWorkflowMode
-    ]
-  );
-
-  const goToSectionIfVisible = useCallback(
-    (sectionId: string) => {
-      if (allSectionItems.some((item) => item.id === sectionId)) {
-        openSection(sectionId);
-      }
-    },
-    [allSectionItems, openSection]
-  );
-
-  const goToHomePage = useCallback(() => {
-    if (isOwnerRole) {
-      navigateOwnerDashboard({
-        nextOwnerMode: "daily_ops",
-        nextSectionId: "overview",
-        startsAtHome: true
-      });
-      return;
+  const openSection = useCallback((section: string) => {
+    if (!allSectionItems.some(item => item.id === section)) return;
+    if (isOwnerRole) { navigateOwnerDashboard(section); return; }
+    if (isManagerRole) {
+      const mode = MANAGER_SECTION_MODE_BY_ID[section];
+      if (mode) setManagerWorkflowMode(mode);
     }
-
-    goToOwnerDailyOpsHomePage();
-  }, [goToOwnerDailyOpsHomePage, isOwnerRole, navigateOwnerDashboard]);
+    setActiveSection(section);
+  }, [allSectionItems, isOwnerRole, isManagerRole, navigateOwnerDashboard]);
+  const goToSectionIfVisible = openSection;
+  const goToHomePage = useCallback(() => {
+    if (isOwnerRole) navigateOwnerDashboard("overview");
+  }, [isOwnerRole, navigateOwnerDashboard]);
 
   useEffect(() => {
     if (!isOwnerRole) {
@@ -540,9 +285,9 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
   }, [isOwnerRole]);
 
   const handleModeChange = (
-    mode: OwnerWorkflowMode | ManagerWorkflowMode,
-    meta: typeof ownerWorkflowModeMeta | typeof managerWorkflowModeMeta,
-    setMode: typeof setOwnerWorkflowMode | typeof setManagerWorkflowMode
+    mode: ManagerWorkflowMode,
+    meta: typeof managerWorkflowModeMeta,
+    setMode: typeof setManagerWorkflowMode
   ) => {
     setMode(mode as never);
     const nextSection = meta[mode as keyof typeof meta].sections[0];
@@ -563,27 +308,17 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
     goToSectionIfVisible,
     isOwnerRole,
     isManagerRole,
-    ownerWorkflowMode,
     managerWorkflowMode
   });
 
   const sidebarItems = isOwnerRole
-    ? ownerModeNavItems
+    ? ownerNavItems
     : isManagerRole
       ? managerModeNavItems
       : sectionItems;
-  const sidebarActiveItemId = isOwnerRole
-    ? activeSection === "analytics" ||
-      activeSection === "manager-payments" ||
-      activeSection === "members" ||
-      activeSection === "tenants"
-      ? activeSection
-      : `owner:${ownerWorkflowMode}`
-    : isManagerRole
-      ? activeSection === "tenants"
-        ? activeSection
-        : `manager:${managerWorkflowMode}`
-      : activeSection;
+  const sidebarActiveItemId = isManagerRole
+    ? activeSection === "tenants" ? activeSection : `manager:${managerWorkflowMode}`
+    : activeSection;
   const reportsHref = isOwnerRole
     ? props.activeAccountId
       ? `/owner/reports?account=${encodeURIComponent(props.activeAccountId)}`
@@ -624,59 +359,10 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
   }, []);
 
   const handleSidebarSelect = (itemId: string) => {
-    if (itemId === "analytics" && isOwnerRole) {
-      openSection("analytics");
-      return;
-    }
-    if (itemId === "manager-payments" && isOwnerRole) {
-      openSection("manager-payments");
-      return;
-    }
-    if (itemId === "members" && isOwnerRole) {
-      openSection("members");
-      return;
-    }
+    if (isOwnerRole) { openSection(itemId); return; }
     if (itemId === "notifications") {
-      if (isOwnerRole) {
-        navigateOwnerDashboard({
-          nextOwnerMode: "records",
-          nextSectionId: "notifications",
-          startsAtHome: false
-        });
-        return;
-      }
-      if (isManagerRole) {
-        setManagerWorkflowMode("daily_ops");
-      }
+      if (isManagerRole) setManagerWorkflowMode("daily_ops");
       setActiveSection("notifications");
-      return;
-    }
-    if (isOwnerRole && itemId.startsWith("owner:")) {
-      if (itemId === "owner:daily_ops") {
-        navigateOwnerDashboard({
-          nextOwnerMode: "daily_ops",
-          nextSectionId: "overview",
-          startsAtHome: true
-        });
-        return;
-      }
-      if (itemId === "owner:new_property") {
-        setIsPropertyWizardOpen(true);
-        return;
-      }
-      if (itemId === "owner:new_tenant") {
-        setIsTenantInviteWizardOpen(true);
-        return;
-      }
-      const nextMode = itemId.replace("owner:", "") as OwnerWorkflowMode;
-      const nextSection = ownerWorkflowModeMeta[nextMode].sections[0];
-      if (nextSection) {
-        navigateOwnerDashboard({
-          nextOwnerMode: nextMode,
-          nextSectionId: nextSection,
-          startsAtHome: false
-        });
-      }
       return;
     }
     if (isManagerRole && itemId.startsWith("manager:")) {
@@ -702,15 +388,9 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
     allSectionItems,
     isUnknownSection,
     sectionItems,
-    ownerWorkflowMode,
     managerWorkflowMode,
-    ownerDailyOpsEnabled,
-    ownerDailyOpsPage,
-    ownerDailyOpsPageLabel,
-    ownerDailyOpsPageCountLabel,
-    ownerDailyOpsTotalPages,
     isOwnerDailyOpsHomePage,
-    isSectionLoading: isSectionLoading || Boolean(ownerCache?.loading),
+    isSectionLoading: Boolean(ownerCache?.loading),
     sidebarItems,
     sidebarActiveItemId,
     reportsHref,

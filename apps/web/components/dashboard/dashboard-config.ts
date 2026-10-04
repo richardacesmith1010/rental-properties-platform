@@ -16,7 +16,6 @@ import {
   LayoutDashboard,
   Receipt,
   Settings,
-  ShieldCheck,
   UserPlus,
   Users,
   Wrench
@@ -35,58 +34,6 @@ export type ManagerWorkflowMode =
   | "new_property"
   | "new_tenant"
   | "vendor_ops";
-
-export const ownerWorkflowModeMeta: Record<
-  OwnerWorkflowMode,
-  { label: string; description: string; sections: string[] }
-> = {
-  daily_ops: {
-    label: "Daily Operations Mode",
-    description: "Daily owner runbook: revenue risk, payments, maintenance, and alerts.",
-    sections: [
-      "overview",
-      "charges",
-      "portfolio",
-      "maintenance",
-      "leases",
-      "tenants",
-      "manager-payments",
-      "members",
-      "analytics"
-    ]
-  },
-  new_property: {
-    label: "New Property Mode",
-    description: "One guided flow to create the property, units, lease, and first tenant invite.",
-    sections: ["overview", "operations", "portfolio", "units", "leases", "tenants", "charges"]
-  },
-  new_tenant: {
-    label: "New Tenant Mode",
-    description: "Focused flow for invitation, lease setup, signatures, and first billing visibility.",
-    sections: [
-      "overview",
-      "leasing",
-      "invitations",
-      "applications",
-      "operations",
-      "leases",
-      "tenants",
-      "documents",
-      "charges",
-      "inbox"
-    ]
-  },
-  new_manager: {
-    label: "New Manager Mode",
-    description: "Focused flow to onboard a manager and verify maintenance/vendor operations.",
-    sections: ["overview", "invitations", "vendors", "maintenance", "inbox"]
-  },
-  records: {
-    label: "Records & Compliance Mode",
-    description: "Document vault, ownership accounts, and property records.",
-    sections: ["overview", "documents", "ownership", "portfolio", "units", "leases", "tenants"]
-  }
-};
 
 export const managerWorkflowModeMeta: Record<
   ManagerWorkflowMode,
@@ -376,87 +323,18 @@ export function buildAllSectionItems(params: BuildAllSectionItemsParams): NavIte
   return items;
 }
 
-export function getOwnerModeNavItems(params?: {
-  hasAnalyticsSection?: boolean;
-  hasManagerPaymentsSection?: boolean;
-  hasMembersSection?: boolean;
-}): NavItem[] {
-  const items: NavItem[] = [
-    {
-      id: "owner:daily_ops",
-      label: "Daily Ops",
-      icon: LayoutDashboard,
-      description: "Revenue, maintenance, and alerts for daily management.",
-      clickHint: "switch to owner daily operations mode"
-    },
-    {
-      id: "owner:new_property",
-      label: "New Property",
-      icon: Building2,
-      description: "Open the step-by-step property creation wizard.",
-      clickHint: "open the new property wizard"
-    },
-    {
-      id: "owner:new_tenant",
-      label: "New Tenant",
-      icon: UserPlus,
-      description: "Open the step-by-step tenant invite wizard.",
-      clickHint: "open the tenant invite wizard"
-    },
-    {
-      id: "tenants",
-      label: "Tenants",
-      icon: Users,
-      description: "All tenants across your properties.",
-      clickHint: "open tenant directory"
-    },
-    {
-      id: "owner:new_manager",
-      label: "New Manager",
-      icon: BriefcaseBusiness,
-      description: "Assign manager to property and verify vendor flow.",
-      clickHint: "switch to owner new manager mode"
-    },
-    {
-      id: "owner:records",
-      label: "Records",
-      icon: ShieldCheck,
-      description: "Documents, ownership, and portfolio records.",
-      clickHint: "switch to owner records mode"
-    }
-  ];
+export const ownerMenuGroups = [
+  { label: "Every day", items: [["overview", "Home"], ["charges", "Rent"], ["maintenance", "Repairs"], ["inbox", "Messages"]] },
+  { label: "Your homes", items: [["portfolio", "Homes"], ["units", "Units"], ["leases", "Leases"], ["tenants", "Tenants"], ["leasing", "Find a tenant"], ["applications", "Applications"], ["invitations", "Invites"]] },
+  { label: "Money", items: [["payments", "Payments"], ["expenses", "Expenses"], ["analytics", "Charts"], ["manager-payments", "Manager pay"]] },
+  { label: "More", items: [["documents", "Documents"], ["vendors", "Vendors"], ["ownership", "Owners"], ["members", "Members"], ["automations", "Automations"], ["activity", "Activity"], ["notifications", "Alerts"]] }
+] as const;
 
-  if (params?.hasAnalyticsSection) {
-    items.push({
-      id: "analytics",
-      label: "Analytics",
-      icon: BarChart3,
-      description: "Portfolio performance, collection, and maintenance trends.",
-      clickHint: "open owner analytics"
-    });
-  }
-
-  if (params?.hasManagerPaymentsSection) {
-    items.push({
-      id: "manager-payments",
-      label: "Manager Payments",
-      icon: Banknote,
-      description: "Recurring manager fees, reimbursements, and invoices.",
-      clickHint: "open manager payments"
-    });
-  }
-
-  if (params?.hasMembersSection) {
-    items.push({
-      id: "members",
-      label: "Members",
-      icon: UserPlus,
-      description: "Invite LLC members by email and manage splits.",
-      clickHint: "open LLC members"
-    });
-  }
-
-  return items;
+export function getOwnerNavItems(available: NavItem[]): NavItem[] {
+  return ownerMenuGroups.flatMap(group => group.items.flatMap(([id, label]) => {
+    const item = available.find(candidate => candidate.id === id);
+    return item ? [{ ...item, label, group: group.label, description: ownerPageDescriptions[id], clickHint: undefined }] : [];
+  }));
 }
 
 export function getManagerModeNavItems(): NavItem[] {
@@ -580,3 +458,18 @@ export function getOwnerWorkflowSteps(params: {
 
   return [];
 }
+
+export const ownerPageDescriptions: Record<string, string> = {
+  overview: "See what needs your attention today.", charges: "Track rent and see who has paid.",
+  maintenance: "Track repairs and help keep your homes safe.", inbox: "Read and send messages.",
+  portfolio: "View and manage your homes.", units: "Manage units and rent amounts.",
+  leases: "View leases and their dates.", tenants: "Find the people who rent your homes.",
+  leasing: "Find your next tenant.", applications: "Review people who want to rent.",
+  invitations: "Send and track invites.", payments: "See payments you have received.",
+  expenses: "Track what you spend on your homes.", analytics: "See how your homes are doing.",
+  "manager-payments": "Track what you owe your managers.", documents: "Find and manage your documents.",
+  vendors: "Find people who help care for your homes.", ownership: "Manage who owns your homes.",
+  members: "Manage members of your business account.", automations: "Manage tasks that run for you.",
+  activity: "See recent changes across your homes.", notifications: "Read updates that need your attention.",
+  operations: "Add homes, units, and leases."
+};

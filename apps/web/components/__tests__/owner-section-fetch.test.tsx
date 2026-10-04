@@ -64,7 +64,7 @@ describe("owner section fetch lifecycle", () => {
     vi.mocked(fetch).mockReturnValueOnce(pending.promise as never);
     const input = props();
     const { result } = renderHook(() => useOwnerSectionCache(input));
-    const preload = () => result.current.preloadNeighbours("portfolio", ["portfolio", "maintenance"]);
+    const preload = () => result.current.preloadSection("maintenance", 150);
     act(preload);
     await act(async () => vi.advanceTimersByTimeAsync(300));
     expect(vi.mocked(fetch).mock.calls[0][0]).toContain("preload=1");
@@ -86,7 +86,7 @@ describe("owner section fetch lifecycle", () => {
     vi.mocked(fetch).mockReturnValue(pending.promise as never);
     const input = props();
     const { result, rerender, unmount } = renderHook(useOwnerSectionCache, { initialProps: input });
-    act(() => result.current.preloadNeighbours("portfolio", ["portfolio", "maintenance"]));
+    act(() => result.current.preloadSection("maintenance", 150));
     await act(async () => vi.advanceTimersByTimeAsync(300));
     act(() => result.current.navigate("/owner?section=charges", "charges"));
     expect(fetch).toHaveBeenCalledTimes(2);
@@ -121,7 +121,7 @@ describe("owner section fetch lifecycle", () => {
     const input = props();
     const { result } = renderHook(() => useOwnerSectionCache(input));
     for (let attempt = 0; attempt < 2; attempt++) {
-      act(() => result.current.preloadNeighbours("portfolio", ["portfolio", "maintenance"]));
+      act(() => result.current.preloadSection("maintenance", 150));
       await act(async () => vi.advanceTimersByTimeAsync(300));
     }
     expect(fetch).toHaveBeenCalledOnce();

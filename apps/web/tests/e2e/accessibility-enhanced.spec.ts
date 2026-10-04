@@ -29,12 +29,19 @@ async function openCommandPaletteOrSkip(page: Page): Promise<Locator> {
 }
 
 test.describe.serial("Enhanced accessibility", () => {
-  test("home pagination controls expose accessible labels", async ({ page }) => {
+  test("Add menu supports keyboard selection and Escape", async ({ page }) => {
     await loginOwnerOrSkip(page);
     await openOwnerHome(page);
 
-    await expect(page.getByRole("button", { name: "Previous section" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Next section" })).toBeVisible();
+    const add = page.getByRole("button", { name: "Add", exact: true });
+    await add.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("menuitem", { name: "Add a home" })).toBeFocused();
+    await page.keyboard.press("ArrowDown");
+    await expect(page.getByRole("menuitem", { name: "Add a tenant" })).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(add).toBeFocused();
+    await expect(page.getByRole("menu")).toHaveCount(0);
     await expect(page.getByRole("button", { name: /open notifications/i }).first()).toBeVisible();
   });
 
@@ -86,7 +93,7 @@ test.describe.serial("Enhanced accessibility", () => {
     await page.goto("/owner?section=charges");
     await page.waitForLoadState("networkidle").catch(() => {});
 
-    await expect(page.getByRole("heading", { name: "Charges", exact: true })).toBeVisible();
-    await expect(page.getByText(/\d+ of \d+/i).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Rent", exact: true })).toBeVisible();
+    await expect(page.getByText(/^\d+ of \d+$/i)).toHaveCount(0);
   });
 });

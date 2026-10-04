@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { Fragment, useContext, type ReactNode } from "react";
+import { OwnerSectionCacheContext } from "../owner-section-cache";
 import { Drawer } from "vaul";
-import { Landmark, Menu, Search, type LucideIcon } from "lucide-react";
+import { Landmark, Menu, Search, Settings, LifeBuoy, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GlobalSearch, type GlobalSearchItem } from "@/components/dashboard/global-search";
 import { NotificationBellMenu } from "@/components/dashboard/notification-bell-menu";
@@ -71,6 +72,17 @@ function CommandPaletteTrigger({ onOpen }: { onOpen: () => void }) {
   );
 }
 
+function OwnerFooterLinks() {
+  return <div className="mt-4 border-t border-[var(--line)] pt-2">
+    <a href="/settings" title="Open settings." className={`${navButtonClasses(false)} min-h-11 ${sidebarFocusRing}`}>
+      <Settings className="h-4 w-4" />Settings
+    </a>
+    <a href="mailto:support@domusbase.com" title="Email Domus support." className={`${navButtonClasses(false)} min-h-11 ${sidebarFocusRing}`}>
+      <LifeBuoy className="h-4 w-4" />Help
+    </a>
+  </div>;
+}
+
 function ThemeToggleGroup() {
   const { theme, setTheme } = useDomusTheme();
 
@@ -111,12 +123,21 @@ interface NavListProps {
 }
 
 function NavList({ navItems, activeItemId, onSelectItem, mobile = false }: NavListProps) {
+  const cache = useContext(OwnerSectionCacheContext);
+  const wrap = (item: NavItem, index: number, content: ReactNode) => (
+    <Fragment key={item.id}>
+      {item.group && navItems[index - 1]?.group !== item.group ? (
+        <p className="px-3.5 pb-1 pt-4 text-xs sidebar-shell-muted">{item.group}</p>
+      ) : null}
+      {mobile ? <Drawer.Close asChild>{content}</Drawer.Close> : content}
+    </Fragment>
+  );
   return (
     <>
-      {navItems.map((item) => {
+      {navItems.map((item, index) => {
         const Icon: LucideIcon = item.icon;
         const isActive = activeItemId === item.id;
-        const className = `${navButtonClasses(isActive, mobile)} ${sidebarFocusRing}`;
+        const className = `${navButtonClasses(isActive, mobile)} ${sidebarFocusRing} ${item.group ? "min-h-11" : ""}`;
 
         if (item.href) {
           const content = (
@@ -136,7 +157,7 @@ function NavList({ navItems, activeItemId, onSelectItem, mobile = false }: NavLi
               ) : null}
             </a>
           );
-          return mobile ? <Drawer.Close asChild key={item.id}>{content}</Drawer.Close> : content;
+          return wrap(item, index, content);
         }
 
         if (onSelectItem) {
@@ -145,6 +166,10 @@ function NavList({ navItems, activeItemId, onSelectItem, mobile = false }: NavLi
               key={item.id}
               type="button"
               onClick={() => onSelectItem(item.id)}
+              onMouseEnter={item.group ? () => cache?.preloadSection(item.id, 150) : undefined}
+              onMouseLeave={item.group ? () => cache?.cancelScheduledPreload() : undefined}
+              onFocus={item.group ? () => cache?.preloadSection(item.id) : undefined}
+              onBlur={item.group ? () => cache?.cancelScheduledPreload() : undefined}
               className={className}
               title={getNavTitle(item)}
               aria-current={isActive ? "page" : undefined}
@@ -158,7 +183,7 @@ function NavList({ navItems, activeItemId, onSelectItem, mobile = false }: NavLi
               ) : null}
             </button>
           );
-          return mobile ? <Drawer.Close asChild key={item.id}>{content}</Drawer.Close> : content;
+          return wrap(item, index, content);
         }
 
         const content = (
@@ -178,7 +203,7 @@ function NavList({ navItems, activeItemId, onSelectItem, mobile = false }: NavLi
             ) : null}
           </a>
         );
-        return mobile ? <Drawer.Close asChild key={item.id}>{content}</Drawer.Close> : content;
+        return wrap(item, index, content);
       })}
     </>
   );
@@ -266,6 +291,7 @@ export function SidebarNav({
 
       <nav aria-label="Main navigation" className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-4 pb-4 pt-1">
         <NavList navItems={navItems} activeItemId={activeItemId} onSelectItem={onSelectItem} />
+        {role === "owner" ? <OwnerFooterLinks /> : null}
       </nav>
 
       <div className="sidebar-user-footer-shell">
@@ -434,6 +460,7 @@ export function MobileTopBar({
                   className="min-h-0 flex-1 space-y-1 overflow-y-auto rounded-2xl border border-border bg-card p-2"
                 >
                   <NavList navItems={navItems} activeItemId={activeItemId} onSelectItem={onSelectItem} mobile />
+                  {role === "owner" ? <OwnerFooterLinks /> : null}
                 </nav>
 
                 <ThemeToggleGroup />

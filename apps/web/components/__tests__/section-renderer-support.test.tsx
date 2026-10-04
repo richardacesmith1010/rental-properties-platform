@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { SectionFrame, SectionNotFoundState } from "@/components/dashboard/section-renderer-support";
+import { PortfolioSectionContent, SectionFrame, SectionNotFoundState } from "@/components/dashboard/section-renderer-support";
 import type { SectionRendererProps } from "@/components/dashboard/section-map";
 
 const availableProperties = [
@@ -101,3 +101,25 @@ describe("SectionFrame property scope control", () => {
     expect(screen.getByRole("link", { name: "Back to home" })).toHaveAttribute("href", "/owner");
   });
 });
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+
+describe("full owner sections", () => {
+  it("shows every home without a shortened preview", () => {
+    const properties = Array.from({ length: 7 }, (_, index) => ({
+      ...availableProperties[0], id: `property-${index}`, name: `Home ${index}`,
+      unitCount: 1, occupiedUnitCount: 1, monthlyRentCents: 10000
+    }));
+    render(<PortfolioSectionContent props={buildProps({
+      filteredPortfolio: { properties, units: [], leases: [], tenants: [] } as never,
+      goToSectionIfVisible: vi.fn()
+    })} />);
+    for (const property of properties) expect(screen.getByText(property.name)).toBeVisible();
+    expect(screen.queryByRole("button", { name: /show all/i })).not.toBeInTheDocument();
+  });
+});
+
+vi.mock("react-dom", async importOriginal => ({
+  ...await importOriginal<typeof import("react-dom")>(),
+  useFormState: () => [null, vi.fn()], useFormStatus: () => ({ pending: false })
+}));

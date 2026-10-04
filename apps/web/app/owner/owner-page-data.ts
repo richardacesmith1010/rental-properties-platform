@@ -1,4 +1,4 @@
-import { OWNER_SECTION_MODE_BY_ID } from "@/components/dashboard/dashboard-workflow-modes";
+import { ownerMenuGroups } from "@/components/dashboard/dashboard-config";
 import { getGeneratedMessage } from "@/lib/format";
 import { getDashboardData, type DashboardData } from "@/lib/dashboard";
 import { getNewFeedbackCountForOwner } from "@/lib/feedback";
@@ -196,33 +196,21 @@ export function resolveOwnerPageRequest(
   searchParams: OwnerPageSearchParams | undefined,
   ownershipAccounts: OwnershipAccountDTO[]
 ): ResolvedOwnerRequest {
-  const requestedMode = getSingleSearchParam(searchParams?.mode);
+  const requestedMode = null;
   const requestedSectionId = getSingleSearchParam(searchParams?.section);
   const requestedPropertyId = getSingleSearchParam(searchParams?.property);
   const accountParam = getSingleSearchParam(searchParams?.account);
   const activeAccountId = ownershipAccounts.some((account) => account.id === accountParam)
     ? accountParam!
     : ownershipAccounts[0]?.id ?? null;
-  const initialOwnerWorkflowMode =
-    requestedMode === "daily_ops" ||
-    requestedMode === "new_property" ||
-    requestedMode === "new_tenant" ||
-    requestedMode === "new_manager" ||
-    requestedMode === "records"
-      ? requestedMode
-      : undefined;
+  const initialOwnerWorkflowMode = undefined;
 
   return {
     accountParam,
     activeAccountId,
     generatedMessage: getGeneratedMessage(searchParams?.generated),
     hasExplicitSection: requestedSectionId !== null,
-    initialOwnerHomePage:
-      initialOwnerWorkflowMode !== "records" &&
-      initialOwnerWorkflowMode !== "new_manager" &&
-      initialOwnerWorkflowMode !== "new_property" &&
-      initialOwnerWorkflowMode !== "new_tenant" &&
-      requestedSectionId === null,
+    initialOwnerHomePage: requestedSectionId === null || requestedSectionId === "overview",
     initialOwnerWorkflowMode,
     initialPropertyId: requestedPropertyId,
     initialSectionId: requestedSectionId,
@@ -816,7 +804,6 @@ export async function loadOwnerPageData(params: {
   ]);
 
   const isEmpty = portfolio.properties.length === 0 &&
-    !request.initialOwnerWorkflowMode &&
     !request.initialSectionId;
 
   finishOwnerPerfWithRequest({
@@ -850,7 +837,7 @@ export async function loadOwnerPageData(params: {
   };
 }
 
-export const OWNER_SECTION_IDS = ["overview", "daily-ops-home", ...Object.keys(OWNER_SECTION_MODE_BY_ID)];
+export const OWNER_SECTION_IDS = ["daily-ops-home", "operations", ...ownerMenuGroups.flatMap(group => group.items.map(([id]) => id))];
 export const OWNER_SHARED_BUNDLES: OwnerBundleId[] = [
   "dashboard", "portfolio", "announcement-properties", "notifications",
   "notification-preferences", "rent-collection-status"
@@ -860,7 +847,7 @@ export function getOwnerSectionBundleRequirements(data: OwnerPageReadyData) {
   return Object.fromEntries(OWNER_SECTION_IDS.map(section => [section,
     Array.from(buildOwnerBundlePlan({
       capabilities: data.capabilities,
-      initialOwnerHomePage: section === "daily-ops-home",
+      initialOwnerHomePage: section === "daily-ops-home" || section === "overview",
       initialSectionId: section,
       isLlcAccount: data.ownershipAccounts.find(account => account.id === data.activeAccountId)?.accountType === "llc",
       sectionAvailability: data.capabilities.ownerSectionAvailability!

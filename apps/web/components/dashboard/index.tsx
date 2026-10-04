@@ -1,14 +1,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AnnouncementComposer } from "@/components/dashboard/announcement-composer";
-import { CompactGreetingBar } from "@/components/dashboard/compact-greeting-bar";
+import { ownerPageDescriptions } from "./dashboard-config";
+import { OwnerAddMenu } from "./owner-add-menu";
 import { ConnectBanner } from "@/components/dashboard/connect-banner";
 import { CommandPalette } from "@/components/dashboard/command-palette";
-import { ContextualGreeting } from "@/components/dashboard/contextual-greeting";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { LeaseWizard } from "@/components/dashboard/lease-wizard";
 import { NotificationPauseBanner } from "@/components/dashboard/notification-pause-banner";
@@ -34,20 +33,6 @@ const AiAssistant = dynamic(
   () => import("@/components/dashboard/ai-assistant").then((module) => module.AiAssistant),
   { ssr: false }
 );
-
-function shouldHandleSectionHotkeys(target: EventTarget | null) {
-  const element = target as HTMLElement | null;
-  if (!element) {
-    return true;
-  }
-
-  const tagName = element.tagName;
-  if (["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(tagName)) {
-    return false;
-  }
-
-  return !element.isContentEditable;
-}
 
 function getWorstStripeHealthStatus(statuses: StripeHealthStatus[]): StripeHealthStatus {
   if (statuses.includes("missing")) {
@@ -120,7 +105,6 @@ function PageHeader({
 }
 
 export function Dashboard(props: DashboardProps) {
-  const router = useRouter();
   const [isAnnouncementComposerOpen, setIsAnnouncementComposerOpen] = useState(false);
   const [initialOperationsTask, setInitialOperationsTask] = useState<OperationTask | undefined>(undefined);
   const [initialOperationsPropertyId, setInitialOperationsPropertyId] = useState<string | null>(null);
@@ -139,10 +123,8 @@ export function Dashboard(props: DashboardProps) {
     goToNextSection,
     goToPreviousSection,
     homeActionItems,
-    isEmptyOwner,
     isManagerRole,
     isOwnerRole,
-    isOwnerDailyOpsEnabled,
     isOwnerDailyOpsHomePage,
     isUnknownSection,
     isLeaseWizardOpen,
@@ -152,9 +134,8 @@ export function Dashboard(props: DashboardProps) {
     llcSetupPrompt,
     occupancy,
     openPropertyWizard,
+    openTenantInviteWizard,
     ownerOnboarding,
-    ownerDailyOpsPageCountLabel,
-    ownerDailyOpsPageLabel,
     nextRentCollectionLabel,
     safePortfolio,
     sectionItems,
@@ -167,22 +148,11 @@ export function Dashboard(props: DashboardProps) {
     props.nickname?.trim() ||
     props.fullName?.trim().split(/\s+/)[0] ||
     props.userEmail;
-  const tenantsBehind = {
-    count: displayDashboardData.kpis.lateAccountCount,
-    amountCents: displayDashboardData.kpis.lateRentCents
-  };
-  const openTicketCount = sectionRendererProps.filteredTickets.filter(
-    (ticket) => ticket.status === "open" || ticket.status === "in_progress"
-  ).length;
-  const urgentTicketCount = sectionRendererProps.filteredTickets.filter(
-    (ticket) => ticket.priority === "high" || ticket.priority === "urgent"
-  ).length;
   const onboardingDismissStorageKey = useMemo(
     () => `domus-owner-onboarding-dismissed:${props.userEmail}`,
     [props.userEmail]
   );
   const [isOnboardingDismissed, setIsOnboardingDismissed] = useState(false);
-  const touchStartX = useRef<number | null>(null);
   const ownerSectionCountLabel = activeSectionIndex >= 0 && sectionItems.length > 0
     ? `${activeSectionIndex + 1} of ${sectionItems.length}`
     : null;
@@ -193,21 +163,12 @@ export function Dashboard(props: DashboardProps) {
   const stripeHealthStatus = getWorstStripeHealthStatus(
     (props.ownershipAccounts ?? []).map((account) => account.stripeStatus ?? null)
   );
-  const showOwnerDailyOpsShell = isOwnerRole && isOwnerDailyOpsEnabled;
   const showLlcSetupPrompt = Boolean(
     isOwnerRole &&
-    isOwnerDailyOpsEnabled &&
     isOwnerDailyOpsHomePage &&
     !isUnknownSection &&
     llcSetupPrompt.shouldShow
   );
-  const statusSummary = tenantsBehind.count > 0
-    ? `${tenantsBehind.count} tenant${tenantsBehind.count === 1 ? "" : "s"} behind`
-    : urgentTicketCount > 0
-      ? `${urgentTicketCount} urgent ticket${urgentTicketCount === 1 ? "" : "s"}`
-      : openTicketCount > 0
-        ? `${openTicketCount} open ticket${openTicketCount === 1 ? "" : "s"}`
-        : "Everything looks good";
   const contentZoneLabel = ownerSectionCountLabel ?? activeWorkflowMeta?.label ?? "Workspace";
   const contentZoneTitle = activeSectionLabel;
   const notificationsPausedUntil =
@@ -233,38 +194,13 @@ export function Dashboard(props: DashboardProps) {
     setIsOnboardingDismissed(window.localStorage.getItem(onboardingDismissStorageKey) === "true");
   }, [onboardingDismissStorageKey]);
 
-  useEffect(() => {
-    if (!isOwnerRole) {
-      return;
-    }
-
-    const handleKeydown = (event: KeyboardEvent) => {
-      if (!shouldHandleSectionHotkeys(event.target)) {
-        return;
-      }
-
-      if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        goToPreviousSection();
-      }
-
-      if (event.key === "ArrowRight") {
-        event.preventDefault();
-        goToNextSection();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeydown);
-    return () => document.removeEventListener("keydown", handleKeydown);
-  }, [goToNextSection, goToPreviousSection, isOwnerRole]);
-
   const showOwnerOnboarding =
     isOwnerRole &&
     ownerOnboarding.shouldShow &&
     !showLlcSetupPrompt &&
     !isOnboardingDismissed &&
     !isUnknownSection &&
-    (isOwnerDailyOpsEnabled ? isOwnerDailyOpsHomePage : activeSection === "overview");
+    activeSection === "overview";
 
   const handleDismissOnboarding = () => {
     if (typeof window !== "undefined") {
@@ -344,32 +280,6 @@ export function Dashboard(props: DashboardProps) {
     </div>
   );
 
-  if (isEmptyOwner && showOwnerOnboarding) {
-    return (
-      <DashboardLayout
-        {...layoutProps}
-        mainClassName="flex flex-1 flex-col items-center justify-center px-6 py-12 lg:ml-[260px]"
-      >
-        <div className="w-full max-w-3xl space-y-4">
-          {connectBannerConnected === false ? (
-            <ConnectBanner
-              connected={false}
-              role="owner"
-              href={ownerConnectHref}
-            />
-          ) : null}
-          {isOwnerRole ? <StripeHealthBanner status={stripeHealthStatus} /> : null}
-          <WelcomeCard
-            displayName={displayName}
-            steps={ownerOnboarding.steps}
-            onContinue={handleContinueOwnerOnboarding}
-            onSkip={handleDismissOnboarding}
-          />
-        </div>
-      </DashboardLayout>
-    );
-  }
-
   return (
       <DashboardLayout
         {...layoutProps}
@@ -406,7 +316,7 @@ export function Dashboard(props: DashboardProps) {
                 if (propertyId) {
                   sectionRendererProps.onSelectProperty(propertyId);
                 }
-                sectionRendererProps.openSection("overview");
+                sectionRendererProps.openSection(isOwnerRole ? "portfolio" : "overview");
               }}
             />
           ) : null}
@@ -460,7 +370,7 @@ export function Dashboard(props: DashboardProps) {
                 }
               }}
               onInviteTenant={props.onInviteTenant}
-              onOpenSection={sectionRendererProps.openSection}
+              onOpenSection={isOwnerRole ? () => sectionRendererProps.openSection("invitations") : sectionRendererProps.openSection}
             />
           ) : null}
           {canSendAnnouncements && props.announcementProperties ? (
@@ -498,94 +408,35 @@ export function Dashboard(props: DashboardProps) {
           />
         ) : null}
 
-        {showOwnerDailyOpsShell ? (
-          <>
-            <CompactGreetingBar
-              userName={displayName}
-              role={props.data.profileRole}
-              statusSummary={statusSummary}
-              notifications={layoutProps.notifications}
-              onDismissNotification={layoutProps.onDismissNotification}
-              onClearAllNotifications={layoutProps.onClearAllNotifications}
-              onSendBatchPaymentReminder={layoutProps.onSendBatchPaymentReminder}
-              onWaiveCharge={layoutProps.onWaiveCharge}
-              onMarkManagerPaymentPaid={layoutProps.onMarkManagerPaymentPaid}
-              onOpenSettings={() => router.push("/settings")}
-              onOpenNotifications={() => sectionRendererProps.openSection("notifications")}
-            />
-            <div className="domus-card mt-3 flex min-h-0 flex-1 flex-col overflow-hidden shadow-sm sm:rounded-[28px]">
-              <PageHeader
-                title={ownerDailyOpsPageLabel}
-                pageCountLabel={ownerDailyOpsPageCountLabel}
-                onPrevious={goToPreviousSection}
-                onNext={goToNextSection}
-                actions={
-                  canSendAnnouncements ? (
-                    <Button
-                      type="button"
-                      variant="default"
-                      size="sm"
-                      disabled={announcementButtonDisabled}
-                      onClick={() => setIsAnnouncementComposerOpen(true)}
-                      title={announcementButtonTitle}
-                    >
-                      Send Announcement
-                    </Button>
-                  ) : null
-                }
-              />
-              <div
-                className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scroll-smooth px-3 pb-24 pt-3 sm:px-5 sm:pb-24 [-webkit-overflow-scrolling:touch]"
-                onTouchStart={(event) => {
-                  touchStartX.current = event.changedTouches[0]?.clientX ?? null;
-                }}
-                onTouchEnd={(event) => {
-                  if (touchStartX.current == null) {
-                    return;
-                  }
-                  const delta = (event.changedTouches[0]?.clientX ?? 0) - touchStartX.current;
-                  if (Math.abs(delta) < 40) {
-                    return;
-                  }
-                  if (delta > 0) {
-                    goToPreviousSection();
-                  } else {
-                    goToNextSection();
-                  }
-                  touchStartX.current = null;
-                }}
-              >
-                <section
-                  id={isOwnerDailyOpsHomePage ? "daily-ops-home" : activeSection}
-                  className="min-h-full"
-                >
-                  {renderedSectionContent}
-                </section>
+        {isOwnerRole ? (
+          <div className="domus-card mt-3 flex min-h-0 flex-1 flex-col shadow-sm sm:rounded-[28px]">
+            <div className="flex items-start justify-between gap-3 border-b border-[var(--line)] p-4 sm:p-6">
+              <div>
+                <h1 className="text-2xl font-semibold text-[var(--ink)]">{activeSectionLabel}</h1>
+                <p className="mt-1 text-sm text-[var(--muted)]">{ownerPageDescriptions[activeSection] ?? "Manage your homes and the people who live there."}</p>
+              </div>
+              <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
+                {canSendAnnouncements ? (
+                  <Button type="button" variant="outline" className="min-h-11"
+                    disabled={announcementButtonDisabled}
+                    onClick={() => setIsAnnouncementComposerOpen(true)}
+                    title={announcementButtonTitle}>
+                    Send Announcement
+                  </Button>
+                ) : null}
+                <OwnerAddMenu onAddHome={openPropertyWizard} onAddTenant={openTenantInviteWizard}
+                  properties={safePortfolio.properties} onInviteManager={props.onInviteManager} />
               </div>
             </div>
-          </>
+            <section id={isOwnerDailyOpsHomePage ? "daily-ops-home" : activeSection}
+              className="min-h-0 flex-1 px-3 pb-24 pt-3 sm:px-5">
+              {renderedSectionContent}
+            </section>
+          </div>
         ) : (
           <>
             <div className="mt-3 shrink-0 space-y-3">
-              {isOwnerRole ? (
-                <DashboardHeader
-                  role={props.data.profileRole}
-                  kpis={displayDashboardData.kpis}
-                  occupancy={occupancy}
-                  propertyCount={filteredPortfolio.properties.length}
-                  userEmail={props.userEmail}
-                  nickname={props.nickname}
-                  fullName={props.fullName}
-                  greetingContent={
-                    <ContextualGreeting
-                      userName={displayName}
-                      tenantsBehindCount={tenantsBehind.count}
-                      lateRentCents={tenantsBehind.amountCents}
-                      openTicketCount={openTicketCount}
-                    />
-                  }
-                />
-              ) : activeSection === "overview" ? (
+              {activeSection === "overview" ? (
                 <DashboardHeader
                   role={props.data.profileRole}
                   kpis={displayDashboardData.kpis}
@@ -596,7 +447,7 @@ export function Dashboard(props: DashboardProps) {
                   fullName={props.fullName}
                 />
               ) : null}
-              {(isOwnerRole || isManagerRole) && activeWorkflowMeta && !showOwnerOnboarding ? (
+              {isManagerRole && activeWorkflowMeta && !showOwnerOnboarding ? (
                 <div className="rounded-[16px] border border-[color:color-mix(in_srgb,var(--line)_82%,transparent)] bg-[color:color-mix(in_srgb,var(--surface)_94%,transparent)] px-4 py-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
                     {activeWorkflowMeta.label}

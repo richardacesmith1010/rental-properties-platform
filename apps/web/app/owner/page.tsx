@@ -146,7 +146,6 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         loadedBundles={ownerPage.loadedBundles}
         requirements={getOwnerSectionBundleRequirements(ownerPage)}
         account={ownerPage.activeAccountId}
-        mode={ownerPage.initialOwnerWorkflowMode}
         property={ownerPage.initialPropertyId}
       >
       <Dashboard
@@ -190,7 +189,6 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         currentUserId={user.id}
         capabilities={ownerPage.capabilities}
         initialOwnerHomePage={ownerPage.initialOwnerHomePage}
-        initialOwnerWorkflowMode={ownerPage.initialOwnerWorkflowMode}
         initialSectionId={ownerPage.initialSectionId}
         initialPropertyId={ownerPage.initialPropertyId}
         userEmail={user.email ?? "unknown"}

@@ -126,12 +126,6 @@ export function useDashboardData(serverProps: DashboardProps) {
     openPropertyWizard,
     openSection,
     openTenantInviteWizard,
-    ownerDailyOpsEnabled,
-    ownerDailyOpsPage,
-    ownerDailyOpsPageCountLabel,
-    ownerDailyOpsPageLabel,
-    ownerDailyOpsTotalPages,
-    ownerWorkflowMode,
     reportsHref,
     sectionItems,
     sidebarActiveItemId,
@@ -209,8 +203,7 @@ export function useDashboardData(serverProps: DashboardProps) {
     handleVendorCreatedSuccess,
     handlePropertyCreated,
     handleUnitCreated,
-    handleLeaseCreated,
-    isOwnerDailyOpsCarousel: isOwnerRole && ownerWorkflowMode === "daily_ops"
+    handleLeaseCreated
   } satisfies SectionRendererProps;
 
   const layoutProps: LayoutProps = {
@@ -249,16 +242,11 @@ export function useDashboardData(serverProps: DashboardProps) {
     isEmptyOwner: props.isEmpty && isOwnerRole,
     isManagerRole,
     isOwnerRole,
-    isOwnerDailyOpsEnabled: ownerDailyOpsEnabled,
     isOwnerDailyOpsHomePage,
     isSectionLoading,
     layoutProps,
     commandPaletteProps: commandState.commandPaletteProps,
     occupancy,
-    ownerDailyOpsPage,
-    ownerDailyOpsPageCountLabel,
-    ownerDailyOpsPageLabel,
-    ownerDailyOpsTotalPages,
     openPropertyWizard,
     closePropertyWizard,
     openLeaseWizard,
@@ -269,7 +257,6 @@ export function useDashboardData(serverProps: DashboardProps) {
     llcSetupPrompt: homeState.llcSetupPrompt,
     homeActionItems: homeState.homeActionItems,
     nextRentCollectionLabel: homeState.nextRentCollectionLabel,
-    ownerWorkflowMode,
     selectedPropertyId,
     selectedPropertySummary,
     financialOverviewData,

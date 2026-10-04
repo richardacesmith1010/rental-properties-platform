@@ -288,6 +288,15 @@ describe("loadOwnerPageData orchestration", () => {
 });
 
 describe("resolveOwnerPageRequest", () => {
+  it.each(["records", "new_tenant", "new_manager", "new_property"])("ignores legacy mode %s", mode => {
+    const accounts = [{ id: "account-1" }] as never;
+    expect(resolveOwnerPageRequest({ mode }, accounts).initialOwnerHomePage).toBe(true);
+    const request = resolveOwnerPageRequest({ mode, section: "expenses" }, accounts);
+    expect(request.initialOwnerHomePage).toBe(false);
+    expect(request.initialSectionId).toBe("expenses");
+    expect(request.initialOwnerWorkflowMode).toBeUndefined();
+    expect(request.requestedMode).toBeNull();
+  });
   it("treats the owner daily ops home as the default first paint", () => {
     const request = resolveOwnerPageRequest({}, [{ id: "account-1" }] as never);
 

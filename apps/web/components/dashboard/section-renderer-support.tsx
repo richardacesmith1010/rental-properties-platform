@@ -245,7 +245,6 @@ export function OverviewSectionContent({
       <OverviewSummaryStrip props={props} />
       <PortfolioSection
         properties={props.filteredPortfolio.properties}
-        previewCount={props.isOwnerDailyOpsCarousel ? 3 : undefined}
         onSelectProperty={props.onSelectProperty}
         onGoToOperations={() => props.goToSectionIfVisible("operations")}
         getPropertyDetailHref={(propertyId) =>
@@ -284,7 +283,6 @@ export function PortfolioSectionContent({ props }: { props: SectionRendererProps
             props.goToSectionIfVisible("overview");
           }}
           onGoToOperations={() => props.goToSectionIfVisible("operations")}
-          previewCount={props.isOwnerDailyOpsCarousel ? 4 : undefined}
           getPropertyDetailHref={(propertyId) =>
             props.data.profileRole === "owner"
               ? `/owner/properties/${propertyId}`
