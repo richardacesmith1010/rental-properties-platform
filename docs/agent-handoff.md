@@ -204,6 +204,13 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Owner-approved permanent delete of 7 empty archived properties on the owner's account (5× "1st Home", "Mom's Home", "Sunset Apartments"): verified 0 rows in all 17 referencing tables first; one guarded transaction; `audit_logs` `delete_property` row per property. Remaining: 1st Home (Goose Creek, active) and Mom's House (Ardmore, active).
 - Sprint 147 (L2) dispatched for findings #1, #2, #3, #8.
 
+## Sprint 147 — Walk-through bug fixes SHIPPED (L2, `8323c77`, 2026-10-03)
+
+- Owner/manager home: greeting, header summary and KPI now all count **tenants behind** ("1 tenant is behind on rent ($2)." / KPI "Tenants behind"). Two floating pills → one 44px **Help** button (menu: Ask Domus, Send feedback; Ask Domus only where the assistant exists). Mobile "account menu open on load" was actually a duplicate always-visible signed-in card in `MobileUserFooter` — removed; sign-out still reachable via avatar. Owner/manager rows no longer show Pay buttons (`isTenantView && status not paid/waived`).
+- Codex hit its usage limit mid-run; resumed automatically after reset (detached nohup), reviewed its own partial tree, finished. 991 tests, gate green.
+- Verified live: header "1 tenant behind", old wording gone, one Help button + menu, Charges shows 3 Record buttons and no Pay, mobile signed-in card hidden on load + sign-out reachable, 0 page errors; smoke 3/3, theme 11/11.
+- Next: Sprint 148 — the ~3 s section load floor (walkthrough #4).
+
 ## Ops & Observability (2026-10-02)
 
 - **Deploys:** Vercel is git-connected — push to `main` auto-deploys production. CLI `vercel deploy` is optional.
