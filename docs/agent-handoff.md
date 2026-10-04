@@ -218,10 +218,16 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - **Measured (prod, smoke owner):** before ≈3,050 ms (Charges ≈3,560). After, warm: Maintenance 2,836 · Portfolio 2,595 · Expenses 2,570 · Leases 2,590 · Charges 3,086 (≈0.45 s faster; less than the projected ~1 s). First pass right after deploy was slower (cold caches, 3.1–4.4 s).
 - **Next for speed (Sprint 150 candidate, "fix 3"):** collapse `getDashboardData`/`getPortfolioData` internal waves, batch the per-property Stripe lookup (`lib/stripe-connect.ts:473-477`), and/or stop refetching the shared bundle on every section switch (client-side section cache). Real target needs the navigation model change.
 
+## Sprint 150 — Owner speed fix 3 SHIPPED (L2, `f7fabdf`, 2026-10-04)
+
+- Ownership reads + owner Stripe map merged into the main owner `Promise.all` (3 barriers → 1); `arePropertyOwnersConnected` batched (5 queries flat for 1 or 10 properties; same decision order as `getOwnerStripeAccountForProperty`, which is unchanged and still used by payment paths); dashboard waves ~10 → 6, portfolio 4 → 2. 1008 tests, independent gate green, smoke 3/3, theme 11/11.
+- **Measured (prod, smoke owner, direct RSC fetch, warm median):** before Overview 2,769 · Charges 3,397 · Maintenance 3,177 · Expenses 2,733 · Leases 2,830 → after Overview ~2,100 · Charges ~1,950–2,240 · Maintenance ~2,010–2,150 · Expenses ~2,070–2,140 · Leases ~2,060–2,080. Target (~2.0 s / Charges ~2.2 s) met.
+- Remaining floor (~2 s) = full `/owner` RSC re-render per section switch. Next lever: navigation model (client-side section switching / cached shared bundle) — Sprint 151 candidate.
+
 ## ▶ START HERE (next session, written 2026-10-04)
 
-- Last shipped: Sprint 149 (`c8c7493`). Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
-- Owner-approved queue, in order: (1) Sprint 150 speed fix 3 (see above); (2) clarity cleanup from `docs/walkthrough-2026-10-03.md` #5–#7, #9 — one bank-setup prompt, simpler navigation (replace "N OF M" carousel), plain-language sweep — **mockup first** (Design canvas, like the landing), L2/L3 TBD.
+- Last shipped: Sprint 150 (`f7fabdf`). Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
+- Owner-approved queue, in order: (1) Sprint 151 navigation-model speed fix (proposed, awaiting approval); (2) clarity cleanup from `docs/walkthrough-2026-10-03.md` #5–#7, #9 — one bank-setup prompt, simpler navigation (replace "N OF M" carousel), plain-language sweep — **mockup first** (Design canvas, like the landing), L2/L3 TBD.
 - Standing rules: notifications OFF until owner says real users (env `DOMUS_NOTIFICATIONS_ENABLED` unset); L3 packets → Claude sends to Domus ChatGPT project via Claude-in-Chrome (memory: feedback-prompt-severity-chatgpt-workflow); Codex default Sol/medium, watch usage limits (detached nohup re-run after reset); verify every UI sprint live with Playwright (temp specs in `apps/web/tests/e2e/zz-*.tmp.spec.ts`, smoke creds from `.env.local`).
 - Owner action items still open: J&MSP LLC bank connection (Stripe; owner must enter bank details). Codex Supabase token expires ~2027-01-01.
 - Angel Hernandez (he/him): lease flagged "Pays outside Domus"; owner records Fidelity payments (Charges → Record → ACH, note "Fidelity") or asks Claude to record quietly.
