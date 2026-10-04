@@ -5,22 +5,24 @@ import { useTimeOfDayGreeting } from "./use-time-of-day-greeting";
 
 interface ContextualGreetingProps {
   userName: string;
-  overdueChargeCount: number;
-  overdueAmountCents: number;
+  tenantsBehindCount: number;
+  lateRentCents: number;
   openTicketCount: number;
 }
 
 export function ContextualGreeting({
   userName,
-  overdueChargeCount,
-  overdueAmountCents,
+  tenantsBehindCount,
+  lateRentCents,
   openTicketCount
 }: ContextualGreetingProps) {
   const greeting = useTimeOfDayGreeting();
 
   let summary = "Everything looks good - no action items today";
-  if (overdueChargeCount > 0) {
-    summary = `You have ${overdueChargeCount} overdue charge${overdueChargeCount === 1 ? "" : "s"} totaling ${formatCurrency(overdueAmountCents)}`;
+  if (tenantsBehindCount > 0) {
+    summary = tenantsBehindCount === 1
+      ? `1 tenant is behind on rent (${formatCurrency(lateRentCents)}).`
+      : `${tenantsBehindCount} tenants are behind on rent (${formatCurrency(lateRentCents)}).`;
   } else if (openTicketCount > 0) {
     summary = `${openTicketCount} maintenance ticket${openTicketCount === 1 ? "" : "s"} need attention`;
   }

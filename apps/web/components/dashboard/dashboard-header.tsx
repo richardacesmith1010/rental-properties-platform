@@ -124,7 +124,7 @@ export function DashboardHeader({
           },
           {
             icon: CreditCard,
-            label: "Late accounts",
+            label: "Tenants behind",
             target: kpis.lateAccountCount,
           },
         ]
@@ -148,7 +148,7 @@ export function DashboardHeader({
           },
           {
             icon: AlertTriangle,
-            label: "Overdue charges",
+            label: "Tenants behind",
             target: kpis.lateAccountCount,
           },
         ];

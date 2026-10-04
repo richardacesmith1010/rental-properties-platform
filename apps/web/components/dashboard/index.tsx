@@ -167,8 +167,10 @@ export function Dashboard(props: DashboardProps) {
     props.nickname?.trim() ||
     props.fullName?.trim().split(/\s+/)[0] ||
     props.userEmail;
-  const overdueCharges = displayDashboardData.charges.filter((charge) => charge.status === "late");
-  const overdueAmountCents = overdueCharges.reduce((sum, charge) => sum + charge.amountCents, 0);
+  const tenantsBehind = {
+    count: displayDashboardData.kpis.lateAccountCount,
+    amountCents: displayDashboardData.kpis.lateRentCents
+  };
   const openTicketCount = sectionRendererProps.filteredTickets.filter(
     (ticket) => ticket.status === "open" || ticket.status === "in_progress"
   ).length;
@@ -199,8 +201,8 @@ export function Dashboard(props: DashboardProps) {
     !isUnknownSection &&
     llcSetupPrompt.shouldShow
   );
-  const statusSummary = overdueCharges.length > 0
-    ? `${overdueCharges.length} overdue charge${overdueCharges.length === 1 ? "" : "s"}`
+  const statusSummary = tenantsBehind.count > 0
+    ? `${tenantsBehind.count} tenant${tenantsBehind.count === 1 ? "" : "s"} behind`
     : urgentTicketCount > 0
       ? `${urgentTicketCount} urgent ticket${urgentTicketCount === 1 ? "" : "s"}`
       : openTicketCount > 0
@@ -473,7 +475,7 @@ export function Dashboard(props: DashboardProps) {
         </>
       }
     >
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 pb-3 pt-3 sm:px-4 sm:pb-4 sm:pt-4 lg:px-8 lg:pb-8 lg:pt-8">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 pb-24 pt-3 sm:px-4 sm:pb-24 sm:pt-4 lg:px-8 lg:pb-24 lg:pt-8">
         {(isOwnerRole || isManagerRole) && connectBannerConnected === false ? (
           <ConnectBanner
             connected={false}
@@ -533,7 +535,7 @@ export function Dashboard(props: DashboardProps) {
                 }
               />
               <div
-                className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scroll-smooth px-3 pb-3 pt-3 sm:px-5 sm:pb-4 [-webkit-overflow-scrolling:touch]"
+                className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scroll-smooth px-3 pb-24 pt-3 sm:px-5 sm:pb-24 [-webkit-overflow-scrolling:touch]"
                 onTouchStart={(event) => {
                   touchStartX.current = event.changedTouches[0]?.clientX ?? null;
                 }}
@@ -577,8 +579,8 @@ export function Dashboard(props: DashboardProps) {
                   greetingContent={
                     <ContextualGreeting
                       userName={displayName}
-                      overdueChargeCount={overdueCharges.length}
-                      overdueAmountCents={overdueAmountCents}
+                      tenantsBehindCount={tenantsBehind.count}
+                      lateRentCents={tenantsBehind.amountCents}
                       openTicketCount={openTicketCount}
                     />
                   }
@@ -628,7 +630,7 @@ export function Dashboard(props: DashboardProps) {
                 }
               />
 
-              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scroll-smooth px-3 pb-3 pt-3 sm:px-5 sm:pb-4 [-webkit-overflow-scrolling:touch]">
+              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scroll-smooth px-3 pb-24 pt-3 sm:px-5 sm:pb-24 [-webkit-overflow-scrolling:touch]">
                 <section id={activeSection} className="min-h-full">
                   {renderedSectionContent}
                 </section>

@@ -311,10 +311,9 @@ export function ChargeRow({
             </div>
 
             <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-              {charge.status !== "paid" && charge.status !== "waived" ? (
-                isTenantView ? (
-                  <div className="w-full space-y-2 xl:w-[18rem]">
-                    <div className="rounded-2xl border border-[var(--accent-line)] bg-[color:color-mix(in_srgb,var(--accent-weak)_76%,transparent)] p-3">
+              {isTenantView && charge.status !== "paid" && charge.status !== "waived" ? (
+                <div className="w-full space-y-2 xl:w-[18rem]">
+                  <div className="rounded-2xl border border-[var(--accent-line)] bg-[color:color-mix(in_srgb,var(--accent-weak)_76%,transparent)] p-3">
                       <p className="text-sm font-semibold text-foreground">
                         Pay with debit or credit card
                       </p>
@@ -347,9 +346,9 @@ export function ChargeRow({
                           Pay {formatCentsAsDollars(cardPayment.totalCents)}
                         </Button>
                       )}
-                    </div>
+                  </div>
 
-                    <div className="rounded-2xl border border-border bg-background/80 p-3">
+                  <div className="rounded-2xl border border-border bg-background/80 p-3">
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-sm font-semibold text-foreground">Pay from bank account</p>
                         <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--pos)]">
@@ -385,37 +384,8 @@ export function ChargeRow({
                           Pay {formatCentsAsDollars(charge.amountCents)}
                         </Button>
                       )}
-                    </div>
                   </div>
-                ) : (
-                  paymentsAvailable ? (
-                    <form action={onPayCharge}>
-                      <input type="hidden" name="chargeId" value={charge.id} />
-                      <SubmitButton
-                        size="sm"
-                        className="h-11 sm:h-8"
-                        title="Open secure checkout for this charge."
-                      >
-                        Pay now
-                      </SubmitButton>
-                    </form>
-                  ) : (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-11 sm:h-8"
-                      disabled
-                      title={
-                        stripeConfigured
-                          ? "Online payment unavailable - property owner hasn't connected their bank account."
-                          : "Online payment unavailable - Stripe is not configured."
-                      }
-                    >
-                      Pay now
-                    </Button>
-                  )
-                )
+                </div>
               ) : null}
 
               {showManualPayment && charge.status !== "paid" && charge.status !== "waived" && onToggleManualPayment ? (

@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { submitFeedback } from "@/app/actions/feedback";
-import { FeedbackButton } from "@/components/feedback/feedback-button";
+import { HelpMenu } from "@/components/help-menu";
 import { InstallPromptBanner } from "@/components/pwa/install-prompt";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SonnerProvider } from "@/components/ui/sonner-provider";
@@ -102,7 +102,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
         <ThemeProvider>
           {children}
-          <FeedbackButton onSubmit={submitFeedback} />
+          <HelpMenu onSubmitFeedback={submitFeedback} />
           <InstallPromptBanner />
           <SonnerProvider />
           {process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true" ? <Analytics /> : null}

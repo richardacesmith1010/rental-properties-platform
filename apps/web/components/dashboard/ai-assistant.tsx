@@ -1,9 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { SendHorizontal, Sparkles, X } from "lucide-react";
+import { SendHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DomusLogo } from "@/components/shared/domus-logo";
+import {
+  AI_ASSISTANT_AVAILABILITY_EVENT,
+  OPEN_AI_ASSISTANT_EVENT
+} from "@/components/help-menu";
 import { cn } from "@/lib/format";
 
 interface ChatMessage {
@@ -14,6 +18,10 @@ interface ChatMessage {
 interface AiAssistantProps {
   accountId: string;
   ownerName?: string;
+}
+
+interface OpenAiAssistantEventDetail {
+  trigger?: HTMLElement | null;
 }
 
 const starterPrompts = [
@@ -51,7 +59,7 @@ export function AiAssistant({ accountId, ownerName }: AiAssistantProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const openerRef = useRef<HTMLElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -68,9 +76,23 @@ export function AiAssistant({ accountId, ownerName }: AiAssistantProps) {
     abortRef.current = null;
     setIsLoading(false);
     setIsOpen(false);
-    window.requestAnimationFrame(() => {
-      triggerRef.current?.focus();
-    });
+    window.requestAnimationFrame(() => openerRef.current?.focus());
+  }, []);
+
+  useEffect(() => {
+    const handleOpen = (event: Event) => {
+      openerRef.current = (event as CustomEvent<OpenAiAssistantEventDetail>).detail?.trigger ?? null;
+      setIsOpen(true);
+    };
+
+    document.documentElement.dataset.domusAiAssistantAvailable = "true";
+    window.dispatchEvent(new CustomEvent(AI_ASSISTANT_AVAILABILITY_EVENT, { detail: true }));
+    window.addEventListener(OPEN_AI_ASSISTANT_EVENT, handleOpen);
+    return () => {
+      delete document.documentElement.dataset.domusAiAssistantAvailable;
+      window.dispatchEvent(new CustomEvent(AI_ASSISTANT_AVAILABILITY_EVENT, { detail: false }));
+      window.removeEventListener(OPEN_AI_ASSISTANT_EVENT, handleOpen);
+    };
   }, []);
 
   const sendMessage = useCallback(
@@ -200,26 +222,14 @@ export function AiAssistant({ accountId, ownerName }: AiAssistantProps) {
 
   return (
     <>
-      {!isOpen ? (
-        <button
-          ref={triggerRef}
-          type="button"
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+9rem)] right-3 z-30 inline-flex min-h-12 items-center gap-2 rounded-2xl border border-[var(--accent-line)] bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-[var(--accent-strong)] hover:shadow-xl sm:bottom-24 sm:right-6"
-          title={helperText}
-          aria-label="Ask Domus"
-        >
-          <Sparkles className="h-4 w-4" />
-          <span>Ask Domus</span>
-        </button>
-      ) : null}
-
       {isOpen ? (
         <section
           role="dialog"
           aria-label="Ask Domus"
+          aria-describedby="ask-domus-description"
           className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] left-4 right-4 z-30 flex h-[min(480px,calc(100vh-9rem))] flex-col rounded-3xl border border-border bg-card shadow-2xl sm:bottom-24 sm:left-auto sm:right-6 sm:w-[360px]"
         >
+          <p id="ask-domus-description" className="sr-only">{helperText}</p>
           <header className="flex items-center justify-between border-b border-border px-4 py-3">
             <div className="flex items-center gap-2">
               <DomusLogo size="sm" />

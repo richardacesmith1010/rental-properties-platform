@@ -17,8 +17,8 @@ describe("ContextualGreeting", () => {
     const markup = renderToString(
       <ContextualGreeting
         userName="Courtney"
-        overdueChargeCount={0}
-        overdueAmountCents={0}
+        tenantsBehindCount={0}
+        lateRentCents={0}
         openTicketCount={0}
       />
     );
@@ -31,8 +31,8 @@ describe("ContextualGreeting", () => {
     render(
       <ContextualGreeting
         userName="Courtney"
-        overdueChargeCount={0}
-        overdueAmountCents={0}
+        tenantsBehindCount={0}
+        lateRentCents={0}
         openTicketCount={0}
       />
     );
@@ -40,5 +40,18 @@ describe("ContextualGreeting", () => {
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: "Good morning, Courtney" })).toBeInTheDocument();
     });
+  });
+
+  it("describes distinct tenants behind and total late rent", () => {
+    render(
+      <ContextualGreeting
+        userName="Courtney"
+        tenantsBehindCount={1}
+        lateRentCents={200}
+        openTicketCount={0}
+      />
+    );
+
+    expect(screen.getByText("1 tenant is behind on rent ($2).")).toBeInTheDocument();
   });
 });

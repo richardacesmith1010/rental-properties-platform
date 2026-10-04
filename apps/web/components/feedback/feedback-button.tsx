@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { MessageCircleMore } from "lucide-react";
 import type { StatefulAction } from "@/app/actions";
 import { FeedbackModal } from "@/components/feedback/feedback-modal";
@@ -8,9 +9,10 @@ import { createClient } from "@/lib/supabase/client";
 
 interface FeedbackButtonProps {
   onSubmit: StatefulAction;
+  onOpen?: () => void;
 }
 
-export function FeedbackButton({ onSubmit }: FeedbackButtonProps) {
+export function FeedbackButton({ onSubmit, onOpen }: FeedbackButtonProps) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
 
@@ -50,25 +52,31 @@ export function FeedbackButton({ onSubmit }: FeedbackButtonProps) {
 
   return (
     <>
-      {!open ? (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+4.75rem)] right-3 z-40 inline-flex h-14 min-w-[56px] items-center justify-center gap-2 rounded-2xl border border-[var(--accent-line)] bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-[var(--accent-strong)] hover:shadow-xl print:hidden sm:bottom-6 sm:right-6 sm:h-auto sm:min-h-12 sm:min-w-12 sm:rounded-full"
-          title="Send feedback to the Domus team."
-          aria-label="Send feedback"
-        >
-          <MessageCircleMore className="h-5 w-5" />
-          <span className="hidden sm:inline">Feedback</span>
-        </button>
-      ) : null}
+      <button
+        type="button"
+        role="menuitem"
+        onClick={() => {
+          onOpen?.();
+          setOpen(true);
+        }}
+        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-[var(--ink-2)] transition hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)]"
+        title="Send feedback to the Domus team."
+      >
+        <MessageCircleMore className="h-4 w-4" />
+        <span>Send feedback</span>
+      </button>
 
-      <FeedbackModal
-        open={open}
-        onClose={() => setOpen(false)}
-        onSubmit={onSubmit}
-        defaultEmail={email}
-      />
+      {open && typeof document !== "undefined"
+        ? createPortal(
+            <FeedbackModal
+              open
+              onClose={() => setOpen(false)}
+              onSubmit={onSubmit}
+              defaultEmail={email}
+            />,
+            document.body
+          )
+        : null}
     </>
   );
 }

@@ -194,6 +194,7 @@ export function SidebarNav({
   navPreset = "default",
   items,
   activeItemId,
+  onSignOut: _onSignOut,
   onSelectItem,
   unreadNotificationCount: _unreadNotificationCount = 0,
   notifications = [],
@@ -290,7 +291,6 @@ export function MobileTopBar({
   navPreset = "default",
   items,
   activeItemId,
-  onSignOut,
   onSelectItem,
   unreadNotificationCount = 0,
   notifications = [],
@@ -380,7 +380,6 @@ export function MobileTopBar({
               userEmail={userEmail}
               avatarUrl={avatarUrl}
               stripeConnected={stripeConnected}
-              onSignOut={onSignOut}
             />
           </div>
 
