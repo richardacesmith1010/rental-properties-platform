@@ -1,11 +1,11 @@
 "use client";
 
-import type { ComponentProps } from "react";
+import { useContext, type ComponentProps, type ReactNode } from "react";
 import { AccountSwitcher } from "@/components/dashboard/account-switcher";
 import type { DashboardLayoutProps } from "./dashboard-layout";
 import { SectionRenderer } from "./section-renderer";
 import { useDashboardCollections, useDashboardKpiData } from "./dashboard-kpi-loader";
-import { useDashboardNavigation } from "./dashboard-section-loaders";
+import { OwnerSectionCacheContext, useOwnerSectionCache, type OwnerSectionCacheProps, useDashboardNavigation } from "./dashboard-section-loaders";
 import { useDashboardHomeState } from "./dashboard-home-loader";
 import { useDashboardCommandState } from "./dashboard-command-loader";
 import type { DashboardProps } from "./types";
@@ -13,9 +13,36 @@ import type { DashboardProps } from "./types";
 type SectionRendererProps = ComponentProps<typeof SectionRenderer>;
 type LayoutProps = Omit<DashboardLayoutProps, "children" | "mainClassName" | "afterMain">;
 
-export function useDashboardData(props: DashboardProps) {
+export function OwnerSectionDataProvider({ children, ...props }: OwnerSectionCacheProps & { children: ReactNode }) {
+  const cache = useOwnerSectionCache(props);
+  return <OwnerSectionCacheContext.Provider value={cache}>{children}</OwnerSectionCacheContext.Provider>;
+}
+
+export function useDashboardData(serverProps: DashboardProps) {
+  const ownerCache = useContext(OwnerSectionCacheContext);
+  const overlay = ownerCache?.data;
+  const props: DashboardProps = { ...serverProps, ...overlay,
+    ...(overlay?.analytics !== undefined ? { analyticsData: overlay.analytics } : {}),
+    ...(overlay?.expenses !== undefined ? { expensesData: overlay.expenses } : {}),
+    ...(overlay?.managerPaymentsData !== undefined ? {
+      managerPaymentConfigs: overlay.managerPaymentsData.configs,
+      managerPayments: overlay.managerPaymentsData.payments,
+      managerPaymentManagers: overlay.managerPaymentsData.managers,
+      managerPaymentsWarning: overlay.managerPaymentsData.warning
+    } : {})
+  };
   const collections = useDashboardCollections(props);
-  const kpis = useDashboardKpiData(props, collections);
+  const baseKpis = useDashboardKpiData(props, collections);
+  // Command-palette and section property picks must share the same invalidation path.
+  const kpis = {
+    ...baseKpis,
+    selectProperty: ownerCache ? (propertyId: string | null) => {
+      const params = ownerCache.navigationParams();
+      if (propertyId) params.set("property", propertyId);
+      else params.delete("property");
+      ownerCache.fullNavigate(`${window.location.pathname}?${params.toString()}`);
+    } : baseKpis.selectProperty
+  };
   const navigation = useDashboardNavigation(props, kpis);
   const homeState = useDashboardHomeState(props, collections, kpis);
   const commandState = useDashboardCommandState(props, collections, kpis, navigation);
@@ -114,6 +141,7 @@ export function useDashboardData(props: DashboardProps) {
   const accountSwitcher =
     isOwnerRole && props.activeAccountId && safeOwnershipAccounts.length > 0 ? (
       <AccountSwitcher
+        onNavigate={ownerCache?.fullNavigate}
         accounts={safeOwnershipAccounts}
         activeAccountId={props.activeAccountId}
         onRenameOwnershipAccount={props.onRenameOwnershipAccount}

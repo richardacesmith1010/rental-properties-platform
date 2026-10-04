@@ -1,3 +1,5 @@
+import { loadOwnerSectionData } from "@/app/actions/owner-section-data";
+import { OwnerSectionDataProvider } from "@/components/dashboard/dashboard-data-loader";
 import { Dashboard } from "@/components/dashboard";
 import { StripeTestModeBanner } from "@/components/shared/stripe-test-mode-banner";
 import {
@@ -107,6 +109,7 @@ import { getAuthenticatedUser, getRoleHomePath } from "@/lib/auth";
 import { getRentCollectionConnectHref } from "@/lib/stripe-connect";
 import { redirect } from "next/navigation";
 import {
+  getOwnerSectionBundleRequirements,
   loadOwnerPageData,
   type OwnerPageSearchParams
 } from "./owner-page-data";
@@ -140,6 +143,14 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
   return (
     <>
       <StripeTestModeBanner />
+      <OwnerSectionDataProvider
+        loadedBundles={ownerPage.loadedBundles}
+        requirements={getOwnerSectionBundleRequirements(ownerPage)}
+        account={ownerPage.activeAccountId}
+        mode={ownerPage.initialOwnerWorkflowMode}
+        property={ownerPage.initialPropertyId}
+        loadSection={loadOwnerSectionData}
+      >
       <Dashboard
         data={ownerPage.dashboard}
         portfolio={ownerPage.portfolio}
@@ -288,6 +299,7 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         onExecuteApprovedWithdrawal={executeApprovedWithdrawal}
         onUpdateManagementFee={updateManagementFee}
       />
+      </OwnerSectionDataProvider>
     </>
   );
 }

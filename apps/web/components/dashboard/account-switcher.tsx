@@ -8,6 +8,7 @@ import type { AccountRenameRequestDTO, OwnershipAccountDTO } from "@/lib/ownersh
 import type { StatefulAction } from "./types";
 
 interface AccountSwitcherProps {
+  onNavigate?: (url: string) => void;
   accounts: OwnershipAccountDTO[];
   activeAccountId: string;
   onRenameOwnershipAccount?: StatefulAction;
@@ -15,6 +16,7 @@ interface AccountSwitcherProps {
 }
 
 export function AccountSwitcher({
+  onNavigate,
   accounts,
   activeAccountId,
   onRenameOwnershipAccount,
@@ -47,7 +49,7 @@ export function AccountSwitcher({
     const params = new URLSearchParams(searchParams.toString());
     params.set("account", nextAccountId);
     const query = params.toString();
-    router.push(query ? `${pathname}?${query}` : pathname);
+    (onNavigate ?? router.push)(query ? `${pathname}?${query}` : pathname);
   };
 
   const handleCreateAccount = () => {
@@ -55,7 +57,7 @@ export function AccountSwitcher({
     params.set("mode", "records");
     params.set("section", "ownership");
     const query = params.toString();
-    router.push(query ? `${pathname}?${query}` : pathname);
+    (onNavigate ?? router.push)(query ? `${pathname}?${query}` : pathname);
   };
 
   const cancelEdit = () => {

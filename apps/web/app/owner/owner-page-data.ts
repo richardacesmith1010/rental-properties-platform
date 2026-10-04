@@ -1,3 +1,4 @@
+import { OWNER_SECTION_MODE_BY_ID } from "@/components/dashboard/dashboard-workflow-modes";
 import { getGeneratedMessage } from "@/lib/format";
 import { getDashboardData, type DashboardData } from "@/lib/dashboard";
 import { getNewFeedbackCountForOwner } from "@/lib/feedback";
@@ -365,7 +366,7 @@ export function buildOwnerBundlePlan(params: {
   };
 }
 
-function buildOwnerSectionAvailability(params: {
+export function buildOwnerSectionAvailability(params: {
   capabilities: FeatureCapabilitiesDTO;
   hasManagedProperties: boolean;
   hasManagerPaymentsSection: boolean;
@@ -438,6 +439,201 @@ async function hasOwnerManagerPaymentSection(propertyIds: string[]): Promise<boo
   }
 
   return (count ?? 0) > 0;
+}
+
+// One section-bundle execution path for initial renders and fetch-style actions.
+export async function loadOwnerSectionBundles(params: {
+  userId: string;
+  userEmail: string;
+  request: ResolvedOwnerRequest;
+  ownershipAccounts: OwnershipAccountDTO[];
+  capabilities: FeatureCapabilitiesDTO;
+  bundles: Set<OwnerBundleId>;
+  connectedPropertyIds: Promise<string[]>;
+  measure: <T>(name: string, work: () => Promise<T>, meta?: Record<string, unknown>) => Promise<T>;
+}) {
+  const { request, ownershipAccounts, capabilities, measure: measureOwnerWithRequest } = params;
+  const activeAccountId = request.activeAccountId;
+  const isLlcAccount = ownershipAccounts.find(account => account.id === activeAccountId)?.accountType === "llc";
+  const hasBundle = (id: OwnerBundleId) => params.bundles.has(id);
+  const [
+    tickets,
+    invitations,
+    documents,
+    inboxThreads,
+    automationTemplates,
+    automationRules,
+    listings,
+    applications,
+    vendors,
+    expenses,
+    managerPaymentsData,
+    analytics,
+    auditLogs,
+    rentIncreaseHistory,
+    newFeedbackCount,
+    ownershipMembers,
+    pendingLlcInvitations,
+    distributionHistory,
+    pendingChangeRequests,
+    pendingWithdrawals,
+    financialActivityFeed,
+    pendingAccountRenameRequests,
+    pendingAccountDeleteRequests,
+    ownerConnectedMap
+  ] = await Promise.all([
+    hasBundle("tickets")
+      ? measureOwnerWithRequest("maintenance.admin-tickets", () => getAdminMaintenanceTickets(params.userId, request.activeAccountId))
+      : Promise.resolve(undefined),
+    hasBundle("invitations")
+      ? measureOwnerWithRequest("invitations.owner", () => getOwnerInvitations(params.userId, request.activeAccountId))
+      : Promise.resolve(undefined),
+    hasBundle("documents")
+      ? capabilities.documentsEnabled
+        ? measureOwnerWithRequest("documents.owner", () => getOwnerDocumentsData(params.userId, request.activeAccountId))
+        : Promise.resolve({
+            templates: [],
+            packets: [],
+            propertyFiles: [],
+            propertyFilesEnabled: false,
+            propertyFilesWarning: "Property file vault is not enabled yet."
+          })
+      : Promise.resolve(undefined),
+    hasBundle("inbox") && capabilities.inboxThreadsEnabled
+      ? measureOwnerWithRequest("inbox.threads", () => getInboxThreadsForUser(params.userId))
+      : Promise.resolve(undefined),
+    hasBundle("automations") && capabilities.automationsEnabled
+      ? measureOwnerWithRequest("automations.templates", () => getAutomationTemplates())
+      : Promise.resolve(undefined),
+    hasBundle("automations") && capabilities.automationsEnabled
+      ? measureOwnerWithRequest("automations.rules", () => getAutomationRulesForUser(params.userId))
+      : Promise.resolve(undefined),
+    hasBundle("listings") && capabilities.leasingPipelineEnabled
+      ? measureOwnerWithRequest("leasing.listings", () => getRentalListingsForUser(params.userId, request.activeAccountId))
+      : Promise.resolve(undefined),
+    hasBundle("applications") && capabilities.leasingPipelineEnabled
+      ? measureOwnerWithRequest("applications.user", () => getApplicationsForUser(params.userId, request.activeAccountId))
+      : Promise.resolve(undefined),
+    hasBundle("vendors") && capabilities.vendorWorkflowEnabled
+      ? measureOwnerWithRequest("vendors.owner", () => getOwnerVendors(params.userId, request.activeAccountId))
+      : Promise.resolve(undefined),
+    hasBundle("expenses")
+      ? measureOwnerWithRequest("expenses.owner", () => getOwnerExpenseData(params.userId, request.activeAccountId))
+      : Promise.resolve(undefined),
+    hasBundle("manager-payments")
+      ? measureOwnerWithRequest(
+          "manager-payments.dashboard",
+          () => getManagerPaymentsDashboardData(params.userId, request.activeAccountId)
+        )
+      : Promise.resolve(undefined),
+    hasBundle("analytics")
+      ? measureOwnerWithRequest("analytics.owner", () => getOwnerAnalyticsData(params.userId, request.activeAccountId))
+      : Promise.resolve(undefined),
+    hasBundle("audit-logs")
+      ? measureOwnerWithRequest("audit.recent", () => getRecentAuditLogs(params.userId, request.activeAccountId))
+      : Promise.resolve(undefined),
+    hasBundle("rent-increases")
+      ? measureOwnerWithRequest("rent-increases.history", () => getRentIncreaseHistory(params.userId, request.activeAccountId))
+      : Promise.resolve(undefined),
+    hasBundle("feedback")
+      ? measureOwnerWithRequest("feedback.new-count", () => getNewFeedbackCountForOwner(params.userEmail), {
+          userId: params.userId
+        })
+      : Promise.resolve(undefined),
+    hasBundle("ownership-members") && isLlcAccount && activeAccountId
+      ? measureOwnerWithRequest(
+          "ownership.members",
+          () => getOwnershipMembersForAccount(params.userId, activeAccountId)
+        )
+      : Promise.resolve(undefined),
+    hasBundle("ownership-members") && isLlcAccount && activeAccountId
+      ? measureOwnerWithRequest(
+          "ownership.pending-llc-invitations",
+          () => getPendingLLCInvitationsForAccount(params.userId, activeAccountId)
+        )
+      : Promise.resolve(undefined),
+    hasBundle("ownership-governance") && isLlcAccount && activeAccountId
+      ? measureOwnerWithRequest(
+          "ownership.distribution-history",
+          () => getDistributionHistory(activeAccountId)
+        )
+      : Promise.resolve(undefined),
+    hasBundle("ownership-governance") && isLlcAccount && activeAccountId
+      ? measureOwnerWithRequest(
+          "ownership.pending-change-requests",
+          () => getPendingChangeRequests(activeAccountId)
+        )
+      : Promise.resolve(undefined),
+    hasBundle("ownership-governance") && isLlcAccount && activeAccountId
+      ? measureOwnerWithRequest(
+          "ownership.pending-withdrawals",
+          () => getPendingWithdrawals(activeAccountId)
+        )
+      : Promise.resolve(undefined),
+    hasBundle("ownership-governance") && isLlcAccount && activeAccountId
+      ? measureOwnerWithRequest(
+          "ownership.financial-activity",
+          () => getFinancialActivityFeed(activeAccountId)
+        )
+      : Promise.resolve(undefined),
+    hasBundle("ownership-governance")
+      ? measureOwnerWithRequest(
+          "ownership.pending-rename-requests",
+          () => getPendingAccountRenameRequests(ownershipAccounts.map((account) => account.id)),
+          {
+            ownershipAccountCount: ownershipAccounts.length
+          }
+        )
+      : Promise.resolve(undefined),
+    hasBundle("ownership-governance")
+      ? measureOwnerWithRequest(
+          "ownership.pending-delete-requests",
+          () => getPendingAccountDeleteRequests(ownershipAccounts.map((account) => account.id)),
+          {
+            ownershipAccountCount: ownershipAccounts.length
+          }
+        )
+      : Promise.resolve(undefined),
+    hasBundle("owner-connected-map")
+      ? params.connectedPropertyIds.then((propertyIds) =>
+          measureOwnerWithRequest(
+            "stripe-connect.owner-map",
+            () => arePropertyOwnersConnected(propertyIds),
+            {
+              propertyCount: propertyIds.length
+            }
+          )
+        )
+      : Promise.resolve(undefined)
+  ]);
+  return {
+    tickets,
+    invitations,
+    documents,
+    inboxThreads,
+    automationTemplates,
+    automationRules,
+    listings,
+    applications,
+    vendors,
+    expenses,
+    managerPaymentsData,
+    analytics,
+    auditLogs,
+    rentIncreaseHistory,
+    newFeedbackCount,
+    ownershipMembers,
+    pendingLlcInvitations,
+    distributionHistory,
+    pendingChangeRequests,
+    pendingWithdrawals,
+    financialActivityFeed,
+    pendingAccountRenameRequests,
+    pendingAccountDeleteRequests,
+    ownerConnectedMap,
+    applicationCount: applications?.length,
+    approvedApplicationCount: applications?.filter(application => application.status === "approved").length
+  };
 }
 
 export async function loadOwnerPageData(params: {
@@ -552,6 +748,10 @@ export async function loadOwnerPageData(params: {
         }
       )
     : [];
+  if (!administeredPropertyIds.includes(request.requestedPropertyId ?? "")) {
+    request.requestedPropertyId = null;
+    request.initialPropertyId = null;
+  }
   const hasManagerPaymentsSection = await measureOwnerWithRequest(
     "manager-payments.visibility",
     () => hasOwnerManagerPaymentSection(administeredPropertyIds),
@@ -587,55 +787,15 @@ export async function loadOwnerPageData(params: {
     dashboard,
     portfolio,
     announcementProperties,
-    tickets,
-    invitations,
-    documents,
     notifications,
     notificationPreferenceSettings,
-    inboxThreads,
-    automationTemplates,
-    automationRules,
-    listings,
-    applications,
-    vendors,
-    expenses,
-    managerPaymentsData,
-    analytics,
-    auditLogs,
-    rentIncreaseHistory,
-    newFeedbackCount,
     rentCollectionStatus,
-    ownershipMembers,
-    pendingLlcInvitations,
-    distributionHistory,
-    pendingChangeRequests,
-    pendingWithdrawals,
-    financialActivityFeed,
-    pendingAccountRenameRequests,
-    pendingAccountDeleteRequests,
-    ownerConnectedMap
+    sectionData
   ] = await Promise.all([
     measureOwnerWithRequest("dashboard.data", () => getDashboardData(params.userId, activeAccountId, administeredPropertyIds)),
     portfolioPromise,
     hasBundle("announcement-properties")
       ? measureOwnerWithRequest("properties.admin-options", () => getAdministeredPropertyOptions(params.userId))
-      : Promise.resolve(undefined),
-    hasBundle("tickets")
-      ? measureOwnerWithRequest("maintenance.admin-tickets", () => getAdminMaintenanceTickets(params.userId, request.activeAccountId))
-      : Promise.resolve(undefined),
-    hasBundle("invitations")
-      ? measureOwnerWithRequest("invitations.owner", () => getOwnerInvitations(params.userId, request.activeAccountId))
-      : Promise.resolve(undefined),
-    hasBundle("documents")
-      ? capabilities.documentsEnabled
-        ? measureOwnerWithRequest("documents.owner", () => getOwnerDocumentsData(params.userId, request.activeAccountId))
-        : Promise.resolve({
-            templates: [],
-            packets: [],
-            propertyFiles: [],
-            propertyFilesEnabled: false,
-            propertyFilesWarning: "Property file vault is not enabled yet."
-          })
       : Promise.resolve(undefined),
     hasBundle("notifications") && capabilities.notificationsEnabled
       ? measureOwnerWithRequest("notifications.user", () => getNotificationsForUser(params.userId))
@@ -643,118 +803,14 @@ export async function loadOwnerPageData(params: {
     hasBundle("notification-preferences")
       ? measureOwnerWithRequest("notifications.preferences", () => getUserNotificationPreferenceSettings(params.userId))
       : Promise.resolve(undefined),
-    hasBundle("inbox") && capabilities.inboxThreadsEnabled
-      ? measureOwnerWithRequest("inbox.threads", () => getInboxThreadsForUser(params.userId))
-      : Promise.resolve(undefined),
-    hasBundle("automations") && capabilities.automationsEnabled
-      ? measureOwnerWithRequest("automations.templates", () => getAutomationTemplates())
-      : Promise.resolve(undefined),
-    hasBundle("automations") && capabilities.automationsEnabled
-      ? measureOwnerWithRequest("automations.rules", () => getAutomationRulesForUser(params.userId))
-      : Promise.resolve(undefined),
-    hasBundle("listings") && capabilities.leasingPipelineEnabled
-      ? measureOwnerWithRequest("leasing.listings", () => getRentalListingsForUser(params.userId, request.activeAccountId))
-      : Promise.resolve(undefined),
-    hasBundle("applications") && capabilities.leasingPipelineEnabled
-      ? measureOwnerWithRequest("applications.user", () => getApplicationsForUser(params.userId, request.activeAccountId))
-      : Promise.resolve(undefined),
-    hasBundle("vendors") && capabilities.vendorWorkflowEnabled
-      ? measureOwnerWithRequest("vendors.owner", () => getOwnerVendors(params.userId, request.activeAccountId))
-      : Promise.resolve(undefined),
-    hasBundle("expenses")
-      ? measureOwnerWithRequest("expenses.owner", () => getOwnerExpenseData(params.userId, request.activeAccountId))
-      : Promise.resolve(undefined),
-    hasBundle("manager-payments")
-      ? measureOwnerWithRequest(
-          "manager-payments.dashboard",
-          () => getManagerPaymentsDashboardData(params.userId, request.activeAccountId)
-        )
-      : Promise.resolve(undefined),
-    hasBundle("analytics")
-      ? measureOwnerWithRequest("analytics.owner", () => getOwnerAnalyticsData(params.userId, request.activeAccountId))
-      : Promise.resolve(undefined),
-    hasBundle("audit-logs")
-      ? measureOwnerWithRequest("audit.recent", () => getRecentAuditLogs(params.userId, request.activeAccountId))
-      : Promise.resolve(undefined),
-    hasBundle("rent-increases")
-      ? measureOwnerWithRequest("rent-increases.history", () => getRentIncreaseHistory(params.userId, request.activeAccountId))
-      : Promise.resolve(undefined),
-    hasBundle("feedback")
-      ? measureOwnerWithRequest("feedback.new-count", () => getNewFeedbackCountForOwner(params.userEmail), {
-          userId: params.userId
-        })
-      : Promise.resolve(undefined),
     measureOwnerWithRequest("stripe-connect.status", () => getRentCollectionConnectStatus(params.userId)),
-    hasBundle("ownership-members") && isLlcAccount && activeAccountId
-      ? measureOwnerWithRequest(
-          "ownership.members",
-          () => getOwnershipMembersForAccount(params.userId, activeAccountId)
-        )
-      : Promise.resolve(undefined),
-    hasBundle("ownership-members") && isLlcAccount && activeAccountId
-      ? measureOwnerWithRequest(
-          "ownership.pending-llc-invitations",
-          () => getPendingLLCInvitationsForAccount(params.userId, activeAccountId)
-        )
-      : Promise.resolve(undefined),
-    hasBundle("ownership-governance") && isLlcAccount && activeAccountId
-      ? measureOwnerWithRequest(
-          "ownership.distribution-history",
-          () => getDistributionHistory(activeAccountId)
-        )
-      : Promise.resolve(undefined),
-    hasBundle("ownership-governance") && isLlcAccount && activeAccountId
-      ? measureOwnerWithRequest(
-          "ownership.pending-change-requests",
-          () => getPendingChangeRequests(activeAccountId)
-        )
-      : Promise.resolve(undefined),
-    hasBundle("ownership-governance") && isLlcAccount && activeAccountId
-      ? measureOwnerWithRequest(
-          "ownership.pending-withdrawals",
-          () => getPendingWithdrawals(activeAccountId)
-        )
-      : Promise.resolve(undefined),
-    hasBundle("ownership-governance") && isLlcAccount && activeAccountId
-      ? measureOwnerWithRequest(
-          "ownership.financial-activity",
-          () => getFinancialActivityFeed(activeAccountId)
-        )
-      : Promise.resolve(undefined),
-    hasBundle("ownership-governance")
-      ? measureOwnerWithRequest(
-          "ownership.pending-rename-requests",
-          () => getPendingAccountRenameRequests(ownershipAccounts.map((account) => account.id)),
-          {
-            ownershipAccountCount: ownershipAccounts.length
-          }
-        )
-      : Promise.resolve(undefined),
-    hasBundle("ownership-governance")
-      ? measureOwnerWithRequest(
-          "ownership.pending-delete-requests",
-          () => getPendingAccountDeleteRequests(ownershipAccounts.map((account) => account.id)),
-          {
-            ownershipAccountCount: ownershipAccounts.length
-          }
-        )
-      : Promise.resolve(undefined),
-    hasBundle("owner-connected-map")
-      ? portfolioPromise.then((loadedPortfolio) =>
-          measureOwnerWithRequest(
-            "stripe-connect.owner-map",
-            () => arePropertyOwnersConnected(loadedPortfolio.properties.map((property) => property.id)),
-            {
-              propertyCount: loadedPortfolio.properties.length
-            }
-          )
-        )
-      : Promise.resolve(undefined)
+    loadOwnerSectionBundles({
+      ...params, request, ownershipAccounts, capabilities, bundles: bundlePlan.bundles,
+      connectedPropertyIds: portfolioPromise.then(value => value.properties.map(property => property.id)),
+      measure: measureOwnerWithRequest
+    })
   ]);
 
-  const approvedApplicationCount = applications?.filter(
-    (application) => application.status === "approved"
-  ).length;
   const isEmpty = portfolio.properties.length === 0 &&
     !request.initialOwnerWorkflowMode &&
     !request.initialSectionId;
@@ -768,49 +824,42 @@ export async function loadOwnerPageData(params: {
 
   return {
     status: "ready",
+    ...sectionData,
     activeAccountId: request.activeAccountId,
-    analytics,
     announcementProperties,
-    applications,
-    applicationCount: applications?.length,
-    approvedApplicationCount,
-    auditLogs,
-    automationRules,
-    automationTemplates,
     capabilities: capabilitiesWithOwnerSectionAvailability,
     dashboard,
-    distributionHistory,
-    documents,
-    expenses,
-    financialActivityFeed,
     generatedMessage: request.generatedMessage,
-    inboxThreads,
     initialOwnerHomePage: request.initialOwnerHomePage,
     initialOwnerWorkflowMode: request.initialOwnerWorkflowMode,
     initialPropertyId: request.initialPropertyId,
     initialSectionId: request.initialSectionId,
-    invitations,
     isEmpty,
-    listings,
     loadedBundles: Array.from(bundlePlan.bundles),
-    managerPaymentsData,
-    newFeedbackCount,
     notificationPreferenceSettings,
     notifications,
-    ownerConnectedMap,
     ownershipAccounts,
-    ownershipMembers,
-    pendingAccountDeleteRequests,
-    pendingAccountRenameRequests,
-    pendingChangeRequests,
-    pendingLlcInvitations,
-    pendingWithdrawals,
     portfolio,
     profile,
     rentCollectionStatus,
-    rentIncreaseHistory,
-    role,
-    tickets,
-    vendors
+    role
   };
+}
+
+export const OWNER_SECTION_IDS = ["overview", "daily-ops-home", ...Object.keys(OWNER_SECTION_MODE_BY_ID)];
+export const OWNER_SHARED_BUNDLES: OwnerBundleId[] = [
+  "dashboard", "portfolio", "announcement-properties", "notifications",
+  "notification-preferences", "rent-collection-status"
+];
+
+export function getOwnerSectionBundleRequirements(data: OwnerPageReadyData) {
+  return Object.fromEntries(OWNER_SECTION_IDS.map(section => [section,
+    Array.from(buildOwnerBundlePlan({
+      capabilities: data.capabilities,
+      initialOwnerHomePage: section === "daily-ops-home",
+      initialSectionId: section,
+      isLlcAccount: data.ownershipAccounts.find(account => account.id === data.activeAccountId)?.accountType === "llc",
+      sectionAvailability: data.capabilities.ownerSectionAvailability!
+    }).bundles).filter(bundle => !OWNER_SHARED_BUNDLES.includes(bundle))
+  ]));
 }

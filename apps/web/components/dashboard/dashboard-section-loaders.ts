@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import type { OwnerBundleId } from "@/app/owner/owner-page-data";
+import type { OwnerSectionData, OwnerSectionInput, OwnerSectionResult } from "@/app/actions/owner-section-data";
+import { createContext, useContext, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   buildAllSectionItems,
@@ -22,7 +24,134 @@ import type { NavItem } from "./sidebar-nav";
 import type { DashboardProps } from "./types";
 import type { DashboardKpiState } from "./dashboard-kpi-loader";
 
+export interface OwnerSectionCacheProps {
+  loadedBundles: OwnerBundleId[];
+  requirements: Record<string, OwnerBundleId[]>;
+  account: string | null;
+  mode?: string;
+  property: string | null;
+  loadSection: (input: OwnerSectionInput) => Promise<OwnerSectionResult>;
+}
+
+function resolveOwnerMode(mode: string | null): OwnerWorkflowMode {
+  return mode && Object.prototype.hasOwnProperty.call(ownerWorkflowModeMeta, mode)
+    ? mode as OwnerWorkflowMode : "daily_ops";
+}
+
+function ownerScope(account: string | null, mode: string | null, property: string | null) {
+  return JSON.stringify([account, resolveOwnerMode(mode), property || null]);
+}
+
+export function useOwnerSectionCache(props: OwnerSectionCacheProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [, redraw] = useState(0);
+  const serverScope = ownerScope(props.account, props.mode ?? null, props.property);
+  const scope = ownerScope(searchParams.get("account") ?? props.account,
+    searchParams.get("mode"), searchParams.get("property"));
+  const state = useRef({
+    server: props.loadedBundles, scope, epoch: 0, request: 0, pendingUrl: null as string | null,
+    overlay: new Map<OwnerBundleId, OwnerSectionData>(), loading: false, waitingForServer: false
+  });
+  const cache = state.current;
+  // Render-time invalidation prevents even one frame of stale overlay after an RSC refresh.
+  if (cache.server !== props.loadedBundles) {
+    cache.server = props.loadedBundles;
+    cache.scope = scope;
+    cache.epoch++;
+    cache.overlay.clear();
+    cache.loading = false;
+    cache.waitingForServer = false;
+    cache.pendingUrl = null;
+  } else if (cache.scope !== scope && !cache.waitingForServer) {
+    cache.scope = scope;
+    cache.epoch++;
+    cache.overlay.clear();
+    cache.loading = true;
+    cache.waitingForServer = true;
+  }
+
+  const invalidate = useCallback(() => {
+    const current = state.current;
+    current.epoch++;
+    current.overlay.clear();
+    current.loading = true;
+    current.waitingForServer = true;
+    current.pendingUrl = null;
+    redraw(value => value + 1);
+  }, []);
+  const fullNavigate = useCallback((url: string) => {
+    invalidate(); // Synchronous, before starting the server navigation.
+    state.current.pendingUrl = url;
+    router.replace(url);
+  }, [invalidate, router]);
+
+  useEffect(() => {
+    const onPopState = () => {
+      invalidate();
+      router.refresh();
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [invalidate, router]);
+
+  const navigate = useCallback((url: string, section: string) => {
+    const next = new URL(url, window.location.origin);
+    const nextScope = ownerScope(next.searchParams.get("account") ?? props.account,
+      next.searchParams.get("mode"), next.searchParams.get("property"));
+    const current = state.current;
+    if (current.waitingForServer || nextScope !== current.scope || nextScope !== serverScope) {
+      fullNavigate(url);
+      return;
+    }
+    window.history.replaceState(null, "", url);
+    const request = ++current.request;
+    const epoch = current.epoch;
+    const required = props.requirements[section];
+    const loaded = new Set([...props.loadedBundles, ...current.overlay.keys()]);
+    if (required && required.every(bundle => loaded.has(bundle))) {
+      current.loading = false;
+      redraw(value => value + 1);
+      return;
+    }
+    current.loading = true;
+    redraw(value => value + 1);
+    const isCurrent = () => state.current.request === request && state.current.epoch === epoch;
+    void props.loadSection({
+      section, account: next.searchParams.get("account") ?? props.account ?? undefined,
+      mode: next.searchParams.get("mode") ?? undefined,
+      property: next.searchParams.get("property") ?? undefined
+    }).then(result => {
+      if (!isCurrent()) return;
+      if (!("status" in result) || result.status !== "ready") {
+        invalidate();
+        router.refresh(); // URL already changed: replace(sameUrl) may do nothing.
+        return;
+      }
+      for (const bundle of result.data.loadedBundles) {
+        current.overlay.delete(bundle);
+        current.overlay.set(bundle, result.data);
+      }
+      current.loading = false;
+      redraw(value => value + 1);
+    }).catch(() => {
+      if (!isCurrent()) return;
+      invalidate();
+      router.refresh();
+    });
+  }, [fullNavigate, invalidate, props, router, serverScope]);
+
+  const navigationParams = () => new URL(
+    state.current.pendingUrl ?? window.location.href, window.location.origin
+  ).searchParams;
+  const data: Partial<OwnerSectionData> = Object.assign({}, ...cache.overlay.values());
+  return { data, loading: cache.loading, navigate, fullNavigate, navigationParams };
+}
+
+export const OwnerSectionCacheContext = createContext<ReturnType<typeof useOwnerSectionCache> | null>(null);
+
 export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpiState) {
+  const ownerCache = useContext(OwnerSectionCacheContext);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -255,6 +384,17 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
     setActiveSection(props.initialSectionId ?? "overview");
   }, [props.initialSectionId]);
 
+  const usesOwnerCache = ownerCache !== null;
+  const ownerQuery = searchParams.toString();
+  useEffect(() => {
+    if (!usesOwnerCache) return;
+    const params = new URLSearchParams(ownerQuery);
+    const mode = resolveOwnerMode(params.get("mode"));
+    setActiveSection(params.get("section") ?? "overview");
+    setOwnerDailyOpsStartsAtHome(!params.has("section") && mode === "daily_ops");
+    setOwnerWorkflowMode(mode);
+  }, [ownerQuery, usesOwnerCache]);
+
   const isUnknownSection = !allSectionItems.some((item) => item.id === activeSection);
 
   useEffect(() => {
@@ -292,7 +432,7 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
       setOwnerDailyOpsStartsAtHome(params.startsAtHome);
       setActiveSection(params.nextSectionId);
 
-      const nextParams = new URLSearchParams(searchParams.toString());
+      const nextParams = ownerCache?.navigationParams() ?? new URLSearchParams(searchParams.toString());
       if (params.nextOwnerMode === "daily_ops") {
         nextParams.delete("mode");
       } else {
@@ -315,12 +455,17 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
         return;
       }
 
+      if (ownerCache) {
+        setIsSectionLoading(false);
+        ownerCache.navigate(nextUrl, params.startsAtHome ? "daily-ops-home" : params.nextSectionId);
+        return;
+      }
       setIsSectionLoading(true);
       startRouteTransition(() => {
         router.replace(nextUrl);
       });
     },
-    [pathname, router, searchParams, startRouteTransition]
+    [ownerCache, pathname, router, searchParams, startRouteTransition]
   );
 
   const goToPreviousSection = () => {
@@ -679,7 +824,7 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
     ownerDailyOpsPageCountLabel,
     ownerDailyOpsTotalPages,
     isOwnerDailyOpsHomePage,
-    isSectionLoading,
+    isSectionLoading: isSectionLoading || Boolean(ownerCache?.loading),
     sidebarItems,
     sidebarActiveItemId,
     reportsHref,
