@@ -235,6 +235,11 @@ Claude must treat every interaction cycle as a learning opportunity. This sectio
 **What was correct:** Any migration that DROPs and recreates a constraint, policy, or function must be diffed against the LIVE definition (`pg_get_constraintdef` / `pg_get_functiondef`) before apply. Packets that add links/contact info must name exact values.
 **Rule:** Before applying a migration that recreates an existing DB object, query its live definition and confirm the new one equals live ± the intended change. In packets, forbid inventing URLs/emails and supply the exact values.
 
+#### L-013 | 2026-10-04 | TECHNICAL
+**What happened:** Sprint 151 promised ~0.5–1 s for a section's first open. It shipped at ~2.2 s because the new server action still pays the same ~1 s fixed prefix (session auth, role, profile, ownership, administered IDs) that the full page paid, plus a ~0.7 s maintenance loader. Revisits did become instant.
+**What was correct:** The Sprint 148/149 telemetry already showed the fixed prefix cost. A performance target must be the sum of the measured costs that remain on the new path, not a guess about what was removed.
+**Rule:** Before stating any latency target in a packet, list the remaining per-request costs from existing `[perf:*]` telemetry and add them up. State the target as that sum, and name which costs the sprint actually removes.
+
 ## 11) Pre-Flight Lessons Check (Hard Rule)
 
 Before starting ANY work cycle (planning, verification, or especially implementation), Claude must:
@@ -254,6 +259,7 @@ If a planned action matches a pattern from a prior lesson, Claude must stop and 
 - Am I about to hypothesize about a production bug? → L-008 says read the actual logs/dashboard first, in order: Vercel logs → third-party dashboard log → direct API query. Hypothesis comes only after data.
 - Am I about to call a UI sprint "shipped" because gate + smoke passed? → L-009 says do a real-session Chrome MCP render check first. HTTP 200 doesn't prove the page actually rendered.
 - Am I applying a migration that recreates a constraint/policy/function? → L-012 says diff against the live definition first. Does a packet add links or contact info? → name exact values.
+- Am I stating a latency target? → L-013 says sum the remaining measured costs from `[perf:*]` telemetry first.
 - Am I ending a cycle report? → L-010 (refined) says keep `docs/agent-handoff.md` + memory current and report the transcript size; only prompt a new chat when a rotation threshold is hit (size ~50MB / compacted ~2× / sluggish / topic pivot) — not every sprint.
 
 This section must be updated whenever a new lesson is added that introduces a new "always check" pattern.
