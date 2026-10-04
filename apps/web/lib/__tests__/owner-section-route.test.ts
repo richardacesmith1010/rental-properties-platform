@@ -153,6 +153,13 @@ describe("owner section GET route", () => {
     expect(ownerLoadMocks.tickets).not.toHaveBeenCalled();
   });
 
+  it.each(["records", "new_tenant", "unknown"])("accepts and ignores legacy mode=%s", async mode => {
+    const direct = await requestSectionData({ section: "expenses" });
+    const legacy = await requestSectionData({ section: "expenses", mode });
+    expect(legacy).toEqual(direct);
+    expect(legacy).toMatchObject({ status: "ready" });
+  });
+
   it("validates known section ids and rejects client identity before checking role", async () => {
     expect(await requestSectionData({ section: "unknown" })).toHaveProperty("error");
     expect(await requestSectionData({ section: "charges", userId: "foreign" } as never)).toHaveProperty("error");
