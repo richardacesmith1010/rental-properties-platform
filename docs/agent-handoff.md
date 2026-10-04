@@ -230,10 +230,16 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - **Measured (prod, smoke owner):** revisiting a section ~50 ms, **zero requests**. First open of a not-yet-loaded section ~2.0–2.4 s (Vercel log: action total 1.3–2.1 s = ~1 s fixed auth/role/profile/ownership/property prefix + bundle; `maintenance.admin-tickets` alone ~650–900 ms). First-open target (0.5–1 s) **missed** — see L-013. Mutation → `router.refresh()` keeps current section correct (verified). Deep link `?section=expenses` without `mode=records` lands on Home — same as before (expenses lives in Records), not a regression.
 - Next speed lever (Sprint 152 candidate): background-preload neighboring sections after the page settles, trim the action's fixed prefix, and speed `getAdminMaintenanceTickets`.
 
+## Sprint 152 — Neighbour preload + faster maintenance loader SHIPPED with known issue (L2, `357571d`, 2026-10-04)
+
+- Codex (Sol) hit its usage limit mid-run; auto-resumed after reset (detached nohup), finished. 1061 tests, independent gate green, smoke 3/3, theme 11/11, zero console errors.
+- **Measured (prod, smoke owner, 2.5 s between clicks):** 7 of 9 arrow clicks 52–350 ms with zero requests at click time; full `/owner` RSC renders ~2.2 s (was 2.5–2.7 s); `getAdminMaintenanceTickets` 7 waves → 2.
+- **Known issue (root-caused):** a Next 14 Server Action that is still in flight when the URL changes via `history.replaceState` makes the App Router refetch the full `/owner` RSC tree for the new URL. Preloads use the Server Action, so nearly every arrow click also triggers a hidden full server render, which clears the overlay → duplicate re-preloads. Reproduced with preload disabled by two quick clicks (Sprint 151 had the same latent bug). User-visible data stays correct; cost is wasted server work. Fix = Sprint 153: move section reads from the Server Action to a GET route handler (fetch bypasses the router), same auth/scoping code.
+
 ## ▶ START HERE (next session, written 2026-10-04)
 
-- Last shipped: Sprint 151 (`a6f5179`). Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
-- Owner-approved queue, in order: (1) Sprint 152 first-open speed (proposed, awaiting approval); (2) clarity cleanup from `docs/walkthrough-2026-10-03.md` #5–#7, #9 — one bank-setup prompt, simpler navigation (replace "N OF M" carousel), plain-language sweep — **mockup first** (Design canvas, like the landing), L2/L3 TBD.
+- Last shipped: Sprint 152 (`357571d`, known issue above). Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
+- Owner-approved queue, in order: (1) Sprint 153 section reads via GET route handler (L3, proposed); (2) clarity cleanup from `docs/walkthrough-2026-10-03.md` #5–#7, #9 — one bank-setup prompt, simpler navigation (replace "N OF M" carousel), plain-language sweep — **mockup first** (Design canvas, like the landing), L2/L3 TBD.
 - Standing rules: notifications OFF until owner says real users (env `DOMUS_NOTIFICATIONS_ENABLED` unset); L3 packets → Claude sends to Domus ChatGPT project via Claude-in-Chrome (memory: feedback-prompt-severity-chatgpt-workflow); Codex default Sol/medium, watch usage limits (detached nohup re-run after reset); verify every UI sprint live with Playwright (temp specs in `apps/web/tests/e2e/zz-*.tmp.spec.ts`, smoke creds from `.env.local`).
 - Owner action items still open: J&MSP LLC bank connection (Stripe; owner must enter bank details). Codex Supabase token expires ~2027-01-01.
 - Angel Hernandez (he/him): lease flagged "Pays outside Domus"; owner records Fidelity payments (Charges → Record → ACH, note "Fidelity") or asks Claude to record quietly.
