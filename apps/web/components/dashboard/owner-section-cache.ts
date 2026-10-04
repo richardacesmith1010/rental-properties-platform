@@ -1,7 +1,8 @@
 "use client";
 
 import type { OwnerBundleId } from "@/app/owner/owner-page-data";
-import type { OwnerSectionData, OwnerSectionInput, OwnerSectionResult } from "@/app/actions/owner-section-data";
+import type { OwnerSectionData, OwnerSectionInput, OwnerSectionResult } from "@/lib/owner-section-transport";
+import { decodeOwnerSectionResult } from "@/lib/owner-section-transport";
 import { createContext, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ownerWorkflowModeMeta, type OwnerWorkflowMode } from "./dashboard-config";
@@ -12,7 +13,29 @@ export interface OwnerSectionCacheProps {
   account: string | null;
   mode?: string;
   property: string | null;
-  loadSection: (input: OwnerSectionInput) => Promise<OwnerSectionResult>;
+}
+
+async function loadSection(input: OwnerSectionInput, signal: AbortSignal): Promise<OwnerSectionResult> {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(input)) {
+    if (value !== undefined) params.set(key, value === true ? "1" : String(value));
+  }
+  const response = await fetch(`/api/owner/section-data?${params}`, {
+    method: "GET", credentials: "same-origin", cache: "no-store", signal
+  });
+  if (!response.ok) return { error: "Unable to load this section." };
+  return decodeOwnerSectionResult(await response.json());
+}
+
+function abortRequests(cache: {
+  controllers: Set<AbortController>; clickController: AbortController | null;
+  preloadFlight: unknown; attemptedPreloads: Set<string>;
+}) {
+  cache.controllers.forEach(controller => controller.abort());
+  cache.controllers.clear();
+  cache.clickController = null;
+  cache.preloadFlight = null;
+  cache.attemptedPreloads.clear();
 }
 
 export function resolveOwnerMode(mode: string | null): OwnerWorkflowMode {
@@ -34,6 +57,8 @@ export function useOwnerSectionCache(props: OwnerSectionCacheProps) {
   const state = useRef({
     server: props.loadedBundles, scope, epoch: 0, request: 0, pendingUrl: null as string | null,
     overlay: new Map<OwnerBundleId, OwnerSectionData>(), loading: false, waitingForServer: false,
+    controllers: new Set<AbortController>(), clickController: null as AbortController | null,
+    attemptedPreloads: new Set<string>(),
     preloadIdle: null as number | null,
     preloadFlight: null as null | {
       section: string;
@@ -49,6 +74,7 @@ export function useOwnerSectionCache(props: OwnerSectionCacheProps) {
   if (cache.server !== props.loadedBundles) {
     cache.server = props.loadedBundles;
     cache.scope = scope;
+    abortRequests(cache);
     cache.epoch++;
     cache.overlay.clear();
     cache.loading = false;
@@ -56,6 +82,7 @@ export function useOwnerSectionCache(props: OwnerSectionCacheProps) {
     cache.pendingUrl = null;
   } else if (cache.scope !== scope && !cache.waitingForServer) {
     cache.scope = scope;
+    abortRequests(cache);
     cache.epoch++;
     cache.overlay.clear();
     cache.loading = true;
@@ -73,6 +100,7 @@ export function useOwnerSectionCache(props: OwnerSectionCacheProps) {
   const invalidate = useCallback(() => {
     const current = state.current;
     cancelScheduledPreload();
+    abortRequests(current);
     current.epoch++;
     current.overlay.clear();
     current.loading = true;
@@ -95,7 +123,11 @@ export function useOwnerSectionCache(props: OwnerSectionCacheProps) {
     return () => window.removeEventListener("popstate", onPopState);
   }, [invalidate, router]);
 
-  useEffect(() => cancelScheduledPreload, [cancelScheduledPreload]);
+  useEffect(() => () => {
+    cancelScheduledPreload();
+    abortRequests(state.current);
+    state.current.epoch++;
+  }, [cancelScheduledPreload]);
 
   const navigate = useCallback((url: string, section: string) => {
     const next = new URL(url, window.location.origin);
@@ -106,6 +138,8 @@ export function useOwnerSectionCache(props: OwnerSectionCacheProps) {
       fullNavigate(url);
       return;
     }
+    current.clickController?.abort();
+    current.clickController = null;
     window.history.replaceState(null, "", url);
     const request = ++current.request;
     const epoch = current.epoch;
@@ -120,16 +154,22 @@ export function useOwnerSectionCache(props: OwnerSectionCacheProps) {
     redraw(value => value + 1);
     const isCurrent = () => state.current.request === request && state.current.epoch === epoch;
     const preloadFlight = current.preloadFlight;
-    const requestPromise = preloadFlight?.section === section &&
-      preloadFlight.scope === current.scope && preloadFlight.epoch === epoch
+    const sharedPreload = preloadFlight?.section === section &&
+      preloadFlight.scope === current.scope && preloadFlight.epoch === epoch;
+    const controller = sharedPreload ? null : new AbortController();
+    if (controller) {
+      current.clickController = controller;
+      current.controllers.add(controller);
+    }
+    const requestPromise = sharedPreload
       ? preloadFlight.promise
-      : props.loadSection({
+      : loadSection({
         section, account: next.searchParams.get("account") ?? props.account ?? undefined,
         mode: next.searchParams.get("mode") ?? undefined,
         property: next.searchParams.get("property") ?? undefined
-      });
+      }, controller!.signal);
     void requestPromise.then(result => {
-      if (!isCurrent()) return;
+      if (!isCurrent() || controller?.signal.aborted) return;
       if (!("status" in result) || result.status !== "ready") {
         invalidate();
         router.refresh();
@@ -142,9 +182,12 @@ export function useOwnerSectionCache(props: OwnerSectionCacheProps) {
       current.loading = false;
       redraw(value => value + 1);
     }).catch(() => {
-      if (!isCurrent()) return;
+      if (!isCurrent() || controller?.signal.aborted) return;
       invalidate();
       router.refresh();
+    }).finally(() => {
+      if (controller) current.controllers.delete(controller);
+      if (current.clickController === controller) current.clickController = null;
     });
   }, [fullNavigate, invalidate, props, router, serverScope]);
 
@@ -177,15 +220,18 @@ export function useOwnerSectionCache(props: OwnerSectionCacheProps) {
           const latestProps = propsRef.current;
           const loaded = new Set([...latestProps.loadedBundles, ...current.overlay.keys()]);
           const required = latestProps.requirements[section];
-          if (!required || required.every(bundle => loaded.has(bundle))) continue;
+          if (!required || required.every(bundle => loaded.has(bundle)) || current.attemptedPreloads.has(section)) continue;
+          current.attemptedPreloads.add(section);
+          const controller = new AbortController();
+          current.controllers.add(controller);
           const params = new URL(window.location.href).searchParams;
-          const promise = latestProps.loadSection({
+          const promise = loadSection({
             section,
             account: params.get("account") ?? latestProps.account ?? undefined,
             mode: params.get("mode") ?? undefined,
             property: params.get("property") ?? undefined,
             preload: true
-          });
+          }, controller.signal);
           const flight = { section, scope: scheduledScope, epoch: scheduledEpoch, promise };
           current.preloadFlight = flight;
           try {
@@ -200,6 +246,7 @@ export function useOwnerSectionCache(props: OwnerSectionCacheProps) {
           } catch {
             // Preload failures are intentionally silent; a later click uses the normal fallback.
           } finally {
+            current.controllers.delete(controller);
             if (current.preloadFlight === flight) current.preloadFlight = null;
           }
         }

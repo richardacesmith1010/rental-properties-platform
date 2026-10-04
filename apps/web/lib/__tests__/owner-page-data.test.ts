@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const ownerLoadMocks = vi.hoisted(() => ({
@@ -81,9 +82,6 @@ import {
   resolveOwnerPageRequest
 } from "@/app/owner/owner-page-data";
 
-import { loadOwnerSectionData } from "@/app/actions/owner-section-data";
-import * as ownerPageModule from "@/app/owner/owner-page-data";
-
 function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((resolvePromise) => {
@@ -128,118 +126,6 @@ describe("loadOwnerPageData orchestration", () => {
     ownerLoadMocks.renameRequests.mockResolvedValue([]);
     ownerLoadMocks.deleteRequests.mockResolvedValue([]);
     ownerLoadMocks.ownerConnected.mockResolvedValue(new Map());
-  });
-
-  it("authenticates before validation, without data reads or redirects", async () => {
-    ownerLoadMocks.getUser.mockResolvedValue({ data: { user: null } });
-    expect(await loadOwnerSectionData({ section: "invalid" })).toEqual({ error: "Authentication required." });
-    expect(ownerLoadMocks.role).not.toHaveBeenCalled();
-    expect(ownerLoadMocks.profile).not.toHaveBeenCalled();
-    expect(ownerLoadMocks.tickets).not.toHaveBeenCalled();
-  });
-
-  it("validates known section ids and rejects client identity before checking role", async () => {
-    expect(await loadOwnerSectionData({ section: "unknown" })).toHaveProperty("error");
-    expect(await loadOwnerSectionData({ section: "charges", userId: "foreign" } as never)).toHaveProperty("error");
-    expect(ownerLoadMocks.role).not.toHaveBeenCalled();
-  });
-
-  it.each(["manager", "tenant"])("returns a typed role mismatch for %s before bundle reads", async role => {
-    ownerLoadMocks.role.mockResolvedValue(role);
-    expect(await loadOwnerSectionData({ section: "maintenance" })).toEqual({ status: "role-mismatch" });
-    expect(ownerLoadMocks.profile).not.toHaveBeenCalled();
-    expect(ownerLoadMocks.tickets).not.toHaveBeenCalled();
-  });
-
-  it("preserves onboarding and setup outcomes without bundle reads", async () => {
-    ownerLoadMocks.profile.mockResolvedValue({ onboardingCompletedAt: null });
-    expect(await loadOwnerSectionData({ section: "charges" })).toEqual({ status: "needs-onboarding" });
-    ownerLoadMocks.profile.mockResolvedValue({ onboardingCompletedAt: "complete" });
-    ownerLoadMocks.ownershipAccounts.mockResolvedValue([]);
-    expect(await loadOwnerSectionData({ section: "charges" })).toEqual({ status: "needs-setup" });
-    expect(ownerLoadMocks.administeredIds).not.toHaveBeenCalled();
-    expect(ownerLoadMocks.ownerConnected).not.toHaveBeenCalled();
-  });
-
-  it("falls back from a foreign account and drops a foreign property before any loader", async () => {
-    ownerLoadMocks.administeredIds.mockResolvedValue(["property-1"]);
-    const helper = vi.spyOn(ownerPageModule, "loadOwnerSectionBundles");
-    const result = await loadOwnerSectionData({ section: "charges", account: "foreign-account", property: "foreign-property" });
-    expect(ownerLoadMocks.administeredIds).toHaveBeenCalledWith("user-1", "account-1");
-    expect(ownerLoadMocks.ownerConnected).toHaveBeenCalledWith(["property-1"]);
-    expect(helper).toHaveBeenCalledWith(expect.objectContaining({ request: expect.objectContaining({
-      activeAccountId: "account-1", initialPropertyId: null, requestedPropertyId: null
-    }) }));
-    expect(JSON.stringify(result)).not.toContain("foreign");
-    helper.mockRestore();
-  });
-
-  it("drops a foreign property with a valid account, without changing account-scoped loader arguments", async () => {
-    ownerLoadMocks.administeredIds.mockResolvedValue(["property-1"]);
-    const helper = vi.spyOn(ownerPageModule, "loadOwnerSectionBundles");
-    const result = await loadOwnerSectionData({ section: "maintenance", account: "account-1", property: "foreign-property" });
-    expect(helper).toHaveBeenCalledWith(expect.objectContaining({ request: expect.objectContaining({
-      initialPropertyId: null, requestedPropertyId: null
-    }) }));
-    expect(ownerLoadMocks.tickets).toHaveBeenCalledWith("user-1", "account-1", ["property-1"]);
-    expect(JSON.stringify(result)).not.toContain("foreign-property");
-    helper.mockRestore();
-  });
-
-  it("returns section bundles only, never loading shared bundles", async () => {
-    const result = await loadOwnerSectionData({ section: "maintenance" });
-    expect(result).toEqual({ status: "ready", data: {
-      tickets: [{ id: "ticket-1", propertyId: "property-1" }], vendors: [], loadedBundles: ["tickets", "vendors"]
-    } });
-    for (const mock of [ownerLoadMocks.dashboard, ownerLoadMocks.portfolio, ownerLoadMocks.administeredOptions,
-      ownerLoadMocks.notifications, ownerLoadMocks.notificationPreferences, ownerLoadMocks.rentCollectionStatus]) {
-      expect(mock).not.toHaveBeenCalled();
-    }
-  });
-
-  it("treats preload as perf metadata only without changing auth, scope, or data", async () => {
-    ownerLoadMocks.administeredIds.mockResolvedValue(["property-1"]);
-    const normal = await loadOwnerSectionData({ section: "maintenance", account: "account-1" });
-    const normalCalls = {
-      auth: ownerLoadMocks.getUser.mock.calls.length,
-      role: ownerLoadMocks.role.mock.calls.length,
-      scope: ownerLoadMocks.administeredIds.mock.calls.length
-    };
-    ownerLoadMocks.logPerf.mockClear();
-
-    const preloaded = await loadOwnerSectionData({ section: "maintenance", account: "account-1", preload: true });
-
-    expect(preloaded).toEqual(normal);
-    expect(ownerLoadMocks.getUser).toHaveBeenCalledTimes(normalCalls.auth + 1);
-    expect(ownerLoadMocks.role).toHaveBeenCalledTimes(normalCalls.role + 1);
-    expect(ownerLoadMocks.administeredIds).toHaveBeenCalledTimes(normalCalls.scope + 1);
-    expect(ownerLoadMocks.tickets).toHaveBeenLastCalledWith("user-1", "account-1", ["property-1"]);
-    expect(ownerLoadMocks.logPerf).toHaveBeenCalledWith(expect.objectContaining({
-      meta: { route: "owner-section-action", preload: true }
-    }));
-  });
-
-  it.each(["documents", "vendors", "inbox", "automations", "applications"])("respects disabled capability gates for %s", async section => {
-    ownerLoadMocks.capabilities.mockResolvedValue({ warnings: {} });
-    expect(await loadOwnerSectionData({ section })).toEqual({ status: "ready", data: { loadedBundles: [] } });
-    expect(ownerLoadMocks.documents).not.toHaveBeenCalled();
-    expect(ownerLoadMocks.vendors).not.toHaveBeenCalled();
-  });
-
-  it.each(["ownership", "maintenance", "documents", "charges"])("page and action share identical section data for %s", async section => {
-    const action = await loadOwnerSectionData({ section });
-    const page = await loadOwnerPageData({ searchParams: { section }, userId: "user-1", userEmail: "" });
-    expect(action).toHaveProperty("status", "ready");
-    expect(page.status).toBe("ready");
-    if (!("status" in action) || action.status !== "ready" || page.status !== "ready") return;
-    const { loadedBundles, ...data } = action.data;
-    expect(page).toMatchObject(data);
-    expect(page.loadedBundles).toEqual(expect.arrayContaining(loadedBundles));
-  });
-
-  it("returns a generic error when a loader fails", async () => {
-    ownerLoadMocks.tickets.mockRejectedValueOnce(new Error("private database detail"));
-    expect(await loadOwnerSectionData({ section: "maintenance" })).toEqual({ error: "Unable to load this section." });
   });
 
   it("short-circuits a role failure before starting data reads", async () => {

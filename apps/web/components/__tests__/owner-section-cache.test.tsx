@@ -6,7 +6,8 @@ import {
   type OwnerSectionCacheProps
 } from "@/components/dashboard/dashboard-section-loaders";
 import { AccountSwitcher } from "@/components/dashboard/account-switcher";
-import type { OwnerSectionResult } from "@/app/actions/owner-section-data";
+import type { OwnerSectionResult } from "@/lib/owner-section-transport";
+import { encodeSectionValue } from "@/lib/owner-section-transport";
 import type { DashboardProps } from "@/components/dashboard/types";
 
 const { router } = vi.hoisted(() => ({ router: { replace: vi.fn(), refresh: vi.fn(), push: vi.fn() } }));
@@ -28,11 +29,12 @@ function ready(id: string): OwnerSectionResult {
 function readyBundle(bundle: "tickets" | "owner-connected-map", id: string): OwnerSectionResult {
   return { status: "ready", data: { tickets: [{ id } as never], loadedBundles: [bundle] } };
 }
+let sectionLoad = vi.fn();
 function fixture(): OwnerSectionCacheProps {
+  sectionLoad = vi.fn().mockResolvedValue(ready("fetched"));
   return {
     account: "account-a", property: null, loadedBundles: ["dashboard", "portfolio"],
-    requirements: { maintenance: ["tickets"], overview: ["tickets"], portfolio: [], charges: ["owner-connected-map"] },
-    loadSection: vi.fn().mockResolvedValue(ready("fetched"))
+    requirements: { maintenance: ["tickets"], overview: ["tickets"], portfolio: [], charges: ["owner-connected-map"] }
   };
 }
 
@@ -67,6 +69,14 @@ function NavigationHarness(props: OwnerSectionCacheProps & { serverTickets: stri
 describe("owner section cache", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      const params = new URL(url, window.location.origin).searchParams;
+      const input = Object.fromEntries(params) as Record<string, unknown>;
+      if (input.preload === "1") input.preload = true;
+      const result = await sectionLoad(input);
+      return { ok: true, json: async () => result.status === "ready"
+        ? { ...result, data: encodeSectionValue(result.data) } : result };
+    }));
     window.history.replaceState(null, "", "/owner?section=portfolio");
     window.scrollTo = vi.fn();
   });
@@ -76,17 +86,17 @@ describe("owner section cache", () => {
     const next = deferred(), previous = deferred();
     const props = fixture();
     props.requirements = { portfolio: [], maintenance: ["tickets"], charges: ["owner-connected-map"] };
-    props.loadSection = vi.fn().mockReturnValueOnce(next.promise).mockReturnValueOnce(previous.promise);
+    sectionLoad = vi.fn().mockReturnValueOnce(next.promise).mockReturnValueOnce(previous.promise);
     const { result } = renderHook(() => useOwnerSectionCache(props));
 
     act(() => result.current.preloadNeighbours("portfolio", ["charges", "portfolio", "maintenance"]));
     await act(async () => vi.advanceTimersByTimeAsync(300));
-    expect(props.loadSection).toHaveBeenCalledTimes(1);
-    expect(props.loadSection).toHaveBeenNthCalledWith(1, expect.objectContaining({ section: "maintenance", preload: true }));
+    expect(sectionLoad).toHaveBeenCalledTimes(1);
+    expect(sectionLoad).toHaveBeenNthCalledWith(1, expect.objectContaining({ section: "maintenance", preload: true }));
 
     await act(async () => next.resolve(readyBundle("tickets", "next")));
-    expect(props.loadSection).toHaveBeenCalledTimes(2);
-    expect(props.loadSection).toHaveBeenNthCalledWith(2, expect.objectContaining({ section: "charges", preload: true }));
+    expect(sectionLoad).toHaveBeenCalledTimes(2);
+    expect(sectionLoad).toHaveBeenNthCalledWith(2, expect.objectContaining({ section: "charges", preload: true }));
     await act(async () => previous.resolve(readyBundle("owner-connected-map", "previous")));
     vi.useRealTimers();
   });
@@ -99,8 +109,8 @@ describe("owner section cache", () => {
     const { result } = renderHook(() => useOwnerSectionCache(props));
     act(() => result.current.preloadNeighbours("charges", ["overview", "portfolio", "charges"]));
     await act(async () => vi.advanceTimersByTimeAsync(300));
-    expect(props.loadSection).toHaveBeenCalledOnce();
-    expect(props.loadSection).toHaveBeenCalledWith(expect.objectContaining({ section: "overview", preload: true }));
+    expect(sectionLoad).toHaveBeenCalledOnce();
+    expect(sectionLoad).toHaveBeenCalledWith(expect.objectContaining({ section: "overview", preload: true }));
     vi.useRealTimers();
   });
 
@@ -108,23 +118,23 @@ describe("owner section cache", () => {
     vi.useFakeTimers();
     const click = deferred();
     const props = fixture();
-    props.loadSection = vi.fn().mockReturnValue(click.promise);
+    sectionLoad = vi.fn().mockReturnValue(click.promise);
     const { result } = renderHook(() => useOwnerSectionCache(props));
     act(() => result.current.navigate("/owner?section=maintenance", "maintenance"));
     act(() => result.current.preloadNeighbours("portfolio", ["charges", "portfolio", "maintenance"]));
     await act(async () => vi.advanceTimersByTimeAsync(300));
-    expect(props.loadSection).toHaveBeenCalledOnce();
+    expect(sectionLoad).toHaveBeenCalledOnce();
     await act(async () => click.resolve(ready("click")));
 
     Object.defineProperty(navigator, "connection", { configurable: true, value: { saveData: true } });
     act(() => result.current.preloadNeighbours("portfolio", ["charges", "portfolio", "maintenance"]));
     await act(async () => vi.advanceTimersByTimeAsync(300));
-    expect(props.loadSection).toHaveBeenCalledOnce();
+    expect(sectionLoad).toHaveBeenCalledOnce();
     Object.defineProperty(navigator, "connection", { configurable: true, value: undefined });
     Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
     act(() => result.current.preloadNeighbours("portfolio", ["charges", "portfolio", "maintenance"]));
     await act(async () => vi.advanceTimersByTimeAsync(300));
-    expect(props.loadSection).toHaveBeenCalledOnce();
+    expect(sectionLoad).toHaveBeenCalledOnce();
     Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
     vi.useRealTimers();
   });
@@ -133,12 +143,12 @@ describe("owner section cache", () => {
     vi.useFakeTimers();
     const preload = deferred();
     const props = fixture();
-    props.loadSection = vi.fn().mockReturnValue(preload.promise);
+    sectionLoad = vi.fn().mockReturnValue(preload.promise);
     const { result } = renderHook(() => useOwnerSectionCache(props));
     act(() => result.current.preloadNeighbours("portfolio", ["charges", "portfolio", "maintenance"]));
     await act(async () => vi.advanceTimersByTimeAsync(300));
     act(() => result.current.navigate("/owner?section=maintenance", "maintenance"));
-    expect(props.loadSection).toHaveBeenCalledOnce();
+    expect(sectionLoad).toHaveBeenCalledOnce();
     await act(async () => preload.resolve(ready("preloaded")));
     expect(result.current.data.tickets?.[0].id).toBe("preloaded");
     expect(result.current.loading).toBe(false);
@@ -149,7 +159,7 @@ describe("owner section cache", () => {
     vi.useFakeTimers();
     const stale = deferred();
     const props = fixture();
-    props.loadSection = vi.fn().mockReturnValue(stale.promise);
+    sectionLoad = vi.fn().mockReturnValue(stale.promise);
     const { result, rerender } = renderHook(
       (input: OwnerSectionCacheProps) => useOwnerSectionCache(input), { initialProps: props }
     );
@@ -161,7 +171,8 @@ describe("owner section cache", () => {
     expect(router.refresh).not.toHaveBeenCalled();
 
     const rejected = deferred();
-    const scopedProps = { ...props, loadSection: vi.fn().mockReturnValue(rejected.promise) };
+    sectionLoad = vi.fn().mockReturnValue(rejected.promise);
+    const scopedProps = { ...props };
     rerender(scopedProps);
     act(() => result.current.preloadNeighbours("portfolio", ["charges", "portfolio", "maintenance"]));
     await act(async () => vi.advanceTimersByTimeAsync(300));
@@ -178,7 +189,7 @@ describe("owner section cache", () => {
     props.loadedBundles.push("tickets");
     const { result } = renderHook(() => useOwnerSectionCache(props));
     act(() => result.current.navigate("/owner?section=maintenance", "maintenance"));
-    expect(props.loadSection).not.toHaveBeenCalled();
+    expect(sectionLoad).not.toHaveBeenCalled();
     expect(router.replace).not.toHaveBeenCalled();
     expect(result.current.loading).toBe(false);
     expect(window.location.search).toBe("?section=maintenance");
@@ -192,7 +203,7 @@ describe("owner section cache", () => {
     await waitFor(() => expect(result.current.data.tickets?.[0].id).toBe("fetched"));
     act(() => result.current.navigate("/owner?section=portfolio", "portfolio"));
     act(() => result.current.navigate("/owner?section=maintenance", "maintenance"));
-    expect(props.loadSection).toHaveBeenCalledTimes(1);
+    expect(sectionLoad).toHaveBeenCalledTimes(1);
     expect(result.current.loading).toBe(false);
     expect(router.replace).not.toHaveBeenCalled();
   });
@@ -200,7 +211,7 @@ describe("owner section cache", () => {
   it("discards out-of-order responses", async () => {
     const first = deferred(), second = deferred();
     const props = fixture();
-    props.loadSection = vi.fn().mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    sectionLoad = vi.fn().mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
     const { result } = renderHook(() => useOwnerSectionCache(props));
     act(() => result.current.navigate("/owner?section=maintenance", "maintenance"));
     act(() => result.current.navigate("/owner?section=overview", "overview"));
@@ -212,7 +223,7 @@ describe("owner section cache", () => {
   it("invalidates a pending request when navigating to a cached section", async () => {
     const pending = deferred();
     const props = fixture();
-    props.loadSection = vi.fn().mockReturnValue(pending.promise);
+    sectionLoad = vi.fn().mockReturnValue(pending.promise);
     const { result } = renderHook(() => useOwnerSectionCache(props));
     act(() => result.current.navigate("/owner?section=maintenance", "maintenance"));
     act(() => result.current.navigate("/owner?section=portfolio", "portfolio"));
@@ -225,7 +236,7 @@ describe("owner section cache", () => {
     const pending = deferred();
     const props = fixture();
     const load = vi.fn().mockResolvedValueOnce(ready("cached")).mockReturnValueOnce(pending.promise);
-    props.loadSection = load;
+    sectionLoad = load;
     const { result, rerender } = renderHook((input: OwnerSectionCacheProps) => useOwnerSectionCache(input), { initialProps: props });
     act(() => result.current.navigate("/owner?section=maintenance", "maintenance"));
     await waitFor(() => expect(result.current.data.tickets?.[0].id).toBe("cached"));
@@ -254,7 +265,7 @@ describe("owner section cache", () => {
     expect(result.current.data).toEqual({});
     expect(result.current.loading).toBe(true);
     expect(router.replace).toHaveBeenCalledWith(url);
-    expect(props.loadSection).toHaveBeenCalledTimes(1);
+    expect(sectionLoad).toHaveBeenCalledTimes(1);
   });
 
   it("clears on an externally changed scope before replacement props", async () => {
@@ -272,7 +283,7 @@ describe("owner section cache", () => {
   it.each([{ error: "failed" }, { status: "role-mismatch" }, { status: "needs-onboarding" }, { status: "needs-setup" }])(
     "refreshes the already-requested URL on non-success %j", async failure => {
       const props = fixture();
-      props.loadSection = vi.fn().mockResolvedValue(failure);
+      sectionLoad = vi.fn().mockResolvedValue(failure);
       const { result } = renderHook(() => useOwnerSectionCache(props));
       act(() => result.current.navigate("/owner?section=maintenance", "maintenance"));
       await waitFor(() => expect(router.refresh).toHaveBeenCalledOnce());
@@ -283,7 +294,7 @@ describe("owner section cache", () => {
 
   it("handles rejected requests with refresh", async () => {
     const props = fixture();
-    props.loadSection = vi.fn().mockRejectedValue(new Error("offline"));
+    sectionLoad = vi.fn().mockRejectedValue(new Error("offline"));
     const { result } = renderHook(() => useOwnerSectionCache(props));
     act(() => result.current.navigate("/owner?section=maintenance", "maintenance"));
     await waitFor(() => expect(router.refresh).toHaveBeenCalledOnce());
@@ -292,7 +303,7 @@ describe("owner section cache", () => {
   it("invalidates in-flight data on browser back/forward and refreshes the target URL", async () => {
     const pending = deferred();
     const props = fixture();
-    props.loadSection = vi.fn().mockReturnValue(pending.promise);
+    sectionLoad = vi.fn().mockReturnValue(pending.promise);
     const { result } = renderHook(() => useOwnerSectionCache(props));
     act(() => result.current.navigate("/owner?section=maintenance", "maintenance"));
     act(() => {
@@ -308,7 +319,7 @@ describe("owner section cache", () => {
   it("renders an unloaded section immediately with a skeleton, then data; server refresh wins", async () => {
     const pending = deferred();
     const props = fixture();
-    props.loadSection = vi.fn().mockReturnValue(pending.promise);
+    sectionLoad = vi.fn().mockReturnValue(pending.promise);
     const view = render(<NavigationHarness {...props} serverTickets="server-original" />);
     fireEvent.click(screen.getByRole("button", { name: "Maintenance" }));
     expect(screen.getByTestId("section")).toHaveTextContent("maintenance");
@@ -317,7 +328,7 @@ describe("owner section cache", () => {
     expect(screen.getByTestId("visible")).toHaveTextContent("fetched");
     view.rerender(<NavigationHarness {...props} loadedBundles={[...props.loadedBundles, "tickets"]} serverTickets="fresh-server" />);
     expect(screen.getByTestId("visible")).toHaveTextContent("fresh-server");
-    expect(props.loadSection).toHaveBeenCalledOnce();
+    expect(sectionLoad).toHaveBeenCalledOnce();
     expect(router.replace).not.toHaveBeenCalled();
   });
 
@@ -326,7 +337,7 @@ describe("owner section cache", () => {
     render(<NavigationHarness {...props} serverTickets="server" />);
     fireEvent.click(screen.getByRole("button", { name: "Expenses" }));
     expect(router.replace).toHaveBeenCalledWith("/owner?section=expenses&mode=records");
-    expect(props.loadSection).not.toHaveBeenCalled();
+    expect(sectionLoad).not.toHaveBeenCalled();
     expect(screen.getByTestId("visible")).toHaveTextContent("loading");
   });
 
@@ -337,7 +348,7 @@ describe("owner section cache", () => {
     render(<NavigationHarness {...props} serverTickets="deep-link-server" />);
     expect(screen.getByTestId("section")).toHaveTextContent("maintenance");
     expect(screen.getByTestId("visible")).toHaveTextContent("deep-link-server");
-    expect(props.loadSection).not.toHaveBeenCalled();
+    expect(sectionLoad).not.toHaveBeenCalled();
   });
 
   it.each(["daily_ops", "unknown", "__proto__"])("preserves home deep links with mode=%s", mode => {
@@ -345,7 +356,7 @@ describe("owner section cache", () => {
     const props = fixture();
     render(<NavigationHarness {...props} serverTickets="server" />);
     expect(screen.getByTestId("mode")).toHaveTextContent("daily_ops|true");
-    expect(props.loadSection).not.toHaveBeenCalled();
+    expect(sectionLoad).not.toHaveBeenCalled();
   });
 
   it("preserves a pending property scope when a command also opens a section", () => {

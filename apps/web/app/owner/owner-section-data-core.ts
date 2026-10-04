@@ -1,7 +1,8 @@
-"use server";
+import "server-only";
+import type { User } from "@supabase/supabase-js";
+import type { OwnerSectionResult } from "@/lib/owner-section-transport";
 
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserRole, getUserProfileSummary } from "@/lib/auth";
 import { getOwnershipAccountsForUser } from "@/lib/ownership";
 import { getAdministeredPropertyIdsForAccount } from "@/lib/property-access";
@@ -9,11 +10,10 @@ import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { logPerfEvent } from "@/lib/logger";
 import {
   OWNER_SECTION_IDS, OWNER_SHARED_BUNDLES, buildOwnerBundlePlan,
-  buildOwnerSectionAvailability, loadOwnerSectionBundles, resolveOwnerPageRequest,
-  type OwnerBundleId
+  buildOwnerSectionAvailability, loadOwnerSectionBundles, resolveOwnerPageRequest
 } from "@/app/owner/owner-page-data";
 
-// Kept with this fetch-style action: this input is not a mutation form.
+// Section reads share this strict validation after session authentication.
 const inputSchema = z.object({
   section: z.string().refine(value => OWNER_SECTION_IDS.includes(value)),
   account: z.string().optional(),
@@ -21,23 +21,11 @@ const inputSchema = z.object({
   mode: z.string().optional(),
   preload: z.boolean().optional()
 }).strict();
-export type OwnerSectionInput = z.infer<typeof inputSchema>;
-export type OwnerSectionData = Partial<Awaited<ReturnType<typeof loadOwnerSectionBundles>>> & {
-  loadedBundles: OwnerBundleId[];
-};
-export type OwnerSectionResult =
-  | { status: "ready"; data: OwnerSectionData }
-  | { status: "role-mismatch" | "needs-onboarding" | "needs-setup" }
-  | { error: string };
-
-export async function loadOwnerSectionData(input: OwnerSectionInput): Promise<OwnerSectionResult> {
+export async function loadOwnerSectionDataForUser(user: Pick<User, "id" | "email">, input: unknown): Promise<OwnerSectionResult> {
   const startedAt = performance.now();
   let isPreload = false;
   // requireAuth redirects and checks role before validation, so cannot serve this fetch contract.
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { error: "Authentication required." };
     const parsed = inputSchema.safeParse(input);
     if (!parsed.success) return { error: "Invalid section request." };
     isPreload = parsed.data.preload === true;
@@ -76,7 +64,7 @@ export async function loadOwnerSectionData(input: OwnerSectionInput): Promise<Ow
         try { return await work(); }
         finally {
           logPerfEvent({ scope: "owner", name, durationMs: performance.now() - start,
-            meta: { route: "owner-section-action", ...(isPreload ? { preload: true } : {}) } });
+            meta: { route: "owner-section-data-api", ...(isPreload ? { preload: true } : {}) } });
         }
       }
     });
@@ -88,6 +76,6 @@ export async function loadOwnerSectionData(input: OwnerSectionInput): Promise<Ow
     return { error: "Unable to load this section." };
   } finally {
     logPerfEvent({ scope: "owner", name: "data-assembly.total", durationMs: performance.now() - startedAt,
-      meta: { route: "owner-section-action", ...(isPreload ? { preload: true } : {}) } });
+      meta: { route: "owner-section-data-api", ...(isPreload ? { preload: true } : {}) } });
   }
 }

@@ -1,4 +1,3 @@
-import { loadOwnerSectionData } from "@/app/actions/owner-section-data";
 import { OwnerSectionDataProvider } from "@/components/dashboard/dashboard-data-loader";
 import { Dashboard } from "@/components/dashboard";
 import { StripeTestModeBanner } from "@/components/shared/stripe-test-mode-banner";
@@ -149,7 +148,6 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         account={ownerPage.activeAccountId}
         mode={ownerPage.initialOwnerWorkflowMode}
         property={ownerPage.initialPropertyId}
-        loadSection={loadOwnerSectionData}
       >
       <Dashboard
         data={ownerPage.dashboard}
