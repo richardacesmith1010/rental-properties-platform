@@ -7,10 +7,12 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 
 import {
+  arePropertyOwnersConnected,
   buildExpressAccountParams,
   buildExpressAccountRequestBody,
   createExpressAccount,
   getDefaultExpressAccountBusinessProfileUrl,
+  getOwnerStripeAccountForProperty,
   getRentCollectionConnectStatus
 } from "@/lib/stripe-connect";
 
@@ -142,6 +144,93 @@ describe("stripe-connect express account params", () => {
       body: "type=express&email=owner%40example.com&country=US&capabilities%5Bcard_payments%5D%5Brequested%5D=true&capabilities%5Btransfers%5D%5Brequested%5D=true&business_profile%5Bmcc%5D=6513&business_profile%5Burl%5D=https%3A%2F%2Fdomusbase.com",
       cache: "no-store"
     });
+  });
+});
+
+describe("arePropertyOwnersConnected", () => {
+  const rows: MockAdminState["rows"] = {
+    properties: [
+      { id: "property-account", owner_account_id: "account-ready", owner_profile_id: null },
+      { id: "property-creator", owner_account_id: "account-creator", owner_profile_id: null },
+      { id: "property-member", owner_account_id: "account-member", owner_profile_id: null },
+      { id: "property-direct", owner_account_id: "account-direct", owner_profile_id: "profile-direct" },
+      { id: "property-legacy", owner_account_id: null, owner_profile_id: "profile-legacy" },
+      { id: "property-no-owner", owner_account_id: null, owner_profile_id: null }
+    ],
+    ownership_accounts: [
+      { id: "account-ready", stripe_account_id: "acct_ready", stripe_onboarding_complete: true, created_by_profile_id: "profile-unused" },
+      { id: "account-creator", stripe_account_id: "acct_incomplete", stripe_onboarding_complete: false, created_by_profile_id: "profile-creator" },
+      { id: "account-member", stripe_account_id: null, stripe_onboarding_complete: false, created_by_profile_id: "profile-disconnected" },
+      { id: "account-direct", stripe_account_id: null, stripe_onboarding_complete: false, created_by_profile_id: "profile-disconnected" }
+    ],
+    ownership_account_members: [
+      { account_id: "account-member", profile_id: "profile-disconnected", member_role: "owner", active: true },
+      { account_id: "account-member", profile_id: "profile-member", member_role: "owner", active: true },
+      { account_id: "account-direct", profile_id: "profile-disconnected", member_role: "owner", active: true }
+    ],
+    profiles: [
+      { id: "profile-unused", stripe_account_id: null, stripe_onboarding_complete: false },
+      { id: "profile-creator", stripe_account_id: "acct_creator", stripe_onboarding_complete: true },
+      { id: "profile-disconnected", stripe_account_id: "acct_disconnected", stripe_onboarding_complete: false },
+      { id: "profile-member", stripe_account_id: "acct_member", stripe_onboarding_complete: true },
+      { id: "profile-direct", stripe_account_id: "acct_direct", stripe_onboarding_complete: true },
+      { id: "profile-legacy", stripe_account_id: "acct_legacy", stripe_onboarding_complete: true }
+    ]
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("matches the single-property resolver for every ownership fallback", async () => {
+    const admin = createStatusAdminClient({ rows });
+    createAdminClientMock.mockReturnValue(admin.client);
+    const propertyIds = [
+      "property-account",
+      "property-creator",
+      "property-member",
+      "property-direct",
+      "property-legacy",
+      "property-no-owner",
+      "property-missing"
+    ];
+    const expected = new Map<string, boolean>();
+    for (const propertyId of propertyIds) {
+      expected.set(propertyId, Boolean(await getOwnerStripeAccountForProperty(propertyId)));
+    }
+
+    const actual = await arePropertyOwnersConnected(propertyIds);
+
+    expect(actual).toEqual(expected);
+    expect(actual).toEqual(new Map([
+      ["property-account", true],
+      ["property-creator", true],
+      ["property-member", true],
+      ["property-direct", true],
+      ["property-legacy", true],
+      ["property-no-owner", false],
+      ["property-missing", false]
+    ]));
+  });
+
+  it("uses the same five queries for one property and ten properties", async () => {
+    const onePropertyAdmin = createStatusAdminClient({ rows });
+    createAdminClientMock.mockReturnValue(onePropertyAdmin.client);
+    await arePropertyOwnersConnected(["property-account"]);
+    expect(onePropertyAdmin.client.from).toHaveBeenCalledTimes(5);
+
+    const tenProperties = Array.from({ length: 10 }, (_, index) => ({
+      id: `property-${index}`,
+      owner_account_id: "account-ready",
+      owner_profile_id: null
+    }));
+    const tenPropertyAdmin = createStatusAdminClient({
+      rows: { ...rows, properties: tenProperties }
+    });
+    createAdminClientMock.mockReturnValue(tenPropertyAdmin.client);
+    await arePropertyOwnersConnected(tenProperties.map((property) => property.id));
+
+    expect(tenPropertyAdmin.client.from).toHaveBeenCalledTimes(5);
   });
 });
 

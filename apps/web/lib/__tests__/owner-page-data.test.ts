@@ -1,9 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const ownerLoadMocks = vi.hoisted(() => ({
+  administeredIds: vi.fn(),
+  administeredOptions: vi.fn(),
+  dashboard: vi.fn(),
+  deleteRequests: vi.fn(),
+  distributionHistory: vi.fn(),
+  financialActivity: vi.fn(),
+  llcInvitations: vi.fn(),
+  managerPayments: vi.fn(),
+  notifications: vi.fn(),
+  notificationPreferences: vi.fn(),
+  ownerConnected: vi.fn(),
+  ownershipMembers: vi.fn(),
+  pendingChanges: vi.fn(),
+  pendingWithdrawals: vi.fn(),
+  portfolio: vi.fn(),
   capabilities: vi.fn(),
   ownershipAccounts: vi.fn(),
   profile: vi.fn(),
+  renameRequests: vi.fn(),
+  rentCollectionStatus: vi.fn(),
   role: vi.fn()
 }));
 
@@ -13,9 +30,9 @@ vi.mock("@/lib/auth", () => ({
 }));
 vi.mock("@/lib/ownership", () => ({
   getOwnershipAccountsForUser: ownerLoadMocks.ownershipAccounts,
-  getOwnershipMembersForAccount: vi.fn(),
-  getPendingAccountDeleteRequests: vi.fn(),
-  getPendingAccountRenameRequests: vi.fn()
+  getOwnershipMembersForAccount: ownerLoadMocks.ownershipMembers,
+  getPendingAccountDeleteRequests: ownerLoadMocks.deleteRequests,
+  getPendingAccountRenameRequests: ownerLoadMocks.renameRequests
 }));
 vi.mock("@/lib/feature-capabilities", () => ({
   getFeatureCapabilities: ownerLoadMocks.capabilities
@@ -23,6 +40,30 @@ vi.mock("@/lib/feature-capabilities", () => ({
 vi.mock("@/lib/logger", () => ({
   logPerfEvent: vi.fn(),
   measurePerf: async (_scope: string, _name: string, work: () => Promise<unknown>) => work()
+}));
+vi.mock("@/lib/dashboard", () => ({ getDashboardData: ownerLoadMocks.dashboard }));
+vi.mock("@/lib/portfolio", () => ({ getPortfolioData: ownerLoadMocks.portfolio }));
+vi.mock("@/lib/property-access", () => ({
+  getAdministeredPropertyIdsForAccount: ownerLoadMocks.administeredIds,
+  getAdministeredPropertyOptions: ownerLoadMocks.administeredOptions
+}));
+vi.mock("@/lib/notifications", () => ({ getNotificationsForUser: ownerLoadMocks.notifications }));
+vi.mock("@/lib/notification-preferences", () => ({
+  getUserNotificationPreferenceSettings: ownerLoadMocks.notificationPreferences
+}));
+vi.mock("@/lib/distributions", () => ({
+  getDistributionHistory: ownerLoadMocks.distributionHistory,
+  getFinancialActivityFeed: ownerLoadMocks.financialActivity
+}));
+vi.mock("@/lib/distribution-approvals", () => ({ getPendingChangeRequests: ownerLoadMocks.pendingChanges }));
+vi.mock("@/lib/withdrawals", () => ({ getPendingWithdrawals: ownerLoadMocks.pendingWithdrawals }));
+vi.mock("@/lib/llc-invitations", () => ({ getPendingLLCInvitationsForAccount: ownerLoadMocks.llcInvitations }));
+vi.mock("@/lib/stripe-connect", () => ({
+  arePropertyOwnersConnected: ownerLoadMocks.ownerConnected,
+  getRentCollectionConnectStatus: ownerLoadMocks.rentCollectionStatus
+}));
+vi.mock("@/lib/manager-payments-data", () => ({
+  getManagerPaymentsDashboardData: ownerLoadMocks.managerPayments
 }));
 
 import {
@@ -42,6 +83,35 @@ function deferred<T>() {
 describe("loadOwnerPageData orchestration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    ownerLoadMocks.role.mockResolvedValue("owner");
+    ownerLoadMocks.profile.mockResolvedValue({ onboardingCompletedAt: "2026-01-01" });
+    ownerLoadMocks.ownershipAccounts.mockResolvedValue([{ id: "account-1", accountType: "llc" }]);
+    ownerLoadMocks.capabilities.mockResolvedValue({
+      automationsEnabled: true,
+      documentsEnabled: true,
+      inboxThreadsEnabled: true,
+      leasingPipelineEnabled: true,
+      notificationsEnabled: true,
+      ownershipEnabled: true,
+      vendorWorkflowEnabled: true,
+      warnings: {}
+    });
+    ownerLoadMocks.administeredIds.mockResolvedValue([]);
+    ownerLoadMocks.administeredOptions.mockResolvedValue([]);
+    ownerLoadMocks.dashboard.mockResolvedValue({ marker: "dashboard" });
+    ownerLoadMocks.portfolio.mockResolvedValue({ properties: [], units: [], leases: [], tenants: [] });
+    ownerLoadMocks.notifications.mockResolvedValue([]);
+    ownerLoadMocks.notificationPreferences.mockResolvedValue(null);
+    ownerLoadMocks.rentCollectionStatus.mockResolvedValue({ marker: "rent-status" });
+    ownerLoadMocks.ownershipMembers.mockResolvedValue([]);
+    ownerLoadMocks.llcInvitations.mockResolvedValue([]);
+    ownerLoadMocks.distributionHistory.mockResolvedValue([]);
+    ownerLoadMocks.pendingChanges.mockResolvedValue([]);
+    ownerLoadMocks.pendingWithdrawals.mockResolvedValue([]);
+    ownerLoadMocks.financialActivity.mockResolvedValue([]);
+    ownerLoadMocks.renameRequests.mockResolvedValue([]);
+    ownerLoadMocks.deleteRequests.mockResolvedValue([]);
+    ownerLoadMocks.ownerConnected.mockResolvedValue(new Map());
   });
 
   it("short-circuits a role failure before starting data reads", async () => {
@@ -77,6 +147,129 @@ describe("loadOwnerPageData orchestration", () => {
     const result = await loading;
 
     expect(result.status).toBe("needs-onboarding");
+  });
+
+  it("starts all ownership reads before the main data wave settles", async () => {
+    const dashboard = deferred<{ marker: string }>();
+    const ownershipMembers = deferred<never[]>();
+    ownerLoadMocks.dashboard.mockReturnValue(dashboard.promise);
+    ownerLoadMocks.ownershipMembers.mockReturnValue(ownershipMembers.promise);
+
+    const loading = loadOwnerPageData({
+      searchParams: { section: "ownership" },
+      userEmail: "owner@example.test",
+      userId: "user-1"
+    });
+
+    await vi.waitFor(() => {
+      expect(ownerLoadMocks.ownershipMembers).toHaveBeenCalledOnce();
+      expect(ownerLoadMocks.llcInvitations).toHaveBeenCalledOnce();
+      expect(ownerLoadMocks.distributionHistory).toHaveBeenCalledOnce();
+      expect(ownerLoadMocks.pendingChanges).toHaveBeenCalledOnce();
+      expect(ownerLoadMocks.pendingWithdrawals).toHaveBeenCalledOnce();
+      expect(ownerLoadMocks.financialActivity).toHaveBeenCalledOnce();
+      expect(ownerLoadMocks.renameRequests).toHaveBeenCalledOnce();
+      expect(ownerLoadMocks.deleteRequests).toHaveBeenCalledOnce();
+    });
+
+    dashboard.resolve({ marker: "dashboard" });
+    ownershipMembers.resolve([]);
+    const result = await loading;
+    expect(result.status).toBe("ready");
+  });
+
+  it("starts the owner-connected map when portfolio resolves without waiting for the main wave", async () => {
+    const dashboard = deferred<{ marker: string }>();
+    const portfolio = deferred<{ properties: Array<{ id: string }>; units: never[]; leases: never[]; tenants: never[] }>();
+    ownerLoadMocks.dashboard.mockReturnValue(dashboard.promise);
+    ownerLoadMocks.portfolio.mockReturnValue(portfolio.promise);
+
+    const loading = loadOwnerPageData({
+      searchParams: { section: "charges" },
+      userEmail: "owner@example.test",
+      userId: "user-1"
+    });
+    portfolio.resolve({ properties: [{ id: "property-1" }], units: [], leases: [], tenants: [] });
+
+    await vi.waitFor(() => {
+      expect(ownerLoadMocks.ownerConnected).toHaveBeenCalledWith(["property-1"]);
+    });
+    expect(ownerLoadMocks.dashboard).toHaveBeenCalledOnce();
+
+    dashboard.resolve({ marker: "dashboard" });
+    const result = await loading;
+    expect(result).toEqual({
+      status: "ready",
+      activeAccountId: "account-1",
+      analytics: undefined,
+      announcementProperties: [],
+      applications: undefined,
+      applicationCount: undefined,
+      approvedApplicationCount: undefined,
+      auditLogs: undefined,
+      automationRules: undefined,
+      automationTemplates: undefined,
+      capabilities: expect.objectContaining({
+        ownerSectionAvailability: {
+          hasActivitySection: true,
+          hasAnalyticsSection: false,
+          hasApplicationsSection: true,
+          hasAutomationsSection: true,
+          hasDocumentsSection: true,
+          hasExpensesSection: true,
+          hasInboxSection: true,
+          hasInvitationsSection: true,
+          hasLeasingSection: true,
+          hasManagerPaymentsSection: false,
+          hasMembersSection: true,
+          hasNotificationsSection: true,
+          hasOwnershipSection: true,
+          hasVendorsSection: true
+        }
+      }),
+      dashboard: { marker: "dashboard" },
+      distributionHistory: undefined,
+      documents: undefined,
+      expenses: undefined,
+      financialActivityFeed: undefined,
+      generatedMessage: null,
+      inboxThreads: undefined,
+      initialOwnerHomePage: false,
+      initialOwnerWorkflowMode: undefined,
+      initialPropertyId: null,
+      initialSectionId: "charges",
+      invitations: undefined,
+      isEmpty: false,
+      listings: undefined,
+      loadedBundles: [
+        "dashboard",
+        "portfolio",
+        "announcement-properties",
+        "notifications",
+        "notification-preferences",
+        "rent-collection-status",
+        "owner-connected-map"
+      ],
+      managerPaymentsData: undefined,
+      newFeedbackCount: undefined,
+      notificationPreferenceSettings: null,
+      notifications: [],
+      ownerConnectedMap: new Map(),
+      ownershipAccounts: [{ id: "account-1", accountType: "llc" }],
+      ownershipMembers: undefined,
+      pendingAccountDeleteRequests: undefined,
+      pendingAccountRenameRequests: undefined,
+      pendingChangeRequests: undefined,
+      pendingLlcInvitations: undefined,
+      pendingWithdrawals: undefined,
+      portfolio: { properties: [{ id: "property-1" }], units: [], leases: [], tenants: [] },
+      profile: { onboardingCompletedAt: "2026-01-01" },
+      rentCollectionStatus: { marker: "rent-status" },
+      rentIncreaseHistory: undefined,
+      role: "owner",
+      tickets: undefined,
+      vendors: undefined
+    });
   });
 });
 

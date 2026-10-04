@@ -577,6 +577,11 @@ export async function loadOwnerPageData(params: {
     ...capabilities,
     ownerSectionAvailability: bundlePlan.sectionAvailability
   };
+  const activeAccountId = request.activeAccountId;
+  const portfolioPromise = measureOwnerWithRequest(
+    "portfolio.data",
+    () => getPortfolioData(params.userId, activeAccountId, administeredPropertyIds)
+  );
 
   const [
     dashboard,
@@ -599,10 +604,19 @@ export async function loadOwnerPageData(params: {
     auditLogs,
     rentIncreaseHistory,
     newFeedbackCount,
-    rentCollectionStatus
+    rentCollectionStatus,
+    ownershipMembers,
+    pendingLlcInvitations,
+    distributionHistory,
+    pendingChangeRequests,
+    pendingWithdrawals,
+    financialActivityFeed,
+    pendingAccountRenameRequests,
+    pendingAccountDeleteRequests,
+    ownerConnectedMap
   ] = await Promise.all([
-    measureOwnerWithRequest("dashboard.data", () => getDashboardData(params.userId, request.activeAccountId, administeredPropertyIds)),
-    measureOwnerWithRequest("portfolio.data", () => getPortfolioData(params.userId, request.activeAccountId, administeredPropertyIds)),
+    measureOwnerWithRequest("dashboard.data", () => getDashboardData(params.userId, activeAccountId, administeredPropertyIds)),
+    portfolioPromise,
     hasBundle("announcement-properties")
       ? measureOwnerWithRequest("properties.admin-options", () => getAdministeredPropertyOptions(params.userId))
       : Promise.resolve(undefined),
@@ -670,23 +684,7 @@ export async function loadOwnerPageData(params: {
           userId: params.userId
         })
       : Promise.resolve(undefined),
-    measureOwnerWithRequest("stripe-connect.status", () => getRentCollectionConnectStatus(params.userId))
-  ]);
-
-  const approvedApplicationCount = applications?.filter(
-    (application) => application.status === "approved"
-  ).length;
-  const activeAccountId = request.activeAccountId;
-  const [
-    ownershipMembers,
-    pendingLlcInvitations,
-    distributionHistory,
-    pendingChangeRequests,
-    pendingWithdrawals,
-    financialActivityFeed,
-    pendingAccountRenameRequests,
-    pendingAccountDeleteRequests
-  ] = await Promise.all([
+    measureOwnerWithRequest("stripe-connect.status", () => getRentCollectionConnectStatus(params.userId)),
     hasBundle("ownership-members") && isLlcAccount && activeAccountId
       ? measureOwnerWithRequest(
           "ownership.members",
@@ -740,17 +738,23 @@ export async function loadOwnerPageData(params: {
             ownershipAccountCount: ownershipAccounts.length
           }
         )
+      : Promise.resolve(undefined),
+    hasBundle("owner-connected-map")
+      ? portfolioPromise.then((loadedPortfolio) =>
+          measureOwnerWithRequest(
+            "stripe-connect.owner-map",
+            () => arePropertyOwnersConnected(loadedPortfolio.properties.map((property) => property.id)),
+            {
+              propertyCount: loadedPortfolio.properties.length
+            }
+          )
+        )
       : Promise.resolve(undefined)
   ]);
-  const ownerConnectedMap = hasBundle("owner-connected-map")
-    ? await measureOwnerWithRequest(
-        "stripe-connect.owner-map",
-        () => arePropertyOwnersConnected(portfolio.properties.map((property) => property.id)),
-        {
-          propertyCount: portfolio.properties.length
-        }
-      )
-    : undefined;
+
+  const approvedApplicationCount = applications?.filter(
+    (application) => application.status === "approved"
+  ).length;
   const isEmpty = portfolio.properties.length === 0 &&
     !request.initialOwnerWorkflowMode &&
     !request.initialSectionId;

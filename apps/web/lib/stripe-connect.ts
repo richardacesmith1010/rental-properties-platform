@@ -472,9 +472,126 @@ export async function getManagerStripeAccountForProperty(
 
 export async function arePropertyOwnersConnected(propertyIds: string[]): Promise<Map<string, boolean>> {
   const uniquePropertyIds = Array.from(new Set(propertyIds.filter(Boolean)));
-  const results = await Promise.all(
-    uniquePropertyIds.map(async (propertyId) => [propertyId, Boolean(await getOwnerStripeAccountForProperty(propertyId))] as const)
+  if (uniquePropertyIds.length === 0) {
+    return new Map();
+  }
+
+  const admin = createAdminClient();
+  const { data: properties } = await admin
+    .from("properties")
+    .select("id, owner_account_id, owner_profile_id")
+    .in("id", uniquePropertyIds);
+  const propertyRows = properties ?? [];
+  const accountIds = Array.from(
+    new Set(
+      propertyRows
+        .map((property) => property.owner_account_id)
+        .filter((accountId): accountId is string => Boolean(accountId))
+    )
   );
+
+  const [accountStripeResult, accountCreatorResult, memberResult] = accountIds.length > 0
+    ? await Promise.all([
+        admin
+          .from("ownership_accounts")
+          .select("id, stripe_account_id, stripe_onboarding_complete")
+          .in("id", accountIds),
+        admin
+          .from("ownership_accounts")
+          .select("id, created_by_profile_id")
+          .in("id", accountIds),
+        admin
+          .from("ownership_account_members")
+          .select("account_id, profile_id")
+          .in("account_id", accountIds)
+          .eq("member_role", "owner")
+          .eq("active", true)
+      ])
+    : [
+        { data: [] as Array<{ id: string; stripe_account_id: string | null; stripe_onboarding_complete: boolean | null }>, error: null },
+        { data: [] as Array<{ id: string; created_by_profile_id: string | null }>, error: null },
+        { data: [] as Array<{ account_id: string; profile_id: string }>, error: null }
+      ];
+
+  const accountStripeById = accountStripeResult.error
+    ? new Map<string, { stripe_account_id: string | null; stripe_onboarding_complete: boolean | null }>()
+    : new Map((accountStripeResult.data ?? []).map((account) => [account.id, account]));
+  const accountCreatorById = new Map(
+    (accountCreatorResult.data ?? []).map((account) => [account.id, account.created_by_profile_id])
+  );
+  const memberProfileIdsByAccountId = new Map<string, string[]>();
+  for (const member of memberResult.data ?? []) {
+    memberProfileIdsByAccountId.set(member.account_id, [
+      ...(memberProfileIdsByAccountId.get(member.account_id) ?? []),
+      member.profile_id
+    ]);
+  }
+
+  const orderedProfileIdsByAccountId = new Map<string, string[]>();
+  for (const accountId of accountIds) {
+    orderedProfileIdsByAccountId.set(
+      accountId,
+      Array.from(
+        new Set(
+          [
+            accountCreatorById.get(accountId) ?? null,
+            ...(memberProfileIdsByAccountId.get(accountId) ?? [])
+          ].filter((profileId): profileId is string => Boolean(profileId))
+        )
+      )
+    );
+  }
+
+  const profileIds = Array.from(
+    new Set([
+      ...Array.from(orderedProfileIdsByAccountId.values()).flat(),
+      ...propertyRows
+        .map((property) => property.owner_profile_id)
+        .filter((profileId): profileId is string => Boolean(profileId))
+    ])
+  );
+  const profiles = await getConnectedStripeProfile(profileIds);
+  const profileById = new Map(profiles.map((profile) => [profile.id, profile]));
+  const propertyById = new Map(propertyRows.map((property) => [property.id, property]));
+
+  const results = uniquePropertyIds.map((propertyId) => {
+    const property = propertyById.get(propertyId);
+    if (!property) {
+      return [propertyId, false] as const;
+    }
+
+    if (!property.owner_account_id) {
+      const profile = property.owner_profile_id
+        ? profileById.get(property.owner_profile_id)
+        : undefined;
+      return [
+        propertyId,
+        Boolean(profile?.stripe_account_id && profile.stripe_onboarding_complete)
+      ] as const;
+    }
+
+    const accountStripe = accountStripeById.get(property.owner_account_id);
+    if (accountStripe?.stripe_account_id && accountStripe.stripe_onboarding_complete) {
+      return [propertyId, true] as const;
+    }
+
+    const orderedProfileIds = orderedProfileIdsByAccountId.get(property.owner_account_id) ?? [];
+    for (const profileId of orderedProfileIds) {
+      const profile = profileById.get(profileId);
+      if (profile?.stripe_account_id && profile.stripe_onboarding_complete) {
+        return [propertyId, true] as const;
+      }
+    }
+
+    if (property.owner_profile_id && !orderedProfileIds.includes(property.owner_profile_id)) {
+      const profile = profileById.get(property.owner_profile_id);
+      if (profile?.stripe_account_id && profile.stripe_onboarding_complete) {
+        return [propertyId, true] as const;
+      }
+    }
+
+    return [propertyId, false] as const;
+  });
 
   return new Map(results);
 }

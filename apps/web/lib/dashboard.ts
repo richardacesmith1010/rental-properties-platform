@@ -124,39 +124,48 @@ export async function getDashboardData(
   administeredPropertyIds?: string[]
 ): Promise<DashboardData> {
   const admin = createAdminClient();
-
-  const { data: profile } = await admin
+  const profilePromise = admin
     .from("profiles")
     .select("id, role")
     .eq("id", userId)
     .single();
+  const propertyDataPromise = (async () => {
+    const propertyIds = administeredPropertyIds ?? (accountId
+      ? await getAdministeredPropertyIdsForAccount(userId, accountId)
+      : await getAdministeredPropertyIds(userId));
+    if (propertyIds.length === 0) {
+      return { propertyIds, propertyRows: [], units: [] };
+    }
+
+    const [{ data: propertyRows }, { data: units }] = await Promise.all([
+      admin
+        .from("properties")
+        .select("id, name")
+        .in("id", propertyIds),
+      admin
+        .from("units")
+        .select("id, occupied, property_id, unit_number")
+        .in("property_id", propertyIds)
+    ]);
+    return { propertyIds, propertyRows: propertyRows ?? [], units: units ?? [] };
+  })();
+
+  const { data: profile } = await profilePromise;
 
   const role = (profile?.role ?? "tenant") as DashboardData["profileRole"];
 
   if (role === "tenant") {
+    void propertyDataPromise.catch(() => undefined);
     return emptyData(role);
   }
 
-  const propertyIds = administeredPropertyIds ?? (accountId
-    ? await getAdministeredPropertyIdsForAccount(userId, accountId)
-    : await getAdministeredPropertyIds(userId));
+  const { propertyIds, propertyRows, units } = await propertyDataPromise;
   if (propertyIds.length === 0) {
     return emptyData(role);
   }
 
-  const [{ data: propertyRows }, { data: units }] = await Promise.all([
-    admin
-      .from("properties")
-      .select("id, name")
-      .in("id", propertyIds),
-    admin
-      .from("units")
-      .select("id, occupied, property_id, unit_number")
-      .in("property_id", propertyIds)
-  ]);
-
-  const properties = propertyRows ?? [];
-  const unitsRows = units ?? [];
+  const properties = propertyRows;
+  const unitsRows = units;
   const unitIds = unitsRows.map((u) => u.id);
   const occupiedUnits = unitsRows.filter((u) => u.occupied).length;
 
@@ -171,20 +180,21 @@ export async function getDashboardData(
     };
   }
 
-  const { data: leaseRows } = await admin
-    .from("leases")
-    .select("id, monthly_rent_cents, active, unit_id, tenant_profile_id, collects_outside_domus")
-    .in("unit_id", unitIds);
+  const [{ data: leaseRows }, { data: maintenance }] = await Promise.all([
+    admin
+      .from("leases")
+      .select("id, monthly_rent_cents, active, unit_id, tenant_profile_id, collects_outside_domus")
+      .in("unit_id", unitIds),
+    admin
+      .from("maintenance_tickets")
+      .select("id, priority")
+      .in("property_id", propertyIds)
+      .in("status", ["open", "in_progress"])
+  ]);
 
   const leases = leaseRows ?? [];
   const activeLeases = leases.filter((lease) => lease.active);
   const leaseIds = leases.map((lease) => lease.id);
-
-  const { data: maintenance } = await admin
-    .from("maintenance_tickets")
-    .select("id, priority")
-    .in("property_id", propertyIds)
-    .in("status", ["open", "in_progress"]);
 
   const propertyNameById = new Map(properties.map((property) => [property.id, property.name]));
   const unitById = new Map(unitsRows.map((unit) => [unit.id, unit]));
@@ -201,19 +211,12 @@ export async function getDashboardData(
     )
   );
 
-  const { data: tenantProfiles } = tenantIds.length
-    ? await admin
+  const tenantProfilesPromise = tenantIds.length
+    ? admin
         .from("profiles")
         .select("id, full_name, email")
         .in("id", tenantIds)
-    : { data: [] as Array<{ id: string; full_name: string | null; email: string | null }> };
-
-  const tenantNameById = new Map(
-    (tenantProfiles ?? []).map((profile) => [profile.id, profile.full_name || profile.email || "Unknown tenant"])
-  );
-  const tenantEmailById = new Map(
-    (tenantProfiles ?? []).map((profile) => [profile.id, profile.email ?? null])
-  );
+    : Promise.resolve({ data: [] as Array<{ id: string; full_name: string | null; email: string | null }> });
 
   let charges: Array<{
     id: string;
@@ -358,15 +361,26 @@ export async function getDashboardData(
       throw chargeDetailsResult.error;
     }
 
-    if (uniqueChargeIds.length > 0) {
-      const { data: reminderNotifications, error: reminderError } = await admin
-        .from("notifications")
-        .select("entity_id, created_at")
-        .in("entity_id", uniqueChargeIds)
-        .in("entity_type", ["rent_charge", "charge"])
-        .in("type", ["rent_due_reminder", "delinquency_escalation"])
-        .order("created_at", { ascending: false });
+    const reminderNotificationsPromise = uniqueChargeIds.length > 0
+      ? admin
+          .from("notifications")
+          .select("entity_id, created_at")
+          .in("entity_id", uniqueChargeIds)
+          .in("entity_type", ["rent_charge", "charge"])
+          .in("type", ["rent_due_reminder", "delinquency_escalation"])
+          .order("created_at", { ascending: false })
+      : Promise.resolve({
+          data: [] as Array<{ entity_id: string | null; created_at: string | null }>,
+          error: null
+        });
+    const [reminderResult, loadedChargeHistoryById] = await Promise.all([
+      reminderNotificationsPromise,
+      getChargeEditHistoryMap(admin, uniqueChargeIds)
+    ]);
+    chargeHistoryById = loadedChargeHistoryById;
 
+    if (uniqueChargeIds.length > 0) {
+      const { data: reminderNotifications, error: reminderError } = reminderResult;
       if (reminderError) {
         console.error("Unable to load rent reminder activity:", reminderError);
       } else {
@@ -384,7 +398,6 @@ export async function getDashboardData(
       }
     }
 
-    chargeHistoryById = await getChargeEditHistoryMap(admin, uniqueChargeIds);
     const chargeById = new Map(chargeDetails.map((charge) => [charge.id, charge]));
 
     const pendingLateCharges = pendingLateRows.map((charge) => ({
@@ -439,6 +452,14 @@ export async function getDashboardData(
       rent_charge_id: string;
     }>;
   }
+
+  const { data: tenantProfiles } = await tenantProfilesPromise;
+  const tenantNameById = new Map(
+    (tenantProfiles ?? []).map((profile) => [profile.id, profile.full_name || profile.email || "Unknown tenant"])
+  );
+  const tenantEmailById = new Map(
+    (tenantProfiles ?? []).map((profile) => [profile.id, profile.email ?? null])
+  );
 
   const now = new Date();
   const currentMonth = now.getUTCMonth();

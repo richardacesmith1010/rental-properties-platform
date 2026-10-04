@@ -109,26 +109,42 @@ export async function getPortfolioData(
   administeredPropertyIds?: string[]
 ): Promise<PortfolioData> {
   const admin = createAdminClient();
+  const selfProfilePromise = (async () => {
+    const selfProfileResult = await admin
+      .from("profiles")
+      .select("id, email, full_name, phone")
+      .eq("id", userId)
+      .single();
+    if (!selfProfileResult.error || !isMissingSchemaError(selfProfileResult.error)) {
+      return selfProfileResult.data;
+    }
 
-  const selfProfileResult = await admin
-    .from("profiles")
-    .select("id, email, full_name, phone")
-    .eq("id", userId)
-    .single();
-  let selfProfile = selfProfileResult.data;
-  if (selfProfileResult.error && isMissingSchemaError(selfProfileResult.error)) {
     const fallback = await admin
       .from("profiles")
       .select("id, email, full_name")
       .eq("id", userId)
       .single();
-    selfProfile = fallback.data
+    return fallback.data
       ? {
           ...fallback.data,
           phone: null as string | null
         }
       : null;
-  }
+  })();
+  const resolvedPropertyIdsPromise = administeredPropertyIds
+    ? Promise.resolve(administeredPropertyIds)
+    : (async () => {
+        const [scopedPropertyIds, administeredProperties] = await Promise.all([
+          accountId
+            ? getAdministeredPropertyIdsForAccount(userId, accountId)
+            : Promise.resolve(null),
+          getAdministeredProperties(userId)
+        ]);
+        return administeredProperties
+          .filter((property) => scopedPropertyIds ? scopedPropertyIds.includes(property.id) : true)
+          .map((property) => property.id);
+      })();
+  let selfProfile: Awaited<typeof selfProfilePromise> = null;
 
   function mergeTenantOptions(
     rows: TenantProfileRow[] | null,
@@ -164,19 +180,14 @@ export async function getPortfolioData(
     });
   }
 
-  let resolvedPropertyIds = administeredPropertyIds;
-  if (!resolvedPropertyIds) {
-    const scopedPropertyIds = accountId
-      ? await getAdministeredPropertyIdsForAccount(userId, accountId)
-      : null;
-    const administeredProperties = (await getAdministeredProperties(userId)).filter((property) =>
-      scopedPropertyIds ? scopedPropertyIds.includes(property.id) : true
-    );
-    resolvedPropertyIds = administeredProperties.map((property) => property.id);
-  }
+  const resolvedPropertyIds = await resolvedPropertyIdsPromise;
 
   if (resolvedPropertyIds.length === 0) {
-    const tenants = await fetchTenantProfiles(admin);
+    const [loadedSelfProfile, tenants] = await Promise.all([
+      selfProfilePromise,
+      fetchTenantProfiles(admin)
+    ]);
+    selfProfile = loadedSelfProfile;
 
     return {
       properties: [],
@@ -191,7 +202,8 @@ export async function getPortfolioData(
     { data: units, error: unitsError },
     tenants,
     { data: tenantInvitations },
-    managerFeesByPropertyId
+    managerFeesByPropertyId,
+    loadedSelfProfile
   ] = await Promise.all([
     admin
       .from("properties")
@@ -210,8 +222,10 @@ export async function getPortfolioData(
       .eq("role", "tenant")
       .in("property_id", resolvedPropertyIds)
       .in("status", ["pending", "accepted"]),
-    getManagerFeesForProperties(resolvedPropertyIds.map((propertyId) => ({ propertyId })))
+    getManagerFeesForProperties(resolvedPropertyIds.map((propertyId) => ({ propertyId }))),
+    selfProfilePromise
   ]);
+  selfProfile = loadedSelfProfile;
 
   let propertyRows: Array<{
     id: string;
@@ -303,18 +317,14 @@ export async function getPortfolioData(
     )
   );
 
-  const { data: ownershipAccounts } = ownerAccountIds.length
-    ? await admin
+  const ownershipAccountsPromise = ownerAccountIds.length
+    ? admin
         .from("ownership_accounts")
         .select("id, display_name")
         .in("id", ownerAccountIds)
-    : { data: [] as Array<{ id: string; display_name: string }> };
+    : Promise.resolve({ data: [] as Array<{ id: string; display_name: string }> });
 
-  const ownershipAccountNameById = new Map(
-    (ownershipAccounts ?? []).map((account) => [account.id, account.display_name])
-  );
-
-  let leases: Array<{
+  type LeaseRow = {
     id: string;
     unit_id: string;
     tenant_profile_id: string;
@@ -329,37 +339,45 @@ export async function getPortfolioData(
     collects_outside_domus: boolean;
     notes: string | null;
     active: boolean;
-  }> = [];
+  };
+  const leasesPromise: Promise<LeaseRow[]> = unitIds.length > 0
+    ? (async () => {
+        const leaseResult = await admin
+          .from("leases")
+          .select(
+            "id, unit_id, tenant_profile_id, monthly_rent_cents, deposit_cents, due_day_of_month, start_date, end_date, lease_status, grace_period_days, late_fee_cents, collects_outside_domus, notes, active"
+          )
+          .in("unit_id", unitIds)
+          .order("start_date", { ascending: false });
 
-  if (unitIds.length > 0) {
-    const leaseResult = await admin
-      .from("leases")
-      .select(
-        "id, unit_id, tenant_profile_id, monthly_rent_cents, deposit_cents, due_day_of_month, start_date, end_date, lease_status, grace_period_days, late_fee_cents, collects_outside_domus, notes, active"
-      )
-      .in("unit_id", unitIds)
-      .order("start_date", { ascending: false });
+        if (leaseResult.error && isMissingSchemaError(leaseResult.error)) {
+          const fallback = await admin
+            .from("leases")
+            .select(
+              "id, unit_id, tenant_profile_id, monthly_rent_cents, deposit_cents, due_day_of_month, start_date, end_date, lease_status, grace_period_days, late_fee_cents, collects_outside_domus, active"
+            )
+            .in("unit_id", unitIds)
+            .order("start_date", { ascending: false });
 
-    if (leaseResult.error && isMissingSchemaError(leaseResult.error)) {
-      const fallback = await admin
-        .from("leases")
-        .select(
-          "id, unit_id, tenant_profile_id, monthly_rent_cents, deposit_cents, due_day_of_month, start_date, end_date, lease_status, grace_period_days, late_fee_cents, collects_outside_domus, active"
-        )
-        .in("unit_id", unitIds)
-        .order("start_date", { ascending: false });
+          return (fallback.data ?? []).map((lease) => ({
+            ...lease,
+            notes: null
+          }));
+        }
 
-      leases = (fallback.data ?? []).map((lease) => ({
-        ...lease,
-        notes: null
-      }));
-    } else {
-      leases = (leaseResult.data ?? []).map((lease) => ({
-        ...lease,
-        notes: lease.notes ?? null
-      }));
-    }
-  }
+        return (leaseResult.data ?? []).map((lease) => ({
+          ...lease,
+          notes: lease.notes ?? null
+        }));
+      })()
+    : Promise.resolve([]);
+  const [{ data: ownershipAccounts }, leases] = await Promise.all([
+    ownershipAccountsPromise,
+    leasesPromise
+  ]);
+  const ownershipAccountNameById = new Map(
+    (ownershipAccounts ?? []).map((account) => [account.id, account.display_name])
+  );
 
   const propertyById = new Map(propertyRows.map((property) => [property.id, property]));
   const unitById = new Map(unitRows.map((unit) => [unit.id, unit]));
