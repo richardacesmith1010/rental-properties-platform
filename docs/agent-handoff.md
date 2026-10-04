@@ -242,10 +242,16 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - **Verified in prod:** zero `/owner` RSC refetches across a 9-click paced walk and 4 rapid clicks (was ~1 per click); full loop = 5 section requests (was 16); 8/9 arrow clicks 53–376 ms; Home (not a preload target) ~2.6 s. Probes: unauthenticated 401; duplicate/unknown/invalid params 400; `Cache-Control: private, no-store`, `Vary` includes Cookie, no ACAO; smoke owner requesting the real owner's account + property IDs → response byte-identical to its own, no foreign IDs. Smoke 3/3, theme 11/11.
 - Owner speed arc (148–153) closed. Optional small follow-up: include Home (`daily-ops-home`) as a preload neighbour.
 
+## Owner clarity mockup — APPROVED by owner (2026-10-04)
+
+- Design canvas: https://claude.ai/artifact/NtynVroGDr3NoyrWcWWMPx (private; boards Main/Rent/Phone/Words). Owner approved everything as drawn.
+- Decisions: (1) remove owner workflow modes (Daily Ops/New Property/New Tenant/New Manager/Records) and the "N OF M" carousel + prev/next arrows; one grouped sidebar — Every day: Home, Rent, Repairs, Messages · Your homes: Homes, Leases, Tenants · Money: Expenses, Reports, Manager pay · Settings, Help; (2) one "Add" button (property / tenant / manager); (3) ONE bank-setup card on Home only (states: not started / needs info / hidden when connected) + one inline line on Rent; (4) Rent page: Late / Due soon / Paid / All, row actions Remind · Mark paid · more; "Generate This Month Charges" removed (daily cron `/api/cron/generate-charges` 08:00 UTC already creates rent); (5) phone bottom bar Home/Rent/Repairs/More; (6) word swaps per the Words board (Charges→Rent, Portfolio→Homes, Maintenance Tickets→Repairs, Record payment→Mark as paid, Open Receivables→Money owed to you, Tenant Ledger→Payment history, P&L→Money in and out, Property Scope→Show: All homes, Manager Payments→Manager pay).
+- Preload (Sprint 152) must be re-targeted from carousel neighbours to likely-next menu items (hover/focus).
+
 ## ▶ START HERE (next session, written 2026-10-04)
 
 - Last shipped: Sprint 153 (`94edd88`). Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
-- Owner-approved queue, in order: (1) DONE — owner speed arc closed; (2) clarity cleanup from `docs/walkthrough-2026-10-03.md` #5–#7, #9 — one bank-setup prompt, simpler navigation (replace "N OF M" carousel), plain-language sweep — **mockup first** (Design canvas, like the landing), L2/L3 TBD.
+- Owner-approved queue, in order: (1) DONE — owner speed arc closed; (2) clarity cleanup — mockup APPROVED, build packets next; from `docs/walkthrough-2026-10-03.md` #5–#7, #9 — one bank-setup prompt, simpler navigation (replace "N OF M" carousel), plain-language sweep — **mockup first** (Design canvas, like the landing), L2/L3 TBD.
 - Standing rules: notifications OFF until owner says real users (env `DOMUS_NOTIFICATIONS_ENABLED` unset); L3 packets → Claude sends to Domus ChatGPT project via Claude-in-Chrome (memory: feedback-prompt-severity-chatgpt-workflow); Codex default Sol/medium, watch usage limits (detached nohup re-run after reset); verify every UI sprint live with Playwright (temp specs in `apps/web/tests/e2e/zz-*.tmp.spec.ts`, smoke creds from `.env.local`).
 - Owner action items still open: J&MSP LLC bank connection (Stripe; owner must enter bank details). Codex Supabase token expires ~2027-01-01.
 - Angel Hernandez (he/him): lease flagged "Pays outside Domus"; owner records Fidelity payments (Charges → Record → ACH, note "Fidelity") or asks Claude to record quietly.
