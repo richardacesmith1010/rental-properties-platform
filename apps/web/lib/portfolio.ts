@@ -105,7 +105,8 @@ async function fetchTenantProfiles(admin: ReturnType<typeof createAdminClient>) 
 
 export async function getPortfolioData(
   userId: string,
-  accountId?: string | null
+  accountId?: string | null,
+  administeredPropertyIds?: string[]
 ): Promise<PortfolioData> {
   const admin = createAdminClient();
 
@@ -163,15 +164,18 @@ export async function getPortfolioData(
     });
   }
 
-  const scopedPropertyIds = accountId
-    ? await getAdministeredPropertyIdsForAccount(userId, accountId)
-    : null;
-  const administeredProperties = (await getAdministeredProperties(userId)).filter((property) =>
-    scopedPropertyIds ? scopedPropertyIds.includes(property.id) : true
-  );
-  const propertyIds = administeredProperties.map((property) => property.id);
+  let resolvedPropertyIds = administeredPropertyIds;
+  if (!resolvedPropertyIds) {
+    const scopedPropertyIds = accountId
+      ? await getAdministeredPropertyIdsForAccount(userId, accountId)
+      : null;
+    const administeredProperties = (await getAdministeredProperties(userId)).filter((property) =>
+      scopedPropertyIds ? scopedPropertyIds.includes(property.id) : true
+    );
+    resolvedPropertyIds = administeredProperties.map((property) => property.id);
+  }
 
-  if (propertyIds.length === 0) {
+  if (resolvedPropertyIds.length === 0) {
     const tenants = await fetchTenantProfiles(admin);
 
     return {
@@ -192,21 +196,21 @@ export async function getPortfolioData(
     admin
       .from("properties")
       .select("id, name, address_line1, city, state, postal_code, owner_account_id, active")
-      .in("id", propertyIds)
+      .in("id", resolvedPropertyIds)
       .order("created_at", { ascending: true }),
     admin
       .from("units")
       .select("id, property_id, unit_number, bedrooms, bathrooms, monthly_rent_cents, square_feet, occupied, active")
-      .in("property_id", propertyIds)
+      .in("property_id", resolvedPropertyIds)
       .order("unit_number", { ascending: true }),
     fetchTenantProfiles(admin),
     admin
       .from("invitations")
       .select("email, property_id, role, status")
       .eq("role", "tenant")
-      .in("property_id", propertyIds)
+      .in("property_id", resolvedPropertyIds)
       .in("status", ["pending", "accepted"]),
-    getManagerFeesForProperties(propertyIds.map((propertyId) => ({ propertyId })))
+    getManagerFeesForProperties(resolvedPropertyIds.map((propertyId) => ({ propertyId })))
   ]);
 
   let propertyRows: Array<{
@@ -225,12 +229,12 @@ export async function getPortfolioData(
       admin
         .from("properties")
         .select("id, name, address_line1, city, state, postal_code, owner_account_id")
-        .in("id", propertyIds)
+        .in("id", resolvedPropertyIds)
         .order("created_at", { ascending: true }),
       admin
         .from("properties")
         .select("id, name, address_line1, city, state, postal_code")
-        .in("id", propertyIds)
+        .in("id", resolvedPropertyIds)
         .order("created_at", { ascending: true })
     ]);
 
@@ -271,7 +275,7 @@ export async function getPortfolioData(
     const { data: legacyUnits } = await admin
       .from("units")
       .select("id, property_id, unit_number, bedrooms, bathrooms, monthly_rent_cents, occupied")
-      .in("property_id", propertyIds)
+      .in("property_id", resolvedPropertyIds)
       .order("unit_number", { ascending: true });
 
     unitRows = (legacyUnits ?? []).map((unit) => ({

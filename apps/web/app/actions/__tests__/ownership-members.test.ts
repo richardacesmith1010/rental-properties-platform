@@ -9,7 +9,11 @@ const parseFormDataMock = vi.hoisted(() => vi.fn());
 const requireAuthMock = vi.hoisted(() => vi.fn());
 const ensureCapabilityEnabledMock = vi.hoisted(() => vi.fn());
 
-vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
+vi.mock("next/cache", () => ({
+  revalidatePath: revalidatePathMock,
+  revalidateTag: vi.fn(),
+  unstable_cache: (work: () => Promise<unknown>) => work
+}));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: createAdminClientMock }));
 vi.mock("@/lib/ownership", () => ({
   canUserAdministerOwnershipAccount: canUserAdministerOwnershipAccountMock,

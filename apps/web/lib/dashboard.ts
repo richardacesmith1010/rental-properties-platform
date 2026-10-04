@@ -120,7 +120,8 @@ function emptyData(role: DashboardData["profileRole"]): DashboardData {
 
 export async function getDashboardData(
   userId: string,
-  accountId?: string | null
+  accountId?: string | null,
+  administeredPropertyIds?: string[]
 ): Promise<DashboardData> {
   const admin = createAdminClient();
 
@@ -136,9 +137,9 @@ export async function getDashboardData(
     return emptyData(role);
   }
 
-  const propertyIds = accountId
+  const propertyIds = administeredPropertyIds ?? (accountId
     ? await getAdministeredPropertyIdsForAccount(userId, accountId)
-    : await getAdministeredPropertyIds(userId);
+    : await getAdministeredPropertyIds(userId));
   if (propertyIds.length === 0) {
     return emptyData(role);
   }

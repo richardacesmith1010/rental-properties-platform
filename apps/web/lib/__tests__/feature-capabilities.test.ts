@@ -1,5 +1,51 @@
-import { describe, expect, it } from "vitest";
-import { deriveFeatureCapabilities } from "@/lib/feature-capabilities";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const cacheState = vi.hoisted(() => ({ values: new Map<string, unknown>() }));
+const adminState = vi.hoisted(() => ({
+  bucketCalls: 0,
+  probeCalls: 0,
+  probeErrors: new Map<string, unknown[]>()
+}));
+
+vi.mock("next/cache", () => ({
+  revalidateTag: () => cacheState.values.clear(),
+  unstable_cache: <T extends () => Promise<unknown>>(work: T, keys: string[]) => async () => {
+    const key = keys.join(":");
+    if (cacheState.values.has(key)) {
+      return cacheState.values.get(key);
+    }
+    const value = await work();
+    cacheState.values.set(key, value);
+    return value;
+  }
+}));
+
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: () => ({
+    from: (tableName: string) => ({
+      select: (columnName: string) => ({
+        limit: async () => {
+          adminState.probeCalls += 1;
+          const key = `${tableName}.${columnName}`;
+          const errors = adminState.probeErrors.get(key) ?? adminState.probeErrors.get(tableName) ?? [];
+          return { error: errors.shift() ?? null };
+        }
+      })
+    }),
+    storage: {
+      getBucket: async (bucketName: string) => {
+        adminState.bucketCalls += 1;
+        return { data: { id: bucketName }, error: null };
+      }
+    }
+  })
+}));
+
+import {
+  deriveFeatureCapabilities,
+  getFeatureCapabilities,
+  invalidateFeatureCapabilitiesCache
+} from "@/lib/feature-capabilities";
 
 const baseProbe = {
   documentTemplatesTable: true,
@@ -106,5 +152,60 @@ describe("deriveFeatureCapabilities", () => {
     expect(capabilities.warnings.leasingPipeline).toContain("V2 Phase A");
     expect(capabilities.warnings.inboxThreads).toContain("V2 Phase A");
     expect(capabilities.warnings.automations).toContain("V2 Phase A");
+  });
+});
+
+describe("getFeatureCapabilities", () => {
+  beforeEach(() => {
+    cacheState.values.clear();
+    adminState.bucketCalls = 0;
+    adminState.probeCalls = 0;
+    adminState.probeErrors.clear();
+  });
+
+  it("reuses one probe wave within the cache window and exposes a cache bust", async () => {
+    const first = await getFeatureCapabilities();
+    const firstProbeCount = adminState.probeCalls + adminState.bucketCalls;
+    const second = await getFeatureCapabilities();
+
+    expect(second).toEqual(first);
+    expect(firstProbeCount).toBe(24);
+    expect(adminState.probeCalls + adminState.bucketCalls).toBe(firstProbeCount);
+
+    invalidateFeatureCapabilitiesCache();
+    await getFeatureCapabilities();
+    expect(adminState.probeCalls + adminState.bucketCalls).toBe(48);
+  });
+
+  it("does not cache a wave containing a non-schema probe error", async () => {
+    adminState.probeErrors.set("document_templates", [
+      { code: "42501", message: "permission denied for relation document_templates" }
+    ]);
+
+    const degraded = await getFeatureCapabilities();
+    const firstProbeCount = adminState.probeCalls + adminState.bucketCalls;
+    const retried = await getFeatureCapabilities();
+
+    expect(degraded.documentsEnabled).toBe(true);
+    expect(retried.documentsEnabled).toBe(true);
+    expect(firstProbeCount).toBe(24);
+    expect(adminState.probeCalls + adminState.bucketCalls).toBe(48);
+  });
+
+  it("caches missing-schema results with the existing DTO and warning text", async () => {
+    adminState.probeErrors.set("document_packets", [
+      { code: "42P01", message: "relation document_packets does not exist" }
+    ]);
+
+    const first = await getFeatureCapabilities();
+    const second = await getFeatureCapabilities();
+
+    expect(first.documentsEnabled).toBe(false);
+    expect(first.documentAssetAccessEnabled).toBe(false);
+    expect(first.warnings.documents).toBe(
+      "Documents and e-sign are not ready yet. Run the Phase 8 migration to enable this section."
+    );
+    expect(second).toEqual(first);
+    expect(adminState.probeCalls + adminState.bucketCalls).toBe(24);
   });
 });

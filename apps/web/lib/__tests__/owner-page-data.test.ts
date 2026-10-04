@@ -1,5 +1,84 @@
-import { describe, expect, it } from "vitest";
-import { buildOwnerBundlePlan, resolveOwnerPageRequest } from "@/app/owner/owner-page-data";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const ownerLoadMocks = vi.hoisted(() => ({
+  capabilities: vi.fn(),
+  ownershipAccounts: vi.fn(),
+  profile: vi.fn(),
+  role: vi.fn()
+}));
+
+vi.mock("@/lib/auth", () => ({
+  getCurrentUserRole: ownerLoadMocks.role,
+  getUserProfileSummary: ownerLoadMocks.profile
+}));
+vi.mock("@/lib/ownership", () => ({
+  getOwnershipAccountsForUser: ownerLoadMocks.ownershipAccounts,
+  getOwnershipMembersForAccount: vi.fn(),
+  getPendingAccountDeleteRequests: vi.fn(),
+  getPendingAccountRenameRequests: vi.fn()
+}));
+vi.mock("@/lib/feature-capabilities", () => ({
+  getFeatureCapabilities: ownerLoadMocks.capabilities
+}));
+vi.mock("@/lib/logger", () => ({
+  logPerfEvent: vi.fn(),
+  measurePerf: async (_scope: string, _name: string, work: () => Promise<unknown>) => work()
+}));
+
+import {
+  buildOwnerBundlePlan,
+  loadOwnerPageData,
+  resolveOwnerPageRequest
+} from "@/app/owner/owner-page-data";
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
+describe("loadOwnerPageData orchestration", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("short-circuits a role failure before starting data reads", async () => {
+    ownerLoadMocks.role.mockResolvedValue("manager");
+
+    const result = await loadOwnerPageData({ userEmail: "owner@example.test", userId: "user-1" });
+
+    expect(result).toEqual({ status: "role-mismatch", role: "manager" });
+    expect(ownerLoadMocks.profile).not.toHaveBeenCalled();
+    expect(ownerLoadMocks.ownershipAccounts).not.toHaveBeenCalled();
+    expect(ownerLoadMocks.capabilities).not.toHaveBeenCalled();
+  });
+
+  it("starts profile, ownership, and capability reads concurrently after role succeeds", async () => {
+    const profile = deferred<{ onboardingCompletedAt: null }>();
+    const accounts = deferred<never[]>();
+    const capabilities = deferred<Record<string, never>>();
+    ownerLoadMocks.role.mockResolvedValue("owner");
+    ownerLoadMocks.profile.mockReturnValue(profile.promise);
+    ownerLoadMocks.ownershipAccounts.mockReturnValue(accounts.promise);
+    ownerLoadMocks.capabilities.mockReturnValue(capabilities.promise);
+
+    const loading = loadOwnerPageData({ userEmail: "owner@example.test", userId: "user-1" });
+    await vi.waitFor(() => {
+      expect(ownerLoadMocks.profile).toHaveBeenCalledOnce();
+      expect(ownerLoadMocks.ownershipAccounts).toHaveBeenCalledOnce();
+      expect(ownerLoadMocks.capabilities).toHaveBeenCalledOnce();
+    });
+
+    profile.resolve({ onboardingCompletedAt: null });
+    accounts.resolve([]);
+    capabilities.resolve({});
+    const result = await loading;
+
+    expect(result.status).toBe("needs-onboarding");
+  });
+});
 
 describe("resolveOwnerPageRequest", () => {
   it("treats the owner daily ops home as the default first paint", () => {

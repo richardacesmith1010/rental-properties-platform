@@ -482,16 +482,15 @@ export async function loadOwnerPageData(params: {
     };
   }
 
-  const profile = await measureOwner("profile.summary", () => getUserProfileSummary(params.userId), {
-    userId: params.userId
-  });
-  const ownershipAccounts = await measureOwner(
-    "ownership.accounts",
-    () => getOwnershipAccountsForUser(params.userId),
-    {
+  const [profile, ownershipAccounts, capabilities] = await Promise.all([
+    measureOwner("profile.summary", () => getUserProfileSummary(params.userId), {
       userId: params.userId
-    }
-  );
+    }),
+    measureOwner("ownership.accounts", () => getOwnershipAccountsForUser(params.userId), {
+      userId: params.userId
+    }),
+    measureOwner("feature.capabilities", () => getFeatureCapabilities())
+  ]);
   const request = resolveOwnerPageRequest(params.searchParams, ownershipAccounts);
   const ownerPerfMeta = buildOwnerPerfMeta(request);
   const measureOwnerWithRequest = <T,>(
@@ -542,10 +541,6 @@ export async function loadOwnerPageData(params: {
     };
   }
 
-  const capabilities = await measureOwnerWithRequest(
-    "feature.capabilities",
-    () => getFeatureCapabilities()
-  );
   const activeAccount = ownershipAccounts.find((account) => account.id === request.activeAccountId);
   const isLlcAccount = activeAccount?.accountType === "llc";
   const administeredPropertyIds = request.activeAccountId
@@ -606,8 +601,8 @@ export async function loadOwnerPageData(params: {
     newFeedbackCount,
     rentCollectionStatus
   ] = await Promise.all([
-    measureOwnerWithRequest("dashboard.data", () => getDashboardData(params.userId, request.activeAccountId)),
-    measureOwnerWithRequest("portfolio.data", () => getPortfolioData(params.userId, request.activeAccountId)),
+    measureOwnerWithRequest("dashboard.data", () => getDashboardData(params.userId, request.activeAccountId, administeredPropertyIds)),
+    measureOwnerWithRequest("portfolio.data", () => getPortfolioData(params.userId, request.activeAccountId, administeredPropertyIds)),
     hasBundle("announcement-properties")
       ? measureOwnerWithRequest("properties.admin-options", () => getAdministeredPropertyOptions(params.userId))
       : Promise.resolve(undefined),
