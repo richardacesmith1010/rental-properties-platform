@@ -336,6 +336,10 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - **166a (`adf2a11`, gpt-reserve 183k):** owner-page-data 857→257 (+ `app/owner/page-data/*`), charges-section → 3-line re-export (+ `components/dashboard/charges/*`, main file 477), section-renderer 521→39 (+ `sections/render-section-cases.tsx` 486). Max line 234 chars (legit). Zero test files changed; full gate green; live: all 22 owner sections, 6 manager, 5 tenant render with 0 console errors; smoke 3/3, theme 11/11. Split is shallower than ideal (big switch/implementation moved mostly whole).
 - **166b REJECTED + reverted (not committed/deployed):** gpt-reserve met "≤500 lines" by compacting code onto lines up to 8,460 chars; 2 tests failing. → L-015. Retry only with L-015 constraints (line length ≤140, char totals ±10%) and a stronger model.
 
+## Bank feed — design drafted (2026-10-05)
+
+- Design `docs/bank-feed-design.md` + mockup https://claude.ai/artifact/Wp4XfbAcPvXTXmiGyY1FwU. Owner answers: personal account mixed with personal spending (Fidelity + a credit union); "ask once, then automatic"; wants to-do list, per-home ledger, monthly profit, alerts. Privacy: store rental items only, personal items as fingerprints only. Phases: (1) schema + CSV upload + matching + review queue (L3), (2) ledger/profit/alerts (L2), (3) Plaid production daily sync (L3; Plaid announced Fidelity support Aug 2026, may need access request). Awaiting owner approval of the mockup.
+
 ## ▶ START HERE (next session, written 2026-10-04)
 
 - Last shipped: Sprint 166a (`adf2a11`); 166b rejected. Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
