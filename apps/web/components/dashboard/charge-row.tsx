@@ -64,7 +64,9 @@ interface ChargeRowProps {
   onDelete?: () => void;
   onOpenMessage?: () => void;
   onSendReminder?: () => void;
+  /** @deprecated Use simpleView. Kept for existing component tests. */
   ownerView?: boolean;
+  simpleView?: boolean;
   isMutatingCharges: boolean;
 }
 
@@ -279,8 +281,10 @@ export function ChargeRow({
   onOpenMessage,
   onSendReminder,
   ownerView = false,
+  simpleView: simpleViewProp,
   isMutatingCharges
 }: ChargeRowProps) {
+  const simpleView = simpleViewProp ?? ownerView;
   const label = getChargeLabel(charge);
   const cardPayment = calculateCardFee(charge.amountCents);
 
@@ -330,7 +334,7 @@ export function ChargeRow({
               {!isTenantView && charge.tenantName ? (
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                   <span>{charge.tenantName}</span>
-                  {onOpenMessage && !ownerView ? (
+                  {onOpenMessage && !simpleView ? (
                     <Button
                       type="button"
                       size="sm"
@@ -377,7 +381,7 @@ export function ChargeRow({
             </div>
 
             <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-              {ownerView && onSendReminder && charge.status !== "paid" && charge.status !== "waived" ? (
+              {simpleView && onSendReminder && charge.status !== "paid" && charge.status !== "waived" ? (
                 <Button type="button" size="sm" variant="ghost" className="h-11" onClick={onSendReminder} title="Send a rent reminder.">
                   Remind
                 </Button>
@@ -464,12 +468,12 @@ export function ChargeRow({
                   type="button"
                   size="sm"
                   variant={manualFormOpen ? "default" : "outline"}
-                  className={ownerView ? "h-11" : "h-11 sm:h-8"}
+                  className={simpleView ? "h-11" : "h-11 sm:h-8"}
                   disabled={isMutatingCharges}
                   onClick={onToggleManualPayment}
                   title="Record a manual payment for this charge."
                 >
-                  {manualFormOpen ? "Cancel" : ownerView ? "Mark paid" : "Record"}
+                  {manualFormOpen ? "Cancel" : simpleView ? "Mark paid" : "Record"}
                 </Button>
               ) : null}
 
@@ -479,8 +483,8 @@ export function ChargeRow({
                   onEdit={onOpenEdit}
                   onWaive={onWaive}
                   onDelete={onDelete}
-                  onMessage={ownerView ? onOpenMessage : undefined}
-                  compact={ownerView}
+              onMessage={simpleView ? onOpenMessage : undefined}
+              compact={simpleView}
                 />
               ) : null}
             </div>

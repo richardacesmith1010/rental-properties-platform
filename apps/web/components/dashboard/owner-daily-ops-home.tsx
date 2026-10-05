@@ -56,6 +56,7 @@ export function groupLateRent(charges: ChargeRowData[]): LateRentGroup[] {
 
 interface OwnerDailyOpsHomeProps {
   bankState: OwnerBankCardState;
+  isManagerView?: boolean;
   summary: OwnerHomeSummary;
   onOpenSection: (sectionId: string) => void;
   onSendBatchPaymentReminder?: StatefulAction;
@@ -96,7 +97,7 @@ function SummaryTile({ title, value, detail, progress }: {
 }
 
 export function OwnerDailyOpsHome({
-  bankState, summary, onOpenSection, onSendBatchPaymentReminder, onRecordManualPayment,
+  bankState, isManagerView = false, summary, onOpenSection, onSendBatchPaymentReminder, onRecordManualPayment,
   financialOverview, llcSetupPrompt, onInitiatePlaidLink, onCompletePlaidLink,
   onRefreshPlaidBalance, onDisconnectPlaid
 }: OwnerDailyOpsHomeProps) {
@@ -140,7 +141,7 @@ export function OwnerDailyOpsHome({
 
   return (
     <div className="flex min-h-full flex-col gap-5 py-1">
-      <OwnerBankCard state={bankState} />
+      <OwnerBankCard state={bankState} role={isManagerView ? "manager" : "owner"} />
 
       {llcSetupPrompt ? (
         <LlcSetupPrompt {...llcSetupPrompt} />
@@ -185,14 +186,16 @@ export function OwnerDailyOpsHome({
 
           <section className="grid gap-3 md:grid-cols-3" aria-label="Your homes">
             <SummaryTile title="Rent this month" value={`${formatCurrency(summary.collectedCents)} of ${formatCurrency(summary.dueCents)}`} progress={dueProgress} />
-            <SummaryTile title="Homes" value={String(summary.homeCount)} detail={`${summary.rentedHomeCount} of ${summary.homeCount} rented`} />
+            <SummaryTile title={isManagerView ? "Homes you manage" : "Homes"} value={String(summary.homeCount)} detail={`${summary.rentedHomeCount} of ${summary.homeCount} rented`} />
             <SummaryTile title="Next rent due" value={summary.nextDueDate ? formatDate(summary.nextDueDate) : "No rent due"} detail={summary.nextDueDate ? `${formatCurrency(summary.nextDueAmountCents)} from ${summary.nextDueTenantCount} tenant${summary.nextDueTenantCount === 1 ? "" : "s"}` : undefined} />
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-lg font-semibold text-[var(--ink)]">More numbers</h2>
-            <FinancialOverviewPanel {...financialOverview} onInitiatePlaidLink={onInitiatePlaidLink} onCompletePlaidLink={onCompletePlaidLink} onRefreshPlaidBalance={onRefreshPlaidBalance} onDisconnectPlaid={onDisconnectPlaid} />
-          </section>
+          {!isManagerView ? (
+            <section className="space-y-3">
+              <h2 className="text-lg font-semibold text-[var(--ink)]">More numbers</h2>
+              <FinancialOverviewPanel {...financialOverview} onInitiatePlaidLink={onInitiatePlaidLink} onCompletePlaidLink={onCompletePlaidLink} onRefreshPlaidBalance={onRefreshPlaidBalance} onDisconnectPlaid={onDisconnectPlaid} />
+            </section>
+          ) : null}
         </>
       )}
     </div>

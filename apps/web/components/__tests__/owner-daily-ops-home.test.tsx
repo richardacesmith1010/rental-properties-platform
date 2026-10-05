@@ -59,6 +59,24 @@ describe("OwnerDailyOpsHome", () => {
     expect(screen.getByText("No open repairs. No new messages.")).toBeInTheDocument();
   });
 
+  it("renders the manager home without owner-only financial numbers", () => {
+    render(
+      <OwnerDailyOpsHome
+        bankState={{ status: "not_started", href: "/connect/onboard" }}
+        isManagerView
+        summary={summary}
+        onOpenSection={vi.fn()}
+        financialOverview={financialOverview}
+      />
+    );
+
+    expect(screen.getByText("Connect your bank to get your fees")).toBeInTheDocument();
+    expect(screen.getByText("Needs you today")).toBeInTheDocument();
+    expect(screen.getByText("Homes you manage")).toBeInTheDocument();
+    expect(screen.queryByText("More numbers")).not.toBeInTheDocument();
+    expect(screen.queryByText("Financial details")).not.toBeInTheDocument();
+  });
+
   it("handles a zero-home portfolio", () => {
     render(<OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }} summary={{ ...summary, lateCharges: [], homeCount: 0, rentedHomeCount: 0 }} onOpenSection={vi.fn()} financialOverview={financialOverview} />);
     expect(screen.getByText("0 of 0 rented")).toBeInTheDocument();

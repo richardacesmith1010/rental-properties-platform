@@ -212,6 +212,35 @@ describe("ChargesSection", () => {
     expect(screen.queryByText(/paid this month/i)).not.toBeInTheDocument();
   });
 
+  it("gives managers the simple rent view without owner bank messaging", () => {
+    render(
+      <ChargesSection
+        charges={[{ ...charges[0], status: "late" }, paidCharge]}
+        onPayCharge={async () => {}}
+        onRecordManualPayment={async () => ({ success: true })}
+        onCreateManualCharge={async () => ({ success: true })}
+        onSendBatchPaymentReminder={async () => ({ success: true })}
+        onSendMessageToTenant={async () => ({ success: true })}
+        onGenerateChargesHref="/manager/generate"
+        simpleRentView
+        bankConnected={false}
+        showManualPayment
+        availableLeases={[{ id: "lease-1", tenantLabel: "Maya Bell", propertyLabel: "Forum House" }]}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Late (1)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Due soon (0)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Paid" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "All" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mark rent as paid" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add a one-time fee" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Generate this month's rent" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/paid this month/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Tenants can’t pay online/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
   it("defaults owner rent to due soon when no rent is late", () => {
     render(<ChargesSection charges={charges} onPayCharge={async () => {}} isOwnerView />);
 

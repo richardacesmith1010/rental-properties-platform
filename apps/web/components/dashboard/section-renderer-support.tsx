@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { Building2, MapPin, Pencil, Wrench } from "lucide-react";
 import { EntityEditModal } from "@/components/dashboard/entity-edit-modal";
 import { FirstVisitHelp } from "@/components/dashboard/first-visit-help";
-import { ManagerDashboard } from "@/components/dashboard/manager-dashboard";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, pluralize } from "@/lib/format";
 import { buildEntityUpdateFormData, buildPropertyEditFields } from "@/lib/entity-edit-fields";
@@ -232,18 +231,6 @@ export function OverviewSectionContent({
 }: {
   props: SectionRendererProps;
 }) {
-  if (props.data.profileRole === "manager") {
-    return (
-      <ManagerDashboard
-        tickets={props.filteredTickets}
-        charges={props.data.charges}
-        notifications={props.safeNotifications}
-        onOpenSection={props.goToSectionIfVisible}
-        onUpdateTicketStatus={props.onUpdateTicketStatus}
-      />
-    );
-  }
-
   return (
     <div className="flex min-h-full flex-col gap-4">
       <OverviewSummaryStrip props={props} />

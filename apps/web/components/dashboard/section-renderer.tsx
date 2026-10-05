@@ -91,13 +91,16 @@ export function SectionRenderer(props: SectionRendererComponentProps) {
           onRecordManualPayment={props.onRecordManualPayment}
           onSendMessageToTenant={props.onSendMessageToTenant}
           onSendBatchPaymentReminder={
-            props.data.profileRole === "owner" ? props.onSendBatchPaymentReminder : undefined
+            props.data.profileRole === "owner" || props.data.profileRole === "manager"
+              ? props.onSendBatchPaymentReminder
+              : undefined
           }
           showManualPayment={props.data.profileRole !== "tenant"}
           onGenerateChargesHref={props.onGenerateChargesHref}
           ownerConnectedMap={props.ownerConnectedMap}
           stripeConnected={props.stripeConnected}
-          isOwnerView={props.data.profileRole === "owner"}
+          simpleRentView={props.data.profileRole === "owner" || props.data.profileRole === "manager"}
+          showBankConnectionNotice={props.data.profileRole === "owner"}
           bankConnected={props.rentCollectionConnected === true}
           availableLeases={props.safePortfolio.leases
             .filter((lease) => lease.active)

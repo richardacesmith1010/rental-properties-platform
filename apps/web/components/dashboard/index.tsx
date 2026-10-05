@@ -10,7 +10,6 @@ import { CommandPalette } from "@/components/dashboard/command-palette";
 import { LeaseWizard } from "@/components/dashboard/lease-wizard";
 import { NotificationPauseBanner } from "@/components/dashboard/notification-pause-banner";
 import { OwnerDailyOpsHome } from "@/components/dashboard/owner-daily-ops-home";
-import { OwnerBankCard } from "./owner-bank-card";
 import { PropertyWizard } from "@/components/dashboard/property-wizard";
 import { TenantInviteWizard } from "@/components/dashboard/tenant-invite-wizard";
 import { WelcomeCard } from "@/components/dashboard/welcome-card";
@@ -114,6 +113,7 @@ export function Dashboard(props: DashboardProps) {
   const contentZoneLabel = activeSectionIndex >= 0 && sectionItems.length > 0
     ? `${activeSectionIndex + 1} of ${sectionItems.length}`
     : null;
+  const isDailyOpsHomePage = isOwnerDailyOpsHomePage || (isManagerRole && activeSection === "overview");
   const onboardingDismissStorageKey = useMemo(
     () => `domus-owner-onboarding-dismissed:${props.userEmail}`,
     [props.userEmail]
@@ -195,7 +195,7 @@ export function Dashboard(props: DashboardProps) {
 
   const renderedSectionContent = isSectionLoading ? (
     <SectionSkeleton
-      label={isOwnerDailyOpsHomePage ? "Loading home..." : `Loading ${activeSectionLabel.toLowerCase()}...`}
+      label={isDailyOpsHomePage ? "Loading home..." : `Loading ${activeSectionLabel.toLowerCase()}...`}
     />
   ) : showOwnerOnboarding ? (
     <div className="flex h-full items-center justify-center">
@@ -206,9 +206,10 @@ export function Dashboard(props: DashboardProps) {
         onSkip={handleDismissOnboarding}
       />
     </div>
-  ) : isOwnerDailyOpsHomePage ? (
+  ) : isDailyOpsHomePage ? (
     <OwnerDailyOpsHome
       bankState={bankState}
+      isManagerView={isManagerRole}
       summary={homeActionItems}
       onOpenSection={sectionRendererProps.openSection}
       onSendBatchPaymentReminder={props.onSendBatchPaymentReminder}
@@ -350,7 +351,6 @@ export function Dashboard(props: DashboardProps) {
       }
     >
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 pb-24 pt-3 sm:px-4 sm:pb-24 sm:pt-4 lg:px-8 lg:pb-24 lg:pt-8">
-        {isManagerRole && activeSection === "overview" ? <OwnerBankCard state={bankState} role="manager" /> : null}
         {props.generatedMessage ? (
           <Alert variant="success" className="mt-3 rounded-xl px-4 py-3">
             {props.generatedMessage}
@@ -369,7 +369,7 @@ export function Dashboard(props: DashboardProps) {
           <div className="domus-card mt-3 flex min-h-0 flex-1 flex-col shadow-sm sm:rounded-[28px]">
             <div className="flex items-start justify-between gap-3 border-b border-[var(--line)] p-4 sm:p-6">
               <div>
-                {isOwnerDailyOpsHomePage ? (
+                {isDailyOpsHomePage ? (
                   <div>
                     <h1 className="text-2xl font-semibold text-[var(--ink)]">
                       {greeting ? `${greeting}, ${displayName}` : displayName}
@@ -396,7 +396,7 @@ export function Dashboard(props: DashboardProps) {
                   properties={safePortfolio.properties} onInviteManager={props.onInviteManager} />
               </div>
             </div>
-            <section id={isOwnerDailyOpsHomePage ? "daily-ops-home" : activeSection}
+            <section id={isDailyOpsHomePage ? "daily-ops-home" : activeSection}
               className="min-h-0 flex-1 px-3 pb-24 pt-3 sm:px-5">
               {renderedSectionContent}
             </section>

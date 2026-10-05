@@ -68,7 +68,10 @@ interface ChargesSectionProps {
   onDisableAutopay?: StatefulAction;
   previewCount?: number;
   availableLeases?: ChargeLeaseOption[];
+  /** @deprecated Use simpleRentView. Kept for existing owner component tests. */
   isOwnerView?: boolean;
+  simpleRentView?: boolean;
+  showBankConnectionNotice?: boolean;
   bankConnected?: boolean;
 }
 
@@ -146,8 +149,11 @@ export function ChargesSection({
   previewCount,
   availableLeases = [],
   isOwnerView = false,
+  simpleRentView: simpleRentViewProp,
+  showBankConnectionNotice,
   bankConnected = true
 }: ChargesSectionProps) {
+  const simpleRentView = simpleRentViewProp ?? isOwnerView;
   const router = useRouter();
   const stripeConfigured = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
   const searchParams = useSearchParams();
@@ -156,7 +162,7 @@ export function ChargesSection({
   ).length;
   const pendingCount = charges.filter((charge) => charge.status === "pending").length;
   const [activeFilter, setActiveFilter] = useState<ChargeFilter>(
-    isOwnerView ? (lateCount > 0 ? "late" : "due_soon") : "all"
+    simpleRentView ? (lateCount > 0 ? "late" : "due_soon") : "all"
   );
   const [manualPaymentChargeId, setManualPaymentChargeId] = useState<string | null>(null);
   const [activeEditChargeId, setActiveEditChargeId] = useState<string | null>(null);
@@ -171,7 +177,7 @@ export function ChargesSection({
     onRecordManualPayment ?? unavailableAction,
     null
   );
-  const batchActionsEnabled = Boolean(onSendBatchPaymentReminder) && !isTenantView && !isOwnerView;
+  const batchActionsEnabled = Boolean(onSendBatchPaymentReminder) && !isTenantView && !simpleRentView;
 
   useEffect(() => {
     if (manualPaymentState?.success) {
@@ -373,7 +379,7 @@ export function ChargesSection({
     <Card id="charges" className="border border-border/50 shadow-sm">
       <ChargeSectionHeader
         isTenantView={isTenantView}
-        isOwnerView={isOwnerView}
+        simpleRentView={simpleRentView}
         showManualPayment={showManualPayment}
         unpaidCount={lateCount + pendingCount}
         canCreateCharge={Boolean(onCreateManualCharge && availableLeases.length > 0 && !isTenantView)}
@@ -382,10 +388,10 @@ export function ChargesSection({
         onGenerateChargesHref={onGenerateChargesHref}
       />
       <CardContent>
-        {isOwnerView ? (
+        {simpleRentView ? (
           <p className="mb-4 text-sm text-[var(--muted)]">Rent is added each month from your leases.</p>
         ) : null}
-        {isOwnerView && !bankConnected ? (
+        {(showBankConnectionNotice ?? isOwnerView) && !bankConnected ? (
           <p className="mb-4 text-sm text-[var(--muted)]">
             Tenants can’t pay online until your bank is connected.{" "}
             <a href="/owner" className="font-semibold text-[var(--accent)] underline-offset-4 hover:underline" title="Open Home to connect your bank.">Connect bank</a>
@@ -427,7 +433,7 @@ export function ChargesSection({
           </AnimatedList>
         ) : null}
 
-        <ChargeSectionFilters isOwnerView={isOwnerView} activeFilter={activeFilter} pendingCount={pendingCount} lateCount={lateCount} paidThisMonthCount={paidThisMonthCount} onChange={setActiveFilter} />
+        <ChargeSectionFilters simpleRentView={simpleRentView} activeFilter={activeFilter} pendingCount={pendingCount} lateCount={lateCount} paidThisMonthCount={paidThisMonthCount} onChange={setActiveFilter} />
 
         {showManualPayment ? (
           <InlineAlert state={manualPaymentState} defaultMessage="Payment recorded." />
@@ -520,11 +526,11 @@ export function ChargesSection({
                         : undefined
                     }
                     onSendReminder={
-                      isOwnerView && onSendBatchPaymentReminder
+                      simpleRentView && onSendBatchPaymentReminder
                         ? () => handleSingleReminder(charge.id)
                         : undefined
                     }
-                    ownerView={isOwnerView}
+                    simpleView={simpleRentView}
                     isMutatingCharges={isMutatingCharges}
                   />
                 );
