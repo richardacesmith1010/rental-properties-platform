@@ -300,9 +300,17 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Decisions: tenant Home with one big rent card ("$X due <date> · in N days" + Pay rent; or "Online pay isn't on yet…" when the landlord can't collect; or "Paid <date>. Thank you!"); tiles Report a problem / Message landlord; "Your problems" status list; small lease summary; tenant nav Home / Rent / Problems / Messages (+ Your lease, Settings on desktop); Pay = bank account (free) first, card with fee, one Pay button, receipt line; Report a problem = what's wrong, details, "It can wait / Fix it soon", 911 note, photo; no carousel arrows, no "charges"/"Waived" jargon.
 - Next: tenant build packets + owner dry-run fix packet (O1–O9 in docs/dryrun-2026-10-04.md).
 
+## Sprints 160–161 + dry-run follow-ups (2026-10-05)
+
+- **160 (`378bb8e`, gpt-reserve 173k):** owner dry-run fixes O1–O9. Codex skipped focused tests for O2/O4/O5 (test debt) and missed `portfolio-section.test.tsx` ("Manage"→"Edit") → full gate failed; Claude fixed the assertion (boundary break, one test line). Live: Add menu 4 items incl. Add a unit; invite wizard vacant-only ("All units are rented."); Edit label; real account Next rent due "Nov 1 · $2,350 · Pays outside Domus", Still outstanding $0. **O5 bug found live:** "Angel Hernandez joined. Set up their lease." on the real account (filter used non-outside active leases) — Claude fixed (`bcfb3e7`, boundary break: one-line filter → any lease of any status + test). Verified real Home clean.
+- **161 (`5c4b0f1`, gpt-reserve 204k):** tenant pay-state helper + menu/bottom bar/problem urgency live and working, but Home/Rent didn't match the mockup (old alarm PayRentCard reused, "charges" copy, duplicate status line, extra "Home" h2, sidebar first item "Rent", Rent page literal `&apos;`, big My Lease block) → Sprint 161b dispatched (corrections). Minor debt: `getNextRentDueDate` caps day at 28 and ignores future lease start.
+- One flaky smoke-auth failure right after the 160 deploy; reran 3/3.
+- Token rule now also requires running every existing test file that imports a changed component (memory).
+- Sprint 162 (tenant messaging, L3) packet ChatGPT-reviewed (APPROVE WITH CHANGES, all adopted); migration `20261005_sprint162_tenant_thread_unique.sql` written, NOT yet applied — apply right before dispatch, after owner approval.
+
 ## ▶ START HERE (next session, written 2026-10-04)
 
-- Last shipped: Sprint 159 (`e8195ce`). Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
+- Last shipped: Sprint 161 (`5c4b0f1`) + 160 follow-up `bcfb3e7`; 161b in progress. Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
 - Owner-approved queue, in order: (1) DONE — owner speed arc closed; (2) clarity cleanup — mockup APPROVED; DONE (154–157 shipped); from `docs/walkthrough-2026-10-03.md` #5–#7, #9 — one bank-setup prompt, simpler navigation (replace "N OF M" carousel), plain-language sweep — **mockup first** (Design canvas, like the landing), L2/L3 TBD.
 - Standing rules: notifications OFF until owner says real users (env `DOMUS_NOTIFICATIONS_ENABLED` unset); L3 packets → Claude sends to Domus ChatGPT project via Claude-in-Chrome (memory: feedback-prompt-severity-chatgpt-workflow); Codex default Sol/medium, watch usage limits (detached nohup re-run after reset); verify every UI sprint live with Playwright (temp specs in `apps/web/tests/e2e/zz-*.tmp.spec.ts`, smoke creds from `.env.local`).
 - Owner action items still open: J&MSP LLC bank connection (Stripe; owner must enter bank details). Codex Supabase token expires ~2027-01-01.
