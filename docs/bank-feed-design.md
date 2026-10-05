@@ -45,11 +45,11 @@ Owner opens Domus daily and sees every rental dollar sorted automatically: Angel
 ## Real bank patterns (owner screenshots, 2026-10-05; rental items only)
 - Money path: Angel (Navy Federal) → **Fidelity** deposit "DIRECT DEPOSIT NFCU ACH P2P ANGEL J HERNAND…" +$2,350 (Oct 2) → Fidelity "Electronic Funds Transfer Paid" −$2,350 (Oct 5) → **Navy Federal checking** "Deposit / ACH Credit" +$2,350.
 - **Count rent once:** the Fidelity deposit from Angel is the rent. The Fidelity EFT out and the matching NFCU ACH credit (same amount, within 5 days) are a **transfer between the owner's own accounts** and must be skipped automatically, never counted as income or expense.
-- Bills paid from Navy Federal checking: "Transfer To Mortgage" −$1,039.44 (1st, NFCU category Mortgages); "Payment to Solar Servicing" −$266.40 (~14th, Loans); "- Ispc XX0028" −$92.00 (~16th, Other Expenses).
+- Bills paid from Navy Federal checking: "Transfer To Mortgage" −$1,039.44 **twice a month (1st and 15th, half each = $2,078.88/mo)** — rules and "recurring" detection must allow more than one match per month; "Payment to Solar Servicing" −$266.40 (~14th, Loans); "- Ispc XX0028" −$92.00 (~16th, Other Expenses).
 - Look-alike to never match as rent: the owner's own apartment rent goes out from the same checking (~$2,280). Only incoming money can match a lease.
-- Unconfirmed (ask the owner): xfinity −$81.81, a pest-control charge −$59.99.
-- Rough October profit for 1st Home: $2,350 − $1,039.44 − $266.40 − $92.00 = **$952.16** (before any unconfirmed bills).
+- "Py *magna Pest Sol" −$59.99 = **1st Home** (pest control). xfinity = **personal** (skip).
+- Monthly cash for 1st Home: $2,350 − $2,078.88 mortgage − $266.40 solar − $92.00 water − $59.99 pest = **−$147.27** (pest/water frequency to confirm from history). Note: only the mortgage *interest* is a tax expense; the ledger shows cash, a tax view can split principal later (Phase 2).
 
 ## Open questions
-- Is xfinity / pest control for 1st Home or personal?
+- Are water and pest control monthly, or less often?
 - Should the J&MSP LLC account get its own feed later? (Out of scope for now.)
