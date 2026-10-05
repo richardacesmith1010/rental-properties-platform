@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useFormState } from "react-dom";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ManualPaymentForm, type ChargeRowData } from "@/components/dashboard/charge-row";
@@ -149,6 +150,13 @@ export function OwnerDailyOpsHome({
     <div className="flex min-h-full flex-col gap-5 py-1">
       <OwnerBankCard state={bankState} role={isManagerView ? "manager" : "owner"} />
 
+      {!isManagerView ? <section className="domus-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div><h2 className="font-semibold text-[var(--ink)]">Sort your bank activity</h2>
+          <p className="text-sm text-[var(--muted)]">Upload your bank file. Domus files rent and bills for you.</p></div>
+        <Link href="/owner/bank" title="Open your bank activity."
+          className="flex min-h-11 items-center justify-center rounded-md bg-[var(--accent)] px-4 font-semibold text-white">Open</Link>
+      </section> : null}
+
       {llcSetupPrompt ? (
         <LlcSetupPrompt {...llcSetupPrompt} />
       ) : (
@@ -167,8 +175,12 @@ export function OwnerDailyOpsHome({
                     <p className="mt-1 text-sm text-[var(--muted)]">Oldest rent was due {formatDate(charge.dueDate)}</p>
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row">
-                    <Button type="button" variant="outline" className="min-h-11" disabled={isSending} onClick={() => sendReminder(group.charges.map((item) => item.id))} title="Send this tenant a rent reminder.">Send reminder</Button>
-                    <Button type="button" className="min-h-11" onClick={() => setPaymentChargeId((current) => current === charge.id ? null : charge.id)} title="Record rent paid outside Domus.">Mark as paid</Button>
+                    <Button type="button" variant="outline" className="min-h-11" disabled={isSending}
+                      onClick={() => sendReminder(group.charges.map((item) => item.id))}
+                      title="Send this tenant a rent reminder.">Send reminder</Button>
+                    <Button type="button" className="min-h-11"
+                      onClick={() => setPaymentChargeId((current) => current === charge.id ? null : charge.id)}
+                      title="Record rent paid outside Domus.">Mark as paid</Button>
                   </div>
                 </div>
                 {paymentChargeId === charge.id ? (
@@ -179,31 +191,45 @@ export function OwnerDailyOpsHome({
                 ) : null}
               </div>;
             })}
-            {(summary.joinedWithoutLease ?? []).map((invite) => <div key={invite.id} className="domus-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            {(summary.joinedWithoutLease ?? []).map((invite) => <div key={invite.id}
+              className="domus-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="font-semibold text-[var(--ink)]">{invite.fullName} joined. Set up their lease.</p>
-              <Button type="button" className="min-h-11" onClick={() => { if (invite.propertyId) onSelectProperty?.(invite.propertyId); onOpenLeaseWizard?.(); }} title="Open the lease setup wizard.">Set up lease</Button>
+              <Button type="button" className="min-h-11"
+                onClick={() => { if (invite.propertyId) onSelectProperty?.(invite.propertyId); onOpenLeaseWizard?.(); }}
+                title="Open the lease setup wizard.">Set up lease</Button>
             </div>)}
 
             {summary.openRepairCount === 0 && summary.newMessageCount === 0 ? (
               <p className="text-sm text-[var(--muted)]">No open repairs. No new messages.</p>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
-                {summary.openRepairCount > 0 ? <Button type="button" variant="outline" className="min-h-11 justify-start" onClick={() => onOpenSection("maintenance")} title="Open Repairs.">{summary.openRepairCount} open repair{summary.openRepairCount === 1 ? "" : "s"}</Button> : null}
-                {summary.newMessageCount > 0 ? <Button type="button" variant="outline" className="min-h-11 justify-start" onClick={() => onOpenSection("inbox")} title="Open Messages.">{summary.newMessageCount} new message{summary.newMessageCount === 1 ? "" : "s"}</Button> : null}
+                {summary.openRepairCount > 0 ? <Button type="button" variant="outline" className="min-h-11 justify-start"
+                  onClick={() => onOpenSection("maintenance")} title="Open Repairs.">
+                  {summary.openRepairCount} open repair{summary.openRepairCount === 1 ? "" : "s"}</Button> : null}
+                {summary.newMessageCount > 0 ? <Button type="button" variant="outline" className="min-h-11 justify-start"
+                  onClick={() => onOpenSection("inbox")} title="Open Messages.">
+                  {summary.newMessageCount} new message{summary.newMessageCount === 1 ? "" : "s"}</Button> : null}
               </div>
             )}
           </section>
 
           <section className="grid gap-3 md:grid-cols-3" aria-label="Your homes">
-            <SummaryTile title="Rent this month" value={`${formatCurrency(summary.collectedCents)} of ${formatCurrency(summary.dueCents)}`} progress={dueProgress} />
-            <SummaryTile title={isManagerView ? "Homes you manage" : "Homes"} value={String(summary.homeCount)} detail={`${summary.rentedHomeCount} of ${summary.homeCount} rented`} />
-            <SummaryTile title="Next rent due" value={summary.nextDueDate ? formatDate(summary.nextDueDate) : "No rent due"} detail={summary.nextDueDate ? `${formatCurrency(summary.nextDueAmountCents)} from ${summary.nextDueTenantCount} tenant${summary.nextDueTenantCount === 1 ? "" : "s"}${summary.nextDueOutsideDomus ? " · Pays outside Domus" : ""}` : undefined} />
+            <SummaryTile title="Rent this month"
+              value={`${formatCurrency(summary.collectedCents)} of ${formatCurrency(summary.dueCents)}`} progress={dueProgress} />
+            <SummaryTile title={isManagerView ? "Homes you manage" : "Homes"} value={String(summary.homeCount)}
+              detail={`${summary.rentedHomeCount} of ${summary.homeCount} rented`} />
+            <SummaryTile title="Next rent due" value={summary.nextDueDate ? formatDate(summary.nextDueDate) : "No rent due"}
+              detail={summary.nextDueDate ? `${formatCurrency(summary.nextDueAmountCents)} from ${summary.nextDueTenantCount}`
+                + ` tenant${summary.nextDueTenantCount === 1 ? "" : "s"}`
+                + `${summary.nextDueOutsideDomus ? " · Pays outside Domus" : ""}` : undefined} />
           </section>
 
           {!isManagerView ? (
             <section className="space-y-3">
               <h2 className="text-lg font-semibold text-[var(--ink)]">More numbers</h2>
-              <FinancialOverviewPanel {...financialOverview} onInitiatePlaidLink={onInitiatePlaidLink} onCompletePlaidLink={onCompletePlaidLink} onRefreshPlaidBalance={onRefreshPlaidBalance} onDisconnectPlaid={onDisconnectPlaid} />
+              <FinancialOverviewPanel {...financialOverview} onInitiatePlaidLink={onInitiatePlaidLink}
+                onCompletePlaidLink={onCompletePlaidLink} onRefreshPlaidBalance={onRefreshPlaidBalance}
+                onDisconnectPlaid={onDisconnectPlaid} />
             </section>
           ) : null}
         </>

@@ -34,18 +34,22 @@ const summary = {
 describe("OwnerDailyOpsHome", () => {
   it("shows one bank card only when setup is needed", () => {
     const { rerender } = render(
-      <OwnerDailyOpsHome bankState={{ status: "not_started", href: "/connect/onboard" }} summary={summary} onOpenSection={vi.fn()} financialOverview={financialOverview} />
+      <OwnerDailyOpsHome bankState={{ status: "not_started", href: "/connect/onboard" }}
+        summary={summary} onOpenSection={vi.fn()} financialOverview={financialOverview} />
     );
     expect(screen.getAllByText("Connect your bank to get paid")).toHaveLength(1);
 
-    rerender(<OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }} summary={summary} onOpenSection={vi.fn()} financialOverview={financialOverview} />);
+    rerender(<OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }}
+      summary={summary} onOpenSection={vi.fn()} financialOverview={financialOverview} />);
     expect(screen.queryByText("Connect your bank to get paid")).not.toBeInTheDocument();
   });
 
   it("renders late rent actions and summary tiles", async () => {
     const reminder = vi.fn(async (_state: unknown, _formData: FormData) => ({ success: true as const }));
     render(
-      <OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }} summary={summary} onOpenSection={vi.fn()} onSendBatchPaymentReminder={reminder} onRecordManualPayment={vi.fn()} financialOverview={financialOverview} />
+      <OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }} summary={summary}
+        onOpenSection={vi.fn()} onSendBatchPaymentReminder={reminder} onRecordManualPayment={vi.fn()}
+        financialOverview={financialOverview} />
     );
 
     expect(screen.getByText("Maya Bell owes $1,200")).toBeInTheDocument();
@@ -57,6 +61,8 @@ describe("OwnerDailyOpsHome", () => {
     expect(screen.getByText("1 of 2 rented")).toBeInTheDocument();
     expect(screen.getByText("$2,400 from 2 tenants")).toBeInTheDocument();
     expect(screen.getByText("No open repairs. No new messages.")).toBeInTheDocument();
+    expect(screen.getByText("Sort your bank activity")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open" })).toHaveAttribute("href", "/owner/bank");
   });
 
   it("renders the manager home without owner-only financial numbers", () => {
@@ -75,10 +81,13 @@ describe("OwnerDailyOpsHome", () => {
     expect(screen.getByText("Homes you manage")).toBeInTheDocument();
     expect(screen.queryByText("More numbers")).not.toBeInTheDocument();
     expect(screen.queryByText("Financial details")).not.toBeInTheDocument();
+    expect(screen.queryByText("Sort your bank activity")).not.toBeInTheDocument();
   });
 
   it("handles a zero-home portfolio", () => {
-    render(<OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }} summary={{ ...summary, lateCharges: [], homeCount: 0, rentedHomeCount: 0 }} onOpenSection={vi.fn()} financialOverview={financialOverview} />);
+    render(<OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }}
+      summary={{ ...summary, lateCharges: [], homeCount: 0, rentedHomeCount: 0 }}
+      onOpenSection={vi.fn()} financialOverview={financialOverview} />);
     expect(screen.getByText("0 of 0 rented")).toBeInTheDocument();
   });
 
@@ -92,7 +101,9 @@ describe("OwnerDailyOpsHome", () => {
       ]
     };
     const { container } = render(
-      <OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }} summary={groupedSummary} onOpenSection={vi.fn()} onSendBatchPaymentReminder={reminder} onRecordManualPayment={vi.fn()} financialOverview={financialOverview} />
+      <OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }} summary={groupedSummary}
+        onOpenSection={vi.fn()} onSendBatchPaymentReminder={reminder} onRecordManualPayment={vi.fn()}
+        financialOverview={financialOverview} />
     );
 
     expect(screen.getByText("Maya Bell owes $2 · 2 months late")).toBeInTheDocument();
@@ -108,7 +119,9 @@ describe("OwnerDailyOpsHome", () => {
   });
 
   it("omits the rent detail when no rent is due", () => {
-    render(<OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }} summary={{ ...summary, lateCharges: [], nextDueDate: null, nextDueAmountCents: 0, nextDueTenantCount: 0 }} onOpenSection={vi.fn()} financialOverview={financialOverview} />);
+    render(<OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }}
+      summary={{ ...summary, lateCharges: [], nextDueDate: null, nextDueAmountCents: 0, nextDueTenantCount: 0 }}
+      onOpenSection={vi.fn()} financialOverview={financialOverview} />);
     expect(screen.getByText("No rent due")).toBeInTheDocument();
     expect(screen.queryByText("$0 from 0 tenants")).not.toBeInTheDocument();
   });
