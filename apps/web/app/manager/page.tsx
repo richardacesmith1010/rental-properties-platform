@@ -132,19 +132,6 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
 
   const capabilities = await getFeatureCapabilities();
   const generatedMessage = getGeneratedMessage(searchParams?.generated);
-  const managerMode =
-    typeof searchParams?.mode === "string"
-      ? searchParams.mode
-      : Array.isArray(searchParams?.mode)
-        ? searchParams.mode[0] ?? null
-        : null;
-  const initialManagerWorkflowMode =
-    managerMode === "daily_ops" ||
-    managerMode === "new_property" ||
-    managerMode === "new_tenant" ||
-    managerMode === "vendor_ops"
-      ? managerMode
-      : undefined;
   const initialSectionId =
     typeof searchParams?.section === "string"
       ? searchParams.section
@@ -257,7 +244,6 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       rentIncreaseHistory={rentIncreaseHistory}
       currentUserId={user.id}
       capabilities={capabilities}
-      initialManagerWorkflowMode={initialManagerWorkflowMode}
       initialSectionId={initialSectionId}
       initialPropertyId={initialPropertyId}
       userEmail={user.email ?? "unknown"}
@@ -265,6 +251,8 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       nickname={profile.nickname}
       avatarUrl={profile.avatarUrl}
       stripeConnected={profile.stripeOnboardingComplete}
+      rentCollectionConnected={profile.stripeOnboardingComplete}
+      rentCollectionConnectHref="/connect/onboard"
       ownerConnectedMap={ownerConnectedMap}
       onSignOut={signOut}
       onCreateProperty={createProperty}

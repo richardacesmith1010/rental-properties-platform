@@ -92,7 +92,7 @@ test.describe("authenticated smoke render", () => {
       password: process.env.SMOKE_MANAGER_PASSWORD ?? "",
       pathPattern: /\/manager(?:\?|$)/,
       navRole: "button",
-      navLabel: "Vendor Ops"
+      navLabel: "Repairs"
     },
     {
       name: "tenant dashboard renders without client errors",

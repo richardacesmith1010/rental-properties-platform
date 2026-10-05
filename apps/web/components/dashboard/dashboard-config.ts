@@ -29,61 +29,7 @@ export type OwnerWorkflowMode =
   | "new_manager"
   | "records";
 
-export type ManagerWorkflowMode =
-  | "daily_ops"
-  | "new_property"
-  | "new_tenant"
-  | "vendor_ops";
-
-export const managerWorkflowModeMeta: Record<
-  ManagerWorkflowMode,
-  { label: string; description: string; sections: string[] }
-> = {
-  daily_ops: {
-    label: "Daily Operations Mode",
-    description: "Daily manager runbook: maintenance queue, charges, and alerts.",
-    sections: [
-      "overview",
-      "maintenance",
-      "charges",
-      "notifications",
-      "activity",
-      "applications",
-      "tenants",
-      "inbox",
-      "automations",
-      "expenses",
-      "analytics",
-      "payments"
-    ]
-  },
-  new_property: {
-    label: "New Property Mode",
-    description: "Guide a property from address to lease readiness without bouncing between sections.",
-    sections: ["overview", "operations", "portfolio", "units", "leases", "tenants", "charges"]
-  },
-  new_tenant: {
-    label: "New Tenant Mode",
-    description: "Invite tenant, activate lease, and verify billing readiness.",
-    sections: [
-      "overview",
-      "leasing",
-      "invitations",
-      "applications",
-      "operations",
-      "leases",
-      "tenants",
-      "documents",
-      "charges",
-      "inbox"
-    ]
-  },
-  vendor_ops: {
-    label: "Vendor Operations Mode",
-    description: "Manage vendors and maintenance execution with minimal distractions.",
-    sections: ["overview", "vendors", "maintenance", "inbox", "automations"]
-  }
-};
+export type ManagerWorkflowMode = "daily_ops" | "new_property" | "new_tenant" | "vendor_ops";
 
 interface BuildAllSectionItemsParams {
   chargeBadgeCount: number;
@@ -344,44 +290,25 @@ export function getOwnerNavItems(available: NavItem[]): NavItem[] {
   }));
 }
 
-export function getManagerModeNavItems(): NavItem[] {
-  return [
-    {
-      id: "manager:daily_ops",
-      label: "Daily Ops",
-      icon: LayoutDashboard,
-      description: "Daily queue for maintenance, charges, and alerts.",
-      clickHint: "switch to manager daily operations mode"
-    },
-    {
-      id: "manager:new_property",
-      label: "New Property",
-      icon: Building2,
-      description: "Onboard property, units, and initial lease setup.",
-      clickHint: "switch to manager new property mode"
-    },
-    {
-      id: "manager:new_tenant",
-      label: "New Tenant",
-      icon: UserPlus,
-      description: "Open the step-by-step tenant invite wizard.",
-      clickHint: "open the tenant invite wizard"
-    },
-    {
-      id: "tenants",
-      label: "Tenants",
-      icon: Users,
-      description: "All tenants across your properties.",
-      clickHint: "open tenant directory"
-    },
-    {
-      id: "manager:vendor_ops",
-      label: "Vendor Ops",
-      icon: BriefcaseBusiness,
-      description: "Vendor-first maintenance execution flow.",
-      clickHint: "switch to manager vendor operations mode"
-    }
-  ];
+export const managerMenuGroups = [
+  { label: "Every day", items: [["overview", "Home"], ["charges", "Rent"], ["maintenance", "Repairs"], ["inbox", "Messages"]] },
+  { label: "Homes you manage", items: [["portfolio", "Homes"], ["units", "Units"], ["leases", "Leases"], ["tenants", "Tenants"], ["leasing", "Find a tenant"], ["applications", "Applications"], ["invitations", "Invites"]] },
+  { label: "Money", items: [["payments", "Payments"], ["expenses", "Expenses"], ["analytics", "Charts"]] },
+  { label: "More", items: [["documents", "Documents"], ["vendors", "Vendors"], ["automations", "Automations"], ["activity", "Activity"], ["notifications", "Alerts"]] }
+] as const;
+
+export function getManagerNavItems(available: NavItem[]): NavItem[] {
+  return managerMenuGroups.flatMap(group => group.items.flatMap(([id, label]) => {
+    const item = available.find(candidate => candidate.id === id);
+    return item ? [{
+      ...item,
+      label,
+      group: group.label,
+      description: ownerPageDescriptions[id],
+      clickHint: undefined,
+      badgeText: id === "charges" && item.badgeCount ? `${item.badgeCount} late` : undefined
+    }] : [];
+  }));
 }
 
 export function getOwnerWorkflowSteps(params: {

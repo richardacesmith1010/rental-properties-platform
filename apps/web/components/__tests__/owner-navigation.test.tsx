@@ -1,6 +1,6 @@
 import { act, fireEvent, render, renderHook, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildAllSectionItems, getOwnerNavItems, getManagerModeNavItems } from "@/components/dashboard/dashboard-config";
+import { buildAllSectionItems, getOwnerNavItems, getManagerNavItems, managerMenuGroups } from "@/components/dashboard/dashboard-config";
 import { SidebarNav } from "@/components/dashboard/sidebar/sidebar-nav";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { OwnerAddMenu } from "@/components/dashboard/owner-add-menu";
@@ -80,6 +80,13 @@ describe("owner grouped navigation", () => {
 });
 
 describe("Add menu", () => {
+  it("shows only home and tenant actions for managers", () => {
+    render(<OwnerAddMenu role="manager" onAddHome={vi.fn()} onAddTenant={vi.fn()} properties={[]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    expect(screen.getAllByRole("menuitem")).toHaveLength(2);
+    expect(screen.queryByRole("menuitem", { name: "Add a manager" })).not.toBeInTheDocument();
+  });
+
   it("opens each existing flow and returns focus on Escape", () => {
     const onAddHome = vi.fn(), onAddTenant = vi.fn();
     render(<OwnerAddMenu onAddHome={onAddHome} onAddTenant={onAddTenant} onInviteManager={vi.fn()} properties={[]} />);
@@ -105,10 +112,22 @@ describe("Add menu", () => {
   });
 });
 
+describe("manager grouped navigation", () => {
+  it("keeps every requested section in its group when available", () => {
+    const items = getManagerNavItems(buildAllSectionItems(availability));
+    expect(Array.from(new Set(items.map(item => item.group)))).toEqual(managerMenuGroups.map(group => group.label));
+    expect(items.map(item => item.label)).toEqual([
+      "Home", "Rent", "Repairs", "Messages", "Homes", "Units", "Leases", "Tenants",
+      "Find a tenant", "Applications", "Invites", "Payments", "Expenses", "Charts",
+      "Documents", "Vendors", "Automations", "Activity", "Alerts"
+    ]);
+  });
+});
+
 describe("post-create and manager regression", () => {
   it("sends owners to Homes and Invites, and stays put for managers", () => {
     const jump = vi.fn();
-    const { result } = renderHook(() => useDashboardWorkflowHandlers({ isOwnerRole: true, isManagerRole: false, managerWorkflowMode: "daily_ops", goToSectionIfVisible: jump }));
+    const { result } = renderHook(() => useDashboardWorkflowHandlers({ isOwnerRole: true, isManagerRole: false, goToSectionIfVisible: jump }));
     act(() => result.current.handlePropertyCreated());
     expect(jump).toHaveBeenLastCalledWith("portfolio");
     act(() => result.current.handleTenantInviteSuccess());
@@ -116,17 +135,13 @@ describe("post-create and manager regression", () => {
     act(() => result.current.handleManagerInviteSuccess());
     expect(jump).toHaveBeenCalledTimes(2);
   });
-  it("preserves manager mode items, paging, and tenant wizard", () => {
+  it("renders the manager grouped menu and opens the tenant wizard", () => {
     window.scrollTo = vi.fn();
     const { result } = renderHook(() => useDashboardNavigation({ data: { profileRole: "manager" } } as never, { ...availability, isOwnerRole: false, isManagerRole: true } as never));
-    expect(result.current.sidebarItems).toEqual(getManagerModeNavItems());
-    expect(result.current.sidebarItems.map(item => [item.id, item.label])).toEqual([
-      ["manager:daily_ops", "Daily Ops"], ["manager:new_property", "New Property"],
-      ["manager:new_tenant", "New Tenant"], ["tenants", "Tenants"], ["manager:vendor_ops", "Vendor Ops"]
-    ]);
-    act(() => result.current.goToNextSection());
-    expect(result.current.activeSection).toBe("charges");
-    act(() => result.current.handleSidebarSelect("manager:new_tenant"));
-    expect(result.current.isTenantInviteWizardOpen).toBe(true);
+    expect(result.current.sidebarItems).toEqual(getManagerNavItems(result.current.allSectionItems));
+    expect(result.current.sidebarItems.map(item => item.label)).toContain("Repairs");
+    expect(result.current.sidebarItems.map(item => item.label)).not.toContain("Vendor Ops");
+    act(() => result.current.handleSidebarSelect("maintenance"));
+    expect(result.current.activeSection).toBe("maintenance");
   });
 });

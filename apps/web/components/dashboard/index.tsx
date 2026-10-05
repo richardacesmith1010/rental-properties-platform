@@ -6,12 +6,11 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AnnouncementComposer } from "@/components/dashboard/announcement-composer";
 import { ownerPageDescriptions } from "./dashboard-config";
 import { OwnerAddMenu } from "./owner-add-menu";
-import { ConnectBanner } from "@/components/dashboard/connect-banner";
 import { CommandPalette } from "@/components/dashboard/command-palette";
-import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { LeaseWizard } from "@/components/dashboard/lease-wizard";
 import { NotificationPauseBanner } from "@/components/dashboard/notification-pause-banner";
 import { OwnerDailyOpsHome } from "@/components/dashboard/owner-daily-ops-home";
+import { OwnerBankCard } from "./owner-bank-card";
 import { PropertyWizard } from "@/components/dashboard/property-wizard";
 import { TenantInviteWizard } from "@/components/dashboard/tenant-invite-wizard";
 import { WelcomeCard } from "@/components/dashboard/welcome-card";
@@ -19,6 +18,7 @@ import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { DashboardLayout } from "./dashboard-layout";
+import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { useDashboardData } from "./dashboard-data-loader";
 import type { OperationTask } from "./operations-section";
 import { SectionRenderer } from "./section-renderer";
@@ -36,52 +36,33 @@ const AiAssistant = dynamic(
 function PageHeader({
   title,
   pageCountLabel,
+  description,
   onPrevious,
   onNext,
   actions
 }: {
   title: string;
-  pageCountLabel: string | null;
-  onPrevious: () => void;
-  onNext: () => void;
+  pageCountLabel?: string | null;
+  description: string;
+  onPrevious?: () => void;
+  onNext?: () => void;
   actions?: ReactNode;
 }) {
   return (
     <div className="flex shrink-0 flex-col gap-4 border-b border-[color:color-mix(in_srgb,var(--line)_84%,transparent)] px-4 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-6">
       <div className="min-w-0 space-y-1">
-        {pageCountLabel ? (
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-            {pageCountLabel}
-          </p>
-        ) : null}
         <h2 className="truncate text-[22px] font-[640] tracking-[-0.02em] text-[var(--ink)]">
           {title}
         </h2>
+        {description ? <p className="text-sm text-[var(--muted)]">{description}</p> : null}
+        {pageCountLabel ? <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{pageCountLabel}</p> : null}
       </div>
       <div className="flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto">
         {actions}
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          className="h-11 w-11 rounded-full border-[color:var(--line)] bg-[color:color-mix(in_srgb,var(--surface)_94%,transparent)]"
-          onClick={onPrevious}
-          title="Previous section"
-          aria-label="Previous section"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          className="h-11 w-11 rounded-full border-[color:var(--line)] bg-[color:color-mix(in_srgb,var(--surface)_94%,transparent)]"
-          onClick={onNext}
-          title="Next section"
-          aria-label="Next section"
-        >
-          <ChevronRight className="h-5 w-5" />
-        </Button>
+        {onPrevious && onNext ? <>
+          <Button type="button" variant="outline" size="icon" className="h-11 w-11 rounded-full" onClick={onPrevious} title="Previous section" aria-label="Previous section"><ChevronLeft className="h-5 w-5" /></Button>
+          <Button type="button" variant="outline" size="icon" className="h-11 w-11 rounded-full" onClick={onNext} title="Next section" aria-label="Next section"><ChevronRight className="h-5 w-5" /></Button>
+        </> : null}
       </div>
     </div>
   );
@@ -96,7 +77,6 @@ export function Dashboard(props: DashboardProps) {
     activeSection,
     activeSectionIndex,
     activeSectionLabel,
-    activeWorkflowMeta,
     closePropertyWizard,
     closeLeaseWizard,
     closeTenantInviteWizard,
@@ -116,10 +96,10 @@ export function Dashboard(props: DashboardProps) {
     isTenantInviteWizardOpen,
     layoutProps,
     llcSetupPrompt,
-    occupancy,
     openPropertyWizard,
     openTenantInviteWizard,
     ownerOnboarding,
+    occupancy,
     safePortfolio,
     sectionItems,
     sectionRendererProps,
@@ -131,17 +111,17 @@ export function Dashboard(props: DashboardProps) {
     props.nickname?.trim() ||
     props.fullName?.trim().split(/\s+/)[0] ||
     props.userEmail;
+  const contentZoneLabel = activeSectionIndex >= 0 && sectionItems.length > 0
+    ? `${activeSectionIndex + 1} of ${sectionItems.length}`
+    : null;
   const onboardingDismissStorageKey = useMemo(
     () => `domus-owner-onboarding-dismissed:${props.userEmail}`,
     [props.userEmail]
   );
   const [isOnboardingDismissed, setIsOnboardingDismissed] = useState(false);
-  const ownerSectionCountLabel = activeSectionIndex >= 0 && sectionItems.length > 0
-    ? `${activeSectionIndex + 1} of ${sectionItems.length}`
-    : null;
   const assistantAccountId = props.activeAccountId ?? props.ownershipAccounts?.[0]?.id ?? "";
   const ownerConnectHref = props.rentCollectionConnectHref ?? "/connect/onboard";
-  const ownerBankState = getOwnerBankCardState({
+  const bankState = getOwnerBankCardState({
     rentCollectionConnected: props.rentCollectionConnected === true,
     profileStripeConnected: props.stripeConnected,
     connectHref: ownerConnectHref,
@@ -158,7 +138,6 @@ export function Dashboard(props: DashboardProps) {
     !isUnknownSection &&
     llcSetupPrompt.shouldShow
   );
-  const contentZoneLabel = ownerSectionCountLabel ?? activeWorkflowMeta?.label ?? "Workspace";
   const contentZoneTitle = activeSectionLabel;
   const notificationsPausedUntil =
     props.notificationPreferenceSettings?.pausedUntil ?? null;
@@ -229,7 +208,7 @@ export function Dashboard(props: DashboardProps) {
     </div>
   ) : isOwnerDailyOpsHomePage ? (
     <OwnerDailyOpsHome
-      bankState={ownerBankState}
+      bankState={bankState}
       summary={homeActionItems}
       onOpenSection={sectionRendererProps.openSection}
       onSendBatchPaymentReminder={props.onSendBatchPaymentReminder}
@@ -286,7 +265,7 @@ export function Dashboard(props: DashboardProps) {
             />
           ) : null}
           {isOwnerRole ? <CommandPalette {...commandPaletteProps} /> : null}
-          {isOwnerRole ? (
+          {(isOwnerRole || isManagerRole) ? (
             <PropertyWizard
               open={isPropertyWizardOpen}
               accountId={props.activeAccountId}
@@ -371,13 +350,7 @@ export function Dashboard(props: DashboardProps) {
       }
     >
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 pb-24 pt-3 sm:px-4 sm:pb-24 sm:pt-4 lg:px-8 lg:pb-24 lg:pt-8">
-        {isManagerRole && props.stripeConnected !== true ? (
-          <ConnectBanner
-            connected={false}
-            role="manager"
-            href="/connect/onboard"
-          />
-        ) : null}
+        {isManagerRole && activeSection === "overview" ? <OwnerBankCard state={bankState} role="manager" /> : null}
         {props.generatedMessage ? (
           <Alert variant="success" className="mt-3 rounded-xl px-4 py-3">
             {props.generatedMessage}
@@ -431,7 +404,7 @@ export function Dashboard(props: DashboardProps) {
         ) : (
           <>
             <div className="mt-3 shrink-0 space-y-3">
-              {activeSection === "overview" ? (
+              {!isManagerRole && activeSection === "overview" ? (
                 <DashboardHeader
                   role={props.data.profileRole}
                   kpis={displayDashboardData.kpis}
@@ -442,26 +415,19 @@ export function Dashboard(props: DashboardProps) {
                   fullName={props.fullName}
                 />
               ) : null}
-              {isManagerRole && activeWorkflowMeta && !showOwnerOnboarding ? (
-                <div className="rounded-[16px] border border-[color:color-mix(in_srgb,var(--line)_82%,transparent)] bg-[color:color-mix(in_srgb,var(--surface)_94%,transparent)] px-4 py-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                    {activeWorkflowMeta.label}
-                  </p>
-                  <p className="mt-1 text-sm text-[var(--ink-2)]">
-                    {activeWorkflowMeta.description}
-                  </p>
-                </div>
-              ) : null}
             </div>
 
             <div className="domus-card mt-4 flex min-h-0 flex-1 flex-col overflow-hidden shadow-sm sm:rounded-[28px]">
               <PageHeader
                 title={contentZoneTitle}
-                pageCountLabel={contentZoneLabel}
-                onPrevious={goToPreviousSection}
-                onNext={goToNextSection}
+                pageCountLabel={isManagerRole ? null : contentZoneLabel}
+                description={isManagerRole ? ownerPageDescriptions[activeSection] ?? "Manage your homes and the people who live there." : ""}
+                onPrevious={isManagerRole ? undefined : goToPreviousSection}
+                onNext={isManagerRole ? undefined : goToNextSection}
                 actions={
-                  canSendAnnouncements ? (
+                  isManagerRole ? (
+                    <OwnerAddMenu role="manager" onAddHome={openPropertyWizard} onAddTenant={openTenantInviteWizard} properties={safePortfolio.properties} />
+                  ) : canSendAnnouncements ? (
                     <Button
                       type="button"
                       variant="default"

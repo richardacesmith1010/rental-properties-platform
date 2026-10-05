@@ -2,16 +2,10 @@ import { useContext, useCallback, useEffect, useMemo, useState, useTransition } 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   buildAllSectionItems,
-  getManagerModeNavItems,
-  getOwnerNavItems,
-  managerWorkflowModeMeta,
-  type ManagerWorkflowMode
+  getManagerNavItems,
+  getOwnerNavItems
 } from "./dashboard-config";
-import {
-  MANAGER_SECTION_MODE_BY_ID
-} from "./dashboard-workflow-modes";
 import { useDashboardWorkflowHandlers } from "./dashboard-workflow-handlers";
-import type { NavItem } from "./sidebar-nav";
 import type { DashboardProps } from "./types";
 import type { DashboardKpiState } from "./dashboard-kpi-loader";
 import { OwnerSectionCacheContext } from "./owner-section-cache";
@@ -125,23 +119,12 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
     ]
   );
 
-  const [managerWorkflowMode, setManagerWorkflowMode] = useState<ManagerWorkflowMode>(
-    props.initialManagerWorkflowMode ?? "daily_ops"
-  );
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isPropertyWizardOpen, setIsPropertyWizardOpen] = useState(false);
   const [isTenantInviteWizardOpen, setIsTenantInviteWizardOpen] = useState(false);
   const [isLeaseWizardOpen, setIsLeaseWizardOpen] = useState(false);
 
   const [, startRouteTransition] = useTransition();
-
-  useEffect(() => {
-    const nextMode = props.initialManagerWorkflowMode;
-    if (!nextMode) {
-      return;
-    }
-    setManagerWorkflowMode((current) => (current === nextMode ? current : nextMode));
-  }, [props.initialManagerWorkflowMode]);
 
   const allSectionItems = useMemo(
     () =>
@@ -175,28 +158,12 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
   );
 
   const ownerNavItems = useMemo(() => getOwnerNavItems(allSectionItems), [allSectionItems]);
-  const managerModeNavItems = useMemo(
-    () => (isManagerRole ? getManagerModeNavItems() : []),
-    [isManagerRole]
+  const managerNavItems = useMemo(
+    () => (isManagerRole ? getManagerNavItems(allSectionItems) : []),
+    [allSectionItems, isManagerRole]
   );
 
-  const activeWorkflowMeta = useMemo(() => {
-    if (isManagerRole) {
-      return managerWorkflowModeMeta[managerWorkflowMode];
-    }
-    return null;
-  }, [isManagerRole, managerWorkflowMode]);
-
-  const workflowSectionItems = useMemo<NavItem[]>(() => {
-    if (!activeWorkflowMeta) {
-      return allSectionItems;
-    }
-    const allowedSections = new Set(activeWorkflowMeta.sections);
-    const filtered = allSectionItems.filter((item) => allowedSections.has(item.id));
-    return filtered.length > 0 ? filtered : allSectionItems;
-  }, [activeWorkflowMeta, allSectionItems]);
-
-  const sectionItems = isOwnerRole ? allSectionItems : workflowSectionItems;
+  const sectionItems = allSectionItems;
 
   const [activeSection, setActiveSection] = useState(() => {
     return props.initialSectionId ?? "overview";
@@ -218,6 +185,20 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
     }
   }, [isOwnerRole, ownerQuery, pathname, props.initialSectionId, usesOwnerCache]);
 
+  useEffect(() => {
+    if (!isManagerRole) return;
+    const params = new URLSearchParams(ownerQuery);
+    const requestedSection = params.get("section");
+    const nextSection = requestedSection && allSectionItems.some((item) => item.id === requestedSection)
+      ? requestedSection
+      : "overview";
+    setActiveSection(nextSection);
+    if (params.has("mode")) {
+      params.delete("mode");
+      window.history.replaceState(null, "", `${pathname}${params.size ? `?${params}` : ""}`);
+    }
+  }, [allSectionItems, isManagerRole, ownerQuery, pathname]);
+
   const isUnknownSection = !allSectionItems.some((item) => item.id === activeSection);
 
   useEffect(() => {
@@ -226,7 +207,7 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
 
   const isOwnerDailyOpsHomePage = isOwnerRole && activeSection === "overview";
   const activeSectionIndex = sectionItems.findIndex(item => item.id === activeSection);
-  const activeSectionLabel = (isOwnerRole ? ownerNavItems : allSectionItems)
+  const activeSectionLabel = (isOwnerRole ? ownerNavItems : isManagerRole ? managerNavItems : allSectionItems)
     .find(item => item.id === activeSection)?.label ??
     (isOwnerRole && activeSection === "operations" ? "Add" : "Section not found");
 
@@ -257,12 +238,8 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
   const openSection = useCallback((section: string) => {
     if (!allSectionItems.some(item => item.id === section)) return;
     if (isOwnerRole) { navigateOwnerDashboard(section); return; }
-    if (isManagerRole) {
-      const mode = MANAGER_SECTION_MODE_BY_ID[section];
-      if (mode) setManagerWorkflowMode(mode);
-    }
     setActiveSection(section);
-  }, [allSectionItems, isOwnerRole, isManagerRole, navigateOwnerDashboard]);
+  }, [allSectionItems, isOwnerRole, navigateOwnerDashboard]);
   const goToSectionIfVisible = openSection;
   const goToHomePage = useCallback(() => {
     if (isOwnerRole) navigateOwnerDashboard("overview");
@@ -284,18 +261,6 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
     return () => document.removeEventListener("keydown", handleKeydown);
   }, [isOwnerRole]);
 
-  const handleModeChange = (
-    mode: ManagerWorkflowMode,
-    meta: typeof managerWorkflowModeMeta,
-    setMode: typeof setManagerWorkflowMode
-  ) => {
-    setMode(mode as never);
-    const nextSection = meta[mode as keyof typeof meta].sections[0];
-    if (nextSection) {
-      setActiveSection(nextSection);
-    }
-  };
-
   const {
     handlePropertyCreated,
     handleUnitCreated,
@@ -308,17 +273,14 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
     goToSectionIfVisible,
     isOwnerRole,
     isManagerRole,
-    managerWorkflowMode
   });
 
   const sidebarItems = isOwnerRole
     ? ownerNavItems
     : isManagerRole
-      ? managerModeNavItems
+      ? managerNavItems
       : sectionItems;
-  const sidebarActiveItemId = isManagerRole
-    ? activeSection === "tenants" ? activeSection : `manager:${managerWorkflowMode}`
-    : activeSection;
+  const sidebarActiveItemId = activeSection;
   const reportsHref = isOwnerRole
     ? props.activeAccountId
       ? `/owner/reports?account=${encodeURIComponent(props.activeAccountId)}`
@@ -336,10 +298,10 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
     setIsCommandPaletteOpen(false);
   }, []);
   const openPropertyWizard = useCallback(() => {
-    if (isOwnerRole) {
+    if (isOwnerRole || isManagerRole) {
       setIsPropertyWizardOpen(true);
     }
-  }, [isOwnerRole]);
+  }, [isManagerRole, isOwnerRole]);
   const closePropertyWizard = useCallback(() => {
     setIsPropertyWizardOpen(false);
   }, []);
@@ -360,23 +322,6 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
 
   const handleSidebarSelect = (itemId: string) => {
     if (isOwnerRole) { openSection(itemId); return; }
-    if (itemId === "notifications") {
-      if (isManagerRole) setManagerWorkflowMode("daily_ops");
-      setActiveSection("notifications");
-      return;
-    }
-    if (isManagerRole && itemId.startsWith("manager:")) {
-      if (itemId === "manager:new_tenant") {
-        setIsTenantInviteWizardOpen(true);
-        return;
-      }
-      handleModeChange(
-        itemId.replace("manager:", "") as ManagerWorkflowMode,
-        managerWorkflowModeMeta,
-        setManagerWorkflowMode
-      );
-      return;
-    }
     openSection(itemId);
   };
 
@@ -384,11 +329,10 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
     activeSection,
     activeSectionIndex,
     activeSectionLabel,
-    activeWorkflowMeta,
+    activeWorkflowMeta: null,
     allSectionItems,
     isUnknownSection,
     sectionItems,
-    managerWorkflowMode,
     isOwnerDailyOpsHomePage,
     isSectionLoading: Boolean(ownerCache?.loading),
     sidebarItems,

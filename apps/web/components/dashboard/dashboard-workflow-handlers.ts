@@ -1,10 +1,8 @@
 import { useCallback } from "react";
-import type { ManagerWorkflowMode } from "./dashboard-config";
 
 interface DashboardWorkflowHandlerParams {
   isOwnerRole: boolean;
   isManagerRole: boolean;
-  managerWorkflowMode: ManagerWorkflowMode;
   goToSectionIfVisible: (sectionId: string) => void;
 }
 
@@ -12,49 +10,39 @@ export function useDashboardWorkflowHandlers({
   goToSectionIfVisible,
   isManagerRole,
   isOwnerRole,
-  managerWorkflowMode
 }: DashboardWorkflowHandlerParams) {
   const handlePropertyCreated = useCallback(() => {
     if (
       isOwnerRole ||
-      (isManagerRole && managerWorkflowMode === "new_property")
+      isManagerRole
     ) {
       goToSectionIfVisible("portfolio");
     }
-  }, [goToSectionIfVisible, isManagerRole, isOwnerRole, managerWorkflowMode]);
+  }, [goToSectionIfVisible, isManagerRole, isOwnerRole]);
 
   const handleUnitCreated = useCallback(() => {
     if (
       isOwnerRole ||
-      (isManagerRole && managerWorkflowMode === "new_property")
+      isManagerRole
     ) {
       goToSectionIfVisible("units");
     }
-  }, [goToSectionIfVisible, isManagerRole, isOwnerRole, managerWorkflowMode]);
+  }, [goToSectionIfVisible, isManagerRole, isOwnerRole]);
 
   const handleLeaseCreated = useCallback(() => {
-    if (
-      isOwnerRole ||
-      (isManagerRole && managerWorkflowMode === "new_property")
-    ) {
+    if (isOwnerRole || isManagerRole) {
       goToSectionIfVisible("leases");
-      return;
     }
-    if (
-      (isManagerRole && managerWorkflowMode === "new_tenant")
-    ) {
-      goToSectionIfVisible("documents");
-    }
-  }, [goToSectionIfVisible, isManagerRole, isOwnerRole, managerWorkflowMode]);
+  }, [goToSectionIfVisible, isManagerRole, isOwnerRole]);
 
   const handleTenantInviteSuccess = useCallback(() => {
     if (isOwnerRole) { goToSectionIfVisible("invitations"); return; }
     if (
-      (isManagerRole && managerWorkflowMode === "new_tenant")
+      isManagerRole
     ) {
       goToSectionIfVisible("leasing");
     }
-  }, [goToSectionIfVisible, isManagerRole, isOwnerRole, managerWorkflowMode]);
+  }, [goToSectionIfVisible, isManagerRole, isOwnerRole]);
 
   const handleManagerInviteSuccess = useCallback(() => {}, []);
 
@@ -66,11 +54,11 @@ export function useDashboardWorkflowHandlers({
 
   const handleVendorCreatedSuccess = useCallback(() => {
     if (
-      (isManagerRole && managerWorkflowMode === "vendor_ops")
+      isManagerRole
     ) {
       goToSectionIfVisible("maintenance");
     }
-  }, [goToSectionIfVisible, isManagerRole, managerWorkflowMode]);
+  }, [goToSectionIfVisible, isManagerRole]);
 
   return {
     handlePropertyCreated,

@@ -72,7 +72,7 @@ function CommandPaletteTrigger({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-function OwnerFooterLinks() {
+function WorkspaceFooterLinks() {
   return <div className="mt-4 border-t border-[var(--line)] pt-2">
     <a href="/settings" title="Open settings." className={`${navButtonClasses(false)} min-h-11 ${sidebarFocusRing}`}>
       <Settings className="h-4 w-4" />Settings
@@ -291,7 +291,7 @@ export function SidebarNav({
 
       <nav aria-label="Main navigation" className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-4 pb-4 pt-1">
         <NavList navItems={navItems} activeItemId={activeItemId} onSelectItem={onSelectItem} />
-        {role === "owner" ? <OwnerFooterLinks /> : null}
+        {role === "owner" || role === "manager" ? <WorkspaceFooterLinks /> : null}
       </nav>
 
       <div className="sidebar-user-footer-shell">
@@ -467,7 +467,7 @@ export function MobileTopBar({
                   className="min-h-0 flex-1 space-y-1 overflow-y-auto rounded-2xl border border-border bg-card p-2"
                 >
                   <NavList navItems={navItems} activeItemId={activeItemId} onSelectItem={onSelectItem} mobile />
-                  {role === "owner" ? <OwnerFooterLinks /> : null}
+                  {role === "owner" || role === "manager" ? <WorkspaceFooterLinks /> : null}
                 </nav>
 
                 <ThemeToggleGroup />

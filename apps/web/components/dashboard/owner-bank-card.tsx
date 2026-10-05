@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Landmark } from "lucide-react";
 import type { OwnerBankCardState } from "@/lib/owner-bank-status";
 
-export function OwnerBankCard({ state }: { state: OwnerBankCardState }) {
+export function OwnerBankCard({ state, role = "owner" }: { state: OwnerBankCardState; role?: "owner" | "manager" }) {
   if (state.status === "connected") {
     return null;
   }
@@ -13,7 +13,11 @@ export function OwnerBankCard({ state }: { state: OwnerBankCardState }) {
         body: "Your bank is almost ready. Answer a few questions so rent can reach you.",
         button: "Finish setup"
       }
-    : {
+    : role === "manager" ? {
+        title: "Connect your bank to get your fees",
+        body: "Your management fees can’t reach you until this is done.",
+        button: "Connect bank"
+      } : {
         title: "Connect your bank to get paid",
         body: "Rent can’t reach you until this is done. It takes about 5 minutes.",
         button: "Connect bank"

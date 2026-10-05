@@ -1,15 +1,16 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useDashboardNavigation } from "@/components/dashboard/dashboard-section-loaders";
 import { ownerMenuGroups } from "@/components/dashboard/dashboard-config";
 import type { DashboardProps } from "@/components/dashboard/types";
 
 const replaceMock = vi.fn();
+let currentQuery = new URLSearchParams();
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: replaceMock }),
   usePathname: () => "/owner",
-  useSearchParams: () => new URLSearchParams()
+  useSearchParams: () => currentQuery
 }));
 
 const kpis = {
@@ -96,10 +97,27 @@ function NavigationProbe({ initialSectionId }: { initialSectionId: string | null
 
 describe("useDashboardNavigation", () => {
   beforeEach(() => {
+    currentQuery = new URLSearchParams();
+    window.history.replaceState(null, "", "/owner");
     Object.defineProperty(window, "scrollTo", {
       value: vi.fn(),
       writable: true
     });
+  });
+
+  it("drops legacy manager modes and keeps a valid section", async () => {
+    currentQuery = new URLSearchParams("mode=vendor_ops&section=vendors");
+    const { result, rerender } = renderHook(() => useDashboardNavigation(
+      { data: { profileRole: "manager" }, userEmail: "manager@example.com" } as DashboardProps,
+      { ...kpis, isOwnerRole: false, isManagerRole: true, hasVendorsSection: true } as never
+    ));
+
+    expect(result.current.activeSection).toBe("vendors");
+    expect(window.location.search).toBe("?section=vendors");
+
+    currentQuery = new URLSearchParams("mode=new_tenant");
+    rerender();
+    expect(result.current.activeSection).toBe("overview");
   });
 
   it("keeps an unknown query section long enough for the fallback UI to render", () => {
