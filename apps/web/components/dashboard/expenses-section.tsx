@@ -38,7 +38,7 @@ export function ExpensesSection({ data, vendors, propertyFiles, onCreateExpense,
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ExpenseForm data={data} vendors={vendors} propertyFiles={propertyFiles} onCreateExpense={onCreateExpense} />
         <Card className="border border-border/50 shadow-sm">
-          <CardHeader><CardTitle className="text-xl font-semibold">Property P&amp;L</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-xl font-semibold">Money in and out by home</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             {selectedSummary ? (
               <>

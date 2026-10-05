@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { PortfolioSectionContent, SectionFrame, SectionNotFoundState } from "@/components/dashboard/section-renderer-support";
+import { ExpensesSection } from "@/components/dashboard/expenses-section";
 import type { SectionRendererProps } from "@/components/dashboard/section-map";
 
 const availableProperties = [
@@ -100,6 +101,24 @@ describe("SectionFrame property scope control", () => {
     expect(screen.getByText(/doesn't exist for your role/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Back to home" })).toHaveAttribute("href", "/owner");
   });
+
+  it("shows the Rent help once for owners and keeps the manager description", () => {
+    const rentHelp = "Rent is added each month from your leases.";
+    const { unmount } = render(
+      <SectionFrame props={buildProps({ activeSection: "charges" })} sectionName="Rent">
+        <div>Rent content</div>
+      </SectionFrame>
+    );
+    expect(screen.queryByText(rentHelp)).not.toBeInTheDocument();
+    unmount();
+
+    render(
+      <SectionFrame props={buildProps({ activeSection: "charges", data: { profileRole: "manager" } as SectionRendererProps["data"] })} sectionName="Rent">
+        <div>Rent content</div>
+      </SectionFrame>
+    );
+    expect(screen.getByText(rentHelp)).toBeInTheDocument();
+  });
 });
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
@@ -116,6 +135,21 @@ describe("full owner sections", () => {
     })} />);
     for (const property of properties) expect(screen.getByText(property.name)).toBeVisible();
     expect(screen.queryByRole("button", { name: /show all/i })).not.toBeInTheDocument();
+  });
+
+  it("uses the plain money in and out heading in Expenses", () => {
+    render(
+      <ExpensesSection
+        data={{ enabled: true, warning: null, properties: [], expenses: [], pnlByProperty: [], monthlyByProperty: {}, categoryByProperty: {} }}
+        vendors={[]}
+        propertyFiles={[]}
+        onCreateExpense={vi.fn()}
+        onUpdateExpense={vi.fn()}
+        onDeleteExpense={vi.fn()}
+      />
+    );
+    expect(screen.getByText("Money in and out by home")).toBeInTheDocument();
+    expect(screen.queryByText("Property P&L")).not.toBeInTheDocument();
   });
 });
 

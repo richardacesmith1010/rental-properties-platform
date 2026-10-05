@@ -1,6 +1,8 @@
 "use client";
 
 import { Home, Menu, Receipt, Wrench, type LucideIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/format";
 import type { NavItem } from "./sidebar/nav-items";
 
@@ -49,6 +51,12 @@ function BarButton({
 }
 
 export function OwnerBottomBar({ items, activeItemId, onSelectItem, onOpenMore }: OwnerBottomBarProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const lateCount = items.find((item) => item.id === "charges")?.badgeCount ?? 0;
   const buttons = [
     { id: "overview", label: "Home", icon: Home },
@@ -56,7 +64,9 @@ export function OwnerBottomBar({ items, activeItemId, onSelectItem, onOpenMore }
     { id: "maintenance", label: "Repairs", icon: Wrench }
   ];
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <nav
       aria-label="Owner shortcuts"
       className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 gap-1 border-t border-[var(--line)] bg-[color:color-mix(in_srgb,var(--surface)_96%,transparent)] px-2 pb-[max(env(safe-area-inset-bottom,0px),0.5rem)] pt-2 shadow-[0_-8px_24px_color-mix(in_srgb,var(--ink)_10%,transparent)] backdrop-blur lg:hidden"
@@ -70,6 +80,7 @@ export function OwnerBottomBar({ items, activeItemId, onSelectItem, onOpenMore }
         />
       ))}
       <BarButton label="More" icon={Menu} active={false} onClick={onOpenMore} />
-    </nav>
+    </nav>,
+    document.body
   );
 }

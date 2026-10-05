@@ -17,7 +17,11 @@ import { SectionErrorBoundary } from "./section-error-boundary";
 import type { SectionRendererProps } from "./section-map";
 
 function getSectionHelpText(sectionId: string, role: string) {
-  if (sectionId === "charges" && role !== "tenant") {
+  if (sectionId === "charges" && role === "owner") {
+    return null;
+  }
+
+  if (sectionId === "charges" && role === "manager") {
     return "Rent is added each month from your leases.";
   }
 
