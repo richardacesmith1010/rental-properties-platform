@@ -110,7 +110,10 @@ export async function undoFiledItem(admin: Admin, item: {
   id: string; kind: string; created_record: boolean; payment_id: string | null;
   expense_id: string | null; rent_charge_id: string | null; prior_charge_status: "pending" | "late" | null;
 }): Promise<{ success: boolean; error?: string }> {
-  if (!item.created_record) return { success: false, error: "This item cannot be undone here." };
+  if (!item.created_record) {
+    const { error, count } = await admin.from("bank_transactions").delete({ count: "exact" }).eq("id", item.id);
+    return error || count !== 1 ? { success: false, error: "We could not undo this item." } : { success: true };
+  }
   const table = item.kind === "rent" ? "payments" : "property_expenses";
   const id = item.kind === "rent" ? item.payment_id : item.expense_id;
   if (!id) return { success: false, error: "This item cannot be undone here." };

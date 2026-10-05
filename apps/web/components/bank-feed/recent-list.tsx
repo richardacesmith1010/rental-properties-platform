@@ -2,6 +2,8 @@ import { formatCurrency, formatDate } from "@/lib/format";
 
 export interface RecentItem { id: string; posted_on: string; description: string; amount_cents: number;
   direction: "in" | "out"; kind: "rent" | "expense" | "transfer"; propertyName: string }
+export interface NewRecentItem { id: string; postedOn: string; description: string; amountCents: number;
+  direction: "in" | "out"; kind: "rent" | "expense" | "transfer"; propertyName: string }
 
 export function RecentList({ items }: { items: RecentItem[] }) {
   return <section className="domus-card space-y-3 p-4 text-[var(--ink)]">

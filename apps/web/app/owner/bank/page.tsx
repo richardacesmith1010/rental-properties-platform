@@ -1,5 +1,6 @@
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { selectableRentCharges } from "@/lib/bank-feed/match";
 import { BankFeedShell } from "@/components/bank-feed/page-shell";
 import { createBankAccount, importBankRows, answerBankItem, undoBankItem, deleteBankAccount } from "@/app/actions/bank-feed";
 
@@ -46,13 +47,13 @@ export default async function BankPage({ searchParams }: { searchParams?: { acco
   const leases = leasesQuery.data || [];
   const leaseIds = leases.map((item) => item.id);
   const chargesQuery = leaseIds.length ? await admin.from("rent_charges")
-    .select("id, lease_id, due_date, amount_cents").in("lease_id", leaseIds).is("deleted_at", null)
+    .select("id, lease_id, due_date, amount_cents, status, deleted_at").in("lease_id", leaseIds).is("deleted_at", null)
     .order("due_date", { ascending: false }).limit(500) : { data: [], error: null };
   if (chargesQuery.error) return <main className="p-5">Bank activity is not ready yet.</main>;
   const unitMap = new Map(units.map((item) => [item.id, item.property_id]));
   const leaseProperty = new Map(leases.map((item) => [item.id, unitMap.get(item.unit_id)]));
   const propertyMap = new Map(properties.map((item) => [item.id, item.name]));
-  const charges = (chargesQuery.data || []).map((item) => ({ id: item.id,
+  const charges = selectableRentCharges(chargesQuery.data || []).map((item) => ({ id: item.id,
     propertyId: leaseProperty.get(item.lease_id) || "", dueDate: item.due_date, amountCents: item.amount_cents }));
   const recent = (recentQuery.data || []).map((item) => ({ ...item,
     propertyName: item.property_id ? propertyMap.get(item.property_id) || "Home" : "—" }));

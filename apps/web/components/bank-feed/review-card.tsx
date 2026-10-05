@@ -3,13 +3,15 @@
 import { useState } from "react";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { BankChoice, ExpenseCategory, Suggestion } from "@/lib/bank-feed/types";
+import type { NewRecentItem } from "./recent-list";
 import type { ParsedBankRow } from "@/lib/bank-feed/csv";
 
 export interface ReviewItem { i: number; token: string; suggestion?: Suggestion; ruleable?: boolean }
 export interface HomeOption { id: string; name: string }
 export interface RentOption { id: string; propertyId: string; dueDate: string; amountCents: number; status?: string }
 export interface AnswerResult { success: boolean; error?: string; bankTransactionId?: string;
-  createdRecord?: boolean; alreadyRecorded?: boolean; ruleSkipped?: boolean; ruleError?: boolean }
+  createdRecord?: boolean; alreadyRecorded?: boolean; ruleSkipped?: boolean; ruleError?: boolean;
+  recentItem?: NewRecentItem }
 
 const billTypes: Array<{ value: ExpenseCategory; label: string }> = [
   { value: "mortgage", label: "Mortgage" }, { value: "insurance", label: "Insurance" },
@@ -36,7 +38,6 @@ export function ReviewCard({ item, row, properties, charges, onAnswer, onUndo }:
   const [error, setError] = useState("");
   const [done, setDone] = useState<"filed" | "skipped" | null>(null);
   const [filedId, setFiledId] = useState<string | null>(null);
-  const [created, setCreated] = useState(false);
   const [notice, setNotice] = useState("");
   const homeCharges = charges.filter((charge) => charge.propertyId === propertyId
     && charge.status !== "waived"
@@ -56,7 +57,6 @@ export function ReviewCard({ item, row, properties, charges, onAnswer, onUndo }:
       if (!result.success) { setError(result.error || "Try again."); return; }
       setDone(decision === "yes" ? "filed" : "skipped");
       setFiledId(result.bankTransactionId || null);
-      setCreated(!!result.createdRecord);
       if (result.ruleSkipped && decision === "yes") setNotice("Filed. Domus will ask again next time for this one.");
       if (result.ruleError) setNotice("Saved this item. Domus could not save your rule.");
       if (result.alreadyRecorded) setNotice("Already recorded");
@@ -68,13 +68,13 @@ export function ReviewCard({ item, row, properties, charges, onAnswer, onUndo }:
     try {
       const result = await onUndo(filedId);
       if (!result.success) { setError(result.error || "Try again."); return; }
-      setDone(null); setFiledId(null); setCreated(false); setNotice("");
+      setDone(null); setFiledId(null); setNotice("");
     } catch { setError("Try again."); } finally { setBusy(false); }
   }
   if (done) return <article className="domus-card p-4 text-[var(--ink)]">
     <p>{done === "filed" ? `Filed: ${row.description}` : "Skipped. Domus will not ask again."}</p>
     {notice ? <p className="mt-2 text-sm text-[var(--muted)]">{notice}</p> : null}
-    {done === "filed" && created && filedId ? <button type="button" title="Undo this item."
+    {done === "filed" && filedId ? <button type="button" title="Undo this item."
       className="mt-2 min-h-11 text-[var(--accent)] underline" onClick={undo} disabled={busy}>Undo</button> : null}
     {error ? <p role="alert" className="text-[var(--crit)]">{error}</p> : null}
   </article>;

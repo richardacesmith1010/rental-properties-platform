@@ -7,6 +7,7 @@ import { canUserAdministerProperty } from "@/lib/property-access";
 import { logAudit } from "@/lib/audit";
 import { bankFingerprint, createRowToken, verifyRowToken } from "@/lib/bank-feed/fingerprint";
 import { classifyRows, isSpecificMatchText, normalizeDescription } from "@/lib/bank-feed/match";
+import { saveAnswerRule, reverseItemRule } from "@/lib/bank-feed/rules";
 import { fileBankItem, undoFiledItem } from "@/lib/bank-feed/file-item";
 import type { BankCharge, BankChoice, BankProperty, BankRow, BankRule, TransferLeg } from "@/lib/bank-feed/types";
 import { answerBankItemSchema, createBankAccountSchema, deleteBankAccountSchema,
@@ -265,6 +266,11 @@ export async function importBankRows(input: unknown) {
   revalidatePath("/owner/bank");
   return { success: true, ...counts, results };
 }
+async function propertyName(admin: Admin, id: string): Promise<string> {
+  const { data, error } = await admin.from("properties").select("name").eq("id", id).maybeSingle();
+  if (error) console.error("bank_recent_property");
+  return data?.name || "Home";
+}
 export async function answerBankItem(input: unknown) {
   const { user } = await requireAuth("owner");
   if (!limit(user.id, "answer")) return { success: false, error: "Too many tries. Try again soon." };
@@ -333,34 +339,19 @@ export async function answerBankItem(input: unknown) {
     alreadyRecorded = filed.alreadyRecorded || false;
   }
   if (parsed.data.always && ruleable) {
-    const action = parsed.data.decision === "no" ? "skip" : choice?.kind;
-    const rule = { owner_account_id: bank.owner_account_id, bank_account_id: bank.id,
-      direction: row.direction, match_text: matchText, action,
-      lease_id: choice?.kind === "rent" ? validated?.charge?.lease_id : null,
-      property_id: choice?.kind === "expense" ? choice.propertyId : null,
-      expense_category: choice?.kind === "expense" ? choice.category : null,
-      label: choice?.kind === "expense" ? choice.label : null, created_by_profile_id: user.id };
-    const existing = await admin.from("bank_rules").select("id").eq("owner_account_id", bank.owner_account_id)
-      .eq("bank_account_id", bank.id).eq("direction", row.direction).eq("match_text", rule.match_text).maybeSingle();
-    if (existing.error) { console.error("bank_find_rule"); ruleError = true; }
-    else {
-      const saved = existing.data ? await admin.from("bank_rules").update(rule).eq("id", existing.data.id)
-        : await admin.from("bank_rules").insert(rule);
-      if (saved.error?.code === "23505") {
-        const found = await admin.from("bank_rules").select("id").eq("owner_account_id", bank.owner_account_id)
-          .eq("bank_account_id", bank.id).eq("direction", row.direction).eq("match_text", matchText).maybeSingle();
-        if (found.error || !found.data) { console.error("bank_find_rule_conflict"); ruleError = true; }
-        else {
-          const updated = await admin.from("bank_rules").update(rule).eq("id", found.data.id);
-          if (updated.error) { console.error("bank_update_rule_conflict"); ruleError = true; }
-        }
-      } else if (saved.error) { console.error("bank_save_rule"); ruleError = true; }
-    }
+    ruleError = !await saveAnswerRule({ admin, ownerAccountId: bank.owner_account_id,
+      bankAccountId: bank.id, userId: user.id, direction: row.direction, matchText,
+      choice, leaseId: validated?.charge?.lease_id, decision: parsed.data.decision, itemId });
   }
   void logAudit({ userId: user.id, action: "bank_answer", entityType: "bank_account", entityId: bank.id,
     metadata: { bankTransactionId: itemId || null, decision: parsed.data.decision } });
   revalidatePath("/owner/bank");
-  return { success: true, bankTransactionId: itemId, createdRecord, alreadyRecorded,
+  const recentItem = itemId && choice ? { id: itemId, postedOn: row.postedOn,
+    description: row.description, amountCents: row.amountCents, direction: row.direction,
+    kind: choice.kind, propertyName: choice.kind === "transfer" ? "—" :
+      choice.kind === "expense" ? await propertyName(admin, choice.propertyId) :
+        await propertyName(admin, validated?.charge?.property_id || "") } : undefined;
+  return { success: true, bankTransactionId: itemId, recentItem, createdRecord, alreadyRecorded,
     ruleSkipped: parsed.data.always && !ruleable, ruleError };
 }
 export async function undoBankItem(input: unknown) {
@@ -377,6 +368,9 @@ export async function undoBankItem(input: unknown) {
   if (item.property_id && !await propertyAllowed(admin, user.id, bank.owner_account_id, item.property_id)) {
     return { success: false, error: ACCESS };
   }
+  if (item.matched_by !== "owner") return { success: false, error: "This item cannot be undone here." };
+  const ruleResult = await reverseItemRule(admin, item);
+  if (!ruleResult.success) return ruleResult;
   const result = await undoFiledItem(admin, item);
   if (!result.success) return result;
   void logAudit({ userId: user.id, action: "bank_undo", entityType: "bank_account", entityId: bank.id,

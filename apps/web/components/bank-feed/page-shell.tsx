@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { ParsedBankRow } from "@/lib/bank-feed/csv";
@@ -37,6 +37,8 @@ export function BankFeedShell({ ownerAccountId, accounts, bankAccounts, properti
   const [summary, setSummary] = useState<ImportResult | null>(null);
   const [error, setError] = useState("");
   const [removing, setRemoving] = useState(false);
+  const [recentItems, setRecentItems] = useState(recent);
+  useEffect(() => setRecentItems(recent), [recent]);
 
   async function importRows(id: string, parsedRows: ParsedBankRow[]) {
     setImportBankAccountId(id); setRows(parsedRows); setError("");
@@ -54,12 +56,21 @@ export function BankFeedShell({ ownerAccountId, accounts, bankAccounts, properti
     choice?: BankChoice): Promise<AnswerResult> {
     const result = await actions.answerBankItem({ bankAccountId: importBankAccountId,
       token: item.token, decision, always, choice });
-    if (result.success) router.refresh();
+    if (result.success) {
+      if (result.recentItem) {
+        const item = result.recentItem;
+        setRecentItems((current) => [{ id: item.id, posted_on: item.postedOn,
+          description: item.description, propertyName: item.propertyName, kind: item.kind,
+          amount_cents: item.amountCents, direction: item.direction },
+        ...current.filter((entry) => entry.id !== item.id)].slice(0, 20));
+      }
+      router.refresh();
+    }
     return result;
   }
   async function undo(id: string) {
     const result = await actions.undoBankItem({ bankTransactionId: id });
-    if (result.success) router.refresh();
+    if (result.success) { setRecentItems((current) => current.filter((item) => item.id !== id)); router.refresh(); }
     return result;
   }
   async function remove() {
@@ -105,7 +116,7 @@ export function BankFeedShell({ ownerAccountId, accounts, bankAccounts, properti
         setPersonal((current) => current.filter((entry) => entry.i !== item.i));
         setAsk((current) => [...current, item]);
       }} /> : null}
-      <RecentList items={recent} />
+      <RecentList items={recentItems} />
       <p className="text-sm text-[var(--muted)]">
         Domus only keeps rental items. It can only read your files. It can never move money.
       </p>

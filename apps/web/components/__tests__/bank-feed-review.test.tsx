@@ -47,4 +47,27 @@ describe("bank review card", () => {
     expect(screen.queryByRole("option", { name: /Oct.*2350/ })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Yes, that's right" })).toBeDisabled();
   });
+  it("shows the home in a bill suggestion", () => {
+    render(<ReviewCard item={{ i: 0, token: "token", suggestion: { text: "Mortgage · 1st Home",
+      kind: "expense", propertyId: "home", category: "mortgage", label: "Mortgage" } }}
+      row={row} properties={properties} charges={[]} {...actions} />);
+    expect(screen.getByText("Looks like: Mortgage · 1st Home")).toBeInTheDocument();
+  });
+  it("offers undo for an already recorded rent and a transfer", async () => {
+    const onAnswer = vi.fn(async () => ({ success: true, bankTransactionId: "item", createdRecord: false,
+      alreadyRecorded: true }));
+    const rent = render(<ReviewCard item={{ i: 0, token: "token" }}
+      row={{ ...row, direction: "in" }} properties={properties} charges={[{ id: "charge", propertyId: "home",
+        dueDate: row.postedOn, amountCents: row.amountCents, status: "paid" }]}
+      onAnswer={onAnswer} onUndo={actions.onUndo} />);
+    fireEvent.change(screen.getByTitle("Pick a home."), { target: { value: "home" } });
+    fireEvent.click(screen.getByRole("button", { name: "Yes, that's right" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument());
+    rent.unmount();
+    render(<ReviewCard item={{ i: 0, token: "token" }} row={row} properties={properties} charges={[]}
+      onAnswer={onAnswer} onUndo={actions.onUndo} />);
+    fireEvent.change(screen.getByTitle("Pick a type."), { target: { value: "transfer" } });
+    fireEvent.click(screen.getByRole("button", { name: "Yes, that's right" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument());
+  });
 });

@@ -1,5 +1,9 @@
 import type { BankCharge, BankChoice, BankProperty, BankRow, BankRule, MatchResult, TransferLeg } from "./types";
 
+export function selectableRentCharges<T extends { status: string; deleted_at: string | null }>(items: T[]): T[] {
+  return items.filter((item) => item.status !== "waived" && item.deleted_at === null);
+}
+
 export function normalizeDescription(value: string): string {
   return value.toUpperCase().replace(/\(CASH\)/g, " ").replace(/\d{5,}/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -26,7 +30,8 @@ function bestCharge(row: BankRow, charges: BankCharge[], leaseId?: string): Bank
 }
 
 const BILL_WORDS: Array<{ test: RegExp; category: BankChoice & { kind: "expense" }; text: string }> = [
-  { test: /MORTGAGE/, category: { kind: "expense", propertyId: "", category: "mortgage", label: "Mortgage" }, text: "Mortgage" },
+  { test: /MORTGAGE/, category: { kind: "expense", propertyId: "", category: "mortgage", label: "Mortgage" },
+    text: "Mortgage" },
   { test: /SOLAR/, category: { kind: "expense", propertyId: "", category: "utility", label: "Solar" }, text: "Solar" },
   { test: /WATER|ISPC/, category: { kind: "expense", propertyId: "", category: "utility", label: "Water" }, text: "Water" },
   { test: /PEST/, category: { kind: "expense", propertyId: "", category: "maintenance", label: "Pest control" }, text: "Pest control" },
@@ -114,7 +119,8 @@ export function classifyRows(input: {
       if (bill) {
         const propertyId = input.properties.length === 1 ? input.properties[0].id : null;
         return { i: row.i, status: "ask", suggestion: { kind: "expense", propertyId,
-          category: bill.category.category, label: bill.category.label, text: bill.text } };
+          category: bill.category.category, label: bill.category.label,
+          text: propertyId ? `${bill.text} · ${input.properties[0].name}` : bill.text } };
       }
     }
     return { i: row.i, status: "personal" };

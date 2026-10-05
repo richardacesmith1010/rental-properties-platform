@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyRows, isSpecificMatchText, normalizeDescription } from "@/lib/bank-feed/match";
+import { classifyRows, isSpecificMatchText, normalizeDescription, selectableRentCharges } from "@/lib/bank-feed/match";
 import type { BankRow, BankRule, TransferLeg } from "@/lib/bank-feed/types";
 
 const charge = { id: "nov", leaseId: "lease", propertyId: "home", propertyName: "1st Home",
@@ -113,5 +113,10 @@ describe("bank matching", () => {
     expect(isSpecificMatchText("TRANSFER TO MORTGAGE")).toBe(true);
     expect(isSpecificMatchText("- ISPC XX0028")).toBe(true);
     expect(normalizeDescription(" paid (Cash) 123456 abc ")).toBe("PAID ABC");
+  });
+  it("excludes waived and deleted rent from the owner picker", () => {
+    expect(selectableRentCharges([{ id: "open", status: "pending", deleted_at: null },
+      { id: "waived", status: "waived", deleted_at: null },
+      { id: "deleted", status: "pending", deleted_at: "2026-10-05" }]).map((item) => item.id)).toEqual(["open"]);
   });
 });

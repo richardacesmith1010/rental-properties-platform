@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { BankFeedShell } from "@/components/bank-feed/page-shell";
@@ -14,11 +15,16 @@ vi.mock("@/components/bank-feed/upload-card", () => ({
   </div>
 }));
 vi.mock("@/components/bank-feed/review-card", () => ({
-  ReviewCard: ({ item, onAnswer }: { item: unknown; onAnswer: (item: unknown, decision: "yes",
-    always: boolean) => Promise<unknown> }) =>
-    <button onClick={() => void onAnswer(item, "yes", false)}>Answer item</button>
+  ReviewCard: ({ item, onAnswer, onUndo }: { item: unknown; onAnswer: (item: unknown, decision: "yes",
+    always: boolean) => Promise<{ bankTransactionId?: string }>; onUndo: (id: string) => Promise<unknown> }) => {
+    const [id, setId] = useState("");
+    return <div><button onClick={() => void onAnswer(item, "yes", false).then((result) =>
+      setId(result.bankTransactionId || ""))}>Answer item</button>
+      {id ? <button onClick={() => void onUndo(id)}>Undo item</button> : null}</div>;
+  }
 }));
-vi.mock("@/components/bank-feed/recent-list", () => ({ RecentList: () => null }));
+vi.mock("@/components/bank-feed/recent-list", () => ({ RecentList: ({ items }: {
+  items: Array<{ description: string }> }) => <div>{items.map((item) => <span key={item.description}>{item.description}</span>)}</div> }));
 vi.mock("@/components/bank-feed/missed-list", () => ({ MissedList: () => null }));
 
 describe("bank account selection", () => {
@@ -54,5 +60,22 @@ describe("bank account selection", () => {
     await waitFor(() => expect(deleteBankAccount).toHaveBeenCalledWith({ bankAccountId: "account-b" }));
     expect(confirm).toHaveBeenCalledWith("Remove Savings? Filed rent and bills stay.");
     confirm.mockRestore();
+  });
+  it("updates recent items immediately after answer and undo", async () => {
+    const actions = { createBankAccount: vi.fn(), importBankRows: vi.fn(async () => ({ success: true,
+      results: [{ i: 0, status: "ask" as const, token: "signed-token" }] })),
+    answerBankItem: vi.fn(async () => ({ success: true, bankTransactionId: "filed",
+      recentItem: { id: "filed", postedOn: "2026-10-01", description: "New bill", propertyName: "Home",
+        amountCents: 100, direction: "out" as const, kind: "expense" as const } })),
+    undoBankItem: vi.fn(async () => ({ success: true })), deleteBankAccount: vi.fn() };
+    render(<BankFeedShell ownerAccountId="owner" accounts={[]} bankAccounts={[
+      { id: "account-a", nickname: "Checking", institution: "other" }
+    ]} properties={[]} charges={[]} recent={[]} actions={actions} />);
+    fireEvent.click(screen.getByText("Import A"));
+    await waitFor(() => expect(screen.getByText("Answer item")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Answer item"));
+    await waitFor(() => expect(screen.getByText("New bill")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Undo item"));
+    await waitFor(() => expect(screen.queryByText("New bill")).not.toBeInTheDocument());
   });
 });
