@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { CreditCard, FileText, MessageSquareText, Wrench } from "lucide-react";
+import { ChevronRight, Wrench } from "lucide-react";
 import type { ActionState } from "@/app/actions";
 import { formatCurrency, formatDate, formatUnitLabel } from "@/lib/format";
 import type { TenantCharge } from "@/lib/tenant-payments";
 import { Card, CardContent } from "@/components/ui/card";
 import { PayRentCard, type AutopayEnrollmentView } from "@/components/dashboard/pay-rent-card";
-import { useTimeOfDayGreeting } from "./use-time-of-day-greeting";
 import { isCollectedOutsideDomus } from "@/lib/lease-collection";
+import type { TenantPayState } from "@/lib/tenant-pay-state";
 
 type TenantOverviewSection = "charges" | "maintenance" | "documents" | "notifications";
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
@@ -29,6 +29,11 @@ interface TenantOverviewProps {
     monthlyRentCents: number;
   } | null;
   openTicketCount: number;
+  tickets?: Array<{ id: string; title: string; status: string }>;
+  payState?: TenantPayState;
+  rentDueDate?: string | null;
+  rentAmountCents?: number | null;
+  lastPaidAt?: string | null;
   onPayCharge: (formData: FormData) => Promise<void>;
   onPayWithACH?: (formData: FormData) => Promise<void>;
   onRequestManualPaymentConfirmation: StatefulAction;
@@ -46,11 +51,16 @@ function getDaysUntil(dateValue: string) {
 }
 
 export function TenantOverview({
-  userName,
+  userName: _userName,
   charges,
   nextCharge,
   lease,
   openTicketCount,
+  tickets = [],
+  payState,
+  rentDueDate,
+  rentAmountCents,
+  lastPaidAt,
   onPayCharge,
   onPayWithACH,
   onRequestManualPaymentConfirmation,
@@ -58,21 +68,16 @@ export function TenantOverview({
   autopayEnrollments = [],
   onSetupAutopay
 }: TenantOverviewProps) {
-  const greeting = useTimeOfDayGreeting();
   const summary = (() => {
     if (!nextCharge) {
-      if (!hasActiveLease) {
-        return "Your landlord hasn't set up your lease yet.";
-      }
-      return "You're all caught up - no payments due.";
+      return hasActiveLease ? "No rent posted yet." : "Your landlord hasn't set up your lease yet.";
     }
 
     const daysUntil = getDaysUntil(nextCharge.dueDate);
     if (daysUntil < 0) {
-      if (isCollectedOutsideDomus(charges[0])) {
-        return `You have a payment of ${formatCurrency(nextCharge.amountCents)} due ${formatDate(nextCharge.dueDate)}.`;
-      }
-      return `You have a payment of ${formatCurrency(nextCharge.amountCents)} that is overdue.`;
+      return isCollectedOutsideDomus(charges[0])
+        ? `You pay ${formatCurrency(nextCharge.amountCents)} outside Domus.`
+        : `${formatCurrency(nextCharge.amountCents)} is ${Math.abs(daysUntil)} day${Math.abs(daysUntil) === 1 ? "" : "s"} late.`;
     }
     if (daysUntil === 0) {
       return `Your rent of ${formatCurrency(nextCharge.amountCents)} is due today.`;
@@ -91,46 +96,36 @@ export function TenantOverview({
         hasActiveLease={hasActiveLease}
         autopayEnrollments={autopayEnrollments}
         onSetupAutopay={onSetupAutopay}
+        payState={payState}
+        rentDueDate={rentDueDate}
+        showManualPaymentControl={false}
+        rentAmountCents={rentAmountCents}
+        lastPaidAt={lastPaidAt}
       />
 
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          {greeting ? `${greeting}, ${userName}` : userName}
-        </h1>
+        {lease ? <p className="text-sm font-medium text-muted-foreground">{lease.propertyName} · {formatUnitLabel(lease.unitLabel)}</p> : null}
         <p className="mt-1 text-sm text-muted-foreground">{summary}</p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <QuickActionCard
-          href={buildSectionHref("charges")}
-          icon={CreditCard}
-          title="Rent"
-          description={nextCharge ? "Pay your rent and review receipts." : "Review your payment history and receipts."}
-        />
-        <QuickActionCard
-          href={buildSectionHref("maintenance")}
-          icon={Wrench}
-          title="Problems"
-          description={openTicketCount > 0 ? `${openTicketCount} problem${openTicketCount === 1 ? "" : "s"} currently open.` : "Report an issue in your home."}
-        />
-        <QuickActionCard
-          href={buildSectionHref("notifications")}
-          icon={MessageSquareText}
-          title="Messages"
-          description="Read updates from your landlord and reply in one place."
-        />
-        <QuickActionCard
-          href={buildSectionHref("documents")}
-          icon={FileText}
-          title="Lease"
-          description="Open your lease packet and shared rental documents."
-        />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Link href={buildSectionHref("maintenance")} className="domus-card flex min-h-16 items-center justify-between p-4" title="Report a problem.">
+          <span className="flex items-center gap-3"><Wrench className="h-5 w-5 text-[var(--accent)]" /><span className="font-semibold">Report a problem</span></span><ChevronRight className="h-4 w-4" />
+        </Link>
+        <Link href={buildSectionHref("notifications")} className="domus-card flex min-h-16 items-center justify-between p-4" title="Message your landlord.">
+          <span className="font-semibold">Message landlord</span><ChevronRight className="h-4 w-4" />
+        </Link>
       </div>
+
+      <section className="space-y-3">
+        <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">Your problems</h2><Link href={buildSectionHref("maintenance")} className="text-sm font-semibold text-[var(--accent)]" title="See all problems.">See all</Link></div>
+        {tickets.length > 0 ? tickets.slice(0, 3).map((ticket) => <div key={ticket.id} className="domus-card flex items-center justify-between p-4"><span className="truncate text-sm font-medium">{ticket.title}</span><span className="rounded-full bg-[var(--accent-weak)] px-2 py-1 text-xs capitalize text-[var(--accent)]">{ticket.status.replaceAll("_", " ")}</span></div>) : <p className="text-sm text-muted-foreground">{openTicketCount > 0 ? `${openTicketCount} open problems.` : "No open problems."}</p>}
+      </section>
 
       {lease ? (
         <Card className="border border-border/50 shadow-sm">
           <CardContent className="p-5">
-            <h2 className="text-lg font-semibold text-foreground">Your Lease</h2>
+            <Link href={buildSectionHref("documents")} className="flex items-center justify-between text-lg font-semibold text-foreground" title="See your lease details."><span>Your lease</span><ChevronRight className="h-4 w-4" /></Link>
             <div className="mt-4 grid gap-y-3 sm:grid-cols-[140px_minmax(0,1fr)] sm:items-center">
               <span className="text-sm text-muted-foreground">Property</span>
               <span className="text-sm font-medium text-foreground">
@@ -149,35 +144,5 @@ export function TenantOverview({
         </Card>
       ) : null}
     </div>
-  );
-}
-
-function QuickActionCard({
-  href,
-  icon: Icon,
-  title,
-  description
-}: {
-  href: string;
-  icon: typeof CreditCard;
-  title: string;
-  description: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="rounded-xl border border-border/50 bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
-      title={description}
-    >
-      <div className="flex items-start gap-3">
-        <div className="rounded-xl bg-primary/10 p-2 text-primary">
-          <Icon className="h-5 w-5" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-foreground">{title}</p>
-          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-        </div>
-      </div>
-    </Link>
   );
 }

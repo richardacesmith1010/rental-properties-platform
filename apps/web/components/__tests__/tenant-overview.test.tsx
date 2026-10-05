@@ -43,7 +43,7 @@ describe("TenantOverview outside-Domus status", () => {
       />
     );
 
-    expect(screen.getByText(/payment of \$2,350 due Oct 1, 2026/i)).toBeInTheDocument();
+    expect(screen.getByText(/You pay \$2,350 outside Domus/i)).toBeInTheDocument();
     expect(screen.queryByText(/overdue/i)).not.toBeInTheDocument();
   });
 });

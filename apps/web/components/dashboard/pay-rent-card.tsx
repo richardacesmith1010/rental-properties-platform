@@ -11,6 +11,7 @@ import { getChargeUrgency } from "@/lib/rent-urgency";
 import type { TenantCharge } from "@/lib/tenant-payments";
 import { cn, formatCurrency, formatDate, formatUnitLabel } from "@/lib/format";
 import { calculateCardFee, formatCentsAsDollars } from "@/lib/payment-fees";
+import type { TenantPayState } from "@/lib/tenant-pay-state";
 
 type StatefulAction = (
   prev: ActionState,
@@ -37,6 +38,11 @@ interface PayRentCardProps {
   hasActiveLease?: boolean;
   autopayEnrollments?: AutopayEnrollmentView[];
   onSetupAutopay?: StatefulAction;
+  payState?: TenantPayState;
+  rentDueDate?: string | null;
+  showManualPaymentControl?: boolean;
+  rentAmountCents?: number | null;
+  lastPaidAt?: string | null;
 }
 
 const noopStatefulAction: StatefulAction = async () => ({
@@ -79,6 +85,11 @@ export function PayRentCard({
   hasActiveLease = true,
   autopayEnrollments = [],
   onSetupAutopay
+  ,payState = "can_pay"
+  ,rentDueDate = null
+  ,showManualPaymentControl = true
+  ,rentAmountCents = null
+  ,lastPaidAt = null
 }: PayRentCardProps) {
   const [manualState, manualAction] = useFormState(
     onRequestManualPaymentConfirmation ?? noopStatefulAction,
@@ -105,9 +116,9 @@ export function PayRentCard({
                   <CheckCircle2 className="h-4 w-4" />
                   You&apos;re all set
                 </div>
-                <h2 className="text-2xl font-bold text-foreground sm:text-3xl">No payments due right now</h2>
+                <h2 className="text-2xl font-bold text-foreground sm:text-3xl">{payState === "not_posted" ? "Next rent" : payState === "paid" ? "Rent paid" : "No payments due right now"}</h2>
                 <p className="max-w-xl text-sm text-muted-foreground">
-                  Your balance is clear. When a new rent charge posts, it will show up here first.
+                  {payState === "paid" && lastPaidAt ? `Paid ${formatDate(lastPaidAt)}. Thank you!` : payState === "not_posted" && rentDueDate ? `${rentAmountCents ? formatCurrency(rentAmountCents) : "Rent"} is due ${formatDate(rentDueDate)}. You can pay once it is posted.` : "Your balance is clear. When a new rent charge posts, it will show up here first."}
                 </p>
               </>
             ) : (
@@ -124,9 +135,9 @@ export function PayRentCard({
           <Link
             href={chargesHref}
             className="text-sm font-medium text-[var(--accent)] underline-offset-4 hover:underline"
-            title="Open your charges and payment history."
+            title="Open your rent and past payments."
           >
-            View payment history
+            View past payments
           </Link>
         </CardContent>
       </Card>
@@ -147,6 +158,7 @@ export function PayRentCard({
   const enrollment = autopayEnrollments.find((item) => item.leaseId === charge.leaseId) ?? null;
   const autopayEnabled = enrollment?.enabled === true;
   const autopayPaused = enrollment?.enabled === false;
+  const showPaymentControls = payState === "can_pay";
 
   return (
     <Card
@@ -213,7 +225,7 @@ export function PayRentCard({
               ) : null}
             </div>
 
-            <div className="space-y-3">
+            {showPaymentControls ? <div className="space-y-3">
               <div className="space-y-3" role="radiogroup" aria-label="Payment method">
                 <div className="relative rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[var(--domus-shadow-sm)] has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent-weak)]">
                   <input
@@ -331,7 +343,7 @@ export function PayRentCard({
                 </div>
               ) : null}
 
-              <form action={manualAction} className="text-center sm:text-left">
+              {showManualPaymentControl ? <form action={manualAction} className="text-center sm:text-left">
                 <input type="hidden" name="chargeId" value={charge.id} />
                 <SubmitButton
                   variant="link"
@@ -348,8 +360,10 @@ export function PayRentCard({
                     {manualState.message ?? "Manual payment request sent for owner confirmation."}
                   </p>
                 ) : null}
-              </form>
-            </div>
+              </form> : null}
+            </div> : <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface-2)] p-4 text-sm text-[var(--muted)]">
+              {payState === "outside" ? "You pay your landlord outside Domus." : "Online pay is not on yet. Your landlord is still setting it up. Pay them the way you usually do for now."}
+            </div>}
           </div>
         </div>
       </CardContent>

@@ -42,7 +42,7 @@ export const defaultNavItems: NavItem[] = [
   },
   {
     id: "charges",
-    label: "Rent",
+    label: "Home",
     icon: Receipt,
     description: "Rent due dates and payment status.",
     clickHint: "open rent"
@@ -146,7 +146,15 @@ export const tenantNavItems: NavItem[] = [
     label: "Rent",
     icon: LayoutDashboard,
     href: "/tenant?section=overview",
-    description: "Pay rent, review due dates, and see your next payment.",
+    description: "See what you owe and what needs attention.",
+    clickHint: "open home"
+  },
+  {
+    id: "charges",
+    label: "Rent",
+    icon: Receipt,
+    href: "/tenant?section=charges",
+    description: "Pay rent and see past payments.",
     clickHint: "open rent"
   },
   {
@@ -159,7 +167,7 @@ export const tenantNavItems: NavItem[] = [
   },
   {
     id: "documents",
-    label: "Lease",
+    label: "Your lease",
     icon: FileSignature,
     href: "/tenant?section=documents",
     description: "Open your lease packet and rental documents.",

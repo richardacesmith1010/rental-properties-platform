@@ -159,7 +159,7 @@ describe("PayRentCard", () => {
 
     expect(screen.getByText("You're all set")).toBeInTheDocument();
     expect(screen.getByText("No payments due right now")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View payment history" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "View past payments" })).toHaveAttribute(
       "href",
       "/tenant?section=charges"
     );

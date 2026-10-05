@@ -294,8 +294,8 @@ export function InboxSection({
               notifications.length === 0 && !query.trim() && readFilter === "all" && typeFilter === "all" ? (
                 <EmptyState
                   icon={Mail}
-                  title="No messages"
-                  description="Your inbox is empty."
+                  title="No messages yet"
+                  description="Your landlord can message you here."
                 />
               ) : (
                 <EmptyState message="No inbox events match these filters. Try clearing search or status filters." />

@@ -170,7 +170,7 @@ export function TicketForm({
           <FormError state={state} />
           <FormSuccess
             state={state}
-            message="Got it! Your landlord has been notified. We&apos;ll update you when there&apos;s progress."
+            message="Sent. You&apos;ll see updates on Home."
           />
 
           {activeUnit ? (
@@ -191,6 +191,16 @@ export function TicketForm({
               required
             />
           </label>
+
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium text-foreground">How bad is it?</legend>
+            <div className="grid grid-cols-2 gap-2">
+              {([['medium', 'It can wait'], ['high', 'Fix it soon']] as const).map(([value, label]) => (
+                <button key={value} type="button" onClick={() => setDraft((current) => ({ ...current, priority: value }))} className={`min-h-11 rounded-xl border px-3 text-sm font-semibold ${draft.priority === value ? "border-[var(--accent)] bg-[var(--accent-weak)] text-[var(--accent)]" : "border-[var(--line)] bg-[var(--surface)] text-[var(--muted)]"}`} title={`Set priority: ${label}.`} aria-pressed={draft.priority === value}>{label}</button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">Emergency like fire, gas, or flooding? Call 911 first.</p>
+          </fieldset>
 
           {photoWorkflowEnabled ? (
             <div className="space-y-2">
@@ -213,7 +223,7 @@ export function TicketForm({
             onClick={handleSubmit}
             title="Report this problem."
           >
-            {isSubmitting ? "Reporting..." : "Report Problem"}
+            {isSubmitting ? "Sending..." : "Send to landlord"}
           </Button>
 
           <p className="text-center text-xs text-muted-foreground">

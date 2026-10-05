@@ -57,7 +57,7 @@ test.describe.serial("Tenant dashboard", () => {
     await expect(page).toHaveURL(/\/tenant/, { timeout: 10000 });
     await page.goto("/tenant?section=charges");
 
-    await expect(page.getByRole("heading", { name: "Rent Payments" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Rent" })).toBeVisible();
     await expect(page.getByText(/E2E Test Property/).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Pay with Card" })).toBeVisible();
   });

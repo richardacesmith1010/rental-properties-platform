@@ -10,8 +10,7 @@ test.describe("Tenant flows", () => {
   test("loads the tenant dashboard home", async ({ page }) => {
     await loginTenantOrSkip(page);
 
-    await expect(page.getByRole("heading", { name: "Tenant Portal" })).toBeVisible();
-    await expect(page.getByText(/good (morning|afternoon|evening),/i).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Hi,/ })).toBeVisible();
     await expect(
       page.getByRole("heading", { name: /no payments due right now|your rent|rent paid!/i }).first()
     ).toBeVisible();
@@ -21,9 +20,8 @@ test.describe("Tenant flows", () => {
     await loginTenantOrSkip(page);
     await page.goto("/tenant?section=charges");
 
-    await expect(page.getByRole("heading", { name: "Payment History", level: 2 })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Rent Payments" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Payment History", level: 3 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Rent", level: 2 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Past payments" })).toBeVisible();
 
     const paymentStateVisible =
       (await page.getByRole("link", { name: /view receipt/i }).count()) > 0 ||

@@ -73,6 +73,7 @@ interface ChargesSectionProps {
   simpleRentView?: boolean;
   showBankConnectionNotice?: boolean;
   bankConnected?: boolean;
+  hideTenantPaymentControls?: boolean;
 }
 
 const unavailableAction: StatefulAction = async () => ({
@@ -151,7 +152,8 @@ export function ChargesSection({
   isOwnerView = false,
   simpleRentView: simpleRentViewProp,
   showBankConnectionNotice,
-  bankConnected = true
+  bankConnected = true,
+  hideTenantPaymentControls = false
 }: ChargesSectionProps) {
   const simpleRentView = simpleRentViewProp ?? isOwnerView;
   const router = useRouter();
@@ -433,7 +435,7 @@ export function ChargesSection({
           </AnimatedList>
         ) : null}
 
-        <ChargeSectionFilters simpleRentView={simpleRentView} activeFilter={activeFilter} pendingCount={pendingCount} lateCount={lateCount} paidThisMonthCount={paidThisMonthCount} onChange={setActiveFilter} />
+        {!isTenantView ? <ChargeSectionFilters simpleRentView={simpleRentView} activeFilter={activeFilter} pendingCount={pendingCount} lateCount={lateCount} paidThisMonthCount={paidThisMonthCount} onChange={setActiveFilter} /> : null}
 
         {showManualPayment ? (
           <InlineAlert state={manualPaymentState} defaultMessage="Payment recorded." />
@@ -469,13 +471,13 @@ export function ChargesSection({
         {filteredCharges.length === 0 ? (
           <EmptyState
             icon={CreditCard}
-            title={charges.length === 0 ? (isTenantView ? "No charges yet" : "No rent yet") : (isTenantView ? "No matching charges" : "No matching rent")}
+            title={charges.length === 0 ? (isTenantView ? "No rent posted yet" : "No rent yet") : (isTenantView ? "No matching rent" : "No matching rent")}
             description={
               charges.length === 0
                 ? isTenantView
-                  ? "No charges yet. Charges are generated automatically on the 1st of each month."
+                  ? "No rent posted yet. Rent is added each month from your lease."
                   : "Rent will appear here after you create a lease."
-                : isTenantView ? "No charges match this filter right now." : "No rent matches this filter right now."
+                : isTenantView ? "No rent matches this view right now." : "No rent matches this filter right now."
             }
           />
         ) : (
@@ -484,7 +486,7 @@ export function ChargesSection({
               {visibleCharges.map((charge, index) => {
                 const manualFormOpen = manualPaymentChargeId === charge.id;
                 const ownerConnected = ownerConnectedMap?.get(charge.propertyId) ?? stripeConnected ?? true;
-                const paymentsAvailable = stripeConfigured && ownerConnected;
+                const paymentsAvailable = !hideTenantPaymentControls && stripeConfigured && ownerConnected;
                 const category = charge.category ?? "rent";
                 const canModify = !isTenantView && (charge.status === "pending" || charge.status === "late");
 

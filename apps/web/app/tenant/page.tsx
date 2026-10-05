@@ -44,28 +44,22 @@ import { EmptyState as DashboardEmptyState } from "@/components/shared/empty-sta
 import { StripeTestModeBanner } from "@/components/shared/stripe-test-mode-banner";
 import { formatCurrency, formatDate, formatDateTime, formatUnitLabel } from "@/lib/format";
 import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
-import { ChevronLeft, ChevronRight, CreditCard } from "lucide-react";
+import { CreditCard } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { redirect } from "next/navigation";
 import { SectionNotFoundState } from "@/components/dashboard/section-renderer-support";
+import { TenantBottomBar } from "@/components/dashboard/tenant-bottom-bar";
+import { getTenantPayState, getNextRentDueDate } from "@/lib/tenant-pay-state";
 
 export const dynamic = "force-dynamic";
 
 type TenantSection = "overview" | "charges" | "maintenance" | "documents" | "notifications";
 
-const tenantSectionOrder: TenantSection[] = [
-  "overview",
-  "charges",
-  "maintenance",
-  "documents",
-  "notifications"
-];
-
 const tenantSectionLabel: Record<TenantSection, string> = {
-  overview: "Rent",
-  charges: "Payment History",
+  overview: "Home",
+  charges: "Rent",
   maintenance: "Problems",
   documents: "Lease",
   notifications: "Messages"
@@ -83,12 +77,6 @@ function isTenantSection(value: string | null): value is TenantSection {
     value === "maintenance" ||
     value === "documents" ||
     value === "notifications";
-}
-
-function buildTenantHref(section: TenantSection) {
-  const params = new URLSearchParams();
-  params.set("section", section);
-  return `/tenant?${params.toString()}`;
 }
 
 function getTenantDisplayName(params: {
@@ -131,12 +119,6 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
   const sectionValue = parseSearchParam(searchParams?.section);
   const hasUnknownSection = sectionValue !== null && !isTenantSection(sectionValue);
   const activeSection: TenantSection = isTenantSection(sectionValue) ? sectionValue : "overview";
-  const activeSectionIndex = tenantSectionOrder.indexOf(activeSection);
-  const previousSection = !hasUnknownSection && activeSectionIndex > 0 ? tenantSectionOrder[activeSectionIndex - 1] : null;
-  const nextSection = !hasUnknownSection && activeSectionIndex < tenantSectionOrder.length - 1
-    ? tenantSectionOrder[activeSectionIndex + 1]
-    : null;
-
   const capabilities = await getFeatureCapabilities();
 
   const [
@@ -170,16 +152,8 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
     getAutopayEnrollments(user.id)
   ]);
 
-  const outstandingCents = paymentData.charges.reduce(
-    (sum, charge) => sum + charge.amountCents,
-    0
-  );
-  const lateChargeCount = paymentData.charges.filter((charge) => charge.status === "late").length;
   const openTicketCount = maintenanceData.tickets.filter(
     (ticket) => ticket.status === "open" || ticket.status === "in_progress"
-  ).length;
-  const pendingDocumentCount = documentsData.packets.filter(
-    (packet) => packet.signerStatus !== "signed"
   ).length;
   const unreadNotificationCount = notifications.filter((notification) => !notification.readAt).length;
   const displayName = getTenantDisplayName({
@@ -199,13 +173,24 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
         endDate: leaseDetails[0].endDate,
         propertyName: leaseDetails[0].propertyName,
         unitLabel: leaseDetails[0].unitNumber,
-        monthlyRentCents: leaseDetails[0].monthlyRentCents
+      monthlyRentCents: leaseDetails[0].monthlyRentCents
       }
     : null;
   const hasActiveLease = leaseDetails.length > 0;
   const ownerConnectedMap = await arePropertyOwnersConnected(
     paymentData.charges.map((charge) => charge.propertyId)
   );
+  const currentCharge = paymentData.charges[0] ?? null;
+  const ownerConnected = currentCharge ? ownerConnectedMap.get(currentCharge.propertyId) ?? false : false;
+  const stripeConfigured = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+  const payState = getTenantPayState({
+    charge: currentCharge,
+    ownerConnected,
+    stripeConfigured,
+    lease: currentLease ? { monthlyRentCents: currentLease.monthlyRentCents, dueDayOfMonth: leaseDetails[0].dueDayOfMonth } : null,
+    lastPayment: paymentHistory[0] ? { paidAt: paymentHistory[0].paidAt } : null
+  });
+  const rentDueDate = currentCharge?.dueDate ?? (leaseDetails[0] ? getNextRentDueDate(leaseDetails[0].dueDayOfMonth) : null);
   const inboxProperties = Array.from(
     new Map(
       leaseDetails.map((lease) => [
@@ -294,14 +279,8 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
       <main id="main-content" className="relative flex-1 lg:ml-[260px]">
         <div className="flex flex-col gap-4 px-6 pt-6 sm:flex-row sm:items-start sm:justify-between lg:px-8 lg:pt-8">
           <div id="overview">
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--ink)]">
-              {maintenanceData.units[0]?.propertyName ?? "Tenant Portal"}
-            </h1>
-            {maintenanceData.units.length > 0 && (
-              <p className="mt-1 text-sm text-[var(--muted)]">
-                {maintenanceData.units[0].propertyName} &middot; {formatUnitLabel(maintenanceData.units[0].unitNumber)}
-              </p>
-            )}
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--ink)]">{activeSection === "overview" ? `Hi, ${displayName}` : tenantSectionLabel[activeSection]}</h1>
+            <p className="mt-1 text-sm text-[var(--muted)]">{activeSection === "overview" ? "Your rent, problems, and lease at a glance." : activeSection === "charges" ? "Pay rent and see what you&apos;ve paid." : "Everything you need for your home."}</p>
           </div>
         </div>
 
@@ -311,30 +290,6 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
             <h2 className="text-lg font-semibold text-[var(--ink)]">
               {hasUnknownSection ? "Section not found" : tenantSectionLabel[activeSection]}
             </h2>
-            <div className="flex items-center gap-2">
-              {previousSection ? (
-                <Button asChild size="icon" variant="outline">
-                  <Link href={buildTenantHref(previousSection)} title="Previous section">
-                    <ChevronLeft className="h-4 w-4" />
-                  </Link>
-                </Button>
-              ) : (
-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface-2)] text-[var(--muted)] opacity-50 sm:h-9 sm:w-9">
-                  <ChevronLeft className="h-4 w-4" />
-                </span>
-              )}
-              {nextSection ? (
-                <Button asChild size="icon" variant="outline">
-                  <Link href={buildTenantHref(nextSection)} title="Next section">
-                    <ChevronRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-              ) : (
-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface-2)] text-[var(--muted)] opacity-50 sm:h-9 sm:w-9">
-                  <ChevronRight className="h-4 w-4" />
-                </span>
-              )}
-            </div>
           </div>
 
           {hasUnknownSection ? (
@@ -349,6 +304,11 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
                 nextCharge={nextCharge}
                 lease={currentLease}
                 openTicketCount={openTicketCount}
+                tickets={maintenanceData.tickets.filter((ticket) => ticket.status === "open" || ticket.status === "in_progress").map((ticket) => ({ id: ticket.id, title: ticket.title, status: ticket.status }))}
+                payState={payState}
+                rentDueDate={rentDueDate}
+                rentAmountCents={currentLease?.monthlyRentCents}
+                lastPaidAt={paymentHistory[0]?.paidAt ?? null}
                 onPayCharge={payWithCard as (formData: FormData) => Promise<void>}
                 onPayWithACH={payWithACH as (formData: FormData) => Promise<void>}
                 onRequestManualPaymentConfirmation={requestManualPaymentConfirmation}
@@ -357,31 +317,13 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
                 onSetupAutopay={setupAutopay}
               />
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <Card padding="sm">
-                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">Open Tickets</p>
-                  <p className="mt-1 text-2xl font-bold tabular-nums text-[var(--ink)]">{openTicketCount}</p>
-                  <p className="text-xs tabular-nums text-[var(--muted)]">{maintenanceData.tickets.length} total</p>
-                </Card>
-                <Card padding="sm">
-                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">Documents</p>
-                  <p className="mt-1 text-2xl font-bold tabular-nums text-[var(--ink)]">{pendingDocumentCount}</p>
-                  <p className="text-xs text-[var(--muted)]">pending signature{pendingDocumentCount === 1 ? "" : "s"}</p>
-                </Card>
-                <Card padding="sm">
-                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">Outstanding</p>
-                  <p className="mt-1 text-2xl font-bold tabular-nums text-[var(--ink)]">{formatCurrency(outstandingCents)}</p>
-                  <p className="text-xs tabular-nums text-[var(--muted)]">
-                    {lateChargeCount > 0 ? `${lateChargeCount} overdue` : "current balance"}
-                  </p>
-                </Card>
-              </div>
             </div>
           )}
 
           {!hasUnknownSection && activeSection === "charges" && (
             <div className="space-y-6">
               <TenantLeaseDetails leases={leaseDetails} />
+              <TenantOverview userName={displayName} charges={paymentData.charges} nextCharge={nextCharge} lease={currentLease} openTicketCount={openTicketCount} payState={payState} rentDueDate={rentDueDate} rentAmountCents={currentLease?.monthlyRentCents} lastPaidAt={paymentHistory[0]?.paidAt ?? null} onPayCharge={payWithCard as (formData: FormData) => Promise<void>} onPayWithACH={payWithACH as (formData: FormData) => Promise<void>} onRequestManualPaymentConfirmation={requestManualPaymentConfirmation} />
               <ChargesSection
                 charges={paymentData.charges}
                 onPayCharge={payWithCard as (formData: FormData) => Promise<void>}
@@ -391,10 +333,11 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
                 autopayEnrollments={autopayEnrollments}
                 onSetupAutopay={setupAutopay}
                 onDisableAutopay={disableAutopay}
+                hideTenantPaymentControls
               />
               <Card>
                 <CardHeader>
-                  <CardTitle>Payment History</CardTitle>
+                  <CardTitle>Past payments</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {paymentHistory.length === 0 ? (
@@ -512,6 +455,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
             ))}
         </div>
       </main>
+      <TenantBottomBar activeItemId={activeSection} />
     </div>
   );
 }
