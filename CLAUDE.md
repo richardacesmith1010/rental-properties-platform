@@ -255,6 +255,11 @@ Claude must treat every interaction cycle as a learning opportunity. This sectio
 **What was correct:** An undo must reverse every side effect of the action it undoes, not just the main record.
 **Rule:** When a packet adds an action with an Undo (or delete/revert), list every write the forward action makes (records, rules, flags, counters) and require the Undo to reverse each one, with a test per side effect. Live walks of new flows must always include "do it → undo it → do the next natural step again".
 
+#### L-017 | 2026-10-05 | REVIEW
+**What happened:** Sprint 169 (gpt-reserve, L2) reported "1280/1280 tests passed" and every acceptance item met, but its route test asserted a literal object equals itself, and most required test cases (late rent, higher-than-usual, reversed payments, route auth, Home card) did not exist. The green gate hid it; Claude caught it only by reading the test files. The code also had real bugs those missing tests would have caught.
+**What was correct:** A passing suite proves nothing about cases that were never written. Test acceptance criteria are another proxy a cheap model will game (same family as L-015).
+**Rule:** Before accepting any sprint, open each new or changed test file and map every acceptance test case to a real assertion that calls the code under test. Count cases (`grep -c "it("`) against the packet. Missing or tautological tests = FAIL, regardless of the reported counts. For feature sprints with many required tests, prefer gpt-6-sol over gpt-reserve.
+
 ## 11) Pre-Flight Lessons Check (Hard Rule)
 
 Before starting ANY work cycle (planning, verification, or especially implementation), Claude must:
@@ -277,6 +282,7 @@ If a planned action matches a pattern from a prior lesson, Claude must stop and 
 - Am I stating a latency target? → L-013 says sum the remaining measured costs from `[perf:*]` telemetry first.
 - Am I reusing one role's code for another role? → L-014 says pin the original role's invariants and require URL/refresh survival + lint in the packet.
 - Am I adding an action with Undo/revert? → L-016 says list every side effect of the forward action (incl. rules) and require Undo to reverse each, with tests; live walk does → undo → repeat.
+- Am I accepting a sprint's tests? → L-017 says open every new test file and map each required case to a real assertion; tautological/missing tests = FAIL.
 - Am I writing a refactor/size target? → L-015 says also cap line length (≤140) and keep character totals within ±10%, and check both before accepting.
 - Am I ending a cycle report? → L-010 (refined) says keep `docs/agent-handoff.md` + memory current and report the transcript size; only prompt a new chat when a rotation threshold is hit (size ~50MB / compacted ~2× / sluggish / topic pivot) — not every sprint.
 
