@@ -1,5 +1,7 @@
 # Sprint 168 — Bank feed fixes: full Undo, live recent list, home names, no waived rent (L3)
 
+Revision 2 — ChatGPT verdict APPROVE WITH CHANGES; all 4 required changes and both optional suggestions adopted (rule reversed before the record, so failures are retryable; restore-failure fallback deletes the rule; newer-owner-answer ownership rule; 23505 race tests; zod-parsed snapshot; cross-account undo test).
+
 ## 1. Objective
 Fix the four defects found in Claude's live walk of Sprint 167:
 1. Undo leaves the "Always do this" rule behind, so the undone item is filed automatically on the next upload.
@@ -24,19 +26,31 @@ Fix the four defects found in Claude's live walk of Sprint 167:
    - Before writing the rule, read any existing rule for the same (owner account, bank account, direction, match_text).
    - If none existed: insert, then update the bank item with `rule_id` = the new id and `rule_created = true`.
    - If one existed: snapshot its `{action, lease_id, property_id, expense_category, label}`, then update it. Then update the bank item with `rule_id` = that id and `rule_snapshot` = the snapshot.
-   - Check every error. If the bank-item update fails, reverse the rule write (delete the new rule, or restore the snapshot) and return `ruleError: true`. The item stays filed.
-   - The 23505 conflict path follows the same rules: the rule existed, so snapshot it before updating.
+   - Check every error. If the bank-item update fails, reverse the rule write and return `ruleError: true`. The item stays filed.
+     - New rule: delete it.
+     - Overwritten rule: restore the snapshot. **If that restore also fails, delete the rule**, so an untracked "Always" rule is never left active.
+     - Log fixed operation names only.
+   - The 23505 conflict path follows the same rules: the initial lookup saw no rule, but a concurrent insert won. Fetch the winning rule, snapshot its
+     current values, update it, then save `rule_id` + `rule_snapshot` on the bank item.
    - `decision: "no"` (skip rules) is unchanged. There is no bank item, so nothing changes there.
 2. **Undo reverses everything** (`undoBankItem` + `undoFiledItem`). Allowed for any bank item with `matched_by = 'owner'` (rent, expense or transfer, whether or not `created_record` is set), after the existing auth and ownership checks.
-   - Do these steps in this order:
-     1. Reverse the record:
+   - Do these steps in this order. The rule is reversed **first**, so a failure never destroys the data needed to retry:
+     1. **Reverse the rule** (only when `rule_id` is still set):
+        - `rule_created`:
+          - delete the rule, unless a **newer owner answer** has since overwritten it, that is another bank item with `matched_by='owner'`,
+            the same `rule_id`, a non-null `rule_snapshot` and a later `created_at`;
+          - in that case keep the rule, because the newer answer now owns its state;
+          - references from `rule`/`auto` items are history only and never block deletion (`rule_id` is ON DELETE SET NULL).
+        - `rule_snapshot`:
+          - parse it with a zod schema (`action` in rent|expense|transfer|skip, nullable uuids, nullable category from the allowed list, nullable label ≤ 80);
+          - restore it onto the rule with `.eq("id", rule_id)`, expecting one row;
+          - if the parse or the restore fails (for example the integrity trigger rejects it because the old lease or property is gone), delete the rule instead.
+        - If the rule cannot be reversed at all (the delete also fails), **stop**. Return `{ success: false, error: "We could not undo this. Try again." }`
+          and do not touch the record. The bank item and its rule data stay, so the user can retry.
+     2. **Reverse the record:**
         - if `created_record`: the existing logic (delete the expense or payment; the bank item cascades; guarded charge restore);
         - otherwise: delete the bank item by id and expect one row.
-     2. Reverse the rule:
-        - if `rule_created` and `rule_id` is set: delete that rule, but only if no other bank item references it (`rule_id`). Otherwise keep it.
-        - if `rule_snapshot` and `rule_id` are set: restore the snapshot values onto that rule with `.eq("id", rule_id)`, expecting one row. If the restore fails (for example the integrity trigger rejects it because the old lease or property is gone), delete the rule instead.
-   - Read `rule_id`, `rule_created` and `rule_snapshot` **before** step 1, because step 1 deletes the bank item.
-   - If step 2 fails, still return success for the record. Add `ruleUndoFailed: true` and log a fixed operation name only.
+        - If this fails after the rule was reversed, return the error. A retry is safe: `rule_id` is now null (SET NULL) or the snapshot is already restored, which is idempotent.
    - Items with `matched_by` `rule` or `auto` stay non-undoable, as today.
    - The UI shows "Undo" on every collapsed "Filed:" card that has a `bankTransactionId`. "Already recorded" and "Moving my money" items now show it too.
 3. **Recent list updates right away.**
@@ -88,9 +102,15 @@ Each file must be at most 400 lines, and each line at most 140 characters. If `b
    - **Yes + Always, with an existing rule** (e.g. a skip rule for the same text): the snapshot is stored. Undo restores the previous action and fields exactly.
    - **A created rule that a later auto-filed item also references:** Undo of the first item keeps the rule.
    - **The bank-item update fails after the rule insert:** the rule is deleted and `ruleError: true` is returned.
-   - **The snapshot restore is rejected:** the rule is deleted, and Undo still succeeds with `ruleUndoFailed: true`.
+   - **The snapshot restore is rejected during Undo:** the rule is deleted instead, and Undo succeeds.
    - **Undo of an owner-answered transfer item** and of an **"Already recorded" rent item:** the bank item is deleted (no payment is touched) and its rule is reversed.
    - **Undo of a `rule` or `auto` item** is refused.
+   - **23505 race:** the lookup sees no rule, the insert gets 23505, the winning rule is fetched and snapshotted, then updated, and `rule_id` + `rule_snapshot` are saved.
+     If that bank-item metadata write fails, the snapshot is restored. If the restore fails, the rule is deleted and `ruleError: true` is returned.
+   - **A newer owner answer overwrote a created rule:** Undo of the older item keeps the rule. A rule only referenced by later `auto`/`rule` items is still deleted.
+   - **Rule reversal fails** (delete error): Undo returns the error, the record, bank item and rule data are untouched, and a retry succeeds.
+   - **A malformed `rule_snapshot`** is not applied; the rule is deleted instead.
+   - Another owner account's member cannot Undo a `matched_by='owner'` item by supplying its id: refused, nothing written.
    - Non-member and other-account requests are refused and write nothing (existing tests still pass).
 2. Component tests:
    - After "Yes", the recent list shows the new item without a page reload. After Undo, it disappears.
