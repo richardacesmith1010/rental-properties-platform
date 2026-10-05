@@ -451,10 +451,6 @@ export function buildInvoiceEmailTemplate({
   return { subject, html, text };
 }
 
-export function buildManagerPaymentEmail(params: ManagerPaymentEmailParams) {
-  return buildInvoiceEmailTemplate(params);
-}
-
 export function buildFeedbackEmail({
   type,
   message,

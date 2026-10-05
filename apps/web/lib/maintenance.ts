@@ -266,12 +266,6 @@ async function buildTimelineMaps(
   return { timelineByTicketId };
 }
 
-export async function getTicketComments(ticketId: string): Promise<MaintenanceComment[]> {
-  const supabase = createClient();
-  const { commentsByTicketId } = await buildCommentMaps(supabase, [ticketId]);
-  return commentsByTicketId.get(ticketId) ?? [];
-}
-
 export async function getMaintenanceTimeline(
   supabase: SupabaseLikeClient,
   ticketId: string

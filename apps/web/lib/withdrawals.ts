@@ -235,14 +235,6 @@ export async function getPendingWithdrawals(accountId: string): Promise<Withdraw
   return buildWithdrawalDtoFromRows(rows);
 }
 
-export async function getWithdrawalHistory(
-  accountId: string,
-  limit = 20
-): Promise<WithdrawalRequestDTO[]> {
-  const rows = await selectWithdrawalRows(accountId, { limit });
-  return buildWithdrawalDtoFromRows(rows);
-}
-
 export async function resolveWithdrawal(requestId: string): Promise<WithdrawalRequestDTO | null> {
   const admin = createAdminClient();
   const requestRow = await selectWithdrawalRowById(requestId);

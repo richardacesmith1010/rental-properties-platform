@@ -1,7 +1,3 @@
-import type { InvitationListItem } from "@/lib/invitations";
-import type { OwnerDocumentsData } from "@/lib/documents";
-import type { VendorDTO } from "@/lib/vendors";
-import type { MaintenanceTicket } from "@/lib/maintenance";
 import {
   Banknote,
   BarChart3,
@@ -309,88 +305,6 @@ export function getManagerNavItems(available: NavItem[]): NavItem[] {
       badgeText: id === "charges" && item.badgeCount ? `${item.badgeCount} late` : undefined
     }] : [];
   }));
-}
-
-export function getOwnerWorkflowSteps(params: {
-  isOwnerRole: boolean;
-  ownerWorkflowMode: OwnerWorkflowMode;
-  invitations?: InvitationListItem[];
-  safeDocuments: OwnerDocumentsData;
-  safePortfolio: { properties: unknown[]; units: unknown[]; leases: unknown[] };
-  safeVendors: VendorDTO[];
-  tickets?: MaintenanceTicket[];
-  chargeCount: number;
-}): Array<{ label: string; done: boolean }> {
-  if (!params.isOwnerRole) {
-    return [];
-  }
-
-  if (params.ownerWorkflowMode === "new_property") {
-    return [
-      {
-        label: "Create property record",
-        done: params.safePortfolio.properties.length > 0
-      },
-      {
-        label: "Add at least one unit",
-        done: params.safePortfolio.units.length > 0
-      },
-      {
-        label: "Finalize first lease",
-        done: params.safePortfolio.leases.length > 0
-      }
-    ];
-  }
-
-  if (params.ownerWorkflowMode === "new_tenant") {
-    const tenantInvites =
-      (params.invitations ?? []).filter((invitation) => invitation.role === "tenant").length > 0;
-    const packetSent =
-      params.safeDocuments.packets.filter(
-        (packet) => packet.status === "sent" || packet.status === "signed"
-      ).length > 0;
-
-    return [
-      {
-        label: "Send tenant invitation",
-        done: tenantInvites
-      },
-      {
-        label: "Create active lease",
-        done: params.safePortfolio.leases.length > 0
-      },
-      {
-        label: "Send lease document packet",
-        done: packetSent
-      },
-      {
-        label: "Verify first charge",
-        done: params.chargeCount > 0
-      }
-    ];
-  }
-
-  if (params.ownerWorkflowMode === "new_manager") {
-    const managerInvites =
-      (params.invitations ?? []).filter((invitation) => invitation.role === "manager").length > 0;
-
-    return [
-      {
-        label: "Send manager invitation",
-        done: managerInvites
-      },
-      {
-        label: "Set up preferred vendor",
-        done: params.safeVendors.length > 0
-      },
-      {
-        label: "Review maintenance queue",
-        done: (params.tickets ?? []).length > 0
-      }
-    ];
-  }
-
-  return [];
 }
 
 export const ownerPageDescriptions: Record<string, string> = {
