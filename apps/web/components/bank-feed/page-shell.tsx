@@ -111,10 +111,11 @@ export function BankFeedShell({ ownerAccountId, accounts, bankAccounts, properti
       {error ? <p role="alert" className="text-sm text-[var(--crit)]">{error}</p> : null}
       {ask.length ? <section className="space-y-3" aria-labelledby="money-check-title">
         <h2 id="money-check-title" className="text-xl font-semibold">Money to check</h2>
-        {ask.map((item) => rows[item.i] ? <ReviewCard key={item.i} item={item} row={rows[item.i]}
+        {ask.map((item) => rows[item.i] ? <ReviewCard key={item.token} item={item} row={rows[item.i]}
           properties={properties} charges={charges} onAnswer={answer} onUndo={undo} /> : null)}
       </section> : null}
-      {personal.length ? <MissedList items={personal} rows={rows} onMove={(item) => {
+      {personal.length ? <MissedList key={personal.map((item) => item.token).join(",")} items={personal}
+        rows={rows} onMove={(item) => {
         setPersonal((current) => current.filter((entry) => entry.i !== item.i));
         setAsk((current) => [...current, item]);
       }} /> : null}

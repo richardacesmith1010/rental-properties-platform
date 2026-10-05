@@ -113,6 +113,16 @@ test.describe("authenticated smoke render", () => {
       expect(loggedIn).toBeTruthy();
 
       await assertRoleHomeRendered(page, scenario);
+      if (scenario.role === "Owner") {
+        await page.goto("/owner/bank");
+        await expect(page.getByRole("heading", { name: "Bank activity" })).toBeVisible();
+        await expect(page.locator("body")).not.toContainText(/application error|something went wrong/i);
+
+        await page.goto("/owner/money");
+        await expect(page.getByRole("heading", { name: /money$/i }).first()).toBeVisible();
+        await expect(page.getByText("Left after bills")).toBeVisible();
+        await expect(page.locator("body")).not.toContainText(/application error|something went wrong/i);
+      }
       expect(errors.consoleErrors, errors.consoleErrors.join("\n")).toEqual([]);
       expect(errors.pageErrors, errors.pageErrors.join("\n")).toEqual([]);
     });

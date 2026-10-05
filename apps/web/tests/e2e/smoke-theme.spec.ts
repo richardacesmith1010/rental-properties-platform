@@ -123,9 +123,15 @@ test.describe("theme contrast math", () => {
     expect(result).toEqual({ r: 0.5, g: 0.5, b: 0.5, a: 1 });
   });
   const exemptionCases = [
-    ["readable light interactive control", { interactiveAncestorDistance: 0, interactiveControlIsSized: true, controlTextContrast: 8.2 }, true],
-    ["low-contrast interactive control", { interactiveAncestorDistance: 1, interactiveControlIsSized: true, controlTextContrast: 2.4 }, false],
-    ["non-interactive light box", { interactiveAncestorDistance: null, interactiveControlIsSized: false, controlTextContrast: null }, false]
+    ["readable light interactive control", {
+      interactiveAncestorDistance: 0, interactiveControlIsSized: true, controlTextContrast: 8.2
+    }, true],
+    ["low-contrast interactive control", {
+      interactiveAncestorDistance: 1, interactiveControlIsSized: true, controlTextContrast: 2.4
+    }, false],
+    ["non-interactive light box", {
+      interactiveAncestorDistance: null, interactiveControlIsSized: false, controlTextContrast: null
+    }, false]
   ] as const;
   for (const [caseName, input, expected] of exemptionCases) {
     test(`light-box exemption decision: ${caseName}`, () => {
@@ -428,6 +434,7 @@ test.describe("authenticated theme contrast smoke", () => {
   );
 
   test("Owner theme views have no severe contrast findings", async ({ page }) => {
+    test.setTimeout(90_000);
     await configureTheme(page, "dark");
     const loggedIn = await loginAsRole(
       page,
@@ -447,10 +454,21 @@ test.describe("authenticated theme contrast smoke", () => {
       }
     }
 
+    for (const path of ["/owner/bank", "/owner/money"]) {
+      await page.goto(path);
+      await waitForView(page);
+      await assertView(page, "Owner", "dark", path);
+    }
+
     await page.goto("/owner");
     await waitForView(page);
     await switchThemeInSession(page, "light");
     await assertView(page, "Owner", "light", "home");
+    for (const path of ["/owner/bank", "/owner/money"]) {
+      await page.goto(path);
+      await waitForView(page);
+      await assertView(page, "Owner", "light", path);
+    }
     if (FULL_MODE) {
       for (const section of OWNER_SECTIONS) {
         if (section === "Home") continue;

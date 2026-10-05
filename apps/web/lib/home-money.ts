@@ -130,7 +130,8 @@ async function loadRows(propertyId: string, from: string, to: string) {
 export function plainMethod(method: string | null | undefined) {
   const value = method?.toLowerCase();
   return value === "ach" ? "Bank transfer" : value === "card" ? "Card"
-    : value === "cash" ? "Cash" : value === "check" ? "Check" : "Other";
+    : value === "cash" ? "Cash" : value === "check" ? "Check"
+      : value === "other" ? "Paid outside Domus" : "Other";
 }
 
 export async function loadHomeMoney(userId: string, propertyId: string,

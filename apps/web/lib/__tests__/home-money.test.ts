@@ -134,4 +134,7 @@ describe("home money", () => {
     expect(["ach", "card", "cash", "check", "wire", null].map(plainMethod))
       .toEqual(["Bank transfer", "Card", "Cash", "Check", "Other", "Other"]);
   });
+  it("labels an owner-recorded other payment as paid outside Domus", () => {
+    expect(plainMethod("other")).toBe("Paid outside Domus");
+  });
 });
