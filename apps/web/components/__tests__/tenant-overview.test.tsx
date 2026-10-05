@@ -1,9 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-vi.mock("@/components/dashboard/pay-rent-card", () => ({
-  PayRentCard: () => <div>Pay rent</div>
-}));
 vi.mock("@/components/dashboard/use-time-of-day-greeting", () => ({
   useTimeOfDayGreeting: () => "Hello"
 }));
@@ -38,12 +35,13 @@ describe("TenantOverview outside-Domus status", () => {
         nextCharge={{ amountCents: charge.amountCents, dueDate: charge.dueDate }}
         lease={null}
         openTicketCount={0}
+        payState="outside"
         onPayCharge={vi.fn()}
         onRequestManualPaymentConfirmation={vi.fn()}
       />
     );
 
-    expect(screen.getByText(/You pay \$2,350 outside Domus/i)).toBeInTheDocument();
+    expect(screen.getByText("You pay your landlord outside Domus.")).toBeInTheDocument();
     expect(screen.queryByText(/overdue/i)).not.toBeInTheDocument();
   });
 });

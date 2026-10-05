@@ -143,7 +143,7 @@ export const defaultNavItems: NavItem[] = [
 export const tenantNavItems: NavItem[] = [
   {
     id: "overview",
-    label: "Rent",
+    label: "Home",
     icon: LayoutDashboard,
     href: "/tenant?section=overview",
     description: "See what you owe and what needs attention.",
@@ -166,20 +166,20 @@ export const tenantNavItems: NavItem[] = [
     clickHint: "open problems"
   },
   {
-    id: "documents",
-    label: "Your lease",
-    icon: FileSignature,
-    href: "/tenant?section=documents",
-    description: "Open your lease packet and rental documents.",
-    clickHint: "open lease"
-  },
-  {
     id: "notifications",
     label: "Messages",
     icon: Bell,
     href: "/tenant?section=notifications",
     description: "Read landlord updates and reply in one place.",
     clickHint: "open messages"
+  },
+  {
+    id: "documents",
+    label: "Your lease",
+    icon: FileSignature,
+    href: "/tenant?section=documents",
+    description: "Open your lease packet and rental documents.",
+    clickHint: "open lease"
   }
 ];
 

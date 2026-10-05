@@ -6,8 +6,8 @@ import type { ActionState } from "@/app/actions";
 import { formatCurrency, formatDate, formatUnitLabel } from "@/lib/format";
 import type { TenantCharge } from "@/lib/tenant-payments";
 import { Card, CardContent } from "@/components/ui/card";
-import { PayRentCard, type AutopayEnrollmentView } from "@/components/dashboard/pay-rent-card";
-import { isCollectedOutsideDomus } from "@/lib/lease-collection";
+import { TenantRentCard } from "@/components/dashboard/tenant-rent-card";
+import type { AutopayEnrollmentView } from "@/components/dashboard/pay-rent-card";
 import type { TenantPayState } from "@/lib/tenant-pay-state";
 
 type TenantOverviewSection = "charges" | "maintenance" | "documents" | "notifications";
@@ -34,6 +34,7 @@ interface TenantOverviewProps {
   rentDueDate?: string | null;
   rentAmountCents?: number | null;
   lastPaidAt?: string | null;
+  lateFeeCents?: number;
   onPayCharge: (formData: FormData) => Promise<void>;
   onPayWithACH?: (formData: FormData) => Promise<void>;
   onRequestManualPaymentConfirmation: StatefulAction;
@@ -42,18 +43,10 @@ interface TenantOverviewProps {
   onSetupAutopay?: StatefulAction;
 }
 
-function getDaysUntil(dateValue: string) {
-  const today = new Date();
-  const todayStart = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
-  const dueDate = new Date(`${dateValue}T00:00:00.000Z`);
-  const dueStart = Date.UTC(dueDate.getUTCFullYear(), dueDate.getUTCMonth(), dueDate.getUTCDate());
-  return Math.ceil((dueStart - todayStart) / (1000 * 60 * 60 * 24));
-}
-
 export function TenantOverview({
   userName: _userName,
   charges,
-  nextCharge,
+  nextCharge: _nextCharge,
   lease,
   openTicketCount,
   tickets = [],
@@ -61,52 +54,29 @@ export function TenantOverview({
   rentDueDate,
   rentAmountCents,
   lastPaidAt,
+  lateFeeCents = 0,
   onPayCharge,
   onPayWithACH,
   onRequestManualPaymentConfirmation,
-  hasActiveLease = true,
+  hasActiveLease: _hasActiveLease = true,
   autopayEnrollments = [],
   onSetupAutopay
 }: TenantOverviewProps) {
-  const summary = (() => {
-    if (!nextCharge) {
-      return hasActiveLease ? "No rent posted yet." : "Your landlord hasn't set up your lease yet.";
-    }
-
-    const daysUntil = getDaysUntil(nextCharge.dueDate);
-    if (daysUntil < 0) {
-      return isCollectedOutsideDomus(charges[0])
-        ? `You pay ${formatCurrency(nextCharge.amountCents)} outside Domus.`
-        : `${formatCurrency(nextCharge.amountCents)} is ${Math.abs(daysUntil)} day${Math.abs(daysUntil) === 1 ? "" : "s"} late.`;
-    }
-    if (daysUntil === 0) {
-      return `Your rent of ${formatCurrency(nextCharge.amountCents)} is due today.`;
-    }
-    return `Your rent of ${formatCurrency(nextCharge.amountCents)} is due in ${daysUntil} day${daysUntil === 1 ? "" : "s"}.`;
-  })();
-
   return (
     <div className="space-y-6">
-      <PayRentCard
+      <TenantRentCard
         charges={charges}
         onPayCharge={onPayCharge}
         onPayWithACH={onPayWithACH}
         onRequestManualPaymentConfirmation={onRequestManualPaymentConfirmation}
-        chargesHref={buildSectionHref("charges")}
-        hasActiveLease={hasActiveLease}
         autopayEnrollments={autopayEnrollments}
         onSetupAutopay={onSetupAutopay}
-        payState={payState}
-        rentDueDate={rentDueDate}
-        showManualPaymentControl={false}
-        rentAmountCents={rentAmountCents}
-        lastPaidAt={lastPaidAt}
+        payState={payState ?? "not_posted"}
+        rentDueDate={rentDueDate ?? null}
+        rentAmountCents={rentAmountCents ?? null}
+        lastPaidAt={lastPaidAt ?? null}
+        lateFeeCents={lateFeeCents}
       />
-
-      <div>
-        {lease ? <p className="text-sm font-medium text-muted-foreground">{lease.propertyName} · {formatUnitLabel(lease.unitLabel)}</p> : null}
-        <p className="mt-1 text-sm text-muted-foreground">{summary}</p>
-      </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Link href={buildSectionHref("maintenance")} className="domus-card flex min-h-16 items-center justify-between p-4" title="Report a problem.">

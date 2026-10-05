@@ -38,8 +38,8 @@ import { TicketForm } from "@/components/dashboard/ticket-form";
 import { MaintenanceSection } from "@/components/dashboard/maintenance-section";
 import { TenantDocumentsSection } from "@/components/dashboard/tenant-documents-section";
 import { InboxSection } from "@/components/dashboard/inbox-section";
-import { TenantLeaseDetails } from "@/components/dashboard/tenant-lease-details";
 import { TenantOverview } from "@/components/dashboard/tenant-overview";
+import { TenantRentCard } from "@/components/dashboard/tenant-rent-card";
 import { EmptyState as DashboardEmptyState } from "@/components/shared/empty-state";
 import { StripeTestModeBanner } from "@/components/shared/stripe-test-mode-banner";
 import { formatCurrency, formatDate, formatDateTime, formatUnitLabel } from "@/lib/format";
@@ -280,17 +280,19 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
         <div className="flex flex-col gap-4 px-6 pt-6 sm:flex-row sm:items-start sm:justify-between lg:px-8 lg:pt-8">
           <div id="overview">
             <h1 className="text-2xl font-bold tracking-tight text-[var(--ink)]">{activeSection === "overview" ? `Hi, ${displayName}` : tenantSectionLabel[activeSection]}</h1>
-            <p className="mt-1 text-sm text-[var(--muted)]">{activeSection === "overview" ? "Your rent, problems, and lease at a glance." : activeSection === "charges" ? "Pay rent and see what you&apos;ve paid." : "Everything you need for your home."}</p>
+            <p className="mt-1 text-sm text-[var(--muted)]">{activeSection === "overview" ? "Your rent, problems, and lease at a glance." : activeSection === "charges" ? "Pay rent and see what you've paid." : "Everything you need for your home."}</p>
           </div>
         </div>
 
         <div className="space-y-6 px-6 pb-24 pt-6 lg:px-8">
           <StripeTestModeBanner />
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-[var(--ink)]">
-              {hasUnknownSection ? "Section not found" : tenantSectionLabel[activeSection]}
-            </h2>
-          </div>
+          {activeSection !== "overview" || hasUnknownSection ? (
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-[var(--ink)]">
+                {hasUnknownSection ? "Section not found" : tenantSectionLabel[activeSection]}
+              </h2>
+            </div>
+          ) : null}
 
           {hasUnknownSection ? (
             <SectionNotFoundState activeSection={sectionValue ?? "unknown"} role="tenant" />
@@ -309,6 +311,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
                 rentDueDate={rentDueDate}
                 rentAmountCents={currentLease?.monthlyRentCents}
                 lastPaidAt={paymentHistory[0]?.paidAt ?? null}
+                lateFeeCents={leaseDetails[0]?.lateFeeCents ?? 0}
                 onPayCharge={payWithCard as (formData: FormData) => Promise<void>}
                 onPayWithACH={payWithACH as (formData: FormData) => Promise<void>}
                 onRequestManualPaymentConfirmation={requestManualPaymentConfirmation}
@@ -322,8 +325,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
 
           {!hasUnknownSection && activeSection === "charges" && (
             <div className="space-y-6">
-              <TenantLeaseDetails leases={leaseDetails} />
-              <TenantOverview userName={displayName} charges={paymentData.charges} nextCharge={nextCharge} lease={currentLease} openTicketCount={openTicketCount} payState={payState} rentDueDate={rentDueDate} rentAmountCents={currentLease?.monthlyRentCents} lastPaidAt={paymentHistory[0]?.paidAt ?? null} onPayCharge={payWithCard as (formData: FormData) => Promise<void>} onPayWithACH={payWithACH as (formData: FormData) => Promise<void>} onRequestManualPaymentConfirmation={requestManualPaymentConfirmation} />
+              <TenantRentCard charges={paymentData.charges} payState={payState} rentDueDate={rentDueDate} rentAmountCents={currentLease?.monthlyRentCents ?? null} lastPaidAt={paymentHistory[0]?.paidAt ?? null} lateFeeCents={leaseDetails[0]?.lateFeeCents ?? 0} onPayCharge={payWithCard as (formData: FormData) => Promise<void>} onPayWithACH={payWithACH as (formData: FormData) => Promise<void>} onRequestManualPaymentConfirmation={requestManualPaymentConfirmation} autopayEnrollments={autopayEnrollments} onSetupAutopay={setupAutopay} />
               <ChargesSection
                 charges={paymentData.charges}
                 onPayCharge={payWithCard as (formData: FormData) => Promise<void>}

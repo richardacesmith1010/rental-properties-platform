@@ -118,7 +118,7 @@ export function PayRentCard({
                 </div>
                 <h2 className="text-2xl font-bold text-foreground sm:text-3xl">{payState === "not_posted" ? "Next rent" : payState === "paid" ? "Rent paid" : "No payments due right now"}</h2>
                 <p className="max-w-xl text-sm text-muted-foreground">
-                  {payState === "paid" && lastPaidAt ? `Paid ${formatDate(lastPaidAt)}. Thank you!` : payState === "not_posted" && rentDueDate ? `${rentAmountCents ? formatCurrency(rentAmountCents) : "Rent"} is due ${formatDate(rentDueDate)}. You can pay once it is posted.` : "Your balance is clear. When a new rent charge posts, it will show up here first."}
+                  {payState === "paid" && lastPaidAt ? `Paid ${formatDate(lastPaidAt)}. Thank you!` : payState === "not_posted" && rentDueDate ? `${rentAmountCents ? formatCurrency(rentAmountCents) : "Rent"} is due ${formatDate(rentDueDate)}. You can pay once it is posted.` : "Your balance is clear. When new rent posts, it will show up here first."}
                 </p>
               </>
             ) : (
@@ -204,7 +204,7 @@ export function PayRentCard({
               <div className="space-y-2 text-center sm:text-left">
                 <p className="text-base font-medium tabular-nums text-[var(--ink)] sm:text-lg">
                   {isLate
-                    ? `Your rent of ${formatCurrency(charge.amountCents)} was due ${getRelativeDueText(charge.dueDate)}. Please pay as soon as possible to avoid late fees.`
+                    ? `Your rent of ${formatCurrency(charge.amountCents)} was due ${getRelativeDueText(charge.dueDate)}.`
                     : `Due ${formatDate(charge.dueDate)} (${getRelativeDueText(charge.dueDate)})`}
                 </p>
                 <p className="text-sm text-muted-foreground sm:text-base">
@@ -219,7 +219,7 @@ export function PayRentCard({
 
               {additionalCharges.length > 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  {additionalCharges.length} more open charge{additionalCharges.length === 1 ? "" : "s"} waiting in
+                  {additionalCharges.length} more month{additionalCharges.length === 1 ? "" : "s"} waiting in
                   your payment history.
                 </p>
               ) : null}
@@ -307,7 +307,7 @@ export function PayRentCard({
                     </span>
                   </div>
                   <p className="mt-2 text-sm text-[var(--pos)]">
-                    Your card will be charged automatically each month.
+                    Your card will be billed automatically each month.
                   </p>
                 </div>
               ) : onSetupAutopay ? (
@@ -324,7 +324,7 @@ export function PayRentCard({
                         : "Set up autopay so rent is paid automatically."}
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Your card will be charged automatically each month.
+                      Your card will be billed automatically each month.
                     </p>
                     <form action={autopayAction} className="mt-3">
                       <input type="hidden" name="leaseId" value={charge.leaseId} />
