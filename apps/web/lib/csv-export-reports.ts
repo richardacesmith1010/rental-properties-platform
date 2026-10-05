@@ -7,8 +7,11 @@ import type {
   TenantLedger
 } from "@/lib/reports";
 
-function escapeCell(value: string | number | null | undefined) {
-  return `"${String(value ?? "").replace(/"/g, '""')}"`;
+export function escapeCell(value: string | number | null | undefined) {
+  const text = String(value ?? "");
+  const isNumeric = /^-?\d+(\.\d+)?$/.test(text);
+  const safe = /^[=+\-@]/.test(text) && !isNumeric ? `'${text}` : text;
+  return `"${safe.replace(/"/g, '""')}"`;
 }
 
 function buildCsv(headers: string[], rows: Array<Array<string | number | null | undefined>>) {
@@ -30,7 +33,8 @@ export function downloadReportCsv(filename: string, csvContent: string): void {
 
 export function rentRollToCsv(data: RentRollItem[]): string {
   return buildCsv(
-    ["Property", "Unit", "Tenant", "Tenant Email", "Monthly Rent ($)", "Lease Start", "Lease End", "Status", "Current Balance ($)", "Last Payment"],
+    ["Property", "Unit", "Tenant", "Tenant Email", "Monthly Rent ($)", "Lease Start", "Lease End", "Status",
+      "Current Balance ($)", "Last Payment"],
     data.map((item) => [
       item.propertyName,
       item.unitNumber,

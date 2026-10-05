@@ -3,7 +3,6 @@
 import { useEffect, useState, useTransition } from "react";
 import { useFormState } from "react-dom";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ManualPaymentForm, type ChargeRowData } from "@/components/dashboard/charge-row";
@@ -11,6 +10,7 @@ import { FinancialOverviewPanel } from "@/components/dashboard/financial-overvie
 import { LlcSetupPrompt } from "@/components/dashboard/llc-setup-prompt";
 import { OwnerBankCard } from "@/components/dashboard/owner-bank-card";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { HomeMoneyCard } from "@/components/home-money/home-money-page";
 import type { OwnerBankCardState } from "@/lib/owner-bank-status";
 import type { InvitationListItem } from "@/lib/invitations";
 import type { StatefulAction } from "./types";
@@ -150,12 +150,7 @@ export function OwnerDailyOpsHome({
     <div className="flex min-h-full flex-col gap-5 py-1">
       <OwnerBankCard state={bankState} role={isManagerView ? "manager" : "owner"} />
 
-      {!isManagerView ? <section className="domus-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div><h2 className="font-semibold text-[var(--ink)]">Sort your bank activity</h2>
-          <p className="text-sm text-[var(--muted)]">Upload your bank file. Domus files rent and bills for you.</p></div>
-        <Link href="/owner/bank" title="Open your bank activity."
-          className="flex min-h-11 items-center justify-center rounded-md bg-[var(--accent)] px-4 font-semibold text-white">Open</Link>
-      </section> : null}
+      {!isManagerView ? <HomeMoneyCard /> : null}
 
       {llcSetupPrompt ? (
         <LlcSetupPrompt {...llcSetupPrompt} />

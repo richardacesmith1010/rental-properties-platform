@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OwnerDailyOpsHome } from "@/components/dashboard/owner-daily-ops-home";
 
 vi.mock("react-dom", async (importOriginal) => {
@@ -32,6 +32,30 @@ const summary = {
 };
 
 describe("OwnerDailyOpsHome", () => {
+  beforeEach(() => vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {}))));
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("shows a skeleton then fetched home money with a plain month", async () => {
+    const response = { ok: true, json: async () => ({ month: "2026-10", moreCount: 0,
+      homes: [{ propertyId: "home", name: "1st Home", inCents: 235000, outCents: 103944,
+        leftCents: 131056, alertCount: 1 }] }) };
+    vi.stubGlobal("fetch", vi.fn(async () => response));
+    const { container } = render(<OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }}
+      summary={summary} onOpenSection={vi.fn()} financialOverview={financialOverview} />);
+    expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
+    expect(await screen.findByText("1st Home · October")).toBeInTheDocument();
+    expect(screen.getByText("1 thing to check")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Details" })).toHaveAttribute("href", "/owner/money?property=home");
+  });
+
+  it("shows the bank link when the home money request fails", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false })));
+    render(<OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }}
+      summary={summary} onOpenSection={vi.fn()} financialOverview={financialOverview} />);
+    expect(await screen.findByText("Numbers are not ready. Try again later.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Sort your bank file" })).toHaveAttribute("href", "/owner/bank");
+  });
+
   it("shows one bank card only when setup is needed", () => {
     const { rerender } = render(
       <OwnerDailyOpsHome bankState={{ status: "not_started", href: "/connect/onboard" }}
@@ -61,8 +85,7 @@ describe("OwnerDailyOpsHome", () => {
     expect(screen.getByText("1 of 2 rented")).toBeInTheDocument();
     expect(screen.getByText("$2,400 from 2 tenants")).toBeInTheDocument();
     expect(screen.getByText("No open repairs. No new messages.")).toBeInTheDocument();
-    expect(screen.getByText("Sort your bank activity")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open" })).toHaveAttribute("href", "/owner/bank");
+    expect(screen.getByRole("link", { name: "Sort your bank file" })).toHaveAttribute("href", "/owner/bank");
   });
 
   it("renders the manager home without owner-only financial numbers", () => {
@@ -81,7 +104,7 @@ describe("OwnerDailyOpsHome", () => {
     expect(screen.getByText("Homes you manage")).toBeInTheDocument();
     expect(screen.queryByText("More numbers")).not.toBeInTheDocument();
     expect(screen.queryByText("Financial details")).not.toBeInTheDocument();
-    expect(screen.queryByText("Sort your bank activity")).not.toBeInTheDocument();
+    expect(screen.queryByText("This month")).not.toBeInTheDocument();
   });
 
   it("handles a zero-home portfolio", () => {

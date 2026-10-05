@@ -87,7 +87,9 @@ export function BankFeedShell({ ownerAccountId, accounts, bankAccounts, properti
   return <main className="app-surface min-h-screen px-4 py-5 text-[var(--ink)]">
     <div className="mx-auto max-w-3xl space-y-5">
       <header><h1 className="text-2xl font-semibold">Bank activity</h1>
-        <p className="mt-1 text-[var(--muted)]">Domus sorts rent and bills for your homes.</p></header>
+        <p className="mt-1 text-[var(--muted)]">Domus sorts rent and bills for your homes.</p>
+        <Link href="/owner/money" className="mt-3 inline-flex min-h-11 items-center text-sm text-[var(--accent)] underline"
+          title="See how your homes are doing.">See how your homes are doing</Link></header>
       {accounts.length > 1 ? <nav aria-label="Home accounts" className="flex flex-wrap gap-2">
         {accounts.map((item) => <Link key={item.id} href={`/owner/bank?account=${item.id}`}
           title={`Open bank activity for ${item.display_name}.`}
