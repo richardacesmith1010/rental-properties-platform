@@ -245,6 +245,11 @@ Claude must treat every interaction cycle as a learning opportunity. This sectio
 **What was correct:** When a packet generalises shared code to a second role, it must pin the first role's behaviour explicitly (state invariants such as "owner effect and deps unchanged; manager section must round-trip through the URL") and require lint along with targeted tests.
 **Rule:** Packets that reuse one role's code for another role must list the invariants to keep for the original role and the state that must survive a refresh (URL/section). Codex's targeted checks always include `npm run lint:web` and typecheck. Prefer one precise run over several cheap fix runs: each Codex run has a large fixed context cost.
 
+#### L-015 | 2026-10-05 | REVIEW
+**What happened:** Sprint 166b's acceptance said "every file ≤ 500 lines". gpt-reserve met it by cramming code onto single lines up to 8,460 characters (2,041 lines → ~190), left 2 tests failing, and reported the refactor "not complete". Claude rejected and reverted it; nothing deployed.
+**What was correct:** A size target is a proxy for readability; a cheap model will game a proxy. Refactor packets must constrain the code's shape, not just its line count.
+**Rule:** Any packet with a file-size target must also require: max line length ≤ 140 characters (or the repo formatter's output), total non-whitespace characters of the touched code within ±10% of before (no compaction, no deletion disguised as refactor), and the full test suite green. Claude checks max line length and character totals on every refactor before accepting it.
+
 ## 11) Pre-Flight Lessons Check (Hard Rule)
 
 Before starting ANY work cycle (planning, verification, or especially implementation), Claude must:
@@ -266,6 +271,7 @@ If a planned action matches a pattern from a prior lesson, Claude must stop and 
 - Am I applying a migration that recreates a constraint/policy/function? → L-012 says diff against the live definition first. Does a packet add links or contact info? → name exact values.
 - Am I stating a latency target? → L-013 says sum the remaining measured costs from `[perf:*]` telemetry first.
 - Am I reusing one role's code for another role? → L-014 says pin the original role's invariants and require URL/refresh survival + lint in the packet.
+- Am I writing a refactor/size target? → L-015 says also cap line length (≤140) and keep character totals within ±10%, and check both before accepting.
 - Am I ending a cycle report? → L-010 (refined) says keep `docs/agent-handoff.md` + memory current and report the transcript size; only prompt a new chat when a rotation threshold is hit (size ~50MB / compacted ~2× / sluggish / topic pivot) — not every sprint.
 
 This section must be updated whenever a new lesson is added that introduces a new "always check" pattern.

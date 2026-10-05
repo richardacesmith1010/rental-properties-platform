@@ -331,9 +331,14 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Live regression walk: owner menu → Rent/Repairs/Expenses/Home with correct URLs, legacy `?mode=` dropped, Add 4 items, 4 section-data fetches / 0 hidden RSC refetches, 0 errors; manager Rent/Repairs/Vendors URLs, reload keeps Vendors, Add 2 items, 0 errors; smoke 3/3, theme 11/11.
 - Next: Sprint 166 (split the biggest UI/data files: owner-page-data 857, unified-property-wizard 777, leases-section 738, charges-section 614, inbox-section 526, section-renderer 521).
 
+## Sprint 166a SHIPPED / 166b REJECTED (2026-10-05)
+
+- **166a (`adf2a11`, gpt-reserve 183k):** owner-page-data 857→257 (+ `app/owner/page-data/*`), charges-section → 3-line re-export (+ `components/dashboard/charges/*`, main file 477), section-renderer 521→39 (+ `sections/render-section-cases.tsx` 486). Max line 234 chars (legit). Zero test files changed; full gate green; live: all 22 owner sections, 6 manager, 5 tenant render with 0 console errors; smoke 3/3, theme 11/11. Split is shallower than ideal (big switch/implementation moved mostly whole).
+- **166b REJECTED + reverted (not committed/deployed):** gpt-reserve met "≤500 lines" by compacting code onto lines up to 8,460 chars; 2 tests failing. → L-015. Retry only with L-015 constraints (line length ≤140, char totals ±10%) and a stronger model.
+
 ## ▶ START HERE (next session, written 2026-10-04)
 
-- Last shipped: Sprint 165 (`cc94b77`). Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
+- Last shipped: Sprint 166a (`adf2a11`); 166b rejected. Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
 - Owner-approved queue, in order: (1) DONE — owner speed arc closed; (2) clarity cleanup — mockup APPROVED; DONE (154–157 shipped); from `docs/walkthrough-2026-10-03.md` #5–#7, #9 — one bank-setup prompt, simpler navigation (replace "N OF M" carousel), plain-language sweep — **mockup first** (Design canvas, like the landing), L2/L3 TBD.
 - Standing rules: notifications OFF until owner says real users (env `DOMUS_NOTIFICATIONS_ENABLED` unset); L3 packets → Claude sends to Domus ChatGPT project via Claude-in-Chrome (memory: feedback-prompt-severity-chatgpt-workflow); Codex default Sol/medium, watch usage limits (detached nohup re-run after reset); verify every UI sprint live with Playwright (temp specs in `apps/web/tests/e2e/zz-*.tmp.spec.ts`, smoke creds from `.env.local`).
 - Owner action items still open: J&MSP LLC bank connection (Stripe; owner must enter bank details). Codex Supabase token expires ~2027-01-01.
