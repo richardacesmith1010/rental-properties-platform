@@ -232,7 +232,7 @@ export function LeasingHubSection({
     <div id="leasing" className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Leasing Hub</CardTitle>
+          <CardTitle>Find a tenant</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">

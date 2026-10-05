@@ -36,7 +36,7 @@ export function PropertySelector({
         className="mb-1.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground"
       >
         <Building2 className="h-3.5 w-3.5" />
-        Property Scope
+        Show
       </label>
       <Select
         id={selectId}
@@ -47,13 +47,13 @@ export function PropertySelector({
         title={
           selectedProperty?.address
             ? `${selectedProperty.name} — ${selectedProperty.address}`
-            : "Choose a property to scope the dashboard."
+            : "Choose which home to show."
         }
         aria-haspopup="listbox"
         aria-expanded={isExpanded}
         className="truncate"
       >
-        <option value="">All Properties</option>
+        <option value="">All homes</option>
         {properties.map((property) => (
           <option key={property.id} value={property.id}>
             {property.name}

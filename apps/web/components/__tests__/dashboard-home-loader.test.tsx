@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { useDashboardHomeState } from "@/components/dashboard/dashboard-home-loader";
 
 function DashboardHomeStateHarness() {
@@ -31,6 +31,7 @@ function DashboardHomeStateHarness() {
 }
 
 describe("useDashboardHomeState", () => {
+  afterEach(() => vi.useRealTimers());
   it("does not include bank setup in the welcome checklist", () => {
     render(<DashboardHomeStateHarness />);
 
@@ -69,5 +70,43 @@ describe("useDashboardHomeState", () => {
 
     render(<SummaryHarness />);
     expect(screen.getByText("late-in|2|1|420000|1|1")).toBeInTheDocument();
+  });
+
+  it.each([
+    {
+      name: "uses the earliest pending rent",
+      charges: [{ id: "next", leaseId: "lease-1", category: "rent", status: "pending", dueDate: "2026-10-20", amountCents: 125000 }],
+      leases: [{ id: "lease-1", active: true, startDate: "2026-01-01", endDate: "2027-12-31", dueDayOfMonth: 20, monthlyRentCents: 125000, tenantProfileId: "tenant-1", collectsOutsideDomus: false }],
+      expected: "2026-10-20|125000|1"
+    },
+    {
+      name: "uses the lease due day before rent exists",
+      charges: [],
+      leases: [{ id: "lease-1", active: true, startDate: "2026-01-01", endDate: "2027-12-31", dueDayOfMonth: 12, monthlyRentCents: 140000, tenantProfileId: "tenant-1", collectsOutsideDomus: false }],
+      expected: "2026-10-12|140000|1"
+    },
+    {
+      name: "skips rent collected outside Domus",
+      charges: [],
+      leases: [{ id: "lease-1", active: true, startDate: "2026-01-01", endDate: "2027-12-31", dueDayOfMonth: 12, monthlyRentCents: 140000, tenantProfileId: "tenant-1", collectsOutsideDomus: true }],
+      expected: "none|0|0"
+    },
+    { name: "shows no rent without leases", charges: [], leases: [], expected: "none|0|0" }
+  ])("$name", ({ charges, leases, expected }) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-04T12:00:00.000Z"));
+
+    function SummaryHarness() {
+      const state = useDashboardHomeState(
+        {} as never,
+        { activeOwnershipAccount: null, safeOwnershipAccounts: [], safePortfolio: { properties: [], units: [], leases, tenants: [] } } as never,
+        { displayDashboardData: { charges, kpis: { collectedRentCents: 0, pendingRentCents: 0, overdueRentCents: 0 } }, filteredPortfolio: { leases }, filteredTickets: [], isOwnerRole: true } as never
+      );
+      const summary = state.homeActionItems;
+      return <div>{summary.nextDueDate ?? "none"}|{summary.nextDueAmountCents}|{summary.nextDueTenantCount}</div>;
+    }
+
+    render(<SummaryHarness />);
+    expect(screen.getByText(expected)).toBeInTheDocument();
   });
 });

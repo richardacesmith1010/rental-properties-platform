@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CircleHelp, Sparkles } from "lucide-react";
+import { usePathname } from "next/navigation";
 import type { StatefulAction } from "@/app/actions";
 import { FeedbackButton } from "@/components/feedback/feedback-button";
 
@@ -13,6 +14,7 @@ interface HelpMenuProps {
 }
 
 export function HelpMenu({ onSubmitFeedback }: HelpMenuProps) {
+  const pathname = usePathname() ?? "";
   const [open, setOpen] = useState(false);
   const [assistantAvailable, setAssistantAvailable] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -67,7 +69,9 @@ export function HelpMenu({ onSubmitFeedback }: HelpMenuProps) {
   return (
     <div
       ref={containerRef}
-      className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)] right-4 z-40 print:hidden sm:bottom-6 sm:right-6"
+      className={pathname.startsWith("/owner")
+        ? "fixed bottom-[calc(env(safe-area-inset-bottom,0px)+6rem)] right-4 z-40 print:hidden lg:bottom-6 lg:right-6"
+        : "fixed bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)] right-4 z-40 print:hidden sm:bottom-6 sm:right-6"}
     >
       <button
         ref={triggerRef}

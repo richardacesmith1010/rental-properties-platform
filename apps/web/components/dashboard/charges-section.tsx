@@ -463,13 +463,13 @@ export function ChargesSection({
         {filteredCharges.length === 0 ? (
           <EmptyState
             icon={CreditCard}
-            title={charges.length === 0 ? "No charges yet" : "No matching charges"}
+            title={charges.length === 0 ? (isTenantView ? "No charges yet" : "No rent yet") : (isTenantView ? "No matching charges" : "No matching rent")}
             description={
               charges.length === 0
                 ? isTenantView
                   ? "No charges yet. Charges are generated automatically on the 1st of each month."
-                  : "Charges will appear here once you create a lease with rent terms."
-                : "No charges match this filter right now."
+                  : "Rent will appear here after you create a lease."
+                : isTenantView ? "No charges match this filter right now." : "No rent matches this filter right now."
             }
           />
         ) : (
@@ -540,7 +540,7 @@ export function ChargesSection({
                   onClick={() => setExpanded((current) => !current)}
                   title={expanded ? "Collapse the charges preview." : "Show the full charges list."}
                 >
-                  {expanded ? "Show Less" : `View All Charges (${filteredCharges.length})`}
+                  {expanded ? "Show less" : `View all rent (${filteredCharges.length})`}
                 </Button>
               </div>
             ) : null}

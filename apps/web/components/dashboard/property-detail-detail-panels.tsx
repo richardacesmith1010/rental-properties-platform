@@ -232,7 +232,7 @@ export function PropertyDetailMaintenancePanel({
         {visibleTickets.length === 0 ? (
           <EmptyState
             icon={Wrench}
-            title="No maintenance tickets"
+            title="No repairs"
             description="Tickets for this property will appear here."
           />
         ) : (

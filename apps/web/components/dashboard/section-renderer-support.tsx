@@ -18,7 +18,7 @@ import type { SectionRendererProps } from "./section-map";
 
 function getSectionHelpText(sectionId: string, role: string) {
   if (sectionId === "charges" && role !== "tenant") {
-    return "Charges are automatically created each month from your leases. You can send reminders, edit, waive, or delete them here.";
+    return "Rent is added each month from your leases.";
   }
 
   if (sectionId === "maintenance") {
@@ -80,7 +80,7 @@ function OverviewSummaryStrip({ props }: { props: SectionRendererProps }) {
     props.filteredTickets.filter((ticket) => ticket.status === "open" || ticket.status === "in_progress")
       .length;
   const occupancy = unitCount > 0 ? Math.round((occupiedUnits / unitCount) * 100) : 0;
-  const title = summary?.property.name ?? "Portfolio Summary";
+  const title = summary?.property.name ?? "Your homes";
   const subtitle =
     summary?.property.address ??
     `${pluralize(props.filteredPortfolio.properties.length, "property")} in view`;
@@ -99,7 +99,7 @@ function OverviewSummaryStrip({ props }: { props: SectionRendererProps }) {
           <div className="flex items-center gap-2">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                Property scope
+                Show
               </p>
               <p className="mt-1 text-[22px] font-[640] tracking-[-0.02em] text-[var(--ink)]">
                 {title}

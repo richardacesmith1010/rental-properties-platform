@@ -214,7 +214,6 @@ export interface SectionRendererProps {
   handlePropertyCreated: () => void;
   handleUnitCreated: () => void;
   handleLeaseCreated: () => void;
-  isOwnerDailyOpsCarousel?: boolean;
 }
 
 export function SectionSkeleton({ label = "Loading section..." }: { label?: string }) {

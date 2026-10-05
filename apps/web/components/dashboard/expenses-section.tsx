@@ -80,7 +80,7 @@ export function ExpensesSection({ data, vendors, propertyFiles, onCreateExpense,
               <EmptyState
                 icon={Receipt}
                 title="No expenses recorded"
-                description="Track property expenses for tax reporting and P&L."
+                description="Track costs for taxes and money in and out."
               />
             )}
           </CardContent>

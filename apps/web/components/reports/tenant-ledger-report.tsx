@@ -55,7 +55,7 @@ export function TenantLedgerReport({
   return (
     <ReportSection
       id="tenant-ledger"
-      title="Tenant Ledger"
+      title="Payment history"
       description="Complete charge and payment history for each tenant."
       rows={rows}
       onExport={() => downloadReportCsv(`domus-tenant-ledger-${new Date().toISOString().slice(0, 10)}.csv`, tenantLedgerToCsv(data))}
@@ -80,7 +80,7 @@ export function TenantLedgerReport({
         { key: "balance", label: "Balance", sortValue: (row) => row.balance, render: (row) => formatCurrency(row.balance) },
         { key: "property", label: "Property", sortValue: (row) => row.propertyName, render: (row) => `${row.propertyName} • ${formatUnitLabel(row.unitNumber)}` }
       ]}
-      emptyTitle="No tenant ledger data"
+      emptyTitle="No payment history"
       emptyDescription="Charge and payment history will appear once billing activity exists."
       getRowId={(row, index) => row.chargeId ?? `${row.tenantEmail}:${row.date}:${index}`}
       renderExpandedContent={(row) =>
@@ -93,7 +93,7 @@ export function TenantLedgerReport({
           />
         ) : (
           <p className="text-sm text-muted-foreground">
-            Payments are immutable records and can be traced back from the tenant ledger.
+            Payments are immutable records and can be traced back through payment history.
           </p>
         )
       }

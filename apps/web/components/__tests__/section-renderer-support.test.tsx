@@ -44,7 +44,7 @@ describe("SectionFrame property scope control", () => {
       onSelectProperty
     });
 
-    fireEvent.change(screen.getByLabelText("Property Scope"), {
+    fireEvent.change(screen.getByLabelText("Show"), {
       target: { value: "property-1" }
     });
 
@@ -58,13 +58,13 @@ describe("SectionFrame property scope control", () => {
       availableProperties: []
     });
 
-    expect(screen.queryByLabelText("Property Scope")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Show")).not.toBeInTheDocument();
   });
 
   it("renders the selector for owners with available properties", () => {
     renderSectionFrame();
 
-    expect(screen.getByLabelText("Property Scope")).toBeInTheDocument();
+    expect(screen.getByLabelText("Show")).toBeInTheDocument();
   });
 
   it("hides the selector for tenants even when properties are available", () => {
@@ -72,7 +72,7 @@ describe("SectionFrame property scope control", () => {
       data: { profileRole: "tenant" } as SectionRendererProps["data"]
     });
 
-    expect(screen.queryByLabelText("Property Scope")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Show")).not.toBeInTheDocument();
   });
 
   it("hides the selector on the members section", () => {
@@ -81,7 +81,7 @@ describe("SectionFrame property scope control", () => {
       activeSection: "members"
     });
 
-    expect(screen.queryByLabelText("Property Scope")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Show")).not.toBeInTheDocument();
   });
 
   it("hides the selector on the tenants section", () => {
@@ -90,7 +90,7 @@ describe("SectionFrame property scope control", () => {
       activeSection: "tenants"
     });
 
-    expect(screen.queryByLabelText("Property Scope")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Show")).not.toBeInTheDocument();
   });
 
   it("renders an explicit fallback for unknown sections", () => {

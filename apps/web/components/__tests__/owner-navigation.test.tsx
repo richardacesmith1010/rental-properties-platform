@@ -1,7 +1,8 @@
 import { act, fireEvent, render, renderHook, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildAllSectionItems, getOwnerNavItems, getManagerModeNavItems } from "@/components/dashboard/dashboard-config";
-import { SidebarNav, MobileTopBar } from "@/components/dashboard/sidebar/sidebar-nav";
+import { SidebarNav } from "@/components/dashboard/sidebar/sidebar-nav";
+import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { OwnerAddMenu } from "@/components/dashboard/owner-add-menu";
 import { OwnerSectionCacheContext } from "@/components/dashboard/owner-section-cache";
 import { useDashboardNavigation } from "@/components/dashboard/dashboard-section-loaders";
@@ -38,7 +39,8 @@ describe("owner grouped navigation", () => {
     expect(Array.from(nav.querySelectorAll("p")).map(p => p.textContent)).toEqual(["Every day", "Your homes", "Money", "More"]);
     const actual = Array.from(nav.querySelectorAll("button,a")).map(el => el.querySelector("span.truncate")?.textContent ?? el.textContent);
     expect(actual).toEqual(llc ? labels : labels.filter(label => label !== "Members"));
-    expect(within(nav).getByRole("button", { name: "Rent 2" })).toHaveAttribute("aria-current", "page");
+    expect(within(nav).getByRole("button", { name: "Rent 2 late" })).toHaveAttribute("aria-current", "page");
+    expect(within(nav).getByRole("button", { name: "Rent 2 late" })).toHaveClass("hover:bg-[var(--accent-weak)]");
     expect(within(nav).getByRole("button", { name: "Messages 3" })).toBeVisible();
     expect(within(nav).getByRole("button", { name: "Alerts 4" })).toBeVisible();
   });
@@ -50,8 +52,12 @@ describe("owner grouped navigation", () => {
 
   it("uses the same grouped items in the mobile drawer", () => {
     window.matchMedia = vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() });
-    render(<MobileTopBar {...navProps} items={getOwnerNavItems(buildAllSectionItems(availability))} />);
-    fireEvent.click(screen.getByRole("button", { name: "Open navigation menu" }));
+    render(<DashboardLayout {...navProps} mainClassName="" items={getOwnerNavItems(buildAllSectionItems(availability))}><div>Page</div></DashboardLayout>);
+    const shortcuts = screen.getByRole("navigation", { name: "Owner shortcuts" });
+    expect(shortcuts).toHaveClass("lg:hidden");
+    expect(within(shortcuts).getByText("2 late")).toBeInTheDocument();
+    fireEvent.click(within(shortcuts).getByRole("button", { name: "More" }));
+    expect(screen.getByRole("dialog", { name: "Menu" })).toBeInTheDocument();
     const nav = screen.getByRole("navigation", { name: "Main navigation" });
     expect(Array.from(nav.querySelectorAll("button,a")).map(el => el.querySelector("span.truncate")?.textContent ?? el.textContent)).toEqual(labels);
   });
@@ -61,7 +67,7 @@ describe("owner grouped navigation", () => {
     render(<OwnerSectionCacheContext.Provider value={cache as never}>
       <SidebarNav {...navProps} items={getOwnerNavItems(buildAllSectionItems(availability))} />
     </OwnerSectionCacheContext.Provider>);
-    const rent = screen.getByRole("button", { name: "Rent 2" });
+    const rent = screen.getByRole("button", { name: "Rent 2 late" });
     fireEvent.mouseEnter(rent);
     expect(cache.preloadSection).toHaveBeenLastCalledWith("charges", 150);
     fireEvent.mouseLeave(rent);

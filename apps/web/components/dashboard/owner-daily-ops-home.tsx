@@ -26,6 +26,34 @@ interface OwnerHomeSummary {
   nextDueTenantCount: number;
 }
 
+interface LateRentGroup {
+  key: string;
+  charges: ChargeRowData[];
+  oldestCharge: ChargeRowData;
+  totalCents: number;
+  monthCount: number;
+}
+
+export function groupLateRent(charges: ChargeRowData[]): LateRentGroup[] {
+  const grouped = new Map<string, ChargeRowData[]>();
+
+  for (const charge of charges) {
+    const key = `${charge.leaseId ?? charge.id}:${charge.tenantProfileId ?? charge.tenantName ?? "tenant"}`;
+    grouped.set(key, [...(grouped.get(key) ?? []), charge]);
+  }
+
+  return Array.from(grouped, ([key, groupCharges]) => {
+    const ordered = [...groupCharges].sort((left, right) => left.dueDate.localeCompare(right.dueDate));
+    return {
+      key,
+      charges: ordered,
+      oldestCharge: ordered[0],
+      totalCents: ordered.reduce((sum, charge) => sum + charge.amountCents, 0),
+      monthCount: new Set(ordered.map((charge) => charge.dueDate.slice(0, 7))).size
+    };
+  }).sort((left, right) => left.oldestCharge.dueDate.localeCompare(right.oldestCharge.dueDate));
+}
+
 interface OwnerDailyOpsHomeProps {
   bankState: OwnerBankCardState;
   summary: OwnerHomeSummary;
@@ -80,14 +108,16 @@ export function OwnerDailyOpsHome({
     ? Math.min(100, Math.round((summary.collectedCents / summary.dueCents) * 100))
     : 0;
 
-  const sendReminder = (chargeId: string) => {
+  const lateRentGroups = groupLateRent(summary.lateCharges);
+
+  const sendReminder = (chargeIds: string[]) => {
     if (!onSendBatchPaymentReminder) {
       onOpenSection("charges");
       return;
     }
     startSending(async () => {
       const formData = new FormData();
-      formData.append("chargeIds", chargeId);
+      chargeIds.forEach((chargeId) => formData.append("chargeIds", chargeId));
       const result = await onSendBatchPaymentReminder(null, formData);
       if (!result?.success) {
         toast.error(result?.error ?? "Unable to send this reminder.");
@@ -118,15 +148,19 @@ export function OwnerDailyOpsHome({
         <>
           <section className="space-y-3" aria-labelledby="needs-you-title">
             <h2 id="needs-you-title" className="text-xl font-semibold text-[var(--ink)]">Needs you today</h2>
-            {summary.lateCharges.map((charge) => (
-              <div key={charge.id} className="domus-card p-4">
+            {lateRentGroups.map((group) => {
+              const charge = group.oldestCharge;
+              return <div key={group.key} className="domus-card p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="font-semibold text-[var(--ink)]">{charge.tenantName || "Tenant"} owes {formatCurrency(charge.amountCents)}</p>
-                    <p className="mt-1 text-sm text-[var(--muted)]">{charge.propertyName || "Home"} · {charge.unitNumber || "Unit"} · due {formatDate(charge.dueDate)}</p>
+                    <p className="font-semibold text-[var(--ink)]">
+                      {charge.tenantName || "Tenant"} owes {formatCurrency(group.totalCents)}
+                      {group.monthCount > 1 ? ` · ${group.monthCount} months late` : null}
+                    </p>
+                    <p className="mt-1 text-sm text-[var(--muted)]">Oldest rent was due {formatDate(charge.dueDate)}</p>
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row">
-                    <Button type="button" variant="outline" className="min-h-11" disabled={isSending} onClick={() => sendReminder(charge.id)} title="Send this tenant a rent reminder.">Send reminder</Button>
+                    <Button type="button" variant="outline" className="min-h-11" disabled={isSending} onClick={() => sendReminder(group.charges.map((item) => item.id))} title="Send this tenant a rent reminder.">Send reminder</Button>
                     <Button type="button" className="min-h-11" onClick={() => setPaymentChargeId((current) => current === charge.id ? null : charge.id)} title="Record rent paid outside Domus.">Mark as paid</Button>
                   </div>
                 </div>
@@ -136,8 +170,8 @@ export function OwnerDailyOpsHome({
                     {paymentState && !paymentState.success ? <p className="mt-2 text-sm text-[var(--crit)]">{paymentState.error}</p> : null}
                   </div>
                 ) : null}
-              </div>
-            ))}
+              </div>;
+            })}
 
             {summary.openRepairCount === 0 && summary.newMessageCount === 0 ? (
               <p className="text-sm text-[var(--muted)]">No open repairs. No new messages.</p>
@@ -149,10 +183,10 @@ export function OwnerDailyOpsHome({
             )}
           </section>
 
-          <section className="grid gap-3 md:grid-cols-3" aria-label="Portfolio summary">
+          <section className="grid gap-3 md:grid-cols-3" aria-label="Your homes">
             <SummaryTile title="Rent this month" value={`${formatCurrency(summary.collectedCents)} of ${formatCurrency(summary.dueCents)}`} progress={dueProgress} />
             <SummaryTile title="Homes" value={String(summary.homeCount)} detail={`${summary.rentedHomeCount} of ${summary.homeCount} rented`} />
-            <SummaryTile title="Next rent due" value={summary.nextDueDate ? formatDate(summary.nextDueDate) : "No rent due"} detail={`${formatCurrency(summary.nextDueAmountCents)} from ${summary.nextDueTenantCount} tenant${summary.nextDueTenantCount === 1 ? "" : "s"}`} />
+            <SummaryTile title="Next rent due" value={summary.nextDueDate ? formatDate(summary.nextDueDate) : "No rent due"} detail={summary.nextDueDate ? `${formatCurrency(summary.nextDueAmountCents)} from ${summary.nextDueTenantCount} tenant${summary.nextDueTenantCount === 1 ? "" : "s"}` : undefined} />
           </section>
 
           <section className="space-y-3">

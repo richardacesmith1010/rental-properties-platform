@@ -117,11 +117,11 @@ export function buildAllSectionItems(params: BuildAllSectionItemsParams): NavIte
     },
     {
       id: "charges",
-      label: "Charges",
+      label: "Rent",
       icon: Receipt,
       badgeCount: params.chargeBadgeCount,
-      description: "Upcoming and late charges.",
-      clickHint: "open billing charges"
+      description: "Rent due dates and payment status.",
+      clickHint: "open rent"
     },
     {
       id: "payments",
@@ -132,18 +132,18 @@ export function buildAllSectionItems(params: BuildAllSectionItemsParams): NavIte
     },
     {
       id: "maintenance",
-      label: "Maintenance",
+      label: "Repairs",
       icon: Wrench,
       badgeCount: params.maintenanceBadgeCount,
-      description: "Ticket queue and assignment controls.",
-      clickHint: "open maintenance tickets"
+      description: "Repair queue and assignment controls.",
+      clickHint: "open repairs"
     }
   ];
 
   if (params.hasLeasingSection) {
     items.push({
       id: "leasing",
-      label: "Leasing Hub",
+      label: "Find a tenant",
       icon: Building2,
       description: "Step-by-step leasing progression from invitation to billing live.",
       clickHint: "open leasing workflow hub"
@@ -163,10 +163,10 @@ export function buildAllSectionItems(params: BuildAllSectionItemsParams): NavIte
   if (params.hasManagerPaymentsSection) {
     items.push({
       id: "manager-payments",
-      label: "Manager Payments",
+      label: "Manager pay",
       icon: Banknote,
       description: "Recurring fees, reimbursements, and manager invoices.",
-      clickHint: "open manager payments"
+      clickHint: "open manager pay"
     });
   }
 
@@ -217,7 +217,7 @@ export function buildAllSectionItems(params: BuildAllSectionItemsParams): NavIte
       id: "activity",
       label: "Activity",
       icon: History,
-      description: "Recent operational changes across your portfolio.",
+      description: "Recent operational changes across your homes.",
       clickHint: "open recent activity"
     });
   }
@@ -267,7 +267,7 @@ export function buildAllSectionItems(params: BuildAllSectionItemsParams): NavIte
       id: "expenses",
       label: "Expenses",
       icon: CreditCard,
-      description: "Expense tracking and monthly P&L.",
+      description: "Track money in and out each month.",
       clickHint: "open expense tracking"
     });
   }
@@ -292,7 +292,7 @@ export function buildAllSectionItems(params: BuildAllSectionItemsParams): NavIte
     },
     {
       id: "portfolio",
-      label: "Portfolio",
+      label: "Homes",
       icon: Building2,
       description: "Property list with edit and archive controls.",
       clickHint: "open property portfolio"
@@ -333,7 +333,14 @@ export const ownerMenuGroups = [
 export function getOwnerNavItems(available: NavItem[]): NavItem[] {
   return ownerMenuGroups.flatMap(group => group.items.flatMap(([id, label]) => {
     const item = available.find(candidate => candidate.id === id);
-    return item ? [{ ...item, label, group: group.label, description: ownerPageDescriptions[id], clickHint: undefined }] : [];
+    return item ? [{
+      ...item,
+      label,
+      group: group.label,
+      description: ownerPageDescriptions[id],
+      clickHint: undefined,
+      badgeText: id === "charges" && item.badgeCount ? `${item.badgeCount} late` : undefined
+    }] : [];
   }));
 }
 

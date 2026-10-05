@@ -80,7 +80,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                 Financial reports
               </h1>
               <p className="mt-2 text-sm text-[var(--muted)]">
-                Portfolio reporting for rent, receivables, ledgers, P&amp;L, and tax prep.
+                Reports for rent, money owed, payments, costs, and taxes.
               </p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
@@ -142,8 +142,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <ReportCard id="rent-roll" icon="bar-chart-3" title="Rent Roll" description="Current tenant roster with rent amounts and balances." />
           <ReportCard id="delinquency-aging" icon="receipt" title="Overdue Rent Aging" description="Outstanding balances by 30/60/90+ day aging." />
-          <ReportCard id="tenant-ledger" icon="file-bar-chart-2" title="Tenant Ledger" description="Complete charge and payment history per tenant." />
-          <ReportCard id="monthly-pnl" icon="wallet" title="Monthly P&L" description="Revenue versus expenses by property by month." />
+          <ReportCard id="tenant-ledger" icon="file-bar-chart-2" title="Payment history" description="Rent and payment history for each tenant." />
+          <ReportCard id="monthly-pnl" icon="wallet" title="Money in and out" description="Income and costs by home and month." />
           <ReportCard id="tax-summary" icon="landmark" title="Tax Summary" description="Annual rental income and deductions in a Schedule E style format." />
           <ReportCard id="accounts-receivable" icon="credit-card" title="Accounts Receivable" description="All outstanding balances grouped by tenant." />
         </section>

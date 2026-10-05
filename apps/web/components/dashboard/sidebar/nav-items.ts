@@ -26,6 +26,7 @@ export interface NavItem {
   label: string;
   icon: LucideIcon;
   badgeCount?: number;
+  badgeText?: string;
   href?: string;
   description?: string;
   clickHint?: string;
@@ -41,10 +42,10 @@ export const defaultNavItems: NavItem[] = [
   },
   {
     id: "charges",
-    label: "Charges",
+    label: "Rent",
     icon: Receipt,
-    description: "Rent charges and due-date tracking.",
-    clickHint: "open billing charges"
+    description: "Rent due dates and payment status.",
+    clickHint: "open rent"
   },
   {
     id: "payments",
@@ -55,17 +56,17 @@ export const defaultNavItems: NavItem[] = [
   },
   {
     id: "manager-payments",
-    label: "Manager Payments",
+    label: "Manager pay",
     icon: Banknote,
     description: "Recurring manager fees, reimbursements, and invoices.",
-    clickHint: "open manager payments"
+    clickHint: "open manager pay"
   },
   {
     id: "maintenance",
-    label: "Maintenance",
+    label: "Repairs",
     icon: Wrench,
-    description: "Maintenance tickets and progress.",
-    clickHint: "open maintenance workflow"
+    description: "Repairs and progress.",
+    clickHint: "open repairs"
   },
   {
     id: "notifications",
@@ -111,7 +112,7 @@ export const defaultNavItems: NavItem[] = [
   },
   {
     id: "portfolio",
-    label: "Portfolio",
+    label: "Homes",
     icon: Building2,
     description: "Property list and property-level edits.",
     clickHint: "open portfolio list"
@@ -244,6 +245,8 @@ export function navButtonClasses(isActive: boolean, mobile = false) {
   return [
     "flex w-full items-center gap-3 rounded-[10px] px-3.5 py-2.5 text-[13px] transition-all",
     mobile ? "justify-start" : "",
-    isActive ? "sidebar-shell-button sidebar-shell-button-active" : "sidebar-shell-button"
+    isActive
+      ? "sidebar-shell-button sidebar-shell-button-active hover:border-[var(--accent-line)] hover:bg-[var(--accent-weak)] hover:text-[var(--accent)] focus-visible:border-[var(--accent-line)] focus-visible:bg-[var(--accent-weak)] focus-visible:text-[var(--accent)]"
+      : "sidebar-shell-button"
   ].join(" ");
 }

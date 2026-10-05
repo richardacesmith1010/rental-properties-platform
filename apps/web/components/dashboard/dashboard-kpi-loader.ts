@@ -6,6 +6,7 @@ import type { OwnerDocumentsData } from "@/lib/documents";
 import type { ExpenseDashboardData } from "@/lib/expenses";
 import type { FeatureCapabilitiesDTO } from "@/lib/feature-capabilities";
 import type { MaintenanceTicket } from "@/lib/maintenance";
+import { isCollectedOutsideDomus } from "@/lib/lease-collection";
 import type { OwnershipAccountDTO } from "@/lib/ownership";
 import type { PortfolioData } from "@/lib/portfolio";
 import type { RentIncreaseEntry } from "@/lib/rent-increases";
@@ -233,7 +234,7 @@ export function useDashboardKpiData(
   const canManagePortfolio = isOwnerRole || isManagerRole;
   const propertyFilteringEnabled = isOwnerRole && safePortfolio.properties.length > 0;
   const chargeBadgeCount = safeDashboardData.charges.filter(
-    (charge) => charge.status === "pending" || charge.status === "late"
+    (charge) => charge.status === "late" && !isCollectedOutsideDomus(charge)
   ).length;
   const maintenanceBadgeCount = safeTickets.filter(
     (ticket) => ticket.status === "open" || ticket.status === "in_progress"

@@ -1,7 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { MobileTopBar, SidebarNav, type NavItem } from "./sidebar-nav";
+import { OwnerBottomBar } from "./owner-bottom-bar";
 import type { GlobalSearchItem } from "./global-search";
 import type { FormAction, StatefulAction } from "./types";
 import type { NotificationDTO } from "@/lib/notifications";
@@ -61,6 +62,7 @@ export function DashboardLayout({
   reportsHref = null,
   accountSwitcher
 }: DashboardLayoutProps) {
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const navProps = {
     userEmail,
     role,
@@ -88,11 +90,19 @@ export function DashboardLayout({
 
   return (
     <div className="app-surface flex min-h-screen flex-col overflow-x-hidden lg:flex-row">
-      <MobileTopBar {...navProps} />
+      <MobileTopBar {...navProps} mobileDrawerOpen={mobileDrawerOpen} onMobileDrawerOpenChange={setMobileDrawerOpen} />
       <SidebarNav {...navProps} />
-      <main id="main-content" className={`min-h-0 overflow-x-hidden ${mainClassName}`}>
+      <main id="main-content" className={`min-h-0 overflow-x-hidden ${role === "owner" ? "pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] lg:pb-0" : ""} ${mainClassName}`}>
         {children}
       </main>
+      {role === "owner" ? (
+        <OwnerBottomBar
+          items={items ?? []}
+          activeItemId={activeItemId}
+          onSelectItem={onSelectItem}
+          onOpenMore={() => setMobileDrawerOpen(true)}
+        />
+      ) : null}
       {afterMain}
     </div>
   );

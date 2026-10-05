@@ -24,7 +24,7 @@ import {
 import { MobileUserFooter, SidebarUserFooter } from "./user-footer";
 import type { StatefulAction } from "../types";
 
-interface SidebarNavProps {
+export interface SidebarNavProps {
   userEmail: string;
   role: string;
   fullName?: string | null;
@@ -152,7 +152,7 @@ function NavList({ navItems, activeItemId, onSelectItem, mobile = false }: NavLi
               <span className="truncate">{item.label}</span>
               {typeof item.badgeCount === "number" && item.badgeCount > 0 ? (
                 <Badge variant="warning" className="ml-auto min-w-[1.5rem] justify-center rounded-full px-1.5 py-0 text-[10px]">
-                  {item.badgeCount}
+                  {item.badgeText ?? item.badgeCount}
                 </Badge>
               ) : null}
             </a>
@@ -178,7 +178,7 @@ function NavList({ navItems, activeItemId, onSelectItem, mobile = false }: NavLi
               <span className="truncate">{item.label}</span>
               {typeof item.badgeCount === "number" && item.badgeCount > 0 ? (
                 <Badge variant="warning" className="ml-auto min-w-[1.5rem] justify-center rounded-full px-1.5 py-0 text-[10px]">
-                  {item.badgeCount}
+                  {item.badgeText ?? item.badgeCount}
                 </Badge>
               ) : null}
             </button>
@@ -198,7 +198,7 @@ function NavList({ navItems, activeItemId, onSelectItem, mobile = false }: NavLi
             <span className="truncate">{item.label}</span>
             {typeof item.badgeCount === "number" && item.badgeCount > 0 ? (
               <Badge variant="warning" className="ml-auto min-w-[1.5rem] justify-center rounded-full px-1.5 py-0 text-[10px]">
-                {item.badgeCount}
+                {item.badgeText ?? item.badgeCount}
               </Badge>
             ) : null}
           </a>
@@ -329,7 +329,9 @@ export function MobileTopBar({
   onOpenCommandPalette,
   commandPaletteEnabled = false,
   reportsHref = null,
-  accountSwitcher
+  accountSwitcher,
+  mobileDrawerOpen,
+  onMobileDrawerOpenChange
 }: Pick<
   SidebarNavProps,
   | "userEmail"
@@ -355,7 +357,10 @@ export function MobileTopBar({
   | "commandPaletteEnabled"
   | "reportsHref"
   | "accountSwitcher"
->) {
+> & {
+  mobileDrawerOpen?: boolean;
+  onMobileDrawerOpenChange?: (open: boolean) => void;
+}) {
   const pathname = usePathname();
   const navItems = injectReportsNavItem(resolveNavItems(items, navPreset), reportsHref);
   const workspacePath = role === "owner" ? "/owner" : role === "manager" ? "/manager" : "/tenant";
@@ -411,7 +416,9 @@ export function MobileTopBar({
 
           <MobileDrawer
             className="gradient-sidebar border-r border-border text-foreground"
-            trigger={
+            open={mobileDrawerOpen}
+            onOpenChange={onMobileDrawerOpenChange}
+            trigger={role === "owner" ? undefined : (
               <button
                 type="button"
                 className="sidebar-shell-button flex h-11 w-11 items-center justify-center"
@@ -420,7 +427,7 @@ export function MobileTopBar({
               >
                 <Menu className="h-5 w-5" />
               </button>
-            }
+            )}
           >
             <div className="flex max-h-[calc(100svh-2rem)] min-h-0 flex-col pr-1">
               <div className="shrink-0 flex items-center justify-between gap-3 pb-1">

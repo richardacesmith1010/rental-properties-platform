@@ -30,7 +30,7 @@ export function MonthlyPnLReport({ data, onEditCharge, onUpdateExpense }: Monthl
   return (
     <ReportSection
       id="monthly-pnl"
-      title="Monthly P&L"
+      title="Money in and out"
       description="Revenue versus expenses by property and month."
       rows={data}
       onExport={() => downloadReportCsv(`domus-monthly-pnl-${new Date().toISOString().slice(0, 10)}.csv`, monthlyPnlToCsv(data))}
@@ -44,12 +44,12 @@ export function MonthlyPnLReport({ data, onEditCharge, onUpdateExpense }: Monthl
         { key: "expenses", label: "Expenses", sortValue: (row) => row.expenses, render: (row) => formatCurrency(row.expenses) },
         { key: "net", label: "Net Income", sortValue: (row) => row.netIncome, render: (row) => formatCurrency(row.netIncome) }
       ]}
-      emptyTitle="No P&L data"
+      emptyTitle="No money records"
       emptyDescription="Income and expense data will populate this report once transactions exist."
       footer={
         data.length > 0 ? (
           <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--ink-2)]">
-            <span className="font-semibold text-[var(--ink)]">Portfolio Summary:</span>{" "}
+            <span className="font-semibold text-[var(--ink)]">Your homes:</span>{" "}
             Income {formatCurrency(portfolioSummary.totalIncome)} · Expenses {formatCurrency(portfolioSummary.expenses)} · Net {formatCurrency(portfolioSummary.netIncome)}
           </div>
         ) : null

@@ -139,7 +139,7 @@ export function MaintenanceSection({
   const visibleTickets =
     previewCount && !expanded ? filteredTickets.slice(0, previewCount) : filteredTickets;
   const hasMore = previewCount != null && filteredTickets.length > previewCount;
-  const sectionTitle = viewerRole === "tenant" ? "Problems" : "Maintenance Tickets";
+  const sectionTitle = viewerRole === "tenant" ? "Problems" : "Repairs";
   const emptyDescription =
     filter === "all"
       ? viewerRole === "tenant"

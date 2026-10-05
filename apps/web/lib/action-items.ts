@@ -77,7 +77,7 @@ function formatDaysUntil(days: number, suffix = "day") {
   return `in ${days} ${suffix}s`;
 }
 
-function getNextDueDateForLease(lease: LeaseListItem, today: Date) {
+export function getNextDueDateForLease(lease: LeaseListItem, today: Date) {
   if (!lease.active) {
     return null;
   }

@@ -18,7 +18,7 @@ test.describe("Property navigation", () => {
     await openOwnerSection(page, "charges");
 
     const selector = page.getByRole("combobox", { name: /property scope/i });
-    await expect(page.getByText("Property Scope", { exact: true })).toBeVisible();
+    await expect(page.getByText("Show", { exact: true })).toBeVisible();
     await expect(selector).toBeVisible();
     await expect(selector.locator('option[value=""]')).toHaveCount(1);
   });

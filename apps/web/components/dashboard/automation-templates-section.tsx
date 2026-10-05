@@ -188,7 +188,7 @@ export function AutomationTemplatesSection({
         ) : (
           <div className="space-y-3">
             <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Property scope</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Show</p>
               <Select
                 value={selectedPropertyId}
                 onChange={(event) => setSelectedPropertyId(event.target.value)}

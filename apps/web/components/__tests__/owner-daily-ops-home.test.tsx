@@ -43,7 +43,7 @@ describe("OwnerDailyOpsHome", () => {
   });
 
   it("renders late rent actions and summary tiles", async () => {
-    const reminder = vi.fn(async () => ({ success: true as const }));
+    const reminder = vi.fn(async (_state: unknown, _formData: FormData) => ({ success: true as const }));
     render(
       <OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }} summary={summary} onOpenSection={vi.fn()} onSendBatchPaymentReminder={reminder} onRecordManualPayment={vi.fn()} financialOverview={financialOverview} />
     );
@@ -62,5 +62,36 @@ describe("OwnerDailyOpsHome", () => {
   it("handles a zero-home portfolio", () => {
     render(<OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }} summary={{ ...summary, lateCharges: [], homeCount: 0, rentedHomeCount: 0 }} onOpenSection={vi.fn()} financialOverview={financialOverview} />);
     expect(screen.getByText("0 of 0 rented")).toBeInTheDocument();
+  });
+
+  it("groups late months and uses all rent for reminders", async () => {
+    const reminder = vi.fn(async (_state: unknown, _formData: FormData) => ({ success: true as const }));
+    const groupedSummary = {
+      ...summary,
+      lateCharges: [
+        { ...summary.lateCharges[0], id: "oldest", dueDate: "2026-08-01", amountCents: 100 },
+        { ...summary.lateCharges[0], id: "newest", dueDate: "2026-09-01", amountCents: 100 }
+      ]
+    };
+    const { container } = render(
+      <OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }} summary={groupedSummary} onOpenSection={vi.fn()} onSendBatchPaymentReminder={reminder} onRecordManualPayment={vi.fn()} financialOverview={financialOverview} />
+    );
+
+    expect(screen.getByText("Maya Bell owes $2 · 2 months late")).toBeInTheDocument();
+    expect(screen.getByText("Oldest rent was due Aug 1, 2026")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Send reminder" })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Send reminder" }));
+    await waitFor(() => expect(reminder).toHaveBeenCalledOnce());
+    const reminderData = reminder.mock.calls[0][1] as FormData;
+    expect(reminderData.getAll("chargeIds")).toEqual(["oldest", "newest"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Mark as paid" }));
+    expect(container.querySelector('input[name="chargeId"]')).toHaveValue("oldest");
+  });
+
+  it("omits the rent detail when no rent is due", () => {
+    render(<OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }} summary={{ ...summary, lateCharges: [], nextDueDate: null, nextDueAmountCents: 0, nextDueTenantCount: 0 }} onOpenSection={vi.fn()} financialOverview={financialOverview} />);
+    expect(screen.getByText("No rent due")).toBeInTheDocument();
+    expect(screen.queryByText("$0 from 0 tenants")).not.toBeInTheDocument();
   });
 });

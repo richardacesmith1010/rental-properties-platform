@@ -105,7 +105,7 @@ export function DomusFinancialsCard({
     <section className={cn("domus-card overflow-hidden p-5 shadow-sm", className)}>
       <div className="flex flex-col gap-2 border-b border-[color:color-mix(in_srgb,var(--line)_84%,transparent)] pb-4">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-          Financial snapshot
+          Your numbers
         </p>
         <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
           <div>

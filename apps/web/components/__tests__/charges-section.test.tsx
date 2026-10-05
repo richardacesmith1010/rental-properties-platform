@@ -56,7 +56,7 @@ describe("ChargesSection", () => {
     );
 
     const generateLink = screen.getByRole("link", {
-      name: "Generate This Month Charges"
+      name: "Generate this month's rent"
     });
 
     expect(generateLink).toBeInTheDocument();
@@ -67,7 +67,7 @@ describe("ChargesSection", () => {
     render(<ChargesSection charges={[]} onPayCharge={async () => {}} />);
 
     expect(
-      screen.queryByRole("link", { name: "Generate This Month Charges" })
+      screen.queryByRole("link", { name: "Generate this month's rent" })
     ).not.toBeInTheDocument();
   });
 
@@ -222,10 +222,10 @@ describe("ChargesSection", () => {
     const { rerender } = render(
       <ChargesSection charges={[]} onPayCharge={async () => {}} isOwnerView onGenerateChargesHref="/owner/generate" />
     );
-    expect(screen.queryByRole("link", { name: "Generate This Month Charges" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Generate this month's rent" })).not.toBeInTheDocument();
 
     rerender(<ChargesSection charges={[]} onPayCharge={async () => {}} onGenerateChargesHref="/owner/generate" />);
-    expect(screen.getByRole("link", { name: "Generate This Month Charges" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Generate this month's rent" })).toBeInTheDocument();
   });
 
   it("shows owner row actions and moves Message into more", async () => {

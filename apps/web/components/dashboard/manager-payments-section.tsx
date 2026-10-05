@@ -119,7 +119,7 @@ export function ManagerPaymentsSection({
   };
 
   if (warning && configs.length === 0 && payments.length === 0) {
-    return <FeatureWarning title="Manager Payments Unavailable" message={warning} />;
+    return <FeatureWarning title="Manager pay unavailable" message={warning} />;
   }
 
   return (
@@ -127,7 +127,7 @@ export function ManagerPaymentsSection({
       <Card className="border border-border/50 shadow-sm">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <CardTitle className="text-xl font-semibold">Manager Payments</CardTitle>
+            <CardTitle className="text-xl font-semibold">Manager pay</CardTitle>
             <p className="text-sm text-muted-foreground">
               Track recurring management fees, reimbursements, and invoice history per property.
             </p>
@@ -135,7 +135,7 @@ export function ManagerPaymentsSection({
           <div className="flex flex-wrap items-center gap-2 sm:justify-end">
             {onRecordManagerPayment ? (
               <Button type="button" onClick={() => setShowPaymentForm((current) => !current)} title="Record a reimbursement or custom manager payment.">
-                Record Payment
+                Mark as paid
               </Button>
             ) : null}
             {onGenerateMonthlyManagerPayments ? (

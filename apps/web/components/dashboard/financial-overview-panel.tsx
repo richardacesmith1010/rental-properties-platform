@@ -219,11 +219,8 @@ export function FinancialOverviewPanel({
               <Wallet className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                Command center
-              </p>
               <h3 className="text-[22px] font-[640] tracking-[-0.02em] text-[var(--ink)]">
-                Financial overview
+                Money overview
               </h3>
               <p className="text-sm text-[var(--muted)]">
                 Switch between your linked bank balance and Domus totals.

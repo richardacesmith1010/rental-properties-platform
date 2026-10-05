@@ -5,15 +5,17 @@ import { type ReactNode } from "react";
 import { cn } from "@/lib/format";
 
 interface MobileDrawerProps {
-  trigger: ReactNode;
+  trigger?: ReactNode;
   children: ReactNode;
   className?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function MobileDrawer({ trigger, children, className }: MobileDrawerProps) {
+export function MobileDrawer({ trigger, children, className, open, onOpenChange }: MobileDrawerProps) {
   return (
-    <Drawer.Root direction="left">
-      <Drawer.Trigger asChild>{trigger}</Drawer.Trigger>
+    <Drawer.Root direction="left" open={open} onOpenChange={onOpenChange}>
+      {trigger ? <Drawer.Trigger asChild>{trigger}</Drawer.Trigger> : null}
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-40 bg-black/45 backdrop-blur-[2px]" />
         <Drawer.Content
@@ -22,6 +24,8 @@ export function MobileDrawer({ trigger, children, className }: MobileDrawerProps
             className
           )}
         >
+          <Drawer.Title className="sr-only">Menu</Drawer.Title>
+          <Drawer.Description className="sr-only">Open dashboard sections.</Drawer.Description>
           <div className="max-h-full overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1.25rem)] pt-[calc(env(safe-area-inset-top,0px)+1rem)]">
             {children}
           </div>

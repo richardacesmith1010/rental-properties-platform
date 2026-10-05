@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { getNextRentCollectionLabel } from "@/lib/action-items";
+import { getNextDueDateForLease, getNextRentCollectionLabel } from "@/lib/action-items";
 import { isCollectedOutsideDomus } from "@/lib/lease-collection";
 import type { OnboardingChecklistStep } from "@/components/dashboard/onboarding-checklist";
 import type { DashboardProps } from "./types";
@@ -141,19 +141,34 @@ export function useDashboardHomeState(
       safePortfolio.units.filter((unit) => unit.occupied).map((unit) => unit.propertyId)
     );
     const today = new Date();
-    const todayIso = today.toISOString().slice(0, 10);
+    const activeLeases = filteredPortfolio.leases.filter(
+      (lease) => lease.active && !isCollectedOutsideDomus(lease)
+    );
+    const activeLeaseIds = new Set(activeLeases.map((lease) => lease.id));
     const nextDueCharges = rentCharges
       .filter(
         (charge) =>
           charge.status === "pending" &&
-          charge.dueDate >= todayIso &&
-          !isCollectedOutsideDomus(charge)
+          !isCollectedOutsideDomus(charge) &&
+          charge.dueDate >= today.toISOString().slice(0, 10) &&
+          Boolean(charge.leaseId && activeLeaseIds.has(charge.leaseId))
       )
       .sort((left, right) => left.dueDate.localeCompare(right.dueDate));
-    const nextDueDate = nextDueCharges[0]?.dueDate ?? null;
-    const chargesOnNextDate = nextDueDate
-      ? nextDueCharges.filter((charge) => charge.dueDate === nextDueDate)
+    const pendingDueDate = nextDueCharges[0]?.dueDate ?? null;
+    const chargesOnNextDate = pendingDueDate
+      ? nextDueCharges.filter((charge) => charge.dueDate === pendingDueDate)
       : [];
+    const activeLeaseDueDates = activeLeases
+      .map((lease) => ({ lease, dueDate: getNextDueDateForLease(lease, today) }))
+      .filter((entry): entry is { lease: typeof entry.lease; dueDate: Date } => Boolean(entry.dueDate))
+      .sort((left, right) => left.dueDate.getTime() - right.dueDate.getTime());
+    const impliedDueDate = activeLeaseDueDates[0]?.dueDate.toISOString().slice(0, 10) ?? null;
+    const leasesOnNextDate = impliedDueDate
+      ? activeLeaseDueDates.filter(
+          (entry) => entry.dueDate.toISOString().slice(0, 10) === impliedDueDate
+        )
+      : [];
+    const nextDueDate = pendingDueDate ?? impliedDueDate;
 
     return {
       lateCharges,
@@ -164,13 +179,14 @@ export function useDashboardHomeState(
       homeCount: safePortfolio.properties.length,
       rentedHomeCount: rentedPropertyIds.size,
       nextDueDate,
-      nextDueAmountCents: chargesOnNextDate.reduce(
-        (sum, charge) => sum + charge.amountCents,
-        0
-      ),
-      nextDueTenantCount: new Set(chargesOnNextDate.map((charge) => charge.leaseId)).size
+      nextDueAmountCents: pendingDueDate
+        ? chargesOnNextDate.reduce((sum, charge) => sum + charge.amountCents, 0)
+        : leasesOnNextDate.reduce((sum, entry) => sum + entry.lease.monthlyRentCents, 0),
+      nextDueTenantCount: pendingDueDate
+        ? new Set(chargesOnNextDate.map((charge) => charge.leaseId)).size
+        : new Set(leasesOnNextDate.map((entry) => entry.lease.tenantProfileId)).size
     };
-  }, [displayDashboardData, filteredTickets, props.inboxThreads, safePortfolio]);
+  }, [displayDashboardData, filteredPortfolio.leases, filteredTickets, props.inboxThreads, safePortfolio]);
 
   return {
     ownerOnboarding,

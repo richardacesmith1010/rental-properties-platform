@@ -100,7 +100,7 @@ export function PortfolioSection({
   return (
     <Card id="portfolio" className="border border-border/50 shadow-sm">
       <CardHeader>
-        <CardTitle className="text-xl font-semibold">Your Portfolio</CardTitle>
+        <CardTitle className="text-xl font-semibold">Your homes</CardTitle>
       </CardHeader>
       <CardContent>
         {showControls && (
@@ -118,7 +118,7 @@ export function PortfolioSection({
           <EmptyState
             icon={Building2}
             title="No properties yet"
-            description="Add your first property to start managing your portfolio."
+            description="Add your first property to start managing your homes."
             actionLabel={onGoToOperations ? "Add Property" : undefined}
             onAction={onGoToOperations}
             actionVariant="default"

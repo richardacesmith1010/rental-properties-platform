@@ -331,9 +331,9 @@ export function DrilldownPanel({
           type="button"
           onClick={() => setActiveView("receivables")}
           className={`domus-kpi-pill text-left transition ${activeView === "receivables" ? "ring-2 ring-primary/40" : ""}`}
-          title="Show every unpaid charge behind open receivables."
+          title="Show every unpaid charge behind money owed to you."
         >
-          <p className="text-xs uppercase tracking-[0.16em] domus-muted">Open receivables</p>
+          <p className="text-xs uppercase tracking-[0.16em] domus-muted">Money owed to you</p>
           <span className="mt-2 block text-2xl font-bold domus-heading">{formatCurrency(openBalanceCents)}</span>
         </button>
         <button
@@ -360,7 +360,7 @@ export function DrilldownPanel({
         {activeView === "receivables" ? (
           <div className="space-y-4">
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Open Receivables</h2>
+              <h2 className="text-lg font-semibold text-foreground">Money owed to you</h2>
               <p className="text-sm text-muted-foreground">
                 Every pending or late charge contributing to outstanding balances.
               </p>
@@ -398,7 +398,7 @@ export function DrilldownPanel({
             <div>
               <h2 className="text-lg font-semibold text-foreground">Tenant Balances</h2>
               <p className="text-sm text-muted-foreground">
-                Current tenant balances derived from the tenant ledger.
+                Current tenant balances derived from payment history.
               </p>
             </div>
             {balanceRows.length === 0 ? (
