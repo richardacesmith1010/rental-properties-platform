@@ -294,6 +294,12 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - **Launch checklist item (L3, needs ChatGPT review):** managers can't send rent reminders — `sendBatchPaymentReminder` is `requireAuth("owner")`. Allowing managers (scoped to properties they manage) is an auth change; moot until notifications are turned on.
 - Polish backlog (fold into the next Codex batch, not worth a run alone): manager Rent help sentence shown twice (manager section-frame description).
 
+## Tenant clarity mockup — APPROVED by owner (2026-10-05)
+
+- Canvas https://claude.ai/artifact/GKgJPNk7dLiLYdXUCchLpV (Main = Tenant Home phone with payState tweak can pay / landlord not ready / paid; Pay; Help = Message landlord + Report a problem tabs; Desktop).
+- Decisions: tenant Home with one big rent card ("$X due <date> · in N days" + Pay rent; or "Online pay isn't on yet…" when the landlord can't collect; or "Paid <date>. Thank you!"); tiles Report a problem / Message landlord; "Your problems" status list; small lease summary; tenant nav Home / Rent / Problems / Messages (+ Your lease, Settings on desktop); Pay = bank account (free) first, card with fee, one Pay button, receipt line; Report a problem = what's wrong, details, "It can wait / Fix it soon", 911 note, photo; no carousel arrows, no "charges"/"Waived" jargon.
+- Next: tenant build packets + owner dry-run fix packet (O1–O9 in docs/dryrun-2026-10-04.md).
+
 ## ▶ START HERE (next session, written 2026-10-04)
 
 - Last shipped: Sprint 159 (`e8195ce`). Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
