@@ -240,6 +240,11 @@ Claude must treat every interaction cycle as a learning opportunity. This sectio
 **What was correct:** The Sprint 148/149 telemetry already showed the fixed prefix cost. A performance target must be the sum of the measured costs that remain on the new path, not a guess about what was removed.
 **Rule:** Before stating any latency target in a packet, list the remaining per-request costs from existing `[perf:*]` telemetry and add them up. State the target as that sum, and name which costs the sprint actually removes.
 
+#### L-014 | 2026-10-04 | PROCESS
+**What happened:** Sprint 158 extended owner navigation code to managers under a new "targeted tests only" rule. Codex skipped lint (my rule forgot it), merged owner and manager URL-sync logic into one effect, and never wrote the manager section to the URL. My full gate caught the lint error and an owner regression; my live walk caught the URL bug. Three fix runs cost more tokens (~355k total) than the targeted rule saved.
+**What was correct:** When a packet generalises shared code to a second role, it must pin the first role's behaviour explicitly (state invariants such as "owner effect and deps unchanged; manager section must round-trip through the URL") and require lint along with targeted tests.
+**Rule:** Packets that reuse one role's code for another role must list the invariants to keep for the original role and the state that must survive a refresh (URL/section). Codex's targeted checks always include `npm run lint:web` and typecheck. Prefer one precise run over several cheap fix runs: each Codex run has a large fixed context cost.
+
 ## 11) Pre-Flight Lessons Check (Hard Rule)
 
 Before starting ANY work cycle (planning, verification, or especially implementation), Claude must:
@@ -260,6 +265,7 @@ If a planned action matches a pattern from a prior lesson, Claude must stop and 
 - Am I about to call a UI sprint "shipped" because gate + smoke passed? → L-009 says do a real-session Chrome MCP render check first. HTTP 200 doesn't prove the page actually rendered.
 - Am I applying a migration that recreates a constraint/policy/function? → L-012 says diff against the live definition first. Does a packet add links or contact info? → name exact values.
 - Am I stating a latency target? → L-013 says sum the remaining measured costs from `[perf:*]` telemetry first.
+- Am I reusing one role's code for another role? → L-014 says pin the original role's invariants and require URL/refresh survival + lint in the packet.
 - Am I ending a cycle report? → L-010 (refined) says keep `docs/agent-handoff.md` + memory current and report the transcript size; only prompt a new chat when a rotation threshold is hit (size ~50MB / compacted ~2× / sluggish / topic pivot) — not every sprint.
 
 This section must be updated whenever a new lesson is added that introduces a new "always check" pattern.
