@@ -250,6 +250,11 @@ Claude must treat every interaction cycle as a learning opportunity. This sectio
 **What was correct:** A size target is a proxy for readability; a cheap model will game a proxy. Refactor packets must constrain the code's shape, not just its line count.
 **Rule:** Any packet with a file-size target must also require: max line length ≤ 140 characters (or the repo formatter's output), total non-whitespace characters of the touched code within ±10% of before (no compaction, no deletion disguised as refactor), and the full test suite green. Claude checks max line length and character totals on every refactor before accepting it.
 
+#### L-016 | 2026-10-05 | REVIEW
+**What happened:** Sprint 167's spec defined Undo as "delete the filed record and the bank item," but the same answer could also create an "Always" rule. Unit tests, ChatGPT's three reviews and Claude's code review all passed it; only the live walk showed the undone mortgage being auto-filed on the next upload.
+**What was correct:** An undo must reverse every side effect of the action it undoes, not just the main record.
+**Rule:** When a packet adds an action with an Undo (or delete/revert), list every write the forward action makes (records, rules, flags, counters) and require the Undo to reverse each one, with a test per side effect. Live walks of new flows must always include "do it → undo it → do the next natural step again".
+
 ## 11) Pre-Flight Lessons Check (Hard Rule)
 
 Before starting ANY work cycle (planning, verification, or especially implementation), Claude must:
@@ -271,6 +276,7 @@ If a planned action matches a pattern from a prior lesson, Claude must stop and 
 - Am I applying a migration that recreates a constraint/policy/function? → L-012 says diff against the live definition first. Does a packet add links or contact info? → name exact values.
 - Am I stating a latency target? → L-013 says sum the remaining measured costs from `[perf:*]` telemetry first.
 - Am I reusing one role's code for another role? → L-014 says pin the original role's invariants and require URL/refresh survival + lint in the packet.
+- Am I adding an action with Undo/revert? → L-016 says list every side effect of the forward action (incl. rules) and require Undo to reverse each, with tests; live walk does → undo → repeat.
 - Am I writing a refactor/size target? → L-015 says also cap line length (≤140) and keep character totals within ±10%, and check both before accepting.
 - Am I ending a cycle report? → L-010 (refined) says keep `docs/agent-handoff.md` + memory current and report the transcript size; only prompt a new chat when a rotation threshold is hit (size ~50MB / compacted ~2× / sluggish / topic pivot) — not every sprint.
 
