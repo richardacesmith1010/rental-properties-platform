@@ -308,9 +308,15 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Token rule now also requires running every existing test file that imports a changed component (memory).
 - Sprint 162 (tenant messaging, L3) packet ChatGPT-reviewed (APPROVE WITH CHANGES, all adopted); migration `20261005_sprint162_tenant_thread_unique.sql` written, NOT yet applied — apply right before dispatch, after owner approval.
 
+## Sprints 161b + 162 SHIPPED (2026-10-05)
+
+- **161b (`5bd4d97`, gpt-reserve 161k):** tenant Home now matches the mockup (calm `tenant-rent-card.tsx`, states via `getTenantPayState`; sidebar Home/Rent/Problems/Messages/Your lease; no "charges"/late-fee scare/duplicate heading; Rent page apostrophe + My Lease block fixed). Verified live desktop + phone, light/dark, 0 console errors.
+- **162 (`d77290c`, L3, ChatGPT APPROVE WITH CHANGES all adopted, gpt-6-sol 109k):** `startTenantConversation` (session auth → zod → rate limit → active-lease property scoping → conflict-safe `findOrCreateTenantThread` with constant subject "Messages with your landlord" → message → recipients = current admins of that property, deduped, via `createNotificationWithDelivery`; safe logging). Migration `inbox_threads_tenant_profile_unique` (partial unique index on property_id, entity_id, subject where entity_type='tenant_profile') applied + verified live by Claude before dispatch. Live: smoke tenant sent 2 messages → 1 thread, 2 msgs, 0 notifications (switch off); owner sees the thread under Messages → Threads. Full gate green (136 files).
+- **Tenant polish backlog (next batch):** Messages page still the old inbox look (triple "Messages" heading, wrong subtitle, Timeline/Threads tabs + "8 unread" notifications mixed in, raw "tenant profile" tag, first message sender "System", tenant shown by email instead of "You"); rent card shows one month ($1) instead of total due ($3 · 3 months); Rent page still shows Enable Autopay + per-row "Pay with card" when online pay is off; `getNextRentDueDate` day cap/start-date edge; Sprint 160 test debt (O2/O4/O5 focused tests); manager Rent duplicate help sentence.
+
 ## ▶ START HERE (next session, written 2026-10-04)
 
-- Last shipped: Sprint 161 (`5c4b0f1`) + 160 follow-up `bcfb3e7`; 161b in progress. Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
+- Last shipped: Sprint 162 (`d77290c`). Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
 - Owner-approved queue, in order: (1) DONE — owner speed arc closed; (2) clarity cleanup — mockup APPROVED; DONE (154–157 shipped); from `docs/walkthrough-2026-10-03.md` #5–#7, #9 — one bank-setup prompt, simpler navigation (replace "N OF M" carousel), plain-language sweep — **mockup first** (Design canvas, like the landing), L2/L3 TBD.
 - Standing rules: notifications OFF until owner says real users (env `DOMUS_NOTIFICATIONS_ENABLED` unset); L3 packets → Claude sends to Domus ChatGPT project via Claude-in-Chrome (memory: feedback-prompt-severity-chatgpt-workflow); Codex default Sol/medium, watch usage limits (detached nohup re-run after reset); verify every UI sprint live with Playwright (temp specs in `apps/web/tests/e2e/zz-*.tmp.spec.ts`, smoke creds from `.env.local`).
 - Owner action items still open: J&MSP LLC bank connection (Stripe; owner must enter bank details). Codex Supabase token expires ~2027-01-01.
