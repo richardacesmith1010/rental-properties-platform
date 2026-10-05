@@ -8,7 +8,11 @@ export function OwnerBankCard({ state, role = "owner" }: { state: OwnerBankCardS
   }
 
   const content = state.status === "needs_info"
-    ? {
+    ? role === "manager" ? {
+        title: "Stripe needs one more thing",
+        body: "Your bank is almost ready. Answer a few questions so your fees can reach you.",
+        button: "Finish setup"
+      } : {
         title: "Stripe needs one more thing",
         body: "Your bank is almost ready. Answer a few questions so rent can reach you.",
         button: "Finish setup"

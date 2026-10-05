@@ -1,4 +1,4 @@
-import { useContext, useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useContext, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   buildAllSectionItems,
@@ -168,6 +168,7 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
   const [activeSection, setActiveSection] = useState(() => {
     return props.initialSectionId ?? "overview";
   });
+  const managerQueryRef = useRef<string | null>(null);
 
   useEffect(() => {
     setActiveSection(props.initialSectionId ?? "overview");
@@ -187,12 +188,16 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
 
   useEffect(() => {
     if (!isManagerRole) return;
+    const queryChanged = managerQueryRef.current !== ownerQuery;
+    managerQueryRef.current = ownerQuery;
     const params = new URLSearchParams(ownerQuery);
     const requestedSection = params.get("section");
     const nextSection = requestedSection && allSectionItems.some((item) => item.id === requestedSection)
       ? requestedSection
       : "overview";
-    setActiveSection(nextSection);
+    if (queryChanged) {
+      setActiveSection(nextSection);
+    }
     if (params.has("mode")) {
       params.delete("mode");
       window.history.replaceState(null, "", `${pathname}${params.size ? `?${params}` : ""}`);
@@ -239,7 +244,14 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
     if (!allSectionItems.some(item => item.id === section)) return;
     if (isOwnerRole) { navigateOwnerDashboard(section); return; }
     setActiveSection(section);
-  }, [allSectionItems, isOwnerRole, navigateOwnerDashboard]);
+    if (isManagerRole) {
+      const params = new URLSearchParams(window.location.search);
+      params.delete("mode");
+      if (section === "overview") params.delete("section");
+      else params.set("section", section);
+      window.history.replaceState(null, "", `${pathname}${params.size ? `?${params}` : ""}`);
+    }
+  }, [allSectionItems, isManagerRole, isOwnerRole, navigateOwnerDashboard, pathname]);
   const goToSectionIfVisible = openSection;
   const goToHomePage = useCallback(() => {
     if (isOwnerRole) navigateOwnerDashboard("overview");

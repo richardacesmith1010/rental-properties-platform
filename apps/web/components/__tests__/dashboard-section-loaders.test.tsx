@@ -1,4 +1,4 @@
-import { fireEvent, render, renderHook, screen } from "@testing-library/react";
+import { act, fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useDashboardNavigation } from "@/components/dashboard/dashboard-section-loaders";
 import { ownerMenuGroups } from "@/components/dashboard/dashboard-config";
@@ -118,6 +118,28 @@ describe("useDashboardNavigation", () => {
     currentQuery = new URLSearchParams("mode=new_tenant");
     rerender();
     expect(result.current.activeSection).toBe("overview");
+  });
+
+  it("writes manager section navigation to the URL and keeps it across rebuilt items", () => {
+    currentQuery = new URLSearchParams("property=home-1&mode=vendor_ops");
+    window.history.replaceState(null, "", "/manager?property=home-1&mode=vendor_ops");
+    const { result, rerender } = renderHook(
+      ({ hasVendorsSection }) => useDashboardNavigation(
+        { data: { profileRole: "manager" }, userEmail: "manager@example.com" } as DashboardProps,
+        { ...kpis, isOwnerRole: false, isManagerRole: true, hasVendorsSection } as never
+      ),
+      { initialProps: { hasVendorsSection: true } }
+    );
+
+    act(() => result.current.openSection("charges"));
+    expect(result.current.activeSection).toBe("charges");
+    expect(window.location.search).toBe("?property=home-1&section=charges");
+
+    rerender({ hasVendorsSection: false });
+    expect(result.current.activeSection).toBe("charges");
+
+    act(() => result.current.openSection("overview"));
+    expect(window.location.search).toBe("?property=home-1");
   });
 
   it("keeps an unknown query section long enough for the fallback UI to render", () => {

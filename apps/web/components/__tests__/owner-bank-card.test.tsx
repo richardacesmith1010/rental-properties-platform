@@ -14,4 +14,16 @@ describe("manager bank card", () => {
     render(<OwnerBankCard role="manager" state={{ status: "connected", href: "/connect/onboard" }} />);
     expect(screen.queryByText("Connect your bank to get your fees")).not.toBeInTheDocument();
   });
+
+  it("uses fee wording for manager setup that needs more information", () => {
+    render(<OwnerBankCard role="manager" state={{ status: "needs_info", href: "/connect/onboard" }} />);
+    expect(screen.getByText("Stripe needs one more thing")).toBeVisible();
+    expect(screen.getByText("Your bank is almost ready. Answer a few questions so your fees can reach you.")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Finish setup" })).toHaveAttribute("href", "/connect/onboard");
+  });
+
+  it("keeps owner rent wording for setup that needs more information", () => {
+    render(<OwnerBankCard role="owner" state={{ status: "needs_info", href: "/connect/onboard" }} />);
+    expect(screen.getByText("Your bank is almost ready. Answer a few questions so rent can reach you.")).toBeVisible();
+  });
 });
