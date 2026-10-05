@@ -267,10 +267,16 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Verified live: Needs-you-today grouped ("Smoke Tenant owes $2 · 2 months late"); Next rent due "Nov 1, 2026 · $1 from 1 tenant"; Rent badge "2 late"; "Show: All homes", "Money overview", "Your numbers"; dead files deleted.
 - Found → Sprint 157 (L1, gpt-6-luna): phone bottom bar not on screen (fixed element trapped by an ancestor; renders at page end, y≈2854) → portal to body; "Property P&L" on Expenses; duplicate Rent help sentence. Manager-pay "Generate This Month…" button left as is (manager-pay generation, different feature).
 
+## Sprint 157 — Phone bottom bar fix SHIPPED (L1, `1577535`, 2026-10-04)
+
+- **gpt-6-luna, low effort: 89,166 tokens**, 3 files, clean (launch.json untouched — the new "never touch files you didn't create" constraint held). Bar portaled to `document.body`. 1153 tests, gate green, smoke 3/3, theme 11/11.
+- Verified live at 390×844: bar on screen (top 781 → bottom 844), Help button above it (bottom 748), Rent/More work, hidden on desktop; "Money in and out by home"; Rent help sentence once; light + dark clean.
+- **Owner clarity arc (154–157) complete.** Token log so far: Sol/Astra 80k–340k per sprint; gpt-reserve 215k (resume of a 30-file sprint); Luna 89k (3-file fix).
+
 ## ▶ START HERE (next session, written 2026-10-04)
 
-- Last shipped: Sprint 156 (`62aedec`). Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
-- Owner-approved queue, in order: (1) DONE — owner speed arc closed; (2) clarity cleanup — mockup APPROVED; 154–156 shipped; 157 (bottom-bar fix, L1) packet ready; from `docs/walkthrough-2026-10-03.md` #5–#7, #9 — one bank-setup prompt, simpler navigation (replace "N OF M" carousel), plain-language sweep — **mockup first** (Design canvas, like the landing), L2/L3 TBD.
+- Last shipped: Sprint 157 (`1577535`). Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
+- Owner-approved queue, in order: (1) DONE — owner speed arc closed; (2) clarity cleanup — mockup APPROVED; DONE (154–157 shipped); from `docs/walkthrough-2026-10-03.md` #5–#7, #9 — one bank-setup prompt, simpler navigation (replace "N OF M" carousel), plain-language sweep — **mockup first** (Design canvas, like the landing), L2/L3 TBD.
 - Standing rules: notifications OFF until owner says real users (env `DOMUS_NOTIFICATIONS_ENABLED` unset); L3 packets → Claude sends to Domus ChatGPT project via Claude-in-Chrome (memory: feedback-prompt-severity-chatgpt-workflow); Codex default Sol/medium, watch usage limits (detached nohup re-run after reset); verify every UI sprint live with Playwright (temp specs in `apps/web/tests/e2e/zz-*.tmp.spec.ts`, smoke creds from `.env.local`).
 - Owner action items still open: J&MSP LLC bank connection (Stripe; owner must enter bank details). Codex Supabase token expires ~2027-01-01.
 - Angel Hernandez (he/him): lease flagged "Pays outside Domus"; owner records Fidelity payments (Charges → Record → ACH, note "Fidelity") or asks Claude to record quietly.
