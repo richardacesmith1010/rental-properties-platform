@@ -6,7 +6,8 @@ import { ArrowLeft, ArrowRight, UserRoundPlus } from "lucide-react";
 import type { ActionState } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { ModalOverlay } from "@/components/ui/modal-overlay";
-import type { PropertyListItem, UnitListItem } from "@/lib/portfolio";
+import type { LeaseListItem, PropertyListItem, UnitListItem } from "@/lib/portfolio";
+import { getVacantUnitsForProperty } from "./lease-wizard-support";
 import {
   STEP_TITLES,
   TenantInviteStepOne,
@@ -16,7 +17,6 @@ import {
   TenantInviteWizardProgress,
   createDefaultDraft,
   getTenantInviteStepError,
-  getUnitsForProperty,
   type TenantInviteWizardDraft,
   type WizardStep
 } from "./tenant-invite-wizard-support";
@@ -33,18 +33,22 @@ interface TenantInviteWizardProps {
   open: boolean;
   properties: PropertyListItem[];
   units: UnitListItem[];
+  leases: LeaseListItem[];
   onOpenChange: (open: boolean) => void;
   onInviteTenant: StatefulAction;
   onOpenSection: (sectionId: string) => void;
+  onAddUnit?: () => void;
 }
 
 export function TenantInviteWizard({
   open,
   properties,
   units,
+  leases,
   onOpenChange,
   onInviteTenant,
   onOpenSection
+  ,onAddUnit
 }: TenantInviteWizardProps) {
   const router = useRouter();
   const [step, setStep] = useState<WizardStep>(0);
@@ -78,8 +82,8 @@ export function TenantInviteWizard({
   }, [open]);
 
   const availableUnits = useMemo(
-    () => getUnitsForProperty(units, draft.propertyId),
-    [draft.propertyId, units]
+    () => getVacantUnitsForProperty(units, leases, draft.propertyId),
+    [draft.propertyId, leases, units]
   );
   const selectedProperty = useMemo(
     () => properties.find((property) => property.id === draft.propertyId) ?? null,
@@ -89,11 +93,15 @@ export function TenantInviteWizard({
     () => availableUnits.find((unit) => unit.id === draft.unitId) ?? null,
     [availableUnits, draft.unitId]
   );
+  useEffect(() => {
+    if (!selectedUnit || draft.monthlyRentDollars) return;
+    setDraft((current) => ({ ...current, monthlyRentDollars: (selectedUnit.monthlyRentCents / 100).toFixed(2) }));
+  }, [draft.monthlyRentDollars, selectedUnit]);
   const currentStepError = getTenantInviteStepError({ step, draft, availableUnits: availableUnits.length });
   const canGoBack = step > 0 && step < STEP_TITLES.length - 1;
 
   const handlePropertyChange = (propertyId: string) => {
-    const propertyUnits = getUnitsForProperty(units, propertyId);
+    const propertyUnits = getVacantUnitsForProperty(units, leases, propertyId);
     setDraft((current) => ({
       ...current,
       propertyId,
@@ -216,6 +224,7 @@ export function TenantInviteWizard({
               draft={draft}
               onPropertyChange={handlePropertyChange}
               onUnitChange={(unitId) => setDraft((current) => ({ ...current, unitId }))}
+              onAddUnit={onAddUnit}
             />
           ) : null}
           {step === 1 ? (
@@ -252,7 +261,7 @@ export function TenantInviteWizard({
                 title="Skip rent and lease details for now, then send the invitation."
                 className="w-full sm:w-auto"
               >
-                Skip - I&apos;ll set this up later
+                Skip — you&apos;ll add rent later
               </Button>
             ) : null}
 

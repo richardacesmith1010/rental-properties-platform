@@ -73,8 +73,9 @@ export function computeFilteredKpis(params: {
   const overdueRentCents = currentMonthRentCharges
     .filter((charge) => charge.status === "late")
     .reduce((sum, charge) => sum + charge.amountCents, 0);
+  const todayIso = new Date().toISOString().slice(0, 10);
   const outstandingCharges = charges.filter(
-    (charge) => charge.status === "pending" || charge.status === "late"
+    (charge) => (charge.status === "pending" && charge.dueDate <= todayIso) || charge.status === "late"
   );
   const totalDueCents = collectedRentCents + pendingRentCents + overdueRentCents;
 

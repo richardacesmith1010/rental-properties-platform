@@ -346,11 +346,12 @@ describe("buildOwnerBundlePlan", () => {
       sectionAvailability
     });
 
-    expect(Array.from(bundlePlan.bundles).sort()).toEqual([
+      expect(Array.from(bundlePlan.bundles).sort()).toEqual([
       "announcement-properties",
       "dashboard",
       "expenses",
-      "feedback",
+        "feedback",
+        "invitations",
       "manager-payments",
       "notification-preferences",
       "notifications",

@@ -263,9 +263,17 @@ export function LeaseWizard({
           ? propertyTenants[0]?.id ?? ""
           : "",
       tenantSearch: ""
+      ,monthlyRentDollars: propertyUnits.length === 1
+        ? ((propertyUnits[0]?.monthlyRentCents ?? 0) / 100).toFixed(2)
+        : ""
     }));
     setErrorMessage(null);
   };
+
+  useEffect(() => {
+    if (!selectedUnit || draft.monthlyRentDollars) return;
+    setDraft((current) => ({ ...current, monthlyRentDollars: (selectedUnit.monthlyRentCents / 100).toFixed(2) }));
+  }, [draft.monthlyRentDollars, selectedUnit]);
 
   const handleClose = () => {
     onOpenChange(false);
@@ -378,11 +386,7 @@ export function LeaseWizard({
         return;
       }
 
-      toast.success(
-        draft.tenantMode === "invite_new"
-          ? "Tenant invited and lease created."
-          : createResult.message ?? "Lease created."
-      );
+      toast.success(`Lease created for ${draft.tenantMode === "invite_new" ? draft.tenantFullName : selectedTenant?.fullName ?? "tenant"}.`);
       onOpenChange(false);
       onOpenSection("leases");
       router.refresh();

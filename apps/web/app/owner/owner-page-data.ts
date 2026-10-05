@@ -250,6 +250,7 @@ export function buildOwnerBundlePlan(params: {
   ]);
 
   if (params.initialOwnerHomePage) {
+    bundles.add("invitations");
     bundles.add("tickets");
     bundles.add("expenses");
     bundles.add("manager-payments");

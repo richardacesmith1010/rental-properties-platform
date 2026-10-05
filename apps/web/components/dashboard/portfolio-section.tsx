@@ -286,7 +286,7 @@ export function PortfolioSection({
                               : "Open property edit controls."
                           }
                         >
-                          {activeEditPropertyId === property.id ? "Done" : "Manage"}
+                          {activeEditPropertyId === property.id ? "Done" : "Edit"}
                         </Button>
                         {activeEditPropertyId === property.id && (
                           <form

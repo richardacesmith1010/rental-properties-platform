@@ -110,6 +110,13 @@ describe("Add menu", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(add).toHaveFocus();
   });
+
+  it("shows the unit action for owners and keeps managers at two actions", () => {
+    render(<OwnerAddMenu onAddHome={vi.fn()} onAddUnit={vi.fn()} onAddTenant={vi.fn()} properties={[]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    expect(screen.getAllByRole("menuitem")).toHaveLength(4);
+    expect(screen.getByRole("menuitem", { name: "Add a unit" })).toBeInTheDocument();
+  });
 });
 
 describe("manager grouped navigation", () => {

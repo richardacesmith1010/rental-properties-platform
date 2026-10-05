@@ -7,6 +7,7 @@ import {
   UserRound
 } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import type { PropertyListItem, UnitListItem } from "@/lib/portfolio";
@@ -122,12 +123,14 @@ export function TenantInviteStepOne({
   draft,
   onPropertyChange,
   onUnitChange
+  ,onAddUnit
 }: {
   properties: PropertyListItem[];
   availableUnits: UnitListItem[];
   draft: TenantInviteWizardDraft;
   onPropertyChange: (propertyId: string) => void;
   onUnitChange: (unitId: string) => void;
+  onAddUnit?: () => void;
 }) {
   const selectedProperty = properties.find((property) => property.id === draft.propertyId) ?? null;
 
@@ -175,7 +178,7 @@ export function TenantInviteStepOne({
             ))}
           </Select>
           {draft.propertyId && availableUnits.length === 0 ? (
-            <p className="text-xs text-[var(--warn)]">Add a unit to this property before sending an invitation.</p>
+            <div className="space-y-2"><p className="text-xs text-[var(--warn)]">All units are rented. Add a unit first.</p>{onAddUnit ? <Button type="button" variant="outline" className="min-h-11" onClick={onAddUnit} title="Open the Add a unit flow.">Add a unit</Button> : null}</div>
           ) : null}
         </div>
       </div>

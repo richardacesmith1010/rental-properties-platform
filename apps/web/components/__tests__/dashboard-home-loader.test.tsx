@@ -86,10 +86,10 @@ describe("useDashboardHomeState", () => {
       expected: "2026-10-12|140000|1"
     },
     {
-      name: "skips rent collected outside Domus",
+      name: "shows the next due date for rent collected outside Domus",
       charges: [],
       leases: [{ id: "lease-1", active: true, startDate: "2026-01-01", endDate: "2027-12-31", dueDayOfMonth: 12, monthlyRentCents: 140000, tenantProfileId: "tenant-1", collectsOutsideDomus: true }],
-      expected: "none|0|0"
+      expected: "2026-10-12|140000|1"
     },
     { name: "shows no rent without leases", charges: [], leases: [], expected: "none|0|0" }
   ])("$name", ({ charges, leases, expected }) => {

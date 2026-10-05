@@ -72,6 +72,11 @@ export function Dashboard(props: DashboardProps) {
   const [isAnnouncementComposerOpen, setIsAnnouncementComposerOpen] = useState(false);
   const [initialOperationsTask, setInitialOperationsTask] = useState<OperationTask | undefined>(undefined);
   const [initialOperationsPropertyId, setInitialOperationsPropertyId] = useState<string | null>(null);
+  const openAddUnit = () => {
+    setInitialOperationsTask("unit");
+    setInitialOperationsPropertyId(null);
+    sectionRendererProps.openSection("operations");
+  };
   const {
     activeSection,
     activeSectionIndex,
@@ -91,6 +96,7 @@ export function Dashboard(props: DashboardProps) {
     isOwnerDailyOpsHomePage,
     isUnknownSection,
     isLeaseWizardOpen,
+    openLeaseWizard,
     isPropertyWizardOpen,
     isTenantInviteWizardOpen,
     layoutProps,
@@ -211,6 +217,9 @@ export function Dashboard(props: DashboardProps) {
       bankState={bankState}
       isManagerView={isManagerRole}
       summary={homeActionItems}
+      invitations={props.invitations ?? []}
+      onOpenLeaseWizard={openLeaseWizard}
+      onSelectProperty={sectionRendererProps.onSelectProperty}
       onOpenSection={sectionRendererProps.openSection}
       onSendBatchPaymentReminder={props.onSendBatchPaymentReminder}
       onRecordManualPayment={props.onRecordManualPayment}
@@ -329,12 +338,14 @@ export function Dashboard(props: DashboardProps) {
               open={isTenantInviteWizardOpen}
               properties={safePortfolio.properties}
               units={safePortfolio.units}
+              leases={safePortfolio.leases}
               onOpenChange={(open) => {
                 if (!open) {
                   closeTenantInviteWizard();
                 }
               }}
               onInviteTenant={props.onInviteTenant}
+              onAddUnit={isOwnerRole ? openAddUnit : undefined}
               onOpenSection={isOwnerRole ? () => sectionRendererProps.openSection("invitations") : sectionRendererProps.openSection}
             />
           ) : null}
@@ -392,7 +403,7 @@ export function Dashboard(props: DashboardProps) {
                     Send Announcement
                   </Button>
                 ) : null}
-                <OwnerAddMenu onAddHome={openPropertyWizard} onAddTenant={openTenantInviteWizard}
+                <OwnerAddMenu onAddHome={openPropertyWizard} onAddUnit={openAddUnit} onAddTenant={openTenantInviteWizard}
                   properties={safePortfolio.properties} onInviteManager={props.onInviteManager} />
               </div>
             </div>

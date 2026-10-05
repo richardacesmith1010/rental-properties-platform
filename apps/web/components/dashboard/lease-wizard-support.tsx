@@ -108,7 +108,9 @@ export function createDefaultLeaseWizardDraft(params: {
     leaseType: "fixed_term",
     startDate,
     endDate: addYearsMinusOneDay(startDate, 1),
-    monthlyRentDollars: "",
+    monthlyRentDollars: unitId
+      ? ((availableUnits.find((unit) => unit.id === unitId)?.monthlyRentCents ?? 0) / 100).toFixed(2)
+      : "",
     depositDollars: "0",
     dueDayOfMonth: "1",
     gracePeriodDays: "5",

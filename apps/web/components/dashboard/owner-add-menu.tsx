@@ -6,9 +6,10 @@ import { ModalOverlay } from "@/components/ui/modal-overlay";
 import { InviteManagerForm } from "./invitations/invite-manager-form";
 import type { StatefulAction } from "./types";
 
-export function OwnerAddMenu({ onAddHome, onAddTenant, onInviteManager, properties, role = "owner" }: {
+export function OwnerAddMenu({ onAddHome, onAddTenant, onAddUnit, onInviteManager, properties, role = "owner" }: {
   onAddHome: () => void;
   onAddTenant: () => void;
+  onAddUnit?: () => void;
   onInviteManager?: StatefulAction;
   properties: Array<{ id: string; name: string }>;
   role?: "owner" | "manager";
@@ -30,6 +31,7 @@ export function OwnerAddMenu({ onAddHome, onAddTenant, onInviteManager, properti
   }, [open]);
   const actions = [
     { label: "Add a home", run: onAddHome },
+    ...(role === "owner" && onAddUnit ? [{ label: "Add a unit", run: onAddUnit }] : []),
     { label: "Add a tenant", run: onAddTenant },
     ...(role === "owner" ? [{ label: "Add a manager", run: () => setManagerOpen(true) }] : [])
   ];

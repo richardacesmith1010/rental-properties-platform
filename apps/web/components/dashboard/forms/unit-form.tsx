@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { FieldLabel, FormError, FormSuccess } from "./form-helpers";
+import { toast } from "sonner";
 
 interface UnitDraft {
   propertyId: string;
@@ -101,8 +102,9 @@ export function UnitForm({
       bathrooms: "1",
       monthlyRentDollars: ""
     });
+    toast.success(`Unit ${draft.unitNumber} added.`);
     onUnitCreated?.();
-  }, [getDefaultPropertyId, onUnitCreated, state]);
+  }, [draft.unitNumber, getDefaultPropertyId, onUnitCreated, state]);
 
   useEffect(() => {
     const nextPropertyId = getDefaultPropertyId();

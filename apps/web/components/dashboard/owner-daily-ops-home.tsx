@@ -11,6 +11,7 @@ import { LlcSetupPrompt } from "@/components/dashboard/llc-setup-prompt";
 import { OwnerBankCard } from "@/components/dashboard/owner-bank-card";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { OwnerBankCardState } from "@/lib/owner-bank-status";
+import type { InvitationListItem } from "@/lib/invitations";
 import type { StatefulAction } from "./types";
 
 interface OwnerHomeSummary {
@@ -24,6 +25,8 @@ interface OwnerHomeSummary {
   nextDueDate: string | null;
   nextDueAmountCents: number;
   nextDueTenantCount: number;
+  nextDueOutsideDomus?: boolean;
+  joinedWithoutLease?: InvitationListItem[];
 }
 
 interface LateRentGroup {
@@ -58,7 +61,10 @@ interface OwnerDailyOpsHomeProps {
   bankState: OwnerBankCardState;
   isManagerView?: boolean;
   summary: OwnerHomeSummary;
+  invitations?: InvitationListItem[];
   onOpenSection: (sectionId: string) => void;
+  onOpenLeaseWizard?: () => void;
+  onSelectProperty?: (propertyId: string) => void;
   onSendBatchPaymentReminder?: StatefulAction;
   onRecordManualPayment?: StatefulAction;
   financialOverview: {
@@ -98,7 +104,7 @@ function SummaryTile({ title, value, detail, progress }: {
 
 export function OwnerDailyOpsHome({
   bankState, isManagerView = false, summary, onOpenSection, onSendBatchPaymentReminder, onRecordManualPayment,
-  financialOverview, llcSetupPrompt, onInitiatePlaidLink, onCompletePlaidLink,
+  financialOverview, llcSetupPrompt, onInitiatePlaidLink, onCompletePlaidLink, onOpenLeaseWizard, onSelectProperty,
   onRefreshPlaidBalance, onDisconnectPlaid
 }: OwnerDailyOpsHomeProps) {
   const router = useRouter();
@@ -173,6 +179,10 @@ export function OwnerDailyOpsHome({
                 ) : null}
               </div>;
             })}
+            {(summary.joinedWithoutLease ?? []).map((invite) => <div key={invite.id} className="domus-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="font-semibold text-[var(--ink)]">{invite.fullName} joined. Set up their lease.</p>
+              <Button type="button" className="min-h-11" onClick={() => { if (invite.propertyId) onSelectProperty?.(invite.propertyId); onOpenLeaseWizard?.(); }} title="Open the lease setup wizard.">Set up lease</Button>
+            </div>)}
 
             {summary.openRepairCount === 0 && summary.newMessageCount === 0 ? (
               <p className="text-sm text-[var(--muted)]">No open repairs. No new messages.</p>
@@ -187,7 +197,7 @@ export function OwnerDailyOpsHome({
           <section className="grid gap-3 md:grid-cols-3" aria-label="Your homes">
             <SummaryTile title="Rent this month" value={`${formatCurrency(summary.collectedCents)} of ${formatCurrency(summary.dueCents)}`} progress={dueProgress} />
             <SummaryTile title={isManagerView ? "Homes you manage" : "Homes"} value={String(summary.homeCount)} detail={`${summary.rentedHomeCount} of ${summary.homeCount} rented`} />
-            <SummaryTile title="Next rent due" value={summary.nextDueDate ? formatDate(summary.nextDueDate) : "No rent due"} detail={summary.nextDueDate ? `${formatCurrency(summary.nextDueAmountCents)} from ${summary.nextDueTenantCount} tenant${summary.nextDueTenantCount === 1 ? "" : "s"}` : undefined} />
+            <SummaryTile title="Next rent due" value={summary.nextDueDate ? formatDate(summary.nextDueDate) : "No rent due"} detail={summary.nextDueDate ? `${formatCurrency(summary.nextDueAmountCents)} from ${summary.nextDueTenantCount} tenant${summary.nextDueTenantCount === 1 ? "" : "s"}${summary.nextDueOutsideDomus ? " · Pays outside Domus" : ""}` : undefined} />
           </section>
 
           {!isManagerView ? (

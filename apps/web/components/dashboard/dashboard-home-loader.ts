@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { getNextDueDateForLease, getNextRentCollectionLabel } from "@/lib/action-items";
 import { isCollectedOutsideDomus } from "@/lib/lease-collection";
+import type { InvitationListItem } from "@/lib/invitations";
 import type { OnboardingChecklistStep } from "@/components/dashboard/onboarding-checklist";
 import type { DashboardProps } from "./types";
 import type { DashboardCollectionState, DashboardKpiState } from "./dashboard-kpi-loader";
@@ -141,9 +142,8 @@ export function useDashboardHomeState(
       safePortfolio.units.filter((unit) => unit.occupied).map((unit) => unit.propertyId)
     );
     const today = new Date();
-    const activeLeases = filteredPortfolio.leases.filter(
-      (lease) => lease.active && !isCollectedOutsideDomus(lease)
-    );
+    const activeAllLeases = filteredPortfolio.leases.filter((lease) => lease.active);
+    const activeLeases = activeAllLeases.filter((lease) => !isCollectedOutsideDomus(lease));
     const activeLeaseIds = new Set(activeLeases.map((lease) => lease.id));
     const nextDueCharges = rentCharges
       .filter(
@@ -158,7 +158,7 @@ export function useDashboardHomeState(
     const chargesOnNextDate = pendingDueDate
       ? nextDueCharges.filter((charge) => charge.dueDate === pendingDueDate)
       : [];
-    const activeLeaseDueDates = activeLeases
+    const activeLeaseDueDates = activeAllLeases
       .map((lease) => ({ lease, dueDate: getNextDueDateForLease(lease, today) }))
       .filter((entry): entry is { lease: typeof entry.lease; dueDate: Date } => Boolean(entry.dueDate))
       .sort((left, right) => left.dueDate.getTime() - right.dueDate.getTime());
@@ -169,6 +169,11 @@ export function useDashboardHomeState(
         )
       : [];
     const nextDueDate = pendingDueDate ?? impliedDueDate;
+    const nextDueLeases = pendingDueDate ? [] : leasesOnNextDate;
+    const tenantEmailsById = new Map((filteredPortfolio.tenants ?? []).map((tenant) => [tenant.id, tenant.email.toLowerCase()]));
+    const joinedWithoutLease = (props.invitations ?? [])
+      .filter((invite: InvitationListItem) => invite.role === "tenant" && invite.status === "accepted")
+      .filter((invite: InvitationListItem) => !activeLeases.some((lease) => tenantEmailsById.get(lease.tenantProfileId) === invite.email.toLowerCase()));
 
     return {
       lateCharges,
@@ -184,9 +189,11 @@ export function useDashboardHomeState(
         : leasesOnNextDate.reduce((sum, entry) => sum + entry.lease.monthlyRentCents, 0),
       nextDueTenantCount: pendingDueDate
         ? new Set(chargesOnNextDate.map((charge) => charge.leaseId)).size
-        : new Set(leasesOnNextDate.map((entry) => entry.lease.tenantProfileId)).size
+        : new Set(leasesOnNextDate.map((entry) => entry.lease.tenantProfileId)).size,
+      nextDueOutsideDomus: nextDueLeases.length > 0 && nextDueLeases.every((entry) => isCollectedOutsideDomus(entry.lease)),
+      joinedWithoutLease
     };
-  }, [displayDashboardData, filteredPortfolio.leases, filteredTickets, props.inboxThreads, safePortfolio]);
+  }, [displayDashboardData, filteredPortfolio.leases, filteredPortfolio.tenants, filteredTickets, props.inboxThreads, props.invitations, safePortfolio]);
 
   return {
     ownerOnboarding,

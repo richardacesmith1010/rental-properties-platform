@@ -73,7 +73,7 @@ describe("PortfolioSection", () => {
     render(<PortfolioSection properties={[properties[0]]} showControls onUpdateProperty={async () => null} onDeleteProperty={async () => null} />);
 
     expect(screen.getByRole("button", { name: "Edit Atlas House" })).toBeInTheDocument();
-    const manageButton = screen.getByRole("button", { name: "Manage" });
+    const manageButton = screen.getByRole("button", { name: "Edit" });
     expect(manageButton).toBeInTheDocument();
 
     fireEvent.click(manageButton);
@@ -85,7 +85,7 @@ describe("PortfolioSection", () => {
   it("hides management controls when showControls is false", () => {
     render(<PortfolioSection properties={[properties[0]]} />);
 
-    expect(screen.queryByRole("button", { name: "Manage" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
   });
 
   it("handles a single property correctly", () => {

@@ -7,13 +7,14 @@ export function OwnerBankCard({ state, role = "owner" }: { state: OwnerBankCardS
     return null;
   }
 
+  const accountName = state.accountName;
   const content = state.status === "needs_info"
     ? role === "manager" ? {
-        title: "Stripe needs one more thing",
+        title: accountName ? `${accountName} needs one more thing` : "Stripe needs one more thing",
         body: "Your bank is almost ready. Answer a few questions so your fees can reach you.",
         button: "Finish setup"
       } : {
-        title: "Stripe needs one more thing",
+        title: accountName ? `${accountName} needs one more thing` : "Stripe needs one more thing",
         body: "Your bank is almost ready. Answer a few questions so rent can reach you.",
         button: "Finish setup"
       }
@@ -22,7 +23,7 @@ export function OwnerBankCard({ state, role = "owner" }: { state: OwnerBankCardS
         body: "Your management fees can’t reach you until this is done.",
         button: "Connect bank"
       } : {
-        title: "Connect your bank to get paid",
+        title: accountName ? `Connect a bank for ${accountName}` : "Connect your bank to get paid",
         body: "Rent can’t reach you until this is done. It takes about 5 minutes.",
         button: "Connect bank"
       };
