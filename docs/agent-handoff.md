@@ -273,9 +273,17 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Verified live at 390×844: bar on screen (top 781 → bottom 844), Help button above it (bottom 748), Rent/More work, hidden on desktop; "Money in and out by home"; Rent help sentence once; light + dark clean.
 - **Owner clarity arc (154–157) complete.** Token log so far: Sol/Astra 80k–340k per sprint; gpt-reserve 215k (resume of a 30-file sprint); Luna 89k (3-file fix).
 
+## Sprint 158 — Manager clarity 1/2 SHIPPED (L2, `22c289f` + fix `2abf678`, 2026-10-04)
+
+- Managers get the owner pattern: grouped menu (Every day / Homes you manage / Money / More), Add (home, tenant), no modes / mode box / KPI strip / "N OF M" / arrows, single bank card on Home (fee wording), legacy `?mode=` URLs handled; smoke manager nav label → "Repairs".
+- First targeted-tests-only sprint exposed two gaps, both caught by Claude's full gate / live walk before or right after deploy: (1) lint error + a `useEffect` missing `allSectionItems` (adding it naively reset owner sections → owner test failed; fixed by splitting owner and manager URL-sync effects); (2) live: manager section switches never wrote `?section=` to the URL, so any `router.refresh()` after a save would throw the manager back to Home — fixed with `history.replaceState` + query-change-only resync. Lint now added to Codex's targeted checks.
+- **Tokens:** 169k (reserve, main) + 42k (Luna lint) + 41k (reserve split) + 103k (Luna URL fix) = **~355k total** — fix rounds erased the targeted-test savings. Each Codex run carries a large fixed context cost (~40k+), so fewer, more precise runs beat cheap re-runs.
+- Verified live: manager menu, Add (2 items), URL updates per section, reload keeps section, fee copy, legacy URL; owner menu, Add (3), owner stays on clicked section; zero console errors; smoke 3/3, theme 11/11; full gate green (1160 tests).
+- Next: Sprint 159 (manager Rent filters/actions + manager Home "Needs you today" — mirror owner 155/156).
+
 ## ▶ START HERE (next session, written 2026-10-04)
 
-- Last shipped: Sprint 157 (`1577535`). Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
+- Last shipped: Sprint 158 (`2abf678`). Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
 - Owner-approved queue, in order: (1) DONE — owner speed arc closed; (2) clarity cleanup — mockup APPROVED; DONE (154–157 shipped); from `docs/walkthrough-2026-10-03.md` #5–#7, #9 — one bank-setup prompt, simpler navigation (replace "N OF M" carousel), plain-language sweep — **mockup first** (Design canvas, like the landing), L2/L3 TBD.
 - Standing rules: notifications OFF until owner says real users (env `DOMUS_NOTIFICATIONS_ENABLED` unset); L3 packets → Claude sends to Domus ChatGPT project via Claude-in-Chrome (memory: feedback-prompt-severity-chatgpt-workflow); Codex default Sol/medium, watch usage limits (detached nohup re-run after reset); verify every UI sprint live with Playwright (temp specs in `apps/web/tests/e2e/zz-*.tmp.spec.ts`, smoke creds from `.env.local`).
 - Owner action items still open: J&MSP LLC bank connection (Stripe; owner must enter bank details). Codex Supabase token expires ~2027-01-01.
