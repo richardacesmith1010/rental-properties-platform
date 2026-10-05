@@ -42,6 +42,14 @@ Owner opens Domus daily and sees every rental dollar sorted automatically: Angel
 - Phase 1: download one month of activity CSV from Fidelity and from the credit union (to build the importers against real formats). Claude will not need your login.
 - Phase 3: apply for Plaid production access (Plaid Dashboard) and request Fidelity; Claude can open the pages and fill everything except identity/business details.
 
+## Real bank patterns (owner screenshots, 2026-10-05; rental items only)
+- Money path: Angel (Navy Federal) → **Fidelity** deposit "DIRECT DEPOSIT NFCU ACH P2P ANGEL J HERNAND…" +$2,350 (Oct 2) → Fidelity "Electronic Funds Transfer Paid" −$2,350 (Oct 5) → **Navy Federal checking** "Deposit / ACH Credit" +$2,350.
+- **Count rent once:** the Fidelity deposit from Angel is the rent. The Fidelity EFT out and the matching NFCU ACH credit (same amount, within 5 days) are a **transfer between the owner's own accounts** and must be skipped automatically, never counted as income or expense.
+- Bills paid from Navy Federal checking: "Transfer To Mortgage" −$1,039.44 (1st, NFCU category Mortgages); "Payment to Solar Servicing" −$266.40 (~14th, Loans); "- Ispc XX0028" −$92.00 (~16th, Other Expenses).
+- Look-alike to never match as rent: the owner's own apartment rent goes out from the same checking (~$2,280). Only incoming money can match a lease.
+- Unconfirmed (ask the owner): xfinity −$81.81, a pest-control charge −$59.99.
+- Rough October profit for 1st Home: $2,350 − $1,039.44 − $266.40 − $92.00 = **$952.16** (before any unconfirmed bills).
+
 ## Open questions
-- Exact solar company and mortgage lender names (for default rules) — can be learned from the first CSV.
+- Is xfinity / pest control for 1st Home or personal?
 - Should the J&MSP LLC account get its own feed later? (Out of scope for now.)
