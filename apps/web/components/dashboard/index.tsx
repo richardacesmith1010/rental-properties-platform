@@ -13,10 +13,6 @@ import { LeaseWizard } from "@/components/dashboard/lease-wizard";
 import { NotificationPauseBanner } from "@/components/dashboard/notification-pause-banner";
 import { OwnerDailyOpsHome } from "@/components/dashboard/owner-daily-ops-home";
 import { PropertyWizard } from "@/components/dashboard/property-wizard";
-import {
-  StripeHealthBanner,
-  type StripeHealthStatus
-} from "@/components/dashboard/stripe-health-banner";
 import { TenantInviteWizard } from "@/components/dashboard/tenant-invite-wizard";
 import { WelcomeCard } from "@/components/dashboard/welcome-card";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
@@ -28,27 +24,14 @@ import type { OperationTask } from "./operations-section";
 import { SectionRenderer } from "./section-renderer";
 import { SectionSkeleton } from "./section-map";
 import type { DashboardProps } from "./types";
+import { getOwnerBankCardState } from "@/lib/owner-bank-status";
+import { formatCurrency } from "@/lib/format";
+import { useTimeOfDayGreeting } from "./use-time-of-day-greeting";
 
 const AiAssistant = dynamic(
   () => import("@/components/dashboard/ai-assistant").then((module) => module.AiAssistant),
   { ssr: false }
 );
-
-function getWorstStripeHealthStatus(statuses: StripeHealthStatus[]): StripeHealthStatus {
-  if (statuses.includes("missing")) {
-    return "missing";
-  }
-
-  if (statuses.includes("restricted")) {
-    return "restricted";
-  }
-
-  if (statuses.includes("active")) {
-    return "active";
-  }
-
-  return null;
-}
 
 function PageHeader({
   title,
@@ -105,6 +88,7 @@ function PageHeader({
 }
 
 export function Dashboard(props: DashboardProps) {
+  const greeting = useTimeOfDayGreeting();
   const [isAnnouncementComposerOpen, setIsAnnouncementComposerOpen] = useState(false);
   const [initialOperationsTask, setInitialOperationsTask] = useState<OperationTask | undefined>(undefined);
   const [initialOperationsPropertyId, setInitialOperationsPropertyId] = useState<string | null>(null);
@@ -136,7 +120,6 @@ export function Dashboard(props: DashboardProps) {
     openPropertyWizard,
     openTenantInviteWizard,
     ownerOnboarding,
-    nextRentCollectionLabel,
     safePortfolio,
     sectionItems,
     sectionRendererProps,
@@ -158,11 +141,17 @@ export function Dashboard(props: DashboardProps) {
     : null;
   const assistantAccountId = props.activeAccountId ?? props.ownershipAccounts?.[0]?.id ?? "";
   const ownerConnectHref = props.rentCollectionConnectHref ?? "/connect/onboard";
-  const connectBannerConnected =
-    isOwnerRole ? props.rentCollectionConnected === true : props.stripeConnected === true;
-  const stripeHealthStatus = getWorstStripeHealthStatus(
-    (props.ownershipAccounts ?? []).map((account) => account.stripeStatus ?? null)
-  );
+  const ownerBankState = getOwnerBankCardState({
+    rentCollectionConnected: props.rentCollectionConnected === true,
+    profileStripeConnected: props.stripeConnected,
+    connectHref: ownerConnectHref,
+    accounts: props.ownershipAccounts ?? []
+  });
+  const homeSummaryLine = displayDashboardData.kpis.lateAccountCount > 0
+    ? displayDashboardData.kpis.lateAccountCount === 1
+      ? `1 tenant is behind on rent (${formatCurrency(displayDashboardData.kpis.lateRentCents)}).`
+      : `${displayDashboardData.kpis.lateAccountCount} tenants are behind on rent (${formatCurrency(displayDashboardData.kpis.lateRentCents)}).`
+    : "Everything looks good.";
   const showLlcSetupPrompt = Boolean(
     isOwnerRole &&
     isOwnerDailyOpsHomePage &&
@@ -220,9 +209,6 @@ export function Dashboard(props: DashboardProps) {
       case "lease":
         sectionRendererProps.openSection("leases");
         return;
-      case "bank":
-        window.location.href = ownerConnectHref;
-        return;
       default:
         sectionRendererProps.openSection("overview");
     }
@@ -243,12 +229,11 @@ export function Dashboard(props: DashboardProps) {
     </div>
   ) : isOwnerDailyOpsHomePage ? (
     <OwnerDailyOpsHome
-      actionItems={homeActionItems}
-      nextCollectionLabel={nextRentCollectionLabel}
+      bankState={ownerBankState}
+      summary={homeActionItems}
       onOpenSection={sectionRendererProps.openSection}
       onSendBatchPaymentReminder={props.onSendBatchPaymentReminder}
-      onWaiveCharge={props.onWaiveCharge}
-      onMarkManagerPaymentPaid={props.onMarkManagerPaymentPaid}
+      onRecordManualPayment={props.onRecordManualPayment}
       financialOverview={financialOverviewData}
       llcSetupPrompt={
         showLlcSetupPrompt
@@ -386,14 +371,13 @@ export function Dashboard(props: DashboardProps) {
       }
     >
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 pb-24 pt-3 sm:px-4 sm:pb-24 sm:pt-4 lg:px-8 lg:pb-24 lg:pt-8">
-        {(isOwnerRole || isManagerRole) && connectBannerConnected === false ? (
+        {isManagerRole && props.stripeConnected !== true ? (
           <ConnectBanner
             connected={false}
-            role={isOwnerRole ? "owner" : "manager"}
-            href={isOwnerRole ? ownerConnectHref : "/connect/onboard"}
+            role="manager"
+            href="/connect/onboard"
           />
         ) : null}
-        {isOwnerRole ? <StripeHealthBanner status={stripeHealthStatus} /> : null}
         {props.generatedMessage ? (
           <Alert variant="success" className="mt-3 rounded-xl px-4 py-3">
             {props.generatedMessage}
@@ -412,8 +396,19 @@ export function Dashboard(props: DashboardProps) {
           <div className="domus-card mt-3 flex min-h-0 flex-1 flex-col shadow-sm sm:rounded-[28px]">
             <div className="flex items-start justify-between gap-3 border-b border-[var(--line)] p-4 sm:p-6">
               <div>
-                <h1 className="text-2xl font-semibold text-[var(--ink)]">{activeSectionLabel}</h1>
-                <p className="mt-1 text-sm text-[var(--muted)]">{ownerPageDescriptions[activeSection] ?? "Manage your homes and the people who live there."}</p>
+                {isOwnerDailyOpsHomePage ? (
+                  <div>
+                    <h1 className="text-2xl font-semibold text-[var(--ink)]">
+                      {greeting ? `${greeting}, ${displayName}` : displayName}
+                    </h1>
+                    <p className="mt-1 text-sm text-[var(--muted)]">{homeSummaryLine}</p>
+                  </div>
+                ) : (
+                  <>
+                    <h1 className="text-2xl font-semibold text-[var(--ink)]">{activeSectionLabel}</h1>
+                    <p className="mt-1 text-sm text-[var(--muted)]">{ownerPageDescriptions[activeSection] ?? "Manage your homes and the people who live there."}</p>
+                  </>
+                )}
               </div>
               <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
                 {canSendAnnouncements ? (

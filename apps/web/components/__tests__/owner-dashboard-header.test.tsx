@@ -42,4 +42,17 @@ describe("owner header", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: "Add a home" }));
     expect(home).toHaveBeenCalledOnce();
   });
+
+  it("never mounts the legacy bank banners for owners", () => {
+    render(<Dashboard {...{
+      userEmail: "owner@example.test",
+      data: { profileRole: "owner" },
+      stripeConnected: false,
+      rentCollectionConnected: false,
+      ownershipAccounts: [{ stripeStatus: "missing" }]
+    } as DashboardProps} />);
+
+    expect(screen.queryByText("Set up rent payments.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Your bank connection is missing")).not.toBeInTheDocument();
+  });
 });

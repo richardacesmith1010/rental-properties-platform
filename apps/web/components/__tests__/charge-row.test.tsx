@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ChargeRow, type ChargeRowData } from "@/components/dashboard/charge-row";
 
@@ -55,5 +55,44 @@ describe("ChargeRow", () => {
 
     expect(screen.getByRole("button", { name: "Pay $1,030.18" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Pay $1,000.00" })).toBeInTheDocument();
+  });
+
+  it("shows the owner rent actions and keeps Message in more", () => {
+    const reminder = vi.fn();
+    const message = vi.fn();
+    render(
+      <ChargeRow
+        charge={charge}
+        last
+        batchActionsEnabled={false}
+        selected={false}
+        onToggleSelection={vi.fn()}
+        canModify
+        category="rent"
+        isTenantView={false}
+        ownerView
+        paymentsAvailable
+        stripeConfigured
+        onPayCharge={vi.fn()}
+        onPayWithACH={vi.fn()}
+        showManualPayment
+        manualFormOpen={false}
+        onToggleManualPayment={vi.fn()}
+        manualPaymentAction={vi.fn()}
+        onSendReminder={reminder}
+        onOpenMessage={message}
+        onOpenEdit={vi.fn()}
+        isMutatingCharges={false}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Remind" }));
+    expect(reminder).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: "Mark paid" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Message Test Tenant/ })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open more charge actions" }));
+    fireEvent.click(screen.getByRole("button", { name: "Message" }));
+    expect(message).toHaveBeenCalledOnce();
   });
 });

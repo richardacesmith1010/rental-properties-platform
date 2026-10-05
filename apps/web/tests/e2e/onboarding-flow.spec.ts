@@ -12,7 +12,7 @@ async function openOnboardingOrSkip(page: Page) {
   await page.goto("/owner");
   await page.waitForTimeout(1500);
 
-  const progressText = page.getByText(/\d+ of 6 complete/i).first();
+  const progressText = page.getByText(/\d+ of 5 complete/i).first();
   test.skip((await progressText.count()) === 0, "Owner onboarding is not visible for the current demo account state.");
 
   await expect(progressText).toBeVisible();
@@ -24,7 +24,7 @@ test.describe.serial("Onboarding flow", () => {
     await loginOwnerOrSkip(page);
     const progressText = await openOnboardingOrSkip(page);
 
-    await expect(progressText).toContainText(/of 6 complete/i);
+    await expect(progressText).toContainText(/of 5 complete/i);
     await expect(page.getByText(/Owner setup/i)).toBeVisible();
   });
 

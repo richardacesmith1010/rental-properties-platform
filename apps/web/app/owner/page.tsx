@@ -105,6 +105,7 @@ import {
   generateMonthlyManagerPayments
 } from "@/app/actions/manager-payments";
 import { getAuthenticatedUser, getRoleHomePath } from "@/lib/auth";
+import { getOwnerBankCardState } from "@/lib/owner-bank-status";
 import { getRentCollectionConnectHref } from "@/lib/stripe-connect";
 import { redirect } from "next/navigation";
 import {
@@ -138,6 +139,16 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
   if (ownerPage.status === "needs-setup") {
     redirect("/owner/setup");
   }
+
+  const rentCollectionConnectHref = getRentCollectionConnectHref(
+    ownerPage.rentCollectionStatus
+  );
+  const ownerBankState = getOwnerBankCardState({
+    rentCollectionConnected: ownerPage.rentCollectionStatus.connected,
+    profileStripeConnected: ownerPage.profile.stripeOnboardingComplete,
+    connectHref: rentCollectionConnectHref,
+    accounts: ownerPage.ownershipAccounts
+  });
 
   return (
     <>
@@ -196,8 +207,8 @@ export default async function OwnerPage({ searchParams }: OwnerPageProps) {
         nickname={ownerPage.profile.nickname}
         avatarUrl={ownerPage.profile.avatarUrl}
         stripeConnected={ownerPage.profile.stripeOnboardingComplete}
-        rentCollectionConnected={ownerPage.rentCollectionStatus.connected}
-        rentCollectionConnectHref={getRentCollectionConnectHref(ownerPage.rentCollectionStatus)}
+        rentCollectionConnected={ownerBankState.status === "connected"}
+        rentCollectionConnectHref={ownerBankState.href}
         ownerConnectedMap={ownerPage.ownerConnectedMap}
         onSignOut={signOut}
         onCreateProperty={createProperty}

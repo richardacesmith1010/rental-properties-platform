@@ -37,7 +37,7 @@ test.describe.serial("Owner setup flow", () => {
     await expect(page.getByText(/owner setup/i)).toBeVisible();
     await expect(page.getByRole("heading", { name: /welcome, e2e!/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /add your first property/i })).toBeVisible();
-    await expect(page.getByText(/^2 of 6 complete$/).last()).toBeVisible();
+    await expect(page.getByText(/^2 of 5 complete$/).last()).toBeVisible();
     await expect(page.getByText(/account set up/i)).toBeVisible();
   });
 });

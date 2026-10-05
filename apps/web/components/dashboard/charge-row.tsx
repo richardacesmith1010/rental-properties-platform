@@ -39,6 +39,7 @@ export interface ChargeRowData {
   latestEditedAt?: string | null;
   latestEditedByName?: string | null;
   editedCount?: number;
+  collectsOutsideDomus?: boolean;
 }
 
 interface ChargeRowProps {
@@ -62,6 +63,8 @@ interface ChargeRowProps {
   onWaive?: () => void;
   onDelete?: () => void;
   onOpenMessage?: () => void;
+  onSendReminder?: () => void;
+  ownerView?: boolean;
   isMutatingCharges: boolean;
 }
 
@@ -83,12 +86,16 @@ function ChargeMoreMenu({
   disabled = false,
   onEdit,
   onWaive,
-  onDelete
+  onDelete,
+  onMessage,
+  compact = false
 }: {
   disabled?: boolean;
   onEdit?: () => void;
   onWaive?: () => void;
   onDelete?: () => void;
+  onMessage?: () => void;
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -120,7 +127,7 @@ function ChargeMoreMenu({
     };
   }, [open]);
 
-  if (!onEdit && !onWaive && !onDelete) {
+  if (!onEdit && !onWaive && !onDelete && !onMessage) {
     return null;
   }
 
@@ -130,18 +137,32 @@ function ChargeMoreMenu({
         type="button"
         size="sm"
         variant="outline"
-        className="h-11 px-3 sm:h-8"
+        className={compact ? "h-11 min-w-11 px-3" : "h-11 px-3 sm:h-8"}
         disabled={disabled}
         onClick={() => setOpen((current) => !current)}
         title="Open more charge actions."
         aria-label="Open more charge actions"
       >
         <MoreVertical className="h-4 w-4" />
-        <span className="ml-1.5">More</span>
+        {compact ? null : <span className="ml-1.5">More</span>}
       </Button>
 
       {open ? (
         <div className="absolute right-0 top-full z-30 mt-2 min-w-[11rem] overflow-hidden rounded-2xl border border-border bg-background p-1.5 shadow-xl">
+          {onMessage ? (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onMessage();
+              }}
+              className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
+              title="Message this tenant."
+            >
+              <MessageSquare className="h-4 w-4" />
+              Message
+            </button>
+          ) : null}
           {onEdit ? (
             <button
               type="button"
@@ -149,7 +170,7 @@ function ChargeMoreMenu({
                 setOpen(false);
                 onEdit();
               }}
-              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
+              className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
               title="Edit this charge."
             >
               <Pencil className="h-4 w-4" />
@@ -163,7 +184,7 @@ function ChargeMoreMenu({
                 setOpen(false);
                 onWaive();
               }}
-              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
+              className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
               title="Waive this charge."
             >
               <CircleOff className="h-4 w-4" />
@@ -179,7 +200,7 @@ function ChargeMoreMenu({
                   setOpen(false);
                   onDelete();
                 }}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-[var(--crit)] transition hover:bg-[var(--crit-bg)]"
+                className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-[var(--crit)] transition hover:bg-[var(--crit-bg)]"
                 title="Delete this charge."
               >
                 <Trash2 className="h-4 w-4" />
@@ -190,6 +211,48 @@ function ChargeMoreMenu({
         </div>
       ) : null}
     </div>
+  );
+}
+
+export function ManualPaymentForm({
+  charge,
+  action
+}: {
+  charge: Pick<ChargeRowData, "id" | "amountCents">;
+  action: (formData: FormData) => void;
+}) {
+  return (
+    <form action={action} className="grid gap-3 sm:grid-cols-4">
+      <input type="hidden" name="chargeId" value={charge.id} />
+      <div className="space-y-1">
+        <label className="block text-xs font-medium text-[var(--muted)]" htmlFor={`manual-payment-amount-${charge.id}`}>
+          Amount
+        </label>
+        <Input id={`manual-payment-amount-${charge.id}`} name="amountDollars" type="number" min={0.01} step="0.01" defaultValue={(charge.amountCents / 100).toFixed(2)} required />
+      </div>
+      <div className="space-y-1">
+        <label className="block text-xs font-medium text-[var(--muted)]" htmlFor={`manual-payment-method-${charge.id}`}>
+          Method
+        </label>
+        <select id={`manual-payment-method-${charge.id}`} name="method" className="domus-input h-11 w-full rounded-md px-3 text-sm" defaultValue="cash" title="Select manual payment method.">
+          <option value="cash">Cash</option>
+          <option value="check">Check</option>
+          <option value="ach">ACH</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div className="space-y-1">
+        <label className="block text-xs font-medium text-[var(--muted)]" htmlFor={`manual-payment-reference-${charge.id}`}>
+          Reference Note
+        </label>
+        <Input id={`manual-payment-reference-${charge.id}`} name="referenceNote" placeholder="Optional" />
+      </div>
+      <div className="flex items-end">
+        <SubmitButton size="sm" variant="outline" className="h-11" title="Record this manual payment.">
+          Save Payment
+        </SubmitButton>
+      </div>
+    </form>
   );
 }
 
@@ -214,6 +277,8 @@ export function ChargeRow({
   onWaive,
   onDelete,
   onOpenMessage,
+  onSendReminder,
+  ownerView = false,
   isMutatingCharges
 }: ChargeRowProps) {
   const label = getChargeLabel(charge);
@@ -221,6 +286,7 @@ export function ChargeRow({
 
   return (
     <div
+      id={`charge-${charge.id}`}
       className={cn(
         "rounded-2xl px-2 py-3 transition-all duration-150 hover:bg-[color:color-mix(in_srgb,var(--accent-weak)_72%,transparent)] hover:shadow-sm sm:px-3",
         last ? "" : "border-b border-[color:color-mix(in_srgb,var(--line)_82%,transparent)]"
@@ -264,7 +330,7 @@ export function ChargeRow({
               {!isTenantView && charge.tenantName ? (
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                   <span>{charge.tenantName}</span>
-                  {onOpenMessage ? (
+                  {onOpenMessage && !ownerView ? (
                     <Button
                       type="button"
                       size="sm"
@@ -311,6 +377,11 @@ export function ChargeRow({
             </div>
 
             <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+              {ownerView && onSendReminder && charge.status !== "paid" && charge.status !== "waived" ? (
+                <Button type="button" size="sm" variant="ghost" className="h-11" onClick={onSendReminder} title="Send a rent reminder.">
+                  Remind
+                </Button>
+              ) : null}
               {isTenantView && charge.status !== "paid" && charge.status !== "waived" ? (
                 <div className="w-full space-y-2 xl:w-[18rem]">
                   <div className="rounded-2xl border border-[var(--accent-line)] bg-[color:color-mix(in_srgb,var(--accent-weak)_76%,transparent)] p-3">
@@ -393,12 +464,12 @@ export function ChargeRow({
                   type="button"
                   size="sm"
                   variant={manualFormOpen ? "default" : "outline"}
-                  className="h-11 sm:h-8"
+                  className={ownerView ? "h-11" : "h-11 sm:h-8"}
                   disabled={isMutatingCharges}
                   onClick={onToggleManualPayment}
                   title="Record a manual payment for this charge."
                 >
-                  {manualFormOpen ? "Cancel" : "Record"}
+                  {manualFormOpen ? "Cancel" : ownerView ? "Mark paid" : "Record"}
                 </Button>
               ) : null}
 
@@ -408,57 +479,15 @@ export function ChargeRow({
                   onEdit={onOpenEdit}
                   onWaive={onWaive}
                   onDelete={onDelete}
+                  onMessage={ownerView ? onOpenMessage : undefined}
+                  compact={ownerView}
                 />
               ) : null}
             </div>
           </div>
 
           {showManualPayment && manualFormOpen && charge.status !== "paid" && charge.status !== "waived" ? (
-            <form action={manualPaymentAction} className="grid gap-3 sm:grid-cols-4">
-              <input type="hidden" name="chargeId" value={charge.id} />
-              <div className="space-y-1">
-                <label className="block text-xs font-medium text-[var(--muted)]" htmlFor={`manual-payment-amount-${charge.id}`}>
-                  Amount
-                </label>
-                <Input
-                  id={`manual-payment-amount-${charge.id}`}
-                  name="amountDollars"
-                  type="number"
-                  min={0.01}
-                  step="0.01"
-                  defaultValue={(charge.amountCents / 100).toFixed(2)}
-                  required
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="block text-xs font-medium text-[var(--muted)]" htmlFor={`manual-payment-method-${charge.id}`}>
-                  Method
-                </label>
-                <select
-                  id={`manual-payment-method-${charge.id}`}
-                  name="method"
-                  className="domus-input h-10 w-full rounded-md px-3 text-sm"
-                  defaultValue="cash"
-                  title="Select manual payment method."
-                >
-                  <option value="cash">Cash</option>
-                  <option value="check">Check</option>
-                  <option value="ach">ACH</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="block text-xs font-medium text-[var(--muted)]" htmlFor={`manual-payment-reference-${charge.id}`}>
-                  Reference Note
-                </label>
-                <Input id={`manual-payment-reference-${charge.id}`} name="referenceNote" placeholder="Optional" />
-              </div>
-              <div>
-                <SubmitButton size="sm" variant="outline" className="h-11 sm:h-8" title="Record this manual payment.">
-                  Save Payment
-                </SubmitButton>
-              </div>
-            </form>
+            <ManualPaymentForm charge={charge} action={manualPaymentAction} />
           ) : null}
         </div>
       </div>

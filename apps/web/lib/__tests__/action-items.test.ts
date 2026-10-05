@@ -122,6 +122,35 @@ describe("action items", () => {
     expect(items[1]?.title).toContain("Angel Hernandez");
   });
 
+  it("excludes outside-Domus rent from overdue action items", () => {
+    const items = computeActionItems({
+      charges: [
+        {
+          id: "outside-charge",
+          leaseId: "outside-lease",
+          propertyId: "property-1",
+          tenantProfileId: "tenant-1",
+          dueDate: "2026-03-01",
+          amountCents: 100000,
+          status: "late",
+          propertyName: "Forum House",
+          unitNumber: "1A",
+          tenantName: "Test Tenant",
+          category: "rent",
+          collectsOutsideDomus: true
+        }
+      ],
+      tickets: [],
+      managerPayments: [],
+      leases: [],
+      pendingInvitations: [],
+      newFeedbackCount: 0,
+      today: new Date("2026-03-24T12:00:00.000Z")
+    });
+
+    expect(items).toEqual([]);
+  });
+
   it("builds a next rent collection label from future pending charges", () => {
     const label = getNextRentCollectionLabel({
       charges: [

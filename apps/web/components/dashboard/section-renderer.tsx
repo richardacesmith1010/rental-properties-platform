@@ -45,6 +45,7 @@ const {
 } = lazySectionComponents;
 
 interface SectionRendererComponentProps extends SectionRendererProps {
+  rentCollectionConnected?: boolean;
   initialOperationsTask?: OperationTask;
   initialOperationsPropertyId?: string | null;
   onInitialOperationsStateConsumed?: () => void;
@@ -96,6 +97,8 @@ export function SectionRenderer(props: SectionRendererComponentProps) {
           onGenerateChargesHref={props.onGenerateChargesHref}
           ownerConnectedMap={props.ownerConnectedMap}
           stripeConnected={props.stripeConnected}
+          isOwnerView={props.data.profileRole === "owner"}
+          bankConnected={props.rentCollectionConnected === true}
           availableLeases={props.safePortfolio.leases
             .filter((lease) => lease.active)
             .map((lease) => ({

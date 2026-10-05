@@ -2,13 +2,11 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useFormState } from "react-dom";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CreditCard, Plus } from "lucide-react";
+import { CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import type { ActionState } from "@/app/actions";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { BatchToolbar } from "@/components/dashboard/batch-toolbar";
@@ -20,9 +18,14 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { ChargeEditModal } from "./charge-edit-modal";
 import { ChargeCreateForm } from "./charge-create-form";
 import { ComposeMessageModal } from "./compose-message-modal";
-import { ChargeRow, getChargeLabel, type ChargeRowData, type ChargeStatus } from "./charge-row";
+import { ChargeRow, getChargeLabel, type ChargeRowData } from "./charge-row";
+import { isCollectedOutsideDomus } from "@/lib/lease-collection";
+import {
+  ChargeSectionFilters,
+  ChargeSectionHeader,
+  type ChargeFilter
+} from "./charge-section-controls";
 
-type ChargeFilter = "all" | ChargeStatus;
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
 type Charge = ChargeRowData;
@@ -65,6 +68,8 @@ interface ChargesSectionProps {
   onDisableAutopay?: StatefulAction;
   previewCount?: number;
   availableLeases?: ChargeLeaseOption[];
+  isOwnerView?: boolean;
+  bankConnected?: boolean;
 }
 
 const unavailableAction: StatefulAction = async () => ({
@@ -139,12 +144,20 @@ export function ChargesSection({
   onSetupAutopay,
   onDisableAutopay,
   previewCount,
-  availableLeases = []
+  availableLeases = [],
+  isOwnerView = false,
+  bankConnected = true
 }: ChargesSectionProps) {
   const router = useRouter();
   const stripeConfigured = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
   const searchParams = useSearchParams();
-  const [activeFilter, setActiveFilter] = useState<ChargeFilter>("all");
+  const lateCount = charges.filter(
+    (charge) => charge.status === "late" && !isCollectedOutsideDomus(charge)
+  ).length;
+  const pendingCount = charges.filter((charge) => charge.status === "pending").length;
+  const [activeFilter, setActiveFilter] = useState<ChargeFilter>(
+    isOwnerView ? (lateCount > 0 ? "late" : "due_soon") : "all"
+  );
   const [manualPaymentChargeId, setManualPaymentChargeId] = useState<string | null>(null);
   const [activeEditChargeId, setActiveEditChargeId] = useState<string | null>(null);
   const [showCreateChargeForm, setShowCreateChargeForm] = useState(false);
@@ -158,7 +171,7 @@ export function ChargesSection({
     onRecordManualPayment ?? unavailableAction,
     null
   );
-  const batchActionsEnabled = Boolean(onSendBatchPaymentReminder) && !isTenantView;
+  const batchActionsEnabled = Boolean(onSendBatchPaymentReminder) && !isTenantView && !isOwnerView;
 
   useEffect(() => {
     if (manualPaymentState?.success) {
@@ -167,7 +180,14 @@ export function ChargesSection({
   }, [manualPaymentState]);
 
   const filteredCharges = useMemo(
-    () => charges.filter((charge) => activeFilter === "all" || charge.status === activeFilter),
+    () => charges.filter((charge) => {
+      if (activeFilter === "all") return true;
+      if (activeFilter === "due_soon") return charge.status === "pending";
+      if (activeFilter === "late") {
+        return charge.status === "late" && !isCollectedOutsideDomus(charge);
+      }
+      return charge.status === activeFilter;
+    }),
     [activeFilter, charges]
   );
   const visibleCharges = previewCount && !expanded ? filteredCharges.slice(0, previewCount) : filteredCharges;
@@ -186,8 +206,6 @@ export function ChargesSection({
     });
   }, [batchActionsEnabled, visibleCharges]);
 
-  const pendingCount = charges.filter((charge) => charge.status === "pending").length;
-  const lateCount = charges.filter((charge) => charge.status === "late").length;
   const paidThisMonthCount = charges.filter((charge) => {
     if (charge.status !== "paid") return false;
     const dueDate = new Date(`${charge.dueDate}T00:00:00.000Z`);
@@ -285,6 +303,33 @@ export function ChargesSection({
     });
   };
 
+  const handleSingleReminder = (chargeId: string) => {
+    if (!onSendBatchPaymentReminder) return;
+    startSendingReminders(async () => {
+      const formData = new FormData();
+      formData.append("chargeIds", chargeId);
+      const result = await onSendBatchPaymentReminder(null, formData);
+      if (!result?.success) {
+        toast.error(result?.error ?? "Unable to send this reminder.");
+        return;
+      }
+      toast.success(result.message ?? "Reminder sent.");
+      router.refresh();
+    });
+  };
+
+  const openFirstManualPayment = () => {
+    const charge = charges.find(
+      (item) => item.status === "late" && !isCollectedOutsideDomus(item)
+    ) ?? charges.find((item) => item.status === "pending");
+    if (!charge) return;
+    setActiveFilter(charge.status === "late" ? "late" : "due_soon");
+    setManualPaymentChargeId(charge.id);
+    window.setTimeout(() => {
+      document.getElementById(`charge-${charge.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 0);
+  };
+
   const handleDeleteCharge = () => {
     if (!confirmDeleteChargeId || !onDeletePendingCharge) {
       return;
@@ -326,35 +371,26 @@ export function ChargesSection({
 
   return (
     <Card id="charges" className="border border-border/50 shadow-sm">
-      <CardHeader className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
-        <CardTitle className="text-xl font-semibold">
-          {isTenantView ? "Rent Payments" : "Upcoming / Late Charges"}
-        </CardTitle>
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-          {onCreateManualCharge && availableLeases.length > 0 && !isTenantView ? (
-            <Button
-              type="button"
-              size="sm"
-              className="w-full sm:w-auto"
-              onClick={() => setShowCreateChargeForm(true)}
-              title="Create a manual one-off charge."
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Charge
-            </Button>
-          ) : null}
-          {onGenerateChargesHref ? (
-            <Link
-              href={onGenerateChargesHref}
-              className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--ink-2)] transition-colors hover:border-[var(--accent-line)] hover:bg-[var(--accent-weak)] hover:text-[var(--accent)] sm:min-h-0 sm:w-auto"
-              title="Generate rent charges for the current billing period."
-            >
-              Generate This Month Charges
-            </Link>
-          ) : null}
-        </div>
-      </CardHeader>
+      <ChargeSectionHeader
+        isTenantView={isTenantView}
+        isOwnerView={isOwnerView}
+        showManualPayment={showManualPayment}
+        unpaidCount={lateCount + pendingCount}
+        canCreateCharge={Boolean(onCreateManualCharge && availableLeases.length > 0 && !isTenantView)}
+        onOpenManualPayment={openFirstManualPayment}
+        onOpenCreateCharge={() => setShowCreateChargeForm(true)}
+        onGenerateChargesHref={onGenerateChargesHref}
+      />
       <CardContent>
+        {isOwnerView ? (
+          <p className="mb-4 text-sm text-[var(--muted)]">Rent is added each month from your leases.</p>
+        ) : null}
+        {isOwnerView && !bankConnected ? (
+          <p className="mb-4 text-sm text-[var(--muted)]">
+            Tenants can’t pay online until your bank is connected.{" "}
+            <a href="/owner" className="font-semibold text-[var(--accent)] underline-offset-4 hover:underline" title="Open Home to connect your bank.">Connect bank</a>
+          </p>
+        ) : null}
         {isTenantView && autopayStatus === "enrolled" ? (
           <Alert variant="success" className="mb-4 px-4 py-3">
             Autopay enabled. Your rent will be charged automatically on the due date.
@@ -391,43 +427,7 @@ export function ChargesSection({
           </AnimatedList>
         ) : null}
 
-        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[color:color-mix(in_srgb,var(--line)_84%,transparent)] bg-[color:color-mix(in_srgb,var(--surface)_94%,transparent)] px-3 py-2 text-sm shadow-sm">
-          <Badge variant="warning" className="px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
-            {pendingCount} pending
-          </Badge>
-          <Badge variant="destructive" className="px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
-            {lateCount} late
-          </Badge>
-          <Badge variant="success" className="px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
-            {paidThisMonthCount} paid this month
-          </Badge>
-        </div>
-
-        <div className="mb-4 flex flex-wrap gap-2">
-          {([
-            ["all", "All"],
-            ["pending", "Pending"],
-            ["late", "Late"],
-            ["paid", "Paid"],
-            ["waived", "Waived"]
-          ] as Array<[ChargeFilter, string]>).map(([value, label]) => (
-            <Button
-              key={value}
-              type="button"
-              size="sm"
-              variant="outline"
-              className={
-                activeFilter === value
-                  ? "border-primary/40 bg-primary/10 font-semibold text-primary shadow-sm"
-                  : "font-medium"
-              }
-              onClick={() => setActiveFilter(value)}
-              title={`Show ${label.toLowerCase()} charges.`}
-            >
-              {label}
-            </Button>
-          ))}
-        </div>
+        <ChargeSectionFilters isOwnerView={isOwnerView} activeFilter={activeFilter} pendingCount={pendingCount} lateCount={lateCount} paidThisMonthCount={paidThisMonthCount} onChange={setActiveFilter} />
 
         {showManualPayment ? (
           <InlineAlert state={manualPaymentState} defaultMessage="Payment recorded." />
@@ -519,6 +519,12 @@ export function ChargesSection({
                         ? () => setActiveMessageChargeId(charge.id)
                         : undefined
                     }
+                    onSendReminder={
+                      isOwnerView && onSendBatchPaymentReminder
+                        ? () => handleSingleReminder(charge.id)
+                        : undefined
+                    }
+                    ownerView={isOwnerView}
                     isMutatingCharges={isMutatingCharges}
                   />
                 );

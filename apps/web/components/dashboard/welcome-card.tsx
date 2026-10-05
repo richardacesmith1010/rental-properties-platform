@@ -35,8 +35,6 @@ function getPrimaryAction(stepId: OnboardingStepId | null): {
       return { label: "Add Your First Unit", icon: DoorOpen };
     case "lease":
       return { label: "Create Your First Lease", icon: FileText };
-    case "bank":
-      return { label: "Connect Bank Account", icon: Landmark };
     case "account":
       return { label: "Finish Account Setup", icon: Building2 };
     default:

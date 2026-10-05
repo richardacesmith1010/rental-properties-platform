@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ChargesSection } from "@/components/dashboard/charges-section";
 import { calculateCardFee, formatCentsAsDollars } from "@/lib/payment-fees";
@@ -194,5 +194,71 @@ describe("ChargesSection", () => {
       screen.getByRole("button", { name: `Pay ${formatCentsAsDollars(charges[0].amountCents)}` })
     ).toBeInTheDocument();
     expect(screen.getByText("FREE")).toBeInTheDocument();
+  });
+
+  it("shows owner filters and defaults to late when rent is late", () => {
+    render(
+      <ChargesSection
+        charges={[{ ...charges[0], status: "late" }, paidCharge]}
+        onPayCharge={async () => {}}
+        isOwnerView
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Late (1)" })).toHaveClass("font-semibold");
+    expect(screen.getByRole("button", { name: "Due soon (0)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Paid" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "All" })).toBeInTheDocument();
+    expect(screen.queryByText(/paid this month/i)).not.toBeInTheDocument();
+  });
+
+  it("defaults owner rent to due soon when no rent is late", () => {
+    render(<ChargesSection charges={charges} onPayCharge={async () => {}} isOwnerView />);
+
+    expect(screen.getByRole("button", { name: "Due soon (1)" })).toHaveClass("font-semibold");
+  });
+
+  it("hides owner generation and preserves manager generation", () => {
+    const { rerender } = render(
+      <ChargesSection charges={[]} onPayCharge={async () => {}} isOwnerView onGenerateChargesHref="/owner/generate" />
+    );
+    expect(screen.queryByRole("link", { name: "Generate This Month Charges" })).not.toBeInTheDocument();
+
+    rerender(<ChargesSection charges={[]} onPayCharge={async () => {}} onGenerateChargesHref="/owner/generate" />);
+    expect(screen.getByRole("link", { name: "Generate This Month Charges" })).toBeInTheDocument();
+  });
+
+  it("shows owner row actions and moves Message into more", async () => {
+    const remind = vi.fn(async () => ({ success: true as const }));
+    render(
+      <ChargesSection
+        charges={[{ ...charges[0], status: "late" }]}
+        onPayCharge={async () => {}}
+        onRecordManualPayment={async () => ({ success: true })}
+        onSendBatchPaymentReminder={remind}
+        onSendMessageToTenant={async () => ({ success: true })}
+        onEditCharge={async () => ({ success: true })}
+        isOwnerView
+        showManualPayment
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Remind" }));
+    await waitFor(() => expect(remind).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("button", { name: "Mark paid" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Message Maya Bell" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Open more charge actions" }));
+    expect(screen.getByRole("button", { name: "Message" })).toBeInTheDocument();
+  });
+
+  it("shows the bank line only for an owner whose bank is not ready", () => {
+    const { rerender } = render(
+      <ChargesSection charges={[]} onPayCharge={async () => {}} isOwnerView bankConnected={false} />
+    );
+    expect(screen.getByText(/Tenants can’t pay online/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Connect bank" })).toHaveAttribute("href", "/owner");
+
+    rerender(<ChargesSection charges={[]} onPayCharge={async () => {}} isOwnerView bankConnected />);
+    expect(screen.queryByText(/Tenants can’t pay online/)).not.toBeInTheDocument();
   });
 });

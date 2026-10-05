@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { computeActionItems, getNextRentCollectionLabel } from "@/lib/action-items";
+import { getNextRentCollectionLabel } from "@/lib/action-items";
+import { isCollectedOutsideDomus } from "@/lib/lease-collection";
 import type { OnboardingChecklistStep } from "@/components/dashboard/onboarding-checklist";
 import type { DashboardProps } from "./types";
 import type { DashboardCollectionState, DashboardKpiState } from "./dashboard-kpi-loader";
@@ -19,7 +20,6 @@ export function useDashboardHomeState(
 ) {
   const {
     activeOwnershipAccount,
-    safeManagerPayments,
     safeOwnershipAccounts,
     safePortfolio
   } = collections;
@@ -67,12 +67,6 @@ export function useDashboardHomeState(
         description: "Set rent, dates, and tenant details so charges can start flowing.",
         completed: safePortfolio.leases.length > 0
       },
-      {
-        id: "bank",
-        label: "Connect bank account",
-        description: "Link your payout and rent-collection account to finish setup.",
-        completed: (props.rentCollectionConnected ?? props.stripeConnected) === true
-      }
     ];
 
     const completedCount = steps.filter((step) => step.completed).length;
@@ -88,8 +82,6 @@ export function useDashboardHomeState(
   }, [
     isOwnerRole,
     props.activeAccountId,
-    props.rentCollectionConnected,
-    props.stripeConnected,
     safeOwnershipAccounts,
     safePortfolio.leases.length,
     safePortfolio.properties.length,
@@ -121,29 +113,6 @@ export function useDashboardHomeState(
     ]
   );
 
-  const homeActionItems = useMemo(
-    () =>
-      isOwnerRole
-        ? computeActionItems({
-            charges: displayDashboardData.charges,
-            tickets: filteredTickets,
-            managerPayments: safeManagerPayments,
-            leases: filteredPortfolio.leases,
-            pendingInvitations: props.pendingLlcInvitations ?? [],
-            newFeedbackCount: props.newFeedbackCount ?? 0
-          })
-        : [],
-    [
-      displayDashboardData.charges,
-      filteredPortfolio.leases,
-      filteredTickets,
-      isOwnerRole,
-      props.newFeedbackCount,
-      props.pendingLlcInvitations,
-      safeManagerPayments
-    ]
-  );
-
   const nextRentCollectionLabel = useMemo(
     () =>
       isOwnerRole
@@ -155,11 +124,59 @@ export function useDashboardHomeState(
     [displayDashboardData.charges, filteredPortfolio.leases, isOwnerRole]
   );
 
+  const ownerHomeSummary = useMemo(() => {
+    const charges = displayDashboardData.charges;
+    const rentCharges = charges.filter((charge) => charge.category === "rent");
+    const lateCharges = rentCharges.filter(
+      (charge) => charge.status === "late" && !isCollectedOutsideDomus(charge)
+    );
+    const openRepairCount = filteredTickets.filter(
+      (ticket) => ticket.status === "open" || ticket.status === "in_progress"
+    ).length;
+    const dueCents =
+      displayDashboardData.kpis.collectedRentCents +
+      displayDashboardData.kpis.pendingRentCents +
+      displayDashboardData.kpis.overdueRentCents;
+    const rentedPropertyIds = new Set(
+      safePortfolio.units.filter((unit) => unit.occupied).map((unit) => unit.propertyId)
+    );
+    const today = new Date();
+    const todayIso = today.toISOString().slice(0, 10);
+    const nextDueCharges = rentCharges
+      .filter(
+        (charge) =>
+          charge.status === "pending" &&
+          charge.dueDate >= todayIso &&
+          !isCollectedOutsideDomus(charge)
+      )
+      .sort((left, right) => left.dueDate.localeCompare(right.dueDate));
+    const nextDueDate = nextDueCharges[0]?.dueDate ?? null;
+    const chargesOnNextDate = nextDueDate
+      ? nextDueCharges.filter((charge) => charge.dueDate === nextDueDate)
+      : [];
+
+    return {
+      lateCharges,
+      openRepairCount,
+      newMessageCount: props.inboxThreads?.length ?? 0,
+      collectedCents: displayDashboardData.kpis.collectedRentCents,
+      dueCents,
+      homeCount: safePortfolio.properties.length,
+      rentedHomeCount: rentedPropertyIds.size,
+      nextDueDate,
+      nextDueAmountCents: chargesOnNextDate.reduce(
+        (sum, charge) => sum + charge.amountCents,
+        0
+      ),
+      nextDueTenantCount: new Set(chargesOnNextDate.map((charge) => charge.leaseId)).size
+    };
+  }, [displayDashboardData, filteredTickets, props.inboxThreads, safePortfolio]);
+
   return {
     ownerOnboarding,
     llcSetupPrompt,
-    homeActionItems,
-    nextRentCollectionLabel
+    homeActionItems: ownerHomeSummary,
+    nextRentCollectionLabel,
   };
 }
 

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, Circle, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/format";
 
-export type OnboardingStepId = "profile" | "account" | "property" | "unit" | "lease" | "bank";
+export type OnboardingStepId = "profile" | "account" | "property" | "unit" | "lease";
 
 export interface OnboardingChecklistStep {
   id: OnboardingStepId;

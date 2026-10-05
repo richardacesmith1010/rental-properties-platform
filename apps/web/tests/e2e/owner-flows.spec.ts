@@ -13,19 +13,17 @@ async function openOwnerWorkspace(page: Page, path = "/owner") {
 }
 
 test.describe("Owner flows", () => {
-  test("loads owner home with action center and finance panel", async ({ page }) => {
+  test("loads the owner daily summary and finance panel", async ({ page }) => {
     const errors = collectConsoleErrors(page);
     await loginOwnerOrSkip(page);
     await openOwnerWorkspace(page);
 
-    await expect(page.getByRole("heading", { name: "Home", exact: true })).toBeVisible();
-    await expect(page.getByText("See what needs your attention today.")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Good (morning|afternoon|evening),/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Needs you today" })).toBeVisible();
     await expect(page.getByRole("heading", { name: /financial overview/i })).toBeVisible();
 
-    const actionCenterVisible =
-      (await page.getByText(/what needs attention/i).count()) > 0 ||
-      (await page.getByRole("heading", { name: /no action items right now/i }).count()) > 0;
-    expect(actionCenterVisible).toBeTruthy();
+    await expect(page.getByText("Rent this month")).toBeVisible();
+    await expect(page.getByText("Next rent due")).toBeVisible();
 
     expectNoConsoleErrors(errors);
   });
@@ -64,7 +62,7 @@ test.describe("Owner flows", () => {
     await loginOwnerOrSkip(page);
     await openOwnerWorkspace(page);
 
-    await expect(page.getByText("See what needs your attention today.")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Good (morning|afternoon|evening),/ })).toBeVisible();
     await page.getByRole("button", { name: "Add", exact: true }).click();
     for (const name of ["Add a home", "Add a tenant", "Add a manager"]) {
       await expect(page.getByRole("menuitem", { name, exact: true })).toBeVisible();
