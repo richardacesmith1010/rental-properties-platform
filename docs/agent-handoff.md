@@ -260,10 +260,17 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Verified live (smoke owner): exactly one bank card on Home ("Stripe needs one more thing"); ConnectBanner + StripeHealthBanner gone for owners; checklist 5 steps, no bank step; Home = greeting + summary, bank card, "Needs you today" (Send reminder / Mark as paid), 3 tiles, "More numbers"; Rent = Late (2) / Due soon (1) / Paid / All, Remind · Mark paid · ⋯, inline bank line, no Generate button; manager Rent still has Generate + Record; zero console errors desktop/phone; light + dark screenshots.
 - Found in verification → Sprint 156: Next-rent-due tile wrong ("No rent due" while one is due soon); same tenant listed twice in Needs you today; duplicate "Rent" title + old description + two primary buttons on Rent; Rent badge bare "3"; leftover jargon. `StripeHealthBanner` now has zero runtime importers.
 
+## Sprint 156 — Owner clarity 3/3 SHIPPED (L2, `62aedec`, 2026-10-04)
+
+- First run (Sol) hit the usage limit mid-run (155,295 tokens); user used a reset; resumed on **gpt-reserve** (first cheap-tier trial, 214,658 tokens incl. re-reading the partial tree). gpt-reserve over-read the resume note and **reverted the user's uncommitted `.claude/launch.json`** — Claude restored it from the session-start diff. Packets now forbid touching/reverting files the sprint didn't create.
+- 1150 tests, independent gate green, smoke 3/3, theme 11/11, zero console errors desktop/phone.
+- Verified live: Needs-you-today grouped ("Smoke Tenant owes $2 · 2 months late"); Next rent due "Nov 1, 2026 · $1 from 1 tenant"; Rent badge "2 late"; "Show: All homes", "Money overview", "Your numbers"; dead files deleted.
+- Found → Sprint 157 (L1, gpt-6-luna): phone bottom bar not on screen (fixed element trapped by an ancestor; renders at page end, y≈2854) → portal to body; "Property P&L" on Expenses; duplicate Rent help sentence. Manager-pay "Generate This Month…" button left as is (manager-pay generation, different feature).
+
 ## ▶ START HERE (next session, written 2026-10-04)
 
-- Last shipped: Sprint 155 (`32ad3d7`). Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
-- Owner-approved queue, in order: (1) DONE — owner speed arc closed; (2) clarity cleanup — mockup APPROVED; 154 + 155 shipped; 156 dispatched 2026-10-04, Codex usage limit mid-run — partial tree uncommitted, auto-resume scheduled 22:28 (resume prompt prepends a review-partial-work note); from `docs/walkthrough-2026-10-03.md` #5–#7, #9 — one bank-setup prompt, simpler navigation (replace "N OF M" carousel), plain-language sweep — **mockup first** (Design canvas, like the landing), L2/L3 TBD.
+- Last shipped: Sprint 156 (`62aedec`). Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
+- Owner-approved queue, in order: (1) DONE — owner speed arc closed; (2) clarity cleanup — mockup APPROVED; 154–156 shipped; 157 (bottom-bar fix, L1) packet ready; from `docs/walkthrough-2026-10-03.md` #5–#7, #9 — one bank-setup prompt, simpler navigation (replace "N OF M" carousel), plain-language sweep — **mockup first** (Design canvas, like the landing), L2/L3 TBD.
 - Standing rules: notifications OFF until owner says real users (env `DOMUS_NOTIFICATIONS_ENABLED` unset); L3 packets → Claude sends to Domus ChatGPT project via Claude-in-Chrome (memory: feedback-prompt-severity-chatgpt-workflow); Codex default Sol/medium, watch usage limits (detached nohup re-run after reset); verify every UI sprint live with Playwright (temp specs in `apps/web/tests/e2e/zz-*.tmp.spec.ts`, smoke creds from `.env.local`).
 - Owner action items still open: J&MSP LLC bank connection (Stripe; owner must enter bank details). Codex Supabase token expires ~2027-01-01.
 - Angel Hernandez (he/him): lease flagged "Pays outside Domus"; owner records Fidelity payments (Charges → Record → ACH, note "Fidelity") or asks Claude to record quietly.
