@@ -338,7 +338,7 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 ## Bank feed — design drafted (2026-10-05)
 
-- Design `docs/bank-feed-design.md` + mockup https://claude.ai/artifact/Wp4XfbAcPvXTXmiGyY1FwU. Owner answers: personal account mixed with personal spending (Fidelity + a credit union); "ask once, then automatic"; wants to-do list, per-home ledger, monthly profit, alerts. Privacy: store rental items only, personal items as fingerprints only. Phases: (1) schema + CSV upload + matching + review queue (L3), (2) ledger/profit/alerts (L2), (3) Plaid production daily sync (L3; Plaid announced Fidelity support Aug 2026, may need access request). Awaiting owner approval of the mockup.
+- Design `docs/bank-feed-design.md` + mockup https://claude.ai/artifact/Wp4XfbAcPvXTXmiGyY1FwU. Owner answers: personal account mixed with personal spending (Fidelity + a credit union); "ask once, then automatic"; wants to-do list, per-home ledger, monthly profit, alerts. Privacy: store rental items only, personal items as fingerprints only. Phases: (1) schema + CSV upload + matching + review queue (L3), (2) ledger/profit/alerts (L2), (3) Plaid production daily sync (L3; Plaid announced Fidelity support Aug 2026, may need access request). **Mockup APPROVED by owner 2026-10-05.** Next: owner downloads one month of activity CSV (Fidelity first, then credit union) → Phase 1 packet (L3, ChatGPT review).
 
 ## ▶ START HERE (next session, written 2026-10-04)
 

@@ -1,4 +1,4 @@
-# Bank feed — design (draft for owner approval, 2026-10-05)
+# Bank feed — design (APPROVED by owner 2026-10-05)
 
 Mockup: https://claude.ai/artifact/Wp4XfbAcPvXTXmiGyY1FwU (boards: Daily "Money to check" (interactive), Monthly profit + alerts, Connect bank / upload statement, 1st Home ledger).
 
