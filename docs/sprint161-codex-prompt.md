@@ -6,7 +6,7 @@
 Build the owner-approved tenant design (canvas https://claude.ai/artifact/GKgJPNk7dLiLYdXUCchLpV, boards "Tenant Home (phone)", "Pay rent (phone)", "Message + report a problem (phone)", "Tenant Home (desktop)") so a tenant instantly sees what they owe, when, and how to pay or get help. Tenant messaging (starting a thread) is NOT in this sprint.
 
 ## 2. Context
-- Branch `main`, HEAD `247c226` or later docs-only. Paths under `apps/web/`.
+- Branch `main`, HEAD `378bb8e` or later docs-only. Paths under `apps/web/`.
 - `app/tenant/page.tsx` (517 lines): section ids `overview | charges | maintenance | documents | notifications` (labels Rent / Payment History / Problems / Lease / Messages, L56-72); data loaders in one `Promise.all` (L140-171); `ownerConnectedMap = arePropertyOwnersConnected(...)` at L206 (passed only to `ChargesSection`); page `h1` L296-305, section `h2` L311-313, "‹ ›" arrows L314-337; `overview` renders `TenantOverview` + a 3-card KPI grid (L344-380); `charges` renders `TenantLeaseDetails` + `ChargesSection isTenantView` + an inline "Payment History" card (L382-447, title L397); `maintenance` renders `TicketForm viewerRole="tenant"` + `MaintenanceSection` (L449-471).
 - Nav: `components/dashboard/sidebar/nav-items.ts:143-178` `tenantNavItems` (overview "Rent", maintenance "Problems", documents "Lease", notifications "Messages" — no item for `charges`); mobile `MobileTopBar` in `sidebar/sidebar-nav.tsx`; owner-only bottom bar `components/dashboard/owner-bottom-bar.tsx`.
 - `components/dashboard/tenant-overview.tsx` (PayRentCard, greeting, 4 quick-action cards, "Your Lease" card). `components/dashboard/pay-rent-card.tsx` never checks owner Stripe readiness or `MIN_ONLINE_PAYMENT_CENTS` (both are enforced only server-side in `app/actions/charges.ts:153-216`), so its pay buttons are always live. `lib/payment-fees.ts` (`MIN_ONLINE_PAYMENT_CENTS = 500`, `calculateCardFee`). `lib/lease-collection.ts` `isCollectedOutsideDomus`.
@@ -42,7 +42,7 @@ Build the owner-approved tenant design (canvas https://claude.ai/artifact/GKgJPN
 ## 6. Implementation requirements
 - Unit tests: `tenant-pay-state` for every state incl. owner not connected, amount < $5, pays-outside, paid, not posted, late; Home renders each state's copy and shows Pay rent only for `can_pay`; tenant nav = 5 items in order and bottom bar 4 items (owner bar unchanged); no arrows / no duplicate "Payment History" / "Past payments" title; Rent page has no filter row for tenants and no "charges"/"Waived"/"Pending" words; problem form sends `medium` vs `high`; owner/manager `ChargesSection`/`TicketForm` output unchanged (existing tests untouched).
 - Update tenant e2e assertions to the new headings (retarget, don't weaken).
-- Targeted validation (Claude runs the full gate): lint, typecheck, and the vitest files you touched/added.
+- Targeted validation (Claude runs the full gate): lint, typecheck, the vitest files you touched/added, AND every existing test file that imports any component/module you changed (find them with grep before finishing; Sprint 160 missed one this way).
 - Plain words, ≤12 words per sentence; tokens only; light + dark; 390 px + 1280 px; 44 px targets. The user should never need to read instructions to complete this flow; every step must be self-explanatory.
 - No PII in logs. Do not invent URLs or emails.
 
