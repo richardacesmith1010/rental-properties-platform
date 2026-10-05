@@ -281,9 +281,16 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Verified live: manager menu, Add (2 items), URL updates per section, reload keeps section, fee copy, legacy URL; owner menu, Add (3), owner stays on clicked section; zero console errors; smoke 3/3, theme 11/11; full gate green (1160 tests).
 - Next: Sprint 159 (manager Rent filters/actions + manager Home "Needs you today" — mirror owner 155/156).
 
+## Sprint 159 — Manager clarity 2/2 SHIPPED (L2, `e8195ce`, 2026-10-04)
+
+- **One run, gpt-reserve, 99,301 tokens** (vs ~355k for 158) — packet pinned owner invariants per L-014; full gate green first try (owner tests unmodified; manager tests added). `isOwnerView` → `simpleRentView` (owner + manager) with owner-only `showBankConnectionNotice`; manager Home now the owner layout ("Homes you manage", no "More numbers"); `manager-dashboard.tsx` deleted (zero importers).
+- Verified live: manager Home/Rent as above, URL tracking intact; owner Home/Rent unchanged; zero console errors; smoke 3/3, theme 11/11.
+- Small leftovers (next polish batch): manager Rent shows the help sentence twice (manager section-frame description) and rows lack Remind (manager page likely doesn't pass the batch-reminder action).
+- **Manager clarity arc (158–159) complete.**
+
 ## ▶ START HERE (next session, written 2026-10-04)
 
-- Last shipped: Sprint 158 (`2abf678`). Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
+- Last shipped: Sprint 159 (`e8195ce`). Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
 - Owner-approved queue, in order: (1) DONE — owner speed arc closed; (2) clarity cleanup — mockup APPROVED; DONE (154–157 shipped); from `docs/walkthrough-2026-10-03.md` #5–#7, #9 — one bank-setup prompt, simpler navigation (replace "N OF M" carousel), plain-language sweep — **mockup first** (Design canvas, like the landing), L2/L3 TBD.
 - Standing rules: notifications OFF until owner says real users (env `DOMUS_NOTIFICATIONS_ENABLED` unset); L3 packets → Claude sends to Domus ChatGPT project via Claude-in-Chrome (memory: feedback-prompt-severity-chatgpt-workflow); Codex default Sol/medium, watch usage limits (detached nohup re-run after reset); verify every UI sprint live with Playwright (temp specs in `apps/web/tests/e2e/zz-*.tmp.spec.ts`, smoke creds from `.env.local`).
 - Owner action items still open: J&MSP LLC bank connection (Stripe; owner must enter bank details). Codex Supabase token expires ~2027-01-01.
