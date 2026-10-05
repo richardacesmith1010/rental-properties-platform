@@ -6,7 +6,7 @@
 Separate owner, manager, and shared logic in the dashboard navigation hook and shell so one role can no longer break another (the Sprint 158 bug class), and so future sprints read smaller files. **Zero behaviour change for every role.**
 
 ## 2. Context
-- Branch `main`, HEAD `62d0cac` or later docs-only. Paths under `apps/web/`.
+- Branch `main`, HEAD `8d86591` or later docs-only. Paths under `apps/web/`.
 - `components/dashboard/dashboard-section-loaders.ts` (381 lines, 46 role checks): one `useDashboardNavigation(props, kpis)` that mixes owner (section cache `navigateOwnerDashboard`, owner URL sync effect, hover/focus preload), manager (manager URL sync effect with query-change guard, `history.replaceState` in `openSection`), and shared logic (`navigationAvailability`, `allSectionItems`, command palette, wizard open/close). Used by `components/dashboard/dashboard-data-loader.tsx`.
 - `components/dashboard/index.tsx` (470 lines, 23 role checks): `PageHeader` still accepts `pageCountLabel`/`onPrevious`/`onNext` and the shell still wires `goToPreviousSection`/`goToNextSection` for non-managers although owners no longer show arrows (Sprint 154) — verify whether anything renders them; if provably unreachable, remove.
 - Invariants that must survive (L-014): owner section cache + URL tracking + preload on hover/focus; owner legacy `?mode=` dropping; manager `?section=` written on switch and kept after reload/`router.refresh()` (query-change-only resync); manager/owner Add menus (owner 4 items, manager 2); tenant pages don't use this hook.

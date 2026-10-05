@@ -2,7 +2,6 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AnnouncementComposer } from "@/components/dashboard/announcement-composer";
 import { ownerPageDescriptions } from "./dashboard-config";
 import { OwnerAddMenu } from "./owner-add-menu";
@@ -36,15 +35,11 @@ function PageHeader({
   title,
   pageCountLabel,
   description,
-  onPrevious,
-  onNext,
   actions
 }: {
   title: string;
   pageCountLabel?: string | null;
   description: string;
-  onPrevious?: () => void;
-  onNext?: () => void;
   actions?: ReactNode;
 }) {
   return (
@@ -58,10 +53,6 @@ function PageHeader({
       </div>
       <div className="flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto">
         {actions}
-        {onPrevious && onNext ? <>
-          <Button type="button" variant="outline" size="icon" className="h-11 w-11 rounded-full" onClick={onPrevious} title="Previous section" aria-label="Previous section"><ChevronLeft className="h-5 w-5" /></Button>
-          <Button type="button" variant="outline" size="icon" className="h-11 w-11 rounded-full" onClick={onNext} title="Next section" aria-label="Next section"><ChevronRight className="h-5 w-5" /></Button>
-        </> : null}
       </div>
     </div>
   );
@@ -88,8 +79,6 @@ export function Dashboard(props: DashboardProps) {
     displayDashboardData,
     financialOverviewData,
     filteredPortfolio,
-    goToNextSection,
-    goToPreviousSection,
     homeActionItems,
     isManagerRole,
     isOwnerRole,
@@ -433,8 +422,6 @@ export function Dashboard(props: DashboardProps) {
                 title={contentZoneTitle}
                 pageCountLabel={isManagerRole ? null : contentZoneLabel}
                 description={isManagerRole ? ownerPageDescriptions[activeSection] ?? "Manage your homes and the people who live there." : ""}
-                onPrevious={isManagerRole ? undefined : goToPreviousSection}
-                onNext={isManagerRole ? undefined : goToNextSection}
                 actions={
                   isManagerRole ? (
                     <OwnerAddMenu role="manager" onAddHome={openPropertyWizard} onAddTenant={openTenantInviteWizard} properties={safePortfolio.properties} />
