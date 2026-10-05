@@ -173,7 +173,8 @@ export function useDashboardHomeState(
     const tenantEmailsById = new Map((filteredPortfolio.tenants ?? []).map((tenant) => [tenant.id, tenant.email.toLowerCase()]));
     const joinedWithoutLease = (props.invitations ?? [])
       .filter((invite: InvitationListItem) => invite.role === "tenant" && invite.status === "accepted")
-      .filter((invite: InvitationListItem) => !activeLeases.some((lease) => tenantEmailsById.get(lease.tenantProfileId) === invite.email.toLowerCase()));
+      // Any lease (active, ended, or paid outside Domus) means the tenant is already set up.
+      .filter((invite: InvitationListItem) => !filteredPortfolio.leases.some((lease) => tenantEmailsById.get(lease.tenantProfileId) === invite.email.toLowerCase()));
 
     return {
       lateCharges,

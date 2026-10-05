@@ -109,4 +109,29 @@ describe("useDashboardHomeState", () => {
     render(<SummaryHarness />);
     expect(screen.getByText(expected)).toBeInTheDocument();
   });
+
+  it("asks to set up a lease only for accepted tenants with no lease of any kind", () => {
+    const tenants = [
+      { id: "t-outside", email: "outside@example.com" },
+      { id: "t-ended", email: "ended@example.com" },
+      { id: "t-new", email: "new@example.com" }
+    ];
+    const leases = [
+      { id: "l-outside", active: true, tenantProfileId: "t-outside", collectsOutsideDomus: true, dueDayOfMonth: 1, monthlyRentCents: 1000 },
+      { id: "l-ended", active: false, tenantProfileId: "t-ended", collectsOutsideDomus: false, dueDayOfMonth: 1, monthlyRentCents: 1000 }
+    ];
+    const invitations = tenants.map((tenant) => ({ id: `i-${tenant.id}`, role: "tenant", status: "accepted", email: tenant.email.toUpperCase() }));
+
+    function JoinedHarness() {
+      const state = useDashboardHomeState(
+        { invitations } as never,
+        { activeOwnershipAccount: null, safeOwnershipAccounts: [], safePortfolio: { properties: [], units: [], leases, tenants } } as never,
+        { displayDashboardData: { charges: [], kpis: { collectedRentCents: 0, pendingRentCents: 0, overdueRentCents: 0 } }, filteredPortfolio: { leases, tenants }, filteredTickets: [], isOwnerRole: true } as never
+      );
+      return <div>{state.homeActionItems.joinedWithoutLease.map((invite: { email: string }) => invite.email).join(",")}</div>;
+    }
+
+    render(<JoinedHarness />);
+    expect(screen.getByText("NEW@EXAMPLE.COM")).toBeInTheDocument();
+  });
 });
