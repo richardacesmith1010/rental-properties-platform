@@ -127,6 +127,7 @@ export { disableAutomation } from "./automations";
 
 export { createInboxThread } from "./inbox";
 export { sendInboxMessage } from "./inbox";
+export { startTenantConversation } from "./inbox";
 export { sendMessageToTenant } from "./inbox";
 export { requestManualPaymentConfirmation } from "./inbox";
 

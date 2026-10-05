@@ -33,6 +33,7 @@ interface InboxSectionProps {
   onMarkAllRead?: StatefulAction;
   onCreateThread?: StatefulAction;
   onSendMessage?: StatefulAction;
+  onStartTenantConversation?: StatefulAction;
   threadsReady?: boolean;
   threadsWarning?: string | null;
   onOpenSection?: (sectionId: string) => void;
@@ -132,12 +133,13 @@ export function InboxSection({
   onMarkAllRead,
   onCreateThread,
   onSendMessage,
+  onStartTenantConversation,
   threadsReady = true,
   threadsWarning = null,
   onOpenSection,
   messageSectionId = "inbox"
 }: InboxSectionProps) {
-  const [activeTab, setActiveTab] = useState<InboxTab>("timeline");
+  const [activeTab, setActiveTab] = useState<InboxTab>(onStartTenantConversation ? "threads" : "timeline");
   const [query, setQuery] = useState("");
   const [readFilter, setReadFilter] = useState<ReadFilter>("all");
   const [typeFilter, setTypeFilter] = useState<NotificationFilter>("all");
@@ -154,6 +156,10 @@ export function InboxSection({
   );
   const [sendMessageState, sendMessageAction] = useFormState(
     onSendMessage ?? unavailableAction,
+    null
+  );
+  const [startState, startAction] = useFormState(
+    onStartTenantConversation ?? unavailableAction,
     null
   );
 
@@ -201,13 +207,16 @@ export function InboxSection({
   }, [notifications, query, readFilter, typeFilter]);
 
   const selectedThread = threads.find((thread) => thread.id === selectedThreadId) ?? null;
+  const homesWithoutThread = properties.filter((property) =>
+    !threads.some((thread) => thread.propertyId === property.id)
+  );
 
   return (
     <Card id="inbox" className="border border-border/50 shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2 text-xl font-semibold">
           <Bell className="h-4 w-4" />
-          Domus Inbox
+          {onStartTenantConversation ? "Messages" : "Domus Inbox"}
         </CardTitle>
         <div className="flex items-center gap-2">
           <Badge variant={unreadCount > 0 ? "warning" : "outline"}>{unreadCount} unread</Badge>
@@ -232,9 +241,9 @@ export function InboxSection({
         {markAllState && markAllState.success && markAllState.message ? (
           <p className="text-sm text-[var(--pos)]">{markAllState.message}</p>
         ) : null}
-        <p className="text-sm text-[var(--ink-2)]">
+        {!onStartTenantConversation && <p className="text-sm text-[var(--ink-2)]">
           Central communication timeline for rent, maintenance, lease, and document events.
-        </p>
+        </p>}
 
         <AnimatedTabs
           tabs={[
@@ -363,13 +372,32 @@ export function InboxSection({
               </form>
             ) : null}
 
-            {threads.length === 0 ? (
+            {onStartTenantConversation && (homesWithoutThread.length > 0 || threads.length === 0) ? (
+              <form action={startAction} className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+                <h3 className="text-lg font-semibold text-[var(--ink)]">Message your landlord</h3>
+                {properties.length > 1 && <label className="block text-sm text-[var(--ink)]">
+                  Which home?
+                  <Select name="propertyId" defaultValue="" required className="mt-1 min-h-11" title="Choose the home this message is about.">
+                    <option value="" disabled>Choose a home</option>
+                    {homesWithoutThread.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}
+                  </Select>
+                </label>}
+                <label className="block text-sm text-[var(--ink)]">
+                  Your message
+                  <textarea name="body" required maxLength={2000} rows={4} className="domus-input mt-1 w-full rounded-xl p-3" placeholder="What would you like to ask?" />
+                </label>
+                <SubmitButton className="min-h-11" title="Send your message to your landlord.">Send</SubmitButton>
+                {startState && !startState.success && <p role="alert" className="text-sm text-[var(--crit)]">{startState.error}</p>}
+                {startState?.success && <p role="status" className="text-sm text-[var(--pos)]">{startState.message}</p>}
+              </form>
+            ) : null}
+            {threads.length === 0 && !onStartTenantConversation ? (
               <EmptyState
                 icon={Mail}
                 title="No messages"
                 description="Your inbox is empty."
               />
-            ) : (
+            ) : threads.length > 0 ? (
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                 <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-[var(--domus-shadow-sm)]">
                   <AnimatedList className="space-y-2">
@@ -378,7 +406,7 @@ export function InboxSection({
                       key={thread.id}
                       type="button"
                       onClick={() => setSelectedThreadId(thread.id)}
-                      className={`w-full rounded-md border px-3 py-2 text-left transition ${
+                      className={`min-h-11 w-full rounded-md border px-3 py-2 text-left transition ${
                         selectedThreadId === thread.id
                           ? "border-[var(--accent-line)] bg-[var(--accent-weak)]"
                           : "border-[var(--line)] bg-[var(--surface-2)] hover:bg-[var(--surface-3)]"
@@ -441,7 +469,7 @@ export function InboxSection({
                         <input type="hidden" name="threadId" value={selectedThread.id} />
                         <Input name="body" placeholder="Type a message..." required />
                         <div className="flex justify-end">
-                          <SubmitButton size="sm" title="Send a new in-app message in this thread.">
+                          <SubmitButton size="sm" className="min-h-11" title="Send a new in-app message in this thread.">
                             Send message
                           </SubmitButton>
                         </div>
@@ -458,7 +486,7 @@ export function InboxSection({
                   )}
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
         )}
       </CardContent>

@@ -1,17 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   buildPropertyMessageEmail
 } from "@/lib/email-templates";
 import { formatCurrency, formatDate, formatUnitLabel } from "@/lib/format";
-import { logFailedSideEffect } from "@/lib/logger";
 import {
   createNotificationWithDelivery,
   type NotificationType
 } from "@/lib/notifications";
-import { canUserAdministerProperty } from "@/lib/property-access";
+import { canUserAdministerProperty, getAdministeredPropertyIds } from "@/lib/property-access";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
   createInboxThreadSchema,
@@ -40,6 +40,12 @@ interface OwnerRecipient {
   email: string | null;
   name: string;
 }
+
+const TENANT_CONVERSATION_SUBJECT = "Messages with your landlord";
+const startTenantConversationSchema = z.object({
+  body: z.string().trim().min(1, "Write a message first.").max(2000, "Keep your message under 2,000 characters."),
+  propertyId: z.string().uuid("Choose a valid home.").optional()
+});
 
 function getProfileDisplayName(
   profile: { full_name?: string | null; email?: string | null } | null | undefined,
@@ -184,6 +190,19 @@ async function findOrCreateTenantThread(params: {
     .select("id")
     .single();
 
+  if (error?.code === "23505") {
+    const { data: winner, error: selectError } = await admin
+      .from("inbox_threads")
+      .select("id")
+      .eq("property_id", params.propertyId)
+      .eq("entity_type", "tenant_profile")
+      .eq("entity_id", params.recipientProfileId)
+      .eq("subject", params.subject)
+      .limit(1)
+      .maybeSingle();
+    return selectError ? null : winner?.id ?? null;
+  }
+
   if (error || !createdThread?.id) {
     return null;
   }
@@ -220,16 +239,7 @@ async function touchInboxThread(threadId: string, userId: string) {
     .eq("id", threadId);
 
   if (threadUpdateError) {
-    logFailedSideEffect(
-      {
-        action: "sendInboxMessage",
-        operation: "update_thread_timestamp",
-        userId,
-        entityType: "inbox_thread",
-        entityId: threadId
-      },
-      threadUpdateError
-    );
+    console.error("inbox_thread_touch_failed", { userId, threadId, category: "update_error" });
 
     const retryResult = await admin
       .from("inbox_threads")
@@ -239,16 +249,7 @@ async function touchInboxThread(threadId: string, userId: string) {
   }
 
   if (threadUpdateError) {
-    logFailedSideEffect(
-      {
-        action: "sendInboxMessage",
-        operation: "update_thread_timestamp_retry",
-        userId,
-        entityType: "inbox_thread",
-        entityId: threadId
-      },
-      threadUpdateError
-    );
+    console.error("inbox_thread_touch_failed", { userId, threadId, category: "retry_error" });
   }
 
   return threadUpdateError;
@@ -378,6 +379,115 @@ async function ensureTenantThreadCapability() {
   }
 
   return null;
+}
+
+export async function startTenantConversation(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const { user } = await requireAuth("tenant");
+  const parsed = startTenantConversationSchema.safeParse({
+    body: formData.get("body"),
+    propertyId: formData.get("propertyId") || undefined
+  });
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Check your message." };
+  }
+
+  if (!checkRateLimit(`startTenantConversation:${user.id}`, 10, 60_000).allowed) {
+    return { success: false, error: "Too many messages. Please try again later." };
+  }
+
+  const capabilityError = await ensureTenantThreadCapability();
+  if (capabilityError) return capabilityError;
+
+  const admin = createAdminClient();
+  const { data: leases, error: leaseError } = await admin
+    .from("leases")
+    .select("unit_id")
+    .eq("tenant_profile_id", user.id)
+    .eq("active", true);
+  if (leaseError) return { success: false, error: "We could not check your lease. Please try again." };
+  const unitIds = [...new Set((leases ?? []).map((lease) => lease.unit_id).filter(Boolean))];
+  if (!unitIds.length) return { success: false, error: "You need an active lease to message your landlord." };
+
+  const { data: units, error: unitsError } = await admin
+    .from("units")
+    .select("property_id")
+    .in("id", unitIds);
+  if (unitsError) return { success: false, error: "We could not check your home. Please try again." };
+  const propertyIds = [...new Set((units ?? []).map((unit) => unit.property_id).filter(Boolean))];
+  if (!propertyIds.length) return { success: false, error: "You need an active lease to message your landlord." };
+  if (parsed.data.propertyId && !propertyIds.includes(parsed.data.propertyId)) {
+    return { success: false, error: "You cannot message about this home." };
+  }
+  if (!parsed.data.propertyId && propertyIds.length > 1) {
+    return { success: false, error: "Choose which home this is about." };
+  }
+  const propertyId = parsed.data.propertyId ?? propertyIds[0];
+
+  const threadId = await findOrCreateTenantThread({
+    propertyId,
+    recipientProfileId: user.id,
+    subject: TENANT_CONVERSATION_SUBJECT,
+    createdByProfileId: user.id
+  });
+  if (!threadId) return { success: false, error: "Your message didn't send. Please try again." };
+
+  const messageError = await insertInboxMessage({
+    threadId,
+    senderProfileId: user.id,
+    body: parsed.data.body,
+    direction: "inbound"
+  });
+  if (messageError) return { success: false, error: "Your message didn't send. Please try again." };
+
+  // A timestamp failure cannot undo an inserted message.
+  await touchInboxThread(threadId, user.id);
+
+  try {
+    const { data: property } = await admin.from("properties")
+      .select("owner_account_id")
+      .eq("id", propertyId)
+      .maybeSingle();
+    const [{ data: owners }, { data: managers }] = await Promise.all([
+      property?.owner_account_id
+        ? admin.from("ownership_account_members").select("profile_id")
+          .eq("account_id", property.owner_account_id).eq("member_role", "owner").eq("active", true)
+        : Promise.resolve({ data: [] as Array<{ profile_id: string }> }),
+      admin.from("property_managers").select("manager_profile_id")
+        .eq("property_id", propertyId).eq("active", true)
+    ]);
+    const candidates = [...new Set([
+      ...(owners ?? []).map((owner) => owner.profile_id),
+      ...(managers ?? []).map((manager) => manager.manager_profile_id)
+    ])].filter((id) => id !== user.id);
+    const authorized = await Promise.all(candidates.map(async (id) =>
+      (await getAdministeredPropertyIds(id, admin)).includes(propertyId) ? id : null
+    ));
+    await Promise.all(authorized.filter((id): id is string => Boolean(id)).map((id) =>
+      createNotificationWithDelivery({
+        recipientProfileId: id,
+        type: "owner_message",
+        title: "New message from a tenant",
+        body: "A tenant sent a message about your property.",
+        entityType: "inbox_thread",
+        entityId: threadId,
+        propertyId,
+        actorProfileId: user.id
+      })
+    ));
+  } catch (error) {
+    console.error("tenant_message_notification_failed", {
+      userId: user.id, propertyId, threadId,
+      category: error instanceof Error ? "delivery_error" : "unknown_error"
+    });
+  }
+
+  revalidatePath("/tenant");
+  revalidatePath("/owner");
+  revalidatePath("/manager");
+  return { success: true, message: "Sent. Your landlord will see it in Messages." };
 }
 
 export async function createInboxThread(

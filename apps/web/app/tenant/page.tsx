@@ -8,6 +8,7 @@ import {
   markNotificationRead,
   requestManualPaymentConfirmation,
   sendInboxMessage,
+  startTenantConversation,
   signDocumentPacket,
   signOut,
   payWithCard,
@@ -442,6 +443,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
                 onMarkRead={markNotificationRead}
                 onMarkAllRead={markAllNotificationsRead}
                 onSendMessage={sendInboxMessage}
+                onStartTenantConversation={startTenantConversation}
                 threadsReady={capabilities.inboxThreadsEnabled}
                 threadsWarning={capabilities.warnings.inboxThreads}
                 messageSectionId="notifications"
