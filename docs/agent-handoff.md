@@ -288,6 +288,12 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Small leftovers (next polish batch): manager Rent shows the help sentence twice (manager section-frame description) and rows lack Remind (manager page likely doesn't pass the batch-reminder action).
 - **Manager clarity arc (158–159) complete.**
 
+## Post-159 checks (2026-10-04)
+
+- Sentry follow-ups from Ops (2026-10-02) are already resolved — no code change needed: browser events report `environment=production` since Sprint 139 (verified: latest event Oct 2 tagged production); "Prevent Storing of IP Addresses" is ON in project domus-web (verified in Sentry settings). Owner Home preload already works (overview → daily-ops-home on hover/focus).
+- **Launch checklist item (L3, needs ChatGPT review):** managers can't send rent reminders — `sendBatchPaymentReminder` is `requireAuth("owner")`. Allowing managers (scoped to properties they manage) is an auth change; moot until notifications are turned on.
+- Polish backlog (fold into the next Codex batch, not worth a run alone): manager Rent help sentence shown twice (manager section-frame description).
+
 ## ▶ START HERE (next session, written 2026-10-04)
 
 - Last shipped: Sprint 159 (`e8195ce`). Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
