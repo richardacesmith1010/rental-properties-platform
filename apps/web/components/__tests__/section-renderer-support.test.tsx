@@ -102,7 +102,7 @@ describe("SectionFrame property scope control", () => {
     expect(screen.getByRole("link", { name: "Back to home" })).toHaveAttribute("href", "/owner");
   });
 
-  it("shows the Rent help once for owners and keeps the manager description", () => {
+  it("shows the Rent help once for owners and managers", () => {
     const rentHelp = "Rent is added each month from your leases.";
     const { unmount } = render(
       <SectionFrame props={buildProps({ activeSection: "charges" })} sectionName="Rent">
@@ -117,7 +117,7 @@ describe("SectionFrame property scope control", () => {
         <div>Rent content</div>
       </SectionFrame>
     );
-    expect(screen.getByText(rentHelp)).toBeInTheDocument();
+    expect(screen.queryByText(rentHelp)).not.toBeInTheDocument();
   });
 });
 

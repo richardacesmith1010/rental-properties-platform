@@ -46,4 +46,11 @@ describe("TenantRentCard", () => {
     expect(screen.queryByText(/late fee may apply/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/charges?/i)).not.toBeInTheDocument();
   });
+
+  it.each(["not_ready", "outside"] as const)("totals unpaid months when pay state is %s", (payState) => {
+    const charges = [baseProps.charges[0], { ...baseProps.charges[0], id: "2", amountCents: 250, dueDate: "2026-11-01" }];
+    render(<TenantRentCard {...baseProps} charges={charges} payState={payState} />);
+    expect(screen.getByText("$3.50 · 2 months")).toBeInTheDocument();
+    expect(screen.getByText(/due Oct 1/)).toBeInTheDocument();
+  });
 });

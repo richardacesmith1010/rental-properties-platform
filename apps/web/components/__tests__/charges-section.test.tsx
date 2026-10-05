@@ -196,6 +196,13 @@ describe("ChargesSection", () => {
     expect(screen.getByText("FREE")).toBeInTheDocument();
   });
 
+  it("hides tenant autopay and row payment controls when online pay is unavailable", () => {
+    render(<ChargesSection charges={charges} onPayCharge={async () => {}} onPayWithACH={async () => {}} isTenantView tenantPayState="not_ready" />);
+    expect(screen.queryByText("Enable Autopay")).not.toBeInTheDocument();
+    expect(screen.queryByText(/processing fee/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("Pay from bank account")).not.toBeInTheDocument();
+  });
+
   it("shows owner filters and defaults to late when rent is late", () => {
     render(
       <ChargesSection

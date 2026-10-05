@@ -38,6 +38,7 @@ interface InboxSectionProps {
   threadsWarning?: string | null;
   onOpenSection?: (sectionId: string) => void;
   messageSectionId?: string;
+  currentUserId?: string;
 }
 
 const unavailableAction: StatefulAction = async () => ({
@@ -137,7 +138,8 @@ export function InboxSection({
   threadsReady = true,
   threadsWarning = null,
   onOpenSection,
-  messageSectionId = "inbox"
+  messageSectionId = "inbox",
+  currentUserId
 }: InboxSectionProps) {
   const [activeTab, setActiveTab] = useState<InboxTab>(onStartTenantConversation ? "threads" : "timeline");
   const [query, setQuery] = useState("");
@@ -210,6 +212,35 @@ export function InboxSection({
   const homesWithoutThread = properties.filter((property) =>
     !threads.some((thread) => thread.propertyId === property.id)
   );
+
+  if (onStartTenantConversation) {
+    const tenantThread = selectedThread;
+    return (
+      <Card id="inbox" className="border border-border/50 shadow-sm">
+        <CardContent className="space-y-4 p-4 sm:p-5">
+          {threads.length === 0 ? (
+            <form action={startAction} className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+              <h2 className="text-lg font-semibold text-[var(--ink)]">Message your landlord</h2>
+              {properties.length > 1 ? <label className="block text-sm text-[var(--ink)]">Which home?<Select name="propertyId" defaultValue="" required className="mt-1 min-h-11" title="Choose the home this message is about."><option value="" disabled>Choose a home</option>{properties.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}</Select></label> : <input type="hidden" name="propertyId" value={properties[0]?.id ?? ""} />}
+              <label className="block text-sm text-[var(--ink)]">Your message<textarea name="body" required maxLength={2000} rows={4} className="domus-input mt-1 w-full rounded-xl p-3" placeholder="Write a message…" /></label>
+              <SubmitButton className="min-h-11" title="Send your message to your landlord.">Send</SubmitButton>
+              {startState && !startState.success ? <p role="alert" className="text-sm text-[var(--crit)]">{startState.error}</p> : null}
+            </form>
+          ) : (
+            <div className="space-y-4">
+              {threads.length > 1 ? <div className="space-y-2"><p className="text-sm font-semibold text-[var(--ink)]">Your homes</p>{threads.map((thread) => <button key={thread.id} type="button" onClick={() => setSelectedThreadId(thread.id)} className={`min-h-11 w-full rounded-xl border px-3 py-2 text-left ${selectedThreadId === thread.id ? "border-[var(--accent-line)] bg-[var(--accent-weak)]" : "border-[var(--line)] bg-[var(--surface-2)]"}`} title={`Open messages for ${thread.propertyName}.`}><span className="font-medium text-[var(--ink)]">{thread.propertyName}</span><span className="mt-0.5 block truncate text-sm text-[var(--muted)]">{thread.latestMessagePreview ?? "No messages yet."}</span></button>)}</div> : null}
+              {tenantThread ? <div className="space-y-4">
+                <div><h2 className="text-lg font-semibold text-[var(--ink)]">{tenantThread.propertyName}</h2><p className="text-sm text-[var(--muted)]">Chat with your landlord</p></div>
+                <div className="space-y-3" aria-live="polite">{tenantThread.messages.map((message) => { const mine = message.senderProfileId === currentUserId || message.direction === "inbound"; return <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}><div className={`max-w-[85%] rounded-2xl px-3 py-2 ${mine ? "bg-[var(--accent)] text-[var(--accent-contrast)]" : "bg-[var(--surface-2)] text-[var(--ink)]"}`}><p className="text-xs font-semibold">{mine ? "You" : message.senderName ?? "Your landlord"}</p><p className="mt-1 text-sm">{message.body}</p><p className={`mt-1 text-[11px] ${mine ? "opacity-80" : "text-[var(--muted)]"}`}>{formatTimestamp(message.createdAt)}</p></div></div>; })}</div>
+                <form action={sendMessageAction} className="space-y-2"><input type="hidden" name="threadId" value={tenantThread.id} /><Input name="body" placeholder="Write a message…" required /><div className="flex justify-end"><SubmitButton size="sm" className="min-h-11" title="Send a message to your landlord.">Send</SubmitButton></div>{sendMessageState && !sendMessageState.success ? <p className="text-sm text-[var(--crit)]">{sendMessageState.error}</p> : null}</form>
+              </div> : null}
+              {homesWithoutThread.length > 0 ? <form action={startAction} className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4"><h2 className="text-lg font-semibold text-[var(--ink)]">Message your landlord</h2><label className="block text-sm text-[var(--ink)]">Which home?<Select name="propertyId" defaultValue="" required className="mt-1 min-h-11" title="Choose the home this message is about."><option value="" disabled>Choose a home</option>{homesWithoutThread.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}</Select></label><label className="block text-sm text-[var(--ink)]">Your message<textarea name="body" required maxLength={2000} rows={4} className="domus-input mt-1 w-full rounded-xl p-3" placeholder="Write a message…" /></label><SubmitButton className="min-h-11" title="Send your message to your landlord.">Send</SubmitButton></form> : null}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card id="inbox" className="border border-border/50 shadow-sm">

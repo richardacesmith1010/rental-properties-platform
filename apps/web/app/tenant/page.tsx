@@ -191,7 +191,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
     lease: currentLease ? { monthlyRentCents: currentLease.monthlyRentCents, dueDayOfMonth: leaseDetails[0].dueDayOfMonth } : null,
     lastPayment: paymentHistory[0] ? { paidAt: paymentHistory[0].paidAt } : null
   });
-  const rentDueDate = currentCharge?.dueDate ?? (leaseDetails[0] ? getNextRentDueDate(leaseDetails[0].dueDayOfMonth) : null);
+  const rentDueDate = currentCharge?.dueDate ?? (leaseDetails[0] ? getNextRentDueDate(leaseDetails[0].dueDayOfMonth, new Date(), leaseDetails[0].startDate) : null);
   const inboxProperties = Array.from(
     new Map(
       leaseDetails.map((lease) => [
@@ -281,7 +281,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
         <div className="flex flex-col gap-4 px-6 pt-6 sm:flex-row sm:items-start sm:justify-between lg:px-8 lg:pt-8">
           <div id="overview">
             <h1 className="text-2xl font-bold tracking-tight text-[var(--ink)]">{activeSection === "overview" ? `Hi, ${displayName}` : tenantSectionLabel[activeSection]}</h1>
-            <p className="mt-1 text-sm text-[var(--muted)]">{activeSection === "overview" ? "Your rent, problems, and lease at a glance." : activeSection === "charges" ? "Pay rent and see what you've paid." : "Everything you need for your home."}</p>
+            <p className="mt-1 text-sm text-[var(--muted)]">{activeSection === "overview" ? "Your rent, problems, and lease at a glance." : activeSection === "charges" ? "Pay rent and see what you've paid." : activeSection === "notifications" ? "Talk with your landlord." : "Everything you need for your home."}</p>
           </div>
         </div>
 
@@ -289,9 +289,9 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
           <StripeTestModeBanner />
           {activeSection !== "overview" || hasUnknownSection ? (
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-[var(--ink)]">
+              {activeSection !== "notifications" ? <h2 className="text-lg font-semibold text-[var(--ink)]">
                 {hasUnknownSection ? "Section not found" : tenantSectionLabel[activeSection]}
-              </h2>
+              </h2> : null}
             </div>
           ) : null}
 
@@ -336,6 +336,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
                 autopayEnrollments={autopayEnrollments}
                 onSetupAutopay={setupAutopay}
                 onDisableAutopay={disableAutopay}
+                tenantPayState={payState}
                 hideTenantPaymentControls
               />
               <Card>
@@ -444,6 +445,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
                 onMarkAllRead={markAllNotificationsRead}
                 onSendMessage={sendInboxMessage}
                 onStartTenantConversation={startTenantConversation}
+                currentUserId={user.id}
                 threadsReady={capabilities.inboxThreadsEnabled}
                 threadsWarning={capabilities.warnings.inboxThreads}
                 messageSectionId="notifications"

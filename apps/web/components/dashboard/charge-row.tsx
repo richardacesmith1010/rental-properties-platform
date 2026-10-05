@@ -52,6 +52,7 @@ interface ChargeRowProps {
   category: ChargeCategory;
   isTenantView: boolean;
   paymentsAvailable: boolean;
+  tenantPayState?: "can_pay" | "not_ready" | "outside" | "paid" | "not_posted";
   stripeConfigured: boolean;
   onPayCharge: (formData: FormData) => Promise<void>;
   onPayWithACH?: (formData: FormData) => Promise<void>;
@@ -268,6 +269,7 @@ export function ChargeRow({
   category,
   isTenantView,
   paymentsAvailable,
+  tenantPayState,
   stripeConfigured,
   onPayCharge,
   onPayWithACH,
@@ -386,7 +388,7 @@ export function ChargeRow({
                   Remind
                 </Button>
               ) : null}
-              {isTenantView && charge.status !== "paid" && charge.status !== "waived" ? (
+              {isTenantView && (tenantPayState === undefined || tenantPayState === "can_pay") && charge.status !== "paid" && charge.status !== "waived" ? (
                 <div className="w-full space-y-2 xl:w-[18rem]">
                   <div className="rounded-2xl border border-[var(--accent-line)] bg-[color:color-mix(in_srgb,var(--accent-weak)_76%,transparent)] p-3">
                       <p className="text-sm font-semibold text-foreground">

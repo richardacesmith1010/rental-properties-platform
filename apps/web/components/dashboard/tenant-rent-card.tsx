@@ -55,12 +55,13 @@ export function TenantRentCard({
 }: TenantRentCardProps) {
   const [showPayment, setShowPayment] = useState(false);
   const charge = charges[0] ?? null;
-  const dueDate = charge?.dueDate ?? rentDueDate;
-  const amountCents = payState === "can_pay"
-    ? charges.reduce((total, item) => total + item.amountCents, 0)
+  const unpaidCharges = charges.filter((item) => item.status === "pending" || item.status === "late");
+  const dueDate = unpaidCharges.map((item) => item.dueDate).sort()[0] ?? charge?.dueDate ?? rentDueDate;
+  const amountCents = ["can_pay", "not_ready", "outside"].includes(payState)
+    ? unpaidCharges.reduce((total, item) => total + item.amountCents, 0)
     : rentAmountCents ?? charge?.amountCents ?? 0;
-  const amountLabel = payState === "can_pay" && charges.length > 1
-    ? `${formatCurrency(amountCents)} · ${charges.length} months`
+  const amountLabel = ["can_pay", "not_ready", "outside"].includes(payState) && unpaidCharges.length > 1
+    ? `${formatCurrency(amountCents)} · ${unpaidCharges.length} months`
     : formatCurrency(amountCents);
   const label = payState === "paid" && lastPaidAt
     ? `${new Intl.DateTimeFormat("en-US", { month: "long", timeZone: "UTC" }).format(new Date(`${lastPaidAt}T00:00:00.000Z`))} rent`

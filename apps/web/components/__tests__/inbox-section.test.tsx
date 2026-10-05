@@ -24,7 +24,7 @@ const thread: InboxThreadDTO = {
   messageCount: 1,
   messages: [{
     id: "message-1", threadId: "thread-1", senderProfileId: "tenant-1",
-    senderEmail: null, body: "Hello", channel: "in_app", direction: "inbound",
+    senderEmail: null, senderName: "Alex Landlord", body: "Hello", channel: "in_app", direction: "inbound",
     createdAt: "2026-10-05T00:00:00Z"
   }]
 };
@@ -54,8 +54,20 @@ describe("InboxSection tenant conversation", () => {
   it("shows the sent message and reply box after refresh", () => {
     render(<InboxSection notifications={[]} threads={[thread]} properties={[home]} onMarkRead={noop} onSendMessage={noop} onStartTenantConversation={noop} />);
     expect(screen.getAllByText("Hello").length).toBeGreaterThan(0);
-    expect(screen.getByPlaceholderText("Type a message...")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Send message" })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Write a message…")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send" })).toBeInTheDocument();
+  });
+
+  it("renders tenant messages as a simple chat", () => {
+    const landlordThread = { ...thread, messages: [
+      { ...thread.messages[0], id: "landlord", senderProfileId: "landlord-1", senderName: "Alex Landlord", direction: "outbound" as const, body: "Welcome home." },
+      { ...thread.messages[0], id: "tenant", senderProfileId: "tenant-1", body: "Thank you." }
+    ], messageCount: 2 };
+    render(<InboxSection notifications={[{ id: "n", type: "owner_message", title: "Alert", body: "Alert", entityType: "general", entityId: null, createdAt: "2026-10-05", readAt: null }]} threads={[landlordThread]} properties={[home]} currentUserId="tenant-1" onMarkRead={noop} onSendMessage={noop} onStartTenantConversation={noop} />);
+    expect(screen.getByText("Alex Landlord")).toBeInTheDocument();
+    expect(screen.getByText("You")).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Timeline" })).not.toBeInTheDocument();
+    expect(screen.queryByText("unread")).not.toBeInTheDocument();
   });
 
   it("lists tenant-started threads for an administrator", () => {

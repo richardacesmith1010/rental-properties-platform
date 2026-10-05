@@ -11,6 +11,7 @@ export interface InboxMessageDTO {
   id: string;
   threadId: string;
   senderProfileId: string | null;
+  senderName?: string | null;
   senderEmail: string | null;
   body: string;
   channel: "in_app" | "email" | "sms" | "system";
@@ -262,6 +263,7 @@ export async function getInboxThreadsForUser(userId: string): Promise<InboxThrea
       threadId: message.thread_id,
       senderProfileId: message.sender_profile_id,
       senderEmail: message.sender_email,
+      senderName: null,
       body: message.body,
       channel: message.channel as InboxMessageDTO["channel"],
       direction: message.direction as InboxMessageDTO["direction"],
@@ -271,6 +273,15 @@ export async function getInboxThreadsForUser(userId: string): Promise<InboxThrea
     const existing = messagesByThreadId.get(mapped.threadId) ?? [];
     existing.push(mapped);
     messagesByThreadId.set(mapped.threadId, existing);
+  }
+
+  const senderIds = unique((messages ?? []).map((message) => message.sender_profile_id).filter(Boolean));
+  const { data: senderProfiles } = senderIds.length
+    ? await admin.from("profiles").select("id, full_name, email").in("id", senderIds)
+    : { data: [] as Array<{ id: string; full_name: string | null; email: string | null }> };
+  const senderNameById = new Map((senderProfiles ?? []).map((profile) => [profile.id, profile.full_name?.trim() || profile.email || null]));
+  for (const messageList of messagesByThreadId.values()) {
+    for (const item of messageList) item.senderName = item.senderProfileId ? senderNameById.get(item.senderProfileId) ?? null : null;
   }
 
   const propertyNameById = new Map((properties ?? []).map((property) => [property.id, property.name]));

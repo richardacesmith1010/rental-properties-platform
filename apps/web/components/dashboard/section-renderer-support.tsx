@@ -20,10 +20,6 @@ function getSectionHelpText(sectionId: string, role: string) {
     return null;
   }
 
-  if (sectionId === "charges" && role === "manager") {
-    return "Rent is added each month from your leases.";
-  }
-
   if (sectionId === "maintenance") {
     return role === "tenant"
       ? "When you report a problem, updates from your landlord will show up here."

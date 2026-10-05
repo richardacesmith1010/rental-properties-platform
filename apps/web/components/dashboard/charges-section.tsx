@@ -66,6 +66,7 @@ interface ChargesSectionProps {
   autopayEnrollments?: AutopayEnrollmentView[];
   onSetupAutopay?: StatefulAction;
   onDisableAutopay?: StatefulAction;
+  tenantPayState?: "can_pay" | "not_ready" | "outside" | "paid" | "not_posted";
   previewCount?: number;
   availableLeases?: ChargeLeaseOption[];
   /** @deprecated Use simpleRentView. Kept for existing owner component tests. */
@@ -147,6 +148,7 @@ export function ChargesSection({
   autopayEnrollments = [],
   onSetupAutopay,
   onDisableAutopay,
+  tenantPayState,
   previewCount,
   availableLeases = [],
   isOwnerView = false,
@@ -417,7 +419,7 @@ export function ChargesSection({
           </Alert>
         ) : null}
 
-        {isTenantView && uniqueLeaseCards.length > 0 ? (
+        {isTenantView && (tenantPayState === undefined || tenantPayState === "can_pay") && uniqueLeaseCards.length > 0 ? (
           <AnimatedList className="mb-4 space-y-3">
             {uniqueLeaseCards.map(({ leaseId, propertyLabel }) => {
               const enrollment = autopayEnrollments.find((item) => item.leaseId === leaseId) ?? null;
@@ -502,6 +504,7 @@ export function ChargesSection({
                     category={category}
                     isTenantView={isTenantView}
                     paymentsAvailable={paymentsAvailable}
+                    tenantPayState={tenantPayState}
                     stripeConfigured={stripeConfigured}
                     onPayCharge={onPayCharge}
                     onPayWithACH={onPayWithACH}
