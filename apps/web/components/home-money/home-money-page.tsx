@@ -45,7 +45,7 @@ export function HomeMoneyCard() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{(data?.homes ?? []).map((home) => <div key={home.propertyId}
           className="rounded-md border border-[var(--line)] p-3">
           <p className="font-medium">{home.name} · {monthLabel(data?.month ?? "", "long")}</p>
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm"><span className="text-[var(--ok)]">
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm"><span className="text-[var(--pos)]">
             In {formatCurrency(home.inCents)}</span><span>Out {formatCurrency(home.outCents)}</span>
             <span className={home.leftCents < 0 ? "text-[var(--crit)]" : "text-[var(--ink)]"}>
               Left {formatCurrency(home.leftCents)}</span></div>{home.alertCount ? <p className="mt-2 text-xs text-[var(--warn)]">
@@ -91,7 +91,7 @@ export function HomeMoneyPage({ data, selectedMonth, months }: Props) {
         {formatCurrency(data.totals.leftCents)}</p>
       <div className="mt-5 space-y-2">{groupByCategory(data.entries).map((line) => <div
         key={`${line.direction}-${line.label}`} className={`flex justify-between ${line.direction === "in"
-          ? "text-[var(--ok)]" : "text-[var(--ink)]"}`}><span>{line.label}</span>
+          ? "text-[var(--pos)]" : "text-[var(--ink)]"}`}><span>{line.label}</span>
           <span>{line.direction === "in" ? "+" : "−"}{formatCurrency(line.amountCents)}</span></div>)}</div>
     </section>
     <section aria-labelledby="heads-up-title"><h2 id="heads-up-title" className="text-xl font-semibold">Heads up</h2>
