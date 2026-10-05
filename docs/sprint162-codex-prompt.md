@@ -6,12 +6,12 @@
 Let a tenant start (or continue) one conversation with their landlord from the Messages page and the Home "Message landlord" tile, as in the approved mockup (canvas https://claude.ai/artifact/GKgJPNk7dLiLYdXUCchLpV, board "Message + report a problem (phone)"). Today a tenant cannot start a thread: `createInboxThread` requires `canUserAdministerProperty`, and `sendInboxMessage` only lets a tenant reply inside a thread the landlord created (`entity_type = "tenant_profile"`, `entity_id = tenant`).
 
 ## 2. Context
-- Branch `main`, HEAD = after Sprint 161 is committed (docs-only after that is fine). Paths under `apps/web/`.
+- Branch `main`, HEAD `5bd4d97` or later docs-only (Sprint 161 + 161b live). Paths under `apps/web/`.
 - `app/actions/inbox.ts` (749 lines): tenant lease check helper (~L130-150: active lease for the tenant on the property's units, admin client); `findOrCreateTenantThread({propertyId, recipientProfileId, subject, createdByProfileId})` (~L152-195, admin client, matches `property_id + entity_type="tenant_profile" + entity_id + subject`); `insertInboxMessage` (~L197); `touchInboxThread` (~L217); `createInboxThread` (L383, admin-only, rate limit `createInboxThread:${user.id}` 20/min); `sendMessageToTenant` (L425, `requireAuth("owner","manager")` + `canUserAdministerProperty`); `sendInboxMessage` (L507, tenant reply rules L539-544). Notifications go through `createNotificationWithDelivery` (respects the `DOMUS_NOTIFICATIONS_ENABLED` master switch — must stay respected). Auth helper `app/actions/auth-helpers.ts` `requireAuth`. RLS policies for `inbox_threads`/`inbox_messages` in `supabase/migrations/20260302_phase10_leasing_inbox_automations.sql:223-240`.
 - Tenant UI: `components/dashboard/inbox-section.tsx` (Threads tab; create-thread form only when `onCreateThread` passed; reply box only after selecting a thread); `app/tenant/page.tsx` passes only `onSendMessage={sendInboxMessage}`.
 
 ## 2b. Database (applied by Claude BEFORE this sprint — do not write migrations)
-Live `inbox_threads` had no uniqueness guarantee (only pkey + two plain indexes; 0 tenant threads existed). Claude applies `supabase/migrations/20261005_sprint162_tenant_thread_unique.sql`:
+Live `inbox_threads` had no uniqueness guarantee (only pkey + two plain indexes; 0 tenant threads existed). APPLIED and verified live by Claude on 2026-10-05 (`supabase/migrations/20261005_sprint162_tenant_thread_unique.sql`):
 `create unique index if not exists inbox_threads_tenant_profile_unique on inbox_threads (property_id, entity_id, subject) where entity_type = 'tenant_profile';`
 Your code must rely on it: on insert conflict (Postgres `23505`), re-select and reuse the existing thread.
 
@@ -45,7 +45,7 @@ Your code must rely on it: on insert conflict (Postgres `23505`), re-select and 
 - Plus: **concurrent** double-call test (two simultaneous starts → one thread, two messages); **cross-tenant** test (tenant A supplies tenant B's property id → zero thread/message/notification writes); recipients test (only current admins of that property, de-duplicated, never the tenant); conflict (`23505`) path reuses the thread; touch-failure still returns success; logging test asserts no message text/emails in logged payloads; subject is the constant.
 - Existing inbox tests pass unmodified.
 - UI tests: tenant with no thread sees the composer; after send, the thread view shows the message and the reply box; owner/manager inbox lists the tenant-started thread.
-- Targeted validation (Claude runs the full gate): lint, typecheck, and the vitest files you touched/added.
+- Targeted validation (Claude runs the full gate): lint, typecheck, the vitest files you touched/added, AND every existing test file that imports a module/component you changed (find with grep).
 - Plain words, ≤12 words per sentence; tokens only; light + dark; 390 px + 1280 px; 44 px targets. The user should never need to read instructions to complete this flow; every step must be self-explanatory.
 - No PII in logs (log ids, never message text or emails). Do not invent URLs or emails.
 
