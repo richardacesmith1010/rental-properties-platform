@@ -390,6 +390,13 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Workspaces → `["apps/web"]`; mobile gate stage removed; `server-only` + `@typescript-eslint/*` declared in web; root `overrides.typescript 5.6.3`. Supabase min password 8 + letters/digits (dashboard). Codex 175 (66,300 tokens) isolated + fixed 5 highs; 175b hit the Codex usage limit (resets 2026-10-06 01:50) so Claude finished it (boundary break: package.json/lockfile only). Preview build verified on Vercel before production. Note: a clean `npm ci` bumps Playwright — run `npx playwright install chromium` before smoke.
 - Scorecard: **Security 80 ✅**. Next category by rule (closest to 80): **Visual design & accessibility (75)** → Sprint 176.
 
+## Sprint 176 (a–d) SHIPPED — Visual design & accessibility reaches 80 (L2, `aa5e85b`, 2026-10-06)
+
+- Codex runs: 176 114,850 · 176b 112,767 · 176c 88,106 · 176d 62,159 tokens (gpt-6-sol). Codex's sandbox cannot launch Chromium, so Claude runs browser specs against a local production build (`npm run build -w @domus/web`; `npx next start -p 3123` in apps/web; `APP_URL=http://localhost:3123`) and feeds findings back. Smoke script now hard-fails without SMOKE_* creds and no longer calls the authenticated cron (it would write production data).
+- Claude boundary-break: added a settle wait in `smoke-mobile-layout.spec.ts` (flaky mid-load measurement; test-only).
+- Untracked stray file `apps/mobile/README 2.md` (Finder/iCloud duplicate) — not committed; owner may delete.
+- Scorecard: **Visual 80 ✅**. Next by rule: Reliability & monitoring (74) — tie with Money accuracy (74), but Money needs the owner's real bank files.
+
 ## ▶ START HERE (next session, written 2026-10-04)
 
 - Last shipped: Sprint 167 + 167b bank feed Phase 1 (`67e2168`). Sprints 168 + 169 shipped (bank feed Phase 1 + 2 complete). Next: owner uploads real Navy Federal + Fidelity October files (from a computer) → Claude verifies real numbers; then Phase 3 (Plaid daily sync, needs owner's Plaid production application). Polish backlog: review-card key by token; payment source 'Other' wording. Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
