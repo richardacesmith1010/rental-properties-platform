@@ -373,6 +373,13 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Found live (pre-existing) → Sprint 173: on mobile the "Add a manager" bottom sheet's Back/Next buttons sit under the bottom nav bar; step copy "Pick property for manager assignment".
 - Process: deploy-wait loops parsing `vercel ls` keep failing; just check `vercel ls` once after ~3 min.
 
+## Sprint 173 SHIPPED (L2, `575b495`, 2026-10-05, 363,403 tokens)
+
+- "Start free" → `/login?mode=signup&role=owner` (owner sign-up open, "Create account" visible at 390 px); fake proofPoints removed; landing reminder promises softened; dead tour link removed; "Tenant Profile ID" setup step removed (→ tenant invite); LLC explained, Account ID hidden, no Back after creation; plain checklist wording; property wizard placeholders "Maple House"/"123 Main St"; ModalOverlay portals to body (root cause: overlay inside dashboard stacking context, navs portaled) → sheet buttons above nav; "Send reminder" hidden while notifications off.
+- Verified: tests read, gate 1372/1372, smoke 3 + 11, live 390 px: signup page + Add-a-manager sheet Next above nav, zero console errors.
+- **Launch-time follow-up (not wired, safe defaults):** pass `notificationsAreOn` (server switch) to `OwnerDailyOpsHome` and `bankConnected` to `UnifiedPropertyWizard` via `components/dashboard/index.tsx` / `app/owner/page.tsx` / props type. Today: reminder hidden (correct while off); wizard shows neutral "Check your bank setup before taking rent." Packet §5 omitted those files (L-011 again).
+- Polish backlog: signup page still has "Premium landlord workspace / command center" marketing copy, long role paragraph, redundant "New to Domus? Create an account" on the signup view.
+
 ## ▶ START HERE (next session, written 2026-10-04)
 
 - Last shipped: Sprint 167 + 167b bank feed Phase 1 (`67e2168`). Sprints 168 + 169 shipped (bank feed Phase 1 + 2 complete). Next: owner uploads real Navy Federal + Fidelity October files (from a computer) → Claude verifies real numbers; then Phase 3 (Plaid daily sync, needs owner's Plaid production application). Polish backlog: review-card key by token; payment source 'Other' wording. Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
