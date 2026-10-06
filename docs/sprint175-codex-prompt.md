@@ -1,5 +1,7 @@
 # Sprint 175 — Security: isolate the stale mobile workspace, then fix the remaining web dependency advisories (L3) · Category 6: Security & privacy
 
+Revision 2 — ChatGPT verdict APPROVE WITH CHANGES. Adopted: the audit acceptance is deterministic, Claude proves the build on a Vercel preview, the lockfile isolation is asserted, and node/npm versions are recorded.
+
 ## 1. Objective
 After Sprint 174, `npm audit --omit=dev` in `apps/web` shows 0 critical and 9 high. 8 of the 9 are fixable without breaking changes, but applying them changes resolutions shared with the stale `apps/mobile` Expo workspace.
 - Take `apps/mobile` out of the npm workspace. Keep the folder and its files untouched, but it no longer shares the root lockfile.
@@ -49,12 +51,19 @@ After Sprint 174, `npm audit --omit=dev` in `apps/web` shows 0 critical and 9 hi
 ## 8. Acceptance criteria (binary)
 1. Root workspaces equal `["apps/web"]`. The gate script has no mobile stage. `apps/mobile` files are byte-identical except the new README.
 2. A clean `npm ci` followed by `npm run gate:web` passes (all web tests, lint, typecheck, build).
-3. `npm audit --omit=dev` (web): **0 critical, 0 high**, OR each remaining high is listed with "no non-breaking fix" and the required major version. Only `postcss` (needs Next 16) is expected to remain.
+3. `npm audit --omit=dev` (web): **0 critical**. Every currently listed high except `postcss` is **eliminated**:
+   `brace-expansion`, `braces`, `fast-glob`, `globby`, `js-yaml`, `micromatch`, `minimatch`, `picomatch`.
+   The only allowed exception is one where npm's actual resolved graph proves there is no non-breaking path under the pinned Next 15.5.27 / React 19.2.8. Each exception must name the package, the dependency path, the advisory ID, and the breaking or direct-major upgrade it would need.
 4. Next 15.5.27 and React 19.2.8 are unchanged.
 5. Only §5 files changed.
+6. The regenerated `package-lock.json` lists `apps/web` as a workspace and contains **no** `apps/mobile` workspace entry or `node_modules` graph rooted at it. Assert this with a grep or JSON check, and include the output in the report.
+7. The report records the `node -v` and `npm -v` used for lockfile regeneration and for the clean `npm ci`.
 
 ## 9. Report format
 JSON per `docs/codex-report-schema.json`. In `self_verification.findings`, include the before/after audit counts, the remaining items with reasons, and confirmation of the clean `npm ci` + gate. Do NOT include "Claude prompt" or "recommended next steps for Claude" sections. Report compact status only.
+
+## 9b. Vercel proof (Claude)
+Before production, Claude pushes the change to a non-`main` branch and confirms the Vercel **preview** deployment builds successfully, with Root Directory `apps/web` and the default npm install. Production deploys only after that preview build passes.
 
 ## 10. Constraints
 No DB writes, deploy, commit or push. Never touch `.claude/launch.json`. Never delete `apps/mobile`.
