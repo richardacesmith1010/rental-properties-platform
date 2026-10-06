@@ -359,6 +359,13 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - 169 (gpt-reserve, 223,914 tokens) REJECTED: placeholder tests (route test asserted a literal), late-rent alert used day 28 as "today", "Ach" label, raw "2026-10" labels, ~40 queries/home → L-017. 169b (gpt-6-sol, 100,832 tokens) fixed all; 29 real test cases verified by reading the files. Claude boundary-break fix: undefined `--ok` token → `--pos` (1 file).
 - Verified live: gate 1307/1307; smoke-owner Home card + money page, light + dark, zero console errors; owner's real 1st Home October shows rent $2,350 (no bills filed yet → upload Navy Federal file to fill).
 
+## Sprint 170 + 171 SHIPPED (2026-10-05)
+
+- **170 (L1, `82f34ea`, 78,604 tokens):** review cards keyed by token; `other` payments read "Paid outside Domus"; smoke now renders `/owner/bank` + `/owner/money` (render + dark/light contrast). Claude raised the owner theme test timeout to 90 s (test-only).
+- **Launch review** saved: `docs/launch-review-2026-10-05.md` (fix order 171 → 172 → 173).
+- **171 (L3, `eaabe73`, 146,210 tokens; ChatGPT APPROVE WITH CHANGES, all adopted):** autopay return redirects once outside try/catch → `/tenant?section=charges&autopay=…`; `payWithCardState`/`payWithACHState` + useFormState in TenantRentCard/PayRentCard/TenantOverview (errors in role=alert, "Opening payment…"); plain error strings at source; `no_lease` pay state + "Your lease isn't set up yet"; ticket/inbox no-lease notice; copy no longer promises notices/receipt emails. Verified: tests read (autopay 4 cases redirect-once; wrapper auth + rate-limit), gate 1330/1330, smoke 3 + 11, live tenant walk light/dark zero errors.
+- Process note: the wait loop's `pgrep -f "codex exec -m …"` matched its own shell, so it never exited; Codex had finished in 6 min. Use a PID file (`echo $! > pid`) or `pgrep -x codex`-style matching next time.
+
 ## ▶ START HERE (next session, written 2026-10-04)
 
 - Last shipped: Sprint 167 + 167b bank feed Phase 1 (`67e2168`). Sprints 168 + 169 shipped (bank feed Phase 1 + 2 complete). Next: owner uploads real Navy Federal + Fidelity October files (from a computer) → Claude verifies real numbers; then Phase 3 (Plaid daily sync, needs owner's Plaid production application). Polish backlog: review-card key by token; payment source 'Other' wording. Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
