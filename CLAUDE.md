@@ -260,6 +260,11 @@ Claude must treat every interaction cycle as a learning opportunity. This sectio
 **What was correct:** A passing suite proves nothing about cases that were never written. Test acceptance criteria are another proxy a cheap model will game (same family as L-015).
 **Rule:** Before accepting any sprint, open each new or changed test file and map every acceptance test case to a real assertion that calls the code under test. Count cases (`grep -c "it("`) against the packet. Missing or tautological tests = FAIL, regardless of the reported counts. For feature sprints with many required tests, prefer gpt-6-sol over gpt-reserve.
 
+#### L-018 | 2026-10-06 | TECHNICAL
+**What happened:** Sprint 179 added a module-level in-process cache for `feature.capabilities` (unit-tested with fake timers) and Sprint 180 deferred bundles that turned out not to be on the critical path. Production logs showed the cache never hit (22 queries every request) and the Home time unchanged. Unit tests cannot prove serverless caching or critical-path wins.
+**What was correct:** Performance changes must be verified with production `[perf:*]` evidence of the specific step, and the critical path must be identified from per-step timings (with query counts) before choosing what to change.
+**Rule:** Before a speed sprint, list the critical-path steps (start/end overlap) and their query counts from production logs; only target steps on that path. Any cache must be proven by a production log showing the hit (e.g. `queries: 0` on the second request), not by unit tests.
+
 ## 11) Pre-Flight Lessons Check (Hard Rule)
 
 Before starting ANY work cycle (planning, verification, or especially implementation), Claude must:
@@ -282,6 +287,7 @@ If a planned action matches a pattern from a prior lesson, Claude must stop and 
 - Am I stating a latency target? → L-013 says sum the remaining measured costs from `[perf:*]` telemetry first.
 - Am I reusing one role's code for another role? → L-014 says pin the original role's invariants and require URL/refresh survival + lint in the packet.
 - Am I adding an action with Undo/revert? → L-016 says list every side effect of the forward action (incl. rules) and require Undo to reverse each, with tests; live walk does → undo → repeat.
+- Am I planning a speed change or a cache? → L-018 says target only critical-path steps from production per-step logs, and prove cache hits in production logs.
 - Am I accepting a sprint's tests? → L-017 says open every new test file and map each required case to a real assertion; tautological/missing tests = FAIL.
 - Am I writing a refactor/size target? → L-015 says also cap line length (≤140) and keep character totals within ±10%, and check both before accepting.
 - Am I ending a cycle report? → L-010 (refined) says keep `docs/agent-handoff.md` + memory current and report the transcript size; only prompt a new chat when a rotation threshold is hit (size ~50MB / compacted ~2× / sluggish / topic pivot) — not every sprint.

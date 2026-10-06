@@ -413,6 +413,10 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Gains modest (owner Home 2.74 → ~2.35 s); root cause is round-trip count, not slow queries. Indexes applied by Claude. Claude test-only: speed budgets set to 4.5 s p75 (2.0 s would have failed the daily smoke). Codex note: onboarding return + account.updated webhook don't set `stripe_status`/`stripe_last_verified_at` (daily cron does) — fold into a later Stripe sprint.
 - Measurement script: scratchpad `bank167/perf.cjs` pattern (login once, 5 loads, median/p75) + Vercel runtime logs `[perf:owner]`/`[perf:tenant]`.
 
+## Sprint 180 SHIPPED — Speed 72 → 73 (L2, `f318203`, 2026-10-06; resumed after a Codex usage limit)
+
+- Home defers 5 Home-only bundles (works; Home loads shared bundles only). Owner Home not faster: critical path = ownership.accounts (8 q) → administered-ids (4 q) → dashboard.data (12 q, ~1 s). feature.capabilities cache from S179 is ineffective in production (22 q every request). Next sprint (L3): RPCs for dashboard + ownership, fix capabilities cache.
+
 ## ▶ START HERE (next session, written 2026-10-04)
 
 - Last shipped: Sprint 167 + 167b bank feed Phase 1 (`67e2168`). Sprints 168 + 169 shipped (bank feed Phase 1 + 2 complete). Next: owner uploads real Navy Federal + Fidelity October files (from a computer) → Claude verifies real numbers; then Phase 3 (Plaid daily sync, needs owner's Plaid production application). Polish backlog: review-card key by token; payment source 'Other' wording. Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
