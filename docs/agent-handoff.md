@@ -366,6 +366,13 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - **171 (L3, `eaabe73`, 146,210 tokens; ChatGPT APPROVE WITH CHANGES, all adopted):** autopay return redirects once outside try/catch → `/tenant?section=charges&autopay=…`; `payWithCardState`/`payWithACHState` + useFormState in TenantRentCard/PayRentCard/TenantOverview (errors in role=alert, "Opening payment…"); plain error strings at source; `no_lease` pay state + "Your lease isn't set up yet"; ticket/inbox no-lease notice; copy no longer promises notices/receipt emails. Verified: tests read (autopay 4 cases redirect-once; wrapper auth + rate-limit), gate 1330/1330, smoke 3 + 11, live tenant walk light/dark zero errors.
 - Process note: the wait loop's `pgrep -f "codex exec -m …"` matched its own shell, so it never exited; Codex had finished in 6 min. Use a PID file (`echo $! > pid`) or `pgrep -x codex`-style matching next time.
 
+## Sprint 172 SHIPPED (L3, `c9f7761`, 2026-10-05, 154,803 tokens)
+
+- Truthful invite results (manager: email | added | already; tenant: email_branded | email_basic | linked); `redirectTo /auth/callback` on all invite + resend calls; manager "Add" label, 0-home copy, "Homes you manage"; "Skip for now" removed; tenant wizard unit messages; sign-up "Send it again" with identical message for every auth response; existing-email sign-up shows the same "Check your email" screen (no account enumeration). ChatGPT: rev1 REJECT (enumeration + "added" truthfulness) → rev2 APPROVE. Copy-invite-link deliberately excluded (account-takeover risk; needs safer design).
+- Verified: tests read (auth/rate-limit order, enumeration-safe resend), gate 1360/1360, smoke 3 + 11, live: manager invite sheet has no Skip.
+- Found live (pre-existing) → Sprint 173: on mobile the "Add a manager" bottom sheet's Back/Next buttons sit under the bottom nav bar; step copy "Pick property for manager assignment".
+- Process: deploy-wait loops parsing `vercel ls` keep failing; just check `vercel ls` once after ~3 min.
+
 ## ▶ START HERE (next session, written 2026-10-04)
 
 - Last shipped: Sprint 167 + 167b bank feed Phase 1 (`67e2168`). Sprints 168 + 169 shipped (bank feed Phase 1 + 2 complete). Next: owner uploads real Navy Federal + Fidelity October files (from a computer) → Claude verifies real numbers; then Phase 3 (Plaid daily sync, needs owner's Plaid production application). Polish backlog: review-card key by token; payment source 'Other' wording. Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
