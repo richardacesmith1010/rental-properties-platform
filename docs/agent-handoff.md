@@ -403,6 +403,11 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - **Post-deploy routine now includes a Sentry check** (`search_issues is:unresolved lastSeen:-1h` in domus-z1/domus-web).
 - Until 06:00 UTC 2026-10-07, `/api/health/cron` returns 503 (verify-stripe has no recorded run yet), so manual smoke fails at that step — expected.
 
+## Sprint 178 SHIPPED — Plain language reaches 80 (L2, `64889d6`, 2026-10-06, 138,086 tokens)
+
+- Guard test + 163-hit sweep, 0 exceptions; `docs/plain-language.md` is the rule sheet for future packets (cite it in every user-facing packet). Claude test-only fix: a11y spec waits for animations to finish (production fade-in). Scorecard now: Security 80 ✅, Visual 80 ✅, Plain language 80 ✅, Reliability 78 (pending owner GitHub secrets), Money 74 (needs bank files), Owner 72, Speed 70, Tenant 70, Code health 68, Onboarding 62, Manager 58, Launch 52, Notifications 30, Phone app 25.
+- Owner is on mobile: pending owner actions at the Mac — (1) 6 SMOKE_* GitHub secrets (page: repo Settings → Secrets → Actions; name field pre-fill flow), (2) Navy Federal + Fidelity October CSVs.
+
 ## ▶ START HERE (next session, written 2026-10-04)
 
 - Last shipped: Sprint 167 + 167b bank feed Phase 1 (`67e2168`). Sprints 168 + 169 shipped (bank feed Phase 1 + 2 complete). Next: owner uploads real Navy Federal + Fidelity October files (from a computer) → Claude verifies real numbers; then Phase 3 (Plaid daily sync, needs owner's Plaid production application). Polish backlog: review-card key by token; payment source 'Other' wording. Production healthy: smoke 3/3 + theme 11/11, Sentry clean.

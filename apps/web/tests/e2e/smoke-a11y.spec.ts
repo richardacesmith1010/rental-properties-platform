@@ -3,6 +3,11 @@ import { expect, test, type Page } from "@playwright/test";
 import { loginAsRole, missingSmokeEnv, openManagerSheet } from "./helpers";
 
 async function assertAccessible(page: Page, view: string) {
+  // Check the settled page: wait for network and for every running CSS animation/transition to finish,
+  // otherwise axe can measure text mid fade-in (seen on production, not on fast local builds).
+  await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => {});
+  await page.waitForFunction(() => document.getAnimations().every((animation) => animation.playState !== "running"),
+    undefined, { timeout: 10_000 }).catch(() => {});
   const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
   const severe = result.violations.filter((violation) => ["serious", "critical"].includes(violation.impact ?? ""));
   const details = severe.flatMap((violation) =>
