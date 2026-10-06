@@ -92,7 +92,12 @@ export function DashboardLayout({
     <div className="app-surface flex min-h-screen flex-col overflow-x-hidden lg:flex-row">
       <MobileTopBar {...navProps} mobileDrawerOpen={mobileDrawerOpen} onMobileDrawerOpenChange={setMobileDrawerOpen} />
       <SidebarNav {...navProps} />
-      <main id="main-content" className={`min-h-0 overflow-x-hidden ${role === "owner" ? "pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] lg:pb-0" : ""} ${mainClassName}`}>
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className={`min-h-0 overflow-x-hidden ${role === "owner"
+          ? "pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] lg:pb-0" : ""} ${mainClassName}`}
+      >
         {children}
       </main>
       {role === "owner" ? (

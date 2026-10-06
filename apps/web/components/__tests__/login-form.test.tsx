@@ -25,6 +25,15 @@ async function signUp(result: unknown = { data: { user: { identities: [{}] } }, 
 
 beforeEach(() => { vi.clearAllMocks(); });
 describe("sign-up confirmation", () => {
+  it("gives both sign-in and sign-up toggles a 44 px minimum target", () => {
+    render(<LoginForm />);
+    const signUpToggle = screen.getByRole("button", { name: "Sign up" });
+    expect(signUpToggle).toHaveClass("inline-flex", "min-h-11", "items-center");
+
+    fireEvent.click(signUpToggle);
+    expect(screen.getByRole("button", { name: "Sign in" })).toHaveClass("inline-flex", "min-h-11", "items-center");
+  });
+
   it("opens directly in sign-up mode when requested", () => {
     render(<LoginForm role="owner" initialMode="signup" />);
     expect(screen.getByRole("button", { name: "Create account" })).toBeInTheDocument();

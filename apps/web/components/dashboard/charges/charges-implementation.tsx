@@ -353,7 +353,7 @@ export function ChargesSection({
           />
         ) : (
           <>
-            <AnimatedList>
+            <div>
               {visibleCharges.map((charge, index) => {
                 const manualFormOpen = manualPaymentChargeId === charge.id;
                 const ownerConnected = ownerConnectedMap?.get(charge.propertyId) ?? stripeConnected ?? true;
@@ -408,7 +408,7 @@ export function ChargesSection({
                   />
                 );
               })}
-            </AnimatedList>
+            </div>
             {hasMoreVisibleCharges ? (
               <div className="mt-4 flex justify-end">
                 <Button

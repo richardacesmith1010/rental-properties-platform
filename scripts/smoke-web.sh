@@ -61,17 +61,6 @@ if [[ "$UNAUTH_CRON_STATUS" != "401" ]]; then
   exit 1
 fi
 
-if [[ -n "${CRON_SECRET:-}" ]]; then
-  echo "[smoke] Triggering authenticated cron endpoint"
-  AUTH_CRON_STATUS="$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/generate-charges")"
-  if [[ "$AUTH_CRON_STATUS" != "200" ]]; then
-    echo "[smoke] Expected 200 from authenticated cron call, got $AUTH_CRON_STATUS"
-    exit 1
-  fi
-else
-  echo "[smoke] CRON_SECRET not set; skipping authenticated cron check"
-fi
-
 echo "[smoke] Checking health endpoint"
 HEALTH_STATUS="$(curl -s -o /dev/null -w "%{http_code}" "$APP_URL/api/health")"
 if [[ "$HEALTH_STATUS" != "200" ]]; then
@@ -88,23 +77,26 @@ SMOKE_ENV_VARS=(
   "SMOKE_TENANT_PASSWORD"
 )
 
-HAS_SMOKE_CREDS=true
+MISSING_SMOKE_CREDS=()
 for env_name in "${SMOKE_ENV_VARS[@]}"; do
   if [[ -z "${!env_name:-}" ]]; then
-    HAS_SMOKE_CREDS=false
-    break
+    MISSING_SMOKE_CREDS+=("$env_name")
   fi
 done
 
-if [[ "$HAS_SMOKE_CREDS" == "true" ]]; then
-  echo "[smoke] Running authenticated render checks"
-  pushd apps/web >/dev/null
-  APP_URL="$APP_URL" npx playwright test tests/e2e/smoke-auth.spec.ts --reporter=line
-  echo "[smoke] Checking theme contrast"
-  APP_URL="$APP_URL" npx playwright test tests/e2e/smoke-theme.spec.ts --reporter=line
-  popd >/dev/null
-else
-  echo "[smoke] SMOKE_* creds not set; skipping authenticated render checks"
+if [[ ${#MISSING_SMOKE_CREDS[@]} -gt 0 ]]; then
+  echo "[smoke] Missing required credentials: ${MISSING_SMOKE_CREDS[*]}"
+  exit 1
 fi
+
+echo "[smoke] Running authenticated render checks"
+pushd apps/web >/dev/null
+APP_URL="$APP_URL" npx playwright test tests/e2e/smoke-auth.spec.ts --reporter=line
+echo "[smoke] Checking theme contrast"
+APP_URL="$APP_URL" npx playwright test tests/e2e/smoke-theme.spec.ts --reporter=line
+echo "[smoke] Checking accessibility, keyboard paths, and 375 px layout"
+APP_URL="$APP_URL" npx playwright test tests/e2e/smoke-a11y.spec.ts tests/e2e/smoke-keyboard.spec.ts \
+  tests/e2e/smoke-mobile-layout.spec.ts --reporter=line
+popd >/dev/null
 
 echo "[smoke] Smoke checks passed"

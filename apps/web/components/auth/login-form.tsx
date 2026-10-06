@@ -185,7 +185,7 @@ function SignInPanel({
         Don&apos;t have an account?{" "}
         <button
           type="button"
-          className="font-semibold text-primary hover:text-primary/80"
+          className="inline-flex min-h-11 items-center font-semibold text-primary hover:text-primary/80"
           onClick={onSwitchToSignup}
         >
           Sign up
@@ -436,7 +436,7 @@ export function LoginForm({ nextPath = "/", role, initialMode = "signin" }: Logi
         Already have an account?{" "}
         <button
           type="button"
-          className="font-semibold text-primary hover:text-primary/80"
+          className="inline-flex min-h-11 items-center font-semibold text-primary hover:text-primary/80"
           onClick={() => {
             setMode("signin");
             setError(null);

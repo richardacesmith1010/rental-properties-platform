@@ -53,6 +53,8 @@ export function RoleSelector({ initialRole, initialMode = "signin" }: {
               {/* Clickable card */}
               <button
                 type="button"
+                inert={isOther}
+                aria-hidden={isOther ? "true" : undefined}
                 onClick={() => setSelectedRole(isSelected ? null : role.id)}
                 onMouseEnter={() => setHoveredRole(role.id)}
                 onMouseLeave={() => setHoveredRole(null)}
@@ -126,7 +128,8 @@ export function RoleSelector({ initialRole, initialMode = "signin" }: {
           type="button"
           onClick={() => setSelectedRole(null)}
           title="Return to role selection cards."
-          className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="flex min-h-11 items-center gap-2 rounded-lg px-4 py-2 text-sm text-muted-foreground
+            transition-colors hover:bg-muted hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Choose a different role

@@ -66,6 +66,29 @@ describe("RoleSelector", () => {
     expect(screen.getByTestId("login-form-/owner")).toHaveAttribute("data-role", "owner");
   });
 
+  it("keeps non-selected cards visible but inert and hidden from assistive technology", async () => {
+    const user = userEvent.setup();
+    render(<RoleSelector />);
+
+    await user.click(screen.getByText("Owner"));
+    const owner = screen.getByText("Owner").closest("button");
+    const manager = screen.getByText("Manager").closest("button");
+    const tenant = screen.getByText("Tenant").closest("button");
+
+    expect(owner).not.toHaveAttribute("inert");
+    for (const card of [manager, tenant]) {
+      expect(card).toHaveAttribute("inert");
+      expect(card).toHaveAttribute("aria-hidden", "true");
+      expect(card).toHaveClass("opacity-40");
+    }
+
+    await user.click(screen.getByRole("button", { name: "Choose a different role" }));
+    for (const card of [manager, tenant]) {
+      expect(card).not.toHaveAttribute("inert");
+      expect(card).not.toHaveAttribute("aria-hidden");
+    }
+  });
+
   it("shows the 'Choose a different role' back button when a role is selected", async () => {
     const user = userEvent.setup();
     render(<RoleSelector />);

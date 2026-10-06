@@ -9,7 +9,7 @@ import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { FormError, FormSuccess } from "@/components/dashboard/forms";
 
-const MANAGER_STEPS = ["Pick Property", "Manager Email", "Manager Name", "Review & Send"] as const;
+const MANAGER_STEPS = ["Home", "Email", "Name", "Send"] as const;
 
 interface ManagerInviteDraft {
   propertyId: string;
@@ -19,22 +19,27 @@ interface ManagerInviteDraft {
 
 function StepPill({ label, active, done, skipped }: { label: string; active: boolean; done: boolean; skipped: boolean }) {
   const className = active
-    ? "border-[var(--accent-line)] bg-[var(--accent-weak)] text-[var(--accent)]"
+    ? "border-[var(--accent-line)] bg-[var(--accent-weak)] text-[var(--accent-strong)]"
     : done
       ? "border-[var(--pos)] bg-[var(--pos-bg)] text-[var(--pos)]"
       : skipped
         ? "border-[var(--warn)] bg-[var(--warn-bg)] text-[var(--warn)]"
-        : "border-[var(--line)] bg-[var(--surface-2)] text-[var(--muted)]";
+        : "border-[var(--line)] bg-[var(--surface-2)] text-[var(--ink)]";
   return <div className={`rounded-md border px-2 py-2 text-xs ${className}`}>{label}</div>;
 }
 
-export function InviteManagerForm({ properties, onInviteManager, onSuccess }: { properties: Array<{ id: string; name: string }>; onInviteManager: StatefulAction; onSuccess?: () => void; }) {
+export function InviteManagerForm({ properties, onInviteManager, onSuccess }: {
+  properties: Array<{ id: string; name: string }>;
+  onInviteManager: StatefulAction;
+  onSuccess?: () => void;
+}) {
   const [state, action] = useFormState(onInviteManager, null);
   const handledRef = useRef<ActionState>(null);
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<ManagerInviteDraft>({ propertyId: "", email: "", fullName: "" });
   const requiredComplete = Boolean(draft.propertyId && draft.email && draft.fullName);
-  const stepComplete = (index: number) => index === 0 ? Boolean(draft.propertyId) : index === 1 ? Boolean(draft.email) : index === 2 ? Boolean(draft.fullName) : requiredComplete;
+  const stepComplete = (index: number) => index === 0 ? Boolean(draft.propertyId)
+    : index === 1 ? Boolean(draft.email) : index === 2 ? Boolean(draft.fullName) : requiredComplete;
 
   useEffect(() => {
     if (!state?.success) return;
@@ -63,7 +68,7 @@ export function InviteManagerForm({ properties, onInviteManager, onSuccess }: { 
       {step === 0 ? (
         <div className="space-y-3">
           <p className="text-sm text-[var(--ink-2)]">Step 1: Pick the home.</p>
-          <Select value={draft.propertyId}
+          <Select aria-label="Home" value={draft.propertyId}
             onChange={(event) => setDraft((current) => ({ ...current, propertyId: event.target.value }))}
             onKeyDown={(event) => onEnterNext(event, stepComplete(step), 1)} required>
             <option value="">Pick a home</option>
@@ -71,9 +76,45 @@ export function InviteManagerForm({ properties, onInviteManager, onSuccess }: { 
           </Select>
         </div>
       ) : null}
-      {step === 1 ? <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Step 2: Enter manager email address.</p><Input type="email" value={draft.email} onChange={(event) => setDraft((current) => ({ ...current, email: event.target.value }))} onKeyDown={(event) => onEnterNext(event, stepComplete(step), 2)} placeholder="manager@email.com" required /></div> : null}
-      {step === 2 ? <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Step 3: Enter manager full name.</p><Input value={draft.fullName} onChange={(event) => setDraft((current) => ({ ...current, fullName: event.target.value }))} onKeyDown={(event) => onEnterNext(event, stepComplete(step), 3)} placeholder="Manager full name" required /></div> : null}
-      {step === 3 ? <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Final step: review and send manager invite.</p><div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-3 py-3 text-sm text-[var(--ink-2)]"><p><span className="font-semibold">Property:</span> {properties.find((property) => property.id === draft.propertyId)?.name ?? "Not set"}</p><p><span className="font-semibold">Email:</span> {draft.email || "Not set"}</p><p><span className="font-semibold">Name:</span> {draft.fullName || "Not set"}</p></div><form className="space-y-2" action={action}><input type="hidden" name="propertyId" value={draft.propertyId} /><input type="hidden" name="email" value={draft.email} /><input type="hidden" name="fullName" value={draft.fullName} /><SubmitButton className="w-full" disabled={!requiredComplete} title="Send manager invitation.">Send Manager Invite</SubmitButton></form></div> : null}
+      {step === 1 ? (
+        <div className="space-y-3">
+          <p className="text-sm text-[var(--ink-2)]">Step 2: Enter manager email address.</p>
+          <Input type="email" value={draft.email}
+            onChange={(event) => setDraft((current) => ({ ...current, email: event.target.value }))}
+            onKeyDown={(event) => onEnterNext(event, stepComplete(step), 2)}
+            placeholder="manager@email.com" required />
+        </div>
+      ) : null}
+      {step === 2 ? (
+        <div className="space-y-3">
+          <p className="text-sm text-[var(--ink-2)]">Step 3: Enter manager full name.</p>
+          <Input value={draft.fullName}
+            onChange={(event) => setDraft((current) => ({ ...current, fullName: event.target.value }))}
+            onKeyDown={(event) => onEnterNext(event, stepComplete(step), 3)}
+            placeholder="Manager full name" required />
+        </div>
+      ) : null}
+      {step === 3 ? (
+        <div className="space-y-3">
+          <p className="text-sm text-[var(--ink-2)]">Final step: review and send manager invite.</p>
+          <div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-3 py-3 text-sm text-[var(--ink-2)]">
+            <p>
+              <span className="font-semibold">Property:</span>{" "}
+              {properties.find((property) => property.id === draft.propertyId)?.name ?? "Not set"}
+            </p>
+            <p><span className="font-semibold">Email:</span> {draft.email || "Not set"}</p>
+            <p><span className="font-semibold">Name:</span> {draft.fullName || "Not set"}</p>
+          </div>
+          <form className="space-y-2" action={action}>
+            <input type="hidden" name="propertyId" value={draft.propertyId} />
+            <input type="hidden" name="email" value={draft.email} />
+            <input type="hidden" name="fullName" value={draft.fullName} />
+            <SubmitButton className="w-full" disabled={!requiredComplete} title="Send manager invitation.">
+              Send Manager Invite
+            </SubmitButton>
+          </form>
+        </div>
+      ) : null}
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" onClick={() => setStep((current) => Math.max(current - 1, 0))}
           disabled={step === 0} title="Go back one step.">

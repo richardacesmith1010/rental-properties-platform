@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ModalOverlay } from "@/components/ui/modal-overlay";
 
@@ -74,5 +75,23 @@ describe("ModalOverlay", () => {
     fireEvent.keyDown(document, { key: "Escape" });
 
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("moves focus into the dialog, traps Tab, and restores focus on close", async () => {
+    const user = userEvent.setup();
+    const trigger = document.createElement("button");
+    document.body.append(trigger);
+    trigger.focus();
+    const { rerender } = render(
+      <ModalOverlay open label="Test dialog"><button type="button">First</button><button type="button">Last</button></ModalOverlay>
+    );
+    expect(screen.getByRole("button", { name: "First" })).toHaveFocus();
+    await user.tab({ shift: true });
+    expect(screen.getByRole("button", { name: "Last" })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole("button", { name: "First" })).toHaveFocus();
+    rerender(<ModalOverlay open={false} label="Test dialog"><button type="button">First</button></ModalOverlay>);
+    expect(trigger).toHaveFocus();
+    trigger.remove();
   });
 });

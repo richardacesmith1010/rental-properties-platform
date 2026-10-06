@@ -37,9 +37,11 @@ export function OwnerAddMenu({ onAddHome, onAddTenant, onAddUnit, onInviteManage
   ];
   return (
     <div ref={container} className="relative">
-      <Button ref={trigger} type="button" className="min-h-11" title={role === "owner" ? "Add a home, tenant, or manager." : "Add a home or tenant."}
+      <Button ref={trigger} type="button" className="min-h-11"
+        title={role === "owner" ? "Add a home, tenant, or manager." : "Add a home or tenant."}
         aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>Add</Button>
-      {open ? <div ref={menu} role="menu" aria-label="Add" className="absolute right-0 z-40 mt-2 w-48 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1 shadow-lg"
+      {open ? <div ref={menu} role="menu" aria-label="Add"
+        className="absolute right-0 z-40 mt-2 w-48 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1 shadow-lg"
         onKeyDown={event => {
           if (event.key === "Escape") { event.preventDefault(); close(); }
           if (event.key === "Tab") setOpen(false);
@@ -51,10 +53,14 @@ export function OwnerAddMenu({ onAddHome, onAddTenant, onAddUnit, onInviteManage
           }
         }}>
         {actions.map(action => <button key={action.label} role="menuitem" type="button" title={action.label}
-          className="min-h-11 w-full rounded-lg px-3 text-left text-sm text-[var(--ink)] hover:bg-[var(--surface-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+          className={[
+            "min-h-11 w-full rounded-lg px-3 text-left text-sm text-[var(--ink)]",
+            "hover:bg-[var(--surface-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+          ].join(" ")}
           onClick={() => { close(); action.run(); }}>{action.label}</button>)}
       </div> : null}
-      {role === "owner" ? <ModalOverlay open={managerOpen} onClose={() => { setManagerOpen(false); trigger.current?.focus(); }}>
+      {role === "owner" ? <ModalOverlay label="Add a manager" open={managerOpen}
+        onClose={() => { setManagerOpen(false); trigger.current?.focus(); }}>
         <div className="domus-card w-full max-w-xl space-y-4 p-5">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-xl font-semibold">Add a manager</h2>

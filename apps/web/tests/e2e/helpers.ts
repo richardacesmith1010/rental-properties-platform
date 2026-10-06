@@ -67,3 +67,18 @@ export function collectConsoleErrors(page: Page) {
 export function expectNoConsoleErrors(errors: string[]) {
   expect(errors, errors.join("\n")).toEqual([]);
 }
+
+export const REQUIRED_SMOKE_ENV = [
+  "APP_URL", "SMOKE_OWNER_EMAIL", "SMOKE_OWNER_PASSWORD", "SMOKE_MANAGER_EMAIL",
+  "SMOKE_MANAGER_PASSWORD", "SMOKE_TENANT_EMAIL", "SMOKE_TENANT_PASSWORD"
+] as const;
+
+export function missingSmokeEnv() {
+  return REQUIRED_SMOKE_ENV.filter((name) => !process.env[name]?.trim());
+}
+
+export async function openManagerSheet(page: Page) {
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Add a manager" }).click();
+  await expect(page.getByRole("dialog", { name: "Add a manager" })).toBeVisible();
+}

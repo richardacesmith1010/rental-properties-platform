@@ -56,7 +56,7 @@ export function HomeMoneyCard() {
         {data?.moreCount ? <p className="text-sm text-[var(--muted)]">+ {data.moreCount} more home
           {data.moreCount === 1 ? "" : "s"}</p> : null}</>}
     <div className="mt-auto border-t border-[var(--line)] pt-3"><Link href="/owner/bank" title="Open your bank activity."
-      className="text-sm text-[var(--accent)] underline">Sort your bank file</Link></div>
+      className="inline-flex min-h-11 items-center text-sm text-[var(--accent)] underline">Sort your bank file</Link></div>
   </div>;
 }
 

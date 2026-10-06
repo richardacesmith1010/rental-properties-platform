@@ -88,14 +88,29 @@ export function TenantOverview({
       </div>
 
       <section className="space-y-3">
-        <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">Your problems</h2><Link href={buildSectionHref("maintenance")} className="text-sm font-semibold text-[var(--accent)]" title="See all problems.">See all</Link></div>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Your problems</h2>
+          <Link
+            href={buildSectionHref("maintenance")}
+            className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--accent)]"
+            title="See all problems."
+          >
+            See all
+          </Link>
+        </div>
         {tickets.length > 0 ? tickets.slice(0, 3).map((ticket) => <div key={ticket.id} className="domus-card flex items-center justify-between p-4"><span className="truncate text-sm font-medium">{ticket.title}</span><span className="rounded-full bg-[var(--accent-weak)] px-2 py-1 text-xs capitalize text-[var(--accent)]">{ticket.status.replaceAll("_", " ")}</span></div>) : <p className="text-sm text-muted-foreground">{openTicketCount > 0 ? `${openTicketCount} open problems.` : "No open problems."}</p>}
       </section>
 
       {lease ? (
         <Card className="border border-border/50 shadow-sm">
           <CardContent className="p-5">
-            <Link href={buildSectionHref("documents")} className="flex items-center justify-between text-lg font-semibold text-foreground" title="See your lease details."><span>Your lease</span><ChevronRight className="h-4 w-4" /></Link>
+            <Link
+              href={buildSectionHref("documents")}
+              className="flex min-h-11 items-center justify-between text-lg font-semibold text-foreground"
+              title="See your lease details."
+            >
+              <span>Your lease</span><ChevronRight className="h-4 w-4" />
+            </Link>
             <div className="mt-4 grid gap-y-3 sm:grid-cols-[140px_minmax(0,1fr)] sm:items-center">
               <span className="text-sm text-muted-foreground">Property</span>
               <span className="text-sm font-medium text-foreground">
