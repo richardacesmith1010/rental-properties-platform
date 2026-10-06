@@ -385,6 +385,11 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Next 15.5.27 + React 19.2.8 (codemod pinned to 15; caching inventory kept Next 14 behaviour incl. `staleTimes` 30 s/300 s); migration `20261005_sprint174_security_hardening.sql` applied (handle_new_user revoked from public/anon/authenticated + explicit grant to supabase_auth_admin; pg_graphql dropped). ChatGPT: rev1 REJECT (14.x EOL) → rev2 APPROVE WITH CHANGES → rev3. Verified locally on a production build + production smoke. Scorecard Security 66 → 76.
 - Next in Security: Supabase min password 6 → 8 + letters/digits (awaiting owner OK; dashboard panel open); remove or isolate stale `apps/mobile` workspace to unblock 8 highs; leaked-password protection needs Pro plan (owner decision).
 
+## Sprint 175/175b SHIPPED — Security reaches 80 (L3, `8a65199`, 2026-10-05)
+
+- Workspaces → `["apps/web"]`; mobile gate stage removed; `server-only` + `@typescript-eslint/*` declared in web; root `overrides.typescript 5.6.3`. Supabase min password 8 + letters/digits (dashboard). Codex 175 (66,300 tokens) isolated + fixed 5 highs; 175b hit the Codex usage limit (resets 2026-10-06 01:50) so Claude finished it (boundary break: package.json/lockfile only). Preview build verified on Vercel before production. Note: a clean `npm ci` bumps Playwright — run `npx playwright install chromium` before smoke.
+- Scorecard: **Security 80 ✅**. Next category by rule (closest to 80): **Visual design & accessibility (75)** → Sprint 176.
+
 ## ▶ START HERE (next session, written 2026-10-04)
 
 - Last shipped: Sprint 167 + 167b bank feed Phase 1 (`67e2168`). Sprints 168 + 169 shipped (bank feed Phase 1 + 2 complete). Next: owner uploads real Navy Federal + Fidelity October files (from a computer) → Claude verifies real numbers; then Phase 3 (Plaid daily sync, needs owner's Plaid production application). Polish backlog: review-card key by token; payment source 'Other' wording. Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
