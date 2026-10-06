@@ -11,6 +11,8 @@ drop extension if exists pg_graphql;
 -- Accepted (documented in docs/scorecard.md, not changed here):
 -- * can_access_property / can_administer_property / can_view_property / is_*_of_account are SECURITY DEFINER
 --   helpers used by ~90 RLS policies scoped TO public. They only answer "can the CURRENT user …" via auth.uid(),
---   so for anon they return false and reveal nothing. Revoking anon EXECUTE would make anon queries on those
+--   so for anon they return false and reveal nothing. Inventory verified 2026-10-05 (pg_proc): all 8 SECURITY DEFINER
+--   functions have proconfig search_path=public (fixed, not caller-controlled), take only a uuid (or no) argument, and
+--   only test the CURRENT user's membership/access, so no argument can broaden access. Revoking anon EXECUTE would make anon queries on those
 --   tables error instead of returning nothing. Re-scoping those policies TO authenticated is a separate, larger change.
 -- * pg_net lives in the public schema (Supabase-managed); moving it is not worth the risk.
