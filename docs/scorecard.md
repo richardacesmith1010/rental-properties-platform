@@ -1,0 +1,26 @@
+# Domus scorecard (1–100)
+
+Scale: 50 = substandard · 75 = close · **80 = shippable (target for every category)** · 100 = perfect.
+Re-score after each sprint that touches a category; record the date and evidence. Scores are Claude's judgment from code, live checks and audits. A score only moves up with evidence (a test, a live check, an audit result, or a real user).
+
+## Baseline — 2026-10-05
+
+| # | Category | Score | Evidence (why not higher) | What gets it to 80 |
+|---|---|---|---|---|
+| 1 | Owner experience (daily use) | 72 | Rent tracking incl. "pays outside Domus", bank feed + money page, repairs, messages. Notifications off; bank feed never run on real bank files; no stranger has used it end-to-end. | Real Navy Federal/Fidelity files sorted correctly; notifications on safely; one real first-time owner completes setup unaided. |
+| 2 | Tenant experience | 68 | Clear rent status, Stripe pay + autopay (fixed S171), problems, messages, no-lease screen. No receipts/alerts; no "Already paid" when online pay is off; leftover jargon ("ledger", "ACH"); no real tenant has used it. | "Already paid" button; notifications on; jargon gone; one real tenant month without help. |
+| 3 | Manager experience | 58 | Repairs, rent view, homes, messages, fee payouts. Can't send reminders; money tools owner-only; no owner statement; no vendor work orders; never dry-run as a manager. | Manager dry run fixed; reminders with owner permission; monthly owner statement. |
+| 4 | First-time onboarding (sign-up → first rent) | 62 | S172/173 fixed entry, invites, setup. Not walked live end-to-end by a new account; invite emails depend on Supabase/Resend config; no copy-link fallback. | Live end-to-end walk with a fresh owner + tenant (owner creates accounts); safe invite-link fallback. |
+| 5 | Money accuracy & payments | 74 | Stripe Connect live-tested (S128); claim-first rent filing, keyed dedupe, ChatGPT-reviewed money paths; reversed payments excluded. Bank matching unproven on real files; Plaid not live. | Real-file import matches bank totals to the cent; one live end-to-end online payment re-test after recent changes. |
+| 6 | Security & privacy | 66 | App level is strong (auth helpers, RLS, enumeration-safe sign-up, Sentry scrubbing, security headers incl. HSTS/CSP). **But:** Next.js 14.2.5 with known critical advisories (latest 14.2.35); `npm audit` (web) 1 critical / 18 high; 8 SECURITY DEFINER functions executable by anon; Supabase leaked-password protection off; 59 tables visible in anon GraphQL schema. | Next patch upgrade + dependency fixes (0 critical/high in web prod deps); anon execute revoked where not needed; leaked-password protection on; GraphQL exposure reviewed. |
+| 7 | Reliability & monitoring | 74 | Authenticated smoke (3 roles) + theme contrast (11) incl. bank/money pages; Sentry; weekly health log; cron runs tracked. Smoke runs only when Claude runs it; no alert reaches the owner when prod breaks. | Smoke on a schedule with failure alert; Sentry alert rule to owner; cron failure alert. |
+| 8 | Speed | 70 | Owner sections: first open ~2 s, revisits instant (S150–153). Money/alert loaders batched (S169b). Fixed ~1 s auth prefix per request remains. | First section open ≤ 1.2 s p75 measured by `[perf:*]`; Home ≤ 1.5 s. |
+| 9 | Plain language & clarity | 70 | Many sweeps (S154–163, 171–173). Leftovers: "ledger", "ACH", "charge" in reminder email, long email sentences, marketing copy on sign-up ("command center"). | Full banned-word/long-sentence sweep of user-facing strings + emails, enforced by a test. |
+| 10 | Visual design & accessibility | 75 | Reskin complete; dark mode; contrast smoke; 44 px targets; mobile sheets fixed (S173). No automated accessibility (axe) checks; keyboard/focus and screen-reader paths untested; not every screen checked at 375 px. | axe checks in smoke for key pages with 0 serious issues; keyboard walk of main flows; 375 px pass of every main screen. |
+| 11 | Notifications & communication | 30 | Deliberately OFF until launch (in-app and email); only owner-triggered invites/auth emails send. | Turn on in-app + email for rent due/late/receipt/repairs with per-user settings; verified with test accounts. |
+| 12 | Code health | 68 | 1,372 tests; lint/typecheck gate; L-015 shape rules. 6 source files > 500 lines (webhook handlers 974, inbox 859, property wizard 791, account-wipe 780, leases 738, ownership 660); stale mobile workspace adds vulnerable deps. | No source file > 500 lines; stale mobile workspace removed or updated. |
+| 13 | Phone app (store) | 25 | Expo app abandoned ~Sprint 23, stale deps, no store setup. Web is installable to home screen (manifest + service worker) — ~55 on that path. | Wrapped store build (e.g. Capacitor) with push, icons, listings, review-ready — after 1–11 reach 80. |
+| 14 | Launch & legal readiness | 52 | Terms + Privacy pages exist; no in-app support contact verified; Domus's own pricing/billing not assessed; data deletion exists (account wipe). | Support contact path, reviewed terms/privacy, pricing decision, data-export/deletion path verified. |
+
+## Order of work
+Closest to 80 first, except urgent security items (critical advisories) which are fixed immediately regardless of rank.
