@@ -39,6 +39,7 @@ interface InboxSectionProps {
   onOpenSection?: (sectionId: string) => void;
   messageSectionId?: string;
   currentUserId?: string;
+  hasActiveLease?: boolean;
 }
 
 const unavailableAction: StatefulAction = async () => ({
@@ -139,7 +140,8 @@ export function InboxSection({
   threadsWarning = null,
   onOpenSection,
   messageSectionId = "inbox",
-  currentUserId
+  currentUserId,
+  hasActiveLease = true
 }: InboxSectionProps) {
   const [activeTab, setActiveTab] = useState<InboxTab>(onStartTenantConversation ? "threads" : "timeline");
   const [query, setQuery] = useState("");
@@ -218,12 +220,27 @@ export function InboxSection({
     return (
       <Card id="inbox" className="border border-border/50 shadow-sm">
         <CardContent className="space-y-4 p-4 sm:p-5">
+          {!hasActiveLease ? (
+            <p className="text-sm text-[var(--muted)]">
+              You can report problems and send messages once your landlord sets up your lease.
+            </p>
+          ) : null}
           {threads.length === 0 ? (
-            <form action={startAction} className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+            <form
+              action={hasActiveLease ? startAction : undefined}
+              onSubmit={!hasActiveLease ? (event) => event.preventDefault() : undefined}
+              className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4"
+            >
               <h2 className="text-lg font-semibold text-[var(--ink)]">Message your landlord</h2>
               {properties.length > 1 ? <label className="block text-sm text-[var(--ink)]">Which home?<Select name="propertyId" defaultValue="" required className="mt-1 min-h-11" title="Choose the home this message is about."><option value="" disabled>Choose a home</option>{properties.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}</Select></label> : <input type="hidden" name="propertyId" value={properties[0]?.id ?? ""} />}
               <label className="block text-sm text-[var(--ink)]">Your message<textarea name="body" required maxLength={2000} rows={4} className="domus-input mt-1 w-full rounded-xl p-3" placeholder="Write a message…" /></label>
-              <SubmitButton className="min-h-11" title="Send your message to your landlord.">Send</SubmitButton>
+              <SubmitButton
+                className="min-h-11"
+                disabled={!hasActiveLease}
+                title="Send your message to your landlord."
+              >
+                Send
+              </SubmitButton>
               {startState && !startState.success ? <p role="alert" className="text-sm text-[var(--crit)]">{startState.error}</p> : null}
             </form>
           ) : (
@@ -232,9 +249,59 @@ export function InboxSection({
               {tenantThread ? <div className="space-y-4">
                 <div><h2 className="text-lg font-semibold text-[var(--ink)]">{tenantThread.propertyName}</h2><p className="text-sm text-[var(--muted)]">Chat with your landlord</p></div>
                 <div className="space-y-3" aria-live="polite">{tenantThread.messages.map((message) => { const mine = message.senderProfileId === currentUserId || message.direction === "inbound"; return <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}><div className={`max-w-[85%] rounded-2xl px-3 py-2 ${mine ? "bg-[var(--accent)] text-[var(--accent-contrast)]" : "bg-[var(--surface-2)] text-[var(--ink)]"}`}><p className="text-xs font-semibold">{mine ? "You" : message.senderName ?? "Your landlord"}</p><p className="mt-1 text-sm">{message.body}</p><p className={`mt-1 text-[11px] ${mine ? "opacity-80" : "text-[var(--muted)]"}`}>{formatTimestamp(message.createdAt)}</p></div></div>; })}</div>
-                <form action={sendMessageAction} className="space-y-2"><input type="hidden" name="threadId" value={tenantThread.id} /><Input name="body" placeholder="Write a message…" required /><div className="flex justify-end"><SubmitButton size="sm" className="min-h-11" title="Send a message to your landlord.">Send</SubmitButton></div>{sendMessageState && !sendMessageState.success ? <p className="text-sm text-[var(--crit)]">{sendMessageState.error}</p> : null}</form>
+                <form
+                  action={hasActiveLease ? sendMessageAction : undefined}
+                  onSubmit={!hasActiveLease ? (event) => event.preventDefault() : undefined}
+                  className="space-y-2"
+                >
+                  <input type="hidden" name="threadId" value={tenantThread.id} />
+                  <Input name="body" placeholder="Write a message…" required />
+                  <div className="flex justify-end">
+                    <SubmitButton
+                      size="sm"
+                      className="min-h-11"
+                      disabled={!hasActiveLease}
+                      title="Send a message to your landlord."
+                    >
+                      Send
+                    </SubmitButton>
+                  </div>
+                  {sendMessageState && !sendMessageState.success ? (
+                    <p className="text-sm text-[var(--crit)]">{sendMessageState.error}</p>
+                  ) : null}
+                </form>
               </div> : null}
-              {homesWithoutThread.length > 0 ? <form action={startAction} className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4"><h2 className="text-lg font-semibold text-[var(--ink)]">Message your landlord</h2><label className="block text-sm text-[var(--ink)]">Which home?<Select name="propertyId" defaultValue="" required className="mt-1 min-h-11" title="Choose the home this message is about."><option value="" disabled>Choose a home</option>{homesWithoutThread.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}</Select></label><label className="block text-sm text-[var(--ink)]">Your message<textarea name="body" required maxLength={2000} rows={4} className="domus-input mt-1 w-full rounded-xl p-3" placeholder="Write a message…" /></label><SubmitButton className="min-h-11" title="Send your message to your landlord.">Send</SubmitButton></form> : null}
+              {homesWithoutThread.length > 0 ? (
+                <form
+                  action={hasActiveLease ? startAction : undefined}
+                  onSubmit={!hasActiveLease ? (event) => event.preventDefault() : undefined}
+                  className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4"
+                >
+                  <h2 className="text-lg font-semibold text-[var(--ink)]">Message your landlord</h2>
+                  <label className="block text-sm text-[var(--ink)]">
+                    Which home?
+                    <Select name="propertyId" defaultValue="" required className="mt-1 min-h-11"
+                      title="Choose the home this message is about."
+                    >
+                      <option value="" disabled>Choose a home</option>
+                      {homesWithoutThread.map((property) => (
+                        <option key={property.id} value={property.id}>{property.name}</option>
+                      ))}
+                    </Select>
+                  </label>
+                  <label className="block text-sm text-[var(--ink)]">
+                    Your message
+                    <textarea name="body" required maxLength={2000} rows={4}
+                      className="domus-input mt-1 w-full rounded-xl p-3" placeholder="Write a message…"
+                    />
+                  </label>
+                  <SubmitButton className="min-h-11" disabled={!hasActiveLease}
+                    title="Send your message to your landlord."
+                  >
+                    Send
+                  </SubmitButton>
+                </form>
+              ) : null}
             </div>
           )}
         </CardContent>

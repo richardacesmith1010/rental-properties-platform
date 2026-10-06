@@ -15,7 +15,7 @@ import {
   setupAutopay,
   uploadMaintenancePhoto
 } from "@/app/actions";
-import { payWithACH } from "@/app/actions/charges";
+import { payWithACH, payWithACHState, payWithCardState } from "@/app/actions/charges";
 import { getAutopayEnrollments } from "@/app/actions/autopay";
 import {
   getAuthenticatedUser,
@@ -313,8 +313,8 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
                 rentAmountCents={currentLease?.monthlyRentCents}
                 lastPaidAt={paymentHistory[0]?.paidAt ?? null}
                 lateFeeCents={leaseDetails[0]?.lateFeeCents ?? 0}
-                onPayCharge={payWithCard as (formData: FormData) => Promise<void>}
-                onPayWithACH={payWithACH as (formData: FormData) => Promise<void>}
+                onPayCharge={payWithCardState}
+                onPayWithACH={payWithACHState}
                 onRequestManualPaymentConfirmation={requestManualPaymentConfirmation}
                 hasActiveLease={hasActiveLease}
                 autopayEnrollments={autopayEnrollments}
@@ -326,7 +326,19 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
 
           {!hasUnknownSection && activeSection === "charges" && (
             <div className="space-y-6">
-              <TenantRentCard charges={paymentData.charges} payState={payState} rentDueDate={rentDueDate} rentAmountCents={currentLease?.monthlyRentCents ?? null} lastPaidAt={paymentHistory[0]?.paidAt ?? null} lateFeeCents={leaseDetails[0]?.lateFeeCents ?? 0} onPayCharge={payWithCard as (formData: FormData) => Promise<void>} onPayWithACH={payWithACH as (formData: FormData) => Promise<void>} onRequestManualPaymentConfirmation={requestManualPaymentConfirmation} autopayEnrollments={autopayEnrollments} onSetupAutopay={setupAutopay} />
+              <TenantRentCard
+                charges={paymentData.charges}
+                payState={payState}
+                rentDueDate={rentDueDate}
+                rentAmountCents={currentLease?.monthlyRentCents ?? null}
+                lastPaidAt={paymentHistory[0]?.paidAt ?? null}
+                lateFeeCents={leaseDetails[0]?.lateFeeCents ?? 0}
+                onPayCharge={payWithCardState}
+                onPayWithACH={payWithACHState}
+                onRequestManualPaymentConfirmation={requestManualPaymentConfirmation}
+                autopayEnrollments={autopayEnrollments}
+                onSetupAutopay={setupAutopay}
+              />
               <ChargesSection
                 charges={paymentData.charges}
                 onPayCharge={payWithCard as (formData: FormData) => Promise<void>}
@@ -336,7 +348,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
                 autopayEnrollments={autopayEnrollments}
                 onSetupAutopay={setupAutopay}
                 onDisableAutopay={disableAutopay}
-                tenantPayState={payState}
+                tenantPayState={payState === "no_lease" ? "not_posted" : payState}
                 hideTenantPaymentControls
               />
               <Card>
@@ -401,6 +413,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
                 photoWorkflowEnabled={capabilities.photoWorkflowEnabled}
                 photoWorkflowWarning={capabilities.warnings.photoWorkflow}
                 viewerRole="tenant"
+                hasActiveLease={hasActiveLease}
               />
 
               <MaintenanceSection
@@ -449,6 +462,7 @@ export default async function TenantPage({ searchParams }: TenantPageProps) {
                 threadsReady={capabilities.inboxThreadsEnabled}
                 threadsWarning={capabilities.warnings.inboxThreads}
                 messageSectionId="notifications"
+                hasActiveLease={hasActiveLease}
               />
             ) : (
               <FeatureWarning

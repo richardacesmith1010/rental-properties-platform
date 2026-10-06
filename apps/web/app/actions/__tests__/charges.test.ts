@@ -51,7 +51,7 @@ vi.mock("@/lib/validations", () => ({
 }));
 vi.mock("@/app/actions/auth-helpers", () => ({ requireAuth: requireAuthMock }));
 
-import { payWithACH, payWithCard, recordManualPayment } from "@/app/actions/charges";
+import { payWithACH, payWithACHState, payWithCard, payWithCardState, recordManualPayment } from "@/app/actions/charges";
 
 interface CheckoutConfig {
   charge?: { id: string; amount_cents: number; status: string; lease_id: string } | null;
@@ -220,6 +220,53 @@ describe("charges actions", () => {
     sideEffectErrorMock.mockReturnValue(() => undefined);
   });
 
+  it.each([
+    ["paid", "This rent was already paid."],
+    ["waived", "This rent was cancelled by your landlord."],
+    ["pending", "Online pay starts at $5.00. Ask your landlord to record it."]
+  ])("returns plain rent error for %s through the state wrapper", async (status, error) => {
+    parseFormDataMock.mockReturnValueOnce({ success: true, data: { chargeId: "charge-1" } });
+    requireAuthMock.mockResolvedValueOnce({
+      user: { id: "tenant-1" },
+      role: "tenant",
+      supabase: createCheckoutSupabase({
+        charge: { id: "charge-1", amount_cents: status === "pending" ? 499 : 125000, status, lease_id: "lease-1" }
+      })
+    });
+
+    expect(await payWithCardState(null, new FormData())).toEqual({ success: false, error });
+    expect(createStripeCheckoutSessionMock).not.toHaveBeenCalled();
+  });
+
+  it("returns a missing rent error through the ACH state wrapper", async () => {
+    parseFormDataMock.mockReturnValueOnce({ success: true, data: { chargeId: "missing" } });
+    requireAuthMock.mockResolvedValueOnce({
+      user: { id: "tenant-1" }, role: "tenant", supabase: createCheckoutSupabase({ charge: null })
+    });
+    expect(await payWithACHState(null, new FormData())).toEqual({
+      success: false, error: "We couldn't find this rent. Refresh the page."
+    });
+  });
+
+  it("keeps authentication and rate limiting before checkout in the wrapper", async () => {
+    requireAuthMock.mockRejectedValueOnce(new Error("REDIRECT:/login"));
+    await expect(payWithCardState(null, new FormData())).rejects.toThrow("REDIRECT:/login");
+    expect(createStripeCheckoutSessionMock).not.toHaveBeenCalled();
+
+    checkRateLimitMock.mockReturnValueOnce({ allowed: false, remaining: 0 });
+    expect(await payWithACHState(null, new FormData())).toEqual({
+      success: false, error: "Too many requests. Please try again later."
+    });
+    expect(createStripeCheckoutSessionMock).not.toHaveBeenCalled();
+  });
+
+  it("lets the checkout redirect propagate from both wrappers", async () => {
+    parseFormDataMock.mockReturnValue({ success: true, data: { chargeId: "charge-1" } });
+    await expect(payWithCardState(null, new FormData())).rejects.toThrow("REDIRECT:https://checkout.stripe.test/session");
+    await expect(payWithACHState(null, new FormData())).rejects.toThrow("REDIRECT:https://checkout.stripe.test/session");
+    expect(redirectMock).toHaveBeenCalledTimes(2);
+  });
+
   it("returns a validation error when chargeId is missing", async () => {
     parseFormDataMock.mockReturnValueOnce({ success: false, error: "Charge ID is required." });
 
@@ -240,7 +287,7 @@ describe("charges actions", () => {
 
     const result = await payWithCard(new FormData());
 
-    expect(result).toEqual({ success: false, error: "This charge has already been paid." });
+    expect(result).toEqual({ success: false, error: "This rent was already paid." });
   });
 
   it("blocks card checkout when the charge is below the online payment minimum", async () => {
@@ -258,7 +305,7 @@ describe("charges actions", () => {
     expect(result).toEqual({
       success: false,
       error:
-        "Online payments must be at least $5.00. For smaller amounts, please ask your owner or manager to record a cash or check payment."
+        "Online pay starts at $5.00. Ask your landlord to record it."
     });
     expect(createStripeCheckoutSessionMock).not.toHaveBeenCalled();
   });
@@ -276,7 +323,7 @@ describe("charges actions", () => {
 
     const result = await payWithCard(new FormData());
 
-    expect(result).toEqual({ success: false, error: "Lease not found for this charge." });
+    expect(result).toEqual({ success: false, error: "We couldn't find the lease for this rent." });
   });
 
   it("returns a rate limit error after too many checkout attempts", async () => {
@@ -498,7 +545,7 @@ describe("charges actions", () => {
     expect(result).toEqual({
       success: false,
       error:
-        "Online payments must be at least $5.00. For smaller amounts, please ask your owner or manager to record a cash or check payment."
+        "Online pay starts at $5.00. Ask your landlord to record it."
     });
     expect(createStripeCheckoutSessionMock).not.toHaveBeenCalled();
   });

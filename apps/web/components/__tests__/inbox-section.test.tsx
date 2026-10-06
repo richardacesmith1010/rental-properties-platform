@@ -31,6 +31,31 @@ const thread: InboxThreadDTO = {
 const noop = vi.fn(async () => ({ success: true as const }));
 
 describe("InboxSection tenant conversation", () => {
+  it("explains no lease and prevents sending a typed message", () => {
+    const onStart = vi.fn(async () => ({ success: true as const }));
+    render(
+      <InboxSection
+        notifications={[]}
+        threads={[]}
+        properties={[]}
+        onMarkRead={noop}
+        onStartTenantConversation={onStart}
+        hasActiveLease={false}
+      />
+    );
+    expect(screen.getByText(
+      "You can report problems and send messages once your landlord sets up your lease."
+    )).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Your message"), { target: { value: "Hello landlord" } });
+    const send = screen.getByRole("button", { name: "Send" });
+    expect(send).toBeDisabled();
+    fireEvent.click(send);
+    const form = send.closest("form");
+    expect(form).not.toBeNull();
+    expect(fireEvent.submit(form!)).toBe(false);
+    expect(onStart).not.toHaveBeenCalled();
+  });
+
   it("shows a message composer before any thread exists", () => {
     render(<InboxSection notifications={[]} threads={[]} properties={[home]} onMarkRead={noop} onSendMessage={noop} onStartTenantConversation={noop} />);
     expect(screen.getByText("Message your landlord")).toBeInTheDocument();

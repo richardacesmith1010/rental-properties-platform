@@ -35,8 +35,8 @@ interface TenantOverviewProps {
   rentAmountCents?: number | null;
   lastPaidAt?: string | null;
   lateFeeCents?: number;
-  onPayCharge: (formData: FormData) => Promise<void>;
-  onPayWithACH?: (formData: FormData) => Promise<void>;
+  onPayCharge: StatefulAction;
+  onPayWithACH?: StatefulAction;
   onRequestManualPaymentConfirmation: StatefulAction;
   hasActiveLease?: boolean;
   autopayEnrollments?: AutopayEnrollmentView[];

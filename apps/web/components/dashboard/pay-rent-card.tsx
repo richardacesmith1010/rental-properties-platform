@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useFormState } from "react-dom";
+import { useFormState, useFormStatus } from "react-dom";
 import { AlertTriangle, CheckCircle2, Clock3 } from "lucide-react";
 import type { ActionState } from "@/app/actions";
 import { SubmitButton } from "@/components/shared/submit-button";
@@ -18,6 +18,11 @@ type StatefulAction = (
   formData: FormData
 ) => Promise<ActionState>;
 
+function PaymentButtonLabel({ amount }: { amount: string }) {
+  const { pending } = useFormStatus();
+  return <>{pending ? "Opening payment…" : `Pay ${amount}`}</>;
+}
+
 export interface AutopayEnrollmentView {
   id: string;
   leaseId: string;
@@ -31,8 +36,8 @@ export interface AutopayEnrollmentView {
 
 interface PayRentCardProps {
   charges: TenantCharge[];
-  onPayCharge: (formData: FormData) => Promise<void>;
-  onPayWithACH?: (formData: FormData) => Promise<void>;
+  onPayCharge: StatefulAction;
+  onPayWithACH?: StatefulAction;
   onRequestManualPaymentConfirmation: StatefulAction;
   chargesHref: string;
   hasActiveLease?: boolean;
@@ -91,6 +96,8 @@ export function PayRentCard({
   ,rentAmountCents = null
   ,lastPaidAt = null
 }: PayRentCardProps) {
+  const [cardState, cardAction] = useFormState(onPayCharge, null);
+  const [achState, achAction] = useFormState(onPayWithACH ?? noopStatefulAction, null);
   const [manualState, manualAction] = useFormState(
     onRequestManualPaymentConfirmation ?? noopStatefulAction,
     null
@@ -213,7 +220,7 @@ export function PayRentCard({
                   <span className="block sm:inline">{formatUnitLabel(charge.unitNumber)}</span>
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  You&apos;ll get a receipt by email after you pay.
+                  Your receipt will be in Domus after you pay.
                 </p>
               </div>
 
@@ -246,14 +253,17 @@ export function PayRentCard({
                     </span>
                   </label>
                   {onPayWithACH ? (
-                    <form action={onPayWithACH} className="mt-3">
+                    <form action={achAction} className="mt-3">
                       <input type="hidden" name="chargeId" value={charge.id} />
                       <SubmitButton
                         className="h-12 w-full rounded-2xl text-sm font-semibold"
                         title={`Pay ${formatCentsAsDollars(charge.amountCents)} from your bank account.`}
                       >
-                        Pay {formatCentsAsDollars(charge.amountCents)}
+                        <PaymentButtonLabel amount={formatCentsAsDollars(charge.amountCents)} />
                       </SubmitButton>
+                      {achState && !achState.success ? (
+                        <p role="alert" className="mt-2 text-sm text-[var(--crit)]">{achState.error}</p>
+                      ) : null}
                     </form>
                   ) : (
                     <button
@@ -283,15 +293,18 @@ export function PayRentCard({
                       </span>
                     </span>
                   </label>
-                  <form action={onPayCharge} className="mt-3">
+                  <form action={cardAction} className="mt-3">
                     <input type="hidden" name="chargeId" value={charge.id} />
                     <SubmitButton
                       variant="outline"
                       className="h-12 w-full rounded-2xl text-sm font-semibold"
                       title={`Pay ${formatCentsAsDollars(cardPayment.totalCents)} with debit or credit card.`}
                     >
-                      Pay {formatCentsAsDollars(cardPayment.totalCents)}
+                      <PaymentButtonLabel amount={formatCentsAsDollars(cardPayment.totalCents)} />
                     </SubmitButton>
+                    {cardState && !cardState.success ? (
+                      <p role="alert" className="mt-2 text-sm text-[var(--crit)]">{cardState.error}</p>
+                    ) : null}
                   </form>
                 </div>
               </div>

@@ -24,6 +24,7 @@ interface TicketFormProps {
   photoWorkflowEnabled?: boolean;
   photoWorkflowWarning?: string | null;
   viewerRole?: "owner" | "manager" | "tenant";
+  hasActiveLease?: boolean;
 }
 
 interface TicketDraft {
@@ -89,7 +90,8 @@ export function TicketForm({
   onCreateTicket,
   photoWorkflowEnabled = true,
   photoWorkflowWarning = null,
-  viewerRole = "tenant"
+  viewerRole = "tenant",
+  hasActiveLease = true
 }: TicketFormProps) {
   const router = useRouter();
   const [state, setState] = useState<ActionState>(null);
@@ -155,7 +157,7 @@ export function TicketForm({
   };
 
   if (viewerRole === "tenant") {
-    const canSubmit = Boolean(draft.unitId && draft.description.trim());
+    const canSubmit = Boolean(hasActiveLease && draft.unitId && draft.description.trim());
 
     return (
       <Card>
@@ -164,7 +166,7 @@ export function TicketForm({
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-[var(--ink-2)]">
-            Describe what&apos;s wrong and we&apos;ll notify your landlord right away.
+            Tell us what&apos;s wrong. Your landlord will see it in Domus.
           </p>
 
           <FormError state={state} />
@@ -215,6 +217,12 @@ export function TicketForm({
             <Alert variant="warning">{photoWorkflowWarning}</Alert>
           ) : null}
 
+          {!hasActiveLease ? (
+            <p className="text-sm text-[var(--muted)]">
+              You can report problems and send messages once your landlord sets up your lease.
+            </p>
+          ) : null}
+
           <Button
             type="button"
             size="lg"
@@ -227,7 +235,7 @@ export function TicketForm({
           </Button>
 
           <p className="text-center text-xs text-muted-foreground">
-            Your landlord will be notified immediately.
+            Your landlord will see it in Domus.
           </p>
         </CardContent>
       </Card>

@@ -1,15 +1,24 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { PayRentCard, sortTenantChargesByUrgency } from "@/components/dashboard/pay-rent-card";
 import { formatCurrency } from "@/lib/format";
 import { calculateCardFee, formatCentsAsDollars } from "@/lib/payment-fees";
 
+const paymentStatus = vi.hoisted(() => ({ pending: false }));
+const formDispatches = vi.hoisted(() => [] as Array<(data: FormData) => Promise<void>>);
+
 vi.mock("react-dom", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-dom")>();
+  const React = await import("react");
   return {
     ...actual,
-    useFormState: () => [null, async () => null] as const,
-    useFormStatus: () => ({ pending: false, data: null, method: "post", action: null })
+    useFormState: (action: (prev: unknown, data: FormData) => Promise<unknown>, initial: unknown) => {
+      const [state, setState] = React.useState(initial);
+      const dispatch = async (data: FormData) => setState(await action(state, data));
+      formDispatches.push(dispatch);
+      return [state, dispatch] as const;
+    },
+    useFormStatus: () => ({ pending: paymentStatus.pending, data: null, method: "post", action: null })
   };
 });
 
@@ -39,6 +48,66 @@ describe("PayRentCard", () => {
     }
   ];
 
+  it("calls both pay actions and shows returned errors under their buttons", async () => {
+    const onPayCharge = vi.fn(async () => ({ success: false, error: "Card pay failed." }));
+    const onPayWithACH = vi.fn(async () => ({ success: false, error: "Bank pay failed." }));
+    formDispatches.length = 0;
+    const { container } = render(
+      <PayRentCard
+        charges={[charges[0]]}
+        onPayCharge={onPayCharge}
+        onPayWithACH={onPayWithACH}
+        onRequestManualPaymentConfirmation={async () => ({ success: true })}
+        chargesHref="/tenant?section=charges"
+      />
+    );
+    const forms = Array.from(container.querySelectorAll("form"));
+    forms[0].addEventListener("submit", (event) => {
+      event.preventDefault();
+      void formDispatches[1](new FormData(forms[0]));
+    });
+    forms[1].addEventListener("submit", (event) => {
+      event.preventDefault();
+      void formDispatches[0](new FormData(forms[1]));
+    });
+    fireEvent.submit(forms[0]);
+    fireEvent.submit(forms[1]);
+    await waitFor(() => {
+      expect(onPayCharge).toHaveBeenCalledOnce();
+      expect(onPayWithACH).toHaveBeenCalledOnce();
+      expect(screen.getByText("Bank pay failed.")).toHaveAttribute("role", "alert");
+      expect(screen.getByText("Card pay failed.")).toHaveAttribute("role", "alert");
+    });
+    expect(onPayCharge).toHaveBeenCalledWith(null, expect.any(FormData));
+  });
+
+  it("shows a pending label while opening checkout", () => {
+    paymentStatus.pending = true;
+    render(
+      <PayRentCard
+        charges={[charges[0]]}
+        onPayCharge={async () => null}
+        onPayWithACH={async () => null}
+        onRequestManualPaymentConfirmation={async () => null}
+        chargesHref="/tenant?section=charges"
+      />
+    );
+    expect(screen.getAllByText("Opening payment…")).toHaveLength(2);
+    paymentStatus.pending = false;
+  });
+
+  it("shows the receipt in Domus copy", () => {
+    render(
+      <PayRentCard
+        charges={[charges[0]]}
+        onPayCharge={async () => null}
+        onRequestManualPaymentConfirmation={async () => null}
+        chargesHref="/tenant?section=charges"
+      />
+    );
+    expect(screen.getByText("Your receipt will be in Domus after you pay.")).toBeInTheDocument();
+  });
+
   it("sorts late charges ahead of pending charges", () => {
     const sorted = sortTenantChargesByUrgency(charges);
 
@@ -51,8 +120,8 @@ describe("PayRentCard", () => {
     render(
       <PayRentCard
         charges={charges}
-        onPayCharge={async () => {}}
-        onPayWithACH={async () => {}}
+        onPayCharge={async () => ({ success: true })}
+        onPayWithACH={async () => ({ success: true })}
         onRequestManualPaymentConfirmation={async () => ({ success: true })}
         chargesHref="/tenant?section=charges"
         onSetupAutopay={async () => ({ success: true })}
@@ -77,8 +146,8 @@ describe("PayRentCard", () => {
     render(
       <PayRentCard
         charges={[charges[0]]}
-        onPayCharge={async () => {}}
-        onPayWithACH={async () => {}}
+        onPayCharge={async () => ({ success: true })}
+        onPayWithACH={async () => ({ success: true })}
         onRequestManualPaymentConfirmation={async () => ({ success: true })}
         chargesHref="/tenant?section=charges"
       />
@@ -95,8 +164,8 @@ describe("PayRentCard", () => {
     render(
       <PayRentCard
         charges={[charges[0]]}
-        onPayCharge={async () => {}}
-        onPayWithACH={async () => {}}
+        onPayCharge={async () => ({ success: true })}
+        onPayWithACH={async () => ({ success: true })}
         onRequestManualPaymentConfirmation={async () => ({ success: true })}
         chargesHref="/tenant?section=charges"
         autopayEnrollments={[
@@ -122,8 +191,8 @@ describe("PayRentCard", () => {
     render(
       <PayRentCard
         charges={[charges[0]]}
-        onPayCharge={async () => {}}
-        onPayWithACH={async () => {}}
+        onPayCharge={async () => ({ success: true })}
+        onPayWithACH={async () => ({ success: true })}
         onRequestManualPaymentConfirmation={async () => ({ success: true })}
         chargesHref="/tenant?section=charges"
         autopayEnrollments={[
@@ -150,7 +219,7 @@ describe("PayRentCard", () => {
     render(
       <PayRentCard
         charges={[]}
-        onPayCharge={async () => {}}
+        onPayCharge={async () => ({ success: true })}
         onRequestManualPaymentConfirmation={async () => ({ success: true })}
         chargesHref="/tenant?section=charges"
         hasActiveLease
@@ -169,7 +238,7 @@ describe("PayRentCard", () => {
     render(
       <PayRentCard
         charges={[]}
-        onPayCharge={async () => {}}
+        onPayCharge={async () => ({ success: true })}
         onRequestManualPaymentConfirmation={async () => ({ success: true })}
         chargesHref="/tenant?section=charges"
         hasActiveLease={false}

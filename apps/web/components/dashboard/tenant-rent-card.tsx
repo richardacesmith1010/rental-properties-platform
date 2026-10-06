@@ -18,8 +18,8 @@ interface TenantRentCardProps {
   rentAmountCents: number | null;
   lastPaidAt: string | null;
   lateFeeCents?: number;
-  onPayCharge: (formData: FormData) => Promise<void>;
-  onPayWithACH?: (formData: FormData) => Promise<void>;
+  onPayCharge: StatefulAction;
+  onPayWithACH?: StatefulAction;
   onRequestManualPaymentConfirmation: StatefulAction;
   autopayEnrollments?: AutopayEnrollmentView[];
   onSetupAutopay?: StatefulAction;
@@ -66,6 +66,19 @@ export function TenantRentCard({
   const label = payState === "paid" && lastPaidAt
     ? `${new Intl.DateTimeFormat("en-US", { month: "long", timeZone: "UTC" }).format(new Date(`${lastPaidAt}T00:00:00.000Z`))} rent`
     : payState === "not_posted" ? "Next rent" : "Rent due";
+
+  if (payState === "no_lease") {
+    return (
+      <Card className="domus-card">
+        <CardContent className="space-y-2 p-5 sm:p-7">
+          <h2 className="text-lg font-semibold text-[var(--ink)]">Your lease isn&apos;t set up yet</h2>
+          <p className="text-sm text-[var(--muted)]">
+            Your landlord is still setting things up. You&apos;ll see your rent here once it&apos;s ready.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (showPayment && payState === "can_pay") {
     return <PayRentCard charges={charges} onPayCharge={onPayCharge} onPayWithACH={onPayWithACH} onRequestManualPaymentConfirmation={onRequestManualPaymentConfirmation} chargesHref="/tenant?section=charges" autopayEnrollments={autopayEnrollments} onSetupAutopay={onSetupAutopay} payState={payState} rentDueDate={rentDueDate} rentAmountCents={rentAmountCents} lastPaidAt={lastPaidAt} />;

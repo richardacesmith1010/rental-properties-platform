@@ -137,23 +137,23 @@ async function prepareCheckoutContext(
         .single()
   );
   if (chargeQuery.error) {
-    return { success: false, error: "Unable to load this charge right now." };
+    return { success: false, error: "We couldn't find this rent. Refresh the page." };
   }
   const charge = chargeQuery.data;
 
   if (!charge) {
-    return { success: false, error: "Charge not found." };
+    return { success: false, error: "We couldn't find this rent. Refresh the page." };
   }
   if (charge.status === "paid") {
-    return { success: false, error: "This charge has already been paid." };
+    return { success: false, error: "This rent was already paid." };
   }
   if (charge.status === "waived") {
-    return { success: false, error: "Waived charges cannot be paid." };
+    return { success: false, error: "This rent was cancelled by your landlord." };
   }
   if (charge.amount_cents < MIN_ONLINE_PAYMENT_CENTS) {
     return {
       success: false,
-      error: `Online payments must be at least $${(MIN_ONLINE_PAYMENT_CENTS / 100).toFixed(2)}. For smaller amounts, please ask your owner or manager to record a cash or check payment.`
+      error: `Online pay starts at $${(MIN_ONLINE_PAYMENT_CENTS / 100).toFixed(2)}. Ask your landlord to record it.`
     };
   }
 
@@ -164,7 +164,7 @@ async function prepareCheckoutContext(
     .single();
 
   if (!lease) {
-    return { success: false, error: "Lease not found for this charge." };
+    return { success: false, error: "We couldn't find the lease for this rent." };
   }
 
   const { data: unit } = await supabase
@@ -184,7 +184,7 @@ async function prepareCheckoutContext(
     .single();
 
   if (!property) {
-    return { success: false, error: "Property not found for this charge." };
+    return { success: false, error: "We couldn't find the property for this rent." };
   }
 
   const isTenant = lease.tenant_profile_id === user.id;
@@ -199,7 +199,7 @@ async function prepareCheckoutContext(
 
   if (isAdminSettled.status === "rejected") {
     console.error("payWithCard permission error:", isAdminSettled.reason);
-    return { success: false, error: "Unable to verify access for this charge right now." };
+    return { success: false, error: "Unable to verify access for this rent right now." };
   }
 
   if (!isAdminSettled.value && !isTenant) {
@@ -372,6 +372,14 @@ export async function payWithACH(formData: FormData): Promise<ActionState | void
   return { success: false, error: PAYMENTS_UNAVAILABLE_MESSAGE };
 }
 
+export async function payWithCardState(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  return (await payWithCard(formData)) ?? null;
+}
+
+export async function payWithACHState(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  return (await payWithACH(formData)) ?? null;
+}
+
 export async function deletePendingCharge(
   _prev: ActionState,
   formData: FormData
@@ -420,19 +428,19 @@ export async function recordManualPayment(
         .maybeSingle()
   );
   if (chargeQuery.error) {
-    return { success: false, error: "Unable to load this charge right now." };
+    return { success: false, error: "We couldn't find this rent. Refresh the page." };
   }
   const charge = chargeQuery.data;
 
   if (!charge) {
-    return { success: false, error: "Charge not found." };
+    return { success: false, error: "We couldn't find this rent. Refresh the page." };
   }
 
   if (charge.status === "paid") {
     return { success: false, error: "This charge is already marked paid." };
   }
   if (charge.status === "waived") {
-    return { success: false, error: "Waived charges cannot be paid." };
+    return { success: false, error: "This rent was cancelled by your landlord." };
   }
 
   if (amountCents !== charge.amount_cents) {
@@ -449,7 +457,7 @@ export async function recordManualPayment(
     .maybeSingle();
 
   if (!lease) {
-    return { success: false, error: "Lease not found for this charge." };
+    return { success: false, error: "We couldn't find the lease for this rent." };
   }
 
   const { data: unit } = await admin
