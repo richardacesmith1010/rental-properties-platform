@@ -43,7 +43,7 @@ describe("lease wizard empty states", () => {
 
     expect(screen.getByText("No properties found")).toBeInTheDocument();
     expect(
-      screen.getByText("You need to create a property before you can set up a lease.")
+      screen.getByText("Create a property before you set up a lease.")
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create Property" })).toBeInTheDocument();
     expect(screen.queryByLabelText("Property")).not.toBeInTheDocument();

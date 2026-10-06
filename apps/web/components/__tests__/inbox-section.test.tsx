@@ -44,7 +44,7 @@ describe("InboxSection tenant conversation", () => {
       />
     );
     expect(screen.getByText(
-      "You can report problems and send messages once your landlord sets up your lease."
+      "Once your landlord sets up your lease, you can report problems. You can also send messages."
     )).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Your message"), { target: { value: "Hello landlord" } });
     const send = screen.getByRole("button", { name: "Send" });

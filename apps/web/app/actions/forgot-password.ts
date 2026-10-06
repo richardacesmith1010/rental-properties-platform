@@ -34,6 +34,6 @@ export async function forgotPasswordAction(
 
   return {
     success: true,
-    message: "If an account exists with that email, a reset link has been sent."
+    message: "If that account exists, we sent a reset link to its email."
   };
 }

@@ -143,8 +143,8 @@ function ChargeMoreMenu({
         className={compact ? "h-11 min-w-11 px-3" : "h-11 px-3 sm:h-8"}
         disabled={disabled}
         onClick={() => setOpen((current) => !current)}
-        title="Open more charge actions."
-        aria-label="Open more charge actions"
+        title="Open more payment actions."
+        aria-label="Open more payment actions"
       >
         <MoreVertical className="h-4 w-4" />
         {compact ? null : <span className="ml-1.5">More</span>}
@@ -174,7 +174,7 @@ function ChargeMoreMenu({
                 onEdit();
               }}
               className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
-              title="Edit this charge."
+              title="Edit this payment."
             >
               <Pencil className="h-4 w-4" />
               Edit
@@ -188,7 +188,7 @@ function ChargeMoreMenu({
                 onWaive();
               }}
               className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
-              title="Waive this charge."
+              title="Waive this payment."
             >
               <CircleOff className="h-4 w-4" />
               Waive
@@ -204,7 +204,7 @@ function ChargeMoreMenu({
                   onDelete();
                 }}
                 className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-[var(--crit)] transition hover:bg-[var(--crit-bg)]"
-                title="Delete this charge."
+                title="Delete this payment."
               >
                 <Trash2 className="h-4 w-4" />
                 Delete
@@ -240,7 +240,7 @@ export function ManualPaymentForm({
         <select id={`manual-payment-method-${charge.id}`} name="method" className="domus-input h-11 w-full rounded-md px-3 text-sm" defaultValue="cash" title="Select manual payment method.">
           <option value="cash">Cash</option>
           <option value="check">Check</option>
-          <option value="ach">ACH</option>
+          <option value="ach">Bank transfer</option>
           <option value="other">Other</option>
         </select>
       </div>
@@ -306,7 +306,7 @@ export function ChargeRow({
               checked={selected}
               onChange={(event) => onToggleSelection(event.target.checked)}
               className="h-4 w-4 rounded border-[var(--line)] text-[var(--accent)] focus:ring-[var(--accent)]"
-              aria-label={`Select charge for ${label}`}
+              aria-label={`Select payment for ${label}`}
               title={`Select ${label}.`}
             />
           </div>
@@ -473,7 +473,7 @@ export function ChargeRow({
                   className={simpleView ? "h-11" : "h-11 sm:h-8"}
                   disabled={isMutatingCharges}
                   onClick={onToggleManualPayment}
-                  title="Record a manual payment for this charge."
+                  title="Record a manual payment for this amount owed."
                 >
                   {manualFormOpen ? "Cancel" : simpleView ? "Mark paid" : "Record"}
                 </Button>

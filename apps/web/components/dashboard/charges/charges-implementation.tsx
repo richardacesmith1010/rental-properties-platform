@@ -329,7 +329,7 @@ export function ChargesSection({
                   checked={allVisibleSelected}
                   onChange={(event) => toggleAllVisibleCharges(event.target.checked)}
                   className="h-4 w-4 rounded border-[var(--line)] text-[var(--accent)] focus:ring-[var(--accent)]"
-                  aria-label="Select all visible charges"
+                  aria-label="Select all visible payments"
                 />
                 Select all visible
               </label>
@@ -425,7 +425,7 @@ export function ChargesSection({
           </>
         )}
         <ConfirmDialog
-          title="Delete Charge?"
+          title="Delete Payment?"
           description={
             chargePendingDeletion
               ? `Delete this ${chargePendingDeletion.status} charge of ${formatCurrency(chargePendingDeletion.amountCents)} due on ${formatDate(chargePendingDeletion.dueDate)}? This cannot be undone.`
@@ -467,7 +467,7 @@ export function ChargesSection({
             recipientProfileId={activeMessageCharge.tenantProfileId}
             propertyId={activeMessageCharge.propertyId}
             propertyName={`${activeMessageCharge.propertyName ?? "Property"} · ${activeMessageCharge.unitNumber ?? "Unit"}`}
-            prefilledSubject={`Charge update for ${activeMessageCharge.propertyName ?? "your rental"}`}
+            prefilledSubject={`Payment update for ${activeMessageCharge.propertyName ?? "your rental"}`}
             onSend={onSendMessageToTenant}
           />
         ) : null}

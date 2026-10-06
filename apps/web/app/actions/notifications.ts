@@ -176,11 +176,11 @@ export async function sendBatchPaymentReminder(
     .in("id", chargeIds);
 
   if (chargeError) {
-    return { success: false, error: "Unable to load the selected charges right now." };
+    return { success: false, error: "Unable to load the selected payments right now." };
   }
 
   if (!charges || charges.length !== chargeIds.length) {
-    return { success: false, error: "Some selected charges could not be found." };
+    return { success: false, error: "Some selected payments could not be found." };
   }
 
   const leaseIds = Array.from(new Set(charges.map((charge) => charge.lease_id)));
@@ -190,7 +190,7 @@ export async function sendBatchPaymentReminder(
     .in("id", leaseIds);
 
   if (leaseError) {
-    return { success: false, error: "Unable to load lease details for the selected charges." };
+    return { success: false, error: "Unable to load lease details for the selected payments." };
   }
 
   const leaseRows = leases ?? [];
@@ -201,7 +201,7 @@ export async function sendBatchPaymentReminder(
     .in("id", unitIds);
 
   if (unitError) {
-    return { success: false, error: "Unable to load unit details for the selected charges." };
+    return { success: false, error: "Unable to load unit details for the selected payments." };
   }
 
   const unitRows = units ?? [];
@@ -212,7 +212,7 @@ export async function sendBatchPaymentReminder(
   );
 
   if (hasUnauthorizedCharge) {
-    return { success: false, error: "You do not have access to one or more selected charges." };
+    return { success: false, error: "You do not have access to one or more selected payments." };
   }
 
   const { data: properties, error: propertyError } = await admin
@@ -221,7 +221,7 @@ export async function sendBatchPaymentReminder(
     .in("id", propertyIds);
 
   if (propertyError) {
-    return { success: false, error: "Unable to load property details for the selected charges." };
+    return { success: false, error: "Unable to load property details for the selected payments." };
   }
 
   const leaseById = new Map(leaseRows.map((lease) => [lease.id, lease]));
@@ -268,7 +268,7 @@ export async function sendBatchPaymentReminder(
   });
 
   if (notifications.length === 0) {
-    return { success: false, error: "Selected charges do not have eligible tenants for reminders." };
+    return { success: false, error: "Selected payments do not have eligible tenants for reminders." };
   }
 
   if (notificationsEnabled()) {

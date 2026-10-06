@@ -338,7 +338,7 @@ export function LeasesSection({
                               required
                             />
                           </div>
-                          <SubmitButton size="sm" variant="outline" title="Save the recurring rent amount for future charge generation.">
+                          <SubmitButton size="sm" variant="outline" title="Save the recurring rent amount for future payment generation.">
                             Save Rent Amount
                           </SubmitButton>
                           <Button
@@ -537,7 +537,7 @@ export function LeasesSection({
                               onClick={() =>
                                 setActiveRentAmountLeaseId((current) => (current === lease.id ? null : lease.id))
                               }
-                              title="Edit the recurring rent amount used for future charges."
+                              title="Edit the recurring rent amount used for future payments."
                             >
                               {activeRentAmountLeaseId === lease.id ? "Hide Rent Editor" : "Edit Rent Amount"}
                             </Button>

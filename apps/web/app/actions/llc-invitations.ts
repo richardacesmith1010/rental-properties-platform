@@ -170,7 +170,7 @@ export async function sendLLCInvitations(
     if (insertError.code === "23505") {
       return {
         success: false,
-        error: "One or more of those emails already has a pending invitation for this LLC."
+        error: "Some of those emails already have an open invite to this LLC."
       };
     }
     console.error("sendLLCInvitations insert error:", insertError);

@@ -57,7 +57,7 @@ export function ChargeEditModal({ charge, open, onClose, onSave }: ChargeEditMod
       <div className="domus-card max-h-[85vh] overflow-y-auto p-6 scroll-smooth [-webkit-overflow-scrolling:touch]">
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-lg font-semibold text-foreground">Edit Charge</h3>
+            <h3 className="text-lg font-semibold text-foreground">Edit Payment</h3>
             <p className="mt-1 text-sm text-muted-foreground">
               {formatCurrency(charge.amountCents)} due {formatDate(charge.dueDate)}
             </p>
@@ -114,7 +114,7 @@ export function ChargeEditModal({ charge, open, onClose, onSave }: ChargeEditMod
                 name="category"
                 defaultValue={charge.category}
                 className="domus-input h-10 w-full rounded-md px-3 text-sm"
-                title="Choose the charge category."
+                title="Choose the payment category."
               >
                 {CHARGE_CATEGORY_VALUES.map((category) => (
                   <option key={category} value={category}>
@@ -132,7 +132,7 @@ export function ChargeEditModal({ charge, open, onClose, onSave }: ChargeEditMod
                 name="status"
                 defaultValue={charge.status}
                 className="domus-input h-10 w-full rounded-md px-3 text-sm"
-                title="Choose the charge status."
+                title="Choose the payment status."
               >
                 {STATUS_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -152,7 +152,7 @@ export function ChargeEditModal({ charge, open, onClose, onSave }: ChargeEditMod
               name="notes"
               rows={3}
               defaultValue={charge.notes ?? ""}
-              placeholder="Describe the charge or adjustment."
+              placeholder="Describe the payment or adjustment."
             />
           </div>
 
@@ -165,7 +165,7 @@ export function ChargeEditModal({ charge, open, onClose, onSave }: ChargeEditMod
               name="reason"
               rows={3}
               required
-              placeholder="Why are you changing this charge?"
+              placeholder="Why are you changing this payment?"
             />
           </div>
 
@@ -182,7 +182,7 @@ export function ChargeEditModal({ charge, open, onClose, onSave }: ChargeEditMod
             <Button type="button" variant="outline" onClick={onClose} title="Cancel these changes.">
               Cancel
             </Button>
-            <SubmitButton title="Save charge changes.">Save Charge</SubmitButton>
+            <SubmitButton title="Save payment changes.">Save Payment</SubmitButton>
           </div>
         </form>
       </div>

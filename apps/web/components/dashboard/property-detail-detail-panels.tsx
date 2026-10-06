@@ -86,25 +86,25 @@ export function PropertyDetailPaymentsPanel({
           <FilterButton
             active={filter === "all"}
             label="All"
-            title="Show all charges for this property."
+            title="Show all payments for this property."
             onClick={() => onFilterChange("all")}
           />
           <FilterButton
             active={filter === "pending"}
             label="Pending"
-            title="Show pending charges."
+            title="Show pending payments."
             onClick={() => onFilterChange("pending")}
           />
           <FilterButton
             active={filter === "paid"}
             label="Paid"
-            title="Show paid charges."
+            title="Show paid payments."
             onClick={() => onFilterChange("paid")}
           />
           <FilterButton
             active={filter === "late"}
             label="Late"
-            title="Show late charges."
+            title="Show late payments."
             onClick={() => onFilterChange("late")}
           />
         </div>
@@ -113,7 +113,7 @@ export function PropertyDetailPaymentsPanel({
         {visibleCharges.length === 0 ? (
           <EmptyState
             icon={Receipt}
-            title="No charges to show"
+            title="No payments to show"
             description="Charges and payment history for this property will appear here."
           />
         ) : (
@@ -123,7 +123,7 @@ export function PropertyDetailPaymentsPanel({
                 <tr>
                   <th className="px-3 py-3">Tenant</th>
                   <th className="px-3 py-3">Unit</th>
-                  <th className="px-3 py-3">Charge type</th>
+                  <th className="px-3 py-3">Payment type</th>
                   <th className="px-3 py-3">Amount</th>
                   <th className="px-3 py-3">Due date</th>
                   <th className="px-3 py-3">Status</th>

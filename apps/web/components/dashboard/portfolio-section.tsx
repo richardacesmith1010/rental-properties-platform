@@ -244,7 +244,7 @@ export function PortfolioSection({
                                 min="0"
                                 step="0.01"
                                 defaultValue={(property.managementFeeCents / 100).toFixed(2)}
-                                title="Set the management fee that routes to the assigned manager on each online payment."
+                                title="Set the fee paid to this manager for each online payment."
                               />
                             </div>
                             <SubmitButton

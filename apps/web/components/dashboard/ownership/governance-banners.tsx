@@ -117,7 +117,7 @@ export function DeleteRequestBanner({
           <p className="text-xs text-[var(--ink-2)]">Requested by {request.requestedByName}</p>
         </div>
         <Alert variant="error" className="text-xs font-normal">
-          Approving this request will unlink all properties from the LLC account and permanently delete it.
+          Approval removes every property from this LLC. It also deletes the LLC for good.
         </Alert>
         <div className="rounded-xl border border-[var(--crit)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--ink-2)]">
           {request.reason?.trim() ? request.reason : "No reason provided."}

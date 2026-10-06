@@ -130,7 +130,7 @@ export default async function SettingsPage(props: SettingsPageProps) {
                   ))}
                   {enrollments.length === 0 ? (
                     <p className="text-sm domus-muted">
-                      No autopay enrollments yet. Enable autopay from your Charges section.
+                      No autopay enrollments yet. Enable autopay from your Payments section.
                     </p>
                   ) : null}
                 </div>

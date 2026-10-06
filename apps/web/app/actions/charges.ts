@@ -92,7 +92,7 @@ function handleStripeCheckoutFailure(params: {
 
     void sendPlatformAlert({
       subject: "Stripe Connect platform issue",
-      body: `${params.actionName} failed for charge ${params.chargeId} (property ${params.propertyId}). Error: ${errorMessage}`,
+      body: `${params.actionName} failed for payment ${params.chargeId} (property ${params.propertyId}). Error: ${errorMessage}`,
       dedupeKey: `platform_misconfigured:${params.actionName}`
     }).catch(
       sideEffectError(params.actionName, "send_platform_alert", {
@@ -437,7 +437,7 @@ export async function recordManualPayment(
   }
 
   if (charge.status === "paid") {
-    return { success: false, error: "This charge is already marked paid." };
+    return { success: false, error: "This payment is already marked paid." };
   }
   if (charge.status === "waived") {
     return { success: false, error: "This rent was cancelled by your landlord." };
@@ -446,7 +446,7 @@ export async function recordManualPayment(
   if (amountCents !== charge.amount_cents) {
     return {
       success: false,
-      error: "Payment amount must match the charge amount exactly."
+      error: "Enter the full amount owed."
     };
   }
 
@@ -486,7 +486,7 @@ export async function recordManualPayment(
 
   if (paymentError) {
     if (paymentError.code === "23505") {
-      return { success: false, error: "Payment already recorded for this charge." };
+      return { success: false, error: "Payment already recorded for this payment." };
     }
     return { success: false, error: "Failed to record manual payment." };
   }
@@ -498,7 +498,7 @@ export async function recordManualPayment(
     .eq("id", charge.id);
 
   if (chargeUpdateError) {
-    return { success: false, error: "Payment recorded, but failed to mark charge as paid." };
+    return { success: false, error: "Payment recorded, but failed to mark payment as paid." };
   }
 
   const { data: tenantProfile } = lease.tenant_profile_id

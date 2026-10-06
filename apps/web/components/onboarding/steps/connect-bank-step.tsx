@@ -23,7 +23,7 @@ export function ConnectBankStep({ alreadyConnected, onSkip }: ConnectBankStepPro
       </div>
 
       <div className="rounded-xl border border-[var(--accent-line)] bg-[var(--accent-weak)] p-4 text-sm text-[var(--ink-2)]">
-        <p>Domus uses Stripe to handle payments. Connecting your bank lets tenants pay rent online, and funds are deposited directly into your account.</p>
+        <p>Domus uses Stripe to handle payments. Link your bank so tenants can pay rent online. Their payments go into your account.</p>
       </div>
 
       <Button asChild className="w-full">

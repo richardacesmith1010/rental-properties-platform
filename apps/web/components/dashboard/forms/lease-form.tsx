@@ -233,7 +233,7 @@ export function LeaseForm({
                 <div>
                   <p className="font-semibold text-[var(--ink)]">No properties found</p>
                   <p className="mt-1 text-sm text-[var(--ink-2)]">
-                    You need to create a property before you can set up a lease.
+                    Create a property before you set up a lease.
                   </p>
                 </div>
                 <Button type="button" onClick={handleCreateProperty} title="Open the property setup flow.">
@@ -493,7 +493,7 @@ export function LeaseForm({
           <p><span className="font-semibold">Payment tracking:</span> {draft.collectsOutsideDomus ? "Tenant pays outside Domus" : "Managed in Domus"}</p>
         </div>
         {!requiredComplete && (
-          <p className="text-xs text-[var(--warn)]">You can skip steps, but lease save stays disabled until required details are completed.</p>
+          <p className="text-xs text-[var(--warn)]">You can skip steps. Add all needed details before saving the lease.</p>
         )}
         <form className="space-y-2" action={action}>
           <input type="hidden" name="unitId" value={draft.unitId} />

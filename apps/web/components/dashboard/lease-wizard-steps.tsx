@@ -87,7 +87,7 @@ export function LeaseWizardStepOne({
             <div>
               <p className="font-medium text-foreground">No properties found</p>
               <p className="mt-1 text-muted-foreground">
-                You need to create a property before you can set up a lease.
+                Create a property before you set up a lease.
               </p>
             </div>
             <Button
@@ -196,7 +196,7 @@ export function LeaseWizardStepOne({
             <Building2 className="mt-0.5 h-4 w-4 text-primary" />
             <div>
               <p className="font-medium text-foreground">Pick the home first.</p>
-              <p className="mt-1">Domus only offers vacant units here so you cannot accidentally double-book a lease.</p>
+              <p className="mt-1">Only empty units appear here. This prevents two leases for one unit.</p>
             </div>
           </div>
         </div>
@@ -236,7 +236,7 @@ export function LeaseWizardStepTwo({
         </div>
         {draft.leaseType === "month_to_month" ? (
           <p className="mt-3 text-xs text-muted-foreground">
-            Domus currently stores a rolling 12-month anchor date for month-to-month billing because the live lease schema still requires an end date.
+            For monthly leases, Domus sets an end date 12 months out. The lease still renews each month.
           </p>
         ) : null}
       </div>
@@ -488,7 +488,7 @@ export function LeaseWizardStepThree({
           ) : (
             <div className="rounded-2xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
               <p className="font-medium text-foreground">No tenant selected yet.</p>
-              <p className="mt-1">Choose an existing tenant already linked to this property, or switch to invite a new tenant.</p>
+              <p className="mt-1">Choose a tenant linked to this property. Or invite a new tenant.</p>
             </div>
           )}
         </div>
@@ -531,7 +531,7 @@ export function LeaseWizardStepThree({
 
           <div className="rounded-2xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground md:col-span-2">
             <p className="font-medium text-foreground">Domus will send a branded tenant invitation first.</p>
-            <p className="mt-1">If the invite succeeds and Domus gets a tenant profile ID back immediately, the lease will be created in the same flow.</p>
+            <p className="mt-1">If the invite works, Domus may create the lease now. Otherwise, finish it later.</p>
           </div>
         </div>
       )}

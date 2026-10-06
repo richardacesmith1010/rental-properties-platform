@@ -171,7 +171,7 @@ export function ReportSection<T>({
           variant="outline"
           className="w-full sm:w-auto"
           onClick={onExport}
-          title={`Export the ${title} data as CSV.`}
+          title={`Export the ${title} data as a spreadsheet.`}
         >
           <Download className="mr-2 h-4 w-4" />
           {exportLabel}

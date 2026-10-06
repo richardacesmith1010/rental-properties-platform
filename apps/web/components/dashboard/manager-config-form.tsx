@@ -74,7 +74,7 @@ export function ManagerConfigForm({
         <div>
           <h3 className="text-base font-semibold text-foreground">Recurring manager payment</h3>
           <p className="text-sm text-muted-foreground">
-            Set a flat monthly fee or commission against the assigned manager for a property.
+            Set a monthly fee or share for this property manager.
           </p>
         </div>
         {onCancel ? (

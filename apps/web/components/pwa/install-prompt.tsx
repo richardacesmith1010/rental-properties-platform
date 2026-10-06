@@ -339,7 +339,7 @@ export function InstallDomusSettingsCard() {
         <div className="space-y-1">
           <CardTitle className="text-base font-semibold text-foreground">Install Domus App</CardTitle>
           <CardDescription>
-            Save Domus to your phone or tablet for home-screen access, splash screen launch, and a standalone app shell.
+            Add Domus to your phone or tablet. Open it from your home screen.
           </CardDescription>
         </div>
         <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>

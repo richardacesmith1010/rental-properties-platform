@@ -69,7 +69,7 @@ function RenameAccountForm({
           </div>
           {account.accountType === "llc" ? (
             <Alert variant="info" className="text-xs font-normal">
-              Multi-member LLC renames require a member vote before the new name is applied.
+              Members must vote before you can rename this LLC.
             </Alert>
           ) : null}
           <div className="flex flex-wrap gap-2">

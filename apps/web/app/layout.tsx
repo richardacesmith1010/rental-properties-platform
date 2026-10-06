@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     template: "%s | Domus",
   },
   description:
-    "Manage rental properties, collect rent with Stripe, handle maintenance tickets, and run operations for Owner, Manager, and Tenant roles — all in one platform.",
+    "Manage rentals, collect rent, and handle repairs in one place. Owners, managers, and tenants each get the right tools.",
   metadataBase: new URL("https://domusbase.com"),
   openGraph: {
     title: "Domus — Rental Property Management",

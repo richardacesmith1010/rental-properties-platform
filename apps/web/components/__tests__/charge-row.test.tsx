@@ -91,7 +91,7 @@ describe("ChargeRow", () => {
     expect(screen.getByRole("button", { name: "Mark paid" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Message Test Tenant/ })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Open more charge actions" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open more payment actions" }));
     fireEvent.click(screen.getByRole("button", { name: "Message" }));
     expect(message).toHaveBeenCalledOnce();
   });

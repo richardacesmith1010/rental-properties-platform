@@ -38,7 +38,7 @@ const tasks = [
   {
     id: "lease" as const,
     title: "3. Lease",
-    description: "Link the unit to a tenant and define lease dates and billing terms."
+    description: "Add a tenant, lease dates, and rent terms to this unit."
   }
 ];
 

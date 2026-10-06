@@ -493,8 +493,8 @@ describe("charges actions", () => {
     });
     expect(sendPlatformAlertMock).toHaveBeenCalledWith({
       subject: "Stripe Connect platform issue",
-      body:
-        "payWithACH failed for charge charge-1 (property property-1). Error: You can only create new accounts if you've signed up for Connect",
+      body: "payWithACH failed for payment charge-1 (property property-1). Error: "
+        + "You can only create new accounts if you've signed up for Connect",
       dedupeKey: "platform_misconfigured:payWithACH"
     });
     expect(notifyOwnerOfStripeIssueMock).not.toHaveBeenCalled();
@@ -590,7 +590,7 @@ describe("charges actions", () => {
 
     const result = await recordManualPayment(null, new FormData());
 
-    expect(result).toEqual({ success: false, error: "This charge is already marked paid." });
+    expect(result).toEqual({ success: false, error: "This payment is already marked paid." });
   });
 
   it("returns an access denied error for unauthorized manual payment users", async () => {
@@ -625,7 +625,7 @@ describe("charges actions", () => {
 
     expect(result).toEqual({
       success: false,
-      error: "Payment amount must match the charge amount exactly."
+      error: "Enter the full amount owed."
     });
   });
 

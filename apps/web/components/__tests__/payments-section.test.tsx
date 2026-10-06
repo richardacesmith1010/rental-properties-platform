@@ -43,6 +43,6 @@ describe("PaymentsSection", () => {
   it("shows the associated charge due date when present", () => {
     render(<PaymentsSection payments={payments} />);
 
-    expect(screen.getByText(/Charge due/)).toBeInTheDocument();
+    expect(screen.getByText(/Payment due/)).toBeInTheDocument();
   });
 });

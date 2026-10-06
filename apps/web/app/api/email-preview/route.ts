@@ -17,7 +17,7 @@ const TEMPLATES: Record<string, () => string> = {
   notification: () =>
     buildNotificationEmail({
       title: "Rent Payment Received",
-      body: "Your tenant Jane Smith paid $1,200.00 for Unit 4B.\n\nThe payment has been recorded and a receipt is available in the dashboard.",
+      body: "Your tenant Jane Smith paid $1,200.00 for Unit 4B.\n\nWe recorded the payment. You can find the receipt in Domus.",
       ctaText: "View Dashboard",
       ctaUrl: "https://domusbase.com/owner",
       preheaderText: "Rent payment received for Unit 4B."

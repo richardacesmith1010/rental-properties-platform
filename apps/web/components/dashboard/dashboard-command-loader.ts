@@ -119,7 +119,7 @@ export function useDashboardCommandState(
             {
               id: "new-tenant",
               label: "New Tenant",
-              description: "Open the tenant onboarding workflow.",
+              description: "Open the tenant setup workflow.",
               icon: UserPlus,
               keywords: ["invite", "tenant", "leasing"]
             },

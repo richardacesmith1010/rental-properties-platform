@@ -44,8 +44,16 @@ export function ChargeSectionHeader({
           </Button>
         ) : null}
         {onGenerateChargesHref && !simpleRentView ? (
-          <Link href={onGenerateChargesHref} className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--ink-2)] transition-colors hover:border-[var(--accent-line)] hover:bg-[var(--accent-weak)] hover:text-[var(--accent)] sm:w-auto" title="Generate rent charges for the current billing period.">
-                  Generate this month&apos;s rent
+          <Link
+            href={onGenerateChargesHref}
+            className={[
+              "inline-flex min-h-11 w-full items-center justify-center rounded-md border border-[var(--line)]",
+              "bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--ink-2)] transition-colors",
+              "hover:border-[var(--accent-line)] hover:bg-[var(--accent-weak)] hover:text-[var(--accent)] sm:w-auto"
+            ].join(" ")}
+            title="Generate rent payments for the current billing period."
+          >
+            Generate this month&apos;s rent
           </Link>
         ) : null}
       </div>
@@ -81,7 +89,17 @@ export function ChargeSectionFilters({
       ) : null}
       <div className="mb-4 flex flex-wrap gap-2">
         {filters.map(([value, label]) => (
-          <Button key={value} type="button" size="sm" variant="outline" className={activeFilter === value ? "min-h-11 border-primary/40 bg-primary/10 font-semibold text-primary shadow-sm" : "min-h-11 font-medium"} onClick={() => onChange(value)} title={`Show ${label.toLowerCase()} charges.`}>
+          <Button
+            key={value}
+            type="button"
+            size="sm"
+            variant="outline"
+            className={activeFilter === value
+              ? "min-h-11 border-primary/40 bg-primary/10 font-semibold text-primary shadow-sm"
+              : "min-h-11 font-medium"}
+            onClick={() => onChange(value)}
+            title={`Show ${label.toLowerCase()} payments.`}
+          >
             {label}
           </Button>
         ))}

@@ -432,7 +432,7 @@ export function UnifiedPropertyWizard({
                 <Building2 className="mt-0.5 h-5 w-5 text-primary" />
                 <div>
                   <h3 className="text-lg font-semibold text-foreground">Property details</h3>
-                  <p className="text-sm text-muted-foreground">Start with the address and property type so Domus can frame the setup correctly.</p>
+                  <p className="text-sm text-muted-foreground">Start with the address and property type.</p>
                 </div>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
@@ -489,7 +489,7 @@ export function UnifiedPropertyWizard({
                 <Home className="mt-0.5 h-5 w-5 text-primary" />
                 <div>
                   <h3 className="text-lg font-semibold text-foreground">Units</h3>
-                  <p className="text-sm text-muted-foreground">Add the rentable space now so the lease step can inherit the right rent and label.</p>
+                  <p className="text-sm text-muted-foreground">Add a unit now. Its rent and name will appear in the lease.</p>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border/60 bg-card px-4 py-3">
@@ -602,7 +602,7 @@ export function UnifiedPropertyWizard({
                 <UserRoundPlus className="mt-0.5 h-5 w-5 text-primary" />
                 <div>
                   <h3 className="text-lg font-semibold text-foreground">Lease and tenant</h3>
-                  <p className="text-sm text-muted-foreground">If you already have a tenant, Domus will invite them and create the lease right now.</p>
+                  <p className="text-sm text-muted-foreground">Have a tenant? Domus will invite them and create the lease.</p>
                 </div>
               </div>
 

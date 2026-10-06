@@ -32,10 +32,10 @@ export function buildConfirmationEmailTemplate(): string {
     title: "Confirm Your Email",
     bodyHtml: `
       <p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:#475569;">
-        Thanks for signing up for Domus! Click the button below to confirm your email address and activate your account.
+        Thanks for signing up for Domus! Use the button to confirm your email and open your account.
       </p>
       <p style="margin:0;font-size:13px;line-height:1.6;color:#94a3b8;">
-        If you didn&apos;t create a Domus account, you can safely ignore this email.
+        If you did not sign up, you can ignore this email.
       </p>
     `,
     ctaText: "Confirm Email",
@@ -49,10 +49,10 @@ export function buildRecoveryEmailTemplate(): string {
     title: "Reset Your Password",
     bodyHtml: `
       <p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:#475569;">
-        We received a request to reset the password for your Domus account. Click the button below to choose a new password.
+        Someone asked to reset your Domus password. Click the button below to choose a new password.
       </p>
       <p style="margin:0;font-size:13px;line-height:1.6;color:#94a3b8;">
-        If you didn&apos;t request a password reset, you can safely ignore this email. Your password will remain unchanged.
+        If that was not you, you can ignore this email. Your password will remain unchanged.
       </p>
     `,
     ctaText: "Reset Password",
@@ -66,10 +66,10 @@ export function buildInviteEmailTemplate(): string {
     title: "You're Invited to Domus",
     bodyHtml: `
       <p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:#475569;">
-        You&apos;ve been invited to join a property on Domus - the platform that makes managing rentals simple. Click the button below to accept your invitation and set up your account.
+        You have been invited to join a property on Domus. Use the button to accept your invite and set up your account.
       </p>
       <p style="margin:0;font-size:13px;line-height:1.6;color:#94a3b8;">
-        If you weren&apos;t expecting this invitation, you can safely ignore this email.
+        If you did not expect this invite, you can ignore it.
       </p>
     `,
     ctaText: "Accept Invitation",
@@ -86,7 +86,7 @@ export function buildMagicLinkEmailTemplate(): string {
         Click the button below to sign in to your Domus account. This link expires in 24 hours.
       </p>
       <p style="margin:0;font-size:13px;line-height:1.6;color:#94a3b8;">
-        If you didn&apos;t request this link, you can safely ignore this email.
+        If that was not you, you can ignore this email.
       </p>
     `,
     ctaText: "Sign In to Domus",

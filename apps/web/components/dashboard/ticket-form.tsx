@@ -219,7 +219,7 @@ export function TicketForm({
 
           {!hasActiveLease ? (
             <p className="text-sm text-[var(--muted)]">
-              You can report problems and send messages once your landlord sets up your lease.
+              Once your landlord sets up your lease, you can report problems. You can also send messages.
             </p>
           ) : null}
 

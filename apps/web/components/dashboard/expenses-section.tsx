@@ -87,7 +87,7 @@ export function ExpensesSection({ data, vendors, propertyFiles, onCreateExpense,
         </Card>
       </div>
       <Card className="border border-border/50 shadow-sm">
-        <CardHeader><CardTitle className="text-xl font-semibold">Expense Ledger</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-xl font-semibold">Expense Payment history</CardTitle></CardHeader>
         <CardContent>
           <ExpenseList data={data} vendors={vendors} propertyFiles={propertyFiles} onUpdateExpense={onUpdateExpense} onDeleteExpense={onDeleteExpense} />
         </CardContent>

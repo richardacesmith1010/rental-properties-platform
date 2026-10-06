@@ -43,7 +43,7 @@ export function TenantDocumentsSection({
         title="Documents Unavailable"
         message={
           featureWarning ??
-          "Documents and signatures are not available yet. Ask your admin to complete setup."
+          "Documents and signatures are not available yet. Ask your landlord to finish setup."
         }
       />
     );

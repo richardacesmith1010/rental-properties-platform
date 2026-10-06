@@ -308,7 +308,7 @@ export function OpsDashboard({
               <div>
                 <CardTitle>Cron Run History</CardTitle>
                 <p className="mt-1 text-sm text-[var(--muted)]">
-                  Last 10 scheduled charge-generation runs with per-operation timing.
+                  Last 10 scheduled payment-generation runs with per-operation timing.
                 </p>
               </div>
               <Badge variant="outline">{initialCronRuns.length} runs</Badge>

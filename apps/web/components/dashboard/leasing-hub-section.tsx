@@ -122,7 +122,7 @@ function buildLeasingStages(params: {
     {
       id: "billing_live",
       label: "Billing Live",
-      description: "Verify first rent charge appears so payment collection can begin.",
+      description: "Verify first rent payment appears so payment collection can begin.",
       done: params.chargeCount > 0,
       metric: `${params.chargeCount} open charges`,
       targetSection: "charges",
@@ -236,7 +236,7 @@ export function LeasingHubSection({
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Use this workflow to move from empty unit to signed lease and active billing with minimal context switching.
+            Set up a lease, get it signed, and start rent billing.
           </p>
           {!pipelineReady && (
             <Alert variant="warning" className="text-xs font-normal">

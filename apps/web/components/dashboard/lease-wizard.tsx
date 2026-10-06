@@ -419,7 +419,7 @@ export function LeaseWizard({
               </p>
               <h2 className="mt-2 text-3xl font-semibold text-foreground">Create a lease without leaving the dashboard</h2>
               <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-                Pick the home, set the terms, attach a tenant, and create the lease in one guided flow.
+                Choose a home, set lease terms, and add a tenant. Then create the lease.
               </p>
             </div>
             <div className="flex h-14 w-14 shrink-0 items-center justify-center self-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--line)] sm:self-start"><FileText className="h-6 w-6 text-[var(--accent)]" /></div>

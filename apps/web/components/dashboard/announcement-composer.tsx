@@ -153,7 +153,7 @@ export function AnnouncementComposer({
                 Send Announcement
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                Send a building-wide update to all your tenants or only the properties you choose.
+                Send an update to all tenants or choose specific properties.
               </p>
             </div>
             <Button

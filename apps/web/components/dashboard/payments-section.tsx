@@ -45,7 +45,7 @@ export function PaymentsSection({ payments }: PaymentsSectionProps) {
                     {payment.propertyName} • {payment.unitNumber}
                   </p>
                   {payment.chargeDueDate && (
-                    <p className="mt-0.5 text-xs text-[var(--muted)]">Charge due {formatDate(payment.chargeDueDate)}</p>
+                    <p className="mt-0.5 text-xs text-[var(--muted)]">Payment due {formatDate(payment.chargeDueDate)}</p>
                   )}
                 </div>
                 <Badge variant="outline">{payment.method.toUpperCase()}</Badge>

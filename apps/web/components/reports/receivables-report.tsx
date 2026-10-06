@@ -44,7 +44,7 @@ export function ReceivablesReport({
           )
         },
         { key: "property", label: "Property", sortValue: (row) => row.propertyName, render: (row) => row.propertyName },
-        { key: "count", label: "Open Charges", sortValue: (row) => row.chargeCount, render: (row) => row.chargeCount },
+        { key: "count", label: "Open Payments", sortValue: (row) => row.chargeCount, render: (row) => row.chargeCount },
         { key: "owed", label: "Total Owed", sortValue: (row) => row.totalOwedCents, render: (row) => formatCurrency(row.totalOwedCents) },
         { key: "oldest", label: "Oldest Due", sortValue: (row) => row.oldestDueDate, render: (row) => formatDate(row.oldestDueDate) }
       ]}

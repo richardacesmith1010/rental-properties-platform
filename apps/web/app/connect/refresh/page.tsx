@@ -59,7 +59,7 @@ export default async function ConnectRefreshPage(props: ConnectRefreshPageProps)
   const result = memberPayout
     ? await (async () => {
         if (!accountId) {
-          return { success: false, error: "Missing payout onboarding details." } as const;
+          return { success: false, error: "Missing payout setup details." } as const;
         }
         const formData = new FormData();
         formData.set("accountId", accountId);
@@ -80,7 +80,7 @@ export default async function ConnectRefreshPage(props: ConnectRefreshPageProps)
   return (
     <main className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
       <div className="w-full max-w-lg rounded-2xl border border-[var(--crit)] bg-[var(--surface)] p-8 shadow-sm">
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--ink)]">Unable to refresh onboarding link</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--ink)]">Unable to refresh setup link</h1>
         <p className="mt-2 text-sm text-[var(--ink-2)]">
           {result && !result.success ? result.error : "Your bank connection could not be restarted right now."}
         </p>

@@ -96,7 +96,7 @@ function ChargeActionList({
   if (charges.length === 0) {
     return (
       <EmptyState
-        title="No source charges"
+        title="No source payments"
         description="There are no matching charges behind this report slice."
       />
     );
@@ -154,7 +154,7 @@ function ChargeActionList({
                     size="sm"
                     variant="outline"
                     onClick={() => setActiveCharge(charge)}
-                    title="Edit this charge."
+                    title="Edit this payment."
                   >
                     <Pencil className="mr-2 h-4 w-4" />
                     Edit
@@ -167,7 +167,7 @@ function ChargeActionList({
                     variant="outline"
                     disabled={isPending}
                     onClick={() => handleDelete(charge)}
-                    title="Soft-delete this charge."
+                    title="Soft-delete this payment."
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete
@@ -180,7 +180,7 @@ function ChargeActionList({
                     variant="outline"
                     disabled={isPending}
                     onClick={() => handleWaive(charge)}
-                    title="Waive this charge."
+                    title="Waive this payment."
                   >
                     Waive
                   </Button>
@@ -331,7 +331,7 @@ export function DrilldownPanel({
           type="button"
           onClick={() => setActiveView("receivables")}
           className={`domus-kpi-pill text-left transition ${activeView === "receivables" ? "ring-2 ring-primary/40" : ""}`}
-          title="Show every unpaid charge behind money owed to you."
+          title="Show every unpaid payment behind money owed to you."
         >
           <p className="text-xs uppercase tracking-[0.16em] domus-muted">Money owed to you</p>
           <span className="mt-2 block text-2xl font-bold domus-heading">{formatCurrency(openBalanceCents)}</span>
@@ -349,9 +349,9 @@ export function DrilldownPanel({
           type="button"
           onClick={() => setActiveView("ledger")}
           className={`domus-kpi-pill text-left transition ${activeView === "ledger" ? "ring-2 ring-primary/40" : ""}`}
-          title="Show tenants with ledger balances."
+          title="Show tenants with payment history balances."
         >
-          <p className="text-xs uppercase tracking-[0.16em] domus-muted">Tenants in ledger</p>
+          <p className="text-xs uppercase tracking-[0.16em] domus-muted">Tenants in payment history</p>
           <span className="mt-2 block text-2xl font-bold domus-heading">{tenantCount}</span>
         </button>
       </section>
@@ -362,7 +362,7 @@ export function DrilldownPanel({
             <div>
               <h2 className="text-lg font-semibold text-foreground">Money owed to you</h2>
               <p className="text-sm text-muted-foreground">
-                Every pending or late charge contributing to outstanding balances.
+                Every pending or late payment contributing to outstanding balances.
               </p>
             </div>
             <ChargeActionList
@@ -379,7 +379,7 @@ export function DrilldownPanel({
             <div className="space-y-4">
               <div>
                 <h2 className="text-lg font-semibold text-foreground">Income Line Items</h2>
-                <p className="text-sm text-muted-foreground">Paid charges included in net income.</p>
+                <p className="text-sm text-muted-foreground">Payments received count toward net income.</p>
               </div>
               <ChargeActionList charges={paidCharges} onEditCharge={onEditCharge} />
             </div>
@@ -420,7 +420,7 @@ export function DrilldownPanel({
                           {formatCurrency(tenant.currentBalanceCents)}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {tenant.chargeCount} open charge{tenant.chargeCount === 1 ? "" : "s"}
+                          {tenant.chargeCount} open payment{tenant.chargeCount === 1 ? "" : "s"}
                         </p>
                       </div>
                     </div>

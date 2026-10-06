@@ -80,11 +80,11 @@ describe("ChargesSection", () => {
       />
     );
 
-    fireEvent.click(screen.getByLabelText(/select charge for atlas house/i));
+    fireEvent.click(screen.getByLabelText(/select payment for atlas house/i));
 
     expect(screen.getByText("1 selected")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send Reminder" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Export CSV" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Export Spreadsheet" })).toBeInTheDocument();
   });
 
   it("supports selecting all visible charges", () => {
@@ -96,7 +96,7 @@ describe("ChargesSection", () => {
       />
     );
 
-    fireEvent.click(screen.getByLabelText("Select all visible charges"));
+    fireEvent.click(screen.getByLabelText("Select all visible payments"));
 
     expect(screen.getByText("1 of 1 visible selected")).toBeInTheDocument();
     expect(screen.getByText("1 selected")).toBeInTheDocument();
@@ -125,7 +125,7 @@ describe("ChargesSection", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Open more charge actions" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open more payment actions" }));
 
     expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Waive" })).toBeInTheDocument();
@@ -141,7 +141,7 @@ describe("ChargesSection", () => {
       />
     );
 
-    expect(screen.queryByRole("button", { name: "Open more charge actions" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open more payment actions" })).not.toBeInTheDocument();
   });
 
   it("opens a confirmation dialog before deleting a pending charge", () => {
@@ -155,10 +155,10 @@ describe("ChargesSection", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Open more charge actions" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open more payment actions" }));
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
-    expect(screen.getByRole("dialog", { name: "Delete Charge?" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Delete Payment?" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Delete Charge" })).toBeInTheDocument();
   });
 
@@ -283,7 +283,7 @@ describe("ChargesSection", () => {
     await waitFor(() => expect(remind).toHaveBeenCalledTimes(1));
     expect(screen.getByRole("button", { name: "Mark paid" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Message Maya Bell" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Open more charge actions" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open more payment actions" }));
     expect(screen.getByRole("button", { name: "Message" })).toBeInTheDocument();
   });
 

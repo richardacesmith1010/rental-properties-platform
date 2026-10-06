@@ -52,9 +52,9 @@ export function ChargeCreateForm({
       <div className="domus-card max-h-[85vh] overflow-y-auto p-6 scroll-smooth [-webkit-overflow-scrolling:touch]">
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-lg font-semibold text-foreground">Add Manual Charge</h3>
+            <h3 className="text-lg font-semibold text-foreground">Add Payment Request</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Create a one-off charge and assign it to an active lease.
+              Create a one-time payment request for an active lease.
             </p>
           </div>
           <Button type="button" variant="outline" onClick={onCancel} title="Close this form.">
@@ -84,7 +84,7 @@ export function ChargeCreateForm({
               className="domus-input h-10 w-full rounded-md px-3 text-sm"
               defaultValue={leases[0]?.id ?? ""}
               required
-              title="Select the lease this charge belongs to."
+              title="Select the lease this payment belongs to."
             >
               {leases.map((lease) => (
                 <option key={lease.id} value={lease.id}>
@@ -132,7 +132,7 @@ export function ChargeCreateForm({
               name="category"
               className="domus-input h-10 w-full rounded-md px-3 text-sm"
               defaultValue="other"
-              title="Choose the charge category."
+              title="Choose the payment category."
             >
               {CHARGE_CATEGORY_VALUES.map((category) => (
                 <option key={category} value={category}>
@@ -150,15 +150,15 @@ export function ChargeCreateForm({
               id="manual-charge-notes"
               name="notes"
               rows={3}
-              placeholder="Key replacement fee, utility true-up, or other one-off charge."
+              placeholder="Key replacement fee, utility true-up, or other one-time amount owed."
             />
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onCancel} title="Cancel charge creation.">
+            <Button type="button" variant="outline" onClick={onCancel} title="Cancel this payment request.">
               Cancel
             </Button>
-            <SubmitButton title="Create this manual charge.">Create Charge</SubmitButton>
+            <SubmitButton title="Create this payment request.">Create Request</SubmitButton>
           </div>
         </form>
       </div>

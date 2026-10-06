@@ -107,7 +107,6 @@ async function trackAuthenticatedUser(params: {
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const callbackError = searchParams.get("error");
-  const callbackErrorDescription = searchParams.get("error_description");
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const accessToken = searchParams.get("access_token");
@@ -120,9 +119,7 @@ export async function GET(request: Request) {
   if (callbackError) {
     const params = new URLSearchParams();
     params.set("error", callbackError);
-    if (callbackErrorDescription) {
-      params.set("error_description", callbackErrorDescription);
-    }
+    params.set("error_description", "We couldn't sign you in. Try again.");
     return NextResponse.redirect(`${origin}/login?${params.toString()}`);
   }
 
@@ -144,7 +141,7 @@ export async function GET(request: Request) {
             // PKCE verifier is missing — ask them to request a new link in this browser.
             const params = new URLSearchParams();
             params.set("error", "reset_link_expired");
-            params.set("error_description", "Your reset link didn't work in this browser. Request a new one below.");
+            params.set("error_description", "This link has expired. Ask for a new one.");
             return NextResponse.redirect(`${origin}/login?${params.toString()}`);
           }
           return NextResponse.redirect(
@@ -224,12 +221,12 @@ export async function GET(request: Request) {
       params.set("error", "invite_expired");
       params.set(
         "error_description",
-        "This invitation link has expired. Please ask your landlord to resend the invite."
+        "This invite link has expired. Ask your landlord for a new one."
       );
     } else {
       params.set("error", "auth_callback_failed");
       if (message) {
-        params.set("error_description", message);
+        params.set("error_description", "We couldn't sign you in. Try again.");
       }
     }
 

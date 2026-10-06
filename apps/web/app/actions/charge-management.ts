@@ -161,7 +161,7 @@ export async function editCharge(
   try {
     const context = await getChargeContext(admin, chargeId);
     if (!context) {
-      return { success: false, error: "Charge not found." };
+      return { success: false, error: "Payment not found." };
     }
 
     if (!(await canUserAdministerProperty(user.id, context.propertyId))) {
@@ -169,11 +169,11 @@ export async function editCharge(
     }
 
     if (context.charge.deleted_at) {
-      return { success: false, error: "Deleted charges cannot be edited." };
+      return { success: false, error: "Deleted payments cannot be edited." };
     }
 
     if (context.charge.status === "paid") {
-      return { success: false, error: "Paid charges cannot be edited." };
+      return { success: false, error: "Payments marked paid cannot be edited." };
     }
 
     const nextAmountCents = Math.round(amountDollars * 100);
@@ -212,7 +212,7 @@ export async function editCharge(
       if (updateError.message?.includes("rent_charges_status_check")) {
         return { success: false, error: CHARGE_EDITING_REQUIRES_UPDATE_MESSAGE };
       }
-      return { success: false, error: "Unable to update this charge right now." };
+      return { success: false, error: "Unable to update this payment right now." };
     }
 
     await insertChargeHistory(
@@ -236,7 +236,7 @@ export async function editCharge(
     }).catch(sideEffectError("editCharge", "log_audit", { userId: user.id, entityType: "rent_charge", entityId: chargeId }));
 
     revalidateChargeSurfaces();
-    return { success: true, message: "Charge updated." };
+    return { success: true, message: "Payment updated." };
   } catch (error) {
     return {
       success: false,
@@ -325,7 +325,7 @@ export async function createManualCharge(
     );
 
     if (insertResult.error) {
-      return { success: false, error: "Unable to create this manual charge right now." };
+      return { success: false, error: "Unable to create this payment request right now." };
     }
     const insertedCharge = insertResult.data as { id: string } | null;
 
@@ -343,7 +343,7 @@ export async function createManualCharge(
     }).catch(sideEffectError("createManualCharge", "log_audit", { userId: user.id, entityType: "rent_charge", entityId: leaseId }));
 
     revalidateChargeSurfaces();
-    return { success: true, message: "Manual charge created." };
+    return { success: true, message: "Payment request created." };
   } catch (error) {
     return {
       success: false,
@@ -371,7 +371,7 @@ export async function deleteCharge(
   try {
     const context = await getChargeContext(admin, parsed.data.chargeId);
     if (!context) {
-      return { success: false, error: "Charge not found." };
+      return { success: false, error: "Payment not found." };
     }
 
     if (!(await canUserAdministerProperty(user.id, context.propertyId))) {
@@ -379,11 +379,11 @@ export async function deleteCharge(
     }
 
     if (context.charge.deleted_at) {
-      return { success: false, error: "This charge has already been deleted." };
+      return { success: false, error: "This payment has already been deleted." };
     }
 
     if (context.charge.status === "paid") {
-      return { success: false, error: "Paid charges cannot be deleted." };
+      return { success: false, error: "Payments marked paid cannot be deleted." };
     }
 
     const reason = parsed.data.reason?.trim() || "Charge deleted from dashboard";
@@ -395,7 +395,7 @@ export async function deleteCharge(
       if (isMissingSchemaError(error)) {
         return { success: false, error: CHARGE_EDITING_REQUIRES_UPDATE_MESSAGE };
       }
-      return { success: false, error: "Unable to delete this charge right now." };
+      return { success: false, error: "Unable to delete this payment right now." };
     }
 
     await insertChargeHistory(admin, [
@@ -410,7 +410,7 @@ export async function deleteCharge(
     ]);
 
     revalidateChargeSurfaces();
-    return { success: true, message: "Charge deleted." };
+    return { success: true, message: "Payment deleted." };
   } catch (error) {
     return {
       success: false,
@@ -437,7 +437,7 @@ export async function waiveCharge(
   try {
     const context = await getChargeContext(admin, parsed.data.chargeId);
     if (!context) {
-      return { success: false, error: "Charge not found." };
+      return { success: false, error: "Payment not found." };
     }
 
     if (!(await canUserAdministerProperty(user.id, context.propertyId))) {
@@ -445,11 +445,11 @@ export async function waiveCharge(
     }
 
     if (context.charge.deleted_at) {
-      return { success: false, error: "Deleted charges cannot be waived." };
+      return { success: false, error: "Deleted payments cannot be waived." };
     }
 
     if (context.charge.status === "paid") {
-      return { success: false, error: "Paid charges cannot be waived." };
+      return { success: false, error: "Payments marked paid cannot be waived." };
     }
 
     const { error } = await admin
@@ -461,7 +461,7 @@ export async function waiveCharge(
       if (isMissingSchemaError(error) || error.message?.includes("rent_charges_status_check")) {
         return { success: false, error: CHARGE_EDITING_REQUIRES_UPDATE_MESSAGE };
       }
-      return { success: false, error: "Unable to waive this charge right now." };
+      return { success: false, error: "Unable to waive this payment right now." };
     }
 
     await insertChargeHistory(admin, [
@@ -476,7 +476,7 @@ export async function waiveCharge(
     ]);
 
     revalidateChargeSurfaces();
-    return { success: true, message: "Charge waived." };
+    return { success: true, message: "Payment waived." };
   } catch (error) {
     return {
       success: false,

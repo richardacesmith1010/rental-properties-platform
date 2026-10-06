@@ -173,7 +173,7 @@ export async function createPropertyWithSetup(
     return {
       success: false,
       error:
-        "The tenant invitation was sent, but Domus could not finish the lease setup. Open Leases to complete it."
+        "We sent the tenant invite, but could not finish the lease. Open Leases to complete it."
     };
   }
 

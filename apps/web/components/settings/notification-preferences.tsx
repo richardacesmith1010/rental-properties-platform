@@ -332,7 +332,7 @@ export function NotificationPreferences({
         <div className="mt-4 flex items-start gap-2 rounded-xl border border-[var(--warn)] bg-[var(--surface)] px-3 py-3 text-sm text-[var(--warn)]">
           <MailWarning className="mt-0.5 h-4 w-4 shrink-0 text-[var(--warn)]" />
           <p>
-            Use pause when you are setting up sample leases or charges and want to suppress outbound email while keeping in-app alerts intact.
+            Pause emails while you set up sample leases or payments. Alerts in Domus will still work.
           </p>
         </div>
       </div>

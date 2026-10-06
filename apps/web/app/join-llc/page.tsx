@@ -113,7 +113,7 @@ export default async function JoinLlcPage(props: JoinLlcPageProps) {
             </Alert>
             <h1 className="mt-6 text-2xl font-semibold text-foreground">Wrong account open</h1>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              Sign out, then open the invite again with the email address that was invited to join {invitation.accountName}.
+              Sign out. Then reopen the invite using the invited email address {invitation.accountName}.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <form action={signOut}>
@@ -183,7 +183,7 @@ export default async function JoinLlcPage(props: JoinLlcPageProps) {
                   You&apos;ve been invited to join {invitation.accountName}.
                 </h1>
                 <p className="max-w-xl text-base leading-7 text-white/78 sm:text-lg">
-                  {invitation.invitedByName ?? "A Domus owner"} invited you to collaborate on the LLC dashboard for properties, members, distributions, and shared financial operations.
+                  {invitation.invitedByName ?? "A Domus owner"} invited you to manage properties and money with your LLC.
                 </p>
               </div>
 

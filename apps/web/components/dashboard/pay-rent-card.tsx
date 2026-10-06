@@ -361,7 +361,7 @@ export function PayRentCard({
                 <SubmitButton
                   variant="link"
                   className="h-auto px-0 py-0 text-sm font-medium text-muted-foreground"
-                  title="Let your landlord know you already paid by cash, check, or another manual method."
+                  title="Tell your landlord if you paid by cash or check. You can also report another payment method."
                 >
                   Already paid? Mark as paid manually
                 </SubmitButton>

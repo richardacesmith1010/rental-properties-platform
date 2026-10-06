@@ -116,7 +116,7 @@ export function buildBrandedEmailShell({
                     <td style="vertical-align:middle;">
                       <div style="font-size:20px;font-weight:700;line-height:1.2;color:#191B1E;">Domus</div>
                       <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#6F757C;">
-                        Rental Property Management
+                        Manage your rentals
                       </div>
                     </td>
                   </tr>
@@ -146,8 +146,8 @@ export function buildBrandedEmailShell({
             <tr>
               <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-top:none;border-radius:0 0 16px 16px;">
                 <div style="font-size:12px;line-height:1.6;color:#6F757C;">
-                  Domus - Rental Property Management<br />
-                  Manage rent, maintenance, documents, and notifications in one place.
+                  Domus. Manage your rentals.<br />
+                  Manage rent, repairs, files, and messages in one place.
                 </div>
                 ${safePreferencesUrl ? `
                 <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#6F757C;">
@@ -279,7 +279,7 @@ export function buildTenantInviteEmail({
     leaseSummary
       ? `<p style="margin:16px 0 0 0;">${escapeHtml(leaseSummary)}</p>`
       : "",
-    `<p style="margin:16px 0 0 0;">Accept the invitation to set your password, view your lease, report problems, and pay rent in one place.</p>`
+    `<p style="margin:16px 0 0 0;">Accept the invite and set your password. Then view your lease, report problems, and pay rent.</p>`
   ]
     .filter(Boolean)
     .join("");
@@ -302,7 +302,7 @@ export function buildTenantInviteEmail({
     "",
     `Accept invitation: ${inviteUrl}`,
     "",
-    "Domus makes it easy to pay rent, report problems, and view your lease."
+    "Pay rent, report problems, and view your lease in Domus."
   ]
     .filter(Boolean)
     .join("\n");
@@ -321,7 +321,7 @@ export function buildLLCInviteEmail({
   const bodyHtml = [
     `<p style="margin:0;">Hi,</p>`,
     `<p style="margin:16px 0 0 0;">${escapeHtml(inviterName)} has invited you to join <strong>${escapeHtml(llcName)}</strong> on Domus.</p>`,
-    `<p style="margin:16px 0 0 0;">Accept the invitation to access the LLC dashboard, manage properties together, and review shared financials in one place.</p>`,
+    `<p style="margin:16px 0 0 0;">Accept the invite to manage LLC properties with others. You can also review shared money records.</p>`,
     `<p style="margin:16px 0 0 0;">This invitation expires in 7 days.</p>`
   ].join("");
 
@@ -365,14 +365,15 @@ export function buildRentReminderEmail({
 
   const summary =
     type === "overdue"
-      ? `Hi ${tenantName}, your rent of ${amountFormatted} for ${propertyName} was due on ${dueDate} and is now overdue. Please pay as soon as possible.`
+      ? `Hi ${tenantName}, your rent of ${amountFormatted} for ${propertyName} was due ${dueDate}.
+        It is now overdue. Please pay as soon as possible.`
       : type === "due_today"
         ? `Hi ${tenantName}, your rent of ${amountFormatted} for ${propertyName} is due today.`
         : `Hi ${tenantName}, your rent of ${amountFormatted} for ${propertyName} is due on ${dueDate}.`;
 
   const bodyHtml = [
     `<p style="margin:0;">${escapeHtml(summary)}</p>`,
-    `<p style="margin:16px 0 0 0;">Open your tenant dashboard to review the charge and pay securely.</p>`
+    `<p style="margin:16px 0 0 0;">Open your dashboard to see what you owe and pay safely.</p>`
   ].join("");
 
   const html = buildBrandedEmailShell({
@@ -415,8 +416,10 @@ export function buildInvoiceEmailTemplate({
 
   const summary =
     status === "paid"
-      ? `Hi ${recipientName}, ${ownerName} marked the ${categoryLabel.toLowerCase()} for ${propertyName} totaling ${amountFormatted} as paid on ${paymentDate}.`
-      : `Hi ${recipientName}, ${ownerName} recorded a ${categoryLabel.toLowerCase()} invoice for ${propertyName} totaling ${amountFormatted} on ${paymentDate}.`;
+      ? `Hi ${recipientName}, ${ownerName} marked the ${categoryLabel.toLowerCase()} for ${propertyName} as paid.
+        The amount was ${amountFormatted} on ${paymentDate}.`
+      : `Hi ${recipientName}, ${ownerName} recorded a ${categoryLabel.toLowerCase()} bill for ${propertyName}.
+        The amount was ${amountFormatted} on ${paymentDate}.`;
 
   const bodyHtml = [
     `<p style="margin:0;">${escapeHtml(summary)}</p>`,

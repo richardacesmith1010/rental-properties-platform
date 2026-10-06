@@ -424,7 +424,7 @@ export function CommandPalette({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={handleInputKeyDown}
-              placeholder="Search sections, properties, tenants, and transactions..."
+              placeholder="Search sections, properties, tenants, and payments..."
               className="h-12 border-border/60 bg-background pl-10 pr-14 text-sm shadow-sm"
               role="combobox"
               aria-label="Search commands"

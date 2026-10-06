@@ -207,7 +207,7 @@ export function TenantInviteWizard({
               </p>
               <h2 className="mt-2 text-3xl font-semibold text-foreground">Invite a tenant with context</h2>
               <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-                Pick the home, add tenant details, optionally include rent context, and Domus will send a branded invitation.
+                Choose a home and add tenant details. You can include rent details before sending the invite.
               </p>
             </div>
             <div className="flex h-14 w-14 shrink-0 items-center justify-center self-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--line)] sm:self-start"><UserRoundPlus className="h-6 w-6 text-[var(--accent)]" /></div>

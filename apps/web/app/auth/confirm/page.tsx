@@ -54,7 +54,7 @@ function ConfirmContent() {
             This link looks broken.
           </h1>
           <p className="mt-3 text-sm leading-6 text-muted-foreground">
-            Try signing in again and request a new email if you still need it.
+            Try signing in again. You can also ask for a new email.
           </p>
           <Button asChild className="mt-6 w-full" title="Go back to the sign-in page.">
             <Link href="/login">Back to login</Link>

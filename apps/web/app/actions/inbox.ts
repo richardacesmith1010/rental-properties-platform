@@ -751,11 +751,11 @@ export async function requestManualPaymentConfirmation(
     .maybeSingle();
 
   if (!charge) {
-    return { success: false, error: "Charge not found." };
+    return { success: false, error: "Payment not found." };
   }
 
   if (charge.status === "paid" || charge.status === "waived") {
-    return { success: false, error: "This charge is already closed." };
+    return { success: false, error: "This payment is already closed." };
   }
 
   const { data: lease } = await admin
@@ -765,7 +765,7 @@ export async function requestManualPaymentConfirmation(
     .maybeSingle();
 
   if (!lease || lease.tenant_profile_id !== user.id) {
-    return { success: false, error: "You do not have access to this charge." };
+    return { success: false, error: "You do not have access to this payment." };
   }
 
   const [{ data: unit }, { data: profile }] = await Promise.all([
@@ -782,7 +782,7 @@ export async function requestManualPaymentConfirmation(
   ]);
 
   if (!unit?.property_id) {
-    return { success: false, error: "This charge is missing property information." };
+    return { success: false, error: "This payment is missing property information." };
   }
 
   const propertyContext = await loadPropertyContext(unit.property_id);

@@ -180,7 +180,7 @@ export function OwnerSetupWizard({
           <div className="mb-6">
             <h2 className="text-xl font-semibold text-[var(--ink)]">Create your LLC</h2>
             <p className="mt-2 text-sm text-[var(--muted)]">
-              Give your LLC account a name that you and the other owners will recognize.
+              Name your LLC so all owners can recognize it.
             </p>
           </div>
           <form action={llcAction} className="space-y-4">
@@ -261,7 +261,7 @@ export function OwnerSetupWizard({
           <div className="mb-6">
             <h2 className="text-xl font-semibold text-[var(--ink)]">Your LLC is ready</h2>
             <p className="mt-2 text-sm text-[var(--muted)]">
-              Share this join code with your LLC members so they can join your account.
+              Share this code so LLC members can join your account.
             </p>
           </div>
           <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-5">

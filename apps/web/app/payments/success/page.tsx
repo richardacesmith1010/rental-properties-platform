@@ -130,7 +130,7 @@ export default async function PaymentSuccessPage(props: SuccessPageProps) {
         icon={<CheckCircle2 className="h-7 w-7 text-[var(--pos)]" />}
         iconBg="bg-[var(--pos-bg)]"
         title="Payment Received"
-        body="Your payment has been processed and recorded in your rental ledger."
+        body="Your payment went through and appears in your payment history."
         redirectMessage="Returning to dashboard in {seconds} seconds..."
       />
     );

@@ -5,7 +5,7 @@ import { TicketForm } from "@/components/dashboard/ticket-form";
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("@/components/dashboard/maintenance/photo-upload", () => ({ PhotoUpload: () => null }));
 
-const notice = "You can report problems and send messages once your landlord sets up your lease.";
+const notice = "Once your landlord sets up your lease, you can report problems. You can also send messages.";
 
 describe("TicketForm tenant", () => {
   it("explains the missing lease and never sends a typed problem", () => {

@@ -29,7 +29,7 @@ export function InviteTenantStep({ propertyId, onInviteTenant, onComplete, onSki
       <div className="text-center">
         <h3 className="text-lg font-semibold text-[var(--ink)]">Invite a tenant</h3>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Send an invite so your tenant can sign up and view their dashboard.
+          Invite your tenant to sign up and see their dashboard.
         </p>
       </div>
 

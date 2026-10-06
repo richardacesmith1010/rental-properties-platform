@@ -163,7 +163,7 @@ describe("charge management", () => {
 
     const result = await editCharge(null, new FormData());
 
-    expect(result).toEqual({ success: true, message: "Charge updated." });
+    expect(result).toEqual({ success: true, message: "Payment updated." });
     expect(admin.rentChargeUpdateEq).toHaveBeenCalled();
     expect(admin.chargeHistoryInsert).toHaveBeenCalled();
     expect(revalidatePathMock).toHaveBeenCalledWith("/owner");
@@ -200,7 +200,7 @@ describe("charge management", () => {
 
     const result = await editCharge(null, new FormData());
 
-    expect(result).toEqual({ success: false, error: "Paid charges cannot be edited." });
+    expect(result).toEqual({ success: false, error: "Payments marked paid cannot be edited." });
   });
 
   it("deleteCharge soft-deletes a non-paid charge", async () => {
@@ -225,7 +225,7 @@ describe("charge management", () => {
 
     const result = await deleteCharge(null, new FormData());
 
-    expect(result).toEqual({ success: true, message: "Charge deleted." });
+    expect(result).toEqual({ success: true, message: "Payment deleted." });
     expect(admin.rentChargeUpdateEq).toHaveBeenCalled();
     expect(admin.chargeHistoryInsert).toHaveBeenCalled();
   });
@@ -253,7 +253,7 @@ describe("charge management", () => {
 
     const result = await deleteCharge(null, new FormData());
 
-    expect(result).toEqual({ success: false, error: "Paid charges cannot be deleted." });
+    expect(result).toEqual({ success: false, error: "Payments marked paid cannot be deleted." });
   });
 
   it("createManualCharge inserts a new pending charge", async () => {
@@ -275,7 +275,7 @@ describe("charge management", () => {
 
     const result = await createManualCharge(null, new FormData());
 
-    expect(result).toEqual({ success: true, message: "Manual charge created." });
+    expect(result).toEqual({ success: true, message: "Payment request created." });
     expect(admin.rentChargeInsert).toHaveBeenCalled();
   });
 
@@ -312,7 +312,7 @@ describe("charge management", () => {
 
     const result = await waiveCharge(null, new FormData());
 
-    expect(result).toEqual({ success: true, message: "Charge waived." });
+    expect(result).toEqual({ success: true, message: "Payment waived." });
     expect(admin.rentChargeUpdateEq).toHaveBeenCalled();
     expect(admin.chargeHistoryInsert).toHaveBeenCalled();
   });

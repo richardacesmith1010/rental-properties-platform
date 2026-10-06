@@ -21,7 +21,7 @@ interface LoginPageProps {
 
 export const metadata: Metadata = {
   title: "Login",
-  description: "Sign in to Domus as Owner, Manager, or Tenant to access your rental workspace.",
+  description: "Sign in to Domus to manage your rentals.",
 };
 
 export default async function LoginPage(props: LoginPageProps) {
@@ -31,7 +31,6 @@ export default async function LoginPage(props: LoginPageProps) {
   const { data } = await supabase.auth.getUser();
   const currentYear = new Date().getFullYear();
   const callbackError = searchParams?.error;
-  const callbackErrorDescription = searchParams?.error_description;
   const emailConfirmed = searchParams?.confirmed === "true";
   const passwordReset = searchParams?.password_reset === "true";
   const isOwnerSignup = searchParams?.mode === "signup" && searchParams?.role === "owner";
@@ -67,14 +66,14 @@ export default async function LoginPage(props: LoginPageProps) {
             <div className="max-w-2xl space-y-5">
               <p className="inline-flex items-center gap-2 rounded-full border border-[var(--accent-line)] bg-[var(--accent-weak)] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
                 <Sparkles className="h-3.5 w-3.5" />
-                Premium landlord workspace
+                Your rental workspace
               </p>
               <div className="space-y-4">
                 <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-5xl">
                   Manage your rentals like a pro.
                 </h1>
                 <p className="max-w-xl text-base leading-7 text-[var(--ink-2)] sm:text-lg">
-                  Domus brings rent collection, maintenance, documents, and tenant communication into one polished command center for owners, managers, and tenants.
+                  Domus brings rent, repairs, documents, and messages into one place. Owners, managers, and tenants can all use it.
                 </p>
               </div>
 
@@ -94,7 +93,7 @@ export default async function LoginPage(props: LoginPageProps) {
                     Built for real operations
                   </div>
                   <p className="mt-2 leading-6 text-[var(--muted)]">
-                    Role-aware access, branded emails, invoices, and real payment workflows are already wired in.
+                    Each person sees the right tools, emails, bills, and payments.
                   </p>
                 </div>
               </div>
@@ -121,7 +120,7 @@ export default async function LoginPage(props: LoginPageProps) {
                   {isOwnerSignup ? "Start with your owner account" : "Sign in to your workspace"}
                 </h2>
                 <p className="mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
-                  Choose your role, then sign in or create your account. Domus keeps owners, managers, and tenants in the same system with the right access for each.
+                  Choose your role, then sign in or create your account. Domus gives owners, managers, and tenants their own tools.
                 </p>
               </div>
 
@@ -156,12 +155,17 @@ export default async function LoginPage(props: LoginPageProps) {
                   </Alert>
                 ) : null}
 
-                {callbackError && callbackError !== "invite_expired" ? (
+                {callbackError === "reset_link_expired" ? (
+                  <Alert variant="error" className="px-4 py-3">
+                    <p className="font-medium">This reset link has expired</p>
+                    <p className="mt-1">Ask for a new reset link.</p>
+                  </Alert>
+                ) : null}
+
+                {callbackError && callbackError !== "invite_expired" && callbackError !== "reset_link_expired" ? (
                   <Alert variant="error" className="px-4 py-3">
                     <p className="font-medium">Sign-in link failed.</p>
-                    <p className="mt-1">
-                      {callbackErrorDescription ?? "Please request a new sign-in link and try again."}
-                    </p>
+                    <p className="mt-1">We couldn&apos;t sign you in. Try again.</p>
                   </Alert>
                 ) : null}
 

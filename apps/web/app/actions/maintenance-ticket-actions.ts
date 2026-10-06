@@ -65,7 +65,7 @@ export async function createMaintenanceTicket(
       .maybeSingle();
 
     if (!lease) {
-      return { success: false, error: "You can only submit tickets for your leased unit." };
+      return { success: false, error: "You can only send tickets for your leased unit." };
     }
   } else {
     const canAdminister = await canUserAdministerProperty(user.id, unit.property_id);

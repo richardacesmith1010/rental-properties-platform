@@ -37,7 +37,7 @@ export function BatchToolbar({
     <div
       className="mb-4 flex flex-col gap-2 rounded-xl border border-border bg-primary/10 px-4 py-3 shadow-sm sm:flex-row sm:flex-wrap sm:items-center sm:gap-3"
       role="toolbar"
-      aria-label="Batch actions for selected charges"
+      aria-label="Batch actions for selected payments"
     >
       <span
         role="status"
@@ -57,7 +57,7 @@ export function BatchToolbar({
           onClick={onSendReminder}
           loading={sendingReminders}
           className="min-h-11 w-full sm:min-h-9 sm:w-auto"
-          title="Send payment reminders for the selected charges."
+          title="Send payment reminders for the selected payments."
         >
           Send Reminder
         </Button>
@@ -67,9 +67,9 @@ export function BatchToolbar({
           variant="outline"
           onClick={onExport}
           className="min-h-11 w-full sm:min-h-9 sm:w-auto"
-          title="Export the selected charges as CSV."
+          title="Export the selected payments as Spreadsheet."
         >
-          Export CSV
+          Export Spreadsheet
         </Button>
       </div>
       <div className="hidden flex-1 sm:block" />
@@ -79,7 +79,7 @@ export function BatchToolbar({
         variant="ghost"
         onClick={onDeselectAll}
         className="min-h-11 w-full sm:min-h-9 sm:w-auto"
-        title="Clear the current charge selection."
+        title="Clear the current payment selection."
       >
         Clear selection
       </Button>

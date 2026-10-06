@@ -222,7 +222,7 @@ export function InboxSection({
         <CardContent className="space-y-4 p-4 sm:p-5">
           {!hasActiveLease ? (
             <p className="text-sm text-[var(--muted)]">
-              You can report problems and send messages once your landlord sets up your lease.
+              Once your landlord sets up your lease, you can report problems. You can also send messages.
             </p>
           ) : null}
           {threads.length === 0 ? (
@@ -360,7 +360,7 @@ export function InboxSection({
         {!threadsReady && (
           <Alert variant="warning" className="text-xs font-normal">
             {threadsWarning ??
-              "Threaded conversation storage is not live yet. This inbox currently reflects event notifications only."}
+              "Messages are not ready yet. You can see alerts here for now."}
           </Alert>
         )}
 
@@ -450,7 +450,7 @@ export function InboxSection({
                     <option value="general">General</option>
                     <option value="maintenance_ticket">Maintenance Ticket</option>
                     <option value="lease">Lease</option>
-                    <option value="rent_charge">Rent Charge</option>
+                    <option value="rent_charge">Rent Payment</option>
                     <option value="document_packet">Document Packet</option>
                   </Select>
                 </div>

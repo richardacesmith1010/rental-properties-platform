@@ -33,7 +33,7 @@ function buildPctMap(members: OwnershipMemberDTO[]) {
 
 const unavailableConnectAction: StatefulAction = async () => ({
   success: false,
-  error: "Member payout onboarding is unavailable."
+  error: "Member payout setup is unavailable."
 });
 
 function MemberPayoutConnectButton({
@@ -131,7 +131,7 @@ export function DistributionConfigPanel({
         {state?.success ? <Alert variant="success">{state.message ?? "Distribution updated."}</Alert> : null}
         {requiresApproval ? (
           <Alert variant="info" className="text-sm font-normal">
-            This LLC has multiple active members. Saving this form will create an approval request instead of applying changes immediately.
+            This LLC has several members. Saving will ask them to approve your changes.
           </Alert>
         ) : null}
 
@@ -268,7 +268,7 @@ export function DistributionConfigPanel({
 
           <div className="flex items-center justify-between gap-3">
             <div className="text-xs text-[var(--muted)]">
-              If someone hasn&apos;t linked their bank, their share stays in the LLC.
+              If a member has no linked bank, their share stays here.
             </div>
             <SubmitButton
               disabled={disableSave}

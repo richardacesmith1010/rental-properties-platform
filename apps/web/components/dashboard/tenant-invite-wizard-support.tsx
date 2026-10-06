@@ -335,7 +335,7 @@ export function TenantInviteStepThree({
       </div>
 
       <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground">
-        These details are optional. If you skip them now, you can still finish lease setup later from the dashboard.
+        These details are optional. You can finish the lease later from your dashboard.
       </div>
     </div>
   );

@@ -138,20 +138,20 @@ export function AnalyticsSection({ data }: AnalyticsSectionProps) {
         <Button
           type="button"
           variant="outline"
-          title="Download monthly rent collection analytics as CSV."
+          title="Download monthly rent collection analytics as Spreadsheet."
           disabled={data.rentMetrics.length === 0}
           onClick={() => exportChargesCSV(data.rentMetrics)}
         >
-          Export Charges CSV
+          Export Payments Spreadsheet
         </Button>
         <Button
           type="button"
           variant="outline"
-          title="Download year-to-date expense totals as CSV."
+          title="Download year-to-date expense totals as Spreadsheet."
           disabled={data.expenseCategories.length === 0}
           onClick={() => exportExpensesCSV(data.expenseCategories)}
         >
-          Export Expenses CSV
+          Export Expenses Spreadsheet
         </Button>
       </div>
     </div>
