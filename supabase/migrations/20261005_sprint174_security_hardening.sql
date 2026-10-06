@@ -16,3 +16,7 @@ drop extension if exists pg_graphql;
 --   only test the CURRENT user's membership/access, so no argument can broaden access. Revoking anon EXECUTE would make anon queries on those
 --   tables error instead of returning nothing. Re-scoping those policies TO authenticated is a separate, larger change.
 -- * pg_net lives in the public schema (Supabase-managed); moving it is not worth the risk.
+
+-- Belt-and-braces: PostgreSQL checks EXECUTE only at CREATE TRIGGER, but keep the auth service's own grant explicit
+-- (supabase_auth_admin is not reachable through /rest/v1). Applied 2026-10-05 as sprint174_grant_auth_admin_trigger.
+grant execute on function public.handle_new_user() to supabase_auth_admin;
