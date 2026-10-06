@@ -39,9 +39,6 @@ else
   echo "[gate] APP_URL not set or Playwright not available; skipping E2E tests"
 fi
 
-echo "[gate] Running mobile typecheck"
-npx tsc -p apps/mobile/tsconfig.json --noEmit
-
 if [[ -n "${APP_URL:-}" ]]; then
   echo "[gate] Running smoke checks against APP_URL=$APP_URL"
   npm run smoke:web

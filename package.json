@@ -3,15 +3,13 @@
   "private": true,
   "version": "1.0.0",
   "workspaces": [
-    "apps/*"
+    "apps/web"
   ],
   "scripts": {
     "dev:web": "npm run dev --workspace @domus/web",
-    "dev:mobile": "npm run start --workspace @domus/mobile",
     "test:web": "npm run test --workspace @domus/web",
     "build:web": "npm run build --workspace @domus/web",
     "lint:web": "npm run lint --workspace @domus/web",
-    "typecheck:mobile": "npx tsc -p apps/mobile/tsconfig.json --noEmit",
     "smoke:web": "bash scripts/smoke-web.sh",
     "verify:phase9-runtime": "node scripts/verify-phase9-runtime.mjs",
     "verify:phase10-runtime": "node scripts/verify-phase10-runtime.mjs",
@@ -21,5 +19,8 @@
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.2.0",
     "@typescript-eslint/parser": "^7.2.0"
+  },
+  "overrides": {
+    "typescript": "5.6.3"
   }
 }
