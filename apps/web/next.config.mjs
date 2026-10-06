@@ -35,6 +35,11 @@ const securityHeaders = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // pdfkit (via @react-pdf/renderer) loads its standard fonts with dynamic requires that file tracing misses.
+  // Without this, any route that loads the PDF code throws "Cannot find module …/standard-fonts/Helvetica.cjs" (DOMUS-WEB-2).
+  outputFileTracingIncludes: {
+    "/**": ["../../node_modules/pdfkit/js/standard-fonts/**"]
+  },
   experimental: {
     staleTimes: {
       dynamic: 30,
