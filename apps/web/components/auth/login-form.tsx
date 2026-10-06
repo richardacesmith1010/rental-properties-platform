@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFormState } from "react-dom";
 import { CheckCircle, Lock } from "lucide-react";
 import { forgotPasswordAction } from "@/app/actions/forgot-password";
@@ -203,7 +203,34 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
   const [loading, setLoading] = useState(false);
   const [signupComplete, setSignupComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
+  const [resendSeconds, setResendSeconds] = useState(0);
 
+  useEffect(() => {
+    if (resendSeconds === 0) return;
+    const timer = window.setTimeout(() => setResendSeconds((seconds) => seconds - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [resendSeconds]);
+  async function handleResend() {
+    if (resendSeconds > 0) return;
+    try {
+      const supabase = createClient();
+      await supabase.auth.resend({
+        type: "signup",
+        email,
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` }
+      });
+      setResendMessage("If this email needs confirming, we sent a new link. Check your inbox.");
+      setResendSeconds(60);
+    } catch (caughtError) {
+      if (caughtError instanceof TypeError) {
+        setResendMessage("Check your connection and try again.");
+        return;
+      }
+      setResendMessage("If this email needs confirming, we sent a new link. Check your inbox.");
+      setResendSeconds(60);
+    }
+  }
   const inputIdSuffix = useMemo(() => {
     const sanitized = nextPath.replace(/[^a-z0-9_-]/gi, "-");
     return sanitized.length > 0 ? sanitized : "portal";
@@ -237,7 +264,7 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
       }
 
       const supabase = createClient();
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -247,12 +274,11 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
       });
 
       if (signUpError) {
+        if (signUpError.code === "user_already_exists" || /already registered/i.test(signUpError.message)) {
+          setSignupComplete(true);
+          return;
+        }
         setError(mapAuthErrorMessage(signUpError.message));
-        return;
-      }
-
-      if (data.user && data.user.identities && data.user.identities.length === 0) {
-        setError("This email already has an account. Try signing in instead.");
         return;
       }
 
@@ -275,6 +301,19 @@ export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
           We sent a confirmation link to <span className="font-medium text-foreground">{email}</span>.
           Click the link in your email to finish setting up your account.
         </p>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Used this email with Domus before? Use the link in your invite email, or tap{" "}
+          <button type="button" className="font-semibold text-primary" onClick={() => {
+            setSignupComplete(false);
+            setMode("signin");
+            setForgotMode(true);
+          }}>Forgot password</button>.
+        </p>
+        {resendMessage ? <Alert variant="success" className="mt-4">{resendMessage}</Alert> : null}
+        <Button type="button" variant="outline" className="mt-4" onClick={handleResend}
+          disabled={resendSeconds > 0} title="Send the confirmation email again.">
+          {resendSeconds > 0 ? `Try again in ${resendSeconds}s` : "Send it again"}
+        </Button>
         <Button
           type="button"
           variant="outline"

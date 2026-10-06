@@ -79,7 +79,7 @@ function OverviewSummaryStrip({ props }: { props: SectionRendererProps }) {
     props.filteredTickets.filter((ticket) => ticket.status === "open" || ticket.status === "in_progress")
       .length;
   const occupancy = unitCount > 0 ? Math.round((occupiedUnits / unitCount) * 100) : 0;
-  const title = summary?.property.name ?? "Your homes";
+  const title = summary?.property.name ?? (props.data.profileRole === "manager" ? "Homes you manage" : "Your homes");
   const subtitle =
     summary?.property.address ??
     `${pluralize(props.filteredPortfolio.properties.length, "property")} in view`;
@@ -232,6 +232,7 @@ export function OverviewSectionContent({
       <OverviewSummaryStrip props={props} />
       <PortfolioSection
         properties={props.filteredPortfolio.properties}
+        role={props.data.profileRole === "manager" ? "manager" : "owner"}
         onSelectProperty={props.onSelectProperty}
         onGoToOperations={() => props.goToSectionIfVisible("operations")}
         getPropertyDetailHref={(propertyId) =>
@@ -258,6 +259,7 @@ export function PortfolioSectionContent({ props }: { props: SectionRendererProps
       <div>
         <PortfolioSection
           properties={props.filteredPortfolio.properties}
+          role={props.data.profileRole === "manager" ? "manager" : "owner"}
           showControls={props.canManagePortfolio}
           onRenameProperty={props.data.profileRole === "owner" ? props.onRenameProperty : undefined}
           onUpdateProperty={props.onUpdateProperty}

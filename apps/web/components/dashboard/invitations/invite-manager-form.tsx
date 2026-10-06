@@ -32,7 +32,6 @@ export function InviteManagerForm({ properties, onInviteManager, onSuccess }: { 
   const [state, action] = useFormState(onInviteManager, null);
   const handledRef = useRef<ActionState>(null);
   const [step, setStep] = useState(0);
-  const [skippedSteps, setSkippedSteps] = useState<number[]>([]);
   const [draft, setDraft] = useState<ManagerInviteDraft>({ propertyId: "", email: "", fullName: "" });
   const requiredComplete = Boolean(draft.propertyId && draft.email && draft.fullName);
   const stepComplete = (index: number) => index === 0 ? Boolean(draft.propertyId) : index === 1 ? Boolean(draft.email) : index === 2 ? Boolean(draft.fullName) : requiredComplete;
@@ -43,7 +42,6 @@ export function InviteManagerForm({ properties, onInviteManager, onSuccess }: { 
     handledRef.current = state;
     setDraft({ propertyId: "", email: "", fullName: "" });
     setStep(0);
-    setSkippedSteps([]);
     onSuccess?.();
   }, [onSuccess, state]);
 
@@ -56,13 +54,27 @@ export function InviteManagerForm({ properties, onInviteManager, onSuccess }: { 
   return (
       <div className="space-y-4">
       <FormError state={state} />
-      <FormSuccess state={state} message="Invitation sent!" />
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{MANAGER_STEPS.map((label, index) => <StepPill key={label} label={label} active={step === index} done={stepComplete(index)} skipped={skippedSteps.includes(index)} />)}</div>
+      <FormSuccess state={state} message={state?.success ? state.message ?? "Invite complete." : ""} />
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {MANAGER_STEPS.map((label, index) => (
+          <StepPill key={label} label={label} active={step === index} done={stepComplete(index)} skipped={false} />
+        ))}
+      </div>
       {step === 0 ? <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Step 1: Pick property for manager assignment.</p><Select value={draft.propertyId} onChange={(event) => setDraft((current) => ({ ...current, propertyId: event.target.value }))} onKeyDown={(event) => onEnterNext(event, stepComplete(step), 1)} required><option value="">Assign to property</option>{properties.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}</Select></div> : null}
       {step === 1 ? <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Step 2: Enter manager email address.</p><Input type="email" value={draft.email} onChange={(event) => setDraft((current) => ({ ...current, email: event.target.value }))} onKeyDown={(event) => onEnterNext(event, stepComplete(step), 2)} placeholder="manager@email.com" required /></div> : null}
       {step === 2 ? <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Step 3: Enter manager full name.</p><Input value={draft.fullName} onChange={(event) => setDraft((current) => ({ ...current, fullName: event.target.value }))} onKeyDown={(event) => onEnterNext(event, stepComplete(step), 3)} placeholder="Manager full name" required /></div> : null}
       {step === 3 ? <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Final step: review and send manager invite.</p><div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-3 py-3 text-sm text-[var(--ink-2)]"><p><span className="font-semibold">Property:</span> {properties.find((property) => property.id === draft.propertyId)?.name ?? "Not set"}</p><p><span className="font-semibold">Email:</span> {draft.email || "Not set"}</p><p><span className="font-semibold">Name:</span> {draft.fullName || "Not set"}</p></div><form className="space-y-2" action={action}><input type="hidden" name="propertyId" value={draft.propertyId} /><input type="hidden" name="email" value={draft.email} /><input type="hidden" name="fullName" value={draft.fullName} /><SubmitButton className="w-full" disabled={!requiredComplete} title="Send manager invitation.">Send Manager Invite</SubmitButton></form></div> : null}
-      <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={() => setStep((current) => Math.max(current - 1, 0))} disabled={step === 0} title="Go back one step.">Back</Button><Button type="button" onClick={() => setStep((current) => Math.min(current + 1, MANAGER_STEPS.length - 1))} disabled={step >= MANAGER_STEPS.length - 1 || !stepComplete(step)} title="Complete this step and move to the next one.">Next</Button><Button type="button" variant="outline" onClick={() => { setSkippedSteps((previous) => (previous.includes(step) ? previous : [...previous, step])); setStep((current) => Math.min(current + 1, MANAGER_STEPS.length - 1)); }} disabled={step >= MANAGER_STEPS.length - 1} title="Skip this step for now and continue.">Skip for now</Button></div>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" variant="outline" onClick={() => setStep((current) => Math.max(current - 1, 0))}
+          disabled={step === 0} title="Go back one step.">
+          Back
+        </Button>
+        <Button type="button" onClick={() => setStep((current) => Math.min(current + 1, MANAGER_STEPS.length - 1))}
+          disabled={step >= MANAGER_STEPS.length - 1 || !stepComplete(step)}
+          title="Complete this step and move to the next one.">
+          Next
+        </Button>
+      </div>
     </div>
   );
 }

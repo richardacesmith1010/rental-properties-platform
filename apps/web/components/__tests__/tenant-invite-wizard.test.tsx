@@ -66,3 +66,35 @@ describe("tenant invite wizard step validation", () => {
     ).toBe("Enter the tenant's email address.");
   });
 });
+
+import { render, screen } from "@testing-library/react";
+import { vi } from "vitest";
+import type { PropertyListItem } from "@/lib/portfolio";
+import { TenantInviteStepOne, TenantInviteSuccess } from "@/components/dashboard/tenant-invite-wizard-support";
+
+describe("tenant invite delivery", () => {
+  const summary = { propertyName: "Home", unitLabel: "1", email: "tenant@example.com", fullName: "Alex" };
+  it.each([
+    ["email_branded", "They'll get an email from Domus with a link to join."],
+    ["email_basic", "They'll get a sign-in email. Ask them to check spam if it doesn't come."],
+    ["linked", "Alex already has a Domus account. We added them to this home. No email was sent."]
+  ])("shows %s result", (delivery, text) => {
+    render(<TenantInviteSuccess summary={summary} successMessage={delivery} />);
+    expect(screen.getByText(text)).toBeInTheDocument();
+  });
+  it("distinguishes no units and rented units and shows add only when available", () => {
+    const props = {
+      properties: [{ id: "home", name: "Home", unitCount: 0 }] as PropertyListItem[],
+      availableUnits: [], draft: buildDraft({ propertyId: "home", unitId: "" }),
+      onPropertyChange: vi.fn(), onUnitChange: vi.fn()
+    };
+    const { rerender } = render(<TenantInviteStepOne {...props} />);
+    expect(screen.getByText("Add a unit to this home first.")).toBeInTheDocument();
+    expect(screen.getByText("Ask the owner to add a unit.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add a unit" })).not.toBeInTheDocument();
+    rerender(<TenantInviteStepOne {...props} onAddUnit={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "Add a unit" })).toBeInTheDocument();
+    rerender(<TenantInviteStepOne {...props} properties={[{ id: "home", name: "Home", unitCount: 2 } as PropertyListItem]} />);
+    expect(screen.getByText("Every unit has a tenant. Add a unit first.")).toBeInTheDocument();
+  });
+});

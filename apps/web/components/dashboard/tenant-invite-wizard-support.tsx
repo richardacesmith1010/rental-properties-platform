@@ -6,7 +6,6 @@ import {
   Phone,
   UserRound
 } from "lucide-react";
-import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -122,8 +121,8 @@ export function TenantInviteStepOne({
   availableUnits,
   draft,
   onPropertyChange,
-  onUnitChange
-  ,onAddUnit
+  onUnitChange,
+  onAddUnit
 }: {
   properties: PropertyListItem[];
   availableUnits: UnitListItem[];
@@ -133,6 +132,7 @@ export function TenantInviteStepOne({
   onAddUnit?: () => void;
 }) {
   const selectedProperty = properties.find((property) => property.id === draft.propertyId) ?? null;
+  const hasUnits = availableUnits.length > 0 || selectedProperty?.unitCount !== 0;
 
   return (
     <div className="space-y-5">
@@ -178,7 +178,17 @@ export function TenantInviteStepOne({
             ))}
           </Select>
           {draft.propertyId && availableUnits.length === 0 ? (
-            <div className="space-y-2"><p className="text-xs text-[var(--warn)]">All units are rented. Add a unit first.</p>{onAddUnit ? <Button type="button" variant="outline" className="min-h-11" onClick={onAddUnit} title="Open the Add a unit flow.">Add a unit</Button> : null}</div>
+            <div className="space-y-2">
+              <p className="text-xs text-[var(--warn)]">
+                {hasUnits ? "Every unit has a tenant. Add a unit first." : "Add a unit to this home first."}
+              </p>
+              {onAddUnit ? (
+                <Button type="button" variant="outline" className="min-h-11" onClick={onAddUnit}
+                  title="Open the Add a unit flow.">
+                  Add a unit
+                </Button>
+              ) : <p className="text-xs">Ask the owner to add a unit.</p>}
+            </div>
           ) : null}
         </div>
       </div>
@@ -187,8 +197,8 @@ export function TenantInviteStepOne({
         <div className="flex items-start gap-3">
           <Building2 className="mt-0.5 h-4 w-4 text-primary" />
           <div>
-            <p className="font-medium text-foreground">Property-linked invitations keep the onboarding clear.</p>
-            <p className="mt-1">Tenants will see exactly which home they were invited to manage as soon as they accept the email.</p>
+            <p className="font-medium text-foreground">Each invitation shows the tenant their home.</p>
+            <p className="mt-1">Tenants will see which home they rent.</p>
           </div>
         </div>
       </div>
@@ -340,14 +350,19 @@ export function TenantInviteSuccess({
 }) {
   return (
     <div className="space-y-5 text-center">
-      {successMessage ? <Alert variant="success">{successMessage}</Alert> : null}
       <div className="mx-auto inline-flex rounded-full bg-[var(--pos-bg)] p-4 text-[var(--pos)]">
         <CheckCircle2 className="h-8 w-8" />
       </div>
       <div>
-        <h3 className="text-2xl font-semibold text-foreground">Invitation sent to {summary.email}</h3>
+        <h3 className="text-2xl font-semibold text-foreground">{successMessage === "linked"
+          ? `${summary.fullName || summary.email} already has a Domus account. We added them to this home. No email was sent.`
+          : `Invite sent to ${summary.email}.`}</h3>
         <p className="mt-2 text-sm text-muted-foreground">
-          {summary.fullName} will receive a branded Domus email with a secure link to create their account.
+          {successMessage === "email_branded"
+            ? "They'll get an email from Domus with a link to join."
+            : successMessage === "email_basic"
+              ? "They'll get a sign-in email. Ask them to check spam if it doesn't come."
+              : null}
         </p>
       </div>
       <div className="rounded-2xl border border-border bg-muted/40 px-4 py-4 text-left text-sm">

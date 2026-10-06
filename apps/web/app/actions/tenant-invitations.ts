@@ -143,11 +143,13 @@ export async function inviteTenant(
 
       revalidatePath("/owner");
       revalidatePath("/manager");
-      return {
+      const result = {
         success: true,
-        message: "Tenant linked to property. Continue to lease setup.",
+        message: "linked",
+        delivery: "linked",
         tenantProfileId: existingProfile.id
-      };
+      } as const;
+      return result;
     }
 
     return {
@@ -172,6 +174,7 @@ export async function inviteTenant(
   }
 
   let invitedProfileId: string | null = null;
+  let delivery: "email_branded" | "email_basic" = "email_branded";
   const generatedInvite = await createTenantInviteLink({
     email,
     metadata: tenantInviteMetadata
@@ -193,6 +196,7 @@ export async function inviteTenant(
     });
 
     if (!brandedInviteSent) {
+      delivery = "email_basic";
       await deleteGeneratedInviteUser(invitedProfileId);
       invitedProfileId = null;
 
@@ -211,6 +215,7 @@ export async function inviteTenant(
       invitedProfileId = fallbackInvite.data.user?.id ?? invitedProfileId;
     }
   } else {
+    delivery = "email_basic";
     const fallbackInvite = await fallbackToSupabaseInvite({
       email,
       metadata: tenantInviteMetadata
@@ -259,10 +264,13 @@ export async function inviteTenant(
 
   revalidatePath("/owner");
   revalidatePath("/manager");
-  return {
+  const result = {
     success: true,
+    message: delivery,
+    delivery,
     tenantProfileId: invitedProfileId ?? undefined
-  };
+  } as const;
+  return result;
 }
 
 export async function resendInvite(
@@ -350,6 +358,7 @@ export async function resendInvite(
       }
     } else {
       const fallbackInvite = await admin.auth.admin.inviteUserByEmail(invitation.email, {
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com"}/auth/callback`,
         data: {
           role: invitation.role,
           full_name: invitation.full_name,
@@ -366,6 +375,7 @@ export async function resendInvite(
     }
   } else {
     const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(invitation.email, {
+      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com"}/auth/callback`,
       data: {
         role: invitation.role,
         full_name: invitation.full_name,

@@ -120,6 +120,15 @@ describe("useDashboardNavigation", () => {
     expect(result.current.activeSection).toBe("overview");
   });
 
+  it("labels manager operations Add", () => {
+    currentQuery = new URLSearchParams("section=operations");
+    const { result } = renderHook(() => useDashboardNavigation(
+      { data: { profileRole: "manager" }, userEmail: "manager@example.com" } as DashboardProps,
+      { ...kpis, isOwnerRole: false, isManagerRole: true } as never
+    ));
+    expect(result.current.activeSectionLabel).toBe("Add");
+  });
+
   it("writes manager section navigation to the URL and keeps it across rebuilt items", () => {
     currentQuery = new URLSearchParams("property=home-1&mode=vendor_ops");
     window.history.replaceState(null, "", "/manager?property=home-1&mode=vendor_ops");

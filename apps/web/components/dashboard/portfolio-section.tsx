@@ -28,6 +28,7 @@ type StatefulAction = (
 
 interface PortfolioSectionProps {
   properties: PropertyListItem[];
+  role?: "owner" | "manager";
   showControls?: boolean;
   previewCount?: number;
   onRenameProperty?: StatefulAction;
@@ -64,6 +65,7 @@ function FormSuccess({ state, message }: { state: ActionState; message: string }
 
 export function PortfolioSection({
   properties,
+  role = "owner",
   showControls = false,
   previewCount,
   onRenameProperty,
@@ -100,7 +102,9 @@ export function PortfolioSection({
   return (
     <Card id="portfolio" className="border border-border/50 shadow-sm">
       <CardHeader>
-        <CardTitle className="text-xl font-semibold">Your homes</CardTitle>
+        <CardTitle className="text-xl font-semibold">
+          {role === "manager" ? "Homes you manage" : "Your homes"}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         {showControls && (
@@ -117,8 +121,10 @@ export function PortfolioSection({
         {properties.length === 0 ? (
           <EmptyState
             icon={Building2}
-            title="No properties yet"
-            description="Add your first property to start managing your homes."
+            title={role === "manager" ? "No homes yet" : "No properties yet"}
+            description={role === "manager"
+              ? "An owner will add you to their home. Ask them to send you an invite."
+              : "Add your first property to start managing your homes."}
             actionLabel={onGoToOperations ? "Add Property" : undefined}
             onAction={onGoToOperations}
             actionVariant="default"

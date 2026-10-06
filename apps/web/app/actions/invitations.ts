@@ -53,6 +53,17 @@ export async function inviteManager(
 
   if (existingProfile) {
     if (existingProfile.role === "manager") {
+      const { data: existingAssignment, error: lookupError } = await admin
+        .from("property_managers")
+        .select("active")
+        .eq("property_id", propertyId)
+        .eq("manager_profile_id", existingProfile.id)
+        .maybeSingle();
+
+      if (lookupError) {
+        return { success: false, error: "Unable to check manager access. Please try again." };
+      }
+
       const { error: assignError } = await admin.from("property_managers").upsert(
         {
           property_id: propertyId,
@@ -85,7 +96,16 @@ export async function inviteManager(
 
       revalidatePath("/owner");
       revalidatePath("/manager");
-      return { success: true };
+      const result = {
+        success: true,
+        delivery: existingAssignment?.active ? "already" : "added",
+        message: existingAssignment?.active
+          ? `${fullName || normalizedEmail} already has access to this home. No email was sent.`
+          : `Added ${fullName || normalizedEmail} to this home. They'll see it next time they sign in.`,
+        email: normalizedEmail,
+        name: fullName
+      } as const;
+      return result;
     }
 
     return {
@@ -95,6 +115,7 @@ export async function inviteManager(
   }
 
   const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
+    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com"}/auth/callback`,
     data: {
       role: "manager",
       full_name: fullName
@@ -151,7 +172,14 @@ export async function inviteManager(
 
   revalidatePath("/owner");
   revalidatePath("/manager");
-  return { success: true };
+  const result = {
+    success: true,
+    delivery: "email",
+    message: `Invite sent to ${normalizedEmail}. They'll get an email from Domus.`,
+    email: normalizedEmail,
+    name: fullName
+  } as const;
+  return result;
 }
 
 export async function inviteOwner(
@@ -248,6 +276,7 @@ export async function inviteOwner(
   }
 
   const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
+    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com"}/auth/callback`,
     data: {
       role: "owner",
       full_name: fullName,

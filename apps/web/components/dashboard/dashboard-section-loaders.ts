@@ -46,7 +46,13 @@ export function useDashboardNavigation(props: DashboardProps, kpis: DashboardKpi
   return {
     activeSection: shared.activeSection,
     activeSectionIndex,
-    activeSectionLabel: isOwnerRole ? owner.activeSectionLabel : isManagerRole ? manager.managerNavItems.find((item) => item.id === shared.activeSection)?.label ?? "Section not found" : shared.allSectionItems.find((item) => item.id === shared.activeSection)?.label ?? "Section not found",
+    activeSectionLabel: shared.activeSection === "operations"
+      ? "Add"
+      : isOwnerRole
+        ? owner.activeSectionLabel
+        : isManagerRole
+          ? manager.managerNavItems.find((item) => item.id === shared.activeSection)?.label ?? "Section not found"
+          : shared.allSectionItems.find((item) => item.id === shared.activeSection)?.label ?? "Section not found",
     activeWorkflowMeta: null,
     allSectionItems: shared.allSectionItems,
     isUnknownSection: shared.isUnknownSection,

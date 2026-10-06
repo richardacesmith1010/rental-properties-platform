@@ -61,6 +61,13 @@ describe("PortfolioSection", () => {
     expect(screen.getByText("Add your first property to start managing your homes.")).toBeInTheDocument();
   });
 
+  it("guides a manager with no homes", () => {
+    render(<PortfolioSection properties={[]} role="manager" />);
+    expect(screen.getByText("No homes yet")).toBeInTheDocument();
+    expect(screen.getByText("Homes you manage")).toBeInTheDocument();
+    expect(screen.getByText("An owner will add you to their home. Ask them to send you an invite.")).toBeInTheDocument();
+  });
+
   it("shows property name, address, and owner account details", () => {
     render(<PortfolioSection properties={[properties[0]]} />);
 

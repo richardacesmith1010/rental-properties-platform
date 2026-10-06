@@ -124,6 +124,16 @@ describe("SectionFrame property scope control", () => {
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 describe("full owner sections", () => {
+  it("passes the manager role through to the homes view", () => {
+    render(<PortfolioSectionContent props={buildProps({
+      data: { profileRole: "manager" } as SectionRendererProps["data"],
+      filteredPortfolio: { properties: [], units: [], leases: [], tenants: [] } as never,
+      goToSectionIfVisible: vi.fn()
+    })} />);
+    expect(screen.getByText("Homes you manage")).toBeInTheDocument();
+    expect(screen.getByText("No homes yet")).toBeInTheDocument();
+  });
+
   it("shows every home without a shortened preview", () => {
     const properties = Array.from({ length: 7 }, (_, index) => ({
       ...availableProperties[0], id: `property-${index}`, name: `Home ${index}`,
