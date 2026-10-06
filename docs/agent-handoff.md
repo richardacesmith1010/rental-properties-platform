@@ -380,6 +380,11 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - **Launch-time follow-up (not wired, safe defaults):** pass `notificationsAreOn` (server switch) to `OwnerDailyOpsHome` and `bankConnected` to `UnifiedPropertyWizard` via `components/dashboard/index.tsx` / `app/owner/page.tsx` / props type. Today: reminder hidden (correct while off); wizard shows neutral "Check your bank setup before taking rent." Packet §5 omitted those files (L-011 again).
 - Polish backlog: signup page still has "Premium landlord workspace / command center" marketing copy, long role paragraph, redundant "New to Domus? Create an account" on the signup view.
 
+## Sprint 174 SHIPPED — Security (L3, `53852df`, 2026-10-05, 314,895 tokens)
+
+- Next 15.5.27 + React 19.2.8 (codemod pinned to 15; caching inventory kept Next 14 behaviour incl. `staleTimes` 30 s/300 s); migration `20261005_sprint174_security_hardening.sql` applied (handle_new_user revoked from public/anon/authenticated + explicit grant to supabase_auth_admin; pg_graphql dropped). ChatGPT: rev1 REJECT (14.x EOL) → rev2 APPROVE WITH CHANGES → rev3. Verified locally on a production build + production smoke. Scorecard Security 66 → 76.
+- Next in Security: Supabase min password 6 → 8 + letters/digits (awaiting owner OK; dashboard panel open); remove or isolate stale `apps/mobile` workspace to unblock 8 highs; leaked-password protection needs Pro plan (owner decision).
+
 ## ▶ START HERE (next session, written 2026-10-04)
 
 - Last shipped: Sprint 167 + 167b bank feed Phase 1 (`67e2168`). Sprints 168 + 169 shipped (bank feed Phase 1 + 2 complete). Next: owner uploads real Navy Federal + Fidelity October files (from a computer) → Claude verifies real numbers; then Phase 3 (Plaid daily sync, needs owner's Plaid production application). Polish backlog: review-card key by token; payment source 'Other' wording. Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
