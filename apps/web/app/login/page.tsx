@@ -9,14 +9,14 @@ import { getCurrentUserRole, getRoleHomePath } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 interface LoginPageProps {
-  searchParams?: {
+  searchParams?: Promise<{
     error?: string;
     error_description?: string;
     confirmed?: string;
     password_reset?: string;
     mode?: string;
     role?: string;
-  };
+  }>;
 }
 
 export const metadata: Metadata = {
@@ -24,9 +24,10 @@ export const metadata: Metadata = {
   description: "Sign in to Domus as Owner, Manager, or Tenant to access your rental workspace.",
 };
 
-export default async function LoginPage({ searchParams }: LoginPageProps) {
+export default async function LoginPage(props: LoginPageProps) {
+  const searchParams = await props.searchParams;
   const supabase = createClient();
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const { data } = await supabase.auth.getUser();
   const currentYear = new Date().getFullYear();
   const callbackError = searchParams?.error;

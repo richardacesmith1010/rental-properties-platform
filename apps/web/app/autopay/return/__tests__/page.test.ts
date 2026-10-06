@@ -32,7 +32,7 @@ function adminClient() {
 }
 
 async function visit(params: { lease_id: string; setup_intent?: string; session_id?: string } = { lease_id: "lease-1", setup_intent: "seti-1" }) {
-  await expect(AutopayReturnPage({ searchParams: params })).rejects.toThrow("NEXT_REDIRECT");
+  await expect(AutopayReturnPage({ searchParams: Promise.resolve(params) })).rejects.toThrow("NEXT_REDIRECT");
   expect(mocks.redirect).toHaveBeenCalledTimes(1);
 }
 

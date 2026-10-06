@@ -23,12 +23,13 @@ import { TenantLedgerReport } from "@/components/reports/tenant-ledger-report";
 export const dynamic = "force-dynamic";
 
 interface ReportsPageProps {
-  searchParams?: {
+  searchParams?: Promise<{
     year?: string | string[];
-  };
+  }>;
 }
 
-export default async function ReportsPage({ searchParams }: ReportsPageProps) {
+export default async function ReportsPage(props: ReportsPageProps) {
+  const searchParams = await props.searchParams;
   const { user, role } = await requireRole(["owner", "manager"]);
   const selectedYear = Number(
     typeof searchParams?.year === "string"

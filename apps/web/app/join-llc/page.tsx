@@ -26,11 +26,11 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 interface JoinLlcPageProps {
-  searchParams?: {
+  searchParams?: Promise<{
     token?: string;
     mode?: string;
     error?: string;
-  };
+  }>;
 }
 
 function InviteErrorState({
@@ -58,7 +58,8 @@ function InviteErrorState({
   );
 }
 
-export default async function JoinLlcPage({ searchParams }: JoinLlcPageProps) {
+export default async function JoinLlcPage(props: JoinLlcPageProps) {
+  const searchParams = await props.searchParams;
   const token = typeof searchParams?.token === "string" ? searchParams.token : "";
   if (!token) {
     return (

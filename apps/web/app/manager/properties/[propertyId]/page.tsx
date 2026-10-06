@@ -13,14 +13,13 @@ import { getPropertyDetailData } from "@/lib/property-detail";
 export const dynamic = "force-dynamic";
 
 interface ManagerPropertyDetailPageProps {
-  params: {
+  params: Promise<{
     propertyId: string;
-  };
+  }>;
 }
 
-export default async function ManagerPropertyDetailPage({
-  params
-}: ManagerPropertyDetailPageProps) {
+export default async function ManagerPropertyDetailPage(props: ManagerPropertyDetailPageProps) {
+  const params = await props.params;
   const { user } = await requireRole(["manager"]);
   const profile = await getUserProfileSummary(user.id);
   if (!profile.onboardingCompletedAt) {

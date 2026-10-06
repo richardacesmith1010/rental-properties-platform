@@ -9,10 +9,10 @@ import { CheckCircle2, AlertCircle, Clock } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 interface SuccessPageProps {
-  searchParams: {
+  searchParams: Promise<{
     session_id?: string;
     method?: string;
-  };
+  }>;
 }
 
 function StatusCard({
@@ -84,7 +84,8 @@ function StatusCard({
   );
 }
 
-export default async function PaymentSuccessPage({ searchParams }: SuccessPageProps) {
+export default async function PaymentSuccessPage(props: SuccessPageProps) {
+  const searchParams = await props.searchParams;
   await getAuthenticatedUser();
   const sessionId = searchParams.session_id;
   const method = searchParams.method;

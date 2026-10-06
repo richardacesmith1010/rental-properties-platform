@@ -365,7 +365,7 @@ describe("ConnectOnboardPage", () => {
     hasRentCollectionAuthorityForAccountMock.mockResolvedValue(authority ?? true);
 
     const ConnectOnboardPage = await loadPage();
-    render(await ConnectOnboardPage({ searchParams }));
+    render(await ConnectOnboardPage({ searchParams: Promise.resolve(searchParams) }));
 
     expect(screen.getByText("We can't check your payment setup right now. Please try again in a minute.")).toBeInTheDocument();
     expect(initiateStripeConnectMock).not.toHaveBeenCalled();
@@ -378,7 +378,7 @@ describe("ConnectOnboardPage", () => {
 
     await expect(
       ConnectOnboardPage({
-        searchParams: { accountId: ACCOUNT_1_ID, memberPayout: "true" }
+        searchParams: Promise.resolve({ accountId: ACCOUNT_1_ID, memberPayout: "true" })
       })
     ).rejects.toThrow("REDIRECT:https://connect.stripe.com/setup/s/member");
     expect(initiateMemberPayoutConnectMock).toHaveBeenCalledTimes(1);

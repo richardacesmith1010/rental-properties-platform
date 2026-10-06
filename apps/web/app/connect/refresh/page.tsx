@@ -10,14 +10,15 @@ import { isStripeConfigured } from "@/lib/env";
 export const dynamic = "force-dynamic";
 
 interface ConnectRefreshPageProps {
-  searchParams?: {
+  searchParams?: Promise<{
     accountId?: string | string[];
     memberPayout?: string | string[];
     profileId?: string | string[];
-  };
+  }>;
 }
 
-export default async function ConnectRefreshPage({ searchParams }: ConnectRefreshPageProps) {
+export default async function ConnectRefreshPage(props: ConnectRefreshPageProps) {
+  const searchParams = await props.searchParams;
   const user = await getAuthenticatedUser();
   const role = await getCurrentUserRole(user.id);
   const accountId =

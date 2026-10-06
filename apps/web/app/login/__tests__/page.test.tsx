@@ -17,7 +17,7 @@ vi.mock("@/components/auth/role-selector", () => ({
 
 describe("LoginPage", () => {
   it("opens owner sign-up with the right heading and form", async () => {
-    render(await LoginPage({ searchParams: { mode: "signup", role: "owner" } }));
+    render(await LoginPage({ searchParams: Promise.resolve({ mode: "signup", role: "owner" }) }));
     expect(screen.getByText("Create your account")).toBeInTheDocument();
     expect(screen.getByText("Owner sign-up form")).toBeInTheDocument();
     expect(screen.getByTestId("role-selector")).toHaveAttribute("data-role", "owner");

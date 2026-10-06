@@ -47,7 +47,7 @@ describe("manager invoice PDF route", () => {
     getUserMock.mockResolvedValue({ data: { user: null } });
 
     const response = await GET(new Request("http://localhost/api/pdf/manager-invoice/payment-1"), {
-      params: { paymentId: "payment-1" }
+      params: Promise.resolve({ paymentId: "payment-1" })
     });
 
     expect(response.status).toBe(401);
@@ -63,7 +63,7 @@ describe("manager invoice PDF route", () => {
     });
 
     const response = await GET(new Request("http://localhost/api/pdf/manager-invoice/payment-1"), {
-      params: { paymentId: "payment-1" }
+      params: Promise.resolve({ paymentId: "payment-1" })
     });
 
     expect(response.status).toBe(403);
@@ -80,7 +80,7 @@ describe("manager invoice PDF route", () => {
     });
 
     const response = await GET(new Request("http://localhost/api/pdf/manager-invoice/payment-1"), {
-      params: { paymentId: "payment-1" }
+      params: Promise.resolve({ paymentId: "payment-1" })
     });
 
     expect(response.status).toBe(404);
@@ -120,7 +120,7 @@ describe("manager invoice PDF route", () => {
     renderToBufferMock.mockResolvedValue(Buffer.from("pdf-binary"));
 
     const response = await GET(new Request("http://localhost/api/pdf/manager-invoice/payment-1"), {
-      params: { paymentId: "payment-1" }
+      params: Promise.resolve({ paymentId: "payment-1" })
     });
 
     expect(response.status).toBe(200);

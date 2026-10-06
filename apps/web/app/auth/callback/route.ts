@@ -6,6 +6,8 @@ import { sideEffectError } from "@/lib/logger";
 import { notifyOwnerMembersOfAcceptedTenantInvite } from "@/lib/notifications";
 import { resolveAuthRoute } from "@/lib/route-resolver";
 
+export const dynamic = "force-dynamic";
+
 function getSafeNextPath(rawNext: string | null) {
   if (!rawNext || !rawNext.startsWith("/") || rawNext.startsWith("//")) {
     return "/";

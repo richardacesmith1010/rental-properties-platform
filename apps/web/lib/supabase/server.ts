@@ -9,15 +9,15 @@ export function createClient() {
     throw new Error("Missing Supabase environment variables.");
   }
 
-  const cookieStore = cookies();
-
   return createServerClient(url, anonKey, {
     cookies: {
-      getAll() {
+      async getAll() {
+        const cookieStore = await cookies();
         return cookieStore.getAll();
       },
-      setAll(cookiesToSet) {
+      async setAll(cookiesToSet) {
         try {
+          const cookieStore = await cookies();
           cookiesToSet.forEach(({ name, value, options }) =>
             cookieStore.set(name, value, options)
           );

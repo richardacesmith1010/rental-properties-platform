@@ -101,7 +101,7 @@ export async function submitFeedback(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const requestHeaders = headers();
+  const requestHeaders = await headers();
   const ipAddress =
     normalizeIpAddress(requestHeaders.get("x-forwarded-for")) ??
     normalizeIpAddress(requestHeaders.get("cf-connecting-ip")) ??

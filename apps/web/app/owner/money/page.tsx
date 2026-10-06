@@ -8,8 +8,9 @@ import { resolveMoneySelection } from "./resolve";
 
 export const dynamic = "force-dynamic";
 
-export default async function OwnerMoneyPage({ searchParams }: { searchParams?: { property?: string; month?: string } }) {
-  const { user } = await requireRole(["owner"]); const administered = await getAdministeredProperties(user.id);
+export default async function OwnerMoneyPage(props: { searchParams?: Promise<{ property?: string; month?: string }> }) {
+  const searchParams = await props.searchParams;
+  const { user } = await requireRole(["owner"]);const administered = await getAdministeredProperties(user.id);
   const ids = administered.map((property) => property.id);
   if (!ids.length) return <main className="app-surface min-h-screen p-5">Add a home to see its money.</main>;
   const selection = resolveMoneySelection(ids, searchParams?.property, searchParams?.month, new Date());

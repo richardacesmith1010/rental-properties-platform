@@ -7,11 +7,11 @@ import { retrieveStripeCheckoutSession } from "@/lib/stripe";
 export const dynamic = "force-dynamic";
 
 interface AutopayReturnPageProps {
-  searchParams?: {
+  searchParams?: Promise<{
     setup_intent?: string | string[];
     session_id?: string | string[];
     lease_id?: string | string[];
-  };
+  }>;
 }
 
 function getSingleValue(value: string | string[] | undefined) {
@@ -24,7 +24,8 @@ function getSingleValue(value: string | string[] | undefined) {
   return null;
 }
 
-export default async function AutopayReturnPage({ searchParams }: AutopayReturnPageProps) {
+export default async function AutopayReturnPage(props: AutopayReturnPageProps) {
+  const searchParams = await props.searchParams;
   const user = await getAuthenticatedUser();
   const setupIntentParam = getSingleValue(searchParams?.setup_intent);
   const sessionId = getSingleValue(searchParams?.session_id);

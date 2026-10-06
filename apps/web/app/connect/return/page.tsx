@@ -8,11 +8,11 @@ import { redirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 interface ConnectReturnPageProps {
-  searchParams?: {
+  searchParams?: Promise<{
     accountId?: string | string[];
     memberPayout?: string | string[];
     profileId?: string | string[];
-  };
+  }>;
 }
 
 async function checkMemberPayoutStatus(accountId: string, profileId: string) {
@@ -79,7 +79,8 @@ function StatusCard({
   );
 }
 
-export default async function ConnectReturnPage({ searchParams }: ConnectReturnPageProps) {
+export default async function ConnectReturnPage(props: ConnectReturnPageProps) {
+  const searchParams = await props.searchParams;
   const user = await getAuthenticatedUser();
   const role = await getCurrentUserRole(user.id);
   const accountId =

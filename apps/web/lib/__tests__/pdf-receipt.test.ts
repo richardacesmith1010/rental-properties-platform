@@ -110,7 +110,7 @@ describe("receipt PDF route", () => {
     getUserMock.mockResolvedValue({ data: { user: null } });
 
     const response = await GET(new Request("http://localhost/api/pdf/receipt/charge-1"), {
-      params: { chargeId: "charge-1" }
+      params: Promise.resolve({ chargeId: "charge-1" })
     });
 
     expect(response.status).toBe(401);
@@ -122,7 +122,7 @@ describe("receipt PDF route", () => {
     getReceiptPdfDataMock.mockResolvedValue({ ok: false, status: 403, error: "Forbidden." });
 
     const response = await GET(new Request("http://localhost/api/pdf/receipt/charge-1"), {
-      params: { chargeId: "charge-1" }
+      params: Promise.resolve({ chargeId: "charge-1" })
     });
 
     expect(response.status).toBe(403);
@@ -135,7 +135,7 @@ describe("receipt PDF route", () => {
     getReceiptPdfDataMock.mockResolvedValue({ ok: false, status: 404, error: "Receipt not found." });
 
     const response = await GET(new Request("http://localhost/api/pdf/receipt/charge-1"), {
-      params: { chargeId: "charge-1" }
+      params: Promise.resolve({ chargeId: "charge-1" })
     });
 
     expect(response.status).toBe(404);
@@ -165,7 +165,7 @@ describe("receipt PDF route", () => {
     renderToBufferMock.mockResolvedValue(Buffer.from("pdf-binary"));
 
     const response = await GET(new Request("http://localhost/api/pdf/receipt/charge-1"), {
-      params: { chargeId: "charge-1" }
+      params: Promise.resolve({ chargeId: "charge-1" })
     });
 
     expect(response.status).toBe(200);

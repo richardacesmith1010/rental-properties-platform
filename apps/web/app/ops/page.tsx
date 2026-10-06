@@ -15,11 +15,12 @@ export const metadata: Metadata = {
   description: "Operational readiness dashboard for Domus."
 };
 
-export default async function OpsPage({
-  searchParams
-}: {
-  searchParams?: { section?: string };
-}) {
+export default async function OpsPage(
+  props: {
+    searchParams?: Promise<{ section?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const supabase = await createClient();
   const {
     data: { user }

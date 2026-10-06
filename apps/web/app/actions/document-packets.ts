@@ -172,7 +172,7 @@ export async function signDocumentPacket(_prev: ActionState, formData: FormData)
   const admin = createAdminClient();
   const { data: profile } = await admin.from("profiles").select("email").eq("id", user.id).single();
   const email = profile?.email ?? "";
-  const requestHeaders = headers();
+  const requestHeaders = await headers();
   const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? requestHeaders.get("x-real-ip") ?? null;
   const userAgent = requestHeaders.get("user-agent");
   const emptySignerLookup = Promise.resolve({ data: null, error: null } as const);

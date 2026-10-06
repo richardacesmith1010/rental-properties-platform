@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { isRedirectError } from "next/dist/client/components/redirect";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import {
   initiateAccountStripeConnect,
   initiateMemberPayoutConnect,
@@ -23,12 +23,12 @@ export const dynamic = "force-dynamic";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 interface ConnectOnboardPageProps {
-  searchParams?: {
+  searchParams?: Promise<{
     accountId?: string | string[];
     memberPayout?: string | string[];
     profile?: string | string[];
     profileId?: string | string[];
-  };
+  }>;
 }
 
 function readSingleQueryParam(value: string | string[] | undefined): {
@@ -174,7 +174,8 @@ function renderMemberPayoutChooser(
   );
 }
 
-export default async function ConnectOnboardPage({ searchParams }: ConnectOnboardPageProps) {
+export default async function ConnectOnboardPage(props: ConnectOnboardPageProps) {
+  const searchParams = await props.searchParams;
   const user = await getAuthenticatedUser();
   const role = await getCurrentUserRole(user.id);
   const requestedAccountId = readSingleQueryParam(searchParams?.accountId);

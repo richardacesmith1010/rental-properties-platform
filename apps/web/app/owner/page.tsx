@@ -117,10 +117,11 @@ import {
 export const dynamic = "force-dynamic";
 
 interface OwnerPageProps {
-  searchParams?: OwnerPageSearchParams;
+  searchParams?: Promise<OwnerPageSearchParams>;
 }
 
-export default async function OwnerPage({ searchParams }: OwnerPageProps) {
+export default async function OwnerPage(props: OwnerPageProps) {
+  const searchParams = await props.searchParams;
   const user = await getAuthenticatedUser();
   const ownerPage = await loadOwnerPageData({
     searchParams,

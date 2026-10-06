@@ -102,12 +102,12 @@ import { redirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 interface ManagerPageProps {
-  searchParams?: {
+  searchParams?: Promise<{
     generated?: string | string[];
     section?: string | string[];
     mode?: string | string[];
     property?: string | string[];
-  };
+  }>;
 }
 
 function getGeneratedMessage(value: string | string[] | undefined) {
@@ -117,7 +117,8 @@ function getGeneratedMessage(value: string | string[] | undefined) {
   return value ?? null;
 }
 
-export default async function ManagerPage({ searchParams }: ManagerPageProps) {
+export default async function ManagerPage(props: ManagerPageProps) {
+  const searchParams = await props.searchParams;
   const user = await getAuthenticatedUser();
   const role = await getCurrentUserRole(user.id);
 

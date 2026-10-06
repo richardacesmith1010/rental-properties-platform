@@ -9,9 +9,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     chargeId: string;
-  };
+  }>;
 }
 
 function buildPdfResponse(buffer: Buffer, filename: string) {
@@ -24,7 +24,8 @@ function buildPdfResponse(buffer: Buffer, filename: string) {
   });
 }
 
-export async function GET(_request: Request, { params }: RouteParams) {
+export async function GET(_request: Request, props: RouteParams) {
+  const params = await props.params;
   const supabase = createClient();
   const {
     data: { user }

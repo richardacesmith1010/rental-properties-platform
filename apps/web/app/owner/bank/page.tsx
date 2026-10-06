@@ -6,7 +6,8 @@ import { createBankAccount, importBankRows, answerBankItem, undoBankItem, delete
 
 export const dynamic = "force-dynamic";
 
-export default async function BankPage({ searchParams }: { searchParams?: { account?: string } }) {
+export default async function BankPage(props: { searchParams?: Promise<{ account?: string }> }) {
+  const searchParams = await props.searchParams;
   const { user } = await requireRole(["owner"]);
   const admin = createAdminClient();
   const members = await admin.from("ownership_account_members").select("account_id")

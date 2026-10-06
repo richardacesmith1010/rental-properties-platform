@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserRole } from "@/lib/auth";
 import { generateMonthlyChargesForOwner } from "@/lib/charges";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   const supabase = createClient();
   const {

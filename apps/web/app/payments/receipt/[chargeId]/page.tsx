@@ -10,12 +10,13 @@ import { Alert } from "@/components/ui/alert";
 import { PrintButton } from "./print-button";
 
 interface ReceiptPageProps {
-  params: {
+  params: Promise<{
     chargeId: string;
-  };
+  }>;
 }
 
-export default async function ReceiptPage({ params }: ReceiptPageProps) {
+export default async function ReceiptPage(props: ReceiptPageProps) {
+  const params = await props.params;
   const supabase = createClient();
   const {
     data: { user }

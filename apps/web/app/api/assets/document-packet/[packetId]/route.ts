@@ -3,13 +3,16 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserRole } from "@/lib/auth";
 import { getSignedDocumentPacketAsset } from "@/lib/assets";
 
+export const dynamic = "force-dynamic";
+
 interface RouteParams {
-  params: {
+  params: Promise<{
     packetId: string;
-  };
+  }>;
 }
 
-export async function GET(_request: Request, { params }: RouteParams) {
+export async function GET(_request: Request, props: RouteParams) {
+  const params = await props.params;
   const supabase = createClient();
   const {
     data: { user },

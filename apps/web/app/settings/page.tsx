@@ -45,12 +45,13 @@ import {
 export const dynamic = "force-dynamic";
 
 interface SettingsPageProps {
-  searchParams?: {
+  searchParams?: Promise<{
     connect?: string | string[];
-  };
+  }>;
 }
 
-export default async function SettingsPage({ searchParams }: SettingsPageProps) {
+export default async function SettingsPage(props: SettingsPageProps) {
+  const searchParams = await props.searchParams;
   const user = await getAuthenticatedUser();
   const role = await getCurrentUserRole(user.id);
   const workspacePath = getRoleHomePath(role);

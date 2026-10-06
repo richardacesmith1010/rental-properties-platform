@@ -99,12 +99,13 @@ function getTenantDisplayName(params: {
 }
 
 interface TenantPageProps {
-  searchParams?: {
+  searchParams?: Promise<{
     section?: string | string[];
-  };
+  }>;
 }
 
-export default async function TenantPage({ searchParams }: TenantPageProps) {
+export default async function TenantPage(props: TenantPageProps) {
+  const searchParams = await props.searchParams;
   const user = await getAuthenticatedUser();
   const role = await getCurrentUserRole(user.id);
 

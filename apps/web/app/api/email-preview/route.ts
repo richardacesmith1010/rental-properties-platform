@@ -7,6 +7,8 @@ import {
 } from "@/lib/auth-email-templates";
 import { buildNotificationEmail } from "@/lib/email-templates";
 
+export const dynamic = "force-dynamic";
+
 const TEMPLATES: Record<string, () => string> = {
   confirmation: buildConfirmationEmailTemplate,
   recovery: buildRecoveryEmailTemplate,
