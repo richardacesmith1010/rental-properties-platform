@@ -8,11 +8,10 @@ import {
   sendRentDueReminders
 } from "@/lib/charges";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
+import { createCronRunRecord, updateCronRunRecord, type CronRunStatus } from "@/lib/cron-runs";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
-
-type CronRunStatus = "running" | "success" | "partial_failure" | "failure";
 
 type OperationStatus = "success" | "failed" | "skipped";
 
@@ -50,59 +49,6 @@ async function runOperation(name: string, fn: () => Promise<unknown>): Promise<O
       error: error instanceof Error ? error.message : String(error),
       durationMs: Date.now() - start
     };
-  }
-}
-
-async function createCronRunRecord(startedAt: string): Promise<string | null> {
-  try {
-    const adminClient = createAdminClient();
-    const { data, error } = await adminClient
-      .from("cron_runs")
-      .insert({
-        job_name: "generate-charges",
-        started_at: startedAt,
-        status: "running",
-        operations: []
-      })
-      .select("id")
-      .maybeSingle();
-
-    if (error) {
-      if (!isMissingSchemaError(error)) {
-        console.error("createCronRunRecord error:", error);
-      }
-      return null;
-    }
-
-    return data?.id ?? null;
-  } catch (error) {
-    console.error("createCronRunRecord unexpected error:", error);
-    return null;
-  }
-}
-
-async function updateCronRunRecord(
-  id: string | null,
-  values: {
-    completed_at: string;
-    status: CronRunStatus;
-    operations: OperationResult[];
-    error: string | null;
-  }
-) {
-  if (!id) {
-    return;
-  }
-
-  try {
-    const adminClient = createAdminClient();
-    const { error } = await adminClient.from("cron_runs").update(values).eq("id", id);
-
-    if (error && !isMissingSchemaError(error)) {
-      console.error("updateCronRunRecord error:", error);
-    }
-  } catch (error) {
-    console.error("updateCronRunRecord unexpected error:", error);
   }
 }
 
@@ -156,7 +102,7 @@ export async function GET(request: Request) {
 
   try {
     const adminClient = createAdminClient();
-    cronRunId = await createCronRunRecord(startedAt);
+    cronRunId = await createCronRunRecord("generate-charges", startedAt);
 
     const operations: OperationResult[] = [];
 

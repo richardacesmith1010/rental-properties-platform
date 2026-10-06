@@ -3,6 +3,13 @@ import { NextRequest } from "next/server";
 
 const createAdminClientMock = vi.hoisted(() => vi.fn());
 const getStripeAccountHealthMock = vi.hoisted(() => vi.fn());
+const createCronRunRecordMock = vi.hoisted(() => vi.fn());
+const updateCronRunRecordMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/cron-runs", () => ({
+  createCronRunRecord: createCronRunRecordMock,
+  updateCronRunRecord: updateCronRunRecordMock
+}));
 
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: createAdminClientMock
@@ -90,6 +97,8 @@ describe("verify-stripe-accounts cron route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env = { ...originalEnv, CRON_SECRET: "cron-secret" };
+    createCronRunRecordMock.mockResolvedValue("run-1");
+    updateCronRunRecordMock.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -102,6 +111,7 @@ describe("verify-stripe-accounts cron route", () => {
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({ error: "Unauthorized" });
     expect(createAdminClientMock).not.toHaveBeenCalled();
+    expect(createCronRunRecordMock).not.toHaveBeenCalled();
   });
 
   it("returns 401 with the wrong bearer token", async () => {
@@ -110,6 +120,17 @@ describe("verify-stripe-accounts cron route", () => {
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({ error: "Unauthorized" });
     expect(createAdminClientMock).not.toHaveBeenCalled();
+  });
+
+  it("records a fixed failure when verification setup throws", async () => {
+    createAdminClientMock.mockImplementation(() => { throw new Error("acct_secret"); });
+
+    const response = await GET(createRequest("cron-secret"));
+
+    expect(response.status).toBe(500);
+    expect(updateCronRunRecordMock).toHaveBeenCalledWith("run-1", expect.objectContaining({
+      status: "failure", error: "Stripe account verification failed."
+    }));
   });
 
   it("summarizes active and missing accounts and updates both tables", async () => {
@@ -164,6 +185,10 @@ describe("verify-stripe-accounts cron route", () => {
       expect.any(String)
     );
     expect(adminState.tables.profiles[0]?.stripe_last_verified_at).toEqual(expect.any(String));
+    expect(createCronRunRecordMock).toHaveBeenCalledWith("verify-stripe-accounts", expect.any(String));
+    expect(updateCronRunRecordMock).toHaveBeenCalledWith("run-1", expect.objectContaining({
+      status: "success", error: null, operations: []
+    }));
   });
 
   it("keeps processing when one account check throws", async () => {
@@ -221,6 +246,9 @@ describe("verify-stripe-accounts cron route", () => {
     expect(adminState.tables.ownership_accounts[1]?.stripe_status).toBe("restricted");
     expect(adminState.tables.profiles[0]?.stripe_status).toBe("active");
     expect(consoleErrorSpy).toHaveBeenCalled();
+    expect(updateCronRunRecordMock).toHaveBeenCalledWith("run-1", expect.objectContaining({
+      status: "failure", error: "Stripe account verification failed.", operations: []
+    }));
     expect(consoleLogSpy).toHaveBeenCalledWith("[verify-stripe-accounts] summary:", {
       checked: 3,
       active: 1,

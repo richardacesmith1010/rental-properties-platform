@@ -68,6 +68,17 @@ if [[ "$HEALTH_STATUS" != "200" ]]; then
   exit 1
 fi
 
+echo "[smoke] Checking cron freshness endpoint"
+CRON_HEALTH_BODY="$(mktemp)"
+CRON_HEALTH_STATUS="$(curl -sS -o "$CRON_HEALTH_BODY" -w "%{http_code}" "$APP_URL/api/health/cron")"
+if [[ "$CRON_HEALTH_STATUS" != "200" ]]; then
+  echo "[smoke] Expected 200 from /api/health/cron, got $CRON_HEALTH_STATUS"
+  cat "$CRON_HEALTH_BODY"
+  rm -f "$CRON_HEALTH_BODY"
+  exit 1
+fi
+rm -f "$CRON_HEALTH_BODY"
+
 SMOKE_ENV_VARS=(
   "SMOKE_OWNER_EMAIL"
   "SMOKE_OWNER_PASSWORD"
