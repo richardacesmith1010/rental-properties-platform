@@ -10,6 +10,14 @@ export function createClient() {
   }
 
   return createServerClient(url, anonKey, {
+    global: {
+      fetch: (input, init) => {
+        const count = Reflect.get(globalThis, Symbol.for("domus.perf.countSupabaseRequest")) as
+          ((request: RequestInfo | URL) => void) | undefined;
+        count?.(input);
+        return fetch(input, init);
+      }
+    },
     cookies: {
       async getAll() {
         const cookieStore = await cookies();

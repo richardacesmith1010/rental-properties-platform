@@ -295,13 +295,18 @@ describe("loadOwnerPageData orchestration", () => {
     });
   });
 
-  it("starts Home tickets before portfolio resolves using administered property IDs", async () => {
+  it("does not start Home-only loaders before portfolio resolves", async () => {
     const portfolio = deferred<{ properties: never[]; units: never[]; leases: never[]; tenants: never[] }>();
     ownerLoadMocks.portfolio.mockReturnValue(portfolio.promise);
 
     const loading = loadOwnerPageData({ userEmail: "owner@example.test", userId: "user-1" });
 
-    await vi.waitFor(() => expect(ownerLoadMocks.tickets).toHaveBeenCalledWith("user-1", "account-1", []));
+    await vi.waitFor(() => expect(ownerLoadMocks.dashboard).toHaveBeenCalled());
+    expect(ownerLoadMocks.tickets).not.toHaveBeenCalled();
+    expect(ownerLoadMocks.invitations).not.toHaveBeenCalled();
+    expect(ownerLoadMocks.expenses).not.toHaveBeenCalled();
+    expect(ownerLoadMocks.managerPayments).not.toHaveBeenCalled();
+    expect(ownerLoadMocks.feedback).not.toHaveBeenCalled();
     portfolio.resolve({ properties: [], units: [], leases: [], tenants: [] });
     expect((await loading).status).toBe("ready");
   });
@@ -391,6 +396,23 @@ describe("buildOwnerBundlePlan", () => {
     expect(bundlePlan.bundles.has("vendors")).toBe(false);
     expect(bundlePlan.sectionAvailability.hasAnalyticsSection).toBe(true);
     expect(bundlePlan.sectionAvailability.hasManagerPaymentsSection).toBe(true);
+  });
+
+  it("defers Home-only bundles on the first render and preserves section plans", () => {
+    const home = buildOwnerBundlePlan({
+      capabilities, initialOwnerHomePage: true, deferHomeOnlyBundles: true,
+      initialSectionId: null, isLlcAccount: true, sectionAvailability
+    });
+    expect([...home.bundles].sort()).toEqual([
+      "announcement-properties", "dashboard", "notification-preferences", "notifications",
+      "ownership-members", "portfolio", "rent-collection-status"
+    ]);
+    for (const section of ["charges", "maintenance", "expenses", "leasing"]) {
+      const base = { capabilities, initialOwnerHomePage: false, initialSectionId: section,
+        isLlcAccount: false, sectionAvailability };
+      expect([...buildOwnerBundlePlan({ ...base, deferHomeOnlyBundles: true }).bundles])
+        .toEqual([...buildOwnerBundlePlan(base).bundles]);
+    }
   });
 
   it("loads only the section-specific bundles for a deferred records section", () => {

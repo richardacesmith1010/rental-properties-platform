@@ -81,6 +81,53 @@ describe("owner section cache", () => {
     window.scrollTo = vi.fn();
   });
 
+  it("loads missing Home bundles immediately through the section cache and merges the result", async () => {
+    const props = fixture();
+    props.requirements["daily-ops-home"] = ["tickets", "invitations", "expenses", "manager-payments", "feedback"];
+    sectionLoad = vi.fn().mockResolvedValue({ status: "ready", data: {
+      tickets: [{ id: "repair-1" }], invitations: [{ id: "invite-1" }],
+      expenses: { expenses: [{ id: "expense-1" }] }, loadedBundles: props.requirements["daily-ops-home"]
+    } });
+    window.history.replaceState(null, "", "/owner");
+    const { result } = renderHook(() => useOwnerSectionCache(props));
+    act(() => { result.current.loadHome(); result.current.loadHome(); });
+    await waitFor(() => expect(result.current.hasBundles("daily-ops-home")).toBe(true));
+    expect(sectionLoad).toHaveBeenCalledOnce();
+    expect(sectionLoad).toHaveBeenCalledWith(expect.objectContaining({ section: "daily-ops-home" }));
+    expect(result.current.data.tickets?.[0].id).toBe("repair-1");
+    expect(result.current.data.invitations?.[0].id).toBe("invite-1");
+    expect(result.current.homeError).toBe(false);
+  });
+
+  it("marks a failed Home request without changing the essential cache", async () => {
+    const props = fixture();
+    props.requirements["daily-ops-home"] = ["tickets"];
+    sectionLoad = vi.fn().mockResolvedValue({ error: "failed" });
+    window.history.replaceState(null, "", "/owner");
+    const { result } = renderHook(() => useOwnerSectionCache(props));
+    act(() => result.current.loadHome());
+    await waitFor(() => expect(result.current.homeError).toBe(true));
+    expect(result.current.hasBundles("daily-ops-home")).toBe(false);
+    expect(result.current.data.tickets).toBeUndefined();
+    expect(router.refresh).not.toHaveBeenCalled();
+  });
+
+  it("discards a Home response after the account scope changes", async () => {
+    const props = fixture();
+    props.requirements["daily-ops-home"] = ["tickets"];
+    const homeRequest = deferred();
+    sectionLoad = vi.fn().mockReturnValue(homeRequest.promise);
+    window.history.replaceState(null, "", "/owner");
+    const { result, rerender } = renderHook(useOwnerSectionCache, { initialProps: props });
+    act(() => result.current.loadHome());
+    expect(sectionLoad).toHaveBeenCalledOnce();
+
+    rerender({ ...props, account: "account-b" });
+    await act(async () => homeRequest.resolve(ready("stale-repair")));
+    expect(result.current.data.tickets).toBeUndefined();
+    expect(result.current.homeError).toBe(false);
+  });
+
   it("preloads hovered sections serially with one request in flight", async () => {
     vi.useFakeTimers();
     const next = deferred(), previous = deferred();

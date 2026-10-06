@@ -7,7 +7,7 @@ import { getCurrentUserRole, getUserProfileSummary } from "@/lib/auth";
 import { getOwnershipAccountsForUser } from "@/lib/ownership";
 import { getAdministeredPropertyIdsForAccount } from "@/lib/property-access";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
-import { logPerfEvent } from "@/lib/logger";
+import { logPerfEvent, measureQueryCount } from "@/lib/logger";
 import {
   OWNER_SECTION_IDS, OWNER_SHARED_BUNDLES, buildOwnerBundlePlan,
   buildOwnerSectionAvailability, loadOwnerSectionBundles, resolveOwnerPageRequest
@@ -59,13 +59,12 @@ export async function loadOwnerSectionDataForUser(user: Pick<User, "id" | "email
       userId: user.id, userEmail: user.email ?? "", request, ownershipAccounts, capabilities,
       bundles, connectedPropertyIds: Promise.resolve(propertyIds),
       // Log only fixed operation names/timing, including failures; never raw DB errors or identifiers.
-      measure: async (name, work) => {
+      measure: (name, work) => {
         const start = performance.now();
-        try { return await work(); }
-        finally {
+        return measureQueryCount(work, queries => {
           logPerfEvent({ scope: "owner", name, durationMs: performance.now() - start,
-            meta: { route: "owner-section-data-api", ...(isPreload ? { preload: true } : {}) } });
-        }
+            meta: { route: "owner-section-data-api", queries, ...(isPreload ? { preload: true } : {}) } });
+        });
       }
     });
     return { status: "ready", data: {

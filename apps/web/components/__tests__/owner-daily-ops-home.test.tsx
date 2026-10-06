@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OwnerDailyOpsHome } from "@/components/dashboard/owner-daily-ops-home";
+import { OwnerSectionCacheContext, type useOwnerSectionCache } from "@/components/dashboard/owner-section-cache";
 
 vi.mock("react-dom", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-dom")>();
@@ -9,7 +10,8 @@ vi.mock("react-dom", async (importOriginal) => {
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("@/components/dashboard/financial-overview-panel", () => ({
-  FinancialOverviewPanel: () => <div>Financial details</div>
+  FinancialOverviewPanel: ({ monthlyExpensesCents }: { monthlyExpensesCents: number }) =>
+    <div>Financial details <span>Expenses: {monthlyExpensesCents}</span></div>
 }));
 
 const financialOverview = {
@@ -32,6 +34,45 @@ const summary = {
 };
 
 describe("OwnerDailyOpsHome", () => {
+  it("shows essential rent and tiles while Home bundles load, then fills the deferred areas", () => {
+    const loadHome = vi.fn();
+    const pendingCache = { hasBundles: () => false, homeError: false, loadHome } as unknown as ReturnType<typeof useOwnerSectionCache>;
+    const readyCache = { hasBundles: () => true, homeError: false, loadHome } as unknown as ReturnType<typeof useOwnerSectionCache>;
+    const home = (cache: ReturnType<typeof useOwnerSectionCache>, ready: boolean) => (
+      <OwnerSectionCacheContext.Provider value={cache}>
+        <OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }}
+          summary={{ ...summary, openRepairCount: ready ? 2 : 0, joinedWithoutLease: ready ? [{
+            id: "invite-1", fullName: "Dana Tenant", propertyId: "property-1"
+          } as never] : [] }}
+          onOpenSection={vi.fn()} financialOverview={{ ...financialOverview, monthlyExpensesCents: ready ? 7500 : 0 }} />
+      </OwnerSectionCacheContext.Provider>
+    );
+    const { rerender } = render(home(pendingCache, false));
+    expect(screen.getByText("Maya Bell owes $1,200")).toBeInTheDocument();
+    expect(screen.getByText("$3,000 of $5,000")).toBeInTheDocument();
+    expect(screen.getByLabelText("Loading new tenants")).toBeInTheDocument();
+    expect(screen.getByLabelText("Loading repairs and messages")).toBeInTheDocument();
+    expect(screen.getByLabelText("Loading more numbers")).toBeInTheDocument();
+    expect(loadHome).toHaveBeenCalledOnce();
+    rerender(home(readyCache, true));
+    expect(screen.getByText("Dana Tenant joined. Set up their lease.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "2 open repairs" })).toBeInTheDocument();
+    expect(screen.getByText("Expenses: 7500")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Loading more numbers")).not.toBeInTheDocument();
+  });
+
+  it("shows a refresh message when the deferred Home request fails", () => {
+    const cache = { hasBundles: () => false, homeError: true, loadHome: vi.fn() } as unknown as
+      ReturnType<typeof useOwnerSectionCache>;
+    render(<OwnerSectionCacheContext.Provider value={cache}>
+      <OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }}
+        summary={summary} onOpenSection={vi.fn()} financialOverview={financialOverview} />
+    </OwnerSectionCacheContext.Provider>);
+    expect(screen.getByText("Maya Bell owes $1,200")).toBeInTheDocument();
+    expect(screen.getAllByText("Some numbers didn't load. Refresh to try again.")).toHaveLength(2);
+    expect(screen.queryByText("Expenses: 0")).not.toBeInTheDocument();
+  });
+
   it("hides reminders while notifications are off and keeps Mark as paid", () => {
     render(<OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }}
       summary={summary} onOpenSection={vi.fn()} financialOverview={financialOverview} />);

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { logFailedSideEffect, sideEffectError } from "../logger";
+import { countSupabaseRequest, logFailedSideEffect, measurePerf, measureQueryCount, sideEffectError } from "../logger";
+import { createAdminClient } from "../supabase/admin";
 
 let consoleSpy: ReturnType<typeof vi.spyOn>;
 
@@ -9,6 +10,8 @@ beforeEach(() => {
 
 afterEach(() => {
   consoleSpy.mockRestore();
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
 });
 
 describe("logFailedSideEffect", () => {
@@ -128,5 +131,62 @@ describe("sideEffectError", () => {
     expect(logged.entityType).toBe("lease");
     expect(logged.entityId).toBe("lease-1");
     expect(logged.userId).toBe("unknown");
+  });
+});
+
+describe("Supabase round-trip counting", () => {
+  test("counts a real admin-client REST fetch", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://db.example");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "service-key");
+    const request = vi.fn(async () => new Response("[]", {
+      status: 200, headers: { "content-type": "application/json" }
+    }));
+    vi.stubGlobal("fetch", request);
+    let queries = -1;
+    await measureQueryCount(async () => await createAdminClient().from("properties").select("id"), count => { queries = count; });
+    expect(request).toHaveBeenCalledOnce();
+    expect(queries).toBe(1);
+  });
+
+  test("counts REST requests independently for concurrent bundle scopes", async () => {
+    const counts: number[] = [];
+    await Promise.all([
+      measureQueryCount(async () => {
+        countSupabaseRequest("https://db.example/rest/v1/properties?select=id");
+        await Promise.resolve();
+        countSupabaseRequest("https://db.example/rest/v1/rpc/home_summary");
+      }, count => counts.push(count)),
+      measureQueryCount(async () => {
+        countSupabaseRequest("https://db.example/auth/v1/user");
+        countSupabaseRequest("https://db.example/rest/v1/leases?select=id");
+      }, count => counts.push(count))
+    ]);
+    expect(counts.sort()).toEqual([1, 2]);
+    await measureQueryCount(async () => {}, count => counts.push(count));
+    expect(counts.at(-1)).toBe(0);
+  });
+
+  test("logs the query count on owner and tenant bundle events", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    for (const scope of ["owner", "tenant"]) {
+      await measurePerf(scope, "bundle", async () => {
+        countSupabaseRequest("https://db.example/rest/v1/units");
+      });
+    }
+    expect(info).toHaveBeenCalledTimes(2);
+    expect(info.mock.calls.map(([line]) => JSON.parse(String(line).split(" ", 2)[1]).queries)).toEqual([1, 1]);
+    info.mockRestore();
+  });
+
+  test("keeps database error details out of perf events", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    await expect(measurePerf("owner", "bundle", async () => {
+      countSupabaseRequest("https://db.example/rest/v1/properties");
+      throw new Error("SQL detail that must stay out of perf logs");
+    })).rejects.toThrow("SQL detail");
+    const event = JSON.parse(String(info.mock.calls[0][0]).split(" ", 2)[1]);
+    expect(event).toMatchObject({ status: "error", queries: 1 });
+    expect(event).not.toHaveProperty("error");
+    info.mockRestore();
   });
 });

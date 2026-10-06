@@ -187,6 +187,7 @@ export async function loadOwnerPageData(params: {
   const provisionalBundlePlan = buildOwnerBundlePlan({
     capabilities,
     initialOwnerHomePage: request.initialOwnerHomePage,
+    deferHomeOnlyBundles: request.initialOwnerHomePage,
     initialSectionId: request.initialSectionId,
     isLlcAccount,
     sectionAvailability: provisionalAvailability

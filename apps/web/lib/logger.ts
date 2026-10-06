@@ -3,6 +3,31 @@
  * In production, these would feed into a log aggregator.
  * For now, emit structured JSON so failures are parseable.
  */
+import { AsyncLocalStorage } from "node:async_hooks";
+
+const queryScope = new AsyncLocalStorage<{ queries: number }>();
+
+export function countSupabaseRequest(input: RequestInfo | URL): void {
+  const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+  if (url.includes("/rest/v1/")) {
+    const scope = queryScope.getStore();
+    if (scope) scope.queries++;
+  }
+}
+
+// The Supabase helpers also appear in client import graphs; register this server-only hook without importing Node code there.
+Reflect.set(globalThis, Symbol.for("domus.perf.countSupabaseRequest"), countSupabaseRequest);
+
+export async function measureQueryCount<T>(work: () => Promise<T>, onComplete: (queries: number) => void): Promise<T> {
+  const scope = { queries: 0 };
+  return queryScope.run(scope, async () => {
+    try {
+      return await work();
+    } finally {
+      onComplete(scope.queries);
+    }
+  });
+}
 
 export interface LogContext {
   action: string;
@@ -77,30 +102,16 @@ export async function measurePerf<T>(
   meta?: Record<string, unknown>
 ): Promise<T> {
   const startedAt = performance.now();
-
-  try {
-    const result = await work();
-    logPerfEvent({
-      scope,
-      name,
-      durationMs: performance.now() - startedAt,
-      meta: {
-        status: "ok",
-        ...(meta ?? {})
-      }
-    });
-    return result;
-  } catch (error) {
-    logPerfEvent({
-      scope,
-      name,
-      durationMs: performance.now() - startedAt,
-      meta: {
-        status: "error",
-        ...(meta ?? {}),
-        error: error instanceof Error ? error.message : String(error)
-      }
-    });
-    throw error;
-  }
+  let status = "ok";
+  return measureQueryCount(async () => {
+    try {
+      return await work();
+    } catch (error) {
+      status = "error";
+      throw error;
+    }
+  }, queries => logPerfEvent({
+    scope, name, durationMs: performance.now() - startedAt,
+    meta: { status, ...(meta ?? {}), queries }
+  }));
 }

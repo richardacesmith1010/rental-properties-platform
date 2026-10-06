@@ -51,6 +51,7 @@ export function useOwnerSectionCache(props: OwnerSectionCacheProps) {
   const state = useRef({
     server: props.loadedBundles, scope, epoch: 0, request: 0, pendingUrl: null as string | null,
     overlay: new Map<OwnerBundleId, OwnerSectionData>(), loading: false, waitingForServer: false,
+    homeError: false, homeController: null as AbortController | null,
     controllers: new Set<AbortController>(), clickController: null as AbortController | null,
     attemptedPreloads: new Set<string>(),
     preloadSchedule: 0,
@@ -73,6 +74,8 @@ export function useOwnerSectionCache(props: OwnerSectionCacheProps) {
     cache.epoch++;
     cache.overlay.clear();
     cache.loading = false;
+    cache.homeError = false;
+    cache.homeController = null;
     cache.waitingForServer = false;
     cache.pendingUrl = null;
   } else if (cache.scope !== scope && !cache.waitingForServer) {
@@ -81,6 +84,8 @@ export function useOwnerSectionCache(props: OwnerSectionCacheProps) {
     cache.epoch++;
     cache.overlay.clear();
     cache.loading = true;
+    cache.homeError = false;
+    cache.homeController = null;
     cache.waitingForServer = true;
   }
 
@@ -99,6 +104,8 @@ export function useOwnerSectionCache(props: OwnerSectionCacheProps) {
     current.epoch++;
     current.overlay.clear();
     current.loading = true;
+    current.homeError = false;
+    current.homeController = null;
     current.waitingForServer = true;
     current.pendingUrl = null;
     redraw(value => value + 1);
@@ -246,11 +253,56 @@ export function useOwnerSectionCache(props: OwnerSectionCacheProps) {
     current.preloadIdle = globalThis.setTimeout(run, delay) as unknown as number;
   }, [cancelScheduledPreload]);
 
+  const loadHome = useCallback(() => {
+    const current = state.current;
+    const latestProps = propsRef.current;
+    const required = latestProps.requirements["daily-ops-home"];
+    const loaded = new Set([...latestProps.loadedBundles, ...current.overlay.keys()]);
+    if (!required || required.every(bundle => loaded.has(bundle)) || current.loading || current.waitingForServer ||
+        current.homeError || current.homeController) return;
+
+    const controller = new AbortController();
+    const epoch = current.epoch;
+    const requestScope = current.scope;
+    current.homeController = controller;
+    current.controllers.add(controller);
+    const params = new URL(window.location.href).searchParams;
+    void loadSection({
+      section: "daily-ops-home",
+      account: params.get("account") ?? latestProps.account ?? undefined,
+      property: params.get("property") ?? undefined
+    }, controller.signal).then(result => {
+      if (controller.signal.aborted || current.epoch !== epoch || current.scope !== requestScope) return;
+      if (!("status" in result) || result.status !== "ready" ||
+          !required.every(bundle => result.data.loadedBundles.includes(bundle) || loaded.has(bundle))) {
+        current.homeError = true;
+      } else {
+        for (const bundle of result.data.loadedBundles) {
+          current.overlay.delete(bundle);
+          current.overlay.set(bundle, result.data);
+        }
+      }
+      redraw(value => value + 1);
+    }).catch(() => {
+      if (controller.signal.aborted || current.epoch !== epoch || current.scope !== requestScope) return;
+      current.homeError = true;
+      redraw(value => value + 1);
+    }).finally(() => {
+      current.controllers.delete(controller);
+      if (current.homeController === controller) current.homeController = null;
+    });
+  }, []);
+
   const navigationParams = () => new URL(
     state.current.pendingUrl ?? window.location.href, window.location.origin
   ).searchParams;
   const data: Partial<OwnerSectionData> = Object.assign({}, ...cache.overlay.values());
-  return { data, loading: cache.loading, navigate, fullNavigate, navigationParams, preloadSection, cancelScheduledPreload };
+  const loaded = new Set([...props.loadedBundles, ...cache.overlay.keys()]);
+  const hasBundles = (section: string) => props.requirements[section]?.every(bundle => loaded.has(bundle)) ?? true;
+  return {
+    data, loading: cache.loading, homeError: cache.homeError, hasBundles, loadHome,
+    navigate, fullNavigate, navigationParams, preloadSection, cancelScheduledPreload
+  };
 }
 
 export const OwnerSectionCacheContext = createContext<ReturnType<typeof useOwnerSectionCache> | null>(null);

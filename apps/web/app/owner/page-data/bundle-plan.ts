@@ -4,6 +4,7 @@ import type { OwnerBundleId } from "./types";
 export function buildOwnerBundlePlan(params: {
   capabilities: FeatureCapabilitiesDTO;
   initialOwnerHomePage: boolean;
+  deferHomeOnlyBundles?: boolean;
   initialSectionId: string | null;
   isLlcAccount: boolean;
   sectionAvailability: OwnerDashboardSectionAvailability;
@@ -21,11 +22,13 @@ export function buildOwnerBundlePlan(params: {
   ]);
 
   if (params.initialOwnerHomePage) {
-    bundles.add("invitations");
-    bundles.add("tickets");
-    bundles.add("expenses");
-    bundles.add("manager-payments");
-    bundles.add("feedback");
+    if (!params.deferHomeOnlyBundles) {
+      bundles.add("invitations");
+      bundles.add("tickets");
+      bundles.add("expenses");
+      bundles.add("manager-payments");
+      bundles.add("feedback");
+    }
 
     if (params.isLlcAccount) {
       bundles.add("ownership-members");

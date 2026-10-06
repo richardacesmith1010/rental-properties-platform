@@ -62,7 +62,11 @@ vi.mock("@/lib/feature-capabilities", () => ({
 }));
 vi.mock("@/lib/logger", () => ({
   logPerfEvent: ownerLoadMocks.logPerf,
-  measurePerf: async (_scope: string, _name: string, work: () => Promise<unknown>) => work()
+  measurePerf: async (_scope: string, _name: string, work: () => Promise<unknown>) => work(),
+  measureQueryCount: async (work: () => Promise<unknown>, onComplete: (queries: number) => void) => {
+    try { return await work(); }
+    finally { onComplete(0); }
+  }
 }));
 vi.mock("@/lib/dashboard", () => ({ getDashboardData: ownerLoadMocks.dashboard }));
 vi.mock("@/lib/portfolio", () => ({ getPortfolioData: ownerLoadMocks.portfolio }));
@@ -237,7 +241,7 @@ describe("owner section GET route", () => {
     expect(ownerLoadMocks.administeredIds).toHaveBeenCalledTimes(normalCalls.scope + 1);
     expect(ownerLoadMocks.tickets).toHaveBeenLastCalledWith("user-1", "account-1", ["property-1"]);
     expect(ownerLoadMocks.logPerf).toHaveBeenCalledWith(expect.objectContaining({
-      meta: { route: "owner-section-data-api", preload: true }
+      meta: { route: "owner-section-data-api", queries: 0, preload: true }
     }));
   });
 

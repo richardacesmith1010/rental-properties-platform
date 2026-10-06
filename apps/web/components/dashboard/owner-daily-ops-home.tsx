@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useContext, useEffect, useState, useTransition } from "react";
 import { useFormState } from "react-dom";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import { HomeMoneyCard } from "@/components/home-money/home-money-page";
 import type { OwnerBankCardState } from "@/lib/owner-bank-status";
 import type { InvitationListItem } from "@/lib/invitations";
 import type { StatefulAction } from "./types";
+import { OwnerSectionCacheContext } from "./owner-section-cache";
 
 interface OwnerHomeSummary {
   lateCharges: ChargeRowData[];
@@ -110,6 +111,10 @@ export function OwnerDailyOpsHome({
   onRefreshPlaidBalance, onDisconnectPlaid
 }: OwnerDailyOpsHomeProps) {
   const router = useRouter();
+  const ownerCache = useContext(OwnerSectionCacheContext);
+  const loadHome = ownerCache?.loadHome;
+  const deferredReady = isManagerView || !ownerCache || ownerCache.hasBundles("daily-ops-home");
+  const deferredFailed = !deferredReady && ownerCache?.homeError;
   const [paymentChargeId, setPaymentChargeId] = useState<string | null>(null);
   const [isSending, startSending] = useTransition();
   const [paymentState, paymentAction] = useFormState(onRecordManualPayment ?? unavailableAction, null);
@@ -118,6 +123,10 @@ export function OwnerDailyOpsHome({
     : 0;
 
   const lateRentGroups = groupLateRent(summary.lateCharges);
+
+  useEffect(() => {
+    if (!isManagerView && !deferredReady) loadHome?.();
+  }, [deferredReady, isManagerView, loadHome]);
 
   const sendReminder = (chargeIds: string[]) => {
     if (!onSendBatchPaymentReminder) {
@@ -189,17 +198,25 @@ export function OwnerDailyOpsHome({
                 ) : null}
               </div>;
             })}
-            {(summary.joinedWithoutLease ?? []).map((invite) => <div key={invite.id}
+            {!deferredReady && !deferredFailed ? (
+              <div className="domus-card h-20 animate-pulse bg-[var(--surface-2)]" aria-label="Loading new tenants" />
+            ) : null}
+            {deferredFailed ? (
+              <p className="text-sm text-[var(--muted)]">Some numbers didn&apos;t load. Refresh to try again.</p>
+            ) : null}
+            {deferredReady ? (summary.joinedWithoutLease ?? []).map((invite) => <div key={invite.id}
               className="domus-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="font-semibold text-[var(--ink)]">{invite.fullName} joined. Set up their lease.</p>
               <Button type="button" className="min-h-11"
                 onClick={() => { if (invite.propertyId) onSelectProperty?.(invite.propertyId); onOpenLeaseWizard?.(); }}
                 title="Open the lease setup wizard.">Set up lease</Button>
-            </div>)}
+            </div>) : null}
 
-            {summary.openRepairCount === 0 && summary.newMessageCount === 0 ? (
+            {!deferredReady && !deferredFailed ? (
+              <div className="h-11 animate-pulse rounded-xl bg-[var(--surface-2)]" aria-label="Loading repairs and messages" />
+            ) : deferredReady && summary.openRepairCount === 0 && summary.newMessageCount === 0 ? (
               <p className="text-sm text-[var(--muted)]">No open repairs. No new messages.</p>
-            ) : (
+            ) : deferredReady ? (
               <div className="grid gap-3 sm:grid-cols-2">
                 {summary.openRepairCount > 0 ? <Button type="button" variant="outline" className="min-h-11 justify-start"
                   onClick={() => onOpenSection("maintenance")} title="Open Repairs.">
@@ -208,7 +225,7 @@ export function OwnerDailyOpsHome({
                   onClick={() => onOpenSection("inbox")} title="Open Messages.">
                   {summary.newMessageCount} new message{summary.newMessageCount === 1 ? "" : "s"}</Button> : null}
               </div>
-            )}
+            ) : null}
           </section>
 
           <section className="grid gap-3 md:grid-cols-3" aria-label="Your homes">
@@ -225,9 +242,21 @@ export function OwnerDailyOpsHome({
           {!isManagerView ? (
             <section className="space-y-3">
               <h2 className="text-lg font-semibold text-[var(--ink)]">More numbers</h2>
-              <FinancialOverviewPanel {...financialOverview} onInitiatePlaidLink={onInitiatePlaidLink}
-                onCompletePlaidLink={onCompletePlaidLink} onRefreshPlaidBalance={onRefreshPlaidBalance}
-                onDisconnectPlaid={onDisconnectPlaid} />
+              {deferredReady ? (
+                <FinancialOverviewPanel {...financialOverview} onInitiatePlaidLink={onInitiatePlaidLink}
+                  onCompletePlaidLink={onCompletePlaidLink} onRefreshPlaidBalance={onRefreshPlaidBalance}
+                  onDisconnectPlaid={onDisconnectPlaid} />
+              ) : deferredFailed ? (
+                <div className="domus-card min-h-80 p-4 text-sm text-[var(--muted)]">
+                  Some numbers didn&apos;t load. Refresh to try again.
+                </div>
+              ) : (
+                <div className="domus-card min-h-80 animate-pulse space-y-5 p-5" aria-label="Loading more numbers">
+                  <div className="h-12 w-1/2 rounded-lg bg-[var(--surface-2)]" />
+                  <div className="h-11 w-full rounded-lg bg-[var(--surface-2)]" />
+                  <div className="h-36 w-full rounded-lg bg-[var(--surface-2)]" />
+                </div>
+              )}
             </section>
           ) : null}
         </>

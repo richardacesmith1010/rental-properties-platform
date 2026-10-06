@@ -9,6 +9,14 @@ export function createAdminClient() {
   }
 
   return createClient(url, serviceRoleKey, {
-    auth: { persistSession: false, autoRefreshToken: false }
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      fetch: (input, init) => {
+        const count = Reflect.get(globalThis, Symbol.for("domus.perf.countSupabaseRequest")) as
+          ((request: RequestInfo | URL) => void) | undefined;
+        count?.(input);
+        return fetch(input, init);
+      }
+    }
   });
 }
