@@ -155,9 +155,9 @@ export async function getUniqueOwnershipJoinCode(maxAttempts = 10): Promise<stri
 export async function getOwnershipAccountsForUser(userId: string): Promise<OwnershipAccountDTO[]> {
   const admin = createAdminClient();
 
-  const propertyAccountIds = await getAdministeredOwnerAccountIds(userId);
-
-  const [{ data: memberRows, error: memberError }, { data: createdRows, error: creatorError }] = await Promise.all([
+  const [propertyAccountIds, { data: memberRows, error: memberError }, { data: createdRows, error: creatorError }] =
+    await Promise.all([
+    getAdministeredOwnerAccountIds(userId),
     admin
       .from("ownership_account_members")
       .select("account_id")
@@ -170,6 +170,10 @@ export async function getOwnershipAccountsForUser(userId: string): Promise<Owner
   ]);
 
   if ((memberError && isMissingSchemaError(memberError)) || (creatorError && isMissingSchemaError(creatorError))) {
+    return [];
+  }
+  if (memberError || creatorError) {
+    console.error("[ownership] Failed to load account access:", memberError ?? creatorError);
     return [];
   }
 
@@ -187,7 +191,9 @@ export async function getOwnershipAccountsForUser(userId: string): Promise<Owner
     admin
       .from("ownership_accounts")
       .select(
-        "id, account_type, display_name, join_code, stripe_account_id, stripe_onboarding_complete, stripe_status, distribution_mode, plaid_account_id, plaid_bank_name, plaid_bank_mask, plaid_balance_cents, plaid_balance_updated_at"
+        "id, account_type, display_name, join_code, stripe_account_id, stripe_onboarding_complete, " +
+        "stripe_status, distribution_mode, plaid_account_id, plaid_bank_name, plaid_bank_mask, " +
+        "plaid_balance_cents, plaid_balance_updated_at"
       )
       .in("id", accountIds)
       .order("created_at", { ascending: true }),
@@ -201,18 +207,25 @@ export async function getOwnershipAccountsForUser(userId: string): Promise<Owner
   if (membersError && isMissingSchemaError(membersError)) {
     return [];
   }
+  if (membersError || (accountsError && !isMissingSchemaError(accountsError))) {
+    console.error("[ownership] Failed to load account details:", membersError ?? accountsError);
+    return [];
+  }
 
+  const fallbackResult = accountsError && isMissingSchemaError(accountsError)
+    ? await admin
+        .from("ownership_accounts")
+        .select("id, account_type, display_name, join_code, stripe_account_id, stripe_onboarding_complete, distribution_mode")
+        .in("id", accountIds)
+        .order("created_at", { ascending: true })
+    : null;
+  if (fallbackResult?.error) {
+    console.error("[ownership] Failed to load fallback account details:", fallbackResult.error);
+    return [];
+  }
   const accountRows: OwnershipAccountRow[] =
-    accountsError && isMissingSchemaError(accountsError)
-      ? (
-          await admin
-            .from("ownership_accounts")
-            .select(
-              "id, account_type, display_name, join_code, stripe_account_id, stripe_onboarding_complete, distribution_mode"
-            )
-            .in("id", accountIds)
-            .order("created_at", { ascending: true })
-        ).data?.map((account) => ({
+    fallbackResult
+      ? (fallbackResult.data ?? []).map((account) => ({
           ...account,
           stripe_account_id: account.stripe_account_id ?? null,
           stripe_onboarding_complete: account.stripe_onboarding_complete ?? false,
@@ -223,8 +236,8 @@ export async function getOwnershipAccountsForUser(userId: string): Promise<Owner
           plaid_bank_mask: null,
           plaid_balance_cents: null,
           plaid_balance_updated_at: null
-        })) ?? []
-      : ((accounts ?? []) as OwnershipAccountRow[]);
+        }))
+      : ((accounts ?? []) as unknown as OwnershipAccountRow[]);
 
   const memberCountByAccount = new Map<string, number>();
   for (const row of members ?? []) {

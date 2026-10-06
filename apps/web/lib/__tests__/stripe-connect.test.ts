@@ -13,7 +13,8 @@ import {
   createExpressAccount,
   getDefaultExpressAccountBusinessProfileUrl,
   getOwnerStripeAccountForProperty,
-  getRentCollectionConnectStatus
+  getRentCollectionConnectStatus,
+  isStripeVerificationStale
 } from "@/lib/stripe-connect";
 
 type MockTable = "profiles" | "ownership_account_members" | "ownership_accounts" | "properties";
@@ -55,7 +56,10 @@ function createQueryBuilder(table: MockTable, state: MockAdminState) {
       };
     },
     then<TResult1 = { data: Array<Record<string, unknown>> | null; error: { code?: string; message: string } | null }, TResult2 = never>(
-      onfulfilled?: ((value: { data: Array<Record<string, unknown>> | null; error: { code?: string; message: string } | null }) => TResult1 | PromiseLike<TResult1>) | null,
+      onfulfilled?: ((value: {
+        data: Array<Record<string, unknown>> | null;
+        error: { code?: string; message: string } | null;
+      }) => TResult1 | PromiseLike<TResult1>) | null,
       onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
     ) {
       return Promise.resolve(execute()).then(onfulfilled, onrejected);
@@ -66,7 +70,7 @@ function createQueryBuilder(table: MockTable, state: MockAdminState) {
 }
 
 function createStatusAdminClient(state: MockAdminState) {
-  const update = vi.fn();
+  const update = vi.fn(() => ({ eq: async () => ({ error: null }) }));
   const insert = vi.fn();
   const remove = vi.fn();
   const from = vi.fn((table: MockTable) => ({
@@ -119,7 +123,9 @@ describe("stripe-connect express account params", () => {
 
     expect(onboardingParams).toEqual(probeParams);
     expect(buildExpressAccountRequestBody(onboardingParams).toString()).toBe(
-      "type=express&country=US&capabilities%5Bcard_payments%5D%5Brequested%5D=true&capabilities%5Btransfers%5D%5Brequested%5D=true&business_profile%5Bmcc%5D=6513&business_profile%5Burl%5D=https%3A%2F%2Fdomusbase.com"
+      "type=express&country=US&capabilities%5Bcard_payments%5D%5Brequested%5D=true&" +
+      "capabilities%5Btransfers%5D%5Brequested%5D=true&business_profile%5Bmcc%5D=6513&" +
+      "business_profile%5Burl%5D=https%3A%2F%2Fdomusbase.com"
     );
   });
 
@@ -141,7 +147,9 @@ describe("stripe-connect express account params", () => {
         Authorization: "Bearer sk_test_123",
         "Content-Type": "application/x-www-form-urlencoded"
       },
-      body: "type=express&email=owner%40example.com&country=US&capabilities%5Bcard_payments%5D%5Brequested%5D=true&capabilities%5Btransfers%5D%5Brequested%5D=true&business_profile%5Bmcc%5D=6513&business_profile%5Burl%5D=https%3A%2F%2Fdomusbase.com",
+      body: "type=express&email=owner%40example.com&country=US&capabilities%5Bcard_payments%5D%5Brequested%5D=true&" +
+        "capabilities%5Btransfers%5D%5Brequested%5D=true&business_profile%5Bmcc%5D=6513&" +
+        "business_profile%5Burl%5D=https%3A%2F%2Fdomusbase.com",
       cache: "no-store"
     });
   });
@@ -158,8 +166,14 @@ describe("arePropertyOwnersConnected", () => {
       { id: "property-no-owner", owner_account_id: null, owner_profile_id: null }
     ],
     ownership_accounts: [
-      { id: "account-ready", stripe_account_id: "acct_ready", stripe_onboarding_complete: true, created_by_profile_id: "profile-unused" },
-      { id: "account-creator", stripe_account_id: "acct_incomplete", stripe_onboarding_complete: false, created_by_profile_id: "profile-creator" },
+      {
+        id: "account-ready", stripe_account_id: "acct_ready", stripe_onboarding_complete: true,
+        stripe_last_verified_at: "2999-01-01", created_by_profile_id: "profile-unused"
+      },
+      {
+        id: "account-creator", stripe_account_id: "acct_incomplete", stripe_onboarding_complete: false,
+        stripe_last_verified_at: "2999-01-01", created_by_profile_id: "profile-creator"
+      },
       { id: "account-member", stripe_account_id: null, stripe_onboarding_complete: false, created_by_profile_id: "profile-disconnected" },
       { id: "account-direct", stripe_account_id: null, stripe_onboarding_complete: false, created_by_profile_id: "profile-disconnected" }
     ],
@@ -180,6 +194,33 @@ describe("arePropertyOwnersConnected", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it("refreshes stale stored account status once and keeps the property connection result", async () => {
+    vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_123");
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ charges_enabled: true, payouts_enabled: true, requirements: {} })
+    } as Response);
+    const admin = createStatusAdminClient({ rows: {
+      properties: [{ id: "property-1", owner_account_id: "account-1", owner_profile_id: null }],
+      ownership_accounts: [{
+        id: "account-1", stripe_account_id: "acct_1", stripe_onboarding_complete: true,
+        stripe_last_verified_at: null, created_by_profile_id: "owner-1"
+      }],
+      ownership_account_members: [],
+      profiles: []
+    } });
+    createAdminClientMock.mockReturnValue(admin.client);
+
+    expect(await arePropertyOwnersConnected(["property-1"])).toEqual(new Map([["property-1", true]]));
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(admin.spies.update).toHaveBeenCalledWith(expect.objectContaining({ stripe_status: "active" }));
   });
 
   it("matches the single-property resolver for every ownership fallback", async () => {
@@ -240,6 +281,68 @@ describe("getRentCollectionConnectStatus", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it("uses fresh stored status without calling Stripe", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    const admin = createStatusAdminClient({
+      rows: {
+        profiles: [{ id: "owner-1", role: "owner", stripe_account_id: null }],
+        ownership_account_members: [],
+        ownership_accounts: [{
+          id: "account-1", display_name: "Alpha", created_by_profile_id: "owner-1",
+          stripe_account_id: "acct_alpha", stripe_onboarding_complete: true,
+          stripe_status: "active", stripe_last_verified_at: new Date().toISOString()
+        }],
+        properties: []
+      }
+    });
+    createAdminClientMock.mockReturnValue(admin.client);
+
+    const status = await getRentCollectionConnectStatus("owner-1");
+
+    expect(status.accounts[0]?.isConnected).toBe(true);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(admin.spies.update).not.toHaveBeenCalled();
+  });
+
+  it("refreshes an expired account from Stripe and preserves the returned connection shape", async () => {
+    vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_123");
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ charges_enabled: true, payouts_enabled: true, requirements: {} })
+    } as Response);
+    const admin = createStatusAdminClient({
+      rows: {
+        profiles: [{ id: "owner-1", role: "owner", stripe_account_id: null }],
+        ownership_account_members: [],
+        ownership_accounts: [{
+          id: "account-1", display_name: "Alpha", created_by_profile_id: "owner-1",
+          stripe_account_id: "acct_alpha", stripe_onboarding_complete: true,
+          stripe_status: "restricted", stripe_last_verified_at: "2020-01-01T00:00:00.000Z"
+        }],
+        properties: []
+      }
+    });
+    createAdminClientMock.mockReturnValue(admin.client);
+
+    const status = await getRentCollectionConnectStatus("owner-1");
+
+    expect(status.accounts[0]?.isConnected).toBe(true);
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(admin.spies.update).toHaveBeenCalledWith(expect.objectContaining({ stripe_status: "active" }));
+  });
+
+  it("treats absent and 24-hour-old verification times as stale", () => {
+    const now = Date.parse("2026-10-06T00:00:00.000Z");
+    expect(isStripeVerificationStale(null, now)).toBe(true);
+    expect(isStripeVerificationStale("2026-10-05T00:00:00.000Z", now)).toBe(true);
+    expect(isStripeVerificationStale("2026-10-05T00:00:01.000Z", now)).toBe(false);
+  });
+
   it("marks all targets connected when every authority account is ready", async () => {
     const admin = createStatusAdminClient({
       rows: {
@@ -255,6 +358,7 @@ describe("getRentCollectionConnectStatus", () => {
             display_name: "Alpha",
             stripe_account_id: "acct_alpha",
             stripe_onboarding_complete: true,
+            stripe_last_verified_at: "2999-01-01",
             created_at: "2026-01-01T00:00:00.000Z",
             created_by_profile_id: "owner-1"
           },
@@ -263,6 +367,7 @@ describe("getRentCollectionConnectStatus", () => {
             display_name: "Beta",
             stripe_account_id: "acct_beta",
             stripe_onboarding_complete: true,
+            stripe_last_verified_at: "2999-01-01",
             created_at: "2026-01-02T00:00:00.000Z",
             created_by_profile_id: "other-owner"
           }
@@ -299,6 +404,7 @@ describe("getRentCollectionConnectStatus", () => {
               display_name: "Alpha",
               stripe_account_id: "acct_alpha",
               stripe_onboarding_complete: false,
+              stripe_last_verified_at: "2999-01-01",
               created_at: "2026-01-01T00:00:00.000Z",
               created_by_profile_id: "owner-1"
             }

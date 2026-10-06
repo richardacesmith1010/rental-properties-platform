@@ -3,7 +3,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const FEATURE_CAPABILITIES_CACHE_TAG = "feature-capabilities";
 const FEATURE_CAPABILITIES_CACHE_KEY = "feature-capabilities-v1";
-const FEATURE_CAPABILITIES_REVALIDATE_SECONDS = 300;
+const FEATURE_CAPABILITIES_REVALIDATE_SECONDS = 600;
+const CAPABILITIES_TTL_MS = 10 * 60 * 1000;
+let processCache: { value: FeatureCapabilitiesDTO; expiresAt: number } | null = null;
+let pendingProbe: Promise<FeatureCapabilitiesDTO> | null = null;
 
 export interface FeatureCapabilitiesDTO {
   documentsEnabled: boolean;
@@ -246,7 +249,8 @@ export function deriveFeatureCapabilities(probe: FeatureCapabilityProbe): Featur
 
   if (!leasingPipelineReady) {
     warnings.leasingPipeline =
-      "Leasing pipeline persistence is not ready yet. Run the V2 Phase A migration to enable listings, applications, and screening records.";
+      "Leasing pipeline persistence is not ready yet. Run the V2 Phase A migration to enable listings, " +
+      "applications, and screening records.";
   }
 
   if (!inboxThreadsReady) {
@@ -380,16 +384,27 @@ const getCachedFeatureCapabilities = unstable_cache(
 );
 
 export async function getFeatureCapabilities(): Promise<FeatureCapabilitiesDTO> {
-  try {
-    return await getCachedFeatureCapabilities();
-  } catch (error) {
-    if (error instanceof UncacheableCapabilitiesResult) {
-      return error.capabilities;
-    }
-    throw error;
+  if (processCache && Date.now() < processCache.expiresAt) {
+    return processCache.value;
   }
+  if (!pendingProbe) {
+    pendingProbe = (async () => {
+      try {
+        const value = await getCachedFeatureCapabilities();
+        processCache = { value, expiresAt: Date.now() + CAPABILITIES_TTL_MS };
+        return value;
+      } catch (error) {
+        if (error instanceof UncacheableCapabilitiesResult) {
+          return error.capabilities;
+        }
+        throw error;
+      }
+    })().finally(() => { pendingProbe = null; });
+  }
+  return pendingProbe;
 }
 
 export function invalidateFeatureCapabilitiesCache(): void {
+  processCache = null;
   revalidateTag(FEATURE_CAPABILITIES_CACHE_TAG);
 }

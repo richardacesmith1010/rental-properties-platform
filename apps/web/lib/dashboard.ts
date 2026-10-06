@@ -121,14 +121,13 @@ function emptyData(role: DashboardData["profileRole"]): DashboardData {
 export async function getDashboardData(
   userId: string,
   accountId?: string | null,
-  administeredPropertyIds?: string[]
+  administeredPropertyIds?: string[],
+  authenticatedRole?: DashboardData["profileRole"]
 ): Promise<DashboardData> {
   const admin = createAdminClient();
-  const profilePromise = admin
-    .from("profiles")
-    .select("id, role")
-    .eq("id", userId)
-    .single();
+  const profilePromise = authenticatedRole
+    ? Promise.resolve({ data: { role: authenticatedRole }, error: null })
+    : admin.from("profiles").select("id, role").eq("id", userId).single();
   const propertyDataPromise = (async () => {
     const propertyIds = administeredPropertyIds ?? (accountId
       ? await getAdministeredPropertyIdsForAccount(userId, accountId)
@@ -150,7 +149,8 @@ export async function getDashboardData(
     return { propertyIds, propertyRows: propertyRows ?? [], units: units ?? [] };
   })();
 
-  const { data: profile } = await profilePromise;
+  const { data: profile, error: profileError } = await profilePromise;
+  if (profileError) throw profileError;
 
   const role = (profile?.role ?? "tenant") as DashboardData["profileRole"];
 

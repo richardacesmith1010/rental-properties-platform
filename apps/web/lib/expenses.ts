@@ -123,20 +123,21 @@ export async function getOwnerExpenseData(
     return EMPTY_DASHBOARD;
   }
 
-  const { data: properties } = await admin
-    .from("properties")
-    .select("id, name")
-    .in("id", propertyIds)
-    .order("name", { ascending: true });
-
-  const propertyRows = properties ?? [];
+  const [propertyResult, expenseResult, unitResult] = await Promise.all([
+    admin.from("properties").select("id, name").in("id", propertyIds).order("name", { ascending: true }),
+    admin.from("property_expenses")
+      .select("id, property_id, category, description, amount_cents, expense_date, recurring, recurring_frequency, " +
+        "vendor_id, receipt_file_id, created_at")
+      .in("property_id", propertyIds)
+      .order("expense_date", { ascending: false }),
+    admin.from("units").select("id, property_id").in("property_id", propertyIds)
+  ]);
+  if (propertyResult.error) throw propertyResult.error;
+  if (unitResult.error) throw unitResult.error;
+  const propertyRows = propertyResult.data ?? [];
   const propertyNameById = new Map(propertyRows.map((property) => [property.id, property.name]));
-
-  const { data: expenses, error: expenseError } = await admin
-    .from("property_expenses")
-    .select("id, property_id, category, description, amount_cents, expense_date, recurring, recurring_frequency, vendor_id, receipt_file_id, created_at")
-    .in("property_id", propertyIds)
-    .order("expense_date", { ascending: false });
+  const expenses = expenseResult.data;
+  const expenseError = expenseResult.error;
 
   if (expenseError && isMissingSchemaError(expenseError)) {
     return {
@@ -146,8 +147,21 @@ export async function getOwnerExpenseData(
       properties: propertyRows.map((property) => ({ id: property.id, name: property.name }))
     };
   }
+  if (expenseError) throw expenseError;
 
-  const expenseRows = expenses ?? [];
+  const expenseRows = (expenses ?? []) as unknown as Array<{
+    id: string;
+    property_id: string;
+    category: string;
+    description: string | null;
+    amount_cents: number;
+    expense_date: string;
+    recurring: boolean;
+    recurring_frequency: RecurringFrequency;
+    vendor_id: string | null;
+    receipt_file_id: string | null;
+    created_at: string;
+  }>;
   const vendorIds = Array.from(
     new Set(
       expenseRows
@@ -156,30 +170,22 @@ export async function getOwnerExpenseData(
     )
   );
 
-  const { data: vendors } = vendorIds.length
-    ? await admin
-        .from("vendors")
-        .select("id, name")
-        .in("id", vendorIds)
-    : { data: [] as Array<{ id: string; name: string }> };
-
-  const vendorNameById = new Map((vendors ?? []).map((vendor) => [vendor.id, vendor.name]));
-
-  const { data: units } = await admin
-    .from("units")
-    .select("id, property_id")
-    .in("property_id", propertyIds);
-
-  const unitRows = units ?? [];
+  const unitRows = unitResult.data ?? [];
   const unitIds = unitRows.map((unit) => unit.id);
   const propertyByUnitId = new Map(unitRows.map((unit) => [unit.id, unit.property_id]));
 
-  const { data: leases } = unitIds.length
-    ? await admin
-        .from("leases")
-        .select("id, unit_id")
-        .in("unit_id", unitIds)
-    : { data: [] as Array<{ id: string; unit_id: string }> };
+  const [vendorResult, leaseResult] = await Promise.all([
+    vendorIds.length
+      ? admin.from("vendors").select("id, name").in("id", vendorIds)
+      : Promise.resolve({ data: [] as Array<{ id: string; name: string }>, error: null }),
+    unitIds.length
+      ? admin.from("leases").select("id, unit_id").in("unit_id", unitIds)
+      : Promise.resolve({ data: [] as Array<{ id: string; unit_id: string }>, error: null })
+  ]);
+  if (vendorResult.error) throw vendorResult.error;
+  if (leaseResult.error) throw leaseResult.error;
+  const vendorNameById = new Map((vendorResult.data ?? []).map((vendor) => [vendor.id, vendor.name]));
+  const leases = leaseResult.data;
 
   const leaseRows = leases ?? [];
   const leaseIds = leaseRows.map((lease) => lease.id);
@@ -187,7 +193,7 @@ export async function getOwnerExpenseData(
     leaseRows.map((lease) => [lease.id, propertyByUnitId.get(lease.unit_id) ?? ""])
   );
 
-  const { data: paidCharges } = leaseIds.length
+  const { data: paidCharges, error: paidChargesError } = leaseIds.length
     ? await withChargeEditingFallback(
         () =>
           admin
@@ -203,7 +209,8 @@ export async function getOwnerExpenseData(
             .in("lease_id", leaseIds)
             .eq("status", "paid")
       )
-    : { data: [] as Array<{ lease_id: string; amount_cents: number; due_date: string }> };
+    : { data: [] as Array<{ lease_id: string; amount_cents: number; due_date: string }>, error: null };
+  if (paidChargesError) throw paidChargesError;
 
   const monthKeys = buildLastTwelveMonthKeys();
   const incomeByProperty = new Map<string, number>();

@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const ownerLoadMocks = vi.hoisted(() => ({
   getUser: vi.fn(),
+  invitations: vi.fn(),
+  expenses: vi.fn(),
+  feedback: vi.fn(),
   tickets: vi.fn(),
   documents: vi.fn(),
   vendors: vi.fn(),
@@ -32,6 +35,12 @@ const ownerLoadMocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: () => ({ auth: { getUser: ownerLoadMocks.getUser } }) }));
 vi.mock("@/lib/maintenance", () => ({ getAdminMaintenanceTickets: ownerLoadMocks.tickets }));
+vi.mock("@/lib/invitations", () => ({ getOwnerInvitations: ownerLoadMocks.invitations }));
+vi.mock("@/lib/expenses", () => ({ getOwnerExpenseData: ownerLoadMocks.expenses }));
+vi.mock("@/lib/feedback", () => ({ getNewFeedbackCountForOwner: ownerLoadMocks.feedback }));
+vi.mock("@/lib/manager-payments-data", () => ({
+  getManagerPaymentsDashboardData: ownerLoadMocks.managerPayments
+}));
 vi.mock("@/lib/documents", () => ({ getOwnerDocumentsData: ownerLoadMocks.documents }));
 vi.mock("@/lib/vendors", () => ({ getOwnerVendors: ownerLoadMocks.vendors }));
 vi.mock("@/lib/auth", () => ({
@@ -72,10 +81,6 @@ vi.mock("@/lib/stripe-connect", () => ({
   arePropertyOwnersConnected: ownerLoadMocks.ownerConnected,
   getRentCollectionConnectStatus: ownerLoadMocks.rentCollectionStatus
 }));
-vi.mock("@/lib/manager-payments-data", () => ({
-  getManagerPaymentsDashboardData: ownerLoadMocks.managerPayments
-}));
-
 import {
   buildOwnerBundlePlan,
   loadOwnerPageData,
@@ -95,6 +100,10 @@ describe("loadOwnerPageData orchestration", () => {
     vi.clearAllMocks();
     ownerLoadMocks.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
     ownerLoadMocks.tickets.mockResolvedValue([{ id: "ticket-1", propertyId: "property-1" }]);
+    ownerLoadMocks.invitations.mockResolvedValue([]);
+    ownerLoadMocks.expenses.mockResolvedValue({ properties: [], expenses: [] });
+    ownerLoadMocks.feedback.mockResolvedValue(0);
+    ownerLoadMocks.managerPayments.mockResolvedValue(null);
     ownerLoadMocks.documents.mockResolvedValue({ templates: [], packets: [], propertyFiles: [] });
     ownerLoadMocks.vendors.mockResolvedValue([]);
     ownerLoadMocks.role.mockResolvedValue("owner");
@@ -285,6 +294,17 @@ describe("loadOwnerPageData orchestration", () => {
       vendors: undefined
     });
   });
+
+  it("starts Home tickets before portfolio resolves using administered property IDs", async () => {
+    const portfolio = deferred<{ properties: never[]; units: never[]; leases: never[]; tenants: never[] }>();
+    ownerLoadMocks.portfolio.mockReturnValue(portfolio.promise);
+
+    const loading = loadOwnerPageData({ userEmail: "owner@example.test", userId: "user-1" });
+
+    await vi.waitFor(() => expect(ownerLoadMocks.tickets).toHaveBeenCalledWith("user-1", "account-1", []));
+    portfolio.resolve({ properties: [], units: [], leases: [], tenants: [] });
+    expect((await loading).status).toBe("ready");
+  });
 });
 
 describe("resolveOwnerPageRequest", () => {
@@ -394,5 +414,18 @@ describe("buildOwnerBundlePlan", () => {
     expect(bundlePlan.bundles.has("manager-payments")).toBe(false);
     expect(bundlePlan.bundles.has("tickets")).toBe(false);
     expect(bundlePlan.sectionAvailability.hasApplicationsSection).toBe(true);
+  });
+
+  it("keeps Home bundle requirements independent of manager visibility timing", () => {
+    const makePlan = (hasManagerPaymentsSection: boolean) => buildOwnerBundlePlan({
+      capabilities,
+      initialOwnerHomePage: true,
+      initialSectionId: null,
+      isLlcAccount: true,
+      sectionAvailability: { ...sectionAvailability, hasManagerPaymentsSection }
+    });
+
+    expect([...makePlan(false).bundles]).toEqual([...makePlan(true).bundles]);
+    expect(makePlan(true).sectionAvailability.hasManagerPaymentsSection).toBe(true);
   });
 });

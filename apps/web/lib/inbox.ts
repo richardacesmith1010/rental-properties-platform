@@ -182,6 +182,7 @@ async function getTenantVisiblePropertyIds(userId: string): Promise<string[]> {
   if (leaseError && isMissingSchemaError(leaseError)) {
     return [];
   }
+  if (leaseError) throw leaseError;
 
   const unitIds = unique((leases ?? []).map((lease) => lease.unit_id).filter(Boolean));
   if (unitIds.length === 0) {
@@ -196,13 +197,17 @@ async function getTenantVisiblePropertyIds(userId: string): Promise<string[]> {
   if (unitError && isMissingSchemaError(unitError)) {
     return [];
   }
+  if (unitError) throw unitError;
 
   return unique((units ?? []).map((unit) => unit.property_id).filter(Boolean));
 }
 
-export async function getInboxThreadsForUser(userId: string): Promise<InboxThreadDTO[]> {
+export async function getInboxThreadsForUser(
+  userId: string,
+  authenticatedRole?: "owner" | "manager" | "tenant"
+): Promise<InboxThreadDTO[]> {
   const admin = createAdminClient();
-  const role = await getCurrentUserRole(userId);
+  const role = authenticatedRole ?? await getCurrentUserRole(userId);
   const propertyIds =
     role === "tenant"
       ? await getTenantVisiblePropertyIds(userId)
@@ -230,6 +235,7 @@ export async function getInboxThreadsForUser(userId: string): Promise<InboxThrea
   if (threadError && isMissingSchemaError(threadError)) {
     return [];
   }
+  if (threadError) throw threadError;
 
   const threadRows = threads ?? [];
   if (threadRows.length === 0) {
@@ -238,7 +244,7 @@ export async function getInboxThreadsForUser(userId: string): Promise<InboxThrea
 
   const threadIds = threadRows.map((thread) => thread.id);
 
-  const [{ data: messages, error: messageError }, { data: properties }] = await Promise.all([
+  const [{ data: messages, error: messageError }, { data: properties, error: propertyError }] = await Promise.all([
     admin
       .from("inbox_messages")
       .select("id, thread_id, sender_profile_id, sender_email, body, channel, direction, created_at")
@@ -254,6 +260,8 @@ export async function getInboxThreadsForUser(userId: string): Promise<InboxThrea
   if (messageError && isMissingSchemaError(messageError)) {
     return [];
   }
+  if (messageError) throw messageError;
+  if (propertyError) throw propertyError;
 
   const messagesByThreadId = new Map<string, InboxMessageDTO[]>();
 
@@ -276,9 +284,10 @@ export async function getInboxThreadsForUser(userId: string): Promise<InboxThrea
   }
 
   const senderIds = unique((messages ?? []).map((message) => message.sender_profile_id).filter(Boolean));
-  const { data: senderProfiles } = senderIds.length
+  const { data: senderProfiles, error: senderError } = senderIds.length
     ? await admin.from("profiles").select("id, full_name, email").in("id", senderIds)
-    : { data: [] as Array<{ id: string; full_name: string | null; email: string | null }> };
+    : { data: [] as Array<{ id: string; full_name: string | null; email: string | null }>, error: null };
+  if (senderError) throw senderError;
   const senderNameById = new Map((senderProfiles ?? []).map((profile) => [profile.id, profile.full_name?.trim() || profile.email || null]));
   for (const messageList of messagesByThreadId.values()) {
     for (const item of messageList) item.senderName = item.senderProfileId ? senderNameById.get(item.senderProfileId) ?? null : null;

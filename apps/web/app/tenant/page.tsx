@@ -53,6 +53,7 @@ import { redirect } from "next/navigation";
 import { SectionNotFoundState } from "@/components/dashboard/section-renderer-support";
 import { TenantBottomBar } from "@/components/dashboard/tenant-bottom-bar";
 import { getTenantPayState, getNextRentDueDate } from "@/lib/tenant-pay-state";
+import { logPerfEvent, measurePerf } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -105,24 +106,38 @@ interface TenantPageProps {
 }
 
 export default async function TenantPage(props: TenantPageProps) {
+  const startedAt = performance.now();
+  const measureTenant = <T,>(name: string, work: () => Promise<T>) => measurePerf("tenant", name, work);
   const searchParams = await props.searchParams;
-  const user = await getAuthenticatedUser();
-  const role = await getCurrentUserRole(user.id);
+  const user = await measureTenant("auth.user", () => getAuthenticatedUser());
+  const role = await measureTenant("auth.role", () => getCurrentUserRole(user.id));
 
   if (role !== "tenant") {
     redirect(getRoleHomePath(role));
   }
 
-  const profile = await getUserProfileSummary(user.id);
+  const profilePromise = measureTenant("profile.summary", () => getUserProfileSummary(user.id));
+  const capabilitiesPromise = measureTenant("feature.capabilities", () => getFeatureCapabilities());
+  const profile = await profilePromise;
   if (!profile.onboardingCompletedAt) {
+    await capabilitiesPromise;
     redirect("/onboarding");
   }
 
   const sectionValue = parseSearchParam(searchParams?.section);
   const hasUnknownSection = sectionValue !== null && !isTenantSection(sectionValue);
   const activeSection: TenantSection = isTenantSection(sectionValue) ? sectionValue : "overview";
-  const capabilities = await getFeatureCapabilities();
-
+  const capabilities = await capabilitiesPromise;
+  const paymentDataPromise = measureTenant("payments.charges", () => getTenantPaymentData(user.id));
+  const ownerConnectedMapPromise = paymentDataPromise.then((paymentData) =>
+    measureTenant("stripe-connect.owner-map", () => arePropertyOwnersConnected(
+      paymentData.charges.map((charge) => charge.propertyId)
+    ))
+  );
+  const paymentHistoryPromise = measureTenant("payments.history", () => getTenantPaymentHistory(user.id));
+  const leaseDetailsPromise = measureTenant("leases.details", () => getTenantLeaseDetails(user.id));
+  const maintenancePromise = measureTenant("maintenance.tenant", () => getTenantMaintenanceData(user.id));
+  const autopayPromise = measureTenant("autopay.enrollments", () => getAutopayEnrollments(user.id));
   const [
     paymentData,
     paymentHistory,
@@ -131,14 +146,15 @@ export default async function TenantPage(props: TenantPageProps) {
     documentsData,
     notifications,
     inboxThreads,
-    autopayEnrollments
+    autopayEnrollments,
+    ownerConnectedMap
   ] = await Promise.all([
-    getTenantPaymentData(user.id),
-    getTenantPaymentHistory(user.id),
-    getTenantLeaseDetails(user.id),
-    getTenantMaintenanceData(user.id),
+    paymentDataPromise,
+    paymentHistoryPromise,
+    leaseDetailsPromise,
+    maintenancePromise,
     capabilities.documentsEnabled
-      ? getTenantDocumentsData(user.id)
+      ? measureTenant("documents.tenant", () => getTenantDocumentsData(user.id))
       : Promise.resolve({
           packets: [],
           files: [],
@@ -146,12 +162,13 @@ export default async function TenantPage(props: TenantPageProps) {
           propertyFilesWarning: "Shared property files are not enabled yet."
         }),
     capabilities.notificationsEnabled
-      ? getNotificationsForUser(user.id)
+      ? measureTenant("notifications.user", () => getNotificationsForUser(user.id))
       : Promise.resolve([]),
     capabilities.inboxThreadsEnabled
-      ? getInboxThreadsForUser(user.id)
+      ? measureTenant("inbox.threads", () => getInboxThreadsForUser(user.id, "tenant"))
       : Promise.resolve([]),
-    getAutopayEnrollments(user.id)
+    autopayPromise,
+    ownerConnectedMapPromise
   ]);
 
   const openTicketCount = maintenanceData.tickets.filter(
@@ -179,9 +196,6 @@ export default async function TenantPage(props: TenantPageProps) {
       }
     : null;
   const hasActiveLease = leaseDetails.length > 0;
-  const ownerConnectedMap = await arePropertyOwnersConnected(
-    paymentData.charges.map((charge) => charge.propertyId)
-  );
   const currentCharge = paymentData.charges[0] ?? null;
   const ownerConnected = currentCharge ? ownerConnectedMap.get(currentCharge.propertyId) ?? false : false;
   const stripeConfigured = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
@@ -192,7 +206,9 @@ export default async function TenantPage(props: TenantPageProps) {
     lease: currentLease ? { monthlyRentCents: currentLease.monthlyRentCents, dueDayOfMonth: leaseDetails[0].dueDayOfMonth } : null,
     lastPayment: paymentHistory[0] ? { paidAt: paymentHistory[0].paidAt } : null
   });
-  const rentDueDate = currentCharge?.dueDate ?? (leaseDetails[0] ? getNextRentDueDate(leaseDetails[0].dueDayOfMonth, new Date(), leaseDetails[0].startDate) : null);
+  const rentDueDate = currentCharge?.dueDate ?? (leaseDetails[0]
+    ? getNextRentDueDate(leaseDetails[0].dueDayOfMonth, new Date(), leaseDetails[0].startDate)
+    : null);
   const inboxProperties = Array.from(
     new Map(
       leaseDetails.map((lease) => [
@@ -244,6 +260,7 @@ export default async function TenantPage(props: TenantPageProps) {
     }))
   ];
 
+  logPerfEvent({ scope: "tenant", name: "data-assembly.total", durationMs: performance.now() - startedAt });
   return (
     <div className="app-surface flex min-h-screen flex-col lg:flex-row">
       <MobileTopBar
@@ -281,8 +298,15 @@ export default async function TenantPage(props: TenantPageProps) {
       <main id="main-content" tabIndex={-1} className="relative flex-1 lg:ml-[260px]">
         <div className="flex flex-col gap-4 px-6 pt-6 sm:flex-row sm:items-start sm:justify-between lg:px-8 lg:pt-8">
           <div id="overview">
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--ink)]">{activeSection === "overview" ? `Hi, ${displayName}` : tenantSectionLabel[activeSection]}</h1>
-            <p className="mt-1 text-sm text-[var(--muted)]">{activeSection === "overview" ? "Your rent, problems, and lease at a glance." : activeSection === "charges" ? "Pay rent and see what you've paid." : activeSection === "notifications" ? "Talk with your landlord." : "Everything you need for your home."}</p>
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--ink)]">
+              {activeSection === "overview" ? `Hi, ${displayName}` : tenantSectionLabel[activeSection]}
+            </h1>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              {activeSection === "overview" ? "Your rent, problems, and lease at a glance."
+                : activeSection === "charges" ? "Pay rent and see what you've paid."
+                  : activeSection === "notifications" ? "Talk with your landlord."
+                    : "Everything you need for your home."}
+            </p>
           </div>
         </div>
 
@@ -308,7 +332,9 @@ export default async function TenantPage(props: TenantPageProps) {
                 nextCharge={nextCharge}
                 lease={currentLease}
                 openTicketCount={openTicketCount}
-                tickets={maintenanceData.tickets.filter((ticket) => ticket.status === "open" || ticket.status === "in_progress").map((ticket) => ({ id: ticket.id, title: ticket.title, status: ticket.status }))}
+                tickets={maintenanceData.tickets
+                  .filter((ticket) => ticket.status === "open" || ticket.status === "in_progress")
+                  .map((ticket) => ({ id: ticket.id, title: ticket.title, status: ticket.status }))}
                 payState={payState}
                 rentDueDate={rentDueDate}
                 rentAmountCents={currentLease?.monthlyRentCents}
@@ -368,7 +394,10 @@ export default async function TenantPage(props: TenantPageProps) {
                       {paymentHistory.map((payment) => (
                         <div
                           key={payment.paymentId}
-                          className="flex flex-col gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-4 sm:flex-row sm:items-center sm:justify-between"
+                          className={
+                            "flex flex-col gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] " +
+                            "p-4 sm:flex-row sm:items-center sm:justify-between"
+                          }
                         >
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">

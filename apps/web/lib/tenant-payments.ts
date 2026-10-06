@@ -30,11 +30,12 @@ export function getTenantChargeStatus(
 export async function getTenantPaymentData(userId: string): Promise<TenantPaymentData> {
   const supabase = createClient();
 
-  const { data: leases } = await supabase
+  const { data: leases, error: leaseError } = await supabase
     .from("leases")
     .select("id, unit_id, collects_outside_domus")
     .eq("tenant_profile_id", userId)
     .eq("active", true);
+  if (leaseError) throw leaseError;
 
   const leaseRows = leases ?? [];
   const leaseIds = leaseRows.map((lease) => lease.id);
@@ -45,35 +46,36 @@ export async function getTenantPaymentData(userId: string): Promise<TenantPaymen
 
   const unitIds = leaseRows.map((lease) => lease.unit_id);
 
-  const { data: units } = await supabase
-    .from("units")
-    .select("id, unit_number, property_id")
-    .in("id", unitIds);
-
-  const propertyIds = Array.from(new Set((units ?? []).map((unit) => unit.property_id)));
-
-  const { data: properties } = await supabase
-    .from("properties")
-    .select("id, name")
-    .in("id", propertyIds);
-
-  const { data: charges } = await withChargeEditingFallback(
-    () =>
-      supabase
+  const [unitsResult, chargesResult] = await Promise.all([
+    supabase.from("units").select("id, unit_number, property_id").in("id", unitIds),
+    withChargeEditingFallback(
+      () => supabase
         .from("rent_charges")
         .select("id, lease_id, due_date, amount_cents, status")
         .in("lease_id", leaseIds)
         .in("status", ["pending", "late"])
         .is("deleted_at", null)
         .order("due_date", { ascending: true }),
-    () =>
-      supabase
+      () => supabase
         .from("rent_charges")
         .select("id, lease_id, due_date, amount_cents, status")
         .in("lease_id", leaseIds)
         .in("status", ["pending", "late"])
         .order("due_date", { ascending: true })
-  );
+    )
+  ]);
+  if (unitsResult.error) throw unitsResult.error;
+  if (chargesResult.error) throw chargesResult.error;
+  const units = unitsResult.data;
+  const charges = chargesResult.data;
+
+  const propertyIds = Array.from(new Set((units ?? []).map((unit) => unit.property_id)));
+
+  const { data: properties, error: propertyError } = await supabase
+    .from("properties")
+    .select("id, name")
+    .in("id", propertyIds);
+  if (propertyError) throw propertyError;
 
   const leaseById = new Map(leaseRows.map((lease) => [lease.id, lease]));
   const unitById = new Map((units ?? []).map((unit) => [unit.id, unit]));

@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sideEffectError } from "@/lib/logger";
 import { getManagerFeeForProperty } from "@/lib/payment-fees";
-import { getStripeSecretKey } from "@/lib/stripe";
+import { getStripeAccountHealth, getStripeSecretKey, type StripeAccountHealthStatus } from "@/lib/stripe";
 
 interface StripeAccountResponse {
   id: string;
@@ -31,7 +31,51 @@ export interface RentCollectionConnectStatus {
 
 interface RentCollectionAuthorityAccountRow {
   id: string;
-  display_name: string; stripe_account_id: string | null; stripe_onboarding_complete: boolean | null; created_at: string | null;
+  display_name: string;
+  stripe_account_id: string | null;
+  stripe_onboarding_complete: boolean | null;
+  stripe_status: StripeAccountHealthStatus | null;
+  stripe_last_verified_at: string | null;
+  created_at: string | null;
+}
+
+interface StoredStripeAccount {
+  id: string;
+  stripe_account_id: string | null;
+  stripe_onboarding_complete: boolean | null;
+  stripe_status: StripeAccountHealthStatus | null;
+  stripe_last_verified_at: string | null;
+}
+
+const STRIPE_VERIFICATION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+export function isStripeVerificationStale(lastVerifiedAt: string | null, now = Date.now()): boolean {
+  const verifiedAt = lastVerifiedAt ? Date.parse(lastVerifiedAt) : NaN;
+  return !Number.isFinite(verifiedAt) || now - verifiedAt >= STRIPE_VERIFICATION_MAX_AGE_MS;
+}
+
+async function refreshStaleStripeAccounts<T extends StoredStripeAccount>(accounts: T[]): Promise<T[]> {
+  const admin = createAdminClient();
+  return Promise.all(accounts.map(async (account) => {
+    if (!account.stripe_account_id || !isStripeVerificationStale(account.stripe_last_verified_at)) {
+      return account;
+    }
+    try {
+      const health = await getStripeAccountHealth(account.stripe_account_id);
+      const verifiedAt = new Date().toISOString();
+      const { error } = await admin.from("ownership_accounts")
+        .update({ stripe_status: health.status, stripe_last_verified_at: verifiedAt })
+        .eq("id", account.id);
+      if (error) {
+        console.error("[stripe-connect] Failed to store Stripe status:", error);
+        return account;
+      }
+      return { ...account, stripe_status: health.status, stripe_last_verified_at: verifiedAt };
+    } catch (error) {
+      console.error("[stripe-connect] Failed to refresh Stripe status:", error);
+      return account;
+    }
+  }));
 }
 
 interface RentCollectionPropertyRow {
@@ -165,16 +209,23 @@ async function getConnectedStripeProfile(profileIds: string[]) {
   }
 
   const admin = createAdminClient();
-  const { data } = await admin
+  const { data, error } = await admin
     .from("profiles")
     .select("id, stripe_account_id, stripe_onboarding_complete")
     .in("id", profileIds);
+  if (error) {
+    console.error("[stripe-connect] Failed to load connected profiles:", error);
+    return [];
+  }
 
   return data ?? [];
 }
 
 function buildEmptyRentCollectionConnectStatus(): RentCollectionConnectStatus {
-  return { ok: false, connected: false, accounts: [], legacyProfileTarget: false, profileConnected: false, targets: [], primaryTarget: null };
+  return {
+    ok: false, connected: false, accounts: [], legacyProfileTarget: false,
+    profileConnected: false, targets: [], primaryTarget: null
+  };
 }
 
 function sortByCreatedAtAndId(
@@ -264,12 +315,18 @@ export async function getRentCollectionConnectStatus(userId: string): Promise<Re
     };
   }
 
-  const [{ data: accounts, error: accountsError }, { data: legacyProperties, error: legacyPropertiesError }, { data: accountProperties, error: accountPropertiesError }] =
+  const [
+    { data: accounts, error: accountsError },
+    { data: legacyProperties, error: legacyPropertiesError },
+    { data: accountProperties, error: accountPropertiesError }
+  ] =
     await Promise.all([
       authorityAccountIds.length > 0
         ? admin
             .from("ownership_accounts")
-            .select("id, display_name, stripe_account_id, stripe_onboarding_complete, created_at")
+            .select(
+              "id, display_name, stripe_account_id, stripe_onboarding_complete, stripe_status, stripe_last_verified_at, created_at"
+            )
             .in("id", authorityAccountIds)
         : Promise.resolve({ data: [], error: null }),
       admin
@@ -305,7 +362,9 @@ export async function getRentCollectionConnectStatus(userId: string): Promise<Re
     ]);
   }
 
-  const orderedAccounts = ((accounts ?? []) as RentCollectionAuthorityAccountRow[]).sort(sortByCreatedAtAndId);
+  const orderedAccounts = (await refreshStaleStripeAccounts(
+    (accounts ?? []) as RentCollectionAuthorityAccountRow[]
+  )).sort(sortByCreatedAtAndId);
   const accountStatuses = orderedAccounts.map((account) => {
     const propertyNames = (activePropertyNamesByAccount.get(account.id) ?? []).slice(0, 3);
     const activePropertyCount = activePropertyNamesByAccount.get(account.id)?.length ?? 0;
@@ -477,10 +536,14 @@ export async function arePropertyOwnersConnected(propertyIds: string[]): Promise
   }
 
   const admin = createAdminClient();
-  const { data: properties } = await admin
+  const { data: properties, error: propertyError } = await admin
     .from("properties")
     .select("id, owner_account_id, owner_profile_id")
     .in("id", uniquePropertyIds);
+  if (propertyError) {
+    console.error("[stripe-connect] Failed to load property owners:", propertyError);
+    return new Map(uniquePropertyIds.map((propertyId) => [propertyId, false]));
+  }
   const propertyRows = properties ?? [];
   const accountIds = Array.from(
     new Set(
@@ -494,7 +557,7 @@ export async function arePropertyOwnersConnected(propertyIds: string[]): Promise
     ? await Promise.all([
         admin
           .from("ownership_accounts")
-          .select("id, stripe_account_id, stripe_onboarding_complete")
+          .select("id, stripe_account_id, stripe_onboarding_complete, stripe_status, stripe_last_verified_at")
           .in("id", accountIds),
         admin
           .from("ownership_accounts")
@@ -508,14 +571,26 @@ export async function arePropertyOwnersConnected(propertyIds: string[]): Promise
           .eq("active", true)
       ])
     : [
-        { data: [] as Array<{ id: string; stripe_account_id: string | null; stripe_onboarding_complete: boolean | null }>, error: null },
+        { data: [] as StoredStripeAccount[], error: null },
         { data: [] as Array<{ id: string; created_by_profile_id: string | null }>, error: null },
         { data: [] as Array<{ account_id: string; profile_id: string }>, error: null }
       ];
 
+  if (accountStripeResult.error) {
+    console.error("[stripe-connect] Failed to load stored Stripe status:", accountStripeResult.error);
+  }
+  if (accountCreatorResult.error) {
+    console.error("[stripe-connect] Failed to load account creators:", accountCreatorResult.error);
+  }
+  if (memberResult.error) {
+    console.error("[stripe-connect] Failed to load account members:", memberResult.error);
+  }
+  const refreshedAccounts = accountStripeResult.error
+    ? []
+    : await refreshStaleStripeAccounts((accountStripeResult.data ?? []) as StoredStripeAccount[]);
   const accountStripeById = accountStripeResult.error
     ? new Map<string, { stripe_account_id: string | null; stripe_onboarding_complete: boolean | null }>()
-    : new Map((accountStripeResult.data ?? []).map((account) => [account.id, account]));
+    : new Map(refreshedAccounts.map((account) => [account.id, account]));
   const accountCreatorById = new Map(
     (accountCreatorResult.data ?? []).map((account) => [account.id, account.created_by_profile_id])
   );

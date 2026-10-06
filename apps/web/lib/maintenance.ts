@@ -330,11 +330,24 @@ async function buildTicketEnhancementMaps(
     };
   }
 
-  const { data: assignments } = await supabase
-    .from("maintenance_assignments")
-    .select("ticket_id, vendor_id, status, assigned_at")
-    .in("ticket_id", ticketIds)
-    .order("assigned_at", { ascending: false });
+  const photoSelect =
+    "id, ticket_id, uploaded_by_profile_id, storage_path, caption, created_at, file_name, file_type, file_size_bytes";
+  const photoFallbackSelect =
+    "id, ticket_id, uploaded_by_profile_id, storage_path, caption, created_at";
+  const [assignmentResult, photoQuery] = await Promise.all([
+    supabase.from("maintenance_assignments")
+      .select("ticket_id, vendor_id, status, assigned_at")
+      .in("ticket_id", ticketIds)
+      .order("assigned_at", { ascending: false }),
+    supabase.from("maintenance_photos")
+      .select(photoSelect)
+      .in("ticket_id", ticketIds)
+      .order("created_at", { ascending: false })
+  ]);
+  if (assignmentResult.error && !isMissingSchemaError(assignmentResult.error)) {
+    throw assignmentResult.error;
+  }
+  const assignments = assignmentResult.data;
 
   for (const assignment of assignments ?? []) {
     if (!assignmentByTicketId.has(assignment.ticket_id)) {
@@ -349,25 +362,16 @@ async function buildTicketEnhancementMaps(
     new Set((assignments ?? []).map((assignment) => assignment.vendor_id))
   );
   if (vendorIds.length > 0) {
-    const { data: vendors } = await supabase
+    const { data: vendors, error: vendorError } = await supabase
       .from("vendors")
       .select("id, name")
       .in("id", vendorIds);
+    if (vendorError && !isMissingSchemaError(vendorError)) throw vendorError;
 
     for (const vendor of vendors ?? []) {
       vendorNameById.set(vendor.id, vendor.name);
     }
   }
-
-  const photoSelect =
-    "id, ticket_id, uploaded_by_profile_id, storage_path, caption, created_at, file_name, file_type, file_size_bytes";
-  const photoFallbackSelect =
-    "id, ticket_id, uploaded_by_profile_id, storage_path, caption, created_at";
-  const photoQuery = await supabase
-    .from("maintenance_photos")
-    .select(photoSelect)
-    .in("ticket_id", ticketIds)
-    .order("created_at", { ascending: false });
 
   let photos: MaintenancePhotoRow[] = (photoQuery.data ?? []) as MaintenancePhotoRow[];
   if (photoQuery.error) {
@@ -569,6 +573,9 @@ export async function getAdminMaintenanceTickets(
   const properties = propertiesResult.data;
   const units = unitsResult.data;
   const tickets = ticketsResult.data;
+  for (const result of [propertiesResult, unitsResult, ticketsResult]) {
+    if (result.error) throw result.error;
+  }
 
   const propertyById = new Map(
     (properties ?? []).map((p) => [p.id, p])
@@ -592,11 +599,12 @@ export async function getAdminMaintenanceTickets(
   const [profilesResult, enhancementMaps, commentMaps, timelineMaps] = await Promise.all([
     tenantIds.length > 0
       ? supabase.from("profiles").select("id, email").in("id", tenantIds)
-      : Promise.resolve({ data: [] }),
+      : Promise.resolve({ data: [] as Array<{ id: string; email: string }>, error: null }),
     buildTicketEnhancementMaps(supabase, ticketIds),
     buildCommentMaps(supabase, ticketIds),
     buildTimelineMaps(supabase, ticketIds)
   ]);
+  if (profilesResult.error) throw profilesResult.error;
   const profileById = new Map<string, { email: string }>(
     (profilesResult.data ?? []).map((profile) => [profile.id, profile])
   );

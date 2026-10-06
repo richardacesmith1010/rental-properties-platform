@@ -17,7 +17,10 @@ import { getPendingChangeRequests } from "@/lib/distribution-approvals";
 import { getPendingWithdrawals } from "@/lib/withdrawals";
 import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
 import { getNewFeedbackCountForOwner } from "@/lib/feedback";
-import { getOwnershipMembersForAccount, getPendingAccountDeleteRequests, getPendingAccountRenameRequests, type OwnershipAccountDTO } from "@/lib/ownership";
+import {
+  getOwnershipMembersForAccount, getPendingAccountDeleteRequests, getPendingAccountRenameRequests,
+  type OwnershipAccountDTO
+} from "@/lib/ownership";
 import type { FeatureCapabilitiesDTO } from "@/lib/feature-capabilities";
 import { getPendingLLCInvitationsForAccount } from "@/lib/llc-invitations";
 import { getManagerPaymentsDashboardData } from "@/lib/manager-payments-data";
@@ -137,7 +140,7 @@ export async function loadOwnerSectionBundles(params: {
           })
       : Promise.resolve(undefined),
     hasBundle("inbox") && capabilities.inboxThreadsEnabled
-      ? measureOwnerWithRequest("inbox.threads", () => getInboxThreadsForUser(params.userId))
+      ? measureOwnerWithRequest("inbox.threads", () => getInboxThreadsForUser(params.userId, "owner"))
       : Promise.resolve(undefined),
     hasBundle("automations") && capabilities.automationsEnabled
       ? measureOwnerWithRequest("automations.templates", () => getAutomationTemplates())

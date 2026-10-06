@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const cacheState = vi.hoisted(() => ({ values: new Map<string, unknown>() }));
+const cacheState = vi.hoisted(() => ({ values: new Map<string, { value: unknown; expiresAt: number }>() }));
 const adminState = vi.hoisted(() => ({
   bucketCalls: 0,
   probeCalls: 0,
@@ -9,13 +9,18 @@ const adminState = vi.hoisted(() => ({
 
 vi.mock("next/cache", () => ({
   revalidateTag: () => cacheState.values.clear(),
-  unstable_cache: <T extends () => Promise<unknown>>(work: T, keys: string[]) => async () => {
+  unstable_cache: <T extends () => Promise<unknown>>(
+    work: T,
+    keys: string[],
+    options: { revalidate: number }
+  ) => async () => {
     const key = keys.join(":");
-    if (cacheState.values.has(key)) {
-      return cacheState.values.get(key);
+    const cached = cacheState.values.get(key);
+    if (cached && Date.now() < cached.expiresAt) {
+      return cached.value;
     }
     const value = await work();
-    cacheState.values.set(key, value);
+    cacheState.values.set(key, { value, expiresAt: Date.now() + options.revalidate * 1000 });
     return value;
   }
 }));
@@ -157,6 +162,8 @@ describe("deriveFeatureCapabilities", () => {
 
 describe("getFeatureCapabilities", () => {
   beforeEach(() => {
+    vi.useRealTimers();
+    invalidateFeatureCapabilitiesCache();
     cacheState.values.clear();
     adminState.bucketCalls = 0;
     adminState.probeCalls = 0;
@@ -190,6 +197,19 @@ describe("getFeatureCapabilities", () => {
     expect(retried.documentsEnabled).toBe(true);
     expect(firstProbeCount).toBe(24);
     expect(adminState.probeCalls + adminState.bucketCalls).toBe(48);
+  });
+
+  it("expires its process-local result after ten minutes", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-06T00:00:00.000Z"));
+    await getFeatureCapabilities();
+    vi.advanceTimersByTime(599_999);
+    await getFeatureCapabilities();
+    expect(adminState.probeCalls + adminState.bucketCalls).toBe(24);
+    vi.advanceTimersByTime(2);
+    await getFeatureCapabilities();
+    expect(adminState.probeCalls + adminState.bucketCalls).toBe(48);
+    vi.useRealTimers();
   });
 
   it("caches missing-schema results with the existing DTO and warning text", async () => {

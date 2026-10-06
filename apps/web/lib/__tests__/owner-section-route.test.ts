@@ -342,7 +342,8 @@ describe("owner section GET route", () => {
         "ownership-members", "rent-increases", "tickets", "vendors"
       ]);
       for (const name of accountScoped) expect(ownerLoadMocks[name]).toHaveBeenCalledWith("user-1", "account-1");
-      for (const name of userScoped) expect(ownerLoadMocks[name]).toHaveBeenCalledWith("user-1");
+      expect(ownerLoadMocks.inbox).toHaveBeenCalledWith("user-1", "owner");
+      expect(ownerLoadMocks.rules).toHaveBeenCalledWith("user-1");
       for (const name of governance) expect(ownerLoadMocks[name]).toHaveBeenCalledWith("account-1");
       expect(ownerLoadMocks.feedback).toHaveBeenCalledWith("");
       expect(ownerLoadMocks.templates).toHaveBeenCalledWith();

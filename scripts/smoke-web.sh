@@ -108,6 +108,8 @@ APP_URL="$APP_URL" npx playwright test tests/e2e/smoke-theme.spec.ts --reporter=
 echo "[smoke] Checking accessibility, keyboard paths, and 375 px layout"
 APP_URL="$APP_URL" npx playwright test tests/e2e/smoke-a11y.spec.ts tests/e2e/smoke-keyboard.spec.ts \
   tests/e2e/smoke-mobile-layout.spec.ts --reporter=line
+echo "[smoke] Measuring content visible speed"
+APP_URL="$APP_URL" npx playwright test tests/e2e/smoke-speed.spec.ts --reporter=line
 popd >/dev/null
 
 echo "[smoke] Smoke checks passed"

@@ -15,7 +15,10 @@ import { resolveOwnerPageRequest } from "./page-data/request";
 import { buildOwnerBundlePlan, buildOwnerSectionAvailability } from "./page-data/bundle-plan";
 import { loadOwnerSectionBundles, hasOwnerManagerPaymentSection } from "./page-data/section-bundles";
 import type { OwnerBundleId } from "./page-data/types";
-export type { OwnerBundleId, OwnerPageSearchParams, ResolvedOwnerRequest, OwnerPageLoadResult, OwnerPageReadyData, OwnerPageNeedsOnboarding, OwnerPageNeedsSetup, OwnerPageRoleMismatch } from "./page-data/types";
+export type {
+  OwnerBundleId, OwnerPageSearchParams, ResolvedOwnerRequest, OwnerPageLoadResult,
+  OwnerPageReadyData, OwnerPageNeedsOnboarding, OwnerPageNeedsSetup, OwnerPageRoleMismatch
+} from "./page-data/types";
 export { resolveOwnerPageRequest, buildOwnerBundlePlan, buildOwnerSectionAvailability, loadOwnerSectionBundles } from "./page-data";
 
 function buildOwnerPerfMeta(request: ResolvedOwnerRequest) {
@@ -71,15 +74,14 @@ export async function loadOwnerPageData(params: {
     };
   }
 
-  const [profile, ownershipAccounts, capabilities] = await Promise.all([
-    measureOwner("profile.summary", () => getUserProfileSummary(params.userId), {
-      userId: params.userId
-    }),
-    measureOwner("ownership.accounts", () => getOwnershipAccountsForUser(params.userId), {
-      userId: params.userId
-    }),
-    measureOwner("feature.capabilities", () => getFeatureCapabilities())
-  ]);
+  const profilePromise = measureOwner("profile.summary", () => getUserProfileSummary(params.userId), {
+    userId: params.userId
+  });
+  const ownershipAccountsPromise = measureOwner("ownership.accounts", () => getOwnershipAccountsForUser(params.userId), {
+    userId: params.userId
+  });
+  const capabilitiesPromise = measureOwner("feature.capabilities", () => getFeatureCapabilities());
+  const [profile, ownershipAccounts] = await Promise.all([profilePromise, ownershipAccountsPromise]);
   const request = resolveOwnerPageRequest(params.searchParams, ownershipAccounts);
   const ownerPerfMeta = buildOwnerPerfMeta(request);
   const measureOwnerWithRequest = <T,>(
@@ -101,6 +103,7 @@ export async function loadOwnerPageData(params: {
     });
 
   if (!profile.onboardingCompletedAt) {
+    await capabilitiesPromise;
     finishOwnerPerfWithRequest({ status: "needs-onboarding" });
     return {
       status: "needs-onboarding",
@@ -116,6 +119,7 @@ export async function loadOwnerPageData(params: {
   }
 
   if (ownershipAccounts.length === 0) {
+    await capabilitiesPromise;
     finishOwnerPerfWithRequest({ status: "needs-setup" });
     return {
       status: "needs-setup",
@@ -132,50 +136,82 @@ export async function loadOwnerPageData(params: {
 
   const activeAccount = ownershipAccounts.find((account) => account.id === request.activeAccountId);
   const isLlcAccount = activeAccount?.accountType === "llc";
-  const administeredPropertyIds = request.activeAccountId
-    ? await measureOwnerWithRequest(
+  const administeredPropertyIdsPromise = request.activeAccountId
+    ? measureOwnerWithRequest(
         "properties.administered-ids",
         () => getAdministeredPropertyIdsForAccount(params.userId, request.activeAccountId!),
-        {
-          activeAccountId: request.activeAccountId
-        }
+        { activeAccountId: request.activeAccountId }
       )
-    : [];
+    : Promise.resolve([] as string[]);
+  const managerPaymentsVisibilityPromise = administeredPropertyIdsPromise.then((propertyIds) =>
+    measureOwnerWithRequest(
+      "manager-payments.visibility",
+      () => hasOwnerManagerPaymentSection(propertyIds),
+      { propertyCount: propertyIds.length }
+    )
+  );
+  const activeAccountId = request.activeAccountId;
+  const dashboardPromise = administeredPropertyIdsPromise.then((propertyIds) =>
+    measureOwnerWithRequest(
+      "dashboard.data",
+      () => getDashboardData(params.userId, activeAccountId, propertyIds, "owner")
+    )
+  );
+  const portfolioPromise = administeredPropertyIdsPromise.then((propertyIds) =>
+    measureOwnerWithRequest(
+      "portfolio.data",
+      () => getPortfolioData(params.userId, activeAccountId, propertyIds)
+    )
+  );
+  const rentCollectionStatusPromise = measureOwnerWithRequest(
+    "stripe-connect.status",
+    () => getRentCollectionConnectStatus(params.userId)
+  );
+  void dashboardPromise.catch(() => undefined);
+  void portfolioPromise.catch(() => undefined);
+  void rentCollectionStatusPromise.catch(() => undefined);
+  void managerPaymentsVisibilityPromise.catch(() => undefined);
+  const capabilities = await capabilitiesPromise;
+
+  const administeredPropertyIds = await administeredPropertyIdsPromise;
   if (!administeredPropertyIds.includes(request.requestedPropertyId ?? "")) {
     request.requestedPropertyId = null;
     request.initialPropertyId = null;
   }
-  const hasManagerPaymentsSection = await measureOwnerWithRequest(
-    "manager-payments.visibility",
-    () => hasOwnerManagerPaymentSection(administeredPropertyIds),
-    {
-      propertyCount: administeredPropertyIds.length
-    }
-  );
+  const provisionalAvailability = buildOwnerSectionAvailability({
+    capabilities,
+    hasManagedProperties: administeredPropertyIds.length > 0,
+    hasManagerPaymentsSection: false,
+    isLlcAccount
+  });
+  const provisionalBundlePlan = buildOwnerBundlePlan({
+    capabilities,
+    initialOwnerHomePage: request.initialOwnerHomePage,
+    initialSectionId: request.initialSectionId,
+    isLlcAccount,
+    sectionAvailability: provisionalAvailability
+  });
+  const sectionDataPromise = loadOwnerSectionBundles({
+    ...params, request, ownershipAccounts, capabilities, bundles: provisionalBundlePlan.bundles,
+    connectedPropertyIds: request.initialOwnerHomePage
+      ? Promise.resolve(administeredPropertyIds)
+      : portfolioPromise.then((value) => value.properties.map((property) => property.id)),
+    measure: measureOwnerWithRequest
+  });
+  void sectionDataPromise.catch(() => undefined);
+  const hasManagerPaymentsSection = await managerPaymentsVisibilityPromise;
   const sectionAvailability = buildOwnerSectionAvailability({
     capabilities,
     hasManagedProperties: administeredPropertyIds.length > 0,
     hasManagerPaymentsSection,
     isLlcAccount
   });
-  const bundlePlan = buildOwnerBundlePlan({
-    capabilities,
-    initialOwnerHomePage: request.initialOwnerHomePage,
-    initialSectionId: request.initialSectionId,
-    isLlcAccount,
-    sectionAvailability
-  });
+  const bundlePlan = { ...provisionalBundlePlan, sectionAvailability };
   const hasBundle = (bundleId: OwnerBundleId) => bundlePlan.bundles.has(bundleId);
   const capabilitiesWithOwnerSectionAvailability: DashboardCapabilities = {
     ...capabilities,
     ownerSectionAvailability: bundlePlan.sectionAvailability
   };
-  const activeAccountId = request.activeAccountId;
-  const portfolioPromise = measureOwnerWithRequest(
-    "portfolio.data",
-    () => getPortfolioData(params.userId, activeAccountId, administeredPropertyIds)
-  );
-
   const [
     dashboard,
     portfolio,
@@ -185,7 +221,7 @@ export async function loadOwnerPageData(params: {
     rentCollectionStatus,
     sectionData
   ] = await Promise.all([
-    measureOwnerWithRequest("dashboard.data", () => getDashboardData(params.userId, activeAccountId, administeredPropertyIds)),
+    dashboardPromise,
     portfolioPromise,
     hasBundle("announcement-properties")
       ? measureOwnerWithRequest("properties.admin-options", () => getAdministeredPropertyOptions(params.userId))
@@ -196,12 +232,8 @@ export async function loadOwnerPageData(params: {
     hasBundle("notification-preferences")
       ? measureOwnerWithRequest("notifications.preferences", () => getUserNotificationPreferenceSettings(params.userId))
       : Promise.resolve(undefined),
-    measureOwnerWithRequest("stripe-connect.status", () => getRentCollectionConnectStatus(params.userId)),
-    loadOwnerSectionBundles({
-      ...params, request, ownershipAccounts, capabilities, bundles: bundlePlan.bundles,
-      connectedPropertyIds: portfolioPromise.then(value => value.properties.map(property => property.id)),
-      measure: measureOwnerWithRequest
-    })
+    rentCollectionStatusPromise,
+    sectionDataPromise
   ]);
 
   const isEmpty = portfolio.properties.length === 0 &&

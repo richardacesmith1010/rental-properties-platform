@@ -116,6 +116,22 @@ describe("getDashboardData output preservation", () => {
     expect(noUnits).toEqual(noProperties);
   });
 
+  it("keeps dashboard output identical when the authenticated owner role is supplied", async () => {
+    dataMocks.resolve.mockImplementation((table, columns) => {
+      if (table === "profiles" && columns === "id, role") return ok([{ id: "owner-1", role: "owner" }]);
+      if (table === "properties") return ok([{ id: "property-1", name: "Forum House" }]);
+      if (table === "units") {
+        return ok([{ id: "unit-1", occupied: true, property_id: "property-1", unit_number: "2B" }]);
+      }
+      return ok();
+    });
+
+    const baseline = await getDashboardData("owner-1", null, ["property-1"]);
+    const suppliedRole = await getDashboardData("owner-1", null, ["property-1"], "owner");
+
+    expect(suppliedRole).toEqual(baseline);
+  });
+
   it("preserves populated-unit output with zero leases", async () => {
     dataMocks.resolve.mockImplementation((table, columns) => {
       if (table === "profiles" && columns === "id, role") {
@@ -143,14 +159,20 @@ describe("getDashboardData output preservation", () => {
       if (table === "properties") return ok([{ id: "property-1", name: "Property" }]);
       if (table === "units") return ok([{ id: "unit-1", occupied: true, property_id: "property-1", unit_number: "1" }]);
       if (table === "leases") {
-        return ok([{ id: "lease-1", monthly_rent_cents: 100000, active: true, unit_id: "unit-1", tenant_profile_id: "tenant-1", collects_outside_domus: false }]);
+        return ok([{
+          id: "lease-1", monthly_rent_cents: 100000, active: true, unit_id: "unit-1",
+          tenant_profile_id: "tenant-1", collects_outside_domus: false
+        }]);
       }
       if (table === "rent_charges") {
         const usesDeletedAt = filters.some(([operator, column]) => operator === "is" && column === "deleted_at");
         if (columns.includes("notes") || usesDeletedAt) return missing();
         if (columns === "amount_cents, lease_id") return ok();
         if (columns === "id") return ok([{ id: "charge-1" }]);
-        return ok([{ id: "charge-1", lease_id: "lease-1", due_date: "2026-10-01", amount_cents: 100000, status: "pending", category: "rent" }]);
+        return ok([{
+          id: "charge-1", lease_id: "lease-1", due_date: "2026-10-01", amount_cents: 100000,
+          status: "pending", category: "rent"
+        }]);
       }
       if (table === "charge_edit_history") return missing();
       return ok();
@@ -181,7 +203,10 @@ describe("getPortfolioData output preservation", () => {
         return ok([{ id: "owner-1", email: "", full_name: "Owner", phone: null }]);
       }
       if (table === "properties") {
-        return ok([{ id: "property-1", name: "Property", address_line1: "", city: "", state: "", postal_code: "", owner_account_id: null, active: true }]);
+        return ok([{
+          id: "property-1", name: "Property", address_line1: "", city: "", state: "",
+          postal_code: "", owner_account_id: null, active: true
+        }]);
       }
       return ok();
     });
@@ -201,15 +226,26 @@ describe("getPortfolioData output preservation", () => {
       if (table === "profiles") return ok();
       if (table === "properties" && columns.includes("active")) return missing();
       if (table === "properties") {
-        return ok([{ id: "property-1", name: "Property", address_line1: "", city: "", state: "", postal_code: "", owner_account_id: null }]);
+        return ok([{
+          id: "property-1", name: "Property", address_line1: "", city: "", state: "",
+          postal_code: "", owner_account_id: null
+        }]);
       }
       if (table === "units" && columns.includes("square_feet")) return missing();
       if (table === "units") {
-        return ok([{ id: "unit-1", property_id: "property-1", unit_number: "1", bedrooms: 1, bathrooms: 1, monthly_rent_cents: 100000, occupied: true }]);
+        return ok([{
+          id: "unit-1", property_id: "property-1", unit_number: "1", bedrooms: 1, bathrooms: 1,
+          monthly_rent_cents: 100000, occupied: true
+        }]);
       }
       if (table === "leases" && columns.includes("notes")) return missing();
       if (table === "leases") {
-        return ok([{ id: "lease-1", unit_id: "unit-1", tenant_profile_id: "tenant-1", monthly_rent_cents: 100000, deposit_cents: 100000, due_day_of_month: 1, start_date: "2026-01-01", end_date: "2026-12-31", lease_status: "active", grace_period_days: 5, late_fee_cents: 5000, collects_outside_domus: false, active: true }]);
+        return ok([{
+          id: "lease-1", unit_id: "unit-1", tenant_profile_id: "tenant-1", monthly_rent_cents: 100000,
+          deposit_cents: 100000, due_day_of_month: 1, start_date: "2026-01-01", end_date: "2026-12-31",
+          lease_status: "active", grace_period_days: 5, late_fee_cents: 5000,
+          collects_outside_domus: false, active: true
+        }]);
       }
       return ok();
     });

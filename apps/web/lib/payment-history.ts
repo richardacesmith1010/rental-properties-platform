@@ -16,10 +16,11 @@ export interface PaymentHistoryItem {
 
 export async function getTenantPaymentHistory(userId: string): Promise<PaymentHistoryItem[]> {
   const supabase = createClient();
-  const { data: leases } = await supabase
+  const { data: leases, error: leaseError } = await supabase
     .from("leases")
     .select("id, unit_id")
     .eq("tenant_profile_id", userId);
+  if (leaseError) throw leaseError;
 
   const leaseRows = (leases ?? []) as Array<{ id: string; unit_id: string }>;
   if (leaseRows.length === 0) {
@@ -27,7 +28,8 @@ export async function getTenantPaymentHistory(userId: string): Promise<PaymentHi
   }
 
   const leaseIds = Array.from(new Set(leaseRows.map((lease) => lease.id)));
-  const { data: charges } = await withChargeEditingFallback(
+  const unitIds = Array.from(new Set(leaseRows.map((lease) => lease.unit_id)));
+  const [chargeResult, unitResult] = await Promise.all([withChargeEditingFallback(
     () =>
       supabase
         .from("rent_charges")
@@ -39,7 +41,10 @@ export async function getTenantPaymentHistory(userId: string): Promise<PaymentHi
         .from("rent_charges")
         .select("id, lease_id, due_date, amount_cents, category")
         .in("lease_id", leaseIds)
-  );
+  ), supabase.from("units").select("id, unit_number, property_id").in("id", unitIds)]);
+  if (chargeResult.error) throw chargeResult.error;
+  if (unitResult.error) throw unitResult.error;
+  const charges = chargeResult.data;
 
   const chargeRows =
     (charges ?? []) as Array<{
@@ -54,12 +59,23 @@ export async function getTenantPaymentHistory(userId: string): Promise<PaymentHi
   }
 
   const chargeIds = Array.from(new Set(chargeRows.map((charge) => charge.id)));
-  const { data: payments } = await supabase
-    .from("payments")
-    .select("id, rent_charge_id, paid_at, amount_cents, method, reference_note")
-    .in("rent_charge_id", chargeIds)
-    .order("paid_at", { ascending: false })
-    .limit(50);
+  const unitRows = (unitResult.data ?? []) as Array<{
+    id: string;
+    unit_number: string;
+    property_id: string;
+  }>;
+  const propertyIds = Array.from(new Set(unitRows.map((unit) => unit.property_id)));
+  const [paymentResult, propertyResult] = await Promise.all([
+    supabase.from("payments")
+      .select("id, rent_charge_id, paid_at, amount_cents, method, reference_note")
+      .in("rent_charge_id", chargeIds)
+      .order("paid_at", { ascending: false })
+      .limit(50),
+    supabase.from("properties").select("id, name").in("id", propertyIds)
+  ]);
+  if (paymentResult.error) throw paymentResult.error;
+  if (propertyResult.error) throw propertyResult.error;
+  const payments = paymentResult.data;
 
   const paymentRows =
     (payments ?? []) as Array<{
@@ -74,23 +90,7 @@ export async function getTenantPaymentHistory(userId: string): Promise<PaymentHi
     return [];
   }
 
-  const unitIds = Array.from(new Set(leaseRows.map((lease) => lease.unit_id)));
-  const { data: units } = await supabase
-    .from("units")
-    .select("id, unit_number, property_id")
-    .in("id", unitIds);
-
-  const unitRows =
-    (units ?? []) as Array<{
-      id: string;
-      unit_number: string;
-      property_id: string;
-    }>;
-  const propertyIds = Array.from(new Set(unitRows.map((unit) => unit.property_id)));
-  const { data: properties } = await supabase
-    .from("properties")
-    .select("id, name")
-    .in("id", propertyIds);
+  const properties = propertyResult.data;
 
   const leaseById = new Map(leaseRows.map((lease) => [lease.id, lease]));
   const chargeById = new Map(chargeRows.map((charge) => [charge.id, charge]));
