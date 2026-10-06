@@ -397,6 +397,12 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Untracked stray file `apps/mobile/README 2.md` (Finder/iCloud duplicate) — not committed; owner may delete.
 - Scorecard: **Visual 80 ✅**. Next by rule: Reliability & monitoring (74) — tie with Money accuracy (74), but Money needs the owner's real bank files.
 
+## Sprint 177/177b SHIPPED — Reliability & monitoring 74 → 78 (L2, `e69e36a`; hotfix `9f2506a`, 2026-10-06)
+
+- Sentry-found regression DOMUS-WEB-2 (pdfkit fonts not traced under Next 15) fixed + resolved. New Sentry alert 6124405. `/api/health/cron` + smoke check; verify-stripe-accounts records cron_runs; daily GitHub Actions smoke (needs SMOKE_* repo secrets — owner pastes them; Claude cannot enter credentials into web forms; `gh` CLI not installed).
+- **Post-deploy routine now includes a Sentry check** (`search_issues is:unresolved lastSeen:-1h` in domus-z1/domus-web).
+- Until 06:00 UTC 2026-10-07, `/api/health/cron` returns 503 (verify-stripe has no recorded run yet), so manual smoke fails at that step — expected.
+
 ## ▶ START HERE (next session, written 2026-10-04)
 
 - Last shipped: Sprint 167 + 167b bank feed Phase 1 (`67e2168`). Sprints 168 + 169 shipped (bank feed Phase 1 + 2 complete). Next: owner uploads real Navy Federal + Fidelity October files (from a computer) → Claude verifies real numbers; then Phase 3 (Plaid daily sync, needs owner's Plaid production application). Polish backlog: review-card key by token; payment source 'Other' wording. Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
