@@ -27,7 +27,11 @@ function DashboardHomeStateHarness() {
     } as never
   );
 
-  return <div>{state.ownerOnboarding.steps.map((step) => step.id).join(",")}</div>;
+  return <div>
+    <span>{state.ownerOnboarding.steps.map((step) => step.id).join(",")}</span>
+    <span>{state.ownerOnboarding.steps.map((step) => step.label).join(",")}</span>
+    <span>{state.ownerOnboarding.steps.map((step) => step.description).join(" ")}</span>
+  </div>;
 }
 
 describe("useDashboardHomeState", () => {
@@ -37,6 +41,9 @@ describe("useDashboardHomeState", () => {
 
     expect(screen.getByText("profile,account,property,unit,lease")).toBeInTheDocument();
     expect(screen.queryByText(/bank/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Homes/)).toBeInTheDocument();
+    expect(screen.getByText(/so rent can reach you/)).toBeInTheDocument();
+    expect(screen.queryByText(/charges can start flowing/)).not.toBeInTheDocument();
   });
 
   it("builds tiles and excludes outside-Domus rent from late rows", () => {

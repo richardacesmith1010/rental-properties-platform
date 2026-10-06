@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ArrowLeft, ArrowRight, Building2, CheckCircle2, Home, UserRoundPlus } from "lucide-react";
 import { toast } from "sonner";
 import type { ActionState } from "@/app/actions";
@@ -43,6 +44,8 @@ interface LeaseDraft {
 interface UnifiedPropertyWizardProps {
   open: boolean;
   accountId?: string | null;
+  bankConnected?: boolean;
+  bankSetupHref?: string;
   onOpenChange: (open: boolean) => void;
   onCreatePropertyWithSetup?: UnifiedSetupAction;
   onComplete?: (propertyId: string | null) => void;
@@ -173,6 +176,8 @@ function WizardProgress({ step }: { step: WizardStep }) {
 export function UnifiedPropertyWizard({
   open,
   accountId,
+  bankConnected,
+  bankSetupHref = "/connect/onboard",
   onOpenChange,
   onCreatePropertyWithSetup,
   onComplete
@@ -433,11 +438,14 @@ export function UnifiedPropertyWizard({
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="space-y-1.5 text-sm font-medium text-foreground md:col-span-2">
                   <span>Property name</span>
-                  <Input data-autofocus="true" value={propertyName} onChange={(event) => setPropertyName(event.target.value)} placeholder="1st Home" title="Enter a recognizable property name." />
+                  <Input data-autofocus="true" value={propertyName}
+                    onChange={(event) => setPropertyName(event.target.value)} placeholder="Maple House"
+                    title="Enter a recognizable property name." />
                 </label>
                 <label className="space-y-1.5 text-sm font-medium text-foreground md:col-span-2">
                   <span>Street address</span>
-                  <Input value={addressLine1} onChange={(event) => setAddressLine1(event.target.value)} placeholder="131 Chaste Tree Circle" title="Enter the street address." />
+                  <Input value={addressLine1} onChange={(event) => setAddressLine1(event.target.value)}
+                    placeholder="123 Main St" title="Enter the street address." />
                 </label>
                 <label className="space-y-1.5 text-sm font-medium text-foreground">
                   <span>City</span>
@@ -730,12 +738,18 @@ export function UnifiedPropertyWizard({
               <Badge variant="success" className="px-3 py-1 text-sm">Setup complete</Badge>
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--line)]"><CheckCircle2 className="h-8 w-8 text-[var(--pos)]" /></div>
               <div className="space-y-2">
-                <h3 className="text-3xl font-semibold tracking-tight text-foreground">Your property is set up.</h3>
+                <h3 className="text-3xl font-semibold tracking-tight text-foreground">Your home is added.</h3>
                 <p className="mx-auto max-w-2xl text-base leading-7 text-muted-foreground">
-                  {lease.hasTenant
-                    ? `${lease.tenantEmail} will receive an invitation email, and the lease is ready to collect rent.`
-                    : "The property and unit records are ready. You can add the tenant later from Leases."}
+                  {bankConnected === true
+                    ? "Your home is ready. Tenants can pay rent here."
+                    : bankConnected === false
+                      ? "Your home is added. Connect your bank so tenants can pay you."
+                      : "Your home is added. Check your bank setup before taking rent."}
                 </p>
+                {bankConnected !== true ? (
+                  <Link href={bankSetupHref} className="inline-flex min-h-11 items-center font-semibold text-primary underline"
+                    title="Connect your bank to receive rent.">Connect your bank</Link>
+                ) : null}
               </div>
               <Button type="button" size="lg" onClick={finishSetup} title="Go to the property overview on the dashboard.">
                 Go to Dashboard

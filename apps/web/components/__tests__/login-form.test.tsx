@@ -25,6 +25,12 @@ async function signUp(result: unknown = { data: { user: { identities: [{}] } }, 
 
 beforeEach(() => { vi.clearAllMocks(); });
 describe("sign-up confirmation", () => {
+  it("opens directly in sign-up mode when requested", () => {
+    render(<LoginForm role="owner" initialMode="signup" />);
+    expect(screen.getByRole("button", { name: "Create account" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Confirm Password")).toBeInTheDocument();
+  });
+
   it("shows the same screen for an existing-user result", async () => {
     await signUp({ data: { user: { identities: [] } }, error: null });
     expect(screen.getByText(/Used this email with Domus before/)).toBeInTheDocument();

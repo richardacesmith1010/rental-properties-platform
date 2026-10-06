@@ -6,12 +6,14 @@ import userEvent from "@testing-library/user-event";
 vi.mock("../auth/login-form", () => ({
   LoginForm: ({
     nextPath,
-    role
+    role,
+    initialMode
   }: {
     nextPath: string;
     role?: "owner" | "manager" | "tenant";
+    initialMode?: "signin" | "signup";
   }) => (
-    <div data-testid={`login-form-${nextPath}`} data-role={role}>
+    <div data-testid={`login-form-${nextPath}`} data-role={role} data-mode={initialMode}>
       Login form for {nextPath}
     </div>
   ),
@@ -20,6 +22,14 @@ vi.mock("../auth/login-form", () => ({
 import { RoleSelector } from "../auth/role-selector";
 
 describe("RoleSelector", () => {
+  it("opens owner sign-up without clipping the form", () => {
+    render(<RoleSelector initialRole="owner" initialMode="signup" />);
+    const form = screen.getByTestId("login-form-/owner");
+    expect(form).toHaveAttribute("data-mode", "signup");
+    expect(form.parentElement?.parentElement).not.toHaveClass("overflow-hidden", "max-h-[400px]");
+    expect(form.parentElement?.parentElement?.parentElement).toHaveClass("sm:col-span-2");
+  });
+
   it("renders all three role cards", () => {
     render(<RoleSelector />);
     expect(screen.getByText("Owner")).toBeInTheDocument();

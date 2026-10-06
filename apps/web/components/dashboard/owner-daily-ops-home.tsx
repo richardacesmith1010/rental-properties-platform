@@ -60,6 +60,7 @@ export function groupLateRent(charges: ChargeRowData[]): LateRentGroup[] {
 
 interface OwnerDailyOpsHomeProps {
   bankState: OwnerBankCardState;
+  notificationsAreOn?: boolean;
   isManagerView?: boolean;
   summary: OwnerHomeSummary;
   invitations?: InvitationListItem[];
@@ -104,7 +105,7 @@ function SummaryTile({ title, value, detail, progress }: {
 }
 
 export function OwnerDailyOpsHome({
-  bankState, isManagerView = false, summary, onOpenSection, onSendBatchPaymentReminder, onRecordManualPayment,
+  bankState, notificationsAreOn = false, isManagerView = false, summary, onOpenSection, onSendBatchPaymentReminder, onRecordManualPayment,
   financialOverview, llcSetupPrompt, onInitiatePlaidLink, onCompletePlaidLink, onOpenLeaseWizard, onSelectProperty,
   onRefreshPlaidBalance, onDisconnectPlaid
 }: OwnerDailyOpsHomeProps) {
@@ -170,9 +171,11 @@ export function OwnerDailyOpsHome({
                     <p className="mt-1 text-sm text-[var(--muted)]">Oldest rent was due {formatDate(charge.dueDate)}</p>
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row">
-                    <Button type="button" variant="outline" className="min-h-11" disabled={isSending}
-                      onClick={() => sendReminder(group.charges.map((item) => item.id))}
-                      title="Send this tenant a rent reminder.">Send reminder</Button>
+                    {notificationsAreOn ? (
+                      <Button type="button" variant="outline" className="min-h-11" disabled={isSending}
+                        onClick={() => sendReminder(group.charges.map((item) => item.id))}
+                        title="Send this tenant a rent reminder.">Send reminder</Button>
+                    ) : null}
                     <Button type="button" className="min-h-11"
                       onClick={() => setPaymentChargeId((current) => current === charge.id ? null : charge.id)}
                       title="Record rent paid outside Domus.">Mark as paid</Button>

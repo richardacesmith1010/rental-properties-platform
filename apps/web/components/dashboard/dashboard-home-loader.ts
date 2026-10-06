@@ -52,20 +52,20 @@ export function useDashboardHomeState(
       },
       {
         id: "property",
-        label: "Add a property",
-        description: "Enter your first property address and core details.",
+        label: "Homes",
+        description: "Enter your first home address and details.",
         completed: safePortfolio.properties.length > 0
       },
       {
         id: "unit",
         label: "Add a unit",
-        description: "Create at least one rentable unit inside your property.",
+        description: "Create at least one rentable unit inside your home.",
         completed: safePortfolio.units.length > 0
       },
       {
         id: "lease",
         label: "Create a lease",
-        description: "Set rent, dates, and tenant details so charges can start flowing.",
+        description: "Set rent, dates, and tenant details so rent can reach you.",
         completed: safePortfolio.leases.length > 0
       },
     ];

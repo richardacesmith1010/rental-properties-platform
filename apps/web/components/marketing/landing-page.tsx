@@ -30,7 +30,9 @@ export function LandingPage() {
           <h1 className="text-4xl font-bold leading-[1.08] tracking-[-0.02em] sm:text-[52px]">Rent, repairs, and leases. All in one place.</h1>
           <p className="max-w-[520px] text-lg leading-relaxed text-[var(--ink-2)] sm:text-[19px]">Tenants pay online. You see who paid. Problems get fixed. No more spreadsheets.</p>
           <div className="flex flex-wrap gap-3 pt-2">
-            <Button asChild size="lg"><Link href="/login" title="Start using Domus for free.">Start free</Link></Button>
+            <Button asChild size="lg">
+              <Link href="/login?mode=signup&role=owner" title="Start using Domus for free.">Start free</Link>
+            </Button>
             <Button asChild size="lg" variant="outline"><a href="#how" title="See how Domus works.">See how it works</a></Button>
           </div>
           <p className="text-sm text-[var(--muted)]">Free while Domus is in early access. No credit card.</p>
@@ -87,7 +89,9 @@ export function LandingPage() {
       <AnimateOnScroll className={`${containerClass} pt-[72px]`}>
         <section className="flex flex-wrap items-center justify-between gap-6 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-8 sm:p-10">
           <div className="min-w-0 flex-1 basis-[360px]"><h2 className="text-[28px] font-bold tracking-[-0.01em]">Free while Domus is in early access</h2><p className="mt-2 text-[17px] text-[var(--ink-2)]">No credit card needed. Set up your first home today.</p></div>
-          <Button asChild size="lg"><Link href="/login" title="Start using Domus for free.">Start free</Link></Button>
+          <Button asChild size="lg">
+              <Link href="/login?mode=signup&role=owner" title="Start using Domus for free.">Start free</Link>
+            </Button>
         </section>
       </AnimateOnScroll>
 

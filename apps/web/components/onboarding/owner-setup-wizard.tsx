@@ -283,17 +283,8 @@ export function OwnerSetupWizard({
                 {copied ? "Copied" : "Copy"}
               </Button>
             </div>
-            <p className="mt-3 text-xs tabular-nums text-[var(--muted)]">Account ID: {createdLlc.accountId}</p>
           </div>
           <div className="mt-6 flex gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setMode("choose")}
-              title="Go back to the setup options."
-            >
-              Back
-            </Button>
             <Button
               type="button"
               onClick={() => {
@@ -301,7 +292,7 @@ export function OwnerSetupWizard({
               }}
               title="Continue into the owner dashboard."
             >
-              Continue to Dashboard
+              Done
             </Button>
           </div>
         </div>

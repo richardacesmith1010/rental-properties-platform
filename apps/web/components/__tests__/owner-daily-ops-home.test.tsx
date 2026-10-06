@@ -32,6 +32,13 @@ const summary = {
 };
 
 describe("OwnerDailyOpsHome", () => {
+  it("hides reminders while notifications are off and keeps Mark as paid", () => {
+    render(<OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }}
+      summary={summary} onOpenSection={vi.fn()} financialOverview={financialOverview} />);
+    expect(screen.queryByRole("button", { name: "Send reminder" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mark as paid" })).toBeInTheDocument();
+  });
+
   beforeEach(() => vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {}))));
   afterEach(() => vi.unstubAllGlobals());
 
@@ -71,7 +78,7 @@ describe("OwnerDailyOpsHome", () => {
   it("renders late rent actions and summary tiles", async () => {
     const reminder = vi.fn(async (_state: unknown, _formData: FormData) => ({ success: true as const }));
     render(
-      <OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }} summary={summary}
+      <OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }} summary={summary} notificationsAreOn
         onOpenSection={vi.fn()} onSendBatchPaymentReminder={reminder} onRecordManualPayment={vi.fn()}
         financialOverview={financialOverview} />
     );
@@ -124,7 +131,7 @@ describe("OwnerDailyOpsHome", () => {
       ]
     };
     const { container } = render(
-      <OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }} summary={groupedSummary}
+      <OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }} summary={groupedSummary} notificationsAreOn
         onOpenSection={vi.fn()} onSendBatchPaymentReminder={reminder} onRecordManualPayment={vi.fn()}
         financialOverview={financialOverview} />
     );

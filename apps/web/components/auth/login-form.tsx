@@ -16,6 +16,7 @@ import { createClient } from "@/lib/supabase/client";
 interface LoginFormProps {
   nextPath?: string;
   role?: "owner" | "manager" | "tenant";
+  initialMode?: "signin" | "signup";
 }
 
 type AuthMode = "signin" | "signup";
@@ -194,8 +195,8 @@ function SignInPanel({
   );
 }
 
-export function LoginForm({ nextPath = "/", role }: LoginFormProps) {
-  const [mode, setMode] = useState<AuthMode>("signin");
+export function LoginForm({ nextPath = "/", role, initialMode = "signin" }: LoginFormProps) {
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [forgotMode, setForgotMode] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

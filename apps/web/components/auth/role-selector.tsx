@@ -28,8 +28,11 @@ const roles = [
   },
 ];
 
-export function RoleSelector() {
-  const [selectedRole, setSelectedRole] = useState<string | null>(null);
+export function RoleSelector({ initialRole, initialMode = "signin" }: {
+  initialRole?: "owner" | "manager" | "tenant";
+  initialMode?: "signin" | "signup";
+}) {
+  const [selectedRole, setSelectedRole] = useState<string | null>(initialRole ?? null);
   const [hoveredRole, setHoveredRole] = useState<string | null>(null);
 
   return (
@@ -46,7 +49,7 @@ export function RoleSelector() {
           const isHovered = hoveredRole === role.id && !selectedRole;
 
           return (
-            <div key={role.id} className="flex flex-col">
+            <div key={role.id} className={isSelected ? "flex flex-col sm:col-span-2" : "flex flex-col"}>
               {/* Clickable card */}
               <button
                 type="button"
@@ -97,13 +100,13 @@ export function RoleSelector() {
               {/* Expanded login form */}
               <div
                 className={`
-                  overflow-hidden transition-all duration-300 ease-out
-                  ${isSelected ? "mt-4 max-h-[400px] opacity-100" : "max-h-0 opacity-0"}
+                  transition-all duration-300 ease-out
+                  ${isSelected ? "mt-4 opacity-100" : "hidden opacity-0"}
                 `}
               >
                 {isSelected && (
                   <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--domus-shadow-sm)]">
-                    <LoginForm nextPath={role.nextPath} role={role.id} />
+                    <LoginForm nextPath={role.nextPath} role={role.id} initialMode={initialMode} />
                   </div>
                 )}
               </div>

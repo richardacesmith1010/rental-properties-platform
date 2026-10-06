@@ -3,7 +3,7 @@ import { BarChart3, Building2, CreditCard, FileText, Users, Wrench, type LucideI
 export interface MarketingCard { icon?: LucideIcon; title: string; body: string; }
 
 export const problemCards: MarketingCard[] = [
-  { title: "You chase rent by text", body: "Domus tells you who paid. It reminds tenants for you." },
+  { title: "You chase rent by text", body: "Domus tells you who paid. It shows you who has paid." },
   { title: "Repairs slip through", body: "Tenants report problems in the app. You see each one until it's fixed." },
   { title: "Papers are everywhere", body: "Leases and receipts live in one safe spot." }
 ];
@@ -28,6 +28,6 @@ export const faqs = [
   { q: "Is Domus really free?", a: "Yes, while we are in early access. You don't need a credit card to start." },
   { q: "How do tenants pay?", a: "Online, by bank or card, through Stripe. They can turn on autopay." },
   { q: "Is my data safe?", a: "Each person only sees what they should. Connections are encrypted. Changes are logged." },
-  { q: "What if a tenant pays late?", a: "Domus sends reminders. You see what is overdue and for how long." },
+  { q: "What if a tenant pays late?", a: "See who owes rent at a glance. You see what is overdue and for how long." },
   { q: "Can my property manager use it?", a: "Yes. Managers get their own view of just the homes they run." }
 ];

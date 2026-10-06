@@ -25,9 +25,10 @@ export default async function OwnerSetupPage() {
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--accent)] text-xl font-bold text-white shadow-[var(--domus-shadow-sm)]">
           D
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Set up your ownership account</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Set up your account</h1>
         <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-          Tell Domus how you hold your properties so ownership, payouts, and shared access start in the right place.
+          Choose how you own your homes. An LLC (a business you own the homes through) can share access.
+          Set up your account to receive rent money.
         </p>
       </div>
       <OwnerSetupWizard

@@ -14,6 +14,8 @@ interface LoginPageProps {
     error_description?: string;
     confirmed?: string;
     password_reset?: string;
+    mode?: string;
+    role?: string;
   };
 }
 
@@ -21,12 +23,6 @@ export const metadata: Metadata = {
   title: "Login",
   description: "Sign in to Domus as Owner, Manager, or Tenant to access your rental workspace.",
 };
-
-const proofPoints = [
-  { label: "Landlords", value: "500+" },
-  { label: "Units managed", value: "2,000+" },
-  { label: "With Stripe + Resend", value: "Live" }
-];
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const supabase = createClient();
@@ -37,6 +33,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const callbackErrorDescription = searchParams?.error_description;
   const emailConfirmed = searchParams?.confirmed === "true";
   const passwordReset = searchParams?.password_reset === "true";
+  const isOwnerSignup = searchParams?.mode === "signup" && searchParams?.role === "owner";
   const sessionExpired = cookieStore.get("x-session-expired")?.value === "1";
 
   if (data.user) {
@@ -80,18 +77,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 </p>
               </div>
 
-              <div className="hidden gap-3 sm:grid sm:grid-cols-3">
-                {proofPoints.map((item) => (
-                  <div
-                    key={item.label}
-                    className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-4 shadow-[var(--domus-shadow-sm)]"
-                  >
-                    <p className="tabular-nums text-2xl font-semibold text-[var(--ink)]">{item.value}</p>
-                    <p className="mt-1 text-sm text-[var(--muted)]">{item.label}</p>
-                  </div>
-                ))}
-              </div>
-
               <div className="hidden gap-3 text-sm text-[var(--ink-2)] sm:grid sm:grid-cols-2">
                 <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-4">
                   <div className="flex items-center gap-2 font-semibold text-[var(--ink)]">
@@ -128,9 +113,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                   </div>
                 </div>
 
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Welcome back</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+                  {isOwnerSignup ? "Create your account" : "Welcome back"}
+                </p>
                 <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
-                  Sign in to your workspace
+                  {isOwnerSignup ? "Start with your owner account" : "Sign in to your workspace"}
                 </h2>
                 <p className="mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
                   Choose your role, then sign in or create your account. Domus keeps owners, managers, and tenants in the same system with the right access for each.
@@ -177,14 +164,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                   </Alert>
                 ) : null}
 
-                <RoleSelector />
+                <RoleSelector initialRole={isOwnerSignup ? "owner" : undefined} initialMode={isOwnerSignup ? "signup" : "signin"} />
               </div>
 
               <div className="border-t border-border/60 bg-muted/30 px-6 py-4 text-center sm:px-8">
                 <p className="text-sm text-muted-foreground">
                   New to Domus?{" "}
-                  <Link href="/marketing" className="font-semibold text-primary hover:text-primary/80" title="Explore Domus plans and features.">
-                    See plans and get started
+                  <Link href="/login?mode=signup&role=owner"
+                    className="font-semibold text-primary hover:text-primary/80" title="Create an owner account.">
+                    Create an account
                   </Link>
                 </p>
               </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 interface ModalOverlayProps {
   open: boolean;
@@ -106,9 +107,11 @@ export function ModalOverlay({ open, onClose, children }: ModalOverlayProps) {
     return null;
   }
 
-  return (
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 overflow-y-auto overscroll-contain"
+      className="fixed inset-0 z-[100] overflow-y-auto overscroll-contain"
       role="dialog"
       aria-modal="true"
     >
@@ -135,6 +138,7 @@ export function ModalOverlay({ open, onClose, children }: ModalOverlayProps) {
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

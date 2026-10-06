@@ -6,7 +6,6 @@ import {
   DoorOpen,
   FileText,
   Landmark,
-  PlayCircle,
   Plus,
   type LucideIcon
 } from "lucide-react";
@@ -30,7 +29,7 @@ function getPrimaryAction(stepId: OnboardingStepId | null): {
 } {
   switch (stepId) {
     case "property":
-      return { label: "Add Your First Property", icon: Plus };
+      return { label: "Add Your First Home", icon: Plus };
     case "unit":
       return { label: "Add Your First Unit", icon: DoorOpen };
     case "lease":
@@ -64,7 +63,7 @@ export function WelcomeCard({
         Welcome, {displayName}!
       </h2>
       <p className="mx-auto mt-2 max-w-2xl text-sm text-muted-foreground">
-        Domus keeps your properties, leases, payments, and resident operations in one place.
+        Domus keeps your homes and tenants in one place.
         Finish these first steps to get your dashboard running smoothly.
       </p>
 
@@ -81,14 +80,6 @@ export function WelcomeCard({
           <PrimaryIcon className="h-4 w-4" />
           {primaryAction.label}
         </Button>
-        <a
-          href="#owner-setup-tour"
-          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-muted/60 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-          title="Preview the Domus setup tour."
-        >
-          <PlayCircle className="h-4 w-4 text-primary" />
-          Watch a 2-minute tour
-        </a>
         {onSkip ? (
           <button
             type="button"

@@ -24,28 +24,43 @@ describe("ModalOverlay", () => {
   });
 
   it("applies the blur backdrop", () => {
-    const { container } = render(
+    render(
       <ModalOverlay open>
         <div>Modal content</div>
       </ModalOverlay>
     );
 
-    expect(container.querySelector(".backdrop-blur-sm")).toBeInTheDocument();
+    expect(document.body.querySelector(".backdrop-blur-sm")).toBeInTheDocument();
   });
 
   it("calls onClose when the backdrop is clicked", () => {
     const onClose = vi.fn();
-    const { container } = render(
+    render(
       <ModalOverlay open onClose={onClose}>
         <div>Modal content</div>
       </ModalOverlay>
     );
 
-    const backdrop = container.querySelector("[aria-hidden='true']");
+    const backdrop = document.body.querySelector("[aria-hidden='true']");
     expect(backdrop).toBeTruthy();
     fireEvent.click(backdrop as Element);
 
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+
+  it("portals the open dialog above a bottom navigation bar", () => {
+    const host = document.createElement("div");
+    document.body.append(host);
+    try {
+      render(<ModalOverlay open><button type="button">Next</button></ModalOverlay>, { container: host });
+      const dialog = screen.getByRole("dialog");
+      expect(dialog.parentElement).toBe(document.body);
+      expect(dialog).toHaveClass("z-[100]");
+      expect(screen.getByRole("button", { name: "Next" })).toBeInTheDocument();
+    } finally {
+      host.remove();
+    }
   });
 
   it("calls onClose when Escape is pressed", () => {
