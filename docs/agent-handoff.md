@@ -408,6 +408,11 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Guard test + 163-hit sweep, 0 exceptions; `docs/plain-language.md` is the rule sheet for future packets (cite it in every user-facing packet). Claude test-only fix: a11y spec waits for animations to finish (production fade-in). Scorecard now: Security 80 ✅, Visual 80 ✅, Plain language 80 ✅, Reliability 78 (pending owner GitHub secrets), Money 74 (needs bank files), Owner 72, Speed 70, Tenant 70, Code health 68, Onboarding 62, Manager 58, Launch 52, Notifications 30, Phone app 25.
 - Owner is on mobile: pending owner actions at the Mac — (1) 6 SMOKE_* GitHub secrets (page: repo Settings → Secrets → Actions; name field pre-fill flow), (2) Navy Federal + Fidelity October CSVs.
 
+## Sprint 179 SHIPPED — Speed 70 → 72 (L2, `dc1c2f9`, 2026-10-06, 238,921 tokens)
+
+- Gains modest (owner Home 2.74 → ~2.35 s); root cause is round-trip count, not slow queries. Indexes applied by Claude. Claude test-only: speed budgets set to 4.5 s p75 (2.0 s would have failed the daily smoke). Codex note: onboarding return + account.updated webhook don't set `stripe_status`/`stripe_last_verified_at` (daily cron does) — fold into a later Stripe sprint.
+- Measurement script: scratchpad `bank167/perf.cjs` pattern (login once, 5 loads, median/p75) + Vercel runtime logs `[perf:owner]`/`[perf:tenant]`.
+
 ## ▶ START HERE (next session, written 2026-10-04)
 
 - Last shipped: Sprint 167 + 167b bank feed Phase 1 (`67e2168`). Sprints 168 + 169 shipped (bank feed Phase 1 + 2 complete). Next: owner uploads real Navy Federal + Fidelity October files (from a computer) → Claude verifies real numbers; then Phase 3 (Plaid daily sync, needs owner's Plaid production application). Polish backlog: review-card key by token; payment source 'Other' wording. Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
