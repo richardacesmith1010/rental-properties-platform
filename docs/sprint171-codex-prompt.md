@@ -1,5 +1,7 @@
 # Sprint 171 — Tenants can pay: autopay result, visible pay errors, "no lease yet" screen, honest copy (L3)
 
+Revision 2 — ChatGPT verdict APPROVE WITH CHANGES; the 3 required changes and the 3 optional suggestions are adopted (messages changed at their source, auth and rate-limit regression tests, interaction tests for all three pay components, a redirect-once assertion on every outcome, and a no-lease send attempt).
+
 ## 1. Objective
 Fix the tenant blockers from `docs/launch-review-2026-10-05.md`:
 1. Turning on autopay saves the card but always lands on the error state.
@@ -32,7 +34,8 @@ Fix the tenant blockers from `docs/launch-review-2026-10-05.md`:
    - In `app/actions/charges.ts`, add `payWithCardState(prev, formData)` and `payWithACHState(prev, formData)`. These are thin wrappers that call the existing functions.
      - The wrappers must let `redirect()` propagate. Do not wrap the call in a try/catch that swallows it.
      - Return the `ActionState` on failure.
-     - Rewrite the user-facing error strings they return into plain words:
+     - Change the tenant-facing error strings **at their source** in `charges.ts`, in the shared checkout preparation used by `payWithCard`/`payWithACH`.
+       Do **not** translate message text inside the wrappers (no string-to-string mapping). The new strings:
        - "This rent was already paid."
        - "This rent was cancelled by your landlord." (for waived)
        - "We couldn't find this rent. Refresh the page."
@@ -80,7 +83,7 @@ Each line at most 140 characters. Do not compact code (L-015). If `charges.ts` o
 - `npm run lint:web`
 
 ## 8. Acceptance criteria (binary). Each case needs a real test that calls the code (L-017)
-1. **Autopay return:**
+1. **Autopay return** (assert `redirect` is called **exactly once** on every outcome):
    - valid setup with last4 and a successful upsert → `redirect` called once with `/tenant?section=charges&autopay=enrolled`;
    - an upsert error → `…autopay=error`;
    - a Stripe retrieve throwing → `…autopay=error`;
@@ -89,12 +92,16 @@ Each line at most 140 characters. Do not compact code (L-015). If `charges.ts` o
    Mock `redirect` to throw like Next's. Assert that the success path is **not** converted to an error.
 2. **Pay wrappers:**
    - a paid rent → `{ success:false, error:"This rent was already paid." }`;
+   - a missing rent → "We couldn't find this rent. Refresh the page.";
+   - the auth/rate-limit path is reached unchanged: a rate-limited call returns the existing rate-limit error and creates no Stripe session.
+     An unauthenticated or non-tenant call is rejected exactly as by the existing function (redirect or error), with no Stripe call;
    - waived → the "cancelled" message;
    - below the minimum → the plain minimum message;
    - success → `redirect` propagates (it is not caught).
-3. **`TenantRentCard`:**
-   - when the action returns an error, the alert shows the error text;
-   - while pending, the button shows "Opening payment…".
+3. **`TenantRentCard`, `PayRentCard` and `TenantOverview`:** each one gets its own interaction test.
+   - Submitting through the component's pay form calls the new state action.
+   - A returned error renders in the `role="alert"` box.
+   - While pending, the button shows "Opening payment…", in every component that has its own button implementation.
 4. **`getTenantPayState`:**
    - no lease → `no_lease`;
    - a lease with no charge → `not_posted`;
@@ -102,7 +109,9 @@ Each line at most 140 characters. Do not compact code (L-015). If `charges.ts` o
 5. **`TenantRentCard`/`TenantOverview` with `no_lease`:**
    - show "Your lease isn't set up yet";
    - never render "$0.00".
-6. **`ticket-form` and the tenant inbox without a lease:** they show the notice text, and the send control is disabled.
+6. **`ticket-form` and the tenant inbox without a lease:**
+   - they show the notice text, and the send control is disabled;
+   - typing in the field and attempting to send calls no server action.
 7. **Copy:**
    - the three old strings no longer exist (grep in §5 files);
    - the new strings render.
