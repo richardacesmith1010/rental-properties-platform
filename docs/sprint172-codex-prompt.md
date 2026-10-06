@@ -1,5 +1,11 @@
 # Sprint 172 — Honest invites, manager first screen, sign-up email resend (L3)
 
+Revision 2 — ChatGPT verdict on rev 1: REJECT; on rev 2: APPROVE. All 3 blocking items and the optional item are adopted:
+- the resend UI is identical for every auth response;
+- the sign-up screen no longer reveals an existing account;
+- manager delivery distinguishes "already" from "added";
+- tests prove the auth/rate-limit order.
+
 ## 1. Objective
 Fix the invite and sign-up items from `docs/launch-review-2026-10-05.md`:
 - The app must say exactly what happened when an owner invites someone (email sent, or person added with no email).
@@ -33,12 +39,16 @@ Fix the invite and sign-up items from `docs/launch-review-2026-10-05.md`:
 
 ## 3. In scope
 1. **Truthful delivery result:**
-   - `inviteManager` returns `delivery: "email" | "added"`:
-     - `"added"` for an existing manager, with a `name` when known;
-     - `"email"` after a successful `inviteUserByEmail`.
+   - `inviteManager` returns `delivery: "email" | "added" | "already"`:
+     - **before** the upsert, read whether an active `property_managers` row already exists for that manager and property;
+     - `"already"` when it does;
+     - `"added"` when the upsert creates or reactivates the link;
+     - `"email"` after a successful `inviteUserByEmail`;
+     - include `name` when known.
    - `invite-manager-form.tsx` shows:
      - for `"email"`: "Invite sent to {email}. They'll get an email from Domus.";
-     - for `"added"`: "Added {name or email} to this home. They'll see it next time they sign in."
+     - for `"added"`: "Added {name or email} to this home. They'll see it next time they sign in.";
+     - for `"already"`: "{name or email} already has access to this home. No email was sent."
    - The tenant invite action returns `delivery: "email_branded" | "email_basic" | "linked"`, and the wizard success screen shows:
      - **branded:** "Invite sent to {email}." and "They'll get an email from Domus with a link to join.";
      - **basic:** "Invite sent to {email}." and "They'll get a sign-in email. Ask them to check spam if it doesn't come.";
@@ -57,9 +67,13 @@ Fix the invite and sign-up items from `docs/launch-review-2026-10-05.md`:
      - ~191 → "Tenants will see which home they rent."
 4. **Sign-up email resend** (`login-form.tsx`, on the "Check your email" screen after sign-up):
    - Add a "Send it again" button that calls `supabase.auth.resend({ type: "signup", email, options: { emailRedirectTo: ${location.origin}/auth/callback } })`.
-   - After a successful send, disable the button for 60 seconds with "Sent. Try again in {n}s".
-   - On error, show "We couldn't send it. Try again in a minute." Never reveal whether the account exists beyond today's behaviour.
-5. **Invited person tries Sign up:** change the existing-email message to "This email already has an account. Use the link in your invite email, or tap Forgot password." Keep the "Forgot password" link visible, using the existing reset flow.
+   - **No account-existence signal:** every response from `auth.resend`, success or any Supabase/auth error, shows the same message and cooldown:
+     "If this email needs confirming, we sent a new link. Check your inbox." The button is then disabled for 60 seconds ("Try again in {n}s").
+   - Only a client or network failure, where the request never reached Supabase (for example a thrown `TypeError` from fetch), may show
+     "Check your connection and try again." This must not depend on any Supabase response field.
+5. **Invited person tries Sign up, with no account-existence signal:**
+   - Remove the branch that shows "This email already has an account…" (~254–256). When sign-up returns an existing-user result, show the **same** "Check your email" screen as a new sign-up.
+   - The "Check your email" screen, for everyone, adds the line "Used this email with Domus before? Use the link in your invite email, or tap Forgot password." with the existing Forgot password link.
 
 ## 4. Out of scope
 - **A "Copy invite link" button. Deliberately excluded:** the invite link lets whoever holds it set the invitee's password. That would let an owner take over a tenant account. It is revisited with a safer design later.
@@ -97,16 +111,19 @@ Each line at most 140 characters. Do not compact code (L-015). Files already ove
 
 ## 8. Acceptance criteria (binary). Each case needs a real test that calls the code (L-017)
 1. **`inviteManager`:**
-   - an existing manager → `{ success:true, delivery:"added" }` and **no** `inviteUserByEmail` call;
+   - an existing manager not yet on the property → `{ success:true, delivery:"added" }` and **no** `inviteUserByEmail` call;
+   - an existing manager already active on the property → `delivery:"already"`, with no email;
+   - auth, role and property-access checks and the rate limit run **before** any profile lookup, upsert or invite call. Prove it: a rejected caller causes zero calls to those;
    - a new email → `delivery:"email"`, and `inviteUserByEmail` is called with `redirectTo` ending in `/auth/callback`;
    - a non-admin of the property is still rejected with no writes.
 2. **Tenant invite:**
    - an existing tenant → `delivery:"linked"`, with no email sent;
    - Resend configured → `"email_branded"`;
    - Resend missing or failing → `"email_basic"`;
-   - both resend branches pass `redirectTo` ending in `/auth/callback`.
+   - both resend branches pass `redirectTo` ending in `/auth/callback`;
+   - a rejected caller (not an admin of the property) causes zero profile lookups or invite calls.
 3. **`invite-manager-form`:**
-   - renders the "Invite sent to…" and "Added … to this home" messages for the two results;
+   - renders the "Invite sent to…", "Added … to this home" and "already has access" messages for the three results;
    - has no "Skip for now".
 4. **Tenant wizard success:** renders the three delivery messages. The zero-unit and all-rented messages are distinct. The "Add a unit" button shows only when `onAddUnit` exists.
 5. **Manager screens:**
@@ -116,10 +133,11 @@ Each line at most 140 characters. Do not compact code (L-015). Files already ove
    - managers see "Homes you manage".
 6. **Login form:**
    - after sign-up, "Send it again" calls `auth.resend` with type `signup`;
-   - after success it is disabled with the countdown;
-   - an error shows the plain message;
-   - the existing-email message is the new text, and the Forgot password link is visible.
-7. A grep of §5 files finds none of "Invitation sent!", "branded Domus email", "invited to manage", "Skip for now", or "Try signing in instead".
+   - a resend success, a resend Supabase error such as rate-limited, and a user-not-found style error all render the **identical** message and countdown (assert identical text);
+   - a thrown network error shows "Check your connection and try again.";
+   - a sign-up that returns an existing-user result renders the **same** "Check your email" screen as a new sign-up, including the "Used this email with Domus before?…" line and the Forgot password link;
+   - the text "already has an account" never renders.
+7. A grep of §5 files finds none of "Invitation sent!", "branded Domus email", "invited to manage", "Skip for now", "Try signing in instead", or "already has an account".
 8. Typecheck and lint pass. Only §5 files changed.
 
 ## 9. Report format
