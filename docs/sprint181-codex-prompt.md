@@ -1,5 +1,7 @@
 # Sprint 181 — Owner Home critical path in one round trip each (L3: DB functions) · Category 8: Speed
 
+Revision 2 — ChatGPT verdict APPROVE WITH CHANGES. The 3 required changes are adopted: a real SQL-level fixture test, explicit null/empty/ordering contracts, and the capability check as a required gate. Optional changes also adopted: exact-signature grants and separate fallback metrics.
+
 ## 1. Objective
 Cut the owner Home's critical path (measured in production, L-018) from about 25 PostgREST round trips to about 3. The current chain:
 - `ownership.accounts`: 8 queries, ~0.55 s;
@@ -24,7 +26,9 @@ Target: owner Home "Needs you today" visible median ≤ 1.5 s in production (fro
 1. **Capabilities, no runtime probes in the request path.**
    - Find which probe is uncacheable on every run, and report it.
    - Then make `getFeatureCapabilities()` return the production capability set **without querying** on page requests: a static "all features available" set, or one derived once at build time.
-   - Keep the probe logic as an explicit check run by `npm run verify:phase10-runtime` (or a new `verify:capabilities` script), so environment drift is still detectable.
+   - Keep the probe logic as an explicit check (`npm run verify:capabilities`).
+   - **Make it a required gate:** add it to the runtime-verification stage of `scripts/gate-web.sh` (the stage that already runs the phase9/phase10 runtime checks), so a deploy cannot pass the gate if any capability is missing. Add the same call to `scripts/smoke-web.sh`, so the daily production smoke catches drift.
+   - If any probe fails, the script exits non-zero and names the missing table, column or bucket.
    - `ownerSectionAvailability` and the derived flags must be identical to today's production values (test with a fixture equal to the current production result).
 2. **DB function `public.owner_dashboard_payload(p_property_ids uuid[], p_today date) returns jsonb`.**
    - **Write the migration file only:** `supabase/migrations/20261006_sprint181_owner_rpcs.sql`. **Claude applies it.**
@@ -32,17 +36,29 @@ Target: owner Home "Needs you today" visible median ≤ 1.5 s in production (fro
    - The TypeScript keeps building the same `DashboardData` shape from the payload.
    - Requirements:
      - `language sql` or `plpgsql`, `stable`, `security invoker`, `set search_path = ''`, fully schema-qualified names;
-     - it filters strictly by `p_property_ids`;
-     - `revoke execute ... from public, anon, authenticated; grant execute ... to service_role;`.
+     - it filters strictly by `p_property_ids`.
+     - **Grants use the exact signature:** `revoke execute on function public.owner_dashboard_payload(uuid[], date) from public, anon, authenticated; grant execute on function public.owner_dashboard_payload(uuid[], date) to service_role;`. The same applies to `ownership_accounts_payload(uuid)`.
+     - **Null, empty and ordering contract (both functions):**
+       - a NULL or empty `p_property_ids` returns the empty scoped payload and never broadens the query;
+       - every collection field is `coalesce(jsonb_agg(... order by <explicit stable keys>), '[]'::jsonb)`;
+       - every aggregate has an explicit null default matching what the legacy TypeScript expects (for example 0 cents);
+       - document each field's order in a SQL comment.
 3. **DB function `public.ownership_accounts_payload(p_user_id uuid) returns jsonb`.** Same rules. It returns what `getOwnershipAccountsForUser` assembles today (member rows, creator rows, property account IDs, and so on) in one call. It is callable only by `service_role`.
 4. **App integration.**
    - `getDashboardData` and `getOwnershipAccountsForUser` call the RPCs through the admin client.
-   - **Fallback:** if the RPC is missing (`isMissingSchemaError`) or errors, log a fixed name and run the existing implementation, kept as `getDashboardDataLegacy` / `getOwnershipAccountsForUserLegacy`.
+   - **Fallback:** if the RPC is missing (`isMissingSchemaError`) or errors, run the existing implementation, kept as `getDashboardDataLegacy` / `getOwnershipAccountsForUserLegacy`.
+   - Log `owner_rpc_fallback_missing` vs `owner_rpc_fallback_error` (fixed names, plus the sanitized Postgres error code only), so persistent defects are visible.
    - The app's authorization is unchanged: administered IDs are still computed in TypeScript and passed in. `p_user_id` is always the authenticated session user, never client input.
-5. **Parity proof.**
+5. **SQL-level test:** `supabase/tests/sprint181_owner_rpcs_test.sql`. It is one `DO $$ ... $$` block that Claude runs through the Supabase MCP after applying the migration, and it must leave no data behind:
+   - inside a transaction it inserts fixture rows (owner profile, ownership account, member, properties, units, leases, rent charges and payments) for 4 scenarios: no homes; 1 home with one late and one pending charge; 2 homes with a paid charge; an LLC account;
+   - it calls both functions for each scenario and asserts the exact expected values (counts, cents, late-charge IDs, ordering, empty arrays as `[]`) with `raise exception` on any mismatch;
+   - it asserts that NULL/empty arrays return empty payloads;
+   - it ends with `raise exception 'SPRINT181_SQL_TESTS_PASSED'`, which forces a rollback;
+   - use fixed UUIDs, and never touch existing rows.
+6. **Parity proof.**
    - Unit tests: for fixtures (no homes, 1 home with a late and a pending charge, 2 homes with a paid charge, an LLC account), the RPC-path assembly produces output deep-equal to the legacy path.
    - Also add `scripts/verify-owner-rpc-parity.ts`, runnable with `npx tsx` from the repo root using `apps/web/.env.local`. Given `--user <uuid>`, it computes administered IDs, runs both paths read-only, and prints `PARITY OK` or a JSON diff. Claude runs it against production for the smoke owner and the real owner.
-6. **Perf logs:** keep the step names; `queries` must drop to ~1 for each of these steps.
+7. **Perf logs:** keep the step names; `queries` must drop to ~1 for each of these steps.
 
 ## 4. Out of scope
 - RLS changes, auth or permission logic, other loaders, client changes, the tenant page.
@@ -54,6 +70,8 @@ Target: owner Home "Needs you today" visible median ≤ 1.5 s in production (fro
 - `apps/web/lib/dashboard.ts`
 - `apps/web/lib/ownership.ts`
 - `supabase/migrations/20261006_sprint181_owner_rpcs.sql` (new, not applied)
+- `supabase/tests/sprint181_owner_rpcs_test.sql` (new)
+- `scripts/gate-web.sh` and `scripts/smoke-web.sh` (the capability check only)
 - `scripts/verify-owner-rpc-parity.ts` (new)
 - tests for capabilities, dashboard parity and ownership parity
 
@@ -71,11 +89,13 @@ If `dashboard.ts` exceeds 500 lines after the change, move the payload mapper to
 
 ## 8. Acceptance criteria (binary)
 1. The capabilities path makes **0 queries** on page requests (unit test: no client calls). The probe check is runnable as a script. The flags equal the production fixture.
-2. The migration defines both functions exactly as in §3.2–3.3, with grants restricted to `service_role`.
+2. The migration defines both functions exactly as in §3.2–3.3, with exact-signature grants restricted to `service_role`. The SQL test file exists, covers the 4 scenarios plus NULL/empty, and ends with the forced rollback.
+2b. `verify:capabilities` exists, is called by `gate-web.sh` (runtime stage) and by `smoke-web.sh`, and exits non-zero naming any missing capability.
 3. The parity unit tests pass for all 4 fixtures, and the fallback test passes (the legacy path is used when the RPC is missing).
 4. The parity script exists and prints usage.
 5. The gate passes. Only §5 files changed.
 6. **Claude, after applying the migration and deploying:**
+   - `SPRINT181_SQL_TESTS_PASSED` from the SQL test;
    - parity OK for the smoke owner and the real owner;
    - production `queries` ≈ 1 for `dashboard.data` and `ownership.accounts`, and 0 for capabilities;
    - owner Home visible median ≤ 1.5 s;
