@@ -417,6 +417,13 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 - Home defers 5 Home-only bundles (works; Home loads shared bundles only). Owner Home not faster: critical path = ownership.accounts (8 q) → administered-ids (4 q) → dashboard.data (12 q, ~1 s). feature.capabilities cache from S179 is ineffective in production (22 q every request). Next sprint (L3): RPCs for dashboard + ownership, fix capabilities cache.
 
+## Sprint 182 SHIPPED — Privacy hotfix, Security 80 → 60 → 80 (L3, `adab51a`, 2026-10-06, n/a tokens)
+- Leak: `getPortfolioData` loaded up to 100 tenant profiles platform-wide into every owner/manager page (and the AI chat route's portfolio). Proven live, then fixed in `apps/web/lib/portfolio.ts`: scoped `.in("id", leaseTenantIds)` / `.in("email", invitedEmails)` + `filterAllowedTenantProfiles` allowlist; self handled separately; errors log `portfolio_tenant_profiles_error` and fail closed. Also fixes "Unknown tenant" past 100 platform tenants.
+- Tests a–j in `dashboard-portfolio-data.test.ts` (fail-closed, error, dedup). New `scripts/verify-tenant-scope.ts --user <uuid>`.
+- Verified: gate 1447/1447; live probe 14 → 6 emails; scope OK for smoke owner/manager/real owner; real leases named 2/2; 27/27 browser specs (owner Home median 1.68 s); Sentry clean; CI #304 green.
+- CI fix earlier same day (`f0b6f9c`): CI builds with placeholder env (repo secret `NEXT_PUBLIC_SUPABASE_URL` malformed); L-019 added.
+- Next: Sprint 183 = the former speed plan (administered-ids + portfolio.data RPCs).
+
 ## Sprint 181 SHIPPED — Speed 73 → 77 (L3, `f0aa0cc`, 2026-10-06, 168,650 tokens)
 
 - Owner dashboard + ownership RPCs (service_role only) with legacy fallback (`owner_rpc_fallback_missing|error` logs); capabilities static + `npm run verify:capabilities` required in gate/smoke. Parity script: `npx tsx scripts/verify-owner-rpc-parity.ts --user <uuid>` (use a scratch npm cache: `npm_config_cache=<scratchpad>/npm-cache`). SQL fixture test in `supabase/tests/sprint181_owner_rpcs_test.sql` (run via MCP; ends with a forced-rollback exception).
