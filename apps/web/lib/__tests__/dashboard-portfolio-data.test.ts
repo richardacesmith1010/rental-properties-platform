@@ -53,6 +53,7 @@ function createQueryBuilder(table: string, columns: string) {
 
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
+    rpc: async () => ({ data: null, error: { code: "PGRST202" } }),
     from: (table: string) => ({
       select: (columns: string) => createQueryBuilder(table, columns)
     })
@@ -404,7 +405,10 @@ describe("getPortfolioData tenant scope", () => {
       expect(result.tenants.map((row) => row.id)).toEqual(["owner-1"]);
       expect(result.leases[0].tenantName).toBe("Unknown tenant");
       expect(queries).toEqual([[ ["eq", "id", "owner-1"] ], [ ["in", "id", ["tenant-1"]] ]]);
-      expect(log.mock.calls).toEqual([["portfolio_tenant_profiles_error", "PGRST999"]]);
+      expect(log.mock.calls).toEqual([
+        ["owner_rpc_fallback_missing", "owner_portfolio_payload", "PGRST202"],
+        ["portfolio_tenant_profiles_error", "PGRST999"]
+      ]);
     } finally {
       log.mockRestore();
     }

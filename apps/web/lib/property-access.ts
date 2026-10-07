@@ -77,7 +77,7 @@ async function getLegacyAdministeredProperties(
   return Array.from(byPropertyId.values());
 }
 
-type PropertyAccessClient = Pick<SupabaseClient, "from">;
+type PropertyAccessClient = Pick<SupabaseClient, "from" | "rpc">;
 
 export async function getAdministeredProperties(
   userId: string,
@@ -237,7 +237,7 @@ export async function getAdministeredPropertyOptions(
     .sort((left, right) => left.name.localeCompare(right.name));
 }
 
-export async function getAdministeredPropertyIdsForAccount(
+export async function getAdministeredPropertyIdsForAccountLegacy(
   userId: string,
   accountId: string,
   adminClient?: PropertyAccessClient
@@ -263,6 +263,33 @@ export async function getAdministeredPropertyIdsForAccount(
   return properties
     .filter((property) => property.ownerAccountId === accountId)
     .map((property) => property.id);
+}
+
+export async function getAdministeredPropertyIdsForAccount(
+  userId: string,
+  accountId: string,
+  adminClient?: PropertyAccessClient
+): Promise<string[]> {
+  const admin = adminClient ?? createAdminClient();
+  const rpcName = "owner_administered_property_ids";
+  if (accountId.startsWith("legacy:")) {
+    return getAdministeredPropertyIdsForAccountLegacy(userId, accountId, admin);
+  }
+  try {
+    const { data, error } = await admin.rpc(rpcName, { p_user_id: userId, p_account_id: accountId });
+    if (!error && data && typeof data === "object" && "property_ids" in data
+      && Array.isArray(data.property_ids)) {
+      return data.property_ids as string[];
+    }
+    const code = /^[A-Z0-9]{5,10}$/.test(error?.code ?? "") ? error!.code : "UNKNOWN";
+    const missing = isMissingSchemaError(error) || code === "PGRST202" || code === "42883";
+    console.error(missing ? "owner_rpc_fallback_missing" : "owner_rpc_fallback_error", rpcName, code);
+  } catch (error) {
+    const rawCode = typeof error === "object" && error && "code" in error ? String(error.code) : "";
+    const code = /^[A-Z0-9]{5,10}$/.test(rawCode) ? rawCode : "UNKNOWN";
+    console.error("owner_rpc_fallback_error", rpcName, code);
+  }
+  return getAdministeredPropertyIdsForAccountLegacy(userId, accountId, admin);
 }
 
 export async function getAdministeredOwnerAccountIds(userId: string): Promise<string[]> {

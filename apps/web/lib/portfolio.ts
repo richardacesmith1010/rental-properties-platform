@@ -5,6 +5,7 @@ import {
   getAdministeredPropertyIdsForAccount
 } from "@/lib/property-access";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
+import { assemblePortfolioPayload, filterAllowedTenantProfiles, type TenantProfileRow, type PortfolioPayload } from "@/lib/portfolio-rpc";
 
 export interface PropertyListItem {
   id: string;
@@ -71,23 +72,6 @@ export interface PortfolioData {
   tenants: TenantOption[];
 }
 
-interface TenantProfileRow {
-  id: string;
-  email: string;
-  full_name: string;
-  phone: string | null;
-}
-
-function filterAllowedTenantProfiles(
-  rows: TenantProfileRow[],
-  leaseTenantIds: string[],
-  invitedEmails: string[]
-): TenantProfileRow[] {
-  const allowedIds = new Set(leaseTenantIds);
-  const allowedEmails = new Set(invitedEmails);
-  return rows.filter((row) => allowedIds.has(row.id) || allowedEmails.has(row.email?.toLowerCase()));
-}
-
 async function fetchScopedTenantProfiles(
   admin: ReturnType<typeof createAdminClient>,
   leaseTenantIds: string[],
@@ -127,7 +111,7 @@ async function fetchScopedTenantProfiles(
     leaseTenantIds, invitedEmails);
 }
 
-export async function getPortfolioData(
+export async function getPortfolioDataLegacy(
   userId: string,
   accountId?: string | null,
   administeredPropertyIds?: string[]
@@ -170,50 +154,14 @@ export async function getPortfolioData(
       })();
   let selfProfile: Awaited<typeof selfProfilePromise> = null;
 
-  function mergeTenantOptions(
-    rows: TenantProfileRow[] | null,
-    propertyIdsByTenantId: Map<string, string[]>,
-    propertyIdsByEmail: Map<string, string[]>
-  ) {
-    const byId = new Map<string, { id: string; email: string; fullName: string; phone: string | null }>();
-    for (const row of rows ?? []) {
-      byId.set(row.id, {
-        id: row.id,
-        email: row.email,
-        fullName: row.full_name,
-        phone: row.phone ?? null
-      });
-    }
-    if (selfProfile?.id) {
-      byId.set(selfProfile.id, {
-        id: selfProfile.id,
-        email: selfProfile.email,
-        fullName: `${selfProfile.full_name} (you)`,
-        phone: selfProfile.phone ?? null
-      });
-    }
-    return Array.from(byId.values()).map((tenant) => {
-      const ids = new Set<string>([
-        ...(propertyIdsByTenantId.get(tenant.id) ?? []),
-        ...(propertyIdsByEmail.get(tenant.email.toLowerCase()) ?? [])
-      ]);
-      return {
-        ...tenant,
-        propertyIds: Array.from(ids)
-      };
-    }).filter((tenant) => tenant.id === selfProfile?.id || tenant.propertyIds.length > 0);
-  }
-
   const resolvedPropertyIds = await resolvedPropertyIdsPromise;
   if (resolvedPropertyIds.length === 0) {
     selfProfile = await selfProfilePromise;
 
-    return {
-      properties: [],
-      units: [],
-      leases: [],
-      tenants: mergeTenantOptions([], new Map(), new Map())
-    };
+    return assemblePortfolioPayload({
+      properties: [], units: [], leases: [], invitations: [], ownership_accounts: [],
+      tenant_profiles: [], self_profile: selfProfile
+    }, new Map());
   }
 
   const [
@@ -227,12 +175,14 @@ export async function getPortfolioData(
       .from("properties")
       .select("id, name, address_line1, city, state, postal_code, owner_account_id, active")
       .in("id", resolvedPropertyIds)
-      .order("created_at", { ascending: true }),
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true }),
     admin
       .from("units")
       .select("id, property_id, unit_number, bedrooms, bathrooms, monthly_rent_cents, square_feet, occupied, active")
       .in("property_id", resolvedPropertyIds)
-      .order("unit_number", { ascending: true }),
+      .order("unit_number", { ascending: true })
+      .order("id", { ascending: true }),
     admin
       .from("invitations")
       .select("email, property_id, role, status")
@@ -403,98 +353,43 @@ export async function getPortfolioData(
   const invitedEmails = Array.from(new Set((tenantInvitations ?? [])
     .map((invitation) => invitation.email?.toLowerCase()).filter((email): email is string => Boolean(email))));
   const tenants = await fetchScopedTenantProfiles(admin, leaseTenantIds, invitedEmails);
-  const ownershipAccountNameById = new Map(
-    (ownershipAccounts ?? []).map((account) => [account.id, account.display_name])
-  );
+  return assemblePortfolioPayload({
+    properties: propertyRows,
+    units: unitRows,
+    leases,
+    invitations: tenantInvitations ?? [],
+    ownership_accounts: ownershipAccounts ?? [],
+    tenant_profiles: tenants,
+    self_profile: selfProfile
+  }, managerFeesByPropertyId);
+}
 
-  const propertyById = new Map(propertyRows.map((property) => [property.id, property]));
-  const unitById = new Map(unitRows.map((unit) => [unit.id, unit]));
-  const tenantById = new Map((tenants ?? []).map((tenant) => [tenant.id, tenant]));
-
-  const propertiesWithCounts: PropertyListItem[] = propertyRows.map((property) => ({
-    id: property.id,
-    name: property.name,
-    addressLine1: property.address_line1,
-    city: property.city,
-    state: property.state,
-    postalCode: property.postal_code,
-    managementFeeCents: managerFeesByPropertyId.get(property.id)?.feeCents ?? 0,
-    unitCount: unitRows.filter((unit) => unit.property_id === property.id).length,
-    ownerAccountId: property.owner_account_id,
-    ownerAccountName:
-      property.owner_account_id
-        ? ownershipAccountNameById.get(property.owner_account_id) ?? "Ownership Account"
-        : "Owner Account",
-    active: property.active
-  }));
-
-  const unitsWithProperty: UnitListItem[] = unitRows.map((unit) => ({
-    id: unit.id,
-    propertyId: unit.property_id,
-    propertyName: propertyById.get(unit.property_id)?.name ?? "Unknown Property",
-    unitNumber: unit.unit_number,
-    bedrooms: unit.bedrooms,
-    bathrooms: unit.bathrooms,
-    monthlyRentCents: unit.monthly_rent_cents,
-    squareFeet: unit.square_feet ?? null,
-    occupied: unit.occupied,
-    active: unit.active
-  }));
-
-  const leaseList: LeaseListItem[] = leases.map((lease) => {
-    const unit = unitById.get(lease.unit_id);
-    const property = unit ? propertyById.get(unit.property_id) : undefined;
-    const tenant = tenantById.get(lease.tenant_profile_id);
-
-    return {
-      id: lease.id,
-      unitId: lease.unit_id,
-      propertyId: unit?.property_id ?? "",
-      propertyName: property?.name ?? "Property",
-      tenantProfileId: lease.tenant_profile_id ?? "",
-      unitLabel: property && unit ? `${property.name} • ${unit.unit_number}` : lease.unit_id,
-      tenantName: tenant?.full_name ?? tenant?.email ?? "Unknown tenant",
-      tenantEmail: tenant?.email ?? lease.tenant_profile_id,
-      tenantPhone: tenant?.phone ?? null,
-      monthlyRentCents: lease.monthly_rent_cents,
-      depositCents: lease.deposit_cents,
-      dueDayOfMonth: lease.due_day_of_month,
-      startDate: lease.start_date,
-      endDate: lease.end_date,
-      leaseStatus: lease.lease_status ?? "active",
-      gracePeriodDays: lease.grace_period_days ?? 5,
-      lateFeeCents: lease.late_fee_cents ?? 0,
-      collectsOutsideDomus: lease.collects_outside_domus,
-      notes: lease.notes ?? null,
-      active: lease.active
-    };
-  });
-
-  const propertyIdsByTenantId = new Map<string, string[]>();
-  for (const lease of leaseList.filter((item) => item.active)) {
-    if (!lease.propertyId) continue;
-    const existing = propertyIdsByTenantId.get(lease.tenantProfileId) ?? [];
-    if (!existing.includes(lease.propertyId)) {
-      existing.push(lease.propertyId);
-      propertyIdsByTenantId.set(lease.tenantProfileId, existing);
+export async function getPortfolioData(
+  userId: string,
+  accountId?: string | null,
+  administeredPropertyIds?: string[]
+): Promise<PortfolioData> {
+  const propertyIds = administeredPropertyIds ?? (accountId
+    ? await getAdministeredPropertyIdsForAccount(userId, accountId)
+    : (await getAdministeredProperties(userId)).map((property) => property.id));
+  const admin = createAdminClient();
+  const rpcName = "owner_portfolio_payload";
+  try {
+    const [rpcResult, fees] = await Promise.all([
+      admin.rpc(rpcName, { p_user_id: userId, p_property_ids: propertyIds }),
+      getManagerFeesForProperties(propertyIds.map((propertyId) => ({ propertyId })))
+    ]);
+    if (!rpcResult.error && rpcResult.data) {
+      return assemblePortfolioPayload(rpcResult.data as unknown as PortfolioPayload, fees);
     }
+    const error = rpcResult.error;
+    const code = /^[A-Z0-9]{5,10}$/.test(error?.code ?? "") ? error!.code : "UNKNOWN";
+    const missing = isMissingSchemaError(error) || code === "PGRST202" || code === "42883";
+    console.error(missing ? "owner_rpc_fallback_missing" : "owner_rpc_fallback_error", rpcName, code);
+  } catch (error) {
+    const rawCode = typeof error === "object" && error && "code" in error ? String(error.code) : "";
+    const code = /^[A-Z0-9]{5,10}$/.test(rawCode) ? rawCode : "UNKNOWN";
+    console.error("owner_rpc_fallback_error", rpcName, code);
   }
-
-  const propertyIdsByEmail = new Map<string, string[]>();
-  for (const invitation of tenantInvitations ?? []) {
-    if (!invitation.property_id || !invitation.email) continue;
-    const normalizedEmail = invitation.email.toLowerCase();
-    const existing = propertyIdsByEmail.get(normalizedEmail) ?? [];
-    if (!existing.includes(invitation.property_id)) {
-      existing.push(invitation.property_id);
-      propertyIdsByEmail.set(normalizedEmail, existing);
-    }
-  }
-
-  return {
-    properties: propertiesWithCounts,
-    units: unitsWithProperty,
-    leases: leaseList,
-    tenants: mergeTenantOptions(tenants, propertyIdsByTenantId, propertyIdsByEmail)
-  };
+  return getPortfolioDataLegacy(userId, accountId, propertyIds);
 }
