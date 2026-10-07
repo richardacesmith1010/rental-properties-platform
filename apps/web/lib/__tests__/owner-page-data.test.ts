@@ -30,10 +30,12 @@ const ownerLoadMocks = vi.hoisted(() => ({
   renameRequests: vi.fn(),
   rentCollectionStatus: vi.fn(),
   role: vi.fn(),
-  logPerf: vi.fn()
+  logPerf: vi.fn(),
+  adminFrom: vi.fn()
 }));
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: () => ({ auth: { getUser: ownerLoadMocks.getUser } }) }));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ from: ownerLoadMocks.adminFrom }) }));
 vi.mock("@/lib/maintenance", () => ({ getAdminMaintenanceTickets: ownerLoadMocks.tickets }));
 vi.mock("@/lib/invitations", () => ({ getOwnerInvitations: ownerLoadMocks.invitations }));
 vi.mock("@/lib/expenses", () => ({ getOwnerExpenseData: ownerLoadMocks.expenses }));
@@ -82,7 +84,6 @@ vi.mock("@/lib/stripe-connect", () => ({
   getRentCollectionConnectStatus: ownerLoadMocks.rentCollectionStatus
 }));
 import {
-  buildOwnerBundlePlan,
   loadOwnerPageData,
   resolveOwnerPageRequest
 } from "@/app/owner/owner-page-data";
@@ -135,6 +136,17 @@ describe("loadOwnerPageData orchestration", () => {
     ownerLoadMocks.renameRequests.mockResolvedValue([]);
     ownerLoadMocks.deleteRequests.mockResolvedValue([]);
     ownerLoadMocks.ownerConnected.mockResolvedValue(new Map());
+    const adminQuery = {
+      select: vi.fn(),
+      in: vi.fn(),
+      eq: vi.fn(),
+      not: vi.fn()
+    };
+    adminQuery.select.mockReturnValue(adminQuery);
+    adminQuery.in.mockReturnValue(adminQuery);
+    adminQuery.eq.mockResolvedValue({ data: [], error: null });
+    adminQuery.not.mockResolvedValue({ data: [], error: null });
+    ownerLoadMocks.adminFrom.mockReturnValue(adminQuery);
   });
 
   it("short-circuits a role failure before starting data reads", async () => {
@@ -310,6 +322,59 @@ describe("loadOwnerPageData orchestration", () => {
     portfolio.resolve({ properties: [], units: [], leases: [], tenants: [] });
     expect((await loading).status).toBe("ready");
   });
+
+  it("starts always-loaded owner bundles before manager visibility resolves", async () => {
+    const managerVisibility = deferred<{ data: Array<{ manager_profile_id: string }>; error: null }>();
+    const adminQuery = {
+      select: vi.fn(),
+      in: vi.fn(),
+      eq: vi.fn(),
+      not: vi.fn()
+    };
+    adminQuery.select.mockReturnValue(adminQuery);
+    adminQuery.in.mockReturnValue(adminQuery);
+    adminQuery.eq.mockReturnValue(managerVisibility.promise);
+    adminQuery.not.mockResolvedValue({ data: [{ id: "manager-1" }], error: null });
+    ownerLoadMocks.adminFrom.mockReturnValue(adminQuery);
+    ownerLoadMocks.administeredIds.mockResolvedValue(["property-1"]);
+    ownerLoadMocks.administeredOptions.mockResolvedValue([{ id: "property-1", name: "Home" }]);
+    ownerLoadMocks.notifications.mockResolvedValue([{ id: "notification-1" }]);
+    ownerLoadMocks.notificationPreferences.mockResolvedValue({ emailEnabled: false });
+
+    const loading = loadOwnerPageData({ userEmail: "owner@example.test", userId: "user-1" });
+    await vi.waitFor(() => {
+      expect(ownerLoadMocks.administeredOptions).toHaveBeenCalledWith("user-1");
+      expect(ownerLoadMocks.notifications).toHaveBeenCalledWith("user-1");
+      expect(ownerLoadMocks.notificationPreferences).toHaveBeenCalledWith("user-1");
+    });
+
+    managerVisibility.resolve({ data: [{ manager_profile_id: "manager-1" }], error: null });
+    const result = await loading;
+    expect(result.status).toBe("ready");
+    if (result.status === "ready") {
+      expect(result.announcementProperties).toEqual([{ id: "property-1", name: "Home" }]);
+      expect(result.notifications).toEqual([{ id: "notification-1" }]);
+      expect(result.notificationPreferenceSettings).toEqual({ emailEnabled: false });
+    }
+  });
+
+  it("does not start always-loaded owner bundles for needs-onboarding", async () => {
+    ownerLoadMocks.profile.mockResolvedValue({ onboardingCompletedAt: null });
+    const result = await loadOwnerPageData({ userEmail: "owner@example.test", userId: "user-1" });
+    expect(result.status).toBe("needs-onboarding");
+    expect(ownerLoadMocks.administeredOptions).not.toHaveBeenCalled();
+    expect(ownerLoadMocks.notifications).not.toHaveBeenCalled();
+    expect(ownerLoadMocks.notificationPreferences).not.toHaveBeenCalled();
+  });
+
+  it("does not start always-loaded owner bundles for needs-setup", async () => {
+    ownerLoadMocks.ownershipAccounts.mockResolvedValue([]);
+    const result = await loadOwnerPageData({ userEmail: "owner@example.test", userId: "user-1" });
+    expect(result.status).toBe("needs-setup");
+    expect(ownerLoadMocks.administeredOptions).not.toHaveBeenCalled();
+    expect(ownerLoadMocks.notifications).not.toHaveBeenCalled();
+    expect(ownerLoadMocks.notificationPreferences).not.toHaveBeenCalled();
+  });
 });
 
 describe("resolveOwnerPageRequest", () => {
@@ -329,125 +394,5 @@ describe("resolveOwnerPageRequest", () => {
     expect(request.initialOwnerHomePage).toBe(true);
     expect(request.initialOwnerWorkflowMode).toBeUndefined();
     expect(request.initialSectionId).toBeNull();
-  });
-});
-
-describe("buildOwnerBundlePlan", () => {
-  const capabilities = {
-    documentsEnabled: true,
-    documentAssetAccessEnabled: true,
-    notificationsEnabled: true,
-    vendorWorkflowEnabled: true,
-    photoWorkflowEnabled: true,
-    ownershipEnabled: true,
-    leasingPipelineEnabled: true,
-    inboxThreadsEnabled: true,
-    automationsEnabled: true,
-    warnings: {}
-  } as const;
-  const sectionAvailability = {
-    hasActivitySection: true,
-    hasAnalyticsSection: true,
-    hasApplicationsSection: true,
-    hasAutomationsSection: true,
-    hasDocumentsSection: true,
-    hasExpensesSection: true,
-    hasInboxSection: true,
-    hasInvitationsSection: true,
-    hasLeasingSection: true,
-    hasManagerPaymentsSection: true,
-    hasMembersSection: true,
-    hasNotificationsSection: true,
-    hasOwnershipSection: true,
-    hasVendorsSection: true
-  } as const;
-
-  it("keeps first paint scoped to the owner home bundles", () => {
-    const bundlePlan = buildOwnerBundlePlan({
-      capabilities,
-      initialOwnerHomePage: true,
-      initialSectionId: null,
-      isLlcAccount: true,
-      sectionAvailability
-    });
-
-      expect(Array.from(bundlePlan.bundles).sort()).toEqual([
-      "announcement-properties",
-      "dashboard",
-      "expenses",
-        "feedback",
-        "invitations",
-      "manager-payments",
-      "notification-preferences",
-      "notifications",
-      "ownership-members",
-      "portfolio",
-      "rent-collection-status",
-      "tickets"
-    ]);
-    expect(bundlePlan.sectionAvailability).toEqual(sectionAvailability);
-    expect(bundlePlan.bundles.has("analytics")).toBe(false);
-    expect(bundlePlan.bundles.has("applications")).toBe(false);
-    expect(bundlePlan.bundles.has("automations")).toBe(false);
-    expect(bundlePlan.bundles.has("documents")).toBe(false);
-    expect(bundlePlan.bundles.has("inbox")).toBe(false);
-    expect(bundlePlan.bundles.has("listings")).toBe(false);
-    expect(bundlePlan.bundles.has("owner-connected-map")).toBe(false);
-    expect(bundlePlan.bundles.has("vendors")).toBe(false);
-    expect(bundlePlan.sectionAvailability.hasAnalyticsSection).toBe(true);
-    expect(bundlePlan.sectionAvailability.hasManagerPaymentsSection).toBe(true);
-  });
-
-  it("defers Home-only bundles on the first render and preserves section plans", () => {
-    const home = buildOwnerBundlePlan({
-      capabilities, initialOwnerHomePage: true, deferHomeOnlyBundles: true,
-      initialSectionId: null, isLlcAccount: true, sectionAvailability
-    });
-    expect([...home.bundles].sort()).toEqual([
-      "announcement-properties", "dashboard", "notification-preferences", "notifications",
-      "ownership-members", "portfolio", "rent-collection-status"
-    ]);
-    for (const section of ["charges", "maintenance", "expenses", "leasing"]) {
-      const base = { capabilities, initialOwnerHomePage: false, initialSectionId: section,
-        isLlcAccount: false, sectionAvailability };
-      expect([...buildOwnerBundlePlan({ ...base, deferHomeOnlyBundles: true }).bundles])
-        .toEqual([...buildOwnerBundlePlan(base).bundles]);
-    }
-  });
-
-  it("loads only the section-specific bundles for a deferred records section", () => {
-    const bundlePlan = buildOwnerBundlePlan({
-      capabilities,
-      initialOwnerHomePage: false,
-      initialSectionId: "applications",
-      isLlcAccount: false,
-      sectionAvailability: {
-        ...sectionAvailability,
-        hasManagerPaymentsSection: false,
-        hasMembersSection: false
-      }
-    });
-
-    expect(bundlePlan.bundles.has("applications")).toBe(true);
-    expect(bundlePlan.bundles.has("listings")).toBe(true);
-    expect(bundlePlan.bundles.has("expenses")).toBe(false);
-    expect(bundlePlan.bundles.has("feedback")).toBe(false);
-    expect(bundlePlan.bundles.has("inbox")).toBe(false);
-    expect(bundlePlan.bundles.has("manager-payments")).toBe(false);
-    expect(bundlePlan.bundles.has("tickets")).toBe(false);
-    expect(bundlePlan.sectionAvailability.hasApplicationsSection).toBe(true);
-  });
-
-  it("keeps Home bundle requirements independent of manager visibility timing", () => {
-    const makePlan = (hasManagerPaymentsSection: boolean) => buildOwnerBundlePlan({
-      capabilities,
-      initialOwnerHomePage: true,
-      initialSectionId: null,
-      isLlcAccount: true,
-      sectionAvailability: { ...sectionAvailability, hasManagerPaymentsSection }
-    });
-
-    expect([...makePlan(false).bundles]).toEqual([...makePlan(true).bundles]);
-    expect(makePlan(true).sectionAvailability.hasManagerPaymentsSection).toBe(true);
   });
 });

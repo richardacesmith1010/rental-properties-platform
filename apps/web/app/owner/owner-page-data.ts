@@ -143,6 +143,17 @@ export async function loadOwnerPageData(params: {
         { activeAccountId: request.activeAccountId }
       )
     : Promise.resolve([] as string[]);
+  const announcementPropertiesPromise = measureOwnerWithRequest(
+    "properties.admin-options", () => getAdministeredPropertyOptions(params.userId)
+  );
+  const notificationsPromise = capabilitiesPromise.then((resolvedCapabilities) =>
+    resolvedCapabilities.notificationsEnabled
+      ? measureOwnerWithRequest("notifications.user", () => getNotificationsForUser(params.userId))
+      : undefined
+  );
+  const notificationPreferencesPromise = measureOwnerWithRequest(
+    "notifications.preferences", () => getUserNotificationPreferenceSettings(params.userId)
+  );
   const managerPaymentsVisibilityPromise = administeredPropertyIdsPromise.then((propertyIds) =>
     measureOwnerWithRequest(
       "manager-payments.visibility",
@@ -171,6 +182,9 @@ export async function loadOwnerPageData(params: {
   void portfolioPromise.catch(() => undefined);
   void rentCollectionStatusPromise.catch(() => undefined);
   void managerPaymentsVisibilityPromise.catch(() => undefined);
+  void announcementPropertiesPromise.catch(() => undefined);
+  void notificationsPromise.catch(() => undefined);
+  void notificationPreferencesPromise.catch(() => undefined);
   const capabilities = await capabilitiesPromise;
 
   const administeredPropertyIds = await administeredPropertyIdsPromise;
@@ -208,7 +222,6 @@ export async function loadOwnerPageData(params: {
     isLlcAccount
   });
   const bundlePlan = { ...provisionalBundlePlan, sectionAvailability };
-  const hasBundle = (bundleId: OwnerBundleId) => bundlePlan.bundles.has(bundleId);
   const capabilitiesWithOwnerSectionAvailability: DashboardCapabilities = {
     ...capabilities,
     ownerSectionAvailability: bundlePlan.sectionAvailability
@@ -224,15 +237,9 @@ export async function loadOwnerPageData(params: {
   ] = await Promise.all([
     dashboardPromise,
     portfolioPromise,
-    hasBundle("announcement-properties")
-      ? measureOwnerWithRequest("properties.admin-options", () => getAdministeredPropertyOptions(params.userId))
-      : Promise.resolve(undefined),
-    hasBundle("notifications") && capabilities.notificationsEnabled
-      ? measureOwnerWithRequest("notifications.user", () => getNotificationsForUser(params.userId))
-      : Promise.resolve(undefined),
-    hasBundle("notification-preferences")
-      ? measureOwnerWithRequest("notifications.preferences", () => getUserNotificationPreferenceSettings(params.userId))
-      : Promise.resolve(undefined),
+    announcementPropertiesPromise,
+    notificationsPromise,
+    notificationPreferencesPromise,
     rentCollectionStatusPromise,
     sectionDataPromise
   ]);
