@@ -223,7 +223,7 @@ export function OwnerDailyOpsHome({
                   {summary.openRepairCount} open repair{summary.openRepairCount === 1 ? "" : "s"}</Button> : null}
                 {summary.newMessageCount > 0 ? <Button type="button" variant="outline" className="min-h-11 justify-start"
                   onClick={() => onOpenSection("inbox")} title="Open Messages.">
-                  {summary.newMessageCount} new message{summary.newMessageCount === 1 ? "" : "s"}</Button> : null}
+                  {summary.newMessageCount} conversation{summary.newMessageCount === 1 ? "" : "s"}</Button> : null}
               </div>
             ) : null}
           </section>

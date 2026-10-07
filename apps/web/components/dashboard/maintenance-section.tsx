@@ -224,9 +224,9 @@ export function MaintenanceSection({
                       {ticket.propertyName}
                       {ticket.unitNumber ? ` • ${ticket.unitNumber}` : ""}
                     </p>
-                    {ticket.tenantEmail ? (
+                    {ticket.tenantName || ticket.tenantEmail ? (
                       <p className="mt-0.5 text-sm text-muted-foreground">
-                        {ticket.tenantEmail}
+                        {ticket.tenantName || ticket.tenantEmail}
                       </p>
                     ) : null}
                     <div className="mt-1.5 flex flex-wrap gap-1.5">

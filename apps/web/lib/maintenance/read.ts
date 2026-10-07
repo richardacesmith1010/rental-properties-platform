@@ -156,14 +156,14 @@ export async function getAdminMaintenanceTickets(
   const ticketIds = ticketRows.map((ticket) => ticket.id);
   const [profilesResult, enhancementMaps, commentMaps, timelineMaps] = await Promise.all([
     tenantIds.length > 0
-      ? supabase.from("profiles").select("id, email").in("id", tenantIds)
-      : Promise.resolve({ data: [] as Array<{ id: string; email: string }>, error: null }),
+      ? supabase.from("profiles").select("id, email, full_name").in("id", tenantIds)
+      : Promise.resolve({ data: [] as Array<{ id: string; email: string; full_name: string | null }>, error: null }),
     buildTicketEnhancementMaps(supabase, ticketIds),
     buildCommentMaps(supabase, ticketIds),
     buildTimelineMaps(supabase, ticketIds),
   ]);
   if (profilesResult.error) throw profilesResult.error;
-  const profileById = new Map<string, { email: string }>(
+  const profileById = new Map<string, { email: string; full_name: string | null }>(
     (profilesResult.data ?? []).map((profile) => [profile.id, profile]),
   );
   const {
@@ -200,6 +200,7 @@ export async function getAdminMaintenanceTickets(
       createdAt: ticket.created_at,
       resolvedAt: ticket.resolved_at,
       tenantEmail: tenant?.email ?? null,
+      tenantName: tenant?.full_name?.trim() || null,
       commentCount: commentCountByTicketId.get(ticket.id) ?? 0,
       comments: commentsByTicketId.get(ticket.id) ?? [],
       timeline: timelineByTicketId.get(ticket.id) ?? [],

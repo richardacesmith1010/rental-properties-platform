@@ -448,6 +448,7 @@ export default async function TenantPage(props: TenantPageProps) {
           {!hasUnknownSection && activeSection === "notifications" &&
             (capabilities.notificationsEnabled || capabilities.inboxThreadsEnabled ? (
               <InboxSection
+                viewerRole="tenant"
                 notifications={notifications}
                 threads={inboxThreads}
                 properties={inboxProperties}

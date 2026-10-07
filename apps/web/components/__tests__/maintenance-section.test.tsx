@@ -93,6 +93,14 @@ describe("MaintenanceSection", () => {
     status: "open"
   });
 
+  it("shows a tenant name when present and email otherwise", () => {
+    const named = { ...ticket, tenantName: "Dry Run Tenant" };
+    const { rerender } = render(<MaintenanceSection tickets={[named]} />);
+    expect(screen.getByText("Dry Run Tenant")).toBeInTheDocument();
+    rerender(<MaintenanceSection tickets={[ticket]} />);
+    expect(screen.getByText("tenant@example.com")).toBeInTheDocument();
+  });
+
   const mixedTickets = [
     buildTicket({ id: "ticket-1", title: "Leaking sink", status: "open" }),
     buildTicket({ id: "ticket-2", title: "Broken heater", status: "in_progress" }),

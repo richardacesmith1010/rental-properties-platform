@@ -61,6 +61,22 @@ describe("OwnerDailyOpsHome", () => {
     expect(screen.queryByLabelText("Loading more numbers")).not.toBeInTheDocument();
   });
 
+  it("counts conversations and preserves the empty Home copy", () => {
+    const cache = { hasBundles: () => true, homeError: false, loadHome: vi.fn() } as unknown as
+      ReturnType<typeof useOwnerSectionCache>;
+    const home = (count: number) => <OwnerSectionCacheContext.Provider value={cache}>
+      <OwnerDailyOpsHome bankState={{ status: "connected", href: "/connect/onboard" }}
+        summary={{ ...summary, newMessageCount: count }} onOpenSection={vi.fn()}
+        financialOverview={financialOverview} />
+    </OwnerSectionCacheContext.Provider>;
+    const { rerender } = render(home(1));
+    expect(screen.getByRole("button", { name: "1 conversation" })).toBeInTheDocument();
+    rerender(home(4));
+    expect(screen.getByRole("button", { name: "4 conversations" })).toBeInTheDocument();
+    rerender(home(0));
+    expect(screen.getByText("No open repairs. No new messages.")).toBeInTheDocument();
+  });
+
   it("shows a refresh message when the deferred Home request fails", () => {
     const cache = { hasBundles: () => false, homeError: true, loadHome: vi.fn() } as unknown as
       ReturnType<typeof useOwnerSectionCache>;

@@ -1,5 +1,6 @@
 "use client";
 
+import { threadDisplayTitle } from "@/lib/inbox/thread-title";
 import { useEffect, useMemo, useState } from "react";
 import { useFormState } from "react-dom";
 import { Bell, Mail, MessageSquare, Search } from "lucide-react";
@@ -28,6 +29,7 @@ import {
 
 export function InboxSection({
   notifications,
+  viewerRole,
   threads,
   properties,
   onMarkRead,
@@ -43,7 +45,8 @@ export function InboxSection({
   hasActiveLease = true,
 }: InboxSectionProps) {
   const [activeTab, setActiveTab] = useState<InboxTab>(
-    onStartTenantConversation ? "threads" : "timeline",
+    viewerRole === "tenant" || onStartTenantConversation || (threads.length > 0 && !notifications.some((item) => !item.readAt))
+      ? "threads" : "timeline",
   );
   const [query, setQuery] = useState("");
   const [readFilter, setReadFilter] = useState<ReadFilter>("all");
@@ -231,8 +234,9 @@ export function InboxSection({
               typeFilter === "all" ? (
                 <EmptyState
                   icon={Mail}
-                  title="No messages yet"
-                  description="Your landlord can message you here."
+                  title={viewerRole === "tenant" || onStartTenantConversation ? "No messages yet" : "No updates yet"}
+                  description={viewerRole === "tenant" || onStartTenantConversation
+                    ? "Your landlord can message you here." : "Rent, repair, and lease updates show up here."}
                 />
               ) : (
                 <EmptyState message="No inbox events match these filters. Try clearing search or status filters." />
@@ -383,7 +387,7 @@ export function InboxSection({
                       >
                         <div className="flex items-center justify-between gap-2">
                           <p className="truncate text-base font-medium text-[var(--ink)]">
-                            {thread.subject}
+                            {threadDisplayTitle(thread.subject, viewerRole ?? "owner")}
                           </p>
                           <Badge variant="outline">{thread.messageCount} msg</Badge>
                         </div>
@@ -401,7 +405,7 @@ export function InboxSection({
                     <div className="space-y-3">
                       <div>
                         <p className="text-base font-medium text-[var(--ink)]">
-                          {selectedThread.subject}
+                          {threadDisplayTitle(selectedThread.subject, viewerRole ?? "owner")}
                         </p>
                         <p className="text-sm text-[var(--muted)]">{selectedThread.propertyName}</p>
                         <div className="mt-1 flex flex-wrap gap-2">

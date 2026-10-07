@@ -22,7 +22,7 @@ interface OwnerRecipient {
   name: string;
 }
 
-export const TENANT_CONVERSATION_SUBJECT = "Messages with your landlord";
+export { TENANT_CONVERSATION_SUBJECT } from "./thread-title";
 export const startTenantConversationSchema = z.object({
   body: z
     .string()

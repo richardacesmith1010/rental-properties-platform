@@ -55,6 +55,7 @@ export interface MaintenanceTicket {
   createdAt: string;
   resolvedAt: string | null;
   tenantEmail: string | null;
+  tenantName?: string | null;
   commentCount: number;
   comments: MaintenanceComment[];
   timeline: StatusHistoryEntry[];

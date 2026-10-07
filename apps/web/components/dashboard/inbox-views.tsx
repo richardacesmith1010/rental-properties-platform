@@ -22,6 +22,7 @@ export type InboxTab = "timeline" | "threads";
 
 export interface InboxSectionProps {
   notifications: NotificationDTO[];
+  viewerRole?: "owner" | "manager" | "tenant";
   threads: InboxThreadDTO[];
   properties: Array<{ id: string; name: string }>;
   onMarkRead: StatefulAction;

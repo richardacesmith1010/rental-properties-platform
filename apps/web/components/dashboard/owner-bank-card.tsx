@@ -10,7 +10,7 @@ export function OwnerBankCard({ state, role = "owner" }: { state: OwnerBankCardS
   const accountName = state.accountName;
   const content = state.status === "needs_info"
     ? role === "manager" ? {
-        title: accountName ? `${accountName} needs one more thing` : "Stripe needs one more thing",
+        title: "Your bank needs one more thing",
         body: "Your bank is almost ready. Answer a few questions so your fees can reach you.",
         button: "Finish setup"
       } : {

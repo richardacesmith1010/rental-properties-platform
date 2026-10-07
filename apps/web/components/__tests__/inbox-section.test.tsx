@@ -97,7 +97,43 @@ describe("InboxSection tenant conversation", () => {
 
   it("lists tenant-started threads for an administrator", () => {
     render(<InboxSection notifications={[]} threads={[thread]} properties={[home]} onMarkRead={noop} onSendMessage={noop} />);
-    fireEvent.click(screen.getByRole("tab", { name: "Threads" }));
-    expect(screen.getByRole("button", { name: /Messages with your landlord/ })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Threads" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("button", { name: /Messages with your tenant/ })).toBeInTheDocument();
   });
+  it("opens owner updates when a notification is unread", () => {
+    render(<InboxSection viewerRole="owner" notifications={[{ id: "n", type: "owner_message", title: "Alert",
+      body: "Alert", entityType: "general", entityId: null, createdAt: "2026-10-05", readAt: null }]}
+      threads={[thread]} properties={[home]} onMarkRead={noop} />);
+    expect(screen.getByRole("tab", { name: "Timeline" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("shows role-specific empty update copy", () => {
+    const { rerender } = render(<InboxSection viewerRole="owner" notifications={[]} threads={[]}
+      properties={[home]} onMarkRead={noop} />);
+    expect(screen.getByText("No updates yet")).toBeInTheDocument();
+    expect(screen.getByText("Rent, repair, and lease updates show up here.")).toBeInTheDocument();
+    rerender(<InboxSection viewerRole="tenant" notifications={[]} threads={[]} properties={[home]}
+      onMarkRead={noop} />);
+    fireEvent.click(screen.getByRole("tab", { name: "Timeline" }));
+    expect(screen.getByText("No messages yet")).toBeInTheDocument();
+    expect(screen.getByText("Your landlord can message you here.")).toBeInTheDocument();
+  });
+
+  it("shows payment thread titles for owner and tenant", () => {
+    const paymentThread = { ...thread, subject: "Manual payment review - Atlas House" };
+    const { rerender } = render(<InboxSection viewerRole="owner" notifications={[]} threads={[paymentThread]}
+      properties={[home]} onMarkRead={noop} />);
+    expect(screen.getAllByText("Tenant says rent is paid - Atlas House")).toHaveLength(2);
+    rerender(<InboxSection viewerRole="tenant" notifications={[]} threads={[paymentThread]}
+      properties={[home]} onMarkRead={noop} onStartTenantConversation={noop} />);
+    expect(screen.getByText("Atlas House")).toBeInTheDocument();
+    expect(screen.queryByText("Tenant says rent is paid - Atlas House")).not.toBeInTheDocument();
+  });
+
+  it("opens manager conversations without unread updates", () => {
+    render(<InboxSection viewerRole="manager" notifications={[]} threads={[thread]}
+      properties={[home]} onMarkRead={noop} />);
+    expect(screen.getByRole("tab", { name: "Threads" })).toHaveAttribute("aria-selected", "true");
+  });
+
 });

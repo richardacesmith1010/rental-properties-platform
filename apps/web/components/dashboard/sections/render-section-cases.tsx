@@ -167,6 +167,7 @@ export function renderSectionCases({
       return renderSection(
         "Inbox",
         <InboxSection
+          viewerRole={props.data.profileRole === "manager" ? "manager" : "owner"}
           notifications={props.safeNotifications}
           threads={props.safeInboxThreads}
           properties={propertyOptions}

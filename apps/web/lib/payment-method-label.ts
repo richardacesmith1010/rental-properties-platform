@@ -1,5 +1,6 @@
 const paymentMethodLabels: Record<string, string> = {
   ach: "Bank transfer",
+  us_bank_account: "Bank account",
   card: "Card",
   cash: "Cash",
   check: "Check",
