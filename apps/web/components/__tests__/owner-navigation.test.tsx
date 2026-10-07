@@ -1,7 +1,7 @@
 import { act, fireEvent, render, renderHook, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildAllSectionItems, getOwnerNavItems, getManagerNavItems, managerMenuGroups } from "@/components/dashboard/dashboard-config";
-import { SidebarNav } from "@/components/dashboard/sidebar/sidebar-nav";
+import { MobileTopBar, SidebarNav } from "@/components/dashboard/sidebar/sidebar-nav";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { OwnerAddMenu } from "@/components/dashboard/owner-add-menu";
 import { OwnerSectionCacheContext } from "@/components/dashboard/owner-section-cache";
@@ -34,12 +34,23 @@ const navProps = { role: "owner", userEmail: "", onSignOut: vi.fn(), reportsHref
 afterEach(() => vi.useRealTimers());
 
 describe("owner grouped navigation", () => {
-  it("anchors the desktop sidebar bell left and the mobile top bar bell right", () => {
-    render(<SidebarNav {...navProps} items={getOwnerNavItems(buildAllSectionItems(availability))} />);
-    const bells = screen.getAllByTestId("notification-bell");
-    expect(bells[0]).toHaveAttribute("data-align", "start");
-    expect(bells[0]).toHaveAttribute("data-panel", "w-[20rem]");
-    expect(bells).toHaveLength(1);
+  it("keeps the desktop bell panel unchanged and fits the mobile panel to the viewport", () => {
+    const items = getOwnerNavItems(buildAllSectionItems(availability));
+    const desktop = render(<SidebarNav {...navProps} items={items} />);
+    const desktopBell = screen.getByTestId("notification-bell");
+    expect(desktopBell).toHaveAttribute("data-align", "start");
+    expect(desktopBell).toHaveAttribute("data-panel", "w-[20rem]");
+    expect(desktopBell.getAttribute("data-panel")).not.toContain("fixed");
+    expect(desktopBell.getAttribute("data-panel")).not.toContain("inset-x-3");
+
+    desktop.unmount();
+    render(<MobileTopBar {...navProps} items={items} />);
+    const mobileBell = screen.getByTestId("notification-bell");
+    expect(mobileBell).toHaveAttribute("data-align", "end");
+    expect(mobileBell.getAttribute("data-panel")).toContain("fixed");
+    expect(mobileBell.getAttribute("data-panel")).toContain("inset-x-3");
+    expect(mobileBell.getAttribute("data-panel")).toContain("w-auto");
+    expect(mobileBell.getAttribute("data-panel")).toContain("max-h-[calc(100dvh-6rem)]");
   });
 
   it.each([true, false])("renders exact groups and order for LLC=%s, preserving badges and reachability", llc => {

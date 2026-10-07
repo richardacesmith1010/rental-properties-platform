@@ -403,7 +403,7 @@ export function MobileTopBar({
             triggerClassName={`sidebar-shell-button relative flex h-11 w-11 items-center justify-center ${sidebarFocusRing}`}
             iconClassName="h-3.5 w-3.5"
             badgeClassName="absolute -right-1 -top-1 min-w-[1rem] px-1 text-[9px]"
-            panelClassName="right-0 w-[min(22rem,calc(100vw-1rem))]"
+            panelClassName="fixed inset-x-3 top-[calc(env(safe-area-inset-top,0px)+4.5rem)] w-auto max-h-[calc(100dvh-6rem)] overflow-y-auto"
           />
 
           <div className="sidebar-user-footer-shell">
