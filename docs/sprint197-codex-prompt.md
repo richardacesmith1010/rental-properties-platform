@@ -1,4 +1,4 @@
-# Sprint 197 — (ChatGPT round 1: APPROVE WITH CHANGES, all adopted) Survive brief Supabase timeouts in the sign-in and profile checks; never treat an error as an answer (L3: auth) · Category 7 (Reliability)
+# Sprint 197 — (ChatGPT: APPROVE WITH CHANGES → APPROVE on rev 2) Survive brief Supabase timeouts in the sign-in and profile checks; never treat an error as an answer (L3: auth) · Category 7 (Reliability)
 
 ## 1. Objective
 On 2026-10-07 22:00:30–32Z Supabase returned two 504s (`/auth/v1/user`, `/rest/v1/profiles`). The tenant dashboard showed its error screen (Vercel log: `[Error: {"message":"Gateway Timeout"}] { digest: '484108108' }`). Reading the code turned up a worse, silent problem. The shared auth helpers **ignore errors and fall back to defaults**:
@@ -46,6 +46,8 @@ Goals: (a) retry **once** on a transient Supabase failure; (b) if it still fails
 5. **Redirects stay untouched.** Call `redirect()` only **outside** any retry/try/catch region; if a catch is unavoidable, rethrow Next's redirect/not-found errors unchanged (`isRedirectError`/digest check). Test: the `/login` and role-home redirects are exact, never retried, never wrapped.
 6. **Exact call counts on the success path:** `getAuthenticatedUser` = 1 `auth.getUser()`; `getCurrentUserRole` = 1 profiles query; `requireAuth` = 1 `auth.getUser()` + 1 profiles query; `getUserProfileSummary` = 1 profiles query; `getAuthState(userId, { invitedAt })` = 1 profiles query and **0** `getUser`. Tests assert these counts.
 7. **Persistent thrown failures:** test "thrown transient twice → exactly 2 attempts → `Error("Account check is unavailable. Please try again.", { cause })`" alongside the persistent resolved-504 case. Every escaping failure uses that exact message with the original error as `cause`.
+9. **401/403 scope (round 2, adopted):** only an `auth.getUser()` 401/403 means "signed out" → `/login`. A 401/403/RLS denial from a **profile or role query** throws the plain error; it never redirects to login. Test both.
+10. **Cause (round 2, adopted):** the thrown error's `cause` is the **final real Supabase error** (or thrown error), not the internal retry marker.
 8. **Timing (optional, adopted):** with fake timers, transient-once waits one ~300 ms delay; success and non-transient failures wait 0 ms.
 
 ## 4. Out of scope
