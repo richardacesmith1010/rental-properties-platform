@@ -417,6 +417,12 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 - Home defers 5 Home-only bundles (works; Home loads shared bundles only). Owner Home not faster: critical path = ownership.accounts (8 q) → administered-ids (4 q) → dashboard.data (12 q, ~1 s). feature.capabilities cache from S179 is ineffective in production (22 q every request). Next sprint (L3): RPCs for dashboard + ownership, fix capabilities cache.
 
+## Sprint 191 SHIPPED — Code health 79 → 80 (L2, `a8c6e15`, 2026-10-07, gpt-reserve medium, 134,410 Codex tokens)
+- `app/tenant/page.tsx` 511→477 (helpers → `app/tenant/tenant-page-helpers.ts`; page diff = removal + one import). `charge-row.tsx` 502→337 (`charge-more-menu.tsx`, `manual-payment-form.tsx`; `ManualPaymentForm` re-exported). Max line 136; non-ws 29,336 vs 28,616 (+2.5%).
+- New `charge-row-snapshot.test.tsx` (11 incl. it.each): Claude ran it in a clean HEAD worktree with `CI=true` (no snapshot writes) → 11/11 on pre-refactor code. Joined className strings verified identical to originals. `tenant-page-helpers.test.ts` (3).
+- Live: gate 1504/1504; owner Rent more-menu + Mark paid form (not submitted) and tenant all sections incl. `?section=bad`, light+dark, 0 console errors; smoke pass; CI #336; Sentry clean.
+- Remaining > 500 lines (4, all L3): stripe-webhook-handlers 974, account-wipe 780, ownership 720, stripe-connect 672.
+
 ## Sprint 190 SHIPPED — Code health 77 → 79, money batch 1 (L3, `019e1b7`, 2026-10-07, gpt-6-sol medium, ChatGPT APPROVE WITH CHANGES: 4 req + 4 opt adopted; 168,310 Codex tokens)
 - charges 571→384, charge-management 562→452, withdrawals 517→478, distributions 574→386. Private helpers moved verbatim to `lib/charge-checkout.ts`, `lib/charge-management-helpers.ts`, `lib/withdrawal-helpers.ts` (all `import "server-only"`, no `"use server"`); pure planners/types to `lib/distribution-plans.ts` (client-safe; `distributions.ts` re-exports, type exports kept as types).
 - Claude verified: 57/57 top-level blocks byte-identical to HEAD~ (one whitespace-only wrap in `updateLeaseRentAmount`, permitted); action export lists unchanged; distributions export surface identical (6 types + 10 functions).
