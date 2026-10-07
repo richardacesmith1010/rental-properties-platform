@@ -417,6 +417,13 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 - Home defers 5 Home-only bundles (works; Home loads shared bundles only). Owner Home not faster: critical path = ownership.accounts (8 q) → administered-ids (4 q) → dashboard.data (12 q, ~1 s). feature.capabilities cache from S179 is ineffective in production (22 q every request). Next sprint (L3): RPCs for dashboard + ownership, fix capabilities cache.
 
+## Sprint 192 SHIPPED — Tenant "I paid this" (L2, `eb718c4`, 2026-10-07, gpt-6-sol low, 68,209 Codex tokens)
+- `tenant-rent-card.tsx`: when pay state is `not_ready` or `outside` and months are unpaid → "Already paid? Tell your landlord." + one row per month (oldest first) with **I paid this** (posts `chargeId` to existing `requestManualPaymentConfirmation`); per-row success "Sent. Your landlord will check and mark it paid." / error. No other pay state changed.
+- Owner message body now: "<Tenant> says they paid $X for <home • unit>. Rent due <date>. Please check, then mark it paid in Rent." Notification title "Tenant says rent is paid" (notifications still OFF). Thread subject unchanged.
+- 7 new tests (it.each counted); gate 1514/1514. GitHub push failed with 500s for ~3 min, then went through.
+- Live: tenant Home + Rent at 1280/375 light+dark, 0 console errors. Claude clicked I paid this once (smoke tenant, Aug 1) → success text; DB: inbox message saved with exact new text; all 3 smoke charges still `late` (nothing marked paid). Owner sees it only under Messages → **Threads** (Timeline is notifications, which are off; "0 unread"; subject "Manual payment review - …"). Smoke pass; CI #339; Sentry clean.
+- **Finding → next:** owners can miss these reports. Show "Tenant says paid" on the owner's Rent row with one-tap "Mark paid".
+
 ## Sprint 191 SHIPPED — Code health 79 → 80 (L2, `a8c6e15`, 2026-10-07, gpt-reserve medium, 134,410 Codex tokens)
 - `app/tenant/page.tsx` 511→477 (helpers → `app/tenant/tenant-page-helpers.ts`; page diff = removal + one import). `charge-row.tsx` 502→337 (`charge-more-menu.tsx`, `manual-payment-form.tsx`; `ManualPaymentForm` re-exported). Max line 136; non-ws 29,336 vs 28,616 (+2.5%).
 - New `charge-row-snapshot.test.tsx` (11 incl. it.each): Claude ran it in a clean HEAD worktree with `CI=true` (no snapshot writes) → 11/11 on pre-refactor code. Joined className strings verified identical to originals. `tenant-page-helpers.test.ts` (3).
