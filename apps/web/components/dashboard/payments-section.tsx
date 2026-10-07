@@ -1,3 +1,4 @@
+import { paymentMethodLabel } from "@/lib/payment-method-label";
 import { CreditCard } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -48,7 +49,7 @@ export function PaymentsSection({ payments }: PaymentsSectionProps) {
                     <p className="mt-0.5 text-xs text-[var(--muted)]">Payment due {formatDate(payment.chargeDueDate)}</p>
                   )}
                 </div>
-                <Badge variant="outline">{payment.method.toUpperCase()}</Badge>
+                <Badge variant="outline">{paymentMethodLabel(payment.method)}</Badge>
               </DataRow>
             ))}
           </div>

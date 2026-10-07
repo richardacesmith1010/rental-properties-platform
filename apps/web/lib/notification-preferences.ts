@@ -72,7 +72,7 @@ export const NOTIFICATION_EMAIL_PREFERENCE_OPTIONS: NotificationPreferenceOption
     {
       key: "late_rent",
       label: "Late rent alerts",
-      description: "Send emails when a rent charge becomes overdue."
+      description: "Send emails when rent becomes overdue."
     },
     {
       key: "payment_received",

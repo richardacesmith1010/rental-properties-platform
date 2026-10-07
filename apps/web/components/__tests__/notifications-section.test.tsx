@@ -115,7 +115,7 @@ describe("NotificationsSection", () => {
 
       expect(screen.getByText("Today")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Send Reminder" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Waive Charge" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Waive payment" })).toBeInTheDocument();
 
       fireEvent.click(screen.getByRole("button", { name: "Send Reminder" }));
     } finally {

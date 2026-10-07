@@ -1,4 +1,5 @@
 import { formatDate, formatDateTime, formatUnitLabel } from "@/lib/format";
+import { paymentMethodLabel } from "@/lib/payment-method-label";
 
 export interface ReceiptPdfData {
   receiptNumber: string;
@@ -89,22 +90,7 @@ export interface LeaseQueryShape {
 }
 
 function formatPaymentMethod(method: string) {
-  switch (method.toLowerCase()) {
-    case "card":
-      return "Card";
-    case "ach":
-      return "ACH";
-    case "check":
-      return "Check";
-    case "cash":
-      return "Cash";
-    case "autopay":
-      return "Autopay";
-    case "other":
-      return "Other";
-    default:
-      return method.charAt(0).toUpperCase() + method.slice(1);
-  }
+  return paymentMethodLabel(method);
 }
 
 function formatLeaseStatus(status: string | null) {

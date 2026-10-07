@@ -36,7 +36,7 @@ describe("PaymentsSection", () => {
   it("shows payment method and property context", () => {
     render(<PaymentsSection payments={payments} />);
 
-    expect(screen.getByText("ACH")).toBeInTheDocument();
+    expect(screen.getByText("Bank transfer")).toBeInTheDocument();
     expect(screen.getByText("Atlas House • 1A")).toBeInTheDocument();
   });
 

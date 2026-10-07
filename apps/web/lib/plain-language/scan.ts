@@ -131,14 +131,12 @@ export function scanWeb(root: string): PlainLanguageHit[] {
   function walk(dir: string): void {
     for (const entry of fs.readdirSync(path.join(root, dir), { withFileTypes: true })) {
       const relative = `${dir}/${entry.name}`;
-      if (entry.isDirectory()) walk(relative);
+      if (entry.isDirectory() && entry.name !== "__tests__") walk(relative);
       else if (/\.tsx?$/.test(entry.name) && !/\.(?:test|spec)\.tsx?$/.test(entry.name)) files.push(relative);
     }
   }
   walk("apps/web/app");
   walk("apps/web/components");
   walk("apps/web/lib");
-  return files.filter((file) => file.startsWith("apps/web/app/")
-    || file.startsWith("apps/web/components/") || isEmailFile(file))
-    .flatMap((file) => scanSource(fs.readFileSync(path.join(root, file), "utf8"), file));
+  return files.flatMap((file) => scanSource(fs.readFileSync(path.join(root, file), "utf8"), file));
 }

@@ -69,7 +69,7 @@ describe("NotificationBellMenu", () => {
     expect(screen.getByRole("button", { name: "Clear all" })).toBeInTheDocument();
     expect(screen.getByText("Late rent detected")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send Reminder" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "View Charge" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "View payment" })).toBeInTheDocument();
   });
 
   it.each([
@@ -148,7 +148,7 @@ describe("NotificationBellMenu", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Open notifications" }));
-    fireEvent.click(screen.getByRole("button", { name: "View Charge" }));
+    fireEvent.click(screen.getByRole("button", { name: "View payment" }));
 
     await waitFor(() => {
       expect(dismissMock).toHaveBeenCalledTimes(1);

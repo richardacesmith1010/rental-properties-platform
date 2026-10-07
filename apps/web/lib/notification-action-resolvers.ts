@@ -63,7 +63,7 @@ export function resolveChargeActions(
       },
       {
         kind: "waive_charge",
-        label: "Waive Charge",
+        label: "Waive payment",
         href: buildDashboardHref("owner", "charges", {
           chargeId,
           action: "waive"
@@ -73,7 +73,7 @@ export function resolveChargeActions(
       },
       {
         kind: "navigate",
-        label: "View Charge",
+        label: "View payment",
         href: buildDashboardHref("owner", "charges", {
           chargeId
         }),
@@ -100,7 +100,7 @@ export function resolveChargeActions(
   return [
     {
       kind: "navigate",
-      label: "View Charge",
+      label: "View payment",
       href: buildDashboardHref("manager", "charges", {
         chargeId
       }),

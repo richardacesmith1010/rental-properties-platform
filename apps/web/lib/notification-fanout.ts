@@ -120,7 +120,7 @@ export async function notifyOwnerOfStripeIssue(params: {
     propertyId: params.propertyId,
     type: "owner_message",
     title: "Bank connection issue",
-    body: "We tried to send a tenant payment to your bank but it did not go through. Please reconnect your bank in Settings.",
+    body: "We could not send a tenant payment to your bank. Please reconnect your bank in Settings.",
     entityType: "property",
     entityId: params.propertyId
   });

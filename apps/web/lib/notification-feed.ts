@@ -96,7 +96,7 @@ export function getNotificationActionLink(notification: {
     notification.type === "delinquency_escalation" ||
     notification.entityType === "rent_charge"
   ) {
-    return { label: "View Charge", sectionId: "charges" };
+    return { label: "View payment", sectionId: "charges" };
   }
 
   if (notification.type === "payment_recorded" || notification.entityType === "payment") {

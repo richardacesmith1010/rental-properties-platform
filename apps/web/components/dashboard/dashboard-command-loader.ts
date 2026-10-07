@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { Bell, Building2, CreditCard, FileText, Receipt, UserPlus } from "lucide-react";
 import { formatDate, formatUnitLabel } from "@/lib/format";
+import { paymentMethodLabel } from "@/lib/payment-method-label";
 import type { GlobalSearchItem } from "./global-search";
 import type {
   CommandPaletteProperty,
@@ -89,7 +90,7 @@ export function useDashboardCommandState(
       ...safeDashboardData.recentPayments.slice(0, 6).map((payment) => ({
         id: `payment:${payment.id}`,
         label: `${payment.propertyName} • ${payment.unitNumber}`,
-        description: `${payment.method} • ${formatDate(payment.paidAt)}`,
+        description: `${paymentMethodLabel(payment.method)} • ${formatDate(payment.paidAt)}`,
         sectionId: "payments",
         icon: CreditCard,
         keywords: [payment.propertyName, payment.unitNumber, payment.method]

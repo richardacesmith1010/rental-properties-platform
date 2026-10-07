@@ -22,9 +22,9 @@ describe("notification actions", () => {
 
     expect(actions).toHaveLength(3);
     expect(actions[0]).toMatchObject({ label: "Send Reminder", kind: "send_reminder" });
-    expect(actions[1]).toMatchObject({ label: "Waive Charge", kind: "waive_charge" });
+    expect(actions[1]).toMatchObject({ label: "Waive payment", kind: "waive_charge" });
     expect(actions[2]).toMatchObject({
-      label: "View Charge",
+      label: "View payment",
       href: "/owner?section=charges&chargeId=charge-1"
     });
   });

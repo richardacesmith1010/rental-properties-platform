@@ -12,6 +12,16 @@ import { FeatureWarning } from "@/components/shared/feature-warning";
 import type { ActionState } from "@/app/actions";
 import type { TenantDocumentPacketDTO, TenantSharedFileDTO } from "@/lib/documents";
 
+const documentStatusLabels: Record<string, string> = {
+  draft: "Draft", sent: "Sent", viewed: "Opened", pending: "Waiting",
+  signed: "Signed", completed: "Done", declined: "Declined",
+  voided: "Canceled", void: "Canceled"
+};
+
+function documentStatusLabel(status: string): string {
+  return documentStatusLabels[status] ?? status.charAt(0).toUpperCase() + status.slice(1);
+}
+
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
 interface TenantDocumentsSectionProps {
@@ -144,10 +154,10 @@ function PacketSignRow({
         <p className="mt-0.5 text-xs text-[var(--muted)]">{packet.propertyLabel}</p>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           <Badge variant={packet.status === "signed" ? "success" : "warning"}>
-            Packet: {packet.status.toUpperCase()}
+            Documents: {documentStatusLabel(packet.status)}
           </Badge>
           <Badge variant={packet.signerStatus === "signed" ? "success" : "outline"}>
-            Signer: {packet.signerStatus.toUpperCase()}
+            Your signature: {documentStatusLabel(packet.signerStatus)}
           </Badge>
           {assetAccessEnabled && (
             <Link

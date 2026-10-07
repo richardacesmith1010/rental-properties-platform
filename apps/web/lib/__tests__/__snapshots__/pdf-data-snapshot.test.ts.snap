@@ -26,7 +26,7 @@ exports[`PDF data original output > locks every exported pure builder 1`] = `
     "generatedAt": "Oct 7, 2026, 6:30 PM",
     "leaseLabel": "Nov 1, 2026 - Oct 31, 2027",
     "paidDate": "Oct 7, 2026, 5:00 PM",
-    "paymentMethod": "ACH",
+    "paymentMethod": "Bank transfer",
     "propertyAddress": "123 Oak St, Denver, CO, 80203",
     "propertyName": "Oak & Elm <House>",
     "receiptNumber": "DOM-PAY12345",

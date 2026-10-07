@@ -408,7 +408,7 @@ describe("ConnectOnboardPage", () => {
     expect(screen.getByRole("heading", { name: "Bank connections aren't available yet" })).toBeInTheDocument();
     expect(
       screen.getByText(
-        "We're still finishing setup with our payment provider. This usually takes up to one business day. Please check back soon — you'll be able to connect your bank once it's ready."
+        "We're still finishing setup with our payment provider. This takes up to one business day. Please check back soon. You can connect your bank once it's ready."
       )
     ).toBeInTheDocument();
   });

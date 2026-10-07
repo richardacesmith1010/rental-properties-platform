@@ -1,3 +1,4 @@
+import { paymentMethodLabel } from "@/lib/payment-method-label";
 import Link from "next/link";
 import { Download } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
@@ -220,7 +221,7 @@ export default async function ReceiptPage(props: ReceiptPageProps) {
               <div className="space-y-1">
                 <p className="text-xs uppercase tracking-wide text-[var(--faint)]">Payment Details</p>
                 <p className="font-medium text-[var(--ink)]">{formatDateTime(payment.paid_at)}</p>
-                <p className="text-sm text-[var(--muted)]">Method: {payment.method.toUpperCase()}</p>
+                <p className="text-sm text-[var(--muted)]">Method: {paymentMethodLabel(payment.method)}</p>
                 {payment.reference_note ? (
                   <p className="text-sm text-[var(--muted)]">Reference: {payment.reference_note}</p>
                 ) : null}

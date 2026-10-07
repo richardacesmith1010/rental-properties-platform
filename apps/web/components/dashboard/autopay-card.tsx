@@ -5,6 +5,7 @@ import { useFormState } from "react-dom";
 import { useRouter } from "next/navigation";
 import type { ActionState } from "@/app/actions";
 import { SubmitButton } from "@/components/shared/submit-button";
+import { paymentMethodLabel } from "@/lib/payment-method-label";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -108,7 +109,9 @@ export function AutopayCard({
           <p className="text-sm font-semibold text-foreground">Autopay Active</p>
           <p className="mt-1 text-sm text-muted-foreground">{propertyLabel}</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {enrollment.brand ? `${enrollment.brand.toUpperCase()} ` : enrollment.paymentMethodType.toUpperCase()}•••• {enrollment.last4}
+            {enrollment.brand
+              ? `${enrollment.brand.toUpperCase()} `
+              : paymentMethodLabel(enrollment.paymentMethodType)}•••• {enrollment.last4}
           </p>
           {enrollment.retryCount > 0 ? (
             <p className="mt-1 text-xs text-muted-foreground">

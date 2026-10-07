@@ -341,7 +341,7 @@ export async function applyLateFeesToOverdueCharges(
             recipientEmail: emailByTenantId.get(lease.tenant_profile_id) ?? null,
             type: "late_rent",
             title: "Rent payment overdue",
-            body: `Your rent charge due on ${formatDate(charge.due_date)} is now marked late.`,
+            body: `Your rent due ${formatDate(charge.due_date)} is now late.`,
             entityType: "rent_charge",
             entityId: charge.id,
             deliveryPreference: propertyId
@@ -356,8 +356,8 @@ export async function applyLateFeesToOverdueCharges(
           notifyOwnerMembersForProperty({
             propertyId,
             type: "late_rent",
-            title: "Rent charge marked late",
-            body: `A rent charge due on ${formatDate(charge.due_date)} is now late.`,
+            title: "Rent is late",
+            body: `Rent due ${formatDate(charge.due_date)} is now late.`,
             entityType: "rent_charge",
             entityId: charge.id
           })

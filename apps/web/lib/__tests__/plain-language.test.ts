@@ -13,6 +13,16 @@ describe("plain language guard", () => {
     expect(hits.filter((hit) => hit.reason.startsWith("sentence has"))).toHaveLength(1);
   });
 
+  it("scans user-facing copy in non-email lib files", () => {
+    const source = 'const copy = { title: "View Charge" };';
+    const hits = scanSource(source, "apps/web/lib/fixture.ts");
+    expect(hits).toMatchObject([{
+      file: "apps/web/lib/fixture.ts",
+      text: "View Charge",
+      reason: "banned word: Charge"
+    }]);
+  });
+
   it("ignores class names", () => {
     const source = '<div className="submit charge reconciliation long words in classes are never user facing at all" />';
     expect(scanSource(source, "apps/web/components/fixture.tsx")).toEqual([]);

@@ -1,3 +1,4 @@
+import { paymentMethodLabel } from "@/lib/payment-method-label";
 import Link from "next/link";
 import {
   addTicketComment,
@@ -373,7 +374,7 @@ export default async function TenantPage(props: TenantPageProps) {
                               <Badge variant="outline">
                                 {payment.category === "late_fee" ? "Late Fee" : "Rent"}
                               </Badge>
-                              <Badge variant="outline">{payment.method.toUpperCase()}</Badge>
+                              <Badge variant="outline">{paymentMethodLabel(payment.method)}</Badge>
                             </div>
                             <p className="mt-1 text-xs text-[var(--muted)]">
                               {payment.propertyName} • {formatUnitLabel(payment.unitNumber)}
