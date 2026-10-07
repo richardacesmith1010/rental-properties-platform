@@ -417,6 +417,12 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 - Home defers 5 Home-only bundles (works; Home loads shared bundles only). Owner Home not faster: critical path = ownership.accounts (8 q) → administered-ids (4 q) → dashboard.data (12 q, ~1 s). feature.capabilities cache from S179 is ineffective in production (22 q every request). Next sprint (L3): RPCs for dashboard + ownership, fix capabilities cache.
 
+## Sprints 187/187b SHIPPED — UI hotfix (L1, `9b2093d`, `f0a807a`, 2026-10-06, gpt-6-luna)
+- Desktop sidebar bell `align="start"`; mobile top bar bell keeps `end` + `panelClassName` fixed/inset-x-3/max-h (cn = twMerge, so overrides apply).
+- Lease wizard: zero units → old message; units all leased → "Every unit at <home> has a lease / Add a new unit, or end a lease first."
+- Verified live: bell panel inside viewport at 1280/768/375 light+dark; wizard message on Smoke Test Property; 33/33 checks; Sentry clean; CI #323 green.
+- Mac note: duplicate files named "<name> 2" (e.g. `.next/types/app 2`, `apps/mobile/README 2.md`) — likely iCloud syncing ~/Documents; blocked Codex's gate once (cleared by `rm -rf apps/web/.next`).
+
 ## Sprint 186 SHIPPED — Code health 71 → 74 (L2, `6029e7d`, 2026-10-06, gpt-6-sol medium)
 - Split notifications / notification-actions / notification-preferences / analytics / command-palette → 13 files; exports identical (TS checker); notifications switch untouched and still single gate; notifications count 78 before/after.
 - Verified: gate 1463/1463; walk light/dark 0 console errors; 27/27 specs; Sentry clean; CI #318 green.
