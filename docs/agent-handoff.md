@@ -421,7 +421,7 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - New RPCs (applied, service_role only): `owner_administered_property_ids(uuid, uuid)`, `owner_portfolio_payload(uuid, uuid[])`; mapper `apps/web/lib/portfolio-rpc.ts`; legacy fallbacks kept (`owner_rpc_fallback_*` — none seen in prod). Sprint 182 allowlist still applied to RPC profiles.
 - SQL test passed (Claude removed Codex's `alter table ... drop not null` from the fixture — no DDL on prod in tests). Parity OK + tenant scope OK for smoke owner/manager/real owner.
 - Prod: administered-ids ~0.10 s/1 q; portfolio ~0.13 s/2 q; owner Home 1.60 s median; data-assembly ~1.1 s (target 0.9 missed — `properties.admin-options` 0.5 s/4 q now on the critical path behind `manager-payments.visibility`).
-- Live leaks.notes column does not exist; legacy paths still request it then retry.
+- Live `leases.notes` column does not exist; legacy paths still request it then retry.
 - Next: Sprint 184 = start announcement-homes load early / reuse already-loaded homes.
 
 ## Sprint 182 SHIPPED — Privacy hotfix, Security 80 → 60 → 80 (L3, `adab51a`, 2026-10-06, n/a tokens)
