@@ -417,6 +417,13 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 - Home defers 5 Home-only bundles (works; Home loads shared bundles only). Owner Home not faster: critical path = ownership.accounts (8 q) → administered-ids (4 q) → dashboard.data (12 q, ~1 s). feature.capabilities cache from S179 is ineffective in production (22 q every request). Next sprint (L3): RPCs for dashboard + ownership, fix capabilities cache.
 
+## Sprint 185 SHIPPED — Code health 68 → 71 (L2, `3834dc8`, 2026-10-06, gpt-6-sol medium)
+- 5 non-money files split (inbox actions, inbox screen, leases section, property wizard, maintenance) → 13 files ≤ 500 lines, ≤ 140 chars; original paths re-export identical symbols.
+- Verified: gate 1463/1463; walk light/dark (inbox, leases, lease form, wizard) 0 console errors; 27/27 specs; Sentry clean; CI #315 green.
+- Daily smoke schedule PAUSED (`fa23039`) until SMOKE_* secrets exist — restore the `schedule:` block after.
+- Bug found (pre-existing): lease wizard "<home> has no units" when units exist but are occupied.
+- Remaining > 500 lines: 20 files.
+
 ## Sprint 184 SHIPPED — Speed 79 → 80 ✅ (L2, `b4b25e9`, 2026-10-06, gpt-reserve)
 - `owner-page-data.ts`: admin-options + notifications + preferences promises created right after `administeredPropertyIdsPromise` (after early returns). Tests: bundle-plan invariant (new `owner-bundle-plan.test.ts`, 4 existing tests moved there), start-order, no-start on needs-onboarding/needs-setup.
 - Prod: `/owner` data-assembly median 784 ms; owner Home 1.30 s; 27/27 specs; Sentry clean; CI #311 green.
