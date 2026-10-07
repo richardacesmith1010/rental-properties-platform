@@ -162,70 +162,16 @@ describe("deriveFeatureCapabilities", () => {
 
 describe("getFeatureCapabilities", () => {
   beforeEach(() => {
-    vi.useRealTimers();
-    invalidateFeatureCapabilitiesCache();
-    cacheState.values.clear();
     adminState.bucketCalls = 0;
     adminState.probeCalls = 0;
-    adminState.probeErrors.clear();
   });
 
-  it("reuses one probe wave within the cache window and exposes a cache bust", async () => {
-    const first = await getFeatureCapabilities();
-    const firstProbeCount = adminState.probeCalls + adminState.bucketCalls;
-    const second = await getFeatureCapabilities();
-
-    expect(second).toEqual(first);
-    expect(firstProbeCount).toBe(24);
-    expect(adminState.probeCalls + adminState.bucketCalls).toBe(firstProbeCount);
-
+  it("returns the all-available production fixture without client calls", async () => {
+    const expected = deriveFeatureCapabilities(baseProbe);
+    expect(await getFeatureCapabilities()).toEqual(expected);
     invalidateFeatureCapabilitiesCache();
-    await getFeatureCapabilities();
-    expect(adminState.probeCalls + adminState.bucketCalls).toBe(48);
-  });
-
-  it("does not cache a wave containing a non-schema probe error", async () => {
-    adminState.probeErrors.set("document_templates", [
-      { code: "42501", message: "permission denied for relation document_templates" }
-    ]);
-
-    const degraded = await getFeatureCapabilities();
-    const firstProbeCount = adminState.probeCalls + adminState.bucketCalls;
-    const retried = await getFeatureCapabilities();
-
-    expect(degraded.documentsEnabled).toBe(true);
-    expect(retried.documentsEnabled).toBe(true);
-    expect(firstProbeCount).toBe(24);
-    expect(adminState.probeCalls + adminState.bucketCalls).toBe(48);
-  });
-
-  it("expires its process-local result after ten minutes", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-10-06T00:00:00.000Z"));
-    await getFeatureCapabilities();
-    vi.advanceTimersByTime(599_999);
-    await getFeatureCapabilities();
-    expect(adminState.probeCalls + adminState.bucketCalls).toBe(24);
-    vi.advanceTimersByTime(2);
-    await getFeatureCapabilities();
-    expect(adminState.probeCalls + adminState.bucketCalls).toBe(48);
-    vi.useRealTimers();
-  });
-
-  it("caches missing-schema results with the existing DTO and warning text", async () => {
-    adminState.probeErrors.set("document_packets", [
-      { code: "42P01", message: "relation document_packets does not exist" }
-    ]);
-
-    const first = await getFeatureCapabilities();
-    const second = await getFeatureCapabilities();
-
-    expect(first.documentsEnabled).toBe(false);
-    expect(first.documentAssetAccessEnabled).toBe(false);
-    expect(first.warnings.documents).toBe(
-      "Documents and e-sign are not ready yet. Run the Phase 8 migration to enable this section."
-    );
-    expect(second).toEqual(first);
-    expect(adminState.probeCalls + adminState.bucketCalls).toBe(24);
+    expect(await getFeatureCapabilities()).toEqual(expected);
+    expect(adminState.probeCalls).toBe(0);
+    expect(adminState.bucketCalls).toBe(0);
   });
 });

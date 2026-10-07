@@ -1,12 +1,5 @@
-import { revalidateTag, unstable_cache } from "next/cache";
-import { createAdminClient } from "@/lib/supabase/admin";
-
-export const FEATURE_CAPABILITIES_CACHE_TAG = "feature-capabilities";
-const FEATURE_CAPABILITIES_CACHE_KEY = "feature-capabilities-v1";
-const FEATURE_CAPABILITIES_REVALIDATE_SECONDS = 600;
-const CAPABILITIES_TTL_MS = 10 * 60 * 1000;
-let processCache: { value: FeatureCapabilitiesDTO; expiresAt: number } | null = null;
-let pendingProbe: Promise<FeatureCapabilitiesDTO> | null = null;
+// Capability existence is checked by verify:capabilities at the gate and daily smoke.
+// Page requests use the production contract without any database or storage calls.
 
 export interface FeatureCapabilitiesDTO {
   documentsEnabled: boolean;
@@ -59,133 +52,6 @@ interface FeatureCapabilityProbe {
   maintenancePhotosBucketReason?: string;
 }
 
-interface ProbeResult<T> {
-  cacheable: boolean;
-  value: T;
-}
-
-class UncacheableCapabilitiesResult extends Error {
-  constructor(readonly capabilities: FeatureCapabilitiesDTO) {
-    super("Feature capability probes included a transient failure.");
-  }
-}
-
-function isMissingTableError(error: unknown): boolean {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-
-  const maybeCode = "code" in error ? String(error.code ?? "") : "";
-  const maybeMessage = "message" in error ? String(error.message ?? "") : "";
-  const normalizedMessage = maybeMessage.toLowerCase();
-
-  if (maybeCode === "42P01" || maybeCode === "PGRST205") {
-    return true;
-  }
-
-  return (
-    normalizedMessage.includes("does not exist") ||
-    normalizedMessage.includes("could not find the table")
-  );
-}
-
-async function probeTable(
-  supabase: ReturnType<typeof createAdminClient>,
-  tableName: string
-): Promise<ProbeResult<boolean>> {
-  const { error } = await supabase
-    .from(tableName)
-    .select("id", { head: true, count: "exact" })
-    .limit(1);
-
-  if (!error) {
-    return { cacheable: true, value: true };
-  }
-
-  if (isMissingTableError(error)) {
-    return { cacheable: true, value: false };
-  }
-
-  // Non-schema errors should not disable features preemptively.
-  return { cacheable: false, value: true };
-}
-
-async function probeColumn(
-  supabase: ReturnType<typeof createAdminClient>,
-  tableName: string,
-  columnName: string
-): Promise<ProbeResult<boolean>> {
-  const { error } = await supabase
-    .from(tableName)
-    .select(columnName, { head: true, count: "exact" })
-    .limit(1);
-
-  if (!error) {
-    return { cacheable: true, value: true };
-  }
-
-  if (isMissingTableError(error)) {
-    return { cacheable: true, value: false };
-  }
-
-  const maybeCode = typeof error === "object" && error && "code" in error ? String(error.code ?? "") : "";
-  const maybeMessage = typeof error === "object" && error && "message" in error ? String(error.message ?? "").toLowerCase() : "";
-
-  if (maybeCode === "42703" || maybeMessage.includes("column") && maybeMessage.includes("does not exist")) {
-    return { cacheable: true, value: false };
-  }
-
-  // Non-schema errors should not disable features preemptively.
-  return { cacheable: false, value: true };
-}
-
-function isMissingBucketError(error: unknown): boolean {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-
-  const code = "statusCode" in error
-    ? String(error.statusCode ?? "")
-    : "status" in error
-      ? String(error.status ?? "")
-      : "code" in error
-        ? String(error.code ?? "")
-        : "";
-  const message = "message" in error ? String(error.message ?? "").toLowerCase() : "";
-  return code === "404" || message.includes("not found") || message.includes("does not exist");
-}
-
-async function probeBucket(
-  admin: ReturnType<typeof createAdminClient>,
-  bucketName: string
-): Promise<ProbeResult<{ exists: boolean; reason?: string }>> {
-  try {
-    const { data, error } = await admin.storage.getBucket(bucketName);
-
-    if (error || !data?.id) {
-      return {
-        cacheable: !error || isMissingBucketError(error),
-        value: {
-          exists: false,
-          reason: `Storage bucket \"${bucketName}\" is not available yet.`
-        }
-      };
-    }
-
-    return { cacheable: true, value: { exists: true } };
-  } catch (error) {
-    return {
-      cacheable: false,
-      value: {
-        exists: false,
-        reason:
-          error instanceof Error
-            ? error.message
-            : `Failed to validate storage bucket \"${bucketName}\".`
-      }
-    };
-  }
-}
 
 export function deriveFeatureCapabilities(probe: FeatureCapabilityProbe): FeatureCapabilitiesDTO {
   const documentsTablesReady =
@@ -277,134 +143,21 @@ export function deriveFeatureCapabilities(probe: FeatureCapabilityProbe): Featur
   };
 }
 
-async function probeFeatureCapabilities(): Promise<FeatureCapabilitiesDTO> {
-  const supabase = createAdminClient();
-
-  const [
-    documentTemplatesTable,
-    documentPacketsTable,
-    documentSignersTable,
-    notificationsTable,
-    notificationDeliveriesTable,
-    vendorsTable,
-    maintenanceAssignmentsTable,
-    maintenancePhotosTable,
-    ownershipAccountsTable,
-    ownershipAccountMembersTable,
-    rentalListingsTable,
-    rentalApplicationsTable,
-    screeningReportsTable,
-    applicationEventsTable,
-    inboxThreadsTable,
-    inboxMessagesTable,
-    messageDeliveriesTable,
-    automationTemplatesTable,
-    automationRulesTable,
-    automationRunsTable,
-    propertiesOwnerAccountColumn,
-    invitationsOwnershipAccountColumn,
-    leaseDocumentsBucketProbe,
-    maintenancePhotosBucketProbe
-  ] = await Promise.all([
-    probeTable(supabase, "document_templates"),
-    probeTable(supabase, "document_packets"),
-    probeTable(supabase, "document_signers"),
-    probeTable(supabase, "notifications"),
-    probeTable(supabase, "notification_deliveries"),
-    probeTable(supabase, "vendors"),
-    probeTable(supabase, "maintenance_assignments"),
-    probeTable(supabase, "maintenance_photos"),
-    probeTable(supabase, "ownership_accounts"),
-    probeTable(supabase, "ownership_account_members"),
-    probeTable(supabase, "rental_listings"),
-    probeTable(supabase, "rental_applications"),
-    probeTable(supabase, "screening_reports"),
-    probeTable(supabase, "application_events"),
-    probeTable(supabase, "inbox_threads"),
-    probeTable(supabase, "inbox_messages"),
-    probeTable(supabase, "message_deliveries"),
-    probeTable(supabase, "automation_templates"),
-    probeTable(supabase, "automation_rules"),
-    probeTable(supabase, "automation_runs"),
-    probeColumn(supabase, "properties", "owner_account_id"),
-    probeColumn(supabase, "invitations", "ownership_account_id"),
-    probeBucket(supabase, "lease-documents"),
-    probeBucket(supabase, "maintenance-photos")
-  ]);
-
-  const results = [
-    documentTemplatesTable, documentPacketsTable, documentSignersTable, notificationsTable,
-    notificationDeliveriesTable, vendorsTable, maintenanceAssignmentsTable, maintenancePhotosTable,
-    ownershipAccountsTable, ownershipAccountMembersTable, rentalListingsTable, rentalApplicationsTable,
-    screeningReportsTable, applicationEventsTable, inboxThreadsTable, inboxMessagesTable,
-    messageDeliveriesTable, automationTemplatesTable, automationRulesTable, automationRunsTable,
-    propertiesOwnerAccountColumn, invitationsOwnershipAccountColumn, leaseDocumentsBucketProbe,
-    maintenancePhotosBucketProbe
-  ];
-  const capabilities = deriveFeatureCapabilities({
-    documentTemplatesTable: documentTemplatesTable.value,
-    documentPacketsTable: documentPacketsTable.value,
-    documentSignersTable: documentSignersTable.value,
-    notificationsTable: notificationsTable.value,
-    notificationDeliveriesTable: notificationDeliveriesTable.value,
-    vendorsTable: vendorsTable.value,
-    maintenanceAssignmentsTable: maintenanceAssignmentsTable.value,
-    maintenancePhotosTable: maintenancePhotosTable.value,
-    ownershipAccountsTable: ownershipAccountsTable.value,
-    ownershipAccountMembersTable: ownershipAccountMembersTable.value,
-    rentalListingsTable: rentalListingsTable.value,
-    rentalApplicationsTable: rentalApplicationsTable.value,
-    screeningReportsTable: screeningReportsTable.value,
-    applicationEventsTable: applicationEventsTable.value,
-    inboxThreadsTable: inboxThreadsTable.value,
-    inboxMessagesTable: inboxMessagesTable.value,
-    messageDeliveriesTable: messageDeliveriesTable.value,
-    automationTemplatesTable: automationTemplatesTable.value,
-    automationRulesTable: automationRulesTable.value,
-    automationRunsTable: automationRunsTable.value,
-    propertiesOwnerAccountColumn: propertiesOwnerAccountColumn.value,
-    invitationsOwnershipAccountColumn: invitationsOwnershipAccountColumn.value,
-    leaseDocumentsBucket: leaseDocumentsBucketProbe.value.exists,
-    maintenancePhotosBucket: maintenancePhotosBucketProbe.value.exists,
-    leaseDocumentsBucketReason: leaseDocumentsBucketProbe.value.reason,
-    maintenancePhotosBucketReason: maintenancePhotosBucketProbe.value.reason
-  });
-
-  if (results.some((result) => !result.cacheable)) {
-    throw new UncacheableCapabilitiesResult(capabilities);
-  }
-
-  return capabilities;
-}
-
-const getCachedFeatureCapabilities = unstable_cache(
-  probeFeatureCapabilities,
-  [FEATURE_CAPABILITIES_CACHE_KEY],
-  { revalidate: FEATURE_CAPABILITIES_REVALIDATE_SECONDS, tags: [FEATURE_CAPABILITIES_CACHE_TAG] }
-);
+const PRODUCTION_CAPABILITIES: FeatureCapabilitiesDTO = deriveFeatureCapabilities({
+  documentTemplatesTable: true, documentPacketsTable: true, documentSignersTable: true,
+  notificationsTable: true, notificationDeliveriesTable: true, vendorsTable: true,
+  maintenanceAssignmentsTable: true, maintenancePhotosTable: true, ownershipAccountsTable: true,
+  ownershipAccountMembersTable: true, rentalListingsTable: true, rentalApplicationsTable: true,
+  screeningReportsTable: true, applicationEventsTable: true, inboxThreadsTable: true,
+  inboxMessagesTable: true, messageDeliveriesTable: true, automationTemplatesTable: true,
+  automationRulesTable: true, automationRunsTable: true, propertiesOwnerAccountColumn: true,
+  invitationsOwnershipAccountColumn: true, leaseDocumentsBucket: true, maintenancePhotosBucket: true
+});
 
 export async function getFeatureCapabilities(): Promise<FeatureCapabilitiesDTO> {
-  if (processCache && Date.now() < processCache.expiresAt) {
-    return processCache.value;
-  }
-  if (!pendingProbe) {
-    pendingProbe = (async () => {
-      try {
-        const value = await getCachedFeatureCapabilities();
-        processCache = { value, expiresAt: Date.now() + CAPABILITIES_TTL_MS };
-        return value;
-      } catch (error) {
-        if (error instanceof UncacheableCapabilitiesResult) {
-          return error.capabilities;
-        }
-        throw error;
-      }
-    })().finally(() => { pendingProbe = null; });
-  }
-  return pendingProbe;
+  return PRODUCTION_CAPABILITIES;
 }
 
 export function invalidateFeatureCapabilitiesCache(): void {
-  processCache = null;
-  revalidateTag(FEATURE_CAPABILITIES_CACHE_TAG);
+  // Kept for callers that invalidate after mutations; the contract is static at runtime.
 }

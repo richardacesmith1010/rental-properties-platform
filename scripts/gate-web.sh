@@ -3,6 +3,7 @@ set -euo pipefail
 
 echo "[gate] Verifying runtime readiness"
 npm run verify:phase9-runtime
+npm run verify:capabilities
 
 echo "[gate] Running web tests"
 npm test --workspace @domus/web

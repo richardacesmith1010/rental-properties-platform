@@ -4,6 +4,7 @@ set -euo pipefail
 APP_URL="${APP_URL:-http://localhost:3000}"
 
 echo "[smoke] Using APP_URL=$APP_URL"
+npm run verify:capabilities
 
 echo "[smoke] Checking landing page"
 curl -fsS "$APP_URL/" >/dev/null

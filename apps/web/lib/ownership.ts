@@ -152,7 +152,54 @@ export async function getUniqueOwnershipJoinCode(maxAttempts = 10): Promise<stri
   return null;
 }
 
+interface OwnershipAccountsPayload {
+  property_account_ids: string[];
+  member_rows: Array<{ account_id: string }>;
+  creator_rows: Array<{ id: string }>;
+  accounts: OwnershipAccountRow[];
+  member_counts: Array<{ account_id: string; member_count: number }>;
+}
+
+export function assembleOwnershipAccountsPayload(payload: OwnershipAccountsPayload): OwnershipAccountDTO[] {
+  const counts = new Map((payload.member_counts ?? []).map(row => [row.account_id, row.member_count]));
+  return (payload.accounts ?? []).map(account => ({
+    id: account.id,
+    accountType: account.account_type as "individual" | "llc",
+    displayName: account.display_name,
+    memberCount: counts.get(account.id) ?? 0,
+    joinCode: account.join_code ?? null,
+    stripeConnected: account.stripe_onboarding_complete === true,
+    distributionMode: account.distribution_mode ?? "retain",
+    stripeAccountId: account.stripe_account_id ?? null,
+    stripeStatus: account.stripe_status ?? null,
+    plaidConnected: Boolean(account.plaid_account_id),
+    bankName: account.plaid_bank_name ?? null,
+    bankMask: account.plaid_bank_mask ?? null,
+    balanceCents: account.plaid_balance_cents ?? null,
+    balanceUpdatedAt: account.plaid_balance_updated_at ?? null
+  }));
+}
+
 export async function getOwnershipAccountsForUser(userId: string): Promise<OwnershipAccountDTO[]> {
+  const admin = createAdminClient();
+  try {
+    const { data, error } = await admin.rpc("ownership_accounts_payload", { p_user_id: userId });
+    if (error || !data) {
+      const code = /^[A-Z0-9]{5,10}$/.test(error?.code ?? "") ? error!.code : "UNKNOWN";
+      const missing = isMissingSchemaError(error) || code === "PGRST202" || code === "42883";
+      console.error(missing ? "owner_rpc_fallback_missing" : "owner_rpc_fallback_error", code);
+    } else {
+      return assembleOwnershipAccountsPayload(data as unknown as OwnershipAccountsPayload);
+    }
+  } catch (error) {
+    const rawCode = typeof error === "object" && error && "code" in error ? String(error.code) : "";
+    const code = /^[A-Z0-9]{5,10}$/.test(rawCode) ? rawCode : "UNKNOWN";
+    console.error("owner_rpc_fallback_error", code);
+  }
+  return getOwnershipAccountsForUserLegacy(userId);
+}
+
+export async function getOwnershipAccountsForUserLegacy(userId: string): Promise<OwnershipAccountDTO[]> {
   const admin = createAdminClient();
 
   const [propertyAccountIds, { data: memberRows, error: memberError }, { data: createdRows, error: creatorError }] =
