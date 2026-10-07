@@ -417,6 +417,15 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 - Home defers 5 Home-only bundles (works; Home loads shared bundles only). Owner Home not faster: critical path = ownership.accounts (8 q) → administered-ids (4 q) → dashboard.data (12 q, ~1 s). feature.capabilities cache from S179 is ineffective in production (22 q every request). Next sprint (L3): RPCs for dashboard + ownership, fix capabilities cache.
 
+## Sprints 193/193b SHIPPED — Tenant paid reports persist + owner Rent-row badge (L3, `4f9a22d`, `660fbb1`, 2026-10-07; gpt-6-sol medium 142,642 + luna 42,055 Codex tokens)
+- ChatGPT: REJECT ×3 → APPROVE on rev 4 (race-safe claim-first; claim is durable, never reverted; zero-row claim classified by re-read; ownership checked before any status/report response — also fixes a pre-existing order where "already closed" leaked before the ownership check).
+- Migration `20261007_sprint193_tenant_reported_paid.sql` applied by Claude: `rent_charges.tenant_reported_paid_at timestamptz` (nullable, no default; plain ADD COLUMN) + `owner_dashboard_payload` = live body + 3 field refs (md5 old b0966314… matched repo; new 8ac187bd… matches live; invoker, search_path '', ACL postgres+service_role only). Tenants have no UPDATE policy on rent_charges (owner/admin only).
+- Action `inbox-manual-payment.ts`: charge → lease → ownership → closed → guarded claim (`is null`, not deleted, pending/late, `.select("id")`) → 0 rows re-read classify / 1 row → thread+message (failures logged, success kept). Owner badge "Tenant says paid · {Mon D}" (UTC) on unpaid rent rows (RPC + legacy paths); tenant row shows "Sent {Mon D}. …" after reload.
+- 193b: success text unified to "Sent. Your landlord will check and mark it paid." (S193 exposed the action's old "Manual payment request sent…" message).
+- Live: smoke tenant Aug (backfilled by SQL to the S192 message time), Sep, Oct each reported once → exactly 1 owner message per month; all still `late`; owner Rent shows 3 badges; light/dark 1280/375, 0 console errors; gate 1535/1535; smoke pass; CI #342/#344; Sentry clean.
+- Smoke tenant now has no unreported month (button hidden). To re-test: `update rent_charges set tenant_reported_paid_at = null` for that tenant's open months (smoke data only).
+- Minor: the owner badge shows only on `category = rent` rows; a tenant report on a one-time fee gets no badge.
+
 ## Sprint 192 SHIPPED — Tenant "I paid this" (L2, `eb718c4`, 2026-10-07, gpt-6-sol low, 68,209 Codex tokens)
 - `tenant-rent-card.tsx`: when pay state is `not_ready` or `outside` and months are unpaid → "Already paid? Tell your landlord." + one row per month (oldest first) with **I paid this** (posts `chargeId` to existing `requestManualPaymentConfirmation`); per-row success "Sent. Your landlord will check and mark it paid." / error. No other pay state changed.
 - Owner message body now: "<Tenant> says they paid $X for <home • unit>. Rent due <date>. Please check, then mark it paid in Rent." Notification title "Tenant says rent is paid" (notifications still OFF). Thread subject unchanged.

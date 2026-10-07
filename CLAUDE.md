@@ -270,6 +270,11 @@ Claude must treat every interaction cycle as a learning opportunity. This sectio
 **What was correct:** CI is part of the gate. A green local gate does not prove CI is green, because CI has a different env (secrets, Node version, clean install).
 **Rule:** At every cycle close, check the latest CI run for the pushed HEAD and report it. Any red CI run blocks the next sprint. CI must not depend on repo secret values to build; it uses fixed placeholders.
 
+#### L-020 | 2026-10-07 | REVIEW
+**What happened:** Sprint 193's packet told the tenant card to show the server action's returned `message`. Sprint 192 had hard-coded the card text, so the action's old success string ("Manual payment request sent to your landlord for confirmation.") had never been visible. Once wired through, the live walk showed the stale wording; a 193b hotfix was needed.
+**What was correct:** When a UI starts rendering a value it previously ignored (an action's `message`, an API field), every possible value of it becomes user-facing copy.
+**Rule:** Before a packet tells UI to display an action/API return value, list every return string on every path of that action and include their exact wording in the packet (rewrite any that break plain-language rules).
+
 ## 11) Pre-Flight Lessons Check (Hard Rule)
 
 Before starting ANY work cycle (planning, verification, or especially implementation), Claude must:
@@ -296,6 +301,7 @@ If a planned action matches a pattern from a prior lesson, Claude must stop and 
 - Am I accepting a sprint's tests? → L-017 says open every new test file and map each required case to a real assertion; tautological/missing tests = FAIL.
 - Am I writing a refactor/size target? → L-015 says also cap line length (≤140) and keep character totals within ±10%, and check both before accepting.
 - Am I closing a cycle? → L-019 says confirm the latest GitHub Actions CI run for HEAD is green; red CI blocks the next sprint.
+- Am I making UI display an action's returned message or an API field it ignored before? → L-020 says list every return string on every path and fix the wording in the packet.
 - Am I ending a cycle report? → L-010 (refined) says keep `docs/agent-handoff.md` + memory current and report the transcript size; only prompt a new chat when a rotation threshold is hit (size ~50MB / compacted ~2× / sluggish / topic pivot) — not every sprint.
 
 This section must be updated whenever a new lesson is added that introduces a new "always check" pattern.
