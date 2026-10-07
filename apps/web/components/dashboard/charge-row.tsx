@@ -32,6 +32,7 @@ export interface ChargeRowData {
   category?: ChargeCategory;
   notes?: string | null;
   reminderSentAt?: string | null;
+  tenantReportedPaidAt?: string | null;
   latestEditedAt?: string | null;
   latestEditedByName?: string | null;
   editedCount?: number;
@@ -155,6 +156,20 @@ export function ChargeRow({
                   />
                   {statusLabel(charge.status)}
                 </span>
+                {!isTenantView && category === "rent" && (charge.status === "pending" || charge.status === "late")
+                  && charge.tenantReportedPaidAt ? (
+                    <span
+                      className={[
+                        "inline-flex items-center rounded-full border border-[var(--accent-line)]",
+                        "px-2 py-0.5 text-xs text-[var(--accent)]"
+                      ].join(" ")}
+                      title="Your tenant says they paid. Check, then tap Mark paid."
+                    >
+                      Tenant says paid · {new Intl.DateTimeFormat("en-US", {
+                        month: "short", day: "numeric", timeZone: "UTC"
+                      }).format(new Date(`${charge.tenantReportedPaidAt.slice(0, 10)}T00:00:00.000Z`))}
+                    </span>
+                  ) : null}
                 {category !== "rent" ? (
                   <Badge variant="outline">{chargeCategoryLabel(category)}</Badge>
                 ) : null}

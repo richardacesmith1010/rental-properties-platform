@@ -15,6 +15,7 @@ interface Lease extends Row {
 interface Charge extends Row {
   lease_id: string; due_date: string; amount_cents: number; status: ChargeStatus;
   category: ChargeCategory | null; notes: string | null;
+  tenant_reported_paid_at?: string | null;
 }
 interface Payment extends Row {
   amount_cents: number; paid_at: string; method: string; rent_charge_id: string;
@@ -130,6 +131,7 @@ export function assembleOwnerDashboardPayload(
         tenantName: lease?.tenant_profile_id ? tenant?.full_name || tenant?.email || "Unknown tenant" : "No tenant",
         tenantEmail: lease?.tenant_profile_id ? tenant?.email ?? null : null,
         category: row.category, notes: row.notes ?? null,
+        tenantReportedPaidAt: row.tenant_reported_paid_at ?? null,
         reminderSentAt: reminderByChargeId.get(row.id) ?? null,
         ...getChargeAuditSummary(historyByChargeId.get(row.id) ?? []),
         collectsOutsideDomus: isCollectedOutsideDomus(lease)

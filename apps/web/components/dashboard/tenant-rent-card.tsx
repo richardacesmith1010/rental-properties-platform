@@ -51,7 +51,13 @@ function ReportPaidRow({ charge, action }: { charge: TenantCharge; action: State
           {monthDay(charge.dueDate)} rent · {formatCurrency(charge.amountCents)}
         </span>
         {state?.success ? (
-          <span className="text-sm text-[var(--pos)]">Sent. Your landlord will check and mark it paid.</span>
+          <span className="text-sm text-[var(--pos)]">
+            {state.message ?? "Sent. Your landlord will check and mark it paid."}
+          </span>
+        ) : charge.tenantReportedPaidAt ? (
+          <span className="text-sm text-[var(--pos)]">
+            Sent {monthDay(charge.tenantReportedPaidAt.slice(0, 10))}. Your landlord will check and mark it paid.
+          </span>
         ) : (
           <form action={formAction}>
             <input type="hidden" name="chargeId" value={charge.id} />

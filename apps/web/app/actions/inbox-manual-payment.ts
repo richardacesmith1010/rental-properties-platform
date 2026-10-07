@@ -6,6 +6,7 @@ import { buildPropertyMessageEmail } from "@/lib/email-templates";
 import { formatCurrency, formatDate, formatUnitLabel } from "@/lib/format";
 import { createNotificationWithDelivery, type NotificationType } from "@/lib/notifications";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { sideEffectError } from "@/lib/logger";
 import { parseFormData, requestManualPaymentConfirmationSchema } from "@/lib/validations";
 import {
   ensureTenantThreadCapability,
@@ -43,16 +44,12 @@ export async function requestManualPaymentConfirmation(
   const { chargeId } = parsed.data;
   const { data: charge } = await admin
     .from("rent_charges")
-    .select("id, lease_id, due_date, amount_cents, status")
+    .select("id, lease_id, due_date, amount_cents, status, tenant_reported_paid_at")
     .eq("id", chargeId)
     .maybeSingle();
 
   if (!charge) {
     return { success: false, error: "Payment not found." };
-  }
-
-  if (charge.status === "paid" || charge.status === "waived") {
-    return { success: false, error: "This payment is already closed." };
   }
 
   const { data: lease } = await admin
@@ -65,13 +62,58 @@ export async function requestManualPaymentConfirmation(
     return { success: false, error: "You do not have access to this payment." };
   }
 
+  if (charge.status === "paid" || charge.status === "waived") {
+    return { success: false, error: "This payment is already closed." };
+  }
+
+  const { data: claimed, error: claimError } = await admin
+    .from("rent_charges")
+    .update({ tenant_reported_paid_at: new Date().toISOString() })
+    .eq("id", chargeId)
+    .is("tenant_reported_paid_at", null)
+    .is("deleted_at", null)
+    .in("status", ["pending", "late"])
+    .select("id");
+  if (claimError) {
+    return { success: false, error: "Could not send. Please try again." };
+  }
+  if (!claimed?.length) {
+    const { data: current, error: rereadError } = await admin
+      .from("rent_charges")
+      .select("id, status, tenant_reported_paid_at, deleted_at")
+      .eq("id", chargeId)
+      .maybeSingle();
+    if (rereadError) return { success: false, error: "Could not send. Please try again." };
+    if (!current || current.deleted_at) return { success: false, error: "Payment not found." };
+    if (current.tenant_reported_paid_at) {
+      return { success: true, message: "Already sent. Your landlord will check and mark it paid." };
+    }
+    if (current.status === "paid" || current.status === "waived") {
+      return { success: false, error: "This payment is already closed." };
+    }
+    sideEffectError("requestManualPaymentConfirmation", "tenant_report_claim_contention", {
+      userId: user.id, entityType: "rent_charge", entityId: chargeId
+    })(new Error("Claim returned no rows for an open, unreported charge."));
+    return { success: false, error: "Could not send. Please try again." };
+  }
+
+  const sent = { success: true as const, message: "Sent. Your landlord will check and mark it paid." };
+  const revalidateReport = () => {
+    revalidatePath("/tenant");
+    revalidatePath("/owner");
+  };
+
   const [{ data: unit }, { data: profile }] = await Promise.all([
     admin.from("units").select("property_id, unit_number").eq("id", lease.unit_id).maybeSingle(),
     admin.from("profiles").select("full_name, email").eq("id", user.id).maybeSingle(),
   ]);
 
   if (!unit?.property_id) {
-    return { success: false, error: "This payment is missing property information." };
+    sideEffectError("requestManualPaymentConfirmation", "load_property", {
+      userId: user.id, entityType: "rent_charge", entityId: chargeId
+    })(new Error("Claimed charge has no property."));
+    revalidateReport();
+    return sent;
   }
 
   const propertyContext = await loadPropertyContext(unit.property_id);
@@ -89,7 +131,11 @@ export async function requestManualPaymentConfirmation(
   });
 
   if (!threadId) {
-    return { success: false, error: "Failed to create a review request." };
+    sideEffectError("requestManualPaymentConfirmation", "create_thread", {
+      userId: user.id, entityType: "rent_charge", entityId: chargeId
+    })(new Error("Thread was not created."));
+    revalidateReport();
+    return sent;
   }
 
   const messageBody = [
@@ -106,7 +152,11 @@ export async function requestManualPaymentConfirmation(
   });
 
   if (messageError) {
-    return { success: false, error: "Failed to create a confirmation request." };
+    sideEffectError("requestManualPaymentConfirmation", "insert_message", {
+      userId: user.id, entityType: "rent_charge", entityId: chargeId
+    })(messageError);
+    revalidateReport();
+    return sent;
   }
 
   const owners = await loadOwnerRecipients(unit.property_id);
@@ -136,8 +186,7 @@ export async function requestManualPaymentConfirmation(
 
   const threadUpdateError = await touchInboxThread(threadId, user.id);
 
-  revalidatePath("/tenant");
-  revalidatePath("/owner");
+  revalidateReport();
 
   if (threadUpdateError) {
     return {

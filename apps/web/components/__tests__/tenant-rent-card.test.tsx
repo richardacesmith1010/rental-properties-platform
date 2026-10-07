@@ -114,6 +114,17 @@ describe("TenantRentCard", () => {
     ]);
   });
 
+  it("shows the saved report date after reload and keeps other months open", () => {
+    const charges = [
+      { ...baseProps.charges[0], tenantReportedPaidAt: "2026-10-07T17:04:35Z" },
+      { ...baseProps.charges[0], id: "2", dueDate: "2026-11-01" }
+    ];
+    render(<TenantRentCard {...baseProps} charges={charges} payState="not_ready" />);
+    expect(screen.getByText("Sent Oct 7. Your landlord will check and mark it paid.")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "I paid this" })).toHaveLength(1);
+    expect(screen.getByText("Nov 1 rent · $1")).toBeInTheDocument();
+  });
+
   it("sends the selected month and replaces only its button after success", async () => {
     formDispatches.length = 0;
     const action = vi.fn(async () => ({ success: true as const }));

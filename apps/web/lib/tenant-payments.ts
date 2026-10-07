@@ -13,6 +13,7 @@ export interface TenantCharge {
   dueDate: string;
   amountCents: number;
   status: "pending" | "late";
+  tenantReportedPaidAt?: string | null;
   collectsOutsideDomus?: boolean;
 }
 
@@ -51,14 +52,14 @@ export async function getTenantPaymentData(userId: string): Promise<TenantPaymen
     withChargeEditingFallback(
       () => supabase
         .from("rent_charges")
-        .select("id, lease_id, due_date, amount_cents, status")
+        .select("id, lease_id, due_date, amount_cents, status, tenant_reported_paid_at")
         .in("lease_id", leaseIds)
         .in("status", ["pending", "late"])
         .is("deleted_at", null)
         .order("due_date", { ascending: true }),
       () => supabase
         .from("rent_charges")
-        .select("id, lease_id, due_date, amount_cents, status")
+        .select("id, lease_id, due_date, amount_cents, status, tenant_reported_paid_at")
         .in("lease_id", leaseIds)
         .in("status", ["pending", "late"])
         .order("due_date", { ascending: true })
@@ -99,6 +100,7 @@ export async function getTenantPaymentData(userId: string): Promise<TenantPaymen
         dueDate: charge.due_date,
         amountCents: charge.amount_cents,
         status: getTenantChargeStatus(charge.status as "pending" | "late", lease),
+        tenantReportedPaidAt: charge.tenant_reported_paid_at ?? null,
         collectsOutsideDomus: isCollectedOutsideDomus(lease)
       };
     })

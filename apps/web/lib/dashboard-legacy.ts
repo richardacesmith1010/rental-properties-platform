@@ -114,6 +114,7 @@ export async function getDashboardDataLegacy(
     status: ChargeStatus;
     category: ChargeCategory;
     notes?: string | null;
+    tenant_reported_paid_at?: string | null;
   }> = [];
 
   let lateCharges: Array<{ amount_cents: number; lease_id: string }> = [];
@@ -159,7 +160,7 @@ export async function getDashboardDataLegacy(
         () =>
           admin
             .from("rent_charges")
-            .select("id, lease_id, due_date, amount_cents, status, category, notes")
+            .select("id, lease_id, due_date, amount_cents, status, category, notes, tenant_reported_paid_at")
             .in("lease_id", leaseIds)
             .in("status", ["pending", "late", "waived"])
             .is("deleted_at", null)
@@ -212,6 +213,7 @@ export async function getDashboardDataLegacy(
       status: ChargeStatus;
       category: string | null;
       notes?: string | null;
+      tenant_reported_paid_at?: string | null;
     }>;
 
     const uniqueChargeIds = Array.from(
@@ -223,7 +225,7 @@ export async function getDashboardDataLegacy(
           () =>
             admin
               .from("rent_charges")
-              .select("id, lease_id, due_date, amount_cents, status, category, notes")
+              .select("id, lease_id, due_date, amount_cents, status, category, notes, tenant_reported_paid_at")
               .in("id", uniqueChargeIds)
               .is("deleted_at", null),
           () =>
@@ -241,6 +243,7 @@ export async function getDashboardDataLegacy(
             status: ChargeStatus;
             category: string | null;
             notes?: string | null;
+            tenant_reported_paid_at?: string | null;
           }>,
           error: null
         };
@@ -295,7 +298,8 @@ export async function getDashboardDataLegacy(
       amount_cents: charge.amount_cents,
       status: charge.status,
       category: normalizeChargeCategory(charge.category),
-      notes: charge.notes ?? null
+      notes: charge.notes ?? null,
+      tenant_reported_paid_at: charge.tenant_reported_paid_at ?? null
     }));
 
     const paidChargeRows = (recentPaymentRows ?? [])
@@ -309,6 +313,7 @@ export async function getDashboardDataLegacy(
           status: ChargeStatus;
           category: string | null;
           notes?: string | null;
+          tenant_reported_paid_at?: string | null;
         } => Boolean(charge)
       )
       .filter((charge) => charge.status === "paid")
@@ -319,7 +324,8 @@ export async function getDashboardDataLegacy(
         amount_cents: charge.amount_cents,
         status: charge.status,
         category: normalizeChargeCategory(charge.category),
-        notes: charge.notes ?? null
+        notes: charge.notes ?? null,
+        tenant_reported_paid_at: charge.tenant_reported_paid_at ?? null
       }));
 
     const seenChargeIds = new Set<string>();
@@ -432,6 +438,7 @@ export async function getDashboardDataLegacy(
           : null,
         category: charge.category,
         notes: charge.notes ?? null,
+        tenantReportedPaidAt: charge.tenant_reported_paid_at ?? null,
         reminderSentAt: reminderSentAtByChargeId.get(charge.id) ?? null,
         ...getChargeAuditSummary(chargeHistoryById.get(charge.id) ?? []),
         collectsOutsideDomus: isCollectedOutsideDomus(lease)

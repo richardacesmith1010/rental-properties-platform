@@ -43,6 +43,7 @@ export interface DashboardCharge {
   category: ChargeCategory;
   notes?: string | null;
   reminderSentAt?: string | null;
+  tenantReportedPaidAt?: string | null;
   latestEditedAt?: string | null;
   latestEditedByName?: string | null;
   editedCount?: number;

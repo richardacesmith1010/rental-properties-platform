@@ -229,6 +229,7 @@ describe("inbox actions", () => {
 
   it("sends the exact plain-language manual payment message and title", async () => {
     const inserted: Array<{ body?: string; subject?: string }> = [];
+    const claimFilters: string[] = [];
     const subjects: string[] = [];
     const rows: Record<string, Record<string, unknown> | Array<Record<string, unknown>>> = {
       rent_charges: { id: "charge-1", lease_id: "lease-1", due_date: "2026-10-01", amount_cents: 100, status: "late" },
@@ -249,7 +250,15 @@ describe("inbox actions", () => {
             return query;
           },
           limit: () => query,
-          in: () => { listProfiles = true; return query; },
+          in: (column: string, values: unknown[]) => {
+            if (table === "rent_charges") claimFilters.push(`${column}:${values.join(",")}`);
+            else listProfiles = true;
+            return query;
+          },
+          is: (column: string, value: unknown) => {
+            if (table === "rent_charges") claimFilters.push(`${column}:${value}`);
+            return query;
+          },
           maybeSingle: async () => ({ data: rows[table] ?? null, error: null }),
           insert: (payload: { body?: string; subject?: string }) => {
             inserted.push(payload);
@@ -259,7 +268,7 @@ describe("inbox actions", () => {
           single: async () => ({ data: rows[table] ?? null, error: null }),
           then: (resolve: (value: { data: unknown; error: null }) => unknown) =>
             Promise.resolve(resolve({
-              data: listProfiles && table === "profiles"
+              data: table === "rent_charges" ? [{ id: "charge-1" }] : listProfiles && table === "profiles"
                 ? [{ id: "owner-1", email: "owner@example.com", full_name: "Ace Owner" }]
                 : rows[table] ?? null,
               error: null
@@ -272,6 +281,8 @@ describe("inbox actions", () => {
     parseFormDataMock.mockReturnValue({ success: true, data: { chargeId: "charge-1" } });
     const result = await requestManualPaymentConfirmation(null, new FormData());
     expect(result?.success).toBe(true);
+    expect(claimFilters).toContain("tenant_reported_paid_at:null");
+    expect(claimFilters).toContain("status:pending,late");
     expect(subjects).toContain("Manual payment review - Atlas House • Unit 1A");
     expect(inserted.find((item) => item.body)?.body).toBe(
       "Taylor Tenant says they paid $1 for Atlas House • Unit 1A. " +

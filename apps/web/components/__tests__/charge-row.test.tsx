@@ -20,10 +20,10 @@ const charge: ChargeRowData = {
   category: "rent"
 };
 
-function renderCharge(isTenantView: boolean) {
+function renderCharge(isTenantView: boolean, row: ChargeRowData = charge) {
   return render(
     <ChargeRow
-      charge={charge}
+      charge={row}
       last
       batchActionsEnabled={false}
       selected={false}
@@ -44,6 +44,22 @@ function renderCharge(isTenantView: boolean) {
 }
 
 describe("ChargeRow", () => {
+  it("shows a report badge only on an unpaid owner row", () => {
+    const reported = { ...charge, tenantReportedPaidAt: "2026-10-07T17:04:35Z" };
+    renderCharge(false, reported);
+    expect(screen.getByText("Tenant says paid · Oct 7")).toHaveAttribute(
+      "title", "Your tenant says they paid. Check, then tap Mark paid."
+    );
+  });
+
+  it("hides the report badge on paid and tenant rows", () => {
+    const reported = { ...charge, tenantReportedPaidAt: "2026-10-07T17:04:35Z" };
+    const { unmount } = renderCharge(false, { ...reported, status: "paid" });
+    expect(screen.queryByText(/Tenant says paid/)).not.toBeInTheDocument();
+    unmount();
+    renderCharge(true, reported);
+    expect(screen.queryByText(/Tenant says paid/)).not.toBeInTheDocument();
+  });
   it("does not render tenant payment controls in an owner or manager view", () => {
     renderCharge(false);
 
