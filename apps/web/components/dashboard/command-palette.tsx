@@ -10,221 +10,30 @@ import {
 } from "react";
 import {
   ArrowRight,
-  Building2,
-  CreditCard,
   Search,
   Sparkles,
-  User,
-  type LucideIcon
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import {
+  searchCommandPalette,
+  groupCommandResults,
+  type CommandPaletteSection,
+  type CommandPaletteProperty,
+  type CommandPaletteTenant,
+  type CommandPaletteTransaction,
+  type CommandPaletteQuickAction,
+  type CommandPaletteResult
+} from "./command-palette-search";
+export { searchCommandPalette, groupCommandResults } from "./command-palette-search";
+export type {
+  CommandPaletteSection,
+  CommandPaletteProperty,
+  CommandPaletteTenant,
+  CommandPaletteTransaction,
+  CommandPaletteQuickAction,
+  CommandPaletteResult
+} from "./command-palette-search";
 import { cn } from "@/lib/format";
-
-export interface CommandPaletteSection {
-  id: string;
-  label: string;
-  description: string;
-  icon: LucideIcon;
-  keywords?: string[];
-  shortcutHint?: string;
-}
-
-export interface CommandPaletteProperty {
-  id: string;
-  name: string;
-  address?: string;
-}
-
-export interface CommandPaletteTenant {
-  id: string;
-  name: string;
-  email: string;
-}
-
-export interface CommandPaletteTransaction {
-  id: string;
-  label: string;
-  description: string;
-  sectionId: string;
-  propertyId?: string | null;
-  icon?: LucideIcon;
-  keywords?: string[];
-}
-
-export interface CommandPaletteQuickAction {
-  id: string;
-  label: string;
-  description: string;
-  icon: LucideIcon;
-  keywords?: string[];
-  shortcutHint?: string;
-}
-
-export type CommandPaletteResult = {
-  id: string;
-  type: "section" | "property" | "tenant" | "transaction" | "quick_action";
-  label: string;
-  secondary: string;
-  icon: LucideIcon;
-  group: "Sections" | "Properties" | "Tenants" | "Transactions" | "Quick Actions";
-  shortcutHint?: string;
-  propertyId?: string | null;
-  sectionId?: string;
-  keywords?: string[];
-};
-
-interface SearchCommandPaletteParams {
-  query: string;
-  sections: CommandPaletteSection[];
-  properties: CommandPaletteProperty[];
-  tenants: CommandPaletteTenant[];
-  transactions?: CommandPaletteTransaction[];
-  quickActions?: CommandPaletteQuickAction[];
-  maxResults?: number;
-}
-
-interface GroupedCommandResults {
-  label: CommandPaletteResult["group"];
-  items: CommandPaletteResult[];
-}
-
-const RESULT_ORDER: CommandPaletteResult["group"][] = [
-  "Sections",
-  "Properties",
-  "Tenants",
-  "Transactions",
-  "Quick Actions"
-];
-
-function normalizeQuery(value: string) {
-  return value.trim().toLowerCase();
-}
-
-function matchesQuery(query: string, values: Array<string | null | undefined>) {
-  if (!query) {
-    return true;
-  }
-
-  return values
-    .filter((value): value is string => Boolean(value))
-    .some((value) => value.toLowerCase().includes(query));
-}
-
-export function searchCommandPalette({
-  query,
-  sections,
-  properties,
-  tenants,
-  transactions = [],
-  quickActions = [],
-  maxResults = 10
-}: SearchCommandPaletteParams): CommandPaletteResult[] {
-  const normalizedQuery = normalizeQuery(query);
-  const sectionResults = sections
-    .filter((section) =>
-      matchesQuery(normalizedQuery, [section.label, section.description, ...(section.keywords ?? [])])
-    )
-    .map<CommandPaletteResult>((section) => ({
-      id: section.id,
-      type: "section",
-      label: section.label,
-      secondary: section.description,
-      icon: section.icon,
-      group: "Sections",
-      shortcutHint: section.shortcutHint ?? "Enter",
-      sectionId: section.id,
-      keywords: section.keywords
-    }));
-
-  const propertyResults = properties
-    .filter((property) => matchesQuery(normalizedQuery, [property.name, property.address]))
-    .map<CommandPaletteResult>((property) => ({
-      id: property.id,
-      type: "property",
-      label: property.name,
-      secondary: property.address ?? "Property",
-      icon: Building2,
-      group: "Properties",
-      shortcutHint: "Enter"
-    }));
-
-  const tenantResults = tenants
-    .filter((tenant) => matchesQuery(normalizedQuery, [tenant.name, tenant.email]))
-    .map<CommandPaletteResult>((tenant) => ({
-      id: tenant.id,
-      type: "tenant",
-      label: tenant.name,
-      secondary: tenant.email,
-      icon: User,
-      group: "Tenants",
-      shortcutHint: "Enter"
-    }));
-
-  const transactionResults = transactions
-    .filter((transaction) =>
-      matchesQuery(normalizedQuery, [transaction.label, transaction.description, ...(transaction.keywords ?? [])])
-    )
-    .map<CommandPaletteResult>((transaction) => ({
-      id: transaction.id,
-      type: "transaction",
-      label: transaction.label,
-      secondary: transaction.description,
-      icon: transaction.icon ?? CreditCard,
-      group: "Transactions",
-      shortcutHint: "Enter",
-      sectionId: transaction.sectionId,
-      propertyId: transaction.propertyId,
-      keywords: transaction.keywords
-    }));
-
-  const quickActionResults = quickActions
-    .filter((action) =>
-      matchesQuery(normalizedQuery, [action.label, action.description, ...(action.keywords ?? [])])
-    )
-    .map<CommandPaletteResult>((action) => ({
-      id: action.id,
-      type: "quick_action",
-      label: action.label,
-      secondary: action.description,
-      icon: action.icon,
-      group: "Quick Actions",
-      shortcutHint: action.shortcutHint ?? "Enter",
-      keywords: action.keywords
-    }));
-
-  const orderedResults = [
-    ...sectionResults,
-    ...propertyResults,
-    ...tenantResults,
-    ...transactionResults,
-    ...quickActionResults
-  ];
-
-  if (!normalizedQuery) {
-    return [...sectionResults.slice(0, Math.max(maxResults - 3, 1)), ...quickActionResults.slice(0, 3)].slice(
-      0,
-      maxResults
-    );
-  }
-
-  return orderedResults.slice(0, maxResults);
-}
-
-export function groupCommandResults(results: CommandPaletteResult[]): GroupedCommandResults[] {
-  const groups = new Map<CommandPaletteResult["group"], CommandPaletteResult[]>();
-
-  for (const group of RESULT_ORDER) {
-    groups.set(group, []);
-  }
-
-  for (const result of results) {
-    groups.get(result.group)?.push(result);
-  }
-
-  return RESULT_ORDER
-    .map((label) => ({ label, items: groups.get(label) ?? [] }))
-    .filter((group) => group.items.length > 0);
-}
 
 interface CommandPaletteProps {
   open: boolean;
@@ -374,7 +183,8 @@ export function CommandPalette({
   const handleDialogKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Tab") {
       const focusableElements = dialogRef.current?.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), ' +
+          'textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
       );
       if (!focusableElements || focusableElements.length === 0) {
         return;
@@ -401,7 +211,10 @@ export function CommandPalette({
 
   return (
     <div
-      className="fixed inset-0 z-[120] flex items-start justify-center bg-[color-mix(in_srgb,var(--ink)_55%,transparent)] px-4 py-16 backdrop-blur-sm"
+      className={
+        "fixed inset-0 z-[120] flex items-start justify-center " +
+        "bg-[color-mix(in_srgb,var(--ink)_55%,transparent)] px-4 py-16 backdrop-blur-sm"
+      }
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           closePalette();
@@ -434,7 +247,12 @@ export function CommandPalette({
               aria-activedescendant={activeResultId}
               aria-describedby="command-palette-results-count"
             />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md border border-border/60 bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+            <span
+              className={
+                "absolute right-3 top-1/2 -translate-y-1/2 rounded-md border border-border/60 " +
+                "bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+              }
+            >
               ⌘K
             </span>
           </div>
@@ -527,7 +345,12 @@ export function CommandPalette({
                             <p className="truncate text-xs text-muted-foreground">{result.secondary}</p>
                           </div>
                           <div className="hidden shrink-0 items-center gap-2 sm:flex">
-                            <span className="rounded-md border border-border/60 bg-background px-2 py-0.5 text-[11px] text-muted-foreground">
+                            <span
+                              className={
+                                "rounded-md border border-border/60 bg-background px-2 py-0.5 " +
+                                "text-[11px] text-muted-foreground"
+                              }
+                            >
                               {result.shortcutHint ?? "Enter"}
                             </span>
                             <ArrowRight aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground" />
