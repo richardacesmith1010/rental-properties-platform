@@ -191,13 +191,12 @@ export async function requestManualPaymentConfirmation(
   if (threadUpdateError) {
     return {
       success: true,
-      message:
-        "Manual payment request sent, but the conversation activity timestamp is catching up.",
+      message: "Sent. Your landlord will check and mark it paid.",
     };
   }
 
   return {
     success: true,
-    message: "Manual payment request sent to your landlord for confirmation.",
+    message: "Sent. Your landlord will check and mark it paid.",
   };
 }

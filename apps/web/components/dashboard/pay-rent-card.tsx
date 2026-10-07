@@ -370,7 +370,7 @@ export function PayRentCard({
                 ) : null}
                 {manualState && manualState.success ? (
                   <p className="mt-2 text-sm text-[var(--pos)]">
-                    {manualState.message ?? "Manual payment request sent for owner confirmation."}
+                    {manualState.message ?? "Sent. Your landlord will check and mark it paid."}
                   </p>
                 ) : null}
               </form> : null}

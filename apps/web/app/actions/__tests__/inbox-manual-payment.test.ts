@@ -32,6 +32,7 @@ type ReportFixture = {
   claimError?: boolean;
   rereadError?: boolean;
   messageError?: boolean;
+  threadUpdateError?: boolean;
   noThread?: boolean;
   forceEmptyClaim?: boolean;
 };
@@ -81,7 +82,9 @@ function reportDb(fixture: ReportFixture = {}) {
         calls.push("thread");
         return { data: fixture.noThread ? null : { id: "thread-1" }, error: null };
       }
-      if (table === "inbox_threads" && operation === "update") return { data: null, error: null };
+      if (table === "inbox_threads" && operation === "update") {
+        return { data: null, error: fixture.threadUpdateError ? { code: "ERROR" } : null };
+      }
       return { data: rows[table] ?? [], error: null };
     };
     const query = {
@@ -173,7 +176,7 @@ describe("manual payment report claim", () => {
       requestManualPaymentConfirmation(null, new FormData())
     ]);
     expect(results).toEqual([
-      { success: true, message: "Manual payment request sent to your landlord for confirmation." },
+      { success: true, message: "Sent. Your landlord will check and mark it paid." },
       { success: true, message: "Already sent. Your landlord will check and mark it paid." }
     ]);
     expect(db.calls.filter((call) => call === "message")).toHaveLength(1);
@@ -203,6 +206,14 @@ describe("manual payment report claim", () => {
     } finally {
       log.mockRestore();
     }
+  });
+
+  it("returns the standard success message when the thread timestamp update fails", async () => {
+    const db = reportDb({ threadUpdateError: true });
+    expect(await requestManualPaymentConfirmation(null, new FormData())).toEqual({
+      success: true, message: "Sent. Your landlord will check and mark it paid."
+    });
+    expect(db.calls).toContain("message");
   });
 
   it("keeps the claim when no owner thread is created", async () => {
