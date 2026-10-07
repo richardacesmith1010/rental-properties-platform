@@ -438,6 +438,7 @@ export function LeaseWizard({
             <LeaseWizardStepOne
               properties={properties}
               availableUnits={availableUnits}
+              totalUnitsForProperty={units.filter((unit) => unit.propertyId === draft.propertyId).length}
               draft={draft}
               onPropertyChange={handlePropertyChange}
               onUnitChange={(unitId) => setDraft((current) => ({ ...current, unitId }))}

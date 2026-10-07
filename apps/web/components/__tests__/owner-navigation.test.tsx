@@ -11,7 +11,11 @@ import { useDashboardWorkflowHandlers } from "@/components/dashboard/dashboard-w
 vi.mock("next/navigation", () => ({ usePathname: () => "/owner", useRouter: () => ({ replace: vi.fn() }), useSearchParams: () => new URLSearchParams() }));
 vi.mock("@/components/theme-provider", () => ({ useDomusTheme: () => ({ theme: "light", setTheme: vi.fn() }) }));
 vi.mock("@/components/dashboard/sidebar/user-footer", () => ({ SidebarUserFooter: () => null, MobileUserFooter: () => null }));
-vi.mock("@/components/dashboard/notification-bell-menu", () => ({ NotificationBellMenu: () => null }));
+vi.mock("@/components/dashboard/notification-bell-menu", () => ({
+  NotificationBellMenu: (props: { align?: string; panelClassName?: string }) => (
+    <div data-testid="notification-bell" data-align={props.align} data-panel={props.panelClassName} />
+  )
+}));
 vi.mock("@/components/dashboard/invitations/invite-manager-form", () => ({ InviteManagerForm: () => <p>Existing manager invite form</p> }));
 
 const availability = {
@@ -30,6 +34,14 @@ const navProps = { role: "owner", userEmail: "", onSignOut: vi.fn(), reportsHref
 afterEach(() => vi.useRealTimers());
 
 describe("owner grouped navigation", () => {
+  it("anchors the desktop sidebar bell left and the mobile top bar bell right", () => {
+    render(<SidebarNav {...navProps} items={getOwnerNavItems(buildAllSectionItems(availability))} />);
+    const bells = screen.getAllByTestId("notification-bell");
+    expect(bells[0]).toHaveAttribute("data-align", "start");
+    expect(bells[0]).toHaveAttribute("data-panel", "w-[20rem]");
+    expect(bells).toHaveLength(1);
+  });
+
   it.each([true, false])("renders exact groups and order for LLC=%s, preserving badges and reachability", llc => {
     const available = buildAllSectionItems({ ...availability, hasMembersSection: llc });
     const items = getOwnerNavItems(available);

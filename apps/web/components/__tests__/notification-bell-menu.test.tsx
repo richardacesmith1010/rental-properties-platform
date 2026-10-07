@@ -72,6 +72,24 @@ describe("NotificationBellMenu", () => {
     expect(screen.getByRole("button", { name: "View Charge" })).toBeInTheDocument();
   });
 
+  it.each([
+    ["start", "left-0"],
+    ["end", "right-0"]
+  ] as const)("anchors an %s aligned panel with %s", (align, expectedClass) => {
+    render(
+      <NotificationBellMenu
+        notifications={notifications}
+        role="owner"
+        align={align}
+        onDismissNotification={async () => ({ success: true })}
+        triggerClassName="inline-flex h-10 w-10 items-center justify-center"
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Open notifications" }));
+    expect(screen.getByText("Notifications").closest(".absolute")).toHaveClass(expectedClass);
+  });
+
   it("clears the local badge and list when clear all succeeds", async () => {
     render(
       <NotificationBellMenu

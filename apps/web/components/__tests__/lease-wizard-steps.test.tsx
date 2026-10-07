@@ -33,6 +33,7 @@ describe("lease wizard empty states", () => {
       <LeaseWizardStepOne
         properties={[]}
         availableUnits={[]}
+        totalUnitsForProperty={0}
         draft={buildDraft()}
         onPropertyChange={vi.fn()}
         onUnitChange={vi.fn()}
@@ -47,6 +48,39 @@ describe("lease wizard empty states", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create Property" })).toBeInTheDocument();
     expect(screen.queryByLabelText("Property")).not.toBeInTheDocument();
+  });
+
+  it("shows a leased unit empty state when every unit has a lease", () => {
+    render(
+      <LeaseWizardStepOne
+        properties={[
+          {
+            id: "property-1",
+            name: "Maple House",
+            addressLine1: "1 Maple St",
+            city: "Denver",
+            state: "CO",
+            postalCode: "80000",
+            managementFeeCents: 0,
+            unitCount: 2,
+            ownerAccountId: null,
+            ownerAccountName: "Owner",
+            active: true
+          }
+        ]}
+        availableUnits={[]}
+        totalUnitsForProperty={2}
+        draft={buildDraft({ propertyId: "property-1" })}
+        onPropertyChange={vi.fn()}
+        onUnitChange={vi.fn()}
+        onCreatePropertyAction={vi.fn()}
+        onAddUnitAction={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText("Every unit at Maple House has a lease")).toBeInTheDocument();
+    expect(screen.getByText("Add a new unit, or end a lease first.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add a Unit" })).toBeInTheDocument();
   });
 
   it("shows a unit empty state when the selected property has no units", () => {
@@ -68,6 +102,7 @@ describe("lease wizard empty states", () => {
           }
         ]}
         availableUnits={[]}
+        totalUnitsForProperty={0}
         draft={buildDraft({ propertyId: "property-1" })}
         onPropertyChange={vi.fn()}
         onUnitChange={vi.fn()}

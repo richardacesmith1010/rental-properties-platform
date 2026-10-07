@@ -252,6 +252,7 @@ export function SidebarNav({
       onMarkManagerPaymentPaid={onMarkManagerPaymentPaid}
       onOpenNotifications={onSelectItem ? () => onSelectItem("notifications") : undefined}
       notificationsHref={notificationHref}
+      align="start"
       triggerClassName={`sidebar-shell-button relative flex items-center justify-center px-2 py-1.5 ${sidebarFocusRing}`}
       iconClassName="h-3.5 w-3.5"
       badgeClassName="absolute -right-1 -top-1 min-w-[1.1rem] px-1 text-[10px]"
@@ -398,6 +399,7 @@ export function MobileTopBar({
             onMarkManagerPaymentPaid={onMarkManagerPaymentPaid}
             onOpenNotifications={onSelectItem ? () => onSelectItem("notifications") : undefined}
             notificationsHref={notificationHref}
+            align="end"
             triggerClassName={`sidebar-shell-button relative flex h-11 w-11 items-center justify-center ${sidebarFocusRing}`}
             iconClassName="h-3.5 w-3.5"
             badgeClassName="absolute -right-1 -top-1 min-w-[1rem] px-1 text-[9px]"

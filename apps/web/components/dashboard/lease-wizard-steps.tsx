@@ -61,6 +61,7 @@ export function LeaseWizardProgress({ step }: { step: LeaseWizardStep }) {
 export function LeaseWizardStepOne({
   properties,
   availableUnits,
+  totalUnitsForProperty,
   draft,
   onPropertyChange,
   onUnitChange,
@@ -69,6 +70,7 @@ export function LeaseWizardStepOne({
 }: {
   properties: PropertyListItem[];
   availableUnits: UnitListItem[];
+  totalUnitsForProperty: number;
   draft: LeaseWizardDraft;
   onPropertyChange: (propertyId: string) => void;
   onUnitChange: (unitId: string) => void;
@@ -136,9 +138,15 @@ export function LeaseWizardStepOne({
               <Building2 className="mt-0.5 h-4 w-4 text-primary" />
               <div className="space-y-4">
                 <div>
-                  <p className="font-medium text-foreground">{selectedProperty.name} has no units</p>
+                  <p className="font-medium text-foreground">
+                    {totalUnitsForProperty === 0
+                      ? `${selectedProperty.name} has no units`
+                      : `Every unit at ${selectedProperty.name} has a lease`}
+                  </p>
                   <p className="mt-1 text-muted-foreground">
-                    Add a unit to this property before creating a lease.
+                    {totalUnitsForProperty === 0
+                      ? "Add a unit to this property before creating a lease."
+                      : "Add a new unit, or end a lease first."}
                   </p>
                 </div>
                 <Button
