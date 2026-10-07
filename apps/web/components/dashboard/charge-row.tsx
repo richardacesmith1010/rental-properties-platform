@@ -1,18 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import {
-  CircleOff,
   Mail,
-  MessageSquare,
-  MoreVertical,
-  Pencil,
-  Trash2
+  MessageSquare
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { SubmitButton } from "@/components/shared/submit-button";
+import { ChargeMoreMenu } from "@/components/dashboard/charge-more-menu";
+import { ManualPaymentForm } from "@/components/dashboard/manual-payment-form";
 import { cn, formatCurrency, formatDate } from "@/lib/format";
 import { calculateCardFee, formatCentsAsDollars } from "@/lib/payment-fees";
 import { getStatusClasses, statusAriaLabel, statusBadgeClasses } from "@/lib/status-colors";
@@ -85,179 +81,7 @@ function statusLabel(status: ChargeStatus) {
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
-function ChargeMoreMenu({
-  disabled = false,
-  onEdit,
-  onWaive,
-  onDelete,
-  onMessage,
-  compact = false
-}: {
-  disabled?: boolean;
-  onEdit?: () => void;
-  onWaive?: () => void;
-  onDelete?: () => void;
-  onMessage?: () => void;
-  compact?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    function handlePointerDown(event: MouseEvent | TouchEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    }
-
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("touchstart", handlePointerDown);
-    document.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("touchstart", handlePointerDown);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [open]);
-
-  if (!onEdit && !onWaive && !onDelete && !onMessage) {
-    return null;
-  }
-
-  return (
-    <div ref={containerRef} className="relative">
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        className={compact ? "h-11 min-w-11 px-3" : "h-11 px-3 sm:h-8"}
-        disabled={disabled}
-        onClick={() => setOpen((current) => !current)}
-        title="Open more payment actions."
-        aria-label="Open more payment actions"
-      >
-        <MoreVertical className="h-4 w-4" />
-        {compact ? null : <span className="ml-1.5">More</span>}
-      </Button>
-
-      {open ? (
-        <div className="absolute right-0 top-full z-30 mt-2 min-w-[11rem] overflow-hidden rounded-2xl border border-border bg-background p-1.5 shadow-xl">
-          {onMessage ? (
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                onMessage();
-              }}
-              className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
-              title="Message this tenant."
-            >
-              <MessageSquare className="h-4 w-4" />
-              Message
-            </button>
-          ) : null}
-          {onEdit ? (
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                onEdit();
-              }}
-              className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
-              title="Edit this payment."
-            >
-              <Pencil className="h-4 w-4" />
-              Edit
-            </button>
-          ) : null}
-          {onWaive ? (
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                onWaive();
-              }}
-              className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
-              title="Waive this payment."
-            >
-              <CircleOff className="h-4 w-4" />
-              Waive
-            </button>
-          ) : null}
-          {onDelete ? (
-            <>
-              <div className="my-1 h-px bg-border/70" />
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  onDelete();
-                }}
-                className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-[var(--crit)] transition hover:bg-[var(--crit-bg)]"
-                title="Delete this payment."
-              >
-                <Trash2 className="h-4 w-4" />
-                Delete
-              </button>
-            </>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-export function ManualPaymentForm({
-  charge,
-  action
-}: {
-  charge: Pick<ChargeRowData, "id" | "amountCents">;
-  action: (formData: FormData) => void;
-}) {
-  return (
-    <form action={action} className="grid gap-3 sm:grid-cols-4">
-      <input type="hidden" name="chargeId" value={charge.id} />
-      <div className="space-y-1">
-        <label className="block text-xs font-medium text-[var(--muted)]" htmlFor={`manual-payment-amount-${charge.id}`}>
-          Amount
-        </label>
-        <Input id={`manual-payment-amount-${charge.id}`} name="amountDollars" type="number" min={0.01} step="0.01" defaultValue={(charge.amountCents / 100).toFixed(2)} required />
-      </div>
-      <div className="space-y-1">
-        <label className="block text-xs font-medium text-[var(--muted)]" htmlFor={`manual-payment-method-${charge.id}`}>
-          Method
-        </label>
-        <select id={`manual-payment-method-${charge.id}`} name="method" className="domus-input h-11 w-full rounded-md px-3 text-sm" defaultValue="cash" title="Select manual payment method.">
-          <option value="cash">Cash</option>
-          <option value="check">Check</option>
-          <option value="ach">Bank transfer</option>
-          <option value="other">Other</option>
-        </select>
-      </div>
-      <div className="space-y-1">
-        <label className="block text-xs font-medium text-[var(--muted)]" htmlFor={`manual-payment-reference-${charge.id}`}>
-          Reference Note
-        </label>
-        <Input id={`manual-payment-reference-${charge.id}`} name="referenceNote" placeholder="Optional" />
-      </div>
-      <div className="flex items-end">
-        <SubmitButton size="sm" variant="outline" className="h-11" title="Record this manual payment.">
-          Save Payment
-        </SubmitButton>
-      </div>
-    </form>
-  );
-}
+export { ManualPaymentForm } from "@/components/dashboard/manual-payment-form";
 
 export function ChargeRow({
   charge,
@@ -294,7 +118,10 @@ export function ChargeRow({
     <div
       id={`charge-${charge.id}`}
       className={cn(
-        "rounded-2xl px-2 py-3 transition-all duration-150 hover:bg-[color:color-mix(in_srgb,var(--accent-weak)_72%,transparent)] hover:shadow-sm sm:px-3",
+        [
+          "rounded-2xl px-2 py-3 transition-all duration-150",
+          "hover:bg-[color:color-mix(in_srgb,var(--accent-weak)_72%,transparent)] hover:shadow-sm sm:px-3"
+        ].join(" "),
         last ? "" : "border-b border-[color:color-mix(in_srgb,var(--line)_82%,transparent)]"
       )}
     >
@@ -388,9 +215,17 @@ export function ChargeRow({
                   Remind
                 </Button>
               ) : null}
-              {isTenantView && (tenantPayState === undefined || tenantPayState === "can_pay") && charge.status !== "paid" && charge.status !== "waived" ? (
+              {isTenantView &&
+              (tenantPayState === undefined || tenantPayState === "can_pay") &&
+              charge.status !== "paid" &&
+              charge.status !== "waived" ? (
                 <div className="w-full space-y-2 xl:w-[18rem]">
-                  <div className="rounded-2xl border border-[var(--accent-line)] bg-[color:color-mix(in_srgb,var(--accent-weak)_76%,transparent)] p-3">
+                  <div
+                    className={[
+                      "rounded-2xl border border-[var(--accent-line)]",
+                      "bg-[color:color-mix(in_srgb,var(--accent-weak)_76%,transparent)] p-3"
+                    ].join(" ")}
+                  >
                       <p className="text-sm font-semibold text-foreground">
                         Pay with debit or credit card
                       </p>
