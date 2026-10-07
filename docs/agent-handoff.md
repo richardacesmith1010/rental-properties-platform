@@ -417,6 +417,11 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 - Home defers 5 Home-only bundles (works; Home loads shared bundles only). Owner Home not faster: critical path = ownership.accounts (8 q) → administered-ids (4 q) → dashboard.data (12 q, ~1 s). feature.capabilities cache from S179 is ineffective in production (22 q every request). Next sprint (L3): RPCs for dashboard + ownership, fix capabilities cache.
 
+## Sprint 181 SHIPPED — Speed 73 → 77 (L3, `f0aa0cc`, 2026-10-06, 168,650 tokens)
+
+- Owner dashboard + ownership RPCs (service_role only) with legacy fallback (`owner_rpc_fallback_missing|error` logs); capabilities static + `npm run verify:capabilities` required in gate/smoke. Parity script: `npx tsx scripts/verify-owner-rpc-parity.ts --user <uuid>` (use a scratch npm cache: `npm_config_cache=<scratchpad>/npm-cache`). SQL fixture test in `supabase/tests/sprint181_owner_rpcs_test.sql` (run via MCP; ends with a forced-rollback exception).
+- Next for Speed 80: portfolio.data + administered-ids into the same pattern; then remove legacy fallbacks once stable.
+
 ## ▶ START HERE (next session, written 2026-10-04)
 
 - Last shipped: Sprint 167 + 167b bank feed Phase 1 (`67e2168`). Sprints 168 + 169 shipped (bank feed Phase 1 + 2 complete). Next: owner uploads real Navy Federal + Fidelity October files (from a computer) → Claude verifies real numbers; then Phase 3 (Plaid daily sync, needs owner's Plaid production application). Polish backlog: review-card key by token; payment source 'Other' wording. Production healthy: smoke 3/3 + theme 11/11, Sentry clean.
