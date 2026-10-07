@@ -417,7 +417,7 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 - Home defers 5 Home-only bundles (works; Home loads shared bundles only). Owner Home not faster: critical path = ownership.accounts (8 q) → administered-ids (4 q) → dashboard.data (12 q, ~1 s). feature.capabilities cache from S179 is ineffective in production (22 q every request). Next sprint (L3): RPCs for dashboard + ownership, fix capabilities cache.
 
-## Sprint 190 SHIPPED — Code health 77 → 79, money batch 1 (L3, `019e1b7`, 2026-10-07, gpt-6-sol medium, ChatGPT APPROVE WITH CHANGES: 4 req + 4 opt adopted)
+## Sprint 190 SHIPPED — Code health 77 → 79, money batch 1 (L3, `019e1b7`, 2026-10-07, gpt-6-sol medium, ChatGPT APPROVE WITH CHANGES: 4 req + 4 opt adopted; 168,310 Codex tokens)
 - charges 571→384, charge-management 562→452, withdrawals 517→478, distributions 574→386. Private helpers moved verbatim to `lib/charge-checkout.ts`, `lib/charge-management-helpers.ts`, `lib/withdrawal-helpers.ts` (all `import "server-only"`, no `"use server"`); pure planners/types to `lib/distribution-plans.ts` (client-safe; `distributions.ts` re-exports, type exports kept as types).
 - Claude verified: 57/57 top-level blocks byte-identical to HEAD~ (one whitespace-only wrap in `updateLeaseRentAmount`, permitted); action export lists unchanged; distributions export surface identical (6 types + 10 functions).
 - Characterization tests written and run on unmodified code first: `withdrawals.test.ts` (14 incl. it.each), `distributions-pure.test.ts` (4). Existing tests got only `vi.mock("server-only")` (charges, charge-management, lease-mutations).
