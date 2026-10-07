@@ -417,6 +417,11 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 - Home defers 5 Home-only bundles (works; Home loads shared bundles only). Owner Home not faster: critical path = ownership.accounts (8 q) → administered-ids (4 q) → dashboard.data (12 q, ~1 s). feature.capabilities cache from S179 is ineffective in production (22 q every request). Next sprint (L3): RPCs for dashboard + ownership, fix capabilities cache.
 
+## Sprint 184 SHIPPED — Speed 79 → 80 ✅ (L2, `b4b25e9`, 2026-10-06, gpt-reserve)
+- `owner-page-data.ts`: admin-options + notifications + preferences promises created right after `administeredPropertyIdsPromise` (after early returns). Tests: bundle-plan invariant (new `owner-bundle-plan.test.ts`, 4 existing tests moved there), start-order, no-start on needs-onboarding/needs-setup.
+- Prod: `/owner` data-assembly median 784 ms; owner Home 1.30 s; 27/27 specs; Sentry clean; CI #311 green.
+- Next category: Reliability 78 (daily smoke secrets, owner alerting).
+
 ## Sprint 183 SHIPPED — Speed 77 → 79 (L3, `7b79dc2`, 2026-10-06) — PASS_WITH_RISK
 - New RPCs (applied, service_role only): `owner_administered_property_ids(uuid, uuid)`, `owner_portfolio_payload(uuid, uuid[])`; mapper `apps/web/lib/portfolio-rpc.ts`; legacy fallbacks kept (`owner_rpc_fallback_*` — none seen in prod). Sprint 182 allowlist still applied to RPC profiles.
 - SQL test passed (Claude removed Codex's `alter table ... drop not null` from the fixture — no DDL on prod in tests). Parity OK + tenant scope OK for smoke owner/manager/real owner.
