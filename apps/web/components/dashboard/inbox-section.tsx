@@ -3,129 +3,28 @@
 import { useEffect, useMemo, useState } from "react";
 import { useFormState } from "react-dom";
 import { Bell, Mail, MessageSquare, Search } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { SubmitButton } from "@/components/shared/submit-button";
-import { EmptyState } from "@/components/dashboard/empty-state";
-import { DataRow } from "@/components/shared/data-row";
-import { Button } from "@/components/ui/button";
-import { AnimatedList } from "@/components/ui/animated-list";
-import { AnimatedTabs } from "@/components/ui/animated-tabs";
-import type { ActionState } from "@/app/actions";
-import type { NotificationDTO } from "@/lib/notifications";
-import type { InboxThreadDTO } from "@/lib/inbox";
-import { formatDateTime } from "@/lib/format";
-import { Alert } from "@/components/ui/alert";
-
-type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
-
-type ReadFilter = "all" | "unread" | "read";
-type NotificationFilter = "all" | NotificationDTO["type"];
-type InboxTab = "timeline" | "threads";
-
-interface InboxSectionProps {
-  notifications: NotificationDTO[];
-  threads: InboxThreadDTO[];
-  properties: Array<{ id: string; name: string }>;
-  onMarkRead: StatefulAction;
-  onMarkAllRead?: StatefulAction;
-  onCreateThread?: StatefulAction;
-  onSendMessage?: StatefulAction;
-  onStartTenantConversation?: StatefulAction;
-  threadsReady?: boolean;
-  threadsWarning?: string | null;
-  onOpenSection?: (sectionId: string) => void;
-  messageSectionId?: string;
-  currentUserId?: string;
-  hasActiveLease?: boolean;
-}
-
-const unavailableAction: StatefulAction = async () => ({
-  success: false,
-  error: "Thread actions are unavailable right now."
-});
-
-function mapNotificationToSection(type: NotificationDTO["type"]): string {
-  if (type === "owner_message") return "inbox";
-  if (type === "new_ticket" || type === "ticket_resolved") return "maintenance";
-  if (type === "late_rent" || type === "payment_recorded") return "charges";
-  if (type === "lease_updated") return "leases";
-  if (type === "document_sent" || type === "document_signed") return "documents";
-  return "overview";
-}
-
-function mapEntityTypeToSection(entityType: string): string {
-  if (entityType === "tenant_profile") return "inbox";
-  if (entityType === "maintenance_ticket") return "maintenance";
-  if (entityType === "lease") return "leases";
-  if (entityType === "rent_charge") return "charges";
-  if (entityType === "document_packet") return "documents";
-  return "overview";
-}
-
-function typeLabel(type: string) {
-  return type.replaceAll("_", " ");
-}
-
-function formatTimestamp(value: string) {
-  return formatDateTime(value);
-}
-
-function InboxNotificationRow({
-  notification,
-  onMarkRead,
-  onOpenSection,
-  last
-}: {
-  notification: NotificationDTO;
-  onMarkRead: StatefulAction;
-  onOpenSection?: (sectionId: string) => void;
-  last: boolean;
-}) {
-  const [state, action] = useFormState(onMarkRead, null);
-  const targetSection = mapNotificationToSection(notification.type);
-
-  return (
-    <DataRow last={last}>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-[var(--ink)]">{notification.title}</p>
-        <p className="mt-0.5 text-xs text-[var(--muted)]">{notification.body}</p>
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
-          <Badge variant="outline" className="uppercase">
-            {typeLabel(notification.type)}
-          </Badge>
-          {notification.readAt ? <Badge variant="outline">Read</Badge> : <Badge variant="warning">Unread</Badge>}
-        </div>
-        <p className="mt-1 text-[11px] text-[var(--faint)]">{formatTimestamp(notification.createdAt)}</p>
-      </div>
-      <div className="flex flex-col items-end gap-2">
-        {!notification.readAt && (
-          <form action={action}>
-            <input type="hidden" name="notificationId" value={notification.id} />
-            <SubmitButton size="sm" variant="outline" title="Mark this inbox item as read.">
-              Mark read
-            </SubmitButton>
-            {state && !state.success && <p className="mt-1 text-xs text-[var(--crit)]">{state.error}</p>}
-            {state && state.success && <p className="mt-1 text-xs text-[var(--pos)]">Marked read.</p>}
-          </form>
-        )}
-        {onOpenSection ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            title={`Open ${targetSection} context for this inbox event.`}
-            onClick={() => onOpenSection(targetSection)}
-          >
-            Open context
-          </Button>
-        ) : null}
-      </div>
-    </DataRow>
-  );
-}
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Badge } from "../ui/badge";
+import { Input } from "../ui/input";
+import { Select } from "../ui/select";
+import { SubmitButton } from "../shared/submit-button";
+import { EmptyState } from "./empty-state";
+import { Button } from "../ui/button";
+import { AnimatedList } from "../ui/animated-list";
+import { AnimatedTabs } from "../ui/animated-tabs";
+import { Alert } from "../ui/alert";
+import {
+  InboxNotificationRow,
+  TenantInboxView,
+  mapEntityTypeToSection,
+  typeLabel,
+  formatTimestamp,
+  unavailableAction,
+  type InboxSectionProps,
+  type InboxTab,
+  type ReadFilter,
+  type NotificationFilter,
+} from "./inbox-views";
 
 export function InboxSection({
   notifications,
@@ -141,9 +40,11 @@ export function InboxSection({
   onOpenSection,
   messageSectionId = "inbox",
   currentUserId,
-  hasActiveLease = true
+  hasActiveLease = true,
 }: InboxSectionProps) {
-  const [activeTab, setActiveTab] = useState<InboxTab>(onStartTenantConversation ? "threads" : "timeline");
+  const [activeTab, setActiveTab] = useState<InboxTab>(
+    onStartTenantConversation ? "threads" : "timeline",
+  );
   const [query, setQuery] = useState("");
   const [readFilter, setReadFilter] = useState<ReadFilter>("all");
   const [typeFilter, setTypeFilter] = useState<NotificationFilter>("all");
@@ -152,19 +53,16 @@ export function InboxSection({
 
   const [createThreadState, createThreadAction] = useFormState(
     onCreateThread ?? unavailableAction,
-    null
+    null,
   );
-  const [markAllState, markAllAction] = useFormState(
-    onMarkAllRead ?? unavailableAction,
-    null
-  );
+  const [markAllState, markAllAction] = useFormState(onMarkAllRead ?? unavailableAction, null);
   const [sendMessageState, sendMessageAction] = useFormState(
     onSendMessage ?? unavailableAction,
-    null
+    null,
   );
   const [startState, startAction] = useFormState(
     onStartTenantConversation ?? unavailableAction,
-    null
+    null,
   );
 
   useEffect(() => {
@@ -211,101 +109,26 @@ export function InboxSection({
   }, [notifications, query, readFilter, typeFilter]);
 
   const selectedThread = threads.find((thread) => thread.id === selectedThreadId) ?? null;
-  const homesWithoutThread = properties.filter((property) =>
-    !threads.some((thread) => thread.propertyId === property.id)
+  const homesWithoutThread = properties.filter(
+    (property) => !threads.some((thread) => thread.propertyId === property.id),
   );
 
   if (onStartTenantConversation) {
-    const tenantThread = selectedThread;
     return (
-      <Card id="inbox" className="border border-border/50 shadow-sm">
-        <CardContent className="space-y-4 p-4 sm:p-5">
-          {!hasActiveLease ? (
-            <p className="text-sm text-[var(--muted)]">
-              Once your landlord sets up your lease, you can report problems. You can also send messages.
-            </p>
-          ) : null}
-          {threads.length === 0 ? (
-            <form
-              action={hasActiveLease ? startAction : undefined}
-              onSubmit={!hasActiveLease ? (event) => event.preventDefault() : undefined}
-              className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4"
-            >
-              <h2 className="text-lg font-semibold text-[var(--ink)]">Message your landlord</h2>
-              {properties.length > 1 ? <label className="block text-sm text-[var(--ink)]">Which home?<Select name="propertyId" defaultValue="" required className="mt-1 min-h-11" title="Choose the home this message is about."><option value="" disabled>Choose a home</option>{properties.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}</Select></label> : <input type="hidden" name="propertyId" value={properties[0]?.id ?? ""} />}
-              <label className="block text-sm text-[var(--ink)]">Your message<textarea name="body" required maxLength={2000} rows={4} className="domus-input mt-1 w-full rounded-xl p-3" placeholder="Write a message…" /></label>
-              <SubmitButton
-                className="min-h-11"
-                disabled={!hasActiveLease}
-                title="Send your message to your landlord."
-              >
-                Send
-              </SubmitButton>
-              {startState && !startState.success ? <p role="alert" className="text-sm text-[var(--crit)]">{startState.error}</p> : null}
-            </form>
-          ) : (
-            <div className="space-y-4">
-              {threads.length > 1 ? <div className="space-y-2"><p className="text-sm font-semibold text-[var(--ink)]">Your homes</p>{threads.map((thread) => <button key={thread.id} type="button" onClick={() => setSelectedThreadId(thread.id)} className={`min-h-11 w-full rounded-xl border px-3 py-2 text-left ${selectedThreadId === thread.id ? "border-[var(--accent-line)] bg-[var(--accent-weak)]" : "border-[var(--line)] bg-[var(--surface-2)]"}`} title={`Open messages for ${thread.propertyName}.`}><span className="font-medium text-[var(--ink)]">{thread.propertyName}</span><span className="mt-0.5 block truncate text-sm text-[var(--muted)]">{thread.latestMessagePreview ?? "No messages yet."}</span></button>)}</div> : null}
-              {tenantThread ? <div className="space-y-4">
-                <div><h2 className="text-lg font-semibold text-[var(--ink)]">{tenantThread.propertyName}</h2><p className="text-sm text-[var(--muted)]">Chat with your landlord</p></div>
-                <div className="space-y-3" aria-live="polite">{tenantThread.messages.map((message) => { const mine = message.senderProfileId === currentUserId || message.direction === "inbound"; return <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}><div className={`max-w-[85%] rounded-2xl px-3 py-2 ${mine ? "bg-[var(--accent)] text-[var(--accent-contrast)]" : "bg-[var(--surface-2)] text-[var(--ink)]"}`}><p className="text-xs font-semibold">{mine ? "You" : message.senderName ?? "Your landlord"}</p><p className="mt-1 text-sm">{message.body}</p><p className={`mt-1 text-[11px] ${mine ? "opacity-80" : "text-[var(--muted)]"}`}>{formatTimestamp(message.createdAt)}</p></div></div>; })}</div>
-                <form
-                  action={hasActiveLease ? sendMessageAction : undefined}
-                  onSubmit={!hasActiveLease ? (event) => event.preventDefault() : undefined}
-                  className="space-y-2"
-                >
-                  <input type="hidden" name="threadId" value={tenantThread.id} />
-                  <Input name="body" placeholder="Write a message…" required />
-                  <div className="flex justify-end">
-                    <SubmitButton
-                      size="sm"
-                      className="min-h-11"
-                      disabled={!hasActiveLease}
-                      title="Send a message to your landlord."
-                    >
-                      Send
-                    </SubmitButton>
-                  </div>
-                  {sendMessageState && !sendMessageState.success ? (
-                    <p className="text-sm text-[var(--crit)]">{sendMessageState.error}</p>
-                  ) : null}
-                </form>
-              </div> : null}
-              {homesWithoutThread.length > 0 ? (
-                <form
-                  action={hasActiveLease ? startAction : undefined}
-                  onSubmit={!hasActiveLease ? (event) => event.preventDefault() : undefined}
-                  className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4"
-                >
-                  <h2 className="text-lg font-semibold text-[var(--ink)]">Message your landlord</h2>
-                  <label className="block text-sm text-[var(--ink)]">
-                    Which home?
-                    <Select name="propertyId" defaultValue="" required className="mt-1 min-h-11"
-                      title="Choose the home this message is about."
-                    >
-                      <option value="" disabled>Choose a home</option>
-                      {homesWithoutThread.map((property) => (
-                        <option key={property.id} value={property.id}>{property.name}</option>
-                      ))}
-                    </Select>
-                  </label>
-                  <label className="block text-sm text-[var(--ink)]">
-                    Your message
-                    <textarea name="body" required maxLength={2000} rows={4}
-                      className="domus-input mt-1 w-full rounded-xl p-3" placeholder="Write a message…"
-                    />
-                  </label>
-                  <SubmitButton className="min-h-11" disabled={!hasActiveLease}
-                    title="Send your message to your landlord."
-                  >
-                    Send
-                  </SubmitButton>
-                </form>
-              ) : null}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <TenantInboxView
+        hasActiveLease={hasActiveLease}
+        threads={threads}
+        properties={properties}
+        startAction={startAction}
+        startState={startState}
+        sendMessageAction={sendMessageAction}
+        sendMessageState={sendMessageState}
+        selectedThread={selectedThread}
+        selectedThreadId={selectedThreadId}
+        setSelectedThreadId={setSelectedThreadId}
+        currentUserId={currentUserId}
+        homesWithoutThread={homesWithoutThread}
+      />
     );
   }
 
@@ -339,9 +162,11 @@ export function InboxSection({
         {markAllState && markAllState.success && markAllState.message ? (
           <p className="text-sm text-[var(--pos)]">{markAllState.message}</p>
         ) : null}
-        {!onStartTenantConversation && <p className="text-sm text-[var(--ink-2)]">
-          Central communication timeline for rent, maintenance, lease, and document events.
-        </p>}
+        {!onStartTenantConversation && (
+          <p className="text-sm text-[var(--ink-2)]">
+            Central communication timeline for rent, maintenance, lease, and document events.
+          </p>
+        )}
 
         <AnimatedTabs
           tabs={[
@@ -359,8 +184,7 @@ export function InboxSection({
 
         {!threadsReady && (
           <Alert variant="warning" className="text-xs font-normal">
-            {threadsWarning ??
-              "Messages are not ready yet. You can see alerts here for now."}
+            {threadsWarning ?? "Messages are not ready yet. You can see alerts here for now."}
           </Alert>
         )}
 
@@ -376,7 +200,10 @@ export function InboxSection({
                   className="pl-8"
                 />
               </div>
-              <Select value={readFilter} onChange={(event) => setReadFilter(event.target.value as ReadFilter)}>
+              <Select
+                value={readFilter}
+                onChange={(event) => setReadFilter(event.target.value as ReadFilter)}
+              >
                 <option value="all">All statuses</option>
                 <option value="unread">Unread only</option>
                 <option value="read">Read only</option>
@@ -398,7 +225,10 @@ export function InboxSection({
             </div>
 
             {filteredNotifications.length === 0 ? (
-              notifications.length === 0 && !query.trim() && readFilter === "all" && typeFilter === "all" ? (
+              notifications.length === 0 &&
+              !query.trim() &&
+              readFilter === "all" &&
+              typeFilter === "all" ? (
                 <EmptyState
                   icon={Mail}
                   title="No messages yet"
@@ -429,8 +259,13 @@ export function InboxSection({
         ) : (
           <div className="space-y-3">
             {onCreateThread ? (
-              <form action={createThreadAction} className="rounded-2xl border border-border/50 bg-[var(--surface-2)] p-3 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Create thread</p>
+              <form
+                action={createThreadAction}
+                className="rounded-2xl border border-border/50 bg-[var(--surface-2)] p-3 shadow-sm"
+              >
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                  Create thread
+                </p>
                 <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <Select
                     name="propertyId"
@@ -446,7 +281,11 @@ export function InboxSection({
                       </option>
                     ))}
                   </Select>
-                  <Select name="entityType" defaultValue="general" title="Link this thread to a related workflow entity.">
+                  <Select
+                    name="entityType"
+                    defaultValue="general"
+                    title="Link this thread to a related workflow entity."
+                  >
                     <option value="general">General</option>
                     <option value="maintenance_ticket">Maintenance Ticket</option>
                     <option value="lease">Lease</option>
@@ -470,57 +309,90 @@ export function InboxSection({
               </form>
             ) : null}
 
-            {onStartTenantConversation && (homesWithoutThread.length > 0 || threads.length === 0) ? (
-              <form action={startAction} className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+            {onStartTenantConversation &&
+            (homesWithoutThread.length > 0 || threads.length === 0) ? (
+              <form
+                action={startAction}
+                className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4"
+              >
                 <h3 className="text-lg font-semibold text-[var(--ink)]">Message your landlord</h3>
-                {properties.length > 1 && <label className="block text-sm text-[var(--ink)]">
-                  Which home?
-                  <Select name="propertyId" defaultValue="" required className="mt-1 min-h-11" title="Choose the home this message is about.">
-                    <option value="" disabled>Choose a home</option>
-                    {homesWithoutThread.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}
-                  </Select>
-                </label>}
+                {properties.length > 1 && (
+                  <label className="block text-sm text-[var(--ink)]">
+                    Which home?
+                    <Select
+                      name="propertyId"
+                      defaultValue=""
+                      required
+                      className="mt-1 min-h-11"
+                      title="Choose the home this message is about."
+                    >
+                      <option value="" disabled>
+                        Choose a home
+                      </option>
+                      {homesWithoutThread.map((property) => (
+                        <option key={property.id} value={property.id}>
+                          {property.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </label>
+                )}
                 <label className="block text-sm text-[var(--ink)]">
                   Your message
-                  <textarea name="body" required maxLength={2000} rows={4} className="domus-input mt-1 w-full rounded-xl p-3" placeholder="What would you like to ask?" />
+                  <textarea
+                    name="body"
+                    required
+                    maxLength={2000}
+                    rows={4}
+                    className="domus-input mt-1 w-full rounded-xl p-3"
+                    placeholder="What would you like to ask?"
+                  />
                 </label>
-                <SubmitButton className="min-h-11" title="Send your message to your landlord.">Send</SubmitButton>
-                {startState && !startState.success && <p role="alert" className="text-sm text-[var(--crit)]">{startState.error}</p>}
-                {startState?.success && <p role="status" className="text-sm text-[var(--pos)]">{startState.message}</p>}
+                <SubmitButton className="min-h-11" title="Send your message to your landlord.">
+                  Send
+                </SubmitButton>
+                {startState && !startState.success && (
+                  <p role="alert" className="text-sm text-[var(--crit)]">
+                    {startState.error}
+                  </p>
+                )}
+                {startState?.success && (
+                  <p role="status" className="text-sm text-[var(--pos)]">
+                    {startState.message}
+                  </p>
+                )}
               </form>
             ) : null}
             {threads.length === 0 && !onStartTenantConversation ? (
-              <EmptyState
-                icon={Mail}
-                title="No messages"
-                description="Your inbox is empty."
-              />
+              <EmptyState icon={Mail} title="No messages" description="Your inbox is empty." />
             ) : threads.length > 0 ? (
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                 <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-[var(--domus-shadow-sm)]">
                   <AnimatedList className="space-y-2">
-                  {threads.map((thread) => (
-                    <button
-                      key={thread.id}
-                      type="button"
-                      onClick={() => setSelectedThreadId(thread.id)}
-                      className={`min-h-11 w-full rounded-md border px-3 py-2 text-left transition ${
-                        selectedThreadId === thread.id
-                          ? "border-[var(--accent-line)] bg-[var(--accent-weak)]"
-                          : "border-[var(--line)] bg-[var(--surface-2)] hover:bg-[var(--surface-3)]"
-                      }`}
-                      title="Open this conversation thread."
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="truncate text-base font-medium text-[var(--ink)]">{thread.subject}</p>
-                        <Badge variant="outline">{thread.messageCount} msg</Badge>
-                      </div>
-                      <p className="mt-0.5 text-sm text-[var(--muted)]">{thread.propertyName}</p>
-                      <p className="mt-0.5 truncate text-sm text-[var(--ink-2)]">
-                        {thread.latestMessagePreview ?? "No messages yet."}
-                      </p>
-                    </button>
-                  ))}
+                    {threads.map((thread) => (
+                      <button
+                        key={thread.id}
+                        type="button"
+                        onClick={() => setSelectedThreadId(thread.id)}
+                        className={`min-h-11 w-full rounded-md border px-3 py-2 text-left transition ${
+                          selectedThreadId === thread.id
+                            ? "border-[var(--accent-line)] bg-[var(--accent-weak)]"
+                            : "border-[var(--line)] bg-[var(--surface-2)] hover:bg-[var(--surface-3)]"
+                        }`}
+                        title="Open this conversation thread."
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="truncate text-base font-medium text-[var(--ink)]">
+                            {thread.subject}
+                          </p>
+                          <Badge variant="outline">{thread.messageCount} msg</Badge>
+                        </div>
+                        <p className="mt-0.5 text-sm text-[var(--muted)]">{thread.propertyName}</p>
+                        <p className="mt-0.5 truncate text-sm text-[var(--ink-2)]">
+                          {thread.latestMessagePreview ?? "No messages yet."}
+                        </p>
+                      </button>
+                    ))}
                   </AnimatedList>
                 </div>
 
@@ -528,7 +400,9 @@ export function InboxSection({
                   {selectedThread ? (
                     <div className="space-y-3">
                       <div>
-                        <p className="text-base font-medium text-[var(--ink)]">{selectedThread.subject}</p>
+                        <p className="text-base font-medium text-[var(--ink)]">
+                          {selectedThread.subject}
+                        </p>
                         <p className="text-sm text-[var(--muted)]">{selectedThread.propertyName}</p>
                         <div className="mt-1 flex flex-wrap gap-2">
                           <Badge variant="outline">{typeLabel(selectedThread.entityType)}</Badge>
@@ -538,7 +412,9 @@ export function InboxSection({
                               size="sm"
                               variant="outline"
                               title="Open the related workspace section for this thread."
-                              onClick={() => onOpenSection(mapEntityTypeToSection(selectedThread.entityType))}
+                              onClick={() =>
+                                onOpenSection(mapEntityTypeToSection(selectedThread.entityType))
+                              }
                             >
                               Open context
                             </Button>
@@ -551,14 +427,18 @@ export function InboxSection({
                           <EmptyState message="No messages in this thread yet." />
                         ) : (
                           <AnimatedList className="space-y-2">
-                          {selectedThread.messages.map((message) => (
-                            <div key={message.id} className="rounded-xl border border-border/50 bg-[var(--surface-2)] px-3 py-2 shadow-sm">
-                              <p className="text-sm text-[var(--muted)]">
-                                {message.senderEmail ?? "System"} • {formatTimestamp(message.createdAt)}
-                              </p>
-                              <p className="mt-1 text-sm text-[var(--ink)]">{message.body}</p>
-                            </div>
-                          ))}
+                            {selectedThread.messages.map((message) => (
+                              <div
+                                key={message.id}
+                                className="rounded-xl border border-border/50 bg-[var(--surface-2)] px-3 py-2 shadow-sm"
+                              >
+                                <p className="text-sm text-[var(--muted)]">
+                                  {message.senderEmail ?? "System"} •{" "}
+                                  {formatTimestamp(message.createdAt)}
+                                </p>
+                                <p className="mt-1 text-sm text-[var(--ink)]">{message.body}</p>
+                              </div>
+                            ))}
                           </AnimatedList>
                         )}
                       </div>
@@ -567,7 +447,11 @@ export function InboxSection({
                         <input type="hidden" name="threadId" value={selectedThread.id} />
                         <Input name="body" placeholder="Type a message..." required />
                         <div className="flex justify-end">
-                          <SubmitButton size="sm" className="min-h-11" title="Send a new in-app message in this thread.">
+                          <SubmitButton
+                            size="sm"
+                            className="min-h-11"
+                            title="Send a new in-app message in this thread."
+                          >
                             Send message
                           </SubmitButton>
                         </div>
