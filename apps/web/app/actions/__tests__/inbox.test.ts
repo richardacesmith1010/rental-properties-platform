@@ -34,6 +34,7 @@ vi.mock("@/app/actions/shared", () => ({
 }));
 
 import { sendMessageToTenant, startTenantConversation } from "@/app/actions/inbox";
+import { requestManualPaymentConfirmation } from "@/app/actions/inbox-manual-payment";
 
 const homeA = "11111111-1111-4111-8111-111111111111";
 const homeB = "22222222-2222-4222-8222-222222222222";
@@ -224,6 +225,61 @@ describe("inbox actions", () => {
       role: "owner",
       supabase: {} as SupabaseClient
     });
+  });
+
+  it("sends the exact plain-language manual payment message and title", async () => {
+    const inserted: Array<{ body?: string; subject?: string }> = [];
+    const subjects: string[] = [];
+    const rows: Record<string, Record<string, unknown> | Array<Record<string, unknown>>> = {
+      rent_charges: { id: "charge-1", lease_id: "lease-1", due_date: "2026-10-01", amount_cents: 100, status: "late" },
+      leases: { id: "lease-1", tenant_profile_id: "tenant-1", unit_id: "unit-1" },
+      units: { property_id: homeA, unit_number: "1A" },
+      profiles: { full_name: "Taylor Tenant", email: "tenant@example.com" },
+      properties: { name: "Atlas House", owner_account_id: "account-1" },
+      ownership_account_members: [{ profile_id: "owner-1" }],
+      inbox_threads: { id: "thread-1" }
+    };
+    createAdminClientMock.mockReturnValue({
+      from: (table: string) => {
+        let listProfiles = false;
+        const query = {
+          select: () => query,
+          eq: (column: string, value: unknown) => {
+            if (column === "subject") subjects.push(String(value));
+            return query;
+          },
+          limit: () => query,
+          in: () => { listProfiles = true; return query; },
+          maybeSingle: async () => ({ data: rows[table] ?? null, error: null }),
+          insert: (payload: { body?: string; subject?: string }) => {
+            inserted.push(payload);
+            return query;
+          },
+          update: () => query,
+          single: async () => ({ data: rows[table] ?? null, error: null }),
+          then: (resolve: (value: { data: unknown; error: null }) => unknown) =>
+            Promise.resolve(resolve({
+              data: listProfiles && table === "profiles"
+                ? [{ id: "owner-1", email: "owner@example.com", full_name: "Ace Owner" }]
+                : rows[table] ?? null,
+              error: null
+            }))
+        };
+        return query;
+      }
+    });
+    requireAuthMock.mockResolvedValue({ user: { id: "tenant-1", email: "tenant@example.com" } });
+    parseFormDataMock.mockReturnValue({ success: true, data: { chargeId: "charge-1" } });
+    const result = await requestManualPaymentConfirmation(null, new FormData());
+    expect(result?.success).toBe(true);
+    expect(subjects).toContain("Manual payment review - Atlas House • Unit 1A");
+    expect(inserted.find((item) => item.body)?.body).toBe(
+      "Taylor Tenant says they paid $1 for Atlas House • Unit 1A. " +
+      "Rent due Oct 1, 2026. Please check, then mark it paid in Rent."
+    );
+    expect(createNotificationWithDeliveryMock).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Tenant says rent is paid" })
+    );
   });
 
   it("rejects unauthorized senders for direct tenant messages", async () => {

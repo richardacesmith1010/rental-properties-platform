@@ -93,8 +93,8 @@ export async function requestManualPaymentConfirmation(
   }
 
   const messageBody = [
-    `${tenantName} reported paying ${formatCurrency(charge.amount_cents)} for ${locationLabel} manually. `,
-    `Charge due ${formatDate(charge.due_date)}. Please confirm receipt in Charges.`
+    `${tenantName} says they paid ${formatCurrency(charge.amount_cents)} for ${locationLabel}. `,
+    `Rent due ${formatDate(charge.due_date)}. Please check, then mark it paid in Rent.`
   ].join("");
 
   const messageError = await insertInboxMessage({
@@ -117,7 +117,7 @@ export async function requestManualPaymentConfirmation(
         recipientProfileId: owner.id,
         recipientEmail: owner.email,
         type: "owner_message" satisfies NotificationType,
-        title: "Manual payment confirmation needed",
+        title: "Tenant says rent is paid",
         body: `${tenantName} reported a manual payment for ${propertyName}.`,
         entityType: "inbox_thread",
         entityId: threadId,

@@ -100,4 +100,70 @@ describe("TenantRentCard", () => {
     expect(screen.getByText("$3.50 · 2 months")).toBeInTheDocument();
     expect(screen.getByText(/due Oct 1/)).toBeInTheDocument();
   });
+
+  it("shows unpaid months oldest first with a button for each when online pay is off", () => {
+    const charges = [
+      { ...baseProps.charges[0], id: "nov", dueDate: "2026-11-01", amountCents: 250 },
+      { ...baseProps.charges[0], id: "oct", dueDate: "2026-10-01" }
+    ];
+    render(<TenantRentCard {...baseProps} charges={charges} payState="not_ready" />);
+    expect(screen.getByText("Already paid? Tell your landlord.")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "I paid this" })).toHaveLength(2);
+    expect(screen.getAllByText(/rent ·/).map((node) => node.textContent)).toEqual([
+      "Oct 1 rent · $1", "Nov 1 rent · $2.50"
+    ]);
+  });
+
+  it("sends the selected month and replaces only its button after success", async () => {
+    formDispatches.length = 0;
+    const action = vi.fn(async () => ({ success: true as const }));
+    const charges = [baseProps.charges[0], { ...baseProps.charges[0], id: "2", dueDate: "2026-11-01" }];
+    const { container } = render(
+      <TenantRentCard {...baseProps} charges={charges} payState="not_ready" onRequestManualPaymentConfirmation={action} />
+    );
+    const form = container.querySelectorAll("form")[1];
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      void formDispatches[1](new FormData(form));
+    });
+    fireEvent.submit(form);
+    await waitFor(() => expect(action).toHaveBeenCalledOnce());
+    expect((action.mock.calls[0] as unknown[])[1]).toBeInstanceOf(FormData);
+    expect(((action.mock.calls[0] as unknown[])[1] as FormData).get("chargeId")).toBe("2");
+    await waitFor(() => expect(screen.getByText("Sent. Your landlord will check and mark it paid.")).toBeInTheDocument());
+    expect(screen.getAllByRole("button", { name: "I paid this" })).toHaveLength(1);
+  });
+
+  it("shows a returned error and keeps the selected button", async () => {
+    formDispatches.length = 0;
+    const action = vi.fn(async () => ({ success: false, error: "Please try again." }));
+    const { container } = render(
+      <TenantRentCard {...baseProps} payState="not_ready" onRequestManualPaymentConfirmation={action} />
+    );
+    const form = container.querySelector("form")!;
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      void formDispatches[0](new FormData(form));
+    });
+    fireEvent.submit(form);
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Please try again."));
+    expect(screen.getByRole("button", { name: "I paid this" })).toBeInTheDocument();
+  });
+
+  it("shows the report button for rent paid outside Domus", () => {
+    render(<TenantRentCard {...baseProps} payState="outside" />);
+    expect(screen.getByRole("button", { name: "I paid this" })).toBeInTheDocument();
+  });
+
+  it.each(["can_pay", "paid", "not_posted", "no_lease"] as const)(
+    "does not show the report button in %s", (payState) => {
+      render(<TenantRentCard {...baseProps} payState={payState} />);
+      expect(screen.queryByRole("button", { name: "I paid this" })).not.toBeInTheDocument();
+    }
+  );
+
+  it("does not prompt when no month is unpaid", () => {
+    render(<TenantRentCard {...baseProps} payState="not_ready" charges={[]} />);
+    expect(screen.queryByText("Already paid? Tell your landlord.")).not.toBeInTheDocument();
+  });
 });

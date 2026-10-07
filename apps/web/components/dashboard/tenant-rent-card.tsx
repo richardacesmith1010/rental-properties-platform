@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useFormState } from "react-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/shared/submit-button";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { TenantCharge } from "@/lib/tenant-payments";
 import type { TenantPayState } from "@/lib/tenant-pay-state";
@@ -38,6 +40,30 @@ function relativeDueText(dueDate: string) {
   if (days < 0) return `${Math.abs(days)} day${Math.abs(days) === 1 ? "" : "s"} late`;
   if (days === 0) return "today";
   return `in ${days} day${days === 1 ? "" : "s"}`;
+}
+
+function ReportPaidRow({ charge, action }: { charge: TenantCharge; action: StatefulAction }) {
+  const [state, formAction] = useFormState(action, null);
+  return (
+    <div className="border-t border-[var(--line)] pt-3 first:border-t-0 first:pt-0">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span className="text-sm text-[var(--ink)]">
+          {monthDay(charge.dueDate)} rent · {formatCurrency(charge.amountCents)}
+        </span>
+        {state?.success ? (
+          <span className="text-sm text-[var(--pos)]">Sent. Your landlord will check and mark it paid.</span>
+        ) : (
+          <form action={formAction}>
+            <input type="hidden" name="chargeId" value={charge.id} />
+            <SubmitButton variant="outline" size="sm" className="min-h-11" title="Tell your landlord you paid this month.">
+              I paid this
+            </SubmitButton>
+          </form>
+        )}
+      </div>
+      {state && !state.success ? <p role="alert" className="mt-2 text-sm text-[var(--crit)]">{state.error}</p> : null}
+    </div>
+  );
 }
 
 export function TenantRentCard({
@@ -101,6 +127,16 @@ export function TenantRentCard({
         ) : null}
         {payState === "not_ready" ? <div className="rounded-xl bg-[var(--surface-2)] p-4 text-sm text-[var(--muted)]"><p className="font-semibold text-[var(--ink)]">Online pay isn&apos;t on yet</p><p className="mt-1">Your landlord is still setting it up. Pay them the way you usually do for now.</p></div> : null}
         {payState === "outside" ? <div className="rounded-xl bg-[var(--surface-2)] p-4 text-sm text-[var(--muted)]">You pay your landlord outside Domus.</div> : null}
+        {(payState === "not_ready" || payState === "outside") && unpaidCharges.length > 0 ? (
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-[var(--ink)]">Already paid? Tell your landlord.</p>
+            <div className="space-y-3">
+              {[...unpaidCharges].sort((a, b) => a.dueDate.localeCompare(b.dueDate)).map((item) => (
+                <ReportPaidRow key={item.id} charge={item} action={onRequestManualPaymentConfirmation} />
+              ))}
+            </div>
+          </div>
+        ) : null}
         {payState === "paid" && lastPaidAt ? <div className="rounded-xl bg-[var(--pos-bg)] p-4 text-sm font-semibold text-[var(--pos)]">Paid {formatDate(lastPaidAt)}. Thank you!</div> : null}
         {payState === "not_posted" ? <p className="text-sm text-[var(--muted)]">You can pay once it&apos;s posted.</p> : null}
       </CardContent>
