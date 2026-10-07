@@ -91,20 +91,20 @@ describe("InboxSection tenant conversation", () => {
     render(<InboxSection notifications={[{ id: "n", type: "owner_message", title: "Alert", body: "Alert", entityType: "general", entityId: null, createdAt: "2026-10-05", readAt: null }]} threads={[landlordThread]} properties={[home]} currentUserId="tenant-1" onMarkRead={noop} onSendMessage={noop} onStartTenantConversation={noop} />);
     expect(screen.getByText("Alex Landlord")).toBeInTheDocument();
     expect(screen.getByText("You")).toBeInTheDocument();
-    expect(screen.queryByRole("tab", { name: "Timeline" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Updates" })).not.toBeInTheDocument();
     expect(screen.queryByText("unread")).not.toBeInTheDocument();
   });
 
   it("lists tenant-started threads for an administrator", () => {
     render(<InboxSection notifications={[]} threads={[thread]} properties={[home]} onMarkRead={noop} onSendMessage={noop} />);
-    expect(screen.getByRole("tab", { name: "Threads" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Conversations" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("button", { name: /Messages with your tenant/ })).toBeInTheDocument();
   });
   it("opens owner updates when a notification is unread", () => {
     render(<InboxSection viewerRole="owner" notifications={[{ id: "n", type: "owner_message", title: "Alert",
       body: "Alert", entityType: "general", entityId: null, createdAt: "2026-10-05", readAt: null }]}
       threads={[thread]} properties={[home]} onMarkRead={noop} />);
-    expect(screen.getByRole("tab", { name: "Timeline" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Updates" })).toHaveAttribute("aria-selected", "true");
   });
 
   it("shows role-specific empty update copy", () => {
@@ -114,7 +114,7 @@ describe("InboxSection tenant conversation", () => {
     expect(screen.getByText("Rent, repair, and lease updates show up here.")).toBeInTheDocument();
     rerender(<InboxSection viewerRole="tenant" notifications={[]} threads={[]} properties={[home]}
       onMarkRead={noop} />);
-    fireEvent.click(screen.getByRole("tab", { name: "Timeline" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Updates" }));
     expect(screen.getByText("No messages yet")).toBeInTheDocument();
     expect(screen.getByText("Your landlord can message you here.")).toBeInTheDocument();
   });
@@ -133,7 +133,23 @@ describe("InboxSection tenant conversation", () => {
   it("opens manager conversations without unread updates", () => {
     render(<InboxSection viewerRole="manager" notifications={[]} threads={[thread]}
       properties={[home]} onMarkRead={noop} />);
-    expect(screen.getByRole("tab", { name: "Threads" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Conversations" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("shows sender name, self, and email fallback without an Entity ID field", () => {
+    const messages = [
+      { ...thread.messages[0], id: "named", senderProfileId: "other", senderName: "Alex Landlord" },
+      { ...thread.messages[0], id: "self", senderProfileId: "me", senderName: "Courtney" },
+      { ...thread.messages[0], id: "email", senderProfileId: null, senderName: null,
+        senderEmail: "guest@example.com" }
+    ];
+    render(<InboxSection viewerRole="owner" notifications={[]} threads={[{ ...thread, messages }]}
+      properties={[home]} currentUserId="me" onMarkRead={noop} onCreateThread={noop} />);
+    expect(screen.getByText(/Alex Landlord •/)).toBeInTheDocument();
+    expect(screen.getByText(/You •/)).toBeInTheDocument();
+    expect(screen.getByText(/guest@example.com •/)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Subject")).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("Entity ID (optional)")).not.toBeInTheDocument();
   });
 
 });

@@ -167,14 +167,14 @@ export function InboxSection({
         ) : null}
         {!onStartTenantConversation && (
           <p className="text-sm text-[var(--ink-2)]">
-            Central communication timeline for rent, maintenance, lease, and document events.
+            Updates about rent, repairs, leases, and papers.
           </p>
         )}
 
         <AnimatedTabs
           tabs={[
-            { id: "timeline", label: "Timeline" },
-            { id: "threads", label: "Threads", icon: <MessageSquare className="h-4 w-4" /> },
+            { id: "timeline", label: "Updates" },
+            { id: "threads", label: "Conversations", icon: <MessageSquare className="h-4 w-4" /> },
           ]}
           activeTab={activeTab}
           onTabChange={(tabId) => {
@@ -297,8 +297,7 @@ export function InboxSection({
                     <option value="document_packet">Document Packet</option>
                   </Select>
                 </div>
-                <Input name="subject" className="mt-2" placeholder="Thread subject" required />
-                <Input name="entityId" className="mt-2" placeholder="Entity ID (optional)" />
+                <Input name="subject" className="mt-2" placeholder="Subject" required />
                 <div className="mt-2 flex justify-end">
                   <SubmitButton size="sm" title="Create a new inbox conversation thread.">
                     Create thread
@@ -415,12 +414,12 @@ export function InboxSection({
                               type="button"
                               size="sm"
                               variant="outline"
-                              title="Open the related workspace section for this thread."
+                              title="Open the page this conversation is about."
                               onClick={() =>
                                 onOpenSection(mapEntityTypeToSection(selectedThread.entityType))
                               }
                             >
-                              Open context
+                              Go to related page
                             </Button>
                           ) : null}
                         </div>
@@ -437,7 +436,9 @@ export function InboxSection({
                                 className="rounded-xl border border-border/50 bg-[var(--surface-2)] px-3 py-2 shadow-sm"
                               >
                                 <p className="text-sm text-[var(--muted)]">
-                                  {message.senderEmail ?? "System"} •{" "}
+                                  {message.senderProfileId === currentUserId && currentUserId
+                                    ? "You"
+                                    : message.senderName || message.senderEmail || "System"} •{" "}
                                   {formatTimestamp(message.createdAt)}
                                 </p>
                                 <p className="mt-1 text-sm text-[var(--ink)]">{message.body}</p>

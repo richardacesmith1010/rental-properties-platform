@@ -138,7 +138,7 @@ export default async function JoinLlcPage(props: JoinLlcPageProps) {
     const acceptError =
       accepted && !accepted.success
         ? accepted.error
-        : "Please sign in again or ask the LLC owner to resend the invitation.";
+        : "Sign in again or ask the LLC owner to resend your invitation.";
 
     return (
       <InviteErrorState
@@ -226,7 +226,7 @@ export default async function JoinLlcPage(props: JoinLlcPageProps) {
                 <p className="mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
                   {mode === "signin"
                     ? "Use the invited email address below. Once you sign in, Domus will attach you to this LLC automatically."
-                    : "Create your Domus owner account and you’ll land directly in this LLC workspace."}
+                    : "Create your Domus owner account to open this LLC workspace."}
                 </p>
               </div>
 

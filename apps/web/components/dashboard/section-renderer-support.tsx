@@ -22,8 +22,8 @@ function getSectionHelpText(sectionId: string, role: string) {
 
   if (sectionId === "maintenance") {
     return role === "tenant"
-      ? "When you report a problem, updates from your landlord will show up here."
-      : "When your tenant reports a problem, it shows up here with status and photo updates.";
+      ? "Report a problem to see updates from your landlord here."
+      : "Tenant reports appear here with status and photo updates.";
   }
 
   if (sectionId === "members") {

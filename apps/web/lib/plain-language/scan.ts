@@ -86,6 +86,25 @@ export function scanSource(source: string, file: string): PlainLanguageHit[] {
   }
 
   function visit(node: ts.Node): void {
+    const returnScope = file.endsWith(".tsx") && /^apps\/web\/(?:components|app)\//.test(file);
+    if (returnScope) {
+      const value = expressionText(node);
+      const parent = node.parent;
+      const returned = parent && ts.isReturnStatement(parent) && parent.expression === node;
+      const ternary = parent && ts.isConditionalExpression(parent)
+        && (parent.whenTrue === node || parent.whenFalse === node);
+      const fallback = parent && ts.isBinaryExpression(parent)
+        && (parent.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken
+          || parent.operatorToken.kind === ts.SyntaxKind.BarBarToken)
+        && parent.right === node;
+      let ancestor: ts.Node | undefined = node.parent;
+      let className = false;
+      while (ancestor) {
+        if (ts.isJsxAttribute(ancestor) && ancestor.name.getText(tree) === "className") className = true;
+        ancestor = ancestor.parent;
+      }
+      if (!className && value !== null && value.includes(" ") && (returned || ternary || fallback)) check(node, value);
+    }
     if (ts.isJsxText(node)) check(node, node.getText(tree));
     if (email) {
       const value = expressionText(node);

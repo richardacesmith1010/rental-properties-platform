@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/format";
 
 interface Tab {
@@ -31,12 +31,21 @@ export function AnimatedTabs({
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const [indicator, setIndicator] = useState({ left: 0, width: 0 });
 
-  useEffect(() => {
-    const el = tabRefs.current.get(activeTab);
-    if (el) {
-      setIndicator({ left: el.offsetLeft, width: el.offsetWidth });
-    }
-  }, [activeTab]);
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = tabRefs.current.get(activeTab);
+      if (el) setIndicator({ left: el.offsetLeft, width: el.offsetWidth });
+    };
+    measure();
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    for (const el of tabRefs.current.values()) observer?.observe(el);
+    window.addEventListener("resize", measure);
+    void document.fonts?.ready.then(measure);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [activeTab, tabs.length]);
 
   return (
     <div className={cn("relative", className)}>
@@ -51,7 +60,10 @@ export function AnimatedTabs({
             aria-selected={tab.id === activeTab}
             onClick={() => onTabChange(tab.id)}
             className={cn(
-              "relative z-10 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ground)]",
+              "relative z-10 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium " +
+              "transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 " +
+              "focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2 " +
+              "focus-visible:ring-offset-[var(--ground)]",
               tab.id === activeTab ? activeClassName : inactiveClassName
             )}
           >

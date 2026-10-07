@@ -98,7 +98,7 @@ export function buildAllSectionItems(params: BuildAllSectionItemsParams): NavIte
       label: "Applications",
       icon: ClipboardList,
       description: "Review tenant applications, notes, and screening scores.",
-      clickHint: "open application review pipeline"
+      clickHint: "open applications"
     });
   }
 

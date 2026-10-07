@@ -89,9 +89,9 @@ export function DocumentsSection({
       {propertyFilesWarning ? <FeatureWarning title="Property File Vault" message={propertyFilesWarning} /> : null}
 
       <div className="flex flex-wrap gap-2">
-        <Button type="button" size="sm" variant={activeFlow === "template" ? "default" : "outline"} onClick={() => setActiveFlow("template")} title="Create or update reusable document templates.">Template Flow</Button>
-        <Button type="button" size="sm" variant={activeFlow === "packet" ? "default" : "outline"} onClick={() => setActiveFlow("packet")} title="Create lease document packets from templates.">Packet Flow</Button>
-        <Button type="button" size="sm" variant={activeFlow === "file" ? "default" : "outline"} onClick={() => setActiveFlow("file")} title="Upload property files with visibility controls.">File Flow</Button>
+        <Button type="button" size="sm" variant={activeFlow === "template" ? "default" : "outline"} onClick={() => setActiveFlow("template")} title="Create or update reusable document templates.">Templates</Button>
+        <Button type="button" size="sm" variant={activeFlow === "packet" ? "default" : "outline"} onClick={() => setActiveFlow("packet")} title="Create lease document packets from templates.">Send papers</Button>
+        <Button type="button" size="sm" variant={activeFlow === "file" ? "default" : "outline"} onClick={() => setActiveFlow("file")} title="Upload property files with visibility controls.">Files</Button>
       </div>
 
       {activeFlow === "template" ? (

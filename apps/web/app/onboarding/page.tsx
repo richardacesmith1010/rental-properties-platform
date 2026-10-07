@@ -46,7 +46,7 @@ export default async function OnboardingPage() {
           <p className="mt-2 text-sm text-muted-foreground">
             {role === "tenant" && inviteContext?.propertyAddress
               ? `${inviteContext.ownerName ?? "Your landlord"} invited you to manage your rental at ${inviteContext.propertyAddress}${inviteContext.unitLabel ? `, ${inviteContext.unitLabel}` : ""}.`
-              : "Add the basics now so Domus feels personal from the first workspace load."}
+              : "Add the basics now to make Domus feel personal."}
           </p>
           {role === "tenant" && inviteContext ? (
             <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-4 text-left text-sm">

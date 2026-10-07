@@ -69,7 +69,7 @@ export function ChargeEditModal({ charge, open, onClose, onSave }: ChargeEditMod
 
         {state?.success ? (
           <Alert variant="success" className="mb-4">
-            {state.message ?? "Charge updated."}
+            {state.message ?? "Payment updated."}
           </Alert>
         ) : null}
         {state && !state.success ? (

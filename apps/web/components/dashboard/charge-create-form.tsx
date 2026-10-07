@@ -64,7 +64,7 @@ export function ChargeCreateForm({
 
         {state?.success ? (
           <Alert variant="success" className="mb-4">
-            {state.message ?? "Manual charge created."}
+            {state.message ?? "Payment created."}
           </Alert>
         ) : null}
         {state && !state.success ? (

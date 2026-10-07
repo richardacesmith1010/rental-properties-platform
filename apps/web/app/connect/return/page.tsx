@@ -130,7 +130,7 @@ export default async function ConnectReturnPage(props: ConnectReturnPageProps) {
   const almostThereDescription = memberPayout
     ? "We're still reviewing this bank account. This usually takes a few minutes."
     : "We're still reviewing your bank account. This usually takes a few minutes.";
-  const incompleteTitle = memberPayout ? "Payout Onboarding Incomplete" : "Onboarding Incomplete";
+  const incompleteTitle = memberPayout ? "Payout setup incomplete" : "Setup incomplete";
   const incompleteDescription = memberPayout
     ? "This bank connection was not finished. Start again to receive rent payouts."
     : "Your bank connection was not finished. Start again to complete it.";

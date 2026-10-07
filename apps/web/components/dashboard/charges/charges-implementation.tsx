@@ -230,10 +230,10 @@ export function ChargesSection({
       formData.set("reason", "Deleted from charges dashboard");
       const result = await onDeletePendingCharge(null, formData);
       if (!result?.success) {
-        toast.error(result?.error ?? "Unable to delete this charge.");
+        toast.error(result?.error ?? "Unable to delete this payment.");
         return;
       }
-      toast.success(result.message ?? "Charge deleted.");
+      toast.success(result.message ?? "Payment deleted.");
       setConfirmDeleteChargeId(null);
       router.refresh();
     });
@@ -248,10 +248,10 @@ export function ChargesSection({
       formData.set("reason", "Waived from charges dashboard");
       const result = await onWaiveCharge(null, formData);
       if (!result?.success) {
-        toast.error(result?.error ?? "Unable to waive this charge.");
+        toast.error(result?.error ?? "Unable to waive this payment.");
         return;
       }
-      toast.success(result.message ?? "Charge waived.");
+      toast.success(result.message ?? "Payment waived.");
       router.refresh();
     });
   };
@@ -416,7 +416,7 @@ export function ChargesSection({
                   variant="ghost"
                   size="sm"
                   onClick={() => setExpanded((current) => !current)}
-                  title={expanded ? "Collapse the charges preview." : "Show the full charges list."}
+                  title={expanded ? "Collapse the payments preview." : "Show all payments."}
                 >
                   {expanded ? "Show less" : `View all rent (${filteredCharges.length})`}
                 </Button>
@@ -428,8 +428,9 @@ export function ChargesSection({
           title="Delete Payment?"
           description={
             chargePendingDeletion
-              ? `Delete this ${chargePendingDeletion.status} charge of ${formatCurrency(chargePendingDeletion.amountCents)} due on ${formatDate(chargePendingDeletion.dueDate)}? This cannot be undone.`
-              : "Delete this charge? This cannot be undone."
+              ? `Delete this ${chargePendingDeletion.status} payment of ${formatCurrency(chargePendingDeletion.amountCents)} ` +
+                `due on ${formatDate(chargePendingDeletion.dueDate)}? This cannot be undone.`
+              : "Delete this payment? This cannot be undone."
           }
           confirmLabel="Delete Charge"
           open={Boolean(confirmDeleteChargeId)}

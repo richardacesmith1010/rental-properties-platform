@@ -341,7 +341,7 @@ export function renderSectionCases({
           assetAccessEnabled={props.safeCapabilities.documentAssetAccessEnabled}
           assetAccessWarning={
             props.safeCapabilities.documentsEnabled && !props.safeCapabilities.documentAssetAccessEnabled
-              ? "Document packet records are available, but file storage access is not configured yet."
+              ? "Document records are available, but file storage is not ready."
               : null
           }
         />

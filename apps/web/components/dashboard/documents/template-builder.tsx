@@ -81,7 +81,7 @@ export function TemplateBuilder({ existingTemplate, ownershipAccounts, onSave, o
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
-          <CardTitle>Document Workflow</CardTitle>
+          <CardTitle>Documents</CardTitle>
           <Button type="button" variant="outline" size="sm" onClick={onCancel} title="Return to document workflow options.">
             Back to flows
           </Button>

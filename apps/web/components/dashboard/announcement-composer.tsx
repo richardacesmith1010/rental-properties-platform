@@ -293,8 +293,8 @@ export function AnnouncementComposer({
               ) : recipientCount == null ? (
                 <p className="text-muted-foreground">
                   {scope === "specific_properties"
-                    ? "Select at least one property to see how many tenants will receive this."
-                    : "Add a title and message when you are ready to send this announcement."}
+                    ? "Select a home to see how many tenants will receive this."
+                    : "Add a title and message before sending this announcement."}
                 </p>
               ) : (
                 <p className="text-foreground">

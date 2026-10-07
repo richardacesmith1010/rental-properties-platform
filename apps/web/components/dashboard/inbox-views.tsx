@@ -62,7 +62,11 @@ export function mapEntityTypeToSection(entityType: string): string {
 }
 
 export function typeLabel(type: string) {
-  return type.replaceAll("_", " ");
+  const labels: Record<string, string> = {
+    tenant_profile: "Tenant", maintenance_ticket: "Repair", lease: "Lease",
+    rent_charge: "Rent", document_packet: "Documents", inbox_thread: "Conversation"
+  };
+  return labels[type] ?? type.replaceAll("_", " ");
 }
 
 export function formatTimestamp(value: string) {
@@ -122,10 +126,10 @@ export function InboxNotificationRow({
             type="button"
             size="sm"
             variant="outline"
-            title={`Open ${targetSection} context for this inbox event.`}
+            title="Open the page this conversation is about."
             onClick={() => onOpenSection(targetSection)}
           >
-            Open context
+            Go to related page
           </Button>
         ) : null}
       </div>

@@ -379,7 +379,7 @@ export function ApplicationsSection({
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-[var(--ink-2)]">
-            Review tenant applications, track screening outcomes, and document decisions before lease creation.
+            Review applications and decide who rents your home.
           </p>
           {!pipelineReady && (
             <Alert variant="warning" className="text-xs font-normal">
@@ -425,7 +425,7 @@ export function ApplicationsSection({
       </Card>
 
       {applications.length === 0 ? (
-        <EmptyState message="No applications yet. Create one from a listing to start the review pipeline." />
+        <EmptyState message="No applications yet. Create one from a listing to start." />
       ) : (
         <div className="space-y-4">
           {sections.map((section) => {
@@ -462,7 +462,7 @@ export function ApplicationsSection({
 
       <div className="text-xs text-[var(--muted)]">
         <p>
-          Screening scores are manually recorded (0-1000). Use timeline notes to document reviewer rationale.
+          Enter screening scores yourself (0 to 1,000). Add notes to explain your choice.
         </p>
         {applications[0]?.submittedAt && (
           <p className="mt-1">Most recent submission: {formatDateTime(applications[0].submittedAt)}</p>

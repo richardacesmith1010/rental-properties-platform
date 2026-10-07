@@ -216,7 +216,7 @@ export function ChargeRow({
                   title={
                     charge.latestEditedAt && charge.latestEditedByName
                       ? `Last edited by ${charge.latestEditedByName} on ${formatDate(charge.latestEditedAt)}`
-                      : "Charge has been edited."
+                      : "Payment has been edited."
                   }
                 >
                   Edited {charge.editedCount}x

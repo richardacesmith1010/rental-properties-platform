@@ -143,7 +143,7 @@ export function MaintenanceSection({
   const emptyDescription =
     filter === "all"
       ? viewerRole === "tenant"
-        ? "Problems you report will show up here with status updates from your landlord."
+        ? "Your reported problems and landlord updates will show up here."
         : "Tickets submitted by tenants will appear here."
       : viewerRole === "tenant"
         ? "Switch filters to review your other maintenance updates."

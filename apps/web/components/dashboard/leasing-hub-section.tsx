@@ -79,7 +79,8 @@ function buildLeasingStages(params: {
       label: "Property + Unit Ready",
       description: "Set up at least one active property and unit before inviting tenants.",
       done: params.portfolio.properties.length > 0 && params.portfolio.units.length > 0,
-      metric: `${params.portfolio.properties.length} properties / ${params.portfolio.units.length} units`,
+      metric: `${params.portfolio.properties.length} ${params.portfolio.properties.length === 1 ? "home" : "homes"} · ` +
+        `${params.portfolio.units.length} ${params.portfolio.units.length === 1 ? "unit" : "units"}`,
       targetSection: "operations",
       actionLabel: "Set up property"
     },
@@ -136,7 +137,7 @@ function currentStepLabel(stages: LeasingStage[]) {
   if (!pending) {
     return "Leasing workflow complete for current portfolio.";
   }
-  return `Next best action: ${pending.label}`;
+  return `Next step: ${pending.label}`;
 }
 
 function ListingRow({

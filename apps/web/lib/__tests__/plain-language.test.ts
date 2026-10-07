@@ -28,6 +28,13 @@ describe("plain language guard", () => {
     expect(scanSource(source, "apps/web/components/fixture.tsx")).toEqual([]);
   });
 
+  it("catches a returned multi-word string in a component", () => {
+    const source = 'function label() { return "Charge becomes late"; }';
+    expect(scanSource(source, "apps/web/components/fixture.tsx")).toMatchObject([
+      { reason: "banned word: Charge" }
+    ]);
+  });
+
   it("keeps all user-facing copy clear", () => {
     const allowed = exceptions as Record<string, string>;
     expect(Object.keys(allowed).length).toBeLessThanOrEqual(25);

@@ -138,12 +138,12 @@ export function ActionableNotification({
         formData.set("reason", "Waived from notifications.");
         const result = await onWaiveCharge(null, formData);
         if (!result?.success) {
-          toast.error(result?.error ?? "Unable to waive this charge.");
+          toast.error(result?.error ?? "Unable to waive this payment.");
           setPendingAction(null);
           return;
         }
 
-        toast.success(result.message ?? "Charge waived.");
+        toast.success(result.message ?? "Payment waived.");
         await clearAfterAction();
         router.refresh();
         return;

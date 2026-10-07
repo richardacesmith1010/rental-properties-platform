@@ -66,10 +66,10 @@ function ChargeActionList({
       formData.set("reason", "Deleted from financial reports");
       const result = await onDeleteCharge(null, formData);
       if (!result?.success) {
-        toast.error(result?.error ?? "Unable to delete this charge.");
+        toast.error(result?.error ?? "Unable to delete this payment.");
         return;
       }
-      toast.success(result.message ?? "Charge deleted.");
+      toast.success(result.message ?? "Payment deleted.");
       router.refresh();
     });
   };
@@ -85,10 +85,10 @@ function ChargeActionList({
       formData.set("reason", "Waived from financial reports");
       const result = await onWaiveCharge(null, formData);
       if (!result?.success) {
-        toast.error(result?.error ?? "Unable to waive this charge.");
+        toast.error(result?.error ?? "Unable to waive this payment.");
         return;
       }
-      toast.success(result.message ?? "Charge waived.");
+      toast.success(result.message ?? "Payment waived.");
       router.refresh();
     });
   };
@@ -127,7 +127,7 @@ function ChargeActionList({
                     title={
                       charge.latestEditedAt && charge.latestEditedByName
                         ? `Last edited by ${charge.latestEditedByName} on ${formatDate(charge.latestEditedAt)}`
-                        : "Charge has been edited."
+                        : "Payment has been edited."
                     }
                   >
                     Edited

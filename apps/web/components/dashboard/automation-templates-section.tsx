@@ -31,15 +31,32 @@ const unavailableAction: StatefulAction = async () => ({
   error: "Automation toggles are unavailable right now."
 });
 
-function triggerLabel(key: string) {
-  if (key === "late_rent_sequence") return "Charge becomes late";
-  if (key === "lease_renewal_sequence") return "Lease nears expiration";
-  if (key === "new_ticket_sla") return "New maintenance ticket is opened";
-  if (key === "move_in_sequence") return "Lease becomes active";
-  if (key === "move_out_sequence") return "Lease termination starts";
-  if (key === "manager_vendor_followup") return "Vendor response exceeds SLA";
-  return "Workflow trigger";
-}
+const displayByKey: Record<string, { name: string; trigger: string; description: string }> = {
+  late_rent_sequence: {
+    name: "Late rent steps", trigger: "Rent becomes late",
+    description: "Tell the tenant and keep track when rent is late."
+  },
+  lease_renewal_sequence: {
+    name: "Lease renewal steps", trigger: "Lease is ending soon",
+    description: "Send reminders and renewal papers before the lease ends."
+  },
+  new_ticket_sla: {
+    name: "Repair follow-up", trigger: "A new repair is reported",
+    description: "Remind you to handle new repairs on time."
+  },
+  move_in_sequence: {
+    name: "Move-in steps", trigger: "Lease starts",
+    description: "Track move-in tasks, first rent, and papers."
+  },
+  move_out_sequence: {
+    name: "Move-out steps", trigger: "Lease is ending",
+    description: "Track the move-out check, final papers, and last balance."
+  },
+  manager_vendor_followup: {
+    name: "Vendor follow-up", trigger: "A vendor has not answered in time",
+    description: "Follow up when a vendor is slow to answer a repair."
+  }
+};
 
 function targetSectionForTemplate(key: string) {
   if (key === "late_rent_sequence") return "charges";
@@ -75,14 +92,14 @@ function AutomationToggleRow({
   return (
     <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-[var(--ink)]">{template.name}</p>
+        <p className="text-sm font-semibold text-[var(--ink)]">{displayByKey[template.key]?.name ?? template.name}</p>
         <Badge variant={enabled ? "success" : "outline"}>{enabled ? "Enabled" : "Disabled"}</Badge>
       </div>
       <p className="mt-1 text-xs text-[var(--ink-2)]">
-        <span className="font-semibold">Trigger:</span> {triggerLabel(template.key)}
+        <span className="font-semibold">Starts when:</span> {displayByKey[template.key]?.trigger ?? "Starts on its own"}
       </p>
       <p className="mt-1 text-xs text-[var(--ink-2)]">
-        <span className="font-semibold">Actions:</span> {template.description ?? "Execute configured flow actions."}
+        <span className="font-semibold">What it does:</span> {displayByKey[template.key]?.description ?? template.description}
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
         <form action={formAction}>
@@ -104,7 +121,7 @@ function AutomationToggleRow({
           title={`Open ${targetSection} section for this workflow.`}
           onClick={() => onOpenSection?.(targetSection)}
         >
-          Open workflow context
+          Go to related page
         </Button>
       </div>
       {state && !state.success && (
@@ -170,12 +187,12 @@ export function AutomationTemplatesSection({
   return (
     <Card id="automations">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Domus Flows</CardTitle>
+        <CardTitle>Automatic steps</CardTitle>
         <Badge variant={enabledCount > 0 ? "success" : "outline"}>{enabledCount} enabled</Badge>
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-[var(--ink-2)]">
-          Automation templates are now persisted per property. Toggle each workflow to create or update a live automation rule.
+          Turn on the steps you want for each home.
         </p>
         {!runtimeReady && (
           <Alert variant="warning" className="text-xs font-normal">
