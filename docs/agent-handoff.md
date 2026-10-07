@@ -417,6 +417,11 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 - Home defers 5 Home-only bundles (works; Home loads shared bundles only). Owner Home not faster: critical path = ownership.accounts (8 q) → administered-ids (4 q) → dashboard.data (12 q, ~1 s). feature.capabilities cache from S179 is ineffective in production (22 q every request). Next sprint (L3): RPCs for dashboard + ownership, fix capabilities cache.
 
+## Sprint 189 SHIPPED — Lease Manage labels (L1, `6bd453e`, 2026-10-07, gpt-6-luna low, 75,476 tokens)
+- 11 lease Manage/Renew/End Lease inputs now have visible labels linked by `htmlFor`/`id`; panel moved to `components/dashboard/lease-manage-panel.tsx` (leases-section 495 → 348 lines). Names/attributes/actions unchanged.
+- 3 new tests map every label → input name/value; gate 1472/1472; scripted walk (smoke owner, 1280/375, light/dark) 4/4, 0 console errors; smoke pass; CI #329 green; Sentry clean.
+- Minor (pre-existing): at 375 px the floating help button overlaps the right edge of the End Lease note box.
+
 ## Sprint 188 SHIPPED — Code health 74 → 77 (L2, `cdc120c`, 2026-10-07, gpt-6-sol medium)
 - Split pdf-data, lease-form, lease-wizard(+steps), email-templates; snapshot tests `email-templates-snapshot` / `pdf-data-snapshot` lock outputs (verified against pre-refactor code via worktree).
 - Live: PDFs OK, lease screens OK, 30/30 checks, Sentry clean, CI #326.
@@ -426,7 +431,7 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Scorecard: Security 80, Visual 80, Plain language 80, Speed 80 ✅; Reliability 78; Code health 77; Money 74; Owner 72; Tenant 70; Onboarding 62; Manager 58; Launch 52; Notifications 30; Phone 25.
 - Code health remaining > 500 lines (10): stripe-webhook-handlers 974, account-wipe 780, ownership 720, stripe-connect 672, distributions 574, charges 571, charge-management 562, withdrawals 517, app/tenant/page.tsx 511, charge-row 502. Money/deletion ones need L3 + ChatGPT review; use snapshot-before-refactor + worktree check (S188 pattern) and the TS export diff script (`node <script> files...` using typescript getExportsOfModule).
 - Waiting on user at Mac: 6 SMOKE_* GitHub secrets (then restore `schedule:` in `.github/workflows/smoke.yml` and run it once) → Reliability 80; Sentry alert rule check (needs permission); Navy Federal + Fidelity October CSVs (Money/Owner).
-- Open UI findings: lease Manage edit inputs unlabeled (owner can't tell rent vs deposit vs due day).
+- Open UI findings: (fixed S189) lease Manage labels. Floating help button overlaps End Lease note box at 375 px (minor).
 - Legacy RPC fallbacks (S181/S183) can be removed once stable (no `owner_rpc_fallback_*` seen in prod).
 
 ## Sprints 187/187b SHIPPED — UI hotfix (L1, `9b2093d`, `f0a807a`, 2026-10-06, gpt-6-luna)
