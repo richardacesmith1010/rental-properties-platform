@@ -417,6 +417,13 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 - Home defers 5 Home-only bundles (works; Home loads shared bundles only). Owner Home not faster: critical path = ownership.accounts (8 q) → administered-ids (4 q) → dashboard.data (12 q, ~1 s). feature.capabilities cache from S179 is ineffective in production (22 q every request). Next sprint (L3): RPCs for dashboard + ownership, fix capabilities cache.
 
+## Sprint 186 SHIPPED — Code health 71 → 74 (L2, `6029e7d`, 2026-10-06, gpt-6-sol medium)
+- Split notifications / notification-actions / notification-preferences / analytics / command-palette → 13 files; exports identical (TS checker); notifications switch untouched and still single gate; notifications count 78 before/after.
+- Verified: gate 1463/1463; walk light/dark 0 console errors; 27/27 specs; Sentry clean; CI #318 green.
+- URGENT (pre-existing): sidebar bell dropdown clipped off-screen left (`components/dashboard/notification-bell-menu.tsx:155-156`, align end → right-0).
+- Also open: lease wizard "<home> has no units" when units are all occupied.
+- Remaining > 500 lines: 15 files.
+
 ## Sprint 185 SHIPPED — Code health 68 → 71 (L2, `3834dc8`, 2026-10-06, gpt-6-sol medium)
 - 5 non-money files split (inbox actions, inbox screen, leases section, property wizard, maintenance) → 13 files ≤ 500 lines, ≤ 140 chars; original paths re-export identical symbols.
 - Verified: gate 1463/1463; walk light/dark (inbox, leases, lease form, wizard) 0 console errors; 27/27 specs; Sentry clean; CI #315 green.
