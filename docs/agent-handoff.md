@@ -417,6 +417,13 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 - Home defers 5 Home-only bundles (works; Home loads shared bundles only). Owner Home not faster: critical path = ownership.accounts (8 q) → administered-ids (4 q) → dashboard.data (12 q, ~1 s). feature.capabilities cache from S179 is ineffective in production (22 q every request). Next sprint (L3): RPCs for dashboard + ownership, fix capabilities cache.
 
+## Sprint 194 SHIPPED — Plain words in lib/, payment labels; guard scans all of lib (L2, `2960edd`, 2026-10-07, gpt-6-sol low, 121,848 Codex tokens)
+- Found: scorecard "leftover jargon" note was stale (guard already bans ledger/ACH/charge in app/components/emails, 0 exceptions). Real gap: non-email `lib/` strings (20 hits).
+- Fixed: late notices ("Rent is late" / "Rent due <date> is now late."), notification buttons "View payment"/"Waive payment", preferences text, receipt PDF header "PROPERTY MANAGEMENT", two long sentences. New `lib/payment-method-label.ts` (ach→Bank transfer, card/cash/check/other) used on tenant Past payments, owner payments, receipt page + PDF, command palette, autopay. Lease document badges "Documents: Signed" / "Your signature: Waiting".
+- Guard now scans every non-test file in `lib/`; 6 exceptions (Stripe transfer descriptions in `stripe-webhook-handlers.ts`, reword in a reviewed L3 sprint). PDF snapshot changed only `ACH`→`Bank transfer`.
+- Live: tenant Past payments "Cash", receipt page "Method: Cash", receipt PDF text "PROPERTY MANAGEMENT" + "Method Cash", light/dark, 0 console errors; gate 1544/1544; smoke pass; CI #348; Sentry clean.
+- Follow-ups: autopay bank card shows "Us_bank_account" when no brand (map `us_bank_account` → "Bank account"); owner badge for one-time fee reports (S193); Stripe transfer descriptions (L3).
+
 ## Sprints 193/193b SHIPPED — Tenant paid reports persist + owner Rent-row badge (L3, `4f9a22d`, `660fbb1`, 2026-10-07; gpt-6-sol medium 142,642 + luna 42,055 Codex tokens)
 - ChatGPT: REJECT ×3 → APPROVE on rev 4 (race-safe claim-first; claim is durable, never reverted; zero-row claim classified by re-read; ownership checked before any status/report response — also fixes a pre-existing order where "already closed" leaked before the ownership check).
 - Migration `20261007_sprint193_tenant_reported_paid.sql` applied by Claude: `rent_charges.tenant_reported_paid_at timestamptz` (nullable, no default; plain ADD COLUMN) + `owner_dashboard_payload` = live body + 3 field refs (md5 old b0966314… matched repo; new 8ac187bd… matches live; invoker, search_path '', ACL postgres+service_role only). Tenants have no UPDATE policy on rent_charges (owner/admin only).
