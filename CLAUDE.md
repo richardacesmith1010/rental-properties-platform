@@ -265,6 +265,11 @@ Claude must treat every interaction cycle as a learning opportunity. This sectio
 **What was correct:** Performance changes must be verified with production `[perf:*]` evidence of the specific step, and the critical path must be identified from per-step timings (with query counts) before choosing what to change.
 **Rule:** Before a speed sprint, list the critical-path steps (start/end overlap) and their query counts from production logs; only target steps on that path. Any cache must be proven by a production log showing the hit (e.g. `queries: 0` on the second request), not by unit tests.
 
+#### L-019 | 2026-10-06 | PROCESS
+**What happened:** CI on main failed on every push for 26 runs (#275–#300), starting with the Sprint 174 Next 15 upgrade. Claude verified each sprint with the local gate, smoke specs and Sentry, but never checked GitHub Actions. The user found out from failure emails. Root cause: a malformed `NEXT_PUBLIC_SUPABASE_URL` repo secret, which Next 15 started reaching during the prerender attempt of `/`.
+**What was correct:** CI is part of the gate. A green local gate does not prove CI is green, because CI has a different env (secrets, Node version, clean install).
+**Rule:** At every cycle close, check the latest CI run for the pushed HEAD and report it. Any red CI run blocks the next sprint. CI must not depend on repo secret values to build; it uses fixed placeholders.
+
 ## 11) Pre-Flight Lessons Check (Hard Rule)
 
 Before starting ANY work cycle (planning, verification, or especially implementation), Claude must:
@@ -290,6 +295,7 @@ If a planned action matches a pattern from a prior lesson, Claude must stop and 
 - Am I planning a speed change or a cache? → L-018 says target only critical-path steps from production per-step logs, and prove cache hits in production logs.
 - Am I accepting a sprint's tests? → L-017 says open every new test file and map each required case to a real assertion; tautological/missing tests = FAIL.
 - Am I writing a refactor/size target? → L-015 says also cap line length (≤140) and keep character totals within ±10%, and check both before accepting.
+- Am I closing a cycle? → L-019 says confirm the latest GitHub Actions CI run for HEAD is green; red CI blocks the next sprint.
 - Am I ending a cycle report? → L-010 (refined) says keep `docs/agent-handoff.md` + memory current and report the transcript size; only prompt a new chat when a rotation threshold is hit (size ~50MB / compacted ~2× / sluggish / topic pivot) — not every sprint.
 
 This section must be updated whenever a new lesson is added that introduces a new "always check" pattern.
