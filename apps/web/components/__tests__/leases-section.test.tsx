@@ -146,6 +146,82 @@ describe("LeasesSection", () => {
     expect(screen.getByRole("button", { name: "End Lease" })).toBeInTheDocument();
   });
 
+  it("labels lease management fields and preserves their values", () => {
+    render(
+      <LeasesSection
+        leases={[activeLease]}
+        showControls
+        onUpdateLease={async () => null}
+        onDeleteLease={async () => null}
+        onRenewLease={async () => null}
+        onTerminateLease={async () => null}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Manage" }));
+
+    const fields = [
+      ["Monthly rent ($)", "monthlyRentDollars", "1800"],
+      ["Deposit ($)", "depositDollars", "900"],
+      ["Rent due day (1–28)", "dueDayOfMonth", "1"],
+      ["Days before rent is late (0–30)", "gracePeriodDays", "5"],
+      ["Late fee ($)", "lateFeeDollars", "50"],
+      ["Lease end date", "endDate", "2026-12-31"]
+    ];
+
+    for (const [label, name, value] of fields) {
+      const input = screen.getByLabelText(label) as HTMLInputElement;
+      expect(input).toHaveAttribute("name", name);
+      expect(input.value).toBe(value);
+    }
+  });
+
+  it("labels renewal fields and maps them to the renewal inputs", () => {
+    render(
+      <LeasesSection
+        leases={[activeLease]}
+        showControls
+        onUpdateLease={async () => null}
+        onDeleteLease={async () => null}
+        onRenewLease={async () => null}
+        onTerminateLease={async () => null}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Manage" }));
+    fireEvent.click(screen.getByRole("button", { name: "Renew" }));
+
+    const fields = [
+      ["New start date", "newStartDate"],
+      ["New end date", "newEndDate"],
+      ["New monthly rent ($)", "newMonthlyRentDollars"],
+      ["New rent due day (1–28)", "newDueDayOfMonth"]
+    ];
+
+    for (const [label, name] of fields) {
+      expect(screen.getByLabelText(label)).toHaveAttribute("name", name);
+    }
+  });
+
+  it("labels the lease ending note textarea", () => {
+    render(
+      <LeasesSection
+        leases={[activeLease]}
+        showControls
+        onUpdateLease={async () => null}
+        onDeleteLease={async () => null}
+        onRenewLease={async () => null}
+        onTerminateLease={async () => null}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Manage" }));
+    fireEvent.click(screen.getByRole("button", { name: "End Lease" }));
+
+    const textarea = screen.getByLabelText("Why is this lease ending?");
+    expect(textarea).toHaveAttribute("name", "terminationReason");
+  });
+
   it("shows the outside-Domus badge and normalizes an unchecked update to false", () => {
     render(
       <LeasesSection
