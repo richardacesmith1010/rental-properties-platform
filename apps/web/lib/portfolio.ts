@@ -78,29 +78,53 @@ interface TenantProfileRow {
   phone: string | null;
 }
 
-async function fetchTenantProfiles(admin: ReturnType<typeof createAdminClient>) {
-  const result = await admin
-    .from("profiles")
-    .select("id, email, full_name, phone")
-    .eq("role", "tenant")
-    .order("email", { ascending: true })
-    .limit(100);
+function filterAllowedTenantProfiles(
+  rows: TenantProfileRow[],
+  leaseTenantIds: string[],
+  invitedEmails: string[]
+): TenantProfileRow[] {
+  const allowedIds = new Set(leaseTenantIds);
+  const allowedEmails = new Set(invitedEmails);
+  return rows.filter((row) => allowedIds.has(row.id) || allowedEmails.has(row.email?.toLowerCase()));
+}
 
-  if (result.error && isMissingSchemaError(result.error)) {
-    const fallback = await admin
-      .from("profiles")
-      .select("id, email, full_name")
-      .eq("role", "tenant")
-      .order("email", { ascending: true })
-      .limit(100);
-
-    return (fallback.data ?? []).map((row) => ({
-      ...row,
-      phone: null
-    })) as TenantProfileRow[];
-  }
-
-  return ((result.data ?? []) as TenantProfileRow[]);
+async function fetchScopedTenantProfiles(
+  admin: ReturnType<typeof createAdminClient>,
+  leaseTenantIds: string[],
+  invitedEmails: string[]
+): Promise<TenantProfileRow[]> {
+  const [idResult, emailResult] = await Promise.all([
+    leaseTenantIds.length
+      ? admin.from("profiles").select("id, email, full_name, phone").in("id", leaseTenantIds)
+      : Promise.resolve({ data: [] as TenantProfileRow[], error: null }),
+    invitedEmails.length
+      ? admin.from("profiles").select("id, email, full_name, phone").in("email", invitedEmails)
+      : Promise.resolve({ data: [] as TenantProfileRow[], error: null })
+  ]);
+  const [byId, byEmail] = await Promise.all([
+    (async () => {
+      if (!idResult.error) return idResult.data ?? [];
+      if (!isMissingSchemaError(idResult.error)) {
+        console.error("portfolio_tenant_profiles_error", idResult.error.code ?? "unknown");
+        return [];
+      }
+      const retry = await admin.from("profiles").select("id, email, full_name").in("id", leaseTenantIds);
+      if (retry.error) console.error("portfolio_tenant_profiles_error", retry.error.code ?? "unknown");
+      return retry.error ? [] : (retry.data ?? []).map((row) => ({ ...row, phone: null }));
+    })(),
+    (async () => {
+      if (!emailResult.error) return emailResult.data ?? [];
+      if (!isMissingSchemaError(emailResult.error)) {
+        console.error("portfolio_tenant_profiles_error", emailResult.error.code ?? "unknown");
+        return [];
+      }
+      const retry = await admin.from("profiles").select("id, email, full_name").in("email", invitedEmails);
+      if (retry.error) console.error("portfolio_tenant_profiles_error", retry.error.code ?? "unknown");
+      return retry.error ? [] : (retry.data ?? []).map((row) => ({ ...row, phone: null }));
+    })()
+  ]);
+  return filterAllowedTenantProfiles([...new Map([...byId, ...byEmail].map((row) => [row.id, row])).values()],
+    leaseTenantIds, invitedEmails);
 }
 
 export async function getPortfolioData(
@@ -177,31 +201,25 @@ export async function getPortfolioData(
         ...tenant,
         propertyIds: Array.from(ids)
       };
-    });
+    }).filter((tenant) => tenant.id === selfProfile?.id || tenant.propertyIds.length > 0);
   }
 
   const resolvedPropertyIds = await resolvedPropertyIdsPromise;
-
   if (resolvedPropertyIds.length === 0) {
-    const [loadedSelfProfile, tenants] = await Promise.all([
-      selfProfilePromise,
-      fetchTenantProfiles(admin)
-    ]);
-    selfProfile = loadedSelfProfile;
+    selfProfile = await selfProfilePromise;
 
     return {
       properties: [],
       units: [],
       leases: [],
-      tenants: mergeTenantOptions(tenants, new Map(), new Map())
+      tenants: mergeTenantOptions([], new Map(), new Map())
     };
   }
 
   const [
     { data: properties, error: propertiesError },
     { data: units, error: unitsError },
-    tenants,
-    { data: tenantInvitations },
+    { data: tenantInvitations, error: tenantInvitationsError },
     managerFeesByPropertyId,
     loadedSelfProfile
   ] = await Promise.all([
@@ -215,7 +233,6 @@ export async function getPortfolioData(
       .select("id, property_id, unit_number, bedrooms, bathrooms, monthly_rent_cents, square_feet, occupied, active")
       .in("property_id", resolvedPropertyIds)
       .order("unit_number", { ascending: true }),
-    fetchTenantProfiles(admin),
     admin
       .from("invitations")
       .select("email, property_id, role, status")
@@ -226,6 +243,9 @@ export async function getPortfolioData(
     selfProfilePromise
   ]);
   selfProfile = loadedSelfProfile;
+  if (tenantInvitationsError) {
+    console.error("portfolio_tenant_invitations_error", tenantInvitationsError.code ?? "unknown");
+  }
 
   let propertyRows: Array<{
     id: string;
@@ -345,7 +365,9 @@ export async function getPortfolioData(
         const leaseResult = await admin
           .from("leases")
           .select(
-            "id, unit_id, tenant_profile_id, monthly_rent_cents, deposit_cents, due_day_of_month, start_date, end_date, lease_status, grace_period_days, late_fee_cents, collects_outside_domus, notes, active"
+            `id, unit_id, tenant_profile_id, monthly_rent_cents, deposit_cents, due_day_of_month,
+            start_date, end_date, lease_status, grace_period_days, late_fee_cents,
+            collects_outside_domus, notes, active`
           )
           .in("unit_id", unitIds)
           .order("start_date", { ascending: false });
@@ -354,7 +376,9 @@ export async function getPortfolioData(
           const fallback = await admin
             .from("leases")
             .select(
-              "id, unit_id, tenant_profile_id, monthly_rent_cents, deposit_cents, due_day_of_month, start_date, end_date, lease_status, grace_period_days, late_fee_cents, collects_outside_domus, active"
+              `id, unit_id, tenant_profile_id, monthly_rent_cents, deposit_cents, due_day_of_month,
+              start_date, end_date, lease_status, grace_period_days, late_fee_cents,
+              collects_outside_domus, active`
             )
             .in("unit_id", unitIds)
             .order("start_date", { ascending: false });
@@ -375,6 +399,10 @@ export async function getPortfolioData(
     ownershipAccountsPromise,
     leasesPromise
   ]);
+  const leaseTenantIds = Array.from(new Set(leases.map((lease) => lease.tenant_profile_id).filter(Boolean)));
+  const invitedEmails = Array.from(new Set((tenantInvitations ?? [])
+    .map((invitation) => invitation.email?.toLowerCase()).filter((email): email is string => Boolean(email))));
+  const tenants = await fetchScopedTenantProfiles(admin, leaseTenantIds, invitedEmails);
   const ownershipAccountNameById = new Map(
     (ownershipAccounts ?? []).map((account) => [account.id, account.display_name])
   );
