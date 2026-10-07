@@ -27,6 +27,8 @@ describe("LoginPage", () => {
   it("keeps default sign-in and offers direct sign-up", async () => {
     render(await LoginPage({}));
     expect(screen.getByText("Welcome back")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Sign in to your workspace" })).toBeInTheDocument();
+    expect(screen.getByText("Your rental workspace").closest("section")).toHaveClass("hidden");
     expect(screen.getByRole("link", { name: "Create an account" }))
       .toHaveAttribute("href", "/login?mode=signup&role=owner");
     expect(screen.queryByText(/500\+|2,000\+/)).not.toBeInTheDocument();
