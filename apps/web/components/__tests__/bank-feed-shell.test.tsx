@@ -50,7 +50,7 @@ describe("bank account selection", () => {
     expect(screen.getByRole("combobox", { name: "Type" })).toBeInTheDocument();
     fireEvent.click(screen.getByText("Import again"));
     await waitFor(() => expect(screen.getByText("Second bill")).toBeInTheDocument());
-    expect(screen.queryByRole("combobox", { name: "Type" })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("combobox", { name: "Type" })).not.toBeInTheDocument());
   });
   it("answers with the imported account after the picker changes", async () => {
     const answerBankItem = vi.fn(async () => ({ success: true }));
