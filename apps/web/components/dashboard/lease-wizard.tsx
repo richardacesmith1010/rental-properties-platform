@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import type { ActionState } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { ModalOverlay } from "@/components/ui/modal-overlay";
-import { formatDate } from "@/lib/format";
 import type { LeaseListItem, PropertyListItem, TenantOption, UnitListItem } from "@/lib/portfolio";
 import {
   LEASE_WIZARD_STEP_TITLES,
@@ -26,72 +25,7 @@ import {
   LeaseWizardStepTwo
 } from "./lease-wizard-steps";
 
-function LeaseWizardReview({
-  draft,
-  property,
-  unit,
-  tenant,
-  effectiveEndDate
-}: {
-  draft: LeaseWizardDraft;
-  property: PropertyListItem | null;
-  unit: UnitListItem | null;
-  tenant: TenantOption | null;
-  effectiveEndDate: string;
-}) {
-  const tenantLabel =
-    draft.tenantMode === "existing"
-      ? tenant
-        ? `${tenant.fullName} (${tenant.email})`
-        : "Not selected"
-      : `${draft.tenantFullName || "New tenant"} (${draft.tenantEmail || "email not set"})`;
-
-  return (
-    <div className="space-y-5">
-      <div className="rounded-2xl border border-border bg-muted/40 p-5 text-sm">
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Property</p>
-            <p className="mt-2 font-medium text-foreground">
-              {property ? `${property.name} - ${property.addressLine1}` : "Not set"}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Unit</p>
-            <p className="mt-2 font-medium text-foreground">
-              {unit ? `${unit.unitNumber} (${unit.bedrooms} bd / ${unit.bathrooms} ba)` : "Not set"}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Tenant</p>
-            <p className="mt-2 font-medium text-foreground">{tenantLabel}</p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Lease term</p>
-            <p className="mt-2 font-medium text-foreground">
-              {draft.startDate ? formatDate(draft.startDate) : "Not set"}
-              {draft.startDate ? " to " : ""}
-              {effectiveEndDate ? formatDate(effectiveEndDate) : "Not set"}
-              {draft.leaseType === "month_to_month" ? " (month-to-month)" : ""}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Rent</p>
-            <p className="mt-2 font-medium text-foreground">
-              {draft.monthlyRentDollars ? `$${Number(draft.monthlyRentDollars).toFixed(2)}/month` : "Not set"}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Deposit</p>
-            <p className="mt-2 font-medium text-foreground">
-              ${Number(draft.depositDollars || "0").toFixed(2)}
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+import { LeaseWizardReview } from "./lease-wizard/review";
 
 export type { LeaseWizardDraft } from "./lease-wizard-support";
 export { getLeaseWizardStepError } from "./lease-wizard-support";
@@ -363,7 +297,8 @@ export function LeaseWizard({
         tenantProfileId = inviteResult.tenantProfileId ?? "";
         if (!tenantProfileId) {
           setErrorMessage(
-            "Invitation sent, but Domus could not recover the tenant profile immediately. Finish the lease after the tenant accepts the invitation."
+            "Invitation sent, but Domus could not recover the tenant profile immediately. " +
+          "Finish the lease after the tenant accepts the invitation."
           );
           return;
         }
@@ -386,7 +321,10 @@ export function LeaseWizard({
         return;
       }
 
-      toast.success(`Lease created for ${draft.tenantMode === "invite_new" ? draft.tenantFullName : selectedTenant?.fullName ?? "tenant"}.`);
+      toast.success(
+        `Lease created for ${draft.tenantMode === "invite_new"
+          ? draft.tenantFullName : selectedTenant?.fullName ?? "tenant"}.`
+      );
       onOpenChange(false);
       onOpenSection("leases");
       router.refresh();
@@ -410,7 +348,10 @@ export function LeaseWizard({
 
   return (
     <ModalOverlay open={open} onClose={handleClose}>
-      <div className="flex max-h-[90svh] w-full max-w-4xl flex-col overflow-hidden rounded-t-[1.5rem] border border-border bg-card px-4 pb-4 pt-5 shadow-2xl sm:rounded-[28px] sm:p-8">
+      <div className={[
+          "flex max-h-[90svh] w-full max-w-4xl flex-col overflow-hidden rounded-t-[1.5rem]",
+          "border border-border bg-card px-4 pb-4 pt-5 shadow-2xl sm:rounded-[28px] sm:p-8"
+        ].join(" ")}>
         <div className="shrink-0 flex flex-col gap-4 border-b border-border pb-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -422,7 +363,10 @@ export function LeaseWizard({
                 Choose a home, set lease terms, and add a tenant. Then create the lease.
               </p>
             </div>
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center self-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--line)] sm:self-start"><FileText className="h-6 w-6 text-[var(--accent)]" /></div>
+            <div className={[
+                  "flex h-14 w-14 shrink-0 items-center justify-center self-center rounded-full",
+                  "bg-[var(--surface-2)] ring-1 ring-[var(--line)] sm:self-start"
+                ].join(" ")}><FileText className="h-6 w-6 text-[var(--accent)]" /></div>
           </div>
           <LeaseWizardProgress step={step} />
         </div>
