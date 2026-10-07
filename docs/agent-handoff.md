@@ -417,6 +417,18 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 - Home defers 5 Home-only bundles (works; Home loads shared bundles only). Owner Home not faster: critical path = ownership.accounts (8 q) → administered-ids (4 q) → dashboard.data (12 q, ~1 s). feature.capabilities cache from S179 is ineffective in production (22 q every request). Next sprint (L3): RPCs for dashboard + ownership, fix capabilities cache.
 
+## Sprint 188 SHIPPED — Code health 74 → 77 (L2, `cdc120c`, 2026-10-07, gpt-6-sol medium)
+- Split pdf-data, lease-form, lease-wizard(+steps), email-templates; snapshot tests `email-templates-snapshot` / `pdf-data-snapshot` lock outputs (verified against pre-refactor code via worktree).
+- Live: PDFs OK, lease screens OK, 30/30 checks, Sentry clean, CI #326.
+- Moved 5 iCloud-style "<file> 2.ts" duplicates (exact copies of current code) out of the repo to Claude's scratchpad; `apps/mobile/README 2.md` left as is.
+
+### NEXT-CHAT START HERE (2026-10-07)
+- Scorecard: Security 80, Visual 80, Plain language 80, Speed 80 ✅; Reliability 78; Code health 77; Money 74; Owner 72; Tenant 70; Onboarding 62; Manager 58; Launch 52; Notifications 30; Phone 25.
+- Code health remaining > 500 lines (10): stripe-webhook-handlers 974, account-wipe 780, ownership 720, stripe-connect 672, distributions 574, charges 571, charge-management 562, withdrawals 517, app/tenant/page.tsx 511, charge-row 502. Money/deletion ones need L3 + ChatGPT review; use snapshot-before-refactor + worktree check (S188 pattern) and the TS export diff script (`node <script> files...` using typescript getExportsOfModule).
+- Waiting on user at Mac: 6 SMOKE_* GitHub secrets (then restore `schedule:` in `.github/workflows/smoke.yml` and run it once) → Reliability 80; Sentry alert rule check (needs permission); Navy Federal + Fidelity October CSVs (Money/Owner).
+- Open UI findings: lease Manage edit inputs unlabeled (owner can't tell rent vs deposit vs due day).
+- Legacy RPC fallbacks (S181/S183) can be removed once stable (no `owner_rpc_fallback_*` seen in prod).
+
 ## Sprints 187/187b SHIPPED — UI hotfix (L1, `9b2093d`, `f0a807a`, 2026-10-06, gpt-6-luna)
 - Desktop sidebar bell `align="start"`; mobile top bar bell keeps `end` + `panelClassName` fixed/inset-x-3/max-h (cn = twMerge, so overrides apply).
 - Lease wizard: zero units → old message; units all leased → "Every unit at <home> has a lease / Add a new unit, or end a lease first."
