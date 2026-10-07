@@ -417,6 +417,13 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 - Home defers 5 Home-only bundles (works; Home loads shared bundles only). Owner Home not faster: critical path = ownership.accounts (8 q) → administered-ids (4 q) → dashboard.data (12 q, ~1 s). feature.capabilities cache from S179 is ineffective in production (22 q every request). Next sprint (L3): RPCs for dashboard + ownership, fix capabilities cache.
 
+## Sprint 183 SHIPPED — Speed 77 → 79 (L3, `7b79dc2`, 2026-10-06) — PASS_WITH_RISK
+- New RPCs (applied, service_role only): `owner_administered_property_ids(uuid, uuid)`, `owner_portfolio_payload(uuid, uuid[])`; mapper `apps/web/lib/portfolio-rpc.ts`; legacy fallbacks kept (`owner_rpc_fallback_*` — none seen in prod). Sprint 182 allowlist still applied to RPC profiles.
+- SQL test passed (Claude removed Codex's `alter table ... drop not null` from the fixture — no DDL on prod in tests). Parity OK + tenant scope OK for smoke owner/manager/real owner.
+- Prod: administered-ids ~0.10 s/1 q; portfolio ~0.13 s/2 q; owner Home 1.60 s median; data-assembly ~1.1 s (target 0.9 missed — `properties.admin-options` 0.5 s/4 q now on the critical path behind `manager-payments.visibility`).
+- Live leaks.notes column does not exist; legacy paths still request it then retry.
+- Next: Sprint 184 = start announcement-homes load early / reuse already-loaded homes.
+
 ## Sprint 182 SHIPPED — Privacy hotfix, Security 80 → 60 → 80 (L3, `adab51a`, 2026-10-06, n/a tokens)
 - Leak: `getPortfolioData` loaded up to 100 tenant profiles platform-wide into every owner/manager page (and the AI chat route's portfolio). Proven live, then fixed in `apps/web/lib/portfolio.ts`: scoped `.in("id", leaseTenantIds)` / `.in("email", invitedEmails)` + `filterAllowedTenantProfiles` allowlist; self handled separately; errors log `portfolio_tenant_profiles_error` and fail closed. Also fixes "Unknown tenant" past 100 platform tenants.
 - Tests a–j in `dashboard-portfolio-data.test.ts` (fail-closed, error, dedup). New `scripts/verify-tenant-scope.ts --user <uuid>`.
