@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { checkedSupabaseCall, isUnauthenticatedAuthError } from "@/lib/supabase-transient";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type AppRole = "owner" | "manager" | "tenant";
 
@@ -15,9 +17,7 @@ export interface UserProfileSummary {
 
 export async function getAuthenticatedUser() {
   const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const user = await getCheckedAuthUser(supabase);
 
   if (!user) {
     redirect("/login");
@@ -26,13 +26,19 @@ export async function getAuthenticatedUser() {
   return user;
 }
 
+export async function getCheckedAuthUser(supabase: SupabaseClient) {
+  const result = await checkedSupabaseCall(() => supabase.auth.getUser(), isUnauthenticatedAuthError);
+  return result?.data.user ?? null;
+}
+
 export async function getCurrentUserRole(userId: string): Promise<AppRole> {
   const supabase = createClient();
-  const { data: profile } = await supabase
+  const result = await checkedSupabaseCall(() => supabase
     .from("profiles")
     .select("role")
     .eq("id", userId)
-    .single();
+    .maybeSingle());
+  const profile = result.data;
 
   const role = profile?.role;
   if (role === "owner" || role === "manager" || role === "tenant") {
@@ -52,11 +58,12 @@ export async function getAuthState(
   needsPasswordSet: boolean;
 }> {
   const supabase = createClient();
-  const { data: profile } = await supabase
+  const result = await checkedSupabaseCall(() => supabase
     .from("profiles")
     .select("role, onboarding_completed_at")
     .eq("id", userId)
-    .maybeSingle();
+    .maybeSingle());
+  const profile = result.data;
 
   const hasProfile = profile !== null;
   const onboardingComplete = Boolean(profile?.onboarding_completed_at);
@@ -72,7 +79,7 @@ export async function getAuthState(
   // that don't have it fall back to fetching the user.
   let invitedAt = opts?.invitedAt;
   if (invitedAt === undefined) {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCheckedAuthUser(supabase);
     invitedAt = typeof user?.invited_at === "string" ? user.invited_at : null;
   }
 
@@ -109,13 +116,14 @@ export async function requireRole(allowed: AppRole[]) {
 
 export async function getUserProfileSummary(userId: string): Promise<UserProfileSummary> {
   const supabase = createClient();
-  const { data: profile } = await supabase
+  const result = await checkedSupabaseCall(() => supabase
     .from("profiles")
     .select(
       "full_name, nickname, avatar_url, onboarding_completed_at, stripe_account_id, stripe_onboarding_complete"
     )
     .eq("id", userId)
-    .maybeSingle();
+    .maybeSingle());
+  const profile = result.data;
 
   const avatarPath =
     typeof profile?.avatar_url === "string" && profile.avatar_url.length > 0

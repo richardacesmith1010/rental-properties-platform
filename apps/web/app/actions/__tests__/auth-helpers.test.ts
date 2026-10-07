@@ -14,7 +14,8 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: createClientMock
 }));
 
-vi.mock("@/lib/auth", () => ({
+vi.mock("@/lib/auth", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/auth")>(),
   getCurrentUserRole: getCurrentUserRoleMock,
   getRoleHomePath: getRoleHomePathMock
 }));
@@ -48,6 +49,8 @@ describe("requireAuth", () => {
 
     expect(result.user).toEqual({ id: "user-1", email: "owner@example.com" });
     expect(result.role).toBe("owner");
+    expect(authGetUserMock).toHaveBeenCalledTimes(1);
+    expect(getCurrentUserRoleMock).toHaveBeenCalledTimes(1);
   });
 
   it("redirects to /login when no authenticated user exists", async () => {
@@ -56,6 +59,8 @@ describe("requireAuth", () => {
     });
 
     await expect(requireAuth("owner")).rejects.toThrow("REDIRECT:/login");
+    expect(authGetUserMock).toHaveBeenCalledTimes(1);
+    expect(getCurrentUserRoleMock).not.toHaveBeenCalled();
   });
 
   it("redirects to the role home path when the role is not allowed", async () => {
@@ -66,6 +71,8 @@ describe("requireAuth", () => {
     getRoleHomePathMock.mockReturnValue("/tenant");
 
     await expect(requireAuth("owner", "manager")).rejects.toThrow("REDIRECT:/tenant");
+    expect(authGetUserMock).toHaveBeenCalledTimes(1);
+    expect(getCurrentUserRoleMock).toHaveBeenCalledTimes(1);
   });
 
   it("accepts a single allowed role", async () => {
@@ -99,5 +106,28 @@ describe("requireAuth", () => {
     const result = await requireAuth("owner");
 
     expect(result.supabase).toBe(mockSupabase);
+  });
+
+  it("retries a transient auth failure then succeeds", async () => {
+    authGetUserMock.mockResolvedValueOnce({ data: { user: null }, error: { status: 504, message: "Gateway Timeout" } })
+      .mockResolvedValueOnce({ data: { user: { id: "user-1" } }, error: null });
+    getCurrentUserRoleMock.mockResolvedValue("owner");
+
+    expect((await requireAuth("owner")).user.id).toBe("user-1");
+    expect(authGetUserMock).toHaveBeenCalledTimes(2);
+    expect(getCurrentUserRoleMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("throws on a persistent auth failure before checking role", async () => {
+    const error = { status: 504, message: "Gateway Timeout" };
+    authGetUserMock.mockResolvedValue({ data: { user: null }, error });
+
+    await requireAuth("owner").then(() => { throw new Error("unexpected success"); }, (caught) => {
+      expect(caught.message).toBe("Account check is unavailable. Please try again.");
+      expect(caught.cause).toBe(error);
+    });
+    expect(authGetUserMock).toHaveBeenCalledTimes(2);
+    expect(getCurrentUserRoleMock).not.toHaveBeenCalled();
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 });

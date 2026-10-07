@@ -2,7 +2,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
-import { getCurrentUserRole, getRoleHomePath, type AppRole } from "@/lib/auth";
+import { getCheckedAuthUser, getCurrentUserRole, getRoleHomePath, type AppRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 interface AuthResult {
@@ -18,9 +18,7 @@ interface AuthResult {
  */
 export async function requireAuth(...allowedRoles: AppRole[]): Promise<AuthResult> {
   const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const user = await getCheckedAuthUser(supabase);
 
   if (!user) {
     redirect("/login");
