@@ -15,7 +15,9 @@ create table public.property_tax_years (
 );
 
 alter table public.property_tax_years enable row level security;
-revoke all on public.property_tax_years from anon;
+revoke all on public.property_tax_years from anon, authenticated;
+grant select, insert, update on public.property_tax_years to authenticated;
+grant all on public.property_tax_years to service_role;
 
 -- Owner members (member_role = 'owner', active) of the property's ownership account only.
 create policy property_tax_years_owner_select on public.property_tax_years for select to authenticated
