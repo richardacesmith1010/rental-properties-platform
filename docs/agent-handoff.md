@@ -423,6 +423,12 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Live: expired pending / fake UUID / junk id → identical inactive text, no PII; accepted → "already used"; headers no-store; robots noindex; Copy link → `https://domusbase.com/join/<id>` + toast. Gate 1668; smoke; CI #379; Sentry clean.
 - Follow-up: hide/disable Copy link (or prompt "Resend first") for pending invites older than 30 days — their link shows inactive until resent.
 
+### Owner decisions (2026-10-07, via question form)
+- Alia's other clients: **she runs those homes alone** (owners not on Domus) → needs a "manager-run homes" design (L3).
+- Pricing: **decide later** (no billing work yet).
+- Account deletion: **keep shared rent/payment/repair records with name removed** (retention period to confirm with a lawyer; draft says 7 years).
+- Owner must-see data: **cash flow per home; mortgage/tax/insurance; rent status & late rent; tax-time summary.**
+
 ### Owner rollout plan (user, 2026-10-07)
 Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to use it for other owners' properties; wants a real phone app by then) → (3) siblings + LLC J&MSP (paid) → (4) siblings' own properties (paid) → later a friend. Open owner decisions: "pertinent data" list; how Alia runs other owners' homes; pricing model; record-retention (now blocks App Store, which requires in-app deletion); Apple/Google developer accounts (owner must create). Big missing pieces: billing (none), Capacitor store app, notifications ON before Alia.
 
