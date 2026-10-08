@@ -1,4 +1,4 @@
-# Manager-run homes ("client accounts") — design (rev 2, 2026-10-08; ChatGPT rev 1: APPROVE WITH CHANGES, all adopted)
+# Manager-run homes ("client accounts") — design (rev 3, 2026-10-08; ChatGPT: rev 1 and rev 2 APPROVE WITH CHANGES, all adopted; "close to implementation-ready")
 
 **Owner decision (2026-10-08):** Alia (property manager) will run homes for owners who are **not** on Domus, by herself. Alia uses Domus for free.
 
@@ -64,6 +64,16 @@ Manager creates client + home (account type client, no owner members, manager li
 5. **Wording:** "Payments recorded" (not "rent collected") in client lists and statements.
 6. **Negative tests:** Client A operations never include Client B data (lists, reports, statements, CSV, search, notifications); another manager can't see or edit a client; a manager can't call owner_only actions on a client home (server and RLS).
 7. **Claim safety:** add `claimed_at`, `claimed_by_profile_id`, `created_by_profile_id` (original creator) on `ownership_accounts`; the claim function locks the account row, checks it's still a client account, and is idempotent. Race tests: double claim, claim vs. manager adding a home.
+
+## 11. Rev 3 changes (required by review of rev 2)
+1. **Ownership type vs. claim state.** Keep `account_type in ('individual','llc')` for the legal owner type and add `claim_state in ('claimed','unclaimed')` (default `'claimed'` for existing rows) plus `managed_client boolean`. A client account is `managed_client = true`; `claim_state = 'unclaimed'` until an owner claims. Alia picks Individual or LLC when adding a client. (Replaces the `account_type = 'client'` idea in §2.)
+2. **Stripe blocked for unclaimed clients, independently of the UI:** Connect onboarding, online checkout, autopay setup, payouts and distributions refuse when the property's account is `unclaimed` (server checks, plus a DB check in the RPCs/policies that create Stripe-linked rows). Tested directly, including privileged server actions.
+3. **Owner statement rules (cash basis, v1):** month = calendar month in the property's time zone (America/Denver default). "Payments recorded" = payments with `paid_at` in the month (any method), minus reversals in the month. Late fees count when paid. Waived rent is listed but not counted. Security deposits are listed separately and not counted as income. Expenses = `property_expenses` with `expense_date` in the month. "Net" = payments recorded − expenses. Open balances = unpaid charges due on or before month end. Tenant "I paid" reports are **never** counted until marked paid. PDF and CSV come from one function and must equal the canonical records (reconciliation test).
+4. **Account-level permission check:** `has_account_capability(account_id, capability)` for create client, rename, add/remove client manager, invite owner/claim, membership changes, and account deletion. The property-level helper is never used for these.
+5. **Locking and claim validation:** "add home to client" and "claim" both lock the `ownership_accounts` row first (same lock order). Claim validates the invitation (intended account, not expired or revoked, claimant email matches) inside the transaction. Derived `property_managers` rows never grant access after the account-manager link is deactivated (checked in the capability function, not only by row state). `created_by_profile_id` is audit metadata only, never an entitlement.
+6. Carried forward from rev 1: capability matrix, DB enforcement, negative cross-client tests, claim race tests, claim audit fields.
+
+**Status:** design accepted for implementation planning. Each implementation sprint is L3 with its own ChatGPT packet review.
 
 ## 9. Open decisions for the owner
 1. v1 = **rent outside Domus only** for client homes (recommended; online rent needs the real owner's bank)?
