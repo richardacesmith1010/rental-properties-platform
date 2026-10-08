@@ -1,4 +1,4 @@
-# Sprint 207 (rev 3; ChatGPT rev 1 + rev 2 REJECT; all REQUIRED + OPTIONAL adopted) — Monthly owner statement for client accounts (L3: money report) · Category 3 (Manager) / 5 (Money)
+# Sprint 207 (rev 4 = rev 3 + ChatGPT APPROVE WITH CHANGES items; all REQUIRED + OPTIONAL 1–3 adopted) — Monthly owner statement for client accounts (L3: money report) · Category 3 (Manager) / 5 (Money)
 
 ## 1. Objective
 A manager can make a monthly **owner statement** (PDF and CSV) for each client account, to send to an owner who isn't on Domus. Each format is generated exclusively from the same `OwnerStatement` calculation and contains no accounting logic of its own.
@@ -23,6 +23,7 @@ A manager can make a monthly **owner statement** (PDF and CSV) for each client a
      1. Calls `isActiveClientManager(managerId, accountId)` first. False → throw `StatementAccessError`.
      2. Loads the account (must be `managed_client`), with active and archived homes in the account. Archived homes are included only if they have activity in the month.
    - **Month window:** from `month`-01 00:00 to the next month's 01 00:00 in `America/Denver`, converted to UTC instants for `timestamptz` comparisons. For `date` columns compare `YYYY-MM-DD` strings.
+   - **Complete results (no silent truncation):** every query that feeds totals (charges, payments, expenses, units, leases, profiles) pages through results with explicit `.range()` pages of 1,000 rows, ordered by `id`, until a short page. Write one shared helper `fetchAllPages`. Never compute from an unpaged query. Chunk `.in()` lists at 200 ids.
    - **Payment rows to load:** payments on charges of the account's homes where (`paid_at` ∈ month) OR (`reversed_at` ∈ month), plus every payment needed for rule 9 (`paid_at` < nextMonthStart on candidate charges). Deduplicate by payment id. A payment with both `paid_at` and `reversed_at` in the month produces two lines.
    - **Charge state as of a cutoff `C` (= nextMonthStart):**
      - *deleted as of C* means `deleted_at IS NOT NULL AND deleted_at < C`;
@@ -43,6 +44,8 @@ A manager can make a monthly **owner statement** (PDF and CSV) for each client a
    - **Correction policy (decided 2026-10-09):** a statement is a **restatement from current records**, not a frozen document.
      - Timestamps (`paid_at`, `reversed_at`, `deleted_at`, `waived_at`) place activity in the right month. A waiver or deletion made *after* the month doesn't hide that month's owed rent or payments.
      - Corrections still restate past months: editing an amount or due date, un-waiving, or editing a payment or expense changes a re-downloaded past statement. This is intended.
+     - **Deletion is not a correction.** A charge deleted before cutoff C is excluded from that month, with its payments. A charge deleted at or after C stays in that month. A later deletion never removes earlier months' activity. `deleted_at` is set once on soft-delete and never cleared or changed by this sprint's code.
+     - **Legacy-waiver limitation:** rows with `status = 'waived'` and `waived_at IS NULL` are treated as waived before every cutoff, so they're never owed in any month. For months before such a waiver really happened, the owed amount may be understated. This is a deliberate data limitation; don't describe those months as reconstructed.
      - The PDF footer and CSV `Summary` say so (see item 3).
      - No history tables in this sprint.
    - **Homes:** `homes` = every active home of the account (zero rows included), plus any archived home with at least one payment, reversal, deposit, waiver, expense or owed line in the statement.
@@ -51,7 +54,9 @@ A manager can make a monthly **owner statement** (PDF and CSV) for each client a
      - expenses: by date, homeLabel, id;
      - notCounted: by date, label, homeLabel;
      - owed: by dueDate, homeLabel;
-     - homes: by name, then id.
+     - homes: by name, then id;
+     - notCounted and owed fall back to the source row id when all other sort fields are equal.
+   - **One cutoff helper** (`lib/statement-month.ts`): Denver month start and next-month start as UTC instants, the latest allowed month, validation (36-month window), the default month, and month labels. Used by the statement, both routes, the action and the UI props, so they can't drift. The clock is injectable.
    - **Returns** `OwnerStatement`:
      - `{ account: { id, name, accountType }, month, monthLabel ("October 2026"), periodLabel ("October 1 – 31, 2026"), preparedBy: { name, email }, generatedAt }`;
      - `totals: { paymentsCents, expensesCents, netCents, stillOwedCents }`;
@@ -87,7 +92,7 @@ A manager can make a monthly **owner statement** (PDF and CSV) for each client a
    - **Denver "today":** the latest allowed month is the current `America/Denver` month, computed on the server, never from the browser or machine time zone. The clock is injectable (`now` parameter) for tests.
    - Filenames: `owner-statement-{slug(account name)}-{YYYY-MM}.pdf` / `.csv`. The slug is lowercase a–z0–9 and `-`, max 40 characters.
    - Headers: `Cache-Control: private, no-store`, `Content-Disposition: attachment`.
-5. **Server action** `getOwnerStatementSummary(accountId, month)` in `app/actions/owner-statement.ts` (`requireAuth("manager")`, Zod) returns `{ success: true, totals, homeCount }` for the sheet. It validates the **same** month window as the routes (≤ current Denver month, ≥ 36 months back; outside it → `Pick a month from the list.`). Errors: `You can't see this client.` / `Could not load the statement. Please try again.`
+5. **Server action** `getOwnerStatementSummary(accountId, month)` in `app/actions/owner-statement.ts` (`requireAuth("manager")`, Zod) returns `{ success: true, totals, homeCount }` for the sheet. It calls `getOwnerStatement` itself, using the same authorization path as the routes. `StatementAccessError` → `You can't see this client.`, returning no totals or account details. Any other error → `Could not load the statement. Please try again.` (never mapped to the access message). It validates the **same** month window as the routes (≤ current Denver month, ≥ 36 months back; outside it → `Pick a month from the list.`). Errors: `You can't see this client.` / `Could not load the statement. Please try again.`
 6. **UI** (client page; match screen 6):
    - An `Owner statement` button in the client page header (≥ 44 px) opens a sheet (`mobile-drawer` on phone, `modal-overlay` on desktop).
    - Sheet contents: title `Owner statement`; line `{Client} · {N} homes. Send this to the owner each month.`; a `Month` select of the last 12 Denver months, newest first, defaulting to the previous month on Denver day 1–10 and the current month otherwise. The default and the month list come from the server (`America/Denver`) as props, never from the browser time zone.
@@ -109,6 +114,8 @@ A manager can make a monthly **owner statement** (PDF and CSV) for each client a
 New:
 - `apps/web/lib/owner-statement.ts`
 - `apps/web/lib/owner-statement-csv.ts`
+- `apps/web/lib/statement-month.ts`
+- `apps/web/lib/supabase-pagination.ts` (`fetchAllPages`), unless an equivalent helper already exists (then reuse it and name it in the report)
 - `apps/web/lib/pdf/owner-statement-template.tsx`
 - `apps/web/app/api/pdf/owner-statement/route.ts`
 - `apps/web/app/api/owner-statement/csv/route.ts`
@@ -153,6 +160,10 @@ Changed:
    - exact cutoff equality (`== nextMonthStart`) for `paid_at`, `reversed_at`, `deleted_at` and `waived_at` follows half-open `[start, next)` semantics;
    - a multi-month waiver fixture (waived Sep 20, un-waived Oct 5, re-waived Nov 3, using the `waived_at` the trigger would set): September and October show it owed per the restatement policy, November lists it under `Waived`;
    - the summary action refuses a month outside the window with `Pick a month from the list.`;
+   - the summary action with an inactive or foreign manager → `You can't see this client.` with no totals; a query error → `Could not load the statement. Please try again.`;
+   - pagination: a fixture with 2,500 payments across 3 pages is fully counted, and a failure on page 2 throws (no partial totals);
+   - a legacy waived charge (`waived_at` NULL) due before the requested month is never owed;
+   - un-waiving restates: a charge waived and later un-waived shows as owed in its month;
    - Denver clock edges: day 10 → previous month, day 11 → current month, the UTC date differing from the Denver date, and December → January;
    - an archived home with activity is included, and an archived home without activity is not.
 2. **Reconciliation test:** for a fixture with 3 homes, 2 units on 1 home, mixed categories, a reversal, a deposit, a waiver and expenses:
