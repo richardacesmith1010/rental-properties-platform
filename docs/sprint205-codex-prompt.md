@@ -1,59 +1,148 @@
-# Sprint 205 — Client accounts groundwork (L3: schema + authorization) · Category 3 (Manager)
+# Sprint 205 (rev 2) — Client accounts groundwork (L3: schema + authorization) · Category 3 (Manager)
+
+Rev 1 was rejected by ChatGPT review. Rev 2 moves enforcement into the database: guard triggers and a hardened `can_administer_property`. That layer is already written and was **dry-run against live inside a rollback**, with 37 adversarial checks (see §2). Codex's job is the app layer on top of it.
 
 ## 1. Objective
-Backend groundwork so a manager (Alia) can run homes for owners who are **not** on Domus (design: `docs/manager-client-accounts-design.md` rev 3, owner decisions §9). **No new screens in this sprint.** It must not change any access that exists today for owners, managers or tenants on normal (non-client) homes.
+Backend groundwork so a manager (Alia) can run homes for owners who are **not** on Domus. Design: `docs/manager-client-accounts-design.md` rev 3; owner decisions §9. **No new screens.** Access for owners, managers and tenants on normal homes must not change.
 
 ## 2. Context (verified live 2026-10-08)
-- **Migration (Claude applies before deploy; Codex must not touch the DB):** `supabase/migrations/20261008_sprint205_client_accounts.sql`:
-  - `properties.owner_profile_id` becomes nullable;
-  - `ownership_accounts` gains `managed_client`, `claim_state` (`claimed`|`unclaimed`), `client_contact_email`, `claimed_at`, `claimed_by_profile_id`, plus a check that only managed clients can be unclaimed;
-  - new table `ownership_account_managers(account_id, manager_profile_id, manager_role, active, created_at)` (RLS: a manager can read their own rows; writes service role only);
-  - two service-role-only SQL functions: `create_client_account(p_manager, p_account_type, p_client_name, p_client_email) → account id`, and `add_client_home(p_manager, p_account, p_name, p_address_line1, p_city, p_state, p_postal_code, p_property_type) → property id`. The latter locks the account row, requires an unclaimed client account plus an active manager link, inserts the property with `owner_profile_id = NULL`, and creates the derived `property_managers` row.
-- **Why the RLS doesn't need rewriting now (map, 2026-10-08):** about 90 policies check access; 35 use `properties.owner_profile_id = auth.uid()` and the rest use `can_administer_property(property_id)` (owner membership of the account **or** an active `property_managers` row) or `can_view_property` (`can_administer_property` or the tenant's active lease). For client homes, `owner_profile_id IS NULL`, so all 35 owner policies **fail closed**, and the manager reaches the home only through the same `property_managers` branch managers use today. Owner-only data (tax inputs, Sprint 202) requires `owner` **membership**, which a client account doesn't have. Keep that reasoning true; don't add new owner_profile_id-based grants.
-- App code reading `properties.owner_profile_id`: `lib/property-access.ts` (type `owner_profile_id: string` at l.13; queries at ~30, ~44), `lib/stripe-connect.ts` (~83, ~334–340), `lib/manager-payments-data.ts` (~36, ~121, ~322, ~339), `lib/notification-preference-store.ts` (~106–134). (`vendors.owner_profile_id` and `document_templates.owner_profile_id` are different columns on other tables; leave them.)
-- Today `createProperty` (`app/actions/properties.ts`) for a manager with no `ownerAccountId` auto-creates a personal account owned by the manager. **Leave that path unchanged in this sprint**; Sprint 206 replaces the manager add-home UI.
-- Rent for client homes is **outside Domus** in v1 (owner decision). `leases.collects_outside_domus` exists.
+**Migration** (Claude applies before deploy; Codex must not touch the DB): `supabase/migrations/20261008_sprint205_client_accounts.sql`. Read it. Summary:
+- `ownership_accounts` gains `managed_client`, `claim_state` (`claimed`|`unclaimed`), `client_contact_email`, `claimed_at`, `claimed_by_profile_id`. Checks:
+  - only managed clients can be unclaimed;
+  - an unclaimed client has `created_by_profile_id = NULL`;
+  - an unclaimed client has no `stripe_account_id`, Plaid token or item, or `join_code`.
+- New table `ownership_account_managers(account_id, manager_profile_id, manager_role creator|manager, active, created_at, updated_at)`. This is the **only** source of manager authority for client accounts. RLS lets a manager read their own rows; all writes go through the service role.
+- `properties.owner_profile_id` is nullable. A trigger allows NULL **only** for homes in an unclaimed client account, and then requires it.
+- **Guard triggers** apply to every role, including the service role, unless the write comes from the client functions:
+  - property ownership columns are read-only for users on **all** homes (this closes a live hole: today an assigned manager can rewrite `owner_profile_id`);
+  - `property_managers` rows for client homes are derived and change only through the client functions or the sync trigger;
+  - client flags and claim fields on `ownership_accounts` change only through the client functions;
+  - no `ownership_account_members` rows on an unclaimed client;
+  - no manager or owner `invitations` into unclaimed client homes or accounts (tenant invitations are allowed);
+  - leases on unclaimed client homes are forced to `collects_outside_domus = true`;
+  - deactivating an `ownership_account_managers` link deactivates that manager's derived `property_managers` rows.
+- `can_administer_property` (manager branch): a client home also needs an active `ownership_account_managers` link. Branches 1 and 3 are unchanged. Branch 3, the creator branch, fails closed for clients because their creator field is NULL.
+- Service-role-only functions:
+  - `create_client_account(p_manager, p_account_type, p_client_name, p_client_email) → uuid`;
+  - `add_client_home(p_manager, p_account, p_name, p_address_line1, p_city, p_state, p_postal_code, p_property_type) → uuid`.
+
+  Both validate their inputs (errcode `22023`) and the manager (`42501`). `add_client_home` locks the account row and requires an unclaimed client plus an active link.
+- **Dry-run results:** every guard fired, normal-home owner and manager access was unchanged, and same-manager multi-client isolation held (deactivating client A kept client B). Script: `supabase/tests/sprint205_client_accounts_test.sql`.
+
+**Authorization map** (55 policies use `can_administer_property`/`can_view_property`). A client manager reaches client homes only through the manager branch, the same way managers reach normal homes today. Classification:
+
+| Class | Tables (policies) | Client manager | How it's enforced |
+|---|---|---|---|
+| Operations | units, leases (insert/update), maintenance_* (6), inspections(+items), preventive_maintenance_schedules, rent_increase_history, inbox_threads, message_deliveries, communication_logs, document_packets/signers, property_files, rental_listings/applications, application_events, screening_reports, automation_rules/runs, audit_logs (select) | ✅ like managers today | existing RLS |
+| Money records (outside Domus) | rent_charges (insert/update), property_expenses (4) | ✅ (marking paid, expenses) | existing RLS; Stripe is blocked separately |
+| Lease money mode | leases | forced "outside Domus" | trigger |
+| Ownership/authority | properties.update (ownership columns), property_managers (insert/update) | ❌ | triggers |
+| Invitations | invitations_insert_admin_v2 | tenants only | trigger |
+| Owner-only | property_tax_years, ownership_account_members, ownership_accounts update, Stripe/Plaid columns | ❌ | owner-membership RLS + triggers + checks (dry-run T7/T8/T11/T15) |
+
+**Pre-existing finding (out of scope; separate L3 sprint):** `invitations_insert_admin_v2`'s tenant branch and `invitations_insert_owner` don't tie the invitation's `property_id`/account to the inserter. The app inserts invitations only through the service role, so no exploit path is known yet. Logged for review.
+
+**App code facts:**
+- Most writes use the admin (service-role) client, so the triggers apply to them. Any app path that tries a blocked write will get a Postgres error, so it must **pre-check and refuse cleanly before** any side effect such as an email or a Stripe call.
+- Readers of `properties.owner_profile_id`: `lib/property-access.ts` (type at l.13, queries ~30/~44), `lib/stripe-connect.ts` (~83, ~334–340), `lib/manager-payments-data.ts` (~36, ~121, ~322, ~339), `lib/notification-preference-store.ts` (~106–134). (`vendors`/`document_templates.owner_profile_id` are other tables; leave them.)
+- `canUserAdministerOwnershipAccount` (`lib/ownership.ts:543`) returns true for any active member **or the creator**. For client accounts the creator is NULL, so it returns false for the client manager. **Keep it that way**: it guards owner-level actions.
+- Stripe entry points: `app/actions/connect.ts`, `app/actions/charges.ts` + `lib/charge-checkout.ts`, `app/actions/autopay.ts` + `lib/stripe-autopay.ts` + `lib/autopay.ts` (scheduled autopay), `app/actions/withdrawals.ts` + `lib/withdrawals.ts`, `lib/distributions.ts`.
+- `createProperty` (`app/actions/properties.ts`) for a manager without `ownerAccountId` auto-creates a personal account. **Leave unchanged** (Sprint 206).
 
 ## 3. In scope
-1. **Types and null safety.** Update the DB types (if the repo keeps generated types) and every reader of `properties.owner_profile_id` to accept `null` without crashing or granting anything. A null owner must never match a user id. Add a test per reader with a null-owner property.
-2. **Client helpers** `apps/web/lib/client-accounts.ts` (`import "server-only"`):
-   - `isClientAccount(accountId)` → `{ managedClient, claimState }` (explicit columns, error checked).
-   - `isActiveClientManager(userId, accountId)` → boolean (from `ownership_account_managers`, `active = true`).
-   - `listClientAccountsForManager(userId)` → `[{ id, name, accountType, claimState, homeCount }]` (explicit columns; only the caller's active links).
-3. **Server actions** `apps/web/app/actions/client-accounts.ts` (`"use server"`, `requireAuth("manager")`, rate limits 20/h create, 60/h home):
-   - `createClientAccount(prev, formData)`: Zod `{ accountType: "individual"|"llc", clientName: 1–120 chars, clientEmail?: email }` → `admin.rpc("create_client_account", …)` with `p_manager = user.id`. Strings: success `Client added.`; failures `Could not add the client. Please try again.` / `Too many requests. Please try again later.`
-   - `addClientHome(prev, formData)`: Zod `{ accountId: uuid, name, addressLine1, city, state (2 letters), postalCode, propertyType? }` → first `isActiveClientManager(user.id, accountId)` (else `You can't add homes for this client.`), then `admin.rpc("add_client_home", …)`. Success `Home added.`; failure `Could not add the home. Please try again.`
-   - Both: `revalidatePath("/manager")`; every error checked; list every returned string (L-020).
-4. **Outside-Domus default.** Wherever a lease is created (find the create-lease action(s)), if the property's account has `managed_client = true` and `claim_state = 'unclaimed'`, force `collects_outside_domus = true` server-side (ignore the form value). Test.
-5. **Stripe blocked for unclaimed clients (server-side):** refuse, with `Online payments aren't available for this home yet.`, in Stripe Connect onboarding/link creation for an unclaimed client account; card/ACH checkout (`lib/charge-checkout.ts` `prepareCheckoutContext`) for a charge whose property is in an unclaimed client account; autopay setup for such a lease; payouts/distributions/withdrawals for such an account. Find each entry point (grep `stripe` server actions); add the check close to the start; a test per entry point.
-6. **Owner-only stays closed (tests, not new code):** with a client account fixture, assert a manager linked to it gets `false` from `canUserAdministerOwnershipAccount` for owner-only uses (tax summary/inputs, bank feed, payouts, LLC votes, account wipe/transfer) and that `getTaxSummaryReport` returns no client homes for them.
-7. **Unchanged access (regression tests):** for a normal owner home: owner, assigned manager and tenant results from `canUserAdministerProperty` / property listing helpers are identical to before (pin current behavior first, then change code).
-8. **Cross-client isolation (tests):** manager A with client X and manager B with client Y: `listClientAccountsForManager` returns only their own; `addClientHome` by B into X is refused and writes nothing; the property listing helpers for A never include Y's homes.
+1. **Central helper** `apps/web/lib/client-accounts.ts` (`import "server-only"`, admin client, explicit columns, every error checked and **thrown**, never treated as "not a client"):
+   - `getClientState(accountId)` → `{ managedClient, claimState } | null`.
+   - `getClientStateForProperty(propertyId)` → same, via `properties.owner_account_id`.
+   - `isUnclaimedClientProperty(propertyId)` / `isUnclaimedClientAccount(accountId)` → boolean.
+   - `isActiveClientManager(userId, accountId)` → boolean (`ownership_account_managers`, `active = true`).
+   - `listClientAccountsForManager(userId)` → `[{ id, name, accountType, claimState, homeCount }]`, only the caller's active links. Count homes with one batched query, not one per client.
+   - Every guard below uses these helpers, never ad-hoc queries.
+2. **Server actions** `apps/web/app/actions/client-accounts.ts` (`"use server"`, `requireAuth("manager")`, rate limits 20/h create and 60/h home):
+   - `createClientAccount(prev, formData)`. Zod: `{ accountType: "individual"|"llc", clientName: trimmed 1–120, clientEmail?: email ≤ 254 }`. Calls `admin.rpc("create_client_account", …)` with `p_manager = user.id`.
+   - `addClientHome(prev, formData)`. Zod: `{ accountId: uuid, name 1–120, addressLine1 1–200, city 1–100, state /^[A-Za-z]{2}$/, postalCode /^\d{5}(-\d{4})?$/, propertyType? (the 6 allowed values) }`. First check `isActiveClientManager(user.id, accountId)`; if false, return `You can't add homes for this client.` with **no RPC call**. Then call `admin.rpc("add_client_home", …)`.
+   - Strings, the complete list (L-020):
+     - success: `Client added.` / `Home added.`;
+     - Postgres `22023`: `Please check the details and try again.`;
+     - `42501`: `You can't add homes for this client.` (home) / `Could not add the client. Please try again.` (client);
+     - any other error: `Could not add the client. Please try again.` / `Could not add the home. Please try again.`;
+     - rate limit: `Too many requests. Please try again later.`
+   - Both call `revalidatePath("/manager")`.
+3. **Null safety.** Every reader of `properties.owner_profile_id` accepts `null`: update the type, never compare `null` to a user id as a match, and never crash. One test per reader with a null-owner property.
+4. **Clean refusals before side effects** (the DB would block these anyway; the app must fail clearly and first):
+   - **Manager invite.** `inviteManager` (`app/actions/invitations.ts`) for a property where `isUnclaimedClientProperty` is true: refuse before `inviteUserByEmail` and before any `property_managers` write. Message: `This home's managers are set by its client account.`
+   - **Owner invite.** `inviteOwner` for an unclaimed client account: refuse before any email or member write. Message: `This client can't have owners yet.`
+   - **Lease create/renew/update** (`lease-mutations.ts`, `lease-lifecycle-actions.ts`, `entity-updates.ts` lease update): if the property is an unclaimed client home, set `collects_outside_domus = true` in the payload. That keeps the UI and DB in sync; the DB trigger stays authoritative.
+   - **Stripe, refuse with `Online payments aren't available for this home yet.`, before any Stripe API call or DB write:**
+     - Connect onboarding and links (`connect.ts`) for an unclaimed client account;
+     - checkout (`prepareCheckoutContext`) for a charge on an unclaimed client home;
+     - autopay setup (`autopay.ts`) for such a lease;
+     - the scheduled autopay run (`lib/autopay.ts`): **skip** such leases and log `[autopay] skipped client home`;
+     - withdrawals and distributions for an unclaimed client account.
+
+     One test per entry point, asserting that the Stripe mock was **not** called.
+5. **Owner-only stays closed (tests).** With a client-account fixture (a linked manager, no members, creator NULL):
+   - `canUserAdministerOwnershipAccount(manager, client)` is false;
+   - `getTaxSummaryReport` returns no client homes for the manager;
+   - `inviteOwner` is refused.
+6. **Unchanged access (regression tests, pinned before you change code).** For a normal owner home, the owner, the assigned manager and the tenant get the same results as today from `canUserAdministerProperty`, the property listing helpers, `inviteManager`, `inviteOwner`, `createLease` and checkout.
+7. **Isolation (tests):**
+   - managers A and B: `listClientAccountsForManager` returns only each manager's own clients; `addClientHome` by B into A's client is refused with **no RPC call**;
+   - same manager, clients X and Y, with X's link inactive: X is excluded from the list and X's homes are refused, while Y still works.
 
 ## 4. Out of scope
-Any UI or screen (Sprint 206); owner statements (207); claim (208); rewriting existing RLS policies or `can_administer_property`; changing `createProperty`'s manager path; notifications (OFF); applying the migration.
+- Any UI (Sprint 206), owner statements (207), claim (208).
+- Rewriting RLS policies.
+- Changing `createProperty`'s manager path.
+- The pre-existing invitation-policy finding.
+- Notifications (OFF).
+- Applying the migration or any DB access.
 
 ## 5. Exact files expected to change
-New: `apps/web/lib/client-accounts.ts`, `apps/web/app/actions/client-accounts.ts`, tests. Changed: `apps/web/lib/property-access.ts`, `apps/web/lib/stripe-connect.ts`, `apps/web/lib/manager-payments-data.ts`, `apps/web/lib/notification-preference-store.ts`, the lease-create action(s), `apps/web/lib/charge-checkout.ts`, the autopay setup action, the payout/distribution/withdrawal entry points, the validations module (Zod), the DB types file if any. List every file.
+New:
+- `apps/web/lib/client-accounts.ts`
+- `apps/web/app/actions/client-accounts.ts`
+- tests
+
+Changed:
+- `apps/web/lib/property-access.ts`, `apps/web/lib/stripe-connect.ts`, `apps/web/lib/manager-payments-data.ts`, `apps/web/lib/notification-preference-store.ts`
+- `apps/web/app/actions/invitations.ts`, `apps/web/app/actions/lease-mutations.ts`, `apps/web/app/actions/lease-lifecycle-actions.ts`, `apps/web/app/actions/entity-updates.ts`
+- `apps/web/app/actions/connect.ts`, `apps/web/lib/charge-checkout.ts`, `apps/web/app/actions/autopay.ts`, `apps/web/lib/autopay.ts`
+- `apps/web/app/actions/withdrawals.ts` and/or `apps/web/lib/withdrawals.ts`, `apps/web/lib/distributions.ts`
+- the validations module (Zod)
+- the DB types file, if the repo keeps one
+
+List every file in the report. Any other file = explain why.
 
 ## 6. Implementation requirements
-Exact strings; sentences ≤ 12 words; plain-language guard passes. Every Supabase result checked; explicit column lists. Lines ≤ 140; files ≤ 500; no new dependencies; no `eslint-disable`. Owner/manager/tenant behavior on non-client homes unchanged.
+- Exact strings; sentences ≤ 12 words; the plain-language guard passes.
+- Every Supabase result is checked; explicit column lists; helpers fail closed by throwing.
+- Lines ≤ 140; files ≤ 500 (split if needed); no new dependencies; no `eslint-disable`.
+- Behavior on non-client homes is unchanged.
 
 ## 7. Validation commands to run
-`npm run lint:web`; `npx tsc --noEmit -p apps/web/tsconfig.json`; new tests + every test importing a changed file; `lib/__tests__/plain-language.test.ts`; `npm run build --workspace @domus/web`.
+- `npm run lint:web`
+- `npx tsc --noEmit -p apps/web/tsconfig.json`
+- new tests, plus every test importing a changed file
+- `lib/__tests__/plain-language.test.ts`
+- `npm run build --workspace @domus/web`
 
 ## 8. Acceptance criteria (binary)
-1. Null `owner_profile_id` is handled everywhere it's read and never grants access.
-2. Managers can create a client account and add homes to their own client accounts only; homes get `owner_profile_id = NULL` and a `property_managers` row; another manager is refused with no write.
-3. Leases on unclaimed client homes are always "outside Domus"; every Stripe entry point refuses unclaimed client homes/accounts.
-4. Owner-only features stay closed to client managers; non-client access is unchanged (pinned tests).
-5. All tests are real assertions; lint, typecheck, guard and build pass; only listed files changed.
+1. Null `owner_profile_id` is handled by every reader and never grants access (one test per reader).
+2. The actions create clients and homes only for the caller's own active links. Refusals happen before any RPC. RPC error codes map to the exact strings.
+3. Every Stripe entry point, plus manager and owner invites, refuses unclaimed client homes and accounts **before** any external call or write. One test each, asserting the mock was not called.
+4. Lease create/renew/update sends `collects_outside_domus = true` for client homes.
+5. Owner-only access stays closed; normal-home behavior is unchanged (tests pinned first); the isolation tests pass.
+6. All tests are real assertions (L-017); lint, typecheck, guard and build pass; only the listed files changed.
 
 ## 8b. Post-deploy (Claude)
-Apply the migration and verify (columns, check constraint, RLS on the new table, function grants service-role only). In SQL as the service role: create a test client account for the smoke manager plus one home; simulate the smoke manager (`set role authenticated`, JWT sub) and confirm they can see it through existing policies and **cannot** see/insert `property_tax_years` for it; simulate the smoke owner and confirm they can't see it; then delete the test client data. Smoke 3 roles, CI, Sentry.
+1. Apply the migration.
+2. Run `supabase/tests/sprint205_client_accounts_test.sql`; every line must match its header expectations.
+3. Run one service-role lease update test.
+4. Confirm function grants are service-role only, plus `get_advisors` security.
+5. Smoke 3 roles, CI, Sentry.
 
 ## 9. Report format
-JSON per `docs/codex-report-schema.json`; list every Stripe entry point guarded and every owner_profile_id reader changed. Do NOT include "Claude prompt" or "recommended next steps for Claude" sections. Report compact status only.
+JSON per `docs/codex-report-schema.json`. List every owner_profile_id reader changed and every guarded entry point (file:function). Do NOT include "Claude prompt" or "recommended next steps for Claude" sections. Report compact status only.
 
 ## 10. Constraints
-No DB access or migration apply, no deploy, commit or push. Never touch `.claude/launch.json`. Notifications stay OFF.
+No DB access or migration apply; no deploy, commit or push. Never touch `.claude/launch.json`. Notifications stay OFF.
