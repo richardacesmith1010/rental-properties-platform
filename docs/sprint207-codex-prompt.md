@@ -1,4 +1,4 @@
-# Sprint 207 (rev 2; ChatGPT rev 1 REJECT, all REQUIRED + OPTIONAL adopted) — Monthly owner statement for client accounts (L3: money report) · Category 3 (Manager) / 5 (Money)
+# Sprint 207 (rev 3; ChatGPT rev 1 + rev 2 REJECT; all REQUIRED + OPTIONAL adopted) — Monthly owner statement for client accounts (L3: money report) · Category 3 (Manager) / 5 (Money)
 
 ## 1. Objective
 A manager can make a monthly **owner statement** (PDF and CSV) for each client account, to send to an owner who isn't on Domus. Each format is generated exclusively from the same `OwnerStatement` calculation and contains no accounting logic of its own.
@@ -40,7 +40,11 @@ A manager can make a monthly **owner statement** (PDF and CSV) for each client a
      8. **Net** = payments recorded (including negative reversal lines) − expenses.
      9. **Still owed at month end.** Take each charge with `due_date` ≤ month end and category ≠ `deposit` that is not deleted as of C and not waived as of C. Its owed amount is `max(0, amount − Σ payments with paid_at < C and (reversed_at IS NULL or reversed_at ≥ C))`. Include it when > 0. Line date = `due_date`. An overpayment is never negative.
      10. **Deletion policy:** a payment on a charge deleted before C is excluded from that month (it was undone). A charge deleted on or after C still shows normally in that month's statement, so later deletions don't rewrite past months.
-   - **Wording:** the report is a month-end snapshot. Every amount is computed only from timestamps, so a statement for a past month doesn't change when charges are later waived or deleted. The only exception is legacy waivers with `waived_at = NULL`.
+   - **Correction policy (decided 2026-10-09):** a statement is a **restatement from current records**, not a frozen document.
+     - Timestamps (`paid_at`, `reversed_at`, `deleted_at`, `waived_at`) place activity in the right month. A waiver or deletion made *after* the month doesn't hide that month's owed rent or payments.
+     - Corrections still restate past months: editing an amount or due date, un-waiving, or editing a payment or expense changes a re-downloaded past statement. This is intended.
+     - The PDF footer and CSV `Summary` say so (see item 3).
+     - No history tables in this sprint.
    - **Homes:** `homes` = every active home of the account (zero rows included), plus any archived home with at least one payment, reversal, deposit, waiver, expense or owed line in the statement.
    - **Stable sorting:**
      - payments: by date, then homeLabel, then payment id (`+` line before `−` line for the same id);
@@ -51,7 +55,7 @@ A manager can make a monthly **owner statement** (PDF and CSV) for each client a
    - **Returns** `OwnerStatement`:
      - `{ account: { id, name, accountType }, month, monthLabel ("October 2026"), periodLabel ("October 1 – 31, 2026"), preparedBy: { name, email }, generatedAt }`;
      - `totals: { paymentsCents, expensesCents, netCents, stillOwedCents }`;
-     - `homes: [{ id, name, paymentsCents, expensesCents, netCents }]`, including homes with all zeros, active ones only, sorted by name;
+     - `homes: [{ id, name, archived, paymentsCents, expensesCents, netCents }]`, following the **Homes** rule above (every active home, zero rows included, plus archived homes with any line in this statement, including an owed line). The same set drives the PDF, CSV and `homeCount`;
      - `payments: [{ date, homeLabel, tenantLabel, kindLabel, methodLabel, amountCents }]` sorted by date;
      - `expenses: [{ date, homeLabel, kindLabel, note, amountCents }]`;
      - `notCounted: [{ label, homeLabel, date, amountCents }]`;
@@ -65,7 +69,7 @@ A manager can make a monthly **owner statement** (PDF and CSV) for each client a
      - `totals.stillOwedCents === Σ owed.amountCents`;
      - every owed amount is > 0.
 2. **`lib/owner-statement-csv.ts`:** `ownerStatementToCsv(statement)`. One CSV with sections and a blank row between each:
-   - `Summary`: rows `Payments recorded`, `Expenses`, `Net`, `Still owed`;
+   - `Summary`: rows `Month`, `Made on` (date), `Payments recorded`, `Expenses`, `Net`, `Still owed`;
    - `By home`;
    - `Payments recorded`;
    - `Expenses`;
@@ -73,7 +77,7 @@ A manager can make a monthly **owner statement** (PDF and CSV) for each client a
    - `Still owed`.
 
    Amounts are plain decimals (`1450.00`; negatives `-1450.00`). They're trusted numeric cells, formatted from integer cents by our own code, and written with plain CSV quoting **without** the formula prefix, using a new `escapeAmountCell(cents)`. Every text cell (names, labels, notes, dates) uses `escapeCell`, which keeps its formula protection.
-3. **PDF:** `lib/pdf/owner-statement-template.tsx` matches the approved design: header, 4 totals, By home table with a total row, Payments recorded, Expenses, Not counted above, Still owed, and the footer `Rent for these homes is paid outside Domus. These are the payments and expenses your manager recorded for {Month}.` Long lists flow onto more pages with repeated table headers and `Page X of Y`. Empty sections show `None this month.`
+3. **PDF:** `lib/pdf/owner-statement-template.tsx` matches the approved design: header, 4 totals, By home table with a total row, Payments recorded, Expenses, Not counted above, Still owed, and the footer `Rent for these homes is paid outside Domus. Made {Mon D, YYYY} from your manager's records. Later fixes to records can change this statement.` Long lists flow onto more pages with repeated table headers and `Page X of Y`. Empty sections show `None this month.`
 4. **Routes:** `GET app/api/pdf/owner-statement/route.ts` and `GET app/api/owner-statement/csv/route.ts`, with query `accountId` (uuid) and `month` (`^\d{4}-(0[1-9]|1[0-2])$`, not after the current Denver month, at most 36 months back).
    - Auth: signed-in user with role `manager`, else 401/403.
    - Rate limit 30/h per user, else 429.
@@ -83,7 +87,7 @@ A manager can make a monthly **owner statement** (PDF and CSV) for each client a
    - **Denver "today":** the latest allowed month is the current `America/Denver` month, computed on the server, never from the browser or machine time zone. The clock is injectable (`now` parameter) for tests.
    - Filenames: `owner-statement-{slug(account name)}-{YYYY-MM}.pdf` / `.csv`. The slug is lowercase a–z0–9 and `-`, max 40 characters.
    - Headers: `Cache-Control: private, no-store`, `Content-Disposition: attachment`.
-5. **Server action** `getOwnerStatementSummary(accountId, month)` in `app/actions/owner-statement.ts` (`requireAuth("manager")`, Zod) returns `{ success: true, totals, homeCount }` for the sheet. Errors: `You can't see this client.` / `Could not load the statement. Please try again.`
+5. **Server action** `getOwnerStatementSummary(accountId, month)` in `app/actions/owner-statement.ts` (`requireAuth("manager")`, Zod) returns `{ success: true, totals, homeCount }` for the sheet. It validates the **same** month window as the routes (≤ current Denver month, ≥ 36 months back; outside it → `Pick a month from the list.`). Errors: `You can't see this client.` / `Could not load the statement. Please try again.`
 6. **UI** (client page; match screen 6):
    - An `Owner statement` button in the client page header (≥ 44 px) opens a sheet (`mobile-drawer` on phone, `modal-overlay` on desktop).
    - Sheet contents: title `Owner statement`; line `{Client} · {N} homes. Send this to the owner each month.`; a `Month` select of the last 12 Denver months, newest first, defaulting to the previous month on Denver day 1–10 and the current month otherwise. The default and the month list come from the server (`America/Denver`) as props, never from the browser time zone.
@@ -94,7 +98,12 @@ A manager can make a monthly **owner statement** (PDF and CSV) for each client a
 7. **Small 206c follow-up.** After `createClientAccount` succeeds in `ClientsSection`, call `router.refresh()` (`next/navigation`). That way the page header, which reads the server-loaded `clients` prop, switches from `Add` to `Add client` without a manual reload. Test: `refresh` is called once on success and not on error.
 
 ## 4. Out of scope
-Statements for owner (non-client) accounts; emailing the statement (notifications OFF); claim; DB changes; editing payments or expenses.
+- Statements for owner (non-client) accounts.
+- Emailing the statement (notifications OFF).
+- Claim.
+- History tables or versioning.
+- Editing payments or expenses.
+- Codex does **no DB access**: Claude owns, applies and verifies the migration. Codex only updates app code and DB types for the new `waived_at` column.
 
 ## 5. Exact files expected to change
 New:
@@ -110,7 +119,8 @@ New:
 Changed:
 - `apps/web/components/dashboard/clients/client-detail.tsx`
 - `apps/web/components/dashboard/clients/clients-section.tsx` (item 7 only)
-- `apps/web/lib/csv-export-reports.ts` (the `escapeCell` `\t`/`\r` change only)
+- `apps/web/lib/csv-export-reports.ts` (`escapeCell` gains tab/CR/LF; new `escapeAmountCell`)
+- the DB types file, if the repo keeps one (`waived_at`)
 - the validations module
 
 ## 6. Implementation requirements
@@ -140,6 +150,9 @@ Changed:
    - a charge deleted in October drops its October payment;
    - a reversal exactly at `nextMonthStart` doesn't reduce the prior month's owed amount;
    - each invariant throws on tampering;
+   - exact cutoff equality (`== nextMonthStart`) for `paid_at`, `reversed_at`, `deleted_at` and `waived_at` follows half-open `[start, next)` semantics;
+   - a multi-month waiver fixture (waived Sep 20, un-waived Oct 5, re-waived Nov 3, using the `waived_at` the trigger would set): September and October show it owed per the restatement policy, November lists it under `Waived`;
+   - the summary action refuses a month outside the window with `Pick a month from the list.`;
    - Denver clock edges: day 10 → previous month, day 11 → current month, the UTC date differing from the Denver date, and December → January;
    - an archived home with activity is included, and an archived home without activity is not.
 2. **Reconciliation test:** for a fixture with 3 homes, 2 units on 1 home, mixed categories, a reversal, a deposit, a waiver and expenses:
@@ -165,6 +178,7 @@ Changed:
 7. All tests are real assertions (L-017). Lint, typecheck, guard and build pass. Only the listed files changed.
 
 ## 8b. Post-deploy (Claude)
+0. **Before Codex:** apply the migration. Verify the trigger with SQL in a rollback: INSERT waived and pending; UPDATE pending→waived, waived→waived (time kept, a client-supplied `waived_at` ignored), and waived→pending (cleared). Confirm existing waived rows are NULL and no other triggers are affected.
 1. As the smoke manager, create a test client, home, unit and lease.
 2. Record by SQL (service role): payments across the month edge, a reversal, a deposit, a waiver and expenses.
 3. Download the PDF and CSV from the live sheet. Check every number against a hand calculation and a SQL query, and check the PDF visually.
