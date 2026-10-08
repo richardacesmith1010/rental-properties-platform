@@ -1,4 +1,6 @@
-# Sprint 205 (rev 2) — Client accounts groundwork (L3: schema + authorization) · Category 3 (Manager)
+# Sprint 205 (rev 3) — Client accounts groundwork (L3: schema + authorization) · Category 3 (Manager)
+
+ChatGPT re-review of rev 2: **APPROVE WITH CHANGES**. All 4 required changes are adopted in rev 3: (1) lock order for manager sync; (2) a membership contract on all client accounts; (3) an executable Stripe call-site inventory; (4) the invitation privilege test. Item 4 was reachable and is fixed in hotfix 205a. Optional items adopted: no claim metadata while unclaimed; `can_administer_property` uses `search_path = ''` and qualified names; failure-injection tests; post-deploy invariant queries.
 
 Rev 1 was rejected by ChatGPT review. Rev 2 moves enforcement into the database: guard triggers and a hardened `can_administer_property`. That layer is already written and was **dry-run against live inside a rollback**, with 37 adversarial checks (see §2). Codex's job is the app layer on top of it.
 
@@ -40,7 +42,9 @@ Backend groundwork so a manager (Alia) can run homes for owners who are **not** 
 | Invitations | invitations_insert_admin_v2 | tenants only | trigger |
 | Owner-only | property_tax_years, ownership_account_members, ownership_accounts update, Stripe/Plaid columns | ❌ | owner-membership RLS + triggers + checks (dry-run T7/T8/T11/T15) |
 
-**Pre-existing finding (out of scope; separate L3 sprint):** `invitations_insert_admin_v2`'s tenant branch and `invitations_insert_owner` don't tie the invitation's `property_id`/account to the inserter. The app inserts invitations only through the service role, so no exploit path is known yet. Logged for review.
+**Invitations (fixed by hotfix `20261008_sprint205a_invitations_lockdown.sql`, applied before this sprint).** Tested live in a rollback: a signed-in owner could insert owner, manager or tenant invitations for **any** account or home. `handle_new_user()` turns pending owner/manager invitations into memberships or manager rows at signup, so this allowed a takeover. Writes to `invitations` are now service-role only, and all app writes already use the admin client. No abuse found: only 5 invitations exist, all tenant, all from authorized inviters.
+
+**Locking contract.** Every change to client manager authority (`add_client_home`, the sync trigger on `ownership_account_managers`, the future claim function) locks the `ownership_accounts` row **first**. **Membership contract:** on any managed-client account, claimed or not, `ownership_account_members` rows can be created or changed only by the controlled client functions. The v1.1 claim function will create the first owner membership atomically with the claim. Generic paths can never grant owner authority on a client account: join code, `inviteOwner`, the creator policy, `handle_new_user`.
 
 **App code facts:**
 - Most writes use the admin (service-role) client, so the triggers apply to them. Any app path that tries a blocked write will get a Postgres error, so it must **pre-check and refuse cleanly before** any side effect such as an email or a Stripe call.
@@ -57,6 +61,7 @@ Backend groundwork so a manager (Alia) can run homes for owners who are **not** 
    - `isActiveClientManager(userId, accountId)` → boolean (`ownership_account_managers`, `active = true`).
    - `listClientAccountsForManager(userId)` → `[{ id, name, accountType, claimState, homeCount }]`, only the caller's active links. Count homes with one batched query, not one per client.
    - Every guard below uses these helpers, never ad-hoc queries.
+   - **Failure-injection tests:** a DB error in each helper throws. It is never read as "not a client". For Connect, checkout and scheduled autopay, a helper error means no Stripe call.
 2. **Server actions** `apps/web/app/actions/client-accounts.ts` (`"use server"`, `requireAuth("manager")`, rate limits 20/h create and 60/h home):
    - `createClientAccount(prev, formData)`. Zod: `{ accountType: "individual"|"llc", clientName: trimmed 1–120, clientEmail?: email ≤ 254 }`. Calls `admin.rpc("create_client_account", …)` with `p_manager = user.id`.
    - `addClientHome(prev, formData)`. Zod: `{ accountId: uuid, name 1–120, addressLine1 1–200, city 1–100, state /^[A-Za-z]{2}$/, postalCode /^\d{5}(-\d{4})?$/, propertyType? (the 6 allowed values) }`. First check `isActiveClientManager(user.id, accountId)`; if false, return `You can't add homes for this client.` with **no RPC call**. Then call `admin.rpc("add_client_home", …)`.
@@ -72,7 +77,10 @@ Backend groundwork so a manager (Alia) can run homes for owners who are **not** 
    - **Manager invite.** `inviteManager` (`app/actions/invitations.ts`) for a property where `isUnclaimedClientProperty` is true: refuse before `inviteUserByEmail` and before any `property_managers` write. Message: `This home's managers are set by its client account.`
    - **Owner invite.** `inviteOwner` for an unclaimed client account: refuse before any email or member write. Message: `This client can't have owners yet.`
    - **Lease create/renew/update** (`lease-mutations.ts`, `lease-lifecycle-actions.ts`, `entity-updates.ts` lease update): if the property is an unclaimed client home, set `collects_outside_domus = true` in the payload. That keeps the UI and DB in sync; the DB trigger stays authoritative.
-   - **Stripe, refuse with `Online payments aren't available for this home yet.`, before any Stripe API call or DB write:**
+   - **Stripe: one shared guard, at the lowest shared layer.** Add `assertStripeEligibleProperty(propertyId)` / `assertStripeEligibleAccount(accountId)` to `lib/client-accounts.ts`. They throw `StripeNotEligibleError` when the client state is unclaimed **or the lookup fails** (fail closed). Every caller maps that to `Online payments aren't available for this home yet.` Call the guard inside the lowest shared money module (`lib/stripe-connect.ts`, `lib/charge-checkout.ts`, `lib/stripe-autopay.ts`, `lib/withdrawals.ts`, `lib/distributions.ts`), not only in actions, so a future caller can't skip it.
+   - **Call-site inventory (required in the report).** Run `grep -rnE "stripe\.[a-zA-Z]+\.(create|update|confirm|capture|del)" apps/web/app apps/web/lib`. Also list every function that calls `lib/stripe.ts`'s client, plus cron, webhook and retry paths. For each call site, give `file:function → guard used`, or a one-line proof that no guard is needed (for example, a webhook that only reacts to an existing Stripe object, which an unclaimed client can't have because the DB check forbids Stripe IDs on unclaimed accounts).
+   - **Race note (document, no code).** `claim_state` only moves unclaimed → claimed, and while unclaimed the DB forbids `stripe_account_id`. So a check-then-call race can't move money for an unclaimed client.
+   - Refuse at these entry points, before any Stripe API call or DB write:
      - Connect onboarding and links (`connect.ts`) for an unclaimed client account;
      - checkout (`prepareCheckoutContext`) for a charge on an unclaimed client home;
      - autopay setup (`autopay.ts`) for such a lease;
@@ -104,6 +112,7 @@ New:
 - tests
 
 Changed:
+- `apps/web/lib/stripe-autopay.ts`
 - `apps/web/lib/property-access.ts`, `apps/web/lib/stripe-connect.ts`, `apps/web/lib/manager-payments-data.ts`, `apps/web/lib/notification-preference-store.ts`
 - `apps/web/app/actions/invitations.ts`, `apps/web/app/actions/lease-mutations.ts`, `apps/web/app/actions/lease-lifecycle-actions.ts`, `apps/web/app/actions/entity-updates.ts`
 - `apps/web/app/actions/connect.ts`, `apps/web/lib/charge-checkout.ts`, `apps/web/app/actions/autopay.ts`, `apps/web/lib/autopay.ts`
@@ -129,16 +138,19 @@ List every file in the report. Any other file = explain why.
 ## 8. Acceptance criteria (binary)
 1. Null `owner_profile_id` is handled by every reader and never grants access (one test per reader).
 2. The actions create clients and homes only for the caller's own active links. Refusals happen before any RPC. RPC error codes map to the exact strings.
-3. Every Stripe entry point, plus manager and owner invites, refuses unclaimed client homes and accounts **before** any external call or write. One test each, asserting the mock was not called.
+3. Every Stripe entry point, plus manager and owner invites, refuses unclaimed client homes and accounts **before** any external call or write. One test each, asserting the mock was not called. The shared guard sits in the lowest money modules. The report includes the complete call-site inventory. Helper failures fail closed (tested).
 4. Lease create/renew/update sends `collects_outside_domus = true` for client homes.
 5. Owner-only access stays closed; normal-home behavior is unchanged (tests pinned first); the isolation tests pass.
 6. All tests are real assertions (L-017); lint, typecheck, guard and build pass; only the listed files changed.
 
 ## 8b. Post-deploy (Claude)
-1. Apply the migration.
+0. Apply 205a first (done before dispatch) and re-run the forged-invitation test; expect `42501`.
+1. Dry-run the final migration plus the test script in a rollback; then apply.
 2. Run `supabase/tests/sprint205_client_accounts_test.sql`; every line must match its header expectations.
 3. Run one service-role lease update test.
 4. Confirm function grants are service-role only, plus `get_advisors` security.
+4a. **Concurrency test:** two parallel sessions. One runs `add_client_home` with a `pg_sleep` after locking. The other deactivates the manager link. The final state must have no active derived `property_managers` row for an inactive link.
+4b. **Invariant queries (must return 0 rows):** normal homes with NULL owner; unclaimed client homes with a non-NULL owner; active links missing an active derived row; active derived rows whose link is inactive or missing; members on managed-client accounts.
 5. Smoke 3 roles, CI, Sentry.
 
 ## 9. Report format

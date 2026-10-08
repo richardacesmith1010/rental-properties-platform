@@ -56,6 +56,8 @@ alter table public.ownership_accounts
   add column claimed_by_profile_id uuid references public.profiles(id) on delete set null,
   add constraint ownership_accounts_client_state_check
     check (managed_client or claim_state = 'claimed'),
+  add constraint ownership_accounts_unclaimed_no_claim_meta_check
+    check (claim_state = 'claimed' or (claimed_at is null and claimed_by_profile_id is null)),
   add constraint ownership_accounts_client_no_creator_check
     check (not managed_client or claim_state = 'claimed' or created_by_profile_id is null),
   add constraint ownership_accounts_unclaimed_no_money_links_check
@@ -194,10 +196,15 @@ create or replace function public.ownership_account_members_guard_client() retur
 language plpgsql security definer set search_path = ''
 as $fn$
 begin
-  if exists (select 1 from public.ownership_accounts oa where oa.id = new.account_id
-             and oa.managed_client and oa.claim_state = 'unclaimed')
+  -- Contract: on ANY managed-client account (unclaimed or claimed) memberships are created/changed
+  -- only by the controlled client functions (the v1.1 claim function creates the first owner
+  -- membership atomically with the claim). Generic paths (join code, inviteOwner, creator policy,
+  -- handle_new_user) can never grant owner authority on a client account.
+  if exists (select 1 from public.ownership_accounts oa
+             where oa.id in (new.account_id, case when tg_op = 'UPDATE' then old.account_id end)
+               and oa.managed_client)
      and not public.domus_client_sync_allowed() then
-    raise exception 'an unclaimed client account has no members' using errcode = '42501';
+    raise exception 'client account members are set only through client functions' using errcode = '42501';
   end if;
   return new;
 end $fn$;
@@ -258,6 +265,9 @@ declare v_account uuid := coalesce(new.account_id, old.account_id);
         v_active boolean := case when tg_op = 'DELETE' then false else new.active end;
         v_prev text := coalesce(current_setting('domus.client_sync', true), '');
 begin
+  -- Same lock order as add_client_home/claim: the account row first. Concurrent home creation
+  -- waits here, and the update below (new statement snapshot) also sees homes committed meanwhile.
+  perform 1 from public.ownership_accounts where id = v_account for update;
   perform set_config('domus.client_sync', 'on', true);
   if v_active then
     insert into public.property_managers (property_id, manager_profile_id, active)
@@ -290,12 +300,12 @@ create or replace function public.can_administer_property(target_property_id uui
  returns boolean
  language sql
  stable security definer
- set search_path to 'public'
+ set search_path to ''
 as $function$
   select exists (
     select 1
-    from properties p
-    join ownership_account_members oam on oam.account_id = p.owner_account_id
+    from public.properties p
+    join public.ownership_account_members oam on oam.account_id = p.owner_account_id
     where p.id = target_property_id
       and oam.profile_id = auth.uid()
       and oam.member_role = 'owner'
@@ -303,20 +313,20 @@ as $function$
   )
   or exists (
     select 1
-    from property_managers pm
-    join properties p on p.id = pm.property_id
-    left join ownership_accounts oa on oa.id = p.owner_account_id
+    from public.property_managers pm
+    join public.properties p on p.id = pm.property_id
+    left join public.ownership_accounts oa on oa.id = p.owner_account_id
     where pm.property_id = target_property_id
       and pm.manager_profile_id = auth.uid()
       and pm.active = true
       and (coalesce(oa.managed_client, false) = false or exists (
-        select 1 from ownership_account_managers x
+        select 1 from public.ownership_account_managers x
         where x.account_id = oa.id and x.manager_profile_id = auth.uid() and x.active = true))
   )
   or exists (
     select 1
-    from properties p
-    join ownership_accounts oa on oa.id = p.owner_account_id
+    from public.properties p
+    join public.ownership_accounts oa on oa.id = p.owner_account_id
     where p.id = target_property_id
       and oa.created_by_profile_id = auth.uid()
   );
