@@ -1,4 +1,11 @@
-# Account deletion — design (rev 3, 2026-10-08; ChatGPT rev 1 REJECT, rev 2 REJECT — all points adopted)
+# Account deletion — design (rev 3, 2026-10-08; ChatGPT: rev 1 REJECT, rev 2 REJECT, rev 3 REJECT "close")
+
+> **Status: PARKED at rev 3 (2026-10-08).** Remaining required work before an implementation packet:
+> 1. **Write-path matrix:** for every table and server action/RPC, which profile(s) a write *affects* (not just who writes), which lock it takes (one shared helper `lock_affected_profiles(uuid[])`), and what happens if any affected profile is deleting. Example: a manager updating a tenant's repair, an owner editing a tenant's rent, a tenant reporting paid while the owner edits.
+> 2. **Service-role writes:** server actions using the admin client must call the same helper; prove none bypass it (tests per write path).
+> 3. **Storage:** use `storage.objects.owner_id` (the deprecated `owner` column must not be used), plus a race-free final ownership check, and an integration test against a real Supabase project (not mocks).
+> 4. Worker timestamps (`claimed_at`, `next_attempt_at`, `last_attempt_at`), lock-order tests, a no-PII deletion receipt.
+> Release is also gated on the lawyer's retention answer, so parking costs no ship time.
 
 **Owner decision (2026-10-07):** keep shared rent, payment and repair records, with the person's name and contact details removed. The retention period is to be confirmed with a lawyer (the legal draft suggests 7 years).
 **Why now:** the App Store requires in-app account deletion for apps with sign-up. Sprint 199 rev 1 was rejected for missing atomicity, a PII inventory, Stripe handling and handover rules; this document answers those first.
