@@ -417,6 +417,16 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 - Home defers 5 Home-only bundles (works; Home loads shared bundles only). Owner Home not faster: critical path = ownership.accounts (8 q) → administered-ids (4 q) → dashboard.data (12 q, ~1 s). feature.capabilities cache from S179 is ineffective in production (22 q every request). Next sprint (L3): RPCs for dashboard + ownership, fix capabilities cache.
 
+## Sprint 198 SHIPPED + launch audit follow-ups (L1, `f0983ee`, 2026-10-07, luna low 83,965 Codex tokens)
+- Launch audit (`docs/launch-readiness-audit-2026-10-07.md`): B1 no MX on domusbase.com (support@/privacy@ dead), B2 alerts to send-only address, B3 Terms/Privacy outdated (March) + "paid plans" contradiction, B4 no tenant/manager deletion or any export; S1 phone sign-in form below fold, S2 no DMARC, S3 sitemap duplicate.
+- **B2 done:** Vercel prod env `PLATFORM_ALERT_EMAIL=richard.ace.smith@gmail.com` (live from this deploy).
+- **S198:** `/login` marketing intro `hidden lg:flex` → phone shows the card first (Owner button bottom 584 px at 375×812, login + signup, light/dark); desktop unchanged; `/marketing` removed from sitemap. Gate 1616/1616; smoke pass; CI #365.
+- Small copy note: signup with role preselected still says "Choose your role, then sign in or create your account."
+
+### WAITING ON USER AT THE MAC (user away until Fri 2026-10-09)
+- **Cloudflare (B1 + S2):** Email Routing for domusbase.com — forward support@ and privacy@ → richard.ace.smith@gmail.com (user signs in + confirms + clicks Cloudflare's verification email); then Claude adds `_dmarc` TXT `v=DMARC1; p=none`. Chrome extension is connected only to the home Mac.
+- 6 SMOKE_* GitHub secrets (Reliability 80) · Navy Federal + Fidelity October CSVs (Owner/Money).
+
 ## Sprint 197 SHIPPED — Auth helpers survive Supabase timeouts; errors never become answers (L3, `d7e9595`, 2026-10-07, gpt-6-sol medium, 86,812 Codex tokens; ChatGPT APPROVE WITH CHANGES → APPROVE rev 2)
 - Root finding: `lib/auth.ts` ignored Supabase errors — role fell back to "tenant", profile errors looked like "not onboarded" (tenant → /onboarding), `getAuthState` reported "no profile".
 - New `lib/supabase-transient.ts`: `isTransientSupabaseFailure` (exclusions first: session-missing, 4xx incl. 401/403/429, 42501, PGRST301/302/116; then status ≥500/0, AuthRetryableFetchError, PGRST003; message regex only for thrown errors) + `checkedSupabaseCall` (one retry after 300 ms; persistent/non-transient → `Error("Account check is unavailable. Please try again.", { cause: <final Supabase error> })`). `getCheckedAuthUser` treats session-missing / getUser 401-403 as signed out (→ /login, no retry). Profile/role reads use `.maybeSingle()` (0 rows → existing fallback; >1 → throw). Redirects stay outside retry. `requireAuth` uses the same.
