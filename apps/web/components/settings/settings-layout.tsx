@@ -54,11 +54,18 @@ export function SettingsLayout({ role, sections }: SettingsLayoutProps) {
     }
   }, [activeSection, availableNav]);
 
+  useEffect(() => {
+    const activeTab = document.querySelector<HTMLButtonElement>(
+      `[data-settings-mobile-nav] [data-settings-tab="${activeSection}"]`
+    );
+    activeTab?.scrollIntoView?.({ inline: "nearest", block: "nearest" });
+  }, [activeSection]);
+
   const currentSection = sections[activeSection];
 
   return (
-    <div className="grid gap-6 md:grid-cols-[14rem_minmax(0,1fr)]">
-      <aside className="space-y-3">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-6 md:grid-cols-[14rem_minmax(0,1fr)]">
+      <aside className="min-w-0 space-y-3">
         <div className="hidden rounded-2xl border border-[var(--domus-card-border)] bg-[var(--domus-input-bg)] p-2 md:block">
           <nav aria-label="Settings navigation" className="space-y-1">
             {availableNav.map((item) => {
@@ -69,8 +76,12 @@ export function SettingsLayout({ role, sections }: SettingsLayoutProps) {
                   key={item.id}
                   type="button"
                   onClick={() => setActiveSection(item.id)}
+                  data-settings-tab={item.id}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-xl border-l-2 px-3 py-2.5 text-left text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ground)]",
+                    "flex w-full items-center gap-3 rounded-xl border-l-2 px-3 py-2.5 text-left",
+                    "text-sm font-medium transition-colors focus-visible:outline-none",
+                    "focus-visible:ring-2 focus-visible:ring-[var(--accent-line)]",
+                    "focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ground)]",
                     isActive
                       ? "border-[var(--accent)] bg-[var(--accent-weak)] text-[var(--accent)]"
                       : "border-transparent text-[var(--ink-2)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"
@@ -86,7 +97,11 @@ export function SettingsLayout({ role, sections }: SettingsLayoutProps) {
         </div>
 
         <div className="md:hidden">
-          <nav aria-label="Settings navigation" className="flex gap-2 overflow-x-auto pb-1">
+          <nav
+            aria-label="Settings navigation"
+            className="flex gap-2 overflow-x-auto pb-1"
+            data-settings-mobile-nav
+          >
             {availableNav.map((item) => {
               const Icon = item.icon;
               const isActive = item.id === activeSection;
@@ -95,8 +110,12 @@ export function SettingsLayout({ role, sections }: SettingsLayoutProps) {
                   key={item.id}
                   type="button"
                   onClick={() => setActiveSection(item.id)}
+                  data-settings-tab={item.id}
                   className={cn(
-                    "inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ground)]",
+                    "inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-sm",
+                    "font-medium transition-colors focus-visible:outline-none",
+                    "focus-visible:ring-2 focus-visible:ring-[var(--accent-line)]",
+                    "focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ground)]",
                     isActive
                       ? "border-[var(--accent)] bg-[var(--accent-weak)] text-[var(--accent)]"
                       : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"
@@ -114,7 +133,7 @@ export function SettingsLayout({ role, sections }: SettingsLayoutProps) {
 
       <section
         key={activeSection}
-        className="domus-card p-5 animate-in fade-in duration-200"
+        className="domus-card min-w-0 p-5 animate-in fade-in duration-200"
         aria-live="polite"
       >
         {currentSection ? (
