@@ -160,6 +160,7 @@ Changed:
    - the CSV `Summary` rows equal `statement.totals`;
    - the CSV section line counts equal the statement arrays;
    - the invariant check throws on a tampered statement.
+   - `owner-statement-csv.ts` and `owner-statement-template.tsx` import no Supabase client or data loader, and take only an `OwnerStatement` (a test reads their import lists).
 3. **Access:**
    - an inactive or foreign manager → `StatementAccessError` → route 404, with no data queries after the access check;
    - an owner or tenant role → 403;
