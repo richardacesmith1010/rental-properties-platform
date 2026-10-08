@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Download } from "lucide-react";
 import { requireRole, getRoleHomePath } from "@/lib/auth";
 import { editCharge, deleteCharge, waiveCharge, updateExpense } from "@/app/actions";
+import { savePropertyTaxYear } from "@/app/actions/property-tax-year";
 import {
   getDelinquencyReport,
   getMonthlyPnLReport,
@@ -49,7 +50,7 @@ export default async function ReportsPage(props: ReportsPageProps) {
     getDelinquencyReport(user.id),
     getTenantLedgerReport(user.id),
     getMonthlyPnLReport(user.id, reportYear),
-    getTaxSummaryReport(user.id, reportYear),
+    role === "owner" ? getTaxSummaryReport(user.id, reportYear) : Promise.resolve([]),
     getReceivablesReport(user.id),
   ]);
 
@@ -145,7 +146,8 @@ export default async function ReportsPage(props: ReportsPageProps) {
           <ReportCard id="delinquency-aging" icon="receipt" title="Overdue Rent Aging" description="Outstanding balances by 30/60/90+ day aging." />
           <ReportCard id="tenant-ledger" icon="file-bar-chart-2" title="Payment history" description="Rent and payment history for each tenant." />
           <ReportCard id="monthly-pnl" icon="wallet" title="Money in and out" description="Income and costs by home and month." />
-          <ReportCard id="tax-summary" icon="landmark" title="Tax Summary" description="Annual rental income and deductions in a Schedule E style format." />
+          {role === "owner" && <ReportCard id="tax-summary" icon="landmark" title="Rental tax summary"
+            description="Rental income and deductions by home for your tax preparer." />}
           <ReportCard id="accounts-receivable" icon="credit-card" title="Accounts Receivable" description="All outstanding balances grouped by tenant." />
         </section>
 
@@ -154,7 +156,7 @@ export default async function ReportsPage(props: ReportsPageProps) {
           <DelinquencyReport data={delinquency} onEditCharge={editCharge} onDeleteCharge={deleteCharge} onWaiveCharge={waiveCharge} />
           <TenantLedgerReport data={tenantLedger} onEditCharge={editCharge} onDeleteCharge={deleteCharge} onWaiveCharge={waiveCharge} />
           <MonthlyPnLReport data={monthlyPnl} onEditCharge={editCharge} onUpdateExpense={role === "owner" ? updateExpense : undefined} />
-          <TaxSummaryReport data={taxSummary} />
+          {role === "owner" && <TaxSummaryReport data={taxSummary} year={reportYear} onSave={savePropertyTaxYear} />}
           <ReceivablesReport data={receivables} onEditCharge={editCharge} onDeleteCharge={deleteCharge} onWaiveCharge={waiveCharge} />
         </div>
       </div>

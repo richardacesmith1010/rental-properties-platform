@@ -1,6 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { type ChargeDetailRecordDTO, type ExpenseLineItemDTO, withChargeEditingFallback } from "@/lib/charge-audit";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
+import { getCurrentUserRole } from "@/lib/auth";
+import { getOwnerMemberPropertyIds } from "@/lib/property-access";
 import {
   buildMonthKeys,
   composePropertyAddress,
@@ -24,6 +26,7 @@ export interface MonthlyPnLRow {
 }
 
 export interface TaxSummaryRow {
+  propertyId: string;
   propertyName: string;
   propertyAddress: string;
   totalRentalIncome: number;
@@ -35,6 +38,11 @@ export interface TaxSummaryRow {
   legalAndProfessional: number;
   managementFees: number;
   mortgageInterest: number;
+  mortgagePaymentsCashFlow: number;
+  depreciation: number;
+  escrowPropertyTax: number;
+  escrowInsurance: number;
+  needsInputs: boolean;
   repairs: number;
   supplies: number;
   taxes: number;
@@ -49,14 +57,19 @@ export function mapExpenseCategoryToTaxField(
 ): keyof Omit<
   TaxSummaryRow,
   | "propertyName"
+  | "propertyId"
   | "propertyAddress"
   | "totalRentalIncome"
   | "totalExpenses"
   | "netIncome"
-> {
+  | "mortgagePaymentsCashFlow"
+  | "escrowPropertyTax"
+  | "escrowInsurance"
+  | "needsInputs"
+> | null {
   switch (category) {
     case "mortgage":
-      return "mortgageInterest";
+      return null;
     case "insurance":
       return "insurance";
     case "management_fee":
@@ -247,15 +260,19 @@ export async function getTaxSummaryReport(
   userId: string,
   year = new Date().getUTCFullYear()
 ): Promise<TaxSummaryRow[]> {
+  if (await getCurrentUserRole(userId) !== "owner") throw new Error("Owner access required");
   try {
     const admin = createAdminClient();
     const { context, leases } = await getLeasesForScope(userId);
-    if (context.propertyIds.length === 0) {
+    const ownerIds = new Set(await getOwnerMemberPropertyIds(userId));
+    const propertyIds = context.propertyIds.filter((id) => ownerIds.has(id));
+    if (propertyIds.length === 0) {
       return [];
     }
 
-    const leaseById = new Map(leases.map((lease) => [lease.id, lease]));
-    const leaseIds = leases.map((lease) => lease.id);
+    const ownerLeases = leases.filter((lease) => ownerIds.has(context.unitById.get(lease.unit_id)?.propertyId ?? ""));
+    const leaseById = new Map(ownerLeases.map((lease) => [lease.id, lease]));
+    const leaseIds = ownerLeases.map((lease) => lease.id);
 
     const { data: charges, error: taxChargeError } = leaseIds.length
       ? await withChargeEditingFallback(
@@ -273,25 +290,36 @@ export async function getTaxSummaryReport(
     }
 
     const chargeById = new Map((charges ?? []).map((charge) => [charge.id, charge]));
-    const { data: payments } = chargeById.size
+    const { data: payments, error: paymentError } = chargeById.size
       ? await admin
           .from("payments")
           .select("rent_charge_id, amount_cents, paid_at")
           .in("rent_charge_id", Array.from(chargeById.keys()))
           .gte("paid_at", startOfYear(year))
           .lte("paid_at", `${endOfYear(year)}T23:59:59.999Z`)
-      : { data: [] };
+      : { data: [], error: null };
+    if (paymentError) throw paymentError;
 
-    const { data: expenses } = await admin
+    const { data: expenses, error: expenseError } = await admin
       .from("property_expenses")
       .select("property_id, category, amount_cents, expense_date")
-      .in("property_id", context.propertyIds)
+      .in("property_id", propertyIds)
       .gte("expense_date", startOfYear(year))
       .lte("expense_date", endOfYear(year));
+    if (expenseError) throw expenseError;
+
+    const { data: taxYears, error: taxYearsError } = await admin.from("property_tax_years")
+      .select("property_id, mortgage_interest_cents, escrow_property_tax_cents, escrow_insurance_cents, depreciation_cents")
+      .in("property_id", propertyIds).eq("tax_year", year);
+    if (taxYearsError) throw taxYearsError;
+    const inputsByPropertyId = new Map((taxYears ?? []).map((item) => [item.property_id, item]));
 
     const rowsByPropertyId = new Map<string, TaxSummaryRow>();
     for (const property of context.propertyById.values()) {
+      if (!ownerIds.has(property.id)) continue;
+      const inputs = inputsByPropertyId.get(property.id);
       rowsByPropertyId.set(property.id, {
+        propertyId: property.id,
         propertyName: property.name,
         propertyAddress: composePropertyAddress(property),
         totalRentalIncome: 0,
@@ -299,13 +327,18 @@ export async function getTaxSummaryReport(
         autoAndTravel: 0,
         cleaningAndMaintenance: 0,
         commissions: 0,
-        insurance: 0,
+        insurance: inputs?.escrow_insurance_cents ?? 0,
         legalAndProfessional: 0,
         managementFees: 0,
-        mortgageInterest: 0,
+        mortgageInterest: inputs?.mortgage_interest_cents ?? 0,
+        mortgagePaymentsCashFlow: 0,
+        depreciation: inputs?.depreciation_cents ?? 0,
+        escrowPropertyTax: inputs?.escrow_property_tax_cents ?? 0,
+        escrowInsurance: inputs?.escrow_insurance_cents ?? 0,
+        needsInputs: false,
         repairs: 0,
         supplies: 0,
-        taxes: 0,
+        taxes: inputs?.escrow_property_tax_cents ?? 0,
         utilities: 0,
         otherExpenses: 0,
         totalExpenses: 0,
@@ -332,8 +365,13 @@ export async function getTaxSummaryReport(
       if (!row) {
         continue;
       }
-      const field = mapExpenseCategoryToTaxField(expense.category);
-      row[field] += expense.amount_cents;
+      if (expense.category === "mortgage") {
+        row.mortgagePaymentsCashFlow += expense.amount_cents;
+        row.needsInputs = !inputsByPropertyId.has(expense.property_id);
+      } else {
+        const field = mapExpenseCategoryToTaxField(expense.category);
+        if (field) row[field] += expense.amount_cents;
+      }
     }
 
     return Array.from(rowsByPropertyId.values()).map((row) => {
@@ -346,6 +384,7 @@ export async function getTaxSummaryReport(
         row.legalAndProfessional +
         row.managementFees +
         row.mortgageInterest +
+        row.depreciation +
         row.repairs +
         row.supplies +
         row.taxes +
@@ -359,9 +398,6 @@ export async function getTaxSummaryReport(
       };
     });
   } catch (error) {
-    if (isMissingSchemaError(error)) {
-      return [];
-    }
     throw error;
   }
 }

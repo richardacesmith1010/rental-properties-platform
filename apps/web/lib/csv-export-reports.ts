@@ -121,7 +121,10 @@ export function taxSummaryToCsv(data: TaxSummaryRow[]): string {
       "Utilities ($)",
       "Other ($)",
       "Total Expenses ($)",
-      "Net Income ($)"
+      "Net Income ($)",
+      "Mortgage interest ($)",
+      "Depreciation ($)",
+      "Mortgage payments (cash flow only) ($)"
     ],
     data.map((row) => [
       row.propertyName,
@@ -141,7 +144,10 @@ export function taxSummaryToCsv(data: TaxSummaryRow[]): string {
       (row.utilities / 100).toFixed(2),
       (row.otherExpenses / 100).toFixed(2),
       (row.totalExpenses / 100).toFixed(2),
-      (row.netIncome / 100).toFixed(2)
+      (row.netIncome / 100).toFixed(2),
+      (row.mortgageInterest / 100).toFixed(2),
+      (row.depreciation / 100).toFixed(2),
+      (row.mortgagePaymentsCashFlow / 100).toFixed(2)
     ])
   );
 }

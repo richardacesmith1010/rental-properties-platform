@@ -41,7 +41,7 @@ describe("bucketDelinquencyDays", () => {
 
 describe("mapExpenseCategoryToTaxField", () => {
   it("maps mortgage expenses", () => {
-    expect(mapExpenseCategoryToTaxField("mortgage")).toBe("mortgageInterest");
+    expect(mapExpenseCategoryToTaxField("mortgage")).toBeNull();
   });
 
   it("maps insurance expenses", () => {
@@ -74,6 +74,7 @@ describe("mapExpenseCategoryToTaxField", () => {
 
   it("falls back unknown categories to other expenses", () => {
     expect(mapExpenseCategoryToTaxField("hoa")).toBe("otherExpenses");
+    expect(mapExpenseCategoryToTaxField("other")).toBe("otherExpenses");
   });
 });
 
@@ -296,6 +297,7 @@ describe("report csv exporters", () => {
   it("builds tax summary csv", () => {
     const csv = taxSummaryToCsv([
       {
+        propertyId: "property-1",
         propertyName: "Atlas",
         propertyAddress: "123 Main",
         totalRentalIncome: 120000,
@@ -307,6 +309,11 @@ describe("report csv exporters", () => {
         legalAndProfessional: 3000,
         managementFees: 4000,
         mortgageInterest: 5000,
+        mortgagePaymentsCashFlow: 1000000000,
+        depreciation: 1234,
+        escrowPropertyTax: 0,
+        escrowInsurance: 0,
+        needsInputs: false,
         repairs: 6000,
         supplies: 0,
         taxes: 7000,
@@ -319,11 +326,14 @@ describe("report csv exporters", () => {
 
     expect(csv).toContain('"123 Main"');
     expect(csv).toContain('"750.00"');
+    expect(csv).toContain('"Mortgage interest ($)","Depreciation ($)","Mortgage payments (cash flow only) ($)"');
+    expect(csv).toContain('"50.00","12.34","10000000.00"');
   });
 
   it("includes every Schedule E expense column in tax summary csv", () => {
     const csv = taxSummaryToCsv([
       {
+        propertyId: "property-1",
         propertyName: "Atlas",
         propertyAddress: "123 Main",
         totalRentalIncome: 0,
@@ -335,6 +345,11 @@ describe("report csv exporters", () => {
         legalAndProfessional: 6,
         managementFees: 7,
         mortgageInterest: 8,
+        mortgagePaymentsCashFlow: 0,
+        depreciation: 0,
+        escrowPropertyTax: 0,
+        escrowInsurance: 0,
+        needsInputs: false,
         repairs: 9,
         supplies: 10,
         taxes: 11,
@@ -348,6 +363,7 @@ describe("report csv exporters", () => {
     expect(csv).toContain('"Advertising ($)"');
     expect(csv).toContain('"Auto/Travel ($)"');
     expect(csv).toContain('"Other ($)"');
+    expect(csv).toContain('"0.08","0.00","0.00"');
   });
 
   it("builds receivables csv", () => {

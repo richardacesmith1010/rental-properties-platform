@@ -320,3 +320,20 @@ export async function canUserAdministerProperty(userId: string, propertyId: stri
   const propertyIds = await getAdministeredPropertyIds(userId);
   return propertyIds.includes(propertyId);
 }
+
+export async function getOwnerMemberPropertyIds(userId: string): Promise<string[]> {
+  const admin = createAdminClient();
+  const { data: memberships, error: memberError } = await admin.from("ownership_account_members")
+    .select("account_id").eq("profile_id", userId).eq("member_role", "owner").eq("active", true);
+  if (memberError) throw memberError;
+  const accountIds = [...new Set((memberships ?? []).map((row) => row.account_id))];
+  if (accountIds.length === 0) return [];
+  const { data: properties, error: propertyError } = await admin.from("properties")
+    .select("id").in("owner_account_id", accountIds);
+  if (propertyError) throw propertyError;
+  return (properties ?? []).map((property) => property.id);
+}
+
+export async function isOwnerMemberOfProperty(userId: string, propertyId: string): Promise<boolean> {
+  return (await getOwnerMemberPropertyIds(userId)).includes(propertyId);
+}
