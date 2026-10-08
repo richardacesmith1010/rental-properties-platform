@@ -167,10 +167,11 @@ interface PropertyWizardSuccessProps {
   bankConnected?: boolean;
   bankSetupHref: string;
   finishSetup: () => void;
+  returnToClientHref?: string;
 }
 
 export function PropertyWizardSuccess({
-  step, bankConnected, bankSetupHref, finishSetup
+  step, bankConnected, bankSetupHref, finishSetup, returnToClientHref
 }: PropertyWizardSuccessProps) {
   return (
     <>
@@ -207,9 +208,9 @@ export function PropertyWizardSuccess({
                 type="button"
                 size="lg"
                 onClick={finishSetup}
-                title="Go to the property overview on the dashboard."
+                title={returnToClientHref ? "Return to this client." : "Go to the property overview on the dashboard."}
               >
-                Go to Dashboard
+                {returnToClientHref ? "Back to client" : "Go to Dashboard"}
               </Button>
             </div>
           ) : null}

@@ -21,8 +21,10 @@ export type ClientOverview = {
 };
 export type ClientDetail = Omit<ClientOverview, "homeCount" | "summary"> & { homes: ClientHome[] };
 
-type AccountRow = { id: string; display_name: string; account_type: "individual" | "llc"; client_contact_email: string | null; managed_client: boolean };
-type PropertyRow = { id: string; owner_account_id: string; name: string; address_line1: string; city: string; state: string; postal_code: string; active: boolean };
+type AccountRow = { id: string; display_name: string; account_type: "individual" | "llc";
+  client_contact_email: string | null; managed_client: boolean };
+type PropertyRow = { id: string; owner_account_id: string; name: string; address_line1: string; city: string;
+  state: string; postal_code: string; active: boolean };
 type UnitRow = { id: string; property_id: string };
 type LeaseRow = { id: string; unit_id: string; active: boolean; due_day_of_month?: number };
 type RentRow = { lease_id: string; due_date: string; status: string };

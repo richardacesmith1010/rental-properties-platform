@@ -2,13 +2,14 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { UnifiedPropertyWizard } from "@/components/dashboard/unified-property-wizard";
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+const router = vi.hoisted(() => ({ refresh: vi.fn(), push: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
-async function reachSuccess(bankConnected: boolean) {
+async function reachSuccess(bankConnected: boolean, returnToClientHref?: string) {
   const action = vi.fn(async () => ({ success: true as const, propertyId: "home-1" }));
   render(<UnifiedPropertyWizard open bankConnected={bankConnected} bankSetupHref="/connect/onboard"
-    onOpenChange={vi.fn()} onCreatePropertyWithSetup={action} />);
+    onOpenChange={vi.fn()} onCreatePropertyWithSetup={action} returnToClientHref={returnToClientHref} />);
   expect(screen.getByPlaceholderText("Maple House")).toBeInTheDocument();
   expect(screen.getByPlaceholderText("123 Main St")).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("Property name"), { target: { value: "Maple House" } });
@@ -31,6 +32,7 @@ describe("UnifiedPropertyWizard", () => {
       .toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Connect your bank" }))
       .toHaveAttribute("href", "/connect/onboard");
+    expect(screen.getByRole("button", { name: "Go to Dashboard" })).toBeInTheDocument();
   });
 
   it("shows rent readiness only when the bank is connected", async () => {
@@ -38,5 +40,13 @@ describe("UnifiedPropertyWizard", () => {
     expect(await screen.findByText("Your home is ready. Tenants can pay rent here."))
       .toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Connect your bank" })).not.toBeInTheDocument();
+  });
+
+  it("returns to the client after setup when requested", async () => {
+    await reachSuccess(true, "/manager/clients/client-1");
+    const button = await screen.findByRole("button", { name: "Back to client" });
+    fireEvent.click(button);
+    expect(router.push).toHaveBeenCalledWith("/manager/clients/client-1");
+    expect(screen.queryByRole("button", { name: "Go to Dashboard" })).not.toBeInTheDocument();
   });
 });

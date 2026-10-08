@@ -43,8 +43,8 @@ interface UnifiedPropertyWizardProps {
   onOpenChange: (open: boolean) => void;
   onCreatePropertyWithSetup?: UnifiedSetupAction;
   onComplete?: (propertyId: string | null) => void;
+  returnToClientHref?: string;
 }
-
 export function UnifiedPropertyWizard({
   open,
   accountId,
@@ -55,6 +55,7 @@ export function UnifiedPropertyWizard({
   onOpenChange,
   onCreatePropertyWithSetup,
   onComplete,
+  returnToClientHref,
 }: UnifiedPropertyWizardProps) {
   const router = useRouter();
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -76,7 +77,6 @@ export function UnifiedPropertyWizard({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [createdPropertyId, setCreatedPropertyId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-
   useEffect(() => {
     if (open && !prevOpenRef.current) {
       const initialUnit = createUnitDraft(0);
@@ -98,7 +98,6 @@ export function UnifiedPropertyWizard({
     }
     prevOpenRef.current = open;
   }, [accountId, managerClients, open]);
-
   useEffect(() => {
     if (!open) {
       return;
@@ -107,13 +106,11 @@ export function UnifiedPropertyWizard({
     const focusTarget = getFirstInput(contentRef.current);
     focusTarget?.focus();
   }, [open, step]);
-
   useEffect(() => {
     if (propertyType !== "single_family" && !hasMultipleUnits) {
       setHasMultipleUnits(true);
     }
   }, [hasMultipleUnits, propertyType]);
-
   useEffect(() => {
     setUnits((current) => {
       if (hasMultipleUnits) {
@@ -170,7 +167,6 @@ export function UnifiedPropertyWizard({
   });
   const unitStepError = getUnitStepError(units);
   const leaseStepError = getLeaseStepError(lease);
-
   const goBack = () => {
     setErrorMessage(null);
     if (managerClients && step === "property") { setPickingClient(true); return; }
@@ -268,7 +264,11 @@ export function UnifiedPropertyWizard({
 
   const finishSetup = () => {
     onOpenChange(false);
-    router.refresh();
+    if (returnToClientHref) {
+      router.push(returnToClientHref);
+    } else {
+      router.refresh();
+    }
     onComplete?.(createdPropertyId);
   };
 
@@ -288,10 +288,10 @@ export function UnifiedPropertyWizard({
             {managerClients ? "Add a home" : "New Property"}
           </p>
           <h2 className="mt-2 text-2xl font-semibold text-foreground sm:text-3xl">
-            {pickingClient ? "Whose home is this?" : "Set up the property, units, lease, and tenant in one flow"}
+            {pickingClient ? "Add a home" : "Set up the property, units, lease, and tenant in one flow"}
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            One pass. No cleanup. Domus creates the records only after you confirm the full setup.
+            Nothing is saved until you finish.
           </p>
           {step !== "success" ? (
             <div className="py-5">
@@ -432,6 +432,7 @@ export function UnifiedPropertyWizard({
             bankConnected={bankConnected}
             bankSetupHref={bankSetupHref}
             finishSetup={finishSetup}
+            returnToClientHref={returnToClientHref}
           />
         </div>
 

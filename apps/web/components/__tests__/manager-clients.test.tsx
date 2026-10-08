@@ -15,6 +15,7 @@ const client = { id: "client-1", name: "Taylor Homes", accountType: "llc" as con
 describe("manager clients", () => {
   it("renders client rows and rent summaries", () => {
     render(<ClientsSection clients={[client]} onCreateClientAccount={vi.fn()} />);
+    expect(screen.queryByRole("heading", { name: "Clients" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Taylor Homes/ })).toHaveAttribute("href", "/manager/clients/client-1");
     expect(screen.getByText("1 rent overdue")).toHaveClass("text-[var(--warn)]");
   });
@@ -22,6 +23,7 @@ describe("manager clients", () => {
     const action = vi.fn(async () => ({ success: true as const, accountId: "client-2", message: "Client added." }));
     render(<ClientsSection clients={[]} onCreateClientAccount={action} />);
     expect(screen.getByText("Add your first client")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Add client" })).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "Add client" }));
     fireEvent.change(screen.getByLabelText("Client name"), { target: { value: "Morgan" } });
     fireEvent.click(screen.getAllByRole("button", { name: "Add client" }).at(-1)!);
@@ -72,6 +74,9 @@ describe("manager clients", () => {
   it("requires a client in the manager wizard", () => {
     render(<UnifiedPropertyWizard open managerClients={[client]} onCreateClientAccount={vi.fn()}
       onCreatePropertyWithSetup={vi.fn()} onOpenChange={vi.fn()} />);
+    expect(screen.getByRole("heading", { name: "Add a home" })).toBeInTheDocument();
+    expect(screen.getByText("Nothing is saved until you finish.")).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "Whose home is this?" })).toHaveLength(1);
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
     fireEvent.click(screen.getByRole("radio", { name: /Taylor Homes/ }));
     expect(screen.getByRole("button", { name: "Continue" })).toBeEnabled();

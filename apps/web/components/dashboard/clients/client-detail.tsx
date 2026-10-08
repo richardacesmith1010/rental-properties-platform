@@ -40,9 +40,14 @@ export function ClientDetail({ client, onCreatePropertyWithSetup, onCreateClient
     </Button>
   );
   return (
-    <main className="mx-auto max-w-4xl space-y-6 px-4 py-6 text-[var(--ink)]">
-      <Link href="/manager?section=clients" title="Back to clients"
-        className="inline-flex min-h-11 items-center text-[var(--accent)]">‹ Clients</Link>
+    <div className="app-surface min-h-screen text-[var(--ink)]">
+      <header className="flex min-h-14 items-center gap-4 border-b border-[var(--line)] bg-[var(--surface)] px-4">
+        <Link href="/manager" aria-label="Go to home" title="Go to home"
+          className="inline-flex min-h-11 items-center font-semibold text-[var(--accent)]">Domus</Link>
+        <Link href="/manager?section=clients" title="Back to clients"
+          className="inline-flex min-h-11 items-center text-[var(--accent)]">‹ Clients</Link>
+      </header>
+      <main className="mx-auto max-w-4xl space-y-6 px-4 py-6 text-[var(--ink)]">
       <header className="flex items-center gap-4">
         <ClientAvatar name={client.name} />
         <div>
@@ -68,13 +73,15 @@ export function ClientDetail({ client, onCreatePropertyWithSetup, onCreateClient
             <HomeStatus home={home} />
           </Link>
         )) : <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-6">
-          <p className="mb-3">No homes yet.</p>{addButton}
+          <p>No homes yet.</p>
         </div>}
       </section>
       <UnifiedPropertyWizard open={open} accountId={client.id}
         managerClients={[{ ...client, homeCount: client.homes.length, summary: "" }]}
         onCreateClientAccount={onCreateClientAccount} onOpenChange={setOpen}
-        onCreatePropertyWithSetup={onCreatePropertyWithSetup} />
-    </main>
+        onCreatePropertyWithSetup={onCreatePropertyWithSetup}
+        returnToClientHref={`/manager/clients/${client.id}`} />
+      </main>
+    </div>
   );
 }

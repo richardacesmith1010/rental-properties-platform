@@ -425,7 +425,16 @@ export function Dashboard(props: DashboardProps) {
                 pageCountLabel={isManagerRole ? null : contentZoneLabel}
                 description={isManagerRole ? ownerPageDescriptions[activeSection] ?? "Manage your homes and the people who live there." : ""}
                 actions={
-                  isManagerRole ? (
+                  isManagerRole && activeSection === "clients" && (props.clients?.length ?? 0) > 0 ? (
+                    <Button
+                      type="button"
+                      className="min-h-11"
+                      onClick={() => window.dispatchEvent(new Event("domus:open-client-sheet"))}
+                      title="Add a client."
+                    >
+                      Add client
+                    </Button>
+                  ) : isManagerRole ? (
                     <OwnerAddMenu role="manager" onAddHome={openPropertyWizard} onAddTenant={openTenantInviteWizard} properties={safePortfolio.properties} />
                   ) : canSendAnnouncements ? (
                     <Button

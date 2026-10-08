@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { ClientOverview } from "@/lib/client-overview";
 import type { StatefulAction } from "../types";
@@ -38,12 +38,14 @@ export function ClientsSection({ clients, onCreateClientAccount }: Props) {
   const addButton = (
     <Button onClick={() => setOpen(true)} title="Add a client" className="min-h-11 sm:min-h-0">Add client</Button>
   );
+  useEffect(() => {
+    const openSheet = () => setOpen(true);
+    window.addEventListener("domus:open-client-sheet", openSheet);
+    return () => window.removeEventListener("domus:open-client-sheet", openSheet);
+  }, []);
   return (
     <div className="space-y-5">
       {items.length ? <>
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-xl font-semibold">Clients</h2>{addButton}
-        </div>
         <div className="space-y-2">{items.map((client) => <ClientRow key={client.id} client={client} />)}</div>
         <p className="text-sm text-[var(--muted)]">
           Rent for client homes is paid outside Domus. You mark it paid when it comes in.
