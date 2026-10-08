@@ -26,6 +26,7 @@ Re-score after each sprint that touches a category; record the date and evidence
 Closest to 80 first, except urgent security items (critical advisories) which are fixed immediately regardless of rank.
 
 ## Change log
+- **2026-10-07 · Visual stays 80, Reliability stays 79 (Sprints 200/200b, `ee04b62`).** Phone layout smoke now covers Settings and every section for all roles (was 9 views); ~20 undersized tap targets fixed. Clipping on any main screen now fails smoke automatically.
 - **2026-10-07 · Launch 55 → 58 (Sprints 199/199b).** Tenants/managers can download their data (ChatGPT-reviewed; live JSON verified against SQL). URGENT pre-existing phone Settings clipping fixed for all roles. Terms/Privacy draft written for owner + lawyer (`docs/legal-draft-terms-privacy-2026-10.md`).
 - **2026-10-07 · Launch readiness audit (no score change, stays 52).** 4 blockers: no inbound mail on domusbase.com (support@/privacy@ dead), platform alerts go to a send-only address, Terms/Privacy outdated (March) and contradict "free" + new processors, no tenant/manager deletion or any data export. See docs/launch-readiness-audit-2026-10-07.md.
 - **2026-10-07 · Reliability 78 → 79 (Sprint 197, `d7e9595`, L3, ChatGPT-approved).** Shared auth helpers retry a transient Supabase failure once and otherwise show the error screen; they no longer misroute (role "tenant" / onboarding redirect) on database errors. Triggered by a real 504 seen during S196 smoke. Timings unchanged in prod.

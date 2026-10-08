@@ -417,6 +417,11 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 - Home defers 5 Home-only bundles (works; Home loads shared bundles only). Owner Home not faster: critical path = ownership.accounts (8 q) → administered-ids (4 q) → dashboard.data (12 q, ~1 s). feature.capabilities cache from S179 is ineffective in production (22 q every request). Next sprint (L3): RPCs for dashboard + ownership, fix capabilities cache.
 
+## Sprints 200/200b SHIPPED — Phone smoke covers every screen; 44 px tap targets (L1, `ee04b62`, 2026-10-07; luna 56,286 + 160,899 Codex tokens)
+- `smoke-mobile-layout.spec.ts` now visits `/settings` (+ its last tab) and **every** section for owner (21), manager (19), tenant (5); elements inside an on-screen `overflow-x: auto/scroll` container are not flagged. Timeout 240 s.
+- First full sweep (prod, 375×812): **0 clipping**, ~20 tap targets < 44 px on 9 views (settings tabs 38, Messages tabs 36, units/leases inline buttons 24–32, portfolio 28, alerts filters 36, members link 20). 200b fixed them with `min-h-11` on phones (`sm:` keeps desktop); verified on a local prod build (4/4) before commit, then prod smoke incl. the new sweep passed. "Your data" icon → Download.
+- Gate 1627/1627; CI ok; Sentry clean.
+
 ## Sprints 199/199b SHIPPED — "Download my data" + URGENT phone Settings fix (L3 `e9bcc10`, L1 `fff2cd1`, 2026-10-07; sol medium 129,454 + luna 59,064 Codex tokens)
 - 199 (ChatGPT: rev 1 export+self-delete REJECTED → narrowed to export-only → APPROVE WITH CHANGES, all adopted): `GET /api/account/export` + `lib/account-export.ts`. Tenant/manager only (owner 403 server-side); rate limit `export:<userId>` 5/h, fails closed 503; explicit column lists, server-derived scopes, `.range()` paging (500) + `.in()` chunks (200), any error → 500; envelope v1; conversations labeled by home name only; headers no-store/nosniff/attachment. Settings "Your data" (tenant/manager) with "Want your account deleted? Tell us with Send feedback…".
 - Live: tenant + manager files contain only allowlisted keys, 0 uuids, no Stripe refs, only their own email; counts match SQL (tenant 1 lease / 4 rent / 1 payment / 5 messages; manager 1 home). Owner 403. Gate 1625; CI #369.
