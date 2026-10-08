@@ -5,7 +5,8 @@ import { PropertyForm } from "@/components/dashboard/forms/property-form";
 import { WhoseHomeStep } from "@/components/dashboard/clients/whose-home-step";
 import { UnifiedPropertyWizard } from "@/components/dashboard/unified-property-wizard";
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+const refresh = vi.hoisted(() => vi.fn());
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 const toast = vi.hoisted(() => ({ success: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
 
@@ -31,6 +32,17 @@ describe("manager clients", () => {
     expect((action.mock.calls[0] as unknown[])[1]).toBeInstanceOf(FormData);
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Client added."));
     expect(screen.getByRole("link", { name: /Morgan/ })).toBeInTheDocument();
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+  it("does not refresh after an add error", async () => {
+    refresh.mockClear();
+    const action = vi.fn(async () => ({ success: false as const, error: "Try again." }));
+    render(<ClientsSection clients={[]} onCreateClientAccount={action} />);
+    fireEvent.click(screen.getByRole("button", { name: "Add client" }));
+    fireEvent.change(screen.getByLabelText("Client name"), { target: { value: "Morgan" } });
+    fireEvent.click(screen.getAllByRole("button", { name: "Add client" }).at(-1)!);
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Try again."));
+    expect(refresh).not.toHaveBeenCalled();
   });
   it("opens a new client sheet from the picker", () => {
     render(<WhoseHomeStep clients={[]} selectedId="" onSelect={vi.fn()} onCreateClientAccount={vi.fn()} />);

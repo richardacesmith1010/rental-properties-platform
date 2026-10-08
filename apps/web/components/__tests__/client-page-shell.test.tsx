@@ -14,6 +14,7 @@ const detail: Detail = { ...client, homes: [] };
 const home = { id: "home-1", name: "Atlas House", address: "123 Forum Ave", status: "no_tenant" as const };
 const availableProperties = [{ id: "property-1", name: "Atlas House", addressLine1: "123 Forum Ave", city: "Denver", state: "CO" }];
 
+vi.mock("@/app/actions/owner-statement", () => ({ getOwnerStatementSummary: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
 vi.mock("next/dynamic", () => ({ default: () => () => null }));
 vi.mock("@/components/dashboard/dashboard-data-loader", () => ({ useDashboardData: () => ({
@@ -36,7 +37,7 @@ vi.mock("@/components/dashboard/section-renderer", () => ({ SectionRenderer: () 
   <ClientsSection clients={[client]} onCreateClientAccount={vi.fn()} />
 ) }));
 
-const detailProps = (homes = detail.homes) => ({ client: { ...detail, homes },
+const detailProps = (homes = detail.homes) => ({ defaultMonth: "2026-09", monthOptions: ["2026-09"], client: { ...detail, homes },
   onCreatePropertyWithSetup: vi.fn(), onCreateClientAccount: vi.fn() });
 
 function renderFrame(activeSection: string, profileRole: "owner" | "manager") {

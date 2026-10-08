@@ -5,10 +5,13 @@ import Link from "next/link";
 import type { ClientDetail as Detail } from "@/lib/client-overview";
 import type { StatefulAction } from "../types";
 import { Button } from "@/components/ui/button";
+import { OwnerStatementSheet } from "./owner-statement-sheet";
 import { UnifiedPropertyWizard } from "../unified-property-wizard";
 
 interface Props {
   client: Detail;
+  defaultMonth: string;
+  monthOptions: string[];
   onCreatePropertyWithSetup: StatefulAction;
   onCreateClientAccount: StatefulAction;
 }
@@ -32,8 +35,9 @@ function HomeStatus({ home }: { home: Detail["homes"][number] }) {
   return <span className={`shrink-0 rounded-full px-2 py-1 text-xs ${color}`}>{label}</span>;
 }
 
-export function ClientDetail({ client, onCreatePropertyWithSetup, onCreateClientAccount }: Props) {
+export function ClientDetail({ client, defaultMonth, monthOptions, onCreatePropertyWithSetup, onCreateClientAccount }: Props) {
   const [open, setOpen] = useState(false);
+  const [statementOpen, setStatementOpen] = useState(false);
   const addButton = (
     <Button onClick={() => setOpen(true)} title="Add a home for this client" className="min-h-11 sm:min-h-0">
       Add a home
@@ -55,7 +59,11 @@ export function ClientDetail({ client, onCreatePropertyWithSetup, onCreateClient
           <p className="text-sm text-[var(--muted)]">{client.accountType === "llc" ? "LLC" : "Person"}</p>
           {client.contactEmail && <p className="text-sm text-[var(--muted)]">{client.contactEmail}</p>}
         </div>
+        <Button onClick={() => setStatementOpen(true)} title="Get an owner statement"
+          className="ml-auto min-h-11">Owner statement</Button>
       </header>
+      <OwnerStatementSheet open={statementOpen} onClose={() => setStatementOpen(false)}
+        client={client} defaultMonth={defaultMonth} monthOptions={monthOptions} />
       <p className="rounded-lg border border-[var(--line)] bg-[var(--surface-2)] p-4 text-sm">
         Rent here is paid outside Domus. Mark it paid when it comes in.
       </p>

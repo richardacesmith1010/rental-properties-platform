@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { ClientOverview } from "@/lib/client-overview";
 import type { StatefulAction } from "../types";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ function ClientRow({ client }: { client: ClientOverview }) {
 }
 
 export function ClientsSection({ clients, onCreateClientAccount }: Props) {
+  const router = useRouter();
   const [items, setItems] = useState(clients);
   const [open, setOpen] = useState(false);
   const addButton = (
@@ -58,9 +60,9 @@ export function ClientsSection({ clients, onCreateClientAccount }: Props) {
         <div className="mt-4">{addButton}</div>
       </div>}
       <AddClientSheet open={open} onClose={() => setOpen(false)} onCreateClientAccount={onCreateClientAccount}
-        onAdded={(client) => setItems((current) => [...current, {
+        onAdded={(client) => { setItems((current) => [...current, {
           ...client, contactEmail: null, homeCount: 0, summary: "No tenants yet"
-        }])} />
+        }]); router.refresh(); }} />
     </div>
   );
 }

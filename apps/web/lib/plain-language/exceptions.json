@@ -4,5 +4,7 @@
   "apps/web/lib/stripe-webhook-handlers.ts:LLC fallback share for charge value": "Stripe transfer description in money code; reword in a reviewed L3 sprint.",
   "apps/web/lib/stripe-webhook-handlers.ts:Rent payment for charge value": "Stripe transfer description in money code; reword in a reviewed L3 sprint.",
   "apps/web/lib/stripe-webhook-handlers.ts:Management fee for charge value": "Stripe transfer description in money code; reword in a reviewed L3 sprint.",
-  "apps/web/lib/stripe-webhook-handlers.ts:Reversal: ACH payment failed for charge value": "Stripe transfer description in money code; reword in a reviewed L3 sprint."
+  "apps/web/lib/stripe-webhook-handlers.ts:Reversal: ACH payment failed for charge value": "Stripe transfer description in money code; reword in a reviewed L3 sprint.",
+  "apps/web/components/dashboard/clients/owner-statement-sheet.tsx:Download owner statement CSV": "Required accessible label names the requested download format.",
+  "apps/web/components/dashboard/clients/owner-statement-sheet.tsx:Download CSV": "Required button copy names the requested download format."
 }

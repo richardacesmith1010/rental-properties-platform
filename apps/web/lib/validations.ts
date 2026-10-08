@@ -56,3 +56,8 @@ export const updatePropertyTaxYearSchema = z.object({
   escrowInsurance: taxDollarsSchema,
   depreciation: taxDollarsSchema
 });
+
+export const ownerStatementRequestSchema = z.object({
+  accountId: z.string().uuid(),
+  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)
+});

@@ -10,8 +10,15 @@ import type {
 export function escapeCell(value: string | number | null | undefined) {
   const text = String(value ?? "");
   const isNumeric = /^-?\d+(\.\d+)?$/.test(text);
-  const safe = /^[=+\-@]/.test(text) && !isNumeric ? `'${text}` : text;
+  const safe = /^[=+\-@\t\r\n]/.test(text) && !isNumeric ? `'${text}` : text;
   return `"${safe.replace(/"/g, '""')}"`;
+}
+
+export function escapeAmountCell(cents: number): string {
+  if (!Number.isSafeInteger(cents)) throw new Error("Invalid amount.");
+  const sign = cents < 0 ? "-" : "";
+  const absolute = Math.abs(cents);
+  return `"${sign}${Math.floor(absolute / 100)}.${String(absolute % 100).padStart(2, "0")}"`;
 }
 
 function buildCsv(headers: string[], rows: Array<Array<string | number | null | undefined>>) {
