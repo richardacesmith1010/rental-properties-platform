@@ -1,4 +1,4 @@
-# Sprint 201 — Safe "Copy link" for pending invites (L3: invites/auth) · Category 4 (Onboarding)
+# Sprint 201 — (ChatGPT: APPROVE WITH CHANGES, all adopted) Safe "Copy link" for pending invites (L3: invites/auth) · Category 4 (Onboarding)
 
 ## 1. Objective
 When an invite email lands in spam or never arrives, the owner (or manager) is stuck. Add a **Copy link** button on each pending invite. The link opens a public Domus **join page** that shows the invite and lets the invitee **get a fresh sign-in email** with clear "check spam" help.
@@ -28,7 +28,7 @@ When an invite email lands in spam or never arrives, the owner (or manager) is s
    - Never render the full email, the invitee's name, ids, or anything else from the row.
 3. **Public resend action** `apps/web/app/actions/join-invite.ts` (`"use server"`): `resendFromJoinLink(prev, formData)`:
    - Input: `inviteId` only (Zod UUID). The email is **never** taken from input.
-   - Rate limits: `join-resend:invite:<inviteId>` **3 per hour** and `join-resend:ip:<ip>` **10 per hour** (IP from `headers()` `x-forwarded-for` first value; if missing, use `"unknown"`). Over either → `{ success: false, error: "Too many emails. Try again in an hour." }`.
+   - Rate limits: `join-resend:invite:<inviteId>` **3 per hour** (always) and `join-resend:ip:<ip>` **10 per hour** (only when an IP is present; see §3b.4). Over either → `{ success: false, error: "Too many emails. Try again in an hour." }`.
    - Re-load the invite (explicit columns); require active per §3.2; otherwise return the generic inactive message (no details).
    - Call `resendInvitationEmail(invitation, invitation.invited_by)`; on success update the same resend timestamp column `resendInvite` updates (check the error, L-002) and return `{ success: true, message: "Sent. Check your email in a few minutes." }`; on failure `{ success: false, error: "Could not send. Please try again." }`.
    - Every return string is listed here (L-020). No other strings reach the UI.
@@ -40,11 +40,24 @@ When an invite email lands in spam or never arrives, the owner (or manager) is s
    - public action: email never read from input (an extra `email` field is ignored); invite rate limit (4th within the hour → error, core not called); IP rate limit; inactive invite → generic message, core not called; success → core called with `invited_by` and the timestamp updated; core failure → error.
    - panel: `Copy link` only on pending rows created by the viewer; clipboard called with the exact URL; both toasts.
 
+## 3b. Required precision (ChatGPT review: APPROVE WITH CHANGES — all adopted)
+1. **Roles.** The join page and `resendFromJoinLink` only serve invites with `role IN ('tenant','manager')`. Any other role (e.g. `owner`) gets the generic inactive state and the core is never called. Test an otherwise-active owner invite.
+2. **One "active" rule.** `isJoinInviteActive(invite, now)` in one helper (`lib/join-invite.ts`): pending + tenant/manager + `created_at` within 30 days. Both the page and the action use it. Boundary tests: 30 days minus 1 ms (active), exactly 30 days (inactive), 30 days plus 1 ms (inactive).
+3. **Strict input.** The action's Zod schema is `.strict()` on `{ inviteId }` (reject extra keys), or it builds the object from `inviteId` only. Tests pass malicious extra `email`, `role`, `invited_by`, `property_id`, `redirectTo` fields and prove only the DB row is used (the core is called with the row's data, and nothing else changes).
+4. **Rate limits fail closed.** Check the per-invite limit (always), then the per-IP limit **only when** a client IP is present. Do **not** use a shared "unknown" bucket. If either limiter throws → `{ success: false, error: "Could not send. Please try again." }` and no send. Document in a code comment that `checkRateLimit` is in-memory per instance (best-effort across instances).
+5. **After a send.** A send failure → the failure response. Send success + timestamp update OK → success. Send success + timestamp update error → log it (`sideEffectError`) and **still return success** (so the user doesn't retry). The rate limiter, not the timestamp, is the abuse control.
+6. **Revocation race.** Re-load and re-check `isJoinInviteActive` immediately before calling the core. Document that a send already in flight may finish after a revoke.
+7. **Owner path characterized first.** Before extracting, add tests that pin today's `resendInvite` behavior for each role path (tenant branded success, tenant branded email failure → fallback, tenant link failure → fallback, manager/owner `inviteUserByEmail`, accepted refusal, not-own invite → "Invitation not found.", rate limit). They must pass before and after the extraction.
+8. **Non-disclosure.** For every inactive case (bad UUID, missing, revoked, expired status, > 30 days, unsupported role) assert the output contains no email or masked email, home name, inviter name or invite id, and is byte-identical across cases.
+9. **Masking fails safe.** Handles one-letter parts, subdomains, uppercase (lower-case first), malformed input (no `@`, empty, null) → returns `***` and never the original string.
+10. **Canonical link origin.** The copied URL uses `process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com"` only, never request headers or `window.location`. Test it.
+11. **No caching.** The join page response is not cached: set `export const revalidate = 0` plus `noStore()` (or the repo's equivalent), and add `Cache-Control: no-store` if the page pattern allows.
+
 ## 4. Out of scope
 Schema changes; owner-role (co-owner) invites (button only for tenant and manager rows); LLC invites (`/join-llc`); SMS; changing the email templates; notifications (OFF); generating or exposing Supabase action links anywhere.
 
 ## 5. Exact files expected to change
-New: `apps/web/lib/invite-resend.ts`, `apps/web/app/join/[inviteId]/page.tsx`, `apps/web/app/actions/join-invite.ts`, a small mask helper (e.g. `apps/web/lib/mask-email.ts`), and tests. Changed: `apps/web/app/actions/tenant-invitations.ts` (call the core), `apps/web/components/dashboard/invitations-panel.tsx`, the validations module for the Zod schema, and `apps/web/middleware.ts` **only if** `/join` is treated as protected (it must be public; say what you found).
+New: `apps/web/lib/invite-resend.ts`, `apps/web/lib/join-invite.ts`, `apps/web/app/join/[inviteId]/page.tsx`, `apps/web/app/actions/join-invite.ts`, a small mask helper (e.g. `apps/web/lib/mask-email.ts`), and tests. Changed: `apps/web/app/actions/tenant-invitations.ts` (call the core), `apps/web/components/dashboard/invitations-panel.tsx`, the validations module for the Zod schema, and `apps/web/middleware.ts` **only if** `/join` is treated as protected (it must be public; say what you found).
 
 ## 6. Implementation requirements
 Exact copy; sentences ≤ 12 words; plain-language guard passes. Lines ≤ 140; files ≤ 500; no new dependencies; no `eslint-disable`. Every Supabase result checked. The user should never need to read instructions to complete this flow. Every step must be self-explanatory.
