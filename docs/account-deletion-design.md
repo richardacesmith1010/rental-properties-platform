@@ -1,4 +1,4 @@
-# Account deletion — design (draft for review, 2026-10-08)
+# Account deletion — design (rev 2, 2026-10-08; ChatGPT rev 1: REJECT, all points adopted)
 
 **Owner decision (2026-10-07):** keep shared rent, payment and repair records, with the person's name and contact details removed. The retention period is to be confirmed with a lawyer (the legal draft suggests 7 years).
 **Why now:** the App Store requires in-app account deletion for apps with sign-up. Sprint 199 rev 1 was rejected for missing atomicity, a PII inventory, Stripe handling and handover rules; this document answers those first.
@@ -8,6 +8,8 @@
 - **Non-goals (v1):** automatic purging of retained financial records after the retention period (later job, once the lawyer sets the period); deleting data held by Stripe beyond what its API allows; deleting other people's copies (e.g. an owner's exported CSV).
 
 ## 2. Who can delete, and when (guards)
+> **Rev 2: guards are obligation-based, not role-based.** The database step checks **every** obligation for the profile, whatever its role: active leases as tenant; in-flight payments/autopay; active manager assignments; unpaid manager pay; homes owned (directly or via an ownership account); membership in an LLC with other active members; a Stripe Connect balance or pending payout. Any one blocks deletion with its message.
+
 | Role | Allowed when | Otherwise the screen says |
 |---|---|---|
 | Tenant | no active lease (`leases.active`) and no open autopay charge in progress | "Your lease is still active. Ask your landlord to end it first." |
@@ -37,9 +39,9 @@ Legend: **E** erase/clear · **A** anonymize (keep the row, replace identity) ·
 | `screening_reports` for those applications | raw_payload jsonb | **D** | Sensitive third-party screening data; no retention need. |
 | `maintenance_tickets` (tenant_profile_id = me) | title, description | **K** | Repair history of the home; text is about the home. Reporter shows "Deleted user". |
 | `maintenance_comments` (author_id = me) | body | **K** | Shared repair conversation. |
-| `maintenance_photos` (uploaded_by = me) | storage files | **K** [DECISION] | Photos show the home's condition (owner's record). |
+| `maintenance_photos` (uploaded_by = me) | storage files + rows | **D** (delete files and rows) | Rev 2: Apple requires deleting user-generated content unless there's a legal basis; repair photos have none by default. |
 | `leases`, `rent_charges`, `payments`, `payment_distributions`, `charge_edit_history`, `rent_increase_history` | links to my profile id, `payments.reference_note` | **K** | Financial records kept for tax/retention, de-identified because the profile is anonymized. |
-| `documents`, `property_files`, `document_packets` (uploaded/created by me) | storage files | **K** [DECISION] | Lease and property documents belong to the rental record. |
+| `documents`, `property_files` uploaded by me | storage files + rows | **D**, except **signed lease documents** (a completed `document_packets`/`document_signers` record) | Rev 2: keep only signed leases, and only once the lawyer confirms a retention basis [LAWYER]; until then the delete flow is **not released** to production. |
 | `profile-avatars` storage | avatar file | **E** (delete the object; path derived from my id only) | Purely personal. |
 | `manager_payments`, `manager_payment_configs` (manager = me) | description, notes | **K** (guards ensure settled) | Owner's payout history. |
 | `property_managers` (manager = me) | — | **K** (already inactive by guard) | History. |
@@ -51,7 +53,13 @@ Legend: **E** erase/clear · **A** anonymize (keep the row, replace identity) ·
 
 Two **[CHECK]** items need a code read before implementation: what writes `communication_logs`, and which `audit_logs.metadata` keys can contain emails/names.
 
-## 4. Mechanism (all-or-nothing)
+## 4. Mechanism (all-or-nothing) — rev 2
+**Rev 2 additions (required by review):**
+- **Durable deletion job.** New table `account_deletion_jobs(profile_id pk, created_at, stripe_customer_id, stripe_account_id, storage_objects jsonb, steps jsonb, last_error text, attempts int, completed_at)`, service_role only. The DB function writes it **in the same transaction** that anonymizes and sets `'deleting'`, so the cleanup list survives a crash. The app and the retry job work only from this table.
+- **No writes while deleting.** Invariant: a profile whose `deletion_state <> 'active'` cannot create or change any user-controlled data. Enforce with (a) a shared SQL helper `public.is_active_profile(uid)` added to the INSERT/UPDATE policies of every table a user can write directly through RLS, and to the storage upload policies of the 4 buckets; (b) server-side checks in `requireAuth`/`getAuthenticatedUser` (S197), which already gate server actions and API routes; (c) **ending sessions:** right after the transaction, call `auth.admin.signOut(<user>, 'global')` (revokes refresh tokens) before deleting the user. Access tokens already issued stay valid until they expire (Supabase default ~1 hour), and (a)+(b) make them useless.
+- **Serialization.** The deletion function takes `pg_advisory_xact_lock(hashtext(p_user::text))` plus `select … for update` on the profile; the server-side create paths that matter (send message, report repair, report paid, upload) re-check `deletion_state = 'active'` inside their own write (RLS helper above covers direct writes). Tests: deletion racing message creation, repair creation, upload.
+- **Retry job** reads `account_deletion_jobs` where `completed_at is null`, runs each remaining step (storage delete, Stripe, global sign-out, auth delete), records progress in `steps`, and finally sets `profiles.deletion_state = 'deleted'`.
+
 1. **Schema:** `profiles.deletion_state text not null default 'active' check (in ('active','deleting','deleted'))` and `profiles.deleted_at timestamptz`.
 2. **One database function** `public.delete_my_account(p_user uuid) returns jsonb`, `security definer`, `search_path = ''`, executable **only by `service_role`** (called from a server action after `requireAuth`). In **one transaction** it: locks the profile row (`for update`), re-checks the §2 guards, applies every **A/E/D** row action from §3, sets `deletion_state = 'deleting'`, writes one audit row (`action = 'account_deleted'`, no PII), and returns the storage paths and Stripe ids to clean up. Any guard failure or error → rollback, nothing changed, and a guard code is returned.
 3. **After commit (app side, in order):** delete the avatar object (path built from the user id only); Stripe cleanup; `auth.admin.deleteUser(id)`; then set `deletion_state = 'deleted'`, `deleted_at = now()`.
@@ -66,7 +74,7 @@ Settings → "Your data" (tenant/manager) and "Account & Data" (owner) get **Del
 Guards per role (allowed and blocked, with zero writes when blocked); the SQL function's per-table effects on fixture data (each §3 row); rollback on an injected failure; idempotent retry from `'deleting'`; auth helpers reject `'deleting'`/`'deleted'`; avatar path can't be steered by `avatar_url`; Stripe calls mocked (customer deleted, Connect blocked with a balance); concurrent double request.
 
 ## 7. Decisions needed from the owner (short)
-1. Keep repair photos and lease/property documents uploaded by the person (recommended: **keep**, since they're the home's records)?
+1. (Rev 2, changed) Repair photos and documents uploaded by the person are **deleted**; only signed lease documents may be kept, **with the lawyer's confirmation**. The delete feature is not released until the lawyer answers.
 2. Managers/owners with a Stripe Connect balance: **block deletion until paid out** (recommended)?
 3. Owners: require homes removed/moved and leaving the LLC first (recommended), rather than deleting homes automatically?
 4. Retention period for kept financial records (lawyer; default 7 years, purge job later).
