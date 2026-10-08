@@ -144,7 +144,7 @@ export function UnitsSection({
                         type="button"
                         size="icon"
                         variant="ghost"
-                        className="h-8 w-8 shrink-0 rounded-md"
+                        className="h-8 w-8 min-h-11 shrink-0 rounded-md sm:min-h-0"
                         onClick={() => setEditingUnit(unit)}
                         title={`Edit ${unit.unitNumber}`}
                         aria-label={`Edit ${unit.unitNumber}`}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Bell, Building2, CreditCard, Palette, Shield, Trash2, User } from "lucide-react";
+import { Bell, Building2, CreditCard, Download, Palette, Shield, Trash2, User } from "lucide-react";
 import { cn } from "@/lib/format";
 
 type SettingsRole = "owner" | "manager" | "tenant";
@@ -32,7 +32,7 @@ const settingsNav: SettingsNavItem[] = [
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "security", label: "Security", icon: Shield },
   { id: "account", label: "Account & Data", icon: Trash2, roles: ["owner"] },
-  { id: "yourData", label: "Your data", icon: Trash2, roles: ["tenant", "manager"] }
+  { id: "yourData", label: "Your data", icon: Download, roles: ["tenant", "manager"] }
 ];
 
 export function SettingsLayout({ role, sections }: SettingsLayoutProps) {
@@ -112,7 +112,7 @@ export function SettingsLayout({ role, sections }: SettingsLayoutProps) {
                   onClick={() => setActiveSection(item.id)}
                   data-settings-tab={item.id}
                   className={cn(
-                    "inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-sm",
+                    "inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-sm",
                     "font-medium transition-colors focus-visible:outline-none",
                     "focus-visible:ring-2 focus-visible:ring-[var(--accent-line)]",
                     "focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ground)]",

@@ -109,7 +109,7 @@ function OverviewSummaryStrip({ props }: { props: SectionRendererProps }) {
                 type="button"
                 size="icon"
                 variant="ghost"
-                className="h-7 w-7 rounded-md"
+                className="h-7 w-7 min-h-11 rounded-md sm:min-h-0"
                 onClick={() => setIsEditOpen(true)}
                 title={`Edit ${editableProperty.name}`}
                 aria-label={`Edit ${editableProperty.name}`}
@@ -127,7 +127,10 @@ function OverviewSummaryStrip({ props }: { props: SectionRendererProps }) {
           {items.map(({ label, value, icon: Icon }) => (
             <div
               key={label}
-              className="rounded-full border border-[color:color-mix(in_srgb,var(--line)_84%,transparent)] bg-[color:color-mix(in_srgb,var(--surface)_94%,transparent)] px-3 py-2 text-sm"
+              className={[
+                "rounded-full border border-[color:color-mix(in_srgb,var(--line)_84%,transparent)]",
+                "bg-[color:color-mix(in_srgb,var(--surface)_94%,transparent)] px-3 py-2 text-sm"
+              ].join(" ")}
             >
               <span className="inline-flex items-center gap-1.5 text-[var(--muted)]">
                 {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
@@ -214,7 +217,7 @@ export function SectionNotFoundState({
       </p>
       <Link
         href={homeHref}
-        className="mt-3 inline-flex text-sm font-semibold underline underline-offset-4"
+        className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4 sm:min-h-0"
       >
         Back to home
       </Link>

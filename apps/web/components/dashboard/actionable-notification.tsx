@@ -240,7 +240,7 @@ export function ActionableNotification({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-9 w-9 shrink-0 rounded-full"
+          className="h-9 w-9 min-h-11 min-w-11 shrink-0 rounded-full sm:min-h-0 sm:min-w-0"
           loading={isPending && pendingAction === "dismiss"}
           onClick={handleDismiss}
           title={`Dismiss ${notification.title}`}

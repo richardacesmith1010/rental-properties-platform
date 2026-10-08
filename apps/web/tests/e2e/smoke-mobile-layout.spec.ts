@@ -22,7 +22,21 @@ async function assertMobileLayout(page: Page, view: string) {
       const rect = element.getBoundingClientRect();
       if (!rect.width || !rect.height) continue;
       if (element.closest("[style*='position: fixed'], .fixed")) continue;
-      if (rect.left < -1 || rect.right > 376) issues.push(`${selector(element)} extends ${rect.left}..${rect.right}`);
+      const offscreen = rect.left < -1 || rect.right > 376;
+      const nearestScrollContainer = (() => {
+        let ancestor = element.parentElement;
+        while (ancestor) {
+          const overflowX = getComputedStyle(ancestor).overflowX;
+          if (overflowX === "auto" || overflowX === "scroll") return ancestor;
+          ancestor = ancestor.parentElement;
+        }
+        return null;
+      })();
+      const containerRect = nearestScrollContainer?.getBoundingClientRect();
+      const containerOnScreen = !!containerRect && containerRect.left >= -1 && containerRect.right <= 376;
+      if (offscreen && !(nearestScrollContainer && containerOnScreen)) {
+        issues.push(`${selector(element)} extends ${rect.left}..${rect.right}`);
+      }
       if (!element.matches("button, a[href]")) continue;
       if (element.matches("a.sr-only")) continue;
       if (element.closest("p") && style.display === "inline") continue;
@@ -36,7 +50,7 @@ async function assertMobileLayout(page: Page, view: string) {
 test.describe("375 px layout smoke", () => {
   test.skip(missingSmokeEnv().length > 0, `Missing smoke env: ${missingSmokeEnv().join(", ")}`);
   test.use({ viewport: { width: 375, height: 812 } });
-  test.setTimeout(120_000);
+  test.setTimeout(240_000);
 
   test("public login", async ({ page }) => {
     for (const path of ["/login", "/login?mode=signup&role=owner"]) {
@@ -47,25 +61,51 @@ test.describe("375 px layout smoke", () => {
 
   test("owner views and manager sheet", async ({ page }) => {
     expect(await loginAsRole(page, "Owner", process.env.SMOKE_OWNER_EMAIL!, process.env.SMOKE_OWNER_PASSWORD!)).toBe(true);
-    for (const path of ["/owner", "/owner?section=charges", "/owner/bank", "/owner/money"]) {
+    const ownerSections = [
+      "overview", "charges", "maintenance", "inbox", "portfolio", "units", "leases", "tenants", "leasing",
+      "applications", "invitations", "payments", "expenses", "analytics", "documents", "vendors", "automations",
+      "activity", "notifications", "ownership", "members"
+    ];
+    for (const path of ["/settings", ...ownerSections.map((section) => `/owner?section=${section}`), "/owner/bank", "/owner/money"]) {
       await page.goto(path);
       await assertMobileLayout(page, path);
+      if (path === "/settings") {
+        await page.locator("[data-settings-mobile-nav] [data-settings-tab]").last().click();
+        await assertMobileLayout(page, `${path} (Account & Data tab)`);
+      }
     }
     await page.goto("/owner");
     await openManagerSheet(page);
     await assertMobileLayout(page, "Add a manager");
   });
 
-  test("manager home", async ({ page }) => {
+  test("manager views", async ({ page }) => {
     expect(await loginAsRole(page, "Manager", process.env.SMOKE_MANAGER_EMAIL!, process.env.SMOKE_MANAGER_PASSWORD!)).toBe(true);
-    await assertMobileLayout(page, "/manager");
+    const managerSections = [
+      "overview", "charges", "maintenance", "inbox", "portfolio", "units", "leases", "tenants", "leasing",
+      "applications", "invitations", "payments", "expenses", "analytics", "documents", "vendors", "automations",
+      "activity", "notifications"
+    ];
+    for (const path of ["/settings", ...managerSections.map((section) => `/manager?section=${section}`)]) {
+      await page.goto(path);
+      await assertMobileLayout(page, path);
+      if (path === "/settings") {
+        await page.locator("[data-settings-mobile-nav] [data-settings-tab]").last().click();
+        await assertMobileLayout(page, `${path} (Your data tab)`);
+      }
+    }
   });
 
   test("tenant views", async ({ page }) => {
     expect(await loginAsRole(page, "Tenant", process.env.SMOKE_TENANT_EMAIL!, process.env.SMOKE_TENANT_PASSWORD!)).toBe(true);
-    for (const path of ["/tenant", "/tenant?section=maintenance"]) {
+    const tenantSections = ["overview", "charges", "maintenance", "documents", "notifications"];
+    for (const path of ["/settings", ...tenantSections.map((section) => `/tenant?section=${section}`)]) {
       await page.goto(path);
       await assertMobileLayout(page, path);
+      if (path === "/settings") {
+        await page.locator("[data-settings-mobile-nav] [data-settings-tab]").last().click();
+        await assertMobileLayout(page, `${path} (Your data tab)`);
+      }
     }
   });
 });

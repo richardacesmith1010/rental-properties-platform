@@ -60,7 +60,8 @@ export function AnimatedTabs({
             aria-selected={tab.id === activeTab}
             onClick={() => onTabChange(tab.id)}
             className={cn(
-              "relative z-10 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium " +
+              "relative z-10 inline-flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium " +
+              "sm:min-h-0 " +
               "transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 " +
               "focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2 " +
               "focus-visible:ring-offset-[var(--ground)]",

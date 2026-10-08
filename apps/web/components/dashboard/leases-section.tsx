@@ -152,7 +152,7 @@ export function LeasesSection({
                             type="button"
                             size="sm"
                             variant={isActivityOpen ? "default" : "ghost"}
-                            className="h-8 px-2 text-xs"
+                            className="h-8 min-h-11 px-2 text-xs sm:min-h-0"
                             onClick={() =>
                               setActiveActivityLeaseId((current) => (current === lease.id ? null : lease.id))
                             }

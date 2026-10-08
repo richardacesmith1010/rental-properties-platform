@@ -130,7 +130,9 @@ export function InlineEdit({
           setError(null);
         }}
         className={cn(
-          "inline-flex max-w-full items-center gap-1 rounded-md px-1.5 py-0.5 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+          "inline-flex min-h-11 max-w-full items-center gap-1 rounded-md px-1.5 py-0.5 text-left " +
+          "transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 " +
+          "focus-visible:ring-primary/40 sm:min-h-0",
           className
         )}
         title={title}

@@ -22,7 +22,10 @@ describe("AnimatedTabs", () => {
   it("positions the indicator under the initially active second tab", () => {
     const { container } = render(<AnimatedTabs tabs={[{ id: "timeline", label: "Updates" },
       { id: "threads", label: "Conversations" }]} activeTab="threads" onTabChange={vi.fn()} />);
-    expect(screen.getByRole("tab", { name: "Conversations" })).toHaveAttribute("aria-selected", "true");
+    const activeTab = screen.getByRole("tab", { name: "Conversations" });
+    expect(activeTab).toHaveAttribute("aria-selected", "true");
+    expect(activeTab.className).toContain("min-h-11");
+    expect(activeTab.className).toContain("sm:min-h-0");
     expect(container.firstElementChild?.lastElementChild).toHaveStyle({ left: "120px", width: "96px" });
   });
 });

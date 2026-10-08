@@ -50,7 +50,10 @@ describe("InlineEdit", () => {
   it("enters edit mode when clicked", () => {
     render(<InlineEditHarness onSave={async () => ({})} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /click to edit/i }));
+    const trigger = screen.getByRole("button", { name: /click to edit/i });
+    expect(trigger.className).toContain("min-h-11");
+    expect(trigger.className).toContain("sm:min-h-0");
+    fireEvent.click(trigger);
 
     expect(screen.getByDisplayValue("Atlas House")).toBeInTheDocument();
   });

@@ -104,6 +104,9 @@ describe("UnitsSection", () => {
       />
     );
 
-    expect(screen.getByRole("button", { name: "Edit 1A" })).toBeInTheDocument();
+    const editButton = screen.getByRole("button", { name: "Edit 1A" });
+    expect(editButton).toBeInTheDocument();
+    expect(editButton.className).toContain("min-h-11");
+    expect(editButton.className).toContain("sm:min-h-0");
   });
 });

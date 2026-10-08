@@ -21,7 +21,9 @@ describe("SettingsLayout", () => {
     expect(section?.className).toContain("min-w-0");
     expect(mobileNav.closest("aside")?.className).toContain("min-w-0");
     expect(mobileNav.className).toContain("overflow-x-auto");
-    expect(screen.getAllByTitle("Open Security settings.")[1].className).toContain("shrink-0");
+    const securityTab = screen.getAllByTitle("Open Security settings.")[1];
+    expect(securityTab.className).toContain("shrink-0");
+    expect(securityTab.className).toContain("min-h-11");
     expect(section?.parentElement?.className).toContain("grid-cols-[minmax(0,1fr)]");
   });
 
