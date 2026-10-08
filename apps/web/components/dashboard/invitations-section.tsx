@@ -17,7 +17,7 @@ import { SubmitButton } from "@/components/shared/submit-button";
 import { InviteManagerForm } from "./invitations/invite-manager-form";
 import { InviteTenantForm } from "./invitations/invite-tenant-form";
 import { Alert } from "@/components/ui/alert";
-import { CopyInviteLinkButton } from "./invitations-panel";
+import { CopyInviteLinkButton, ExpiredInviteLinkNote } from "./invitations-panel";
 
 type InvitationFlow = "tenant" | "manager" | "owner";
 
@@ -192,6 +192,7 @@ function InvitationRow({ invitation, last, onResendInvite, onRevokeInvite }: { i
               <SubmitButton variant="outline" size="sm" title="Resend this pending invitation email.">Resend</SubmitButton>
             </form>
             <CopyInviteLinkButton invitation={invitation} />
+            <ExpiredInviteLinkNote invitation={invitation} />
             {onRevokeInvite ? (
               <form action={revokeAction}>
                 <input type="hidden" name="invitationId" value={invitation.id} />

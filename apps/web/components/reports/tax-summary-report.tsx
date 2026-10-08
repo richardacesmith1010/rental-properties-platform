@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormState } from "react-dom";
+import { toast } from "sonner";
 import { SubmitButton } from "@/components/shared/submit-button";
 import type { ActionState } from "@/app/actions/shared";
 import { downloadReportCsv, taxSummaryToCsv } from "@/lib/csv-export-reports";
@@ -15,7 +16,13 @@ interface TaxSummaryReportProps {
 }
 
 function TaxNumbersForm({ row, year, onSave }: { row: TaxSummaryRow; year: number; onSave: TaxSummaryReportProps["onSave"] }) {
-  const [state, action] = useFormState(onSave, null);
+  const saveWithToast: TaxSummaryReportProps["onSave"] = async (prev, formData) => {
+    const result = await onSave(prev, formData);
+    if (result?.success) toast.success("Saved.");
+    else if (result?.error) toast.error(result.error);
+    return result;
+  };
+  const [state, action] = useFormState(saveWithToast, null);
   const fields = [
     ["mortgageInterest", "Mortgage interest (Form 1098)", row.mortgageInterest],
     ["escrowPropertyTax", "Property tax paid from escrow (not already in your expenses)", row.escrowPropertyTax],

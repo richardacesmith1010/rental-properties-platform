@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { toast } from "sonner";
-import { CopyInviteLinkButton } from "../invitations-panel";
+import { CopyInviteLinkButton, ExpiredInviteLinkNote } from "../invitations-panel";
 import type { InvitationListItem } from "@/lib/invitations";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -26,6 +26,24 @@ describe("copy invite link", () => {
     expect(screen.queryByRole("button")).toBeNull();
     rerender(<CopyInviteLinkButton invitation={{ ...invitation, role: "manager" }} />);
     expect(screen.getByRole("button", { name: "Copy link" })).toBeInTheDocument();
+  });
+
+  it("hides expired pending links and explains how to get a new one", () => {
+    const expired = { ...invitation, createdAt: "2026-09-08T00:00:00.000Z" };
+    render(<><CopyInviteLinkButton invitation={expired} /><ExpiredInviteLinkNote invitation={expired} /></>);
+    expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull();
+    expect(screen.getByText("Link expired. Resend to get a new one.")).toBeInTheDocument();
+  });
+
+  it("keeps active links and accepted rows unchanged", () => {
+    const recent = { ...invitation, createdAt: new Date().toISOString() };
+    const { rerender } = render(<><CopyInviteLinkButton invitation={recent} /><ExpiredInviteLinkNote invitation={recent} /></>);
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeInTheDocument();
+    expect(screen.queryByText("Link expired. Resend to get a new one.")).toBeNull();
+    const accepted = { ...recent, status: "accepted" as const };
+    rerender(<><CopyInviteLinkButton invitation={accepted} /><ExpiredInviteLinkNote invitation={accepted} /></>);
+    expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull();
+    expect(screen.queryByText("Link expired. Resend to get a new one.")).toBeNull();
   });
 
   it("copies the canonical URL and shows success", async () => {

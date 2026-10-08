@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { toast } from "sonner";
 import { TaxSummaryReport } from "../tax-summary-report";
 import type { TaxSummaryRow } from "@/lib/reports";
+
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const row: TaxSummaryRow = {
   propertyId: "home-1", propertyName: "Atlas", propertyAddress: "123 Main",
@@ -24,5 +27,19 @@ describe("Rental tax summary", () => {
     expect(screen.getByLabelText("Mortgage interest (Form 1098)")).toHaveProperty("value", "7000.00");
     expect(screen.getByLabelText("Depreciation (from your tax preparer)")).toHaveProperty("value", "500.00");
     expect(screen.getByText("Only enter amounts your lender paid. Don't also add them as expenses.")).toBeTruthy();
+  });
+
+  it("shows a success toast after saving", async () => {
+    const onSave = vi.fn().mockResolvedValue({ success: true, message: "Saved." });
+    render(<TaxSummaryReport data={[row]} year={2026} onSave={onSave} />);
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Saved."));
+  });
+
+  it("shows the returned error in a toast", async () => {
+    const onSave = vi.fn().mockResolvedValue({ success: false, error: "Could not save." });
+    render(<TaxSummaryReport data={[row]} year={2026} onSave={onSave} />);
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Could not save."));
   });
 });

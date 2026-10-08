@@ -6,6 +6,7 @@ import { Mail, RotateCcw, UserPlus, XCircle } from "lucide-react";
 import type { StatefulAction, ActionState } from "@/app/actions";
 import type { InvitationListItem } from "@/lib/invitations";
 import { formatDate } from "@/lib/format";
+import { isJoinInviteActive } from "@/lib/join-invite";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +24,7 @@ interface InvitationsPanelProps {
 
 export function CopyInviteLinkButton({ invitation }: { invitation: InvitationListItem }) {
   if (invitation.status !== "pending" || !["tenant", "manager"].includes(invitation.role)) return null;
+  if (!isJoinInviteActive({ role: invitation.role, status: invitation.status, created_at: invitation.createdAt })) return null;
 
   async function copyLink() {
     try {
@@ -37,6 +39,12 @@ export function CopyInviteLinkButton({ invitation }: { invitation: InvitationLis
   return <Button type="button" size="sm" variant="outline" title="Copy a join link you can text." onClick={copyLink}>
     Copy link
   </Button>;
+}
+
+export function ExpiredInviteLinkNote({ invitation }: { invitation: InvitationListItem }) {
+  if (invitation.status !== "pending" || !["tenant", "manager"].includes(invitation.role)) return null;
+  if (isJoinInviteActive({ role: invitation.role, status: invitation.status, created_at: invitation.createdAt })) return null;
+  return <p className="text-xs text-muted-foreground">Link expired. Resend to get a new one.</p>;
 }
 
 const statusVariant: Record<string, "warning" | "success" | "outline"> = {
@@ -88,6 +96,7 @@ function InvitationActions({
           </SubmitButton>
         </form>
         <CopyInviteLinkButton invitation={invitation} />
+        <ExpiredInviteLinkNote invitation={invitation} />
         <form action={revokeAction}>
           <input type="hidden" name="invitationId" value={invitation.id} />
           <SubmitButton size="sm" variant="outline" title="Revoke this pending invitation.">
