@@ -440,6 +440,10 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 - Account deletion: **keep shared rent/payment/repair records with name removed** (retention period to confirm with a lawyer; draft says 7 years).
 - Owner must-see data: **cash flow per home; mortgage/tax/insurance; rent status & late rent; tax-time summary.**
 
+### Client accounts + deletion status (2026-10-08)
+- Client accounts design `docs/manager-client-accounts-design.md` rev 3 accepted for implementation planning (ChatGPT APPROVE WITH CHANGES ×2). Owner chose: rent outside Domus in v1; owner statement in v1; claim in v1.1. Plan: S205 DB groundwork + capability functions + nullable owner_profile_id; S206 Clients UI + add-home flow; S207 owner statement; S208 (v1.1) claim.
+- Account deletion design `docs/account-deletion-design.md` PARKED at rev 3 (needs write-path matrix; release gated on lawyer).
+
 ### Owner rollout plan (user, 2026-10-07)
 Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to use it for other owners' properties; wants a real phone app by then) → (3) siblings + LLC J&MSP (paid) → (4) siblings' own properties (paid) → later a friend. Open owner decisions: "pertinent data" list; how Alia runs other owners' homes; pricing model; record-retention (now blocks App Store, which requires in-app deletion); Apple/Google developer accounts (owner must create). Big missing pieces: billing (none), Capacitor store app, notifications ON before Alia.
 

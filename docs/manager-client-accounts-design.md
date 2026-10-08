@@ -75,7 +75,12 @@ Manager creates client + home (account type client, no owner members, manager li
 
 **Status:** design accepted for implementation planning. Each implementation sprint is L3 with its own ChatGPT packet review.
 
-## 9. Open decisions for the owner
+## 9. Owner decisions (answered 2026-10-08)
+- Client rent: **outside Domus** in v1 (Alia marks paid).
+- Monthly owner statement: **in v1**.
+- Owner claim: **later (v1.1)**.
+
+### Original questions
 1. v1 = **rent outside Domus only** for client homes (recommended; online rent needs the real owner's bank)?
 2. Is the **monthly owner statement** in v1 (recommended: yes, it's what Alia's clients expect)?
 3. Build "Invite owner to claim" now, or later (recommended: later, v1.1)?
