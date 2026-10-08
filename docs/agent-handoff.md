@@ -417,6 +417,15 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 - Home defers 5 Home-only bundles (works; Home loads shared bundles only). Owner Home not faster: critical path = ownership.accounts (8 q) → administered-ids (4 q) → dashboard.data (12 q, ~1 s). feature.capabilities cache from S179 is ineffective in production (22 q every request). Next sprint (L3): RPCs for dashboard + ownership, fix capabilities cache.
 
+## Sprint 201 SHIPPED — Safe invite "Copy link" + public join page (L3, `9641bf7`, 2026-10-07, sol medium 134,581 Codex tokens; ChatGPT APPROVE WITH CHANGES, all adopted)
+- User decision: join link is NOT a sign-in credential (copying Supabase's action link rejected: owner could sign in as the tenant). `/join/[inviteId]` shows "{Inviter} invited you to {Home}. We emailed a sign-in link to j***@g***.com" + "Email me a new link" + spam tip. Active = pending + tenant/manager + < 30 days (`lib/join-invite.ts`); all inactive cases identical text; noindex; no-store.
+- `resendFromJoinLink`: input `{inviteId}` only; per-invite 3/h always, per-IP 10/h only when IP present, fail closed; re-check active right before send; send OK + timestamp error → still success (logged). Email core extracted to `lib/invite-resend.ts` (owner `resendInvite` behavior pinned by tests first). Owner/manager panel "Copy link" on own pending tenant/manager invites, canonical origin.
+- Live: expired pending / fake UUID / junk id → identical inactive text, no PII; accepted → "already used"; headers no-store; robots noindex; Copy link → `https://domusbase.com/join/<id>` + toast. Gate 1668; smoke; CI #379; Sentry clean.
+- Follow-up: hide/disable Copy link (or prompt "Resend first") for pending invites older than 30 days — their link shows inactive until resent.
+
+### Owner rollout plan (user, 2026-10-07)
+Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to use it for other owners' properties; wants a real phone app by then) → (3) siblings + LLC J&MSP (paid) → (4) siblings' own properties (paid) → later a friend. Open owner decisions: "pertinent data" list; how Alia runs other owners' homes; pricing model; record-retention (now blocks App Store, which requires in-app deletion); Apple/Google developer accounts (owner must create). Big missing pieces: billing (none), Capacitor store app, notifications ON before Alia.
+
 ## Sprints 200/200b SHIPPED — Phone smoke covers every screen; 44 px tap targets (L1, `ee04b62`, 2026-10-07; luna 56,286 + 160,899 Codex tokens)
 - `smoke-mobile-layout.spec.ts` now visits `/settings` (+ its last tab) and **every** section for owner (21), manager (19), tenant (5); elements inside an on-screen `overflow-x: auto/scroll` container are not flagged. Timeout 240 s.
 - First full sweep (prod, 375×812): **0 clipping**, ~20 tap targets < 44 px on 9 views (settings tabs 38, Messages tabs 36, units/leases inline buttons 24–32, portfolio 28, alerts filters 36, members link 20). 200b fixed them with `min-h-11` on phones (`sm:` keeps desktop); verified on a local prod build (4/4) before commit, then prod smoke incl. the new sweep passed. "Your data" icon → Download.
