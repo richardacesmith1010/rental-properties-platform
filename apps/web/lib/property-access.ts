@@ -10,7 +10,7 @@ export interface AdministeredProperty {
 
 interface LegacyPropertyRow {
   id: string;
-  owner_profile_id: string;
+  owner_profile_id: string | null;
   active?: boolean;
 }
 
@@ -64,7 +64,9 @@ async function getLegacyAdministeredProperties(
         ).data ?? []
       : ((managerPropertyRows ?? []) as LegacyPropertyRow[]);
 
-  const merged = [...ownedRowsSafe, ...managerRowsSafe].filter((property) => property.active !== false);
+  const merged = [...ownedRowsSafe, ...managerRowsSafe].filter(
+    (property) => property.active !== false && property.owner_profile_id !== null
+  );
   const byPropertyId = new Map<string, AdministeredProperty>();
 
   for (const property of merged) {

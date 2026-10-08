@@ -21,10 +21,15 @@ const parseFormDataMock = vi.hoisted(() => vi.fn());
 const requireAuthMock = vi.hoisted(() => vi.fn());
 const sendPlatformAlertMock = vi.hoisted(() => vi.fn());
 const sideEffectErrorMock = vi.hoisted(() => vi.fn());
+const assertStripeEligiblePropertyMock = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({ redirect: redirectMock }));
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: createAdminClientMock }));
+vi.mock("@/lib/client-accounts", () => ({
+  assertStripeEligibleProperty: assertStripeEligiblePropertyMock,
+  STRIPE_CLIENT_MESSAGE: "Online payments aren't available for this home yet."
+}));
 vi.mock("@/lib/stripe", () => ({ createStripeCheckoutSession: createStripeCheckoutSessionMock }));
 vi.mock("@/lib/payment-fees", () => ({
   calculateCardFee: calculateCardFeeMock,
@@ -184,6 +189,7 @@ describe("charges actions", () => {
     calculateCardFeeMock.mockReturnValue({ baseCents: 125000, feeCents: 3762, totalCents: 128762 });
     getManagerFeeForPropertyMock.mockResolvedValue({ feeCents: 11250, managerProfileId: "manager-1" });
     getOwnerStripeAccountForPropertyMock.mockResolvedValue("acct_123");
+    assertStripeEligiblePropertyMock.mockResolvedValue(undefined);
     getManagerStripeAccountForPropertyMock.mockResolvedValue({
       accountId: "acct_manager_123",
       feeCents: 11250
@@ -267,6 +273,15 @@ describe("charges actions", () => {
     await expect(payWithCardState(null, new FormData())).rejects.toThrow("REDIRECT:https://checkout.stripe.test/session");
     await expect(payWithACHState(null, new FormData())).rejects.toThrow("REDIRECT:https://checkout.stripe.test/session");
     expect(redirectMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("refuses an unclaimed client home before Stripe checkout", async () => {
+    parseFormDataMock.mockReturnValue({ success: true, data: { chargeId: "charge-1" } });
+    assertStripeEligiblePropertyMock.mockRejectedValue(new Error("unclaimed"));
+    expect(await payWithCardState(null, new FormData())).toEqual({
+      success: false, error: "Online payments aren't available for this home yet."
+    });
+    expect(createStripeCheckoutSessionMock).not.toHaveBeenCalled();
   });
 
   it("returns a validation error when chargeId is missing", async () => {

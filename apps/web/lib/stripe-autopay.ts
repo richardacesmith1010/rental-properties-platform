@@ -1,4 +1,5 @@
 import { getStripeSecretKey } from "@/lib/stripe";
+import { assertStripeEligibleProperty } from "@/lib/client-accounts";
 
 interface StripeSetupIntentResponse {
   id: string;
@@ -40,8 +41,10 @@ async function stripeAutopayRequest<T>(
 
 export async function createStripeCustomer(
   email: string,
-  name: string
+  name: string,
+  propertyId: string
 ): Promise<{ id: string }> {
+  await assertStripeEligibleProperty(propertyId);
   const body = new URLSearchParams();
   body.set("email", email);
   body.set("name", name);
@@ -55,11 +58,13 @@ export async function createStripeCustomer(
 }
 
 export async function createSetupCheckoutSession(params: {
+  propertyId: string;
   customerId: string;
   successUrl: string;
   cancelUrl: string;
   metadata: Record<string, string>;
 }): Promise<{ id: string; url: string | null }> {
+  await assertStripeEligibleProperty(params.propertyId);
   const body = new URLSearchParams();
   body.set("mode", "setup");
   body.set("customer", params.customerId);
@@ -116,12 +121,14 @@ export async function getPaymentMethod(
 }
 
 export async function createOffSessionPaymentIntent(params: {
+  propertyId: string;
   customerId: string;
   paymentMethodId: string;
   amountCents: number;
   metadata: Record<string, string>;
   transferGroup: string;
 }): Promise<{ id: string; status: string }> {
+  await assertStripeEligibleProperty(params.propertyId);
   const body = new URLSearchParams();
   body.set("amount", String(params.amountCents));
   body.set("currency", "usd");

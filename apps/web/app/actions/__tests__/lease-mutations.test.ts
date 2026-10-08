@@ -11,6 +11,8 @@ const createAdminClientMock = vi.hoisted(() => vi.fn());
 const logAuditMock = vi.hoisted(() => vi.fn());
 const notificationMock = vi.hoisted(() => vi.fn());
 const ownerNotificationMock = vi.hoisted(() => vi.fn());
+const isUnclaimedClientPropertyMock = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/client-accounts", () => ({ isUnclaimedClientProperty: isUnclaimedClientPropertyMock }));
 
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 vi.mock("@/app/actions/auth-helpers", () => ({ requireAuth: requireAuthMock }));
@@ -127,6 +129,7 @@ function createSupabaseMock() {
 describe("lease collection setting mutations", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    isUnclaimedClientPropertyMock.mockResolvedValue(false);
     checkRateLimitMock.mockReturnValue({ allowed: true });
     canUserAdministerPropertyMock.mockResolvedValue(true);
     notificationMock.mockResolvedValue(undefined);
@@ -193,6 +196,22 @@ describe("lease collection setting mutations", () => {
     await expect(updateLease(null, formData)).resolves.toEqual({ success: true });
     expect(supabase.leaseUpdateMock).toHaveBeenCalledWith(
       expect.objectContaining({ collects_outside_domus: expected })
+    );
+  });
+
+  it("forces outside collection for client lease creation and update", async () => {
+    isUnclaimedClientPropertyMock.mockResolvedValue(true);
+    const supabase = createSupabaseMock();
+    requireAuthMock.mockResolvedValue({ user: { id: "manager" }, supabase: supabase.client });
+    const formData = leaseFormData();
+    formData.set("collectsOutsideDomus", "false");
+    expect(await createLease(null, formData)).toEqual({ success: true });
+    expect(supabase.leaseInsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ collects_outside_domus: true })
+    );
+    expect(await updateLease(null, formData)).toEqual({ success: true });
+    expect(supabase.leaseUpdateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ collects_outside_domus: true })
     );
   });
 });

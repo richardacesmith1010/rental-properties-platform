@@ -5,6 +5,7 @@ import type { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAudit } from "@/lib/audit";
 import { canUserAdministerProperty } from "@/lib/property-access";
+import { isUnclaimedClientProperty } from "@/lib/client-accounts";
 import { sideEffectError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
@@ -89,7 +90,10 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
 
   const { data: createdLease, error } = await supabase
     .from("leases")
-    .insert(buildCreateLeaseInsert(parsed.data))
+    .insert({
+      ...buildCreateLeaseInsert(parsed.data),
+      collects_outside_domus: (await isUnclaimedClientProperty(unit.property_id)) || parsed.data.collectsOutsideDomus
+    })
     .select("id")
     .single();
   if (error || !createdLease?.id) return { success: false, error: "Failed to create lease. Please try again." };
@@ -161,7 +165,10 @@ export async function updateLease(_prev: ActionState, formData: FormData): Promi
   if (!unit) return { success: false, error: "Unit not found for this lease." };
   if (!(await canUserAdministerProperty(user.id, unit.property_id))) return { success: false, error: "You do not have access to this lease." };
 
-  const updates = buildUpdateLeaseMutation(parsed.data);
+  const updates = {
+    ...buildUpdateLeaseMutation(parsed.data),
+    collects_outside_domus: (await isUnclaimedClientProperty(unit.property_id)) || parsed.data.collectsOutsideDomus
+  };
 
   const { error } = await supabase.from("leases").update(updates).eq("id", leaseId);
   if (error) return { success: false, error: "Failed to update lease. Please try again." };

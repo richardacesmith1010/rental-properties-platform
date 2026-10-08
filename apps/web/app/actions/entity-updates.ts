@@ -1,6 +1,7 @@
 "use server";
 
 import { logAudit } from "@/lib/audit";
+import { isUnclaimedClientProperty } from "@/lib/client-accounts";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { sideEffectError } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -271,6 +272,9 @@ export async function updateLeaseDetails(
       updates.collectsOutsideDomus !== lease.collects_outside_domus
     ) {
       updatePayload.collects_outside_domus = updates.collectsOutsideDomus;
+    }
+    if (await isUnclaimedClientProperty(unit.property_id)) {
+      updatePayload.collects_outside_domus = true;
     }
     if (updates.notes !== undefined && updates.notes !== lease.notes) {
       updatePayload.notes = updates.notes;

@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { assertStripeEligibleAccount, STRIPE_CLIENT_MESSAGE } from "@/lib/client-accounts";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 import {
   buildDistributionConfigSnapshot,
@@ -46,6 +47,8 @@ export async function recordPaymentDistribution(params: {
   if (!params.paymentId) {
     return;
   }
+
+  await assertStripeEligibleAccount(params.accountId);
 
   const admin = createAdminClient();
   const { error } = await admin.from("payment_distributions").insert({
@@ -196,6 +199,11 @@ export async function applyDistributionConfig(
   accountId: string,
   config: DistributionConfigSnapshot
 ): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    await assertStripeEligibleAccount(accountId);
+  } catch {
+    return { success: false, error: STRIPE_CLIENT_MESSAGE };
+  }
   const admin = createAdminClient();
   const activeMembers = await getDistributionMembersForAccount(accountId);
   const activeProfileIds = activeMembers.members.map((member) => member.profileId);

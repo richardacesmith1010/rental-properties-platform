@@ -4,6 +4,7 @@ import { generateMonthlyChargesForPropertyIdsWithClient } from "@/lib/charge-gen
 import { getAdministeredPropertyIds } from "@/lib/property-access";
 import { getOwnerStripeAccountForProperty } from "@/lib/stripe-connect";
 import { createOffSessionPaymentIntent } from "@/lib/stripe-autopay";
+import { assertStripeEligibleProperty, StripeNotEligibleError } from "@/lib/client-accounts";
 
 export {
   createOffSessionPaymentIntent,
@@ -124,10 +125,18 @@ export async function processAutopayCharges(
   const unitMap = new Map(((units ?? []) as Array<{ id: string; property_id: string }>).map((unit) => [unit.id, unit]));
 
   const ownerStripeAccountByProperty = new Map<string, string | null>();
+  const blockedClientProperties = new Set<string>();
   await processInBatches(
     Array.from(new Set((units ?? []).map((unit) => unit.property_id))),
     async (propertyId) => {
-      ownerStripeAccountByProperty.set(propertyId, await getOwnerStripeAccountForProperty(propertyId));
+      try {
+        await assertStripeEligibleProperty(propertyId);
+        ownerStripeAccountByProperty.set(propertyId, await getOwnerStripeAccountForProperty(propertyId));
+      } catch (error) {
+        if (!(error instanceof StripeNotEligibleError)) throw error;
+        console.log("[autopay] skipped client home", propertyId);
+        blockedClientProperties.add(propertyId);
+      }
     },
     5
   );
@@ -153,6 +162,11 @@ export async function processAutopayCharges(
       const lease = leaseMap.get(enrollment.lease_id);
       const unit = lease ? unitMap.get(lease.unit_id) : null;
       const ownerStripeAccount = unit ? ownerStripeAccountByProperty.get(unit.property_id) : null;
+
+      if (unit && blockedClientProperties.has(unit.property_id)) {
+        skipped += dueCharges.length;
+        continue;
+      }
 
       if (!profile?.stripe_customer_id || !lease?.unit_id || !unit?.property_id || !ownerStripeAccount) {
         skipped += dueCharges.length;
@@ -187,6 +201,7 @@ export async function processAutopayCharges(
 
           processed += 1;
           const paymentIntent = await createOffSessionPaymentIntent({
+            propertyId: unit.property_id,
             customerId: profile.stripe_customer_id,
             paymentMethodId: enrollment.stripe_payment_method_id,
             amountCents: charge.amount_cents,

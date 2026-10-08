@@ -14,7 +14,7 @@ interface PropertyAccessConfig {
   managerProperties?: Array<{ id: string; owner_account_id: string; active?: boolean }>;
   ownerError?: { code?: string; message?: string } | null;
   managerError?: { code?: string; message?: string } | null;
-  legacyOwnedRows?: Array<{ id: string; owner_profile_id: string; active?: boolean }>;
+  legacyOwnedRows?: Array<{ id: string; owner_profile_id: string | null; active?: boolean }>;
 }
 
 function createAccessClient(config: PropertyAccessConfig): SupabaseClient {
@@ -75,6 +75,14 @@ function createAccessClient(config: PropertyAccessConfig): SupabaseClient {
 describe("property-access utilities", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("never treats a null owner as a legacy owner", async () => {
+    const client = createAccessClient({
+      memberError: { code: "42P01" },
+      legacyOwnedRows: [{ id: "unclaimed-home", owner_profile_id: null }]
+    });
+    expect(await getAdministeredProperties("manager", client)).toEqual([]);
   });
 
   it("returns owned properties for owner memberships", async () => {

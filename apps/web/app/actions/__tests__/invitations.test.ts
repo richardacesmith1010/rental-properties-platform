@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  auth: vi.fn(), rate: vi.fn(), access: vi.fn(), admin: vi.fn(), parse: vi.fn(), audit: vi.fn()
+  auth: vi.fn(), rate: vi.fn(), access: vi.fn(), admin: vi.fn(), parse: vi.fn(), audit: vi.fn(),
+  clientProperty: vi.fn(), clientAccount: vi.fn(), ownershipAccess: vi.fn()
+}));
+vi.mock("@/lib/ownership", () => ({ canUserAdministerOwnershipAccount: mocks.ownershipAccess }));
+vi.mock("@/app/actions/shared", () => ({ ensureCapabilityEnabled: vi.fn().mockResolvedValue(null) }));
+vi.mock("@/lib/client-accounts", () => ({
+  getClientStateForProperty: mocks.clientProperty, getClientState: mocks.clientAccount
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn(), unstable_cache: (fn: unknown) => fn }));
 vi.mock("@/app/actions/auth-helpers", () => ({ requireAuth: mocks.auth }));
@@ -12,7 +18,7 @@ vi.mock("@/lib/audit", () => ({ logAudit: mocks.audit }));
 vi.mock("@/lib/validations", () => ({
   inviteManagerSchema: {}, inviteOwnerSchema: {}, parseFormData: mocks.parse
 }));
-import { inviteManager } from "@/app/actions/invitations";
+import { inviteManager, inviteOwner } from "@/app/actions/invitations";
 
 const form = new FormData();
 function setup(profile: { id: string; role: string } | null, active: boolean | null = null) {
@@ -41,13 +47,58 @@ beforeEach(() => {
   } });
   mocks.rate.mockReturnValue({ allowed: true });
   mocks.access.mockResolvedValue(true);
+  mocks.clientProperty.mockResolvedValue(null);
+  mocks.clientAccount.mockResolvedValue(null);
+  mocks.ownershipAccess.mockResolvedValue(true);
   mocks.parse.mockReturnValue({ success: true, data: {
     email: "manager@example.com", fullName: "Alex Manager", propertyId: "home"
   } });
   mocks.audit.mockResolvedValue(undefined);
 });
 
+describe("inviteOwner", () => {
+  it("refuses unclaimed clients before membership or email", async () => {
+    const calls = setup(null);
+    mocks.parse.mockReturnValue({ success: true, data: {
+      email: "owner@example.com", fullName: "Owner", ownershipAccountId: "client"
+    } });
+    mocks.clientAccount.mockResolvedValue({ managedClient: true, claimState: "unclaimed" });
+    expect(await inviteOwner(null, form)).toEqual({ success: false, error: "This client can't have owners yet." });
+    expect(mocks.ownershipAccess).not.toHaveBeenCalled();
+    expect(calls.invite).not.toHaveBeenCalled();
+    expect(calls.upsert).not.toHaveBeenCalled();
+  });
+  it("refuses claimed client membership through the generic invite", async () => {
+    const calls = setup(null);
+    mocks.parse.mockReturnValue({ success: true, data: {
+      email: "owner@example.com", fullName: "Owner", ownershipAccountId: "client"
+    } });
+    mocks.clientAccount.mockResolvedValue({ managedClient: true, claimState: "claimed" });
+    expect(await inviteOwner(null, form)).toEqual({
+      success: false, error: "This client's owners are set by its client account."
+    });
+    expect(calls.invite).not.toHaveBeenCalled();
+    expect(calls.upsert).not.toHaveBeenCalled();
+  });
+});
+
 describe("inviteManager", () => {
+  it("refuses client home before assignment or email", async () => {
+    const calls = setup(null);
+    mocks.clientProperty.mockResolvedValue({ managedClient: true, claimState: "unclaimed" });
+    expect(await inviteManager(null, form)).toEqual({
+      success: false, error: "This home's managers are set by its client account."
+    });
+    expect(calls.upsert).not.toHaveBeenCalled();
+    expect(calls.invite).not.toHaveBeenCalled();
+  });
+  it("refuses a claimed client's generic manager invitation", async () => {
+    const calls = setup(null);
+    mocks.clientProperty.mockResolvedValue({ managedClient: true, claimState: "claimed" });
+    expect(await inviteManager(null, form)).toMatchObject({ success: false });
+    expect(calls.invite).not.toHaveBeenCalled();
+    expect(calls.upsert).not.toHaveBeenCalled();
+  });
   it("adds an existing manager without sending email", async () => {
     const calls = setup({ id: "manager", role: "manager" });
     expect(await inviteManager(null, form)).toMatchObject({ success: true, delivery: "added" });

@@ -1,6 +1,7 @@
 import { sideEffectError } from "@/lib/logger";
 import { notifyAccountMembers } from "@/lib/notifications";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { assertStripeEligibleAccount } from "@/lib/client-accounts";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 export interface WithdrawalRequestDTO {
@@ -242,6 +243,8 @@ export async function resolveWithdrawal(requestId: string): Promise<WithdrawalRe
   if (!requestRow) {
     return null;
   }
+
+  await assertStripeEligibleAccount(requestRow.ownership_account_id);
 
   const votes = await getVotes([requestId]);
   const profileMap = await getProfiles(

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { canUserAdministerOwnershipAccount } from "@/lib/ownership";
+import { getClientState, getClientStateForProperty } from "@/lib/client-accounts";
 import { logAudit } from "@/lib/audit";
 import { sideEffectError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -43,6 +44,14 @@ export async function inviteManager(
 
   if (!property || !(await canUserAdministerProperty(user.id, property.id))) {
     return { success: false, error: "Property not found." };
+  }
+
+  try {
+    if ((await getClientStateForProperty(propertyId))?.managedClient) {
+      return { success: false, error: "This home's managers are set by its client account." };
+    }
+  } catch {
+    return { success: false, error: "Unable to check this home's client account." };
   }
 
   const { data: existingProfile } = await admin
@@ -206,6 +215,17 @@ export async function inviteOwner(
   const { email, fullName, ownershipAccountId } = parsed.data;
   const admin = createAdminClient();
   const normalizedEmail = email.toLowerCase();
+
+  try {
+    const client = await getClientState(ownershipAccountId);
+    if (client?.managedClient) {
+      return { success: false, error: client.claimState === "unclaimed"
+        ? "This client can't have owners yet."
+        : "This client's owners are set by its client account." };
+    }
+  } catch {
+    return { success: false, error: "Unable to check this client account." };
+  }
 
   if (!(await canUserAdministerOwnershipAccount(user.id, ownershipAccountId))) {
     return { success: false, error: "You do not have access to that ownership account." };

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { withChargeEditingFallback } from "@/lib/charge-audit";
 import { MIN_ONLINE_PAYMENT_CENTS } from "@/lib/payment-fees";
 import { getOwnerStripeAccountForProperty } from "@/lib/stripe-connect";
+import { assertStripeEligibleProperty, STRIPE_CLIENT_MESSAGE } from "@/lib/client-accounts";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { notifyOwnerOfStripeIssue } from "@/lib/notifications";
 import { isStripeConfigured } from "@/lib/env";
@@ -163,6 +164,12 @@ export async function prepareCheckoutContext(
 
   if (!property) {
     return { success: false, error: "We couldn't find the property for this rent." };
+  }
+
+  try {
+    await assertStripeEligibleProperty(property.id);
+  } catch {
+    return { success: false, error: STRIPE_CLIENT_MESSAGE };
   }
 
   const isTenant = lease.tenant_profile_id === user.id;

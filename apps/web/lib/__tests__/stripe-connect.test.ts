@@ -1,4 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+const assertStripeEligibleAccountMock = vi.hoisted(() => vi.fn());
+vi.mock("server-only", () => ({}));
+vi.mock("@/lib/client-accounts", () => ({
+  assertStripeEligibleProperty: vi.fn(), assertStripeEligibleAccount: assertStripeEligibleAccountMock
+}));
 
 const createAdminClientMock = vi.hoisted(() => vi.fn());
 
@@ -137,7 +142,7 @@ describe("stripe-connect express account params", () => {
       })
     } as Response);
 
-    const account = await createExpressAccount("owner@example.com");
+    const account = await createExpressAccount("owner@example.com", { kind: "profile" });
 
     expect(account).toEqual({ id: "acct_test_123" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -152,6 +157,15 @@ describe("stripe-connect express account params", () => {
         "business_profile%5Burl%5D=https%3A%2F%2Fdomusbase.com",
       cache: "no-store"
     });
+  });
+
+  it("blocks client account creation before the Stripe request", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    assertStripeEligibleAccountMock.mockRejectedValue(new Error("unclaimed"));
+    await expect(createExpressAccount("owner@example.com", {
+      kind: "account", accountId: "client"
+    })).rejects.toThrow("unclaimed");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 

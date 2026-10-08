@@ -10,6 +10,11 @@ const resolveWithdrawalMock = vi.hoisted(() => vi.fn());
 const createStripeTransferMock = vi.hoisted(() => vi.fn());
 const notifyAccountMembersMock = vi.hoisted(() => vi.fn());
 const checkRateLimitMock = vi.hoisted(() => vi.fn());
+const assertStripeEligibleAccountMock = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/client-accounts", () => ({
+  assertStripeEligibleAccount: assertStripeEligibleAccountMock,
+  STRIPE_CLIENT_MESSAGE: "Online payments aren't available for this home yet."
+}));
 
 vi.mock("@/app/actions/auth-helpers", () => ({ requireAuth: requireAuthMock }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: createAdminClientMock }));
@@ -105,9 +110,19 @@ beforeEach(() => {
   resolveWithdrawalMock.mockResolvedValue({ status: "approved" });
   notifyAccountMembersMock.mockResolvedValue(undefined);
   checkRateLimitMock.mockReturnValue({ allowed: true });
+  assertStripeEligibleAccountMock.mockResolvedValue(undefined);
 });
 
 describe("withdrawal actions", () => {
+  it("refuses a client withdrawal before status writes or Stripe", async () => {
+    const { log } = setupAdmin();
+    assertStripeEligibleAccountMock.mockRejectedValue(new Error("unclaimed"));
+    expect(await executeApprovedWithdrawal(null, executeForm())).toEqual({
+      success: false, error: "Online payments aren't available for this home yet."
+    });
+    expect(log).toEqual([]);
+    expect(createStripeTransferMock).not.toHaveBeenCalled();
+  });
   it.each([
     ["submit", submitWithdrawalRequest, submitForm],
     ["vote", voteOnWithdrawal, voteForm],

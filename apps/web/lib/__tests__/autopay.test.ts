@@ -6,6 +6,12 @@ const generateMonthlyChargesForPropertyIdsWithClientMock = vi.hoisted(() => vi.f
 const getAdministeredPropertyIdsMock = vi.hoisted(() => vi.fn());
 const getOwnerStripeAccountForPropertyMock = vi.hoisted(() => vi.fn());
 const createOffSessionPaymentIntentMock = vi.hoisted(() => vi.fn());
+const assertStripeEligiblePropertyMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/client-accounts", () => ({
+  assertStripeEligibleProperty: assertStripeEligiblePropertyMock,
+  StripeNotEligibleError: class StripeNotEligibleError extends Error {}
+}));
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: createClientMock }));
 vi.mock("@/lib/charge-generation", () => ({
@@ -292,11 +298,21 @@ describe("processAutopayCharges", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.spyOn(console, "log").mockImplementation(() => {});
     getOwnerStripeAccountForPropertyMock.mockResolvedValue("acct_1");
+    assertStripeEligiblePropertyMock.mockResolvedValue(undefined);
     createOffSessionPaymentIntentMock.mockResolvedValue({ id: "pi_1", status: "succeeded" });
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("skips an unclaimed client home before calling Stripe", async () => {
+    const { StripeNotEligibleError } = await import("@/lib/client-accounts");
+    assertStripeEligiblePropertyMock.mockRejectedValue(new StripeNotEligibleError());
+    const result = await processAutopayCharges(createSupabaseMock(buildAutopayConfig()));
+    expect(result.skipped).toBe(1);
+    expect(createOffSessionPaymentIntentMock).not.toHaveBeenCalled();
+    expect(console.log).toHaveBeenCalledWith("[autopay] skipped client home", "property-1");
   });
 
   it("skips a paid charge during the re-check and continues to later due charges", async () => {

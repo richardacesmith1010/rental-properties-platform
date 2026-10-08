@@ -7,6 +7,7 @@ import { logAudit } from "@/lib/audit";
 import { sideEffectError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getStripeConnectOnboardingErrorCopy } from "@/lib/stripe-errors";
+import { assertStripeEligibleAccount, STRIPE_CLIENT_MESSAGE, StripeNotEligibleError } from "@/lib/client-accounts";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 import { createAccountLink, createExpressAccount, createLoginLink, getAccount, hasRentCollectionAuthorityForAccount } from "@/lib/stripe-connect";
 import { parseFormData, updateManagementFeeSchema } from "@/lib/validations";
@@ -38,7 +39,7 @@ export async function initiateStripeConnect(): Promise<ActionState> {
     }
     let stripeAccountId = profile?.stripe_account_id ?? null;
     if (!stripeAccountId) {
-      const account = await createExpressAccount(user.email);
+      const account = await createExpressAccount(user.email, { kind: "profile" });
       stripeAccountId = account.id;
       const { error } = await admin
         .from("profiles")
@@ -53,7 +54,9 @@ export async function initiateStripeConnect(): Promise<ActionState> {
       }
     }
     const appUrl = getAppUrl();
-    const accountLink = await createAccountLink(stripeAccountId, `${appUrl}/connect/refresh`, `${appUrl}/connect/return`);
+    const accountLink = await createAccountLink(
+      stripeAccountId, `${appUrl}/connect/refresh`, `${appUrl}/connect/return`, { kind: "profile" }
+    );
     return { success: true, url: accountLink.url };
   } catch (err) {
     console.error("initiateStripeConnect error:", err);
@@ -77,6 +80,7 @@ export async function initiateAccountStripeConnect(
     if (!checkRateLimit(`initiateAccountStripeConnect:${user.id}`, 5, 60 * 60 * 1000).allowed) {
       return { success: false, error: "Too many requests. Please try again later." };
     }
+    await assertStripeEligibleAccount(accountId);
     const { canUserAdministerOwnershipAccount } = await import("@/lib/ownership");
     const canAdministerAccount = await canUserAdministerOwnershipAccount(user.id, accountId);
     if (!canAdministerAccount) {
@@ -96,7 +100,7 @@ export async function initiateAccountStripeConnect(
       if (!user.email) {
         return { success: false, error: "Your account is missing an email address." };
       }
-      const stripeAccount = await createExpressAccount(user.email);
+      const stripeAccount = await createExpressAccount(user.email, { kind: "account", accountId });
       stripeAccountId = stripeAccount.id;
       const { error } = await admin
         .from("ownership_accounts")
@@ -115,14 +119,15 @@ export async function initiateAccountStripeConnect(
     const accountLink = await createAccountLink(
       stripeAccountId,
       `${appUrl}/connect/refresh?accountId=${encodedAccountId}`,
-      `${appUrl}/connect/return?accountId=${encodedAccountId}`
+      `${appUrl}/connect/return?accountId=${encodedAccountId}`,
+      { kind: "account", accountId }
     );
     return { success: true, url: accountLink.url };
   } catch (err) {
     console.error("initiateAccountStripeConnect error:", err);
     return {
       success: false,
-      error: getStripeConnectOnboardingErrorCopy(err).description
+      error: err instanceof StripeNotEligibleError ? STRIPE_CLIENT_MESSAGE : getStripeConnectOnboardingErrorCopy(err).description
     };
   }
 }
@@ -142,6 +147,7 @@ export async function initiateMemberPayoutConnect(
     if (!checkRateLimit(`initiateMemberPayoutConnect:${user.id}`, 5, 60 * 60 * 1000).allowed) {
       return { success: false, error: "Too many requests. Please try again later." };
     }
+    await assertStripeEligibleAccount(accountId);
     const requestedProfileId = typeof profileId === "string" && profileId.length > 0 ? profileId : user.id;
     const isSelfService = requestedProfileId === user.id;
     const { canUserAdministerOwnershipAccount } = await import("@/lib/ownership");
@@ -190,7 +196,7 @@ export async function initiateMemberPayoutConnect(
       if (!profile?.email) {
         return { success: false, error: "Member has no email address on file." };
       }
-      const stripeAccount = await createExpressAccount(profile.email);
+      const stripeAccount = await createExpressAccount(profile.email, { kind: "account", accountId });
       stripeAccountId = stripeAccount.id;
       const { error } = await admin
         .from("ownership_account_members")
@@ -210,7 +216,8 @@ export async function initiateMemberPayoutConnect(
     const accountLink = await createAccountLink(
       stripeAccountId,
       `${appUrl}/connect/refresh?${payoutQuery}`,
-      `${appUrl}/connect/return?${payoutQuery}`
+      `${appUrl}/connect/return?${payoutQuery}`,
+      { kind: "account", accountId }
     );
 
     return { success: true, url: accountLink.url };
@@ -218,7 +225,7 @@ export async function initiateMemberPayoutConnect(
     console.error("initiateMemberPayoutConnect error:", err);
     return {
       success: false,
-      error: getStripeConnectOnboardingErrorCopy(err).description
+      error: err instanceof StripeNotEligibleError ? STRIPE_CLIENT_MESSAGE : getStripeConnectOnboardingErrorCopy(err).description
     };
   }
 }
@@ -232,6 +239,7 @@ export async function checkConnectStatus(accountId?: string | null): Promise<Act
     const admin = createAdminClient();
 
     if (accountId) {
+      await assertStripeEligibleAccount(accountId);
       const { canUserAdministerOwnershipAccount } = await import("@/lib/ownership");
       const canAdministerAccount = await canUserAdministerOwnershipAccount(user.id, accountId);
       if (!canAdministerAccount) {
@@ -302,10 +310,11 @@ export async function checkConnectStatus(accountId?: string | null): Promise<Act
       connected,
       detailsSubmitted: account.details_submitted
     };
-  } catch {
+  } catch (error) {
     return {
       success: false,
-      error: "Unable to verify your Stripe connection right now. Please try again."
+      error: error instanceof StripeNotEligibleError ? STRIPE_CLIENT_MESSAGE
+        : "Unable to verify your Stripe connection right now. Please try again."
     };
   }
 }
@@ -328,6 +337,7 @@ export async function getExpressDashboardUrl(
     const admin = createAdminClient();
 
     if (requestedAccountId) {
+      await assertStripeEligibleAccount(requestedAccountId);
       const hasAuthority = await hasRentCollectionAuthorityForAccount(user.id, requestedAccountId);
       if (!hasAuthority) {
         return { success: false, error: "Access denied." };
@@ -346,7 +356,9 @@ export async function getExpressDashboardUrl(
         return { success: false, error: "Set up rent payments first." };
       }
 
-      const loginLink = await createLoginLink(ownershipAccount.stripe_account_id);
+      const loginLink = await createLoginLink(ownershipAccount.stripe_account_id, {
+        kind: "account", accountId: requestedAccountId
+      });
       return {
         success: true,
         url: loginLink.url,
@@ -364,16 +376,17 @@ export async function getExpressDashboardUrl(
       return { success: false, error: "Connect your bank account first." };
     }
 
-    const loginLink = await createLoginLink(profile.stripe_account_id);
+    const loginLink = await createLoginLink(profile.stripe_account_id, { kind: "profile" });
     return {
       success: true,
       url: loginLink.url,
       message: "Stripe dashboard link ready."
     };
-  } catch {
+  } catch (error) {
     return {
       success: false,
-      error: "Unable to open Stripe right now. Please try again."
+      error: error instanceof StripeNotEligibleError ? STRIPE_CLIENT_MESSAGE
+        : "Unable to open Stripe right now. Please try again."
     };
   }
 }

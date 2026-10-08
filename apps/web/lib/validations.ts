@@ -6,6 +6,30 @@ export * from "./validations-entity";
 
 import { z } from "zod";
 
+const trimmed = (max: number) => z.string().trim().min(1).max(max);
+
+export const createClientAccountSchema = z.object({
+  accountType: z.enum(["individual", "llc"]),
+  clientName: trimmed(120),
+  clientEmail: z.preprocess(
+    (value) => value === "" || value == null ? undefined : value,
+    z.string().trim().email().max(254).optional()
+  )
+});
+
+export const addClientHomeSchema = z.object({
+  accountId: z.string().uuid(),
+  name: trimmed(120),
+  addressLine1: trimmed(200),
+  city: trimmed(100),
+  state: z.string().regex(/^[A-Za-z]{2}$/),
+  postalCode: z.string().regex(/^\d{5}(-\d{4})?$/),
+  propertyType: z.preprocess(
+    (value) => value === "" || value == null ? undefined : value,
+    z.enum(["single_family", "duplex", "triplex", "apartment", "condo", "townhouse"]).optional()
+  )
+});
+
 export function dollarsToCents(value: string): number {
   if (value === "") return 0;
   if (!/^\d{1,8}(\.\d{1,2})?$/.test(value)) throw new Error("Enter a valid dollar amount.");

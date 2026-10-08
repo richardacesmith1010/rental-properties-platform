@@ -9,6 +9,7 @@ import { canUserAdministerOwnershipAccount } from "@/lib/ownership";
 import { sideEffectError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createStripeTransfer } from "@/lib/stripe";
+import { assertStripeEligibleAccount, STRIPE_CLIENT_MESSAGE } from "@/lib/client-accounts";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 import { resolveWithdrawal } from "@/lib/withdrawals";
 import { requireAuth } from "./auth-helpers";
@@ -37,6 +38,12 @@ export async function submitWithdrawalRequest(
 
   if (typeof accountId !== "string" || accountId.length === 0) {
     return { success: false, error: "Missing account ID." };
+  }
+
+  try {
+    await assertStripeEligibleAccount(accountId);
+  } catch {
+    return { success: false, error: STRIPE_CLIENT_MESSAGE };
   }
 
   if (!Number.isFinite(amountCents) || amountCents <= 0) {
@@ -183,6 +190,12 @@ export async function voteOnWithdrawal(
     return { success: false, error: "Withdrawal request not found." };
   }
 
+  try {
+    await assertStripeEligibleAccount(request.ownership_account_id);
+  } catch {
+    return { success: false, error: STRIPE_CLIENT_MESSAGE };
+  }
+
   if (request.status !== "pending") {
     return { success: false, error: "This withdrawal request has already been resolved." };
   }
@@ -281,6 +294,12 @@ export async function executeApprovedWithdrawal(
 
     if (!withdrawal) {
       return { success: false, error: "Withdrawal request not found." };
+    }
+
+    try {
+      await assertStripeEligibleAccount(withdrawal.ownership_account_id);
+    } catch {
+      return { success: false, error: STRIPE_CLIENT_MESSAGE };
     }
 
     if (withdrawal.status !== "approved" && withdrawal.status !== "failed") {

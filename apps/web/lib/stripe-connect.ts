@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { assertStripeEligibleAccount, assertStripeEligibleProperty } from "@/lib/client-accounts";
 import { sideEffectError } from "@/lib/logger";
 import { getManagerFeeForProperty } from "@/lib/payment-fees";
 import { getStripeAccountHealth, getStripeSecretKey, type StripeAccountHealthStatus } from "@/lib/stripe";
@@ -145,7 +146,14 @@ async function stripeConnectRequest<T>(path: string, options?: { method?: "GET" 
   return (await response.json()) as T;
 }
 
-export async function createExpressAccount(email: string): Promise<{ id: string }> {
+type ConnectContext = { kind: "profile" } | { kind: "account"; accountId: string };
+
+async function assertConnectContext(context: ConnectContext) {
+  if (context.kind === "account") await assertStripeEligibleAccount(context.accountId);
+}
+
+export async function createExpressAccount(email: string, context: ConnectContext): Promise<{ id: string }> {
+  await assertConnectContext(context);
   const params = buildExpressAccountParams(getDefaultExpressAccountBusinessProfileUrl());
   const body = buildExpressAccountRequestBody(params, { email });
 
@@ -160,8 +168,10 @@ export async function createExpressAccount(email: string): Promise<{ id: string 
 export async function createAccountLink(
   accountId: string,
   refreshUrl: string,
-  returnUrl: string
+  returnUrl: string,
+  context: ConnectContext
 ): Promise<{ url: string }> {
+  await assertConnectContext(context);
   const body = new URLSearchParams();
   body.set("account", accountId);
   body.set("refresh_url", refreshUrl);
@@ -194,7 +204,8 @@ export async function getAccount(accountId: string): Promise<{
   };
 }
 
-export async function createLoginLink(accountId: string): Promise<{ url: string }> {
+export async function createLoginLink(accountId: string, context: ConnectContext): Promise<{ url: string }> {
+  await assertConnectContext(context);
   const link = await stripeConnectRequest<{ url: string }>(`/accounts/${accountId}/login_links`, {
     method: "POST",
     body: new URLSearchParams()
@@ -412,6 +423,7 @@ export async function getRentCollectionConnectStatus(userId: string): Promise<Re
 }
 
 export async function getOwnerStripeAccountForProperty(propertyId: string): Promise<string | null> {
+  await assertStripeEligibleProperty(propertyId);
   const admin = createAdminClient();
   const { data: property } = await admin
     .from("properties")
@@ -495,6 +507,7 @@ export async function getManagerStripeAccountForProperty(
   propertyId: string,
   rentAmountCents = 0
 ): Promise<{ accountId: string; feeCents: number; managerProfileId: string } | null> {
+  await assertStripeEligibleProperty(propertyId);
   const admin = createAdminClient();
   const feeInfo = await getManagerFeeForProperty(propertyId, rentAmountCents);
   if (feeInfo.feeCents <= 0) {

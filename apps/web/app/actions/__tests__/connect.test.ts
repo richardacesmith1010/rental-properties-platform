@@ -1,4 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+const assertStripeEligibleAccountMock = vi.hoisted(() => vi.fn());
+vi.mock("server-only", () => ({}));
+vi.mock("@/lib/client-accounts", () => ({
+  assertStripeEligibleAccount: assertStripeEligibleAccountMock,
+  STRIPE_CLIENT_MESSAGE: "Online payments aren't available for this home yet.",
+  StripeNotEligibleError: class StripeNotEligibleError extends Error {}
+}));
 
 const revalidatePathMock = vi.hoisted(() => vi.fn());
 const createAdminClientMock = vi.hoisted(() => vi.fn());
@@ -96,6 +103,7 @@ describe("connect actions", () => {
     createAccountLinkMock.mockResolvedValue({ url: "https://connect.stripe.com/account-link" });
     createLoginLinkMock.mockResolvedValue({ url: "https://connect.stripe.com/login-link" });
     createExpressAccountMock.mockResolvedValue({ id: "acct_new" });
+    assertStripeEligibleAccountMock.mockResolvedValue(undefined);
     getAccountMock.mockResolvedValue({
       id: "acct_existing",
       charges_enabled: false,
@@ -125,7 +133,8 @@ describe("connect actions", () => {
     expect(createAccountLinkMock).toHaveBeenCalledWith(
       "acct_existing",
       expect.stringContaining("/connect/refresh?accountId=account-1"),
-      expect.stringContaining("/connect/return?accountId=account-1")
+      expect.stringContaining("/connect/return?accountId=account-1"),
+      { kind: "account", accountId: "account-1" }
     );
     expect(admin.ownershipAccountUpdate).not.toHaveBeenCalled();
   });
@@ -150,7 +159,22 @@ describe("connect actions", () => {
       message: "Stripe dashboard link ready."
     });
     expect(hasRentCollectionAuthorityForAccountMock).toHaveBeenCalledWith("owner-1", "account-1");
-    expect(createLoginLinkMock).toHaveBeenCalledWith("acct_rent");
+    expect(createLoginLinkMock).toHaveBeenCalledWith("acct_rent", { kind: "account", accountId: "account-1" });
+  });
+
+  it("refuses a client account before any Stripe call or account write", async () => {
+    const { StripeNotEligibleError } = await import("@/lib/client-accounts");
+    const admin = createConnectAdminClient({ ownershipAccount: { stripe_account_id: null } });
+    createAdminClientMock.mockReturnValue(admin.client);
+    assertStripeEligibleAccountMock.mockRejectedValue(new StripeNotEligibleError());
+    const formData = new FormData();
+    formData.set("accountId", "client-account");
+    expect(await initiateAccountStripeConnect(null, formData)).toEqual({
+      success: false, error: "Online payments aren't available for this home yet."
+    });
+    expect(createExpressAccountMock).not.toHaveBeenCalled();
+    expect(createAccountLinkMock).not.toHaveBeenCalled();
+    expect(admin.ownershipAccountUpdate).not.toHaveBeenCalled();
   });
 
   it("preserves the profile dashboard flow when no accountId is posted", async () => {
@@ -168,6 +192,6 @@ describe("connect actions", () => {
       message: "Stripe dashboard link ready."
     });
     expect(hasRentCollectionAuthorityForAccountMock).not.toHaveBeenCalled();
-    expect(createLoginLinkMock).toHaveBeenCalledWith("acct_profile");
+    expect(createLoginLinkMock).toHaveBeenCalledWith("acct_profile", { kind: "profile" });
   });
 });

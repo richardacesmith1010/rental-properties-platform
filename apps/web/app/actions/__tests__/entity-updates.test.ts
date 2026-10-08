@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+const clientPropertyMock = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/client-accounts", () => ({ isUnclaimedClientProperty: clientPropertyMock }));
 
 const revalidatePathMock = vi.hoisted(() => vi.fn());
 const logAuditMock = vi.hoisted(() => vi.fn());
@@ -111,6 +113,7 @@ function createEntityAdminClient(config: {
 describe("entity update actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clientPropertyMock.mockResolvedValue(false);
     checkRateLimitMock.mockReturnValue({ allowed: true, remaining: 10 });
     requireAuthMock.mockResolvedValue({
       user: { id: "user-1", email: "owner@example.com" },
@@ -296,5 +299,23 @@ describe("entity update actions", () => {
     expect(admin.leaseUpdateMock).toHaveBeenCalledWith({
       collects_outside_domus: next
     });
+  });
+
+  it("forces outside collection on a client lease detail update", async () => {
+    clientPropertyMock.mockResolvedValue(true);
+    parseFormDataMock.mockReturnValueOnce({ success: true, data: {
+      leaseId: "lease-1", collectsOutsideDomus: false
+    } });
+    getAdministeredPropertyIdsMock.mockResolvedValueOnce(["property-1"]);
+    const admin = createEntityAdminClient({
+      lease: { id: "lease-1", unit_id: "unit-1", start_date: "2026-01-01",
+        end_date: "2026-12-31", monthly_rent_cents: 10000, deposit_cents: 0,
+        due_day_of_month: 1, grace_period_days: 5, late_fee_cents: 0,
+        collects_outside_domus: false, tenant_profile_id: "tenant-1", notes: null },
+      unit: { id: "unit-1", property_id: "property-1" }
+    });
+    createAdminClientMock.mockReturnValue(admin.client);
+    expect(await updateLeaseDetails(null, new FormData())).toMatchObject({ success: true });
+    expect(admin.leaseUpdateMock).toHaveBeenCalledWith({ collects_outside_domus: true });
   });
 });

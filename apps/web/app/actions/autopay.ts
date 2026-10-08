@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { assertStripeEligibleProperty, getPropertyIdForLease, STRIPE_CLIENT_MESSAGE } from "@/lib/client-accounts";
 import { createStripeCustomer, createSetupCheckoutSession } from "@/lib/autopay";
 import { isStripeConfigured } from "@/lib/env";
 import { formatUnitLabel } from "@/lib/format";
@@ -76,6 +77,14 @@ export async function setupAutopay(
     return { success: false, error: "Lease not found for your account." };
   }
 
+  let propertyId: string;
+  try {
+    propertyId = await getPropertyIdForLease(leaseId);
+    await assertStripeEligibleProperty(propertyId);
+  } catch {
+    return { success: false, error: STRIPE_CLIENT_MESSAGE };
+  }
+
   const admin = createAdminClient();
   const { data: profile } = await admin
     .from("profiles")
@@ -93,7 +102,7 @@ export async function setupAutopay(
     let customer;
     try {
       customer = await withRetry(
-        () => createStripeCustomer(userEmail, profile?.full_name ?? userEmail),
+        () => createStripeCustomer(userEmail, profile?.full_name ?? userEmail, propertyId),
         {
           maxAttempts: 2,
           baseDelayMs: 250,
@@ -126,6 +135,7 @@ export async function setupAutopay(
     session = await withRetry(
       () =>
         createSetupCheckoutSession({
+          propertyId,
           customerId: stripeCustomerId,
           successUrl: `${appUrl}/autopay/return?session_id={CHECKOUT_SESSION_ID}&lease_id=${leaseId}`,
           cancelUrl: `${appUrl}/tenant?section=charges&autopay=cancelled`,

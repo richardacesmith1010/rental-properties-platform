@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAudit } from "@/lib/audit";
 import { canUserAdministerProperty } from "@/lib/property-access";
+import { isUnclaimedClientProperty } from "@/lib/client-accounts";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 import { sideEffectError } from "@/lib/logger";
@@ -58,6 +59,7 @@ export async function renewLease(_prev: ActionState, formData: FormData): Promis
     grace_period_days: lease.grace_period_days ?? 5,
     late_fee_cents: lease.late_fee_cents ?? 0,
     renewed_from_lease_id: lease.id,
+    collects_outside_domus: await isUnclaimedClientProperty(unit.property_id),
     lease_status: "active",
     active: true
   }).select("id").single();
