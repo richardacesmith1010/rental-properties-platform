@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormState } from "react-dom";
+import { toast } from "sonner";
 import { Mail, RotateCcw, UserPlus, XCircle } from "lucide-react";
 import type { StatefulAction, ActionState } from "@/app/actions";
 import type { InvitationListItem } from "@/lib/invitations";
@@ -18,6 +19,24 @@ interface InvitationsPanelProps {
   onRevokeInvite: StatefulAction;
   onOpenInviteWizard?: () => void;
   previewCount?: number;
+}
+
+export function CopyInviteLinkButton({ invitation }: { invitation: InvitationListItem }) {
+  if (invitation.status !== "pending" || !["tenant", "manager"].includes(invitation.role)) return null;
+
+  async function copyLink() {
+    try {
+      const origin = process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com";
+      await navigator.clipboard.writeText(`${origin}/join/${invitation.id}`);
+      toast.success("Link copied. Text it to them.");
+    } catch {
+      toast.error("Could not copy. Try again.");
+    }
+  }
+
+  return <Button type="button" size="sm" variant="outline" title="Copy a join link you can text." onClick={copyLink}>
+    Copy link
+  </Button>;
 }
 
 const statusVariant: Record<string, "warning" | "success" | "outline"> = {
@@ -68,6 +87,7 @@ function InvitationActions({
             Resend
           </SubmitButton>
         </form>
+        <CopyInviteLinkButton invitation={invitation} />
         <form action={revokeAction}>
           <input type="hidden" name="invitationId" value={invitation.id} />
           <SubmitButton size="sm" variant="outline" title="Revoke this pending invitation.">

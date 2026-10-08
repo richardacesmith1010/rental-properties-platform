@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { logAudit } from "@/lib/audit";
 import { sendTenantInviteEmail } from "@/lib/invite-email";
+import { resendInvitationEmail } from "@/lib/invite-resend";
 import { sideEffectError } from "@/lib/logger";
 import { notifyOwnerMembersOfAcceptedTenantInvite } from "@/lib/notifications";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -18,7 +19,6 @@ import { requireAuth } from "./auth-helpers";
 import {
   buildPropertyAddress,
   buildTenantInviteMetadata,
-  buildTenantResendPayload,
   createTenantInviteLink,
   deleteGeneratedInviteUser,
   fallbackToSupabaseInvite,
@@ -304,94 +304,18 @@ export async function resendInvite(
     return { success: false, error: "Invitation not found." };
   }
 
-  let nextInvitedProfileId = invitation.invited_profile_id ?? null;
-
   if (invitation.status === "accepted") {
     return { success: false, error: "This invitation has already been accepted." };
   }
 
-  if (invitation.role === "tenant") {
-    const tenantPayload = await buildTenantResendPayload({
-      currentUserId: user.id,
-      invitation
-    });
-
-    if (tenantPayload) {
-      const generatedInvite = await createTenantInviteLink({
-        email: invitation.email,
-        metadata: tenantPayload.metadata
-      });
-
-      if (!generatedInvite.error && generatedInvite.data.user) {
-        nextInvitedProfileId = generatedInvite.data.user.id;
-        const brandedInviteSent = await sendTenantInviteEmail({
-          ...tenantPayload.emailParams,
-          inviteUrl: generatedInvite.data.properties.action_link
-        });
-
-        if (!brandedInviteSent) {
-          await deleteGeneratedInviteUser(nextInvitedProfileId);
-          nextInvitedProfileId = null;
-
-          const fallbackInvite = await fallbackToSupabaseInvite({
-            email: invitation.email,
-            metadata: tenantPayload.metadata
-          });
-
-          if (fallbackInvite.error) {
-            return { success: false, error: "Failed to resend invitation." };
-          }
-
-          nextInvitedProfileId = fallbackInvite.data.user?.id ?? nextInvitedProfileId;
-        }
-      } else {
-        const fallbackInvite = await fallbackToSupabaseInvite({
-          email: invitation.email,
-          metadata: tenantPayload.metadata
-        });
-
-        if (fallbackInvite.error) {
-          return { success: false, error: "Failed to resend invitation." };
-        }
-
-        nextInvitedProfileId = fallbackInvite.data.user?.id ?? nextInvitedProfileId;
-      }
-    } else {
-      const fallbackInvite = await admin.auth.admin.inviteUserByEmail(invitation.email, {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com"}/auth/callback`,
-        data: {
-          role: invitation.role,
-          full_name: invitation.full_name,
-          property_id: invitation.property_id,
-          ownership_account_id: invitation.ownership_account_id
-        }
-      });
-
-      if (fallbackInvite.error) {
-        return { success: false, error: "Failed to resend invitation." };
-      }
-
-      nextInvitedProfileId = fallbackInvite.data.user?.id ?? nextInvitedProfileId;
-    }
-  } else {
-    const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(invitation.email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com"}/auth/callback`,
-      data: {
-        role: invitation.role,
-        full_name: invitation.full_name,
-        property_id: invitation.property_id,
-        ownership_account_id: invitation.ownership_account_id
-      }
-    });
-
-    if (inviteError) {
-      return { success: false, error: "Failed to resend invitation." };
-    }
+  const delivery = await resendInvitationEmail(invitation, user.id);
+  if (!delivery.ok) {
+    return { success: false, error: "Failed to resend invitation." };
   }
 
   const { error: resendUpdateError } = await admin
     .from("invitations")
-    .update({ created_at: new Date().toISOString(), invited_profile_id: nextInvitedProfileId })
+    .update({ created_at: new Date().toISOString(), invited_profile_id: delivery.invitedProfileId })
     .eq("id", invitationId);
 
   if (resendUpdateError) {

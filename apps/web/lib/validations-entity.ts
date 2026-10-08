@@ -173,6 +173,10 @@ export const resendInviteSchema = z.object({
   invitationId: z.string().uuid("Invalid invitation ID.")
 });
 
+export const resendFromJoinLinkSchema = z.object({
+  inviteId: z.string().uuid()
+}).strict();
+
 export const revokeInviteSchema = z.object({
   invitationId: z.string().uuid("Invalid invitation ID.")
 });
