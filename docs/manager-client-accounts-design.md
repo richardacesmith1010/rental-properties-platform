@@ -1,4 +1,4 @@
-# Manager-run homes ("client accounts") — design (draft for review, 2026-10-08)
+# Manager-run homes ("client accounts") — design (rev 2, 2026-10-08; ChatGPT rev 1: APPROVE WITH CHANGES, all adopted)
 
 **Owner decision (2026-10-08):** Alia (property manager) will run homes for owners who are **not** on Domus, by herself. Alia uses Domus for free.
 
@@ -45,6 +45,25 @@ Find manager-created personal accounts (account owned by a profile whose `role =
 
 ## 8. Tests (high level)
 Manager creates client + home (account type client, no owner members, manager linked, `collects_outside_domus` default); another manager can't see/edit it; owner-only tools hidden and refused server-side for client accounts; P&L/rent roll/statement scoped to the client; statement numbers equal the underlying records; creating a home never auto-creates a personal account for a manager; tenant flows unchanged; (v1.1) claim transfers ownership atomically and keeps the manager.
+
+## 10. Rev 2 changes (required by review)
+1. **No false owner on client homes.** `properties.owner_profile_id` becomes **nullable**; for homes in a client account it is **NULL** while unclaimed and set to the real owner on claim. Invariant: *`owner_profile_id` never grants owner authority for a property whose account is a client account.* Every RLS policy and TS check that reads `owner_profile_id` is updated (audit list in the implementation packet), and code that assumes it's non-null is fixed.
+2. **Central capability matrix** (one SQL function `has_property_capability(property_id, capability)` + one TS mirror used by server actions), instead of widening `can_administer_property`:
+
+   | Capability | Owner member | Client-account manager | Assigned manager (owner's home) |
+   |---|---|---|---|
+   | view_operations (homes, units, leases, tenants, repairs, messages) | ✅ | ✅ | ✅ |
+   | manage_operations (edit the above, invite tenants) | ✅ | ✅ | ✅ (as today) |
+   | record_payments (mark paid, record payment) | ✅ | ✅ | ✅ (as today) |
+   | view_finance_reports (rent roll, P&L, owner statement) | ✅ | ✅ (own clients) | as today |
+   | owner_only (tax summary/inputs, bank feed, payouts, LLC votes, Stripe Connect, wipe, transfer) | ✅ | ❌ | ❌ |
+   | manage_client_account (rename client, add home, invite owner to claim) | — | ✅ (creator/manager) | ❌ |
+
+3. **Database-level enforcement.** RLS for the affected tables calls `has_property_capability`; the server checks are a second layer, not the only one.
+4. **One source of manager authority.** `ownership_account_managers` is the source for client accounts. Per-home `property_managers` rows are **derived** (created/ended by the same SQL function that adds a home or changes the client manager, in one transaction), never edited separately for client homes. A consistency test asserts they match.
+5. **Wording:** "Payments recorded" (not "rent collected") in client lists and statements.
+6. **Negative tests:** Client A operations never include Client B data (lists, reports, statements, CSV, search, notifications); another manager can't see or edit a client; a manager can't call owner_only actions on a client home (server and RLS).
+7. **Claim safety:** add `claimed_at`, `claimed_by_profile_id`, `created_by_profile_id` (original creator) on `ownership_accounts`; the claim function locks the account row, checks it's still a client account, and is idempotent. Race tests: double claim, claim vs. manager adding a home.
 
 ## 9. Open decisions for the owner
 1. v1 = **rent outside Domus only** for client homes (recommended; online rent needs the real owner's bank)?
