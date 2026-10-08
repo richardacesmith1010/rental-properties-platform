@@ -1,74 +1,83 @@
-# Sprint 199 — Tenants and managers can download their data and delete their account (L3: auth + data deletion) · Category 14 (Launch) / 6 (Privacy)
+# Sprint 199 — Tenants and managers can download their data (L3: privacy, read-only) · Category 14 (Launch) / 6 (Privacy)
+
+> Revision 3 (ChatGPT: rev 1 REJECT → rev 2 APPROVE WITH CHANGES, all adopted). ChatGPT **rejected** rev 1 (export + self-delete). Self-delete needs a retention policy (owner/lawyer decision, see `docs/legal-draft-terms-privacy-2026-10.md`), a personal-data inventory, all-or-nothing DB writes, Stripe cleanup and manager-handover rules, so it moves to a later, separately reviewed sprint. This revision is **export only**, with every export-related review point adopted.
 
 ## 1. Objective
-Launch audit B4 (`docs/launch-readiness-audit-2026-10-07.md`): the Privacy page promises access, export and deletion, but tenants and managers have no way to do either (Settings → "Account & Data" is owner-only), and the fallback mailbox `privacy@` can't receive mail. Add, for **tenants and managers**:
-- **Download my data**: a JSON file of their own data;
-- **Delete my account**: removes their login and personal details, and keeps shared records (rent, payments, repairs, messages, audit) with the name replaced by "Deleted user".
-Owners are out of scope (they already have Account & Data; owner export is a later sprint).
+Launch audit B4: Privacy promises access/export, but tenants and managers have no self-serve path. Add **Download my data** (a JSON file) for tenants and managers, and a plain note on how to ask for deletion.
 
 ## 2. Context (verified live 2026-10-07)
-- `public.profiles`: `id` (PK), `full_name text NOT NULL`, `email text NOT NULL UNIQUE`, `phone`, `nickname`, `avatar_url`, `role` (owner|manager|tenant), `notification_preferences jsonb NOT NULL`, `notifications_paused_until`, `stripe_customer_id`, `stripe_account_id`, … There is **no FK from profiles to auth.users**.
-- More than 50 FKs point at `profiles(id)`, many `NO ACTION`/`RESTRICT` (leases.tenant_profile_id, maintenance_tickets.tenant_profile_id, inbox_messages.sender_profile_id, audit_logs.user_id, payment_distributions, …). **Never delete the profile row.** CASCADE ones include `notifications`, `notification_preferences`, `autopay_enrollments`, `property_managers`, `manager_payment_configs`, `manager_payments`, `tenant_activity_log.tenant_profile_id`.
-- `inbox_messages` stores a denormalized `sender_email` (see `lib/inbox/action-helpers.ts` `insertInboxMessage`).
-- Auth helpers hardened in Sprint 197 (`lib/auth.ts`, `app/actions/auth-helpers.ts` `requireAuth`). Admin client: `createAdminClient()` (`lib/supabase/admin`), which can call `auth.admin.deleteUser(id)`.
-- Settings: `app/settings/page.tsx` + `components/settings/settings-layout.tsx` (sections with `roles`; `account` = `["owner"]`).
-- Plain-language rules and guard: `docs/plain-language.md`, `lib/plain-language`; owner/tenant word list in CLAUDE.md §18.
+- Auth helpers hardened in Sprint 197 (`lib/auth.ts` `getAuthenticatedUser`, `getCurrentUserRole`). Admin client `createAdminClient()` (`lib/supabase/admin`). Rate limiter `checkRateLimit` (`lib/rate-limit`).
+- Settings: `app/settings/page.tsx` + `components/settings/settings-layout.tsx` (sections carry `roles`; `account` = `["owner"]`).
+- Tables: `profiles`; `leases(tenant_profile_id, unit_id, start_date, end_date, monthly_rent_cents, deposit_cents, due_day_of_month, active, …)`; `rent_charges(lease_id, due_date, amount_cents, status, category, deleted_at, …)`; `payments(rent_charge_id, amount_cents, paid_at, method, …)`; `maintenance_tickets(tenant_profile_id, title, status, created_at, resolved_at, …)`; `inbox_messages(sender_profile_id, thread_id, body, created_at, sender_email)`; `inbox_threads(subject, …)`; `property_managers(manager_profile_id, property_id, active, assigned_at)`; `manager_payments(manager_profile_id, …)`; `properties(name, …)`; `units(unit_number, property_id)`. **Check each column name against the live types (`lib/database.types.ts` or existing queries) before use; never guess (L-004).**
+- Display helper for thread titles: `lib/inbox/thread-title.ts` `threadDisplayTitle`.
+- In-app "Send feedback" stores feedback and emails the owner (works today). `privacy@domusbase.com` cannot receive mail yet.
 
 ## 3. In scope
-1. **Settings section** `your-data` ("Your data"), roles `["tenant", "manager"]`, with two cards:
-   - **Download my data**: text `Get a copy of your Domus data as a file.`, button `Download my data` → `GET /api/account/export`.
-   - **Delete my account**: text `This removes your login and your personal details. Rent, repair, and message records stay for your landlord, with your name removed. This cannot be undone.`, a text input labelled `Type DELETE to confirm`, button `Delete my account` (disabled until the input is exactly `DELETE`), destructive style. On success → sign out and go to `/login?deleted=1`, and `/login` shows `Your account was deleted.`
-2. **Export route** `app/api/account/export/route.ts` (GET): `getAuthenticatedUser()` + role via `getCurrentUserRole` (tenant/manager only; owners → 403 JSON `{ error: "Not available for owners yet." }`). Rate limit 5/hour/user (`checkRateLimit`). Respond `Content-Type: application/json`, `Content-Disposition: attachment; filename="domus-my-data-YYYY-MM-DD.json"`. Content, **only the requester's own rows**, read with the admin client strictly filtered by the requester's id:
-   - `profile`: full_name, email, phone, nickname, role, created_at;
-   - tenant: `leases` where `tenant_profile_id = me` (property name, unit, dates, rent, deposit, due day); `rent` charges for those leases (due date, amount, status, category); `payments` for those charges (date, amount, method); `repairs` where `tenant_profile_id = me` (title, status, created, resolved); `messagesSent` where `sender_profile_id = me` (thread subject via `threadDisplayTitle(…, "tenant")`, body, created_at);
-   - manager: `homesManaged` from `property_managers` (property name, active, assigned_at); `managerPayments` where `manager_profile_id = me` (amount, status, period/date); `messagesSent` as above.
-   - Never include other people's emails or phones, tokens, Stripe ids, or internal ids other than the requester's own record ids.
-3. **Delete action** `app/actions/account-self-delete.ts` (`"use server"`), `deleteMyAccount(prev, formData)`:
-   1. `requireAuth("tenant", "manager")`; rate limit 3/hour/user; Zod: `confirm` must equal `DELETE`.
-   2. **Tenant guard:** if any `leases` row with `tenant_profile_id = me` and `active = true` exists → return `{ success: false, error: "Your lease is still active. Ask your landlord to end it first." }` and write nothing.
-   3. **Anonymize (admin client), each result checked (L-002):**
-      - `profiles` update for `id = me`: `full_name = "Deleted user"`, `email = "deleted+<id>@deleted.domusbase.invalid"`, `phone = null`, `nickname = null`, `avatar_url = null`, `notifications_paused_until = null`, `notification_preferences = '{}'::jsonb` (or the column default; check the live default and use it);
-      - `inbox_messages` update `sender_email = null` where `sender_profile_id = me`;
-      - delete `autopay_enrollments`, `notifications` (recipient), `notification_preferences` rows for `me`;
-      - manager: `property_managers` set `active = false` where `manager_profile_id = me` (keep rows for history);
-      - remove the avatar file from storage if `avatar_url` pointed to `profile-avatars/` (log on failure, don't block);
-      - `audit_logs` insert `{ action: "self_delete_account", user_id: me, entity_type: "profile", entity_id: me }` (match the existing `logAudit` helper).
-   4. **Then** `admin.auth.admin.deleteUser(me)`. If it fails → return `{ success: false, error: "Could not finish deleting. Please try again." }` (the anonymization already done is fine to repeat).
-   5. **Idempotent:** a retry after a partial run must succeed (updates are safe to repeat; deletes of already-deleted rows are fine).
-   6. Return `{ success: true }`; the client then signs out (`supabase.auth.signOut()`) and navigates.
-   - The action **never** deletes the `profiles` row, leases, charges, payments, tickets, messages, documents or audit rows.
-4. **Tests** (real assertions, call counts):
-   - export: tenant gets only own rows (assert every query is filtered by the requester id); manager variant; owner → 403; unauthenticated → login redirect / 401 per the route pattern; filename and headers; no other person's email in output.
-   - delete: wrong confirm → error, no writes; active lease → the lease error, no writes; success path performs each write in §3.3.3 then `deleteUser`, in that order; any write error → error returned, `deleteUser` **not** called; `deleteUser` error → the retry error; repeat after partial → succeeds; the profile row is never deleted (no `.delete()` on `profiles`); an owner calling the action is redirected (via requireAuth).
-   - settings: the `your-data` section shows for tenant and manager and not for owner; delete button disabled until `DELETE`.
-   - `/login?deleted=1` shows the message.
+1. **Export route** `apps/web/app/api/account/export/route.ts` (GET, `export const dynamic = "force-dynamic"`):
+   - Auth: `getAuthenticatedUser()` → `getCurrentUserRole(user.id)`. Only `tenant` and `manager`. Owner → `403 { error: "Not available for owners yet." }` (server-side check; UI hiding is not authorization). Unauthenticated → follow `getAuthenticatedUser` (redirect) — or, if the route pattern in `app/api/` returns 401 JSON for API routes, match that pattern and say which.
+   - Rate limit keyed **only** by the authenticated user id: `export:<userId>`, 5 per hour. Over the limit → `429 { error: "Too many downloads. Try again later." }`. If the limiter throws, **fail closed** with 503 `{ error: "Download is unavailable. Please try again." }`.
+   - Every scope is **derived on the server from the authenticated user id**. The route takes no ids from the request.
+   - Every query uses an **explicit column list** (no `select("*")`) and is filtered by the requester's id or by ids derived from it in this request.
+   - Response: `200`, `Content-Type: application/json; charset=utf-8`, `Content-Disposition: attachment; filename="domus-my-data-YYYY-MM-DD.json"` (UTC date), `Cache-Control: no-store, private`, `X-Content-Type-Options: nosniff`.
+   - **Body** (envelope + allowlisted fields only):
+     ```
+     { exportVersion: 1, generatedAt: <ISO>, accountRole: "tenant"|"manager",
+       profile: { fullName, email, phone, nickname, role, createdAt },
+       // tenant only:
+       leases: [{ home, unit, startDate, endDate, monthlyRent, deposit, dueDay, active }],
+       rent: [{ home, unit, dueDate, amount, status, kind }],      // kind = category label
+       payments: [{ dueDate, amount, paidAt, method }],             // method via paymentMethodLabel
+       repairs: [{ title, status, reportedAt, resolvedAt }],
+       // manager only:
+       homesManaged: [{ home, active, assignedAt }],
+       managerPayments: [{ amount, status, date }],                 // pick the real date/period column
+       // both:
+       messagesYouSent: [{ conversation, sentAt, text }]            // conversation = home name only (see §3b.2)
+     }
+     ```
+     Money as dollars with 2 decimals (number). Dates ISO. **Exclude**: other people's names/emails/phones, any ids, Stripe/Plaid references, internal notes, `sender_email`, messages written by others, documents/photos (listed as a follow-up).
+   - Tenant scope chain: leases where `tenant_profile_id = me` → charges where `lease_id ∈ those` and `deleted_at is null` → payments where `rent_charge_id ∈ those charges`. Repairs where `tenant_profile_id = me`. Messages where `sender_profile_id = me`.
+   - Manager scope: `property_managers` where `manager_profile_id = me` (home names via the properties join), `manager_payments` where `manager_profile_id = me`, messages where `sender_profile_id = me`.
+   - Every Supabase result's `error` is checked; any error → `500 { error: "Download is unavailable. Please try again." }` (no partial file).
+2. **Settings "Your data"** section (`components/settings/your-data-settings.tsx`), roles `["tenant", "manager"]`:
+   - Title `Your data`. Text `Get a copy of your Domus data as a file.` Button `Download my data` (a link to `/api/account/export`; it shows an error message if the response is not 200).
+   - Deletion note: `Want your account deleted? Tell us with Send feedback. We will reply by email.`
+3. **Tests** (real assertions):
+   - tenant export: only allowlisted keys at every level (assert the exact key sets); every query's column list matches the allowlist (no `*`); each query filtered by the requester id or derived ids; an **adversarial** fixture where the mocked DB also holds another tenant's lease/charge/payment/message proves none of them appear; payments of another tenant's charge never appear even if the charge id collides in mocks.
+   - manager export: keys and scopes; no other people's data.
+   - owner → 403; rate limit → 429; limiter throws → 503; any query error → 500 and no body data; headers (`no-store`, attachment filename format, nosniff); envelope fields present.
+   - settings: "Your data" visible for tenant and manager, not owner; deletion note text.
+
+## 3b. Required precision (ChatGPT rev 2: APPROVE WITH CHANGES — all adopted)
+1. **One tenant per lease.** `leases.tenant_profile_id` is a single column, so a lease has exactly one tenant. Before relying on that, check the code: if any action can **reassign** a lease's tenant, export only charges dated on/after the requester became the tenant, or report it and stop. Say which in the report. Tests: a lease of another tenant on the same unit never contributes charges or payments; payments are reached only through the requester's own charges.
+2. **Conversation label = home name only.** `messagesYouSent[].conversation` is the thread's **property name** (via `inbox_threads.property_id → properties.name`), never the thread subject or any participant-derived title. Message `text` is exported unredacted because the requester wrote it; add a one-line comment in code saying so. Test: a thread whose subject contains another person's name/email exports only the home name.
+3. **Complete, bounded queries.** Page every list query with `.range()` in fixed pages (e.g. 500) until a short page, ordered by a stable key (`created_at, id` or the table's PK). Split `.in()` id lists into chunks (≤ 200). Skip the child query when the id list is empty. If any page or chunk fails → the whole export fails with the 500 error, never a partial file. Tests: a dataset larger than one page is fully returned; a failure on a later page returns 500 with no data; empty parent sets make no child query.
+4. **Optional, adopted:** test the exact `Content-Type`, `Content-Disposition` filename (UTC date), `Cache-Control`; `homesManaged` includes inactive past assignments (with `active`), and `managerPayments` includes all history; `payments.method` is the display label from `paymentMethodLabel` (never a processor id); money is a decimal-dollar **number** with 2 places (e.g. 1250.5 → 1250.50 as a number; document it).
 
 ## 4. Out of scope
-Owners (self-delete and export); Stripe customer/payment-method deletion in Stripe (list it as a follow-up); any schema change; changing existing owner Account & Data tools; notifications (OFF); emailing a confirmation.
+Account deletion (separate sprint after the retention decision); owner export; documents/photos in the export (follow-up); Stripe data; schema changes; notifications (OFF).
 
 ## 5. Exact files expected to change
-New: `apps/web/app/api/account/export/route.ts`, `apps/web/app/actions/account-self-delete.ts`, `apps/web/components/settings/your-data-settings.tsx`, tests (route, action, component). Changed: `apps/web/app/settings/page.tsx`, `apps/web/components/settings/settings-layout.tsx`, `apps/web/app/login/page.tsx` (deleted message), `apps/web/app/actions/index.ts` (export the action if that is the pattern), `apps/web/lib/validations*.ts` (Zod schema). List anything else.
+New: `apps/web/app/api/account/export/route.ts` (+ a helper module like `apps/web/lib/account-export.ts` if the route would exceed ~200 lines), `apps/web/components/settings/your-data-settings.tsx`, tests. Changed: `apps/web/app/settings/page.tsx`, `apps/web/components/settings/settings-layout.tsx`.
 
 ## 6. Implementation requirements
-- Exact copy from §3; sentences ≤ 12 words except the delete warning, which may be split into short sentences as written; no banned words; the plain-language guard must pass.
-- Every Supabase mutation result is checked; write order exactly as §3.3; `deleteUser` last.
-- Lines ≤ 140 chars; files ≤ 500 lines; no new dependencies; no `eslint-disable`.
-- The user should never need to read instructions to complete this flow. Every step must be self-explanatory.
+Exact copy; sentences ≤ 12 words; plain-language guard passes. Lines ≤ 140; files ≤ 500; no new dependencies; no `eslint-disable`. The user should never need to read instructions to complete this flow. Every step must be self-explanatory.
 
 ## 7. Validation commands to run
-`npm run lint:web`; `npx tsc --noEmit -p apps/web/tsconfig.json`; the new tests plus every test importing a changed file; `lib/__tests__/plain-language.test.ts`; `npm run build --workspace @domus/web`.
+`npm run lint:web`; `npx tsc --noEmit -p apps/web/tsconfig.json`; new tests plus tests importing changed files; `lib/__tests__/plain-language.test.ts`; `npm run build --workspace @domus/web`.
 
 ## 8. Acceptance criteria (binary)
-1. Tenants and managers can download a JSON file containing only their own data; owners get 403.
-2. Delete: guarded by the exact `DELETE` confirmation and the active-lease check; anonymizes per §3.3.3; deletes the auth user last; never deletes the profile or shared records; idempotent; every error path writes nothing further and returns a plain error.
-3. Settings shows "Your data" only for tenant/manager; `/login?deleted=1` shows the message.
-4. All §3.4 cases are real assertions; lint, typecheck, tests, guard and build pass; only §5 files changed (plus any listed).
+1. Tenants and managers download a JSON file with exactly the allowlisted fields of their own data; owners get 403 server-side.
+2. No `select("*")`; every scope is server-derived; adversarial tests prove other users' data never appears.
+3. Rate limit keyed by user id; fails closed; `no-store` and attachment headers set; any DB error returns 500 with no partial data.
+4. Settings "Your data" for tenant/manager only, with the deletion note.
+5. All tests are real assertions; lint, typecheck, guard and build pass; only §5 files changed.
 
 ## 8b. Post-deploy verification (Claude only)
-Create no real accounts. On the smoke tenant (no active lease? if it has one, verify the lease-guard message instead and do **not** delete) and on a throwaway invited test tenant if available: export downloads valid JSON with only own data; delete flow guarded; the smoke manager sees "Your data". Owner doesn't. Light/dark, 375/1280, 0 console errors; smoke; Sentry; CI.
+Smoke tenant and smoke manager download the file; Claude checks the JSON has only the envelope and allowlisted keys, only their own records (cross-checked with SQL), and no emails other than their own. Smoke owner gets 403. Headers verified. "Your data" light/dark, 375/1280, 0 console errors. Smoke, Sentry, CI.
 
 ## 9. Report format
-JSON per `docs/codex-report-schema.json`. List follow-ups (Stripe customer cleanup, owner export). Do NOT include "Claude prompt" or "recommended next steps for Claude" sections. Report compact status only.
+JSON per `docs/codex-report-schema.json`; list exact column lists used per query. Do NOT include "Claude prompt" or "recommended next steps for Claude" sections. Report compact status only.
 
 ## 10. Constraints
 No DB access or migration, no deploy, commit or push. Never touch `.claude/launch.json`. Notifications stay OFF.
