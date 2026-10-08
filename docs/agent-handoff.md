@@ -417,6 +417,10 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 - Home defers 5 Home-only bundles (works; Home loads shared bundles only). Owner Home not faster: critical path = ownership.accounts (8 q) → administered-ids (4 q) → dashboard.data (12 q, ~1 s). feature.capabilities cache from S179 is ineffective in production (22 q every request). Next sprint (L3): RPCs for dashboard + ownership, fix capabilities cache.
 
+## Sprint 203 SHIPPED — Tax Save confirmation + no dead invite links (L1, `9c4c37f`, 2026-10-08, luna 57,445 Codex tokens)
+- Root cause: tax form status lived only in `useFormState`; `revalidatePath` refreshed the tree and remounted the form. Fix: client wrapper toasts "Saved." / the returned error (server action unchanged). Expired (≥ 30 d) pending invites show "Link expired. Resend to get a new one." instead of Copy link (uses `isJoinInviteActive`).
+- Live: Save → "Saved." visible; smoke owner's Aug-24 invite shows the note, 0 Copy link buttons; test value reset to 0. Gate 1703.
+
 ## Sprint 202 SHIPPED — Accurate rental tax summary (L3, `f8dfad3`, 2026-10-08, sol medium 131,492 Codex tokens; ChatGPT APPROVE WITH CHANGES, all adopted)
 - Bug fixed: every "mortgage" expense was counted as mortgage interest (principal + escrow overstated deductions). Now: owner enters per home/year Form 1098 interest, escrow property tax, escrow insurance, depreciation (`property_tax_years`, owner-only RLS; migration `20261008_sprint202_property_tax_years.sql` applied + verified: RLS, 3 policies, no anon, authenticated S/I/U only; simulated manager insert refused + sees 0 rows, owner allowed; test rolled back). Mortgage payments → `mortgagePaymentsCashFlow` (info only). Exact category mapping pinned; dollars→cents without floats.
 - **Tax summary is now owner-only** (managers could see it before on `/owner/reports`).
