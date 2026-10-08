@@ -30,6 +30,7 @@ import { PasswordSettings } from "@/components/settings/password-settings";
 import { ProfileSettings } from "@/components/settings/profile-settings";
 import { SettingsLayout } from "@/components/settings/settings-layout";
 import { AccountDataSettings } from "@/components/settings/account-data-settings";
+import { YourDataSettings } from "@/components/settings/your-data-settings";
 import { InstallDomusSettingsCard } from "@/components/pwa/install-prompt";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -178,6 +179,10 @@ export default async function SettingsPage(props: SettingsPageProps) {
             security: {
               title: "Security",
               content: <PasswordSettings />
+            },
+            yourData: {
+              title: "Your data",
+              content: <YourDataSettings />
             },
             account: {
               title: "Account & Data",
