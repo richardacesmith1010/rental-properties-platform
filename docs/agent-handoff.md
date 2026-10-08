@@ -417,6 +417,14 @@ Design source of truth: `docs/design-system.md` **v2** (25-question session). Ph
 
 - Home defers 5 Home-only bundles (works; Home loads shared bundles only). Owner Home not faster: critical path = ownership.accounts (8 q) → administered-ids (4 q) → dashboard.data (12 q, ~1 s). feature.capabilities cache from S179 is ineffective in production (22 q every request). Next sprint (L3): RPCs for dashboard + ownership, fix capabilities cache.
 
+## Sprint 205a APPLIED — URGENT invitations lockdown (L3 security hotfix, DB only, 2026-10-08, owner-approved)
+- Hole (found mapping S205): any signed-in owner could INSERT invitations for ANY account/home (`invitations_insert_owner` had no target check; `invitations_insert_admin_v2` tenant branch unbound), and `handle_new_user()` turns pending owner/manager invitations into `ownership_account_members` / `property_managers` at signup → takeover (e.g. a tenant knows their home's id). Audit: 5 invitations ever, all tenant, all authorized → no abuse.
+- Fix `20261008_sprint205a_invitations_lockdown.sql`: dropped 4 insert/update policies; revoked insert/update/delete/truncate/references/trigger from anon+authenticated (select kept). All app writes already use the admin client. Verified live: forged insert → 42501; policies left = 2 SELECT.
+- Also found (closed by S205 migration, not yet applied): assigned managers can rewrite `properties.owner_profile_id`/`owner_account_id`; `created_by_profile_id` is a hidden entitlement (can_administer_property branch 3, ownership_accounts update, members insert, TS `canUserAdministerOwnershipAccount`).
+
+## Sprint 205 IN PROGRESS — client accounts groundwork (L3, rev 3; ChatGPT rev1 REJECT → rev2 APPROVE WITH CHANGES, 4 required adopted)
+- DB guard triggers + hardened `can_administer_property`; rev 2 dry-run on live in rollback: 37 checks pass (`supabase/tests/sprint205_client_accounts_test.sql`). Migration NOT applied yet: re-dry-run rev 3 then apply after Codex passes. Dispatched to Codex gpt-6-sol medium 2026-10-08.
+
 ## Sprint 203 SHIPPED — Tax Save confirmation + no dead invite links (L1, `9c4c37f`, 2026-10-08, luna 57,445 Codex tokens)
 - Root cause: tax form status lived only in `useFormState`; `revalidatePath` refreshed the tree and remounted the form. Fix: client wrapper toasts "Saved." / the returned error (server action unchanged). Expired (≥ 30 d) pending invites show "Link expired. Resend to get a new one." instead of Copy link (uses `isJoinInviteActive`).
 - Live: Save → "Saved." visible; smoke owner's Aug-24 invite shows the note, 0 Copy link buttons; test value reset to 0. Gate 1703.

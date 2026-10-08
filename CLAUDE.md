@@ -275,6 +275,11 @@ Claude must treat every interaction cycle as a learning opportunity. This sectio
 **What was correct:** When a UI starts rendering a value it previously ignored (an action's `message`, an API field), every possible value of it becomes user-facing copy.
 **Rule:** Before a packet tells UI to display an action/API return value, list every return string on every path of that action and include their exact wording in the packet (rewrite any that break plain-language rules).
 
+#### L-021 | 2026-10-08 | REVIEW
+**What happened:** Sprint 205 rev 1 claimed "no RLS rewrite needed" after checking only the policy expressions. Mapping deeper showed (a) any signed-in owner could insert invitations for any home/account, and `handle_new_user()` silently converts pending invitations into owner/manager access at signup (live takeover path, hotfixed as 205a); (b) managers could rewrite home ownership columns; (c) `created_by_profile_id` was an undocumented entitlement in SQL and TS. None was visible from the policy list alone.
+**What was correct:** An authorization claim must follow every path to a grant: table GRANTs + RLS for direct PostgREST writes, triggers and SECURITY DEFINER functions that consume rows (e.g. auth signup hooks), and TS helpers.
+**Rule:** Before any packet that adds a new kind of access, simulate the attacker in SQL (`set local role authenticated` + JWT claims, rolled back) against every table the feature touches, including direct inserts the app "never does", and grep `pg_proc` for functions that read those tables to grant access (`handle_new_user`, payload RPCs). Any table a definer function trusts must not be user-writable.
+
 ## 11) Pre-Flight Lessons Check (Hard Rule)
 
 Before starting ANY work cycle (planning, verification, or especially implementation), Claude must:
@@ -302,6 +307,7 @@ If a planned action matches a pattern from a prior lesson, Claude must stop and 
 - Am I writing a refactor/size target? → L-015 says also cap line length (≤140) and keep character totals within ±10%, and check both before accepting.
 - Am I closing a cycle? → L-019 says confirm the latest GitHub Actions CI run for HEAD is green; red CI blocks the next sprint.
 - Am I making UI display an action's returned message or an API field it ignored before? → L-020 says list every return string on every path and fix the wording in the packet.
+- Am I adding a new kind of access or claiming "existing policies are safe"? → L-021 says simulate the attacker with direct SQL writes as `authenticated`, and check definer functions/triggers that trust user-writable tables.
 - Am I ending a cycle report? → L-010 (refined) says keep `docs/agent-handoff.md` + memory current and report the transcript size; only prompt a new chat when a rotation threshold is hit (size ~50MB / compacted ~2× / sluggish / topic pivot) — not every sprint.
 
 This section must be updated whenever a new lesson is added that introduces a new "always check" pattern.
