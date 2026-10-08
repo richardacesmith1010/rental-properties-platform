@@ -1,3 +1,6 @@
+import { getClientsOverview } from "@/lib/client-overview";
+import { createClientAccount } from "@/app/actions/client-accounts";
+import { createPropertyWithSetup } from "@/app/actions/unified-setup";
 import { Dashboard } from "@/components/dashboard";
 import { getDashboardData } from "@/lib/dashboard";
 import { getPortfolioData } from "@/lib/portfolio";
@@ -165,7 +168,8 @@ export default async function ManagerPage(props: ManagerPageProps) {
     expenses,
     analytics,
     auditLogs,
-    rentIncreaseHistory
+    rentIncreaseHistory,
+    clients
   ] =
     await Promise.all([
       getDashboardData(user.id),
@@ -210,7 +214,8 @@ export default async function ManagerPage(props: ManagerPageProps) {
       getOwnerExpenseData(user.id),
       getOwnerAnalyticsData(user.id),
       getRecentAuditLogs(user.id),
-      getRentIncreaseHistory(user.id)
+      getRentIncreaseHistory(user.id),
+      getClientsOverview(user.id)
     ]);
 
   const approvedApplicationCount = applications.filter(
@@ -223,6 +228,9 @@ export default async function ManagerPage(props: ManagerPageProps) {
   return (
     <Dashboard
       data={dashboard}
+      clients={clients}
+      onCreateClientAccount={createClientAccount}
+      onCreatePropertyWithSetup={createPropertyWithSetup}
       portfolio={portfolio}
       tickets={tickets}
       invitations={invitations}

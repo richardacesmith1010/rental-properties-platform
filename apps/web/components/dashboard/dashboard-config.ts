@@ -233,6 +233,13 @@ export function buildAllSectionItems(params: BuildAllSectionItemsParams): NavIte
       clickHint: "open operations forms"
     },
     {
+      id: "clients",
+      label: "Clients",
+      icon: Users,
+      description: "Owners whose homes you run.",
+      clickHint: "open clients"
+    },
+    {
       id: "portfolio",
       label: "Homes",
       icon: Building2,
@@ -288,7 +295,7 @@ export function getOwnerNavItems(available: NavItem[]): NavItem[] {
 
 export const managerMenuGroups = [
   { label: "Every day", items: [["overview", "Home"], ["charges", "Rent"], ["maintenance", "Repairs"], ["inbox", "Messages"]] },
-  { label: "Homes you manage", items: [["portfolio", "Homes"], ["units", "Units"], ["leases", "Leases"], ["tenants", "Tenants"], ["leasing", "Find a tenant"], ["applications", "Applications"], ["invitations", "Invites"]] },
+  { label: "Homes you manage", items: [["clients", "Clients"], ["portfolio", "Homes"], ["units", "Units"], ["leases", "Leases"], ["tenants", "Tenants"], ["leasing", "Find a tenant"], ["applications", "Applications"], ["invitations", "Invites"]] },
   { label: "Money", items: [["payments", "Payments"], ["expenses", "Expenses"], ["analytics", "Charts"]] },
   { label: "More", items: [["documents", "Documents"], ["vendors", "Vendors"], ["automations", "Automations"], ["activity", "Activity"], ["notifications", "Alerts"]] }
 ] as const;
@@ -310,7 +317,7 @@ export function getManagerNavItems(available: NavItem[]): NavItem[] {
 export const ownerPageDescriptions: Record<string, string> = {
   overview: "See what needs your attention today.", charges: "Track rent and see who has paid.",
   maintenance: "Track repairs and help keep your homes safe.", inbox: "Read and send messages.",
-  portfolio: "View and manage your homes.", units: "Manage units and rent amounts.",
+  clients: "Owners whose homes you run.", portfolio: "View and manage your homes.", units: "Manage units and rent amounts.",
   leases: "View leases and their dates.", tenants: "Find the people who rent your homes.",
   leasing: "Find your next tenant.", applications: "Review people who want to rent.",
   invitations: "Send and track invites.", payments: "See payments you have received.",

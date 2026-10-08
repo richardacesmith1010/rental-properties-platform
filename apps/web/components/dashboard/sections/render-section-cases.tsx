@@ -1,5 +1,6 @@
 import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
+import { ClientsSection } from "../clients/clients-section";
 import { FeatureWarning } from "@/components/shared/feature-warning";
 import { ActivityFeed } from "../activity-feed";
 import { ApplicationsSection } from "../applications-section";
@@ -390,6 +391,8 @@ export function renderSectionCases({
         <OperationsSection
           portfolio={props.safePortfolio}
           ownershipAccounts={props.safeOwnershipAccounts}
+          managerClients={props.data.profileRole === "manager" ? props.clients : undefined}
+          onCreateClientAccount={props.onCreateClientAccount}
           onCreateProperty={props.onCreateProperty}
           onCreateUnit={props.onCreateUnit}
           onCreateLease={props.onCreateLease}
@@ -401,6 +404,10 @@ export function renderSectionCases({
           onInitialStateConsumed={props.onInitialOperationsStateConsumed}
         />
       );
+    case "clients":
+      return props.data.profileRole === "manager" && props.onCreateClientAccount
+        ? renderSection("Clients", <ClientsSection clients={props.clients ?? []} onCreateClientAccount={props.onCreateClientAccount} />)
+        : <SectionNotFoundState activeSection={props.activeSection} role={props.data.profileRole} />;
     case "portfolio":
       return renderSection("Portfolio", <PortfolioSectionContent props={props} />);
     case "units":

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isActiveClientManager } from "@/lib/client-accounts";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import {
@@ -30,6 +31,35 @@ export async function createProperty(_prev: ActionState, formData: FormData): Pr
   const parsed = parseFormData(createPropertySchema, formData);
   if (!parsed.success) {
     return parsed;
+  }
+
+  if (role === "manager") {
+    const { ownerAccountId, name, addressLine1, city, state, postalCode, propertyType } = parsed.data;
+    if (!ownerAccountId) return { success: false, error: "Pick whose home this is." };
+    try {
+      if (!(await isActiveClientManager(user.id, ownerAccountId))) {
+        return { success: false, error: "You can't add homes for this client." };
+      }
+    } catch {
+      return { success: false, error: "Could not add the home. Please try again." };
+    }
+    try {
+      const { data, error } = await createAdminClient().rpc("add_client_home", {
+        p_manager: user.id, p_account: ownerAccountId, p_name: name,
+        p_address_line1: addressLine1, p_city: city, p_state: state,
+        p_postal_code: postalCode, p_property_type: propertyType ?? null
+      });
+      if (error) return {
+        success: false,
+        error: error.code === "22023" ? "Please check the details and try again."
+          : error.code === "42501" ? "You can't add homes for this client."
+            : "Could not add the home. Please try again."
+      };
+      revalidatePath("/manager");
+      return { success: true, propertyId: data, message: "Home added." };
+    } catch {
+      return { success: false, error: "Could not add the home. Please try again." };
+    }
   }
 
   const admin = createAdminClient();
@@ -95,22 +125,6 @@ export async function createProperty(_prev: ActionState, formData: FormData): Pr
   if (error) {
     console.error("createProperty insert error:", JSON.stringify(error));
     return { success: false, error: `Failed to create property. (${error.message})` };
-  }
-
-  if (role === "manager" && property?.id) {
-    const admin = createAdminClient();
-    const { error: managerAssignmentError } = await admin.from("property_managers").upsert(
-      {
-        property_id: property.id,
-        manager_profile_id: user.id,
-        active: true
-      },
-      { onConflict: "property_id,manager_profile_id" }
-    );
-
-    if (managerAssignmentError) {
-      console.error("createProperty manager assignment error:", managerAssignmentError);
-    }
   }
 
   if (property?.id) {

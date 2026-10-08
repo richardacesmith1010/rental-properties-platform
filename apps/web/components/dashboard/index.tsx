@@ -268,6 +268,8 @@ export function Dashboard(props: DashboardProps) {
             <PropertyWizard
               open={isPropertyWizardOpen}
               accountId={props.activeAccountId}
+              managerClients={isManagerRole ? props.clients : undefined}
+              onCreateClientAccount={props.onCreateClientAccount}
               onOpenChange={(open) => {
                 if (!open) {
                   closePropertyWizard();

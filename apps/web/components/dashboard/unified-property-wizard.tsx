@@ -25,6 +25,9 @@ import {
   getStepIndex,
   stepOrder,
 } from "./property-wizard-drafts";
+import type { ClientOverview } from "@/lib/client-overview";
+import type { StatefulAction } from "./types";
+import { WhoseHomeStep } from "./clients/whose-home-step";
 import { cn, formatCurrency } from "@/lib/format";
 
 export type { UnifiedSetupAction } from "./property-wizard-drafts";
@@ -33,6 +36,8 @@ import type { UnifiedSetupAction } from "./property-wizard-drafts";
 interface UnifiedPropertyWizardProps {
   open: boolean;
   accountId?: string | null;
+  managerClients?: ClientOverview[];
+  onCreateClientAccount?: StatefulAction;
   bankConnected?: boolean;
   bankSetupHref?: string;
   onOpenChange: (open: boolean) => void;
@@ -43,6 +48,8 @@ interface UnifiedPropertyWizardProps {
 export function UnifiedPropertyWizard({
   open,
   accountId,
+  managerClients,
+  onCreateClientAccount,
   bankConnected,
   bankSetupHref = "/connect/onboard",
   onOpenChange,
@@ -53,6 +60,9 @@ export function UnifiedPropertyWizard({
   const contentRef = useRef<HTMLDivElement | null>(null);
   const prevOpenRef = useRef(false);
   const [step, setStep] = useState<WizardStep>("property");
+  const [pickingClient, setPickingClient] = useState(Boolean(managerClients));
+  const [selectedAccountId, setSelectedAccountId] = useState(accountId ?? "");
+  const [clients, setClients] = useState(managerClients ?? []);
   const [propertyName, setPropertyName] = useState("");
   const [addressLine1, setAddressLine1] = useState("");
   const [city, setCity] = useState("");
@@ -71,6 +81,8 @@ export function UnifiedPropertyWizard({
     if (open && !prevOpenRef.current) {
       const initialUnit = createUnitDraft(0);
       setStep("property");
+      setPickingClient(Boolean(managerClients));
+      setSelectedAccountId(accountId ?? "");
       setPropertyName("");
       setAddressLine1("");
       setCity("");
@@ -85,7 +97,7 @@ export function UnifiedPropertyWizard({
       setCreatedPropertyId(null);
     }
     prevOpenRef.current = open;
-  }, [open]);
+  }, [accountId, managerClients, open]);
 
   useEffect(() => {
     if (!open) {
@@ -161,6 +173,7 @@ export function UnifiedPropertyWizard({
 
   const goBack = () => {
     setErrorMessage(null);
+    if (managerClients && step === "property") { setPickingClient(true); return; }
     const currentIndex = getStepIndex(step);
     if (currentIndex > 0) {
       setStep(stepOrder[currentIndex - 1]);
@@ -169,6 +182,7 @@ export function UnifiedPropertyWizard({
 
   const goNext = () => {
     setErrorMessage(null);
+    if (pickingClient) { if (selectedAccountId) setPickingClient(false); return; }
 
     if (step === "property") {
       if (propertyStepError) {
@@ -235,8 +249,8 @@ export function UnifiedPropertyWizard({
       setErrorMessage(null);
       const formData = new FormData();
       formData.set("payload", JSON.stringify(payload));
-      if (accountId) {
-        formData.set("accountId", accountId);
+      if (selectedAccountId || accountId) {
+        formData.set("accountId", selectedAccountId || accountId || "");
       }
 
       const result = await onCreatePropertyWithSetup(null, formData);
@@ -271,17 +285,17 @@ export function UnifiedPropertyWizard({
         ].join(" ")}>
         <div className="shrink-0 border-b border-border/60 px-4 pb-0 pt-5 sm:px-6 sm:pt-6">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-            New Property
+            {managerClients ? "Add a home" : "New Property"}
           </p>
           <h2 className="mt-2 text-2xl font-semibold text-foreground sm:text-3xl">
-            Set up the property, units, lease, and tenant in one flow
+            {pickingClient ? "Whose home is this?" : "Set up the property, units, lease, and tenant in one flow"}
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
             One pass. No cleanup. Domus creates the records only after you confirm the full setup.
           </p>
           {step !== "success" ? (
             <div className="py-5">
-              <WizardProgress step={step} />
+              {pickingClient ? <p className="text-sm text-[var(--muted)]">Step 1 of 5</p> : <WizardProgress step={step} />}
             </div>
           ) : null}
         </div>
@@ -295,7 +309,11 @@ export function UnifiedPropertyWizard({
             <Alert variant="success">{successMessage}</Alert>
           ) : null}
 
-          <PropertyAndUnitSteps
+          {pickingClient && onCreateClientAccount ? <WhoseHomeStep clients={clients}
+            selectedId={selectedAccountId} onSelect={setSelectedAccountId}
+            onCreateClientAccount={onCreateClientAccount}
+            onClientAdded={(client) => setClients((current) => [...current, client])} /> : null}
+          {!pickingClient && <PropertyAndUnitSteps
             step={step}
             propertyName={propertyName}
             setPropertyName={setPropertyName}
@@ -314,11 +332,11 @@ export function UnifiedPropertyWizard({
             units={units}
             setUnits={setUnits}
             goNext={goNext}
-          />
+          />}
 
-          <LeaseStep step={step} lease={lease} setLease={setLease} units={units} goNext={goNext} />
+          {!pickingClient && <LeaseStep step={step} lease={lease} setLease={setLease} units={units} goNext={goNext} />}
 
-          {step === "confirm" ? (
+          {!pickingClient && step === "confirm" ? (
             <div className="space-y-5">
               <div className="flex items-start gap-3 rounded-2xl border border-border bg-muted/30 p-4">
                 <CheckCircle2 className="mt-0.5 h-5 w-5 text-primary" />
@@ -425,7 +443,7 @@ export function UnifiedPropertyWizard({
                 step === "property" && "sm:justify-end",
               )}
             >
-              {step !== "property" ? (
+              {step !== "property" || (managerClients && !pickingClient) ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -449,7 +467,7 @@ export function UnifiedPropertyWizard({
                 >
                   Close
                 </Button>
-                {step === "confirm" ? (
+                {!pickingClient && step === "confirm" ? (
                   <Button
                     type="button"
                     loading={isPending}
@@ -463,6 +481,7 @@ export function UnifiedPropertyWizard({
                   <Button
                     type="button"
                     onClick={goNext}
+                    disabled={pickingClient && !selectedAccountId}
                     title="Continue to the next step."
                     className="w-full sm:w-auto"
                   >

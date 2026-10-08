@@ -1,3 +1,4 @@
+import type { ClientOverview } from "@/lib/client-overview";
 import type { DashboardData } from "@/lib/dashboard";
 import type {
   AnnouncementPropertyOption,
@@ -73,6 +74,8 @@ export type DashboardCapabilities = FeatureCapabilitiesDTO & {
 
 export interface DashboardProps {
   data: DashboardData;
+  clients?: ClientOverview[];
+  onCreateClientAccount?: StatefulAction;
   isEmpty?: boolean;
   activeAccountId?: string | null;
   currentUserId?: string;

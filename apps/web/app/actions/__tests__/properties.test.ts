@@ -12,9 +12,11 @@ const checkRateLimitMock = vi.hoisted(() => vi.fn());
 const parseFormDataMock = vi.hoisted(() => vi.fn());
 const requireAuthMock = vi.hoisted(() => vi.fn());
 const isMissingSchemaErrorMock = vi.hoisted(() => vi.fn());
+const isActiveClientManagerMock = vi.hoisted(() => vi.fn());
 
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: createAdminClientMock }));
+vi.mock("@/lib/client-accounts", () => ({ isActiveClientManager: isActiveClientManagerMock }));
 vi.mock("@/lib/feature-capabilities", () => ({ getFeatureCapabilities: getFeatureCapabilitiesMock }));
 vi.mock("@/lib/property-access", () => ({ canUserAdministerProperty: canUserAdministerPropertyMock }));
 vi.mock("@/lib/ownership", () => ({
@@ -142,6 +144,7 @@ describe("properties actions", () => {
     createAdminClientMock.mockReturnValue(createPropertiesAdminClient({ propertyId: "property-1" }));
     logAuditMock.mockResolvedValue(undefined);
     isMissingSchemaErrorMock.mockResolvedValue(false);
+    isActiveClientManagerMock.mockResolvedValue(true);
   });
 
   it("returns a validation error for an empty property name", async () => {
@@ -177,9 +180,11 @@ describe("properties actions", () => {
 
     expect(result).toEqual({ success: true, propertyId: "property-1" });
     expect(getOrCreateIndividualOwnershipAccountMock).toHaveBeenCalledWith("user-1");
+    expect(canUserAdministerOwnershipAccountMock).not.toHaveBeenCalled();
+    expect(createAdminClientMock().from).not.toHaveBeenCalledWith("property_managers");
   });
 
-  it("creates a manager assignment when a manager creates a property", async () => {
+  it("requires a client before a manager adds a home", async () => {
     parseFormDataMock.mockReturnValueOnce({
       success: true,
       data: {
@@ -199,9 +204,65 @@ describe("properties actions", () => {
     const managerAdmin = createPropertiesAdminClient({ propertyId: "property-1" });
     createAdminClientMock.mockReturnValue(managerAdmin);
 
-    await createProperty(null, new FormData());
+    const result = await createProperty(null, new FormData());
 
-    expect(managerAdmin.from).toHaveBeenCalledWith("property_managers");
+    expect(result).toEqual({ success: false, error: "Pick whose home this is." });
+    expect(managerAdmin.from).not.toHaveBeenCalled();
+    expect(getOrCreateIndividualOwnershipAccountMock).not.toHaveBeenCalled();
+  });
+
+  const managerData = {
+    name: "Client home", addressLine1: "123 Main", city: "Denver", state: "CO",
+    postalCode: "80202", propertyType: "single_family", ownerAccountId: "client-1"
+  };
+
+  function managerRequest() {
+    parseFormDataMock.mockReturnValueOnce({ success: true, data: managerData });
+    requireAuthMock.mockResolvedValueOnce({ user: { id: "manager-1" }, role: "manager" });
+  }
+
+  it("uses the client RPC and never writes a manager home directly", async () => {
+    managerRequest();
+    const rpc = vi.fn().mockResolvedValue({ data: "home-1", error: null });
+    const from = vi.fn();
+    createAdminClientMock.mockReturnValue({ rpc, from });
+    expect(await createProperty(null, new FormData())).toEqual({ success: true, propertyId: "home-1", message: "Home added." });
+    expect(isActiveClientManagerMock).toHaveBeenCalledWith("manager-1", "client-1");
+    expect(rpc).toHaveBeenCalledWith("add_client_home", {
+      p_manager: "manager-1", p_account: "client-1", p_name: "Client home",
+      p_address_line1: "123 Main", p_city: "Denver", p_state: "CO",
+      p_postal_code: "80202", p_property_type: "single_family"
+    });
+    expect(from).not.toHaveBeenCalled();
+    expect(getOrCreateIndividualOwnershipAccountMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an inactive client without calling the RPC", async () => {
+    managerRequest();
+    isActiveClientManagerMock.mockResolvedValueOnce(false);
+    const rpc = vi.fn();
+    createAdminClientMock.mockReturnValue({ rpc });
+    expect(await createProperty(null, new FormData())).toEqual({ success: false, error: "You can't add homes for this client." });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when client lookup errors", async () => {
+    managerRequest();
+    isActiveClientManagerMock.mockRejectedValueOnce(new Error("lookup"));
+    const rpc = vi.fn();
+    createAdminClientMock.mockReturnValue({ rpc });
+    expect(await createProperty(null, new FormData())).toEqual({ success: false, error: "Could not add the home. Please try again." });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["22023", "Please check the details and try again."],
+    ["42501", "You can't add homes for this client."],
+    ["50000", "Could not add the home. Please try again."]
+  ])("maps client RPC error %s", async (code, message) => {
+    managerRequest();
+    createAdminClientMock.mockReturnValue({ rpc: vi.fn().mockResolvedValue({ data: null, error: { code } }) });
+    expect(await createProperty(null, new FormData())).toEqual({ success: false, error: message });
   });
 
   it("returns an access error when updateProperty is unauthorized", async () => {

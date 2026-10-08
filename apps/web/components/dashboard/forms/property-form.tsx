@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useFormState } from "react-dom";
 import type { StatefulAction, ActionState } from "@/app/actions";
+import type { ClientOverview } from "@/lib/client-overview";
+import { WhoseHomeStep } from "../clients/whose-home-step";
 import type { OwnershipAccountDTO } from "@/lib/ownership";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +34,8 @@ const PROPERTY_STEP_LABELS = [
 
 interface PropertyFormProps {
   ownershipAccounts: OwnershipAccountDTO[];
+  managerClients?: ClientOverview[];
+  onCreateClientAccount?: StatefulAction;
   onCreateProperty: StatefulAction;
   onPropertyCreated?: () => void;
   onBack: () => void;
@@ -51,6 +55,8 @@ function StepPill({ label, active, done, skipped }: { label: string; active: boo
 
 export function PropertyForm({
   ownershipAccounts,
+  managerClients,
+  onCreateClientAccount,
   onCreateProperty,
   onPropertyCreated,
   onBack
@@ -58,6 +64,8 @@ export function PropertyForm({
   const [state, action] = useFormState(onCreateProperty, null);
   const handledStateRef = useRef<ActionState>(null);
   const [stepIndex, setStepIndex] = useState(0);
+  const [pickingClient, setPickingClient] = useState(Boolean(managerClients));
+  const [clients, setClients] = useState(managerClients ?? []);
   const [skippedSteps, setSkippedSteps] = useState<number[]>([]);
   const [draft, setDraft] = useState<PropertyDraft>({
     name: "",
@@ -80,6 +88,7 @@ export function PropertyForm({
     if (handledStateRef.current === state) return;
     handledStateRef.current = state;
     setStepIndex(0);
+    setPickingClient(Boolean(managerClients));
     setSkippedSteps([]);
     setDraft({
       name: "",
@@ -90,7 +99,7 @@ export function PropertyForm({
       ownerAccountId: ""
     });
     onPropertyCreated?.();
-  }, [onPropertyCreated, state]);
+  }, [managerClients, onPropertyCreated, state]);
 
   const handleEnterAdvance = (
     event: KeyboardEvent<HTMLInputElement | HTMLSelectElement>,
@@ -104,10 +113,19 @@ export function PropertyForm({
     }
   };
 
-  const next = () => setStepIndex((current) => Math.min(current + 1, PROPERTY_STEP_LABELS.length - 1));
-  const back = () => setStepIndex((current) => Math.max(current - 1, 0));
+  const next = () => {
+    if (pickingClient) { setPickingClient(false); return; }
+    setStepIndex((current) => managerClients && current === 4 ? 6 : Math.min(current + 1, PROPERTY_STEP_LABELS.length - 1));
+  };
+  const back = () => {
+    if (stepIndex === 0 && managerClients) { setPickingClient(true); return; }
+    setStepIndex((current) => managerClients && current === 6 ? 4 : Math.max(current - 1, 0));
+  };
 
   const renderStep = () => {
+    if (pickingClient && onCreateClientAccount) return <WhoseHomeStep clients={clients}
+      selectedId={draft.ownerAccountId} onSelect={(id) => setDraft((current) => ({ ...current, ownerAccountId: id }))}
+      onCreateClientAccount={onCreateClientAccount} onClientAdded={(client) => setClients((current) => [...current, client])} />;
     if (stepIndex === 0) {
       return (
         <div className="space-y-3">
@@ -240,7 +258,8 @@ export function PropertyForm({
           <input type="hidden" name="state" value={draft.state} />
           <input type="hidden" name="postalCode" value={draft.postalCode} />
           <input type="hidden" name="ownerAccountId" value={draft.ownerAccountId} />
-          <SubmitButton className="w-full" title="Save this property." disabled={!requiredComplete}>
+          <SubmitButton className="w-full" title="Save this property."
+            disabled={!requiredComplete || Boolean(managerClients && !draft.ownerAccountId)}>
             Save Property
           </SubmitButton>
         </form>
@@ -253,7 +272,10 @@ export function PropertyForm({
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
           <div>
-            <CardTitle>Add Property</CardTitle>
+            <CardTitle>{managerClients ? "Add a home" : "Add Property"}</CardTitle>
+            {managerClients && <p className="text-xs text-[var(--muted)]">
+              Step {pickingClient ? 1 : stepIndex < 5 ? stepIndex + 2 : 7} of 7
+            </p>}
             <p className="text-xs text-[var(--muted)]">One field at a time. Press Enter or click Next.</p>
           </div>
           <Button type="button" variant="outline" size="sm" onClick={onBack} title="Return to setup options.">
@@ -266,12 +288,18 @@ export function PropertyForm({
         <FormSuccess state={state} />
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {PROPERTY_STEP_LABELS.map((label, index) => (
+          {(managerClients
+            ? ["Whose home is this?", ...PROPERTY_STEP_LABELS.filter((_, index) => index !== 5)]
+            : PROPERTY_STEP_LABELS).map((label, index) => (
             <StepPill
               key={label}
               label={label}
-              active={stepIndex === index}
-              done={stepComplete(index)}
+              active={managerClients
+                ? (pickingClient ? index === 0 : index === (stepIndex < 5 ? stepIndex + 1 : 6))
+                : stepIndex === index}
+              done={managerClients && index === 0
+                ? Boolean(draft.ownerAccountId)
+                : stepComplete(managerClients ? (index === 6 ? 6 : index - 1) : index)}
               skipped={skippedSteps.includes(index)}
             />
           ))}
@@ -280,18 +308,19 @@ export function PropertyForm({
         {renderStep()}
 
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={back} disabled={stepIndex === 0} title="Go back one step.">
+          <Button type="button" variant="outline" onClick={back}
+            disabled={pickingClient || (stepIndex === 0 && !managerClients)} title="Go back one step.">
             Back
           </Button>
           <Button
             type="button"
             onClick={next}
-            disabled={stepIndex >= PROPERTY_STEP_LABELS.length - 1 || !stepComplete(stepIndex)}
+            disabled={pickingClient ? !draft.ownerAccountId : stepIndex >= PROPERTY_STEP_LABELS.length - 1 || !stepComplete(stepIndex)}
             title="Complete this step and move to the next step."
           >
             Next
           </Button>
-          <Button
+          {!managerClients && <Button
             type="button"
             variant="outline"
             onClick={() => {
@@ -302,7 +331,7 @@ export function PropertyForm({
             title="Skip this step for now and continue."
           >
             Skip for now
-          </Button>
+          </Button>}
         </div>
       </CardContent>
     </Card>

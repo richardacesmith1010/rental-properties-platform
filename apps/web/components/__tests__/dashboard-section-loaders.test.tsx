@@ -160,7 +160,7 @@ describe("useDashboardNavigation", () => {
   it("keeps owner grouped navigation complete when deferred data is absent", () => {
     render(<NavigationProbe initialSectionId="overview" />);
 
-    expect(screen.getByTestId("section-count")).toHaveTextContent(String(ownerMenuGroups.reduce((sum, group) => sum + group.items.length, 0) + 1));
+    expect(screen.getByTestId("section-count")).toHaveTextContent(String(ownerMenuGroups.reduce((sum, group) => sum + group.items.length, 0) + 2));
     for (const group of ownerMenuGroups) for (const [, label] of group.items) {
       expect(screen.getByRole("button", { name: label })).toBeVisible();
     }

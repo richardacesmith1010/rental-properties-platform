@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { StatefulAction } from "@/app/actions";
+import type { ClientOverview } from "@/lib/client-overview";
 import type { PortfolioData } from "@/lib/portfolio";
 import type { OwnershipAccountDTO } from "@/lib/ownership";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,8 @@ import { PropertyForm, UnitForm, LeaseForm } from "./forms";
 export interface OperationsSectionProps {
   portfolio: PortfolioData;
   ownershipAccounts: OwnershipAccountDTO[];
+  managerClients?: ClientOverview[];
+  onCreateClientAccount?: StatefulAction;
   onCreateProperty: StatefulAction;
   onCreateUnit: StatefulAction;
   onCreateLease: StatefulAction;
@@ -45,6 +48,8 @@ const tasks = [
 export function OperationsSection({
   portfolio,
   ownershipAccounts,
+  managerClients,
+  onCreateClientAccount,
   onCreateProperty,
   onCreateUnit,
   onCreateLease,
@@ -132,6 +137,8 @@ export function OperationsSection({
       {task === "property" ? (
         <PropertyForm
           ownershipAccounts={ownershipAccounts}
+          managerClients={managerClients}
+          onCreateClientAccount={onCreateClientAccount}
           onCreateProperty={onCreateProperty}
           onPropertyCreated={handlePropertyCreated}
           onBack={() => setTask(null)}

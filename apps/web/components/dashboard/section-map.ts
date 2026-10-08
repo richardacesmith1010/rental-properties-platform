@@ -1,5 +1,6 @@
 import dynamic from "next/dynamic";
 import { createElement } from "react";
+import type { ClientOverview } from "@/lib/client-overview";
 import type { DashboardData } from "@/lib/dashboard";
 import type { PortfolioData, PropertyListItem } from "@/lib/portfolio";
 import type { MaintenanceTicket } from "@/lib/maintenance";
@@ -42,6 +43,8 @@ export type TenantActivityLoader = (
 ) => Promise<TenantActivityEntry[]>;
 
 export interface SectionRendererProps {
+  clients?: ClientOverview[];
+  onCreateClientAccount?: StatefulAction;
   activeSection: string;
   activeSectionLabel: string;
   occupancy: number;

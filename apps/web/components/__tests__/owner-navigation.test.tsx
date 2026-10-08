@@ -56,7 +56,7 @@ describe("owner grouped navigation", () => {
   it.each([true, false])("renders exact groups and order for LLC=%s, preserving badges and reachability", llc => {
     const available = buildAllSectionItems({ ...availability, hasMembersSection: llc });
     const items = getOwnerNavItems(available);
-    expect(new Set(items.map(item => item.id))).toEqual(new Set(available.filter(item => item.id !== "operations").map(item => item.id)));
+    expect(new Set(items.map(item => item.id))).toEqual(new Set(available.filter(item => item.id !== "operations" && item.id !== "clients").map(item => item.id)));
     render(<SidebarNav {...navProps} items={items} activeItemId="charges" />);
     const nav = screen.getByRole("navigation", { name: "Main navigation" });
     expect(Array.from(nav.querySelectorAll("p")).map(p => p.textContent)).toEqual(["Every day", "Your homes", "Money", "More"]);
@@ -147,7 +147,7 @@ describe("manager grouped navigation", () => {
     const items = getManagerNavItems(buildAllSectionItems(availability));
     expect(Array.from(new Set(items.map(item => item.group)))).toEqual(managerMenuGroups.map(group => group.label));
     expect(items.map(item => item.label)).toEqual([
-      "Home", "Rent", "Repairs", "Messages", "Homes", "Units", "Leases", "Tenants",
+      "Home", "Rent", "Repairs", "Messages", "Clients", "Homes", "Units", "Leases", "Tenants",
       "Find a tenant", "Applications", "Invites", "Payments", "Expenses", "Charts",
       "Documents", "Vendors", "Automations", "Activity", "Alerts"
     ]);
