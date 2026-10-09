@@ -110,6 +110,7 @@ interface ManagerPageProps {
     section?: string | string[];
     mode?: string | string[];
     property?: string | string[];
+    account?: string | string[];
   }>;
 }
 
@@ -148,6 +149,8 @@ export default async function ManagerPage(props: ManagerPageProps) {
       : Array.isArray(searchParams?.property)
         ? searchParams?.property[0] ?? null
         : null;
+  const initialAccountId = typeof searchParams?.account === "string"
+    ? searchParams.account : Array.isArray(searchParams?.account) ? searchParams.account[0] ?? null : null;
 
   const [
     dashboard,
@@ -255,6 +258,7 @@ export default async function ManagerPage(props: ManagerPageProps) {
       capabilities={capabilities}
       initialSectionId={initialSectionId}
       initialPropertyId={initialPropertyId}
+      initialAccountId={initialAccountId}
       userEmail={user.email ?? "unknown"}
       fullName={profile.fullName}
       nickname={profile.nickname}

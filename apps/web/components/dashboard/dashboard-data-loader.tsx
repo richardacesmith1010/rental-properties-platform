@@ -93,6 +93,8 @@ export function useDashboardData(serverProps: DashboardProps) {
     occupancy,
     selectedProperty,
     selectedPropertyId,
+    selectedScopeValue,
+    selectScope,
     selectedPropertySummary,
     selectProperty,
     sortedVendors
@@ -174,6 +176,8 @@ export function useDashboardData(serverProps: DashboardProps) {
     safeOwnershipAccounts,
     availableProperties: safePortfolio.properties,
     selectedPropertyId,
+    selectedScopeValue,
+    onSelectScope: selectScope,
     selectedProperty,
     selectedPropertySummary,
     onSelectProperty: selectProperty,

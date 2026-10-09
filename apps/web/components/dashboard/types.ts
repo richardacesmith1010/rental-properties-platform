@@ -118,6 +118,7 @@ export interface DashboardProps {
   initialOwnerHomePage?: boolean;
   initialSectionId?: string | null;
   initialPropertyId?: string | null;
+  initialAccountId?: string | null;
   initialOwnerWorkflowMode?: OwnerWorkflowMode;
   initialManagerWorkflowMode?: ManagerWorkflowMode;
   userEmail: string;

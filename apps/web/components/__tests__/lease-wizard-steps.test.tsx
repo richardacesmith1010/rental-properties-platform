@@ -65,6 +65,7 @@ describe("lease wizard empty states", () => {
             unitCount: 2,
             ownerAccountId: null,
             ownerAccountName: "Owner",
+            ownerAccountIsClient: false,
             active: true
           }
         ]}
@@ -98,6 +99,7 @@ describe("lease wizard empty states", () => {
             unitCount: 0,
             ownerAccountId: null,
             ownerAccountName: "Owner",
+            ownerAccountIsClient: false,
             active: true
           }
         ]}

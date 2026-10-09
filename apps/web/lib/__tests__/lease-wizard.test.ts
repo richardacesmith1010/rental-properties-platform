@@ -126,6 +126,7 @@ describe("lease wizard step validation", () => {
           unitCount: 1,
           ownerAccountId: null,
           ownerAccountName: "Owner",
+          ownerAccountIsClient: false,
           active: true
         },
         {
@@ -139,6 +140,7 @@ describe("lease wizard step validation", () => {
           unitCount: 1,
           ownerAccountId: null,
           ownerAccountName: "Owner",
+          ownerAccountIsClient: false,
           active: true
         }
       ],
@@ -164,6 +166,7 @@ describe("lease wizard step validation", () => {
           unitCount: 1,
           ownerAccountId: null,
           ownerAccountName: "Owner",
+          ownerAccountIsClient: false,
           active: true
         }
       ],

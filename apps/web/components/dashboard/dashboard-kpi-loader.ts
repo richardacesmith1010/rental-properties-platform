@@ -9,6 +9,10 @@ import type { MaintenanceTicket } from "@/lib/maintenance";
 import { isCollectedOutsideDomus } from "@/lib/lease-collection";
 import type { OwnershipAccountDTO } from "@/lib/ownership";
 import type { PortfolioData } from "@/lib/portfolio";
+import {
+  filterPortfolioByHomeIds, homeIdsForScope, resolveHomeScope, scopeFromParams,
+  scopeFromValue, scopeValue, writeScopeParams, type HomeScope
+} from "@/lib/home-scope";
 import type { RentIncreaseEntry } from "@/lib/rent-increases";
 import type { DashboardProps } from "./types";
 
@@ -233,7 +237,7 @@ export function useDashboardKpiData(
   const isOwnerRole = safeDashboardData.profileRole === "owner";
   const isManagerRole = safeDashboardData.profileRole === "manager";
   const canManagePortfolio = isOwnerRole || isManagerRole;
-  const propertyFilteringEnabled = isOwnerRole && safePortfolio.properties.length > 0;
+  const propertyFilteringEnabled = (isOwnerRole || isManagerRole) && safePortfolio.properties.length > 0;
   const chargeBadgeCount = safeDashboardData.charges.filter(
     (charge) => charge.status === "late" && !isCollectedOutsideDomus(charge)
   ).length;
@@ -265,49 +269,42 @@ export function useDashboardKpiData(
     isOwnerRole && params.safeCapabilities.ownershipEnabled && activeOwnershipAccount?.accountType === "llc"
   );
   const hasAnalyticsSection = Boolean(canManagePortfolio && safeAnalytics.enabled);
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(() => {
-    if (!propertyFilteringEnabled || !props.initialPropertyId) {
-      return null;
-    }
-    return safePortfolio.properties.some((property) => property.id === props.initialPropertyId)
-      ? props.initialPropertyId
-      : null;
-  });
+  const [scope, setScope] = useState<HomeScope>(() => resolveHomeScope(
+    scopeFromParams(props.initialPropertyId, isManagerRole ? props.initialAccountId : null), safePortfolio.properties
+  ));
+  const validScope = useMemo<HomeScope>(() => propertyFilteringEnabled
+    ? resolveHomeScope(scope, safePortfolio.properties) : { kind: "all" },
+  [propertyFilteringEnabled, safePortfolio.properties, scope]);
+  const selectedPropertyId = validScope.kind === "property" ? validScope.id : null;
+  const selectedScopeValue = isManagerRole ? scopeValue(validScope) : selectedPropertyId ?? "";
 
-  const syncPropertyUrl = useCallback((propertyId: string | null) => {
+  const syncPropertyUrl = useCallback((nextScope: HomeScope) => {
     const params = new URLSearchParams(window.location.search);
-    if (propertyId) {
-      params.set("property", propertyId);
-    } else {
-      params.delete("property");
-    }
+    writeScopeParams(params, nextScope);
     const query = params.toString();
     const nextUrl = `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`;
     window.history.replaceState(null, "", nextUrl);
   }, []);
 
   useEffect(() => {
-    if (!propertyFilteringEnabled) {
-      setSelectedPropertyId(null);
+    if (scopeValue(scope) !== scopeValue(validScope)) {
+      setScope(validScope);
+      syncPropertyUrl(validScope);
       return;
     }
-
-    const currentSelectionIsValid =
-      selectedPropertyId != null &&
-      safePortfolio.properties.some((property) => property.id === selectedPropertyId);
-
-    if (currentSelectionIsValid) {
-      return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("property") !== (validScope.kind === "property" ? validScope.id : null)
+      || params.get("account") !== (validScope.kind === "account" ? validScope.id : null)) {
+      syncPropertyUrl(validScope);
     }
+  }, [scope, validScope, syncPropertyUrl]);
 
-    const initialSelection =
-      props.initialPropertyId &&
-      safePortfolio.properties.some((property) => property.id === props.initialPropertyId)
-        ? props.initialPropertyId
-        : null;
-
-    setSelectedPropertyId(initialSelection);
-  }, [propertyFilteringEnabled, props.initialPropertyId, safePortfolio.properties, selectedPropertyId]);
+  const selectScope = useCallback((value: string) => {
+    if (!propertyFilteringEnabled) return;
+    const next = resolveHomeScope(isManagerRole ? scopeFromValue(value) : scopeFromParams(value), safePortfolio.properties);
+    setScope(next);
+    syncPropertyUrl(next);
+  }, [isManagerRole, propertyFilteringEnabled, safePortfolio.properties, syncPropertyUrl]);
 
   const selectProperty = useCallback(
     (propertyId: string | null) => {
@@ -315,13 +312,9 @@ export function useDashboardKpiData(
         return;
       }
 
-      const nextPropertyId =
-        propertyId && safePortfolio.properties.some((property) => property.id === propertyId)
-          ? propertyId
-          : null;
-
-      setSelectedPropertyId(nextPropertyId);
-      syncPropertyUrl(nextPropertyId);
+      const next = resolveHomeScope(scopeFromParams(propertyId), safePortfolio.properties);
+      setScope(next);
+      syncPropertyUrl(next);
     },
     [propertyFilteringEnabled, safePortfolio.properties, syncPropertyUrl]
   );
@@ -333,36 +326,28 @@ export function useDashboardKpiData(
         : null,
     [propertyFilteringEnabled, safePortfolio.properties, selectedPropertyId]
   );
-  const filteredPortfolio = useMemo<PortfolioData>(() => {
-    if (!selectedProperty) {
-      return safePortfolio;
-    }
-
-    return {
-      properties: safePortfolio.properties.filter((property) => property.id === selectedProperty.id),
-      units: safePortfolio.units.filter((unit) => unit.propertyId === selectedProperty.id),
-      leases: safePortfolio.leases.filter((lease) => lease.propertyId === selectedProperty.id),
-      tenants: safePortfolio.tenants.filter((tenant) => tenant.propertyIds.includes(selectedProperty.id))
-    };
-  }, [safePortfolio, selectedProperty]);
+  const selectedHomeIds = useMemo(() => homeIdsForScope(validScope, safePortfolio.properties),
+    [validScope, safePortfolio.properties]);
+  const filteredPortfolio = useMemo<PortfolioData>(() => filterPortfolioByHomeIds(safePortfolio, selectedHomeIds),
+    [safePortfolio, selectedHomeIds]);
   const filteredTickets = useMemo(
-    () => (selectedProperty ? safeTickets.filter((ticket) => ticket.propertyId === selectedProperty.id) : safeTickets),
-    [safeTickets, selectedProperty]
+    () => selectedHomeIds ? safeTickets.filter((ticket) => selectedHomeIds.has(ticket.propertyId)) : safeTickets,
+    [safeTickets, selectedHomeIds]
   );
   const filteredCharges = useMemo(
     () =>
-      selectedProperty
-        ? safeDashboardData.charges.filter((charge) => charge.propertyId === selectedProperty.id)
+      selectedHomeIds
+        ? safeDashboardData.charges.filter((charge) => selectedHomeIds.has(charge.propertyId))
         : safeDashboardData.charges,
-    [safeDashboardData.charges, selectedProperty]
+    [safeDashboardData.charges, selectedHomeIds]
   );
   const selectedPropertyNetCashFlowCents = useMemo(() => {
-    if (!selectedProperty) {
+    if (!selectedHomeIds) {
       return safeAnalytics.summaryKpis.netIncomeCentsYtd;
     }
-
-    return safeExpenses.pnlByProperty.find((row) => row.propertyId === selectedProperty.id)?.netCents ?? 0;
-  }, [safeAnalytics.summaryKpis.netIncomeCentsYtd, safeExpenses.pnlByProperty, selectedProperty]);
+    return safeExpenses.pnlByProperty.filter((row) => selectedHomeIds.has(row.propertyId))
+      .reduce((sum, row) => sum + row.netCents, 0);
+  }, [safeAnalytics.summaryKpis.netIncomeCentsYtd, safeExpenses.pnlByProperty, selectedHomeIds]);
   const filteredKpis = useMemo(
     () =>
       computeFilteredKpis({
@@ -383,30 +368,31 @@ export function useDashboardKpiData(
       ? Math.round((displayDashboardData.kpis.occupiedUnits / displayDashboardData.kpis.totalUnits) * 100)
       : 0;
   const selectedPropertySummary = useMemo(() => {
-    if (!selectedProperty) {
+    if (validScope.kind === "all") {
       return null;
     }
+    const accountName = validScope.kind === "account" ? filteredPortfolio.properties[0]?.ownerAccountName : null;
 
     return {
       property: {
-        id: selectedProperty.id,
-        name: selectedProperty.name,
-        address: buildPropertyAddress(selectedProperty)
+        id: selectedProperty?.id ?? "",
+        name: selectedProperty?.name ?? accountName ?? "Homes",
+        address: selectedProperty ? buildPropertyAddress(selectedProperty) : undefined
       },
       unitCount: filteredPortfolio.units.length,
       occupiedUnits: filteredPortfolio.units.filter((unit) => unit.occupied).length,
       monthlyRentCents: displayDashboardData.kpis.monthlyGrossRentCents,
       openTickets: filteredTickets.filter((ticket) => ticket.status === "open" || ticket.status === "in_progress").length
     };
-  }, [displayDashboardData.kpis.monthlyGrossRentCents, filteredPortfolio.units, filteredTickets, selectedProperty]);
+  }, [displayDashboardData.kpis.monthlyGrossRentCents, filteredPortfolio.properties,
+    filteredPortfolio.units, filteredTickets, selectedProperty, validScope.kind]);
   const financialOverviewData = useMemo(() => {
     const now = new Date();
     const currentYear = now.getUTCFullYear();
     const currentMonth = now.getUTCMonth();
     const currentYearStartIso = `${currentYear}-01-01`;
-    const expensePropertyId = selectedProperty?.id ?? null;
-    const visibleExpenses = expensePropertyId
-      ? safeExpenses.expenses.filter((expense) => expense.propertyId === expensePropertyId)
+    const visibleExpenses = selectedHomeIds
+      ? safeExpenses.expenses.filter((expense) => selectedHomeIds.has(expense.propertyId))
       : safeExpenses.expenses;
     const monthlyExpensesCents = visibleExpenses
       .filter((expense) => occursInUtcMonth(expense.expenseDate, currentYear, currentMonth))
@@ -435,7 +421,7 @@ export function useDashboardKpiData(
       ytdExpensesCents,
       collectionRate: displayDashboardData.kpis.collectionRate
     };
-  }, [activeOwnershipAccount, displayDashboardData.kpis, filteredCharges, safeExpenses.expenses, selectedProperty]);
+  }, [activeOwnershipAccount, displayDashboardData.kpis, filteredCharges, safeExpenses.expenses, selectedHomeIds]);
   return {
     sortedVendors,
     isOwnerRole,
@@ -461,6 +447,8 @@ export function useDashboardKpiData(
     hasMembersSection,
     hasAnalyticsSection,
     selectedPropertyId,
+    selectedScopeValue,
+    selectScope,
     selectProperty,
     selectedProperty,
     filteredPortfolio,

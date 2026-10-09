@@ -35,6 +35,7 @@ describe("PropertyDetailView", () => {
       unitCount: 2,
       ownerAccountId: "account-1",
       ownerAccountName: "Atlas LLC",
+      ownerAccountIsClient: false,
       active: true
     },
     units: [

@@ -18,6 +18,7 @@ export interface PropertyListItem {
   unitCount: number;
   ownerAccountId: string | null;
   ownerAccountName: string;
+  ownerAccountIsClient: boolean;
   active: boolean;
 }
 
@@ -290,9 +291,9 @@ export async function getPortfolioDataLegacy(
   const ownershipAccountsPromise = ownerAccountIds.length
     ? admin
         .from("ownership_accounts")
-        .select("id, display_name")
+        .select("id, display_name, managed_client")
         .in("id", ownerAccountIds)
-    : Promise.resolve({ data: [] as Array<{ id: string; display_name: string }> });
+    : Promise.resolve({ data: [] as Array<{ id: string; display_name: string; managed_client: boolean }>, error: null });
 
   type LeaseRow = {
     id: string;
@@ -345,10 +346,11 @@ export async function getPortfolioDataLegacy(
         }));
       })()
     : Promise.resolve([]);
-  const [{ data: ownershipAccounts }, leases] = await Promise.all([
+  const [{ data: ownershipAccounts, error: ownershipAccountsError }, leases] = await Promise.all([
     ownershipAccountsPromise,
     leasesPromise
   ]);
+  if (ownershipAccountsError) throw new Error("Unable to load owner accounts.");
   const leaseTenantIds = Array.from(new Set(leases.map((lease) => lease.tenant_profile_id).filter(Boolean)));
   const invitedEmails = Array.from(new Set((tenantInvitations ?? [])
     .map((invitation) => invitation.email?.toLowerCase()).filter((email): email is string => Boolean(email))));
@@ -380,13 +382,26 @@ export async function getPortfolioData(
       getManagerFeesForProperties(propertyIds.map((propertyId) => ({ propertyId })))
     ]);
     if (!rpcResult.error && rpcResult.data) {
-      return assemblePortfolioPayload(rpcResult.data as unknown as PortfolioPayload, fees);
+      const portfolio = assemblePortfolioPayload(rpcResult.data as unknown as PortfolioPayload, fees);
+      const accountIds = [...new Set(portfolio.properties.map((home) => home.ownerAccountId).filter((id): id is string => Boolean(id)))];
+      if (accountIds.length === 0) return portfolio;
+      const { data: accounts, error: accountsError } = await admin.from("ownership_accounts")
+        .select("id, display_name, managed_client").in("id", accountIds);
+      if (accountsError) throw new Error("Unable to load owner accounts.");
+      const byId = new Map((accounts ?? []).map((account) => [account.id, account]));
+      return { ...portfolio, properties: portfolio.properties.map((home) => ({
+        ...home,
+        ownerAccountName: home.ownerAccountId
+          ? byId.get(home.ownerAccountId)?.display_name ?? home.ownerAccountName : home.ownerAccountName,
+        ownerAccountIsClient: home.ownerAccountId ? byId.get(home.ownerAccountId)?.managed_client === true : false
+      })) };
     }
     const error = rpcResult.error;
     const code = /^[A-Z0-9]{5,10}$/.test(error?.code ?? "") ? error!.code : "UNKNOWN";
     const missing = isMissingSchemaError(error) || code === "PGRST202" || code === "42883";
     console.error(missing ? "owner_rpc_fallback_missing" : "owner_rpc_fallback_error", rpcName, code);
   } catch (error) {
+    if (error instanceof Error && error.message === "Unable to load owner accounts.") throw error;
     const rawCode = typeof error === "object" && error && "code" in error ? String(error.code) : "";
     const code = /^[A-Z0-9]{5,10}$/.test(rawCode) ? rawCode : "UNKNOWN";
     console.error("owner_rpc_fallback_error", rpcName, code);

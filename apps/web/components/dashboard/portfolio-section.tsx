@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFormState } from "react-dom";
 import { Building2, Pencil } from "lucide-react";
@@ -20,6 +20,7 @@ import type { ActionState } from "@/app/actions";
 import { Alert } from "@/components/ui/alert";
 import { pluralize } from "@/lib/format";
 import { buildEntityUpdateFormData, buildPropertyEditFields } from "@/lib/entity-edit-fields";
+import { buildHomeGroups } from "@/lib/home-scope";
 
 type StatefulAction = (
   prev: ActionState,
@@ -88,7 +89,11 @@ export function PortfolioSection({
   const [editingProperty, setEditingProperty] = useState<PropertyListItem | null>(null);
   const [confirmDeletePropertyId, setConfirmDeletePropertyId] = useState<string | null>(null);
   const deleteFormRefs = useRef<Record<string, HTMLFormElement | null>>({});
-  const visibleProperties = previewCount && !expanded ? properties.slice(0, previewCount) : properties;
+  const orderedProperties = role === "manager"
+    ? buildHomeGroups(properties).flatMap((group) => group.homes) : properties;
+  const visibleProperties = previewCount && !expanded ? orderedProperties.slice(0, previewCount) : orderedProperties;
+  const managerGroups = role === "manager" ? buildHomeGroups(visibleProperties) : [];
+  const headingByFirstHomeId = new Map(managerGroups.map((group) => [group.homes[0].id, group]));
   const hasMore = previewCount != null && properties.length > previewCount;
 
   useEffect(() => {
@@ -133,13 +138,25 @@ export function PortfolioSection({
           <>
             <AnimatedList>
               {visibleProperties.map((property, i) => (
+              <Fragment key={property.id}>
+                {headingByFirstHomeId.get(property.id) ? (() => {
+                  const group = headingByFirstHomeId.get(property.id)!;
+                  return <div className="px-4 pb-2 pt-5" role="group" aria-label={group.name}>
+                    <h3 className="text-base font-semibold text-[var(--ink)]">{group.name}</h3>
+                    <span className="text-sm text-[var(--muted)]">
+                      {group.isClient ? "Client" : "Owner on Domus"} · {group.homes.length}
+                      {" "}{group.homes.length === 1 ? "home" : "homes"}
+                    </span>
+                  </div>;
+                })() : null}
               <div
-                key={property.id}
                 role={onSelectProperty && activeEditPropertyId !== property.id ? "button" : undefined}
                 tabIndex={onSelectProperty && activeEditPropertyId !== property.id ? 0 : undefined}
                 className={
                   onSelectProperty && activeEditPropertyId !== property.id
-                    ? "rounded-2xl border border-border/40 bg-card/80 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2"
+                    ? "rounded-2xl border border-border/40 bg-card/80 shadow-sm transition-shadow hover:shadow-md "
+                      + "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)] "
+                      + "focus-visible:ring-offset-2"
                     : undefined
                 }
                 onClick={() => {
@@ -210,7 +227,9 @@ export function PortfolioSection({
                     <p className="mt-0.5 text-sm text-[var(--muted)]">
                       {property.city}, {property.state} {property.postalCode}
                     </p>
-                    <p className="mt-0.5 text-sm text-[var(--muted)]">{property.ownerAccountName}</p>
+                    {role === "owner" ? (
+                      <p className="mt-0.5 text-sm text-[var(--muted)]">{property.ownerAccountName}</p>
+                    ) : null}
                     {property.managementFeeCents > 0 ? (
                       <p className="mt-0.5 text-sm text-[var(--muted)]">
                         Management fee: ${(property.managementFeeCents / 100).toFixed(2)}
@@ -320,6 +339,7 @@ export function PortfolioSection({
                   </div>
                 </DataRow>
               </div>
+              </Fragment>
               ))}
             </AnimatedList>
             {hasMore ? (

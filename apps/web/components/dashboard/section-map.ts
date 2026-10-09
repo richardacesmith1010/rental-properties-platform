@@ -84,6 +84,8 @@ export interface SectionRendererProps {
   currentUserId?: string;
   availableProperties: PropertyListItem[];
   selectedPropertyId: string | null;
+  selectedScopeValue?: string;
+  onSelectScope?: (value: string) => void;
   selectedProperty: PropertyListItem | null;
   selectedPropertySummary: {
     property: {

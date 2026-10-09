@@ -24,7 +24,7 @@ export interface PortfolioPayload {
     notes?: string | null;
   }>;
   invitations: Array<{ email: string; property_id: string }>;
-  ownership_accounts: Array<{ id: string; display_name: string }>;
+  ownership_accounts: Array<{ id: string; display_name: string; managed_client?: boolean }>;
   tenant_profiles: TenantProfileRow[];
   self_profile: TenantProfileRow | null;
 }
@@ -91,6 +91,9 @@ export function assemblePortfolioPayload(
   const ownershipAccountNameById = new Map(
     (ownershipAccounts ?? []).map((account) => [account.id, account.display_name])
   );
+  const ownershipAccountClientById = new Map(
+    (ownershipAccounts ?? []).map((account) => [account.id, account.managed_client === true])
+  );
 
   const propertyById = new Map(propertyRows.map((property) => [property.id, property]));
   const unitById = new Map(unitRows.map((unit) => [unit.id, unit]));
@@ -106,6 +109,8 @@ export function assemblePortfolioPayload(
     managementFeeCents: managerFeesByPropertyId.get(property.id)?.feeCents ?? 0,
     unitCount: unitRows.filter((unit) => unit.property_id === property.id).length,
     ownerAccountId: property.owner_account_id,
+    ownerAccountIsClient: property.owner_account_id
+      ? ownershipAccountClientById.get(property.owner_account_id) ?? false : false,
     ownerAccountName:
       property.owner_account_id
         ? ownershipAccountNameById.get(property.owner_account_id) ?? "Ownership Account"

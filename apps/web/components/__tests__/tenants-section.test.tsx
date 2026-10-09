@@ -14,6 +14,7 @@ const properties = [
     unitCount: 1,
     ownerAccountId: null,
     ownerAccountName: "Owner Account",
+    ownerAccountIsClient: false,
     active: true
   },
   {
@@ -27,6 +28,7 @@ const properties = [
     unitCount: 1,
     ownerAccountId: null,
     ownerAccountName: "Owner Account",
+    ownerAccountIsClient: false,
     active: true
   }
 ];

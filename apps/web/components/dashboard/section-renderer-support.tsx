@@ -59,6 +59,9 @@ function PropertyScopeControl({ props }: { props: SectionRendererProps }) {
           address: [property.addressLine1, property.city, property.state].filter(Boolean).join(", ")
         }))}
         selectedPropertyId={props.selectedPropertyId}
+        managerProperties={props.data.profileRole === "manager" ? props.availableProperties : undefined}
+        selectedScopeValue={props.selectedScopeValue}
+        onSelectScope={props.onSelectScope}
         onSelect={props.onSelectProperty}
       />
     </div>

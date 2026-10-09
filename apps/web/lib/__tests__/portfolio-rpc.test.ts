@@ -10,7 +10,8 @@ const mocks = vi.hoisted(() => ({
   rpc: vi.fn(),
   fees: vi.fn(),
   administered: vi.fn(),
-  scoped: vi.fn()
+  scoped: vi.fn(),
+  failAccounts: false
 }));
 function query(table: string) {
   const filters: Array<[string, string, unknown]> = [];
@@ -26,6 +27,9 @@ function query(table: string) {
       kind === "eq" ? row[key] === value : (value as unknown[]).includes(row[key])));
     if (table === "leases" && columns.includes("notes")) {
       return { data: null, error: { code: "42703", message: "column does not exist" } };
+    }
+    if (table === "ownership_accounts" && mocks.failAccounts) {
+      return { data: null, error: { code: "42501", message: "permission denied" } };
     }
     return { data: selected, error: null };
   };
@@ -74,7 +78,7 @@ function arrange(homes: number, inactiveLease = false, inactiveUnit = false, use
       { id: userId, email: "owner@example.test", full_name: "Owner", phone: null },
       { id: "tenant-1", email: "tenant-1@example.test", full_name: "Tenant", phone: null }
     ],
-    accounts: [{ id: "account-1", display_name: "Account" }]
+    accounts: [{ id: "account-1", display_name: "Account", managed_client: true }]
   };
   const payload = {
     properties, units: units.filter((row) => row.active),
@@ -87,6 +91,7 @@ function arrange(homes: number, inactiveLease = false, inactiveUnit = false, use
     self_profile: mocks.fixture.profiles[0]
   };
   mocks.rpc.mockResolvedValue({ data: payload, error: null });
+  mocks.failAccounts = false;
   mocks.administered.mockResolvedValue(properties.map((property) => ({
     id: property.id, ownerAccountId: "account-1"
   })));
@@ -151,5 +156,17 @@ describe("owner portfolio RPC parity", () => {
     expect(result.tenants.map((tenant) => tenant.id)).toEqual(["tenant-1", "owner-1"]);
     expect(result.leases[0].tenantName).toBe("Tenant");
     expect(JSON.stringify(result)).not.toContain("foreign@example.test");
+  });
+  it("sets the client flag from the checked account query on RPC and legacy paths", async () => {
+    const ids = arrange(1);
+    expect((await getPortfolioData("owner-1", null, ids)).properties[0].ownerAccountIsClient).toBe(true);
+    expect((await getPortfolioDataLegacy("owner-1", null, ids)).properties[0].ownerAccountIsClient).toBe(true);
+  });
+  it("throws when the account query fails", async () => {
+    const ids = arrange(1);
+    mocks.failAccounts = true;
+    await expect(getPortfolioData("owner-1", null, ids)).rejects.toThrow("Unable to load owner accounts.");
+    await expect(getPortfolioDataLegacy("owner-1", null, ids)).rejects.toThrow("Unable to load owner accounts.");
+    mocks.failAccounts = false;
   });
 });

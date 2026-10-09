@@ -39,18 +39,38 @@ function renderSectionFrame(overrides: Partial<SectionRendererProps> = {}) {
 
 describe("SectionFrame property scope control", () => {
   it("renders the selector for managers with available properties and scopes on selection", () => {
-    const onSelectProperty = vi.fn();
+    const onSelectScope = vi.fn();
     renderSectionFrame({
       data: { profileRole: "manager" } as SectionRendererProps["data"],
-      onSelectProperty
+      onSelectScope
     });
 
     fireEvent.change(screen.getByLabelText("Show"), {
-      target: { value: "property-1" }
+      target: { value: "property:property-1" }
     });
 
     expect(screen.getByRole("option", { name: "Atlas House" })).toBeInTheDocument();
-    expect(onSelectProperty).toHaveBeenCalledWith("property-1");
+    expect(onSelectScope).toHaveBeenCalledWith("property:property-1");
+    expect(screen.getByText("Your choice stays as you move between pages.")).toBeInTheDocument();
+  });
+
+  it("groups manager homes by client and owner with account options", () => {
+    renderSectionFrame({
+      data: { profileRole: "manager" } as SectionRendererProps["data"],
+      availableProperties: [
+        { ...availableProperties[0], id: "owner", name: "Zed", ownerAccountId: "o",
+          ownerAccountName: "Able", ownerAccountIsClient: false },
+        { ...availableProperties[0], id: "client-b", name: "Beta", ownerAccountId: "c",
+          ownerAccountName: "Zen", ownerAccountIsClient: true },
+        { ...availableProperties[0], id: "client-a", name: "Alpha", ownerAccountId: "c",
+          ownerAccountName: "Zen", ownerAccountIsClient: true }
+      ] as SectionRendererProps["availableProperties"]
+    });
+    const select = screen.getByLabelText("Show");
+    expect(Array.from(select.querySelectorAll("optgroup")).map((group) => group.label))
+      .toEqual(["Client · Zen", "Owner · Able"]);
+    expect(Array.from(select.querySelectorAll("option")).map((option) => option.textContent))
+      .toEqual(["All homes", "All 2 Zen homes", "Alpha", "Beta", "All 1 Able home", "Zed"]);
   });
 
   it("hides the selector for managers with no available properties", () => {
@@ -66,6 +86,11 @@ describe("SectionFrame property scope control", () => {
     renderSectionFrame();
 
     expect(screen.getByLabelText("Show")).toBeInTheDocument();
+    const select = screen.getByLabelText("Show");
+    expect(Array.from(select.querySelectorAll("option")).map((option) => [option.value, option.textContent]))
+      .toEqual([["", "All homes"], ["property-1", "Atlas House"]]);
+    expect(select.querySelectorAll("optgroup")).toHaveLength(0);
+    expect(screen.queryByText("Your choice stays as you move between pages.")).not.toBeInTheDocument();
   });
 
   it("hides the selector for tenants even when properties are available", () => {

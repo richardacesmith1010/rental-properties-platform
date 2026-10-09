@@ -30,6 +30,7 @@ describe("PortfolioSection", () => {
       unitCount: 3,
       ownerAccountId: "acct-1",
       ownerAccountName: "Atlas LLC",
+      ownerAccountIsClient: false,
       active: true
     },
     {
@@ -43,6 +44,7 @@ describe("PortfolioSection", () => {
       unitCount: 1,
       ownerAccountId: "acct-2",
       ownerAccountName: "Imperium Holdings",
+      ownerAccountIsClient: false,
       active: true
     }
   ];
@@ -74,6 +76,19 @@ describe("PortfolioSection", () => {
     expect(screen.getByText("123 Forum Ave")).toBeInTheDocument();
     expect(screen.getByText("Denver, CO 80202")).toBeInTheDocument();
     expect(screen.getByText("Atlas LLC")).toBeInTheDocument();
+    expect(screen.queryByText(/Owner on Domus/)).not.toBeInTheDocument();
+  });
+
+  it("groups manager homes and removes the repeated owner line", () => {
+    render(<PortfolioSection role="manager" properties={[
+      { ...properties[0], ownerAccountIsClient: true },
+      { ...properties[0], id: "property-3", name: "Second Home", ownerAccountIsClient: true },
+      properties[1]
+    ]} />);
+    expect(screen.getByRole("heading", { name: "Atlas LLC" })).toBeInTheDocument();
+    expect(screen.getByText("Client · 2 homes")).toBeInTheDocument();
+    expect(screen.getByText("Owner on Domus · 1 home")).toBeInTheDocument();
+    expect(screen.getAllByText("Atlas LLC")).toHaveLength(1);
   });
 
   it("renders management controls when showControls is true", () => {
