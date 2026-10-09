@@ -47,7 +47,7 @@ export default async function ReportsPage(props: ReportsPageProps) {
 
   const [rentRoll, delinquency, tenantLedger, monthlyPnl, taxSummary, receivables] = await Promise.all([
     getRentRollReport(user.id),
-    getDelinquencyReport(user.id),
+    getDelinquencyReport(user.id, role === "manager"),
     getTenantLedgerReport(user.id),
     getMonthlyPnLReport(user.id, reportYear),
     role === "owner" ? getTaxSummaryReport(user.id, reportYear) : Promise.resolve([]),

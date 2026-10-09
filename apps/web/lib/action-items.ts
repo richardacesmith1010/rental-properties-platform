@@ -3,7 +3,7 @@ import type { MaintenanceTicket } from "@/lib/maintenance";
 import type { ManagerPaymentDTO } from "@/lib/manager-payments";
 import type { LeaseListItem } from "@/lib/portfolio";
 import type { LLCInvitationDTO } from "@/lib/llc-invitations";
-import { isCollectedOutsideDomus } from "@/lib/lease-collection";
+import { tracksLateRent } from "@/lib/lease-collection";
 
 export type ActionItemSeverity = "urgent" | "attention" | "info";
 export type ActionItemKind =
@@ -158,7 +158,7 @@ export function computeActionItems({
     const dueDate = parseDateOnly(charge.dueDate);
     const daysUntilDue = diffUtcDays(dueDate, todayStart);
 
-    if (charge.status === "late" && !isCollectedOutsideDomus(charge)) {
+    if (charge.status === "late" && tracksLateRent(charge)) {
       items.push({
         id: `charge-overdue-${charge.id}`,
         kind: "overdue_charge",

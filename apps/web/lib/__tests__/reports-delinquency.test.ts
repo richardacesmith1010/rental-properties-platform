@@ -49,12 +49,14 @@ describe("delinquency report outside-Domus filtering", () => {
       {
         id: "lease-outside",
         unit_id: "unit-outside",
-        tenant_profile_id: "tenant-lease-outside"
+        tenant_profile_id: "tenant-lease-outside",
+        collects_outside_domus: true
       },
       {
         id: "lease-domus",
         unit_id: "unit-domus",
-        tenant_profile_id: "tenant-lease-domus"
+        tenant_profile_id: "tenant-lease-domus",
+        collects_outside_domus: false
       }
     ];
     getLeasesForScopeMock.mockResolvedValue({
@@ -81,10 +83,13 @@ describe("delinquency report outside-Domus filtering", () => {
     });
 
     createAdminClientMock.mockReturnValue({
-      from: vi.fn(() => ({
+      from: vi.fn((table: string) => ({
         select: vi.fn(() => ({
-          in: vi.fn(() => ({
-            eq: vi.fn(async () => ({ data: [{ id: "lease-domus" }], error: null }))
+          in: vi.fn(async () => ({
+            data: table === "leases" ? leases : table === "properties"
+              ? [{ id: "property-1", owner_account_id: "account-1" }]
+              : [{ id: "account-1", managed_client: false }],
+            error: null
           }))
         }))
       }))
@@ -96,6 +101,24 @@ describe("delinquency report outside-Domus filtering", () => {
 
     expect(report.map((row) => row.leaseId)).toEqual(["lease-domus"]);
     expect(report[0]?.totalOwed).toBe(150000);
+  });
+
+  it("includes an outside client-home rent in delinquency aging", async () => {
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn((table: string) => ({ select: vi.fn(() => ({
+        in: vi.fn(async () => ({
+          data: table === "leases" ? [
+            { id: "lease-outside", unit_id: "unit-outside", collects_outside_domus: true },
+            { id: "lease-domus", unit_id: "unit-domus", collects_outside_domus: false }
+          ] : table === "properties"
+            ? [{ id: "property-1", owner_account_id: "account-1" }]
+            : [{ id: "account-1", managed_client: true }],
+          error: null
+        }))
+      })) }))
+    });
+    const report = await getDelinquencyReport("manager-1", true);
+    expect(report.map((row) => row.leaseId).sort()).toEqual(["lease-domus", "lease-outside"]);
   });
 
   it("keeps the same flagged balance in ordinary receivables", async () => {

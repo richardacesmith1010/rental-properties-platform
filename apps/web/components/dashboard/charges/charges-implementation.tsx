@@ -18,7 +18,7 @@ import { ChargeEditModal } from "../charge-edit-modal";
 import { ChargeCreateForm } from "../charge-create-form";
 import { ComposeMessageModal } from "../compose-message-modal";
 import { ChargeRow, getChargeLabel } from "../charge-row";
-import { isCollectedOutsideDomus } from "@/lib/lease-collection";
+import { tracksLateRent } from "@/lib/lease-collection";
 import {
   ChargeSectionFilters,
   ChargeSectionHeader,
@@ -60,7 +60,7 @@ export function ChargesSection({
   const stripeConfigured = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
   const searchParams = useSearchParams();
   const lateCount = charges.filter(
-    (charge) => charge.status === "late" && !isCollectedOutsideDomus(charge)
+    (charge) => charge.status === "late" && tracksLateRent(charge)
   ).length;
   const pendingCount = charges.filter((charge) => charge.status === "pending").length;
   const [activeFilter, setActiveFilter] = useState<ChargeFilter>(
@@ -90,7 +90,7 @@ export function ChargesSection({
       if (activeFilter === "all") return true;
       if (activeFilter === "due_soon") return charge.status === "pending";
       if (activeFilter === "late") {
-        return charge.status === "late" && !isCollectedOutsideDomus(charge);
+        return charge.status === "late" && tracksLateRent(charge);
       }
       return charge.status === activeFilter;
     }),
@@ -211,7 +211,7 @@ export function ChargesSection({
   };
   const openFirstManualPayment = () => {
     const charge = charges.find(
-      (item) => item.status === "late" && !isCollectedOutsideDomus(item)
+      (item) => item.status === "late" && tracksLateRent(item)
     ) ?? charges.find((item) => item.status === "pending");
     if (!charge) return;
     setActiveFilter(charge.status === "late" ? "late" : "due_soon");

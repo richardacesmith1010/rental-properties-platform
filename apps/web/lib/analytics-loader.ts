@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdministeredPropertyIds, getAdministeredPropertyIdsForAccount } from "@/lib/property-access";
 import { withChargeEditingFallback } from "@/lib/charge-audit";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
+import { getClientHomeFlags } from "@/lib/lease-collection";
 import {
   buildExpenseCategoryMetrics, buildMaintenanceMetrics, buildOccupancyMetrics,
   buildRentMetrics, monthKey, type AnalyticsDashboardData, type AnalyticsChargeRow,
@@ -58,7 +59,8 @@ function startOfCurrentYearIso(): string {
 
 export async function getOwnerAnalyticsData(
   userId: string,
-  accountId?: string | null
+  accountId?: string | null,
+  managerView = false
 ): Promise<AnalyticsDashboardData> {
   const admin = createAdminClient();
   const propertyIds = accountId
@@ -134,6 +136,8 @@ export async function getOwnerAnalyticsData(
     }
 
     const leaseRows = leasesQuery.data ?? [];
+    const clientFlags = managerView ? await getClientHomeFlags(admin, propertyIds) : new Map<string, boolean>();
+    const propertyIdByUnitId = new Map(unitRows.map((unit) => [unit.id, unit.property_id]));
     const leaseIds = leaseRows.map((lease) => lease.id);
 
     const chargesQuery = leaseIds.length
@@ -232,7 +236,12 @@ export async function getOwnerAnalyticsData(
       lastTwelveMonths,
       currentYearStart,
       currentMonthKey,
-      new Map(leaseRows.map((lease) => [lease.id, lease]))
+      new Map(leaseRows.map((lease) => {
+        const propertyId = propertyIdByUnitId.get(lease.unit_id);
+        return [lease.id, {
+          ...lease, clientHome: propertyId ? clientFlags.get(propertyId) === true : false
+        }];
+      }))
     );
 
     const paymentsByChargeId = new Map<string, { rent_charge_id: string; paid_at: string }>();

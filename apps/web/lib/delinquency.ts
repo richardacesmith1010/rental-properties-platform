@@ -9,7 +9,7 @@ import {
   getPropertyNotificationDeliveryPreferences,
 } from "@/lib/notification-preferences";
 import { notificationsEnabled } from "@/lib/notifications-switch";
-import { isCollectedOutsideDomus } from "@/lib/lease-collection";
+import { getClientHomeFlags, tracksLateRent } from "@/lib/lease-collection";
 
 function differenceInDays(fromDate: string, toDate: string) {
   const from = new Date(`${fromDate}T00:00:00.000Z`);
@@ -82,14 +82,6 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
       collects_outside_domus: boolean;
     }>).map((lease) => [lease.id, lease])
   );
-  candidates = candidates.filter(
-    (charge) => !isCollectedOutsideDomus(leaseById.get(charge.lease_id))
-  );
-
-  if (candidates.length === 0) {
-    return "Overdue rent follow-ups sent: 0.";
-  }
-
   const { data: existingNotifications, error: existingError } = await supabase
     .from("notifications")
     .select("entity_id")
@@ -120,6 +112,15 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
     ((units ?? []) as Array<{ id: string; property_id: string; unit_number: string }>).map((unit) => [unit.id, unit])
   );
   const propertyIds = Array.from(new Set((units ?? []).map((unit) => unit.property_id)));
+  const clientFlags = await getClientHomeFlags(supabase, propertyIds);
+  candidates = candidates.filter((charge) => {
+    const lease = leaseById.get(charge.lease_id);
+    const propertyId = lease ? unitById.get(lease.unit_id)?.property_id : null;
+    return tracksLateRent({
+      ...lease, clientHome: propertyId ? clientFlags.get(propertyId) === true : false
+    });
+  });
+  if (candidates.length === 0) return "Overdue rent follow-ups sent: 0.";
   const { data: properties, error: propertiesError } = await supabase
     .from("properties")
     .select("id, name")

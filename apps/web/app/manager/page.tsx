@@ -215,7 +215,7 @@ export default async function ManagerPage(props: ManagerPageProps) {
         : Promise.resolve([]),
       getActiveLlcMembershipsForUser(user.id),
       getOwnerExpenseData(user.id),
-      getOwnerAnalyticsData(user.id),
+      getOwnerAnalyticsData(user.id, null, true),
       getRecentAuditLogs(user.id),
       getRentIncreaseHistory(user.id),
       getClientsOverview(user.id)

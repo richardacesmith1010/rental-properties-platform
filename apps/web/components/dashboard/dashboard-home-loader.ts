@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { getNextDueDateForLease, getNextRentCollectionLabel } from "@/lib/action-items";
-import { isCollectedOutsideDomus } from "@/lib/lease-collection";
+import { isCollectedOutsideDomus, tracksLateRent } from "@/lib/lease-collection";
 import type { InvitationListItem } from "@/lib/invitations";
 import type { OnboardingChecklistStep } from "@/components/dashboard/onboarding-checklist";
 import type { DashboardProps } from "./types";
@@ -129,7 +129,7 @@ export function useDashboardHomeState(
     const charges = displayDashboardData.charges;
     const rentCharges = charges.filter((charge) => charge.category === "rent");
     const lateCharges = rentCharges.filter(
-      (charge) => charge.status === "late" && !isCollectedOutsideDomus(charge)
+      (charge) => charge.status === "late" && tracksLateRent(charge)
     );
     const openRepairCount = filteredTickets.filter(
       (ticket) => ticket.status === "open" || ticket.status === "in_progress"
@@ -143,13 +143,17 @@ export function useDashboardHomeState(
     );
     const today = new Date();
     const activeAllLeases = filteredPortfolio.leases.filter((lease) => lease.active);
-    const activeLeases = activeAllLeases.filter((lease) => !isCollectedOutsideDomus(lease));
+    const clientPropertyIds = new Set(safePortfolio.properties
+      .filter((home) => home.ownerAccountIsClient).map((home) => home.id));
+    const activeLeases = activeAllLeases.filter((lease) => tracksLateRent({
+      ...lease, clientHome: clientPropertyIds.has(lease.propertyId)
+    }));
     const activeLeaseIds = new Set(activeLeases.map((lease) => lease.id));
     const nextDueCharges = rentCharges
       .filter(
         (charge) =>
           charge.status === "pending" &&
-          !isCollectedOutsideDomus(charge) &&
+          tracksLateRent(charge) &&
           charge.dueDate >= today.toISOString().slice(0, 10) &&
           Boolean(charge.leaseId && activeLeaseIds.has(charge.leaseId))
       )

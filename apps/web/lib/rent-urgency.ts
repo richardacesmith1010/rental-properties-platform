@@ -1,4 +1,4 @@
-import { isCollectedOutsideDomus, type LeaseCollectionPreference } from "@/lib/lease-collection";
+import { tracksLateRent, type LeaseCollectionPreference } from "@/lib/lease-collection";
 
 export type ChargeUrgencyLevel = "none" | "upcoming" | "due_today" | "overdue";
 
@@ -43,7 +43,7 @@ export function getChargeUrgency(
     return { level: "due_today", daysUntilDue };
   }
 
-  if (isCollectedOutsideDomus(charge)) {
+  if (!tracksLateRent(charge)) {
     return { level: "none", daysUntilDue };
   }
 

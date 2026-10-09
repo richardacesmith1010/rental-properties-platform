@@ -37,6 +37,7 @@ export interface ChargeRowData {
   latestEditedByName?: string | null;
   editedCount?: number;
   collectsOutsideDomus?: boolean;
+  clientHome?: boolean;
 }
 
 interface ChargeRowProps {

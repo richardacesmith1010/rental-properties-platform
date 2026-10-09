@@ -3,7 +3,7 @@ import { computeFilteredKpis } from "@/components/dashboard/dashboard-kpi-loader
 import { computeActionItems } from "@/lib/action-items";
 import { buildRentMetrics, type MonthWindow } from "@/lib/analytics";
 import { getDashboardChargeStatus, type DashboardCharge, type DashboardKpis } from "@/lib/dashboard";
-import { isCollectedOutsideDomus } from "@/lib/lease-collection";
+import { isCollectedOutsideDomus, tracksLateRent } from "@/lib/lease-collection";
 import { getManagerChargeStatus, summarizeManagerLateCharges } from "@/lib/manager-dashboard";
 import { getChargeUrgency } from "@/lib/rent-urgency";
 import { getTenantChargeStatus } from "@/lib/tenant-payments";
@@ -57,6 +57,40 @@ function dashboardCharge(overrides: Partial<DashboardCharge> = {}): DashboardCha
 }
 
 describe("outside-Domus collection rules", () => {
+  it("tracks late rent for ordinary and client homes only", () => {
+    expect(tracksLateRent({ collects_outside_domus: false })).toBe(true);
+    expect(tracksLateRent({ collects_outside_domus: true, clientHome: false })).toBe(false);
+    expect(tracksLateRent({ collects_outside_domus: true, clientHome: true })).toBe(true);
+    expect(tracksLateRent({ collectsOutsideDomus: true, client_home: true })).toBe(true);
+  });
+
+  it("keeps client rent late across manager, KPIs, analytics, action items and urgency", () => {
+    const lease = { collects_outside_domus: true, clientHome: true };
+    expect(getDashboardChargeStatus("late", lease)).toBe("late");
+    expect(getManagerChargeStatus("late", lease)).toBe("late");
+    expect(summarizeManagerLateCharges(
+      [{ lease_id: "client", amount_cents: 235000 }], new Map([["client", lease]])
+    )).toEqual({ lateRentCents: 235000, lateAccountCount: 1 });
+    const charge = dashboardCharge({ collectsOutsideDomus: true, clientHome: true });
+    const kpis = computeFilteredKpis({
+      baseKpis, charges: [charge], tickets: [],
+      portfolio: { properties: [], units: [], leases: [], tenants: [] }, netCashFlowCents: 0
+    });
+    expect(kpis.lateRentCents).toBe(235000);
+    expect(computeActionItems({
+      charges: [charge], tickets: [], managerPayments: [], leases: [],
+      pendingInvitations: [], newFeedbackCount: 0,
+      today: new Date("2026-10-10T12:00:00.000Z")
+    }).some((item) => item.kind === "overdue_charge")).toBe(true);
+    expect(buildRentMetrics([{
+      id: "charge-1", lease_id: "client", due_date: "2026-10-01",
+      amount_cents: 235000, status: "late", category: "rent"
+    }], monthWindows, "2026-01-01", "2026-10", new Map([["client", lease]]))
+      .rentMetrics[0]?.lateCents).toBe(235000);
+    expect(getChargeUrgency({
+      status: "late", dueDate: "2026-10-01", collectsOutsideDomus: true, clientHome: true
+    }, new Date("2026-10-10T12:00:00.000Z")).level).toBe("overdue");
+  });
   it("recognizes database and DTO lease shapes", () => {
     expect(isCollectedOutsideDomus({ collects_outside_domus: true })).toBe(true);
     expect(isCollectedOutsideDomus({ collectsOutsideDomus: true })).toBe(true);

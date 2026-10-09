@@ -23,6 +23,20 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("ChargesSection", () => {
+  it("counts outside client rent in the Late tab while excluding owner outside rent", () => {
+    const base = {
+      id: "client-late", leaseId: "lease-1", propertyId: "home-1",
+      tenantProfileId: "tenant-1", dueDate: "2026-10-01", amountCents: 235000,
+      status: "late" as const, propertyName: "Client House", unitNumber: "1",
+      tenantName: "Tenant", category: "rent" as const, collectsOutsideDomus: true
+    };
+    render(<ChargesSection charges={[
+      { ...base, clientHome: true }, { ...base, id: "owner-late", clientHome: false }
+    ]} onPayCharge={async () => {}} isOwnerView />);
+    expect(screen.getByRole("button", { name: "Late (1)" })).toBeInTheDocument();
+    expect(screen.getByText("Client House • 1")).toBeInTheDocument();
+  });
+
   const charges = [
     {
       id: "550e8400-e29b-41d4-a716-446655440000",

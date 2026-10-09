@@ -3,14 +3,15 @@ import { getAdministeredPropertyIds, getAdministeredPropertyIdsForAccount } from
 import { getChargeAuditSummary, getChargeEditHistoryMap, normalizeChargeCategory,
   withChargeEditingFallback, type ChargeCategory, type ChargeEditHistoryEntryDTO,
   type ChargeStatus } from "@/lib/charge-audit";
-import { isCollectedOutsideDomus } from "@/lib/lease-collection";
+import { isCollectedOutsideDomus, tracksLateRent } from "@/lib/lease-collection";
 import { emptyData, getDashboardChargeStatus, type DashboardData } from "@/lib/dashboard";
 
 export async function getDashboardDataLegacy(
   userId: string,
   accountId?: string | null,
   administeredPropertyIds?: string[],
-  authenticatedRole?: DashboardData["profileRole"]
+  authenticatedRole?: DashboardData["profileRole"],
+  clientFlags: ReadonlyMap<string, boolean> = new Map()
 ): Promise<DashboardData> {
   const admin = createAdminClient();
   const profilePromise = authenticatedRole
@@ -24,7 +25,7 @@ export async function getDashboardDataLegacy(
       return { propertyIds, propertyRows: [], units: [] };
     }
 
-    const [{ data: propertyRows }, { data: units }] = await Promise.all([
+    const [propertyResult, unitResult] = await Promise.all([
       admin
         .from("properties")
         .select("id, name")
@@ -34,7 +35,9 @@ export async function getDashboardDataLegacy(
         .select("id, occupied, property_id, unit_number")
         .in("property_id", propertyIds)
     ]);
-    return { propertyIds, propertyRows: propertyRows ?? [], units: units ?? [] };
+    if (propertyResult.error) throw propertyResult.error;
+    if (unitResult.error) throw unitResult.error;
+    return { propertyIds, propertyRows: propertyResult.data ?? [], units: unitResult.data ?? [] };
   })();
 
   const { data: profile, error: profileError } = await profilePromise;
@@ -68,7 +71,7 @@ export async function getDashboardDataLegacy(
     };
   }
 
-  const [{ data: leaseRows }, { data: maintenance }] = await Promise.all([
+  const [leaseResult, maintenanceResult] = await Promise.all([
     admin
       .from("leases")
       .select("id, monthly_rent_cents, active, unit_id, tenant_profile_id, collects_outside_domus")
@@ -79,16 +82,23 @@ export async function getDashboardDataLegacy(
       .in("property_id", propertyIds)
       .in("status", ["open", "in_progress"])
   ]);
-
-  const leases = leaseRows ?? [];
+  if (leaseResult.error) throw leaseResult.error;
+  if (maintenanceResult.error) throw maintenanceResult.error;
+  const leases = leaseResult.data ?? [];
+  const maintenance = maintenanceResult.data ?? [];
   const activeLeases = leases.filter((lease) => lease.active);
   const leaseIds = leases.map((lease) => lease.id);
 
   const propertyNameById = new Map(properties.map((property) => [property.id, property.name]));
   const unitById = new Map(unitsRows.map((unit) => [unit.id, unit]));
-  const leaseById = new Map(leases.map((lease) => [lease.id, lease]));
+  const leaseById = new Map(leases.map((lease) => {
+    const propertyId = unitById.get(lease.unit_id)?.property_id;
+    return [lease.id, {
+      ...lease, clientHome: propertyId ? clientFlags.get(propertyId) === true : false
+    }] as const;
+  }));
   const lateEligibleLeaseIds = leases
-    .filter((lease) => !isCollectedOutsideDomus(lease))
+    .filter((lease) => tracksLateRent(leaseById.get(lease.id)))
     .map((lease) => lease.id);
 
   const tenantIds = Array.from(
@@ -104,7 +114,9 @@ export async function getDashboardDataLegacy(
         .from("profiles")
         .select("id, full_name, email")
         .in("id", tenantIds)
-    : Promise.resolve({ data: [] as Array<{ id: string; full_name: string | null; email: string | null }> });
+    : Promise.resolve({
+        data: [] as Array<{ id: string; full_name: string | null; email: string | null }>, error: null
+      });
 
   let charges: Array<{
     id: string;
@@ -194,7 +206,7 @@ export async function getDashboardDataLegacy(
 
     const chargeIdsForLease = (leaseChargeIdRows.data ?? []).map((row) => row.id);
 
-    const { data: recentPaymentRows } = chargeIdsForLease.length
+    const { data: recentPaymentRows, error: recentPaymentError } = chargeIdsForLease.length
       ? await admin
           .from("payments")
           .select("id, amount_cents, paid_at, method, rent_charge_id")
@@ -202,7 +214,8 @@ export async function getDashboardDataLegacy(
           .gte("paid_at", thirtyDaysAgo.toISOString())
           .order("paid_at", { ascending: false })
           .limit(10)
-      : { data: [] as Array<{ id: string; amount_cents: number; paid_at: string; method: string; rent_charge_id: string }> };
+      : { data: [] as Array<{ id: string; amount_cents: number; paid_at: string; method: string; rent_charge_id: string }>, error: null };
+    if (recentPaymentError) throw recentPaymentError;
 
     const paidChargeIds = (recentPaymentRows ?? []).map((payment) => payment.rent_charge_id);
     const pendingLateRows = (pendingLateChargeRows.data ?? []) as Array<{
@@ -347,7 +360,8 @@ export async function getDashboardDataLegacy(
     }>;
   }
 
-  const { data: tenantProfiles } = await tenantProfilesPromise;
+  const { data: tenantProfiles, error: tenantProfilesError } = await tenantProfilesPromise;
+  if (tenantProfilesError) throw tenantProfilesError;
   const tenantNameById = new Map(
     (tenantProfiles ?? []).map((profile) => [profile.id, profile.full_name || profile.email || "Unknown tenant"])
   );
@@ -441,7 +455,8 @@ export async function getDashboardDataLegacy(
         tenantReportedPaidAt: charge.tenant_reported_paid_at ?? null,
         reminderSentAt: reminderSentAtByChargeId.get(charge.id) ?? null,
         ...getChargeAuditSummary(chargeHistoryById.get(charge.id) ?? []),
-        collectsOutsideDomus: isCollectedOutsideDomus(lease)
+        collectsOutsideDomus: isCollectedOutsideDomus(lease),
+        ...(role === "manager" ? { clientHome: lease?.clientHome ?? false } : {})
       };
     }),
     recentPayments: recentPayments.map((payment) => {

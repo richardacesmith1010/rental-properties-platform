@@ -8,7 +8,7 @@ import {
   getAdministeredPropertyIds,
   getAdministeredPropertyIdsForAccount
 } from "@/lib/property-access";
-import { isCollectedOutsideDomus, type LeaseCollectionPreference } from "@/lib/lease-collection";
+import { getClientHomeFlags, tracksLateRent, type LeaseCollectionPreference } from "@/lib/lease-collection";
 
 export interface DashboardKpis {
   monthlyGrossRentCents: number;
@@ -48,13 +48,14 @@ export interface DashboardCharge {
   latestEditedByName?: string | null;
   editedCount?: number;
   collectsOutsideDomus?: boolean;
+  clientHome?: boolean;
 }
 
 export function getDashboardChargeStatus(
   status: ChargeStatus,
   lease: LeaseCollectionPreference | null | undefined
 ): ChargeStatus {
-  return status === "late" && isCollectedOutsideDomus(lease) ? "pending" : status;
+  return status === "late" && !tracksLateRent(lease) ? "pending" : status;
 }
 
 interface RecentPayment {
@@ -132,6 +133,10 @@ export async function getDashboardData(
     ? await getAdministeredPropertyIdsForAccount(userId, accountId)
     : await getAdministeredPropertyIds(userId));
   if (!propertyIds.length) return emptyData((role ?? "tenant") as DashboardData["profileRole"]);
+  const clientFlags = role === "manager" ? await getClientHomeFlags(admin, propertyIds) : new Map<string, boolean>();
+  if (role === "manager") {
+    return getDashboardDataLegacy(userId, accountId, propertyIds, role, clientFlags);
+  }
   try {
     const { data, error } = await admin.rpc("owner_dashboard_payload", {
       p_property_ids: propertyIds,
@@ -149,5 +154,5 @@ export async function getDashboardData(
     const code = /^[A-Z0-9]{5,10}$/.test(rawCode) ? rawCode : "UNKNOWN";
     console.error("owner_rpc_fallback_error", code);
   }
-  return getDashboardDataLegacy(userId, accountId, propertyIds, role as DashboardData["profileRole"]);
+  return getDashboardDataLegacy(userId, accountId, propertyIds, role as DashboardData["profileRole"], clientFlags);
 }

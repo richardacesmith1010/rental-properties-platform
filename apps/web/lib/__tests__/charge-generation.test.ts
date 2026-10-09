@@ -21,6 +21,8 @@ import {
 
 function createLateFeeSupabaseMock(params: {
   collectsOutsideDomus: boolean;
+  clientHome?: boolean;
+  accountError?: boolean;
   existingLateFee?: boolean;
 }) {
   const update = vi.fn(() => {
@@ -104,6 +106,19 @@ function createLateFeeSupabaseMock(params: {
         };
       }
 
+      if (table === "properties") {
+        return { select: vi.fn(() => ({ in: vi.fn(async () => ({
+          data: [{ id: "property-1", owner_account_id: "account-1" }], error: null
+        })) })) };
+      }
+
+      if (table === "ownership_accounts") {
+        return { select: vi.fn(() => ({ in: vi.fn(async () => ({
+          data: [{ id: "account-1", managed_client: params.clientHome === true }],
+          error: params.accountError ? new Error("account lookup failed") : null
+        })) })) };
+      }
+
       if (table === "profiles") {
         return {
           select: vi.fn(() => ({
@@ -121,6 +136,7 @@ function createLateFeeSupabaseMock(params: {
 
   return {
     supabase: client as unknown as SupabaseClient,
+    from: client.from,
     update,
     insert
   };
@@ -330,6 +346,28 @@ describe("charge generation", () => {
     ).resolves.toBe(0);
     expect(update).not.toHaveBeenCalled();
     expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("marks outside client rent late without a fee using one account lookup", async () => {
+    setToday("2026-10-03T12:00:00.000Z");
+    const { supabase, from, update, insert } = createLateFeeSupabaseMock({
+      collectsOutsideDomus: true, clientHome: true
+    });
+    await applyLateFeesToOverdueCharges(supabase, ["lease-1"], "2026-10-03");
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(insert).not.toHaveBeenCalled();
+    expect(createNotificationWithDeliveryMock).not.toHaveBeenCalled();
+    expect(notifyOwnerMembersForPropertyMock).not.toHaveBeenCalled();
+    expect(from.mock.calls.filter(([table]) => table === "ownership_accounts")).toHaveLength(1);
+  });
+
+  it("throws when the batched client lookup fails", async () => {
+    setToday("2026-10-03T12:00:00.000Z");
+    const { supabase } = createLateFeeSupabaseMock({
+      collectsOutsideDomus: true, accountError: true
+    });
+    await expect(applyLateFeesToOverdueCharges(supabase, ["lease-1"], "2026-10-03"))
+      .rejects.toThrow("account lookup failed");
   });
 
   it("remains idempotent when the flagged late job runs repeatedly", async () => {

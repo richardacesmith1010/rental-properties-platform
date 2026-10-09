@@ -1,4 +1,4 @@
-import { isCollectedOutsideDomus, type LeaseCollectionPreference } from "@/lib/lease-collection";
+import { tracksLateRent, type LeaseCollectionPreference } from "@/lib/lease-collection";
 
 interface ManagerCharge {
   id: string;
@@ -12,7 +12,7 @@ export function getManagerChargeStatus(
   status: ManagerCharge["status"],
   lease: LeaseCollectionPreference | null | undefined
 ): ManagerCharge["status"] {
-  return status === "late" && isCollectedOutsideDomus(lease) ? "pending" : status;
+  return status === "late" && !tracksLateRent(lease) ? "pending" : status;
 }
 
 export function summarizeManagerLateCharges(
@@ -20,7 +20,7 @@ export function summarizeManagerLateCharges(
   leaseById: ReadonlyMap<string, LeaseCollectionPreference>
 ) {
   const lateCharges = charges.filter(
-    (charge) => !isCollectedOutsideDomus(leaseById.get(charge.lease_id))
+    (charge) => tracksLateRent(leaseById.get(charge.lease_id))
   );
   return {
     lateRentCents: lateCharges.reduce((sum, charge) => sum + charge.amount_cents, 0),

@@ -1,6 +1,7 @@
 import type { ChargeDetailRecordDTO } from "@/lib/charge-audit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
+import { getClientHomeFlags, tracksLateRent } from "@/lib/lease-collection";
 import { differenceInDays, getChargeDetailsForLeases, getLeasesForScope } from "./reports-rent-roll";
 
 export interface DelinquencyItem {
@@ -45,7 +46,10 @@ export function bucketDelinquencyDays(
   return "ninetyPlus";
 }
 
-export async function getDelinquencyReport(userId: string): Promise<DelinquencyItem[]> {
+export async function getDelinquencyReport(
+  userId: string,
+  managerView = false
+): Promise<DelinquencyItem[]> {
   try {
     const admin = createAdminClient();
     const { context, leases, tenantById } = await getLeasesForScope(userId);
@@ -65,13 +69,20 @@ export async function getDelinquencyReport(userId: string): Promise<DelinquencyI
 
     const { data: delinquencyLeases, error: delinquencyLeasesError } = await admin
       .from("leases")
-      .select("id")
-      .in("id", leaseIds)
-      .eq("collects_outside_domus", false);
+      .select("id, unit_id, collects_outside_domus")
+      .in("id", leaseIds);
     if (delinquencyLeasesError) {
       throw delinquencyLeasesError;
     }
-    const delinquencyLeaseIds = new Set((delinquencyLeases ?? []).map((lease) => lease.id));
+    const clientFlags = managerView
+      ? await getClientHomeFlags(admin, context.propertyIds) : new Map<string, boolean>();
+    const delinquencyLeaseIds = new Set((delinquencyLeases ?? [])
+      .filter((lease) => {
+        const propertyId = context.unitById.get(lease.unit_id)?.propertyId;
+        return tracksLateRent({
+          ...lease, clientHome: propertyId ? clientFlags.get(propertyId) === true : false
+        });
+      }).map((lease) => lease.id));
 
     const todayIso = new Date().toISOString().slice(0, 10);
     const grouped = new Map<string, DelinquencyItem>();

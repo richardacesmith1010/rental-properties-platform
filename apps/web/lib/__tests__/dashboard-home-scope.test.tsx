@@ -16,7 +16,8 @@ const portfolio: PortfolioData = {
   leases: [], tenants: []
 };
 const charges = homes.map((home) => ({ propertyId: home.id, status: "late", amountCents: 100,
-  category: "rent", dueDate: "2026-01-01", leaseId: `l-${home.id}` }));
+  category: "rent", dueDate: "2026-01-01", leaseId: `l-${home.id}`,
+  collectsOutsideDomus: true, clientHome: home.ownerAccountIsClient }));
 const tickets = homes.map((home) => ({ propertyId: home.id, status: "open", priority: "high" }));
 
 function renderScope(role: "manager" | "owner", initialPropertyId?: string, initialAccountId?: string) {
@@ -34,6 +35,11 @@ function renderScope(role: "manager" | "owner", initialPropertyId?: string, init
 
 describe("dashboard home scope", () => {
   beforeEach(() => window.history.replaceState(null, "", "/manager?section=charges"));
+
+  it("counts only client outside-Domus late rent in the manager nav badge", () => {
+    const { result } = renderScope("manager");
+    expect(result.current.chargeBadgeCount).toBe(2);
+  });
 
   it("filters manager portfolio, charges, tickets, KPIs and cash flow by account or home", () => {
     const { result } = renderScope("manager");

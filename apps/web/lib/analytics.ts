@@ -1,5 +1,5 @@
 import { average } from "@/lib/analytics-average";
-import { isCollectedOutsideDomus, type LeaseCollectionPreference } from "@/lib/lease-collection";
+import { tracksLateRent, type LeaseCollectionPreference } from "@/lib/lease-collection";
 
 export interface MonthlyRentMetric {
   month: string;
@@ -147,7 +147,7 @@ export function buildRentMetrics(
       }
       if (
         charge.status === "late" &&
-        !isCollectedOutsideDomus(leaseById.get(charge.lease_id))
+        tracksLateRent(leaseById.get(charge.lease_id))
       ) {
         metric.lateCents += charge.amount_cents;
       }
