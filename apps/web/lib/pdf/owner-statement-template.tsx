@@ -18,7 +18,7 @@ const s = StyleSheet.create({
   footer: { position: "absolute", left: 36, right: 36, bottom: 23, fontSize: 8, color: "#666d75" },
   pageNumber: { position: "absolute", right: 36, bottom: 10, fontSize: 8, color: "#666d75" }
 });
-const money = (cents: number) => `${cents < 0 ? "−" : ""}$${(Math.abs(cents) / 100).toLocaleString("en-US", {
+export const formatStatementMoney = (cents: number) => `${cents < 0 ? "-" : ""}$${(Math.abs(cents) / 100).toLocaleString("en-US", {
   minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 function Table({ title, headers, rows }: { title: string; headers: string[]; rows: string[][] }) {
   const groups: string[][][] = [];
@@ -44,21 +44,21 @@ export function OwnerStatementDocument({ statement }: { statement: OwnerStatemen
       ["Payments recorded", totals.paymentsCents], ["Expenses", totals.expensesCents],
       ["Net", totals.netCents], ["Still owed", totals.stillOwedCents]
     ] as const).map(([label, value]) => <View key={label} style={s.total}>
-      <Text>{label}</Text><Text style={s.totalValue}>{money(value)}</Text>
+      <Text>{label}</Text><Text style={s.totalValue}>{formatStatementMoney(value)}</Text>
     </View>)}</View>
     <Table title="By home" headers={["Home", "Payments", "Expenses", "Net"]}
-      rows={[...statement.homes.map((row) => [row.name, money(row.paymentsCents),
-        money(row.expensesCents), money(row.netCents)]),
-      ["Total", money(totals.paymentsCents), money(totals.expensesCents), money(totals.netCents)]]} />
+      rows={[...statement.homes.map((row) => [row.name, formatStatementMoney(row.paymentsCents),
+        formatStatementMoney(row.expensesCents), formatStatementMoney(row.netCents)]),
+      ["Total", formatStatementMoney(totals.paymentsCents), formatStatementMoney(totals.expensesCents), formatStatementMoney(totals.netCents)]]} />
     <Table title="Payments recorded" headers={["Date", "Home", "Tenant", "Kind", "Method", "Amount"]}
       rows={statement.payments.map((row) => [row.date, row.homeLabel, row.tenantLabel, row.kindLabel,
-        row.methodLabel, money(row.amountCents)])} />
+        row.methodLabel, formatStatementMoney(row.amountCents)])} />
     <Table title="Expenses" headers={["Date", "Home", "Kind", "Note", "Amount"]}
-      rows={statement.expenses.map((row) => [row.date, row.homeLabel, row.kindLabel, row.note, money(row.amountCents)])} />
+      rows={statement.expenses.map((row) => [row.date, row.homeLabel, row.kindLabel, row.note, formatStatementMoney(row.amountCents)])} />
     <Table title="Not counted" headers={["Date", "Home", "Kind", "Amount"]}
-      rows={statement.notCounted.map((row) => [row.date, row.homeLabel, row.label, money(row.amountCents)])} />
+      rows={statement.notCounted.map((row) => [row.date, row.homeLabel, row.label, formatStatementMoney(row.amountCents)])} />
     <Table title="Still owed" headers={["Due", "Home", "Amount"]}
-      rows={statement.owed.map((row) => [row.dueDate, row.homeLabel, money(row.amountCents)])} />
+      rows={statement.owed.map((row) => [row.dueDate, row.homeLabel, formatStatementMoney(row.amountCents)])} />
     <Text style={s.footer} fixed>Rent for these homes is paid outside Domus. Made {madeDate(statement.generatedAt)} from your
       manager&apos;s records. Later fixes to records can change this statement.</Text>
     <Text style={s.pageNumber} fixed render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />

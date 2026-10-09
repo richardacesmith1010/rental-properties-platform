@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { renderToBuffer } from "@react-pdf/renderer";
-import { OwnerStatementDocument } from "../pdf/owner-statement-template";
+import { OwnerStatementDocument, formatStatementMoney } from "../pdf/owner-statement-template";
 import type { OwnerStatement } from "../owner-statement";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -12,6 +12,12 @@ const blank: OwnerStatement = {
   homes: [], payments: [], expenses: [], notCounted: [], owed: []
 };
 describe("statement exports", () => {
+  it("formats negative statement amounts with an ASCII minus sign", () => {
+    expect(formatStatementMoney(-140000)).toBe("-$1,400.00");
+    expect(formatStatementMoney(-140000)).not.toContain("\u2212");
+    expect(formatStatementMoney(5)).toBe("$0.05");
+    expect(formatStatementMoney(-5)).toBe("-$0.05");
+  });
   it("renders an empty letter PDF", async () => {
     const buffer = await renderToBuffer(<OwnerStatementDocument statement={blank} />);
     expect(buffer.subarray(0, 4).toString()).toBe("%PDF");
@@ -24,6 +30,13 @@ describe("statement exports", () => {
     const buffer = await renderToBuffer(<OwnerStatementDocument statement={statement} />);
     expect(buffer.subarray(0, 4).toString()).toBe("%PDF");
     expect(buffer.length).toBeGreaterThan(5000);
+  });
+  it("renders a reversal payment row as a PDF", async () => {
+    const statement: OwnerStatement = { ...blank,
+      payments: [{ date: "2026-10-01", homeLabel: "House", tenantLabel: "J. Doe",
+        kindLabel: "Reversal", methodLabel: "Cash", amountCents: -140000 }] };
+    const buffer = await renderToBuffer(<OwnerStatementDocument statement={statement} />);
+    expect(buffer.subarray(0, 4).toString()).toBe("%PDF");
   });
   it("keeps exports free of data loaders", () => {
     for (const file of ["owner-statement-csv.ts", "pdf/owner-statement-template.tsx"]) {
