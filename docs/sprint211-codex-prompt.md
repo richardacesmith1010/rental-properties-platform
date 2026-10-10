@@ -1,4 +1,4 @@
-# Sprint 211 — Notification rules v1 (L3: decides who sees what) · rev 2 (ChatGPT REJECT → 7 of 8 required changes adopted; #1 was a misread, clarified in §2)
+# Sprint 211 — Notification rules v1 (L3: decides who sees what) · rev 3 (rev 1 REJECT → rev 2 APPROVE WITH CHANGES → all 4 required + optional 1, 3 adopted)
 
 Owner approved the plan in `docs/notifications-plan.md` on 2026-10-10 ("yes to all"). Notifications stay OFF in production after this sprint. This sprint only makes the rules correct and adds a test-only mode.
 
@@ -33,9 +33,15 @@ Make every notification go to the right people, and add a safe way to turn notif
 ### A. Three modes (`lib/notifications-switch.ts`), fail closed
 1. `notificationMode(): "off" | "test" | "on"`:
    - parse `DOMUS_NOTIFICATIONS_ALLOWLIST` (comma-separated): trim, lowercase, drop empties and duplicates, and **drop any entry that isn't a valid email** (simple `local@domain.tld` check);
-   - if the parsed list is non-empty → `"test"`, **even if** `DOMUS_NOTIFICATIONS_ENABLED === "true"` (the stricter setting wins; log one warning `[notifications] both set: using test mode`);
-   - else if `DOMUS_NOTIFICATIONS_ENABLED === "true"` → `"on"`;
-   - else `"off"`. A malformed or unknown value never yields `"on"`.
+   - the mode follows this table exactly ("configured" = the allowlist var is set and non-blank):
+
+     | Allowlist | `ENABLED` | Mode |
+     |---|---|---|
+     | not configured | unset or not `"true"` | off |
+     | not configured | `"true"` | on |
+     | configured, ≥1 valid entry | any | test (log one warning `[notifications] both set: using test mode` if ENABLED is `"true"`) |
+     | configured, **no** valid entries | any | **off** (log one warning `[notifications] allowlist invalid: off`) |
+   - A malformed or unknown value never yields `"on"`.
 2. `notificationsEnabled()` returns `mode !== "off"`, so the crons run in test mode.
 3. **Recipient gate, inside `createNotificationWithDelivery`, before any write:**
    - `"off"`: return.
@@ -64,7 +70,10 @@ Make every notification go to the right people, and add a safe way to turn notif
      excludeActor: boolean;
    }
    ```
-   `rulesFor(event)` returns the rule. Events not listed keep today's behavior; only the actor-exclusion change in §C applies to them.
+   `rulesFor(event)` returns the rule; a manager-scope helper, if any, takes the **event** (not the type).
+   - **Events not in this table** (messages, documents, invites, payouts, LLC approvals, announcements, application reviewed, invite accepted, Stripe-issue alert) keep today's recipients.
+   - Their only change: when a fan-out helper today receives `actorProfileId` for a user's own action, that actor is now excluded.
+   - Automated, webhook and critical alerts (e.g. the Stripe-issue alert) never exclude anyone.
 2. **Who counts as an owner of a home:** active `ownership_account_members` with `member_role = 'owner'` and `can_receive_critical_alerts`, on **that home's current** `properties.owner_account_id` (looked up from the DB by property id at send time). Recipients by kind of home:
    - **ordinary home:** its account's owners, plus its managers when the rule allows;
    - **unclaimed client home:** no owner members exist, so only managers (by the rule) and the tenant;
@@ -105,13 +114,21 @@ Make every notification go to the right people, and add a safe way to turn notif
 - **Ticket comments** use event `ticket_comment` (DB type stays `new_ticket`). Recipients come from the stored ticket's property and its tenant, minus the author (by profile id, even if they hold several roles).
 - **Avoid an extra query per tenant.** Where the lease row is already loaded, read `collects_outside_domus` from it. Otherwise add the column to the existing select.
 
-### D. Inbox mirror
-`ensureInboxThreadForEvent` runs only when `notificationMode() === "on"`.
+### D. Side-effect contract per mode
+- **off:** no notification rows, no delivery rows, no notification emails, no inbox-thread mirrors.
+- **test:** allowlisted (and authorized) recipients get normal notification rows and emails, per preferences and the event's email setting. **No inbox-thread mirror is created for anyone**, including allowlisted people (`ensureInboxThreadForEvent` runs only in `"on"`).
+- **on:** everything as designed.
+- **Always unaffected:** business records and inbox conversations people write themselves (messages, tickets, comments).
+
+### D2. Timing of authorization (no stale lists)
+- Delivery is synchronous today: recipients are chosen and the row and email are written in the same call. Confirm this in the report. If you find any queued or retried email path, list it and make it re-check the recipient (§2 rule + mode gate) right before sending, failing closed.
+- Do **not** add any queue, retry worker or cached recipient list.
+- `emailMode: "never"` must hold on every path that can send email for that row.
 
 ### E. User messages (exact copy, L-020)
 In `app/actions/notifications.ts` and `app/actions/announcements.ts`, every success message branches on the mode:
 - `"on"`: unchanged.
-- `"test"`: `Saved. Domus is in test mode, so only test accounts were notified.`
+- `"test"`: `Saved. Domus is in test mode. Only test accounts can get notices.`
 - `"off"`: unchanged (`Saved. Notifications are off until launch, so no one was notified.`).
 
 List every other return string you touch in the report.
@@ -167,8 +184,7 @@ For each, give its event, its recipients, and the gate it passes (mode gate, or 
 Each item needs its own test that calls the real code.
 1. **Modes:** `off`, `test` and `on` resolve correctly, including:
    - an empty env var, uppercase emails, spaces, duplicates, and malformed entries (dropped);
-   - an allowlist of only malformed entries resolves to `"off"` unless `ENABLED` is set;
-   - both variables set resolves to `"test"`.
+   - every row of the §A1 table, including that an allowlist of only malformed entries is `"off"` even with `ENABLED="true"`.
 2. **Test mode blocks everyone not on the list.** It writes no in-app row, no delivery row and no email (assert the admin mock got no `upsert`, insert or `fetch`). A listed recipient gets both. Also:
    - the caller passes a listed `recipientEmail`, but the profile's real email isn't listed: blocked;
    - the profile lookup fails or the email is missing: blocked.
@@ -192,7 +208,8 @@ Each item needs its own test that calls the real code.
    - autopay or bank failure still reaches the tenant (Domus payment).
 6. **Tickets:** a new ticket sends nothing to the tenant. Ticket fixed sends to the tenant only. A ticket comment creates in-app rows and sends **no** email.
 7. **Leases:** a lease edit sends the tenant an in-app row with no email and sends nothing to owners. Lease ending in 30 days now reaches owners and managers.
-8. **Inbox mirror:** it does not run in `off` or `test` mode, and does run in `on`.
+8. **Inbox mirror:** it does not run in `off` or `test` mode (including for an allowlisted recipient, who still gets the notification row), and does run in `on`.
+8c. **Events outside the table:** an announcement and a message don't notify their sender. An invitation keeps today's behavior. An autopay failure reaches every owner.
 8b. **Partial failure:** if one recipient's lookup or send fails in a multi-recipient event, the others still get theirs, nobody extra is added, and no recipient's data appears in another's notice.
 9. **Copy:** the §E messages are exact in each mode.
 10. **Clean rename:** `grep -rn notifyOwnerMembersForProperty apps/web` returns 0 results.
