@@ -472,3 +472,18 @@
     opacity: 0.72;
   }
 }
+
+/* Native presentation only; dashboards already inset their MobileTopBar. */
+.domus-native .domus-landing-header,
+.domus-native .domus-login-page {
+  padding-top: env(safe-area-inset-top);
+}
+
+.domus-native {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.domus-native a,
+.domus-native button {
+  -webkit-touch-callout: none;
+}

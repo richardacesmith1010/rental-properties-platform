@@ -1,10 +1,30 @@
 {
-  "name": "Domus — Rental Property Management",
+  "name": "Domus \u2014 Rental Property Management",
   "short_name": "Domus",
   "description": "Professional rental property management for landlords with 1-10 units.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#7c3aed",
-  "orientation": "portrait-primary"
+  "theme_color": "#FBFBF9",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
 }

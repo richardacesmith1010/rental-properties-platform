@@ -1,11 +1,22 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import LoginPage from "@/app/login/page";
 
+const { getUser, getRole, redirect } = vi.hoisted(() => ({
+  getUser: vi.fn(), getRole: vi.fn(), redirect: vi.fn()
+}));
+vi.mock("@/lib/auth", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/auth")>(), getCurrentUserRole: getRole
+}));
+beforeEach(() => {
+  getUser.mockResolvedValue({ data: { user: null } });
+  redirect.mockImplementation((url: string) => { throw new Error(`REDIRECT:${url}`); });
+});
+
 vi.mock("next/headers", () => ({ cookies: () => ({ get: () => undefined }) }));
-vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
+vi.mock("next/navigation", () => ({ redirect }));
 vi.mock("@/lib/supabase/server", () => ({
-  createClient: () => ({ auth: { getUser: async () => ({ data: { user: null } }) } })
+  createClient: () => ({ auth: { getUser } })
 }));
 vi.mock("@/components/auth/role-selector", () => ({
   RoleSelector: ({ initialRole, initialMode }: { initialRole?: string; initialMode?: string }) => (
@@ -16,6 +27,18 @@ vi.mock("@/components/auth/role-selector", () => ({
 }));
 
 describe("LoginPage", () => {
+  it.each(["owner", "manager", "tenant"])("redirects a signed-in %s to their role home", async (role) => {
+    getUser.mockResolvedValue({ data: { user: { id: "test-user" } } });
+    getRole.mockResolvedValue(role);
+    await expect(LoginPage({})).rejects.toThrow(`REDIRECT:/${role}`);
+    expect(getRole).toHaveBeenCalledWith("test-user");
+  });
+
+  it("places the native safe-area hook on the login top container", async () => {
+    const page = await LoginPage({});
+    expect(page.props.className.split(" ")).toContain("domus-login-page");
+  });
+
   it("opens owner sign-up with the right heading and form", async () => {
     render(await LoginPage({ searchParams: Promise.resolve({ mode: "signup", role: "owner" }) }));
     expect(screen.getByText("Create your account")).toBeInTheDocument();

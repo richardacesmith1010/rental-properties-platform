@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Domus — Offline</title>
+  <style>
+    :root { color-scheme: light dark; --bg: #FBFBF9; --text: #121316; --accent: #1D4ED8; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #121316; --text: #FBFBF9; --accent: #2563EB; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; min-height: 100svh; display: grid; place-items: center;
+      padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+      background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; text-align: center; }
+    .wordmark { font-size: 32px; font-weight: 700; letter-spacing: .12em; }
+    h1 { font-size: 24px; margin-top: 48px; }
+    p { line-height: 1.5; }
+    a { display: inline-flex; align-items: center; justify-content: center; min-height: 48px;
+      padding: 12px 28px; margin-top: 16px; border-radius: 12px; background: var(--accent);
+      color: #FFFFFF; font-weight: 600; text-decoration: none; }
+  </style>
+</head>
+<body><main>
+  <div class="wordmark" aria-label="Domus">DOMUS</div>
+  <h1>Can't reach Domus right now.</h1>
+  <p>Check your connection, then try again.</p>
+  <a href="https://domusbase.com" title="Try loading Domus again">Try again</a>
+</main></body>
+</html>

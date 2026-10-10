@@ -42,7 +42,7 @@ export default async function LoginPage(props: LoginPageProps) {
   }
 
   return (
-    <div className="app-surface min-h-screen">
+    <div className="domus-login-page app-surface min-h-screen">
       <div className="flex min-h-screen flex-col lg:grid lg:grid-cols-[1.05fr_0.95fr]">
         <section className="hidden relative overflow-hidden border-b border-[var(--line)] bg-[var(--ground)] px-5 py-8 text-[var(--ink)] sm:px-8 lg:flex lg:flex-col lg:justify-between lg:border-b-0 lg:border-r lg:px-12 lg:py-12">
           <div className="relative z-10 flex items-center justify-between">

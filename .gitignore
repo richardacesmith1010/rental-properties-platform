@@ -19,3 +19,9 @@ test-results/
 apps/web/test-results/
 **/test-results/
 .playwright-cli/
+
+# Standalone Capacitor iPhone shell
+apps/ios/node_modules/
+apps/ios/ios/App/build/
+**/DerivedData/
+**/xcuserdata/

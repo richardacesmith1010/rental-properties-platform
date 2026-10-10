@@ -1,0 +1,23 @@
+{
+  "name": "@domus/ios",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "sync": "cap sync ios",
+    "open": "cap open ios",
+    "assets": "node scripts/assets.mjs && capacitor-assets generate --ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "8.5.3",
+    "@capacitor/ios": "8.5.3",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/splash-screen": "8.0.2",
+    "@capacitor/status-bar": "8.0.4"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.3",
+    "@capacitor/assets": "3.0.5",
+    "sharp": "0.34.5",
+    "typescript": "5.6.3"
+  }
+}

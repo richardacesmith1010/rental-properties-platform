@@ -1,3 +1,4 @@
+import { isNativeApp } from "@/lib/native-app";
 import type {
   DelinquencyItem,
   MonthlyPnLRow,
@@ -29,6 +30,20 @@ function buildCsv(headers: string[], rows: Array<Array<string | number | null | 
 }
 
 export function downloadReportCsv(filename: string, csvContent: string): void {
+  if (isNativeApp()) {
+    const nativeWindow = window as Window & {
+      webkit?: { messageHandlers?: { domusShareCsv?: {
+        postMessage: (message: { filename: string; csv: string }) => void;
+      } } };
+    };
+    const handler = nativeWindow.webkit?.messageHandlers?.domusShareCsv;
+    if (handler) {
+      handler.postMessage({ filename, csv: csvContent });
+      return;
+    }
+    window.alert("Download failed. Try again.");
+    return;
+  }
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");

@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
+import { isNativeApp } from "@/lib/native-app";
+
 const DISMISS_KEY = "domus-install-dismissed-until";
 const DISMISS_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -91,6 +93,7 @@ function detectStandaloneMode() {
 }
 
 function refreshInstallEnvironment() {
+  if (isNativeApp()) return;
   const isInstalled = detectStandaloneMode();
   const isIos = detectIosInstallSupport();
   const isMobile = detectMobileViewport();
@@ -107,7 +110,7 @@ function refreshInstallEnvironment() {
 }
 
 function registerServiceWorker() {
-  if (serviceWorkerRegistered || typeof window === "undefined" || !("serviceWorker" in window.navigator)) {
+  if (isNativeApp() || serviceWorkerRegistered || typeof window === "undefined" || !("serviceWorker" in window.navigator)) {
     return;
   }
 
@@ -128,7 +131,7 @@ function registerServiceWorker() {
 }
 
 function registerInstallListeners() {
-  if (listenersRegistered || typeof window === "undefined") {
+  if (isNativeApp() || listenersRegistered || typeof window === "undefined") {
     return;
   }
 
@@ -220,7 +223,7 @@ export function InstallPromptBanner() {
 
   const shouldRender = ready && !isInstalled && isMobile && !dismissedUntil && canInstall;
 
-  if (!shouldRender) {
+  if (isNativeApp() || !shouldRender) {
     return null;
   }
 
@@ -332,6 +335,8 @@ export function InstallDomusSettingsCard() {
 
     setFeedback("Install prompt is not available on this device yet.");
   };
+
+  if (!ready || isNativeApp()) return null;
 
   return (
     <Card className="border border-border/60 shadow-sm">

@@ -7,6 +7,7 @@ import { InstallPromptBanner } from "@/components/pwa/install-prompt";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SonnerProvider } from "@/components/ui/sonner-provider";
 import { DOMUS_THEME_ATTRIBUTE, DOMUS_THEME_KEY } from "@/lib/theme";
+import { isNativeAppServer } from "@/lib/native-app-server";
 import "./globals.css";
 
 const inter = Inter({
@@ -65,6 +66,13 @@ export const metadata: Metadata = {
     copyright: `© ${new Date().getFullYear()} Domus. All rights reserved.`
   },
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" }
+    ],
+    apple: { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -80,12 +88,16 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#7c3aed"
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#FBFBF9" },
+    { media: "(prefers-color-scheme: dark)", color: "#121316" }
+  ]
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const native = await isNativeAppServer();
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={native ? "domus-native" : undefined} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -96,7 +108,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${inter.variable} font-sans`}>
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-[var(--accent)] focus:px-4 focus:py-2 focus:text-white focus:shadow-lg"
+          className={[
+            "sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg",
+            "focus:bg-[var(--accent)] focus:px-4 focus:py-2 focus:text-white focus:shadow-lg"
+          ].join(" ")}
         >
           Skip to main content
         </a>

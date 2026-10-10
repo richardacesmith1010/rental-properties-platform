@@ -10,7 +10,7 @@ const sectionClass = `${containerClass} py-16 sm:py-[72px]`;
 export function LandingPage() {
   return (
     <main id="main-content" className="overflow-x-hidden">
-      <header className="border-b border-[var(--line)] bg-[var(--surface)]">
+      <header className="domus-landing-header border-b border-[var(--line)] bg-[var(--surface)]">
         <div className={`${containerClass} flex flex-wrap items-center justify-between gap-4 py-4`}>
           <a href="#top" className="flex items-center gap-2.5 text-lg font-bold text-[var(--ink)]" title="Go to the top of the page.">
             <Home className="h-7 w-7 text-[var(--accent)]" aria-hidden="true" /> Domus

@@ -440,6 +440,12 @@ Every agent must treat mistakes as permanent lessons. This section is a living d
 **What was correct:** Every `useFormState` form must submit through `SubmitButton` so pending state is always visible to users.
 **Rule:** In any form powered by `useFormState`, use `SubmitButton` for the submit trigger (including delete/archive flows). If confirmation is required, intercept `onClick`, open confirm dialog, then call `form.requestSubmit()` on confirm.
 
+
+#### L-005 | 2026-10-09 | PATTERN
+**What happened:** Capacitor 8 generates a SceneDelegate that creates its own bridge controller, bypassing the storyboard controller.
+**What was correct:** Wire the custom bridge controller into both the scene entry point and storyboard, and use the scene foreground callback.
+**Rule:** Inspect generated native lifecycle entry points before wiring navigation or foreground behavior; storyboard changes alone are insufficient.
+
 ---
 
 ## 13. Continuous Codebase Grooming

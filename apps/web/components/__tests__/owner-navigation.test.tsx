@@ -7,6 +7,7 @@ import { OwnerAddMenu } from "@/components/dashboard/owner-add-menu";
 import { OwnerSectionCacheContext } from "@/components/dashboard/owner-section-cache";
 import { useDashboardNavigation } from "@/components/dashboard/dashboard-section-loaders";
 import { useDashboardWorkflowHandlers } from "@/components/dashboard/dashboard-workflow-handlers";
+import { applyTheme, DOMUS_THEME_ATTRIBUTE, normalizeTheme } from "@/lib/theme";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/owner", useRouter: () => ({ replace: vi.fn() }), useSearchParams: () => new URLSearchParams() }));
 vi.mock("@/components/theme-provider", () => ({ useDomusTheme: () => ({ theme: "light", setTheme: vi.fn() }) }));
@@ -173,5 +174,30 @@ describe("post-create and manager regression", () => {
     expect(result.current.sidebarItems.map(item => item.label)).not.toContain("Vendor Ops");
     act(() => result.current.handleSidebarSelect("maintenance"));
     expect(result.current.activeSection).toBe("maintenance");
+  });
+});
+
+describe("native dashboard safe areas", () => {
+  it.each(["owner", "manager", "tenant"])("keeps one top inset for %s in every theme", (role) => {
+    window.matchMedia = vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() });
+    const previousClass = document.documentElement.className;
+    const previousTheme = document.documentElement.getAttribute(DOMUS_THEME_ATTRIBUTE);
+    try {
+      for (const theme of ["atlas-light", "noctis-neon", "imperium-night"]) {
+        document.documentElement.className = "domus-native";
+        applyTheme(normalizeTheme(theme));
+        const view = render(<DashboardLayout {...navProps} role={role} mainClassName=""><div>Page</div></DashboardLayout>);
+        const insetElements = Array.from(view.container.querySelectorAll("[class]"))
+          .filter(element => element.getAttribute("class")?.includes("pt-[calc(env(safe-area-inset-top"));
+        expect(insetElements).toHaveLength(1);
+        expect(insetElements[0]).toHaveClass("pt-[calc(env(safe-area-inset-top,0px)+0.75rem)]");
+        expect(view.container.querySelector(".domus-login-page,.domus-landing-header")).toBeNull();
+        view.unmount();
+      }
+    } finally {
+      document.documentElement.className = previousClass;
+      if (previousTheme === null) document.documentElement.removeAttribute(DOMUS_THEME_ATTRIBUTE);
+      else document.documentElement.setAttribute(DOMUS_THEME_ATTRIBUTE, previousTheme);
+    }
   });
 });
