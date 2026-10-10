@@ -203,6 +203,16 @@
     opacity: 1;
   }
 
+  /* Components precede utilities, so larger text sizes still win. */
+  @media (pointer: coarse) {
+    input:where(:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"])),
+    select,
+    textarea,
+    .domus-input:where(:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"])) {
+      font-size: max(16px, 1em);
+    }
+  }
+
   .domus-input:focus-visible {
     border-color: var(--accent);
     box-shadow: 0 0 0 2px var(--accent-line);
@@ -308,6 +318,15 @@
 }
 
 @layer utilities {
+  /* Clamp the small utilities used on controls, without changing desktop text. */
+  @media (pointer: coarse) {
+    :where(
+      input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]), select, textarea
+    ):is(.text-xs, .text-sm) {
+      font-size: max(16px, 1em);
+    }
+  }
+
   .tabular-nums,
   .text-tabular {
     font-variant-numeric: tabular-nums;

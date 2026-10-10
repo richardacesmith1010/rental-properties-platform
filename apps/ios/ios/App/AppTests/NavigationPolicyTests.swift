@@ -2,6 +2,24 @@ import XCTest
 import WebKit
 @testable import App
 
+@MainActor
+final class InspectionPolicyTests: XCTestCase {
+    func testInspectionMatchesBuildAfterCapacitorDidLoad() throws {
+        #if DEBUG
+        XCTAssertTrue(InspectionPolicy.enabled)
+        #else
+        XCTAssertFalse(InspectionPolicy.enabled)
+        #endif
+        let controller = DomusBridgeViewController()
+        // loadView calls capacitorDidLoad; viewDidLoad would navigate to the live server.
+        controller.loadView()
+        let webView = try XCTUnwrap(controller.webView)
+        if #available(iOS 16.4, *) {
+            XCTAssertEqual(webView.isInspectable, InspectionPolicy.enabled)
+        }
+    }
+}
+
 final class NavigationPolicyTests: XCTestCase {
     func testTopLevelDestinations() {
         let cases: [(String, NavigationPolicy.Decision)] = [
