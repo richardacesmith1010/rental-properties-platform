@@ -724,3 +724,19 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 | Duplicate component name | `apps/web/components/dashboard/empty-state.tsx` and `apps/web/components/shared/empty-state.tsx` | Low priority, but the wrapper/shared duplication adds search noise. Consolidate if backward compatibility no longer needs both. |
 | Duplicate component name | `apps/web/components/dashboard/ownership-section.tsx` and `apps/web/components/dashboard/ownership/ownership-section.tsx` | Intentional barrel + implementation pair. Keep if import compatibility still depends on the barrel. |
 | Duplicate component name | `apps/web/components/dashboard/sidebar-nav.tsx` and `apps/web/components/dashboard/sidebar/sidebar-nav.tsx` | Intentional barrel + implementation pair. Keep if import compatibility still depends on the barrel. |
+
+## Sprint 211 / 211b SHIPPED (2026-10-10) — Notification rules v1 (L3)
+- Plan: `docs/notifications-plan.md` (owner: "yes to all"). Packet rev 3 after ChatGPT REJECT → APPROVE WITH CHANGES.
+- **DB (applied):** `20261010_sprint211_notification_grants.sql`. Direct writes to `notifications` / `notification_deliveries` are revoked from anon and authenticated, and `update(read_at)` is granted back. An attacker simulation (rolled back) showed insert, delete and title updates blocked (42501) while read_at updates still work.
+- **Code:**
+  - three modes in `lib/notifications-switch.ts`: off / test (`DOMUS_NOTIFICATIONS_ALLOWLIST`, canonical profile email, invalid-only list = off) / on;
+  - typed event policy in `lib/notification-policy.ts`;
+  - `notifyPropertyTeam` (renamed): current-account owners, plus managers under the live two-link rule (`lib/notification-recipients.ts`);
+  - outside-Domus tenants get no rent reminders, late notices or receipts (fail closed on a null flag); autopay and bank failures still reach them;
+  - actor exclusion applies to user actions only; ticket comments and lease edits are in-app only; inbox mirrors run only in "on".
+- **Verify:**
+  - gate passed with 1945 tests; smoke passed 13/13; CI green on `1a91e15`;
+  - the 211b tests were each proven to fail when their production line is flipped;
+  - production has no notification env vars set, so mode = **off**.
+- **Next (owner):** set `DOMUS_NOTIFICATIONS_ALLOWLIST` = owner email + smoke accounts in Vercel production to start the test week.
+- **Lessons:** Codex in a background Bash run needs `< /dev/null` (it hung about 1h). Packets must not tell Codex to run `gate:web` under a no-DB constraint (its runtime verifier reads Supabase).
