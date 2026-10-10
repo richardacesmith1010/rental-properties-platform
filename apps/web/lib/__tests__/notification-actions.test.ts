@@ -137,4 +137,18 @@ describe("notification actions", () => {
       href: "/tenant?section=notifications"
     });
   });
+  it.each([
+    ["payment_recorded", "rent_charge"],
+    ["late_rent", "rent_charge"],
+    ["delinquency_escalation", "rent_charge"],
+    ["new_ticket", "maintenance_ticket"],
+    ["lease_expiring_soon", "lease"],
+    ["lease_expired", "lease"]
+  ])("uses a manager destination for %s", (type, entityType) => {
+    const action = getPrimaryNotificationAction({
+      type, entityType, entityId: "entity-1", title: "Update", body: "Body"
+    }, "manager");
+    expect(action?.href.startsWith("/manager")).toBe(true);
+  });
+
 });

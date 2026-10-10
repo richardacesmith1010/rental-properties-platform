@@ -119,7 +119,7 @@ export async function submitWithdrawalRequest(
   }
 
   if (votesRequired === 1) {
-    const resolved = await resolveWithdrawal(request.id);
+    const resolved = await resolveWithdrawal(request.id, user.id);
     revalidatePath("/owner");
     if (resolved?.status === "approved") {
       return { success: true, message: "Withdrawal request approved immediately for this solo account." };
@@ -248,7 +248,7 @@ export async function voteOnWithdrawal(
     return { success: false, error: "Your vote was recorded, but the request tally could not be updated." };
   }
 
-  const resolved = await resolveWithdrawal(requestId);
+  const resolved = await resolveWithdrawal(requestId, user.id);
   revalidatePath("/owner");
 
   if (resolved?.status === "approved") {
@@ -457,7 +457,8 @@ export async function executeApprovedWithdrawal(
         title: "Withdrawal completed",
         body: `${formatCurrency(withdrawal.amount_cents)} was paid out to the approved member.`,
         entityType: "withdrawal_request",
-        entityId: withdrawal.id
+        entityId: withdrawal.id,
+        excludeProfileId: user.id
       }).catch(
         sideEffectError("executeApprovedWithdrawal", "notify_account_members", {
           userId: user.id,

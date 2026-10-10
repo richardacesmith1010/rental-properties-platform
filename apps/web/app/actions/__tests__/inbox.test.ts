@@ -66,7 +66,9 @@ function createTenantDb(options: {
       if (table === "units") return { data: homes.map((id) => ({ property_id: id })), error: null };
       if (table === "properties") return { data: { owner_account_id: "account-1" }, error: null };
       if (table === "ownership_account_members") return { data: [{ profile_id: "owner-1" }, { profile_id: "owner-1" }], error: null };
-      if (table === "property_managers") return { data: [{ manager_profile_id: "manager-1" }, { manager_profile_id: "former-1" }], error: null };
+      if (table === "property_managers") return {
+        data: [{ manager_profile_id: "manager-1" }, { manager_profile_id: "former-1" }], error: null
+      };
       if (table === "inbox_threads" && operation === "select") {
         const thread = threads.find((item) => item.propertyId === filters.property_id && item.subject === filters.subject);
         return { data: thread ? { id: thread.id } : null, error: null };
@@ -75,7 +77,9 @@ function createTenantDb(options: {
         writes.push("thread");
         if (conflictPending || threads.length > 0) {
           conflictPending = false;
-          if (!threads.length) threads.push({ id: "thread-1", propertyId: payload.property_id as string, subject: payload.subject as string });
+          if (!threads.length) threads.push({
+            id: "thread-1", propertyId: payload.property_id as string, subject: payload.subject as string
+          });
           return { data: null, error: { code: "23505" } };
         }
         threads.push({ id: "thread-1", propertyId: payload.property_id as string, subject: payload.subject as string });
@@ -313,7 +317,7 @@ describe("inbox actions", () => {
     });
   });
 
-  it("creates an inbox thread and delivery notification for a valid direct tenant message", async () => {
+  it("owner inbox send notifies the tenant but never its sender", async () => {
     parseFormDataMock.mockReturnValue({
       success: true,
       data: {
@@ -336,6 +340,9 @@ describe("inbox actions", () => {
         entityType: "inbox_thread"
       })
     );
+    expect(createNotificationWithDeliveryMock.mock.calls.map(([payload]) => payload.recipientProfileId))
+      .toEqual(["tenant-1"]);
+    expect(createNotificationWithDeliveryMock.mock.calls[0]?.[0].actorProfileId).toBe("owner-1");
     expect(revalidatePathMock).toHaveBeenCalledWith("/tenant");
   });
 });
@@ -406,7 +413,7 @@ describe("startTenantConversation", () => {
     expect(db.threads[0]?.propertyId).toBe(homeB);
   });
 
-  it("uses the sole home, fixed subject, and current administrators", async () => {
+  it("tenant inbox send notifies current administrators but never its sender", async () => {
     const db = createTenantDb();
     createAdminClientMock.mockReturnValue(db.client);
     expect(await startTenantConversation(null, tenantForm("  Hello  "))).toEqual({
@@ -414,7 +421,8 @@ describe("startTenantConversation", () => {
     });
     expect(db.threads).toEqual([{ id: "thread-1", propertyId: homeA, subject: "Messages with your landlord" }]);
     expect(db.messages).toMatchObject([{ sender_profile_id: "tenant-1", body: "Hello" }]);
-    expect(createNotificationWithDeliveryMock.mock.calls.map(([payload]) => payload.recipientProfileId).sort()).toEqual(["manager-1", "owner-1"]);
+    expect(createNotificationWithDeliveryMock.mock.calls.map(([payload]) => payload.recipientProfileId).sort())
+      .toEqual(["manager-1", "owner-1"]);
   });
 
   it("reuses a thread on a second call and after a unique conflict", async () => {

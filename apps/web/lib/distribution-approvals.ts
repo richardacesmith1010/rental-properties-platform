@@ -168,7 +168,8 @@ async function selectRequestById(requestId: string): Promise<RequestRow | null> 
   const { data, error } = await admin
     .from("distribution_change_requests")
     .select(
-      "id, ownership_account_id, requested_by, current_config, proposed_config, status, votes_required, votes_received, created_at, resolved_at"
+      "id, ownership_account_id, requested_by, current_config, proposed_config, \
+       status, votes_required, votes_received, created_at, resolved_at"
     )
     .eq("id", requestId)
     .maybeSingle();
@@ -201,7 +202,8 @@ export async function getPendingChangeRequests(
   const { data, error } = await admin
     .from("distribution_change_requests")
     .select(
-      "id, ownership_account_id, requested_by, current_config, proposed_config, status, votes_required, votes_received, created_at, resolved_at"
+      "id, ownership_account_id, requested_by, current_config, proposed_config, \
+       status, votes_required, votes_received, created_at, resolved_at"
     )
     .eq("ownership_account_id", accountId)
     .eq("status", "pending")
@@ -219,7 +221,7 @@ export async function getPendingChangeRequests(
 }
 
 export async function resolveRequest(
-  requestId: string
+  requestId: string, actorProfileId?: string
 ): Promise<DistributionChangeRequestDTO | null> {
   const admin = createAdminClient();
   const requestRow = await selectRequestById(requestId);
@@ -299,7 +301,8 @@ export async function resolveRequest(
       title,
       body,
       entityType: "distribution_change_request",
-      entityId: requestId
+      entityId: requestId,
+      excludeProfileId: actorProfileId
     }).catch(
       sideEffectError("resolveRequest", "notify_account_members", {
         entityType: "distribution_change_request",

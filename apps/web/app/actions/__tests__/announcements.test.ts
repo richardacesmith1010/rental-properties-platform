@@ -245,4 +245,41 @@ describe("announcement actions", () => {
     });
     expect(createNotificationWithDeliveryMock).not.toHaveBeenCalled();
   });
+  it("shows exact test-mode copy and excludes the announcement sender", async () => {
+    vi.stubEnv("DOMUS_NOTIFICATIONS_ALLOWLIST", "tenant1@example.com");
+    createAdminClientMock.mockReturnValue(createAnnouncementAdminClient({
+      units: [{ id: "unit-1" }],
+      leases: [{ tenant_profile_id: "owner-1" }, { tenant_profile_id: "tenant-1" }],
+      tenantProfiles: [
+        { id: "owner-1", email: "owner@example.com", role: "owner" },
+        { id: "tenant-1", email: "tenant1@example.com", role: "tenant" }
+      ]
+    }));
+    const formData = new FormData();
+    formData.set("scope", "all_administered");
+    formData.set("title", "Entry notice");
+    formData.set("body", "Pest control will enter units on Tuesday.");
+    const result = await createAnnouncement(null, formData);
+    expect(result).toEqual({ success: true, message: "Saved. Domus is in test mode. Only test accounts can get notices." });
+    expect(createNotificationWithDeliveryMock).toHaveBeenCalledTimes(1);
+    expect(createNotificationWithDeliveryMock).toHaveBeenCalledWith(expect.objectContaining({ recipientProfileId: "tenant-1" }));
+  });
+
+  it("uses exact test-mode copy for an already saved announcement", async () => {
+    vi.stubEnv("DOMUS_NOTIFICATIONS_ALLOWLIST", "tenant@example.com");
+    createAdminClientMock.mockReturnValue(createAnnouncementAdminClient({
+      units: [{ id: "unit-1" }],
+      leases: [{ tenant_profile_id: "tenant-1" }],
+      insertError: { code: "23505", message: "duplicate key" }
+    }));
+    const formData = new FormData();
+    formData.set("scope", "all_administered");
+    formData.set("title", "Entry notice");
+    formData.set("body", "Pest control will enter units on Tuesday.");
+    expect(await createAnnouncement(null, formData)).toEqual({
+      success: true,
+      message: "Saved. Domus is in test mode. Only test accounts can get notices."
+    });
+  });
+
 });

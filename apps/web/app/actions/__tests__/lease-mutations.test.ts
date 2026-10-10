@@ -25,7 +25,7 @@ vi.mock("@/lib/audit", () => ({ logAudit: logAuditMock }));
 vi.mock("@/lib/logger", () => ({ sideEffectError: () => () => undefined }));
 vi.mock("@/lib/notifications", () => ({
   createNotificationWithDelivery: notificationMock,
-  notifyOwnerMembersForProperty: ownerNotificationMock
+  notifyPropertyTeam: ownerNotificationMock
 }));
 vi.mock("@/lib/supabase-errors", () => ({ isMissingSchemaError: () => false }));
 
@@ -214,4 +214,21 @@ describe("lease collection setting mutations", () => {
       expect.objectContaining({ collects_outside_domus: true })
     );
   });
+  it("lease edit gives the tenant an in-app notice and no owner-team recipients", async () => {
+    const supabase = createSupabaseMock();
+    requireAuthMock.mockResolvedValue({ user: { id: "owner-1" }, supabase: supabase.client });
+    const formData = leaseFormData();
+    formData.set("collectsOutsideDomus", "false");
+    expect(await updateLease(null, formData)).toEqual({ success: true });
+    expect(notificationMock).toHaveBeenCalledWith(expect.objectContaining({
+      recipientProfileId: "22222222-2222-4222-8222-222222222222",
+      type: "lease_updated",
+      emailMode: "never"
+    }));
+    expect(ownerNotificationMock).toHaveBeenCalledWith(expect.objectContaining({
+      event: "lease_changed",
+      emailMode: "never"
+    }));
+  });
+
 });

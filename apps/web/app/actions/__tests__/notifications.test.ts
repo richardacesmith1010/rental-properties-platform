@@ -99,4 +99,11 @@ describe("notification actions", () => {
     });
     expect(createNotificationWithDeliveryMock).not.toHaveBeenCalled();
   });
+  it("shows exact test-mode copy while attempting eligible deliveries", async () => {
+    vi.stubEnv("DOMUS_NOTIFICATIONS_ALLOWLIST", "tenant@example.com");
+    const result = await sendBatchPaymentReminder(null, reminderFormData());
+    expect(result).toEqual({ success: true, message: "Saved. Domus is in test mode. Only test accounts can get notices." });
+    expect(createNotificationWithDeliveryMock).toHaveBeenCalledTimes(1);
+  });
+
 });

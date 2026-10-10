@@ -446,6 +446,11 @@ Every agent must treat mistakes as permanent lessons. This section is a living d
 **What was correct:** Wire the custom bridge controller into both the scene entry point and storyboard, and use the scene foreground callback.
 **Rule:** Inspect generated native lifecycle entry points before wiring navigation or foreground behavior; storyboard changes alone are insufficient.
 
+#### L-006 | 2026-10-10 | PROCESS
+**What happened:** During Sprint 211, `npm run gate:web` was started despite a no-DB-access constraint. Its runtime verifier read the configured Supabase project before the gate was stopped.
+**What was correct:** Inspect composite gate scripts before running them under a restricted task; run only their local checks when a gate includes forbidden external access.
+**Rule:** Before running a required gate under a no-network or no-DB constraint, read the gate script and skip any stage that would violate the task constraint. Report the full gate as incomplete.
+
 ---
 
 ## 13. Continuous Codebase Grooming

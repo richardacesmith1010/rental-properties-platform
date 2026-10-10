@@ -8,10 +8,7 @@ import { canUserAdministerProperty } from "@/lib/property-access";
 import { isUnclaimedClientProperty } from "@/lib/client-accounts";
 import { sideEffectError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
-import {
-  createNotificationWithDelivery,
-  notifyOwnerMembersForProperty
-} from "@/lib/notifications";
+import { createNotificationWithDelivery, notifyPropertyTeam } from "@/lib/notifications";
 import {
   createLeaseSchema,
   updateLeaseSchema,
@@ -67,7 +64,9 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
   const { unitId, tenantProfileId } = parsed.data;
   const { data: unit } = await supabase.from("units").select("id, property_id").eq("id", unitId).single();
   if (!unit) return { success: false, error: "Unit not found." };
-  if (!(await canUserAdministerProperty(user.id, unit.property_id))) return { success: false, error: "You do not have access to this unit." };
+  if (!(await canUserAdministerProperty(user.id, unit.property_id))) {
+    return { success: false, error: "You do not have access to this unit." };
+  }
 
   const admin = createAdminClient();
   const { data: tenantProfile } = await admin.from("profiles").select("id, email").eq("id", tenantProfileId).maybeSingle();
@@ -76,10 +75,14 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
   const { data: propertyUnitRows } = await supabase.from("units").select("id").eq("property_id", unit.property_id);
   const propertyUnitIds = (propertyUnitRows ?? []).map((row) => row.id);
   const hasExistingLeaseInProperty = propertyUnitIds.length
-    ? Boolean((await supabase.from("leases").select("id").eq("tenant_profile_id", tenantProfile.id).eq("active", true).in("unit_id", propertyUnitIds).limit(1)).data?.length)
+    ? Boolean((await supabase.from("leases").select("id")
+        .eq("tenant_profile_id", tenantProfile.id).eq("active", true)
+        .in("unit_id", propertyUnitIds).limit(1)).data?.length)
     : false;
 
-  const invitationQuery = await admin.from("invitations").select("id").eq("email", tenantProfile.email.toLowerCase()).eq("role", "tenant").eq("property_id", unit.property_id).in("status", ["pending", "accepted"]).limit(1);
+  const invitationQuery = await admin.from("invitations").select("id")
+    .eq("email", tenantProfile.email.toLowerCase()).eq("role", "tenant")
+    .eq("property_id", unit.property_id).in("status", ["pending", "accepted"]).limit(1);
   const hasTenantInvitationForProperty = !invitationQuery.error ? Boolean(invitationQuery.data?.length) : false;
   if (invitationQuery.error && !isMissingSchemaError(invitationQuery.error)) {
     return { success: false, error: "Failed to validate tenant-property link." };
@@ -101,26 +104,25 @@ export async function createLease(_prev: ActionState, formData: FormData): Promi
   const { error: unitUpdateError } = await supabase.from("units").update({ occupied: true }).eq("id", unitId);
   if (unitUpdateError) return { success: false, error: "Lease created, but unit occupancy could not be updated." };
 
-  void notifyOwnerMembersForProperty({
+  void notifyPropertyTeam({
     propertyId: unit.property_id,
+    event: "lease_changed",
     type: "lease_updated",
     title: "Lease created",
     body: "A new lease was created for one of your properties.",
     entityType: "lease",
     entityId: createdLease.id,
-    actorProfileId: user.id
-  }).catch(
-    sideEffectError("createLease", "notify_owner_members", {
-      userId: user.id,
-      entityType: "lease",
-      entityId: createdLease.id
-    })
-  );
+    actorProfileId: user.id,
+    emailMode: "never"
+  }).catch(sideEffectError("createLease", "mirror_lease", {
+    userId: user.id, entityType: "lease", entityId: createdLease.id
+  }));
 
   void createNotificationWithDelivery({
     recipientProfileId: tenantProfile.id,
     recipientEmail: tenantProfile.email,
     type: "lease_updated",
+    emailMode: "never",
     title: "Lease created",
     body: "A lease has been created or updated for your unit.",
     entityType: "lease",
@@ -163,7 +165,9 @@ export async function updateLease(_prev: ActionState, formData: FormData): Promi
 
   const { data: unit } = await supabase.from("units").select("id, property_id").eq("id", lease.unit_id).single();
   if (!unit) return { success: false, error: "Unit not found for this lease." };
-  if (!(await canUserAdministerProperty(user.id, unit.property_id))) return { success: false, error: "You do not have access to this lease." };
+  if (!(await canUserAdministerProperty(user.id, unit.property_id))) {
+    return { success: false, error: "You do not have access to this lease." };
+  }
 
   const updates = {
     ...buildUpdateLeaseMutation(parsed.data),
@@ -173,29 +177,29 @@ export async function updateLease(_prev: ActionState, formData: FormData): Promi
   const { error } = await supabase.from("leases").update(updates).eq("id", leaseId);
   if (error) return { success: false, error: "Failed to update lease. Please try again." };
 
-  void notifyOwnerMembersForProperty({
+  void notifyPropertyTeam({
     propertyId: unit.property_id,
+    event: "lease_changed",
     type: "lease_updated",
     title: "Lease updated",
     body: "A lease was updated for one of your properties.",
     entityType: "lease",
     entityId: leaseId,
-    actorProfileId: user.id
-  }).catch(
-    sideEffectError("updateLease", "notify_owner_members", {
-      userId: user.id,
-      entityType: "lease",
-      entityId: leaseId
-    })
-  );
+    actorProfileId: user.id,
+    emailMode: "never"
+  }).catch(sideEffectError("updateLease", "mirror_lease", {
+    userId: user.id, entityType: "lease", entityId: leaseId
+  }));
 
   if (lease.tenant_profile_id) {
-    const { data: tenantProfile } = await createAdminClient().from("profiles").select("id, email").eq("id", lease.tenant_profile_id).maybeSingle();
+    const { data: tenantProfile } = await createAdminClient().from("profiles")
+      .select("id, email").eq("id", lease.tenant_profile_id).maybeSingle();
     if (tenantProfile?.id) {
       void createNotificationWithDelivery({
         recipientProfileId: tenantProfile.id,
         recipientEmail: tenantProfile.email,
         type: "lease_updated",
+        emailMode: "never",
         title: "Lease updated",
         body: "Your lease terms were updated.",
         entityType: "lease",
@@ -243,7 +247,9 @@ export async function deleteLease(_prev: ActionState, formData: FormData): Promi
 
   const { data: unit } = await supabase.from("units").select("id, property_id").eq("id", lease.unit_id).single();
   if (!unit) return { success: false, error: "Unit not found for this lease." };
-  if (!(await canUserAdministerProperty(user.id, unit.property_id))) return { success: false, error: "You do not have access to this lease." };
+  if (!(await canUserAdministerProperty(user.id, unit.property_id))) {
+    return { success: false, error: "You do not have access to this lease." };
+  }
 
   const nextLeaseStatus =
     lease.lease_status === "expired" || lease.lease_status === "renewed" || lease.lease_status === "terminated"
@@ -258,29 +264,29 @@ export async function deleteLease(_prev: ActionState, formData: FormData): Promi
   const { error: unitError } = await supabase.from("units").update({ occupied: false }).eq("id", lease.unit_id);
   if (unitError) return { success: false, error: "Lease archived, but unit occupancy could not be updated." };
 
-  void notifyOwnerMembersForProperty({
+  void notifyPropertyTeam({
     propertyId: unit.property_id,
+    event: "lease_changed",
     type: "lease_updated",
     title: "Lease archived",
     body: "A lease was archived for one of your properties.",
     entityType: "lease",
     entityId: parsed.data.leaseId,
-    actorProfileId: user.id
-  }).catch(
-    sideEffectError("deleteLease", "notify_owner_members", {
-      userId: user.id,
-      entityType: "lease",
-      entityId: parsed.data.leaseId
-    })
-  );
+    actorProfileId: user.id,
+    emailMode: "never"
+  }).catch(sideEffectError("deleteLease", "mirror_lease", {
+    userId: user.id, entityType: "lease", entityId: parsed.data.leaseId
+  }));
 
   if (lease.tenant_profile_id) {
-    const { data: tenantProfile } = await createAdminClient().from("profiles").select("id, email").eq("id", lease.tenant_profile_id).maybeSingle();
+    const { data: tenantProfile } = await createAdminClient().from("profiles")
+      .select("id, email").eq("id", lease.tenant_profile_id).maybeSingle();
     if (tenantProfile?.id) {
       void createNotificationWithDelivery({
         recipientProfileId: tenantProfile.id,
         recipientEmail: tenantProfile.email,
         type: "lease_updated",
+        emailMode: "never",
         title: "Lease archived",
         body: "Your lease has been archived by management.",
         entityType: "lease",

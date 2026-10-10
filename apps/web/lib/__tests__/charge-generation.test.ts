@@ -2,16 +2,20 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const createNotificationWithDeliveryMock = vi.hoisted(() => vi.fn());
-const notifyOwnerMembersForPropertyMock = vi.hoisted(() => vi.fn());
+const notifyPropertyTeamMock = vi.hoisted(() => vi.fn());
 const getPropertyNotificationDeliveryPreferencesMock = vi.hoisted(() => vi.fn());
+const createAdminClientMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/notifications", () => ({
   createNotificationWithDelivery: createNotificationWithDeliveryMock,
-  notifyOwnerMembersForProperty: notifyOwnerMembersForPropertyMock
+  notifyPropertyTeam: notifyPropertyTeamMock
 }));
 vi.mock("@/lib/notification-preferences", () => ({
-  getPropertyNotificationDeliveryPreferences: getPropertyNotificationDeliveryPreferencesMock
+  getPropertyNotificationDeliveryPreferences: getPropertyNotificationDeliveryPreferencesMock,
+  getNotificationPreference: vi.fn().mockResolvedValue({ inAppEnabled: true, emailEnabled: true })
 }));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: createAdminClientMock }));
+import { createNotificationAdminClient, notificationUpserts } from "./notification-test-helpers";
 import {
   buildDueDatesByLeaseId,
   getCandidateMonths,
@@ -20,7 +24,7 @@ import {
 } from "@/lib/charge-generation";
 
 function createLateFeeSupabaseMock(params: {
-  collectsOutsideDomus: boolean;
+  collectsOutsideDomus: boolean | null;
   clientHome?: boolean;
   accountError?: boolean;
   existingLateFee?: boolean;
@@ -149,13 +153,15 @@ function setToday(isoDateTime: string) {
 
 describe("charge generation", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     createNotificationWithDeliveryMock.mockResolvedValue(undefined);
-    notifyOwnerMembersForPropertyMock.mockResolvedValue(undefined);
+    notifyPropertyTeamMock.mockResolvedValue(undefined);
     getPropertyNotificationDeliveryPreferencesMock.mockResolvedValue(new Map());
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllEnvs();
   });
 
   it("returns exactly the current month and next month as charge candidates", () => {
@@ -357,7 +363,7 @@ describe("charge generation", () => {
     expect(update).toHaveBeenCalledTimes(1);
     expect(insert).not.toHaveBeenCalled();
     expect(createNotificationWithDeliveryMock).not.toHaveBeenCalled();
-    expect(notifyOwnerMembersForPropertyMock).not.toHaveBeenCalled();
+    expect(notifyPropertyTeamMock).toHaveBeenCalledWith(expect.objectContaining({ event: "late_fee", propertyId: "property-1" }));
     expect(from.mock.calls.filter(([table]) => table === "ownership_accounts")).toHaveLength(1);
   });
 
@@ -401,5 +407,39 @@ describe("charge generation", () => {
         amount_cents: 5000
       })
     ]);
+  });
+
+  it("null lease collection flag keeps the fee and owner notice but blocks tenant late notice", async () => {
+    setToday("2026-10-03T12:00:00.000Z");
+    const { supabase, update, insert } = createLateFeeSupabaseMock({ collectsOutsideDomus: null });
+    await expect(applyLateFeesToOverdueCharges(supabase, ["lease-1"], "2026-10-03"))
+      .resolves.toBe(1);
+    expect(update).toHaveBeenCalledWith({ status: "late" });
+    expect(insert).toHaveBeenCalledWith([expect.objectContaining({
+      category: "late_fee", amount_cents: 5000, parent_charge_id: "charge-1"
+    })]);
+    expect(createNotificationWithDeliveryMock).not.toHaveBeenCalled();
+    expect(notifyPropertyTeamMock).toHaveBeenCalledWith(expect.objectContaining({
+      event: "late_fee", propertyId: "property-1"
+    }));
+  });
+
+  it("allowlisted tenant A gets no notice for tenant B's late rent and unlisted B gets none", async () => {
+    vi.stubEnv("DOMUS_NOTIFICATIONS_ENABLED", "true");
+    vi.stubEnv("DOMUS_NOTIFICATIONS_ALLOWLIST", "tenant-a@example.com");
+    const notificationAdmin = createNotificationAdminClient({ profiles: [
+      { id: "tenant-a", email: "tenant-a@example.com" },
+      { id: "tenant-1", email: "tenant-b@example.com" }
+    ] });
+    createAdminClientMock.mockReturnValue(notificationAdmin);
+    const actual = await vi.importActual<typeof import("@/lib/notifications")>("@/lib/notifications");
+    createNotificationWithDeliveryMock.mockImplementation(actual.createNotificationWithDelivery);
+    setToday("2026-10-03T12:00:00.000Z");
+    const { supabase } = createLateFeeSupabaseMock({ collectsOutsideDomus: false });
+    await applyLateFeesToOverdueCharges(supabase, ["lease-1"], "2026-10-03");
+    expect(createNotificationWithDeliveryMock.mock.calls.map(([row]) => row.recipientProfileId))
+      .toEqual(["tenant-1"]);
+    expect(notificationUpserts(notificationAdmin)).toHaveLength(0);
+    expect(notifyPropertyTeamMock).toHaveBeenCalledWith(expect.objectContaining({ event: "late_fee" }));
   });
 });

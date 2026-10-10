@@ -7,7 +7,7 @@ import { logAudit } from "@/lib/audit";
 import { sideEffectError } from "@/lib/logger";
 import {
   createNotificationWithDelivery,
-  notifyOwnerMembersForProperty
+  notifyPropertyTeam
 } from "@/lib/notifications";
 import {
   addTicketCommentSchema,
@@ -83,13 +83,14 @@ export async function addTicketComment(
   const internalNote = isInternal === "true";
 
   const admin = createAdminClient();
-  const { data: ticket } = await admin
+  const { data: ticket, error: ticketError } = await admin
     .from("maintenance_tickets")
     .select("id, property_id, tenant_profile_id, title")
     .eq("id", ticketId)
     .maybeSingle();
 
-  if (!ticket) {
+  if (ticketError) console.error(`[notifications] ticket_lookup: ${ticketError.code ?? "unknown"}`);
+  if (ticketError || !ticket) {
     return { success: false, error: "Ticket not found." };
   }
 
@@ -124,30 +125,26 @@ export async function addTicketComment(
     };
   }
 
-  if (role === "tenant") {
-    void notifyOwnerMembersForProperty({
-      propertyId: ticket.property_id,
-      type: "new_ticket",
-      title: "New maintenance comment",
-      body: `Tenant added a comment on: ${ticket.title}`,
-      entityType: "maintenance_ticket",
-      entityId: ticket.id,
-      actorProfileId: user.id
-    }).catch(
-      sideEffectError("addTicketComment", "notify_participants", {
-        userId: user.id,
-        entityType: "ticket",
-        entityId: ticket.id
-      })
-    );
-  } else if (ticket.tenant_profile_id) {
-    const { data: tenantProfile } = await admin
-      .from("profiles")
-      .select("id, email")
-      .eq("id", ticket.tenant_profile_id)
-      .maybeSingle();
-
-    if (tenantProfile?.id) {
+  void notifyPropertyTeam({
+    propertyId: ticket.property_id,
+    event: "ticket_comment",
+    type: "new_ticket",
+    title: "New maintenance comment",
+    body: role === "tenant"
+      ? `Tenant added a comment on: ${ticket.title}`
+      : `New update on your maintenance request: ${ticket.title}`,
+    entityType: "maintenance_ticket",
+    entityId: ticket.id,
+    actorProfileId: user.id,
+    emailMode: "never"
+  }).catch(sideEffectError("addTicketComment", "notify_participants", {
+    userId: user.id, entityType: "ticket", entityId: ticket.id
+  }));
+  if (!internalNote && ticket.tenant_profile_id && ticket.tenant_profile_id !== user.id) {
+    const { data: tenantProfile, error: profileError } = await admin.from("profiles")
+      .select("id, email").eq("id", ticket.tenant_profile_id).maybeSingle();
+    if (profileError) console.error(`[notifications] ticket_tenant: ${profileError.code ?? "unknown"}`);
+    if (!profileError && tenantProfile?.id) {
       void createNotificationWithDelivery({
         recipientProfileId: tenantProfile.id,
         recipientEmail: tenantProfile.email,
@@ -155,14 +152,11 @@ export async function addTicketComment(
         title: "Maintenance request updated",
         body: `New update on your maintenance request: ${ticket.title}`,
         entityType: "maintenance_ticket",
-        entityId: ticket.id
-      }).catch(
-        sideEffectError("addTicketComment", "notify_participants", {
-          userId: user.id,
-          entityType: "ticket",
-          entityId: ticket.id
-        })
-      );
+        entityId: ticket.id,
+        emailMode: "never"
+      }).catch(sideEffectError("addTicketComment", "notify_participants", {
+        userId: user.id, entityType: "ticket", entityId: ticket.id
+      }));
     }
   }
 

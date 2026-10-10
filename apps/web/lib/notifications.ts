@@ -14,7 +14,7 @@ import {
   toAbsoluteNotificationUrl,
   type NotificationRecipientRole
 } from "@/lib/notification-actions";
-import { notificationsEnabled } from "@/lib/notifications-switch";
+import { notificationMode, notificationAllowlist, isNotificationRecipientAllowed } from "@/lib/notifications-switch";
 export {
   formatRelativeNotificationTime,
   getNotificationActionLink,
@@ -121,6 +121,7 @@ interface CreateNotificationParams {
   actorProfileId?: string | null;
   emailContent?: NotificationEmailContent;
   deliveryPreference?: NotificationDeliveryPreference;
+  emailMode?: "default" | "never";
 }
 
 function buildNotificationPlainText(params: {
@@ -151,30 +152,50 @@ async function resolveRecipientRole(
     return providedRole;
   }
 
-  const { data: profile } = await admin
+  const { data: profile, error } = await admin
     .from("profiles")
     .select("role")
     .eq("id", recipientProfileId)
     .maybeSingle();
 
+  if (error) {
+    console.error(`[notifications] role_lookup: ${error.code ?? "unknown"}`);
+    throw new Error("Notification recipient role lookup failed");
+  }
   return profile?.role === "owner" || profile?.role === "manager" || profile?.role === "tenant"
     ? profile.role
     : "owner";
 }
 
 export async function createNotificationWithDelivery(params: CreateNotificationParams) {
-  if (!notificationsEnabled()) {
+  const mode = notificationMode();
+  if (mode === "off") {
     console.info(`[notifications] off: skipped ${params.type}`);
     return;
   }
 
+  if (params.actorProfileId && params.actorProfileId === params.recipientProfileId) return;
   try {
     const admin = createAdminClient();
+    let recipientEmail = params.recipientEmail;
+    if (mode === "test") {
+      const { data: canonicalProfile, error: profileError } = await admin.from("profiles")
+        .select("email").eq("id", params.recipientProfileId).maybeSingle();
+      if (profileError) console.error(`[notifications] profile_lookup: ${profileError.code ?? "unknown"}`);
+      if (profileError || !isNotificationRecipientAllowed(mode, canonicalProfile?.email, notificationAllowlist())) {
+        console.info(`[notifications] test mode: skipped ${params.type}`);
+        return;
+      }
+      recipientEmail = canonicalProfile?.email;
+    }
     const preference =
       params.deliveryPreference ??
       (await getNotificationPreference(params.recipientProfileId, params.type));
     const shouldCreateInApp = preference.inAppEnabled;
-    const shouldSendEmail = preference.emailEnabled;
+    const shouldSendEmail = preference.emailEnabled && params.emailMode !== "never";
+    const recipientRole = shouldSendEmail
+      ? await resolveRecipientRole(admin, params.recipientProfileId, params.recipientRole)
+      : null;
 
     if (!shouldCreateInApp && !shouldSendEmail) {
       return;
@@ -204,16 +225,21 @@ export async function createNotificationWithDelivery(params: CreateNotificationP
         .single();
 
       if (error || !notification) {
+        console.error(`[notifications] upsert: ${error?.code ?? "missing_row"}`);
         return;
       }
 
       notificationId = notification.id;
 
-      const { data: existingDeliveries } = await admin
+      const { data: existingDeliveries, error: deliveryError } = await admin
         .from("notification_deliveries")
         .select("channel, status")
         .eq("notification_id", notification.id);
 
+      if (deliveryError) {
+        console.error(`[notifications] delivery_lookup: ${deliveryError.code ?? "unknown"}`);
+        return;
+      }
       deliveryRows = (existingDeliveries ?? []).map((row) => ({
         channel: row.channel as "in_app" | "email",
         status: row.status as "pending" | "sent" | "failed"
@@ -243,11 +269,6 @@ export async function createNotificationWithDelivery(params: CreateNotificationP
     }
 
     if (shouldSendEmail && shouldRecordSuccessfulDelivery(deliveryRows, "email")) {
-      const recipientRole = await resolveRecipientRole(
-        admin,
-        params.recipientProfileId,
-        params.recipientRole
-      );
       const primaryAction =
         getPrimaryNotificationAction(
           {
@@ -257,7 +278,7 @@ export async function createNotificationWithDelivery(params: CreateNotificationP
             title: params.title,
             body: params.body
           },
-          recipientRole
+          recipientRole ?? "owner"
         ) ?? {
           label: "Open Domus",
           href: "/",
@@ -282,7 +303,7 @@ export async function createNotificationWithDelivery(params: CreateNotificationP
       };
 
       emailResult = await sendNotificationEmail({
-        to: params.recipientEmail,
+        to: recipientEmail,
         subject: emailContent.subject,
         text: emailContent.text,
         html: emailContent.html
@@ -299,13 +320,13 @@ export async function createNotificationWithDelivery(params: CreateNotificationP
       });
     }
   } catch (error) {
-    console.error("Failed to create notification delivery records:", error);
+    console.error(`[notifications] delivery: ${error instanceof Error ? error.name : "unknown"}`);
   }
 }
 
 
 export {
-  notifyOwnerMembersForProperty,
+  notifyPropertyTeam,
   notifyOwnerOfStripeIssue,
   notifyAccountMembers,
   notifyOwnerMembersOfAcceptedTenantInvite

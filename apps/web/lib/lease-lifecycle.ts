@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatUnitLabel } from "@/lib/format";
 import {
   createNotificationWithDelivery,
-  notifyOwnerMembersForProperty
+  notifyPropertyTeam
 } from "@/lib/notifications";
 import {
   getPropertyNotificationDeliveryPreferences
@@ -109,8 +109,9 @@ export async function detectExpiredLeases(supabase: SupabaseClient): Promise<str
 
       if (unit?.property_id) {
         notifications.push(
-          notifyOwnerMembersForProperty({
+          notifyPropertyTeam({
             propertyId: unit.property_id,
+            event: "lease_ended",
             type: "lease_expired",
             title: "Lease Expired",
             body: `Lease for ${tenantProfile?.email ?? "tenant"} at ${formatUnitLabel(unit.unit_number)} has expired.`,
@@ -166,7 +167,7 @@ export async function sendLeaseExpirationWarnings(supabase: SupabaseClient): Pro
   const candidateIds = candidates.map((lease) => lease.id);
   const { data: existingWarnings, error: existingWarningsError } = await supabase
     .from("notifications")
-    .select("entity_id")
+    .select("entity_id, recipient_profile_id")
     .eq("type", "lease_expiring_soon")
     .eq("entity_type", "lease")
     .in("entity_id", candidateIds)
@@ -176,9 +177,9 @@ export async function sendLeaseExpirationWarnings(supabase: SupabaseClient): Pro
   }
 
   const alreadyWarned = new Set(
-    ((existingWarnings ?? []) as Array<{ entity_id: string | null }>).map((row) => row.entity_id).filter(
-      (entityId): entityId is string => Boolean(entityId)
-    )
+    ((existingWarnings ?? []) as Array<{ entity_id: string | null; recipient_profile_id: string | null }>)
+      .filter((row) => row.entity_id && row.recipient_profile_id)
+      .map((row) => `${row.entity_id}:${row.recipient_profile_id}`)
   );
 
   const unitIds = Array.from(new Set(candidates.map((lease) => lease.unit_id)));
@@ -220,7 +221,8 @@ export async function sendLeaseExpirationWarnings(supabase: SupabaseClient): Pro
   );
 
   const pendingNotifications = candidates
-    .filter((lease) => lease.tenant_profile_id && !alreadyWarned.has(lease.id))
+    .filter((lease) => lease.tenant_profile_id &&
+      !alreadyWarned.has(`${lease.id}:${lease.tenant_profile_id}`))
     .map((lease) => {
       const unit = unitById.get(lease.unit_id);
       const property = unit ? propertyById.get(unit.property_id) : null;
@@ -230,7 +232,9 @@ export async function sendLeaseExpirationWarnings(supabase: SupabaseClient): Pro
         recipientEmail: tenantProfile?.email ?? null,
         type: "lease_expiring_soon",
         title: "Lease Expiring Soon",
-        body: `Your lease for ${formatUnitLabel(unit?.unit_number ?? "?")} at ${property?.name ?? "your property"} expires on ${lease.end_date}. Contact your landlord about renewal.`,
+        body: `Your lease for ${formatUnitLabel(unit?.unit_number ?? "?")} ` +
+          `at ${property?.name ?? "your property"} expires on ${lease.end_date}. ` +
+          "Contact your landlord about renewal.",
         entityType: "lease",
         entityId: lease.id,
         deliveryPreference: unit?.property_id
@@ -239,6 +243,19 @@ export async function sendLeaseExpirationWarnings(supabase: SupabaseClient): Pro
       });
     });
 
-  await Promise.all(pendingNotifications);
+  const teamNotifications = candidates.map((lease) => {
+    const unit = unitById.get(lease.unit_id);
+    if (!unit) return Promise.resolve();
+    return notifyPropertyTeam({
+      propertyId: unit.property_id,
+      event: "lease_ending_soon",
+      type: "lease_expiring_soon",
+      title: "Lease Expiring Soon",
+      body: `A lease for ${formatUnitLabel(unit.unit_number)} expires on ${lease.end_date}.`,
+      entityType: "lease",
+      entityId: lease.id
+    });
+  });
+  await Promise.all([...pendingNotifications, ...teamNotifications]);
   return `Expiration warnings sent: ${pendingNotifications.length}.`;
 }

@@ -4,10 +4,11 @@ import { withChargeEditingFallback } from "@/lib/charge-audit";
 import { formatDate } from "@/lib/format";
 import {
   createNotificationWithDelivery,
-  notifyOwnerMembersForProperty
+  notifyPropertyTeam
 } from "@/lib/notifications";
 import { getPropertyNotificationDeliveryPreferences } from "@/lib/notification-preferences";
 import { getAdministeredPropertyIds } from "@/lib/property-access";
+import { tenantEligibleForEvent } from "@/lib/notification-policy";
 import { getClientHomeFlags, isCollectedOutsideDomus, tracksLateRent } from "@/lib/lease-collection";
 type LeaseStatus = "active" | "expiring_soon" | "expired" | "terminated" | "renewed" | null;
 type UnitRow = { id: string; property_id: string };
@@ -283,7 +284,11 @@ export async function applyLateFeesToOverdueCharges(
     throw existingLateFeeError;
   }
 
-  const lateFeesByParentChargeId = new Set(((existingLateFeeCharges ?? []) as Array<{ parent_charge_id: string | null }>).map((row) => row.parent_charge_id).filter((value): value is string => Boolean(value)));
+  const lateFeesByParentChargeId = new Set(
+    ((existingLateFeeCharges ?? []) as Array<{ parent_charge_id: string | null }>)
+      .map((row) => row.parent_charge_id)
+      .filter((value): value is string => Boolean(value))
+  );
 
   const lateFeeInserts = lateFeeChargeRows
     .map((charge) => {
@@ -302,7 +307,10 @@ export async function applyLateFeesToOverdueCharges(
         parent_charge_id: charge.id
       };
     })
-    .filter((row): row is { lease_id: string; due_date: string; amount_cents: number; status: "pending"; category: "late_fee"; parent_charge_id: string } => row !== null);
+    .filter((row): row is {
+      lease_id: string; due_date: string; amount_cents: number;
+      status: "pending"; category: "late_fee"; parent_charge_id: string;
+    } => row !== null);
 
   if (lateFeeInserts.length > 0) {
     const { error: lateFeeInsertError } = await supabase.from("rent_charges").insert(lateFeeInserts);
@@ -311,8 +319,7 @@ export async function applyLateFeesToOverdueCharges(
     }
   }
 
-  const notificationChargeRows = lateStatusChargeRows.filter((charge) =>
-    !isCollectedOutsideDomus(leaseById.get(charge.lease_id)));
+  const notificationChargeRows = lateStatusChargeRows;
   if (notificationChargeRows.length === 0) return lateStatusChargeRows.length;
   const lateLeaseRows = Array.from(new Set(notificationChargeRows.map((charge) => charge.lease_id)))
     .map((leaseId) => leaseById.get(leaseId))
@@ -342,14 +349,17 @@ export async function applyLateFeesToOverdueCharges(
     throw profilesError;
   }
 
-  const emailByTenantId = new Map(((profiles ?? []) as Array<{ id: string; email: string | null }>).map((profile) => [profile.id, profile.email]));
+  const emailByTenantId = new Map(
+    ((profiles ?? []) as Array<{ id: string; email: string | null }>)
+      .map((profile) => [profile.id, profile.email])
+  );
   await Promise.all(
     notificationChargeRows.flatMap((charge) => {
       const lease = leaseById.get(charge.lease_id);
       const propertyId = lease?.unit_id ? propertyIdByUnitId.get(lease.unit_id) ?? null : null;
       const notifications: Promise<unknown>[] = [];
 
-      if (lease?.tenant_profile_id) {
+      if (lease?.tenant_profile_id && tenantEligibleForEvent("late_fee", lease.collects_outside_domus)) {
         notifications.push(
           createNotificationWithDelivery({
             recipientProfileId: lease.tenant_profile_id,
@@ -368,8 +378,9 @@ export async function applyLateFeesToOverdueCharges(
 
       if (propertyId) {
         notifications.push(
-          notifyOwnerMembersForProperty({
+          notifyPropertyTeam({
             propertyId,
+            event: "late_fee",
             type: "late_rent",
             title: "Rent is late",
             body: `Rent due ${formatDate(charge.due_date)} is now late.`,
@@ -413,7 +424,8 @@ export async function generateMonthlyChargesForPropertyIdsWithClient(
   const { data: leases, error: leasesError } = await supabase
     .from("leases")
     .select(
-      "id, unit_id, tenant_profile_id, start_date, end_date, created_at, due_day_of_month, monthly_rent_cents, grace_period_days, late_fee_cents, lease_status"
+      "id, unit_id, tenant_profile_id, start_date, end_date, created_at, \
+       due_day_of_month, monthly_rent_cents, grace_period_days, late_fee_cents, lease_status"
     )
     .in("unit_id", unitIds)
     .eq("active", true);

@@ -13,7 +13,7 @@ const getOwnerStripeAccountForPropertyMock = vi.hoisted(() => vi.fn());
 const getManagerStripeAccountForPropertyMock = vi.hoisted(() => vi.fn());
 const canUserAdministerPropertyMock = vi.hoisted(() => vi.fn());
 const createNotificationWithDeliveryMock = vi.hoisted(() => vi.fn());
-const notifyOwnerMembersForPropertyMock = vi.hoisted(() => vi.fn());
+const notifyPropertyTeamMock = vi.hoisted(() => vi.fn());
 const notifyOwnerOfStripeIssueMock = vi.hoisted(() => vi.fn());
 const logAuditMock = vi.hoisted(() => vi.fn());
 const checkRateLimitMock = vi.hoisted(() => vi.fn());
@@ -43,7 +43,7 @@ vi.mock("@/lib/stripe-connect", () => ({
 vi.mock("@/lib/property-access", () => ({ canUserAdministerProperty: canUserAdministerPropertyMock }));
 vi.mock("@/lib/notifications", () => ({
   createNotificationWithDelivery: createNotificationWithDeliveryMock,
-  notifyOwnerMembersForProperty: notifyOwnerMembersForPropertyMock,
+  notifyPropertyTeam: notifyPropertyTeamMock,
   notifyOwnerOfStripeIssue: notifyOwnerOfStripeIssueMock
 }));
 vi.mock("@/lib/audit", () => ({ logAudit: logAuditMock }));
@@ -69,7 +69,10 @@ interface CheckoutConfig {
 
 interface ManualConfig {
   charge?: { id: string; lease_id: string; due_date: string; status: string; amount_cents: number } | null;
-  lease?: { id: string; tenant_profile_id: string; unit_id: string } | null;
+  lease?: {
+    id: string; tenant_profile_id: string; unit_id: string;
+    collects_outside_domus?: boolean | null;
+  } | null;
   unit?: { id: string; property_id: string; unit_number: string } | null;
   tenantProfile?: { id: string; email: string } | null;
   paymentError?: { code?: string; message: string } | null;
@@ -220,7 +223,7 @@ describe("charges actions", () => {
         tenantProfile: { id: "tenant-1", email: "tenant@example.com" }
       })
     );
-    notifyOwnerMembersForPropertyMock.mockResolvedValue(undefined);
+    notifyPropertyTeamMock.mockResolvedValue(undefined);
     notifyOwnerOfStripeIssueMock.mockResolvedValue(undefined);
     createNotificationWithDeliveryMock.mockResolvedValue(undefined);
     logAuditMock.mockResolvedValue(undefined);
@@ -481,7 +484,8 @@ describe("charges actions", () => {
     expect(result).toEqual({
       success: false,
       error:
-        "We can't connect to your owner's bank right now. We've notified them. Please try again in a few hours, or message your property manager."
+        "We can't connect to your owner's bank right now. We've notified them. " +
+          "Please try again in a few hours, or message your property manager."
     });
     expect(notifyOwnerOfStripeIssueMock).toHaveBeenCalledWith({
       propertyId: "property-1",
@@ -664,4 +668,32 @@ describe("charges actions", () => {
     expect(revalidatePathMock).toHaveBeenCalledWith("/owner");
     expect(revalidatePathMock).toHaveBeenCalledWith("/manager");
   });
+  it.each([
+    [true, false],
+    [false, true],
+    [null, false]
+  ] as const)("manual receipt eligibility for outside flag %s", async (outside, tenantNotified) => {
+    parseFormDataMock.mockReturnValueOnce({
+      success: true,
+      data: { chargeId: "charge-1", amountDollars: 1250, method: "cash", referenceNote: "" }
+    });
+    createAdminClientMock.mockReturnValue(createManualAdminClient({
+      charge: {
+        id: "charge-1", lease_id: "lease-1", due_date: "2026-03-01",
+        status: "pending", amount_cents: 125000
+      },
+      lease: {
+        id: "lease-1", tenant_profile_id: "tenant-1", unit_id: "unit-1",
+        collects_outside_domus: outside
+      },
+      unit: { id: "unit-1", property_id: "property-1", unit_number: "1A" },
+      tenantProfile: { id: "tenant-1", email: "tenant@example.com" }
+    }));
+    expect(await recordManualPayment(null, new FormData())).toMatchObject({ success: true });
+    expect(notifyPropertyTeamMock).toHaveBeenCalledWith(expect.objectContaining({
+      event: "rent_paid_manual", actorProfileId: "user-1"
+    }));
+    expect(createNotificationWithDeliveryMock).toHaveBeenCalledTimes(tenantNotified ? 1 : 0);
+  });
+
 });

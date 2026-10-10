@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const createStripeTransferMock = vi.hoisted(() => vi.fn());
 const createStripeTransferReversalMock = vi.hoisted(() => vi.fn());
 const createNotificationWithDeliveryMock = vi.hoisted(() => vi.fn());
-const notifyOwnerMembersForPropertyMock = vi.hoisted(() => vi.fn());
+const notifyPropertyTeamMock = vi.hoisted(() => vi.fn());
 const getManagerStripeAccountForPropertyMock = vi.hoisted(() => vi.fn());
 const getOwnerStripeAccountForPropertyMock = vi.hoisted(() => vi.fn());
 const getDistributionMembersForAccountMock = vi.hoisted(() => vi.fn());
@@ -26,7 +26,7 @@ vi.mock("@/lib/logger", () => ({
 
 vi.mock("@/lib/notifications", () => ({
   createNotificationWithDelivery: createNotificationWithDeliveryMock,
-  notifyOwnerMembersForProperty: notifyOwnerMembersForPropertyMock
+  notifyPropertyTeam: notifyPropertyTeamMock
 }));
 
 vi.mock("@/lib/stripe", () => ({
@@ -46,7 +46,8 @@ vi.mock("@/lib/supabase/admin", () => ({
 import {
   handleAsyncPaymentFailed,
   handleAsyncPaymentSucceeded,
-  handleCheckoutSessionCompleted
+  handleCheckoutSessionCompleted,
+  handlePaymentIntentPaymentFailed
 } from "@/lib/stripe-webhook-handlers";
 
 interface TestSupabaseConfig {
@@ -59,6 +60,7 @@ interface TestSupabaseConfig {
   } | null;
   managerProfileEmail?: string | null;
   paymentUpdateError?: { message: string } | null;
+  collectsOutsideDomus?: boolean | null;
 }
 
 function createWebhookSupabase(config: TestSupabaseConfig = {}) {
@@ -72,7 +74,8 @@ function createWebhookSupabase(config: TestSupabaseConfig = {}) {
   const lease = {
     id: "lease-1",
     tenant_profile_id: "tenant-1",
-    unit_id: "unit-1"
+    unit_id: "unit-1",
+    collects_outside_domus: config.collectsOutsideDomus ?? null
   };
   const unit = {
     id: "unit-1",
@@ -136,6 +139,17 @@ function createWebhookSupabase(config: TestSupabaseConfig = {}) {
               maybeSingle: vi.fn().mockResolvedValue({ data: lease, error: null })
             }))
           }))
+        };
+      }
+
+      if (table === "autopay_enrollments") {
+        return {
+          select: vi.fn(() => ({ eq: vi.fn(() => ({ eq: vi.fn(() => ({
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { id: "autopay-1", retry_count: 0, tenant_profile_id: "tenant-1" }, error: null
+            })
+          })) })) })),
+          update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) }))
         };
       }
 
@@ -215,7 +229,7 @@ describe("stripe webhook handlers", () => {
     vi.clearAllMocks();
     createStripeTransferReversalMock.mockResolvedValue({ id: "trr_123" });
     createNotificationWithDeliveryMock.mockResolvedValue(undefined);
-    notifyOwnerMembersForPropertyMock.mockResolvedValue(undefined);
+    notifyPropertyTeamMock.mockResolvedValue(undefined);
     getOwnerStripeAccountForPropertyMock.mockResolvedValue("acct_owner_123");
     getManagerStripeAccountForPropertyMock.mockResolvedValue({
       accountId: "acct_manager_123",
@@ -227,6 +241,40 @@ describe("stripe webhook handlers", () => {
     planCustomDistributionTransfersMock.mockReturnValue({ memberShares: [], llcFallbackAmount: 0 });
     recordPaymentDistributionMock.mockResolvedValue(undefined);
     sideEffectErrorMock.mockReturnValue(() => undefined);
+  });
+
+  it.each([true, null])(
+    "Stripe receipt with outside-Domus flag %s skips tenant but dispatches owners",
+    async (collectsOutsideDomus) => {
+      const supabase = createWebhookSupabase({ collectsOutsideDomus });
+      getManagerStripeAccountForPropertyMock.mockResolvedValue(null);
+      await handleCheckoutSessionCompleted(supabase as never, {
+        id: "cs_receipt", url: null, payment_status: "paid", amount_total: 125000,
+        payment_intent: "pi_receipt",
+        metadata: { charge_id: "charge-1", user_id: "tenant-1", payment_method: "card" }
+      });
+      await flushAsyncWork();
+      expect(createNotificationWithDeliveryMock.mock.calls.map(([row]) => row.recipientProfileId))
+        .not.toContain("tenant-1");
+      expect(notifyPropertyTeamMock).toHaveBeenCalledWith(expect.objectContaining({
+        event: "rent_paid_stripe", type: "payment_recorded", propertyId: "property-1"
+      }));
+    }
+  );
+
+  it("outside-Domus autopay failure still notifies tenant and property team", async () => {
+    const supabase = createWebhookSupabase({ collectsOutsideDomus: true });
+    await handlePaymentIntentPaymentFailed(supabase as never, {
+      id: "pi_failed", status: "requires_payment_method",
+      metadata: { charge_id: "charge-1", lease_id: "lease-1", autopay: "true" }
+    });
+    await flushAsyncWork();
+    expect(createNotificationWithDeliveryMock).toHaveBeenCalledWith(expect.objectContaining({
+      recipientProfileId: "tenant-1", type: "late_rent", title: "Autopay Payment Failed"
+    }));
+    expect(notifyPropertyTeamMock).toHaveBeenCalledWith(expect.objectContaining({
+      event: "autopay_failed", propertyId: "property-1"
+    }));
   });
 
   it("notifies the manager after a successful ACH transfer", async () => {
@@ -347,8 +395,9 @@ describe("stripe webhook handlers", () => {
     expect(getManagerNotificationPayloads()).toHaveLength(0);
   });
 
-  it("reverses transfers and marks the payment reversed when a failed ACH session already has a payment", async () => {
+  it("outside-Domus failed ACH still notifies tenant and property team before reversing", async () => {
     const supabase = createWebhookSupabase({
+      collectsOutsideDomus: true,
       existingAsyncFailurePayment: {
         id: "payment-1",
         stripe_transfer_id: "tr_owner_123",
@@ -378,6 +427,9 @@ describe("stripe webhook handlers", () => {
         entityId: "charge-1"
       })
     );
+    expect(notifyPropertyTeamMock).toHaveBeenCalledWith(expect.objectContaining({
+      event: "bank_payment_failed", type: "late_rent", propertyId: "property-1"
+    }));
     expect(createStripeTransferReversalMock).toHaveBeenCalledTimes(2);
     expect(createStripeTransferReversalMock).toHaveBeenNthCalledWith(1, {
       transferId: "tr_owner_123",

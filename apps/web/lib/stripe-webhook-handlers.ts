@@ -15,9 +15,10 @@ import {
 } from "@/lib/stripe";
 import {
   createNotificationWithDelivery,
-  notifyOwnerMembersForProperty
+  notifyPropertyTeam
 } from "@/lib/notifications";
 import { getManagerStripeAccountForProperty, getOwnerStripeAccountForProperty } from "@/lib/stripe-connect";
+import { tenantEligibleForEvent } from "@/lib/notification-policy";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
@@ -29,7 +30,7 @@ type Match = {
 
 interface Ctx {
   charge: { id: string; lease_id: string; status: string; due_date: string; amount_cents: number };
-  lease: { id: string; tenant_profile_id: string | null; unit_id: string };
+  lease: { id: string; tenant_profile_id: string | null; unit_id: string; collects_outside_domus: boolean | null };
   unit: { id: string; property_id: string; unit_number: string };
   property: { id: string; owner_account_id: string | null; name: string };
   tenantProfile: { id: string; email: string | null } | null;
@@ -93,7 +94,7 @@ async function getCtx(supabase: AdminClient, chargeId: string): Promise<CtxResul
 
   const { data: lease, error: leaseError } = await supabase
     .from("leases")
-    .select("id, tenant_profile_id, unit_id")
+    .select("id, tenant_profile_id, unit_id, collects_outside_domus")
     .eq("id", charge.lease_id)
     .maybeSingle();
   if (leaseError) {
@@ -130,13 +131,17 @@ async function getCtx(supabase: AdminClient, chargeId: string): Promise<CtxResul
     return { ok: false, reason: "not_found" };
   }
 
-  const { data: tenantProfile } = lease.tenant_profile_id
+  const { data: tenantProfile, error: tenantProfileError } = lease.tenant_profile_id
     ? await supabase
         .from("profiles")
         .select("id, email")
         .eq("id", lease.tenant_profile_id)
         .maybeSingle()
-    : { data: null };
+    : { data: null, error: null };
+  if (tenantProfileError) {
+    console.error(`[stripe-webhook] getCtx tenant_profile: ${tenantProfileError.code ?? "unknown"}`);
+    return { ok: false, reason: "db_error", error: tenantProfileError };
+  }
 
   return { ok: true, ctx: { charge, lease, unit, property, tenantProfile } };
 }
@@ -460,8 +465,9 @@ function notifyManagerOfFeeTransfer(
 }
 
 function queuePaymentNotifications(ctx: Ctx, amountCents: number) {
-  void notifyOwnerMembersForProperty({
+  void notifyPropertyTeam({
     propertyId: ctx.property.id,
+    event: "rent_paid_stripe",
     type: "payment_recorded",
     title: "Rent Payment Received",
     body: `A payment of ${formatCurrency(amountCents)} was recorded for ${formatUnitLabel(ctx.unit.unit_number)}.`,
@@ -473,7 +479,7 @@ function queuePaymentNotifications(ctx: Ctx, amountCents: number) {
     entityId: ctx.charge.id
   }));
 
-  if (ctx.tenantProfile?.id) {
+  if (ctx.tenantProfile?.id && tenantEligibleForEvent("rent_paid_stripe", ctx.lease.collects_outside_domus)) {
     void createNotificationWithDelivery({
       recipientProfileId: ctx.tenantProfile.id,
       recipientEmail: ctx.tenantProfile.email,
@@ -514,8 +520,9 @@ function queueAutopayFailure(
   }
 
   if (context?.property.id) {
-    void notifyOwnerMembersForProperty({
+    void notifyPropertyTeam({
       propertyId: context.property.id,
+      event: "autopay_failed",
       type: "late_rent",
       title: "Autopay Failed",
       body: `Automatic payment failed for ${formatUnitLabel(context.unit.unit_number)}.`,
@@ -851,13 +858,24 @@ export async function handleAsyncPaymentFailed(
   const ctxResult = await getCtx(supabase, chargeId);
   if (ctxResult.ok) {
     const ctx = ctxResult.ctx;
-    if (ctx.tenantProfile?.id && ctx.tenantProfile.email) {
+    void notifyPropertyTeam({
+      propertyId: ctx.property.id,
+      event: "bank_payment_failed",
+      type: "late_rent",
+      title: "Bank payment didn't go through",
+      body: `A bank payment for ${formatUnitLabel(ctx.unit.unit_number)} did not clear.`,
+      entityType: "rent_charge",
+      entityId: ctx.charge.id
+    });
+    if (ctx.tenantProfile?.id) {
       void createNotificationWithDelivery({
         recipientProfileId: ctx.tenantProfile.id,
         recipientEmail: ctx.tenantProfile.email,
         type: "late_rent",
         title: "Bank payment didn't go through",
-        body: `Your bank account payment of ${formatCurrency(ctx.charge.amount_cents)} for ${formatUnitLabel(ctx.unit.unit_number)} didn't clear. Please try again or use a different payment method.`,
+        body: `Your bank account payment of ${formatCurrency(ctx.charge.amount_cents)} ` +
+          `for ${formatUnitLabel(ctx.unit.unit_number)} didn't clear. ` +
+          "Please try again or use a different payment method.",
         entityType: "rent_charge",
         entityId: ctx.charge.id
       }).catch(sideEffectError("handleAsyncPaymentFailed", "notify_tenant", {
@@ -885,7 +903,8 @@ export async function handleAsyncPaymentFailed(
 
   if (existingPayment && !existingPayment.reversed_at) {
     console.error(
-      `[stripe-webhook] RECONCILIATION: payment record ${existingPayment.id} exists for failed ACH session ${session.id} - reversing transfers`
+      `[stripe-webhook] RECONCILIATION: payment record ${existingPayment.id} ` +
+        `exists for failed ACH session ${session.id} - reversing transfers`
     );
 
     if (existingPayment.stripe_transfer_id) {

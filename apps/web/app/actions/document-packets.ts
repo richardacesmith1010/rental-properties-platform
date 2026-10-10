@@ -7,7 +7,7 @@ import { shouldThrottleDocumentPacketSend } from "@/lib/idempotency";
 import { sideEffectError } from "@/lib/logger";
 import {
   createNotificationWithDelivery,
-  notifyOwnerMembersForProperty
+  notifyPropertyTeam
 } from "@/lib/notifications";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import {
@@ -67,7 +67,9 @@ export async function createDocumentPacket(_prev: ActionState, formData: FormDat
   const { data: property } = await supabase.from("properties").select("id, owner_account_id").eq("id", unit.property_id).single();
   if (!property) return { success: false, error: "Property not found for lease." };
   if (!(await canUserAdministerProperty(user.id, property.id))) return { success: false, error: "You do not have access to this lease." };
-  if (template.owner_account_id !== property.owner_account_id) return { success: false, error: "Template account does not match this property account." };
+  if (template.owner_account_id !== property.owner_account_id) {
+    return { success: false, error: "Template account does not match this property account." };
+  }
 
   const { error } = await supabase.from("document_packets").insert({
     template_id: templateId,
@@ -103,7 +105,9 @@ export async function sendDocumentPacket(_prev: ActionState, formData: FormData)
     .single();
 
   if (!packet) return { success: false, error: "Document packet not found." };
-  if (!(await canUserAdministerProperty(user.id, packet.property_id))) return { success: false, error: "You do not have access to this packet." };
+  if (!(await canUserAdministerProperty(user.id, packet.property_id))) {
+    return { success: false, error: "You do not have access to this packet." };
+  }
   if (packet.status === "signed" || packet.status === "void") return { success: false, error: "This packet can no longer be sent." };
   if (packet.status === "sent" && shouldThrottleDocumentPacketSend(packet.sent_at)) return { success: true };
   if (!packet.lease_id) return { success: false, error: "Packet must be linked to a lease before sending." };
@@ -141,7 +145,7 @@ export async function sendDocumentPacket(_prev: ActionState, formData: FormData)
     entityId: packet.id
   }).catch(sideEffectError("sendDocumentPacket", "notify_signer", { userId: user.id, entityType: "document_packet", entityId: packet.id }));
 
-  void notifyOwnerMembersForProperty({
+  void notifyPropertyTeam({
     propertyId: packet.property_id,
     type: "document_sent",
     title: "Document packet sent",
@@ -226,7 +230,8 @@ export async function signDocumentPacket(_prev: ActionState, formData: FormData)
 
   const { data: remaining } = await admin.from("document_signers").select("id").eq("packet_id", packetId).eq("status", "pending").limit(1);
   if (!remaining || remaining.length === 0) {
-    const { error: packetUpdateError } = await admin.from("document_packets").update({ status: "signed", signed_at: signedAt }).eq("id", packetId);
+    const { error: packetUpdateError } = await admin.from("document_packets")
+      .update({ status: "signed", signed_at: signedAt }).eq("id", packetId);
     if (packetUpdateError) return { success: false, error: "Document signed, but the packet could not be finalized." };
 
     const { data: packet } = await admin.from("document_packets").select("id, property_id, template_id").eq("id", packetId).single();
@@ -235,14 +240,17 @@ export async function signDocumentPacket(_prev: ActionState, formData: FormData)
         ? await admin.from("document_templates").select("name").eq("id", packet.template_id).maybeSingle()
         : { data: null };
 
-      void notifyOwnerMembersForProperty({
+      void notifyPropertyTeam({
         propertyId: packet.property_id,
         type: "document_signed",
         title: "Document Signed",
         body: `"${template?.name ?? "Lease document"}" has been signed.`,
         entityType: "document_packet",
-        entityId: packet.id
-      }).catch(sideEffectError("signDocumentPacket", "notify_signer", { userId: user.id, entityType: "document_packet", entityId: packet.id }));
+        entityId: packet.id,
+        actorProfileId: user.id
+      }).catch(sideEffectError("signDocumentPacket", "notify_signer", {
+        userId: user.id, entityType: "document_packet", entityId: packet.id
+      }));
     }
   }
 

@@ -59,7 +59,8 @@ interface QueryError {
 }
 
 const WITHDRAWAL_SELECT =
-  "id, ownership_account_id, requested_by, amount_cents, reason, status, votes_required, votes_received, created_at, resolved_at, stripe_transfer_id";
+  "id, ownership_account_id, requested_by, amount_cents, reason, status, \
+   votes_required, votes_received, created_at, resolved_at, stripe_transfer_id";
 const LEGACY_WITHDRAWAL_SELECT =
   "id, ownership_account_id, requested_by, amount_cents, reason, status, votes_required, votes_received, created_at, resolved_at";
 
@@ -236,7 +237,7 @@ export async function getPendingWithdrawals(accountId: string): Promise<Withdraw
   return buildWithdrawalDtoFromRows(rows);
 }
 
-export async function resolveWithdrawal(requestId: string): Promise<WithdrawalRequestDTO | null> {
+export async function resolveWithdrawal(requestId: string, actorProfileId?: string): Promise<WithdrawalRequestDTO | null> {
   const admin = createAdminClient();
   const requestRow = await selectWithdrawalRowById(requestId);
 
@@ -296,7 +297,8 @@ export async function resolveWithdrawal(requestId: string): Promise<WithdrawalRe
           ? `${requestorName}'s withdrawal request has been approved.`
           : `${requestorName}'s withdrawal request was rejected.`,
       entityType: "withdrawal_request",
-      entityId: requestId
+      entityId: requestId,
+      excludeProfileId: actorProfileId
     }).catch(
       sideEffectError("resolveWithdrawal", "notify_account_members", {
         entityType: "withdrawal_request",

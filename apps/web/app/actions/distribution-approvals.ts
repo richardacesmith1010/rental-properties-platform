@@ -142,7 +142,7 @@ export async function submitDistributionChangeRequest(
   }
 
   if (votesRequired === 1) {
-    const resolved = await resolveRequest(request.id);
+    const resolved = await resolveRequest(request.id, user.id);
     revalidatePath("/owner");
     if (resolved?.status === "approved") {
       return { success: true, message: "Distribution updated immediately for this solo account." };
@@ -262,7 +262,7 @@ export async function voteOnDistributionChange(
     return { success: false, error: "Your vote was recorded, but the request tally could not be updated." };
   }
 
-  const resolved = await resolveRequest(requestId);
+  const resolved = await resolveRequest(requestId, user.id);
   revalidatePath("/owner");
 
   if (resolved?.status === "approved") {

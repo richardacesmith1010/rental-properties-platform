@@ -8,6 +8,9 @@ import {
   type NotificationPreferenceSettings
 } from "@/lib/notification-preferences";
 import { createNotificationWithDelivery, type NotificationType } from "@/lib/notifications";
+import { notificationMode } from "@/lib/notifications-switch";
+import { rulesFor, type NotificationEvent } from "@/lib/notification-policy";
+import { loadPropertyTeam } from "@/lib/notification-recipients";
 
 function createFallbackNotificationSettings(): NotificationPreferenceSettings {
   return {
@@ -18,93 +21,81 @@ function createFallbackNotificationSettings(): NotificationPreferenceSettings {
 }
 
 
-interface NotifyOwnerMembersParams {
+interface NotifyPropertyTeamParams {
   propertyId: string;
   type: NotificationType;
+  event?: NotificationEvent;
   title: string;
   body: string;
   entityType: string;
   entityId?: string | null;
   excludeProfileId?: string | null;
   actorProfileId?: string | null;
+  emailMode?: "default" | "never";
 }
 
 function shouldMirrorToInbox(type: NotificationType) {
   return type === "new_ticket" || type === "ticket_resolved" || type === "lease_updated";
 }
 
-export async function notifyOwnerMembersForProperty(params: NotifyOwnerMembersParams) {
+export async function notifyPropertyTeam(params: NotifyPropertyTeamParams) {
+  const mode = notificationMode();
+  if (mode === "off") return;
   try {
     const admin = createAdminClient();
-
-    if (shouldMirrorToInbox(params.type)) {
-      await ensureInboxThreadForEvent({
-        propertyId: params.propertyId,
-        entityType: params.entityType,
-        entityId: params.entityId ?? null,
-        subject: params.title,
-        messageBody: params.body,
-        actorProfileId: params.actorProfileId ?? null
-      });
+    const rule = params.event ? rulesFor(params.event) : null;
+    const team = await loadPropertyTeam(admin, params.propertyId);
+    if (!team) return;
+    if (rule && rule.type !== params.type) return;
+    const mirrorActorId = params.actorProfileId ?? team.ownerIds[0] ?? team.managerIds[0];
+    if (mode === "on" && shouldMirrorToInbox(params.type) && mirrorActorId) {
+      try {
+        await ensureInboxThreadForEvent({
+          propertyId: params.propertyId,
+          entityType: params.entityType,
+          entityId: params.entityId ?? null,
+          subject: params.title,
+          messageBody: params.body,
+          actorProfileId: mirrorActorId
+        });
+      } catch (error) {
+        console.error(`[notifications] inbox_mirror: ${error instanceof Error ? error.name : "unknown"}`);
+      }
     }
-
-    const { data: property } = await admin
-      .from("properties")
-      .select("owner_account_id")
-      .eq("id", params.propertyId)
-      .single();
-
-    if (!property?.owner_account_id) {
+    const ownerIds = rule?.owners === false ? [] : team.ownerIds;
+    const managerIds = rule?.managers === "all_homes" ||
+      (rule?.managers === "client_homes" && team.clientHome) ? team.managerIds : [];
+    const excluded = new Set([params.excludeProfileId]);
+    if (!rule || rule.excludeActor) excluded.add(params.actorProfileId);
+    const recipients = new Map<string, "owner" | "manager">();
+    for (const id of ownerIds) if (!excluded.has(id)) recipients.set(id, "owner");
+    for (const id of managerIds) if (!excluded.has(id) && !recipients.has(id)) recipients.set(id, "manager");
+    const recipientIds = Array.from(recipients.keys());
+    if (recipientIds.length === 0) return;
+    const { data: profiles, error } = await admin.from("profiles")
+      .select("id, email").in("id", recipientIds);
+    if (error) {
+      console.error(`[notifications] profiles: ${error.code ?? "unknown"}`);
       return;
     }
-
-    const { data: members } = await admin
-      .from("ownership_account_members")
-      .select("profile_id, can_receive_critical_alerts")
-      .eq("account_id", property.owner_account_id)
-      .eq("member_role", "owner")
-      .eq("active", true);
-
-    const recipientIds = (members ?? [])
-      .filter((member) => member.can_receive_critical_alerts)
-      .map((member) => member.profile_id)
-      .filter((id) => id !== params.excludeProfileId);
-
-    if (recipientIds.length === 0) {
-      return;
-    }
-
-    const { data: profiles } = await admin
-      .from("profiles")
-      .select("id, email, role")
-      .in("id", recipientIds);
-
-    const settingsByProfileId = await getUserNotificationPreferenceSettingsMap(
-      recipientIds
-    );
-
-    for (const profile of profiles ?? []) {
-      await createNotificationWithDelivery({
-        recipientProfileId: profile.id,
-        recipientEmail: profile.email,
-        recipientRole:
-          profile.role === "owner" || profile.role === "manager" || profile.role === "tenant"
-            ? profile.role
-            : undefined,
-        type: params.type,
-        title: params.title,
-        body: params.body,
-        entityType: params.entityType,
-        entityId: params.entityId ?? null,
-        deliveryPreference: resolveNotificationDeliveryPreference(
-          settingsByProfileId.get(profile.id) ??
-            createFallbackNotificationSettings(),
-          params.type
-        )
-      });
-    }
+    const settingsByProfileId = await getUserNotificationPreferenceSettingsMap(recipientIds);
+    await Promise.allSettled((profiles ?? []).filter((profile) => recipients.has(profile.id))
+      .map((profile) => createNotificationWithDelivery({
+      recipientProfileId: profile.id,
+      recipientEmail: profile.email,
+      recipientRole: recipients.get(profile.id),
+      type: params.type,
+      title: params.title,
+      body: params.body,
+      entityType: params.entityType,
+      entityId: params.entityId ?? null,
+      emailMode: params.emailMode ?? (rule?.email === false ? "never" : "default"),
+      deliveryPreference: resolveNotificationDeliveryPreference(
+        settingsByProfileId.get(profile.id) ?? createFallbackNotificationSettings(), params.type
+      )
+    })));
   } catch (error) {
-    console.error("Failed to notify owner members:", error);
+    console.error(`[notifications] property_team: ${error instanceof Error ? error.name : "unknown"}`);
   }
 }
 
@@ -116,7 +107,7 @@ export async function notifyOwnerOfStripeIssue(params: {
     return;
   }
 
-  await notifyOwnerMembersForProperty({
+  await notifyPropertyTeam({
     propertyId: params.propertyId,
     type: "owner_message",
     title: "Bank connection issue",
@@ -206,30 +197,29 @@ export async function notifyAccountMembers(params: NotifyAccountMembersParams) {
 export async function notifyOwnerMembersOfAcceptedTenantInvite(profileId: string) {
   try {
     const admin = createAdminClient();
-    const { data: invitations } = await admin
+    const { data: invitations, error } = await admin
       .from("invitations")
       .select("id, property_id, email, full_name")
       .eq("role", "tenant")
       .eq("status", "accepted")
       .eq("invited_profile_id", profileId)
       .not("property_id", "is", null);
-
-    for (const invitation of invitations ?? []) {
-      if (!invitation.property_id) {
-        continue;
-      }
-
-      await notifyOwnerMembersForProperty({
-        propertyId: invitation.property_id,
+    if (error) {
+      console.error(`[notifications] accepted_invites: ${error.code ?? "unknown"}`);
+      return;
+    }
+    await Promise.allSettled((invitations ?? [])
+      .filter((invitation) => Boolean(invitation.property_id))
+      .map((invitation) => notifyPropertyTeam({
+        propertyId: invitation.property_id as string,
         type: "invite_accepted",
         title: "Tenant invite accepted",
         body: `${invitation.full_name || invitation.email} accepted the invitation and can now access Domus.`,
         entityType: "invitation",
         entityId: invitation.id,
         actorProfileId: profileId
-      });
-    }
+      })));
   } catch (error) {
-    console.error("Failed to notify owner members of accepted tenant invite:", error);
+    console.error(`[notifications] accepted_invites: ${error instanceof Error ? error.name : "unknown"}`);
   }
 }

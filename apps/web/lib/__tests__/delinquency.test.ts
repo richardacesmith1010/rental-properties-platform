@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const buildRentReminderEmailMock = vi.hoisted(() => vi.fn());
 const createNotificationWithDeliveryMock = vi.hoisted(() => vi.fn());
-const notifyOwnerMembersForPropertyMock = vi.hoisted(() => vi.fn());
+const notifyPropertyTeamMock = vi.hoisted(() => vi.fn());
 const getPropertyNotificationDeliveryPreferencesMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/email-templates", () => ({
@@ -11,7 +11,7 @@ vi.mock("@/lib/email-templates", () => ({
 }));
 vi.mock("@/lib/notifications", () => ({
   createNotificationWithDelivery: createNotificationWithDeliveryMock,
-  notifyOwnerMembersForProperty: notifyOwnerMembersForPropertyMock
+  notifyPropertyTeam: notifyPropertyTeamMock
 }));
 vi.mock("@/lib/notification-preferences", () => ({
   getPropertyNotificationDeliveryPreferences: getPropertyNotificationDeliveryPreferencesMock
@@ -33,7 +33,7 @@ interface LeaseRow {
   id: string;
   tenant_profile_id: string | null;
   unit_id: string;
-  collects_outside_domus: boolean;
+  collects_outside_domus: boolean | null;
 }
 
 interface UnitRow {
@@ -45,6 +45,7 @@ interface UnitRow {
 interface PropertyRow {
   id: string;
   name: string;
+  owner_account_id?: string | null;
 }
 
 interface ProfileRow {
@@ -65,6 +66,7 @@ interface DelinquencySupabaseConfig {
   properties: PropertyRow[];
   profiles: ProfileRow[];
   notifications?: NotificationRow[];
+  accounts?: Array<{ id: string; managed_client: boolean }>;
 }
 
 function createSupabaseMock(config: DelinquencySupabaseConfig): SupabaseClient {
@@ -188,6 +190,17 @@ function createSupabaseMock(config: DelinquencySupabaseConfig): SupabaseClient {
         };
       }
 
+      if (table === "ownership_accounts") {
+        return {
+          select: vi.fn(() => ({
+            in: vi.fn(async (_column: string, ids: string[]) => ({
+              data: (config.accounts ?? []).filter((account) => ids.includes(account.id)),
+              error: null
+            }))
+          }))
+        };
+      }
+
       if (table === "properties") {
         return {
           select: vi.fn(() => ({
@@ -243,7 +256,7 @@ describe("delinquency notifications", () => {
       html: "<p>Reminder</p>"
     });
     createNotificationWithDeliveryMock.mockResolvedValue(undefined);
-    notifyOwnerMembersForPropertyMock.mockResolvedValue(undefined);
+    notifyPropertyTeamMock.mockResolvedValue(undefined);
     getPropertyNotificationDeliveryPreferencesMock.mockResolvedValue(
       new Map([["property-1", { inAppEnabled: true, emailEnabled: true }]])
     );
@@ -300,7 +313,7 @@ describe("delinquency notifications", () => {
     expect(createNotificationWithDeliveryMock).toHaveBeenCalledWith(
       expect.objectContaining({ entityId: "charge-active" })
     );
-    expect(notifyOwnerMembersForPropertyMock).not.toHaveBeenCalled();
+    expect(notifyPropertyTeamMock).toHaveBeenCalledWith(expect.objectContaining({ event: "overdue_followup", entityId: "charge-active" }));
   });
 
   it("excludes historical late charges for leases collected outside Domus", async () => {
@@ -332,7 +345,7 @@ describe("delinquency notifications", () => {
       "Overdue rent follow-ups sent: 0."
     );
     expect(createNotificationWithDeliveryMock).not.toHaveBeenCalled();
-    expect(notifyOwnerMembersForPropertyMock).not.toHaveBeenCalled();
+    expect(notifyPropertyTeamMock).not.toHaveBeenCalled();
   });
 
   it("excludes soft-deleted charges from rent due reminders while still notifying on active charges", async () => {
@@ -369,4 +382,46 @@ describe("delinquency notifications", () => {
       expect.objectContaining({ entityId: "charge-active" })
     );
   });
+  it.each([
+    [true, false],
+    [false, true],
+    [null, false]
+  ] as const)("rent-due reminder eligibility for outside flag %s", async (outside, eligible) => {
+    const supabase = createSupabaseMock(buildDelinquencyConfig({
+      charges: [{
+        id: "charge-1", lease_id: "lease-1", due_date: "2026-05-06",
+        amount_cents: 150000, status: "pending", category: "rent", deleted_at: null
+      }],
+      leases: [{
+        id: "lease-1", tenant_profile_id: "tenant-1", unit_id: "unit-1",
+        collects_outside_domus: outside
+      }]
+    }));
+    expect(await sendRentDueReminders(supabase)).toBe(`Reminders sent: ${eligible ? 1 : 0}.`);
+    expect(createNotificationWithDeliveryMock).toHaveBeenCalledTimes(eligible ? 1 : 0);
+  });
+
+  it.each([true, null] as const)(
+    "outside client lease with flag %s still alerts owners but not tenant",
+    async (outside) => {
+      const supabase = createSupabaseMock(buildDelinquencyConfig({
+        charges: [{
+          id: "charge-client", lease_id: "lease-1", due_date: "2026-01-01",
+          amount_cents: 150000, status: "late", category: "rent", deleted_at: null
+        }],
+        leases: [{
+          id: "lease-1", tenant_profile_id: "tenant-1", unit_id: "unit-1",
+          collects_outside_domus: outside
+        }],
+        properties: [{ id: "property-1", name: "Client Home", owner_account_id: "account-1" }],
+        accounts: [{ id: "account-1", managed_client: true }]
+      }));
+      expect(await sendDelinquencyEscalations(supabase)).toBe("Overdue rent follow-ups sent: 1.");
+      expect(createNotificationWithDeliveryMock).not.toHaveBeenCalled();
+      expect(notifyPropertyTeamMock).toHaveBeenCalledWith(expect.objectContaining({
+        event: "overdue_followup", propertyId: "property-1"
+      }));
+    }
+  );
+
 });

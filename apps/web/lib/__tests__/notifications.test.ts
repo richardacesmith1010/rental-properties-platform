@@ -1,4 +1,3 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const createClientMock = vi.hoisted(() => vi.fn());
@@ -31,86 +30,10 @@ vi.mock("@/lib/notification-preferences", () => ({
   resolveNotificationDeliveryPreference: resolveNotificationDeliveryPreferenceMock
 }));
 
-import { createNotificationWithDelivery, getNotificationsForUser, notifyOwnerMembersForProperty } from "@/lib/notifications";
-
-interface NotificationAdminConfig {
-  notificationId?: string;
-  existingDeliveries?: Array<{ channel: string; status: string }>;
-  property?: { owner_account_id: string | null } | null;
-  members?: Array<{ profile_id: string; can_receive_critical_alerts: boolean }>;
-  profiles?: Array<{ id: string; email: string | null }>;
-  throwsOnPropertyLookup?: boolean;
-}
-
-function createNotificationAdminClient(config: NotificationAdminConfig): SupabaseClient {
-  const deliveryInsertMock = vi.fn().mockResolvedValue({ error: null });
-  const notificationsUpsertMock = vi.fn(() => ({
-    select: vi.fn(() => ({
-      single: vi.fn().mockResolvedValue({ data: { id: config.notificationId ?? "notification-1" }, error: null })
-    }))
-  }));
-
-  const from = vi.fn((table: string) => {
-    if (table === "notifications") {
-      return {
-        upsert: notificationsUpsertMock
-      };
-    }
-
-    if (table === "notification_deliveries") {
-      return {
-        select: vi.fn(() => ({
-          eq: vi.fn().mockResolvedValue({ data: config.existingDeliveries ?? [], error: null })
-        })),
-        insert: deliveryInsertMock
-      };
-    }
-
-    if (table === "properties") {
-      return {
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            single: config.throwsOnPropertyLookup
-              ? vi.fn().mockRejectedValue(new Error("property lookup failed"))
-              : vi.fn().mockResolvedValue({ data: config.property ?? { owner_account_id: "account-1" }, error: null })
-          }))
-        }))
-      };
-    }
-
-    if (table === "ownership_account_members") {
-      return {
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              eq: vi.fn().mockResolvedValue({ data: config.members ?? [], error: null })
-            }))
-          }))
-        }))
-      };
-    }
-
-    if (table === "profiles") {
-      return {
-        select: vi.fn(() => ({
-          in: vi.fn().mockResolvedValue({ data: config.profiles ?? [], error: null }),
-          eq: vi.fn((column: string, value: string) => ({
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: (config.profiles ?? []).find((profile) => profile.id === value) ?? null,
-              error: null
-            })
-          }))
-        }))
-      };
-    }
-
-    return {
-      select: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: [], error: null }) }))
-    };
-  });
-
-  return { from } as unknown as SupabaseClient;
-}
+import { createNotificationWithDelivery, getNotificationsForUser, notifyPropertyTeam } from "@/lib/notifications";
+import {
+  createNotificationAdminClient, notificationDeliveryInserts, notificationUpserts
+} from "./notification-test-helpers";
 
 describe("notifications utilities", () => {
   beforeEach(() => {
@@ -306,7 +229,7 @@ describe("notifications utilities", () => {
     });
     createAdminClientMock.mockReturnValue(admin);
 
-    await notifyOwnerMembersForProperty({
+    await notifyPropertyTeam({
       propertyId: "property-1",
       type: "late_rent",
       title: "Late rent",
@@ -327,7 +250,7 @@ describe("notifications utilities", () => {
     });
     createAdminClientMock.mockReturnValue(admin);
 
-    await notifyOwnerMembersForProperty({
+    await notifyPropertyTeam({
       propertyId: "property-1",
       type: "late_rent",
       title: "Late rent",
@@ -343,7 +266,7 @@ describe("notifications utilities", () => {
     createAdminClientMock.mockReturnValue(admin);
 
     await expect(
-      notifyOwnerMembersForProperty({
+      notifyPropertyTeam({
         propertyId: "property-1",
         type: "late_rent",
         title: "Late rent",
@@ -352,4 +275,204 @@ describe("notifications utilities", () => {
       })
     ).resolves.toBeUndefined();
   });
+  it.each([
+    { canonical: "allowed@example.com", caller: "other@example.com", allowed: true },
+    { canonical: "blocked@example.com", caller: "allowed@example.com", allowed: false },
+    { canonical: null, caller: "allowed@example.com", allowed: false }
+  ])("test mode gates the canonical profile email: $canonical", async ({ canonical, caller, allowed }) => {
+    vi.stubEnv("DOMUS_NOTIFICATIONS_ALLOWLIST", "allowed@example.com");
+    vi.stubEnv("RESEND_API_KEY", "test-key");
+    vi.stubEnv("RESEND_FROM_EMAIL", "alerts@domusbase.com");
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue({ id: "email-1" }) });
+    vi.stubGlobal("fetch", fetchMock);
+    getNotificationPreferenceMock.mockResolvedValue({ inAppEnabled: true, emailEnabled: true });
+    const admin = createNotificationAdminClient({ profiles: [{ id: "user-1", email: canonical }] });
+    createAdminClientMock.mockReturnValue(admin);
+    await createNotificationWithDelivery({
+      recipientProfileId: "user-1", recipientEmail: caller, type: "late_rent",
+      title: "Rent late", body: "Due", entityType: "rent_charge", entityId: "charge-1"
+    });
+    expect(notificationUpserts(admin)).toHaveLength(allowed ? 1 : 0);
+    if (!allowed) expect(admin.from).not.toHaveBeenCalledWith("notification_deliveries");
+    expect(fetchMock).toHaveBeenCalledTimes(allowed ? 1 : 0);
+    if (allowed) expect(JSON.parse(fetchMock.mock.calls[0][1].body).to).toEqual(["allowed@example.com"]);
+  });
+
+  it("test mode fails closed when the profile lookup errors", async () => {
+    vi.stubEnv("DOMUS_NOTIFICATIONS_ALLOWLIST", "allowed@example.com");
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const admin = createNotificationAdminClient({ profileLookupError: true, profiles: [{ id: "user-1", email: "allowed@example.com" }] });
+    createAdminClientMock.mockReturnValue(admin);
+    await createNotificationWithDelivery({
+      recipientProfileId: "user-1",
+      recipientEmail: "allowed@example.com",
+      type: "new_ticket",
+      title: "Ticket",
+      body: "Body",
+      entityType: "ticket"
+    });
+    expect(notificationUpserts(admin)).toHaveLength(0);
+    expect(admin.from).not.toHaveBeenCalledWith("notification_deliveries");
+  });
+
+  it("routes only authorized client managers and current account owners, without duplicates", async () => {
+    const admin = createNotificationAdminClient({
+      managedClient: true,
+      members: [{ profile_id: "owner-1", can_receive_critical_alerts: true }],
+      assignments: ["manager-1", "manager-1", "manager-2"],
+      accountLinks: ["manager-1", "manager-2"],
+      profiles: [
+        { id: "owner-1", email: "owner@example.com" },
+        { id: "manager-1", email: "one@example.com" },
+        { id: "manager-2", email: "two@example.com" }
+      ]
+    });
+    createAdminClientMock.mockReturnValue(admin);
+    await notifyPropertyTeam({
+      propertyId: "property-1",
+      event: "rent_paid_manual",
+      type: "payment_recorded",
+      title: "Paid",
+      body: "Body",
+      entityType: "rent_charge",
+      actorProfileId: "owner-1"
+    });
+    expect(notificationUpserts(admin).map(([row]) => row.recipient_profile_id).sort()).toEqual(["manager-1", "manager-2"]);
+  });
+
+  it("does not notify a client manager without the active account link", async () => {
+    const admin = createNotificationAdminClient({
+      managedClient: true,
+      assignments: ["manager-1"],
+      profiles: [{ id: "manager-1", email: "one@example.com" }]
+    });
+    createAdminClientMock.mockReturnValue(admin);
+    await notifyPropertyTeam({
+      propertyId: "property-1",
+      event: "late_fee",
+      type: "late_rent",
+      title: "Late",
+      body: "Body",
+      entityType: "rent_charge"
+    });
+    expect(notificationUpserts(admin)).toHaveLength(0);
+  });
+
+  it("one owner upsert failure leaves only the other owner's matching row, deliveries, and email", async () => {
+    vi.stubEnv("RESEND_API_KEY", "test-key");
+    vi.stubEnv("RESEND_FROM_EMAIL", "alerts@domusbase.com");
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true, json: vi.fn().mockResolvedValue({ id: "email-1" })
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const config = {
+      members: [
+        { profile_id: "owner-1", can_receive_critical_alerts: true },
+        { profile_id: "owner-2", can_receive_critical_alerts: true }
+      ],
+      profiles: [
+        { id: "owner-1", email: "one@example.com" },
+        { id: "owner-2", email: "two@example.com" },
+        { id: "unrelated", email: "other@example.com" }
+      ],
+      failingRecipients: ["owner-1"]
+    };
+    const admin = createNotificationAdminClient(config);
+    createAdminClientMock.mockReturnValue(admin);
+    await notifyPropertyTeam({
+      propertyId: "property-1", event: "late_fee", type: "late_rent",
+      title: "Owner notice A", body: "Charge A only", entityType: "rent_charge", entityId: "charge-a"
+    });
+    expect(notificationUpserts(admin).map(([row]) => [row.recipient_profile_id, row.title, row.body]))
+      .toEqual([
+        ["owner-1", "Owner notice A", "Charge A only"],
+        ["owner-2", "Owner notice A", "Charge A only"]
+      ]);
+    expect(notificationDeliveryInserts(admin).map(([row]) => [row.notification_id, row.channel]))
+      .toEqual([
+        ["notification-owner-2", "in_app"],
+        ["notification-owner-2", "email"]
+      ]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).to).toEqual(["two@example.com"]);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).subject).toBe("Owner notice A");
+    config.members = [{ profile_id: "owner-2", can_receive_critical_alerts: true }];
+    await notifyPropertyTeam({
+      propertyId: "property-1", event: "late_fee", type: "late_rent",
+      title: "Owner notice B", body: "Charge B only", entityType: "rent_charge", entityId: "charge-b"
+    });
+    expect(notificationUpserts(admin).map(([row]) => [row.recipient_profile_id, row.title, row.body]))
+      .toEqual([
+        ["owner-1", "Owner notice A", "Charge A only"],
+        ["owner-2", "Owner notice A", "Charge A only"],
+        ["owner-2", "Owner notice B", "Charge B only"]
+      ]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({
+      to: ["two@example.com"], subject: "Owner notice B"
+    });
+    expect(notificationDeliveryInserts(admin)).toHaveLength(4);
+  });
+
+  it("gates inbox mirrors in off and test but runs them on", async () => {
+    const admin = createNotificationAdminClient({
+      members: [{ profile_id: "owner-1", can_receive_critical_alerts: true }],
+      profiles: [{ id: "owner-1", email: "owner@example.com" }]
+    });
+    createAdminClientMock.mockReturnValue(admin);
+    const input = {
+      propertyId: "property-1",
+      event: "ticket_created" as const,
+      type: "new_ticket" as const,
+      title: "Ticket",
+      body: "Body",
+      entityType: "maintenance_ticket"
+    };
+    vi.stubEnv("DOMUS_NOTIFICATIONS_ENABLED", "false");
+    await notifyPropertyTeam(input);
+    vi.stubEnv("DOMUS_NOTIFICATIONS_ALLOWLIST", "owner@example.com");
+    await notifyPropertyTeam(input);
+    expect(notificationUpserts(admin)).toHaveLength(1);
+    expect(ensureInboxThreadForEventMock).not.toHaveBeenCalled();
+    vi.stubEnv("DOMUS_NOTIFICATIONS_ALLOWLIST", "");
+    vi.stubEnv("DOMUS_NOTIFICATIONS_ENABLED", "true");
+    await notifyPropertyTeam(input);
+    expect(ensureInboxThreadForEventMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("forces email off for in-app-only events even when preferences permit it", async () => {
+    vi.stubEnv("RESEND_API_KEY", "test-key");
+    vi.stubEnv("RESEND_FROM_EMAIL", "alerts@domusbase.com");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    getNotificationPreferenceMock.mockResolvedValue({ inAppEnabled: true, emailEnabled: true });
+    const admin = createNotificationAdminClient({});
+    createAdminClientMock.mockReturnValue(admin);
+    await createNotificationWithDelivery({
+      recipientProfileId: "user-1",
+      recipientEmail: "user@example.com",
+      type: "lease_updated",
+      title: "Lease",
+      body: "Updated",
+      entityType: "lease",
+      emailMode: "never"
+    });
+    expect(notificationUpserts(admin)).toHaveLength(1);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("does not notify a direct-message sender even when they are the recipient", async () => {
+    await createNotificationWithDelivery({
+      recipientProfileId: "sender-1",
+      actorProfileId: "sender-1",
+      recipientEmail: "sender@example.com",
+      type: "owner_message",
+      title: "Message",
+      body: "Body",
+      entityType: "inbox_thread"
+    });
+    expect(createAdminClientMock).not.toHaveBeenCalled();
+  });
+
 });

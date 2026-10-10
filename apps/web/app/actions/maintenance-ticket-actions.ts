@@ -8,7 +8,7 @@ import { sideEffectError } from "@/lib/logger";
 import { logMaintenanceStatusChange } from "@/lib/maintenance";
 import {
   createNotificationWithDelivery,
-  notifyOwnerMembersForProperty
+  notifyPropertyTeam
 } from "@/lib/notifications";
 import {
   createMaintenanceTicketSchema,
@@ -103,7 +103,9 @@ export async function createMaintenanceTicket(
     if (!uploadResult.success) {
       successMessage = "Maintenance request submitted, but the photo upload did not finish.";
     } else if (uploadResult.uploadedCount > 0) {
-      successMessage = `Maintenance request submitted with ${uploadResult.uploadedCount} photo${uploadResult.uploadedCount === 1 ? "" : "s"}.`;
+      successMessage = `Maintenance request submitted with ${uploadResult.uploadedCount} photo${
+        uploadResult.uploadedCount === 1 ? "" : "s"
+      }.`;
     }
   }
 
@@ -118,13 +120,8 @@ export async function createMaintenanceTicket(
   try {
     const admin = createAdminClient();
 
-    const [propertySettled, assignmentsSettled, actorProfileSettled] = await Promise.allSettled([
+    const [propertySettled, actorProfileSettled] = await Promise.allSettled([
       admin.from("properties").select("id, name").eq("id", unit.property_id).maybeSingle(),
-      admin
-        .from("property_managers")
-        .select("manager_profile_id")
-        .eq("property_id", unit.property_id)
-        .eq("active", true),
       admin.from("profiles").select("email").eq("id", user.id).maybeSingle()
     ]);
 
@@ -144,24 +141,6 @@ export async function createMaintenanceTicket(
         entityType: "ticket",
         entityId: ticket.id
       })(propertySettled.value.error);
-    }
-
-    const assignments =
-      assignmentsSettled.status === "fulfilled" && !assignmentsSettled.value.error
-        ? assignmentsSettled.value.data ?? []
-        : [];
-    if (assignmentsSettled.status === "rejected") {
-      sideEffectError("createMaintenanceTicket", "load_property_managers", {
-        userId: user.id,
-        entityType: "ticket",
-        entityId: ticket.id
-      })(assignmentsSettled.reason);
-    } else if (assignmentsSettled.value.error) {
-      sideEffectError("createMaintenanceTicket", "load_property_managers", {
-        userId: user.id,
-        entityType: "ticket",
-        entityId: ticket.id
-      })(assignmentsSettled.value.error);
     }
 
     const actorProfile =
@@ -186,17 +165,11 @@ export async function createMaintenanceTicket(
       throw new Error("Property not found for maintenance notification dispatch.");
     }
 
-    const recipientIds = new Set<string>();
-    for (const assignment of assignments ?? []) {
-      if (assignment.manager_profile_id !== user.id) {
-        recipientIds.add(assignment.manager_profile_id);
-      }
-    }
-
     const fromActor = actorProfile?.email ?? "A user";
     const propertyName = property?.name ?? "Property";
-    void notifyOwnerMembersForProperty({
+    void notifyPropertyTeam({
       propertyId: unit.property_id,
+      event: "ticket_created",
       type: "new_ticket",
       title: "New maintenance ticket",
       body: `${fromActor} submitted "${title}" for ${propertyName}.`,
@@ -212,30 +185,7 @@ export async function createMaintenanceTicket(
       })
     );
 
-    if (recipientIds.size > 0) {
-      const { data: recipients } = await admin
-        .from("profiles")
-        .select("id, email")
-        .in("id", Array.from(recipientIds));
 
-      for (const recipient of recipients ?? []) {
-        void createNotificationWithDelivery({
-          recipientProfileId: recipient.id,
-          recipientEmail: recipient.email,
-          type: "new_ticket",
-          title: "New maintenance ticket",
-          body: `${fromActor} submitted "${title}" for ${propertyName}.`,
-          entityType: "maintenance_ticket",
-          entityId: ticket.id
-        }).catch(
-          sideEffectError("createMaintenanceTicket", "notify_property_admin", {
-            userId: user.id,
-            entityType: "ticket",
-            entityId: ticket.id
-          })
-        );
-      }
-    }
   } catch (notificationError) {
     console.error("Failed to create new-ticket notifications:", notificationError);
   }
@@ -322,21 +272,18 @@ export async function updateTicketStatus(
   );
 
   if (status === "resolved" || status === "closed") {
-    void notifyOwnerMembersForProperty({
+    void notifyPropertyTeam({
       propertyId: ticket.property_id,
+      event: "ticket_resolved",
       type: "ticket_resolved",
       title: "Maintenance ticket resolved",
       body: `"${ticket.title}" was marked ${status}.`,
       entityType: "maintenance_ticket",
       entityId: ticket.id,
       actorProfileId: user.id
-    }).catch(
-      sideEffectError("updateTicketStatus", "notify_owner", {
-        userId: user.id,
-        entityType: "ticket",
-        entityId: ticket.id
-      })
-    );
+    }).catch(sideEffectError("updateTicketStatus", "mirror_ticket", {
+      userId: user.id, entityType: "ticket", entityId: ticket.id
+    }));
   }
 
   if (status === "resolved" && ticket.tenant_profile_id) {

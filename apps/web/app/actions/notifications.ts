@@ -11,7 +11,7 @@ import {
   markNotificationReadForUser
 } from "@/lib/notifications";
 import { updateNotificationPreference } from "@/lib/notification-preferences";
-import { notificationsEnabled } from "@/lib/notifications-switch";
+import { notificationMode, notificationsEnabled } from "@/lib/notifications-switch";
 import { getAdministeredPropertyIds } from "@/lib/property-access";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
@@ -260,7 +260,8 @@ export async function sendBatchPaymentReminder(
         recipient_profile_id: lease.tenant_profile_id,
         type: "rent_due_reminder" as const,
         title: "Payment reminder",
-        body: `${property?.name ?? "Your property"} • ${formatUnitLabel(unit.unit_number)}: ${formatCurrency(charge.amount_cents)} is due ${formatDate(charge.due_date)}.`,
+        body: `${property?.name ?? "Your property"} • ${formatUnitLabel(unit.unit_number)}: ` +
+          `${formatCurrency(charge.amount_cents)} is due ${formatDate(charge.due_date)}.`,
         entity_type: "charge",
         entity_id: charge.id
       }
@@ -309,9 +310,11 @@ export async function sendBatchPaymentReminder(
   revalidatePath("/tenant");
   return {
     success: true,
-    message: notificationsEnabled()
-      ? `${notifications.length} reminder${notifications.length === 1 ? "" : "s"} sent.`
-      : "Saved. Notifications are off until launch, so no one was notified."
+    message: notificationMode() === "test"
+      ? "Saved. Domus is in test mode. Only test accounts can get notices."
+      : notificationsEnabled()
+        ? `${notifications.length} reminder${notifications.length === 1 ? "" : "s"} sent.`
+        : "Saved. Notifications are off until launch, so no one was notified."
   };
 }
 

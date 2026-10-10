@@ -15,8 +15,9 @@ import {
 import { canUserAdministerProperty } from "@/lib/property-access";
 import {
   createNotificationWithDelivery,
-  notifyOwnerMembersForProperty
+  notifyPropertyTeam
 } from "@/lib/notifications";
+import { tenantEligibleForEvent } from "@/lib/notification-policy";
 import { logAudit } from "@/lib/audit";
 import { formatCurrency, formatUnitLabel } from "@/lib/format";
 import { sideEffectError } from "@/lib/logger";
@@ -263,13 +264,14 @@ export async function recordManualPayment(
     };
   }
 
-  const { data: lease } = await admin
+  const { data: lease, error: leaseError } = await admin
     .from("leases")
-    .select("id, tenant_profile_id, unit_id")
+    .select("id, tenant_profile_id, unit_id, collects_outside_domus")
     .eq("id", charge.lease_id)
     .maybeSingle();
 
-  if (!lease) {
+  if (leaseError) console.error(`[notifications] manual_payment_lease: ${leaseError.code ?? "unknown"}`);
+  if (leaseError || !lease) {
     return { success: false, error: "We couldn't find the lease for this rent." };
   }
 
@@ -314,16 +316,20 @@ export async function recordManualPayment(
     return { success: false, error: "Payment recorded, but failed to mark payment as paid." };
   }
 
-  const { data: tenantProfile } = lease.tenant_profile_id
+  const { data: tenantProfile, error: tenantProfileError } = lease.tenant_profile_id
     ? await admin
         .from("profiles")
         .select("id, email")
         .eq("id", lease.tenant_profile_id)
         .maybeSingle()
-    : { data: null };
+    : { data: null, error: null };
+  if (tenantProfileError) {
+    console.error(`[notifications] manual_payment_tenant: ${tenantProfileError.code ?? "unknown"}`);
+  }
 
-  void notifyOwnerMembersForProperty({
+  void notifyPropertyTeam({
     propertyId: unit.property_id,
+    event: "rent_paid_manual",
     type: "payment_recorded",
     title: "Rent Payment Received",
     body: `A payment of ${formatCurrency(amountCents)} was recorded for ${formatUnitLabel(unit.unit_number)}.`,
@@ -338,7 +344,8 @@ export async function recordManualPayment(
     })
   );
 
-  if (tenantProfile?.id) {
+  if (!tenantProfileError && tenantProfile?.id &&
+    tenantEligibleForEvent("rent_paid_manual", lease.collects_outside_domus)) {
     void createNotificationWithDelivery({
       recipientProfileId: tenantProfile.id,
       recipientEmail: tenantProfile.email,

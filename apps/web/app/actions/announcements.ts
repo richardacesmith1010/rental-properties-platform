@@ -9,7 +9,7 @@ import {
 } from "@/lib/announcements";
 import type { NotificationRecipientRole } from "@/lib/notification-actions";
 import { createNotificationWithDelivery } from "@/lib/notifications";
-import { notificationsEnabled } from "@/lib/notifications-switch";
+import { notificationMode, notificationsEnabled } from "@/lib/notifications-switch";
 import {
   getAdministeredPropertyIds
 } from "@/lib/property-access";
@@ -276,9 +276,11 @@ export async function createAnnouncement(
     if (insertError.code === "23505") {
       return {
         success: true,
-        message: notificationsEnabled()
-          ? "This announcement was already sent."
-          : "Saved. Notifications are off until launch, so no one was notified."
+        message: notificationMode() === "test"
+          ? "Saved. Domus is in test mode. Only test accounts can get notices."
+          : notificationsEnabled()
+            ? "This announcement was already sent."
+            : "Saved. Notifications are off until launch, so no one was notified."
       };
     }
 
@@ -316,7 +318,7 @@ export async function createAnnouncement(
   );
 
   const deliveryResults = notificationsEnabled()
-    ? await Promise.allSettled(tenantLookup.tenantIds.map((tenantId) => {
+    ? await Promise.allSettled(tenantLookup.tenantIds.filter((tenantId) => tenantId !== user.id).map((tenantId) => {
       const tenantProfile = tenantProfileById.get(tenantId);
       const recipientRole: NotificationRecipientRole =
         tenantProfile?.role === "owner" ||
@@ -351,8 +353,10 @@ export async function createAnnouncement(
 
   return {
     success: true,
-    message: notificationsEnabled()
-      ? `Announcement sent to ${tenantLookup.tenantIds.length} tenant${tenantLookup.tenantIds.length === 1 ? "" : "s"}.`
-      : "Saved. Notifications are off until launch, so no one was notified."
+    message: notificationMode() === "test"
+      ? "Saved. Domus is in test mode. Only test accounts can get notices."
+      : notificationsEnabled()
+        ? `Announcement sent to ${tenantLookup.tenantIds.length} tenant${tenantLookup.tenantIds.length === 1 ? "" : "s"}.`
+        : "Saved. Notifications are off until launch, so no one was notified."
   };
 }
