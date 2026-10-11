@@ -5,6 +5,7 @@ import { getAdministeredPropertyIdsForAccount, getAdministeredPropertyOptions } 
 import { getRentCollectionConnectStatus } from "@/lib/stripe-connect";
 import { getNotificationsForUser } from "@/lib/notifications";
 import { getUserNotificationPreferenceSettings } from "@/lib/notification-preferences";
+import { loadOwnerYearRentReceived } from "@/lib/owner-ytd";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { getOwnershipAccountsForUser } from "@/lib/ownership";
 import { getCurrentUserRole, getUserProfileSummary } from "@/lib/auth";
@@ -168,6 +169,9 @@ export async function loadOwnerPageData(params: {
       () => getDashboardData(params.userId, activeAccountId, propertyIds, "owner")
     )
   );
+  const ownerYearRentPromise = measureOwnerWithRequest(
+    "rent.year-received", () => loadOwnerYearRentReceived(activeAccountId)
+  ).catch(() => ({ ok: false as const, error: "load_failed" as const }));
   const portfolioPromise = administeredPropertyIdsPromise.then((propertyIds) =>
     measureOwnerWithRequest(
       "portfolio.data",
@@ -228,6 +232,7 @@ export async function loadOwnerPageData(params: {
   };
   const [
     dashboard,
+    ownerYearRent,
     portfolio,
     announcementProperties,
     notifications,
@@ -236,6 +241,7 @@ export async function loadOwnerPageData(params: {
     sectionData
   ] = await Promise.all([
     dashboardPromise,
+    ownerYearRentPromise,
     portfolioPromise,
     announcementPropertiesPromise,
     notificationsPromise,
@@ -261,6 +267,7 @@ export async function loadOwnerPageData(params: {
     announcementProperties,
     capabilities: capabilitiesWithOwnerSectionAvailability,
     dashboard,
+    ownerYearRent,
     generatedMessage: request.generatedMessage,
     initialOwnerHomePage: request.initialOwnerHomePage,
     initialOwnerWorkflowMode: request.initialOwnerWorkflowMode,

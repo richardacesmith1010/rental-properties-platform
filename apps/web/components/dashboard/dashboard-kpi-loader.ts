@@ -9,6 +9,7 @@ import type { MaintenanceTicket } from "@/lib/maintenance";
 import { tracksLateRent } from "@/lib/lease-collection";
 import type { OwnershipAccountDTO } from "@/lib/ownership";
 import type { PortfolioData } from "@/lib/portfolio";
+import { selectedRentReceivedCents } from "@/lib/rent-received";
 import {
   filterPortfolioByHomeIds, homeIdsForScope, resolveHomeScope, scopeFromParams,
   scopeFromValue, scopeValue, writeScopeParams, type HomeScope
@@ -400,9 +401,11 @@ export function useDashboardKpiData(
     const ytdExpensesCents = visibleExpenses
       .filter((expense) => expense.expenseDate >= currentYearStartIso)
       .reduce((sum, expense) => sum + expense.amountCents, 0);
-    const ytdIncomeCents = filteredCharges
-      .filter((charge) => charge.status === "paid" && charge.dueDate >= currentYearStartIso)
-      .reduce((sum, charge) => sum + charge.amountCents, 0);
+    const ytdIncomeCents = isOwnerRole
+      ? props.ownerYearRent?.ok
+        ? selectedRentReceivedCents(props.ownerYearRent.byPropertyId, selectedHomeIds) : null
+      : filteredCharges.filter((charge) => charge.status === "paid" && charge.dueDate >= currentYearStartIso)
+        .reduce((sum, charge) => sum + charge.amountCents, 0);
     const monthlyCollectedCents = displayDashboardData.kpis.collectedRentCents;
     const monthlyOutstandingCents = displayDashboardData.kpis.outstandingCents;
 
@@ -421,7 +424,8 @@ export function useDashboardKpiData(
       ytdExpensesCents,
       collectionRate: displayDashboardData.kpis.collectionRate
     };
-  }, [activeOwnershipAccount, displayDashboardData.kpis, filteredCharges, safeExpenses.expenses, selectedHomeIds]);
+  }, [activeOwnershipAccount, displayDashboardData.kpis, filteredCharges, isOwnerRole,
+    props.ownerYearRent, safeExpenses.expenses, selectedHomeIds]);
   return {
     sortedVendors,
     isOwnerRole,

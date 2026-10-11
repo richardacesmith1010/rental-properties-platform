@@ -1,0 +1,36 @@
+import { getAuthenticatedUser, getCurrentUserRole } from "@/lib/auth";
+import { rentReceivedByPropertyId } from "@/lib/rent-received";
+import { loadRentRowsForProperties } from "@/lib/owner-rent-rows";
+import { getOwnershipAccountsForUser } from "@/lib/ownership";
+import { getAdministeredProperties } from "@/lib/property-access";
+
+export type OwnerYearRentResult = { ok: true; byPropertyId: Record<string, number> }
+  | { ok: false; error: "load_failed" };
+
+export async function loadOwnerYearRentReceived(accountId?: string | null): Promise<OwnerYearRentResult> {
+  const user = await getAuthenticatedUser();
+  try {
+    if (await getCurrentUserRole(user.id) !== "owner") return { ok: true, byPropertyId: {} };
+    const [administered, accounts] = await Promise.all([
+      getAdministeredProperties(user.id), getOwnershipAccountsForUser(user.id)
+    ]);
+    if (accountId && !accounts.some((account) => account.id === accountId)) {
+      return { ok: true, byPropertyId: {} };
+    }
+    const properties = administered.filter((property) => !accountId || property.ownerAccountId === accountId);
+    if (!properties.length) return { ok: true, byPropertyId: {} };
+    const year = new Date().getUTCFullYear();
+    const from = `${year}-01-01`, to = `${year + 1}-01-01`;
+    const { units, leases, charges, payments } = await loadRentRowsForProperties(
+      properties.map((property) => property.id), from, to);
+    const unitProperty = new Map(units.map((unit) => [unit.id, unit.property_id]));
+    const leaseProperty = new Map(leases.map((lease) => [lease.id, unitProperty.get(lease.unit_id)]));
+    const chargeProperty = new Map(charges.map((charge) => [charge.id, leaseProperty.get(charge.lease_id)]));
+    const byPropertyId = rentReceivedByPropertyId(
+      properties.map((property) => property.id), charges, payments, chargeProperty, from, to);
+    return { ok: true, byPropertyId };
+  } catch (error) {
+    console.error("Owner year rent load failed", error);
+    return { ok: false, error: "load_failed" };
+  }
+}

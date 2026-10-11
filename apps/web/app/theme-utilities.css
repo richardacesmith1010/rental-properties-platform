@@ -3,21 +3,22 @@
   border: 1px solid var(--line);
   color: var(--ink);
   box-shadow: var(--shadow-sm);
-  @apply rounded-[10px];
+  border-radius: var(--radius-card);
 }
 
 .sidebar-shell-panel-soft {
   background: var(--surface-2);
   border: 1px solid var(--line-2);
   color: var(--ink-2);
-  @apply rounded-[10px];
+  border-radius: var(--radius-card);
 }
 
 .sidebar-shell-input {
   background: var(--surface);
   border: 1px solid var(--line);
   color: var(--ink);
-  @apply rounded-[10px] transition-colors duration-150;
+  border-radius: var(--radius-control);
+  @apply transition-colors duration-150;
 }
 
 .sidebar-shell-input::placeholder {
@@ -26,7 +27,7 @@
 
 .sidebar-shell-input:focus-visible {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-line);
+  box-shadow: 0 0 0 2px var(--accent);
   outline: none;
 }
 
@@ -34,7 +35,8 @@
   background: transparent;
   border: 1px solid transparent;
   color: var(--ink-2);
-  @apply rounded-[10px] transition-colors duration-150;
+  border-radius: var(--radius-control);
+  @apply transition-colors duration-150;
 }
 
 .sidebar-shell-button:hover {
@@ -277,7 +279,7 @@
 }
 
 .sidebar-user-footer-shell .relative > button:focus-visible {
-  box-shadow: 0 0 0 2px var(--accent-line);
+  box-shadow: 0 0 0 2px var(--accent);
   outline: none;
 }
 

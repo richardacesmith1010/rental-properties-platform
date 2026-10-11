@@ -9,7 +9,7 @@ export interface DomusFinancialsCardProps {
   monthlyOutstandingCents: number;
   monthlyExpensesCents: number;
   netIncomeCents: number;
-  ytdIncomeCents: number;
+  ytdIncomeCents: number | null;
   ytdExpensesCents: number;
   collectionRate: number;
   className?: string;
@@ -98,8 +98,8 @@ export function DomusFinancialsCard({
 }: DomusFinancialsCardProps) {
   const monthlyNetTone = getNetTone(netIncomeCents);
   const collectionTone = getCollectionTone(collectionRate);
-  const ytdNetCents = ytdIncomeCents - ytdExpensesCents;
-  const ytdNetTone = getNetTone(ytdNetCents);
+  const ytdNetCents = ytdIncomeCents === null ? null : ytdIncomeCents - ytdExpensesCents;
+  const ytdNetTone = ytdNetCents === null ? null : getNetTone(ytdNetCents);
 
   return (
     <section className={cn("domus-card overflow-hidden p-5 shadow-sm", className)}>
@@ -159,14 +159,16 @@ export function DomusFinancialsCard({
       </div>
 
       <div className="mt-5 grid gap-3 border-t border-[color:color-mix(in_srgb,var(--line)_84%,transparent)] pt-4 sm:grid-cols-3">
-        <MetricTile label="Year-to-date income" value={formatCurrency(ytdIncomeCents)} meta="Rent and other income" />
+        <MetricTile label="Year-to-date income" value={ytdIncomeCents === null ? "—" : formatCurrency(ytdIncomeCents)}
+          meta={ytdIncomeCents === null ? "Couldn't load" : "Rent and other income"} />
         <MetricTile label="Year-to-date expenses" value={formatCurrency(ytdExpensesCents)} meta="Operating costs recorded" />
         <MetricTile
           label="Year-to-date net"
-          value={formatCurrency(ytdNetCents)}
-          meta={ytdNetCents >= 0 ? "Net positive so far" : "Net negative so far"}
+          value={ytdNetCents === null ? "—" : formatCurrency(ytdNetCents)}
+          meta={ytdNetCents === null ? "Couldn't load" : ytdNetCents >= 0 ? "Net positive so far" : "Net negative so far"}
           tone={ytdNetTone}
-          icon={<ToneIcon value={ytdNetCents} className={ytdNetTone.text} />}
+          icon={ytdNetCents === null || !ytdNetTone ? undefined
+            : <ToneIcon value={ytdNetCents} className={ytdNetTone.text} />}
         />
       </div>
     </section>

@@ -31,7 +31,7 @@ export interface FinancialOverviewPanelProps {
   monthlyOutstandingCents: number;
   monthlyExpensesCents: number;
   netIncomeCents: number;
-  ytdIncomeCents: number;
+  ytdIncomeCents: number | null;
   ytdExpensesCents: number;
   collectionRate: number;
   onInitiatePlaidLink?: StatefulAction;

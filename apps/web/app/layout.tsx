@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Geist } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { submitFeedback } from "@/app/actions/feedback";
 import { HelpMenu } from "@/components/help-menu";
@@ -10,9 +10,11 @@ import { DOMUS_THEME_ATTRIBUTE, DOMUS_THEME_KEY } from "@/lib/theme";
 import { isNativeAppServer } from "@/lib/native-app-server";
 import "./globals.css";
 
-const inter = Inter({
+const geist = Geist({
   subsets: ["latin"],
-  variable: "--font-inter",
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-geist",
 });
 
 const themeInitScript = `
@@ -89,8 +91,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#FBFBF9" },
-    { media: "(prefers-color-scheme: dark)", color: "#121316" }
+    { media: "(prefers-color-scheme: light)", color: "#F2F2F5" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" }
   ]
 };
 
@@ -105,7 +107,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           }}
         />
       </head>
-      <body className={`${inter.variable} font-sans`}>
+      <body className={`${geist.variable} font-sans`}>
         <a
           href="#main-content"
           className={[

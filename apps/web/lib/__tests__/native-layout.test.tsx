@@ -6,7 +6,7 @@ import RootLayout, { metadata, viewport } from "@/app/layout";
 
 const { native } = vi.hoisted(() => ({ native: vi.fn() }));
 vi.mock("@/lib/native-app-server", () => ({ isNativeAppServer: native }));
-vi.mock("next/font/google", () => ({ Inter: () => ({ variable: "inter" }) }));
+vi.mock("next/font/google", () => ({ Geist: () => ({ variable: "geist" }) }));
 vi.mock("@/app/actions/feedback", () => ({ submitFeedback: vi.fn() }));
 vi.mock("@/components/help-menu", () => ({ HelpMenu: () => null }));
 vi.mock("@/components/pwa/install-prompt", () => ({ InstallPromptBanner: () => null }));
@@ -23,8 +23,8 @@ it.each([true, false])("sets the initial server HTML class only for native=%s", 
 
 it("exports light/dark theme colors and real install icons", () => {
   expect(viewport.themeColor).toEqual([
-    { media: "(prefers-color-scheme: light)", color: "#FBFBF9" },
-    { media: "(prefers-color-scheme: dark)", color: "#121316" }
+    { media: "(prefers-color-scheme: light)", color: "#F2F2F5" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" }
   ]);
   expect(metadata.icons).toMatchObject({ apple: { url: "/icons/apple-touch-icon.png", sizes: "180x180" } });
   const manifest = JSON.parse(readFileSync(path.resolve("public/manifest.json"), "utf8"));

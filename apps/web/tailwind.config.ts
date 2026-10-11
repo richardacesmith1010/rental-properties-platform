@@ -9,7 +9,7 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        sans: ["var(--font-geist)", "-apple-system", "system-ui", "sans-serif"],
       },
       colors: {
         domus: {
@@ -21,8 +21,8 @@ const config: Config = {
         },
       },
       borderRadius: {
-        xl: "12px",
-        "2xl": "16px",
+        xl: "var(--radius-control)",
+        "2xl": "var(--radius-card)",
       },
       keyframes: {
         "fade-in-up": {

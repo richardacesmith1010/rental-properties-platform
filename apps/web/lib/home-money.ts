@@ -1,6 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { escapeCell } from "@/lib/csv-export-reports";
+import { loadPropertyRentRows } from "@/lib/owner-rent-rows";
+import { dateOnly, rentReceivedCents } from "@/lib/rent-received";
 
 export interface Entry {
   id: string; date: string; kind: "rent" | "bill"; title: string; detail: string;
@@ -16,7 +18,6 @@ const labels: Record<string, string> = {
   repair: "Repair", maintenance: "Maintenance", utility: "Utility", management_fee: "Management fee",
   legal: "Legal", other: "Other"
 };
-const dateOnly = (value: string) => value.includes("T") ? value.slice(0, 10) : value;
 const categoryLabel = (category: string | null | undefined) => labels[category ?? ""] ?? (category || "Other");
 const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
@@ -54,30 +55,20 @@ async function checked<T>(query: PromiseLike<{ data: T | null; error: { message:
 
 async function loadRows(propertyId: string, from: string, to: string) {
   const admin = createAdminClient();
-  const [property, units] = await Promise.all([
+  const [property, rentRows] = await Promise.all([
     checked(admin.from("properties").select("id, name").eq("id", propertyId).maybeSingle()),
-    checked(admin.from("units").select("id").eq("property_id", propertyId))
+    loadPropertyRentRows(propertyId, from, to)
   ]);
-  const unitIds = (units ?? []).map((row) => row.id);
-  const leases = unitIds.length ? await checked(admin.from("leases")
-    .select("id, unit_id, tenant_profile_id, grace_period_days, active").in("unit_id", unitIds)) : [];
-  const leaseIds = leases.map((row) => row.id);
+  const { leases, charges, payments } = rentRows;
   const profileIds = [...new Set(leases.map((row) => row.tenant_profile_id).filter((id): id is string => Boolean(id)))];
-  const [charges, expenses, profiles] = await Promise.all([
-    leaseIds.length ? checked(admin.from("rent_charges")
-      .select("id, lease_id, category, amount_cents, due_date, status, deleted_at")
-      .in("lease_id", leaseIds).is("deleted_at", null)) : Promise.resolve([]),
+  const [expenses, profiles] = await Promise.all([
     checked(admin.from("property_expenses")
       .select("id, property_id, category, description, amount_cents, expense_date")
       .eq("property_id", propertyId).gte("expense_date", from).lt("expense_date", to)),
     profileIds.length ? checked(admin.from("profiles").select("id, full_name, nickname").in("id", profileIds))
       : Promise.resolve([])
   ]);
-  const chargeIds = charges.map((row) => row.id);
-  const payments = chargeIds.length ? await checked(admin.from("payments")
-    .select("id, rent_charge_id, amount_cents, paid_at, reversed_at, method, stripe_payment_intent_id")
-    .in("rent_charge_id", chargeIds).gte("paid_at", from).lt("paid_at", to)) : [];
-  const paymentIds = payments.filter((row) => !row.reversed_at).map((row) => row.id);
+  const paymentIds = payments.map((row) => row.id);
   const expenseIds = expenses.map((row) => row.id);
   const [paymentLinks, expenseLinks] = await Promise.all([
     paymentIds.length ? checked(admin.from("bank_transactions")
@@ -124,7 +115,7 @@ async function loadRows(propertyId: string, from: string, to: string) {
     });
   }
   entries.sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
-  return { property: property ?? { id: propertyId, name: "Home" }, entries, charges, leases, profileMap };
+  return { property: property ?? { id: propertyId, name: "Home" }, entries, charges, leases, payments, profileMap };
 }
 
 export function plainMethod(method: string | null | undefined) {
@@ -137,9 +128,8 @@ export function plainMethod(method: string | null | undefined) {
 export async function loadHomeMoney(userId: string, propertyId: string,
   range: { from: string; to: string }): Promise<HomeMoney | null> {
   if (!(await canUserAdministerProperty(userId, propertyId))) return null;
-  const { property, entries } = await loadRows(propertyId, range.from, range.to);
-  const inCents = entries.filter((entry) => entry.direction === "in")
-    .reduce((sum, entry) => sum + entry.amountCents, 0);
+  const { property, entries, charges, payments } = await loadRows(propertyId, range.from, range.to);
+  const inCents = rentReceivedCents(charges, payments, range.from, range.to);
   const outCents = entries.filter((entry) => entry.direction === "out")
     .reduce((sum, entry) => sum + entry.amountCents, 0);
   return { property, entries, totals: { inCents, outCents, leftCents: inCents - outCents } };

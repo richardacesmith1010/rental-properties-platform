@@ -162,6 +162,7 @@ export default async function OwnerPage(props: OwnerPageProps) {
       >
       <Dashboard
         data={ownerPage.dashboard}
+        ownerYearRent={ownerPage.ownerYearRent}
         portfolio={ownerPage.portfolio}
         isEmpty={ownerPage.isEmpty}
         tickets={ownerPage.tickets}

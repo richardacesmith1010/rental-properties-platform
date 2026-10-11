@@ -1,4 +1,6 @@
 import { requireRole } from "@/lib/auth";
+import Link from "next/link";
+import { OwnerBottomBar } from "@/components/dashboard/owner-bottom-bar";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { selectableRentCharges } from "@/lib/bank-feed/match";
 import { BankFeedShell } from "@/components/bank-feed/page-shell";
@@ -6,27 +8,36 @@ import { createBankAccount, importBankRows, answerBankItem, undoBankItem, delete
 
 export const dynamic = "force-dynamic";
 
+function BankStatus({ message }: { message: string }) {
+  return <>
+    <main className="min-h-screen p-5 pb-[calc(env(safe-area-inset-bottom,0px)+5.25rem)] lg:pb-5">
+      {message}
+    </main>
+    <OwnerBottomBar />
+  </>;
+}
+
 export default async function BankPage(props: { searchParams?: Promise<{ account?: string }> }) {
   const searchParams = await props.searchParams;
   const { user } = await requireRole(["owner"]);
   const admin = createAdminClient();
   const members = await admin.from("ownership_account_members").select("account_id")
     .eq("profile_id", user.id).eq("member_role", "owner").eq("active", true);
-  if (members.error) return <main className="p-5">Bank activity is not ready yet.</main>;
+  if (members.error) return <BankStatus message="Bank activity is not ready yet." />;
   const accountIds = (members.data || []).map((item) => item.account_id);
-  if (!accountIds.length) return <main className="p-5">Set up a home account first.</main>;
+  if (!accountIds.length) return <BankStatus message="Set up a home account first." />;
   const accountsQuery = await admin.from("ownership_accounts").select("id, display_name").in("id", accountIds)
     .order("created_at", { ascending: true });
-  if (accountsQuery.error) return <main className="p-5">Bank activity is not ready yet.</main>;
+  if (accountsQuery.error) return <BankStatus message="Bank activity is not ready yet." />;
   const accounts = accountsQuery.data || [];
   const selected = accounts.find((item) => item.id === searchParams?.account) || accounts[0];
-  if (!selected) return <main className="p-5">Set up a home account first.</main>;
+  if (!selected) return <BankStatus message="Set up a home account first." />;
   const [bankQuery, propertyQuery] = await Promise.all([
     admin.from("bank_accounts").select("id, nickname, institution").eq("owner_account_id", selected.id)
       .order("created_at", { ascending: true }),
     admin.from("properties").select("id, name").eq("owner_account_id", selected.id).eq("active", true)
   ]);
-  if (bankQuery.error || propertyQuery.error) return <main className="p-5">Bank activity is not ready yet.</main>;
+  if (bankQuery.error || propertyQuery.error) return <BankStatus message="Bank activity is not ready yet." />;
   const bankAccounts = bankQuery.data || [];
   const properties = propertyQuery.data || [];
   const bankIds = bankAccounts.map((item) => item.id);
@@ -39,18 +50,18 @@ export default async function BankPage(props: { searchParams?: Promise<{ account
     propertyIds.length ? admin.from("units").select("id, property_id").in("property_id", propertyIds)
       : Promise.resolve({ data: [], error: null })
   ]);
-  if (recentQuery.error || unitsQuery.error) return <main className="p-5">Bank activity is not ready yet.</main>;
+  if (recentQuery.error || unitsQuery.error) return <BankStatus message="Bank activity is not ready yet." />;
   const units = unitsQuery.data || [];
   const unitIds = units.map((item) => item.id);
   const leasesQuery = unitIds.length ? await admin.from("leases").select("id, unit_id")
     .in("unit_id", unitIds).eq("active", true) : { data: [], error: null };
-  if (leasesQuery.error) return <main className="p-5">Bank activity is not ready yet.</main>;
+  if (leasesQuery.error) return <BankStatus message="Bank activity is not ready yet." />;
   const leases = leasesQuery.data || [];
   const leaseIds = leases.map((item) => item.id);
   const chargesQuery = leaseIds.length ? await admin.from("rent_charges")
     .select("id, lease_id, due_date, amount_cents, status, deleted_at").in("lease_id", leaseIds).is("deleted_at", null)
     .order("due_date", { ascending: false }).limit(500) : { data: [], error: null };
-  if (chargesQuery.error) return <main className="p-5">Bank activity is not ready yet.</main>;
+  if (chargesQuery.error) return <BankStatus message="Bank activity is not ready yet." />;
   const unitMap = new Map(units.map((item) => [item.id, item.property_id]));
   const leaseProperty = new Map(leases.map((item) => [item.id, unitMap.get(item.unit_id)]));
   const propertyMap = new Map(properties.map((item) => [item.id, item.name]));
@@ -58,7 +69,16 @@ export default async function BankPage(props: { searchParams?: Promise<{ account
     propertyId: leaseProperty.get(item.lease_id) || "", dueDate: item.due_date, amountCents: item.amount_cents }));
   const recent = (recentQuery.data || []).map((item) => ({ ...item,
     propertyName: item.property_id ? propertyMap.get(item.property_id) || "Home" : "—" }));
-  return <BankFeedShell ownerAccountId={selected.id} accounts={accounts} bankAccounts={bankAccounts}
+  return <>
+    <div className="pb-[calc(env(safe-area-inset-bottom,0px)+5.25rem)] lg:pb-0">
+      <Link href="/owner" title="Return home."
+        className="hidden min-h-11 items-center px-4 text-sm text-[var(--muted)] lg:inline-flex">
+        ← Home
+      </Link>
+    <BankFeedShell ownerAccountId={selected.id} accounts={accounts} bankAccounts={bankAccounts}
     properties={properties} charges={charges} recent={recent}
-    actions={{ createBankAccount, importBankRows, answerBankItem, undoBankItem, deleteBankAccount }} />;
+    actions={{ createBankAccount, importBankRows, answerBankItem, undoBankItem, deleteBankAccount }} />
+    </div>
+    <OwnerBottomBar />
+  </>;
 }

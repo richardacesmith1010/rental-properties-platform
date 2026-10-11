@@ -20,6 +20,7 @@ const ownerLoadMocks = vi.hoisted(() => ({
   notifications: vi.fn(),
   notificationPreferences: vi.fn(),
   ownerConnected: vi.fn(),
+  ownerYearRent: vi.fn(),
   ownershipMembers: vi.fn(),
   pendingChanges: vi.fn(),
   pendingWithdrawals: vi.fn(),
@@ -64,6 +65,7 @@ vi.mock("@/lib/logger", () => ({
 }));
 vi.mock("@/lib/dashboard", () => ({ getDashboardData: ownerLoadMocks.dashboard }));
 vi.mock("@/lib/portfolio", () => ({ getPortfolioData: ownerLoadMocks.portfolio }));
+vi.mock("@/lib/owner-ytd", () => ({ loadOwnerYearRentReceived: ownerLoadMocks.ownerYearRent }));
 vi.mock("@/lib/property-access", () => ({
   getAdministeredPropertyIdsForAccount: ownerLoadMocks.administeredIds,
   getAdministeredPropertyOptions: ownerLoadMocks.administeredOptions
@@ -136,6 +138,7 @@ describe("loadOwnerPageData orchestration", () => {
     ownerLoadMocks.renameRequests.mockResolvedValue([]);
     ownerLoadMocks.deleteRequests.mockResolvedValue([]);
     ownerLoadMocks.ownerConnected.mockResolvedValue(new Map());
+    ownerLoadMocks.ownerYearRent.mockResolvedValue({ ok: true, byPropertyId: {} });
     const adminQuery = {
       select: vi.fn(),
       in: vi.fn(),
@@ -290,6 +293,7 @@ describe("loadOwnerPageData orchestration", () => {
       notificationPreferenceSettings: null,
       notifications: [],
       ownerConnectedMap: new Map(),
+      ownerYearRent: { ok: true, byPropertyId: {} },
       ownershipAccounts: [{ id: "account-1", accountType: "llc" }],
       ownershipMembers: undefined,
       pendingAccountDeleteRequests: undefined,
@@ -305,6 +309,13 @@ describe("loadOwnerPageData orchestration", () => {
       tickets: undefined,
       vendors: undefined
     });
+  });
+
+  it("keeps the dashboard ready when the YTD loader fails", async () => {
+    ownerLoadMocks.ownerYearRent.mockRejectedValue(new Error("unavailable"));
+    const result = await loadOwnerPageData({ userEmail: "owner@example.test", userId: "user-1" });
+    expect(result.status).toBe("ready");
+    if (result.status === "ready") expect(result.ownerYearRent).toEqual({ ok: false, error: "load_failed" });
   });
 
   it("does not start Home-only loaders before portfolio resolves", async () => {

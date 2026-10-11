@@ -79,7 +79,8 @@ describe("owner grouped navigation", () => {
     render(<DashboardLayout {...navProps} mainClassName="" items={getOwnerNavItems(buildAllSectionItems(availability))}><div>Page</div></DashboardLayout>);
     const shortcuts = screen.getByRole("navigation", { name: "Owner shortcuts" });
     expect(shortcuts).toHaveClass("lg:hidden");
-    expect(within(shortcuts).getByText("2 late")).toBeInTheDocument();
+    expect(within(shortcuts).getByRole("link", { name: "Home, 2 late rent payments" }))
+      .toHaveAttribute("href", "/owner");
     fireEvent.click(within(shortcuts).getByRole("button", { name: "More" }));
     expect(screen.getByRole("dialog", { name: "Menu" })).toBeInTheDocument();
     const nav = screen.getByRole("navigation", { name: "Main navigation" });

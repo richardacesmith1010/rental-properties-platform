@@ -74,7 +74,7 @@ interface OwnerDailyOpsHomeProps {
     accountId: string | null; plaidConnected: boolean; bankName: string | null;
     bankMask: string | null; balanceCents: number | null; balanceUpdatedAt: string | null;
     monthlyCollectedCents: number; monthlyOutstandingCents: number; monthlyExpensesCents: number;
-    netIncomeCents: number; ytdIncomeCents: number; ytdExpensesCents: number; collectionRate: number;
+    netIncomeCents: number; ytdIncomeCents: number | null; ytdExpensesCents: number; collectionRate: number;
   };
   llcSetupPrompt?: {
     accountName: string; memberCount: number; propertyCount: number;

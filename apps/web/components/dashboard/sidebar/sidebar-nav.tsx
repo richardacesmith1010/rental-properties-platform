@@ -51,7 +51,7 @@ export interface SidebarNavProps {
 }
 
 const sidebarFocusRing =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]";
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]";
 
 function CommandPaletteTrigger({ onOpen }: { onOpen: () => void }) {
   return (

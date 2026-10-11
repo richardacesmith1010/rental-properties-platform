@@ -189,6 +189,10 @@ async function openDashboardSection(page: Page, label: string): Promise<boolean>
   if (new URL(page.url()).pathname === "/owner") {
     const item = page.getByRole("navigation", { name: "Main navigation" })
       .getByRole("button", { name: new RegExp(`^${escapeRegExp(label)}(?:\\s|$)`, "i") }).first();
+    if (!(await item.isVisible().catch(() => false))) {
+      await page.getByRole("navigation", { name: "Owner shortcuts" })
+        .getByRole("button", { name: "More" }).click();
+    }
     if (!(await item.isVisible().catch(() => false))) return false;
     await item.click();
     await waitForView(page);
@@ -213,6 +217,8 @@ async function openDashboardSection(page: Page, label: string): Promise<boolean>
     await input.press("Enter");
     await expect(dialog).toBeHidden({ timeout: 3_000 });
   } else {
+    const menuTrigger = page.getByRole("button", { name: "Open navigation menu" });
+    if (await menuTrigger.isVisible().catch(() => false)) await menuTrigger.click();
     const navigation = page.getByRole("navigation", { name: "Main navigation" });
     const item = navigation.getByRole("button", { name: new RegExp(`^${escapeRegExp(label)}(?:\\s|$)`, "i") }).first();
     if (!(await item.isVisible().catch(() => false))) {
@@ -435,6 +441,7 @@ test.describe("authenticated theme contrast smoke", () => {
 
   test("Owner theme views have no severe contrast findings", async ({ page }) => {
     test.setTimeout(90_000);
+    await page.setViewportSize({ width: 390, height: 844 });
     await configureTheme(page, "dark");
     const loggedIn = await loginAsRole(
       page,
@@ -480,6 +487,7 @@ test.describe("authenticated theme contrast smoke", () => {
   });
 
   test("Manager dark theme views have no severe contrast findings", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
     await configureTheme(page, "dark");
     const loggedIn = await loginAsRole(
       page,
@@ -497,9 +505,12 @@ test.describe("authenticated theme contrast smoke", () => {
         }
       }
     }
+    await switchThemeInSession(page, "light");
+    await assertView(page, "Manager", "light", "home");
   });
 
   test("Tenant theme views have no severe contrast findings", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
     await configureTheme(page, "dark");
     const loggedIn = await loginAsRole(
       page,
