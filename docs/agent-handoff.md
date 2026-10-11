@@ -807,3 +807,12 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   - 2026 for 1st Home: rent $21,150.00, costs $22,996.74 (−$1,846.74 through Oct 1).
 - **Leaked password protection:** needs the Supabase Pro plan (the org is on Free). Deferred to launch.
 - **Owner plan:** eventually pay all property bills from Fidelity, which would make Fidelity the account Domus reads.
+
+## Sprint 214 / 214b SHIPPED (2026-10-11) — iPhone Stripe return + device signing (L3)
+- `lastSafeURL` (committed main-frame on `https` + the server host; excludes `/connect`, `/auth`, offline, failed). Connect opens in Safari once, the app recovers once, and returning loads the safe page once. `CODE_SIGN_IDENTITY[sdk=iphoneos*] = Apple Development`.
+- **214b:** the test seams `handleCommittedMainFrame` / `handleMainFrameResponse` replaced test-time WebKit object construction, which crashed the runner. Codex ran with full access for Xcode only.
+- **Verify:**
+  - XCTest 33/33; config 51/51 (run with the owner's local signing file moved aside temporarily, then restored);
+  - device build with no override; `codesign --verify --deep --strict` OK (Apple Development);
+  - the owner tapped Stripe on a real iPhone: back to Domus once, no white screen.
+- **Note:** `config.test.cjs` refuses while `Signing.local.xcconfig` exists. Move it aside to run it, then restore it.
