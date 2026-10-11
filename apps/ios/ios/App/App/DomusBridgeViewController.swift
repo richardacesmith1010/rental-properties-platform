@@ -21,8 +21,9 @@ final class DomusBridgeViewController: CAPBridgeViewController {
         let downloads = DownloadHandler(presenter: DownloadPresenter(viewController: self))
         let handler = DomusNavigationDelegate(original: original, downloads: downloads,
                                               offlineURL: bridge.config.errorPathURL,
-                                              startupURL: bridge.config.serverURL,
-                                              mainWebView: webView)
+                                              startupURL: bridge.config.appStartServerURL,
+                                              mainWebView: webView,
+                                              serverHost: bridge.config.serverURL.host ?? "domusbase.com")
         navigationHandler = handler
         webView.navigationDelegate = handler
         webView.uiDelegate = handler

@@ -61,8 +61,15 @@ Domus-origin blob downloads enter the download delegate, never page navigation.
 
 Connect onboarding opens Safari. Users return to Domus themselves.
 `DomusNavigationDelegate` sets a pending flag for HTTPS Connect external opens.
-`SceneDelegate.sceneWillEnterForeground` consumes that flag and reloads the main view once.
-Ordinary app switching never reloads, regardless of the current URL.
+The delegate remembers the last committed main-frame HTTPS page on the configured server host,
+excluding `/connect`, `/connect/*`, `/auth/*`, the offline document and failed navigations.
+It falls back to the validated configured start URL, or `https://domusbase.com/login`.
+If the main view is blank or left on Connect, the handoff immediately loads that safe page once.
+Duplicate handoff callbacks do not reopen Safari or repeat recovery.
+`SceneDelegate.sceneWillEnterForeground` consumes the pending flag and loads the safe page once
+to refresh Stripe status, including when the user cancels onboarding. It never reloads a Connect URL.
+Ordinary app switching never refreshes, regardless of the current URL.
+Stripe return/refresh URLs may remain in Safari; switching back keeps Domus usable.
 This uses the generated Capacitor 8 scene lifecycle, without a JavaScript hook.
 There is no `@capacitor/browser` dependency or Safari sheet.
 
@@ -157,7 +164,7 @@ xcodebuild test -project ios/App/App.xcodeproj -scheme App \
   -destination 'id=C79BDA37-1967-45CB-A369-85B260EA111D'
 ```
 
-`AppTests` covers navigation decisions, blank-target routing, one-shot Connect reloads, response classification,
+`AppTests` covers navigation decisions, blank-target routing, safe Connect recovery/return, response classification,
 server filenames, file cleanup, CSV sharing, and failure presentation.
 Build output, synced web copies, dependencies, and user data are ignored.
 
@@ -204,7 +211,7 @@ Account deletion, native features and Guideline 4.2 compliance remain future wor
 7. Export a report CSV; confirm its filename and readable contents.
 8. Attach a repair photo from the library and submit it.
 9. Open mail, external links, and Stripe Connect; verify system routing.
-10. Return from Connect; confirm one main-view reload. Switch apps again; confirm no reload.
+10. Open Connect from an owner page; confirm Safari opens once and Domus keeps a usable page. Return (also try cancelling); confirm one safe-page refresh and no Stripe reopen. Switch apps again; confirm no refresh.
 11. Perform test Checkout when payable smoke rent exists; verify session retention.
 12. Start offline, restore networking, and tap Try again.
 13. Test the unreachable host override, then restore the production configuration.
@@ -219,7 +226,29 @@ Deployment and authenticated runtime walks were not performed by this sprint.
 2. Add your Apple Developer account in Xcode → Settings → Accounts. Plug in your iPhone, unlock it and choose **Trust this computer** if prompted. Enable **Settings → Privacy & Security → Developer Mode** on the phone and follow its restart instructions.
 3. In Xcode select **App**, choose your connected phone, and press **Run**. On the first run, Xcode may download device support and create a signing profile. These steps are normal. Simulator runs do not need a local signing file or an Apple account.
 
+Command-line device build and install, from `apps/ios/ios/App`:
+
+```sh
+xcodebuild -project App.xcodeproj -scheme App -configuration Debug \
+  -destination 'id=<device>' -derivedDataPath build/device \
+  -allowProvisioningUpdates -allowProvisioningDeviceRegistration build
+codesign --verify --deep --strict build/device/Build/Products/Debug-iphoneos/App.app
+xcrun devicectl device install app --device <id> build/device/Build/Products/Debug-iphoneos/App.app
+```
+
+For the first install, the build can register the phone automatically. This requires a signed-in
+Xcode account with permission to manage provisioning; registration can fail if permissions or
+Apple's services are unavailable. Both Debug and Release device builds resolve to
+`Apple Development`, with automatic signing enabled, without a command-line identity override.
+Simulator signing remains disabled and requires no team or local signing file.
+Config tests verify these effective settings; real-device signature verification and installation
+are separate checks, not proven by config tests.
+
 ## Send a TestFlight build
+
+Distribution export is unchanged: archiving and exporting with `method=app-store-connect`
+and automatic signing lets Xcode re-sign with Apple Distribution. Do not hard-code a distribution
+identity. Device development signing does not replace distribution signing at export.
 
 1. Once, create the App Store Connect app record for **com.domusbase.app**, using your Apple Developer account. Set up the local signing file and Xcode account as above. Review [PRIVACY-AUDIT.md](PRIVACY-AUDIT.md), including its unverified items. This script does not make the app App Store-compliant.
 2. Before uploading from a new computer, check App Store Connect → TestFlight for the latest build. `build-number.txt` records the last confirmed upload (initial baseline `1`; build 1 was never uploaded). The first normal upload uses `2`. If another computer uploaded a higher number, use `--build N` with a number above both the counter and App Store Connect's latest build.
@@ -245,3 +274,5 @@ bash -n scripts/testflight.sh
 The config suite uses isolated fake upload tools and real Xcode settings/unsigned Release
 build checks. It never archives or uploads with real Xcode. Real Xcode checks need a working
 local Xcode/Simulator service and writable developer caches. Failures remain failures, not skips.
+The suite requires `Signing.local.xcconfig` to be absent and refuses to overwrite it. Temporarily
+preserve your existing file outside the project before testing, then restore it afterward.

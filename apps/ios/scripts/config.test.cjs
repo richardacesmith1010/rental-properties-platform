@@ -294,21 +294,35 @@ function settings(configuration, sdk, extra = []) {
     "-sdk", sdk, "-showBuildSettings", "-json", ...extra], { cwd: xcodeCwd })));
 }
 for (const [configuration, sdk, team] of [["Debug", "iphonesimulator", ""], ["Release", "iphoneos", ""],
-  ["Release", "iphoneos", "ABCDE12345"], ["Debug", "iphoneos", "ABCDE12345"]]) {
+  ["Release", "iphoneos", "ABCDE12345"], ["Debug", "iphoneos", "ABCDE12345"],
+  ["Debug", "iphoneos", ""], ["Release", "iphonesimulator", ""]]) {
   test(`effective ${configuration} ${sdk} ${team ? "synthetic local team" : "no local signing file"}`, t => withSigning(team, () => {
     const all = settings(configuration, sdk);
     const app = all.find(row => row.target === "App").buildSettings;
     assert.equal(app.DEVELOPMENT_TEAM || "", team);
     assert.equal(app.CODE_SIGN_STYLE, "Automatic");
-    if (sdk === "iphoneos") assert.equal(app.CODE_SIGNING_ALLOWED, "YES");
+    if (sdk === "iphoneos") {
+      assert.equal(app.CODE_SIGN_IDENTITY, "Apple Development");
+      assert.equal(app.CODE_SIGNING_ALLOWED, "YES");
+    } else {
+      assert.equal(app.CODE_SIGN_IDENTITY || "", "");
+      assert.equal(app.CODE_SIGNING_ALLOWED, "NO");
+    }
     if (configuration === "Release") {
       assert.doesNotMatch(app.SWIFT_ACTIVE_COMPILATION_CONDITIONS || "", /\bDEBUG\b/);
       assert.doesNotMatch(app.OTHER_SWIFT_FLAGS || "", /-D\s*DEBUG\b/);
     }
-    for (const key of ["CODE_SIGN_STYLE", "CODE_SIGNING_ALLOWED", "DEVELOPMENT_TEAM", "SWIFT_ACTIVE_COMPILATION_CONDITIONS", "OTHER_SWIFT_FLAGS"])
+    for (const key of ["CODE_SIGN_IDENTITY", "CODE_SIGN_STYLE", "CODE_SIGNING_ALLOWED", "DEVELOPMENT_TEAM", "SWIFT_ACTIVE_COMPILATION_CONDITIONS", "OTHER_SWIFT_FLAGS"])
       t.diagnostic(`${configuration} ${sdk}: ${key} = ${app[key] || ""}`);
   }));
 }
+test("distribution export retains automatic App Store signing without an identity override", () => {
+  const options = plist("scripts/ExportOptions.template.plist");
+  assert.equal(options.method, "app-store-connect");
+  assert.equal(options.signingStyle, "automatic");
+  assert.equal(options.signingCertificate, undefined);
+  assert.doesNotMatch(readFileSync("scripts/testflight.sh", "utf8"), /CODE_SIGN_IDENTITY\s*=/);
+});
 test("effective test target settings match the pre-sprint project", () => withSigning("", () => {
   const temporary = fs.mkdtempSync(path.join(xcodeCwd, "baseline-"));
   const baselineProject = `${temporary}.xcodeproj`;

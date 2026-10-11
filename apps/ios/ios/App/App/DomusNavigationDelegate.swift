@@ -8,6 +8,7 @@ protocol NavigationOpening {
 
 @MainActor
 protocol MainWebViewLoading: AnyObject {
+    var mainURL: URL? { get }
     func loadMainRequest(_ request: URLRequest)
     func reloadMainView()
 }
@@ -17,6 +18,7 @@ extension UIApplication: NavigationOpening {
 }
 
 extension WKWebView: MainWebViewLoading {
+    var mainURL: URL? { url }
     func loadMainRequest(_ request: URLRequest) { load(request) }
     func reloadMainView() { reload() }
 }
@@ -29,17 +31,27 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
     private let downloads: DownloadHandler
     private let offlineURL: URL?
     private let startupURL: URL
+    private let serverHost: String
+    private(set) var lastSafeURL: URL
+    private var committedNavigation: AnyObject?
+    private var previousSafeURL: URL?
+    private let failedNavigations = NSHashTable<AnyObject>.weakObjects()
+    private var navigatingConnect = false
     private var awaitingStartup = true
     private let opener: NavigationOpening
     private weak var mainWebView: MainWebViewLoading?
     private(set) var pendingConnect = false
 
     init(original: NSObject, downloads: DownloadHandler, offlineURL: URL?, startupURL: URL,
-         mainWebView: MainWebViewLoading, opener: NavigationOpening? = nil) {
+         mainWebView: MainWebViewLoading, opener: NavigationOpening? = nil,
+         serverHost: String = "domusbase.com") {
         self.original = original
         self.downloads = downloads
         self.offlineURL = offlineURL
         self.startupURL = startupURL
+        self.serverHost = serverHost.lowercased()
+        self.lastSafeURL = Self.isSafeURL(startupURL, host: serverHost.lowercased(), offlineURL: offlineURL)
+            ? startupURL : URL(string: "https://domusbase.com/login")!
         self.mainWebView = mainWebView
         self.opener = opener ?? UIApplication.shared
     }
@@ -60,8 +72,15 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
 
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
                  decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-        let mainFrame = action.targetFrame?.isMainFrame ?? true
-        let url = action.request.url
+        handleNavigationAction(url: action.request.url, mainFrame: action.targetFrame?.isMainFrame ?? true,
+                               shouldPerformDownload: action.shouldPerformDownload, decisionHandler: decisionHandler)
+    }
+
+    func handleNavigationAction(url: URL?, mainFrame: Bool, shouldPerformDownload: Bool = false,
+                                decisionHandler: (WKNavigationActionPolicy) -> Void) {
+        if mainFrame, let url, url.host?.lowercased() == serverHost {
+            navigatingConnect = Self.isConnectPath(url)
+        }
         // A developer-configured startup URL is loaded once, never an added host wildcard.
         // This also allows the unreachable-host offline test. Subsequent navigations use policy.
         if awaitingStartup && mainFrame && url == startupURL {
@@ -75,7 +94,7 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
         }
         switch decision(for: url, mainFrame: mainFrame) {
         case .allowInApp:
-            if action.shouldPerformDownload {
+            if shouldPerformDownload {
                 decisionHandler(.download)
             } else {
                 // WKUIDelegate routes blank targets back into the main web view.
@@ -83,7 +102,7 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
             }
         case .openExternal, .system:
             decisionHandler(.cancel)
-            openOutsideApp(url)
+            openOutsideApp(url, mainFrame: mainFrame)
         case .reject:
             decisionHandler(.cancel)
         }
@@ -92,16 +111,22 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
     func webView(_ webView: WKWebView, decidePolicyFor response: WKNavigationResponse,
                  decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
         guard response.isForMainFrame else { decisionHandler(.allow); return }
+        handleMainFrameResponse(url: response.response.url, isDownload: DownloadHandler.isDownload(response.response),
+                                decisionHandler: decisionHandler)
+    }
+
+    func handleMainFrameResponse(url: URL?, isDownload: Bool = false,
+                                 decisionHandler: (WKNavigationResponsePolicy) -> Void) {
         // Recheck final responses, including redirect destinations.
-        let result = decision(for: response.response.url, mainFrame: true)
-        guard result == .allowInApp || response.response.url == startupURL else {
+        let result = decision(for: url, mainFrame: true)
+        guard result == .allowInApp || url == startupURL else {
             decisionHandler(.cancel)
-            if result == .openExternal || result == .system, let url = response.response.url {
-                openOutsideApp(url)
+            if result == .openExternal || result == .system, let url {
+                openOutsideApp(url, mainFrame: true)
             }
             return
         }
-        decisionHandler(DownloadHandler.isDownload(response.response) ? .download : .allow)
+        decisionHandler(isDownload ? .download : .allow)
     }
 
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
@@ -115,7 +140,7 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
                 ? action.request : URLRequest(url: url)
             mainWebView?.loadMainRequest(request)
         case .openExternal, .system:
-            openOutsideApp(url)
+            openOutsideApp(url, mainFrame: true)
         case .reject:
             break
         }
@@ -123,14 +148,63 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
     }
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        handleCommittedMainFrame(url: webView.url, navigation: navigation)
         (original as? WKNavigationDelegate)?.webView?(webView, didCommit: navigation)
     }
 
-    private func openOutsideApp(_ url: URL?) {
+    // WebKit supplies navigation identities; tests use ordinary objects with the same lifetime.
+    // Commit/finish callbacks describe the main frame only.
+    func handleCommittedMainFrame(url: URL?, navigation: AnyObject?) {
+        if let navigation, let url, !failedNavigations.contains(navigation),
+           Self.isSafeURL(url, host: serverHost, offlineURL: offlineURL) {
+            if committedNavigation !== navigation { previousSafeURL = lastSafeURL }
+            committedNavigation = navigation
+            lastSafeURL = url
+            navigatingConnect = false
+        }
+    }
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        handleFinishedMainFrame(navigation: navigation)
+        (original as? WKNavigationDelegate)?.webView?(webView, didFinish: navigation)
+    }
+
+    func handleFinishedMainFrame(navigation: AnyObject?) {
+        if let navigation, committedNavigation === navigation {
+            previousSafeURL = nil
+            committedNavigation = nil
+        }
+    }
+
+    private static func isConnectPath(_ url: URL) -> Bool {
+        let path = url.standardized.path
+        return path == "/connect" || path.hasPrefix("/connect/")
+    }
+
+    private static func isSafeURL(_ url: URL?, host: String, offlineURL: URL?) -> Bool {
+        guard let url, url.baseURL == nil, url != offlineURL,
+              url.scheme?.lowercased() == "https", url.host?.lowercased() == host,
+              host != "stripe.com", !host.hasSuffix(".stripe.com"),
+              url.user == nil, url.password == nil, !url.absoluteString.contains("\\") else { return false }
+        let path = url.standardized.path
+        return !isConnectPath(url) && path != "/auth" && !path.hasPrefix("/auth/")
+    }
+
+    private func openOutsideApp(_ url: URL?, mainFrame: Bool) {
         guard let url else { return }
-        if NavigationPolicy.decide(url: url, isMainFrame: true) == .openExternal,
+        if mainFrame, NavigationPolicy.decide(url: url, isMainFrame: true) == .openExternal,
            url.scheme?.lowercased() == "https", url.host?.lowercased() == "connect.stripe.com" {
+            // Action/response/new-window callbacks can refer to the same handoff.
+            guard !pendingConnect else { return }
             pendingConnect = true
+            opener.openNavigationURL(url)
+            // WebKit may still report the prior URL during a provisional Connect redirect.
+            // A blank target can leave an already usable page intact.
+            if navigatingConnect || !Self.isSafeURL(mainWebView?.mainURL, host: serverHost, offlineURL: offlineURL) {
+                navigatingConnect = false
+                mainWebView?.loadMainRequest(URLRequest(url: lastSafeURL))
+            }
+            return
         }
         opener.openNavigationURL(url)
     }
@@ -138,7 +212,7 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
     func reloadAfterConnectIfNeeded() {
         guard pendingConnect else { return }
         pendingConnect = false
-        mainWebView?.reloadMainView()
+        mainWebView?.loadMainRequest(URLRequest(url: lastSafeURL))
     }
 
     func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {
@@ -150,11 +224,26 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        handleFailure(webView, error: error)
+        handleFailedNavigation(webView, navigation: navigation, error: error)
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        handleFailedNavigation(webView, navigation: navigation, error: error)
+    }
+
+    func handleFailedNavigation(_ webView: WKWebView, navigation: AnyObject?, error: Error) {
+        discardFailedNavigation(navigation)
         handleFailure(webView, error: error)
+    }
+
+    private func discardFailedNavigation(_ navigation: AnyObject?) {
+        guard let navigation else { return }
+        failedNavigations.add(navigation)
+        if committedNavigation === navigation {
+            lastSafeURL = previousSafeURL ?? lastSafeURL
+            previousSafeURL = nil
+            committedNavigation = nil
+        }
     }
 
     private func handleFailure(_ webView: WKWebView, error: Error) {
