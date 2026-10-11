@@ -740,3 +740,21 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   - production has no notification env vars set, so mode = **off**.
 - **Next (owner):** set `DOMUS_NOTIFICATIONS_ALLOWLIST` = owner email + smoke accounts in Vercel production to start the test week.
 - **Lessons:** Codex in a background Bash run needs `< /dev/null` (it hung about 1h). Packets must not tell Codex to run `gate:web` under a no-DB constraint (its runtime verifier reads Supabase).
+
+## Sprint 212 SHIPPED (2026-10-10) — iPhone signing + TestFlight readiness (L3, phone-app exception)
+- **Packet:** rev 3 (rev 1 REJECT, then rev 2 APPROVE WITH CHANGES). Codex gpt-6-astra hit its usage limit mid-run and resumed at 20:27.
+- **What shipped:**
+  - `Signing.xcconfig` (Automatic) plus an optional, gitignored `Signing.local.xcconfig` that holds the team ID;
+  - `release.xcconfig`; `Info.plist` arm64 + `ITSAppUsesNonExemptEncryption=false`;
+  - `PrivacyInfo.xcprivacy` with `apps/ios/PRIVACY-AUDIT.md` (it has UNVERIFIED rows, and is not an App Store compliance claim);
+  - `scripts/testflight.sh` (lock, pending-build guard, `--resolve`, `--build`, `--dry-run`, team redacted) with the build counter in `apps/ios/build-number.txt` (last uploaded = 1).
+- **Verified by Claude outside the sandbox:** config test 48/48 (all §A8 signing cases, manifest inside the Release simulator and device bundles) and XCTest 17/17. No team ID is committed.
+- **Before App Store submission, review the privacy audit:**
+  - the DeviceID, BrowsingHistory and CoarseLocation rows come from reading the Vercel Analytics docs and may be over-declared;
+  - CreditInfo comes from screening scores.
+- **Next (owner at the Mac):**
+  1. Copy the team ID into `Signing.local.xcconfig`.
+  2. Sign Xcode into the Apple account.
+  3. Plug in the iPhone, turn on Developer Mode, Run.
+  4. Then run the remaining 210 phone gates on the device.
+  5. TestFlight: create the App Store Connect record for `com.domusbase.app`, then run `testflight.sh`.
