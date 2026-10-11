@@ -1,6 +1,14 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { readFileSync } = require("node:fs");
+const fs = require("node:fs");
+const path = require("node:path");
+const os = require("node:os");
+const { spawnSync } = require("node:child_process");
+const { parseLast, nextBuild } = require("./build-number.cjs");
+const ios = path.resolve(__dirname, "..");
+const repo = path.resolve(ios, "../..");
+process.chdir(ios);
 const ts = require("typescript");
 const vm = require("node:vm");
 const source = ts.transpileModule(readFileSync("capacitor.config.ts", "utf8"), {
@@ -34,4 +42,302 @@ test("keeps the exact offline message and retry action", () => {
 for (const url of ["http://domusbase.com", "http://localhost.evil.com", "http:localhost", "//domusbase.com",
   "javascript:alert(1)", "ftp://example.com", "https://user:password@example.com", "https://", " https://example.com"]) {
   test(`rejects invalid developer URL ${url}`, () => assert.throws(() => config(url)));
+}
+
+function run(command, args, options = {}) {
+  const result = spawnSync(command, args, { cwd: ios, encoding: "utf8", timeout: 300000,
+    maxBuffer: 32 * 1024 * 1024, ...options });
+  return { ...result, output: `${result.stdout || ""}${result.stderr || ""}` };
+}
+function successful(result) {
+  assert.equal(result.status, 0, `${result.error || ""}\n${result.output.slice(-6000)}`);
+  return result.stdout;
+}
+function plist(file) {
+  return JSON.parse(successful(run("plutil", ["-convert", "json", "-o", "-", file])));
+}
+const projectFile = "ios/App/App.xcodeproj/project.pbxproj";
+function projectAtHead() {
+  return JSON.parse(successful(run("plutil", ["-convert", "json", "-o", "-", "--", "-"], {
+    input: successful(run("git", ["show", `HEAD:apps/ios/${projectFile}`]))
+  })));
+}
+function configurations(project, name) {
+  const target = Object.values(project.objects).find(o => o.isa === "PBXNativeTarget" && o.name === name);
+  return project.objects[target.buildConfigurationList].buildConfigurations.map(id => project.objects[id]);
+}
+const manifestFile = "ios/App/App/PrivacyInfo.xcprivacy";
+test("App Store plist values preserve camera text", () => {
+  const info = plist("ios/App/App/Info.plist");
+  assert.deepEqual(info.UIRequiredDeviceCapabilities, ["arm64"]);
+  assert.equal(info.ITSAppUsesNonExemptEncryption, false);
+  const original = JSON.parse(successful(run("plutil", ["-convert", "json", "-o", "-", "--", "-"], {
+    input: successful(run("git", ["show", "HEAD:apps/ios/ios/App/App/Info.plist"]))
+  })));
+  assert.equal(info.NSCameraUsageDescription, original.NSCameraUsageDescription);
+});
+test("privacy manifest matches audit flags/purposes and App Resources", () => {
+  successful(run("plutil", ["-lint", manifestFile]));
+  const manifest = plist(manifestFile);
+  const table = readFileSync("PRIVACY-AUDIT.md", "utf8")
+    .split("<!-- manifest-data:start -->")[1].split("<!-- manifest-data:end -->")[0];
+  const rows = table.split("\n").filter(line => line.startsWith("| NSPrivacyCollectedDataType"));
+  assert.ok(rows.length > 0);
+  const expected = rows.map(line => {
+    const [type, linked, tracking, purposes] = line.split("|").slice(1, -1).map(s => s.trim());
+    assert.match(linked, /^(true|false)$/);
+    assert.equal(tracking, "false");
+    return { NSPrivacyCollectedDataType: type, NSPrivacyCollectedDataTypeLinked: linked === "true",
+      NSPrivacyCollectedDataTypeTracking: false, NSPrivacyCollectedDataTypePurposes: purposes.split(",") };
+  });
+  assert.equal(new Set(expected.map(row => row.NSPrivacyCollectedDataType)).size, rows.length);
+  assert.deepEqual(manifest.NSPrivacyCollectedDataTypes, expected);
+  assert.equal(manifest.NSPrivacyTracking, false);
+  assert.deepEqual(manifest.NSPrivacyTrackingDomains, []);
+  assert.deepEqual(manifest.NSPrivacyAccessedAPITypes, []);
+  const { objects } = plist(projectFile);
+  const target = Object.values(objects).find(o => o.isa === "PBXNativeTarget" && o.name === "App");
+  const resources = target.buildPhases.map(id => objects[id]).find(o => o.isa === "PBXResourcesBuildPhase");
+  assert.ok(resources.files.some(id => objects[objects[id].fileRef].path === "PrivacyInfo.xcprivacy"));
+});
+test("signing is target-scoped; original test settings and versions are preserved", () => {
+  const project = plist(projectFile);
+  assert.deepEqual(configurations(project, "AppTests"), configurations(projectAtHead(), "AppTests"));
+  for (const config of configurations(project, "App")) {
+    assert.notEqual(config.buildSettings.CODE_SIGNING_ALLOWED, "NO");
+    assert.equal(String(config.buildSettings.CURRENT_PROJECT_VERSION), "1");
+    assert.equal(String(config.buildSettings.MARKETING_VERSION), "1.0");
+    assert.equal(project.objects[config.baseConfigurationReference].path, `../${config.name.toLowerCase()}.xcconfig`);
+  }
+  assert.equal(readFileSync("ios/release.xcconfig", "utf8"), '#include "App/Signing.xcconfig"\n');
+  assert.match(readFileSync("ios/debug.xcconfig", "utf8"), /CAPACITOR_DEBUG = true/);
+  assert.match(readFileSync("ios/debug.xcconfig", "utf8"), /#include "App\/Signing.xcconfig"/);
+  assert.match(readFileSync("ios/App/Signing.xcconfig", "utf8"), /#include\? "Signing.local.xcconfig"/);
+});
+test("tracked sources contain no assigned team; secrets and artifacts are ignored", () => {
+  const files = successful(run("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z", "apps/ios"], { cwd: repo })).split("\0").filter(Boolean);
+  for (const file of files) {
+    // Only the example is permitted to assign its non-secret placeholder.
+    const source = readFileSync(path.join(repo, file), "utf8");
+    const assignments = [...source.matchAll(/^[ \t]*DEVELOPMENT_TEAM[ \t]*=[ \t]*([^\r\n]*)/gm)];
+    for (const match of assignments) {
+      const value = match[1].replace(/;.*/, "").trim();
+      assert.ok(!value || (file.endsWith("Signing.local.xcconfig.example") && value === "YOUR_TEAM_ID"), file);
+    }
+  }
+  for (const file of ["ios/App/Signing.local.xcconfig", "build-number.pending", "ios/App/build/testflight.lock",
+    "sample.xcarchive", "sample.ipa", "sample.mobileprovision", "sample.p12", "sample.cer"]) {
+    successful(run("git", ["check-ignore", file]));
+  }
+});
+test("build numbers are bounded, monotonic, and reject corrupt counters/overrides", () => {
+  assert.equal(nextBuild(nextBuild("1")), 3);
+  assert.equal(parseLast("1\n"), 1);
+  assert.equal(nextBuild(1, "42"), 42);
+  assert.equal(nextBuild(999999998), 999999999);
+  for (const value of ["", "abc", "0", "-1", "1000000000", "01", "1.5", "1e2"]) {
+    assert.throws(() => parseLast(value));
+    assert.throws(() => nextBuild(1, value));
+  }
+  for (const value of ["1", "2"]) assert.throws(() => nextBuild(2, value));
+  assert.throws(() => nextBuild(999999999));
+});
+
+// Everything that can archive/export is exercised only in isolated fake-tool fixtures.
+const teamMessage = "Add your Apple Team ID to apps/ios/ios/App/Signing.local.xcconfig (see Signing.local.xcconfig.example).";
+const { fixture: uploadFixture } = require("./config-upload-fixture.cjs");
+const fixture = t => uploadFixture(t, { run, manifestFile, ios });
+test("dry run prints commands, redacts team, and executes/writes nothing", t => {
+  const f = fixture(t), result = f.run(["--dry-run"]);
+  successful(result);
+  assert.match(result.output, /xcodebuild archive/);
+  assert.match(result.output, /xcodebuild -exportArchive/);
+  assert.match(result.output, /CURRENT_PROJECT_VERSION=2/);
+  assert.equal((result.output.match(/-allowProvisioningUpdates/g) || []).length, 2);
+  assert.match(result.output, /<team>/);
+  assert.doesNotMatch(result.output, /ABCDE12345/);
+  assert.equal(f.read("build-number.txt"), "1\n");
+  for (const file of ["calls", "ios/App/build", "build-number.pending"]) assert.equal(f.exists(file), false, file);
+  assert.match(successful(f.run(["--dry-run", "--build", "7"])), /CURRENT_PROJECT_VERSION=7/);
+});
+for (const team of [null, "DEVELOPMENT_TEAM = invalid", "DEVELOPMENT_TEAM = ABCDE12345\nDEVELOPMENT_TEAM = ZYXWV98765"]) {
+  test(`dry run rejects ${team === null ? "missing" : "malformed/duplicate"} signing config`, t => {
+    const f = fixture(t);
+    if (team === null) fs.unlinkSync(path.join(f.dir, "ios/App/Signing.local.xcconfig"));
+    else f.write("ios/App/Signing.local.xcconfig", team);
+    const result = f.run(["--dry-run"]);
+    assert.equal(result.status, 1);
+    assert.equal(result.stderr.trim(), teamMessage);
+    assert.equal(f.exists("calls"), false);
+  });
+}
+test("sequential fake uploads advance 1 to 2 to 3, clear stale files and redact logs", t => {
+  const f = fixture(t);
+  for (const next of [2, 3]) {
+    fs.mkdirSync(path.join(f.dir, "ios/App/build/testflight"), { recursive: true });
+    f.write("ios/App/build/testflight/stale", "old archive");
+    const result = f.run();
+    successful(result);
+    assert.match(result.output, new RegExp(`Upload submitted for build ${next}`));
+    assert.doesNotMatch(result.output, /ABCDE12345/);
+    assert.equal(f.read("build-number.txt"), `${next}\n`);
+    for (const file of ["build-number.pending", "ios/App/build/testflight.lock", "ios/App/build/testflight/stale"]) assert.equal(f.exists(file), false);
+    assert.doesNotMatch(f.read("ios/App/build/testflight/export.log"), /ABCDE12345/);
+    const options = plist(path.join(f.dir, "ios/App/build/testflight/ExportOptions.plist"));
+    assert.deepEqual(options, { method: "app-store-connect", destination: "upload", signingStyle: "automatic",
+      teamID: "ABCDE12345", manageAppVersionAndBuildNumber: false, uploadSymbols: true });
+  }
+});
+for (const mode of ["failed-export", "ambiguous", "counter"]) {
+  test(`${mode} keeps pending guard and blocks retry; both resolution paths work`, t => {
+    const f = fixture(t), result = f.run([], mode);
+    assert.equal(result.status, 1);
+    assert.match(result.output, /Upload status unknown for build 2/);
+    assert.equal(f.read("build-number.txt"), "1\n");
+    assert.equal(f.read("build-number.pending"), "2\n");
+    assert.equal(f.exists("ios/App/build/testflight.lock"), false);
+    const before = f.read("calls"), blocked = f.run();
+    assert.equal(blocked.status, 1);
+    assert.match(blocked.output, /Build 2 may already be uploaded.*--resolve uploaded or --resolve not-uploaded/);
+    assert.equal(f.read("calls"), before);
+    successful(f.run(["--resolve", "not-uploaded"]));
+    assert.equal(f.read("build-number.txt"), "1\n");
+    assert.equal(f.exists("build-number.pending"), false);
+    f.write("build-number.pending", "2\n");
+    successful(f.run(["--resolve", "uploaded"]));
+    assert.equal(f.read("build-number.txt"), "2\n");
+    assert.equal(f.exists("build-number.pending"), false);
+  });
+}
+test("lock refuses a second invocation without removing the first lock", t => {
+  const f = fixture(t);
+  fs.mkdirSync(path.join(f.dir, "ios/App/build/testflight.lock"), { recursive: true });
+  const result = f.run();
+  assert.equal(result.status, 1);
+  assert.match(result.output, /Another upload is running\./);
+  assert.equal(f.exists("ios/App/build/testflight.lock"), true);
+  assert.equal(f.exists("calls"), false);
+});
+test("counter replaced by a directory cannot falsely confirm an accepted upload", t => {
+  const f = fixture(t), result = f.run([], "counter-directory");
+  assert.equal(result.status, 1);
+  assert.match(result.output, /Upload status unknown for build 2/);
+  assert.equal(f.read("build-number.pending"), "2\n");
+  assert.equal(f.exists("ios/App/build/testflight.lock"), false);
+  assert.doesNotMatch(result.output, /Upload submitted/);
+});
+for (const mode of ["sync", "archive", "missing-app", "wrong-id", "wrong-version", "missing-privacy", "no-xcode", "no-export", "dirty"]) {
+  test(`${mode} stops before export and releases lock`, t => {
+    const f = fixture(t), result = f.run([], mode);
+    assert.equal(result.status, 1, result.output);
+    assert.equal(f.read("build-number.txt"), "1\n");
+    assert.equal(f.exists("build-number.pending"), false);
+    assert.equal(f.exists("ios/App/build/testflight.lock"), false);
+    assert.doesNotMatch(f.read("calls"), /\["xcodebuild","-exportArchive"/);
+    if (mode === "dirty") successful(f.run(["--allow-dirty"], mode));
+  });
+}
+test("script rejects bad counters and low overrides; valid override is persisted", t => {
+  const f = fixture(t);
+  for (const value of ["oops", "0", "-1", "1000000000", "999999999"]) {
+    f.write("build-number.txt", value);
+    assert.equal(f.run().status, 1);
+    assert.equal(f.exists("calls"), false);
+  }
+  f.write("build-number.txt", "2\n");
+  for (const value of ["1", "2"]) assert.equal(f.run(["--build", value]).status, 1);
+  successful(f.run(["--build", "42"]));
+  assert.equal(f.read("build-number.txt"), "42\n");
+});
+
+// Real Xcode checks deliberately fail (never skip) if the host cannot build/resolve packages.
+const localSigning = path.join(ios, "ios/App/Signing.local.xcconfig");
+function withSigning(team, callback) {
+  assert.equal(fs.existsSync(localSigning), false, "Remove your local signing file before running config tests; it will never be overwritten.");
+  let created = false;
+  try {
+    if (team) {
+      fs.writeFileSync(localSigning, `DEVELOPMENT_TEAM = ${team}\n`, { flag: "wx" });
+      created = true;
+    }
+    return callback();
+  } finally {
+    if (created) fs.rmSync(localSigning, { force: true });
+  }
+}
+const xcodeBase = ["-project", "App.xcodeproj", "-scheme", "App"];
+const xcodeCwd = path.join(ios, "ios/App");
+test("actual script dry run leaves workspace untouched, with and without synthetic signing", t => {
+  const counter = readFileSync("build-number.txt", "utf8");
+  const expectedNext = nextBuild(counter);
+  const state = () => ["ios/App/build/testflight", "ios/App/build/testflight.lock", "build-number.pending"]
+    .map(file => fs.existsSync(file) ? fs.statSync(file).mtimeMs : null);
+  const before = state();
+  withSigning("", () => {
+    const result = run(path.join(__dirname, "testflight.sh"), ["--dry-run"]);
+    assert.equal(result.status, 1);
+    assert.equal(result.stderr.trim(), teamMessage);
+  });
+  withSigning("ABCDE12345", () => {
+    const result = run(path.join(__dirname, "testflight.sh"), ["--dry-run"]);
+    successful(result);
+    assert.match(result.output, new RegExp(`CURRENT_PROJECT_VERSION=${expectedNext}\\b`));
+    assert.doesNotMatch(result.output, /ABCDE12345/);
+    t.diagnostic(result.stdout.trim());
+  });
+  assert.equal(readFileSync("build-number.txt", "utf8"), counter);
+  assert.deepEqual(state(), before);
+  assert.equal(fs.existsSync(localSigning), false);
+});
+function settings(configuration, sdk, extra = []) {
+  return JSON.parse(successful(run("xcodebuild", [...xcodeBase, "-configuration", configuration,
+    "-sdk", sdk, "-showBuildSettings", "-json", ...extra], { cwd: xcodeCwd })));
+}
+for (const [configuration, sdk, team] of [["Debug", "iphonesimulator", ""], ["Release", "iphoneos", ""],
+  ["Release", "iphoneos", "ABCDE12345"], ["Debug", "iphoneos", "ABCDE12345"]]) {
+  test(`effective ${configuration} ${sdk} ${team ? "synthetic local team" : "no local signing file"}`, t => withSigning(team, () => {
+    const all = settings(configuration, sdk);
+    const app = all.find(row => row.target === "App").buildSettings;
+    assert.equal(app.DEVELOPMENT_TEAM || "", team);
+    assert.equal(app.CODE_SIGN_STYLE, "Automatic");
+    if (sdk === "iphoneos") assert.equal(app.CODE_SIGNING_ALLOWED, "YES");
+    if (configuration === "Release") {
+      assert.doesNotMatch(app.SWIFT_ACTIVE_COMPILATION_CONDITIONS || "", /\bDEBUG\b/);
+      assert.doesNotMatch(app.OTHER_SWIFT_FLAGS || "", /-D\s*DEBUG\b/);
+    }
+    for (const key of ["CODE_SIGN_STYLE", "CODE_SIGNING_ALLOWED", "DEVELOPMENT_TEAM", "SWIFT_ACTIVE_COMPILATION_CONDITIONS", "OTHER_SWIFT_FLAGS"])
+      t.diagnostic(`${configuration} ${sdk}: ${key} = ${app[key] || ""}`);
+  }));
+}
+test("effective test target settings match the pre-sprint project", () => withSigning("", () => {
+  const temporary = fs.mkdtempSync(path.join(xcodeCwd, "baseline-"));
+  const baselineProject = `${temporary}.xcodeproj`;
+  fs.renameSync(temporary, baselineProject);
+  try {
+    const original = projectAtHead();
+    // Same SOURCE_ROOT, but restore pre-sprint project Debug xcconfig without signing.
+    const debug = path.join(baselineProject, "debug.xcconfig");
+    fs.writeFileSync(debug, "CAPACITOR_DEBUG = true\n");
+    for (const obj of Object.values(original.objects)) if (obj.path === "../debug.xcconfig") obj.path = debug;
+    fs.writeFileSync(path.join(baselineProject, "project.pbxproj"), JSON.stringify(original));
+    successful(run("plutil", ["-convert", "xml1", path.join(baselineProject, "project.pbxproj")]));
+    for (const configuration of ["Debug", "Release"]) {
+      const query = project => JSON.parse(successful(run("xcodebuild", ["-project", project, "-target", "AppTests",
+        "-configuration", configuration, "-sdk", "iphonesimulator", "-showBuildSettings", "-json", `SRCROOT=${xcodeCwd}`], { cwd: xcodeCwd })))[0].buildSettings;
+      const before = query(baselineProject), after = query("App.xcodeproj");
+      for (const key of ["CODE_SIGNING_ALLOWED", "CODE_SIGN_STYLE", "DEVELOPMENT_TEAM", "SWIFT_ACTIVE_COMPILATION_CONDITIONS", "OTHER_SWIFT_FLAGS", "CAPACITOR_DEBUG", "IPHONEOS_DEPLOYMENT_TARGET", "PRODUCT_BUNDLE_IDENTIFIER"])
+        assert.equal(after[key] || "", before[key] || "", `${configuration} ${key}`);
+    }
+  } finally { fs.rmSync(baselineProject, { recursive: true, force: true }); }
+}));
+for (const sdk of ["iphonesimulator", "iphoneos"]) {
+  test(`Release ${sdk} built bundle contains the exact privacy manifest`, () => withSigning("", () => {
+    const derived = fs.mkdtempSync(path.join(os.tmpdir(), "domus212-release-"));
+    try {
+      successful(run("xcodebuild", [...xcodeBase, "-configuration", "Release", "-sdk", sdk,
+        "-derivedDataPath", derived, ...(sdk === "iphoneos" ? ["CODE_SIGNING_ALLOWED=NO"] : []), "build"], { cwd: xcodeCwd }));
+      const bundle = path.join(derived, `Build/Products/Release-${sdk}/App.app/PrivacyInfo.xcprivacy`);
+      assert.deepEqual(plist(bundle), plist(manifestFile));
+    } finally { fs.rmSync(derived, { recursive: true, force: true }); }
+  }));
 }

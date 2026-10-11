@@ -25,3 +25,13 @@ apps/ios/node_modules/
 apps/ios/ios/App/build/
 **/DerivedData/
 **/xcuserdata/
+
+# Local Apple signing and distribution artifacts
+apps/ios/ios/App/Signing.local.xcconfig
+*.xcarchive
+*.ipa
+*.mobileprovision
+*.p12
+*.cer
+apps/ios/build-number.pending
+apps/ios/ios/App/build/testflight.lock

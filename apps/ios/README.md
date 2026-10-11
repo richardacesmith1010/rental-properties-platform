@@ -1,8 +1,8 @@
-# Domus for iPhone — Sprint 210 / 210b
+# Domus for iPhone
 
-This is an unsigned Capacitor 8 shell for the live Domus website.
+This is a Capacitor 8 shell for the live Domus website, with local automatic signing.
 Deployment target: **iOS 15.0**. Device family: **iPhone only**. Orientation: **portrait**.
-The Xcode scheme is **App**. There is no Apple team ID.
+The Xcode scheme is **App**. The Apple team ID belongs only in your ignored local signing file.
 Notifications remain off. No database changes are needed.
 
 ## Architecture exception
@@ -189,7 +189,9 @@ Guideline 4.2 evidence must include biometric re-entry, actionable native push,
 native photo capture/upload, native file/share flows, and universal links.
 That sprint must document the utility for App Review.
 It must provide a reviewer account and verify major physical-iPhone workflows.
-Signing, distribution, and an Apple team ID remain outside this sprint.
+Signing and the TestFlight script are prepared. A real signed archive, upload, physical-device install,
+and App Store Connect records were not performed or created by Sprint 212.
+Account deletion, native features and Guideline 4.2 compliance remain future work.
 
 ## Required runtime verification
 
@@ -210,3 +212,36 @@ Signing, distribution, and an Apple team ID remain outside this sprint.
 15. Verify the separately deployed web changes with smoke, CI, and Sentry.
 
 Deployment and authenticated runtime walks were not performed by this sprint.
+
+## Put Domus on your iPhone
+
+1. Open `apps/ios/ios/App/App.xcodeproj` in Xcode. Copy `Signing.local.xcconfig.example` to `Signing.local.xcconfig` in that same App folder. Replace `YOUR_TEAM_ID` with the Team ID at developer.apple.com → Account → Membership details. Keep this local file private; it is ignored by git. Don't enter your team into the shared project settings.
+2. Add your Apple Developer account in Xcode → Settings → Accounts. Plug in your iPhone, unlock it and choose **Trust this computer** if prompted. Enable **Settings → Privacy & Security → Developer Mode** on the phone and follow its restart instructions.
+3. In Xcode select **App**, choose your connected phone, and press **Run**. On the first run, Xcode may download device support and create a signing profile. These steps are normal. Simulator runs do not need a local signing file or an Apple account.
+
+## Send a TestFlight build
+
+1. Once, create the App Store Connect app record for **com.domusbase.app**, using your Apple Developer account. Set up the local signing file and Xcode account as above. Review [PRIVACY-AUDIT.md](PRIVACY-AUDIT.md), including its unverified items. This script does not make the app App Store-compliant.
+2. Before uploading from a new computer, check App Store Connect → TestFlight for the latest build. `build-number.txt` records the last confirmed upload (initial baseline `1`; build 1 was never uploaded). The first normal upload uses `2`. If another computer uploaded a higher number, use `--build N` with a number above both the counter and App Store Connect's latest build.
+3. From the repository root run `apps/ios/scripts/testflight.sh`. From another folder use the script's full path. It syncs the app, archives Release and uploads automatically. Review any uncommitted changes before choosing `--allow-dirty`. For a preview use `apps/ios/scripts/testflight.sh --dry-run`: it validates local inputs and prints the plan with `<team>`, without running Xcode, sync, archive or upload, writing files, or signing in.
+4. When the script says **Upload submitted**, check App Store Connect for processing status. Commit `apps/ios/build-number.txt` afterward so the next computer uses a higher build. App version stays **1.0**; build numbers are positive integers of at most 9 digits.
+5. If an upload is interrupted or its status is unknown, the next run is blocked by `build-number.pending`. Check App Store Connect first, then run `apps/ios/scripts/testflight.sh --resolve uploaded` to advance the counter, or `--resolve not-uploaded` to clear only the pending guard. These commands do not upload. Do not guess. A second concurrent run is blocked by `testflight.lock`; after a forced kill, remove that ignored lock directory only after confirming no upload is still running.
+
+Success requires exit status 0 and the exact `** EXPORT SUCCEEDED **` line. This line is present
+in the installed Xcode 27.0 (27A266a) `IDEDistribution` binary; `xcodebuild -help` confirms
+`-exportArchive`, `app-store-connect` and `destination=upload`. No real export was run to test
+Apple's acceptance. Failed/ambiguous export or counter-save failure retains the pending guard.
+Sync/archive failures occur before that guard is written. Generated export options contain the
+team; terminal and export logs redact it. `build/testflight` is cleared before each real upload.
+
+Local regression checks (no DB, no real archive/upload):
+
+```sh
+cd apps/ios
+node scripts/config.test.cjs
+bash -n scripts/testflight.sh
+```
+
+The config suite uses isolated fake upload tools and real Xcode settings/unsigned Release
+build checks. It never archives or uploads with real Xcode. Real Xcode checks need a working
+local Xcode/Simulator service and writable developer caches. Failures remain failures, not skips.
