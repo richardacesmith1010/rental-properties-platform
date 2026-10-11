@@ -1,4 +1,4 @@
-# Sprint 215 — Wallet redesign foundation: tokens, font, cards, owner tab bar + correct Home "year to date" (L3: money number) · rev 1
+# Sprint 215 — Wallet redesign foundation: tokens, font, cards, owner tab bar + correct Home "year to date" (L3: money number) · rev 2 (ChatGPT APPROVE WITH CHANGES: 5 required + optional 1–5 adopted)
 
 Owner approved the "Wallet" (Apple Card-style) direction on 2026-10-11. Mockups: https://claude.ai/artifact/FsvezREEzyFY6WXg9PDqo4 (artboards "B · Home", "B · Money", "B · Homes").
 
@@ -123,7 +123,7 @@ This sprint changes the **foundation only**: colors, font, card shape and the ph
    - every tab is a real `<a href>` (More is a `<button>`), at least 44px tall, with `aria-current="page"` on the active one.
 3. **Active tab rules:**
    - `/owner` with no section (or `overview`) → Home;
-   - `/owner/money` → Money;
+   - `/owner/money` and `/owner/bank` → Money;
    - `section=portfolio`, `units`, `leases` or `tenants`, or `/owner/properties/*` → Homes;
    - `section=inbox` → Inbox;
    - any other section → More.
@@ -132,17 +132,45 @@ This sprint changes the **foundation only**: colors, font, card shape and the ph
    - Keep their "← Home" link on desktop only (`lg:inline-flex`, hidden on phones, since the tab bar replaces it).
 5. Desktop (`lg+`) is unchanged: sidebar, no tab bar. Manager and tenant phone navigation are unchanged in this sprint.
 
-### D. Correct Home "Year-to-date" income (money)
-1. **New server function `getOwnerYearRentReceived(userId, accountId?)`** in `lib/home-money.ts`, or a new `lib/owner-ytd.ts` that reuses its row logic.
-   - It returns `{ byPropertyId: Record<string, number> }`: the sum of **payment `amount_cents`** for rent charges (`category === 'rent'`) on leases of the homes the user can administer, with `paid_at` in the current calendar year.
-   - Use the **same year boundary and timezone as the Money page's "This year"** (`app/owner/money/resolve.ts`), so both screens always match.
-   - Reversed payments (`reversed_at` set) are excluded; soft-deleted charges (`deleted_at`) are excluded.
-   - Batch the queries (`.in()` with paging like `lib/owner-statement.ts` `inPages`); no query inside a loop.
-   - Authorize the home list with the existing administered-property helper.
-   - On a query error, fail closed: return an error state, and the Home card shows "—" with "Couldn't load", **never** a wrong number.
-2. Load it on the owner Home server path, in parallel with the existing loaders (no added waterfall). Pass `byPropertyId` to the client.
-3. In `dashboard-kpi-loader.ts`, `ytdIncomeCents` = the sum of `byPropertyId` over the selected homes (respecting the existing "Show" filter `selectedHomeIds`). Remove the old charge-based sum.
-4. Year-to-date expenses stay as they are (already correct).
+### D. Correct Home "Year-to-date" income (money). Controlling rule: **Home = Money, exactly, in cents**
+1. **One shared calculation.**
+   - Extract the rent-received aggregation that the Money page uses today (`lib/home-money.ts` `loadRows` and the `totals.inCents` logic) into a shared, pure function plus a loader. Both the Money page and the new Home loader call it, so both screens can never disagree.
+   - Don't change Money's existing rules. Its current handling of `paid_at` vs due date, reversed payments, deleted charges, categories, partial and multiple payments per charge, timezone and year range is the definition. Document the rules you found in a comment and in the report.
+   - Money's existing tests must still pass unchanged.
+2. **Multi-home loader** `loadOwnerYearRentReceived()`:
+   - **Who:** the authenticated user comes from the server session inside the loader, never as a caller-supplied id. The optional `accountId` is validated against that user's permitted owner accounts.
+   - **Which homes:** exactly the ones the Money page would let this user open. Use the same authorization helper and rule as the Money page (`canUserAdministerProperty` or its batched equivalent), applied to the owner's account scope as the Home screen uses it. No wider set.
+   - **Queries:** explicit columns; deterministic, complete pagination (ordered by id, paged until a short page) for every `.in()` batch, deduplicated by id; integer-cent sums only (no floats).
+   - **If any page or batch fails:** the whole result fails. A partial total is never returned.
+3. **Result type:** `{ ok: true; byPropertyId: Record<string, number> } | { ok: false; error: "load_failed" }`.
+   - Success with nothing received shows **$0**.
+   - Failure shows **"—"** with **"Couldn't load"**.
+   - A YTD failure never fails or blocks the rest of the owner dashboard. It runs concurrently with the other loaders, and the rest of Home renders normally.
+4. In `dashboard-kpi-loader.ts`, `ytdIncomeCents` = the sum of `byPropertyId` over the selected homes (respecting the existing "Show" filter). Remove the old charge-based sum, and never use the dashboard's limited `charges` / `recent_payments` arrays for it.
+5. Year-to-date expenses stay as they are.
+6. **Tests:**
+   - **Parity:** for the same fixture and homes, Home YTD == Money "This year" rent, exactly in cents (one home, several homes, the filter applied).
+   - **Paging:** more than 1000 qualifying payments (beyond one page) are all counted.
+   - **Exclusions:** a failed second page → `load_failed`; reversed and deleted rows excluded the same way Money does; payments in the previous December and a future date (whatever Money does); multiple leases for one home; a home with no rent.
+   - **Errors and edges:** zero income → `$0`; an empty authorized list → `ok` with `{}`; an `accountId` the user doesn't own → no homes from it.
+
+### E. Regression protection for the global look
+1. **Contrast:** extend `theme-contrast-tokens.test.ts` to every foreground/background pair components actually use, at ≥4.5:1 (3:1 for large text, icons and focus rings), in light and dark:
+   - text: `ink` / `ink-2` / `muted` on `ground`, `surface`, `surface-2`;
+   - status and accent: `pos` / `crit` / `warn` on their `-bg` and on `surface`; `accent` on `surface`; `accent-contrast` on `accent`;
+   - other: `faint` on `surface` for disabled (3:1); the focus ring color vs `surface`.
+2. A test that the two dark blocks hold identical values.
+3. Focus rings, validation (error) states, hover and selected nav states stay visible. Don't remove any `focus-visible` styles.
+4. **Tab bar:**
+   - `/owner/bank` → **Money** is active;
+   - exactly **one** tab bar per page, including Money and Bank (test this);
+   - safe-area bottom padding so content is never hidden behind it on Home, Money, Bank and owner sub-sections;
+   - More opens and closes the drawer, with Escape and the keyboard;
+   - tabs are real links, so browser back/forward works;
+   - the Home badge reads as "Home, 2 late rent payments" for screen readers, without a duplicate announcement.
+5. Keep the selected-home "Show" filter when moving between tabs, if it's already persisted (URL or storage). Don't add new persistence.
+6. **Font:** `next/font/google` Geist with fallback `-apple-system, system-ui, sans-serif`. The build must succeed (it already has network); report whether the font is self-hosted at build.
+7. **E2E:** make sure `tests/e2e/smoke-theme.spec.ts` covers the owner, manager and tenant views at a phone viewport in light and dark. Extend its routes only if needed; no new screens.
 
 ## 4. Out of scope
 - Rebuilding the Home, Money or Homes layouts (216–217).
@@ -182,7 +210,7 @@ This sprint changes the **foundation only**: colors, font, card shape and the ph
 1. Token values match §A (or lightness-adjusted with the final hex reported). The contrast test passes for light and both dark blocks, the dark blocks are identical, and the radius tokens exist.
 2. Geist is the only app font; Inter is gone.
 3. **Tab bar tests:** five tabs in order, correct `href`s, the active rules in §C3 (one test per rule), More opens the drawer, the late badge appears with its aria-label, and it renders on the Money and Bank pages.
-4. **YTD tests:**
+4. **YTD tests** (all of §D6 and §E1–4 present and passing). The original list:
    - a mocked Supabase with payments across years: Jan–Oct this year counts, last December doesn't, reversed doesn't, deleted charges don't, and non-rent categories don't;
    - per-home sums respect the selected homes;
    - a query error gives the error state, not a number;
