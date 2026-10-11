@@ -584,7 +584,7 @@ Dedicated test accounts must exist for every role. Claude uses these for flow wa
 
 | Role | Email | Status |
 |---|---|---|
-| Tenant (real data) | richard.ace.smith+alt@gmail.com | Lease on "1st Home" ENDED 2026-10-04 (owner-approved cleanup; paid Sprint 128 $5 charge + payment kept). No active lease. |
+| Tenant (real data) | richard.ace.smith+alt@gmail.com | No lease. Its ended "1st Home" test lease and the Sprint 128 $5 Stripe charge/payment were deleted 2026-10-10 at the owner's request (Domus now differs from Stripe by that $5 test). |
 | Tenant (dry run) | richard.ace.smith+drytenant@gmail.com | Active — Smoke Test Property Unit D, $25/mo from 2026-11-01 (first-tenant dry run). Owner holds the password; Claude walks it only via the owner's logged-in browser. |
 | Owner (smoke) | richard.ace.smith+smokeowner@gmail.com | Active — isolated smoke graph (Sprint 130) |
 | Manager (smoke) | richard.ace.smith+smokemanager@gmail.com | Active — assigned to Smoke Test Property only |
