@@ -770,3 +770,17 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - **Pending:**
   - a Navy Federal CSV for Jan 1–Sep 30 at the next Mac session (Feb–Sep costs are missing, so profit is overstated);
   - Mom's House lease (tenant through 10-31, renewing to 2027-10-31): owner says hold until onboarding.
+
+## Security cleanup (2026-10-10, owner-approved)
+- **Applied:** `20261010_security_definer_helpers_no_anon.sql`. The 7 RLS helper functions (`can_*_property`, `is_*_of_account`) can no longer be executed by PUBLIC or anon; authenticated and service_role keep access.
+- **Checks:**
+  - anon RPC calls now return 401;
+  - an anon `properties` read now errors (42501) instead of returning `[]`;
+  - smoke passes 13/13 for all 3 signed-in roles;
+  - the advisor no longer flags anon.
+- **Kept on purpose:**
+  - authenticated EXECUTE: RLS needs it, and the functions only answer about `auth.uid()`;
+  - RLS-without-policy on `bank_skipped_fingerprints` and `cron_runs` (service-role only);
+  - `pg_net` in public (moving it risks the keepalive cron).
+- **Owner action:** turn on Leaked Password Protection (Supabase → Authentication → password settings).
+- **Possible follow-up:** anon still has default table grants on about 35 public tables (RLS blocks it, but defense in depth says revoke). The app never reads tables as anon.
