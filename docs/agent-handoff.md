@@ -758,3 +758,15 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   3. Plug in the iPhone, turn on Developer Mode, Run.
   4. Then run the remaining 210 phone gates on the device.
   5. TestFlight: create the App Store Connect record for `com.domusbase.app`, then run `testflight.sh`.
+
+## Owner data check (remote, 2026-10-10)
+- **Removed** (owner-approved): the ended "Test Tenant" lease on 1st Home and its $5 Stripe test charge and payment (Domus now differs from Stripe by $5).
+- **Angel's rent:**
+  - Feb/Mar/Jun 2026 added as paid outside Domus;
+  - May/Jul payments re-dated to the 1st, and Oct re-dated to 10-05 to match the bank;
+  - 4 waived late fees deleted with their payments and edit history.
+  - Now Feb–Oct are paid ($21,150) and Nov is pending.
+- **Mortgage:** $1,039.44 on the 1st **and** the 15th, including escrow. The rule catches both.
+- **Pending:**
+  - a Navy Federal CSV for Jan 1–Sep 30 at the next Mac session (Feb–Sep costs are missing, so profit is overstated);
+  - Mom's House lease (tenant through 10-31, renewing to 2027-10-31): owner says hold until onboarding.
