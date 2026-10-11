@@ -443,6 +443,42 @@ describe("getRentCollectionConnectStatus", () => {
     expect(status.targets).toEqual([{ kind: "account", accountId: "account-1" }]);
   });
 
+  it.each([
+    { ownerProfileId: "owner-1", legacyProfileTarget: true },
+    { ownerProfileId: null, legacyProfileTarget: false }
+  ])("does not count a null-account home toward a normal account (profile: $ownerProfileId)", async ({
+    ownerProfileId, legacyProfileTarget
+  }) => {
+    createAdminClientMock.mockReturnValue(createStatusAdminClient({
+      rows: {
+        profiles: [{ id: "owner-1", role: "owner", stripe_account_id: null, stripe_onboarding_complete: false }],
+        ownership_account_members: [],
+        ownership_accounts: [{
+          id: "account-1", display_name: "Alpha", created_by_profile_id: "owner-1",
+          stripe_account_id: null, stripe_onboarding_complete: false,
+          created_at: "2026-01-01T00:00:00.000Z"
+        }],
+        properties: [
+          { id: "normal", name: "Account Home", owner_account_id: "account-1", owner_profile_id: null, active: true },
+          { id: "null-owner", name: "Unassigned Home", owner_account_id: null, owner_profile_id: ownerProfileId, active: true }
+        ]
+      }
+    }).client);
+
+    const status = await getRentCollectionConnectStatus("owner-1");
+
+    expect(status.ok).toBe(true);
+    expect(status.accounts).toMatchObject([{
+      accountId: "account-1", isConnected: false,
+      activePropertyCount: 1, propertyNames: ["Account Home"]
+    }]);
+    expect(status.legacyProfileTarget).toBe(legacyProfileTarget);
+    expect(status.primaryTarget).toEqual({ kind: "account", accountId: "account-1" });
+    expect(status.targets).toEqual(legacyProfileTarget
+      ? [{ kind: "account", accountId: "account-1" }, { kind: "profile" }]
+      : [{ kind: "account", accountId: "account-1" }]);
+  });
+
   it("falls back to the legacy profile target when active personal properties still need setup", async () => {
     createAdminClientMock.mockReturnValue(
       createStatusAdminClient({

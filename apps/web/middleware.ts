@@ -17,6 +17,7 @@ function isProtectedRoute(pathname: string) {
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
+  const hadAuthCookie = request.cookies.getAll().some(({ name }) => /^sb-.+-auth-token(\.\d+)?$/.test(name));
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -51,7 +52,7 @@ export async function middleware(request: NextRequest) {
       data: { user }
     } = await supabase.auth.getUser();
 
-    if (!user && isProtectedRoute(request.nextUrl.pathname)) {
+    if (!user && hadAuthCookie && isProtectedRoute(request.nextUrl.pathname)) {
       supabaseResponse.cookies.set("x-session-expired", "1", {
         path: "/",
         maxAge: 10

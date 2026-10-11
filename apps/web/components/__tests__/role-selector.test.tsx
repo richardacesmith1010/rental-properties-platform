@@ -27,7 +27,9 @@ describe("RoleSelector", () => {
     const form = screen.getByTestId("login-form-/owner");
     expect(form).toHaveAttribute("data-mode", "signup");
     expect(form.parentElement?.parentElement).not.toHaveClass("overflow-hidden", "max-h-[400px]");
-    expect(form.parentElement?.parentElement?.parentElement).toHaveClass("sm:col-span-2");
+    expect(form.parentElement?.parentElement?.parentElement).toHaveClass("flex", "flex-col");
+    expect(form.parentElement?.parentElement?.parentElement?.parentElement).toHaveClass("grid-cols-1");
+    expect(form.parentElement?.parentElement?.parentElement?.parentElement).not.toHaveClass("sm:grid-cols-3");
   });
 
   it("renders all three role cards", () => {

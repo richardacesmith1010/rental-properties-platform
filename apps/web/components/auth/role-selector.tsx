@@ -41,7 +41,7 @@ export function RoleSelector({ initialRole, initialMode = "signin" }: {
         Choose your role to sign in or create an account.
       </p>
       {/* Role cards */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5">
         {roles.map((role) => {
           const Icon = role.icon;
           const isSelected = selectedRole === role.id;
@@ -49,7 +49,7 @@ export function RoleSelector({ initialRole, initialMode = "signin" }: {
           const isHovered = hoveredRole === role.id && !selectedRole;
 
           return (
-            <div key={role.id} className={isSelected ? "flex flex-col sm:col-span-2" : "flex flex-col"}>
+            <div key={role.id} className="flex flex-col">
               {/* Clickable card */}
               <button
                 type="button"
@@ -71,7 +71,9 @@ export function RoleSelector({ initialRole, initialMode = "signin" }: {
                     ? "scale-[1.02] border-[var(--accent-line)] bg-[var(--accent-weak)] shadow-[var(--domus-shadow-md)]"
                     : isOther
                       ? "pointer-events-none scale-95 border-[var(--line)] bg-[var(--surface)] opacity-40"
-                      : "cursor-pointer border-[var(--line)] bg-[var(--surface)] hover:scale-[1.02] hover:border-[var(--accent-line)] hover:bg-[var(--surface-2)] hover:shadow-[var(--domus-shadow-md)]"
+                      : `cursor-pointer border-[var(--line)] bg-[var(--surface)] hover:scale-[1.02]
+                         hover:border-[var(--accent-line)] hover:bg-[var(--surface-2)]
+                         hover:shadow-[var(--domus-shadow-md)]`
                   }
                 `}
               >
