@@ -784,3 +784,12 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   - `pg_net` in public (moving it risks the keepalive cron).
 - **Owner action:** turn on Leaked Password Protection (Supabase → Authentication → password settings).
 - **Possible follow-up:** anon still has default table grants on about 35 public tables (RLS blocks it, but defense in depth says revoke). The app never reads tables as anon.
+
+## Sprint 213 SHIPPED (2026-10-10) — login polish + null-owner test (L2)
+- **Session-expired banner:** only shown when the request carried an `sb-*-auth-token` cookie.
+- **Role cards:** now a single column inside the form column (each card at least 278 px).
+- **Null-owner test:** `getRentCollectionConnectStatus` is covered.
+- **Verify:**
+  - gate 1952; smoke 13/13; CI green on `903335e`;
+  - Playwright on production at 375/800/1280, light and dark: no banner for a new visitor, no horizontal scroll.
+- **Pre-existing, not changed:** the floating help button overlaps the form card edge at 375 px.
