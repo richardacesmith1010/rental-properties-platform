@@ -793,3 +793,17 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   - gate 1952; smoke 13/13; CI green on `903335e`;
   - Playwright on production at 375/800/1280, light and dark: no banner for a new visitor, no horizontal scroll.
 - **Pre-existing, not changed:** the floating help button overlaps the form card edge at 375 px.
+
+## Mac session (2026-10-11)
+- **iPhone:**
+  - Team ID set in the gitignored `Signing.local.xcconfig`; Xcode is signed in; "Ace's iPhone" (iPhone 17, iOS 26.6.1) is registered; Developer Mode is on.
+  - The device build needed `CODE_SIGN_IDENTITY="Apple Development"` plus `-allowProvisioningDeviceRegistration`. The project still has `CODE_SIGN_IDENTITY = ""`, which needs a fix.
+  - Installed and launched. Device gates: PDF download/share sheet PASS; photo picker (profile photo) PASS; mailto PASS; offline + Try again PASS; stay signed in / sign out PASS.
+  - **FAIL — Stripe Connect return:** the app reloaded `/connect/onboard` (server redirect to Stripe), which opened Stripe again.
+- **Money:**
+  - Navy Federal 0565 CSV for Jan 2–Sep 30 (796 rows) imported: 16 mortgage halves auto-filed, 758 personal rows skipped.
+  - Sorted with "always" rules: solar $266.40/mo (utility); ISPC $92/mo = water filtration (maintenance); car washes = not rental; "Fidelity Investments Deposit" = moving my money.
+  - June mortgage, solar and filter were added by hand (paid from another account, owner-confirmed). The October rent payment is re-dated to 10-01 (Angel pays Fidelity on the 1st; the owner transfers later).
+  - 2026 for 1st Home: rent $21,150.00, costs $22,996.74 (−$1,846.74 through Oct 1).
+- **Leaked password protection:** needs the Supabase Pro plan (the org is on Free). Deferred to launch.
+- **Owner plan:** eventually pay all property bills from Fidelity, which would make Fidelity the account Domus reads.
