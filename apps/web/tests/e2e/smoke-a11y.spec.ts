@@ -23,7 +23,7 @@ test.describe("accessibility smoke", () => {
   test("public login and owner signup", async ({ page }) => {
     for (const path of ["/login", "/login?mode=signup&role=owner"]) {
       await page.goto(path);
-      await expect(page.getByRole("heading", { name: /workspace|owner account/i })).toBeVisible();
+      await expect(page.getByRole("heading", { name: /Welcome back|Create your account/i })).toBeVisible();
       await assertAccessible(page, path);
     }
   });
