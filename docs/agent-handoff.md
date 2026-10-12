@@ -828,7 +828,7 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - **Next:** Sprint 216 — rebuild the owner Home in the Wallet layout (canvas FsvezREEzyFY6WXg9PDqo4).
 
 ## In flight (2026-10-11 evening)
-- **Sprint 216** (owner Home Wallet layout, `docs/sprint216-codex-prompt.md`): Codex gpt-6-sol high is running. Report: `<scratchpad>/s216-report.json`. Verify per §8: the manager Home regression, then gate/deploy/smoke and phone screenshots in light and dark.
+- **Sprint 216:** SHIPPED (see below).
 - **Sign-in redesign:** mockups "Sign in" + "Create account" are on canvas FsvezREEzyFY6WXg9PDqo4, row 2. **Owner APPROVED 2026-10-11.**
   - Proposal: sign-in = email + password only (role is known after sign-in); role choice moves to "Create account" (owner / manager / tenant radio cards); tenants are told to use their invite link.
   - Becomes Sprint 218 (auth-adjacent → L3 + ChatGPT review), after 217 (Money + Homes).
@@ -837,3 +837,18 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   - **Design rule:** Face ID unlocks a session token kept in the iOS Keychain (biometry-gated). It never stores the password.
   - **Fallback:** the normal sign-in.
   - **Setting:** owner opt-in on the first sign-in, and it can be turned off in Settings.
+
+## Sprint 216 SHIPPED (2026-10-11) — owner Home in the Wallet layout (L2)
+- **New layout:** `components/dashboard/owner-home/` (wallet-home, home-pass-card, ytd-tiles, needs-you-list, recent-activity) plus `lib/owner-recent-activity.ts`.
+- **Removed:** the old owner-only `HomeMoneyCard` and its route `/api/owner/home-money` (dead; grep is clean).
+- **Manager Home:** unchanged (regression test).
+- **Live (Ace):**
+  - 1st Home pass card shows left after bills $1,310.56; tiles show 2026 −$1,846.74 and rent collected $21,150;
+  - Needs you shows "Finish J&MSP bank setup"; recent activity has 5 items;
+  - page height 1398 px (was 3182).
+- **Verify:** gate 2020 (needed `rm -rf apps/web/.next` for the iCloud " 2" duplicates); smoke all green (speed spec now waits for the "Home" heading); CI green; phone screenshots in light and dark.
+- **Open questions for the owner:**
+  - Home is scoped to the active account, so Mom's House (J&MSP) only shows after switching accounts. Should Home show every home?
+  - The title still sits inside a white header card; the mockup has it on the ground. Polish in 217.
+- **Next:** Sprint 217 (Money + Homes in the Wallet layout), then 218 sign-in redesign (approved; L3), then 219 Face ID (phone L3).
+- **Codex usage:** gpt-6-sol hits the limit mid-sprint on big packets. Schedule a resume with a sleep-until in a background Bash run, and always use `< /dev/null`.
