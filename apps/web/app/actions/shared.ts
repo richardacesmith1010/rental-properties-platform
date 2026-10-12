@@ -11,6 +11,7 @@ export type ActionState =
       unitId?: string;
       tenantProfileId?: string;
       paymentId?: string;
+      expenseId?: string;
       avatarUrl?: string;
       url?: string;
       connected?: boolean;

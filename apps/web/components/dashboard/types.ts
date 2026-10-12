@@ -1,3 +1,4 @@
+import type { addPartner, setExpensePaidBy } from "@/app/actions/partners";
 import type { ClientOverview } from "@/lib/client-overview";
 import type { DashboardData } from "@/lib/dashboard";
 import type { OwnerYearRentResult } from "@/lib/owner-ytd";
@@ -199,6 +200,8 @@ export interface DashboardProps {
   onCreateExpense?: StatefulAction;
   onUpdateExpense?: StatefulAction;
   onDeleteExpense?: StatefulAction;
+  onAddPartner?: typeof addPartner;
+  onSetPaidBy?: typeof setExpensePaidBy;
   onSetupManagerPaymentConfig?: StatefulAction;
   onRecordManagerPayment?: StatefulAction;
   onMarkManagerPaymentPaid?: StatefulAction;

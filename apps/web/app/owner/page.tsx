@@ -1,3 +1,4 @@
+import { addPartner, setExpensePaidBy } from "@/app/actions/partners";
 import { OwnerSectionDataProvider } from "@/components/dashboard/dashboard-data-loader";
 import { Dashboard } from "@/components/dashboard";
 import { StripeTestModeBanner } from "@/components/shared/stripe-test-mode-banner";
@@ -280,6 +281,8 @@ export default async function OwnerPage(props: OwnerPageProps) {
         onCreateExpense={createExpense}
         onUpdateExpense={updateExpense}
         onDeleteExpense={deleteExpense}
+        onAddPartner={addPartner}
+        onSetPaidBy={setExpensePaidBy}
         onSetupManagerPaymentConfig={setupManagerPaymentConfig}
         onRecordManagerPayment={recordManagerPayment}
         onMarkManagerPaymentPaid={markManagerPaymentPaid}

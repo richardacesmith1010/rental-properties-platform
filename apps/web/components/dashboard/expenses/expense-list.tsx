@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormState } from "react-dom";
 import type { StatefulAction } from "@/app/actions";
+import type { setExpensePaidBy } from "@/app/actions/partners";
 import type { ExpenseDashboardData } from "@/lib/expenses";
 import type { VendorDTO } from "@/lib/vendors";
 import type { PropertyFileDTO } from "@/lib/documents";
@@ -27,13 +28,15 @@ export function ExpenseList({
   vendors,
   propertyFiles,
   onUpdateExpense,
-  onDeleteExpense
+  onDeleteExpense,
+  onSetPaidBy
 }: {
   data: ExpenseDashboardData;
   vendors: VendorDTO[];
   propertyFiles: PropertyFileDTO[];
   onUpdateExpense: StatefulAction;
   onDeleteExpense: StatefulAction;
+  onSetPaidBy?: typeof setExpensePaidBy;
 }) {
   const [selectedPropertyId, setSelectedPropertyId] = useState(data.properties[0]?.id ?? "");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -85,7 +88,11 @@ export function ExpenseList({
       ) : (
         <AnimatedList>
           {filteredExpenses.map((expense, index) => (
-            <ExpenseRow key={expense.id} expense={expense} vendors={availableVendors} receiptFiles={availableReceiptFiles} onUpdateExpense={onUpdateExpense} onDeleteExpense={onDeleteExpense} last={index === filteredExpenses.length - 1} />
+            <ExpenseRow key={expense.id} expense={expense} vendors={availableVendors}
+              receiptFiles={availableReceiptFiles} onUpdateExpense={onUpdateExpense}
+              onDeleteExpense={onDeleteExpense} onSetPaidBy={onSetPaidBy}
+              partnerAccount={data.partnerAccounts?.[expense.propertyId]}
+              last={index === filteredExpenses.length - 1} />
           ))}
         </AnimatedList>
       )}
@@ -93,8 +100,26 @@ export function ExpenseList({
   );
 }
 
-function ExpenseRow({ expense, vendors, receiptFiles, onUpdateExpense, onDeleteExpense, last }: { expense: ExpenseDashboardData["expenses"][number]; vendors: VendorDTO[]; receiptFiles: PropertyFileDTO[]; onUpdateExpense: StatefulAction; onDeleteExpense: StatefulAction; last: boolean; }) {
-  const [updateState, updateAction] = useFormState(onUpdateExpense, null);
+function ExpenseRow({ expense, vendors, receiptFiles, onUpdateExpense, onDeleteExpense, onSetPaidBy,
+  partnerAccount, last }: { expense: ExpenseDashboardData["expenses"][number]; vendors: VendorDTO[];
+  receiptFiles: PropertyFileDTO[]; onUpdateExpense: StatefulAction; onDeleteExpense: StatefulAction;
+  onSetPaidBy?: typeof setExpensePaidBy;
+  partnerAccount?: NonNullable<ExpenseDashboardData["partnerAccounts"]>[string]; last: boolean }) {
+  const [payerId, setPayerId] = useState(expense.paidById ?? "");
+  const [savedPayerId, setSavedPayerId] = useState(expense.paidById ?? "");
+  const [retryPayer, setRetryPayer] = useState<string | null>(null);
+  const updateWithPayer: StatefulAction = async (previous, formData) => {
+    const result = await onUpdateExpense(previous, formData);
+    if (!result?.success || !onSetPaidBy || payerId === savedPayerId) return result;
+    const saved = await onSetPaidBy(expense.id, payerId || null);
+    if (!saved.ok) {
+      setRetryPayer(payerId);
+      return { success: false, error: "We saved the bill but not who paid. Try again." };
+    }
+    setSavedPayerId(payerId);
+    return result;
+  };
+  const [updateState, updateAction] = useFormState(updateWithPayer, null);
   const [deleteState, deleteAction] = useFormState(onDeleteExpense, null);
   const [isManaging, setIsManaging] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -111,6 +136,8 @@ function ExpenseRow({ expense, vendors, receiptFiles, onUpdateExpense, onDeleteE
       <div className="min-w-0 flex-1">
         <p className="text-base font-medium text-[var(--ink)]">{expense.propertyName} • {formatCategory(expense.category)}</p>
         <p className="mt-0.5 text-sm text-[var(--muted)]">{formatDate(expense.expenseDate)}{expense.vendorName ? ` • ${expense.vendorName}` : ""}{expense.recurring ? ` • Recurs ${expense.recurringFrequency ?? "monthly"}` : ""}</p>
+        {partnerAccount && <p className="mt-0.5 text-sm text-[var(--muted)]">
+          Paid by {expense.paidByName ?? "The LLC"}</p>}
         {expense.description ? <p className="mt-0.5 text-sm text-[var(--muted)]">{expense.description}</p> : null}
         {isManaging ? (
           <>
@@ -124,9 +151,24 @@ function ExpenseRow({ expense, vendors, receiptFiles, onUpdateExpense, onDeleteE
               <Select name="recurringFrequency" defaultValue={expense.recurringFrequency ?? ""}><option value="">Not recurring</option>{recurringFrequencies.map((frequency) => <option key={frequency} value={frequency}>{formatCategory(frequency)}</option>)}</Select>
               <Select name="vendorId" defaultValue={expense.vendorId ?? ""}><option value="">No vendor linked</option>{vendors.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.name}</option>)}</Select>
               <Select name="receiptFileId" defaultValue={expense.receiptFileId ?? ""}><option value="">No receipt file</option>{receiptFiles.map((file) => <option key={file.id} value={file.id}>{file.fileName}</option>)}</Select>
+              {partnerAccount && onSetPaidBy && <label className="block text-sm font-medium">Who paid?
+                <Select value={payerId} onChange={(event) => setPayerId(event.target.value)}>
+                  <option value="">The LLC (from its bank)</option>
+                  {partnerAccount.partners.filter((partner) => partner.active || partner.id === savedPayerId)
+                    .map((partner) => <option key={partner.id} value={partner.id}>{partner.displayName}</option>)}
+                </Select></label>}
               <Input name="receiptFile" type="file" className="sm:col-span-2" />
               <div className="sm:col-span-3 flex items-center gap-2"><SubmitButton size="sm" variant="outline" title="Save updates to this expense.">Save Expense</SubmitButton><Badge variant="outline">{formatCurrency(expense.amountCents)}</Badge></div>
-              {updateState && !updateState.success ? <p className="sm:col-span-3 text-xs text-[var(--crit)]">{updateState.error}</p> : null}
+              {retryPayer !== null && <div className="sm:col-span-3 space-y-2 text-sm text-[var(--crit)]">
+                <p>We saved the bill but not who paid. Try again.</p>
+                <Button type="button" title="Retry saving who paid" onClick={async () => {
+                  if (!onSetPaidBy) return;
+                  const result = await onSetPaidBy(expense.id, retryPayer || null);
+                  if (result.ok) { setSavedPayerId(retryPayer); setRetryPayer(null); setIsManaging(false); }
+                }}>Try again</Button></div>}
+              {updateState && !updateState.success &&
+                updateState.error !== "We saved the bill but not who paid. Try again."
+                ? <p className="sm:col-span-3 text-xs text-[var(--crit)]">{updateState.error}</p> : null}
               {updateState && updateState.success ? <p className="sm:col-span-3 text-xs text-[var(--pos)]">Expense updated.</p> : null}
             </form>
             <form action={deleteAction} className="mt-2" ref={deleteFormRef}>

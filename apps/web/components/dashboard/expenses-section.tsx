@@ -1,6 +1,7 @@
 "use client";
 
 import type { StatefulAction } from "@/app/actions";
+import type { addPartner, setExpensePaidBy } from "@/app/actions/partners";
 import type { ExpenseDashboardData } from "@/lib/expenses";
 import type { VendorDTO } from "@/lib/vendors";
 import type { PropertyFileDTO } from "@/lib/documents";
@@ -19,9 +20,12 @@ interface ExpensesSectionProps {
   onCreateExpense: StatefulAction;
   onUpdateExpense: StatefulAction;
   onDeleteExpense: StatefulAction;
+  onAddPartner?: typeof addPartner;
+  onSetPaidBy?: typeof setExpensePaidBy;
 }
 
-export function ExpensesSection({ data, vendors, propertyFiles, onCreateExpense, onUpdateExpense, onDeleteExpense }: ExpensesSectionProps) {
+export function ExpensesSection({ data, vendors, propertyFiles, onCreateExpense,
+  onUpdateExpense, onDeleteExpense, onAddPartner, onSetPaidBy }: ExpensesSectionProps) {
   const selectedPropertyId = data.properties[0]?.id ?? "";
   const selectedSummary = data.pnlByProperty.find((row) => row.propertyId === selectedPropertyId) ?? null;
 
@@ -35,8 +39,10 @@ export function ExpensesSection({ data, vendors, propertyFiles, onCreateExpense,
 
   return (
     <div id="expenses" className="space-y-4">
+      {data.partnerWarning && <FeatureWarning title="Partners" message={data.partnerWarning} />}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <ExpenseForm data={data} vendors={vendors} propertyFiles={propertyFiles} onCreateExpense={onCreateExpense} />
+        <ExpenseForm data={data} vendors={vendors} propertyFiles={propertyFiles}
+          onCreateExpense={onCreateExpense} onAddPartner={onAddPartner} onSetPaidBy={onSetPaidBy} />
         <Card className="border border-border/50 shadow-sm">
           <CardHeader><CardTitle className="text-xl font-semibold">Money in and out by home</CardTitle></CardHeader>
           <CardContent className="space-y-4">
@@ -89,7 +95,8 @@ export function ExpensesSection({ data, vendors, propertyFiles, onCreateExpense,
       <Card className="border border-border/50 shadow-sm">
         <CardHeader><CardTitle className="text-xl font-semibold">Expense Payment history</CardTitle></CardHeader>
         <CardContent>
-          <ExpenseList data={data} vendors={vendors} propertyFiles={propertyFiles} onUpdateExpense={onUpdateExpense} onDeleteExpense={onDeleteExpense} />
+          <ExpenseList data={data} vendors={vendors} propertyFiles={propertyFiles}
+            onUpdateExpense={onUpdateExpense} onDeleteExpense={onDeleteExpense} onSetPaidBy={onSetPaidBy} />
         </CardContent>
       </Card>
     </div>

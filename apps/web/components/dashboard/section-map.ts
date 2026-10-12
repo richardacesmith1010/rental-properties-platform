@@ -1,3 +1,4 @@
+import type { addPartner, setExpensePaidBy } from "@/app/actions/partners";
 import dynamic from "next/dynamic";
 import { createElement } from "react";
 import type { ClientOverview } from "@/lib/client-overview";
@@ -161,6 +162,8 @@ export interface SectionRendererProps {
   onCreateExpense?: StatefulAction;
   onUpdateExpense?: StatefulAction;
   onDeleteExpense?: StatefulAction;
+  onAddPartner?: typeof addPartner;
+  onSetPaidBy?: typeof setExpensePaidBy;
   onSetupManagerPaymentConfig?: StatefulAction;
   onRecordManagerPayment?: StatefulAction;
   onMarkManagerPaymentPaid?: StatefulAction;

@@ -381,6 +381,8 @@ export function renderSectionCases({
           onCreateExpense={props.onCreateExpense!}
           onUpdateExpense={props.onUpdateExpense!}
           onDeleteExpense={props.onDeleteExpense!}
+          onAddPartner={props.onAddPartner}
+          onSetPaidBy={props.onSetPaidBy}
         />
       );
     case "analytics":

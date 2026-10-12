@@ -28,7 +28,7 @@ export function combineHomeMoney(results: HomeMoney[]): Pick<HomeMoney, "entries
 const labels: Record<string, string> = {
   mortgage: "Mortgage", insurance: "Insurance", property_tax: "Property tax", hoa: "HOA",
   repair: "Repair", maintenance: "Maintenance", utility: "Utility", management_fee: "Management fee",
-  legal: "Legal", other: "Other"
+  legal: "Legal", improvement: "Improvement", other: "Other"
 };
 const categoryLabel = (category: string | null | undefined) => labels[category ?? ""] ?? (category || "Other");
 const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;

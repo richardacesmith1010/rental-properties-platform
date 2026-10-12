@@ -5,6 +5,10 @@ import { homeMoneyCsv, runningBalance, type Entry, type MoneyAlert } from "@/lib
 import { MoneyHero } from "./money-hero";
 import { PeriodSwitch, monthLabel } from "./period-switch";
 import { CategoryCard } from "./category-card";
+import { PartnersCard } from "./partners-card";
+import type { PartnerReport } from "@/lib/partners";
+import type { addPartner, renamePartner, deactivatePartner,
+  addPartnerPayment, updatePartnerPayment, deletePartnerPayment } from "@/app/actions/partners";
 import { EveryItem } from "./every-item";
 
 export interface HomeMoneyPageData {
@@ -14,9 +18,14 @@ export interface HomeMoneyPageData {
   alerts: Array<MoneyAlert & { homeName?: string }>;
   properties: Array<{ id: string; name: string }>;
 }
-interface Props { data: HomeMoneyPageData; selectedMonth: string; months: string[] }
+interface Props { data: HomeMoneyPageData; selectedMonth: string; months: string[];
+  partnerWarning?: string;
+  partnerData?: { accountId: string; report: PartnerReport; period: string; allTimeHref: string; periodHref: string;
+    onAddPartner: typeof addPartner; onRenamePartner: typeof renamePartner;
+    onDeactivatePartner: typeof deactivatePartner; onAddPayment: typeof addPartnerPayment;
+    onUpdatePayment: typeof updatePartnerPayment; onDeletePayment: typeof deletePartnerPayment } }
 
-export function HomeMoneyPage({ data, selectedMonth, months }: Props) {
+export function HomeMoneyPage({ data, selectedMonth, months, partnerData, partnerWarning }: Props) {
   const allHomes = !data.property;
   const propertyId = data.property?.id ?? null;
   const label = selectedMonth === "year" ? months[0]?.slice(0, 4) ?? "" : monthLabel(selectedMonth);
@@ -49,6 +58,11 @@ export function HomeMoneyPage({ data, selectedMonth, months }: Props) {
     <PeriodSwitch months={months} selectedMonth={selectedMonth} propertyId={propertyId} />
     <MoneyHero label={label} totals={data.totals} />
     <CategoryCard entries={data.entries} />
+    {partnerData && <PartnersCard {...partnerData} />}
+    {partnerWarning && <section className="domus-card rounded-2xl p-4" aria-label="Partners">
+      <h2 className="text-lg font-semibold">Partners</h2>
+      <p className="text-sm text-[var(--muted)]">{partnerWarning}</p>
+    </section>}
     {data.alerts.length > 0 && <section aria-labelledby="heads-up-title">
       <h2 id="heads-up-title" className="mb-2 text-lg font-semibold">Heads up</h2>
       <div className="space-y-2">{data.alerts.map((alert, index) => <div key={`${alert.type}-${index}`}

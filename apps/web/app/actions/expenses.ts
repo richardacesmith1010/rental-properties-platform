@@ -106,7 +106,7 @@ export async function createExpense(
   );
 
   revalidatePath("/owner");
-  return { success: true };
+  return { success: true, expenseId: createdExpense.id };
 }
 
 export async function updateExpense(

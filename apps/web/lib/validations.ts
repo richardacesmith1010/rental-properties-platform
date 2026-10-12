@@ -61,3 +61,19 @@ export const ownerStatementRequestSchema = z.object({
   accountId: z.string().uuid(),
   month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)
 });
+
+export const createPartnerSchema = z.object({ accountId: z.string().uuid(), displayName: trimmed(80) });
+export const updatePartnerSchema = z.object({ accountId: z.string().uuid(), partnerId: z.string().uuid(),
+  displayName: trimmed(80) });
+export const deletePartnerSchema = z.object({ accountId: z.string().uuid(), partnerId: z.string().uuid() });
+const partnerEndpoint = z.string().uuid().nullable();
+export const createPartnerPaymentSchema = z.object({ accountId: z.string().uuid(),
+  fromPartnerId: partnerEndpoint, toPartnerId: partnerEndpoint,
+  amountCents: z.number().int().positive(), paidOn: z.string().date(),
+  kind: z.enum(["reimbursement", "manager_fee", "settle_up", "other"]),
+  status: z.enum(["done", "planned"]), note: z.string().max(200).nullable() }).refine(
+  (value) => value.fromPartnerId !== value.toPartnerId, "Pick two different payment endpoints."
+);
+export const updatePartnerPaymentSchema = createPartnerPaymentSchema.and(z.object({ id: z.string().uuid() }));
+export const deletePartnerPaymentSchema = z.object({ accountId: z.string().uuid(), id: z.string().uuid() });
+export const setExpensePaidBySchema = z.object({ expenseId: z.string().uuid(), partnerId: partnerEndpoint });

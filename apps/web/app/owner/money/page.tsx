@@ -6,6 +6,9 @@ import { getAdministeredProperties } from "@/lib/property-access";
 import { combineHomeMoney, loadHomeAlerts, loadHomeMoney, type MoneyAlert } from "@/lib/home-money";
 import { HomeMoneyPage, type HomeMoneyPageData } from "@/components/home-money/home-money-page";
 import { resolveMoneySelection } from "./resolve";
+import { loadPartnerReport, singleSelectedAccount } from "@/lib/partners";
+import { addPartner, renamePartner, deactivatePartner,
+  addPartnerPayment, updatePartnerPayment, deletePartnerPayment } from "@/app/actions/partners";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +21,7 @@ function MoneyStatus({ message }: { message: string }) {
   </>;
 }
 
-export default async function OwnerMoneyPage(props: { searchParams?: Promise<{ property?: string; month?: string }> }) {
+export default async function OwnerMoneyPage(props: { searchParams?: Promise<{ property?: string; month?: string; partners?: string }> }) {
   const searchParams = await props.searchParams;
   const { user } = await requireRole(["owner"]);
   const administered = await getAdministeredProperties(user.id);
@@ -39,10 +42,24 @@ export default async function OwnerMoneyPage(props: { searchParams?: Promise<{ p
     return <MoneyStatus message="Numbers are not ready. Try again later." />;
   }
   const admin = createAdminClient();
-  const { data: propertyRows, error: propertiesError } = await admin.from("properties").select("id, name").in("id", ids);
+  const { data: propertyRows, error: propertiesError } = await admin.from("properties").select("id, name, owner_account_id").in("id", ids);
   if (propertiesError) {
     return <MoneyStatus message="Numbers are not ready. Try again later." />;
   }
+  const partnerAccountId = singleSelectedAccount(propertyRows ?? [], selectedIds);
+  const partnerRange = searchParams?.partners === "all" ? "all" as const : range;
+  const partnerResult = partnerAccountId ? await loadPartnerReport(partnerAccountId, partnerRange) : null;
+  const partnerQuery = `${selectedId ? `property=${encodeURIComponent(selectedId)}&` : ""}month=${selectedMonth}`;
+  const partnerData = partnerResult?.ok && partnerAccountId ? {
+    accountId: partnerAccountId, report: partnerResult.data,
+    period: searchParams?.partners === "all" ? "All time" : selectedMonth === "year"
+      ? now.slice(0, 4) : selectedMonth,
+    allTimeHref: `/owner/money?${partnerQuery}&partners=all`,
+    periodHref: `/owner/money?${partnerQuery}`,
+    onAddPartner: addPartner, onRenamePartner: renamePartner,
+    onDeactivatePartner: deactivatePartner, onAddPayment: addPartnerPayment,
+    onUpdatePayment: updatePartnerPayment, onDeletePayment: deletePartnerPayment
+  } : undefined;
   const propertyNames = new Map((propertyRows ?? []).map((property) => [property.id, property.name]));
   const combined = combineHomeMoney(results.filter((result) => result.money).map((result) => result.money!));
   const single = selectedId ? results[0]?.money : null;
@@ -64,7 +81,9 @@ export default async function OwnerMoneyPage(props: { searchParams?: Promise<{ p
       pb-[calc(env(safe-area-inset-bottom,0px)+5.25rem)]">
       <div className="mx-auto max-w-[720px]">
     <Link href="/owner" className="hidden min-h-11 items-center text-sm text-[var(--muted)] lg:inline-flex">← Home</Link>
-        <HomeMoneyPage data={data} selectedMonth={selectedMonth} months={months} />
+        <HomeMoneyPage data={data} selectedMonth={selectedMonth} months={months} partnerData={partnerData}
+          partnerWarning={partnerResult && !partnerResult.ok && partnerResult.error === "unavailable"
+            ? "This feature requires a database update." : undefined} />
       </div>
     </main>
     <OwnerBottomBar />

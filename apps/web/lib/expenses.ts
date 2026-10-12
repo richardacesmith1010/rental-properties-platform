@@ -1,4 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserRole } from "@/lib/auth";
+import type { Partner } from "@/lib/partners";
 import {
   getAdministeredPropertyIds,
   getAdministeredPropertyIdsForAccount
@@ -34,6 +37,8 @@ export interface ExpenseItemDTO {
   vendorName: string | null;
   receiptFileId: string | null;
   createdAt: string;
+  paidById?: string | null;
+  paidByName?: string | null;
 }
 
 export interface PropertyPnLDTO {
@@ -60,6 +65,8 @@ export interface ExpenseDashboardData {
   enabled: boolean;
   warning: string | null;
   properties: Array<{ id: string; name: string }>;
+  partnerAccounts?: Record<string, { accountId: string; partners: Partner[] }>;
+  partnerWarning?: string | null;
   expenses: ExpenseItemDTO[];
   pnlByProperty: PropertyPnLDTO[];
   monthlyByProperty: Record<string, MonthlyPnLDTO[]>;
@@ -124,7 +131,7 @@ export async function getOwnerExpenseData(
   }
 
   const [propertyResult, expenseResult, unitResult] = await Promise.all([
-    admin.from("properties").select("id, name").in("id", propertyIds).order("name", { ascending: true }),
+    admin.from("properties").select("id, name, owner_account_id").in("id", propertyIds).order("name", { ascending: true }),
     admin.from("property_expenses")
       .select("id, property_id, category, description, amount_cents, expense_date, recurring, recurring_frequency, " +
         "vendor_id, receipt_file_id, created_at")
@@ -162,6 +169,44 @@ export async function getOwnerExpenseData(
     receipt_file_id: string | null;
     created_at: string;
   }>;
+  const partnerAccounts: NonNullable<ExpenseDashboardData["partnerAccounts"]> = {};
+  let partnerWarning: string | null = null;
+  const payerByExpense = new Map<string, string>();
+  const partnerById = new Map<string, Partner>();
+  if (await getCurrentUserRole(userId) === "owner") {
+    const client = createClient();
+    const accountIds = [...new Set(propertyRows.map((row) => row.owner_account_id)
+      .filter((id): id is string => Boolean(id)))];
+    if (accountIds.length) {
+      const accounts = await client.from("ownership_accounts").select("id, account_type").in("id", accountIds);
+      if (accounts.error) throw accounts.error;
+      const llcIds = (accounts.data ?? []).filter((row) => row.account_type === "llc").map((row) => row.id);
+      if (llcIds.length) {
+        const [partners, attributions] = await Promise.all([
+          client.from("account_partners").select("id, account_id, display_name, active, profile_id").in("account_id", llcIds),
+          expenseRows.length ? client.from("expense_partner_attributions")
+            .select("expense_id, partner_id").in("expense_id", expenseRows.map((row) => row.id))
+            : Promise.resolve({ data: [], error: null })
+        ]);
+        if (partners.error && !isMissingSchemaError(partners.error)) throw partners.error;
+        if (attributions.error && !isMissingSchemaError(attributions.error)) throw attributions.error;
+        if (partners.error || attributions.error) partnerWarning = "This feature requires a database update.";
+        if (!partners.error && !attributions.error) {
+          for (const row of partners.data ?? []) partnerById.set(row.id, {
+            id: row.id, accountId: row.account_id, displayName: row.display_name,
+            active: row.active, profileId: row.profile_id
+          });
+          for (const row of attributions.data ?? []) payerByExpense.set(row.expense_id, row.partner_id);
+          for (const property of propertyRows) {
+            if (property.owner_account_id && llcIds.includes(property.owner_account_id)) {
+              partnerAccounts[property.id] = { accountId: property.owner_account_id,
+                partners: [...partnerById.values()].filter((partner) => partner.accountId === property.owner_account_id) };
+            }
+          }
+        }
+      }
+    }
+  }
   const vendorIds = Array.from(
     new Set(
       expenseRows
@@ -297,6 +342,8 @@ export async function getOwnerExpenseData(
     enabled: true,
     warning: null,
     properties: propertyRows.map((property) => ({ id: property.id, name: property.name })),
+    partnerAccounts,
+    partnerWarning,
     expenses: expenseRows.map((expense) => ({
       id: expense.id,
       propertyId: expense.property_id,
@@ -310,7 +357,9 @@ export async function getOwnerExpenseData(
       vendorId: expense.vendor_id,
       vendorName: expense.vendor_id ? vendorNameById.get(expense.vendor_id) ?? null : null,
       receiptFileId: expense.receipt_file_id,
-      createdAt: expense.created_at
+      createdAt: expense.created_at,
+      paidById: payerByExpense.get(expense.id) ?? null,
+      paidByName: partnerById.get(payerByExpense.get(expense.id) ?? "")?.displayName ?? null
     })),
     pnlByProperty,
     monthlyByProperty,

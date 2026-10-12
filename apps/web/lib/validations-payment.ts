@@ -144,6 +144,7 @@ const expenseCategorySchema = z.enum(
     "hoa",
     "repair",
     "maintenance",
+    "improvement",
     "utility",
     "management_fee",
     "legal",
