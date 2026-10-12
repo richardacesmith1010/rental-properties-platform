@@ -873,3 +873,11 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Verify: gate 2058, a11y smoke 4/4, smoke otherwise green, phone walk light and dark (sign in, create account steps 1–2), Enter-to-sign-in works on prod, zero page errors. The hotfix was deployed from a clean worktree of HEAD (Codex was mid-219 in the main tree).
 - Minor: the dark disabled "Create account" button is low contrast (disabled state only).
 ## Sprint 219 RUNNING — partners (ChatGPT: REJECT → rev 2 APPROVE WITH CHANGES → rev 3 APPROVE). Claude applies the migration and runs the live attacker SQL after code review.
+
+## Sprint 219 SHIPPED (2026-10-12) — partners (L3; ChatGPT REJECT → rev 2 → rev 3 APPROVE)
+- Code: Codex gpt-6-sol, 255k tokens, 2093 tests. Migration `20261012_sprint219_partners.sql` applied live by Claude. It adds `account_partners`, `partner_payments`, `expense_partner_attributions` (owner-only RLS, LLC-only, column-level update grants), the `improvement` category, and backfills partners from LLC owner members.
+- **Claude fix before apply:** Supabase default privileges grant ALL on new public tables to anon and authenticated, so column-level update grants are meaningless without `revoke all ... from anon, authenticated` first. Added. **Future migrations creating tables must revoke first.**
+- Live attacker SQL (rolled back): 15/15 attacks blocked (manager read/add/replace/clear; individual-account owner partner/payment; unrelated profile link; spoofed creator insert/update; non-LLC expense; cross-LLC partner; anon read). 3/3 owner controls allowed. No test rows left.
+- Verify: gate 2093, smoke green, CI green. The real owner's Money → Mom's House shows the Partners card (The LLC, Ciocia Patel, Richard Smith; rows expand), viewed only, with no writes to real data.
+- **Data note:** Mom's House has no bills in Domus yet, so Put in is $0 everywhere. The sister's history (and partners Yani and Mom's Estate) must be entered for the report to replace her sheet.
+- **Next partner sprints (docs/partner-ledger-requirements.md):** 220 tenant ledger by month (water billing, refunds, monthly view); 221 managing-partner fee and settle-up suggestion; 222 deposits held / available cash; 223 shared duties. Then Face ID.
