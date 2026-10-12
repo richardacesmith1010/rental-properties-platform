@@ -187,14 +187,17 @@ async function waitForView(page: Page) {
 
 async function openDashboardSection(page: Page, label: string): Promise<boolean> {
   if (new URL(page.url()).pathname === "/owner") {
-    const item = page.getByRole("navigation", { name: "Main navigation" })
-      .getByRole("button", { name: new RegExp(`^${escapeRegExp(label)}(?:\\s|$)`, "i") }).first();
-    if (!(await item.isVisible().catch(() => false))) {
+    let navigation = page.getByRole("navigation", { name: "Main navigation" });
+    if (!(await navigation.isVisible().catch(() => false))) {
       await page.getByRole("navigation", { name: "Owner shortcuts" })
         .getByRole("button", { name: "More" }).click();
+      navigation = page.getByRole("dialog").getByRole("navigation", { name: "Main navigation" });
     }
+    const item = navigation
+      .getByRole("button", { name: new RegExp(`^${escapeRegExp(label)}(?:\\s|$)`, "i") }).first();
     if (!(await item.isVisible().catch(() => false))) return false;
     await item.click();
+    await expect(page.getByRole("dialog")).toBeHidden({ timeout: 5_000 });
     await waitForView(page);
     return true;
   }
@@ -219,7 +222,11 @@ async function openDashboardSection(page: Page, label: string): Promise<boolean>
   } else {
     const menuTrigger = page.getByRole("button", { name: "Open navigation menu" });
     if (await menuTrigger.isVisible().catch(() => false)) await menuTrigger.click();
-    const navigation = page.getByRole("navigation", { name: "Main navigation" });
+    const drawerNavigation = page.getByRole("dialog").getByRole("navigation", { name: "Main navigation" });
+    const sidebarNavigation = page.getByRole("navigation", { name: "Main navigation" });
+    const navigation = await drawerNavigation.isVisible().catch(() => false)
+      ? drawerNavigation
+      : sidebarNavigation;
     const item = navigation.getByRole("button", { name: new RegExp(`^${escapeRegExp(label)}(?:\\s|$)`, "i") }).first();
     if (!(await item.isVisible().catch(() => false))) {
       return false;
