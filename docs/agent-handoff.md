@@ -867,3 +867,9 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - 218 sign-in redesign: ChatGPT APPROVE WITH CHANGES (3 required tests folded in, rev 2) → Codex gpt-6-sol RUNNING.
 - **Then the partner/tenant ledger sprints (`docs/partner-ledger-requirements.md`) BEFORE Face ID.** Owner: "Do the partner sprints before Face ID." Goal: the co-owner sister never needs her own spreadsheet.
 - Face ID (219 → renumbered after the partner sprints).
+
+## Sprint 218 SHIPPED (2026-10-12) — sign-in + create account in the Wallet look (L3, ChatGPT APPROVE WITH CHANGES)
+- `8bd3e34` (Codex gpt-6-sol, 310k tokens), plus `9566462` (a11y smoke heading regex) and `0679ac5` (hotfix: the Sign in label was hidden by `[&>span:last-child]:hidden`; regression test added; L-022).
+- Verify: gate 2058, a11y smoke 4/4, smoke otherwise green, phone walk light and dark (sign in, create account steps 1–2), Enter-to-sign-in works on prod, zero page errors. The hotfix was deployed from a clean worktree of HEAD (Codex was mid-219 in the main tree).
+- Minor: the dark disabled "Create account" button is low contrast (disabled state only).
+## Sprint 219 RUNNING — partners (ChatGPT: REJECT → rev 2 APPROVE WITH CHANGES → rev 3 APPROVE). Claude applies the migration and runs the live attacker SQL after code review.

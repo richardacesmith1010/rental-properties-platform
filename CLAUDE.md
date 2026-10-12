@@ -280,6 +280,11 @@ Claude must treat every interaction cycle as a learning opportunity. This sectio
 **What was correct:** An authorization claim must follow every path to a grant: table GRANTs + RLS for direct PostgREST writes, triggers and SECURITY DEFINER functions that consume rows (e.g. auth signup hooks), and TS helpers.
 **Rule:** Before any packet that adds a new kind of access, simulate the attacker in SQL (`set local role authenticated` + JWT claims, rolled back) against every table the feature touches, including direct inserts the app "never does", and grep `pg_proc` for functions that read those tables to grant access (`handle_new_user`, payload RPCs). Any table a definer function trusts must not be user-writable.
 
+#### L-022 | 2026-10-12 | REVIEW
+**What happened:** Sprint 218 shipped a Sign in button with no visible label. A Tailwind selector `[&>span:last-child]:hidden`, meant to hide a spinner, also hid the only span (the label) when the button was not loading. Unit tests passed because jsdom ignores CSS, so `getByRole("button", { name: "Sign in" })` still found the text. Smoke passed because sign-in by Enter worked. Only the screenshot walk caught it.
+**What was correct:** A text-in-DOM test does not prove the text is visible. Arbitrary-variant selectors that hide children are fragile.
+**Rule:** Every UI sprint walk must screenshot each primary button and confirm its label is visible. In review, grep new UI code for `]:hidden`, `]:opacity-0` and `!opacity` on child selectors and reject them unless a test proves the visible state. Also, while Codex works in the tree, deploy only from a clean `git worktree` of HEAD (never the dirty tree).
+
 ## 11) Pre-Flight Lessons Check (Hard Rule)
 
 Before starting ANY work cycle (planning, verification, or especially implementation), Claude must:
@@ -308,6 +313,7 @@ If a planned action matches a pattern from a prior lesson, Claude must stop and 
 - Am I closing a cycle? → L-019 says confirm the latest GitHub Actions CI run for HEAD is green; red CI blocks the next sprint.
 - Am I making UI display an action's returned message or an API field it ignored before? → L-020 says list every return string on every path and fix the wording in the packet.
 - Am I adding a new kind of access or claiming "existing policies are safe"? → L-021 says simulate the attacker with direct SQL writes as `authenticated`, and check definer functions/triggers that trust user-writable tables.
+- Am I accepting a UI sprint? → L-022 says screenshot every primary button (labels visible), reject child-hiding selectors, and deploy from a clean worktree while Codex is mid-run.
 - Am I ending a cycle report? → L-010 (refined) says keep `docs/agent-handoff.md` + memory current and report the transcript size; only prompt a new chat when a rotation threshold is hit (size ~50MB / compacted ~2× / sluggish / topic pivot) — not every sprint.
 
 This section must be updated whenever a new lesson is added that introduces a new "always check" pattern.
