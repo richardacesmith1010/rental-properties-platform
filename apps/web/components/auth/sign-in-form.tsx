@@ -7,6 +7,7 @@ import { forgotPasswordAction } from "@/app/actions/forgot-password";
 import { loginAction, type LoginActionState } from "@/app/actions/login";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 const emptyLoginState: LoginActionState = {};
@@ -14,11 +15,10 @@ const fieldClass = "h-[52px] rounded-[14px]";
 
 function SignInButton() {
   const { pending } = useFormStatus();
-  return <SubmitButton title="Sign in to your Domus account."
-    className="h-[54px] w-full rounded-2xl text-[var(--accent-contrast)]
-      [&>span:first-child]:!opacity-100 [&>span:last-child]:hidden">
+  return <Button type="submit" disabled={pending} title="Sign in to your Domus account."
+    className="h-[54px] w-full rounded-2xl text-[var(--accent-contrast)]">
     {pending ? "Signing in…" : "Sign in"}
-  </SubmitButton>;
+  </Button>;
 }
 
 function ForgotPasswordView({ email, setEmail, onBack }: {

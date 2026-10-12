@@ -60,6 +60,12 @@ describe("SignInForm", () => {
     render(<SignInForm />);
     expect(screen.getByRole("button", { name: "Signing in…" })).toBeDisabled();
   });
+  it("keeps the Sign in label visible (no hidden span classes)", () => {
+    render(<SignInForm />);
+    const button = screen.getByRole("button", { name: "Sign in" });
+    expect(button.className).not.toMatch(/hidden|opacity-0/);
+    expect(button.querySelector(".hidden, .opacity-0")).toBeNull();
+  });
   it("8.1c shows action errors in an alert", () => {
     mocks.state = { error: "Wrong email or password." };
     render(<SignInForm />);
