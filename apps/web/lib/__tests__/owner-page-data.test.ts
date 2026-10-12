@@ -21,6 +21,7 @@ const ownerLoadMocks = vi.hoisted(() => ({
   notificationPreferences: vi.fn(),
   ownerConnected: vi.fn(),
   ownerYearRent: vi.fn(),
+  ownerHomeMoney: vi.fn(),
   ownershipMembers: vi.fn(),
   pendingChanges: vi.fn(),
   pendingWithdrawals: vi.fn(),
@@ -66,6 +67,7 @@ vi.mock("@/lib/logger", () => ({
 vi.mock("@/lib/dashboard", () => ({ getDashboardData: ownerLoadMocks.dashboard }));
 vi.mock("@/lib/portfolio", () => ({ getPortfolioData: ownerLoadMocks.portfolio }));
 vi.mock("@/lib/owner-ytd", () => ({ loadOwnerYearRentReceived: ownerLoadMocks.ownerYearRent }));
+vi.mock("@/lib/owner-recent-activity", () => ({ loadOwnerHomeMoney: ownerLoadMocks.ownerHomeMoney }));
 vi.mock("@/lib/property-access", () => ({
   getAdministeredPropertyIdsForAccount: ownerLoadMocks.administeredIds,
   getAdministeredPropertyOptions: ownerLoadMocks.administeredOptions
@@ -139,6 +141,7 @@ describe("loadOwnerPageData orchestration", () => {
     ownerLoadMocks.deleteRequests.mockResolvedValue([]);
     ownerLoadMocks.ownerConnected.mockResolvedValue(new Map());
     ownerLoadMocks.ownerYearRent.mockResolvedValue({ ok: true, byPropertyId: {} });
+    ownerLoadMocks.ownerHomeMoney.mockResolvedValue({ ok: true, leftByPropertyId: {}, items: [] });
     const adminQuery = {
       select: vi.fn(),
       in: vi.fn(),
@@ -293,6 +296,7 @@ describe("loadOwnerPageData orchestration", () => {
       notificationPreferenceSettings: null,
       notifications: [],
       ownerConnectedMap: new Map(),
+      ownerHomeMoney: { ok: true, leftByPropertyId: {}, items: [] },
       ownerYearRent: { ok: true, byPropertyId: {} },
       ownershipAccounts: [{ id: "account-1", accountType: "llc" }],
       ownershipMembers: undefined,
@@ -316,6 +320,15 @@ describe("loadOwnerPageData orchestration", () => {
     const result = await loadOwnerPageData({ userEmail: "owner@example.test", userId: "user-1" });
     expect(result.status).toBe("ready");
     if (result.status === "ready") expect(result.ownerYearRent).toEqual({ ok: false, error: "load_failed" });
+  });
+
+  it("loads Home money on other owner sections so client navigation to Home has real data", async () => {
+    ownerLoadMocks.administeredIds.mockResolvedValue(["property-1"]);
+    const result = await loadOwnerPageData({
+      searchParams: { section: "charges" }, userEmail: "owner@example.test", userId: "user-1"
+    });
+    expect(ownerLoadMocks.ownerHomeMoney).toHaveBeenCalledWith(["property-1"]);
+    expect(result.status).toBe("ready");
   });
 
   it("does not start Home-only loaders before portfolio resolves", async () => {

@@ -23,7 +23,6 @@ import { SectionRenderer } from "./section-renderer";
 import { SectionSkeleton } from "./section-map";
 import type { DashboardProps } from "./types";
 import { getOwnerBankCardState } from "@/lib/owner-bank-status";
-import { formatCurrency } from "@/lib/format";
 import { useTimeOfDayGreeting } from "./use-time-of-day-greeting";
 
 const AiAssistant = dynamic(
@@ -78,6 +77,7 @@ export function Dashboard(props: DashboardProps) {
     commandPaletteProps,
     displayDashboardData,
     financialOverviewData,
+    selectedPropertyId,
     filteredPortfolio,
     homeActionItems,
     isManagerRole,
@@ -122,11 +122,6 @@ export function Dashboard(props: DashboardProps) {
     connectHref: ownerConnectHref,
     accounts: props.ownershipAccounts ?? []
   });
-  const homeSummaryLine = displayDashboardData.kpis.lateAccountCount > 0
-    ? displayDashboardData.kpis.lateAccountCount === 1
-      ? `1 tenant is behind on rent (${formatCurrency(displayDashboardData.kpis.lateRentCents)}).`
-      : `${displayDashboardData.kpis.lateAccountCount} tenants are behind on rent (${formatCurrency(displayDashboardData.kpis.lateRentCents)}).`
-    : "Everything looks good.";
   const showLlcSetupPrompt = Boolean(
     isOwnerRole &&
     isOwnerDailyOpsHomePage &&
@@ -206,7 +201,9 @@ export function Dashboard(props: DashboardProps) {
       bankState={bankState}
       isManagerView={isManagerRole}
       summary={homeActionItems}
-      invitations={props.invitations ?? []}
+      portfolio={safePortfolio}
+      money={props.ownerHomeMoney}
+      selectedPropertyId={selectedPropertyId}
       onOpenLeaseWizard={openLeaseWizard}
       onSelectProperty={sectionRendererProps.onSelectProperty}
       onOpenSection={sectionRendererProps.openSection}
@@ -224,10 +221,6 @@ export function Dashboard(props: DashboardProps) {
             }
           : null
       }
-      onInitiatePlaidLink={props.onInitiatePlaidLink}
-      onCompletePlaidLink={props.onCompletePlaidLink}
-      onRefreshPlaidBalance={props.onRefreshPlaidBalance}
-      onDisconnectPlaid={props.onDisconnectPlaid}
     />
   ) : (
     <div className="min-h-full">
@@ -369,14 +362,12 @@ export function Dashboard(props: DashboardProps) {
 
         {isOwnerRole ? (
           <div className="domus-card mt-3 flex min-h-0 flex-1 flex-col shadow-sm sm:rounded-[28px]">
-            <div className="flex items-start justify-between gap-3 border-b border-[var(--line)] p-4 sm:p-6">
+            <div className={`flex items-start justify-between gap-3 border-b border-[var(--line)] p-4 sm:p-6 ${isOwnerDailyOpsHomePage ? "mx-auto w-full max-w-[720px]" : ""}`}>
               <div>
                 {isDailyOpsHomePage ? (
                   <div>
-                    <h1 className="text-2xl font-semibold text-[var(--ink)]">
-                      {greeting ? `${greeting}, ${displayName}` : displayName}
-                    </h1>
-                    <p className="mt-1 text-sm text-[var(--muted)]">{homeSummaryLine}</p>
+                    <p className="text-sm text-[var(--muted)]">{greeting ? `${greeting}, ${displayName}` : displayName}</p>
+                    <h1 className="mt-1 text-[34px] font-bold leading-tight text-[var(--ink)]">Home</h1>
                   </div>
                 ) : (
                   <>
@@ -386,7 +377,7 @@ export function Dashboard(props: DashboardProps) {
                 )}
               </div>
               <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
-                {canSendAnnouncements ? (
+                {canSendAnnouncements && !isOwnerDailyOpsHomePage ? (
                   <Button type="button" variant="outline" className="min-h-11"
                     disabled={announcementButtonDisabled}
                     onClick={() => setIsAnnouncementComposerOpen(true)}
@@ -395,7 +386,11 @@ export function Dashboard(props: DashboardProps) {
                   </Button>
                 ) : null}
                 <OwnerAddMenu onAddHome={openPropertyWizard} onAddUnit={openAddUnit} onAddTenant={openTenantInviteWizard}
-                  properties={safePortfolio.properties} onInviteManager={props.onInviteManager} />
+                  properties={safePortfolio.properties} onInviteManager={props.onInviteManager}
+                  homeStyle={isOwnerDailyOpsHomePage}
+                  onSendAnnouncement={isOwnerDailyOpsHomePage && canSendAnnouncements
+                    ? () => setIsAnnouncementComposerOpen(true) : undefined}
+                  announcementDisabled={announcementButtonDisabled} announcementTitle={announcementButtonTitle} />
               </div>
             </div>
             <section id={isDailyOpsHomePage ? "daily-ops-home" : activeSection}

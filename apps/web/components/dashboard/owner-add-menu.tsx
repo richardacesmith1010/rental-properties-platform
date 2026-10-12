@@ -1,18 +1,24 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ModalOverlay } from "@/components/ui/modal-overlay";
 import { InviteManagerForm } from "./invitations/invite-manager-form";
 import type { StatefulAction } from "./types";
 
-export function OwnerAddMenu({ onAddHome, onAddTenant, onAddUnit, onInviteManager, properties, role = "owner" }: {
+export function OwnerAddMenu({ onAddHome, onAddTenant, onAddUnit, onInviteManager, properties, role = "owner",
+  homeStyle = false, onSendAnnouncement, announcementDisabled = false, announcementTitle }: {
   onAddHome: () => void;
   onAddTenant: () => void;
   onAddUnit?: () => void;
   onInviteManager?: StatefulAction;
   properties: Array<{ id: string; name: string }>;
   role?: "owner" | "manager";
+  homeStyle?: boolean;
+  onSendAnnouncement?: () => void;
+  announcementDisabled?: boolean;
+  announcementTitle?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [managerOpen, setManagerOpen] = useState(false);
@@ -33,13 +39,16 @@ export function OwnerAddMenu({ onAddHome, onAddTenant, onAddUnit, onInviteManage
     { label: "Add a home", run: onAddHome },
     ...(role === "owner" && onAddUnit ? [{ label: "Add a unit", run: onAddUnit }] : []),
     { label: "Add a tenant", run: onAddTenant },
-    ...(role === "owner" ? [{ label: "Add a manager", run: () => setManagerOpen(true) }] : [])
+    ...(role === "owner" ? [{ label: "Add a manager", run: () => setManagerOpen(true) }] : []),
+    ...(onSendAnnouncement ? [{ label: "Send Announcement", run: onSendAnnouncement,
+      disabled: announcementDisabled, title: announcementTitle }] : [])
   ];
   return (
     <div ref={container} className="relative">
-      <Button ref={trigger} type="button" className="min-h-11"
+      <Button ref={trigger} type="button" className={homeStyle ? "h-11 w-11 rounded-full p-0" : "min-h-11"}
         title={role === "owner" ? "Add a home, tenant, or manager." : "Add a home or tenant."}
-        aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>Add</Button>
+        aria-label="Add" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
+        {homeStyle ? <Plus className="h-5 w-5" aria-hidden="true" /> : "Add"}</Button>
       {open ? <div ref={menu} role="menu" aria-label="Add"
         className="absolute right-0 z-40 mt-2 w-48 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1 shadow-lg"
         onKeyDown={event => {
@@ -52,12 +61,25 @@ export function OwnerAddMenu({ onAddHome, onAddTenant, onAddUnit, onInviteManage
             buttons[(index + (event.key === "ArrowDown" ? 1 : buttons.length - 1)) % buttons.length]?.focus();
           }
         }}>
-        {actions.map(action => <button key={action.label} role="menuitem" type="button" title={action.label}
-          className={[
-            "min-h-11 w-full rounded-lg px-3 text-left text-sm text-[var(--ink)]",
-            "hover:bg-[var(--surface-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-          ].join(" ")}
-          onClick={() => { close(); action.run(); }}>{action.label}</button>)}
+        {actions.map(action => (
+          <button
+            key={action.label}
+            role="menuitem"
+            type="button"
+            title={"title" in action ? action.title : action.label}
+            disabled={"disabled" in action && action.disabled}
+            className={[
+              "min-h-11 w-full rounded-lg px-3 text-left text-sm text-[var(--ink)]",
+              "hover:bg-[var(--surface-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent)]",
+            ].join(" ")}
+            onClick={() => {
+              close();
+              action.run();
+            }}
+          >
+            {action.label}
+          </button>
+        ))}
       </div> : null}
       {role === "owner" ? <ModalOverlay label="Add a manager" open={managerOpen}
         onClose={() => { setManagerOpen(false); trigger.current?.focus(); }}>

@@ -1,5 +1,6 @@
 import type { DashboardData } from "@/lib/dashboard";
 import type { OwnerYearRentResult } from "@/lib/owner-ytd";
+import type { OwnerHomeMoneyResult } from "@/lib/owner-recent-activity";
 import type { DashboardCapabilities } from "@/components/dashboard/types";
 import type { UserProfileSummary, AppRole } from "@/lib/auth";
 import type { OwnershipAccountDTO, ActiveLlcMembershipDTO, OwnershipMemberDTO, AccountDeleteRequestDTO, AccountRenameRequestDTO } from "@/lib/ownership";
@@ -113,6 +114,7 @@ export interface OwnerPageReadyData extends OwnerPageResolvedBase {
   capabilities: DashboardCapabilities;
   dashboard: DashboardData;
   ownerYearRent: OwnerYearRentResult;
+  ownerHomeMoney?: OwnerHomeMoneyResult;
   distributionHistory?: DistributionHistoryEntry[];
   documents?: OwnerDocumentsData;
   expenses?: ExpenseDashboardData;

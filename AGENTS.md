@@ -451,6 +451,11 @@ Every agent must treat mistakes as permanent lessons. This section is a living d
 **What was correct:** Inspect composite gate scripts before running them under a restricted task; run only their local checks when a gate includes forbidden external access.
 **Rule:** Before running a required gate under a no-network or no-DB constraint, read the gate script and skip any stage that would violate the task constraint. Report the full gate as incomplete.
 
+#### L-007 | 2026-10-11 | PROCESS
+**What happened:** During Sprint 216, a standalone TypeScript check ran while `next build` regenerated `.next/types`, causing transient missing-file errors.
+**What was correct:** Run the standalone TypeScript check after the build finishes when both use the same `.next` directory.
+**Rule:** Do not run `npx tsc --noEmit -p apps/web/tsconfig.json` concurrently with `npm run build --workspace @domus/web`; rerun it after the build if a generated-type race occurs.
+
 ---
 
 ## 13. Continuous Codebase Grooming

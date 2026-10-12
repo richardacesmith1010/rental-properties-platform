@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { formatCurrency } from "@/lib/format";
 import { groupByCategory, homeMoneyCsv, runningBalance, type Entry, type MoneyAlert } from "@/lib/home-money";
 
@@ -13,9 +12,6 @@ export interface HomeMoneyPageData {
   properties: Array<{ id: string; name: string }>;
 }
 interface Props { data: HomeMoneyPageData; selectedMonth: string; months: string[]; }
-interface HomeCardData { month: string; homes: Array<{ propertyId: string; name: string; inCents: number;
-  outCents: number; leftCents: number; alertCount: number }>; moreCount: number; }
-
 function monthLabel(month: string, style: "short" | "long" = "short") {
   return new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-US", { month: style, timeZone: "UTC" });
 }
@@ -24,40 +20,6 @@ function itemDate(date: string) {
   return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", {
     month: "short", day: "numeric", timeZone: "UTC"
   });
-}
-
-export function HomeMoneyCard() {
-  const [data, setData] = useState<HomeCardData | null>(null);
-  const [loading, setLoading] = useState(true); const [error, setError] = useState(false);
-  useEffect(() => {
-    const controller = new AbortController();
-    fetch("/api/owner/home-money", { signal: controller.signal, credentials: "same-origin" })
-      .then((response) => response.ok ? response.json() : Promise.reject(new Error("home money")))
-      .then(setData).catch((reason: unknown) => { if ((reason as { name?: string }).name !== "AbortError") setError(true); })
-      .finally(() => setLoading(false));
-    return () => controller.abort();
-  }, []);
-  return <div className="domus-card flex min-h-[150px] flex-col gap-4 p-4">
-    {loading ? <div className="animate-pulse space-y-3"><div className="h-5 w-36 rounded bg-[var(--surface-2)]" />
-      <div className="h-12 rounded bg-[var(--surface-2)]" /></div>
-      : error ? <p className="text-sm text-[var(--muted)]">Numbers are not ready. Try again later.</p> : <>
-        <h2 className="font-semibold text-[var(--ink)]">This month</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{(data?.homes ?? []).map((home) => <div key={home.propertyId}
-          className="rounded-md border border-[var(--line)] p-3">
-          <p className="font-medium">{home.name} · {monthLabel(data?.month ?? "", "long")}</p>
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm"><span className="text-[var(--pos)]">
-            In {formatCurrency(home.inCents)}</span><span>Out {formatCurrency(home.outCents)}</span>
-            <span className={home.leftCents < 0 ? "text-[var(--crit)]" : "text-[var(--ink)]"}>
-              Left {formatCurrency(home.leftCents)}</span></div>{home.alertCount ? <p className="mt-2 text-xs text-[var(--warn)]">
-                {home.alertCount} thing{home.alertCount === 1 ? "" : "s"} to check</p> : null}
-          <Link href={`/owner/money?property=${home.propertyId}`} className="mt-2 inline-flex min-h-11 items-center
-            text-sm text-[var(--accent)] underline"
-            title={`See money details for ${home.name}.`}>Details</Link></div>)}</div>
-        {data?.moreCount ? <p className="text-sm text-[var(--muted)]">+ {data.moreCount} more home
-          {data.moreCount === 1 ? "" : "s"}</p> : null}</>}
-    <div className="mt-auto border-t border-[var(--line)] pt-3"><Link href="/owner/bank" title="Open your bank activity."
-      className="inline-flex min-h-11 items-center text-sm text-[var(--accent)] underline">Sort your bank file</Link></div>
-  </div>;
 }
 
 export function HomeMoneyPage({ data, selectedMonth, months }: Props) {

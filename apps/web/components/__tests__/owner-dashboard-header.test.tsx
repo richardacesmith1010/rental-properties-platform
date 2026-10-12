@@ -3,11 +3,17 @@ import { describe, expect, it, vi } from "vitest";
 import { Dashboard } from "@/components/dashboard";
 import type { DashboardProps } from "@/components/dashboard/types";
 
-const { previous, next, home, tenant } = vi.hoisted(() => ({ previous: vi.fn(), next: vi.fn(), home: vi.fn(), tenant: vi.fn() }));
+const { previous, next, home, tenant, state } = vi.hoisted(() => ({
+  previous: vi.fn(),
+  next: vi.fn(),
+  home: vi.fn(),
+  tenant: vi.fn(),
+  state: { section: "charges" },
+}));
 vi.mock("next/dynamic", () => ({ default: () => () => null }));
 vi.mock("@/components/dashboard/dashboard-data-loader", () => ({ useDashboardData: () => ({
-  activeSection: "charges", activeSectionLabel: "Rent", activeSectionIndex: 1,
-  activeWorkflowMeta: null, isOwnerRole: true, isManagerRole: false, isOwnerDailyOpsHomePage: false,
+  activeSection: state.section, activeSectionLabel: state.section === "overview" ? "Home" : "Rent", activeSectionIndex: 1,
+  activeWorkflowMeta: null, isOwnerRole: true, isManagerRole: false, isOwnerDailyOpsHomePage: state.section === "overview",
   ownerOnboarding: { shouldShow: false }, llcSetupPrompt: { shouldShow: false },
   layoutProps: {}, displayDashboardData: { kpis: {} }, filteredPortfolio: { properties: [] },
   safePortfolio: { properties: [] }, sectionItems: [{ id: "overview" }, { id: "charges" }],
@@ -16,9 +22,12 @@ vi.mock("@/components/dashboard/dashboard-data-loader", () => ({ useDashboardDat
   closePropertyWizard: vi.fn(), closeLeaseWizard: vi.fn(), closeTenantInviteWizard: vi.fn(),
   commandPaletteProps: {}, isPropertyWizardOpen: false, isLeaseWizardOpen: false, isTenantInviteWizardOpen: false
 }) }));
-vi.mock("@/components/dashboard/dashboard-layout", () => ({ DashboardLayout: ({ children }: { children: React.ReactNode }) => <main>{children}</main> }));
+vi.mock("@/components/dashboard/dashboard-layout", () => ({
+  DashboardLayout: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
+}));
 vi.mock("@/components/dashboard/section-renderer", () => ({ SectionRenderer: () => <div>Full rent section</div> }));
 vi.mock("@/components/dashboard/section-map", () => ({ SectionSkeleton: () => null }));
+vi.mock("@/components/dashboard/owner-daily-ops-home", () => ({ OwnerDailyOpsHome: () => <div>Wallet Home</div> }));
 
 describe("owner header", () => {
   it("renders one Add button without modes, counters, or paging interactions", () => {
@@ -54,5 +63,22 @@ describe("owner header", () => {
 
     expect(screen.queryByText("Set up rent payments.")).not.toBeInTheDocument();
     expect(screen.queryByText("Your bank connection is missing")).not.toBeInTheDocument();
+  });
+
+  it("shows the large Home title and circular Add with announcements inside its menu", () => {
+    state.section = "overview";
+    try {
+      render(<Dashboard {...{
+        userEmail: "ace@example.test", nickname: "Ace", data: { profileRole: "owner" },
+        onCreateAnnouncement: vi.fn(), onGetAnnouncementRecipientCount: vi.fn(),
+        announcementProperties: [{ id: "p1", name: "Home" }],
+        capabilities: { notificationsEnabled: true }
+      } as unknown as DashboardProps} />);
+      expect(screen.getByRole("heading", { name: "Home" })).toHaveClass("text-[34px]");
+      expect(screen.getByRole("button", { name: "Add" })).toHaveClass("rounded-full");
+      expect(screen.queryByRole("button", { name: "Send Announcement" })).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Add" }));
+      expect(screen.getByRole("menuitem", { name: "Send Announcement" })).toBeInTheDocument();
+    } finally { state.section = "charges"; }
   });
 });
