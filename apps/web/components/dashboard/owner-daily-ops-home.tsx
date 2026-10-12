@@ -12,7 +12,7 @@ import { WalletHome } from "./owner-home/wallet-home";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { OwnerBankCardState } from "@/lib/owner-bank-status";
 import type { PortfolioData } from "@/lib/portfolio";
-import type { OwnerHomeMoneyResult } from "@/lib/owner-recent-activity";
+import type { OwnerWalletHomeResult } from "@/lib/owner-wallet-home";
 import type { InvitationListItem } from "@/lib/invitations";
 import type { StatefulAction } from "./types";
 import { OwnerSectionCacheContext } from "./owner-section-cache";
@@ -43,8 +43,8 @@ export function groupLateRent(charges: ChargeRowData[]): LateRentGroup[] {
 
 interface OwnerDailyOpsHomeProps {
   bankState: OwnerBankCardState; notificationsAreOn?: boolean; isManagerView?: boolean;
-  summary: OwnerHomeSummary; portfolio?: PortfolioData; money?: OwnerHomeMoneyResult;
-  selectedPropertyId?: string | null;
+  summary: OwnerHomeSummary; portfolio?: PortfolioData; wallet?: OwnerWalletHomeResult;
+  selectedPropertyId?: string | null; showAccountName?: boolean;
   onOpenSection: (sectionId: string) => void; onOpenLeaseWizard?: () => void;
   onSelectProperty?: (propertyId: string) => void;
   onSendBatchPaymentReminder?: StatefulAction; onRecordManualPayment?: StatefulAction;
@@ -69,11 +69,9 @@ export function OwnerDailyOpsHome(props: OwnerDailyOpsHomeProps) {
   useEffect(() => {
     if (!props.isManagerView && !deferredReady) ownerCache?.loadHome();
   }, [deferredReady, ownerCache, props.isManagerView]);
-  if (!props.isManagerView) return <WalletHome portfolio={props.portfolio ?? { properties: [], units: [], leases: [], tenants: [] }}
-    summary={props.summary} bankState={props.bankState} money={props.money}
-    ytdIncomeCents={props.financialOverview.ytdIncomeCents} ytdExpensesCents={props.financialOverview.ytdExpensesCents}
-    expensesReady={deferredReady} expensesFailed={Boolean(ownerCache?.homeError)}
-    selectedPropertyId={props.selectedPropertyId} llcSetup={props.llcSetupPrompt}
+  if (!props.isManagerView) return <WalletHome wallet={props.wallet} showAccountName={props.showAccountName}
+    summary={props.summary} bankState={props.bankState}
+    llcSetup={props.llcSetupPrompt}
     onOpenSection={props.onOpenSection} onOpenLeaseWizard={props.onOpenLeaseWizard}
     onSelectProperty={props.onSelectProperty} />;
   return <ManagerDailyOpsHome {...props} />;

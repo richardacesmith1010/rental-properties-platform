@@ -10,16 +10,18 @@ export interface NeedsYouSummary {
   newMessageCount: number;
 }
 
-export function NeedsYouList({ summary, bankState, llcSetup, onOpenSection, onOpenLeaseWizard, onSelectProperty }: {
+export function NeedsYouList({ summary, bankState, llcSetup, lateName, onOpenSection, onOpenLeaseWizard, onSelectProperty }: {
   summary: NeedsYouSummary; bankState: OwnerBankCardState;
   llcSetup?: { accountName: string; onInviteMembers: () => void } | null;
+  lateName?: string | null;
   onOpenSection: (id: string) => void; onOpenLeaseWizard?: () => void;
   onSelectProperty?: (id: string) => void;
 }) {
   const late = summary.lateCharges[0];
   const invite = summary.joinedWithoutLease?.[0];
   const rows: Array<{ key: string; label: string; href?: string; run?: () => void }> = [];
-  if (late) rows.push({ key: "late", label: `${late.tenantName || "Tenant"}'s rent is late`,
+  if (lateName || (lateName === undefined && late)) rows.push({ key: "late",
+    label: `${lateName || late?.tenantName || "Tenant"}'s rent is late`,
     run: () => onOpenSection("charges") });
   if (bankState.status !== "connected") rows.push({ key: "bank",
     label: bankState.status === "needs_info"

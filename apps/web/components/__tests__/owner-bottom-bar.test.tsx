@@ -53,6 +53,14 @@ describe("owner phone bar", () => {
     expect(open).toHaveBeenCalledOnce();
   });
 
+  it("shows notification count on More and hides it at zero", () => {
+    const { rerender } = render(<OwnerBottomBar unreadNotificationCount={4} onOpenMore={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "More, 4 unread notifications" })).toBeInTheDocument();
+    rerender(<OwnerBottomBar unreadNotificationCount={0} onOpenMore={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "More" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /unread notifications/ })).not.toBeInTheDocument();
+  });
+
   it.each(["/owner/money", "/owner/bank"])("shows one Money-active bar on %s", (path) => {
     state.path = path;
     window.history.replaceState(null, "", `${path}?account=account-a&property=home-a`);

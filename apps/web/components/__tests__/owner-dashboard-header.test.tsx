@@ -8,12 +8,13 @@ const { previous, next, home, tenant, state } = vi.hoisted(() => ({
   next: vi.fn(),
   home: vi.fn(),
   tenant: vi.fn(),
-  state: { section: "charges" },
+  state: { section: "charges", role: "owner" },
 }));
 vi.mock("next/dynamic", () => ({ default: () => () => null }));
 vi.mock("@/components/dashboard/dashboard-data-loader", () => ({ useDashboardData: () => ({
   activeSection: state.section, activeSectionLabel: state.section === "overview" ? "Home" : "Rent", activeSectionIndex: 1,
-  activeWorkflowMeta: null, isOwnerRole: true, isManagerRole: false, isOwnerDailyOpsHomePage: state.section === "overview",
+  activeWorkflowMeta: null, isOwnerRole: state.role === "owner", isManagerRole: state.role === "manager",
+  isOwnerDailyOpsHomePage: state.role === "owner" && state.section === "overview",
   ownerOnboarding: { shouldShow: false }, llcSetupPrompt: { shouldShow: false },
   layoutProps: {}, displayDashboardData: { kpis: {} }, filteredPortfolio: { properties: [] },
   safePortfolio: { properties: [] }, sectionItems: [{ id: "overview" }, { id: "charges" }],
@@ -37,6 +38,8 @@ describe("owner header", () => {
     expect(screen.getByRole("heading", { name: "Rent" })).toBeVisible();
     expect(screen.getByText("Track rent and see who has paid.")).toBeVisible();
     expect(screen.getByText("Full rent section")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Rent" }).closest(".domus-card")).toBeNull();
+    expect(screen.getByText("Full rent section").closest(".domus-card")).not.toBeNull();
     expect(screen.getAllByRole("button", { name: "Add" })).toHaveLength(1);
     expect(screen.queryByText(/\d+ of \d+|workflow|daily operations mode/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Previous section" })).not.toBeInTheDocument();
@@ -75,10 +78,27 @@ describe("owner header", () => {
         capabilities: { notificationsEnabled: true }
       } as unknown as DashboardProps} />);
       expect(screen.getByRole("heading", { name: "Home" })).toHaveClass("text-[34px]");
+      expect(screen.getByRole("heading", { name: "Home" }).closest(".domus-card")).toBeNull();
+      expect(screen.getByText("Wallet Home").closest(".domus-card")).toBeNull();
       expect(screen.getByRole("button", { name: "Add" })).toHaveClass("rounded-full");
       expect(screen.queryByRole("button", { name: "Send Announcement" })).not.toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: "Add" }));
       expect(screen.getByRole("menuitem", { name: "Send Announcement" })).toBeInTheDocument();
     } finally { state.section = "charges"; }
+  });
+
+  it("keeps manager Home and section header in the existing card", () => {
+    state.role = "manager";
+    try {
+      for (const section of ["overview", "charges"]) {
+        state.section = section;
+        const view = render(<Dashboard {...{
+          userEmail: "manager@example.test", data: { profileRole: "manager" }
+        } as DashboardProps} />);
+        const heading = screen.getAllByRole("heading")[0];
+        expect(heading.closest(".domus-card")).not.toBeNull();
+        view.unmount();
+      }
+    } finally { state.role = "owner"; state.section = "charges"; }
   });
 });

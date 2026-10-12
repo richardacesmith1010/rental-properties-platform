@@ -106,6 +106,7 @@ export function DashboardLayout({
           activeItemId={activeItemId}
           onSelectItem={onSelectItem}
           onOpenMore={() => setMobileDrawerOpen(true)}
+          unreadNotificationCount={unreadNotificationCount}
         />
       ) : null}
       {afterMain}

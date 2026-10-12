@@ -59,7 +59,7 @@ describe("owner Home replacement", () => {
       { ...summary.lateCharges[0], id: "b", dueDate: "2026-09-01" }]))
       .toMatchObject([{ totalCents: 240000, monthCount: 2, oldestCharge: { id: "a" } }]);
   });
-  it("loads deferred Home bundles before showing the YTD net", () => {
+  it("loads deferred Home bundles while wallet failure remains visible", () => {
     const loadHome = vi.fn();
     const cache = { hasBundles: () => false, homeError: false, loadHome } as unknown as
       ReturnType<typeof useOwnerSectionCache>;
@@ -68,7 +68,7 @@ describe("owner Home replacement", () => {
         summary={summary} onOpenSection={vi.fn()} financialOverview={financialOverview} />
     </OwnerSectionCacheContext.Provider>);
     expect(loadHome).toHaveBeenCalledOnce();
-    expect(screen.getByText("Loading...")).toBeInTheDocument();
+    expect(screen.getByText("Couldn't load your homes. Pull down to try again.")).toBeInTheDocument();
     expect(screen.queryByText("$2,250")).not.toBeInTheDocument();
   });
 });

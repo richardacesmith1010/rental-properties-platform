@@ -202,7 +202,8 @@ export function Dashboard(props: DashboardProps) {
       isManagerView={isManagerRole}
       summary={homeActionItems}
       portfolio={safePortfolio}
-      money={props.ownerHomeMoney}
+      wallet={props.ownerWalletHome}
+      showAccountName={(props.ownershipAccounts?.length ?? 0) > 1}
       selectedPropertyId={selectedPropertyId}
       onOpenLeaseWizard={openLeaseWizard}
       onSelectProperty={sectionRendererProps.onSelectProperty}
@@ -361,8 +362,8 @@ export function Dashboard(props: DashboardProps) {
         ) : null}
 
         {isOwnerRole ? (
-          <div className="domus-card mt-3 flex min-h-0 flex-1 flex-col shadow-sm sm:rounded-[28px]">
-            <div className={`flex items-start justify-between gap-3 border-b border-[var(--line)] p-4 sm:p-6 ${isOwnerDailyOpsHomePage ? "mx-auto w-full max-w-[720px]" : ""}`}>
+          <div className="mt-3 flex min-h-0 flex-1 flex-col">
+            <div className={`flex w-full items-start justify-between gap-3 py-4 ${isOwnerDailyOpsHomePage ? "mx-auto max-w-[720px]" : ""}`}>
               <div>
                 {isDailyOpsHomePage ? (
                   <div>
@@ -371,8 +372,10 @@ export function Dashboard(props: DashboardProps) {
                   </div>
                 ) : (
                   <>
-                    <h1 className="text-2xl font-semibold text-[var(--ink)]">{activeSectionLabel}</h1>
-                    <p className="mt-1 text-sm text-[var(--muted)]">{ownerPageDescriptions[activeSection] ?? "Manage your homes and the people who live there."}</p>
+                    <h1 className="text-[34px] font-bold leading-tight text-[var(--ink)]">{activeSectionLabel}</h1>
+                    <p className="mt-1 text-[15px] text-[var(--muted)]">
+                      {ownerPageDescriptions[activeSection] ?? "Manage your homes and the people who live there."}
+                    </p>
                   </>
                 )}
               </div>
@@ -394,7 +397,8 @@ export function Dashboard(props: DashboardProps) {
               </div>
             </div>
             <section id={isDailyOpsHomePage ? "daily-ops-home" : activeSection}
-              className="min-h-0 flex-1 px-3 pb-24 pt-3 sm:px-5">
+              className={isOwnerDailyOpsHomePage ? "min-h-0 flex-1 pb-24 pt-3" :
+                "domus-card min-h-0 flex-1 px-3 pb-24 pt-3 shadow-sm sm:rounded-[28px] sm:px-5"}>
               {renderedSectionContent}
             </section>
           </div>

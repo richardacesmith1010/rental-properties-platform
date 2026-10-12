@@ -163,7 +163,7 @@ export default async function OwnerPage(props: OwnerPageProps) {
       <Dashboard
         data={ownerPage.dashboard}
         ownerYearRent={ownerPage.ownerYearRent}
-        ownerHomeMoney={ownerPage.ownerHomeMoney}
+        ownerWalletHome={ownerPage.ownerWalletHome}
         portfolio={ownerPage.portfolio}
         isEmpty={ownerPage.isEmpty}
         tickets={ownerPage.tickets}

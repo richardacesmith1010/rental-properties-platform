@@ -6,7 +6,7 @@ import { getRentCollectionConnectStatus } from "@/lib/stripe-connect";
 import { getNotificationsForUser } from "@/lib/notifications";
 import { getUserNotificationPreferenceSettings } from "@/lib/notification-preferences";
 import { loadOwnerYearRentReceived } from "@/lib/owner-ytd";
-import { loadOwnerHomeMoney } from "@/lib/owner-recent-activity";
+import { loadOwnerWalletHome } from "@/lib/owner-wallet-home";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { getOwnershipAccountsForUser } from "@/lib/ownership";
 import { getCurrentUserRole, getUserProfileSummary } from "@/lib/auth";
@@ -174,9 +174,9 @@ export async function loadOwnerPageData(params: {
     "rent.year-received", () => loadOwnerYearRentReceived(activeAccountId)
   ).catch(() => ({ ok: false as const, error: "load_failed" as const }));
   // Home can be opened through the client-side section navigator from any owner section.
-  const ownerHomeMoneyPromise = administeredPropertyIdsPromise.then((ids) => measureOwnerWithRequest(
-    "home.money", () => loadOwnerHomeMoney(ids)
-  )).catch(() => ({ ok: false as const, error: "load_failed" as const }));
+  const ownerWalletHomePromise = measureOwnerWithRequest(
+    "home.wallet", () => loadOwnerWalletHome(params.userId)
+  ).catch(() => ({ ok: false as const, error: "load_failed" as const }));
   const portfolioPromise = administeredPropertyIdsPromise.then((propertyIds) =>
     measureOwnerWithRequest(
       "portfolio.data",
@@ -194,7 +194,7 @@ export async function loadOwnerPageData(params: {
   void announcementPropertiesPromise.catch(() => undefined);
   void notificationsPromise.catch(() => undefined);
   void notificationPreferencesPromise.catch(() => undefined);
-  void ownerHomeMoneyPromise.catch(() => undefined);
+  void ownerWalletHomePromise.catch(() => undefined);
   const capabilities = await capabilitiesPromise;
 
   const administeredPropertyIds = await administeredPropertyIdsPromise;
@@ -239,7 +239,7 @@ export async function loadOwnerPageData(params: {
   const [
     dashboard,
     ownerYearRent,
-    ownerHomeMoney,
+    ownerWalletHome,
     portfolio,
     announcementProperties,
     notifications,
@@ -249,7 +249,7 @@ export async function loadOwnerPageData(params: {
   ] = await Promise.all([
     dashboardPromise,
     ownerYearRentPromise,
-    ownerHomeMoneyPromise,
+    ownerWalletHomePromise,
     portfolioPromise,
     announcementPropertiesPromise,
     notificationsPromise,
@@ -276,7 +276,7 @@ export async function loadOwnerPageData(params: {
     capabilities: capabilitiesWithOwnerSectionAvailability,
     dashboard,
     ownerYearRent,
-    ownerHomeMoney,
+    ownerWalletHome,
     generatedMessage: request.generatedMessage,
     initialOwnerHomePage: request.initialOwnerHomePage,
     initialOwnerWorkflowMode: request.initialOwnerWorkflowMode,

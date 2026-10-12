@@ -1,11 +1,11 @@
 "use client";
-
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Fragment, useContext, type ReactNode } from "react";
 import { OwnerSectionCacheContext } from "../owner-section-cache";
 import { Drawer } from "vaul";
-import { Landmark, Menu, Search, Settings, LifeBuoy, type LucideIcon } from "lucide-react";
+import { Bell, Landmark, Menu, Search, Settings, LifeBuoy, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GlobalSearch, type GlobalSearchItem } from "@/components/dashboard/global-search";
 import { NotificationBellMenu } from "@/components/dashboard/notification-bell-menu";
@@ -23,7 +23,6 @@ import {
 } from "./nav-items";
 import { MobileUserFooter, SidebarUserFooter } from "./user-footer";
 import type { StatefulAction } from "../types";
-
 export interface SidebarNavProps {
   userEmail: string;
   role: string;
@@ -49,10 +48,8 @@ export interface SidebarNavProps {
   reportsHref?: string | null;
   accountSwitcher?: ReactNode;
 }
-
 const sidebarFocusRing =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]";
-
 function CommandPaletteTrigger({ onOpen }: { onOpen: () => void }) {
   return (
     <button
@@ -71,7 +68,6 @@ function CommandPaletteTrigger({ onOpen }: { onOpen: () => void }) {
     </button>
   );
 }
-
 function WorkspaceFooterLinks() {
   return <div className="mt-4 border-t border-[var(--line)] pt-2">
     <a href="/settings" title="Open settings." className={`${navButtonClasses(false)} min-h-11 ${sidebarFocusRing}`}>
@@ -82,10 +78,8 @@ function WorkspaceFooterLinks() {
     </a>
   </div>;
 }
-
 function ThemeToggleGroup() {
   const { theme, setTheme } = useDomusTheme();
-
   return (
     <div className="space-y-2">
       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] sidebar-shell-muted">Theme</p>
@@ -114,7 +108,6 @@ function ThemeToggleGroup() {
     </div>
   );
 }
-
 interface NavListProps {
   navItems: NavItem[];
   activeItemId?: string;
@@ -368,15 +361,98 @@ export function MobileTopBar({
   const displayName = getDisplayName({ nickname, fullName, userEmail });
   const showWorkspaceButton = pathname !== workspacePath;
   const notificationHref = role === "tenant" ? "/tenant?section=notifications" : `${workspacePath}#notifications`;
-
-  return (
-    <div className="gradient-sidebar sticky top-0 z-30 border-b border-border px-3 pb-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] shadow-sm lg:hidden">
+  const drawer = (
+          <MobileDrawer
+            className="gradient-sidebar border-r border-border text-foreground"
+            open={mobileDrawerOpen}
+            onOpenChange={onMobileDrawerOpenChange}
+            trigger={role === "owner" ? undefined : (
+              <button
+                type="button"
+                className="sidebar-shell-button flex h-11 w-11 items-center justify-center"
+                aria-label="Open navigation menu"
+                title="Open navigation menu."
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+            )}
+          >
+            <div className="flex max-h-[calc(100svh-2rem)] min-h-0 flex-col pr-1">
+              {role === "owner" ? <Drawer.Close asChild><a href="/settings" title="Open settings."
+                className={`sidebar-shell-button mb-3 flex min-h-11 items-center gap-3 px-3 py-2 ${sidebarFocusRing}`}>
+                {avatarUrl ? <Image src={avatarUrl} alt="" width={32} height={32}
+                  className="h-8 w-8 rounded-full object-cover" />
+                  : <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent)] font-semibold text-white">
+                    {displayName.charAt(0).toUpperCase()}</span>}
+                <span className="min-w-0 flex-1"><span className="block truncate font-semibold">{displayName}</span>
+                  <span className="block text-xs sidebar-shell-muted">Owner</span></span>
+                {stripeConnected === false ? <span aria-label="Bank not connected"
+                  className="h-2 w-2 rounded-full bg-[var(--crit)]" /> : null}
+              </a></Drawer.Close> : <div className="shrink-0 flex items-center justify-between gap-3 pb-1">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{displayName}</p>
+                  <p className="text-xs uppercase tracking-[0.18em] sidebar-shell-muted">{role}</p>
+                </div>
+                <Badge variant="outline" className="border-border bg-background text-foreground">
+                  {unreadNotificationCount} unread
+                </Badge>
+              </div>}
+              <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-4">
+                {commandPaletteEnabled && onOpenCommandPalette ? (
+                  <CommandPaletteTrigger onOpen={onOpenCommandPalette} />
+                ) : searchItems.length > 0 ? (
+                  <GlobalSearch items={searchItems} />
+                ) : null}
+                {role === "owner" ? <Drawer.Close asChild>
+                  {onSelectItem ? <button type="button" title="Open notifications."
+                    onClick={() => onSelectItem("notifications")}
+                    className={`sidebar-shell-button flex min-h-11 items-center gap-3 px-3 py-2 text-sm ${sidebarFocusRing}`}>
+                    <Bell className="h-4 w-4" aria-hidden="true" />Notifications
+                    <span className="ml-auto num">{unreadNotificationCount}</span>
+                  </button> : <a href="/owner#notifications" title="Open notifications."
+                    className={`sidebar-shell-button flex min-h-11 items-center gap-3 px-3 py-2 text-sm ${sidebarFocusRing}`}>
+                    <Bell className="h-4 w-4" aria-hidden="true" />Notifications
+                    <span className="ml-auto num">{unreadNotificationCount}</span>
+                  </a>}
+                </Drawer.Close> : null}
+                {accountSwitcher ? <div className="sidebar-account-switcher">{accountSwitcher}</div> : null}
+                <div className="grid grid-cols-1 gap-2">
+                  {showWorkspaceButton ? (
+                    <Drawer.Close asChild>
+                      <Link
+                        href={workspacePath}
+                        className="sidebar-shell-button rounded-xl px-3 py-2 text-sm font-semibold"
+                        title="Return to your main workspace for this role."
+                      >
+                        {role === "owner" ? "Owner Workspace" : role === "manager" ? "Manager Workspace" : "Tenant Workspace"}
+                      </Link>
+                    </Drawer.Close>
+                  ) : null}
+                </div>
+                <nav
+                  aria-label="Main navigation"
+                  className="min-h-0 flex-1 space-y-1 overflow-y-auto rounded-2xl border border-border bg-card p-2"
+                >
+                  <NavList navItems={navItems} activeItemId={activeItemId} onSelectItem={onSelectItem} mobile />
+                  {role === "owner" || role === "manager" ? <WorkspaceFooterLinks /> : null}
+                </nav>
+                <ThemeToggleGroup />
+              </div>
+            </div>
+          </MobileDrawer>
+  );
+  return role === "owner" ? (
+    <div className="pt-[env(safe-area-inset-top)] lg:hidden">{drawer}</div>
+  ) : (
+    <div className="gradient-sidebar sticky top-0 z-30 border-b border-border px-3 pb-3
+      pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] shadow-sm lg:hidden">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--surface-2)] ring-1 ring-[var(--line)]"><Landmark className="h-4 w-4 text-[var(--accent)]" /></span>
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--surface-2)] ring-1 ring-[var(--line)]">
+            <Landmark className="h-4 w-4 text-[var(--accent)]" />
+          </span>
           <span className="sr-only">Domus</span>
         </div>
-
         <div className="flex items-center gap-2">
           {commandPaletteEnabled && onOpenCommandPalette ? (
             <button
@@ -403,9 +479,9 @@ export function MobileTopBar({
             triggerClassName={`sidebar-shell-button relative flex h-11 w-11 items-center justify-center ${sidebarFocusRing}`}
             iconClassName="h-3.5 w-3.5"
             badgeClassName="absolute -right-1 -top-1 min-w-[1rem] px-1 text-[9px]"
-            panelClassName="fixed inset-x-3 top-[calc(env(safe-area-inset-top,0px)+4.5rem)] w-auto max-h-[calc(100dvh-6rem)] overflow-y-auto"
+            panelClassName="fixed inset-x-3 top-[calc(env(safe-area-inset-top,0px)+4.5rem)]
+              w-auto max-h-[calc(100dvh-6rem)] overflow-y-auto"
           />
-
           <div className="sidebar-user-footer-shell">
             <MobileUserFooter
               displayName={displayName}
@@ -415,67 +491,7 @@ export function MobileTopBar({
               stripeConnected={stripeConnected}
             />
           </div>
-
-          <MobileDrawer
-            className="gradient-sidebar border-r border-border text-foreground"
-            open={mobileDrawerOpen}
-            onOpenChange={onMobileDrawerOpenChange}
-            trigger={role === "owner" ? undefined : (
-              <button
-                type="button"
-                className="sidebar-shell-button flex h-11 w-11 items-center justify-center"
-                aria-label="Open navigation menu"
-                title="Open navigation menu."
-              >
-                <Menu className="h-5 w-5" />
-              </button>
-            )}
-          >
-            <div className="flex max-h-[calc(100svh-2rem)] min-h-0 flex-col pr-1">
-              <div className="shrink-0 flex items-center justify-between gap-3 pb-1">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">{displayName}</p>
-                  <p className="text-xs uppercase tracking-[0.18em] sidebar-shell-muted">{role}</p>
-                </div>
-                <Badge variant="outline" className="border-border bg-background text-foreground">
-                  {unreadNotificationCount} unread
-                </Badge>
-              </div>
-
-              <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-4">
-                {commandPaletteEnabled && onOpenCommandPalette ? (
-                  <CommandPaletteTrigger onOpen={onOpenCommandPalette} />
-                ) : searchItems.length > 0 ? (
-                  <GlobalSearch items={searchItems} />
-                ) : null}
-                {accountSwitcher ? <div className="sidebar-account-switcher">{accountSwitcher}</div> : null}
-
-                <div className="grid grid-cols-1 gap-2">
-                  {showWorkspaceButton ? (
-                    <Drawer.Close asChild>
-                      <Link
-                        href={workspacePath}
-                        className="sidebar-shell-button rounded-xl px-3 py-2 text-sm font-semibold"
-                        title="Return to your main workspace for this role."
-                      >
-                        {role === "owner" ? "Owner Workspace" : role === "manager" ? "Manager Workspace" : "Tenant Workspace"}
-                      </Link>
-                    </Drawer.Close>
-                  ) : null}
-                </div>
-
-                <nav
-                  aria-label="Main navigation"
-                  className="min-h-0 flex-1 space-y-1 overflow-y-auto rounded-2xl border border-border bg-card p-2"
-                >
-                  <NavList navItems={navItems} activeItemId={activeItemId} onSelectItem={onSelectItem} mobile />
-                  {role === "owner" || role === "manager" ? <WorkspaceFooterLinks /> : null}
-                </nav>
-
-                <ThemeToggleGroup />
-              </div>
-            </div>
-          </MobileDrawer>
+          {drawer}
         </div>
       </div>
     </div>

@@ -14,6 +14,7 @@ interface OwnerBottomBarProps {
   activeItemId?: string;
   onSelectItem?: (id: string) => void;
   onOpenMore?: () => void;
+  unreadNotificationCount?: number;
 }
 
 type OwnerTab = "Home" | "Money" | "Homes" | "Inbox" | "More";
@@ -67,7 +68,8 @@ function StandaloneDrawer({ open, onOpenChange, search }: {
   </MobileDrawer>;
 }
 
-export function OwnerBottomBar({ items = [], activeItemId, onOpenMore }: OwnerBottomBarProps) {
+export function OwnerBottomBar({ items = [], activeItemId, onOpenMore,
+  unreadNotificationCount = 0 }: OwnerBottomBarProps) {
   const pathname = usePathname();
   const [location, setLocation] = useState<{ pathname: string } | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -87,7 +89,7 @@ export function OwnerBottomBar({ items = [], activeItemId, onOpenMore }: OwnerBo
     { label: "Money", icon: BarChart3 },
     { label: "Homes", icon: Building2 },
     { label: "Inbox", icon: MessageCircle, count: inboxCount },
-    { label: "More", icon: Menu }
+    { label: "More", icon: Menu, count: unreadNotificationCount }
   ];
   const bar = <>
     <nav aria-label="Owner shortcuts" className="fixed inset-x-0 bottom-0 z-40 grid h-[84px] grid-cols-5
@@ -95,7 +97,8 @@ export function OwnerBottomBar({ items = [], activeItemId, onOpenMore }: OwnerBo
       px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur-[20px] lg:hidden">
       {tabs.map(({ label, icon: Icon, count }) => {
         const selected = active === label;
-        const badgeLabel = label === "Home" ? `${count} late rent payments` : `${count} unread`;
+        const badgeLabel = label === "Home" ? `${count} late rent payments` :
+          label === "More" ? `${count} unread notifications` : `${count} unread`;
         const common = `relative flex min-h-11 flex-col items-center justify-center gap-0.5 px-1
           text-[11px] font-semibold focus-visible:outline-2 focus-visible:outline-[var(--accent)]
           ${selected ? "text-[var(--accent)]" : "text-[var(--faint)] hover:text-[var(--accent)]"}`;
@@ -104,7 +107,8 @@ export function OwnerBottomBar({ items = [], activeItemId, onOpenMore }: OwnerBo
           {count ? <span aria-hidden="true" className="absolute right-2 top-1 min-w-4 rounded-full
             bg-[var(--crit)] px-1 text-center text-[10px] leading-4 text-white">{count}</span> : null}</>;
         return label === "More" ? <button key={label} type="button" title="Open more navigation."
-          aria-label="More" aria-current={selected ? "page" : undefined} className={common}
+          aria-label={count ? `More, ${badgeLabel}` : "More"}
+          aria-current={selected ? "page" : undefined} className={common}
           onClick={() => onOpenMore ? onOpenMore() : setDrawerOpen(true)}>{children}</button>
           : <a key={label} href={tabHref(label, search)} title={`Open ${label}.`}
             onClick={(event) => { event.currentTarget.href = tabHref(label, window.location.search); }}

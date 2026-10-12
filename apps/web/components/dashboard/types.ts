@@ -1,7 +1,7 @@
 import type { ClientOverview } from "@/lib/client-overview";
 import type { DashboardData } from "@/lib/dashboard";
 import type { OwnerYearRentResult } from "@/lib/owner-ytd";
-import type { OwnerHomeMoneyResult } from "@/lib/owner-recent-activity";
+import type { OwnerWalletHomeResult } from "@/lib/owner-wallet-home";
 import type {
   AnnouncementPropertyOption,
   AnnouncementScope
@@ -77,7 +77,7 @@ export type DashboardCapabilities = FeatureCapabilitiesDTO & {
 export interface DashboardProps {
   data: DashboardData;
   ownerYearRent?: OwnerYearRentResult;
-  ownerHomeMoney?: OwnerHomeMoneyResult;
+  ownerWalletHome?: OwnerWalletHomeResult;
   clients?: ClientOverview[];
   onCreateClientAccount?: StatefulAction;
   isEmpty?: boolean;

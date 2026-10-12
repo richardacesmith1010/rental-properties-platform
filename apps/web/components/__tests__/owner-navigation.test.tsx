@@ -11,7 +11,8 @@ import { applyTheme, DOMUS_THEME_ATTRIBUTE, normalizeTheme } from "@/lib/theme";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/owner", useRouter: () => ({ replace: vi.fn() }), useSearchParams: () => new URLSearchParams() }));
 vi.mock("@/components/theme-provider", () => ({ useDomusTheme: () => ({ theme: "light", setTheme: vi.fn() }) }));
-vi.mock("@/components/dashboard/sidebar/user-footer", () => ({ SidebarUserFooter: () => null, MobileUserFooter: () => null }));
+vi.mock("@/components/dashboard/sidebar/user-footer", () => ({ SidebarUserFooter: () => null,
+  MobileUserFooter: () => <button type="button" aria-label="Account pill" /> }));
 vi.mock("@/components/dashboard/notification-bell-menu", () => ({
   NotificationBellMenu: (props: { align?: string; panelClassName?: string }) => (
     <div data-testid="notification-bell" data-align={props.align} data-panel={props.panelClassName} />
@@ -45,13 +46,31 @@ describe("owner grouped navigation", () => {
     expect(desktopBell.getAttribute("data-panel")).not.toContain("inset-x-3");
 
     desktop.unmount();
-    render(<MobileTopBar {...navProps} items={items} />);
+    render(<MobileTopBar {...navProps} role="manager" items={items}
+      commandPaletteEnabled onOpenCommandPalette={vi.fn()} />);
     const mobileBell = screen.getByTestId("notification-bell");
+    expect(screen.getByRole("button", { name: "Open search" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Account pill" })).toBeInTheDocument();
     expect(mobileBell).toHaveAttribute("data-align", "end");
     expect(mobileBell.getAttribute("data-panel")).toContain("fixed");
     expect(mobileBell.getAttribute("data-panel")).toContain("inset-x-3");
     expect(mobileBell.getAttribute("data-panel")).toContain("w-auto");
     expect(mobileBell.getAttribute("data-panel")).toContain("max-h-[calc(100dvh-6rem)]");
+  });
+
+  it("hides owner top bar controls outside More and orders drawer rows", () => {
+    render(<MobileTopBar {...navProps} fullName="Ace Owner" stripeConnected={false}
+      unreadNotificationCount={4} commandPaletteEnabled onOpenCommandPalette={vi.fn()}
+      accountSwitcher={<button type="button">Account switcher</button>} mobileDrawerOpen />);
+    expect(screen.queryByTestId("notification-bell")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open search" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Account pill" })).not.toBeInTheDocument();
+    const dialog = screen.getByRole("dialog", { name: "Menu" });
+    const text = dialog.textContent ?? "";
+    expect(text.indexOf("Ace Owner")).toBeLessThan(text.indexOf("Search navigation"));
+    expect(text.indexOf("Search navigation")).toBeLessThan(text.indexOf("Notifications"));
+    expect(text.indexOf("Notifications")).toBeLessThan(text.indexOf("Account switcher"));
+    expect(within(dialog).getByText("4")).toBeInTheDocument();
   });
 
   it.each([true, false])("renders exact groups and order for LLC=%s, preserving badges and reachability", llc => {
@@ -188,10 +207,12 @@ describe("native dashboard safe areas", () => {
         document.documentElement.className = "domus-native";
         applyTheme(normalizeTheme(theme));
         const view = render(<DashboardLayout {...navProps} role={role} mainClassName=""><div>Page</div></DashboardLayout>);
+        const insetClass = role === "owner" ? "pt-[env(safe-area-inset-top)]" :
+          "pt-[calc(env(safe-area-inset-top,0px)+0.75rem)]";
         const insetElements = Array.from(view.container.querySelectorAll("[class]"))
-          .filter(element => element.getAttribute("class")?.includes("pt-[calc(env(safe-area-inset-top"));
+          .filter(element => element.classList.contains(insetClass));
         expect(insetElements).toHaveLength(1);
-        expect(insetElements[0]).toHaveClass("pt-[calc(env(safe-area-inset-top,0px)+0.75rem)]");
+        expect(insetElements[0]).toHaveClass(insetClass);
         expect(view.container.querySelector(".domus-login-page,.domus-landing-header")).toBeNull();
         view.unmount();
       }
