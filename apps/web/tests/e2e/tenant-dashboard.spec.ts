@@ -49,10 +49,9 @@ test.describe.serial("Tenant dashboard", () => {
     });
 
     await page.goto("/login");
-    await page.getByRole("button", { name: "Tenant" }).click();
     await page.getByLabel("Email").fill(tenantEmail);
     await page.getByLabel("Password").fill(password);
-    await page.getByRole("button", { name: "Sign In" }).click();
+    await page.getByRole("button", { name: "Sign in" }).click();
 
     await expect(page).toHaveURL(/\/tenant/, { timeout: 10000 });
     await page.goto("/tenant?section=charges");

@@ -2,28 +2,27 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import LoginPage from "@/app/login/page";
 
-const { getUser, getRole, redirect } = vi.hoisted(() => ({
-  getUser: vi.fn(), getRole: vi.fn(), redirect: vi.fn()
+const { getUser, getRole, redirect, sessionCookie } = vi.hoisted(() => ({
+  getUser: vi.fn(), getRole: vi.fn(), redirect: vi.fn(), sessionCookie: { value: undefined as string | undefined }
 }));
 vi.mock("@/lib/auth", async (importOriginal) => ({
   ...await importOriginal<typeof import("@/lib/auth")>(), getCurrentUserRole: getRole
 }));
 beforeEach(() => {
   getUser.mockResolvedValue({ data: { user: null } });
+  sessionCookie.value = undefined;
   redirect.mockImplementation((url: string) => { throw new Error(`REDIRECT:${url}`); });
 });
 
-vi.mock("next/headers", () => ({ cookies: () => ({ get: () => undefined }) }));
+vi.mock("next/headers", () => ({ cookies: () => ({ get: () => ({ value: sessionCookie.value }) }) }));
 vi.mock("next/navigation", () => ({ redirect }));
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () => ({ auth: { getUser } })
 }));
-vi.mock("@/components/auth/role-selector", () => ({
-  RoleSelector: ({ initialRole, initialMode }: { initialRole?: string; initialMode?: string }) => (
-    <div data-testid="role-selector" data-role={initialRole} data-mode={initialMode}>
-      {initialMode === "signup" ? "Owner sign-up form" : "Sign-in form"}
-    </div>
-  )
+vi.mock("@/components/auth/sign-in-form", () => ({ SignInForm: () => <div data-testid="sign-in-form" /> }));
+vi.mock("@/components/auth/create-account-form", () => ({
+  CreateAccountForm: ({ initialRole }: { initialRole?: string }) =>
+    <div data-testid="create-account-form" data-role={initialRole} />
 }));
 
 describe("LoginPage", () => {
@@ -41,19 +40,30 @@ describe("LoginPage", () => {
 
   it("opens owner sign-up with the right heading and form", async () => {
     render(await LoginPage({ searchParams: Promise.resolve({ mode: "signup", role: "owner" }) }));
-    expect(screen.getByText("Create your account")).toBeInTheDocument();
-    expect(screen.getByText("Owner sign-up form")).toBeInTheDocument();
-    expect(screen.getByTestId("role-selector")).toHaveAttribute("data-role", "owner");
+    expect(screen.getByTestId("create-account-form")).toHaveAttribute("data-role", "owner");
     expect(screen.queryByText("Welcome back")).not.toBeInTheDocument();
   });
 
   it("keeps default sign-in and offers direct sign-up", async () => {
     render(await LoginPage({}));
     expect(screen.getByText("Welcome back")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Sign in to your workspace" })).toBeInTheDocument();
+    expect(screen.getByText("Sign in to see your rent, bills and homes.")).toBeInTheDocument();
+    expect(screen.getByTestId("sign-in-form")).toBeInTheDocument();
     expect(screen.getByText("Your rental workspace").closest("section")).toHaveClass("hidden");
-    expect(screen.getByRole("link", { name: "Create an account" }))
-      .toHaveAttribute("href", "/login?mode=signup&role=owner");
     expect(screen.queryByText(/500\+|2,000\+/)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["session expired", { cookie: "1" }, "Your session expired."],
+    ["confirmed=true", { confirmed: "true" }, "Email confirmed!"],
+    ["password_reset=true", { password_reset: "true" }, "Password updated!"],
+    ["invite_expired", { error: "invite_expired" }, "Invitation link expired"],
+    ["reset_link_expired", { error: "reset_link_expired" }, "This reset link has expired"],
+    ["other error", { error: "unknown" }, "Sign-in link failed."]
+  ])("8.2 renders %s alert copy", async (_name, params, copy) => {
+    sessionCookie.value = "cookie" in params ? params.cookie : undefined;
+    const searchParams = "cookie" in params ? {} : params;
+    render(await LoginPage({ searchParams: Promise.resolve(searchParams) }));
+    expect(screen.getByText(copy)).toBeInTheDocument();
   });
 });

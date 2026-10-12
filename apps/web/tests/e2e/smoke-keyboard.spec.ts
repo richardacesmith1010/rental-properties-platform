@@ -31,17 +31,10 @@ test.describe("keyboard smoke", () => {
 
   test("login order and Enter submit", async ({ page }) => {
     await page.goto("/login");
-    await tabTo(page, page.getByRole("button", { name: /^Owner/ }));
-    await tabTo(page, page.getByRole("button", { name: /^Manager/ }));
-    await tabTo(page, page.getByRole("button", { name: /^Tenant/ }));
-    await page.keyboard.press("Shift+Tab");
-    await page.keyboard.press("Shift+Tab");
-    await page.keyboard.press("Enter");
     await tabTo(page, page.getByLabel("Email"));
     await page.keyboard.type(process.env.SMOKE_OWNER_EMAIL!);
     await tabTo(page, page.getByLabel("Password"));
     await page.keyboard.type(process.env.SMOKE_OWNER_PASSWORD!);
-    await tabTo(page, page.getByRole("button", { name: "Sign In" }));
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/owner(?:\?|$)/, { timeout: 45_000 });
   });

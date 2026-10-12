@@ -4,7 +4,6 @@ import { DEMO_USERS, loginAs } from "./helpers";
 test.describe("Accessibility", () => {
   test("login page exposes labeled form fields", async ({ page }) => {
     await page.goto("/login");
-    await page.getByRole("button", { name: "Owner" }).click();
 
     await expect(page.getByLabel("Email")).toHaveAttribute("type", "email");
     await expect(page.getByLabel("Password")).toHaveAttribute("type", "password");
@@ -27,8 +26,8 @@ test.describe("Accessibility", () => {
     expect(activeTag).not.toBe("");
   });
 
-  test("Dom mascot image has descriptive alt text", async ({ page }) => {
+  test("decorative sign-in house is hidden from assistive tech", async ({ page }) => {
     await page.goto("/login");
-    await expect(page.getByAltText("Dom, the Domus mascot").first()).toBeVisible();
+    await expect(page.locator("[aria-hidden=true] svg.lucide-house")).toBeVisible();
   });
 });

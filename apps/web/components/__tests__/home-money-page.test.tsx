@@ -30,6 +30,14 @@ describe("Money components", () => {
     expect(screen.getByRole("tab", { name: "October" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("tab", { name: "2026" })).toHaveAttribute("href", "/owner/money?property=home&month=year");
   });
+  it("8.6 uses accent fill only for the selected dark segment", () => {
+    render(<PeriodSwitch months={months} selectedMonth="2026-10" propertyId="home" />);
+    expect(screen.getByRole("tab", { name: "October" })).toHaveClass(
+      "bg-[var(--surface)]", "[html[data-theme=dark]_&]:bg-[var(--accent)]",
+      "[html[data-theme=dark]_&]:text-[var(--accent-contrast)]"
+    );
+    expect(screen.getByRole("tab", { name: "September" })).not.toHaveClass("[html[data-theme=dark]_&]:bg-[var(--accent)]");
+  });
   it("3d home chips appear with at least two homes", () => {
     const { rerender } = render(<HomeMoneyPage data={base} selectedMonth="2026-10" months={months} />);
     expect(screen.queryByRole("navigation", { name: "Homes" })).not.toBeInTheDocument();

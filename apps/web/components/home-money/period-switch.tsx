@@ -14,7 +14,11 @@ export function PeriodSwitch({ months, selectedMonth, propertyId }: {
       href={`/owner/money?${propertyId ? `property=${encodeURIComponent(propertyId)}&` : ""}month=${choice.value}`}
       title={`Show money for ${choice.label}`}
       className={`flex min-h-11 items-center justify-center rounded-lg px-2 text-sm font-semibold text-[var(--ink)]
-        ${selectedMonth === choice.value ? "bg-[var(--surface)] shadow-sm" : ""}`}>
+        ${selectedMonth === choice.value ? `bg-[var(--surface)] shadow-sm [html[data-theme=dark]_&]:bg-[var(--accent)]
+          [html[data-theme=dark]_&]:text-[var(--accent-contrast)]
+          [@media(prefers-color-scheme:dark)]:bg-[var(--accent)]
+          [@media(prefers-color-scheme:dark)]:text-[var(--accent-contrast)]
+          [html[data-theme=light]_&]:bg-[var(--surface)] [html[data-theme=light]_&]:text-[var(--ink)]` : ""}`}>
       {choice.label}
     </Link>)}
   </div>;

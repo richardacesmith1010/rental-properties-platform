@@ -26,15 +26,14 @@ export async function dismissOwnerOnboarding(page: Page, email: string) {
 
 export async function loginAsRole(
   page: Page,
-  role: "Owner" | "Manager" | "Tenant",
+  _role: "Owner" | "Manager" | "Tenant",
   email: string,
   password: string
 ) {
   await page.goto("/login");
-  await page.getByRole("button", { name: new RegExp("^" + role) }).click();
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: "Sign In" }).click();
+  await page.getByRole("button", { name: "Sign in" }).click();
 
   const redirected = await page
     .waitForURL(/\/(owner|manager|tenant|onboarding|owner\/setup)/, { timeout: 12_000 })
