@@ -149,7 +149,7 @@ describe("SectionFrame property scope control", () => {
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 describe("full owner sections", () => {
-  it("passes the manager role through to the homes view", () => {
+  it("6 manager portfolio passes the manager role through to the existing homes view", () => {
     render(<PortfolioSectionContent props={buildProps({
       data: { profileRole: "manager" } as SectionRendererProps["data"],
       filteredPortfolio: { properties: [], units: [], leases: [], tenants: [] } as never,

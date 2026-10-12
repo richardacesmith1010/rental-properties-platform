@@ -6,7 +6,7 @@ export function resolveMoneySelection(
 ) {
   const today = now.toISOString().slice(0, 10);
   const currentMonth = today.slice(0, 7);
-  const propertyId = propertyIds.includes(requestedProperty ?? "") ? requestedProperty! : propertyIds[0];
+  const propertyId = propertyIds.includes(requestedProperty ?? "") ? requestedProperty! : null;
   const selectedMonth = requestedMonth === "year" ? "year"
     : /^\d{4}-(0[1-9]|1[0-2])$/.test(requestedMonth ?? "") ? requestedMonth! : currentMonth;
   const [year, value] = selectedMonth === "year"

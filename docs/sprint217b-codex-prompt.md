@@ -14,7 +14,7 @@ Rebuild the two other owner tabs in the Wallet look, with real data:
 
 Managers and tenants are unchanged.
 
-## 2. Context (HEAD = 217a's commit, branch `main`)
+## 2. Context (HEAD `9229f51`, branch `main`)
 - **Money page:** `app/owner/money/page.tsx` (64 lines), `app/owner/money/resolve.ts`, and `components/home-money/home-money-page.tsx` (97 lines).
   - Today it shows **one** home (it defaults to the first id) with 4 month tabs (3 months + "This year"), a "Left after bills" card, Heads up, and Every item with a running balance plus a "Download for taxes" CSV.
 - **Money loaders (don't change their math):** `loadHomeMoney(userId, propertyId, range)` and `loadHomeAlerts(userId, propertyId, today)` in `lib/home-money.ts`. They gate on `canUserAdministerProperty`. `groupByCategory`, `runningBalance` and `homeMoneyCsv` are pure.

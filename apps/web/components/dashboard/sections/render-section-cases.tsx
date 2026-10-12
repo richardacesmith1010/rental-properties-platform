@@ -23,6 +23,7 @@ import { UnitsSection } from "../units-section";
 import { VendorsSection } from "../vendors-section";
 import { lazySectionComponents } from "../section-map";
 import type { SectionRendererComponentProps } from "../section-renderer";
+import { HomesWallet } from "../owner-homes/homes-wallet";
 const AnalyticsSection = dynamic(
   () => import("../analytics-section").then((module) => module.AnalyticsSection),
   {
@@ -409,6 +410,10 @@ export function renderSectionCases({
         ? renderSection("Clients", <ClientsSection clients={props.clients ?? []} onCreateClientAccount={props.onCreateClientAccount} />)
         : <SectionNotFoundState activeSection={props.activeSection} role={props.data.profileRole} />;
     case "portfolio":
+      if (props.data.profileRole === "owner") return <HomesWallet wallet={props.ownerWalletHome}
+        onAddHome={props.onAddHome ?? (() => undefined)}
+        onAddTenant={props.onAddTenantToHome ?? (() => undefined)}
+        manageContent={<PortfolioSectionContent props={props} />} />;
       return renderSection("Portfolio", <PortfolioSectionContent props={props} />);
     case "units":
       return renderSection(

@@ -6,12 +6,24 @@ import { dateOnly, rentReceivedCents } from "@/lib/rent-received";
 
 export interface Entry {
   id: string; date: string; kind: "rent" | "bill"; title: string; detail: string;
-  category: string; amountCents: number; direction: "in" | "out"; source: string;
+  category: string; amountCents: number; direction: "in" | "out"; source: string; homeName?: string;
 }
 export interface MoneyAlert { type: "late-rent" | "higher-than-usual"; title: string; detail: string; }
 export interface HomeMoney { property: { id: string; name: string }; entries: Entry[]; totals: {
   inCents: number; outCents: number; leftCents: number;
 } }
+
+export function combineHomeMoney(results: HomeMoney[]): Pick<HomeMoney, "entries" | "totals"> {
+  const totals = results.reduce((sum, result) => ({
+    inCents: sum.inCents + result.totals.inCents,
+    outCents: sum.outCents + result.totals.outCents,
+    leftCents: sum.leftCents + result.totals.leftCents
+  }), { inCents: 0, outCents: 0, leftCents: 0 });
+  const entries = results.flatMap((result) => result.entries.map((entry) => ({
+    ...entry, homeName: result.property.name
+  }))).sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+  return { entries, totals };
+}
 
 const labels: Record<string, string> = {
   mortgage: "Mortgage", insurance: "Insurance", property_tax: "Property tax", hoa: "HOA",
@@ -185,11 +197,12 @@ export async function loadHomeAlerts(userId: string, propertyId: string, today: 
   return alerts.slice(0, 5);
 }
 
-export function homeMoneyCsv(entries: Array<Entry & { balanceCents?: number }>) {
-  const rows = entries.map((entry) => [entry.date, `${entry.title}${entry.source ? ` · ${entry.source}` : ""}`, entry.kind,
+export function homeMoneyCsv(entries: Array<Entry & { balanceCents?: number }>, includeHome = false) {
+  const rows = entries.map((entry) => [entry.date, ...(includeHome ? [entry.homeName ?? ""] : []),
+    `${entry.title}${entry.source ? ` · ${entry.source}` : ""}`, entry.kind,
     entry.category, entry.direction === "in" ? (entry.amountCents / 100).toFixed(2) : "",
     entry.direction === "out" ? (entry.amountCents / 100).toFixed(2) : "",
     ((entry.balanceCents ?? 0) / 100).toFixed(2), entry.source]);
-  return [["Date", "What", "Type", "Category", "In", "Out", "Balance", "Source"], ...rows]
+  return [["Date", ...(includeHome ? ["Home"] : []), "What", "Type", "Category", "In", "Out", "Balance", "Source"], ...rows]
     .map((row) => row.map(escapeCell).join(",")).join("\n");
 }

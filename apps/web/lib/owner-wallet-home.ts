@@ -10,6 +10,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface WalletHomeEntry {
   id: string; name: string; city: string; state: string; accountId: string; accountName: string;
+  accountType: "individual" | "llc"; addressLine1: string; leaseEndDate: string | null;
+  rentDueThisYear: number; rentOnTimeThisYear: number;
   activeLeases: { tenantNames: string[]; rentCents: number; nextDueDate: string | null }[];
   isLate: boolean; leftCents: number;
 }
@@ -37,7 +39,7 @@ export async function loadOwnerWalletHome(userId: string, today = new Date()): P
     if (expenses.error) throw expenses.error;
     if (!money.ok) throw new Error("Recent money unavailable.");
     const idSet = new Set(ids);
-    const accountById = new Map(accounts.map((account) => [account.id, account.displayName]));
+    const accountById = new Map(accounts.map((account) => [account.id, account]));
     const administeredById = new Map(administered.map((property) => [property.id, property.ownerAccountId]));
     const unitProperty = new Map(rentRows.units.map((unit) => [unit.id, unit.property_id]));
     const leaseProperty = new Map(rentRows.leases.map((lease) => [lease.id, unitProperty.get(lease.unit_id)]));
@@ -53,12 +55,42 @@ export async function loadOwnerWalletHome(userId: string, today = new Date()): P
     const lateIds = new Set(rentRows.charges.filter((charge) => charge.status === "late" &&
       tracksLateRent(collectionByLeaseId.get(charge.lease_id)))
       .map((charge) => chargeProperty.get(charge.id)).filter((id): id is string => Boolean(id)));
+    const leaseById = new Map(rentRows.leases.map((lease) => [lease.id, lease]));
+    const paymentsByCharge = new Map<string, typeof rentRows.payments>();
+    for (const payment of rentRows.payments) {
+      const group = paymentsByCharge.get(payment.rent_charge_id) ?? [];
+      group.push(payment);
+      paymentsByCharge.set(payment.rent_charge_id, group);
+    }
+    const dueByProperty = new Map<string, { due: number; onTime: number }>();
+    const todayDate = today.toISOString().slice(0, 10);
+    for (const charge of rentRows.charges) {
+      if (charge.category !== "rent" || charge.due_date < yearFrom || charge.due_date > todayDate) continue;
+      const propertyId = chargeProperty.get(charge.id);
+      if (!propertyId) continue;
+      const count = dueByProperty.get(propertyId) ?? { due: 0, onTime: 0 };
+      count.due += 1;
+      const due = new Date(`${charge.due_date}T00:00:00Z`);
+      due.setUTCDate(due.getUTCDate() + (leaseById.get(charge.lease_id)?.grace_period_days ?? 0));
+      const deadline = due.toISOString().slice(0, 10);
+      const paidOnTime = (paymentsByCharge.get(charge.id) ?? [])
+        .filter((payment) => payment.paid_at.slice(0, 10) <= deadline && payment.paid_at.slice(0, 10) <= todayDate)
+        .reduce((sum, payment) => sum + payment.amount_cents, 0);
+      if (paidOnTime >= charge.amount_cents) count.onTime += 1;
+      dueByProperty.set(propertyId, count);
+    }
     const homes = portfolio.properties.filter((property) => idSet.has(property.id)).map((property) => {
       const accountId = administeredById.get(property.id) ?? "";
+      const active = portfolio.leases.filter((lease) => lease.active && lease.propertyId === property.id);
+      const endDates = active.map((lease) => lease.endDate).filter(Boolean).sort();
       return {
         id: property.id, name: property.name, city: property.city, state: property.state,
-        accountId, accountName: accountById.get(accountId) ?? property.ownerAccountName,
-        activeLeases: portfolio.leases.filter((lease) => lease.active && lease.propertyId === property.id)
+        accountId, accountName: accountById.get(accountId)?.displayName ?? property.ownerAccountName,
+        accountType: accountById.get(accountId)?.accountType ?? "individual" as const,
+        addressLine1: property.addressLine1, leaseEndDate: endDates[0] ?? null,
+        rentDueThisYear: dueByProperty.get(property.id)?.due ?? 0,
+        rentOnTimeThisYear: dueByProperty.get(property.id)?.onTime ?? 0,
+        activeLeases: active
           .map((lease) => ({ tenantNames: [lease.tenantName].filter(Boolean), rentCents: lease.monthlyRentCents,
             nextDueDate: getNextDueDateForLease(lease, today)?.toISOString().slice(0, 10) ?? null })),
         isLate: lateIds.has(property.id), leftCents: money.leftByPropertyId[property.id] ?? 0

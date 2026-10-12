@@ -1,8 +1,12 @@
 import type { OperationTask } from "./operations-section";
 import type { SectionRendererProps } from "./section-map";
+import type { OwnerWalletHomeResult } from "@/lib/owner-wallet-home";
 import { renderSectionCases } from "./sections/render-section-cases";
 
 export interface SectionRendererComponentProps extends SectionRendererProps {
+  ownerWalletHome?: OwnerWalletHomeResult;
+  onAddHome?: () => void;
+  onAddTenantToHome?: (id: string) => void;
   rentCollectionConnected?: boolean;
   initialOperationsTask?: OperationTask;
   initialOperationsPropertyId?: string | null;

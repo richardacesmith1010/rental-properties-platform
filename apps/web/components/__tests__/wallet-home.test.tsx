@@ -4,14 +4,14 @@ import { WalletHome } from "@/components/dashboard/owner-home/wallet-home";
 import type { OwnerWalletHomeResult } from "@/lib/owner-wallet-home";
 
 const wallet: Extract<OwnerWalletHomeResult, { ok: true }> = { ok: true, homes: [
-  { id: "b", name: "Zenith", city: "Denver", state: "CO", accountId: "llc", accountName: "J&MSP",
-    activeLeases: [{ tenantNames: ["Maya"], rentCents: 200000, nextDueDate: "2026-11-01" }],
+  { id: "b", name: "Zenith", city: "Denver", state: "CO", accountId: "llc", accountName: "J&MSP", accountType: "llc", addressLine1: "123 Forum Ave",
+    leaseEndDate: "2027-02-01", rentDueThisYear: 9, rentOnTimeThisYear: 9, activeLeases: [{ tenantNames: ["Maya"], rentCents: 200000, nextDueDate: "2026-11-01" }],
     isLate: true, leftCents: -4000 },
-  { id: "a", name: "Aspen", city: "Boulder", state: "CO", accountId: "personal", accountName: "Personal",
-    activeLeases: [{ tenantNames: ["Angel"], rentCents: 100000, nextDueDate: "2026-11-01" }],
+  { id: "a", name: "Aspen", city: "Boulder", state: "CO", accountId: "personal", accountName: "Personal", accountType: "individual", addressLine1: "1 Aspen St",
+    leaseEndDate: null, rentDueThisYear: 0, rentOnTimeThisYear: 0, activeLeases: [{ tenantNames: ["Angel"], rentCents: 100000, nextDueDate: "2026-11-01" }],
     isLate: false, leftCents: 75000 },
-  { id: "c", name: "Vacant", city: "Denver", state: "CO", accountId: "llc", accountName: "J&MSP",
-    activeLeases: [], isLate: false, leftCents: 0 }
+  { id: "c", name: "Vacant", city: "Denver", state: "CO", accountId: "llc", accountName: "J&MSP", accountType: "llc", addressLine1: "123 Forum Ave",
+    leaseEndDate: "2027-02-01", rentDueThisYear: 9, rentOnTimeThisYear: 9, activeLeases: [], isLate: false, leftCents: 0 }
 ], ytd: { inCents: 100000, outCents: 20000 }, recent: [] };
 const summary = { lateCharges: [], openRepairCount: 0, newMessageCount: 0 };
 const base = { summary, bankState: { status: "connected" as const, href: "/connect/onboard" },

@@ -3,8 +3,14 @@ import { resolveMoneySelection } from "@/app/owner/money/resolve";
 
 const now = new Date("2026-10-03T15:00:00Z");
 describe("money page selection", () => {
-  it("falls back from a foreign property to the first administered home", () => {
-    expect(resolveMoneySelection(["allowed", "second"], "foreign", undefined, now).propertyId).toBe("allowed");
+  it("2b invalid property selects all homes", () => {
+    expect(resolveMoneySelection(["allowed", "second"], "foreign", undefined, now).propertyId).toBeNull();
+  });
+  it("2a missing property selects all homes", () => {
+    expect(resolveMoneySelection(["allowed"], undefined, undefined, now).propertyId).toBeNull();
+  });
+  it("2c valid property is preserved", () => {
+    expect(resolveMoneySelection(["allowed"], "allowed", undefined, now).propertyId).toBe("allowed");
   });
   it("uses real UTC today for the current month", () => {
     expect(resolveMoneySelection(["allowed"], undefined, "2026-10", now).alertToday).toBe("2026-10-03");

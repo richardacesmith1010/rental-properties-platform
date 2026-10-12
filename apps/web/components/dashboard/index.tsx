@@ -227,6 +227,9 @@ export function Dashboard(props: DashboardProps) {
     <div className="min-h-full">
       <SectionRenderer
         {...sectionRendererProps}
+        ownerWalletHome={props.ownerWalletHome}
+        onAddHome={openPropertyWizard}
+        onAddTenantToHome={(id) => { sectionRendererProps.onSelectProperty(id); openLeaseWizard(); }}
         initialOperationsTask={initialOperationsTask}
         initialOperationsPropertyId={initialOperationsPropertyId}
         onInitialOperationsStateConsumed={() => {
@@ -363,7 +366,7 @@ export function Dashboard(props: DashboardProps) {
 
         {isOwnerRole ? (
           <div className="mt-3 flex min-h-0 flex-1 flex-col">
-            <div
+            {activeSection !== "portfolio" && <div
               className={`flex w-full items-start justify-between gap-3 py-4 ${isOwnerDailyOpsHomePage
                 ? "mx-auto max-w-[720px]"
                 : "flex-col sm:flex-row"}`}
@@ -401,9 +404,10 @@ export function Dashboard(props: DashboardProps) {
                     ? () => setIsAnnouncementComposerOpen(true) : undefined}
                   announcementDisabled={announcementButtonDisabled} announcementTitle={announcementButtonTitle} />
               </div>
-            </div>
+            </div>}
             <section id={isDailyOpsHomePage ? "daily-ops-home" : activeSection}
-              className={isOwnerDailyOpsHomePage ? "min-h-0 flex-1 pb-24 pt-3" :
+              className={isOwnerDailyOpsHomePage || (isOwnerRole && activeSection === "portfolio")
+                ? "min-h-0 flex-1 pb-24 pt-3" :
                 "domus-card min-h-0 flex-1 px-3 pb-24 pt-3 shadow-sm sm:rounded-[28px] sm:px-5"}>
               {renderedSectionContent}
             </section>

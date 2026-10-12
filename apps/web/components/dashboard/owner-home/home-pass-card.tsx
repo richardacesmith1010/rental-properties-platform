@@ -2,7 +2,10 @@ import { ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import type { WalletHomeEntry } from "@/lib/owner-wallet-home";
 
-const colors = ["#14532D", "#1E3A8A", "#111214", "#7C2D12"];
+export const passCardColors = ["#14532D", "#1E3A8A", "#111214", "#7C2D12"];
+export const passCardStyle = (index: number) => ({
+  backgroundColor: passCardColors[index % passCardColors.length], borderRadius: 22, boxShadow: "var(--shadow-lg)"
+});
 
 export function HomePassCard({ home, index, single, showAccount = false }: {
   home: WalletHomeEntry; index: number; single?: boolean; showAccount?: boolean;
@@ -17,7 +20,7 @@ export function HomePassCard({ home, index, single, showAccount = false }: {
     <a href={`/owner/money?property=${encodeURIComponent(home.id)}`} title={`Open money for ${home.name}`}
       className={`flex min-h-64 snap-start flex-col justify-between p-5 text-white ${single
         ? "min-w-full" : "min-w-[88%] sm:min-w-[calc(50%-0.375rem)]"}`}
-      style={{ backgroundColor: colors[index % colors.length], borderRadius: 22, boxShadow: "var(--shadow-lg)" }}>
+      style={passCardStyle(index)}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="truncate text-xl font-bold">{home.name}</h2>

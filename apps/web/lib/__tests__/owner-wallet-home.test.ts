@@ -16,21 +16,25 @@ import { loadOwnerWalletHome } from "@/lib/owner-wallet-home";
 
 const today = new Date("2026-10-11T12:00:00Z");
 const homes = [
-  { id: "p1", name: "First", city: "Denver", state: "CO", ownerAccountName: "Personal" },
-  { id: "p2", name: "Second", city: "Boulder", state: "CO", ownerAccountName: "J&MSP" }
+  { id: "p1", name: "First", city: "Denver", state: "CO", addressLine1: "1 Main St", ownerAccountName: "Personal" },
+  { id: "p2", name: "Second", city: "Boulder", state: "CO", addressLine1: "2 Main St", ownerAccountName: "J&MSP" }
 ];
 const rentRows = () => ({ units: [{ id: "u1", property_id: "p1" }, { id: "u2", property_id: "p2" }],
-  leases: [{ id: "l1", unit_id: "u1" }, { id: "l2", unit_id: "u2" }],
-  charges: [{ id: "c1", lease_id: "l1", status: "pending", due_date: "2026-10-10", deleted_at: null },
-    { id: "c2", lease_id: "l2", status: "pending", due_date: "2026-10-12", deleted_at: null },
-    { id: "c3", lease_id: "l2", status: "paid", due_date: "2026-10-01", deleted_at: null }],
+  leases: [{ id: "l1", unit_id: "u1", grace_period_days: 4 }, { id: "l2", unit_id: "u2", grace_period_days: 0 }],
+  charges: [{ id: "c1", lease_id: "l1", category: "rent", amount_cents: 100000,
+    status: "pending", due_date: "2026-10-10", deleted_at: null },
+    { id: "c2", lease_id: "l2", category: "rent", amount_cents: 50000,
+      status: "pending", due_date: "2026-10-12", deleted_at: null },
+    { id: "c3", lease_id: "l2", category: "rent", amount_cents: 50000,
+      status: "paid", due_date: "2026-10-01", deleted_at: null }],
   payments: [{ id: "pay1", rent_charge_id: "c1", amount_cents: 100000, paid_at: "2026-10-01", reversed_at: null },
     { id: "pay2", rent_charge_id: "c2", amount_cents: 50000, paid_at: "2026-09-01", reversed_at: null }] });
 
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.administered.mockResolvedValue([{ id: "p1", ownerAccountId: "a1" }, { id: "p2", ownerAccountId: "a2" }]);
-  mocks.accounts.mockResolvedValue([{ id: "a1", displayName: "Personal" }, { id: "a2", displayName: "J&MSP" }]);
+  mocks.accounts.mockResolvedValue([{ id: "a1", displayName: "Personal", accountType: "individual" },
+    { id: "a2", displayName: "J&MSP", accountType: "llc" }]);
   mocks.portfolio.mockResolvedValue({ properties: homes, leases: [
     { id: "l1", propertyId: "p1", unitId: "u1", tenantName: "Maya", active: true,
       monthlyRentCents: 100000, dueDayOfMonth: 1, startDate: "2025-01-01", endDate: "2028-01-01" }
@@ -95,5 +99,19 @@ describe("loadOwnerWalletHome", () => {
     expect(mocks.portfolio).toHaveBeenCalledWith("owner", null, ["p1", "p2"]);
     expect(mocks.rentRows).toHaveBeenCalledWith(["p1", "p2"], "2026-01-01", "2027-01-01");
     expect(mocks.money).toHaveBeenCalledWith(["p1", "p2"], today);
+  });
+  it("4a counts grace-day payment and excludes payment after grace", async () => {
+    const rows = rentRows();
+    rows.payments[0].paid_at = "2026-10-14";
+    mocks.rentRows.mockResolvedValue(rows);
+    const onTime = await loadOwnerWalletHome("owner", new Date("2026-10-20T12:00:00Z"));
+    if (onTime.ok) expect(onTime.homes[0].rentOnTimeThisYear).toBe(1);
+    rows.payments[0].paid_at = "2026-10-15";
+    const late = await loadOwnerWalletHome("owner", new Date("2026-10-20T12:00:00Z"));
+    if (late.ok) expect(late.homes[0].rentOnTimeThisYear).toBe(0);
+  });
+  it("4b future due rent is not counted", async () => {
+    const result = await loadOwnerWalletHome("owner", today);
+    if (result.ok) expect(result.homes[1].rentDueThisYear).toBe(1);
   });
 });

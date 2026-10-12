@@ -1,97 +1,62 @@
 "use client";
 
 import Link from "next/link";
-import { formatCurrency } from "@/lib/format";
-import { groupByCategory, homeMoneyCsv, runningBalance, type Entry, type MoneyAlert } from "@/lib/home-money";
+import { homeMoneyCsv, runningBalance, type Entry, type MoneyAlert } from "@/lib/home-money";
+import { MoneyHero } from "./money-hero";
+import { PeriodSwitch, monthLabel } from "./period-switch";
+import { CategoryCard } from "./category-card";
+import { EveryItem } from "./every-item";
 
 export interface HomeMoneyPageData {
-  property: { id: string; name: string };
+  property: { id: string; name: string } | null;
   entries: Entry[];
   totals: { inCents: number; outCents: number; leftCents: number };
-  alerts: MoneyAlert[];
+  alerts: Array<MoneyAlert & { homeName?: string }>;
   properties: Array<{ id: string; name: string }>;
 }
-interface Props { data: HomeMoneyPageData; selectedMonth: string; months: string[]; }
-function monthLabel(month: string, style: "short" | "long" = "short") {
-  return new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-US", { month: style, timeZone: "UTC" });
-}
-
-function itemDate(date: string) {
-  return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", {
-    month: "short", day: "numeric", timeZone: "UTC"
-  });
-}
+interface Props { data: HomeMoneyPageData; selectedMonth: string; months: string[] }
 
 export function HomeMoneyPage({ data, selectedMonth, months }: Props) {
-  const entries = runningBalance(data.entries);
-  const period = selectedMonth === "year" ? "year" : selectedMonth;
+  const allHomes = !data.property;
+  const propertyId = data.property?.id ?? null;
+  const label = selectedMonth === "year" ? months[0]?.slice(0, 4) ?? "" : monthLabel(selectedMonth);
   const download = () => {
-    const blob = new Blob([homeMoneyCsv(entries)], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob); const link = document.createElement("a");
+    const csv = homeMoneyCsv(allHomes ? data.entries : runningBalance(data.entries), allHomes);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const name = data.property?.name ?? "All-homes";
     link.href = url;
-    link.download = `${data.property.name.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "")}-${period}.csv`;
-    link.click(); URL.revokeObjectURL(url);
+    link.download = `${name.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "")}-${selectedMonth}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
   return <div className="space-y-5">
-    <header><h1 className="text-3xl font-semibold">{data.property.name} money</h1>
-      <div className="mt-3 flex flex-wrap gap-2" aria-label="Month tabs">
-        {months.map((month) => <Link key={month} href={`/owner/money?property=${data.property.id}&month=${month}`}
-          className={`min-h-11 rounded-md border px-4 py-3 text-sm ${selectedMonth === month
-            ? "border-[var(--accent)]" : "border-[var(--line)]"}`}>{monthLabel(month)}</Link>)}
-        <Link href={`/owner/money?property=${data.property.id}&month=year`}
-          className={`min-h-11 rounded-md border px-4 py-3 text-sm ${selectedMonth === "year"
-            ? "border-[var(--accent)]" : "border-[var(--line)]"}`}>This year</Link>
-      </div>
+    <header className="flex items-center justify-between gap-3">
+      <h1 className="text-[34px] font-bold leading-tight">Money</h1>
+      <button type="button" onClick={download} title="Download current money for taxes"
+        className="domus-card min-h-11 rounded-full px-5 text-sm font-semibold">For taxes</button>
     </header>
-    {data.properties.length > 1 ? <nav className="flex flex-wrap gap-2" aria-label="Homes">
-      {data.properties.map((property) => <Link key={property.id}
-        href={`/owner/money?property=${property.id}&month=${period}`}
-        className="min-h-11 rounded-md border border-[var(--line)] px-4 py-3">{property.name}</Link>)}
-    </nav> : null}
-    <section className="domus-card p-5"><p className="text-sm text-[var(--muted)]">Left after bills</p>
-      <p className={`mt-1 text-4xl font-semibold ${data.totals.leftCents < 0 ? "text-[var(--crit)]" : "text-[var(--ink)]"}`}>
-        {formatCurrency(data.totals.leftCents)}</p>
-      <div className="mt-5 space-y-2">{groupByCategory(data.entries).map((line) => <div
-        key={`${line.direction}-${line.label}`} className={`flex justify-between ${line.direction === "in"
-          ? "text-[var(--pos)]" : "text-[var(--ink)]"}`}><span>{line.label}</span>
-          <span>{line.direction === "in" ? "+" : "−"}{formatCurrency(line.amountCents)}</span></div>)}</div>
-    </section>
-    <section aria-labelledby="heads-up-title"><h2 id="heads-up-title" className="text-xl font-semibold">Heads up</h2>
-      {data.alerts.length ? <div className="mt-2 space-y-2">{data.alerts.map((alert) => <div
-        key={`${alert.type}-${alert.title}`} className={`rounded-lg border p-4 ${alert.type === "higher-than-usual"
-          ? "border-[var(--warn)] bg-[color:var(--warn)]/10" : "border-[var(--line)]"}`}>
-          <p className="font-semibold">{alert.title}</p><p className="text-sm text-[var(--muted)]">{alert.detail}</p></div>)}</div>
-        : <p className="mt-2 text-[var(--muted)]">Nothing unusual this month.</p>}
-    </section>
-    <section aria-labelledby="every-item-title"><div className="flex items-center justify-between gap-3">
-      <h2 id="every-item-title" className="text-xl font-semibold">Every item</h2>
-      <button type="button" onClick={download} title="Download this home's money for taxes."
-        className="min-h-11 rounded-md bg-[var(--accent)] px-4 font-semibold text-white">Download for taxes</button>
-    </div>{entries.length ? <>
-      <div className="domus-card mt-3 divide-y divide-[var(--line)] sm:hidden" data-testid="stacked-money-rows">
-        {entries.map((entry) => <div key={entry.id} className="space-y-2 p-4 text-sm">
-          <div className="flex justify-between gap-3 font-medium"><span>{itemDate(entry.date)}</span><span>{entry.title}</span></div>
-          <div className="text-[var(--muted)]">{entry.source}</div>
-          <div className="flex justify-between gap-3"><span>{entry.direction === "in" ? "+" : "−"}
-            {formatCurrency(entry.amountCents)}</span><span>Balance {formatCurrency(entry.balanceCents)}</span></div>
-        </div>)}
-      </div>
-      <div className="domus-card mt-3 hidden overflow-x-auto sm:block"><table className="w-full text-left text-sm">
-        <thead><tr className="border-b border-[var(--line)] text-[var(--muted)]">
-          <th className="p-4">Date</th><th className="p-4">What</th><th className="p-4">Type</th>
-          <th className="p-4">Amount</th><th className="p-4">Balance</th>
-        </tr></thead>
-        <tbody>{entries.map((entry) => <tr key={entry.id} className="border-b border-[var(--line)] last:border-0">
-          <td className="p-4">{itemDate(entry.date)}</td>
-          <td className="p-4"><span>{entry.title}</span><small className="block text-[var(--muted)]">{entry.source}</small></td>
-          <td className="p-4">{entry.kind === "rent" ? "Rent" : "Bill"}</td>
-          <td className="p-4">{entry.direction === "in" ? "+" : "−"}{formatCurrency(entry.amountCents)}</td>
-          <td className="p-4">{formatCurrency(entry.balanceCents)}</td>
-        </tr>)}</tbody>
-      </table></div>
-    </>
-      : <div className="domus-card mt-3 p-5"><p>Nothing here yet. <Link className="text-[var(--accent)] underline"
-        href="/owner/bank">Upload a bank file to fill this in.</Link></p></div>}
-    </section>
+    {data.properties.length >= 2 && <nav className="flex gap-2 overflow-x-auto pb-1" aria-label="Homes">
+      {[{ id: null, name: "All homes" }, ...data.properties].map((home) => <Link key={home.id ?? "all"}
+        href={`/owner/money?${home.id ? `property=${encodeURIComponent(home.id)}&` : ""}month=${selectedMonth}`}
+        title={`Show money for ${home.name}`}
+        className={`flex min-h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold
+          ${propertyId === home.id ? "bg-[var(--accent)] text-[var(--accent-contrast)]" : "domus-card"}`}>
+        {home.name}
+      </Link>)}
+    </nav>}
+    <PeriodSwitch months={months} selectedMonth={selectedMonth} propertyId={propertyId} />
+    <MoneyHero label={label} totals={data.totals} />
+    <CategoryCard entries={data.entries} />
+    {data.alerts.length > 0 && <section aria-labelledby="heads-up-title">
+      <h2 id="heads-up-title" className="mb-2 text-lg font-semibold">Heads up</h2>
+      <div className="space-y-2">{data.alerts.map((alert, index) => <div key={`${alert.type}-${index}`}
+        className="rounded-2xl bg-[var(--warn-bg)] p-4 text-[var(--ink)]">
+        <p className="font-semibold">{allHomes && data.properties.length >= 2 ? `${alert.homeName} · ` : ""}{alert.title}</p>
+        <p className="mt-1 text-sm">{alert.detail}</p>
+      </div>)}</div>
+    </section>}
+    <EveryItem entries={data.entries} allHomes={allHomes} />
   </div>;
 }
