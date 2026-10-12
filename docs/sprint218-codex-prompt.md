@@ -1,4 +1,4 @@
-# Sprint 218 — Sign-in and Create account in the Wallet look (L3, auth-adjacent UI) · rev 1
+# Sprint 218 — Sign-in and Create account in the Wallet look (L3, auth-adjacent UI) · rev 2 (ChatGPT review: APPROVE WITH CHANGES, folded in)
 
 The owner approved this on 2026-10-11. Mockups are the artboards **"Sign in"** and **"Create account"** (row 2) on https://claude.ai/artifact/FsvezREEzyFY6WXg9PDqo4.
 
@@ -9,7 +9,7 @@ Rebuild `/login` as two plain screens:
 1. **Sign in:** email + password only, plus "Forgot password?" and a "Create an account" button.
 2. **Create account:** first "What brings you to Domus?" (3 radio cards), then email + password + confirm.
 
-The auth calls, the rate limit, redirects and the callback handling must stay exactly as they are today. This is a **UI-only change to how the same calls are reached.**
+The auth calls, the rate limit, redirects and the callback handling must stay exactly as they are today. There are **no auth or backend behavior changes**, but splitting the auth component is real risk, so treat it carefully.
 
 Also ride-along: the dark-mode Money period switch's selected segment is hard to see (Sprint 217b finding).
 
@@ -148,7 +148,7 @@ In `period-switch.tsx`, the selected segment uses `--accent` fill with white tex
 - Run `rm -rf apps/web/.next` first if tsc reports " 2" duplicates.
 - Don't run `gate:web` or the e2e suite (Claude runs them against production).
 
-## 8. Acceptance criteria (binary; each one needs a named test that calls real code)
+## 8. Acceptance criteria (binary; each one needs a named test that calls real code, or the static verification named in that item)
 1. **Sign in:**
    - (a) it renders Email, Password, "Forgot password?", "Sign in" and "Create an account", with no role cards;
    - (b) submitting calls `loginAction` with only `email` and `password` form fields;
@@ -164,6 +164,10 @@ In `period-switch.tsx`, the selected segment uses `--accent` fill with white tex
    - (f) `signUp` is called with `data: { role: 'tenant' }` and `emailRedirectTo` ending `/auth/callback?next=%2Ftenant` when Tenant is chosen;
    - (g) `user_already_exists` → the "Check your email" screen;
    - (h) a weak password or a mismatch blocks the call.
+   - (i) **Allowlist at the call boundary:** for `?mode=signup&role=admin` (and `role=../evil`), the actual `signUp` call receives `options.data.role === "owner"` and `emailRedirectTo` ending `/auth/callback?next=%2Fowner`.
+   - (j) **No enumeration:** the `user_already_exists` path and a normal success render the same visible "Check your email" output. Compare the rendered text and the presence of the resend button.
+   - (k) Pick Manager → Continue → "‹ Change" → pick Tenant → submit. `signUp` gets `role: "tenant"` with `next=%2Ftenant`, so no stale role is used.
+   - (l) Pressing Enter in the password field submits both sign-in and signup step 2.
 4. A signed-in user visiting `/login` is still redirected to their role home (the existing test still passes).
 5. `loginAsRole` in `tests/e2e/helpers.ts` no longer references a role button (asserted by reading the file in a unit test, or shown in the report with a grep).
 6. The period switch in dark mode: the selected segment has the accent class, and light mode is unchanged (test).
