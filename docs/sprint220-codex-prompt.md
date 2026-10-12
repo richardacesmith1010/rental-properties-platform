@@ -1,4 +1,4 @@
-# Sprint 220 — One monthly bill: water and credits on the next rent bill, plus a monthly ledger (L3: money + schema) · rev 2
+# Sprint 220 — One monthly bill: water and credits on the next rent bill, plus a monthly ledger (L3: money + schema) · rev 3 (ChatGPT rev 2 = APPROVE WITH CHANGES; 4 REQUIRED + 4 OPTIONAL folded in)
 
 **Rev 1 was rejected by ChatGPT.** The main reason: adding a line to an existing charge races with an open Stripe checkout. Rev 2 attaches lines **only when the next monthly charge is created**, inside one DB transaction. An existing charge's amount is never changed by a line.
 
@@ -64,7 +64,7 @@ The owner approved this on 2026-10-12. Source: `docs/partner-ledger-requirements
    - Columns:
      - `id uuid primary key default gen_random_uuid()`;
      - `lease_id uuid not null references public.leases(id) on delete cascade`;
-     - `charge_id uuid null references public.rent_charges(id) on delete restrict`. Null means waiting for the next bill;
+     - `charge_id uuid null references public.rent_charges(id) on delete cascade`. Null means waiting for the next bill. Charges are normally soft-deleted; a hard delete (lease or account wipe) removes its lines with it;
      - `kind text not null check (kind in ('utility','credit'))`;
      - `label text not null check (length(trim(label)) between 1 and 60)`;
      - `amount_cents integer not null`, with `check ((kind = 'utility' and amount_cents > 0) or (kind = 'credit' and amount_cents < 0))`;
@@ -76,10 +76,12 @@ The owner approved this on 2026-10-12. Source: `docs/partner-ledger-requirements
      - a unique index on `(source_expense_id)` where not null;
      - an index on `(lease_id)` where `charge_id is null`.
 2. **RLS (enable).**
-   - SELECT policy: `public.lease_visible_to_caller(lease_id)`. This is a hardened `SECURITY DEFINER` function (`set search_path = ''`, schema-qualified). It returns true when the caller can administer the lease's property (reuse `public.can_administer_property`), or is the lease's tenant. Revoke it from public and anon; grant it to authenticated.
+   - SELECT policy: `public.lease_line_visible_to_caller(lease_id, charge_id)`. This is a hardened `SECURITY DEFINER` function (`set search_path = ''`, schema-qualified). It returns true when the caller can administer the lease's property (reuse `public.can_administer_property`), **or** is the lease's tenant **and** `charge_id is not null` (tenants never see lines still waiting for a bill). Revoke it from public and anon; grant it to authenticated.
    - There are no insert, update or delete policies.
    - `revoke all on public.rent_charge_lines from anon, authenticated; grant select on public.rent_charge_lines to authenticated;`
 3. **Service-role-only RPCs.** Each is `SECURITY DEFINER` with `set search_path = ''` and schema-qualified names, then `revoke all … from public, anon, authenticated; grant execute … to service_role;`.
+   - **Each of the 3 RPCs starts with `perform pg_advisory_xact_lock(hashtextextended('rent_charge_lines:' || p_lease_id::text, 0))`** (for remove, resolve `lease_id` from the line first, then lock), so adding, removing and generating lines for one lease are serialized.
+   - **Cutoff rule:** a line that commits after a generation transaction takes the lock belongs to the following bill.
    - **`public.add_rent_charge_line(p_lease_id uuid, p_kind text, p_label text, p_amount_cents integer, p_source_expense_id uuid, p_actor_profile_id uuid) returns uuid`.** It inserts an **unattached** line. It validates from canonical rows:
      - the lease exists;
      - the kind and sign agree;
@@ -88,13 +90,13 @@ The owner approved this on 2026-10-12. Source: `docs/partner-ledger-requirements
      - On a duplicate `source_expense_id`, it returns the existing line's id (idempotent).
    - **`public.remove_rent_charge_line(p_line_id uuid, p_actor_profile_id uuid)`** deletes only when `charge_id is null`. Otherwise it raises `line_attached`.
    - **`public.create_rent_charge_with_lines(p_lease_id uuid, p_due_date date, p_rent_cents integer) returns table(charge_id uuid, created boolean)`.** It runs in one transaction:
-     1. Insert the rent charge (`category 'rent'`, status `pending`, amount = `p_rent_cents`). If it conflicts with the unique (lease, due date, rent, not deleted) index, return the existing id with `created=false` and attach nothing.
+     1. Take the lease lock. If a non-deleted rent charge for this lease already exists with a **later** `due_date` than `p_due_date`, insert the charge without claiming lines (lines only go on the newest bill). Insert the rent charge (`category 'rent'`, status `pending`, amount = `p_rent_cents`). If it conflicts with the unique (lease, due date, rent, not deleted) index, return the existing id with `created=false` and attach nothing.
      2. Claim lines with one `update public.rent_charge_lines set charge_id = <new id>, attached_at = now() where lease_id = p_lease_id and charge_id is null and id = any(<selected ids>) returning id, amount_cents`. The `charge_id is null` re-check under row locks guarantees a line attaches at most once.
      3. **Selection rule** (deterministic; the total stays strictly > 0):
         - every unattached utility line;
         - then unattached credits, oldest first, only while rent + utilities + the credits chosen so far stays > 0;
         - credits that don't fit stay unattached for the next bill.
-     4. Set the charge's `amount_cents` = `p_rent_cents` + the sum of the claimed lines.
+     4. Set the charge's `amount_cents` = `p_rent_cents` + the sum of the claimed lines. Compute every sum in **bigint**; if the final total is ≤ 0 or > 2147483647, raise `charge_total_out_of_range` (the whole transaction rolls back; nothing is silently dropped).
      - A crash at any step rolls back everything.
 4. No change to the `rent_charges` CHECK, `payments`, or the Stripe tables.
 
@@ -104,7 +106,8 @@ The owner approved this on 2026-10-12. Source: `docs/partner-ledger-requirements
    - Then call `add_rent_charge_line` through the admin client, with `p_actor_profile_id` = the authenticated user's id. Write an audit entry.
    - A credit ≥ rent → "That credit is bigger than the rent."
    - A DB error → `{ ok: false }`.
-2. **`removeNextBillLine(lineId)`.** Same auth. If the line is attached → "This line is already on a bill. Add a credit to the next bill instead."
+2. **`removeNextBillLine(lineId)`.** Load the line through the admin client, then resolve its **canonical** lease → unit → property from DB rows (never from caller input). Authorize the actor on that property (owner or manager who can administer it). If the line is attached → "This line is already on a bill. Add a credit to the next bill instead."
+   - **Audit policy (add and remove):** the line mutation is the source of truth and also stores `created_by_profile_id`. The audit entry is written after; if writing it fails, the action still succeeds, logs `console.error('[charge-line-audit-failed]', …)`, and returns `{ ok: true, auditWarning: true }`. This is tested.
 3. **Charge generation** (`lib/charge-generation.ts`): replace the direct rent-charge insert with one `create_rent_charge_with_lines` call per lease.
    - `created=false` is the old duplicate path.
    - Keep everything else: which leases get charges, the due dates, notifications.
@@ -128,9 +131,8 @@ The owner approved this on 2026-10-12. Source: `docs/partner-ledger-requirements
      - `lib/rent-received.ts`: a new `rentOnlyReceivedCents` for the "Rent collected" tile (`owner-wallet-home.ts` ytd `inCents`). `rentReceivedCents` stays "all money in";
      - `lib/reports-pnl.ts`: a "Water paid back" line.
    - Use batched queries, no query in a loop, and check every error.
-8. **Manager fee:** where the fee base falls back to the charge amount (`app/actions/charges.ts`, and the webhook transfer code), pass `splitChargePayment(...).rentIncomeCents` for charges with lines.
+8. **Manager fee — business rule (explicit):** a configured `base_rent_cents` is the contractual base and is used exactly as today, even when a credit applies. Only where the fee base **falls back** to the charge amount (`app/actions/charges.ts`, and the webhook transfer code) is it replaced, for charges with lines, by `splitChargePayment(...).rentIncomeCents` (rent after credits).
    - Unlined charges: inputs and outputs identical to today.
-   - A configured `base_rent_cents` still wins, as today.
    - No other webhook change.
 9. **Ledger:** add `getMonthlyLeaseLedger(leaseId)` in `lib/reports-ledger.ts`.
    - Returns `lease { startDate, endDate, monthlyRentCents }`, `months[] { month, rentCents, utilityCents, creditCents, owedCents, paidCents, balanceCents, short }`, and `totals`.
@@ -145,7 +147,7 @@ The owner approved this on 2026-10-12. Source: `docs/partner-ledger-requirements
 2. **Owner Rent list:**
    - Each charge shows its lines under the amount, muted ("Rent $2,160 · Water $112.59 · Credit −$104.94").
    - Add a menu item, "Add to next bill". It opens a sheet with Type ("Water / utilities", "Credit"), Label and Amount.
-   - The lease's latest charge shows "On next bill: Water $112.59" for unattached lines, each with a Remove button.
+   - The lease's latest charge shows "On next bill: Water $112.59" for unattached lines, each with a Remove button. A credit that didn't fit on the last bill shows "Waiting for a bill big enough" in muted text.
 3. **Tenant:**
    - The amount due is the same (the charge total), with a breakdown line under it when there are lines.
    - `tenant-payments.ts` loads the category and the lines.
@@ -193,6 +195,7 @@ The owner approved this on 2026-10-12. Source: `docs/partner-ledger-requirements
   - "We saved the bill but didn't add it to the rent bill. Try again."
   - "Add to next bill"
   - "On next bill:"
+  - "Waiting for a bill big enough"
   - "Water / utilities"
   - "Credit"
   - "That credit is bigger than the rent."
@@ -233,12 +236,13 @@ The owner approved this on 2026-10-12. Source: `docs/partner-ledger-requirements
    - (i) calling it twice → one line;
    - (j) form retry → exactly one bill and one line;
    - (k) `sourceExpenseId` isn't in the client action's schema.
-2. **`removeNextBillLine`:** unattached → removed; attached → the exact copy.
+2. **`removeNextBillLine`:** unattached → removed; attached → the exact copy; an actor who administers a different property is rejected even with a valid line id; an audit-write failure → `{ ok: true, auditWarning: true }` and the `[charge-line-audit-failed]` log (also tested for add).
 3. **Generation** (RPC mocked at the boundary):
    - (a) the total = rent + claimed lines;
    - (b) `created=false` → nothing attached;
    - (c) the selection rule: all utilities; credits oldest first while the total stays > 0; excess credit stays waiting;
-   - (d) the existing generation tests pass.
+   - (d) the existing generation tests pass;
+   - (e) a total out of range → the RPC error is surfaced and no charge is created (mocked error at the boundary).
 4. **Charge editing:** an amount edit on a lined charge is blocked with the exact copy; an unlined charge works as today.
 5. **`chargeBreakdown` / `splitChargePayment`:**
    - (a) credit < rent;
@@ -252,10 +256,10 @@ The owner approved this on 2026-10-12. Source: `docs/partner-ledger-requirements
    - (b) "Rent collected" excludes water;
    - (c) "Left after bills" is unchanged for unlined data (snapshot);
    - (d) P&L has a "Water paid back" line;
-   - (e) manager fee: rent-only is identical to today; with rent + water, it's on rent only; with rent + water + credit, it's on rent after the credit; a configured `base_rent_cents` is unchanged in all 3.
+   - (e) manager fee (fallback base): rent-only is identical to today; rent + water → on rent only; rent + water + credit → on rent after the credit. With a configured `base_rent_cents`, the fee equals today's in all 3 cases (contract rule).
 7. **Tenant:** the breakdown shows with lines and not without; rent + water in one month says "1 month".
 8. **Ledger:**
-   - (a) a fixture from the sheet: Nov rent 2,160 + water 112.59, paid 2,273 → balance −0.41;
+   - (a) a fixture from the sheet: Nov rent 2,160 + water 112.59, paid 2,273 → balance −0.41; plus a 3-month fixture mixing an underpaid month, an overpaid month, a waived charge and a reversed payment. `short` is per month (that month's paid < that month's owed, once it's due), and the balance is cumulative;
    - (b) a short month is flagged;
    - (c) waived and reversed items are excluded in both ledgers;
    - (d) the totals.
@@ -265,7 +269,9 @@ The owner approved this on 2026-10-12. Source: `docs/partner-ledger-requirements
    - only select is granted to authenticated;
    - the 3 RPCs are SECURITY DEFINER with `search_path = ''`, revoked from public, anon and authenticated, and granted to service_role only;
    - `created_by_profile_id` has no default;
-   - `charge_id` uses `on delete restrict`.
+   - `charge_id` uses `on delete cascade`;
+   - each RPC calls `pg_advisory_xact_lock`;
+   - sums use bigint.
 10. Lint, typecheck, the full suite and the build are green.
 
 **Claude will also run live SQL (rolled back) proving:**
@@ -273,7 +279,8 @@ The owner approved this on 2026-10-12. Source: `docs/partner-ledger-requirements
 - managers and owners read only lines on homes they administer;
 - direct writes are denied;
 - authenticated users can't execute the RPCs;
-- a line is claimed at most once across two `create_rent_charge_with_lines` calls;
+- a line is claimed at most once across two `create_rent_charge_with_lines` calls, and never by an older due date once a newer charge exists;
+- a tenant can't see unattached lines;
 - the credit selection rule holds.
 
 ## 9. Report format
