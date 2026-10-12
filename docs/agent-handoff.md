@@ -816,3 +816,13 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   - device build with no override; `codesign --verify --deep --strict` OK (Apple Development);
   - the owner tapped Stripe on a real iPhone: back to Domus once, no white screen.
 - **Note:** `config.test.cjs` refuses while `Signing.local.xcconfig` exists. Move it aside to run it, then restore it.
+
+## Sprint 215 / 215b / 215c SHIPPED (2026-10-11) — Wallet redesign foundation (L3)
+- **Look:** Wallet tokens in `globals.css` (light `#F2F2F5` ground, accent `#0A5BD3`; dark `#000` / `#1C1C1E`); radius tokens; the Geist font replaces Inter; tabular numbers.
+- **Owner phone tab bar:** Home · Money · Homes · Inbox · More, on every owner page (`app/owner/layout.tsx` plus the Money and Bank pages). The Bank page counts as the Money tab.
+- **Year-to-date:** Home YTD income now comes from the shared calculation in `lib/rent-received.ts` (`paid_at`, integer cents, excludes reversed payments and deleted charges, includes **all charge categories**, as Money always did). Claude restored the all-categories rule (a boundary break, 1 line); Codex had excluded non-rent charges because of a contradiction in the packet.
+- **Live:** owner Home shows YTD income $21,150 and net −$1,846.74, matching Money.
+- **215b (test-only):** the phone theme smoke scopes the drawer nav and waits for the drawer to close (Claude added the wait).
+- **215c:** the settings avatar input fits at 375 px.
+- **Verify:** gate 2017; smoke all green (mobile layout plus theme contrast for owner/manager/tenant, light and dark, at phone size); manual phone screenshots in light and dark.
+- **Next:** Sprint 216 — rebuild the owner Home in the Wallet layout (canvas FsvezREEzyFY6WXg9PDqo4).
