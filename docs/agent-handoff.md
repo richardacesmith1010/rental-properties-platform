@@ -826,3 +826,10 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - **215c:** the settings avatar input fits at 375 px.
 - **Verify:** gate 2017; smoke all green (mobile layout plus theme contrast for owner/manager/tenant, light and dark, at phone size); manual phone screenshots in light and dark.
 - **Next:** Sprint 216 — rebuild the owner Home in the Wallet layout (canvas FsvezREEzyFY6WXg9PDqo4).
+
+## In flight (2026-10-11 evening)
+- **Sprint 216** (owner Home Wallet layout, `docs/sprint216-codex-prompt.md`): Codex gpt-6-sol high is running. Report: `<scratchpad>/s216-report.json`. Verify per §8: the manager Home regression, then gate/deploy/smoke and phone screenshots in light and dark.
+- **Sign-in redesign:** mockups "Sign in" + "Create account" are on canvas FsvezREEzyFY6WXg9PDqo4, row 2, **awaiting owner approval**.
+  - Proposal: sign-in = email + password only (role is known after sign-in); role choice moves to "Create account" (owner / manager / tenant radio cards); tenants are told to use their invite link.
+  - Becomes Sprint 218 (auth-adjacent → L3 + ChatGPT review), after 217 (Money + Homes).
+- **Session rotation:** the transcript is about 45 MB. Rotate after 216 ships.
