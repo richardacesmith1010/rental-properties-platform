@@ -38,7 +38,7 @@ test.describe("authenticated content speed", () => {
       name: "owner Home",
       budgetMs: 3_000,
       visible: async (current) => {
-        await expect(current.getByText("Needs you today")).toBeVisible();
+        await expect(current.getByRole("heading", { name: "Home", exact: true })).toBeVisible();
       }
     });
     await measureRoute(page, {
