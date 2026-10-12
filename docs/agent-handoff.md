@@ -881,3 +881,7 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Verify: gate 2093, smoke green, CI green. The real owner's Money → Mom's House shows the Partners card (The LLC, Ciocia Patel, Richard Smith; rows expand), viewed only, with no writes to real data.
 - **Data note:** Mom's House has no bills in Domus yet, so Put in is $0 everywhere. The sister's history (and partners Yani and Mom's Estate) must be entered for the report to replace her sheet.
 - **Next partner sprints (docs/partner-ledger-requirements.md):** 220 tenant ledger by month (water billing, refunds, monthly view); 221 managing-partner fee and settle-up suggestion; 222 deposits held / available cash; 223 shared duties. Then Face ID.
+
+## In flight (2026-10-12 17:00 MDT) — Sprint 220 (one monthly bill: water/credit lines; L3, ChatGPT REJECT → rev 2 AWC → rev 3 APPROVE)
+- Codex hit its usage limit mid-run (304k tokens). The partial work is in the tree, uncommitted. An auto-resume is scheduled for 18:16 (`<scratchpad>/s220-resume.sh`, resume note + packet).
+- After it finishes: review → Claude applies the migration `20261013_sprint220_charge_lines.sql` → live attacker + concurrency SQL (see packet §8 "Claude will also run") → gate → deploy → walk.
