@@ -1,4 +1,4 @@
-# Sprint 219 — Partners: who paid, partner payments, "Put in" report (L3: schema + money) · rev 3 (ChatGPT rev 2 = APPROVE WITH CHANGES, 3 required + 3 optional folded in; rev 1 = REJECT: attribution moved to an owner-only table; DB-enforced profile link + creator; inactive partners; projected %)
+# Sprint 219 — Partners: who paid, partner payments, "Put in" report (L3: schema + money) · rev 3 — ChatGPT FINAL: APPROVE (rev 2 = APPROVE WITH CHANGES, 3 required + 3 optional folded in; rev 1 = REJECT: attribution moved to an owner-only table; DB-enforced profile link + creator; inactive partners; projected %)
 
 The owner decided on 2026-10-11 that the partner sprints come before Face ID. Requirements are in `docs/partner-ledger-requirements.md` (Sheet B: B1, B2, B4, plus the B3 fee entries as manual partner payments).
 
@@ -19,7 +19,7 @@ For LLC ownership accounts:
 
 Personal (`individual`) accounts don't change. Managers never see partner data.
 
-## 2. Context (HEAD = 218's commit, branch `main`)
+## 2. Context (HEAD `8bd3e34`, branch `main`)
 - **Live schema (verified 2026-10-11):**
   - `property_expenses`: id, property_id, created_by_profile_id, category (CHECK in mortgage | insurance | property_tax | hoa | repair | maintenance | utility | management_fee | legal | other), description, amount_cents (> 0), expense_date, recurring, recurring_frequency, vendor_id, receipt_file_id, created_at.
     - RLS: all four commands use `can_administer_property(property_id)`, which managers pass too.
@@ -44,7 +44,7 @@ Personal (`individual`) accounts don't change. Managers never see partner data.
    - `public.is_active_owner_member(p_account_id uuid, p_profile_id uuid)`: an active `member_role = 'owner'` row exists.
    - `public.expense_in_account(p_expense_id uuid, p_account_id uuid)`: the expense's `property.owner_account_id = p_account_id`, and that account is `llc`.
    - `public.is_llc_account(p_account_id uuid)`: the account exists and its `account_type = 'llc'`.
-   - For both: `revoke all on function … from public, anon;` then `grant execute … to authenticated;` (RLS evaluates them as the caller).
+   - For **all three helpers**: `revoke all on function … from public, anon;` then `grant execute … to authenticated;` (RLS evaluates them as the caller).
 2. **`public.account_partners` table:**
    - columns: `id uuid pk default gen_random_uuid()`, `account_id uuid not null references ownership_accounts(id) on delete cascade`, `display_name text not null check (length(trim(display_name)) between 1 and 80)`, `profile_id uuid null references profiles(id) on delete set null`, `active boolean not null default true`, `created_at timestamptz not null default now()`;
    - `unique (id, account_id)`;
@@ -144,7 +144,7 @@ Personal (`individual`) accounts don't change. Managers never see partner data.
   1. Save the bill with the existing action, and keep the returned expense id.
   2. If "Who paid?" isn't "The LLC", call `setExpensePaidBy(id, partnerId)`.
   3. If step 2 fails, show "We saved the bill but not who paid. Try again." with a **Try again** button. That button retries **only** `setExpensePaidBy` for the same id; it never creates the bill again.
-  4. Editing a bill calls `setExpensePaidBy` with the new choice, or null for The LLC.
+  4. Editing a bill **preselects the saved payer** (never defaults to The LLC). It calls `setExpensePaidBy` only when the choice changed: the new partner, or null for The LLC.
   - If the existing create action doesn't return the new id, extend its success result with `expenseId`. That's the only change to `expenses.ts`.
 - Managers and personal-account homes never see "Who paid?", and never call `setExpensePaidBy` (the server also rejects them).
 
@@ -260,6 +260,7 @@ Personal (`individual`) accounts don't change. Managers never see partner data.
    - (d) "improvement" is accepted;
    - (e) **retry-safe:** the bill saves, then attribution fails, then "Try again" succeeds. Exactly one bill exists, `create` was called once, and one attribution row exists;
    - (f) `setExpensePaidBy` is idempotent;
+   - (h) editing a bill with a saved payer preselects it, and saving without changing it doesn't clear it;
    - (g) the existing bill create and update tests are unchanged and pass.
 4. **UI:**
    - (a) "Who paid?" shows only for LLC homes, for owner members, and lists only active partners;
