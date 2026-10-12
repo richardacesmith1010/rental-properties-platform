@@ -36,6 +36,11 @@ describe("owner header", () => {
       userEmail: "", data: { profileRole: "owner" }, rentCollectionConnected: true
     } as DashboardProps} />);
     expect(screen.getByRole("heading", { name: "Rent" })).toBeVisible();
+    const title = screen.getByRole("heading", { name: "Rent" });
+    const titleBlock = title.parentElement;
+    const titleRow = titleBlock?.parentElement;
+    expect(titleBlock).toHaveClass("min-w-0");
+    expect(titleRow).toHaveClass("flex-col", "sm:flex-row");
     expect(screen.getByText("Track rent and see who has paid.")).toBeVisible();
     expect(screen.getByText("Full rent section")).toBeVisible();
     expect(screen.getByRole("heading", { name: "Rent" }).closest(".domus-card")).toBeNull();

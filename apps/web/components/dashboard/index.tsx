@@ -363,8 +363,12 @@ export function Dashboard(props: DashboardProps) {
 
         {isOwnerRole ? (
           <div className="mt-3 flex min-h-0 flex-1 flex-col">
-            <div className={`flex w-full items-start justify-between gap-3 py-4 ${isOwnerDailyOpsHomePage ? "mx-auto max-w-[720px]" : ""}`}>
-              <div>
+            <div
+              className={`flex w-full items-start justify-between gap-3 py-4 ${isOwnerDailyOpsHomePage
+                ? "mx-auto max-w-[720px]"
+                : "flex-col sm:flex-row"}`}
+            >
+              <div className={isOwnerDailyOpsHomePage ? "" : "min-w-0 break-words"}>
                 {isDailyOpsHomePage ? (
                   <div>
                     <p className="text-sm text-[var(--muted)]">{greeting ? `${greeting}, ${displayName}` : displayName}</p>
@@ -372,14 +376,16 @@ export function Dashboard(props: DashboardProps) {
                   </div>
                 ) : (
                   <>
-                    <h1 className="text-[34px] font-bold leading-tight text-[var(--ink)]">{activeSectionLabel}</h1>
+                    <h1 className="break-words text-[34px] font-bold leading-tight text-[var(--ink)]">{activeSectionLabel}</h1>
                     <p className="mt-1 text-[15px] text-[var(--muted)]">
                       {ownerPageDescriptions[activeSection] ?? "Manage your homes and the people who live there."}
                     </p>
                   </>
                 )}
               </div>
-              <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
+              <div className={isOwnerDailyOpsHomePage
+                ? "flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center"
+                : "flex w-full flex-wrap items-center justify-start gap-2 sm:w-auto sm:shrink-0 sm:justify-end"}>
                 {canSendAnnouncements && !isOwnerDailyOpsHomePage ? (
                   <Button type="button" variant="outline" className="min-h-11"
                     disabled={announcementButtonDisabled}
