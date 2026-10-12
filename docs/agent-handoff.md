@@ -829,7 +829,11 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 
 ## In flight (2026-10-11 evening)
 - **Sprint 216** (owner Home Wallet layout, `docs/sprint216-codex-prompt.md`): Codex gpt-6-sol high is running. Report: `<scratchpad>/s216-report.json`. Verify per §8: the manager Home regression, then gate/deploy/smoke and phone screenshots in light and dark.
-- **Sign-in redesign:** mockups "Sign in" + "Create account" are on canvas FsvezREEzyFY6WXg9PDqo4, row 2, **awaiting owner approval**.
+- **Sign-in redesign:** mockups "Sign in" + "Create account" are on canvas FsvezREEzyFY6WXg9PDqo4, row 2. **Owner APPROVED 2026-10-11.**
   - Proposal: sign-in = email + password only (role is known after sign-in); role choice moves to "Create account" (owner / manager / tenant radio cards); tenants are told to use their invite link.
   - Becomes Sprint 218 (auth-adjacent → L3 + ChatGPT review), after 217 (Money + Homes).
 - **Session rotation:** the transcript is about 45 MB. Rotate after 216 ships.
+- **Face ID (owner wants it, 2026-10-11):** planned as Sprint 219, after the sign-in redesign (218). It's a phone-app sprint, so L3 + ChatGPT review + gpt-6-astra + a real-iPhone test.
+  - **Design rule:** Face ID unlocks a session token kept in the iOS Keychain (biometry-gated). It never stores the password.
+  - **Fallback:** the normal sign-in.
+  - **Setting:** owner opt-in on the first sign-in, and it can be turned off in Settings.
