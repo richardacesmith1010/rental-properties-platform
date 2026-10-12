@@ -855,6 +855,7 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 
 ## In flight (2026-10-11 night) — Sprint 217 (owner answers: Home shows every home = yes; header "move it"; 217 approved)
 - Split into two Codex runs to stay under usage limits:
-  - **217a** (`docs/sprint217a-codex-prompt.md`, gpt-6-sol medium, RUNNING): Home across all accounts (`lib/owner-wallet-home.ts`), owner title row on the ground (no card on Home), phone top bar removed for owners (search/notifications/profile → More drawer, More tab badge), 404 heading contrast fix.
-  - **217b** (`docs/sprint217b-codex-prompt.md`, queued after 217a ships): Money all-homes Wallet layout + Homes pass cards grouped by account, "Manage homes" keeps the old portfolio tools.
+  - **217a** SHIPPED `a24fd0a` + `9bf2db7` (`docs/sprint217a-codex-prompt.md`, gpt-6-sol medium, 186k tokens): Home across all accounts (`lib/owner-wallet-home.ts`), owner title row on the ground (no card on Home), phone top bar removed for owners (search/notifications/profile → More drawer, More tab badge), 404 heading contrast fix.
+  - **217b** (`docs/sprint217b-codex-prompt.md`, gpt-6-sol medium, RUNNING): Money all-homes Wallet layout + Homes pass cards grouped by account, "Manage homes" keeps the old portfolio tools.
 - Found while scoping: 404 page "Page not found" is white-on-light (fixed in 217a).
+- **217a verify:** review found isLate ignored grace + outside-Domus leases → 217a-fix (luna) uses status='late' + tracksLateRent. Smoke caught 34px section titles overflowing at 375px (Applications) → 217a-fix2 wraps actions under the title. Gate 2034/2034, smoke all green, CI green, Playwright phone walk light+dark (Home, More drawer, Applications, 404) with zero page errors. Multi-account labels not walked (smoke owner has 1 account) — owner to eyeball Mom's House on their Home.
