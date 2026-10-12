@@ -129,7 +129,7 @@ export function ProfileSettings({
           )}
         </div>
 
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2">
           <input
             key={fileInputKey}
             id="settings-avatar"
@@ -137,7 +137,7 @@ export function ProfileSettings({
             type="file"
             accept="image/jpeg,image/png,image/webp"
             onChange={handleAvatarChange}
-            className="block text-sm text-[var(--ink-2)] file:mr-3 file:rounded-md file:border-0 file:bg-[var(--accent-weak)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[var(--accent)] hover:file:bg-[var(--accent-line)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ground)]"
+            className="block w-full max-w-full min-w-0 text-sm text-[var(--ink-2)] file:mr-3 file:rounded-md file:border-0 file:bg-[var(--accent-weak)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[var(--accent)] hover:file:bg-[var(--accent-line)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ground)]"
           />
           <p className="text-xs text-[var(--muted)]">JPG, PNG, or WebP up to 5MB.</p>
           {previewUrl ? (
