@@ -852,3 +852,9 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   - The title still sits inside a white header card; the mockup has it on the ground. Polish in 217.
 - **Next:** Sprint 217 (Money + Homes in the Wallet layout), then 218 sign-in redesign (approved; L3), then 219 Face ID (phone L3).
 - **Codex usage:** gpt-6-sol hits the limit mid-sprint on big packets. Schedule a resume with a sleep-until in a background Bash run, and always use `< /dev/null`.
+
+## In flight (2026-10-11 night) — Sprint 217 (owner answers: Home shows every home = yes; header "move it"; 217 approved)
+- Split into two Codex runs to stay under usage limits:
+  - **217a** (`docs/sprint217a-codex-prompt.md`, gpt-6-sol medium, RUNNING): Home across all accounts (`lib/owner-wallet-home.ts`), owner title row on the ground (no card on Home), phone top bar removed for owners (search/notifications/profile → More drawer, More tab badge), 404 heading contrast fix.
+  - **217b** (`docs/sprint217b-codex-prompt.md`, queued after 217a ships): Money all-homes Wallet layout + Homes pass cards grouped by account, "Manage homes" keeps the old portfolio tools.
+- Found while scoping: 404 page "Page not found" is white-on-light (fixed in 217a).
