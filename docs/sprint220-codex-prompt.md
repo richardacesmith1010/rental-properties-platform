@@ -1,4 +1,4 @@
-# Sprint 220 — One monthly bill: water and credits on the next rent bill, plus a monthly ledger (L3: money + schema) · rev 3 (ChatGPT rev 2 = APPROVE WITH CHANGES; 4 REQUIRED + 4 OPTIONAL folded in)
+# Sprint 220 — One monthly bill: water and credits on the next rent bill, plus a monthly ledger (L3: money + schema) · rev 3 — ChatGPT FINAL: APPROVE
 
 **Rev 1 was rejected by ChatGPT.** The main reason: adding a line to an existing charge races with an open Stripe checkout. Rev 2 attaches lines **only when the next monthly charge is created**, inside one DB transaction. An existing charge's amount is never changed by a line.
 
@@ -26,7 +26,7 @@ The owner approved this on 2026-10-12. Source: `docs/partner-ledger-requirements
    - a totals row.
    - Also fix the existing ledger bugs: waived charges and reversed payments must not count.
 
-## 2. Context (HEAD after 219, branch `main`; code survey 2026-10-12)
+## 2. Context (HEAD `b0c1928`, branch `main`; code survey 2026-10-12)
 - **`rent_charges`:**
   - category CHECK is `('rent','late_fee')`;
   - unique index on `(lease_id, due_date, category)` where not deleted;
