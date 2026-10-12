@@ -862,3 +862,8 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - **217b verify:** gate 2051/2051, smoke green, CI green, phone walk light+dark (Money month/year/every item, Homes) zero page errors. Live data: 1st Home = 9 of 9 on time. Bounded per-home Promise.all on /owner/money is accepted debt.
 - **Findings for next sprint:** dark-mode Money period switch selected segment barely distinguishable from the track.
 - **Next:** Sprint 218 — sign-in redesign (approved; auth-adjacent → L3, ChatGPT review before Codex). Then 219 Face ID (phone L3).
+
+## Order decided 2026-10-11 (owner)
+- 218 sign-in redesign: ChatGPT APPROVE WITH CHANGES (3 required tests folded in, rev 2) → Codex gpt-6-sol RUNNING.
+- **Then the partner/tenant ledger sprints (`docs/partner-ledger-requirements.md`) BEFORE Face ID.** Owner: "Do the partner sprints before Face ID." Goal: the co-owner sister never needs her own spreadsheet.
+- Face ID (219 → renumbered after the partner sprints).
