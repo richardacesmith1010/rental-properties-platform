@@ -894,3 +894,17 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - **Not walked with real lines** (the smoke leases feed the owner's dry run). The first real water pass-through should be eyeballed on its next bill.
 - **Next partner sprints:** 221 managing-partner fee + settle-up suggestion; 222 deposits held / available cash; 223 shared duties. Then Face ID.
 - **2026-10-12 owner decision:** next is **bank sync** (Plaid production + `/transactions/sync` + webhook + persistent review queue, per `docs/bank-feed-design.md` Phase 2), ahead of partner sprints 221–223. No automatic manager-fee calculation (manual "Manager fee" partner payment only). Settle-up = equal shares, later. Plaid keys exist in Vercel prod (set ~203 days ago, likely sandbox); a production access application is needed (owner action).
+
+## In flight (2026-10-12 evening) — Sprint 224 bank sync (L3)
+- ChatGPT: rev 1–4 REJECT → rev 5 APPROVE WITH CHANGES → rev 6 dispatched (`docs/sprint224-codex-prompt.md`). Design highlights:
+  - encrypted Plaid tokens in a secrets table no client can read;
+  - multi-account link with server-side metadata;
+  - atomic `file_synced_bank_item` and `resolve_bank_review_item`;
+  - fenced sync lease;
+  - `pending_account_match` gate for upload↔Plaid account linking;
+  - "Bank changed this" for Plaid modified/removed filed items;
+  - signed webhook (raw-body hash, ES256, kid, key expiry);
+  - daily cron.
+- Codex runs via `<scratchpad>/run-codex.sh` (auto-resumes after a usage limit).
+- **After Codex:** review → Claude sets `BANK_TOKEN_KEY` in Vercel (32-byte base64, never printed) → applies the migration → live attacker/atomicity/lease SQL → gate → deploy → sandbox Link walk.
+- **Owner action pending:** sign in to dashboard.plaid.com so Claude can start the production access application (and request Fidelity). Live check: 0 legacy plaintext Plaid tokens exist.
