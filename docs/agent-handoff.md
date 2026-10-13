@@ -911,3 +911,17 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - 224 first Codex run: 497k tokens, 2167 tests, but the test map showed many MISSING/WEAK acceptance items (sync.ts row handling mocked away), so it FAILED per L-017. Fix-up `docs/sprint224b-codex-prompt.md` is running (tests + cron retries `error` connections + robust confirm-conflict mapping).
 - Migration reviewed: matches the design; `bank_transactions_kind_shape` and the fingerprint hex checks are satisfied; the institution CHECK widening is a superset of live. **Not yet applied.**
 - `BANK_TOKEN_KEY` set in Vercel production (generated and piped, never printed).
+
+## Sprint 224 SHIPPED (2026-10-12 night) — bank sync (L3; ChatGPT rev 1–4 REJECT → rev 5 AWC → rev 6)
+- Codex: 497k (224) + 176k (224b, test gaps + cron retries `error` + confirm-conflict mapping). 2209 tests.
+- Migration `20261014_sprint224_bank_sync.sql` applied live. `BANK_TOKEN_KEY` set in Vercel prod.
+- Live SQL (rolled back), 19/19:
+  - expense filed then replay `already`; rent filed (payment + paid); wrong amount `stale` with 0 rows; cross-account property blocked;
+  - resolve: conflict on wrong `updated_at`, stale keeps the item, `no` skips;
+  - lease: a second acquire is null; a wrong-token cursor save is false; `pending_account_match` blocks the lease; skip transitions once;
+  - perms: owner sees own connections but not secrets; RPCs and queue writes denied; manager 0; anon denied. No leftovers.
+- Prod: unsigned Plaid webhook → 401; cron without secret → 401. Smoke green, CI green. "Your banks" renders in light and dark (zero errors).
+- **Not yet verified end to end with a real Plaid Link** (sandbox test credentials are only allowed on a local host; production needs Plaid approval).
+- **Finding:** in dark mode, "Connect a bank" has white text on the light accent (low contrast). Use accent-contrast like other primary buttons.
+- **Owner action:** sign in to dashboard.plaid.com → Claude drives the production application (+ the Fidelity request, the `PLAID_REDIRECT_URI` registration, the webhook URL). Then switch `PLAID_ENV`/secret to production and do a real NFCU connect walk with the owner.
+- **Next:** 221 equal-share settle-up, 222 deposits held / available cash, 223 shared duties, then Face ID.
