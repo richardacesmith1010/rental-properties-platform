@@ -885,3 +885,11 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 ## In flight (2026-10-12 17:00 MDT) — Sprint 220 (one monthly bill: water/credit lines; L3, ChatGPT REJECT → rev 2 AWC → rev 3 APPROVE)
 - Codex hit its usage limit mid-run (304k tokens). The partial work is in the tree, uncommitted. An auto-resume is scheduled for 18:16 (`<scratchpad>/s220-resume.sh`, resume note + packet).
 - After it finishes: review → Claude applies the migration `20261013_sprint220_charge_lines.sql` → live attacker + concurrency SQL (see packet §8 "Claude will also run") → gate → deploy → walk.
+
+## Sprint 220 SHIPPED (2026-10-12) — one monthly bill (L3; ChatGPT REJECT → AWC → APPROVE)
+- Water and credit lines wait unattached and attach atomically in `create_rent_charge_with_lines` (per-lease advisory lock, newest-bill-only, credits fit while total > 0, bigint range check). An existing charge's amount never changes because of a line.
+- Codex: 304k + 106k tokens (it hit the usage limit; resumed at 18:16). Migration `20261013_sprint220_charge_lines.sql` applied live.
+- Live SQL, rolled back: 17/17 as designed (attach once; older-dated charge claims nothing; duplicate due date → created=false; credit ≥ rent blocked; tenants see only attached lines on their own lease; manager/owner scoped; direct writes, RPCs and anon all denied). No leftovers.
+- Verify: gate 2125, smoke green, CI green. Phone walk of Reports "Rent & water by month" and the Rent list in light and dark, zero page errors.
+- **Not walked with real lines** (the smoke leases feed the owner's dry run). The first real water pass-through should be eyeballed on its next bill.
+- **Next partner sprints:** 221 managing-partner fee + settle-up suggestion; 222 deposits held / available cash; 223 shared duties. Then Face ID.
