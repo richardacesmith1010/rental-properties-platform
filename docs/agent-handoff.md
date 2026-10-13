@@ -925,3 +925,8 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - **Finding:** in dark mode, "Connect a bank" has white text on the light accent (low contrast). Use accent-contrast like other primary buttons.
 - **Owner action:** sign in to dashboard.plaid.com → Claude drives the production application (+ the Fidelity request, the `PLAID_REDIRECT_URI` registration, the webhook URL). Then switch `PLAID_ENV`/secret to production and do a real NFCU connect walk with the owner.
 - **Next:** 221 equal-share settle-up, 222 deposits held / available cash, 223 shared duties, then Face ID.
+
+## Sprint 221 SHIPPED (2026-10-12 night) — Even it out (L2)
+- `suggestEvenSettleUp` (equal shares over active partners, using `projectedPutIn`, cents-exact targets, greedy ≤ n−1 payments, hidden within $1) plus a "Even it out" section in the Partners All-time view with Add as planned / Add all. Bank buttons use accent-contrast (dark fix).
+- Codex 83k tokens; 2226 tests. Viewed the real owner's Mom's House All time ("Everyone has put in about the same.", since no data yet), with no writes and no console errors.
+- **Speed finding (L-018):** owner Home p75 has crept to ~2.8–3.7 s (budget 3 s; it was ~1.9 s at 224). One smoke run failed the budget, the rerun passed. Production `[perf:owner]` shows two parallel ~2 s critical-path steps: `home.wallet` (23 queries) and `rent.year-received` (10 queries), which overlap in year-rent work. Every step was slow on that load (DB latency). **Candidate speed sprint:** merge year rent into `loadOwnerWalletHome` and drop the separate `rent.year-received` on Home; target = the remaining measured critical path.
