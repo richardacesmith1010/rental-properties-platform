@@ -930,3 +930,9 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - `suggestEvenSettleUp` (equal shares over active partners, using `projectedPutIn`, cents-exact targets, greedy ≤ n−1 payments, hidden within $1) plus a "Even it out" section in the Partners All-time view with Add as planned / Add all. Bank buttons use accent-contrast (dark fix).
 - Codex 83k tokens; 2226 tests. Viewed the real owner's Mom's House All time ("Everyone has put in about the same.", since no data yet), with no writes and no console errors.
 - **Speed finding (L-018):** owner Home p75 has crept to ~2.8–3.7 s (budget 3 s; it was ~1.9 s at 224). One smoke run failed the budget, the rerun passed. Production `[perf:owner]` shows two parallel ~2 s critical-path steps: `home.wallet` (23 queries) and `rent.year-received` (10 queries), which overlap in year-rent work. Every step was slow on that load (DB latency). **Candidate speed sprint:** merge year rent into `loadOwnerWalletHome` and drop the separate `rent.year-received` on Home; target = the remaining measured critical path.
+
+## Sprint 225 SHIPPED (2026-10-13) — owner Home speed (L2) — PASS_WITH_RISK
+- The wallet loads rent rows once (a single window), derives money with the pure `buildHomeMoney`, and runs bank needs and charge lines in parallel. `rent.year-received` is removed; `ownerYearRent` comes from the wallet (**rent-only**, fixed in 225b after Codex flagged that packet 225 wrongly said all-categories).
+- Production `[perf:owner] home.wallet`: **746–1011 ms, 16 queries** (was 1,968 ms / 23). There's no `rent.year-received` line. Smoke owner Home p75 **2.39 s** (budget 3 s, target ≤ 2.5 s, met). **Risk:** the query count of 16 missed the ≤ 14 target (the unit test's fake counts differently); the speed goal is met anyway.
+- 2231 tests, gate green, CI checked.
+- In flight: **Sprint 222** (deposits held + cash on hand; ChatGPT rev 1–3 REJECT → rev 4 AWC → rev 5 dispatched).
