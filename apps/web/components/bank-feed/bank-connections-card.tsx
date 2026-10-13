@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { formatCurrency } from "@/lib/format";
 import { loadPlaidScript } from "./plaid-script";
 
 export interface ConnectionView {
   id: string; institution_name: string; status: string; last_synced_at: string | null;
-  accounts: Array<{ id: string; nickname: string; institution: string }>;
+  accounts: Array<{ id: string; nickname: string; institution: string;
+    balance_cents?: number | null; balance_as_of?: string | null }>;
 }
 export interface MatchView {
   connectionId: string;
@@ -107,7 +109,8 @@ export function BankConnectionsCard({ ownerAccountId, connections, pendingMatch,
       <div className="flex items-start justify-between gap-2">
         <div><p className="font-medium">{connection.institution_name}</p>
           {connection.accounts.map((account) => <p key={account.id} className="text-sm text-[var(--muted)]">
-            {account.nickname}</p>)}
+            {account.nickname}{account.balance_cents != null ? ` · ${formatCurrency(account.balance_cents)}` : ""}
+            {account.balance_as_of ? ` · as of ${new Date(account.balance_as_of).toLocaleDateString("en-US")}` : ""}</p>)}
           <p className="text-sm text-[var(--muted)]">{statusText(connection)}</p>
         </div>
         <details><summary title="Bank options" className="cursor-pointer px-3 py-2">⋯</summary>

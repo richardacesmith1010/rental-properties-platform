@@ -1,3 +1,4 @@
+import { depositHeldCents } from "@/lib/deposits";
 import { getNextDueDateForLease } from "@/lib/action-items";
 import { buildHomeMoney, type OwnerMoneyItem } from "@/lib/owner-recent-activity";
 import { loadRentRowsForProperties } from "@/lib/owner-rent-rows";
@@ -15,7 +16,7 @@ export interface WalletHomeEntry {
   accountType: "individual" | "llc"; addressLine1: string; leaseEndDate: string | null;
   rentDueThisYear: number; rentOnTimeThisYear: number;
   activeLeases: { tenantNames: string[]; rentCents: number; nextDueDate: string | null }[];
-  isLate: boolean; leftCents: number;
+  isLate: boolean; leftCents: number; depositCents: number; depositReturned: boolean;
 }
 
 export type OwnerWalletHomeResult = {
@@ -149,6 +150,9 @@ export async function loadOwnerWalletHome(userId: string, today = new Date()): P
         activeLeases: active
           .map((lease) => ({ tenantNames: [lease.tenantName].filter(Boolean), rentCents: lease.monthlyRentCents,
             nextDueDate: getNextDueDateForLease(lease, today)?.toISOString().slice(0, 10) ?? null })),
+        depositCents: active.reduce((sum, lease) => sum + depositHeldCents(
+          { deposit_cents: lease.depositCents }, lease.depositReturn ?? null), 0),
+        depositReturned: active.length > 0 && active.every((lease) => Boolean(lease.depositReturn)),
         isLate: lateIds.has(property.id), leftCents: money.leftByPropertyId[property.id] ?? 0
       };
     });

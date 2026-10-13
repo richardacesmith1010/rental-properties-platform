@@ -47,6 +47,7 @@ export interface LeaseListItem {
   tenantPhone: string | null;
   monthlyRentCents: number;
   depositCents: number;
+  depositReturn?: { returned_cents: number; returned_on: string } | null;
   dueDayOfMonth: number;
   startDate: string;
   endDate: string;
@@ -366,6 +367,20 @@ export async function getPortfolioDataLegacy(
   }, managerFeesByPropertyId);
 }
 
+async function withDepositReturns(portfolio: PortfolioData): Promise<PortfolioData> {
+  const ids = portfolio.leases.map((lease) => lease.id);
+  if (!ids.length) return portfolio;
+  const result = await createAdminClient().from("lease_deposit_returns")
+    .select("lease_id,returned_cents,returned_on").in("lease_id", ids);
+  if (result.error) {
+    if (isMissingSchemaError(result.error)) return portfolio;
+    throw result.error;
+  }
+  const byId = new Map((result.data ?? []).map((row) => [row.lease_id, row]));
+  return { ...portfolio, leases: portfolio.leases.map((lease) => byId.has(lease.id)
+    ? { ...lease, depositReturn: byId.get(lease.id) } : lease) };
+}
+
 export async function getPortfolioData(
   userId: string,
   accountId?: string | null,
@@ -384,17 +399,17 @@ export async function getPortfolioData(
     if (!rpcResult.error && rpcResult.data) {
       const portfolio = assemblePortfolioPayload(rpcResult.data as unknown as PortfolioPayload, fees);
       const accountIds = [...new Set(portfolio.properties.map((home) => home.ownerAccountId).filter((id): id is string => Boolean(id)))];
-      if (accountIds.length === 0) return portfolio;
+      if (accountIds.length === 0) return withDepositReturns(portfolio);
       const { data: accounts, error: accountsError } = await admin.from("ownership_accounts")
         .select("id, display_name, managed_client").in("id", accountIds);
       if (accountsError) throw new Error("Unable to load owner accounts.");
       const byId = new Map((accounts ?? []).map((account) => [account.id, account]));
-      return { ...portfolio, properties: portfolio.properties.map((home) => ({
+      return withDepositReturns({ ...portfolio, properties: portfolio.properties.map((home) => ({
         ...home,
         ownerAccountName: home.ownerAccountId
           ? byId.get(home.ownerAccountId)?.display_name ?? home.ownerAccountName : home.ownerAccountName,
         ownerAccountIsClient: home.ownerAccountId ? byId.get(home.ownerAccountId)?.managed_client === true : false
-      })) };
+      })) });
     }
     const error = rpcResult.error;
     const code = /^[A-Z0-9]{5,10}$/.test(error?.code ?? "") ? error!.code : "UNKNOWN";
@@ -406,5 +421,5 @@ export async function getPortfolioData(
     const code = /^[A-Z0-9]{5,10}$/.test(rawCode) ? rawCode : "UNKNOWN";
     console.error("owner_rpc_fallback_error", rpcName, code);
   }
-  return getPortfolioDataLegacy(userId, accountId, propertyIds);
+  return withDepositReturns(await getPortfolioDataLegacy(userId, accountId, propertyIds));
 }

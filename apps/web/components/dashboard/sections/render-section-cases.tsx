@@ -450,6 +450,8 @@ export function renderSectionCases({
           rentIncreaseHistory={props.rentIncreaseHistory}
           showControls={props.canManagePortfolio}
           onUpdateLease={props.onUpdateLease}
+          onRecordDepositReturn={props.onRecordDepositReturn}
+          onClearDepositReturn={props.onClearDepositReturn}
           onUpdateRentAmount={props.onUpdateRentAmount}
           onUpdateTenantDisplayInfo={props.onUpdateTenantDisplayInfo}
           onSendMessageToTenant={props.onSendMessageToTenant}

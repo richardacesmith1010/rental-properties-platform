@@ -1,3 +1,4 @@
+import { recordDepositReturn, clearDepositReturn } from "@/app/actions/deposits";
 import { getClientsOverview } from "@/lib/client-overview";
 import { createClientAccount } from "@/app/actions/client-accounts";
 import { createPropertyWithSetup } from "@/app/actions/unified-setup";
@@ -278,6 +279,8 @@ export default async function ManagerPage(props: ManagerPageProps) {
       onUpdateUnit={updateUnitDetails}
       onDeleteUnit={deleteUnit}
       onUpdateLease={updateLeaseDetails}
+        onRecordDepositReturn={recordDepositReturn}
+        onClearDepositReturn={clearDepositReturn}
       onUpdateRentAmount={updateRentAmount}
       onUpdateTenantDisplayInfo={updateTenantDisplayInfo}
       onUpdateManagerInfo={updateManagerInfo}

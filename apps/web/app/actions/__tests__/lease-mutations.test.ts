@@ -214,6 +214,17 @@ describe("lease collection setting mutations", () => {
       expect.objectContaining({ collects_outside_domus: true })
     );
   });
+  it("surfaces the deposit freeze error from the database", async () => {
+    const supabase = createSupabaseMock();
+    requireAuthMock.mockResolvedValue({ user: { id: "owner-1" }, supabase: supabase.client });
+    supabase.leaseUpdateMock.mockImplementationOnce(() => ({
+      eq: vi.fn().mockResolvedValue({ error: {
+        message: "Undo the deposit return before changing the deposit." } })
+    }));
+    expect(await updateLease(null, leaseFormData())).toEqual({ success: false,
+      error: "Undo the deposit return before changing the deposit." });
+  });
+
   it("lease edit gives the tenant an in-app notice and no owner-team recipients", async () => {
     const supabase = createSupabaseMock();
     requireAuthMock.mockResolvedValue({ user: { id: "owner-1" }, supabase: supabase.client });

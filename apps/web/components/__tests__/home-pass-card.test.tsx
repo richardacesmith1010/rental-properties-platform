@@ -5,7 +5,8 @@ import type { WalletHomeEntry } from "@/lib/owner-wallet-home";
 
 const home: WalletHomeEntry = { id: "p1", name: "Forum House", city: "Denver", state: "CO",
   accountId: "a1", accountName: "J&MSP", accountType: "llc", addressLine1: "123 Forum Ave",
-  leaseEndDate: "2027-02-01", rentDueThisYear: 9, rentOnTimeThisYear: 9, isLate: false, leftCents: 32750,
+  leaseEndDate: "2027-02-01", rentDueThisYear: 9, rentOnTimeThisYear: 9,
+  depositCents: 0, depositReturned: false, isLate: false, leftCents: 32750,
   activeLeases: [{ tenantNames: ["Maya Bell"], rentCents: 120000, nextDueDate: "2026-11-01" }] };
 
 describe("HomePassCard", () => {

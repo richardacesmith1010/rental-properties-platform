@@ -6,7 +6,7 @@ import type { OwnerWalletHomeResult, WalletHomeEntry } from "@/lib/owner-wallet-
 const home: WalletHomeEntry = {
   id: "p1", name: "Forum House", city: "Denver", state: "CO", addressLine1: "123 Forum Ave",
   accountId: "llc", accountName: "J&MSP", accountType: "llc", leaseEndDate: "2027-02-01",
-  rentDueThisYear: 9, rentOnTimeThisYear: 9, isLate: false, leftCents: 0,
+  rentDueThisYear: 9, rentOnTimeThisYear: 9, depositCents: 0, depositReturned: false, isLate: false, leftCents: 0,
   activeLeases: [{ tenantNames: ["Maya"], rentCents: 235000, nextDueDate: "2026-11-01" }]
 };
 const wallet: OwnerWalletHomeResult = { ok: true, homes: [home, { ...home, id: "p2", name: "Aspen",
@@ -20,10 +20,11 @@ describe("HomesWallet", () => {
     expect(screen.getAllByRole("heading", { level: 2 }).map((node) => node.textContent))
       .toEqual(["Ace · Personal", "J&MSP · LLC"]);
   });
-  it("5b leased card shows four fields and 4c month to month fallback", () => {
+  it("5b leased card shows five fields and 4c month to month fallback", () => {
     render(<HomesWallet wallet={wallet} {...handlers} />);
-    for (const label of ["Tenant", "Rent", "Lease ends", "Paid this year"]) expect(screen.getByText(label)).toBeInTheDocument();
+    for (const label of ["Tenant", "Rent", "Lease ends", "Paid this year", "Deposit"]) expect(screen.getByText(label)).toBeInTheDocument();
     expect(screen.getByText("9 of 9 on time")).toBeInTheDocument();
+    expect(screen.getByText("$0 held")).toBeInTheDocument();
     expect(leaseEndLabel(null)).toBe("Month to month");
   });
   it("5c unleased card calls handler and 5d card links to property", () => {

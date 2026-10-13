@@ -13,6 +13,7 @@ import { Input } from "../ui/input";
 import { AnimatedList } from "../ui/animated-list";
 import { PaysOutsideDomusBadge } from "./lease-collection-setting";
 import { LeaseManagePanel } from "./lease-manage-panel";
+import { DepositReturnSheet } from "./deposit-return-sheet";
 import type { LeaseListItem } from "@/lib/portfolio";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
@@ -27,6 +28,8 @@ export function LeasesSection({
   showControls = false,
   previewCount,
   onUpdateLease,
+  onRecordDepositReturn,
+  onClearDepositReturn,
   onUpdateRentAmount,
   onUpdateTenantDisplayInfo,
   onSendMessageToTenant,
@@ -210,9 +213,14 @@ export function LeasesSection({
                         </form>
                       ) : null}
 
+                      {showControls && !isActiveLease ? <DepositReturnSheet leaseId={lease.id}
+                        depositCents={lease.depositCents} recorded={lease.depositReturn ?? null}
+                        onRecord={onRecordDepositReturn} onClear={onClearDepositReturn} /> : null}
                       {showControls && isActiveLease && activeEditLeaseId === lease.id ? (
                         <LeaseManagePanel
                           lease={lease}
+                          onRecordDepositReturn={onRecordDepositReturn}
+                          onClearDepositReturn={onClearDepositReturn}
                           updateAction={updateAction}
                           renewAction={renewAction}
                           terminateAction={terminateAction}

@@ -175,7 +175,8 @@ export async function updateLease(_prev: ActionState, formData: FormData): Promi
   };
 
   const { error } = await supabase.from("leases").update(updates).eq("id", leaseId);
-  if (error) return { success: false, error: "Failed to update lease. Please try again." };
+  if (error) return { success: false, error: error.message.includes("Undo the deposit return before changing the deposit.")
+    ? "Undo the deposit return before changing the deposit." : "Failed to update lease. Please try again." };
 
   void notifyPropertyTeam({
     propertyId: unit.property_id,

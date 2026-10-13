@@ -6,6 +6,8 @@ import { getAdministeredProperties } from "@/lib/property-access";
 import { combineHomeMoney, loadHomeAlerts, loadHomeMoney, type MoneyAlert } from "@/lib/home-money";
 import { HomeMoneyPage, type HomeMoneyPageData } from "@/components/home-money/home-money-page";
 import { resolveMoneySelection } from "./resolve";
+import { isMissingSchemaError } from "@/lib/supabase-errors";
+import { loadCashOnHand } from "@/lib/cash-on-hand";
 import { loadPartnerReport, singleSelectedAccount } from "@/lib/partners";
 import { addPartner, renamePartner, deactivatePartner,
   addPartnerPayment, updatePartnerPayment, deletePartnerPayment } from "@/app/actions/partners";
@@ -40,6 +42,13 @@ export default async function OwnerMoneyPage(props: { searchParams?: Promise<{ p
     }));
   } catch {
     return <MoneyStatus message="Numbers are not ready. Try again later." />;
+  }
+  let cashAccounts: Awaited<ReturnType<typeof loadCashOnHand>> = [];
+  let cashWarning: string | undefined;
+  try { cashAccounts = await loadCashOnHand(user.id); }
+  catch (error) {
+    cashWarning = isMissingSchemaError(error) ? "This feature requires a database update."
+      : "Numbers are not ready. Try again later.";
   }
   const admin = createAdminClient();
   const { data: propertyRows, error: propertiesError } = await admin.from("properties").select("id, name, owner_account_id").in("id", ids);
@@ -81,7 +90,8 @@ export default async function OwnerMoneyPage(props: { searchParams?: Promise<{ p
       pb-[calc(env(safe-area-inset-bottom,0px)+5.25rem)]">
       <div className="mx-auto max-w-[720px]">
     <Link href="/owner" className="hidden min-h-11 items-center text-sm text-[var(--muted)] lg:inline-flex">← Home</Link>
-        <HomeMoneyPage data={data} selectedMonth={selectedMonth} months={months} partnerData={partnerData}
+        <HomeMoneyPage cashAccounts={cashAccounts} cashWarning={cashWarning} data={data}
+          selectedMonth={selectedMonth} months={months} partnerData={partnerData}
           partnerWarning={partnerResult && !partnerResult.ok && partnerResult.error === "unavailable"
             ? "This feature requires a database update." : undefined} />
       </div>

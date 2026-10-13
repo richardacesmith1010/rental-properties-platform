@@ -1,3 +1,4 @@
+import { recordDepositReturn, clearDepositReturn } from "@/app/actions/deposits";
 import { addPartner, setExpensePaidBy } from "@/app/actions/partners";
 import { billTenantForExpense } from "@/app/actions/charge-lines";
 import { addNextBillLine, removeNextBillLine } from "@/app/actions/charge-lines";
@@ -230,6 +231,8 @@ export default async function OwnerPage(props: OwnerPageProps) {
         onUpdateUnit={updateUnitDetails}
         onDeleteUnit={deleteUnit}
         onUpdateLease={updateLeaseDetails}
+        onRecordDepositReturn={recordDepositReturn}
+        onClearDepositReturn={clearDepositReturn}
         onUpdateRentAmount={updateRentAmount}
         onUpdateTenantDisplayInfo={updateTenantDisplayInfo}
         onUpdateManagerInfo={updateManagerInfo}

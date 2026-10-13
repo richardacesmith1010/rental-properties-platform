@@ -6,12 +6,15 @@ import type { OwnerWalletHomeResult } from "@/lib/owner-wallet-home";
 const wallet: Extract<OwnerWalletHomeResult, { ok: true }> = { ok: true, homes: [
   { id: "b", name: "Zenith", city: "Denver", state: "CO", accountId: "llc", accountName: "J&MSP", accountType: "llc", addressLine1: "123 Forum Ave",
     leaseEndDate: "2027-02-01", rentDueThisYear: 9, rentOnTimeThisYear: 9, activeLeases: [{ tenantNames: ["Maya"], rentCents: 200000, nextDueDate: "2026-11-01" }],
-    isLate: true, leftCents: -4000 },
+
+  depositCents: 0, depositReturned: false, isLate: true, leftCents: -4000 },
   { id: "a", name: "Aspen", city: "Boulder", state: "CO", accountId: "personal", accountName: "Personal", accountType: "individual", addressLine1: "1 Aspen St",
     leaseEndDate: null, rentDueThisYear: 0, rentOnTimeThisYear: 0, activeLeases: [{ tenantNames: ["Angel"], rentCents: 100000, nextDueDate: "2026-11-01" }],
-    isLate: false, leftCents: 75000 },
+
+  depositCents: 0, depositReturned: false, isLate: false, leftCents: 75000 },
   { id: "c", name: "Vacant", city: "Denver", state: "CO", accountId: "llc", accountName: "J&MSP", accountType: "llc", addressLine1: "123 Forum Ave",
-    leaseEndDate: "2027-02-01", rentDueThisYear: 9, rentOnTimeThisYear: 9, activeLeases: [], isLate: false, leftCents: 0 }
+    leaseEndDate: "2027-02-01", rentDueThisYear: 9, rentOnTimeThisYear: 9, activeLeases: [],
+    depositCents: 0, depositReturned: false, isLate: false, leftCents: 0 }
 ], ytd: { inCents: 100000, outCents: 20000 }, recent: [], yearRentReceivedByPropertyId: {} };
 const summary = { lateCharges: [], openRepairCount: 0, newMessageCount: 0 };
 const base = { summary, bankState: { status: "connected" as const, href: "/connect/onboard" },

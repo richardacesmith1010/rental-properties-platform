@@ -1,5 +1,8 @@
 "use client";
 
+import { CashOnHandCard } from "./cash-on-hand-card";
+import type { CashOnHand } from "@/lib/cash-on-hand";
+
 import Link from "next/link";
 import { homeMoneyCsv, runningBalance, type Entry, type MoneyAlert } from "@/lib/home-money";
 import { MoneyHero } from "./money-hero";
@@ -18,14 +21,14 @@ export interface HomeMoneyPageData {
   alerts: Array<MoneyAlert & { homeName?: string }>;
   properties: Array<{ id: string; name: string }>;
 }
-interface Props { data: HomeMoneyPageData; selectedMonth: string; months: string[];
+interface Props { cashAccounts?: CashOnHand[]; cashWarning?: string; data: HomeMoneyPageData; selectedMonth: string; months: string[];
   partnerWarning?: string;
   partnerData?: { accountId: string; report: PartnerReport; period: string; allTimeHref: string; periodHref: string;
     onAddPartner: typeof addPartner; onRenamePartner: typeof renamePartner;
     onDeactivatePartner: typeof deactivatePartner; onAddPayment: typeof addPartnerPayment;
     onUpdatePayment: typeof updatePartnerPayment; onDeletePayment: typeof deletePartnerPayment } }
 
-export function HomeMoneyPage({ data, selectedMonth, months, partnerData, partnerWarning }: Props) {
+export function HomeMoneyPage({ data, selectedMonth, months, partnerData, partnerWarning, cashAccounts = [], cashWarning }: Props) {
   const allHomes = !data.property;
   const propertyId = data.property?.id ?? null;
   const label = selectedMonth === "year" ? months[0]?.slice(0, 4) ?? "" : monthLabel(selectedMonth);
@@ -58,6 +61,7 @@ export function HomeMoneyPage({ data, selectedMonth, months, partnerData, partne
     <PeriodSwitch months={months} selectedMonth={selectedMonth} propertyId={propertyId} />
     <MoneyHero label={label} totals={data.totals} />
     <CategoryCard entries={data.entries} />
+    <CashOnHandCard accounts={cashAccounts} warning={cashWarning} />
     {partnerData && <PartnersCard {...partnerData} />}
     {partnerWarning && <section className="domus-card rounded-2xl p-4" aria-label="Partners">
       <h2 className="text-lg font-semibold">Partners</h2>

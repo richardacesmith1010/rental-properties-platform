@@ -1,3 +1,4 @@
+import type { RecordReturn, ClearReturn } from "@/components/dashboard/deposit-return-sheet";
 import type { addPartner, setExpensePaidBy } from "@/app/actions/partners";
 import type { billTenantForExpense } from "@/app/actions/charge-lines";
 import type { addNextBillLine, removeNextBillLine } from "@/app/actions/charge-lines";
@@ -149,6 +150,8 @@ export interface DashboardProps {
   onUpdateUnit?: StatefulAction;
   onDeleteUnit?: StatefulAction;
   onUpdateLease?: StatefulAction;
+  onRecordDepositReturn?: RecordReturn;
+  onClearDepositReturn?: ClearReturn;
   onUpdateRentAmount?: StatefulAction;
   onUpdateTenantDisplayInfo?: StatefulAction;
   onUpdateManagerInfo?: StatefulAction;

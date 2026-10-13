@@ -1,6 +1,6 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { syncTransactions, LeaseLost } from "@/lib/plaid";
+import { syncTransactions, getAccountsSnapshot, LeaseLost } from "@/lib/plaid";
 import { decryptBankToken } from "./token-crypto";
 import { plaidFingerprint } from "./fingerprint";
 import { processBankRows, type SyncedRow } from "./process-rows";
@@ -42,7 +42,7 @@ export async function syncConnection(connectionId: string): Promise<boolean> {
   if (!token) return false;
   try {
     const [connectionResult, secretResult, accountsResult] = await Promise.all([
-      admin.from("bank_connections").select("id,owner_account_id,created_by_profile_id,status")
+      admin.from("bank_connections").select("id,owner_account_id,created_by_profile_id,status,plaid_item_id")
         .eq("id", connectionId).single(),
       admin.from("bank_connection_secrets").select("access_token_ciphertext,transactions_cursor")
         .eq("connection_id", connectionId).single(),
@@ -119,6 +119,32 @@ export async function syncConnection(connectionId: string): Promise<boolean> {
       p_connection_id: connectionId, p_lease_token: token, p_cursor: pages.nextCursor
     });
     if (saved.error || saved.data !== true) throw new LeaseLost();
+    try {
+      const snapshot = await getAccountsSnapshot(accessToken);
+      if (snapshot.item?.item_id !== connection.plaid_item_id || !Array.isArray(snapshot.accounts)
+        || (snapshot.accounts.length === 0 && accounts.length > 0)) {
+        console.error("[bank-balance-incomplete]");
+      } else {
+        const checkedAt = new Date().toISOString();
+        const balances = snapshot.accounts.map((account) => {
+          const eligible = account.type === "depository"
+            && ["checking", "savings", "cash management", "money market"].includes(account.subtype ?? "")
+            && account.balances.iso_currency_code === "USD";
+          const amount = account.balances.available ?? account.balances.current;
+          return { plaid_account_id: account.account_id, account_type: account.type,
+            subtype: account.subtype ?? null, currency: account.balances.iso_currency_code ?? null,
+            cents: eligible && typeof amount === "number" ? Math.round(amount * 100) : null,
+            as_of: account.balances.last_updated_datetime ?? checkedAt };
+        });
+        const savedBalances = await admin.rpc("save_bank_balances", {
+          p_connection_id: connectionId, p_lease_token: token, p_balances: balances, p_complete: true
+        });
+        if (savedBalances.error) console.error("[bank-balance-failed]", safePlaidError(savedBalances.error));
+        else if (savedBalances.data === false) console.error("[bank-balance-lease-lost]");
+      }
+    } catch (error) {
+      console.error("[bank-balance-failed]", safePlaidError(error));
+    }
     const updated = await admin.from("bank_connections").update({
       last_synced_at: new Date().toISOString(), status: "ok", last_error: null
     }).eq("id", connectionId).eq("sync_lease_token", token).in("status", ["ok", "error"]);

@@ -7,12 +7,15 @@ import { Textarea } from "../ui/textarea";
 import { SubmitButton } from "../shared/submit-button";
 import { LeaseCollectionSetting } from "./lease-collection-setting";
 import { addDays, addYears } from "./lease-section-presentation";
+import { DepositReturnSheet, type RecordReturn, type ClearReturn } from "./deposit-return-sheet";
 import type { LeaseListItem } from "@/lib/portfolio";
 
 type LeaseFormAction = (payload: FormData) => void | Promise<void>;
 
 interface LeaseManagePanelProps {
   lease: LeaseListItem;
+  onRecordDepositReturn?: RecordReturn;
+  onClearDepositReturn?: ClearReturn;
   updateAction: LeaseFormAction;
   renewAction: LeaseFormAction;
   terminateAction: LeaseFormAction;
@@ -27,6 +30,8 @@ const fieldLabelClass = "block text-xs font-medium text-muted-foreground";
 
 export function LeaseManagePanel({
   lease,
+  onRecordDepositReturn,
+  onClearDepositReturn,
   updateAction,
   renewAction,
   terminateAction,
@@ -38,6 +43,8 @@ export function LeaseManagePanel({
 }: LeaseManagePanelProps) {
   return (
     <div className="mt-3 space-y-4">
+      <DepositReturnSheet leaseId={lease.id} depositCents={lease.depositCents}
+        recorded={lease.depositReturn ?? null} onRecord={onRecordDepositReturn} onClear={onClearDepositReturn} />
       <form action={updateAction} className="grid gap-2 sm:grid-cols-3">
         <input type="hidden" name="leaseId" value={lease.id} />
         <div className="space-y-1">
@@ -66,7 +73,12 @@ export function LeaseManagePanel({
             step="0.01"
             defaultValue={lease.depositCents / 100}
             required
+            disabled={Boolean(lease.depositReturn)}
           />
+          {lease.depositReturn ? <>
+            <input type="hidden" name="depositDollars" value={lease.depositCents / 100} />
+            <p className="text-xs text-[var(--muted)]">Undo the deposit return before changing the deposit.</p>
+          </> : null}
         </div>
         <div className="space-y-1">
           <label className={fieldLabelClass} htmlFor={`lease-due-day-${lease.id}`}>

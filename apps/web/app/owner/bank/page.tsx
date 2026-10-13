@@ -9,6 +9,8 @@ import { createBankAccount, importBankRows, answerBankItem, undoBankItem, delete
 import { startBankLink, finishBankLink, startBankRelink, finishBankRelink, refreshBank }
   from "@/app/actions/bank-connections";
 import { confirmBankLinks, skipBankLinks, disconnectBank } from "@/app/actions/bank-connection-management";
+import { BankBalancesCard } from "@/components/bank-feed/bank-balances-card";
+import { setManualBalance } from "@/app/actions/bank-balances";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +40,7 @@ export default async function BankPage(props: { searchParams?: Promise<{ account
   const selected = accounts.find((item) => item.id === searchParams?.account) || accounts[0];
   if (!selected) return <BankStatus message="Set up a home account first." />;
   const [bankQueryRaw, propertyQuery] = await Promise.all([
-    admin.from("bank_accounts").select("id, nickname, institution, source, connection_id")
+    admin.from("bank_accounts").select("id, nickname, institution, source, connection_id, balance_cents, balance_as_of")
       .eq("owner_account_id", selected.id)
       .order("created_at", { ascending: true }),
     admin.from("properties").select("id, name").eq("owner_account_id", selected.id).eq("active", true)
@@ -49,8 +51,10 @@ export default async function BankPage(props: { searchParams?: Promise<{ account
     : bankQueryRaw;
   if (bankQuery.error || propertyQuery.error) return <BankStatus message="Bank activity is not ready yet." />;
   const bankAccounts = (bankQuery.data || []).map((bank) => ({ ...bank,
-    source: "source" in bank ? bank.source : "upload",
-    connection_id: "connection_id" in bank ? bank.connection_id : null }));
+    source: "source" in bank ? String(bank.source) : "upload",
+    connection_id: "connection_id" in bank ? bank.connection_id : null,
+    balance_cents: "balance_cents" in bank && typeof bank.balance_cents === "number" ? bank.balance_cents : null,
+    balance_as_of: "balance_as_of" in bank && typeof bank.balance_as_of === "string" ? bank.balance_as_of : null }));
   const [connectionsQuery, queueQuery, changedQuery] = await Promise.all([
     admin.from("bank_connections").select("id,institution_name,status,last_synced_at")
       .eq("owner_account_id", selected.id).order("created_at", { ascending: false }),
@@ -106,6 +110,7 @@ export default async function BankPage(props: { searchParams?: Promise<{ account
         className="hidden min-h-11 items-center px-4 text-sm text-[var(--muted)] lg:inline-flex">
         ← Home
       </Link>
+    <BankBalancesCard accounts={bankAccounts} save={setManualBalance} />
     <BankFeedShell ownerAccountId={selected.id} accounts={accounts} bankAccounts={bankAccounts}
     properties={properties} charges={charges} recent={recent}
     connections={connections} pendingMatch={pendingMatch} queued={queueQuery.data || []}

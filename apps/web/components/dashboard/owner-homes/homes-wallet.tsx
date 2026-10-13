@@ -38,6 +38,7 @@ function WalletCard({ home, index, onAddTenant }: {
         {field("Lease ends", leaseEndLabel(home.leaseEndDate))}
         {field("Paid this year", home.rentDueThisYear
           ? `${home.rentOnTimeThisYear} of ${home.rentDueThisYear} on time` : "No rent due yet")}
+        {field("Deposit", home.depositReturned ? "Returned" : `${formatCurrency(home.depositCents)} held`)}
       </dl>}
     </a>
     {!leased && <button type="button" onClick={() => onAddTenant(home.id)}

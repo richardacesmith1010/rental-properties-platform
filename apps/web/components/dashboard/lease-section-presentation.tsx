@@ -1,5 +1,7 @@
 "use client";
 
+import type { RecordReturn, ClearReturn } from "@/components/dashboard/deposit-return-sheet";
+
 import type { Dispatch, SetStateAction } from "react";
 import { useRouter } from "next/navigation";
 import { FileText } from "lucide-react";
@@ -31,6 +33,8 @@ export interface LeasesSectionProps {
   showControls?: boolean;
   previewCount?: number;
   onUpdateLease?: StatefulAction;
+  onRecordDepositReturn?: RecordReturn;
+  onClearDepositReturn?: ClearReturn;
   onUpdateRentAmount?: StatefulAction;
   onUpdateTenantDisplayInfo?: StatefulAction;
   onSendMessageToTenant?: StatefulAction;

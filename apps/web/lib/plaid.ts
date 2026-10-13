@@ -102,6 +102,11 @@ export async function getAccounts(accessToken: string): Promise<PlaidAccountSumm
   }));
 }
 
+export async function getAccountsSnapshot(accessToken: string) {
+  const response = await getPlaidClient().accountsGet({ access_token: accessToken });
+  return response.data;
+}
+
 export async function getInstitutionName(accessToken: string): Promise<string> {
   const client = getPlaidClient();
   const item = await client.itemGet({ access_token: accessToken });

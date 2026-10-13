@@ -77,3 +77,13 @@ export const createPartnerPaymentSchema = z.object({ accountId: z.string().uuid(
 export const updatePartnerPaymentSchema = createPartnerPaymentSchema.and(z.object({ id: z.string().uuid() }));
 export const deletePartnerPaymentSchema = z.object({ accountId: z.string().uuid(), id: z.string().uuid() });
 export const setExpensePaidBySchema = z.object({ expenseId: z.string().uuid(), partnerId: partnerEndpoint });
+
+export const createDepositReturnSchema = z.object({
+  leaseId: z.string().uuid(),
+  returnedCents: z.number().int().min(0),
+  returnedOn: z.string().date()
+});
+export const deleteDepositReturnSchema = z.object({ leaseId: z.string().uuid() });
+export const updateManualBalanceSchema = z.object({
+  bankAccountId: z.string().uuid(), balanceCents: z.number().int().safe()
+});
