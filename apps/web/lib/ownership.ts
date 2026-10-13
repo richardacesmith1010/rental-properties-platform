@@ -317,22 +317,11 @@ export async function getActiveLlcMembershipsForUser(
 ): Promise<ActiveLlcMembershipDTO[]> {
   const admin = createAdminClient();
 
-  const membershipQuery = () =>
-    admin
-      .from("ownership_account_members")
-      .select("account_id, payout_stripe_account_id")
-      .eq("profile_id", userId)
-      .eq("active", true)
-      .is("deleted_at", null);
-
-  let membershipRowsResult = await membershipQuery();
-  if (membershipRowsResult.error && isMissingSchemaError(membershipRowsResult.error)) {
-    membershipRowsResult = await admin
-      .from("ownership_account_members")
-      .select("account_id, payout_stripe_account_id")
-      .eq("profile_id", userId)
-      .eq("active", true);
-  }
+  const membershipRowsResult = await admin
+    .from("ownership_account_members")
+    .select("account_id, payout_stripe_account_id")
+    .eq("profile_id", userId)
+    .eq("active", true);
 
   if (membershipRowsResult.error) {
     throw membershipRowsResult.error;

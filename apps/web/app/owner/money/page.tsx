@@ -9,6 +9,7 @@ import { resolveMoneySelection } from "./resolve";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 import { loadCashOnHand } from "@/lib/cash-on-hand";
 import { loadPartnerReport, singleSelectedAccount } from "@/lib/partners";
+import { logOwnerMoneyLoadFailure, withOneRetry } from "@/lib/retry-transient";
 import { addPartner, renamePartner, deactivatePartner,
   addPartnerPayment, updatePartnerPayment, deletePartnerPayment } from "@/app/actions/partners";
 
@@ -34,25 +35,34 @@ export default async function OwnerMoneyPage(props: { searchParams?: Promise<{ p
   const selectedIds = selectedId ? [selectedId] : ids;
   let results: Array<{ id: string; money: Awaited<ReturnType<typeof loadHomeMoney>>; alerts: MoneyAlert[] }>;
   try {
-    results = await Promise.all(selectedIds.map(async (id) => {
+    results = await withOneRetry("money-alerts", () => Promise.all(selectedIds.map(async (id) => {
       const [money, alerts] = await Promise.all([
         loadHomeMoney(user.id, id, range), loadHomeAlerts(user.id, id, alertToday)
       ]);
       return { id, money, alerts };
-    }));
-  } catch {
+    })));
+  } catch (error) {
+    logOwnerMoneyLoadFailure("money-alerts", error);
     return <MoneyStatus message="Numbers are not ready. Try again later." />;
   }
   let cashAccounts: Awaited<ReturnType<typeof loadCashOnHand>> = [];
   let cashWarning: string | undefined;
   try { cashAccounts = await loadCashOnHand(user.id); }
   catch (error) {
+    logOwnerMoneyLoadFailure("cash-on-hand", error);
     cashWarning = isMissingSchemaError(error) ? "This feature requires a database update."
       : "Numbers are not ready. Try again later.";
   }
   const admin = createAdminClient();
-  const { data: propertyRows, error: propertiesError } = await admin.from("properties").select("id, name, owner_account_id").in("id", ids);
-  if (propertiesError) {
+  let propertyRows: Array<{ id: string; name: string; owner_account_id: string | null }> | null;
+  try {
+    propertyRows = await withOneRetry("properties", async () => {
+      const { data, error } = await admin.from("properties").select("id, name, owner_account_id").in("id", ids);
+      if (error) throw error;
+      return data;
+    });
+  } catch (error) {
+    logOwnerMoneyLoadFailure("properties", error);
     return <MoneyStatus message="Numbers are not ready. Try again later." />;
   }
   const partnerAccountId = singleSelectedAccount(propertyRows ?? [], selectedIds);

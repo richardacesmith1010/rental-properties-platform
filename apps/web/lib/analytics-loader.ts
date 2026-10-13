@@ -192,7 +192,7 @@ export async function getOwnerAnalyticsData(
 
     const maintenanceQuery = await admin
       .from("maintenance_tickets")
-      .select("priority, status, created_at, resolved_at, updated_at, actual_cost_cents")
+      .select("priority, status, created_at, resolved_at, actual_cost_cents")
       .in("property_id", propertyIds);
 
     if (maintenanceQuery.error) {

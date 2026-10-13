@@ -278,7 +278,6 @@ describe("analytics transformations", () => {
           status: "resolved",
           created_at: "2026-01-01T00:00:00.000Z",
           resolved_at: "2026-01-04T00:00:00.000Z",
-          updated_at: "2026-01-04T00:00:00.000Z",
           actual_cost_cents: 25000
         },
         {
@@ -286,7 +285,6 @@ describe("analytics transformations", () => {
           status: "open",
           created_at: "2026-01-05T00:00:00.000Z",
           resolved_at: null,
-          updated_at: "2026-01-05T00:00:00.000Z",
           actual_cost_cents: 10000
         }
       ],
@@ -302,6 +300,13 @@ describe("analytics transformations", () => {
     });
   });
 
+  it("uses resolved_at only for repair duration", () => {
+    const result = buildMaintenanceMetrics([{ priority: "high", status: "resolved",
+      created_at: "2026-01-01T00:00:00.000Z", resolved_at: null, actual_cost_cents: 0 }], "2026-01-01");
+    expect(result.maintenanceMetrics.find((metric) => metric.priority === "high"))
+      .toMatchObject({ totalTickets: 1, resolvedTickets: 1, avgResolutionDays: 0 });
+  });
+
   it("falls back unknown priorities into the low bucket", () => {
     const result = buildMaintenanceMetrics(
       [
@@ -310,7 +315,6 @@ describe("analytics transformations", () => {
           status: "closed",
           created_at: "2026-01-01T00:00:00.000Z",
           resolved_at: "2026-01-02T00:00:00.000Z",
-          updated_at: "2026-01-02T00:00:00.000Z",
           actual_cost_cents: 5000
         }
       ],
@@ -333,7 +337,6 @@ describe("analytics transformations", () => {
           status: "resolved",
           created_at: "2026-01-05T00:00:00.000Z",
           resolved_at: "2026-01-04T00:00:00.000Z",
-          updated_at: "2026-01-04T00:00:00.000Z",
           actual_cost_cents: 1000
         }
       ],
@@ -356,7 +359,6 @@ describe("analytics transformations", () => {
           status: "closed",
           created_at: "2025-12-31T00:00:00.000Z",
           resolved_at: "2026-01-02T00:00:00.000Z",
-          updated_at: "2026-01-02T00:00:00.000Z",
           actual_cost_cents: 1500
         }
       ],

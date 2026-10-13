@@ -79,7 +79,6 @@ export interface AnalyticsTicketRow {
   status: string | null;
   created_at: string;
   resolved_at: string | null;
-  updated_at: string | null;
   actual_cost_cents: number | null;
 }
 
@@ -249,7 +248,7 @@ export function buildMaintenanceMetrics(
 
     if (ticket.status === "resolved" || ticket.status === "closed") {
       bucket.resolvedTickets += 1;
-      const resolvedAt = ticket.resolved_at ?? ticket.updated_at;
+      const resolvedAt = ticket.resolved_at;
       const createdAt = new Date(ticket.created_at).getTime();
       const resolvedTime = resolvedAt ? new Date(resolvedAt).getTime() : Number.NaN;
       if (!Number.isNaN(createdAt) && !Number.isNaN(resolvedTime) && resolvedTime >= createdAt) {
