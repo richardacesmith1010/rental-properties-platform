@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { loadOwnerHomeMoney } from "@/lib/owner-recent-activity";
+import { buildHomeMoney, loadOwnerHomeMoney } from "@/lib/owner-recent-activity";
 
 const { rentRows, tableData } = vi.hoisted(() => ({
   rentRows: vi.fn(), tableData: new Map<string, { data: unknown; error: unknown }>()
@@ -45,5 +45,28 @@ describe("loadOwnerHomeMoney", () => {
     expect(await loadOwnerHomeMoney(["p1"], new Date("2026-10-11T00:00:00Z")))
       .toEqual({ ok: false, error: "load_failed" });
     spy.mockRestore();
+  });
+});
+
+describe("buildHomeMoney", () => {
+  it("computes monthly left and the five newest recent items with tenant fallback", () => {
+    const payments = Array.from({ length: 6 }, (_, index) => ({ id: `pay${index}`, rent_charge_id: "c1",
+      amount_cents: 1000, paid_at: `2026-10-0${index + 1}`, reversed_at: null,
+      method: null, stripe_payment_intent_id: null }));
+    const result = buildHomeMoney({ ids: ["p1"], today: new Date("2026-10-11T00:00:00Z"),
+      rentRows: { units: [{ id: "u1", property_id: "p1" }], leases: [{ id: "l1", unit_id: "u1",
+        tenant_profile_id: "t1", grace_period_days: 0, active: true }],
+      charges: [{ id: "c1", lease_id: "l1", category: "rent", amount_cents: 6000,
+        due_date: "2026-10-01", status: "paid", deleted_at: null }], payments },
+      expenses: [{ id: "e1", property_id: "p1", category: "repair", description: "Plumber · invoice",
+        amount_cents: 1500, expense_date: "2026-10-07" }], propertyNames: { p1: "Aspen" },
+      tenantNameByLeaseId: new Map([["l1", "Tenant"]]) });
+    expect(result).toMatchObject({ ok: true, leftByPropertyId: { p1: 4500 } });
+    if (result.ok) {
+      expect(result.items.map((item) => item.id)).toEqual(["e1", "pay5", "pay4", "pay3", "pay2"]);
+      expect(result.items[0]).toMatchObject({ title: "Plumber", amountCents: 1500, direction: "out",
+        propertyName: "Aspen" });
+      expect(result.items[1]).toMatchObject({ title: "Rent from Tenant", direction: "in" });
+    }
   });
 });

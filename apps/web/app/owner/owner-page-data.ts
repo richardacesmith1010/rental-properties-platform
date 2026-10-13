@@ -5,7 +5,6 @@ import { getAdministeredPropertyIdsForAccount, getAdministeredPropertyOptions } 
 import { getRentCollectionConnectStatus } from "@/lib/stripe-connect";
 import { getNotificationsForUser } from "@/lib/notifications";
 import { getUserNotificationPreferenceSettings } from "@/lib/notification-preferences";
-import { loadOwnerYearRentReceived } from "@/lib/owner-ytd";
 import { loadOwnerWalletHome } from "@/lib/owner-wallet-home";
 import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { getOwnershipAccountsForUser } from "@/lib/ownership";
@@ -170,9 +169,6 @@ export async function loadOwnerPageData(params: {
       () => getDashboardData(params.userId, activeAccountId, propertyIds, "owner")
     )
   );
-  const ownerYearRentPromise = measureOwnerWithRequest(
-    "rent.year-received", () => loadOwnerYearRentReceived(activeAccountId)
-  ).catch(() => ({ ok: false as const, error: "load_failed" as const }));
   // Home can be opened through the client-side section navigator from any owner section.
   const ownerWalletHomePromise = measureOwnerWithRequest(
     "home.wallet", () => loadOwnerWalletHome(params.userId)
@@ -238,7 +234,6 @@ export async function loadOwnerPageData(params: {
   };
   const [
     dashboard,
-    ownerYearRent,
     ownerWalletHome,
     portfolio,
     announcementProperties,
@@ -248,7 +243,6 @@ export async function loadOwnerPageData(params: {
     sectionData
   ] = await Promise.all([
     dashboardPromise,
-    ownerYearRentPromise,
     ownerWalletHomePromise,
     portfolioPromise,
     announcementPropertiesPromise,
@@ -257,6 +251,9 @@ export async function loadOwnerPageData(params: {
     rentCollectionStatusPromise,
     sectionDataPromise
   ]);
+  const ownerYearRent = ownerWalletHome.ok
+    ? { ok: true as const, byPropertyId: ownerWalletHome.yearRentReceivedByPropertyId }
+    : { ok: false as const, error: "load_failed" as const };
 
   const isEmpty = portfolio.properties.length === 0 &&
     !request.initialSectionId;

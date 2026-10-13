@@ -20,7 +20,6 @@ const ownerLoadMocks = vi.hoisted(() => ({
   notifications: vi.fn(),
   notificationPreferences: vi.fn(),
   ownerConnected: vi.fn(),
-  ownerYearRent: vi.fn(),
   ownerWalletHome: vi.fn(),
   ownershipMembers: vi.fn(),
   pendingChanges: vi.fn(),
@@ -66,7 +65,6 @@ vi.mock("@/lib/logger", () => ({
 }));
 vi.mock("@/lib/dashboard", () => ({ getDashboardData: ownerLoadMocks.dashboard }));
 vi.mock("@/lib/portfolio", () => ({ getPortfolioData: ownerLoadMocks.portfolio }));
-vi.mock("@/lib/owner-ytd", () => ({ loadOwnerYearRentReceived: ownerLoadMocks.ownerYearRent }));
 vi.mock("@/lib/owner-wallet-home", () => ({ loadOwnerWalletHome: ownerLoadMocks.ownerWalletHome }));
 vi.mock("@/lib/property-access", () => ({
   getAdministeredPropertyIdsForAccount: ownerLoadMocks.administeredIds,
@@ -140,8 +138,8 @@ describe("loadOwnerPageData orchestration", () => {
     ownerLoadMocks.renameRequests.mockResolvedValue([]);
     ownerLoadMocks.deleteRequests.mockResolvedValue([]);
     ownerLoadMocks.ownerConnected.mockResolvedValue(new Map());
-    ownerLoadMocks.ownerYearRent.mockResolvedValue({ ok: true, byPropertyId: {} });
-    ownerLoadMocks.ownerWalletHome.mockResolvedValue({ ok: true, homes: [], ytd: { inCents: 0, outCents: 0 }, recent: [] });
+    ownerLoadMocks.ownerWalletHome.mockResolvedValue({ ok: true, homes: [], ytd: { inCents: 0, outCents: 0 },
+      recent: [], yearRentReceivedByPropertyId: {} });
     const adminQuery = {
       select: vi.fn(),
       in: vi.fn(),
@@ -296,7 +294,8 @@ describe("loadOwnerPageData orchestration", () => {
       notificationPreferenceSettings: null,
       notifications: [],
       ownerConnectedMap: new Map(),
-      ownerWalletHome: { ok: true, homes: [], ytd: { inCents: 0, outCents: 0 }, recent: [] },
+      ownerWalletHome: { ok: true, homes: [], ytd: { inCents: 0, outCents: 0 }, recent: [],
+        yearRentReceivedByPropertyId: {} },
       ownerYearRent: { ok: true, byPropertyId: {} },
       ownershipAccounts: [{ id: "account-1", accountType: "llc" }],
       ownershipMembers: undefined,
@@ -315,11 +314,19 @@ describe("loadOwnerPageData orchestration", () => {
     });
   });
 
-  it("keeps the dashboard ready when the YTD loader fails", async () => {
-    ownerLoadMocks.ownerYearRent.mockRejectedValue(new Error("unavailable"));
+  it("marks year rent unavailable when wallet fails", async () => {
+    ownerLoadMocks.ownerWalletHome.mockResolvedValue({ ok: false, error: "load_failed" });
     const result = await loadOwnerPageData({ userEmail: "owner@example.test", userId: "user-1" });
     expect(result.status).toBe("ready");
     if (result.status === "ready") expect(result.ownerYearRent).toEqual({ ok: false, error: "load_failed" });
+  });
+
+  it("derives year rent from wallet for the KPI", async () => {
+    ownerLoadMocks.ownerWalletHome.mockResolvedValue({ ok: true, homes: [],
+      ytd: { inCents: 0, outCents: 0 }, recent: [], yearRentReceivedByPropertyId: { "property-1": 12500 } });
+    const result = await loadOwnerPageData({ userEmail: "owner@example.test", userId: "user-1" });
+    expect(result.status).toBe("ready");
+    if (result.status === "ready") expect(result.ownerYearRent).toEqual({ ok: true, byPropertyId: { "property-1": 12500 } });
   });
 
   it("loads Home money on other owner sections so client navigation to Home has real data", async () => {

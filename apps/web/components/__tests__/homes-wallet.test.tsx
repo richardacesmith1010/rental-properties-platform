@@ -11,7 +11,7 @@ const home: WalletHomeEntry = {
 };
 const wallet: OwnerWalletHomeResult = { ok: true, homes: [home, { ...home, id: "p2", name: "Aspen",
   accountId: "personal", accountName: "Ace", accountType: "individual", activeLeases: [] }],
-  ytd: { inCents: 0, outCents: 0 }, recent: [] };
+  ytd: { inCents: 0, outCents: 0 }, recent: [], yearRentReceivedByPropertyId: {} };
 const handlers = { onAddHome: vi.fn(), onAddTenant: vi.fn(), manageContent: <div>Edit, rename, delete, fee and invitations</div> };
 
 describe("HomesWallet", () => {
