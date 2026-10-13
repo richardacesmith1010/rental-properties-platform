@@ -936,3 +936,20 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Production `[perf:owner] home.wallet`: **746–1011 ms, 16 queries** (was 1,968 ms / 23). There's no `rent.year-received` line. Smoke owner Home p75 **2.39 s** (budget 3 s, target ≤ 2.5 s, met). **Risk:** the query count of 16 missed the ≤ 14 target (the unit test's fake counts differently); the speed goal is met anyway.
 - 2231 tests, gate green, CI checked.
 - In flight: **Sprint 222** (deposits held + cash on hand; ChatGPT rev 1–3 REJECT → rev 4 AWC → rev 5 dispatched).
+
+## Sprint 222 SHIPPED (2026-10-13) — deposits held + Cash on hand (L3; ChatGPT rev 1–3 REJECT → rev 4 AWC → rev 5)
+- Migration `20261015_sprint222_deposits_cash.sql` applied live. It adds:
+  - the `lease_deposit_returns` table (select-only RLS, no client writes);
+  - the audited service-role RPCs `record_deposit_return` / `clear_deposit_return`, both locking the lease row;
+  - triggers for the deposit bound and the deposit freeze;
+  - `bank_accounts` balance triple plus type/currency;
+  - the fenced `save_bank_balances` with a `p_complete` snapshot rule.
+- Live SQL (rolled back), 18/18:
+  - deposit returns: record then `already` (1 audit row); freeze blocks postgres and owner; clear then `none`; the bound and future-date checks block;
+  - balances: a wrong token is false; credit is excluded; incomplete keeps the balance; a complete empty snapshot nulls it; duplicate IDs raise;
+  - owner access: insert and delete are denied even after `set_config`; a deposit edit after a return is blocked; the owner can't run the RPC; an owner balance write is denied;
+  - visibility: owner 1, manager 1, unrelated owner 0.
+  - No leftovers.
+- Codex 211k tokens; 2254 tests; smoke green (owner Home p75 2.33 s).
+- **Visual check found transient failures:** right after the deploy, one session got "Numbers are not ready" on `/owner/money` and "Bank activity is not ready yet." on `/owner/bank`. Later loads were all fine (4/4). The catches swallow errors, so there's no log. → **Sprint 226 running** (money-page logging + one retry on transient errors; it also fixes 2 broken queries found in the Supabase edge logs: `maintenance_tickets.updated_at` doesn't exist, so **analytics repair stats have been silently empty**, and `ownership_account_members.deleted_at` doesn't exist, causing a 400 + fallback on every LLC lookup).
+- **Follow-ups:** add the same logging to the `/owner/bank` loader; the dark Bank page shows an empty rounded card at the top when there are no balances (hide `BankBalancesCard` when empty); Supabase default TRUNCATE grants to anon/authenticated on public tables (unreachable via PostgREST) are a hardening item.
