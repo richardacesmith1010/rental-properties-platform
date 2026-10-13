@@ -15,6 +15,7 @@ export function BankBalancesCard({ accounts, save }: { accounts: Bank[];
   const [amount, setAmount] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const uploadAccounts = accounts.filter((bank) => bank.source === "upload");
   async function submit(id: string) {
     if (!/^-?\d+(\.\d{1,2})?$/.test(amount)) { setError("Enter a valid balance."); return; }
     setBusy(true); setError("");
@@ -23,8 +24,9 @@ export function BankBalancesCard({ accounts, save }: { accounts: Bank[];
     else setError(result.error ?? "Could not save the balance.");
     setBusy(false);
   }
+  if (!uploadAccounts.length) return null;
   return <section className="domus-card space-y-3 p-4" aria-label="Bank balances">
-    {accounts.filter((bank) => bank.source === "upload").map((bank) => <div key={bank.id} className="border-t border-[var(--line)] pt-3">
+    {uploadAccounts.map((bank) => <div key={bank.id} className="border-t border-[var(--line)] pt-3">
       <div className="flex items-center justify-between gap-3">
         <div><p className="font-medium">{bank.nickname}</p>
           {bank.balance_cents !== null ? <p className="tabular-nums">{formatCurrency(bank.balance_cents)}</p> : null}
