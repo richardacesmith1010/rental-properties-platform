@@ -1,4 +1,4 @@
-# Sprint 224 — Bank sync: connect once, transactions flow in (L3: bank data + secrets + schema) · rev 5 (ChatGPT rev 1–4 = REJECT; all REQUIRED/OPTIONAL folded in)
+# Sprint 224 — Bank sync: connect once, transactions flow in (L3: bank data + secrets + schema) · rev 6 — ChatGPT rev 5: APPROVE WITH CHANGES (2 REQUIRED + 2 OPTIONAL folded in)
 
 The owner decided on 2026-10-12 that this comes next, ahead of partner sprints 221–223.
 
@@ -23,7 +23,7 @@ Design source: `docs/bank-feed-design.md` (Phase 2). Plaid stays in **sandbox** 
    - **Disconnect** calls Plaid `itemRemove` and deletes the connection and its secrets. Filed records stay.
 5. **Secrets:** Plaid access tokens are stored **encrypted**, in a table no client role can read.
 
-## 2. Context (HEAD after 220, branch `main`; survey 2026-10-12)
+## 2. Context (HEAD `587b030`, branch `main`; survey 2026-10-12)
 - **Plaid today (Sprint 33):**
   - `lib/plaid.ts`: `createLinkToken` asks for `[Products.Auth, Products.Transactions]` (line 56), with no webhook. `exchangePublicToken`, `getAccounts`, `getBalances`.
   - `app/actions/plaid.ts`: `initiatePlaidLink`, `completePlaidLink` (it keeps only the first account, line 110), `refreshPlaidBalance`, `disconnectPlaid`. Disconnect doesn't call `itemRemove`.
@@ -104,7 +104,7 @@ Design source: `docs/bank-feed-design.md` (Phase 2). Plaid stays in **sandbox** 
      1. Claim: `delete from bank_review_items where id = p_item_id and updated_at = p_expected_updated_at returning *`. 0 rows → `raise exception using errcode = 'P0001', message = 'conflict'`.
      2. `'no'` → insert the skip fingerprint. Result `'skipped'`.
      3. `'yes'` → precondition checks (ownership, as above). Insert the canonical `bank_transactions` row `on conflict do nothing`. On a conflict, the result is `'already'`: keep the claim delete (the item is resolved), and do nothing else. Otherwise `_file_bank_choice`. If it reports `'stale'` → `raise … message = 'stale'`.
-     - **Exception handler:** map `message` `'conflict'` / `'stale'` to that return value. Any other error is mapped to `'stale'` and logged with `raise warning` (no details).
+     - **Exception handler:** catch **only** the intentional `P0001` exceptions with message `'conflict'` or `'stale'`, and return that value. Any other error is **re-raised** (it still rolls back, so the review item is preserved); the server action returns its generic failure copy without details.
      - Because the claim delete is **inside** the block, `'stale'` and any error leave the review item, the marker and all side effects exactly as before.
      - `'already'` counts as resolved for the UI, but **never** creates an Always rule.
    - **`public.confirm_bank_account_links(p_connection_id uuid, p_pairs jsonb) returns void`** (pairs of `{ plaidBankAccountId, uploadBankAccountId }`). One transaction:
@@ -136,7 +136,7 @@ Design source: `docs/bank-feed-design.md` (Phase 2). Plaid stays in **sandbox** 
      - Every selected ID must belong to that item. Otherwise reject.
      - Encrypt the token and call `create_bank_connection` (atomic), with `nickname = "<Account name> ••<mask>"`.
      - If the RPC fails, call `removeItem` (compensation) so no orphan Plaid item or token remains.
-     - Then run the first `syncConnection`.
+     - **Then:** if upload accounts exist, return `{ needsMatch: true, … }` and **don't sync** (the connection is `pending_account_match`). Otherwise the connection is `ok`, so run the first `syncConnection` immediately. Both matching paths (confirm or skip) start the first sync only **after** their status transition commits.
      - On a duplicate `plaid_item_id`, return "This bank is already connected."
    - **`startBankRelink(connectionId)`** → update-mode token. **`finishBankRelink(connectionId)`** → status `ok`, then sync.
    - **`disconnectBank(connectionId)`**: first set the status to `revoked` (so it never shows as healthy), then call `removeItem` (log and continue if Plaid errors), then call `disconnect_bank_connection`. If the local step fails, the connection stays `revoked`, shows "Disconnected", and offers **Disconnect** again to retry the cleanup. **Filed records are kept.**
@@ -197,7 +197,7 @@ Design source: `docs/bank-feed-design.md` (Phase 2). Plaid stays in **sandbox** 
      - `ITEM:USER_PERMISSION_REVOKED` → `revoked`.
    - Always 200 for unknown types. Unknown `item_id` → 200 and a log line.
    - **Replay-safe:** repeated delivery of the same event is harmless. Sync is idempotent and fenced, and status updates are conditional: `needs_login` and `revoked` are only set `where status <> 'revoked'`, and never downgrade `revoked`.
-7. **Cron `app/api/cron/bank-sync/route.ts`** (daily, `CRON_SECRET`, added to `vercel.json`): sync every connection with status `ok` whose `last_synced_at` is older than 12 hours. Process them sequentially; a failure in one doesn't stop the rest.
+7. **Cron `app/api/cron/bank-sync/route.ts`** (daily, `CRON_SECRET`, added to `vercel.json`): sync every connection with status `ok` whose `last_synced_at` is null **or** older than 12 hours (so a failed first sync after matching is retried). Process them sequentially; a failure in one doesn't stop the rest.
 8. **Review queue actions:** `answerQueuedBankItem({ itemId, expectedUpdatedAt, decision, choice?, always? })`.
    - Auth → owner → active owner member of the item's canonical `owner_account_id` (loaded server-side) → the existing per-property permission for the choice.
    - Then call **`resolve_bank_review_item`** (atomic claim + file/skip + remove).
@@ -331,6 +331,7 @@ Design source: `docs/bank-feed-design.md` (Phase 2). Plaid stays in **sandbox** 
    - `answerQueuedBankItem` calls `resolve_bank_review_item` with `expectedUpdatedAt`;
    - `'conflict'`, `'stale'` and the rule-warning paths return their exact copy;
    - another account's owner is rejected before any RPC call;
+   - an unexpected RPC error returns the generic failure copy (not the stale copy);
    - Always saves the rule only after a successful resolve;
    - `'already'` is handled with the copy "This was already filed.";
    - (Claude live SQL) a throwing filing helper rolls back the claim, the marker and the side effect.
@@ -358,7 +359,7 @@ Design source: `docs/bank-feed-design.md` (Phase 2). Plaid stays in **sandbox** 
 
 **Claude will also run live SQL (rolled back)** proving:
 - `file_synced_bank_item` replays return `'already'` with no duplicate expense or payment; `'stale'` (wrong amount or a waived charge) leaves zero rows; and the output rows for rent, a paid charge, an expense and a transfer match what `fileBankItem` writes;
-- `resolve_bank_review_item` with a stale `updated_at` → `'conflict'` and nothing changes; a `'stale'` filing, a forced error in `_file_bank_choice` and a failed payment insert each leave the **queue row present**, with no marker and no side effects;
+- `resolve_bank_review_item` with a stale `updated_at` → `'conflict'` and nothing changes; an **unexpected** DB error inside it propagates as an error (not `'stale'`) and leaves the queue row; a `'stale'` filing, a forced error in `_file_bank_choice` and a failed payment insert each leave the **queue row present**, with no marker and no side effects;
 - `pending_account_match` blocks the lease acquire; confirm and skip transition exactly once;
 - the lease fencing SQL: a second acquire during a live lease gets no row; a cursor save with a wrong token updates 0 rows;
 - a cross-account property, or a cross-account bank account, is rejected;
