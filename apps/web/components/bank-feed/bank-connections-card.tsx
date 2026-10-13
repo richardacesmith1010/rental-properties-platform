@@ -101,7 +101,7 @@ export function BankConnectionsCard({ ownerAccountId, connections, pendingMatch,
     <div className="flex items-center justify-between gap-2">
       <h2 className="text-xl font-semibold">Your banks</h2>
       <button type="button" title="Connect a bank" disabled={busy} onClick={() => void openLink()}
-        className="min-h-11 rounded-md bg-[var(--accent)] px-4 text-white">Connect a bank</button>
+        className="min-h-11 rounded-md bg-[var(--accent)] px-4 text-[var(--accent-contrast)]">Connect a bank</button>
     </div>
     {connections.map((connection) => <article key={connection.id} className="border-t border-[var(--line)] pt-3">
       <div className="flex items-start justify-between gap-2">

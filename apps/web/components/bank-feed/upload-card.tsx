@@ -90,7 +90,7 @@ export function UploadCard({ accounts, ownerAccountId, onCreate, onImport, onSel
       <p className="text-sm text-[var(--muted)]">This file looks like it came from another bank. You can still use it.</p> : null}
     <button type="button" title="Sort the items in this file." onClick={openFile}
       disabled={busy || (selectedId === "add" && !nickname.trim()) || !file}
-      className="min-h-11 rounded-md bg-[var(--accent)] px-4 font-semibold text-white disabled:opacity-50">
+      className="min-h-11 rounded-md bg-[var(--accent)] px-4 font-semibold text-[var(--accent-contrast)] disabled:opacity-50">
       {busy ? "Reading file…" : "Sort this file"}
     </button>
     {error ? <p role="alert" className="text-sm text-[var(--crit)]">{error}</p> : null}

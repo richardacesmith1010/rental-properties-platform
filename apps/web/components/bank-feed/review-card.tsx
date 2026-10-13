@@ -121,7 +121,7 @@ export function ReviewCard({ item, row, properties, charges, onAnswer, onUndo }:
       <button type="button" title="Skip this as personal." className="min-h-11 rounded-md border border-[var(--line)] px-4"
         onClick={() => answer("no")} disabled={busy}>Not rental</button>
       <button type="button" title="File this for your home."
-        className="min-h-11 rounded-md bg-[var(--accent)] px-4 font-semibold text-white"
+        className="min-h-11 rounded-md bg-[var(--accent)] px-4 font-semibold text-[var(--accent-contrast)]"
         onClick={() => answer("yes")} disabled={busy || needsHome || !choice}>Yes, that&apos;s right</button>
     </div>
     {error ? <p role="alert" className="text-sm text-[var(--crit)]">{error}</p> : null}

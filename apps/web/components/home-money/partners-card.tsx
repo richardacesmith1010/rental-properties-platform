@@ -8,6 +8,7 @@ import type { addPartner, renamePartner, deactivatePartner, addPartnerPayment,
   updatePartnerPayment, deletePartnerPayment } from "@/app/actions/partners";
 import { ManagePartnersSheet } from "./manage-partners-sheet";
 import { PartnerPaymentSheet } from "./partner-payment-sheet";
+import { SettleUpSection } from "./settle-up-section";
 
 const kinds = [
   ["cleaningRepairs", "Cleaning & repairs"], ["improvements", "Improvements"],
@@ -51,6 +52,8 @@ export function PartnersCard({ accountId, report, period, allTimeHref, periodHre
       {report.rows.map((row) => <div key={row.id ?? "llc"} className="flex justify-between gap-2 py-1">
         <span>{row.name}</span><span className="num">{formatCurrency(row.projectedPutIn)} · {row.projectedSharePct}%</span>
       </div>)}</div>}
+    <SettleUpSection accountId={accountId} rows={report.rows} period={period} allTimeHref={allTimeHref}
+      onAddPayment={onAddPayment} />
     {report.payments.length > 0 && <div className="space-y-2 border-t border-[var(--line)] pt-2">
       {report.payments.map((payment) => <div key={payment.id}
         className="flex min-h-11 items-center justify-between gap-2 text-sm">

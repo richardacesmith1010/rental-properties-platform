@@ -25,6 +25,8 @@ describe("Sprint 224 bank UI", () => {
       return { open };
     }) };
     render(<BankConnectionsCard ownerAccountId="owner" connections={[]} actions={actions} />);
+    expect(screen.getByRole("button", { name: "Connect a bank" }))
+      .toHaveClass("text-[var(--accent-contrast)]");
     fireEvent.click(screen.getByRole("button", { name: "Connect a bank" }));
     await waitFor(() => expect(open).toHaveBeenCalled());
     await waitFor(() => expect(actions.finish).toHaveBeenCalledWith({ ownerAccountId: "owner",
