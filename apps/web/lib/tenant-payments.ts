@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { withChargeEditingFallback } from "@/lib/charge-audit";
 import { formatUnitLabel } from "@/lib/format";
 import { isCollectedOutsideDomus } from "@/lib/lease-collection";
+import { chargeBreakdown, type ChargeLine } from "@/lib/charge-lines";
+import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 export interface TenantCharge {
   id: string;
@@ -15,6 +17,7 @@ export interface TenantCharge {
   status: "pending" | "late";
   tenantReportedPaidAt?: string | null;
   collectsOutsideDomus?: boolean;
+  lines?: ChargeLine[];
 }
 
 export interface TenantPaymentData {
@@ -69,6 +72,15 @@ export async function getTenantPaymentData(userId: string): Promise<TenantPaymen
   if (chargesResult.error) throw chargesResult.error;
   const units = unitsResult.data;
   const charges = chargesResult.data;
+  const chargeIds = (charges ?? []).map((charge) => charge.id);
+  const lineResult = chargeIds.length ? await supabase.from("rent_charge_lines")
+    .select("id, lease_id, charge_id, kind, label, amount_cents")
+    .in("charge_id", chargeIds) : { data: [], error: null };
+  if (lineResult.error && !isMissingSchemaError(lineResult.error)) throw lineResult.error;
+  const lineMap = new Map<string, ChargeLine[]>();
+  for (const line of (lineResult.data ?? []) as ChargeLine[]) {
+    if (line.charge_id) lineMap.set(line.charge_id, [...(lineMap.get(line.charge_id) ?? []), line]);
+  }
 
   const propertyIds = Array.from(new Set((units ?? []).map((unit) => unit.property_id)));
 
@@ -90,6 +102,8 @@ export async function getTenantPaymentData(userId: string): Promise<TenantPaymen
 
       const propertyLabel = property ? `${property.name} • ${formatUnitLabel(unit?.unit_number ?? "?")}` : "Your Rental";
 
+      const lines = lineMap.get(charge.id) ?? [];
+      chargeBreakdown({ id: charge.id, amount_cents: charge.amount_cents }, lines);
       return {
         id: charge.id,
         leaseId: charge.lease_id,
@@ -99,6 +113,7 @@ export async function getTenantPaymentData(userId: string): Promise<TenantPaymen
         unitNumber: unit?.unit_number ?? "?",
         dueDate: charge.due_date,
         amountCents: charge.amount_cents,
+        lines,
         status: getTenantChargeStatus(charge.status as "pending" | "late", lease),
         tenantReportedPaidAt: charge.tenant_reported_paid_at ?? null,
         collectsOutsideDomus: isCollectedOutsideDomus(lease)

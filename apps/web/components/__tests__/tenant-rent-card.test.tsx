@@ -85,13 +85,20 @@ describe("TenantRentCard", () => {
   });
 
   it("totals multiple unpaid months and only shows a late-fee warning when needed", () => {
-    const charges = [baseProps.charges[0], { ...baseProps.charges[0], id: "2", amountCents: 250 }];
+    const charges = [baseProps.charges[0], { ...baseProps.charges[0],
+      id: "2", amountCents: 250, dueDate: "2026-11-01" }];
     const { rerender } = render(<TenantRentCard {...baseProps} charges={charges} payState="can_pay" lateFeeCents={500} />);
     expect(screen.getByText("$3.50 · 2 months")).toBeInTheDocument();
     expect(screen.getByText("A $5 late fee may apply.")).toBeInTheDocument();
     rerender(<TenantRentCard {...baseProps} charges={charges} payState="can_pay" lateFeeCents={0} />);
     expect(screen.queryByText(/late fee may apply/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/charges?/i)).not.toBeInTheDocument();
+  });
+
+  it("counts rent and water on the same due month as one month", () => {
+    const charges = [baseProps.charges[0], { ...baseProps.charges[0], id: "water", amountCents: 250 }];
+    render(<TenantRentCard {...baseProps} charges={charges} payState="can_pay" />);
+    expect(screen.getByText("$3.50 · 1 month")).toBeInTheDocument();
   });
 
   it.each(["not_ready", "outside"] as const)("totals unpaid months when pay state is %s", (payState) => {

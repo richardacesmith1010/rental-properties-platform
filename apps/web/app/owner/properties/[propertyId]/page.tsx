@@ -9,6 +9,8 @@ import {
 import { PropertyDetailView } from "@/components/dashboard/property-detail-view";
 import { requireRole, getUserProfileSummary } from "@/lib/auth";
 import { getPropertyDetailData } from "@/lib/property-detail";
+import { getMonthlyLeaseLedgers } from "@/lib/reports-ledger";
+import { MonthlyLeaseLedgerCard } from "@/components/reports/monthly-lease-ledger";
 
 export const dynamic = "force-dynamic";
 
@@ -32,9 +34,11 @@ export default async function OwnerPropertyDetailPage(props: OwnerPropertyDetail
       "/owner?generated=Property%20details%20are%20not%20available%20for%20that%20address."
     );
   }
+  const monthlyLedgers = await getMonthlyLeaseLedgers(data.leases.filter((lease) => lease.active)
+    .map((lease) => lease.id));
 
   return (
-    <PropertyDetailView
+    <><PropertyDetailView
       data={data}
       role="owner"
       onCreateTenantActivity={createTenantActivity}
@@ -43,5 +47,9 @@ export default async function OwnerPropertyDetailPage(props: OwnerPropertyDetail
       onAddTicketComment={addTicketComment}
       onUpdateTicketStatus={updateTicketStatus}
     />
+    <div className="app-surface space-y-4 px-4 pb-6 sm:px-6">
+      {[...monthlyLedgers].map(([leaseId, ledger]) =>
+        <MonthlyLeaseLedgerCard key={leaseId} data={ledger} />)}
+    </div></>
   );
 }

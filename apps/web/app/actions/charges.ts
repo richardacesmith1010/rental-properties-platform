@@ -30,6 +30,7 @@ import {
 import { requireAuth } from "./auth-helpers";
 import type { ActionState } from "./shared";
 import { deleteCharge } from "./charge-management";
+import { managerFeeBaseForCharge } from "@/lib/charge-lines";
 import {
   PAYMENTS_UNAVAILABLE_MESSAGE,
   handleStripeCheckoutFailure,
@@ -48,8 +49,10 @@ export async function payWithCard(formData: FormData): Promise<ActionState | voi
   const { baseCents, feeCents: cardFeeCents, totalCents } = calculateCardFee(charge.amount_cents);
 
   let managerFee;
+  let managerFeeBaseCents;
   try {
-    managerFee = await getManagerFeeForProperty(propertyId, baseCents);
+    managerFeeBaseCents = await managerFeeBaseForCharge(charge);
+    managerFee = await getManagerFeeForProperty(propertyId, managerFeeBaseCents);
   } catch (error) {
     console.error("payWithCard manager fee error:", error);
     return { success: false, error: "Unable to calculate this payment right now." };
@@ -58,7 +61,7 @@ export async function payWithCard(formData: FormData): Promise<ActionState | voi
   let managerStripeAccount = null;
   if (managerFee.feeCents > 0) {
     try {
-      managerStripeAccount = await getManagerStripeAccountForProperty(propertyId, baseCents);
+      managerStripeAccount = await getManagerStripeAccountForProperty(propertyId, managerFeeBaseCents);
     } catch (error) {
       console.error("payWithCard manager stripe error:", error);
       return { success: false, error: "Unable to calculate this payment right now." };
@@ -124,8 +127,10 @@ export async function payWithACH(formData: FormData): Promise<ActionState | void
   const baseCents = charge.amount_cents;
 
   let managerFee;
+  let managerFeeBaseCents;
   try {
-    managerFee = await getManagerFeeForProperty(propertyId, baseCents);
+    managerFeeBaseCents = await managerFeeBaseForCharge(charge);
+    managerFee = await getManagerFeeForProperty(propertyId, managerFeeBaseCents);
   } catch (error) {
     console.error("payWithACH manager fee error:", error);
     return { success: false, error: "Unable to calculate this payment right now." };
@@ -134,7 +139,7 @@ export async function payWithACH(formData: FormData): Promise<ActionState | void
   let managerStripeAccount = null;
   if (managerFee.feeCents > 0) {
     try {
-      managerStripeAccount = await getManagerStripeAccountForProperty(propertyId, baseCents);
+      managerStripeAccount = await getManagerStripeAccountForProperty(propertyId, managerFeeBaseCents);
     } catch (error) {
       console.error("payWithACH manager stripe error:", error);
       return { success: false, error: "Unable to calculate this payment right now." };

@@ -71,6 +71,11 @@ function createAdminMock(config: MockAdminConfig = {}) {
 
   const client = {
     from: vi.fn((table: string) => {
+      if (table === "rent_charge_lines") {
+        return { select: vi.fn(() => ({ eq: vi.fn(() => ({
+          limit: vi.fn().mockResolvedValue({ data: [], error: null })
+        })) })) };
+      }
       if (table === "rent_charges") {
         return {
           select: vi.fn(() => rentChargeSelectBuilder),

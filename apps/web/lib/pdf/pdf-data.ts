@@ -4,6 +4,7 @@ import { canUserAdministerProperty, getAdministeredPropertyIds } from "@/lib/pro
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildLeaseSummaryPdfData, buildReceiptPdfData } from "./pdf-builders";
 import type { LeaseQueryShape, ReceiptQueryShape, LeaseSummaryPdfData, ReceiptPdfData } from "./pdf-builders";
+import { getChargeLines } from "@/lib/charge-lines";
 
 export {
   buildLeaseSummaryFileName, buildLeaseSummaryPdfData, buildReceiptFileName,
@@ -93,7 +94,8 @@ due_day_of_month, late_fee_cents, grace_period_days, lease_status"
     lease,
     unit,
     property,
-    tenantProfile
+    tenantProfile,
+    lines: await getChargeLines([charge.id])
   };
 }
 
@@ -289,6 +291,12 @@ due_day_of_month, late_fee_cents, grace_period_days, lease_status"
   }
 
   const chargeIds = chargeRows.map((charge) => charge.id);
+  const lineRows = await getChargeLines(chargeIds);
+  const linesById = new Map<string, typeof lineRows>();
+  for (const line of lineRows) {
+    if (line.charge_id) linesById.set(line.charge_id,
+      [...(linesById.get(line.charge_id) ?? []), line]);
+  }
   const startIso = `${year}-01-01T00:00:00.000Z`;
   const endIso = `${year + 1}-01-01T00:00:00.000Z`;
   const { data: payments } = await admin
@@ -361,7 +369,8 @@ due_day_of_month, late_fee_cents, grace_period_days, lease_status"
         lease,
         unit,
         property,
-        tenantProfile: profileById.get(lease.tenant_profile_id) ?? null
+        tenantProfile: profileById.get(lease.tenant_profile_id) ?? null,
+        lines: linesById.get(charge.id) ?? []
       });
     })
     .filter((receipt): receipt is ReceiptPdfData => receipt !== null);

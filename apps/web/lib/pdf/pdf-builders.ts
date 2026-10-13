@@ -1,5 +1,6 @@
 import { formatDate, formatDateTime, formatUnitLabel } from "@/lib/format";
 import { paymentMethodLabel } from "@/lib/payment-method-label";
+import { chargeBreakdown, type ChargeLine } from "@/lib/charge-lines";
 
 export interface ReceiptPdfData {
   receiptNumber: string;
@@ -15,6 +16,7 @@ export interface ReceiptPdfData {
   categoryLabel: string;
   referenceNote?: string | null;
   generatedAt: string;
+  lines?: Array<{ label: string; amountFormatted: string }>;
 }
 
 export interface LeaseSummaryPdfData {
@@ -80,6 +82,7 @@ export interface ReceiptQueryShape {
     full_name: string | null;
     email: string | null;
   } | null;
+  lines?: ChargeLine[];
 }
 
 export interface LeaseQueryShape {
@@ -159,6 +162,8 @@ function buildLeaseNumber(leaseId: string) {
 }
 
 export function buildReceiptPdfData(shape: ReceiptQueryShape): ReceiptPdfData {
+  const lines = shape.lines ?? [];
+  const parts = chargeBreakdown(shape.charge, lines);
   return {
     receiptNumber: buildReceiptNumber(shape.payment.id),
     tenantName: getTenantName(shape.tenantProfile),
@@ -178,7 +183,11 @@ export function buildReceiptPdfData(shape: ReceiptQueryShape): ReceiptPdfData {
     leaseLabel: `${formatDate(shape.lease.start_date)} - ${formatDate(shape.lease.end_date)}`,
     categoryLabel: formatCategory(shape.charge.category),
     referenceNote: shape.payment.reference_note,
-    generatedAt: formatDateTime(new Date())
+    generatedAt: formatDateTime(new Date()),
+    ...(lines.length ? { lines: [
+      { label: "Rent", amountFormatted: formatCurrencyForPdf(parts.rentCents) },
+      ...lines.map((line) => ({ label: line.label, amountFormatted: formatCurrencyForPdf(line.amount_cents) }))
+    ] } : {})
   };
 }
 
@@ -206,4 +215,3 @@ export function buildLeaseSummaryPdfData(shape: LeaseQueryShape): LeaseSummaryPd
     generatedAt: formatDateTime(new Date())
   };
 }
-

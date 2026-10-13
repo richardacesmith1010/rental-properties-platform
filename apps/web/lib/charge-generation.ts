@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createRentChargeWithLines } from "@/lib/charge-lines";
 import { withChargeEditingFallback } from "@/lib/charge-audit";
 import { formatDate } from "@/lib/format";
 import {
@@ -474,14 +476,16 @@ export async function generateMonthlyChargesForPropertyIdsWithClient(
       }))
   );
 
-  if (inserts.length > 0) {
-    const { error } = await supabase.from("rent_charges").insert(inserts);
-    if (error && error.code !== "23505") throw error;
+  const admin = createAdminClient();
+  let createdCount = 0;
+  for (const charge of inserts) {
+    if (await createRentChargeWithLines(admin, charge.lease_id, charge.due_date,
+      charge.amount_cents)) createdCount += 1;
   }
   await applyLateFeesToOverdueCharges(supabase, leaseIds, todayIso);
   await updateLeaseStatuses(supabase, propertyIds);
-  return inserts.length > 0
-    ? `Generated ${inserts.length} new charge${inserts.length === 1 ? "" : "s"}.`
+  return createdCount > 0
+    ? `Generated ${createdCount} new charge${createdCount === 1 ? "" : "s"}.`
     : "No new charges generated (already up to date).";
 }
 

@@ -117,6 +117,9 @@ function createCheckoutSupabase(config: CheckoutConfig): SupabaseClient {
 function createManualAdminClient(config: ManualConfig): SupabaseClient {
   return {
     from: vi.fn((table: string) => {
+      if (table === "rent_charge_lines") {
+        return { select: vi.fn(() => ({ in: vi.fn().mockResolvedValue({ data: [], error: null }) })) };
+      }
       if (table === "payments") {
         return {
           insert: vi.fn().mockResolvedValue({ error: config.paymentError ?? null })

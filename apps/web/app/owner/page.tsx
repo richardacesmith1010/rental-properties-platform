@@ -1,4 +1,7 @@
 import { addPartner, setExpensePaidBy } from "@/app/actions/partners";
+import { billTenantForExpense } from "@/app/actions/charge-lines";
+import { addNextBillLine, removeNextBillLine } from "@/app/actions/charge-lines";
+import { enrichDashboardChargeLines } from "@/lib/dashboard";
 import { OwnerSectionDataProvider } from "@/components/dashboard/dashboard-data-loader";
 import { Dashboard } from "@/components/dashboard";
 import { StripeTestModeBanner } from "@/components/shared/stripe-test-mode-banner";
@@ -151,6 +154,7 @@ export default async function OwnerPage(props: OwnerPageProps) {
     connectHref: rentCollectionConnectHref,
     accounts: ownerPage.ownershipAccounts
   });
+  const dashboard = await enrichDashboardChargeLines(ownerPage.dashboard);
 
   return (
     <>
@@ -162,7 +166,7 @@ export default async function OwnerPage(props: OwnerPageProps) {
         property={ownerPage.initialPropertyId}
       >
       <Dashboard
-        data={ownerPage.dashboard}
+        data={dashboard}
         ownerYearRent={ownerPage.ownerYearRent}
         ownerWalletHome={ownerPage.ownerWalletHome}
         portfolio={ownerPage.portfolio}
@@ -237,6 +241,8 @@ export default async function OwnerPage(props: OwnerPageProps) {
         onPayCharge={payWithCard as (formData: FormData) => Promise<void>}
         onDeletePendingCharge={deletePendingCharge}
         onEditCharge={editCharge}
+        onAddNextBillLine={addNextBillLine}
+        onRemoveNextBillLine={removeNextBillLine}
         onCreateManualCharge={createManualCharge}
         onWaiveCharge={waiveCharge}
         onRecordManualPayment={recordManualPayment}
@@ -283,6 +289,7 @@ export default async function OwnerPage(props: OwnerPageProps) {
         onDeleteExpense={deleteExpense}
         onAddPartner={addPartner}
         onSetPaidBy={setExpensePaidBy}
+        onBillTenantForExpense={billTenantForExpense}
         onSetupManagerPaymentConfig={setupManagerPaymentConfig}
         onRecordManagerPayment={recordManagerPayment}
         onMarkManagerPaymentPaid={markManagerPaymentPaid}

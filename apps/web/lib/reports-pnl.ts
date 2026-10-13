@@ -3,6 +3,7 @@ import { type ChargeDetailRecordDTO, type ExpenseLineItemDTO, withChargeEditingF
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 import { getCurrentUserRole } from "@/lib/auth";
 import { getOwnerMemberPropertyIds } from "@/lib/property-access";
+import { chargeBreakdown, getChargeLines, linesByCharge, splitChargePayment } from "@/lib/charge-lines";
 import {
   buildMonthKeys,
   composePropertyAddress,
@@ -18,6 +19,7 @@ export interface MonthlyPnLRow {
   propertyName: string;
   rentalIncome: number;
   lateFeeIncome: number;
+  waterPaidBack?: number;
   totalIncome: number;
   expenses: number;
   netIncome: number;
@@ -123,28 +125,34 @@ export async function getMonthlyPnLReport(
       throw chargeError;
     }
 
-    const chargeById = new Map((charges ?? []).map((charge) => [charge.id, charge]));
-    const { data: payments } = chargeById.size
+    const chargeById = new Map((charges ?? []).filter((charge) => charge.status !== "waived")
+      .map((charge) => [charge.id, charge]));
+    const lineMap = linesByCharge(await getChargeLines([...chargeById.keys()]));
+    const { data: payments, error: paymentError } = chargeById.size
       ? await admin
           .from("payments")
-          .select("rent_charge_id, amount_cents, paid_at")
+          .select("rent_charge_id, amount_cents, paid_at, reversed_at")
           .in("rent_charge_id", Array.from(chargeById.keys()))
+          .is("reversed_at", null)
           .gte("paid_at", startOfYear(year))
           .lte("paid_at", `${endOfYear(year)}T23:59:59.999Z`)
-      : { data: [] };
+      : { data: [], error: null };
+    if (paymentError) throw paymentError;
 
-    const { data: expenses } = await admin
+    const { data: expenses, error: expenseError } = await admin
       .from("property_expenses")
       .select("id, property_id, category, description, amount_cents, expense_date")
       .in("property_id", context.propertyIds)
       .gte("expense_date", startOfYear(year))
       .lte("expense_date", endOfYear(year));
+    if (expenseError) throw expenseError;
 
     const totalsByMonthProperty = new Map<
       string,
       {
         rentalIncome: number;
         lateFeeIncome: number;
+        waterPaidBack: number;
         expenses: number;
         incomeLineItems: ChargeDetailRecordDTO[];
         expenseLineItems: ExpenseLineItemDTO[];
@@ -156,6 +164,7 @@ export async function getMonthlyPnLReport(
         totalsByMonthProperty.set(`${property.id}:${month}`, {
           rentalIncome: 0,
           lateFeeIncome: 0,
+          waterPaidBack: 0,
           expenses: 0,
           incomeLineItems: [],
           expenseLineItems: []
@@ -179,7 +188,12 @@ export async function getMonthlyPnLReport(
       if (charge.category === "late_fee") {
         bucket.lateFeeIncome += payment.amount_cents;
       } else {
-        bucket.rentalIncome += payment.amount_cents;
+        const lines = lineMap.get(charge.id) ?? [];
+        const parts = lines.length
+          ? splitChargePayment(chargeBreakdown(charge, lines))
+          : { rentIncomeCents: payment.amount_cents, waterPaidBackCents: 0 };
+        bucket.rentalIncome += parts.rentIncomeCents;
+        bucket.waterPaidBack += parts.waterPaidBackCents;
       }
       const tenantId = lease.tenant_profile_id ?? null;
       bucket.incomeLineItems.push({
@@ -231,13 +245,14 @@ export async function getMonthlyPnLReport(
         if (!bucket) {
           continue;
         }
-        const totalIncome = bucket.rentalIncome + bucket.lateFeeIncome;
+        const totalIncome = bucket.rentalIncome + bucket.lateFeeIncome + bucket.waterPaidBack;
         rows.push({
           month,
           propertyId: property.id,
           propertyName: property.name,
           rentalIncome: bucket.rentalIncome,
           lateFeeIncome: bucket.lateFeeIncome,
+          waterPaidBack: bucket.waterPaidBack,
           totalIncome,
           expenses: bucket.expenses,
           netIncome: totalIncome - bucket.expenses,

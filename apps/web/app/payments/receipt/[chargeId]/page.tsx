@@ -9,6 +9,8 @@ import { formatCurrency, formatDate, formatDateTime, formatUnitLabel } from "@/l
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
 import { PrintButton } from "./print-button";
+import { chargeBreakdown, type ChargeLine } from "@/lib/charge-lines";
+import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 interface ReceiptPageProps {
   params: Promise<{
@@ -91,6 +93,11 @@ export default async function ReceiptPage(props: ReceiptPageProps) {
   if (!property) {
     notFound();
   }
+  const { data: rawLines, error: linesError } = await supabase.from("rent_charge_lines")
+    .select("id, lease_id, charge_id, kind, label, amount_cents").eq("charge_id", charge.id);
+  if (linesError && !isMissingSchemaError(linesError)) throw linesError;
+  const lines = (rawLines ?? []) as ChargeLine[];
+  const parts = chargeBreakdown(charge, lines);
 
   return (
     <main className="app-surface min-h-screen px-6 py-8 lg:px-8">
@@ -217,6 +224,10 @@ export default async function ReceiptPage(props: ReceiptPageProps) {
                   {charge.category === "late_fee" ? "Late Fee" : "Rent"} • Due {formatDate(charge.due_date)}
                 </p>
                 <p className="text-sm text-[var(--muted)]">{formatCurrency(charge.amount_cents)}</p>
+                {lines.length ? <div className="space-y-1 text-sm text-[var(--muted)]">
+                  <p>Rent {formatCurrency(parts.rentCents)}</p>
+                  {lines.map((line) => <p key={line.id}>{line.label} {formatCurrency(line.amount_cents)}</p>)}
+                </div> : null}
               </div>
               <div className="space-y-1">
                 <p className="text-xs uppercase tracking-wide text-[var(--faint)]">Payment Details</p>

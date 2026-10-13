@@ -71,4 +71,31 @@ describe("expense payer flow", () => {
     expect(props.onCreateExpense).toHaveBeenCalledTimes(1);
     expect(props.onSetPaidBy).toHaveBeenLastCalledWith("expense", "partner");
   });
+  it("saves one utility bill and retries only its next-bill line", async () => {
+    const onCreateExpense = vi.fn().mockResolvedValue({ success: true, expenseId: "expense" });
+    const onBillTenantForExpense = vi.fn().mockResolvedValueOnce({ ok: false })
+      .mockResolvedValueOnce({ ok: true });
+    const data = { ...base, activeLeaseByProperty: { home: { tenantName: "Jamie", count: 1 } } };
+    const { container } = render(<ExpenseForm data={data} {...props}
+      onCreateExpense={onCreateExpense} onBillTenantForExpense={onBillTenantForExpense} />);
+    fireEvent.click(screen.getByTitle("Complete this step and move to the next step."));
+    fireEvent.change(container.querySelector("select")!, { target: { value: "utility" } });
+    fireEvent.click(screen.getByTitle("Complete this step and move to the next step."));
+    fireEvent.change(container.querySelector('input[type="number"]')!, { target: { value: "112.59" } });
+    fireEvent.click(screen.getByTitle("Complete this step and move to the next step."));
+    fireEvent.change(container.querySelector('input[type="date"]')!, { target: { value: "2026-10-12" } });
+    fireEvent.click(screen.getByTitle("Complete this step and move to the next step."));
+    fireEvent.click(screen.getByTitle("Complete this step and move to the next step."));
+    for (let index = 0; index < 3; index += 1) {
+      fireEvent.click(screen.getByTitle("Skip this optional step for now and continue."));
+    }
+    expect(screen.getByText(/We'll add it to Jamie's next rent bill/)).toBeTruthy();
+    fireEvent.click(screen.getByText("Bill the tenant for this"));
+    fireEvent.click(screen.getByTitle("Create this expense record."));
+    await waitFor(() => expect(screen.getByTitle("Retry adding this bill to the next rent bill")).toBeTruthy());
+    fireEvent.click(screen.getByTitle("Retry adding this bill to the next rent bill"));
+    await waitFor(() => expect(onBillTenantForExpense).toHaveBeenCalledTimes(2));
+    expect(onCreateExpense).toHaveBeenCalledTimes(1);
+    expect(onBillTenantForExpense).toHaveBeenLastCalledWith("expense");
+  });
 });

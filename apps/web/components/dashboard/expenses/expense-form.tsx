@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { useFormState } from "react-dom";
 import type { StatefulAction } from "@/app/actions";
 import type { addPartner, setExpensePaidBy } from "@/app/actions/partners";
+import type { billTenantForExpense } from "@/app/actions/charge-lines";
 import type { Partner } from "@/lib/partners";
 import type { ExpenseDashboardData } from "@/lib/expenses";
 import type { VendorDTO } from "@/lib/vendors";
@@ -48,9 +49,11 @@ function StepPill({ label, active, done, skipped }: { label: string; active: boo
   return <div className={`rounded-md border px-2 py-2 text-xs ${className}`}>{label}</div>;
 }
 
-export function ExpenseForm({ data, vendors, propertyFiles, onCreateExpense, onAddPartner, onSetPaidBy }: {
+export function ExpenseForm({ data, vendors, propertyFiles, onCreateExpense, onAddPartner,
+  onSetPaidBy, onBillTenantForExpense }: {
   data: ExpenseDashboardData; vendors: VendorDTO[]; propertyFiles: PropertyFileDTO[];
-  onCreateExpense: StatefulAction; onAddPartner?: typeof addPartner; onSetPaidBy?: typeof setExpensePaidBy
+  onCreateExpense: StatefulAction; onAddPartner?: typeof addPartner; onSetPaidBy?: typeof setExpensePaidBy;
+  onBillTenantForExpense?: typeof billTenantForExpense;
 }) {
   const [payerId, setPayerId] = useState("");
   const [newName, setNewName] = useState("");
@@ -59,17 +62,29 @@ export function ExpenseForm({ data, vendors, propertyFiles, onCreateExpense, onA
   const [retry, setRetry] = useState<{ expenseId: string; partnerId: string } | null>(null);
   const [retryError, setRetryError] = useState("");
   const [retrySaved, setRetrySaved] = useState(false);
+  const [billTenant, setBillTenant] = useState(false);
+  const [retryBillId, setRetryBillId] = useState<string | null>(null);
+  const billRetryCopy = "We saved the bill but didn't add it to the rent bill. Try again.";
   const saveExpense: StatefulAction = async (previous, formData) => {
     setRetrySaved(false);
     const result = await onCreateExpense(previous, formData);
-    if (!result?.success || !result.expenseId || !payerId || !onSetPaidBy) return result;
-    const target = { expenseId: result.expenseId, partnerId: payerId };
-    const saved = await onSetPaidBy(target.expenseId, target.partnerId);
-    if (!saved.ok) {
-      setRetry(target);
-      return { success: false, error: "We saved the bill but not who paid. Try again." };
+    if (!result?.success || !result.expenseId) return result;
+    let partnerFailed = false;
+    if (payerId && onSetPaidBy) {
+      const target = { expenseId: result.expenseId, partnerId: payerId };
+      const saved = await onSetPaidBy(target.expenseId, target.partnerId);
+      if (!saved.ok) { setRetry(target); partnerFailed = true; }
+      else setRetry(null);
     }
-    setRetry(null);
+    if (billTenant && onBillTenantForExpense) {
+      const added = await onBillTenantForExpense(result.expenseId);
+      if (!added.ok) {
+        setRetryBillId(result.expenseId);
+        return { success: false, error: billRetryCopy };
+      }
+      setRetryBillId(null);
+    }
+    if (partnerFailed) return { success: false, error: "We saved the bill but not who paid. Try again." };
     return result;
   };
   const [state, action] = useFormState(saveExpense, null);
@@ -113,6 +128,11 @@ export function ExpenseForm({ data, vendors, propertyFiles, onCreateExpense, onA
     }
     else setRetryError("We saved the bill but not who paid. Try again.");
   }
+  async function tryBillAgain() {
+    if (!retryBillId || !onBillTenantForExpense) return;
+    const result = await onBillTenantForExpense(retryBillId);
+    if (result.ok) { setRetryBillId(null); setBillTenant(false); setRetrySaved(true); setStep(0); }
+  }
   const availableVendors = useMemo(() => [...vendors].sort((left, right) => left.name.localeCompare(right.name)), [vendors]);
   const availableCreateReceiptFiles = useMemo(() => propertyFiles.filter((file) => !draft.propertyId || file.propertyId === draft.propertyId).sort((left, right) => right.createdAt.localeCompare(left.createdAt)), [draft.propertyId, propertyFiles]);
   const requiredComplete = Boolean(draft.propertyId && draft.category && Number(draft.amountDollars) > 0 && draft.expenseDate && (!draft.recurring || draft.recurringFrequency));
@@ -129,6 +149,7 @@ export function ExpenseForm({ data, vendors, propertyFiles, onCreateExpense, onA
   useEffect(() => {
     if (!state?.success) return;
     setPayerId("");
+    setBillTenant(false);
     setStep(0);
     setSkippedSteps([]);
     setDraft({ propertyId: data.properties[0]?.id ?? "", category: "maintenance", amountDollars: "", expenseDate: "", recurring: false, recurringFrequency: "", vendorId: "", receiptFileId: "", description: "" });
@@ -146,11 +167,17 @@ export function ExpenseForm({ data, vendors, propertyFiles, onCreateExpense, onA
       <CardContent className="space-y-4">
         <p className="text-sm text-[var(--ink-2)]">One field at a time. Press Enter or Next to continue. Optional steps can be skipped.</p>
         {state && !state.success && state.error !== "We saved the bill but not who paid. Try again."
+          && state.error !== billRetryCopy
           ? <FormError state={state} /> : null}
         {retrySaved && <p className="text-sm text-[var(--pos)]">Expense created.</p>}
         {retry && <div role="alert" className="space-y-2 text-sm text-[var(--crit)]">
           <p>We saved the bill but not who paid. Try again.</p>
           <Button type="button" title="Retry saving who paid" onClick={tryAgain}>Try again</Button>
+        </div>}
+        {retryBillId && <div role="alert" className="space-y-2 text-sm text-[var(--crit)]">
+          <p>{billRetryCopy}</p>
+          <Button type="button" title="Retry adding this bill to the next rent bill"
+            onClick={tryBillAgain}>Try again</Button>
         </div>}
         {retryError && <p role="alert" className="text-sm text-[var(--crit)]">{retryError}</p>}
         <FormSuccess state={state} message="Expense created." />
@@ -162,12 +189,22 @@ export function ExpenseForm({ data, vendors, propertyFiles, onCreateExpense, onA
           <Select value={draft.propertyId} onChange={(event) => {
             setDraft((current) => ({ ...current, propertyId: event.target.value, receiptFileId: "" }));
             setPayerId("");
+            setBillTenant(false);
           }}>
             <option value="">Select property</option>
             {data.properties.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}
           </Select>
         </div> : null}
-        {step === 1 ? <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Step 2: Choose the expense category.</p><Select value={draft.category} onChange={(event) => setDraft((current) => ({ ...current, category: event.target.value }))}>{expenseCategories.map((category) => <option key={category} value={category}>{formatCategory(category)}</option>)}</Select></div> : null}
+        {step === 1 ? <div className="space-y-3">
+          <p className="text-sm text-[var(--ink-2)]">Step 2: Choose the expense category.</p>
+          <Select value={draft.category} onChange={(event) => {
+            setDraft((current) => ({ ...current, category: event.target.value }));
+            setBillTenant(false);
+          }}>
+            {expenseCategories.map((category) => <option key={category} value={category}>
+              {formatCategory(category)}</option>)}
+          </Select>
+        </div> : null}
         {step === 2 ? <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Step 3: Enter amount in US dollars.</p><Input value={draft.amountDollars} onChange={(event) => setDraft((current) => ({ ...current, amountDollars: event.target.value }))} onKeyDown={(event) => onEnterNext(event, stepComplete(step), 3)} type="number" min={0.01} step="0.01" placeholder="Amount (USD)" required /></div> : null}
         {step === 3 ? <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Step 4: Select the date of the expense.</p><Input value={draft.expenseDate} onChange={(event) => setDraft((current) => ({ ...current, expenseDate: event.target.value }))} type="date" required /></div> : null}
         {step === 4 ? <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Step 5: Set recurring behavior.</p><label className="flex items-center gap-2 text-xs text-[var(--ink-2)]"><input type="checkbox" checked={draft.recurring} onChange={(event) => setDraft((current) => ({ ...current, recurring: event.target.checked, recurringFrequency: event.target.checked ? current.recurringFrequency : "" }))} />Recurring expense</label><Select value={draft.recurringFrequency} onChange={(event) => setDraft((current) => ({ ...current, recurringFrequency: event.target.value }))} disabled={!draft.recurring}><option value="">Not recurring</option>{recurringFrequencies.map((frequency) => <option key={frequency} value={frequency}>{formatCategory(frequency)}</option>)}</Select></div> : null}
@@ -205,6 +242,14 @@ export function ExpenseForm({ data, vendors, propertyFiles, onCreateExpense, onA
               <Button type="button" title="Save new person" onClick={addPerson}>Add</Button>
             </div>}
           </div>}
+          {draft.category === "utility" && data.activeLeaseByProperty?.[draft.propertyId]?.count === 1
+            && onBillTenantForExpense ? <label className="flex items-start gap-2 text-sm text-[var(--ink)]">
+              <input type="checkbox" checked={billTenant}
+                onChange={(event) => setBillTenant(event.target.checked)} />
+              <span>Bill the tenant for this<span className="block text-xs text-[var(--muted)]">
+                We&apos;ll add it to {data.activeLeaseByProperty[draft.propertyId].tenantName}&apos;s next rent bill.
+              </span></span>
+            </label> : null}
           <form className="space-y-3" action={action}>
             <input type="hidden" name="propertyId" value={draft.propertyId} />
             <input type="hidden" name="category" value={draft.category} />
@@ -217,7 +262,7 @@ export function ExpenseForm({ data, vendors, propertyFiles, onCreateExpense, onA
             <input type="hidden" name="receiptFileId" value={draft.receiptFileId} />
             <input type="hidden" name="description" value={draft.description} />
             <Input name="receiptFile" type="file" />
-            <SubmitButton className="w-full" disabled={!requiredComplete || Boolean(retry)}
+            <SubmitButton className="w-full" disabled={!requiredComplete || Boolean(retry) || Boolean(retryBillId)}
               title="Create this expense record.">Save Expense</SubmitButton>
           </form>
         </div> : null}

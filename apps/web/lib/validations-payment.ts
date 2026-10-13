@@ -1,6 +1,16 @@
 import { z } from "zod";
 import { checkboxBooleanSchema } from "@/lib/validations-auth";
 
+export const createNextBillLineSchema = z.object({
+  leaseId: z.string().uuid(),
+  kind: z.enum(["utility", "credit"]),
+  label: z.string().trim().min(1).max(60),
+  amountCents: z.number().int().positive().max(2147483647)
+});
+
+export const deleteNextBillLineSchema = z.object({ lineId: z.string().uuid() });
+export const billTenantForExpenseSchema = z.object({ expenseId: z.string().uuid() });
+
 export const payChargeSchema = z.object({
   chargeId: z.string().uuid("Invalid charge ID.")
 });

@@ -58,6 +58,8 @@ function ReceiptPage({ receipt }: { receipt: ReceiptPdfData }) {
           <DetailRow label="Payment Date" value={receipt.paidDate} />
           <DetailRow label="Method" value={receipt.paymentMethod} />
           {receipt.referenceNote ? <DetailRow label="Reference" value={receipt.referenceNote} /> : null}
+          {receipt.lines?.map((line, index) =>
+            <DetailRow key={`${line.label}:${index}`} label={line.label} value={line.amountFormatted} />)}
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Amount Paid</Text>
             <Text style={styles.totalValue}>{receipt.amountFormatted}</Text>

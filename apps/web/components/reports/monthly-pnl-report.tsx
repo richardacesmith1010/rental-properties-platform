@@ -20,11 +20,12 @@ export function MonthlyPnLReport({ data, onEditCharge, onUpdateExpense }: Monthl
     (summary, row) => ({
       rentalIncome: summary.rentalIncome + row.rentalIncome,
       lateFeeIncome: summary.lateFeeIncome + row.lateFeeIncome,
+      waterPaidBack: summary.waterPaidBack + (row.waterPaidBack ?? 0),
       totalIncome: summary.totalIncome + row.totalIncome,
       expenses: summary.expenses + row.expenses,
       netIncome: summary.netIncome + row.netIncome
     }),
-    { rentalIncome: 0, lateFeeIncome: 0, totalIncome: 0, expenses: 0, netIncome: 0 }
+    { rentalIncome: 0, lateFeeIncome: 0, waterPaidBack: 0, totalIncome: 0, expenses: 0, netIncome: 0 }
   );
 
   return (
@@ -40,6 +41,8 @@ export function MonthlyPnLReport({ data, onEditCharge, onUpdateExpense }: Monthl
         { key: "property", label: "Property", sortValue: (row) => row.propertyName, render: (row) => row.propertyName },
         { key: "rent", label: "Rental Income", sortValue: (row) => row.rentalIncome, render: (row) => formatCurrency(row.rentalIncome) },
         { key: "late", label: "Late Fees", sortValue: (row) => row.lateFeeIncome, render: (row) => formatCurrency(row.lateFeeIncome) },
+        { key: "water", label: "Water paid back", sortValue: (row) => row.waterPaidBack ?? 0,
+          render: (row) => formatCurrency(row.waterPaidBack ?? 0) },
         { key: "income", label: "Total Income", sortValue: (row) => row.totalIncome, render: (row) => formatCurrency(row.totalIncome) },
         { key: "expenses", label: "Expenses", sortValue: (row) => row.expenses, render: (row) => formatCurrency(row.expenses) },
         { key: "net", label: "Net Income", sortValue: (row) => row.netIncome, render: (row) => formatCurrency(row.netIncome) }

@@ -2,7 +2,8 @@ import { getClientsOverview } from "@/lib/client-overview";
 import { createClientAccount } from "@/app/actions/client-accounts";
 import { createPropertyWithSetup } from "@/app/actions/unified-setup";
 import { Dashboard } from "@/components/dashboard";
-import { getDashboardData } from "@/lib/dashboard";
+import { enrichDashboardChargeLines, getDashboardData } from "@/lib/dashboard";
+import { addNextBillLine, removeNextBillLine, billTenantForExpense } from "@/app/actions/charge-lines";
 import { getPortfolioData } from "@/lib/portfolio";
 import { getAdministeredPropertyOptions } from "@/lib/property-access";
 import { getAdminMaintenanceTickets } from "@/lib/maintenance";
@@ -227,10 +228,11 @@ export default async function ManagerPage(props: ManagerPageProps) {
   const ownerConnectedMap = await arePropertyOwnersConnected(
     portfolio.properties.map((property) => property.id)
   );
+  const dashboardWithLines = await enrichDashboardChargeLines(dashboard);
 
   return (
     <Dashboard
-      data={dashboard}
+      data={dashboardWithLines}
       clients={clients}
       onCreateClientAccount={createClientAccount}
       onCreatePropertyWithSetup={createPropertyWithSetup}
@@ -287,6 +289,9 @@ export default async function ManagerPage(props: ManagerPageProps) {
       onPayCharge={payWithCard as (formData: FormData) => Promise<void>}
       onDeletePendingCharge={deletePendingCharge}
       onEditCharge={editCharge}
+      onAddNextBillLine={addNextBillLine}
+      onRemoveNextBillLine={removeNextBillLine}
+      onBillTenantForExpense={billTenantForExpense}
       onCreateManualCharge={createManualCharge}
       onWaiveCharge={waiveCharge}
       onRecordManualPayment={recordManualPayment}

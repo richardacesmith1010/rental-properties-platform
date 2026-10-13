@@ -4,7 +4,8 @@ import { loadRentRowsForProperties } from "@/lib/owner-rent-rows";
 import { getOwnershipAccountsForUser } from "@/lib/ownership";
 import { getAdministeredProperties } from "@/lib/property-access";
 import { getPortfolioData } from "@/lib/portfolio";
-import { rentReceivedByPropertyId } from "@/lib/rent-received";
+import { rentOnlyReceivedByPropertyId } from "@/lib/rent-received";
+import { getChargeLines } from "@/lib/charge-lines";
 import { tracksLateRent } from "@/lib/lease-collection";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -44,8 +45,9 @@ export async function loadOwnerWalletHome(userId: string, today = new Date()): P
     const unitProperty = new Map(rentRows.units.map((unit) => [unit.id, unit.property_id]));
     const leaseProperty = new Map(rentRows.leases.map((lease) => [lease.id, unitProperty.get(lease.unit_id)]));
     const chargeProperty = new Map(rentRows.charges.map((charge) => [charge.id, leaseProperty.get(charge.lease_id)]));
-    const inByProperty = rentReceivedByPropertyId(ids, rentRows.charges, rentRows.payments,
-      chargeProperty, yearFrom, yearTo);
+    const lines = await getChargeLines(rentRows.charges.map((charge) => charge.id));
+    const inByProperty = rentOnlyReceivedByPropertyId(ids, rentRows.charges, rentRows.payments,
+      chargeProperty, yearFrom, yearTo, lines);
     const outByProperty = new Map<string, number>();
     for (const expense of expenses.data ?? []) {
       if (!idSet.has(expense.property_id)) continue;

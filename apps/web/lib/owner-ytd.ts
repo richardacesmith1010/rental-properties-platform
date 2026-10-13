@@ -1,5 +1,6 @@
 import { getAuthenticatedUser, getCurrentUserRole } from "@/lib/auth";
-import { rentReceivedByPropertyId } from "@/lib/rent-received";
+import { rentOnlyReceivedByPropertyId } from "@/lib/rent-received";
+import { getChargeLines } from "@/lib/charge-lines";
 import { loadRentRowsForProperties } from "@/lib/owner-rent-rows";
 import { getOwnershipAccountsForUser } from "@/lib/ownership";
 import { getAdministeredProperties } from "@/lib/property-access";
@@ -26,8 +27,9 @@ export async function loadOwnerYearRentReceived(accountId?: string | null): Prom
     const unitProperty = new Map(units.map((unit) => [unit.id, unit.property_id]));
     const leaseProperty = new Map(leases.map((lease) => [lease.id, unitProperty.get(lease.unit_id)]));
     const chargeProperty = new Map(charges.map((charge) => [charge.id, leaseProperty.get(charge.lease_id)]));
-    const byPropertyId = rentReceivedByPropertyId(
-      properties.map((property) => property.id), charges, payments, chargeProperty, from, to);
+    const lines = await getChargeLines(charges.map((charge) => charge.id));
+    const byPropertyId = rentOnlyReceivedByPropertyId(
+      properties.map((property) => property.id), charges, payments, chargeProperty, from, to, lines);
     return { ok: true, byPropertyId };
   } catch (error) {
     console.error("Owner year rent load failed", error);

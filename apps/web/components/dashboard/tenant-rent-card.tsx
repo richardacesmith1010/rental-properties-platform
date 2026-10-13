@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/shared/submit-button";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { TenantCharge } from "@/lib/tenant-payments";
 import type { TenantPayState } from "@/lib/tenant-pay-state";
+import { chargeBreakdown } from "@/lib/charge-breakdown";
 import { PayRentCard, type AutopayEnrollmentView } from "@/components/dashboard/pay-rent-card";
 import type { ActionState } from "@/app/actions";
 
@@ -92,8 +93,9 @@ export function TenantRentCard({
   const amountCents = ["can_pay", "not_ready", "outside"].includes(payState)
     ? unpaidCharges.reduce((total, item) => total + item.amountCents, 0)
     : rentAmountCents ?? charge?.amountCents ?? 0;
+  const dueMonthCount = new Set(unpaidCharges.map((item) => item.dueDate.slice(0, 7))).size;
   const amountLabel = ["can_pay", "not_ready", "outside"].includes(payState) && unpaidCharges.length > 1
-    ? `${formatCurrency(amountCents)} · ${unpaidCharges.length} months`
+    ? `${formatCurrency(amountCents)} · ${dueMonthCount} month${dueMonthCount === 1 ? "" : "s"}`
     : formatCurrency(amountCents);
   const label = payState === "paid" && lastPaidAt
     ? `${new Intl.DateTimeFormat("en-US", { month: "long", timeZone: "UTC" }).format(new Date(`${lastPaidAt}T00:00:00.000Z`))} rent`
@@ -122,6 +124,11 @@ export function TenantRentCard({
         <div>
           <p className="text-sm font-medium text-[var(--muted)]">{label}</p>
           <p className="mt-1 text-4xl font-bold tabular-nums text-[var(--ink)]">{amountLabel}</p>
+          {charge?.lines?.length ? <p className="mt-2 text-sm text-[var(--muted)]">
+            Rent {formatCurrency(chargeBreakdown({ id: charge.id, amount_cents: charge.amountCents },
+              charge.lines).rentCents)}
+            {charge.lines.map((line) => ` · ${line.label} ${formatCurrency(line.amount_cents)}`).join("")}
+          </p> : null}
           {dueDate && payState !== "paid" ? <p className="mt-2 text-sm text-[var(--muted)]">{payState === "not_posted" ? `due ${monthDay(dueDate)}` : `due ${monthDay(dueDate)} · ${relativeDueText(dueDate)}`}</p> : null}
         </div>
         {payState === "can_pay" ? (

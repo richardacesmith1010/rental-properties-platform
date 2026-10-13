@@ -10,6 +10,7 @@ export function ChargeMoreMenu({
   onWaive,
   onDelete,
   onMessage,
+  onAddNextBill,
   compact = false
 }: {
   disabled?: boolean;
@@ -17,6 +18,7 @@ export function ChargeMoreMenu({
   onWaive?: () => void;
   onDelete?: () => void;
   onMessage?: () => void;
+  onAddNextBill?: () => void;
   compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -49,7 +51,7 @@ export function ChargeMoreMenu({
     };
   }, [open]);
 
-  if (!onEdit && !onWaive && !onDelete && !onMessage) {
+  if (!onEdit && !onWaive && !onDelete && !onMessage && !onAddNextBill) {
     return null;
   }
 
@@ -93,6 +95,10 @@ export function ChargeMoreMenu({
               Message
             </button>
           ) : null}
+          {onAddNextBill ? <button type="button" onClick={() => {
+            setOpen(false); onAddNextBill();
+          }} className="flex min-h-11 w-full items-center rounded-xl px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+            title="Add water or a credit to the next rent bill">Add to next bill</button> : null}
           {onEdit ? (
             <button
               type="button"

@@ -13,6 +13,7 @@ import { cn, formatCurrency, formatDate } from "@/lib/format";
 import { calculateCardFee, formatCentsAsDollars } from "@/lib/payment-fees";
 import { getStatusClasses, statusAriaLabel, statusBadgeClasses } from "@/lib/status-colors";
 import { chargeCategoryLabel, type ChargeCategory } from "@/lib/charge-audit";
+import { chargeBreakdown, type ChargeLine } from "@/lib/charge-breakdown";
 
 export type ChargeStatus = "pending" | "paid" | "late" | "waived";
 
@@ -38,6 +39,8 @@ export interface ChargeRowData {
   editedCount?: number;
   collectsOutsideDomus?: boolean;
   clientHome?: boolean;
+  lines?: ChargeLine[];
+  waitingLines?: ChargeLine[];
 }
 
 interface ChargeRowProps {
@@ -59,6 +62,8 @@ interface ChargeRowProps {
   manualPaymentAction: (formData: FormData) => void;
   onToggleManualPayment?: () => void;
   onOpenEdit?: () => void;
+  onAddNextBill?: () => void;
+  onRemoveNextBillLine?: (lineId: string) => void;
   onWaive?: () => void;
   onDelete?: () => void;
   onOpenMessage?: () => void;
@@ -104,6 +109,8 @@ export function ChargeRow({
   manualPaymentAction,
   onToggleManualPayment,
   onOpenEdit,
+  onAddNextBill,
+  onRemoveNextBillLine,
   onWaive,
   onDelete,
   onOpenMessage,
@@ -175,6 +182,19 @@ export function ChargeRow({
                   <Badge variant="outline">{chargeCategoryLabel(category)}</Badge>
                 ) : null}
               </div>
+              {charge.lines?.length ? <p className="mt-1 text-xs text-[var(--muted)]">
+                Rent {formatCurrency(chargeBreakdown({ id: charge.id, amount_cents: charge.amountCents },
+                  charge.lines).rentCents)}
+                {charge.lines.map((line) => ` · ${line.label} ${formatCurrency(line.amount_cents)}`).join("")}
+              </p> : null}
+              {charge.waitingLines?.map((line) => <div key={line.id}
+                className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
+                <span>On next bill: {line.label} {formatCurrency(line.amount_cents)}</span>
+                {line.waitingForBiggerBill && <span>Waiting for a bill big enough</span>}
+                {onRemoveNextBillLine && <Button type="button" size="sm" variant="ghost"
+                  title={`Remove ${line.label} from the next bill`}
+                  onClick={() => onRemoveNextBillLine(line.id)}>Remove</Button>}
+              </div>)}
 
               {!isTenantView && charge.tenantName ? (
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -330,12 +350,13 @@ export function ChargeRow({
                 </Button>
               ) : null}
 
-              {canModify ? (
+              {canModify || onAddNextBill ? (
                 <ChargeMoreMenu
                   disabled={isMutatingCharges}
                   onEdit={onOpenEdit}
                   onWaive={onWaive}
                   onDelete={onDelete}
+                  onAddNextBill={onAddNextBill}
               onMessage={simpleView ? onOpenMessage : undefined}
               compact={simpleView}
                 />

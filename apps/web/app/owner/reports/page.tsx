@@ -20,6 +20,8 @@ import { ReceivablesReport } from "@/components/reports/receivables-report";
 import { RentRollReport } from "@/components/reports/rent-roll-report";
 import { TaxSummaryReport } from "@/components/reports/tax-summary-report";
 import { TenantLedgerReport } from "@/components/reports/tenant-ledger-report";
+import { MonthlyLeaseLedgerCard } from "@/components/reports/monthly-lease-ledger";
+import { getMonthlyLeaseLedgers } from "@/lib/reports-ledger";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +57,9 @@ export default async function ReportsPage(props: ReportsPageProps) {
   ]);
 
   const yearOptions = Array.from({ length: 4 }, (_, index) => new Date().getUTCFullYear() - index);
+  const monthlyLedgers = role === "owner" ? await getMonthlyLeaseLedgers(rentRoll
+    .filter((row) => ["active", "expiring_soon"].includes(row.leaseStatus))
+    .map((row) => row.leaseId)) : new Map();
   const reportsBasePath = role === "manager" ? "/owner/reports" : "/owner/reports";
   const openBalanceCents = receivables.reduce((sum, item) => sum + item.totalOwedCents, 0);
   const netIncomeCents = monthlyPnl.reduce((sum, row) => sum + row.netIncome, 0);
@@ -155,6 +160,8 @@ export default async function ReportsPage(props: ReportsPageProps) {
           <RentRollReport data={rentRoll} onEditCharge={editCharge} onDeleteCharge={deleteCharge} onWaiveCharge={waiveCharge} />
           <DelinquencyReport data={delinquency} onEditCharge={editCharge} onDeleteCharge={deleteCharge} onWaiveCharge={waiveCharge} />
           <TenantLedgerReport data={tenantLedger} onEditCharge={editCharge} onDeleteCharge={deleteCharge} onWaiveCharge={waiveCharge} />
+          {role === "owner" && [...monthlyLedgers].map(([leaseId, data]) =>
+            <MonthlyLeaseLedgerCard key={leaseId} data={data} />)}
           <MonthlyPnLReport data={monthlyPnl} onEditCharge={editCharge} onUpdateExpense={role === "owner" ? updateExpense : undefined} />
           {role === "owner" && <TaxSummaryReport data={taxSummary} year={reportYear} onSave={savePropertyTaxYear} />}
           <ReceivablesReport data={receivables} onEditCharge={editCharge} onDeleteCharge={deleteCharge} onWaiveCharge={waiveCharge} />

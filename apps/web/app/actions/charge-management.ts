@@ -65,6 +65,15 @@ export async function editCharge(
     }
 
     const nextAmountCents = Math.round(amountDollars * 100);
+    if (nextAmountCents !== context.charge.amount_cents) {
+      const { data: lines, error: linesError } = await admin.from("rent_charge_lines")
+        .select("id").eq("charge_id", chargeId).limit(1);
+      if (linesError && !isMissingSchemaError(linesError)) throw linesError;
+      if (lines?.length) return {
+        success: false,
+        error: "This bill has water or credit lines. Add a credit to the next bill instead."
+      };
+    }
     const nextNotes = notes?.trim() || null;
     const changeEntries: Array<{
       fieldName: string;

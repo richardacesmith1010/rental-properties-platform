@@ -3,6 +3,7 @@ import { canUserAdministerProperty } from "@/lib/property-access";
 import { escapeCell } from "@/lib/csv-export-reports";
 import { loadPropertyRentRows } from "@/lib/owner-rent-rows";
 import { dateOnly, rentReceivedCents } from "@/lib/rent-received";
+import { chargeBreakdown, getChargeLines, linesByCharge, splitChargePayment } from "@/lib/charge-lines";
 
 export interface Entry {
   id: string; date: string; kind: "rent" | "bill"; title: string; detail: string;
@@ -44,7 +45,9 @@ export function runningBalance(entries: Entry[]) {
 export function groupByCategory(entries: Entry[]) {
   const groups = new Map<string, { label: string; direction: "in" | "out"; amountCents: number }>();
   for (const entry of entries) {
-    const label = entry.direction === "in" ? "Rent" : entry.title || categoryLabel(entry.category);
+    const label = entry.direction === "in"
+      ? entry.category === "utility_reimbursement" ? "Water paid back" : "Rent"
+      : entry.title || categoryLabel(entry.category);
     const key = `${entry.direction}:${label}`;
     const prior = groups.get(key);
     groups.set(key, { label, direction: entry.direction, amountCents: (prior?.amountCents ?? 0) + entry.amountCents });
@@ -72,6 +75,7 @@ async function loadRows(propertyId: string, from: string, to: string) {
     loadPropertyRentRows(propertyId, from, to)
   ]);
   const { leases, charges, payments } = rentRows;
+  const chargeLines = linesByCharge(await getChargeLines(charges.map((charge) => charge.id)));
   const profileIds = [...new Set(leases.map((row) => row.tenant_profile_id).filter((id): id is string => Boolean(id)))];
   const [expenses, profiles] = await Promise.all([
     checked(admin.from("property_expenses")
@@ -108,10 +112,22 @@ async function loadRows(propertyId: string, from: string, to: string) {
     const lease = leaseMap.get(charge.lease_id);
     const date = dateOnly(payment.paid_at);
     if (date < from || date >= to) continue;
-    entries.push({
+    const lines = chargeLines.get(charge.id) ?? [];
+    const split = lines.length
+      ? splitChargePayment(chargeBreakdown(charge, lines))
+      : { rentIncomeCents: payment.amount_cents, waterPaidBackCents: 0 };
+    if (split.rentIncomeCents) entries.push({
       id: payment.id, date, kind: "rent",
       title: lease?.tenant_profile_id ? `Rent from ${profileMap.get(lease.tenant_profile_id) ?? "Tenant"}` : "Rent",
-      detail: "Rent", category: "rent", amountCents: payment.amount_cents, direction: "in",
+      detail: "Rent", category: "rent", amountCents: split.rentIncomeCents, direction: "in",
+      source: bankByPayment.get(payment.id) ? `From bank: ${bankByPayment.get(payment.id)}`
+        : payment.stripe_payment_intent_id ? "Paid online" : plainMethod(payment.method)
+    });
+    if (split.waterPaidBackCents) entries.push({
+      id: `${payment.id}:water`, date, kind: "rent", title: lease?.tenant_profile_id
+        ? `Water paid back from ${profileMap.get(lease.tenant_profile_id) ?? "Tenant"}` : "Water paid back",
+      detail: "Water paid back", category: "utility_reimbursement",
+      amountCents: split.waterPaidBackCents, direction: "in",
       source: bankByPayment.get(payment.id) ? `From bank: ${bankByPayment.get(payment.id)}`
         : payment.stripe_payment_intent_id ? "Paid online" : plainMethod(payment.method)
     });

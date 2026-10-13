@@ -12,6 +12,7 @@ import type { TenantCharge } from "@/lib/tenant-payments";
 import { cn, formatCurrency, formatDate, formatUnitLabel } from "@/lib/format";
 import { calculateCardFee, formatCentsAsDollars } from "@/lib/payment-fees";
 import type { TenantPayState } from "@/lib/tenant-pay-state";
+import { chargeBreakdown } from "@/lib/charge-breakdown";
 
 type StatefulAction = (
   prev: ActionState,
@@ -193,6 +194,11 @@ export function PayRentCard({
                   <h2 className="tabular-nums text-[34px] font-bold leading-none tracking-[-0.03em] text-[var(--ink)] sm:text-[38px]">
                     {formatCurrency(charge.amountCents)}
                   </h2>
+                  {charge.lines?.length ? <p className="text-sm text-[var(--muted)]">
+                    Rent {formatCurrency(chargeBreakdown({ id: charge.id, amount_cents: charge.amountCents },
+                      charge.lines).rentCents)}
+                    {charge.lines.map((line) => ` · ${line.label} ${formatCurrency(line.amount_cents)}`).join("")}
+                  </p> : null}
                 </div>
                 <Badge
                   variant="outline"

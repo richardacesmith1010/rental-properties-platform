@@ -20,6 +20,7 @@ import {
 import { getManagerStripeAccountForProperty, getOwnerStripeAccountForProperty } from "@/lib/stripe-connect";
 import { tenantEligibleForEvent } from "@/lib/notification-policy";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { managerFeeBaseForCharge } from "@/lib/charge-lines";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -287,10 +288,12 @@ async function createTransfersForPayment(
       return;
     }
 
-    const managerInfo = await getManagerStripeAccountForProperty(params.propertyId, params.amountCents);
     const hasManagerFeeOverride =
       typeof params.managerFeeCentsOverride === "number" &&
       Number.isFinite(params.managerFeeCentsOverride);
+    const feeBaseCents = hasManagerFeeOverride ? params.amountCents
+      : await managerFeeBaseForCharge({ id: params.chargeId, amount_cents: params.amountCents });
+    const managerInfo = await getManagerStripeAccountForProperty(params.propertyId, feeBaseCents);
     const managerFeeOverride = hasManagerFeeOverride ? Number(params.managerFeeCentsOverride) : 0;
     const managementFee = hasManagerFeeOverride
       ? Math.max(managerFeeOverride, 0)

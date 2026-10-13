@@ -1,4 +1,6 @@
 import type { addPartner, setExpensePaidBy } from "@/app/actions/partners";
+import type { billTenantForExpense } from "@/app/actions/charge-lines";
+import type { addNextBillLine, removeNextBillLine } from "@/app/actions/charge-lines";
 import dynamic from "next/dynamic";
 import { createElement } from "react";
 import type { ClientOverview } from "@/lib/client-overview";
@@ -124,6 +126,8 @@ export interface SectionRendererProps {
   onPayCharge: FormAction;
   onDeletePendingCharge?: StatefulAction;
   onEditCharge?: StatefulAction;
+  onAddNextBillLine?: typeof addNextBillLine;
+  onRemoveNextBillLine?: typeof removeNextBillLine;
   onCreateManualCharge?: StatefulAction;
   onWaiveCharge?: StatefulAction;
   onRecordManualPayment?: StatefulAction;
@@ -164,6 +168,7 @@ export interface SectionRendererProps {
   onDeleteExpense?: StatefulAction;
   onAddPartner?: typeof addPartner;
   onSetPaidBy?: typeof setExpensePaidBy;
+  onBillTenantForExpense?: typeof billTenantForExpense;
   onSetupManagerPaymentConfig?: StatefulAction;
   onRecordManagerPayment?: StatefulAction;
   onMarkManagerPaymentPaid?: StatefulAction;

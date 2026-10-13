@@ -13,12 +13,8 @@ import { ManagerPaymentsSection } from "../manager-payments-section";
 import { MaintenanceSection } from "../maintenance-section";
 import { OperationsSection } from "../operations-section";
 import { PaymentsSection } from "../payments-section";
-import {
-  OverviewSectionContent,
-  PortfolioSectionContent,
-  SectionFrame,
-  SectionNotFoundState
-} from "../section-renderer-support";
+import { OverviewSectionContent, PortfolioSectionContent, SectionFrame,
+  SectionNotFoundState } from "../section-renderer-support";
 import { UnitsSection } from "../units-section";
 import { VendorsSection } from "../vendors-section";
 import { lazySectionComponents } from "../section-map";
@@ -76,6 +72,7 @@ export function renderSectionCases({
           onPayCharge={props.onPayCharge}
           onDeletePendingCharge={props.onDeletePendingCharge}
           onEditCharge={props.onEditCharge}
+          onAddNextBillLine={props.onAddNextBillLine} onRemoveNextBillLine={props.onRemoveNextBillLine}
           onCreateManualCharge={props.onCreateManualCharge}
           onWaiveCharge={props.onWaiveCharge}
           onRecordManualPayment={props.onRecordManualPayment}
@@ -383,6 +380,7 @@ export function renderSectionCases({
           onDeleteExpense={props.onDeleteExpense!}
           onAddPartner={props.onAddPartner}
           onSetPaidBy={props.onSetPaidBy}
+          onBillTenantForExpense={props.onBillTenantForExpense}
         />
       );
     case "analytics":

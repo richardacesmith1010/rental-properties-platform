@@ -18,6 +18,7 @@ import { ChargeEditModal } from "../charge-edit-modal";
 import { ChargeCreateForm } from "../charge-create-form";
 import { ComposeMessageModal } from "../compose-message-modal";
 import { ChargeRow, getChargeLabel } from "../charge-row";
+import { NextBillLineSheet } from "../next-bill-line-sheet";
 import { tracksLateRent } from "@/lib/lease-collection";
 import {
   ChargeSectionFilters,
@@ -33,6 +34,8 @@ export function ChargesSection({
   onPayWithACH,
   onDeletePendingCharge,
   onEditCharge,
+  onAddNextBillLine,
+  onRemoveNextBillLine,
   onCreateManualCharge,
   onWaiveCharge,
   onRecordManualPayment,
@@ -68,6 +71,7 @@ export function ChargesSection({
   );
   const [manualPaymentChargeId, setManualPaymentChargeId] = useState<string | null>(null);
   const [activeEditChargeId, setActiveEditChargeId] = useState<string | null>(null);
+  const [nextBillLeaseId, setNextBillLeaseId] = useState<string | null>(null);
   const [showCreateChargeForm, setShowCreateChargeForm] = useState(false);
   const [confirmDeleteChargeId, setConfirmDeleteChargeId] = useState<string | null>(null);
   const [activeMessageChargeId, setActiveMessageChargeId] = useState<string | null>(null);
@@ -385,6 +389,14 @@ export function ChargesSection({
                     onOpenEdit={
                       canModify && onEditCharge ? () => setActiveEditChargeId(charge.id) : undefined
                     }
+                    onAddNextBill={onAddNextBillLine && charge.leaseId && !isTenantView
+                      ? () => setNextBillLeaseId(charge.leaseId!) : undefined}
+                    onRemoveNextBillLine={onRemoveNextBillLine ? (lineId) => {
+                      void onRemoveNextBillLine(lineId).then((result) => {
+                        if (!result.ok) toast.error(result.error ?? "Could not remove this line.");
+                        else router.refresh();
+                      });
+                    } : undefined}
                     onWaive={
                       canModify && onWaiveCharge ? () => handleWaiveCharge(charge.id) : undefined
                     }
@@ -449,6 +461,12 @@ export function ChargesSection({
             onSave={onEditCharge}
           />
         ) : null}
+        {nextBillLeaseId && onAddNextBillLine ? <NextBillLineSheet leaseId={nextBillLeaseId}
+          onAdd={async (input) => {
+            const result = await onAddNextBillLine(input);
+            if (result.ok) router.refresh();
+            return result;
+          }} onClose={() => setNextBillLeaseId(null)} /> : null}
         {onCreateManualCharge ? (
           <ChargeCreateForm
             open={showCreateChargeForm}

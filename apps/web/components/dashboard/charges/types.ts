@@ -2,6 +2,7 @@
 
 import type { ActionState } from "@/app/actions";
 import type { ChargeRowData } from "../charge-row";
+import type { addNextBillLine, removeNextBillLine } from "@/app/actions/charge-lines";
 
 export type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -30,6 +31,8 @@ export interface ChargesSectionProps {
   onPayWithACH?: (formData: FormData) => Promise<void>;
   onDeletePendingCharge?: StatefulAction;
   onEditCharge?: StatefulAction;
+  onAddNextBillLine?: typeof addNextBillLine;
+  onRemoveNextBillLine?: typeof removeNextBillLine;
   onCreateManualCharge?: StatefulAction;
   onWaiveCharge?: StatefulAction;
   onRecordManualPayment?: StatefulAction;

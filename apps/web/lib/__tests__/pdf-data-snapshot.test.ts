@@ -33,6 +33,15 @@ describe("PDF data original output", () => {
         payment: { id: "pay-12345678", paid_at: "2026-10-07T17:00:00.000Z",
           amount_cents: 123456, method: "ach", reference_note: "Rent & fees <paid>" }
       };
+      expect(buildReceiptPdfData({
+        ...receipt,
+        charge: { ...receipt.charge, amount_cents: 227259 },
+        lines: [{ id: "water", lease_id: base.lease.id, charge_id: receipt.charge.id,
+          kind: "utility" as const, label: "Water", amount_cents: 11259 }]
+      }).lines).toEqual([
+        { label: "Rent", amountFormatted: "$2,160.00" },
+        { label: "Water", amountFormatted: "$112.59" }
+      ]);
       expect({
         leaseSummaryFileName: buildLeaseSummaryFileName(base.lease.id),
         receiptFileName: buildReceiptFileName(receipt.charge.id),

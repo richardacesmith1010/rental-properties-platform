@@ -9,6 +9,8 @@ import {
   getAdministeredPropertyIdsForAccount
 } from "@/lib/property-access";
 import { getClientHomeFlags, tracksLateRent, type LeaseCollectionPreference } from "@/lib/lease-collection";
+import { getChargeLines, getWaitingLines, linesByCharge } from "@/lib/charge-lines";
+import type { ChargeLine } from "@/lib/charge-breakdown";
 
 export interface DashboardKpis {
   monthlyGrossRentCents: number;
@@ -49,6 +51,8 @@ export interface DashboardCharge {
   editedCount?: number;
   collectsOutsideDomus?: boolean;
   clientHome?: boolean;
+  lines?: ChargeLine[];
+  waitingLines?: ChargeLine[];
 }
 
 export function getDashboardChargeStatus(
@@ -73,6 +77,35 @@ export interface DashboardData {
   charges: DashboardCharge[];
   recentPayments: RecentPayment[];
   profileRole: "owner" | "manager" | "tenant";
+}
+
+export async function enrichDashboardChargeLines(data: DashboardData): Promise<DashboardData> {
+  const charges = data.charges;
+  const leaseIds = [...new Set(charges.map((charge) => charge.leaseId))];
+  const [attached, waiting] = await Promise.all([
+    getChargeLines(charges.map((charge) => charge.id)), getWaitingLines(leaseIds)
+  ]);
+  const attachedByCharge = linesByCharge(attached);
+  const latestByLease = new Map<string, string>();
+  for (const charge of [...charges].sort((a, b) => a.dueDate.localeCompare(b.dueDate))) {
+    latestByLease.set(charge.leaseId, charge.id);
+  }
+  const latestIds = [...latestByLease.values()];
+  const admin = createAdminClient();
+  const { data: latestRows, error: latestError } = latestIds.length
+    ? await admin.from("rent_charges").select("id, created_at").in("id", latestIds)
+    : { data: [], error: null };
+  if (latestError) throw latestError;
+  const latestCreated = new Map((latestRows ?? []).map((row) => [row.id, row.created_at]));
+  return { ...data, charges: charges.map((charge) => ({
+    ...charge, lines: attachedByCharge.get(charge.id) ?? [],
+    waitingLines: latestByLease.get(charge.leaseId) === charge.id
+      ? waiting.filter((line) => line.lease_id === charge.leaseId).map((line) => ({
+        ...line, waitingForBiggerBill: line.kind === "credit" &&
+          Boolean(line.created_at && latestCreated.get(charge.id) &&
+            line.created_at < latestCreated.get(charge.id)!)
+      })) : []
+  })) };
 }
 
 export function computeTrend(

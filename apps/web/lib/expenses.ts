@@ -65,6 +65,7 @@ export interface ExpenseDashboardData {
   enabled: boolean;
   warning: string | null;
   properties: Array<{ id: string; name: string }>;
+  activeLeaseByProperty?: Record<string, { tenantName: string; count: number }>;
   partnerAccounts?: Record<string, { accountId: string; partners: Partner[] }>;
   partnerWarning?: string | null;
   expenses: ExpenseItemDTO[];
@@ -224,8 +225,10 @@ export async function getOwnerExpenseData(
       ? admin.from("vendors").select("id, name").in("id", vendorIds)
       : Promise.resolve({ data: [] as Array<{ id: string; name: string }>, error: null }),
     unitIds.length
-      ? admin.from("leases").select("id, unit_id").in("unit_id", unitIds)
-      : Promise.resolve({ data: [] as Array<{ id: string; unit_id: string }>, error: null })
+      ? admin.from("leases").select("id, unit_id, tenant_profile_id, active").in("unit_id", unitIds)
+      : Promise.resolve({ data: [] as Array<{
+        id: string; unit_id: string; tenant_profile_id: string | null; active: boolean
+      }>, error: null })
   ]);
   if (vendorResult.error) throw vendorResult.error;
   if (leaseResult.error) throw leaseResult.error;
@@ -233,6 +236,23 @@ export async function getOwnerExpenseData(
   const leases = leaseResult.data;
 
   const leaseRows = leases ?? [];
+  const activeLeases = leaseRows.filter((lease) => lease.active);
+  const activeTenantIds = [...new Set(activeLeases.map((lease) => lease.tenant_profile_id)
+    .filter((id): id is string => Boolean(id)))];
+  const { data: activeTenants, error: activeTenantError } = activeTenantIds.length
+    ? await admin.from("profiles").select("id, full_name, nickname").in("id", activeTenantIds)
+    : { data: [], error: null };
+  if (activeTenantError) throw activeTenantError;
+  const tenantNameById = new Map((activeTenants ?? []).map((tenant) => [tenant.id,
+    tenant.full_name || tenant.nickname || "tenant"]));
+  const activeLeaseByProperty: NonNullable<ExpenseDashboardData["activeLeaseByProperty"]> = {};
+  for (const lease of activeLeases) {
+    const propertyId = propertyByUnitId.get(lease.unit_id);
+    if (!propertyId) continue;
+    const prior = activeLeaseByProperty[propertyId];
+    activeLeaseByProperty[propertyId] = { count: (prior?.count ?? 0) + 1,
+      tenantName: tenantNameById.get(lease.tenant_profile_id ?? "") ?? "tenant" };
+  }
   const leaseIds = leaseRows.map((lease) => lease.id);
   const propertyByLeaseId = new Map(
     leaseRows.map((lease) => [lease.id, propertyByUnitId.get(lease.unit_id) ?? ""])
@@ -342,6 +362,7 @@ export async function getOwnerExpenseData(
     enabled: true,
     warning: null,
     properties: propertyRows.map((property) => ({ id: property.id, name: property.name })),
+    activeLeaseByProperty,
     partnerAccounts,
     partnerWarning,
     expenses: expenseRows.map((expense) => ({

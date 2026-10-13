@@ -1,6 +1,7 @@
 export interface RentChargeRow {
-  id: string; category: string; deleted_at: string | null;
+  id: string; category: string; deleted_at: string | null; amount_cents?: number;
 }
+import { chargeBreakdown, splitChargePayment, type ChargeLine } from "@/lib/charge-lines";
 export interface RentPaymentRow {
   id: string; rent_charge_id: string; amount_cents: number;
   paid_at: string; reversed_at: string | null;
@@ -27,6 +28,24 @@ export function rentReceivedCents(charges: RentChargeRow[], payments: RentPaymen
     .reduce((sum, payment) => sum + payment.amount_cents, 0);
 }
 
+export function rentOnlyReceivedCents(charges: RentChargeRow[], payments: RentPaymentRow[],
+  from: string, to: string, lines: ChargeLine[]): number {
+  const chargeById = new Map(charges.map((charge) => [charge.id, charge]));
+  const lineMap = new Map<string, ChargeLine[]>();
+  for (const line of lines) {
+    if (line.charge_id) lineMap.set(line.charge_id, [...(lineMap.get(line.charge_id) ?? []), line]);
+  }
+  return receivedRentPayments(charges, payments, from, to).reduce((sum, payment) => {
+    const charge = chargeById.get(payment.rent_charge_id);
+    if (!charge) return sum;
+    if (charge.category !== "rent") return sum + payment.amount_cents;
+    const chargeLines = lineMap.get(charge.id) ?? [];
+    if (!chargeLines.length) return sum + payment.amount_cents;
+    const parts = chargeBreakdown({ id: charge.id, amount_cents: charge.amount_cents ?? payment.amount_cents }, chargeLines);
+    return sum + splitChargePayment(parts).rentIncomeCents;
+  }, 0);
+}
+
 export function rentReceivedByPropertyId(
   propertyIds: string[], charges: RentChargeRow[], payments: RentPaymentRow[],
   chargeProperty: Map<string, string | undefined>, from: string, to: string
@@ -51,6 +70,17 @@ export function rentReceivedByPropertyId(
   }
   return Object.fromEntries(propertyIds.map((id) => [id,
     rentReceivedCents(chargesByProperty.get(id) ?? [], paymentsByProperty.get(id) ?? [], from, to)]));
+}
+
+export function rentOnlyReceivedByPropertyId(
+  propertyIds: string[], charges: RentChargeRow[], payments: RentPaymentRow[],
+  chargeProperty: Map<string, string | undefined>, from: string, to: string, lines: ChargeLine[]
+): Record<string, number> {
+  return Object.fromEntries(propertyIds.map((id) => [id, rentOnlyReceivedCents(
+    charges.filter((charge) => chargeProperty.get(charge.id) === id),
+    payments.filter((payment) => chargeProperty.get(payment.rent_charge_id) === id),
+    from, to, lines
+  )]));
 }
 
 export function selectedRentReceivedCents(byPropertyId: Record<string, number>, selectedIds?: Set<string> | null) {

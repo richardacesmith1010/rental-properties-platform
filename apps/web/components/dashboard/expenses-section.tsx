@@ -2,6 +2,7 @@
 
 import type { StatefulAction } from "@/app/actions";
 import type { addPartner, setExpensePaidBy } from "@/app/actions/partners";
+import type { billTenantForExpense } from "@/app/actions/charge-lines";
 import type { ExpenseDashboardData } from "@/lib/expenses";
 import type { VendorDTO } from "@/lib/vendors";
 import type { PropertyFileDTO } from "@/lib/documents";
@@ -22,10 +23,11 @@ interface ExpensesSectionProps {
   onDeleteExpense: StatefulAction;
   onAddPartner?: typeof addPartner;
   onSetPaidBy?: typeof setExpensePaidBy;
+  onBillTenantForExpense?: typeof billTenantForExpense;
 }
 
 export function ExpensesSection({ data, vendors, propertyFiles, onCreateExpense,
-  onUpdateExpense, onDeleteExpense, onAddPartner, onSetPaidBy }: ExpensesSectionProps) {
+  onUpdateExpense, onDeleteExpense, onAddPartner, onSetPaidBy, onBillTenantForExpense }: ExpensesSectionProps) {
   const selectedPropertyId = data.properties[0]?.id ?? "";
   const selectedSummary = data.pnlByProperty.find((row) => row.propertyId === selectedPropertyId) ?? null;
 
@@ -42,7 +44,8 @@ export function ExpensesSection({ data, vendors, propertyFiles, onCreateExpense,
       {data.partnerWarning && <FeatureWarning title="Partners" message={data.partnerWarning} />}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ExpenseForm data={data} vendors={vendors} propertyFiles={propertyFiles}
-          onCreateExpense={onCreateExpense} onAddPartner={onAddPartner} onSetPaidBy={onSetPaidBy} />
+          onCreateExpense={onCreateExpense} onAddPartner={onAddPartner} onSetPaidBy={onSetPaidBy}
+          onBillTenantForExpense={onBillTenantForExpense} />
         <Card className="border border-border/50 shadow-sm">
           <CardHeader><CardTitle className="text-xl font-semibold">Money in and out by home</CardTitle></CardHeader>
           <CardContent className="space-y-4">
