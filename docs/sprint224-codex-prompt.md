@@ -1,4 +1,4 @@
-# Sprint 224 — Bank sync: connect once, transactions flow in (L3: bank data + secrets + schema) · rev 3 (ChatGPT rev 1 + rev 2 = REJECT; all REQUIRED/OPTIONAL folded in)
+# Sprint 224 — Bank sync: connect once, transactions flow in (L3: bank data + secrets + schema) · rev 4 (ChatGPT rev 1–3 = REJECT; all REQUIRED/OPTIONAL folded in)
 
 The owner decided on 2026-10-12 that this comes next, ahead of partner sprints 221–223.
 
@@ -103,8 +103,15 @@ Design source: `docs/bank-feed-design.md` (Phase 2). Plaid stays in **sandbox** 
    - **`public.resolve_bank_review_item(p_item_id uuid, p_expected_updated_at timestamptz, p_decision text, p_choice jsonb, p_actor_profile_id uuid) returns text`** returns `'filed' | 'skipped' | 'conflict' | 'stale'`, in one transaction:
      1. Claim the item: `delete from bank_review_items where id = p_item_id and updated_at = p_expected_updated_at returning *`. 0 rows → `'conflict'`.
      2. `'no'` → insert the skip fingerprint (as today) and return `'skipped'`.
-     3. `'yes'` → precondition checks and `_file_bank_choice`, as in `file_synced_bank_item`. On `'stale'`, raise inside a subtransaction so the claim delete is also rolled back (the item stays queued), and return `'stale'`.
+     3. `'yes'` → precondition checks. Then, inside a subtransaction, **insert the canonical `bank_transactions` row** (`fingerprint`, `external_id`, `bank_account_id`, `owner` checks) `on conflict do nothing`. A conflict → `'already'` (the queue row stays deleted, and nothing else is written). Then `_file_bank_choice` sets the side effect and links on that same row.
+        - On `'stale'` or any error, raise inside the subtransaction, so the claim delete, the `bank_transactions` insert and any side effect all roll back. The item stays queued, and the function returns `'stale'`.
+     - So a concurrent sync replay always sees the marker and never files again, and Undo (`undoFiledItem`) works on the resulting row.
+     - It returns `'filed' | 'skipped' | 'already' | 'conflict' | 'stale'`.
      - The ownership checks match the ones above.
+   - **`public.confirm_bank_account_links(p_connection_id uuid, p_pairs jsonb) returns void`** (pairs of `{ plaidBankAccountId, uploadBankAccountId }`). One transaction:
+     - validate that both rows belong to the connection's owner account, that the upload row has `source='upload'` and no `plaid_account_id`, that the Plaid row belongs to this connection, and that the institutions match case-insensitively;
+     - copy `plaid_account_id`, `connection_id`, `mask`, `account_subtype` onto the upload row and set `source='plaid'`;
+     - delete the Plaid row (it has no transactions yet, because the first sync waits for this step).
    - **`public.disconnect_bank_connection(p_connection_id) returns void`.** One transaction: delete `bank_review_items` for the connection's accounts, null `bank_accounts.connection_id`, and delete the connection (the secret cascades).
 
 ### 3.2 Server
@@ -118,11 +125,11 @@ Design source: `docs/bank-feed-design.md` (Phase 2). Plaid stays in **sandbox** 
      - `webhook: ${APP_URL}/api/webhooks/plaid`, `transactions: { days_requested: 90 }`, `account_filters`: depository (checking, savings, cash management).
      - Update mode passes `access_token` and no products.
      - Add `redirect_uri` from `PLAID_REDIRECT_URI` when set (needed for OAuth banks in production).
-   - **`syncTransactions(accessToken, cursor)`**: loops `/transactions/sync` until `has_more` is false. On `TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION`, restart from the original cursor. Returns `{ added, modified, removed, nextCursor }`. On restart it **discards all accumulated arrays** and starts again from the original cursor.
+   - **`syncTransactions(accessToken, cursor, { onPage })`**: loops `/transactions/sync` until `has_more` is false. **Before each page request it awaits `onPage()`**, which renews the lease and throws `LeaseLost` if it can't, ending the loop with nothing persisted. It's bounded: at most 50 pages, and each request is retried at most 3 times with backoff (500 ms, 2 s, 5 s) on 5xx or rate-limit errors. On `TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION`, restart from the original cursor. Returns `{ added, modified, removed, nextCursor }`. On restart it **discards all accumulated arrays** and starts again from the original cursor.
    - **`removeItem(accessToken)`.**
 3. **Linking** (`app/actions/bank-connections.ts`, new; AGENTS.md §3: auth → owner → active owner member of the account → zod):
    - **`startBankLink(ownerAccountId)`** → link token.
-   - **`finishBankLink({ ownerAccountId, publicToken, selectedAccountIds: string[] })`.** The client sends **only** the public token and the selected account IDs.
+   - **`finishBankLink({ ownerAccountId, publicToken, selectedAccountIds: string[] })`.** The client sends **only** the public token and the selected account IDs. **Validation:** `selectedAccountIds` must be non-empty and unique (zod). A missing mask is stored as null and the nickname omits "••". A nickname collision within the owner account gets " (2)", " (3)" … appended.
      - The server exchanges the token, then fetches **authoritative** data: `/accounts/get` for name, mask and subtype, and `/item/get` + `/institutions/get_by_id` for the institution name.
      - Every selected ID must belong to that item. Otherwise reject.
      - Encrypt the token and call `create_bank_connection` (atomic), with `nickname = "<Account name> ••<mask>"`.
@@ -148,10 +155,15 @@ Design source: `docs/bank-feed-design.md` (Phase 2). Plaid stays in **sandbox** 
      - **skip `pending: true` rows** (they come back as posted rows);
      - match each row to its `bank_accounts` row by `plaid_account_id`, and ignore accounts that weren't selected.
    - **Identity:** for synced rows, `fingerprint = HMAC(BANK_FEED_SECRET, "plaid:" + bank_account_id + ":" + transaction_id)`, independent of batch or pagination. `external_id` = the Plaid `transaction_id`. CSV fingerprints are unchanged.
-   - **Cross-source reconciliation:** for each synced row, compute the CSV-style fingerprints for occurrence indices 0–9 (same date, amount, direction and normalized description).
+   - **Linking uploaded accounts to connected accounts (once, at connect time):** if the ownership account already has `source='upload'` bank accounts, `finishBankLink` returns `needsMatch` with the new Plaid accounts and the upload accounts. The UI then asks, for each new Plaid account: "Is this the same account as one you uploaded before?", offering each upload account (nickname + institution) and **"No, it's new"** (the default).
+     - Each upload account can be chosen at most once, and the institution names must match case-insensitively (otherwise that option isn't offered).
+     - **Confirmed** → `confirm_bank_account_links(p_connection_id, p_pairs jsonb)` (service-role RPC; validates the same owner account, upload source, and that it's unlinked) turns the **upload account itself** into the Plaid account: it sets `plaid_account_id`, `connection_id`, `mask`, `source='plaid'`. The new duplicate Plaid account row is deleted. So history and fingerprints share one `bank_account_id`.
+     - **Not confirmed** → no cross-account dedupe at all; accounts are treated as separate.
+     - The first sync waits until this answer (or "Skip for now" = all new).
+   - **Cross-source reconciliation (same bank account):** for each synced row, compute the CSV-style fingerprints for occurrence indices 0–9 (same date, amount, direction and normalized description).
      - If **any** of them exists in `bank_transactions` or `bank_skipped_fingerprints` for the same bank account, the synced row is **never auto-filed and never auto-skipped**. It goes to the review queue with `possible_duplicate = true` and the label "Maybe already added from a statement file."
      - Legitimate duplicates stay possible, because the owner decides.
-   - **`modified`:** if the transaction is still queued, update it. If it was filed (a `bank_transactions` row with that `external_id`) and the amount, date or direction changed, set `bank_change='modified'`. Records aren't rewritten silently.
+   - **`modified`:** if the transaction is still queued, update its fields **and its `fingerprint` and `updated_at` together in one statement**. Any owner decision based on the old `updated_at` then gets `'conflict'`. If it was filed (a `bank_transactions` row with that `external_id`) and the amount, date or direction changed, set `bank_change='modified'`. Records aren't rewritten silently.
    - **`removed`:** delete the queued item. If it was filed, set `bank_change='removed'`.
    - Flagged items appear in **"Bank changed this"** (see the UI) until the owner chooses **Keep as is** (clears the flag) or **Undo** (the existing undo path, then clears it).
    - **The cursor is saved only after all rows from that sync are processed.** Processing is idempotent through the unique `(bank_account_id, external_id)` and fingerprint constraints, so a crash re-processes safely.
@@ -161,7 +173,7 @@ Design source: `docs/bank-feed-design.md` (Phase 2). Plaid stays in **sandbox** 
      - any other error → `error`. `last_error` comes **only from an allowlist**: the Plaid `error_code` (`/^[A-Z_]{3,60}$/`), or `"SYNC_FAILED"`. Never free text, tokens or PII.
    - **Concurrency (fenced lease):**
      - **Acquire:** `update bank_connections set sync_lease_token = gen_random_uuid(), sync_lease_until = now() + interval '10 minutes' where id = $1 and status in ('ok','error') and (sync_lease_until is null or sync_lease_until < now()) returning sync_lease_token`. No row → skip.
-     - **Heartbeat:** extend `sync_lease_until` after each Plaid page, with `where sync_lease_token = mine`. 0 rows → the lease was lost: abort without saving the cursor.
+     - **Heartbeat:** `onPage` extends `sync_lease_until`, with `where sync_lease_token = mine`, before each Plaid page, and again **before processing begins** and every 100 processed rows. 0 rows → `LeaseLost` → abort without saving the cursor (filing writes made before the loss are idempotent, so replay is safe).
      - **Cursor save:** `update bank_connection_secrets set transactions_cursor = $new … where connection_id = $1 and exists (select 1 from bank_connections where id = $1 and sync_lease_token = mine and sync_lease_until > now())`. 0 rows → abort; the old cursor stays.
      - **Status transitions are conditional:** a sync may set `ok` or `error` only `where status in ('ok','error') and sync_lease_token = mine`. It never revives `revoked` or `needs_login`; only the relink flow sets `needs_login → ok`.
      - **Release:** `set sync_lease_token = null, sync_lease_until = null where sync_lease_token = mine`, in a finally block.
@@ -256,6 +268,10 @@ Design source: `docs/bank-feed-design.md` (Phase 2). Plaid stays in **sandbox** 
   - "This rent was already recorded or changed. Check the Rent page."
   - "Saved. The Always rule didn't save. Try again from Rules."
   - "Use Connect a bank on the Bank page."
+  - "This was already filed."
+  - "Is this the same account as one you uploaded before?"
+  - "No, it's new"
+  - "Skip for now"
 - The user should never need to read instructions to complete this flow. Every step must be self-explanatory. If the user needs to think about what to do, the UI needs to be clearer.
 - **Invariants:**
   - CSV upload behaves exactly as today (all existing bank-feed tests pass unchanged);
@@ -298,6 +314,7 @@ Design source: `docs/bank-feed-design.md` (Phase 2). Plaid stays in **sandbox** 
    - (m) a row matching any CSV fingerprint (occurrence 0–9) is queued with `possible_duplicate=true` and is neither filed nor skipped; two genuinely identical bank rows with different `transaction_id`s are both kept;
    - (n) system authority: a property in another owner account is never filed; a departed creator falls back to another active owner member; with no active member, the row is queued;
    - (o) a sync failure → `last_error` is an allowlisted code only;
+   - (p0) **heartbeat:** `onPage` runs before every page; a `LeaseLost` thrown on page 2 ends the sync with no cursor saved; retries are bounded (3 attempts, then `error`), and there are at most 50 pages;
    - (p) **lease fencing:** a worker whose lease expired and was re-acquired by another can't save its cursor (the update affects 0 rows, and it aborts); a lost heartbeat aborts; release only clears its own token;
    - (q) a sync can't set `ok` on a `revoked` or `needs_login` connection (disconnect/sync race).
 4. **Webhook:** a valid signature → sync is called; each of a bad signature, a stale `iat`, a body-hash mismatch, a wrong `alg`, a missing `kid`, and an expired verification key → 401 with **no DB call**; the hash is computed on the raw body (a whitespace-altered body fails); an unknown item → 200; the ITEM error codes set the right statuses.
@@ -306,7 +323,10 @@ Design source: `docs/bank-feed-design.md` (Phase 2). Plaid stays in **sandbox** 
    - `answerQueuedBankItem` calls `resolve_bank_review_item` with `expectedUpdatedAt`;
    - `'conflict'`, `'stale'` and the rule-warning paths return their exact copy;
    - another account's owner is rejected before any RPC call;
-   - Always saves the rule only after a successful resolve.
+   - Always saves the rule only after a successful resolve;
+   - `'already'` is handled with the copy "This was already filed.";
+   - (Claude live SQL) a throwing filing helper rolls back the claim, the marker and the side effect.
+6b. **Account linking:** with upload accounts present, `finishBankLink` returns `needsMatch`; confirming links the upload account itself (same `bank_account_id`), and statement-then-connect produces no duplicate filing; "No, it's new" means no cross-account dedupe; an institution mismatch isn't offered; duplicate or empty `selectedAccountIds` are rejected; a missing mask and nickname collisions are handled.
 7. **Disconnect:** the status becomes `revoked` first; `itemRemove` is called; `disconnect_bank_connection` removes the connection, the secret and the queue rows; filed records remain. If the local step fails, the status stays `revoked` and a retry succeeds.
 7b. **"Bank changed this":** Keep clears the flag. Undo runs the **existing** `undoBankItem` path, with all its Sprint 167/168 guarantees, including reversing an auto-created rule where it would today; then the flag clears. The count shows in Home.
 7c. **Webhook replay:** delivering the same `SYNC_UPDATES_AVAILABLE` twice files nothing twice; repeated `ITEM` errors never change `revoked`.
@@ -319,7 +339,7 @@ Design source: `docs/bank-feed-design.md` (Phase 2). Plaid stays in **sandbox** 
     - the `institution` CHECK is a length check;
     - the unique constraints are present;
     - the composite FK on `bank_review_items`;
-    - the 3 RPCs are SECURITY DEFINER with `search_path = ''` and granted to service_role only.
+    - **every** function (`create_bank_connection`, `file_synced_bank_item`, `resolve_bank_review_item`, `disconnect_bank_connection`, `confirm_bank_account_links`, and the internal `_file_bank_choice`) is SECURITY DEFINER with `search_path = ''`, revoked from public, anon and authenticated; the first five are granted to service_role only, and `_file_bank_choice` to **no one**.
 
 **Claude will also run live SQL (rolled back)** proving:
 - `file_synced_bank_item` replays return `'already'` with no duplicate expense or payment; `'stale'` (wrong amount or a waived charge) leaves zero rows; and the output rows for rent, a paid charge, an expense and a transfer match what `fileBankItem` writes;
