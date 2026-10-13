@@ -1,4 +1,4 @@
-# Sprint 222 — Deposits held and "Yours to use" cash (L3: schema + money) · rev 4 (ChatGPT rev 1–3 = REJECT; all REQUIRED/OPTIONAL folded in)
+# Sprint 222 — Deposits held and "Yours to use" cash (L3: schema + money) · rev 5 — ChatGPT rev 4: APPROVE WITH CHANGES (2 REQUIRED + optional folded in)
 
 The owner approved this on 2026-10-13. Source: `docs/partner-ledger-requirements.md` B5. Her sheet works it out like this: "Navy Federal balance $21,885 − Security deposit $3,750 = $18,135 we can actually use."
 
@@ -14,7 +14,7 @@ The owner approved this on 2026-10-13. Source: `docs/partner-ledger-requirements
    - "Yours to use" (bank minus deposits).
    - Plus how old the balance is.
 
-## 2. Context (HEAD after 225, branch `main`)
+## 2. Context (HEAD `8d67781`, branch `main`)
 - **`leases`** (live, 2026-10-13): id, unit_id, tenant_profile_id, start_date, end_date, monthly_rent_cents, due_day_of_month, `deposit_cents`, active, lease_status, terminated_at, collects_outside_domus, …
   - There are no deposit-return fields.
   - Live data: 1st Home deposit $2,350 (active); smoke leases $0.
@@ -35,13 +35,14 @@ The owner approved this on 2026-10-13. Source: `docs/partner-ledger-requirements
      - `returned_cents integer not null check (returned_cents >= 0)`;
      - `returned_on date not null`;
      - `created_by_profile_id uuid not null references profiles(id)`, `created_at`.
-   - **RLS:** enable it. Select policy: the caller can administer the lease's property, via a hardened SECURITY DEFINER helper `public.lease_admin_visible(p_lease_id uuid)` with `search_path = ''`, revoked from public and anon, and granted to authenticated.
+   - **RLS:** enable it. Select policy: the caller can administer the lease's property, via a hardened SECURITY DEFINER helper `public.lease_admin_visible(p_lease_id uuid)` that reuses `public.can_administer_property(property_id)` (the existing trusted check), with `search_path = ''`, revoked from public and anon, and granted to authenticated.
      - `revoke all on public.lease_deposit_returns from anon, authenticated; grant select … to authenticated;`
      - **No insert, update or delete grant to any client role, so no client can write it, whatever settings it sets.**
+   - **DB-level upper bound:** trigger `lease_deposit_returns_bound` (BEFORE INSERT OR UPDATE; SECURITY DEFINER, `search_path = ''`) raises unless `new.returned_cents <= (select deposit_cents from public.leases where id = new.lease_id for update)`. This holds independently of the RPC.
    - **Trigger `leases_deposit_freeze`** (BEFORE UPDATE OF `deposit_cents` ON `leases`): if `deposit_cents` changes and a `lease_deposit_returns` row exists for the lease, raise "Undo the deposit return before changing the deposit." The check runs through a SECURITY DEFINER helper `public.lease_has_deposit_return(uuid)` (`search_path = ''`, revoked from public, anon and authenticated), so RLS can't hide the row. It applies to every role.
    - **Service-role-only RPCs** (`SECURITY DEFINER`, `search_path = ''`, revoked from public, anon and authenticated; granted to service_role). Each is one transaction covering the mutation and its `public.audit_logs` row:
      - `public.record_deposit_return(p_lease_id uuid, p_returned_cents integer, p_returned_on date, p_actor_profile_id uuid) returns text`:
-       - validate `0 ≤ cents ≤ leases.deposit_cents` and `returned_on ≤ current_date`, and that the actor profile exists;
+       - **first `select deposit_cents from public.leases where id = p_lease_id for update`** (the lock is held until commit), then validate `0 ≤ cents ≤ deposit_cents` and `returned_on ≤ current_date`, and that the actor profile exists;
        - `insert … on conflict (lease_id) do nothing`. A conflict → return `'already'` with no audit row (idempotent; Undo is required to change it);
        - otherwise insert the audit row (`action='deposit_return_recorded'`, metadata `{returned_cents, returned_on}`) and return `'recorded'`.
        - An audit insert failure fails the whole call.
@@ -59,7 +60,7 @@ The owner approved this on 2026-10-13. Source: `docs/partner-ledger-requirements
      1. **One** `update … from jsonb_to_recordset` that sets `account_type`, `account_subtype` and `iso_currency_code` for matching rows of this connection, and sets the balance triple **only when the account is eligible and `cents` is not null**. Otherwise all three balance columns become **null**.
      2. **Only when `p_complete` is true:** **one** `update` that nulls the balance triple for this connection's Plaid accounts **not present** in the payload (closed or removed accounts). When `p_complete` is false, absent accounts are left untouched.
    - Return true.
-4. **No new tables.**
+4. **One new table: `lease_deposit_returns`.** No others.
 
 ### 3.2 Server
 1. **Pure helper `depositHeldCents(lease, returnRow | null)`** in `lib/deposits.ts` (new): `deposit_cents` if there's no return row, else 0. A recorded return of **$0** means the whole deposit was kept, so nothing is held. It applies to every lease (active or ended). "Kept" = `deposit_cents − returned_cents`.
@@ -198,7 +199,8 @@ The owner approved this on 2026-10-13. Source: `docs/partner-ledger-requirements
    - the balance-triple CHECK on `bank_accounts`;
    - `save_bank_balances` is SECURITY DEFINER with `search_path = ''`, takes `for update` on `bank_connections`, uses a single `update … from jsonb_to_recordset`, and is service-role-only;
    - no grants to authenticated or anon;
-   - no new tables.
+   - the only new table is `lease_deposit_returns`, and its bound trigger exists;
+   - `record_deposit_return` takes `for update` on `leases`.
 7b. **Lease edit:** changing `deposit_cents` on a lease with a recorded return returns the exact copy; with no return recorded, it works as today.
 8. Lint, typecheck, the full suite and the build are green.
 
@@ -208,6 +210,9 @@ The owner approved this on 2026-10-13. Source: `docs/partner-ledger-requirements
 - an authenticated owner or manager who **can update the lease** can't insert, update or delete `lease_deposit_returns`, **even after running `set_config` with any custom setting in the same transaction**;
 - `record_deposit_return` and `clear_deposit_return` write their `audit_logs` row atomically; a forced audit failure rolls back; a repeated record returns `'already'` with no second audit row;
 - changing `deposit_cents` while a return exists fails for authenticated users **and** the service role;
+- a return above the deposit is refused by the bound trigger even with a direct service-role insert;
+- **concurrency:** session A runs `record_deposit_return` while session B updates `deposit_cents` on the same lease. B waits on the lease lock, and the end state never has a return above the deposit, nor a deposit changed after a return;
+- authenticated users (even lease admins) can't execute either deposit RPC;
 - `save_bank_balances` with `p_complete=false` leaves absent accounts' balances unchanged; with `true`, it nulls them;
 - the CHECKs reject a returned amount above the deposit and partial balance triples.
 
