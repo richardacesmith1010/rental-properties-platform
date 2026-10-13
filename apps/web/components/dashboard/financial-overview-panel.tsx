@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from "react";
 import { useFormState } from "react-dom";
 import { Alert } from "@/components/ui/alert";
 import { BankBalanceCard } from "@/components/dashboard/bank-balance-card";
-import { PlaidLinkButton } from "@/components/dashboard/plaid-link-button";
 import { DomusFinancialsCard } from "@/components/dashboard/domus-financials-card";
 import { RelativeTime } from "@/components/ui/relative-time";
 import { cn, formatDateTime } from "@/lib/format";
@@ -94,25 +93,17 @@ function FinanceViewButton({
 
 function UnavailableBankState({
   canConnect,
-  accountId,
-  onInitiatePlaidLink,
-  onCompletePlaidLink
+  accountId
 }: {
   canConnect: boolean;
   accountId: string | null;
   onInitiatePlaidLink?: StatefulAction;
   onCompletePlaidLink?: StatefulAction;
 }) {
-  if (canConnect && accountId && onInitiatePlaidLink && onCompletePlaidLink) {
+  if (canConnect && accountId) {
     return (
-      <PlaidLinkButton
-        accountId={accountId}
-        onInitiatePlaidLink={onInitiatePlaidLink}
-        onCompletePlaidLink={onCompletePlaidLink}
-        className="mt-0"
-        title="Connect your bank"
-        description="See real-time balances from your connected bank account alongside Domus rent collection."
-      />
+      <a href="/owner/bank" title="Connect a bank" className="min-h-11 text-[var(--accent)] underline">
+        Connect a bank</a>
     );
   }
 

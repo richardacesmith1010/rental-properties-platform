@@ -24,6 +24,10 @@ export function bankFingerprint(row: Pick<RowPayload,
     + `${normalizeDescription(row.description)}|${row.occurrenceIndex}`).toString("hex");
 }
 
+export function plaidFingerprint(bankAccountId: string, transactionId: string): string {
+  return createHmac("sha256", secret()).update(`plaid:${bankAccountId}:${transactionId}`).digest("hex");
+}
+
 export function createRowToken(row: Omit<RowPayload, "v" | "exp">, now = Date.now()): string {
   const payload: RowPayload = { v: 1, bankAccountId: row.bankAccountId, profileId: row.profileId,
     postedOn: row.postedOn, amountCents: row.amountCents, direction: row.direction,

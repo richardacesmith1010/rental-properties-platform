@@ -4,7 +4,12 @@ import { OwnerBottomBar } from "@/components/dashboard/owner-bottom-bar";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { selectableRentCharges } from "@/lib/bank-feed/match";
 import { BankFeedShell } from "@/components/bank-feed/page-shell";
-import { createBankAccount, importBankRows, answerBankItem, undoBankItem, deleteBankAccount } from "@/app/actions/bank-feed";
+import { createBankAccount, importBankRows, answerBankItem, undoBankItem, deleteBankAccount,
+  answerQueuedBankItem, keepBankChange } from "@/app/actions/bank-feed";
+import { startBankLink, finishBankLink, startBankRelink, finishBankRelink, refreshBank }
+  from "@/app/actions/bank-connections";
+import { confirmBankLinks, skipBankLinks, disconnectBank } from "@/app/actions/bank-connection-management";
+import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -32,13 +37,39 @@ export default async function BankPage(props: { searchParams?: Promise<{ account
   const accounts = accountsQuery.data || [];
   const selected = accounts.find((item) => item.id === searchParams?.account) || accounts[0];
   if (!selected) return <BankStatus message="Set up a home account first." />;
-  const [bankQuery, propertyQuery] = await Promise.all([
-    admin.from("bank_accounts").select("id, nickname, institution").eq("owner_account_id", selected.id)
+  const [bankQueryRaw, propertyQuery] = await Promise.all([
+    admin.from("bank_accounts").select("id, nickname, institution, source, connection_id")
+      .eq("owner_account_id", selected.id)
       .order("created_at", { ascending: true }),
     admin.from("properties").select("id, name").eq("owner_account_id", selected.id).eq("active", true)
   ]);
+  const bankQuery = bankQueryRaw.error && isMissingSchemaError(bankQueryRaw.error)
+    ? await admin.from("bank_accounts").select("id,nickname,institution")
+      .eq("owner_account_id", selected.id).order("created_at", { ascending: true })
+    : bankQueryRaw;
   if (bankQuery.error || propertyQuery.error) return <BankStatus message="Bank activity is not ready yet." />;
-  const bankAccounts = bankQuery.data || [];
+  const bankAccounts = (bankQuery.data || []).map((bank) => ({ ...bank,
+    source: "source" in bank ? bank.source : "upload",
+    connection_id: "connection_id" in bank ? bank.connection_id : null }));
+  const [connectionsQuery, queueQuery, changedQuery] = await Promise.all([
+    admin.from("bank_connections").select("id,institution_name,status,last_synced_at")
+      .eq("owner_account_id", selected.id).order("created_at", { ascending: false }),
+    admin.from("bank_review_items").select("id,bank_account_id,updated_at,posted_on,amount_cents,direction,description,suggestion,possible_duplicate")
+      .eq("owner_account_id", selected.id)
+      .order("created_at", { ascending: false }),
+    bankAccounts.length ? admin.from("bank_transactions").select("id,description,bank_change")
+      .in("bank_account_id", bankAccounts.map((bank) => bank.id)).not("bank_change", "is", null)
+      : Promise.resolve({ data: [], error: null })
+  ]);
+  if ([connectionsQuery.error, queueQuery.error, changedQuery.error]
+    .some((error) => error && !isMissingSchemaError(error))) {
+    return <BankStatus message="Bank activity is not ready yet." />;
+  }
+  const connections = (connectionsQuery.data || []).map((connection) => ({ ...connection,
+    accounts: bankAccounts.filter((bank) => bank.connection_id === connection.id) }));
+  const pending = connections.find((connection) => connection.status === "pending_account_match");
+  const pendingMatch = pending ? { connectionId: pending.id,
+    plaidAccounts: pending.accounts, uploadAccounts: bankAccounts.filter((bank) => bank.source === "upload") } : undefined;
   const properties = propertyQuery.data || [];
   const bankIds = bankAccounts.map((item) => item.id);
   const propertyIds = properties.map((item) => item.id);
@@ -77,6 +108,12 @@ export default async function BankPage(props: { searchParams?: Promise<{ account
       </Link>
     <BankFeedShell ownerAccountId={selected.id} accounts={accounts} bankAccounts={bankAccounts}
     properties={properties} charges={charges} recent={recent}
+    connections={connections} pendingMatch={pendingMatch} queued={queueQuery.data || []}
+    changed={changedQuery.data || []}
+    connectionActions={{ start: startBankLink, finish: finishBankLink, startRelink: startBankRelink,
+      finishRelink: finishBankRelink, refresh: refreshBank, disconnect: disconnectBank,
+      confirm: confirmBankLinks, skip: skipBankLinks }}
+    queueActions={{ answer: answerQueuedBankItem, keep: keepBankChange, undo: undoBankItem }}
     actions={{ createBankAccount, importBankRows, answerBankItem, undoBankItem, deleteBankAccount }} />
     </div>
     <OwnerBottomBar />

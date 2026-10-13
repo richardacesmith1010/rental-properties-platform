@@ -1,5 +1,12 @@
 import type { BankCharge, BankChoice, BankProperty, BankRow, BankRule, MatchResult, TransferLeg } from "./types";
 
+export function bankFeedInstitution(name: string): string {
+  const normalized = name.trim().toLowerCase();
+  if (normalized === "navy federal" || normalized === "navy federal credit union") return "navy_federal";
+  if (normalized === "fidelity" || normalized === "fidelity investments") return "fidelity";
+  return name;
+}
+
 export function selectableRentCharges<T extends { status: string; deleted_at: string | null }>(items: T[]): T[] {
   return items.filter((item) => item.status !== "waived" && item.deleted_at === null);
 }

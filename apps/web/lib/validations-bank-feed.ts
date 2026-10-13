@@ -28,3 +28,13 @@ export const answerBankItemSchema = z.object({
 });
 export const undoBankItemSchema = z.object({ bankTransactionId: uuid });
 export const deleteBankAccountSchema = z.object({ bankAccountId: uuid });
+export const createBankLinkSchema = z.object({ ownerAccountId: uuid });
+export const finishBankLinkSchema = z.object({ ownerAccountId: uuid, publicToken: z.string().min(1),
+  selectedAccountIds: z.array(z.string().min(1)).min(1) })
+  .refine((value) => new Set(value.selectedAccountIds).size === value.selectedAccountIds.length);
+export const bankConnectionSchema = z.object({ connectionId: uuid });
+export const confirmBankLinksSchema = z.object({ connectionId: uuid, pairs: z.array(z.object({
+  plaidBankAccountId: uuid, uploadBankAccountId: uuid
+})) });
+export const queuedBankAnswerSchema = z.object({ itemId: uuid, expectedUpdatedAt: z.iso.datetime(),
+  decision: z.enum(["yes", "no"]), choice: bankChoiceSchema.optional(), always: z.boolean() });

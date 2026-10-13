@@ -11,9 +11,7 @@ import { Input } from "@/components/ui/input";
 import { DataRow } from "@/components/shared/data-row";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { SubmitButton } from "@/components/shared/submit-button";
-import { BankBalanceCard } from "@/components/dashboard/bank-balance-card";
 import { DistributionConfigPanel } from "@/components/dashboard/distribution-config-panel";
-import { PlaidLinkButton } from "@/components/dashboard/plaid-link-button";
 import type {
   AccountDeleteRequestDTO,
   AccountRenameRequestDTO,
@@ -202,27 +200,18 @@ export function OwnershipAccountCard(props: OwnershipAccountCardProps) {
     onInitiateAccountStripeConnect,
     onUpdateDistributionConfig,
     onSubmitDistributionChangeRequest,
-    onInitiateMemberPayoutConnect,
-    onInitiatePlaidLink,
-    onCompletePlaidLink,
-    onRefreshPlaidBalance,
-    onDisconnectPlaid
+    onInitiateMemberPayoutConnect
   } = props;
 
   const canConfigureDistribution =
     account.accountType === "llc" && isActive && Boolean(onUpdateDistributionConfig);
   const canRequestWithdrawal =
     account.accountType === "llc" && isActive && Boolean(onToggleWithdrawal);
-  const showPlaidTools =
-    account.accountType === "llc" &&
-    ((account.plaidConnected && Boolean(onRefreshPlaidBalance) && Boolean(onDisconnectPlaid)) ||
-      (!account.plaidConnected && Boolean(onInitiatePlaidLink) && Boolean(onCompletePlaidLink)));
   const hasExpandedContent = Boolean(
     pendingRenameRequest ||
       pendingDeleteRequest ||
       isRenaming ||
-      isDistributionOpen ||
-      showPlaidTools
+      isDistributionOpen
   );
 
   return (
@@ -309,25 +298,6 @@ export function OwnershipAccountCard(props: OwnershipAccountCardProps) {
           currentUserId={currentUserId}
           onVote={onVoteOnDeleteLLC}
         />
-      ) : null}
-      {showPlaidTools ? (
-        account.plaidConnected && onRefreshPlaidBalance && onDisconnectPlaid ? (
-          <BankBalanceCard
-            accountId={account.id}
-            bankName={account.bankName}
-            bankMask={account.bankMask}
-            balanceCents={account.balanceCents}
-            balanceUpdatedAt={account.balanceUpdatedAt}
-            onRefreshBalance={onRefreshPlaidBalance}
-            onDisconnect={onDisconnectPlaid}
-          />
-        ) : onInitiatePlaidLink && onCompletePlaidLink ? (
-          <PlaidLinkButton
-            accountId={account.id}
-            onInitiatePlaidLink={onInitiatePlaidLink}
-            onCompletePlaidLink={onCompletePlaidLink}
-          />
-        ) : null
       ) : null}
       {isDistributionOpen && members && onUpdateDistributionConfig ? (
         <DistributionConfigPanel

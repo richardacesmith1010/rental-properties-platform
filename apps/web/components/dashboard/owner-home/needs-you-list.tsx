@@ -10,8 +10,12 @@ export interface NeedsYouSummary {
   newMessageCount: number;
 }
 
-export function NeedsYouList({ summary, bankState, llcSetup, lateName, onOpenSection, onOpenLeaseWizard, onSelectProperty }: {
+export function NeedsYouList({ summary, bankState, llcSetup, lateName, bankNeedsCount = 0,
+  hasBankConnection = false, hasPendingBankConnection = false,
+  onOpenSection, onOpenLeaseWizard, onSelectProperty }: {
   summary: NeedsYouSummary; bankState: OwnerBankCardState;
+  bankNeedsCount?: number;
+  hasBankConnection?: boolean; hasPendingBankConnection?: boolean;
   llcSetup?: { accountName: string; onInviteMembers: () => void } | null;
   lateName?: string | null;
   onOpenSection: (id: string) => void; onOpenLeaseWizard?: () => void;
@@ -23,7 +27,10 @@ export function NeedsYouList({ summary, bankState, llcSetup, lateName, onOpenSec
   if (lateName || (lateName === undefined && late)) rows.push({ key: "late",
     label: `${lateName || late?.tenantName || "Tenant"}'s rent is late`,
     run: () => onOpenSection("charges") });
-  if (bankState.status !== "connected") rows.push({ key: "bank",
+  if (bankNeedsCount > 0) rows.push({ key: "bank-items",
+    label: `${bankNeedsCount} bank items to check`, href: "/owner/bank" });
+  if (hasPendingBankConnection) rows.push({ key: "bank-match", label: "Finish connecting", href: "/owner/bank" });
+  else if (!hasBankConnection && bankState.status !== "connected") rows.push({ key: "bank",
     label: bankState.status === "needs_info"
       ? `Finish ${bankState.accountName ? `${bankState.accountName} ` : ""}bank setup`
       : `Connect ${bankState.accountName ? `${bankState.accountName} ` : "your "}bank`, href: bankState.href });

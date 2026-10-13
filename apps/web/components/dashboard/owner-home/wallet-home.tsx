@@ -34,6 +34,9 @@ export function WalletHome({ wallet, summary, bankState, showAccountName, llcSet
     <YtdTiles incomeCents={wallet?.ok ? wallet.ytd.inCents : null}
       expensesCents={wallet?.ok ? wallet.ytd.outCents : 0} expensesFailed={!wallet?.ok} />
     <NeedsYouList summary={summary} bankState={bankState} llcSetup={llcSetup}
+      bankNeedsCount={wallet?.ok ? wallet.bankNeedsCount || 0 : 0}
+      hasBankConnection={wallet?.ok ? wallet.hasBankConnection || false : false}
+      hasPendingBankConnection={wallet?.ok ? wallet.hasPendingBankConnection || false : false}
       lateName={lateName ?? null} onOpenSection={onOpenSection} onOpenLeaseWizard={onOpenLeaseWizard}
       onSelectProperty={onSelectProperty} />
     <RecentActivity money={money} />

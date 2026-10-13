@@ -8,6 +8,7 @@ import { rentOnlyReceivedByPropertyId } from "@/lib/rent-received";
 import { getChargeLines } from "@/lib/charge-lines";
 import { tracksLateRent } from "@/lib/lease-collection";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 export interface WalletHomeEntry {
   id: string; name: string; city: string; state: string; accountId: string; accountName: string;
@@ -19,13 +20,47 @@ export interface WalletHomeEntry {
 
 export type OwnerWalletHomeResult = {
   ok: true; homes: WalletHomeEntry[]; ytd: { inCents: number; outCents: number }; recent: OwnerMoneyItem[];
+  bankNeedsCount?: number; hasBankConnection?: boolean; hasPendingBankConnection?: boolean;
 } | { ok: false; error: "load_failed" };
+
+async function loadBankNeedState(admin: ReturnType<typeof createAdminClient>, ownerIds: string[]) {
+  let bankNeedsCount = 0;
+  let hasBankConnection = false;
+  let hasPendingBankConnection = false;
+  if (ownerIds.length) {
+    const [queue, bankAccounts, connections] = await Promise.all([
+      admin.from("bank_review_items").select("id", { count: "exact", head: true })
+        .in("owner_account_id", ownerIds),
+      admin.from("bank_accounts").select("id").in("owner_account_id", ownerIds),
+      admin.from("bank_connections").select("id,status").in("owner_account_id", ownerIds)
+    ]);
+    if (queue.error && !isMissingSchemaError(queue.error)) throw queue.error;
+    if (bankAccounts.error) throw bankAccounts.error;
+    if (connections.error && !isMissingSchemaError(connections.error)) throw connections.error;
+    bankNeedsCount = queue.count || 0;
+    hasBankConnection = (connections.data || []).some((connection) => connection.status !== "revoked");
+    hasPendingBankConnection = (connections.data || []).some(
+      (connection) => connection.status === "pending_account_match");
+    const bankIds = (bankAccounts.data || []).map((item) => item.id);
+    if (bankIds.length) {
+      const changed = await admin.from("bank_transactions").select("id", { count: "exact", head: true })
+        .in("bank_account_id", bankIds).not("bank_change", "is", null);
+      if (changed.error && !isMissingSchemaError(changed.error)) throw changed.error;
+      bankNeedsCount += changed.count || 0;
+    }
+  }
+  return { bankNeedsCount, hasBankConnection, hasPendingBankConnection };
+}
 
 export async function loadOwnerWalletHome(userId: string, today = new Date()): Promise<OwnerWalletHomeResult> {
   try {
     const administered = await getAdministeredProperties(userId);
     const ids = [...new Set(administered.map((property) => property.id))];
-    if (!ids.length) return { ok: true, homes: [], ytd: { inCents: 0, outCents: 0 }, recent: [] };
+    if (!ids.length) {
+      const accounts = await getOwnershipAccountsForUser(userId);
+      const bankNeeds = await loadBankNeedState(createAdminClient(), accounts.map((account) => account.id));
+      return { ok: true, homes: [], ytd: { inCents: 0, outCents: 0 }, recent: [], ...bankNeeds };
+    }
     const admin = createAdminClient();
     const yearFrom = `${today.getUTCFullYear()}-01-01`;
     const yearTo = `${today.getUTCFullYear() + 1}-01-01`;
@@ -39,6 +74,7 @@ export async function loadOwnerWalletHome(userId: string, today = new Date()): P
     ]);
     if (expenses.error) throw expenses.error;
     if (!money.ok) throw new Error("Recent money unavailable.");
+    const bankNeeds = await loadBankNeedState(admin, accounts.map((account) => account.id));
     const idSet = new Set(ids);
     const accountById = new Map(accounts.map((account) => [account.id, account]));
     const administeredById = new Map(administered.map((property) => [property.id, property.ownerAccountId]));
@@ -101,7 +137,7 @@ export async function loadOwnerWalletHome(userId: string, today = new Date()): P
     return { ok: true, homes, ytd: {
       inCents: Object.values(inByProperty).reduce((sum, cents) => sum + cents, 0),
       outCents: [...outByProperty.values()].reduce((sum, cents) => sum + cents, 0)
-    }, recent: money.items.filter((item) => idSet.has(item.propertyId)) };
+    }, recent: money.items.filter((item) => idSet.has(item.propertyId)), ...bankNeeds };
   } catch (error) {
     console.error("Owner wallet home load failed", error);
     return { ok: false, error: "load_failed" };

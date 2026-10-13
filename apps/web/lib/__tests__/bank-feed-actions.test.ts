@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createRowToken } from "@/lib/bank-feed/fingerprint";
 import { createBankAccount, answerBankItem, importBankRows } from "@/app/actions/bank-feed";
 import { fileBankItem, undoFiledItem } from "@/lib/bank-feed/file-item";
+import { parseBankCsv } from "@/lib/bank-feed/csv";
 import { answerBankItemSchema, bankChoiceSchema, createBankAccountSchema,
   deleteBankAccountSchema, importBankRowsSchema, undoBankItemSchema } from "@/lib/validations-bank-feed";
 vi.mock("server-only", () => ({}));
@@ -43,6 +44,33 @@ describe("bank input validation", () => {
   });
 });
 describe("bank actions and filing", () => {
+  it("8 importBankRows fixture CSV preserves the response shape", async () => {
+    const parsed = parseBankCsv("Date,Description,Amount\n10/05/2026,Payment to xfinity,81.81\n");
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    const admin = fakeAdmin(base); vi.mocked(createAdminClient).mockReturnValue(admin as never);
+    const response = await importBankRows({ bankAccountId: BANK_ID,
+      rows: parsed.rows.map((row, i) => ({ ...row, i })) });
+    const shape = JSON.parse(JSON.stringify(response, (key, value) => key === "token" && value ? "<token>" : value));
+    expect(shape).toMatchInlineSnapshot(`
+      {
+        "alreadyCount": 0,
+        "filedCount": 0,
+        "personalCount": 1,
+        "results": [
+          {
+            "i": 0,
+            "ruleable": true,
+            "status": "personal",
+            "token": "<token>",
+          },
+        ],
+        "skippedByRuleCount": 0,
+        "success": true,
+        "transferCount": 0,
+      }
+    `);
+  });
   it("rejects account creation by a non-owner without a write", async () => {
     const admin = fakeAdmin({ ...base, ownership_account_members: [] });
     vi.mocked(createAdminClient).mockReturnValue(admin as never);

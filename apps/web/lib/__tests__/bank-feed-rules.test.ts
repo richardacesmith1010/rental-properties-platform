@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createRowToken } from "@/lib/bank-feed/fingerprint";
-import { answerBankItem, undoBankItem } from "@/app/actions/bank-feed";
+import { answerBankItem, undoBankItem, keepBankChange } from "@/app/actions/bank-feed";
 import { reverseItemRule } from "@/lib/bank-feed/rules";
 import { fakeAdmin, BANK_ID, base, tokenRow } from "./bank-feed-test-admin";
 vi.mock("server-only", () => ({}));
@@ -23,6 +23,23 @@ const ownerItem = { id: ITEM_ID, bank_account_id: BANK_ID, matched_by: "owner", 
   rent_charge_id: null, prior_charge_status: null };
 
 describe("rule-aware undo", () => {
+  it("7b Keep clears bank change and another account owner is rejected", async () => {
+    const admin = fakeAdmin({ ...base, bank_transactions: [{ ...ownerItem, bank_change: "modified",
+      bank_change_at: "2026-10-12" }] });
+    vi.mocked(createAdminClient).mockReturnValue(admin as never);
+    expect((await keepBankChange({ bankTransactionId: ITEM_ID })).success).toBe(true);
+    expect(admin.tables.bank_transactions[0]).toMatchObject({ bank_change: null, bank_change_at: null });
+    admin.tables.bank_accounts[0].owner_account_id = "another";
+    expect((await keepBankChange({ bankTransactionId: ITEM_ID })).success).toBe(false);
+  });
+  it("7b flagged Undo follows undoBankItem and reverses its auto-created rule", async () => {
+    const admin = fakeAdmin({ ...base, bank_transactions: [{ ...ownerItem, matched_by: "rule",
+      bank_change: "removed", bank_change_at: "2026-10-12" }], bank_rules: [{ id: RULE_ID }] });
+    vi.mocked(createAdminClient).mockReturnValue(admin as never);
+    expect((await undoBankItem({ bankTransactionId: ITEM_ID })).success).toBe(true);
+    expect(admin.tables.bank_rules).toHaveLength(0);
+    expect(admin.tables.bank_transactions).toHaveLength(0);
+  });
   it("deletes an owner transfer and its created rule", async () => {
     const admin = fakeAdmin({ ...base, bank_transactions: [ownerItem], bank_rules: [{ id: RULE_ID }] });
     vi.mocked(createAdminClient).mockReturnValue(admin as never);

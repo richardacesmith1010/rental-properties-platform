@@ -9,15 +9,22 @@ import { UploadCard, type AccountOption } from "./upload-card";
 import { ReviewCard, type ReviewItem, type HomeOption, type RentOption, type AnswerResult } from "./review-card";
 import { MissedList } from "./missed-list";
 import { RecentList, type RecentItem } from "./recent-list";
+import { BankConnectionsCard, type ConnectionView, type MatchView } from "./bank-connections-card";
+import { QueuedReviewList, type QueuedItem, type ChangedItem } from "./queued-review-list";
+import type { ComponentProps } from "react";
 
 interface ImportResult { success: boolean; error?: string; filedCount?: number; transferCount?: number;
   alreadyCount?: number; skippedByRuleCount?: number; personalCount?: number;
   results?: Array<{ i: number; status: "filed" | "transfer" | "already" | "skipped" | "ask" | "personal";
     token?: string; suggestion?: Suggestion; ruleable?: boolean; alreadyRecorded?: boolean }> }
 
-export function BankFeedShell({ ownerAccountId, accounts, bankAccounts, properties, charges, recent, actions }: {
+export function BankFeedShell({ ownerAccountId, accounts, bankAccounts, properties, charges, recent, actions,
+  connections = [], pendingMatch, queued = [], changed = [], connectionActions, queueActions }: {
   ownerAccountId: string; accounts: Array<{ id: string; display_name: string }>;
   bankAccounts: AccountOption[]; properties: HomeOption[]; charges: RentOption[]; recent: RecentItem[];
+  connections?: ConnectionView[]; pendingMatch?: MatchView; queued?: QueuedItem[]; changed?: ChangedItem[];
+  connectionActions?: ComponentProps<typeof BankConnectionsCard>["actions"];
+  queueActions?: ComponentProps<typeof QueuedReviewList>["actions"];
   actions: {
     createBankAccount: (input: { ownerAccountId: string; institution: Institution; nickname: string }) =>
       Promise<{ success: boolean; error?: string; bankAccountId?: string }>;
@@ -97,6 +104,11 @@ export function BankFeedShell({ ownerAccountId, accounts, bankAccounts, properti
             ? "border-[var(--accent)]" : "border-[var(--line)]"}`}>
           {item.display_name}</Link>)}
       </nav> : null}
+      {connectionActions ? <BankConnectionsCard ownerAccountId={ownerAccountId} connections={connections}
+        pendingMatch={pendingMatch} actions={connectionActions} /> : null}
+      {queueActions ? <QueuedReviewList items={queued} changed={changed} properties={properties}
+        charges={charges} actions={queueActions} /> : null}
+      {connectionActions ? <h2 className="text-lg font-semibold">Or upload a statement file.</h2> : null}
       <UploadCard key={bankAccounts.map((item) => item.id).join(",")} accounts={bankAccounts}
         ownerAccountId={ownerAccountId} onCreate={actions.createBankAccount}
         onImport={importRows} onSelected={setSelectedAccount} />
