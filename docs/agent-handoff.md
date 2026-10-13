@@ -953,3 +953,9 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Codex 211k tokens; 2254 tests; smoke green (owner Home p75 2.33 s).
 - **Visual check found transient failures:** right after the deploy, one session got "Numbers are not ready" on `/owner/money` and "Bank activity is not ready yet." on `/owner/bank`. Later loads were all fine (4/4). The catches swallow errors, so there's no log. → **Sprint 226 running** (money-page logging + one retry on transient errors; it also fixes 2 broken queries found in the Supabase edge logs: `maintenance_tickets.updated_at` doesn't exist, so **analytics repair stats have been silently empty**, and `ownership_account_members.deleted_at` doesn't exist, causing a 400 + fallback on every LLC lookup).
 - **Follow-ups:** add the same logging to the `/owner/bank` loader; the dark Bank page shows an empty rounded card at the top when there are no balances (hide `BankBalancesCard` when empty); Supabase default TRUNCATE grants to anon/authenticated on public tables (unreachable via PostgREST) are a hardening item.
+
+## Sprint 226 + 226b SHIPPED (2026-10-13) — error visibility + broken queries (L2/L1)
+- `/owner/money` and `/owner/bank`: every failure branch logs `[owner-money-load-failed]` / `[owner-bank-load-failed]` with safe fields, plus one retry on transient errors. Empty balances card hidden.
+- Removed nonexistent columns: `maintenance_tickets.updated_at` (analytics repair stats were silently empty → fixed) and the `ownership_account_members.deleted_at` filter (a 400 + fallback on every LLC lookup).
+- Supabase edge logs after 226: 521 requests, **0** 4xx/5xx (previously constant 400s).
+- 2269 tests; smoke all green after 226b (owner Home p75 **1.73 s**); no `load-failed` lines in the following 20 min. The intermittent "not ready" seen twice is now observable if it recurs. The earlier smoke failure had no DB errors in that window, so it was likely a cold-start timeout.
