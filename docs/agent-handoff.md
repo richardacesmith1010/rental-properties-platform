@@ -908,3 +908,6 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Codex runs via `<scratchpad>/run-codex.sh` (auto-resumes after a usage limit).
 - **After Codex:** review → Claude sets `BANK_TOKEN_KEY` in Vercel (32-byte base64, never printed) → applies the migration → live attacker/atomicity/lease SQL → gate → deploy → sandbox Link walk.
 - **Owner action pending:** sign in to dashboard.plaid.com so Claude can start the production access application (and request Fidelity). Live check: 0 legacy plaintext Plaid tokens exist.
+- 224 first Codex run: 497k tokens, 2167 tests, but the test map showed many MISSING/WEAK acceptance items (sync.ts row handling mocked away), so it FAILED per L-017. Fix-up `docs/sprint224b-codex-prompt.md` is running (tests + cron retries `error` connections + robust confirm-conflict mapping).
+- Migration reviewed: matches the design; `bank_transactions_kind_shape` and the fingerprint hex checks are satisfied; the institution CHECK widening is a superset of live. **Not yet applied.**
+- `BANK_TOKEN_KEY` set in Vercel production (generated and piped, never printed).
