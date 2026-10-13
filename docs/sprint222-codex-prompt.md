@@ -1,4 +1,4 @@
-# Sprint 222 — Deposits held and "Yours to use" cash (L3: schema + money) · rev 3 (ChatGPT rev 1–2 = REJECT; all REQUIRED/OPTIONAL folded in)
+# Sprint 222 — Deposits held and "Yours to use" cash (L3: schema + money) · rev 4 (ChatGPT rev 1–3 = REJECT; all REQUIRED/OPTIONAL folded in)
 
 The owner approved this on 2026-10-13. Source: `docs/partner-ledger-requirements.md` B5. Her sheet works it out like this: "Navy Federal balance $21,885 − Security deposit $3,750 = $18,135 we can actually use."
 
@@ -29,34 +29,40 @@ The owner approved this on 2026-10-13. Source: `docs/partner-ledger-requirements
 
 ## 3. In scope
 ### 3.1 Migration `supabase/migrations/20261015_sprint222_deposits_cash.sql` (Codex writes it; Claude applies it and runs attacker SQL)
-1. **`leases`:** add `deposit_returned_cents integer null` and `deposit_returned_on date null`.
-   - Check: `(deposit_returned_cents is null and deposit_returned_on is null) or (deposit_returned_cents between 0 and deposit_cents and deposit_returned_on is not null)`.
-   - **Write guard trigger `leases_deposit_guard`** (BEFORE UPDATE; `SECURITY INVOKER`, `set search_path = ''`):
-     - if `deposit_returned_cents` or `deposit_returned_on` changes **and** `pg_catalog.current_setting('domus.deposit_write', true) is distinct from 'on'`, raise "Deposit returns are recorded from the lease page." **No role or `current_user` exceptions.** The only way to set that flag is inside the two service-role RPCs below (`set_config('domus.deposit_write','on', true)`, which is transaction-local). Every other path is blocked, including the service role's direct updates and any existing SECURITY DEFINER function that updates leases;
-     - if `deposit_cents` changes while `OLD.deposit_returned_on is not null`, raise "Undo the deposit return before changing the deposit." (this applies to everyone, including the service role).
-     - So owners and managers who can edit a lease still can't write the return columns directly, and a recorded return can't be silently re-based.
-   - **Service-role-only RPCs** (each `SECURITY DEFINER`, `search_path = ''`, revoked from public, anon and authenticated; granted to service_role), each **one transaction covering the mutation and its audit row**:
-     - `public.record_deposit_return(p_lease_id uuid, p_returned_cents integer, p_returned_on date, p_actor_profile_id uuid) returns void`:
-       - validates `0 ≤ cents ≤ deposit_cents` and `returned_on ≤ current_date`;
-       - sets the flag, updates the lease, and inserts into `public.audit_logs (user_id, action='deposit_return_recorded', entity_type='lease', entity_id, metadata jsonb {returned_cents, returned_on})`.
-       - If the audit insert fails, the whole call fails and nothing changes.
-     - `public.clear_deposit_return(p_lease_id uuid, p_actor_profile_id uuid) returns void`: same pattern, with `action='deposit_return_cleared'`.
+1. **Deposit returns live in their own table** (a privilege boundary; **no new columns on `leases`**):
+   - `public.lease_deposit_returns`:
+     - `lease_id uuid primary key references leases(id) on delete cascade`;
+     - `returned_cents integer not null check (returned_cents >= 0)`;
+     - `returned_on date not null`;
+     - `created_by_profile_id uuid not null references profiles(id)`, `created_at`.
+   - **RLS:** enable it. Select policy: the caller can administer the lease's property, via a hardened SECURITY DEFINER helper `public.lease_admin_visible(p_lease_id uuid)` with `search_path = ''`, revoked from public and anon, and granted to authenticated.
+     - `revoke all on public.lease_deposit_returns from anon, authenticated; grant select … to authenticated;`
+     - **No insert, update or delete grant to any client role, so no client can write it, whatever settings it sets.**
+   - **Trigger `leases_deposit_freeze`** (BEFORE UPDATE OF `deposit_cents` ON `leases`): if `deposit_cents` changes and a `lease_deposit_returns` row exists for the lease, raise "Undo the deposit return before changing the deposit." The check runs through a SECURITY DEFINER helper `public.lease_has_deposit_return(uuid)` (`search_path = ''`, revoked from public, anon and authenticated), so RLS can't hide the row. It applies to every role.
+   - **Service-role-only RPCs** (`SECURITY DEFINER`, `search_path = ''`, revoked from public, anon and authenticated; granted to service_role). Each is one transaction covering the mutation and its `public.audit_logs` row:
+     - `public.record_deposit_return(p_lease_id uuid, p_returned_cents integer, p_returned_on date, p_actor_profile_id uuid) returns text`:
+       - validate `0 ≤ cents ≤ leases.deposit_cents` and `returned_on ≤ current_date`, and that the actor profile exists;
+       - `insert … on conflict (lease_id) do nothing`. A conflict → return `'already'` with no audit row (idempotent; Undo is required to change it);
+       - otherwise insert the audit row (`action='deposit_return_recorded'`, metadata `{returned_cents, returned_on}`) and return `'recorded'`.
+       - An audit insert failure fails the whole call.
+     - `public.clear_deposit_return(p_lease_id uuid, p_actor_profile_id uuid) returns text`: `delete … returning`. No row → `'none'` with no audit row; otherwise insert the audit row (`'deposit_return_cleared'`) and return `'cleared'`.
+   - **Actor:** the server action authorizes the authenticated user (owner or manager who can administer the property) before calling, and passes that user's id. The RPC only accepts an existing profile id.
 2. **`bank_accounts`:**
    - add `balance_cents bigint null`, `balance_as_of timestamptz null`, `balance_source text null check (balance_source in ('plaid','manual'))`;
    - add a check that all three are null or all three are set;
    - add **`account_type text null`** and **`iso_currency_code text null`**, the Plaid metadata used for eligibility.
    - **Column-level privilege:** these stay writable only by the service role. Don't add any authenticated grant on `bank_accounts`.
-3. **Service-role-only RPC `public.save_bank_balances(p_connection_id uuid, p_lease_token uuid, p_balances jsonb) returns boolean`** (`SECURITY DEFINER`, `search_path = ''`, revoked from public, anon and authenticated; granted to service_role). One transaction:
+3. **Service-role-only RPC `public.save_bank_balances(p_connection_id uuid, p_lease_token uuid, p_balances jsonb, p_complete boolean) returns boolean`** (`SECURITY DEFINER`, `search_path = ''`, revoked from public, anon and authenticated; granted to service_role). One transaction:
    - `select … from bank_connections where id = p_connection_id and sync_lease_token = p_lease_token and sync_lease_until > now() and status in ('ok','error') for update`. No row → return false and write nothing. The row lock blocks any concurrent lease takeover until commit.
    - **Payload:** every account `/accounts/get` returned for the item: `{ plaid_account_id, account_type, subtype, currency, cents (nullable), as_of (nullable) }`. Duplicate `plaid_account_id`s are rejected (raise).
    - **Then, in the same transaction:**
      1. **One** `update … from jsonb_to_recordset` that sets `account_type`, `account_subtype` and `iso_currency_code` for matching rows of this connection, and sets the balance triple **only when the account is eligible and `cents` is not null**. Otherwise all three balance columns become **null**.
-     2. **One** `update` that nulls the balance triple for this connection's Plaid accounts **not present** in the payload (closed or removed accounts).
+     2. **Only when `p_complete` is true:** **one** `update` that nulls the balance triple for this connection's Plaid accounts **not present** in the payload (closed or removed accounts). When `p_complete` is false, absent accounts are left untouched.
    - Return true.
 4. **No new tables.**
 
 ### 3.2 Server
-1. **Pure helper `depositHeldCents(lease)`** in `lib/deposits.ts` (new): `deposit_cents` if `deposit_returned_on` is null, else 0. A recorded return of **$0** means the whole deposit was kept, so nothing is held. It applies to every lease (active or ended).
+1. **Pure helper `depositHeldCents(lease, returnRow | null)`** in `lib/deposits.ts` (new): `deposit_cents` if there's no return row, else 0. A recorded return of **$0** means the whole deposit was kept, so nothing is held. It applies to every lease (active or ended). "Kept" = `deposit_cents − returned_cents`.
    - **`loadCashOnHand(userId)`** (`lib/cash-on-hand.ts`, new):
      - for each ownership account the user is an **active owner member** of, take its **eligible** bank accounts. Eligibility is decided **independently of whether a balance is stored**:
        - every `source='upload'` account;
@@ -69,14 +75,16 @@ The owner approved this on 2026-10-13. Source: `docs/partner-ledger-requirements
      - batched queries only, with every error checked.
    - Use the **user-scoped** client for reads (RLS), and verify membership server-side.
 2. **Actions** (`app/actions/deposits.ts`, new; AGENTS.md §3: auth → owner or manager who can administer the lease's property → zod):
-   - **`recordDepositReturn({ leaseId, returnedCents, returnedOn })`**: authorize, zod-validate, then call the `record_deposit_return` RPC through the admin client (atomic with its audit row). Check the error and revalidate. **No separate `logAudit` call.**
-   - **`clearDepositReturn(leaseId)`**: undo through `clear_deposit_return` (atomic).
+   - **`recordDepositReturn({ leaseId, returnedCents, returnedOn })`**: authorize, zod-validate, then call the `record_deposit_return` RPC through the admin client (atomic with its audit row). `'already'` → "This deposit return is already recorded. Undo it first." Check the error and revalidate. **No separate `logAudit` call.**
+   - **`clearDepositReturn(leaseId)`**: undo through `clear_deposit_return` (atomic). `'none'` → success with no change.
 3. **Plaid balances:**
    - in `syncConnection`, after a successful sync and **before** the lease is released, call `/accounts/get` once;
    - **Eligibility:** only accounts with `type = 'depository'`, a subtype in (`checking`, `savings`, `cash management`, `money market`), and `iso_currency_code = 'USD'` (a null or other currency is skipped). Credit, loan and investment balances are never stored.
    - **Amount — product rule:** "Yours to use" means money you can spend today, so use `balances.available` when it's not null, otherwise `balances.current`. Store `round(value * 100)`.
    - **Timestamp:** `balance_as_of` = `balances.last_updated_datetime` when Plaid provides it, otherwise `now()` (when Domus checked).
-   - **Write all eligible accounts in one call** to `save_bank_balances(connectionId, leaseToken, json)`. A `false` result (lease lost) → no balance written, logged once. No per-account queries.
+   - **Send every account `/accounts/get` returned** (eligible or not; ineligible ones or null values with `cents: null`) in one call to `save_bank_balances(connectionId, leaseToken, json, complete)`. A `false` result (lease lost) → no balance written, logged once. No per-account queries.
+   - **Snapshot completeness:** the response counts as **complete** only if it's well-formed (`item.item_id` equals the connection's `plaid_item_id`, and `accounts` is an array), and it isn't an empty array while the connection has linked Plaid accounts.
+     - Malformed or empty → **don't call the RPC at all**. Log `[bank-balance-incomplete]`. Stored balances stay unchanged; their `balance_as_of` keeps aging, so the stale warning shows.
    - a failure to fetch balances must not fail the sync: log `[bank-balance-failed]` with the allowlisted error code only.
 4. **Manual balance:** `setManualBalance({ bankAccountId, balanceCents })`. Owner member of the bank account's owner account; **only for `source = 'upload'` accounts**; sets `balance_source = 'manual'` and `balance_as_of = now()`. A Plaid account → "This bank updates its balance by itself."
 
@@ -164,17 +172,17 @@ The owner approved this on 2026-10-13. Source: `docs/partner-ledger-requirements
    - (d) a non-member account is excluded;
    - (e) a query error → fail closed.
 3. **Deposit actions:**
-   - (a0) the actions call the RPCs (never a direct `leases` update), and an RPC error (e.g. an audit failure) → `{ ok: false }` with nothing reported as saved;
+   - (a0) the actions call the RPCs (never a direct table write), and an RPC error (e.g. an audit failure) → `{ ok: false }` with nothing reported as saved; `'already'` → the exact copy; `'none'` on undo → ok;
    - (a) a tenant or an unrelated owner is rejected;
    - (b) an amount above the deposit, negative, or a future date → rejected with validation copy;
    - (c) record, then clear, round-trips;
    - (d) the error is checked;
    - (e) an audit entry is written.
 4. **Balances from sync:**
-   - (a) after a sync, one `save_bank_balances` call carries the eligible accounts only (non-depository, non-USD and credit accounts are excluded), in cents;
+   - (a) after a sync, one `save_bank_balances` call carries **every** returned account with type, subtype and currency. Eligible accounts have `cents`; ineligible ones (credit, non-USD) and null values have `cents: null`;
    - (b) `available` is used first, with `current` as the fallback; `last_updated_datetime` is used when present, otherwise now;
    - (c) a `false` result (lease lost) → no balance write and one log line;
-   - (c4) the payload carries **all** returned accounts with type and currency; an ineligible account or a null value is sent with `cents: null`;
+   - (c4) **snapshot completeness:** a malformed response (wrong `item_id`, missing `accounts`) or an empty array with linked accounts → no RPC call, the log line, and stored balances unchanged; a complete response → `p_complete=true`;
    - (d) a balance fetch failure doesn't fail the sync and logs the allowlisted code.
 5. **Manual balance:** upload account → saved as manual; Plaid account → the exact copy; a non-member is rejected.
 6. **UI:**
@@ -183,8 +191,11 @@ The owner approved this on 2026-10-13. Source: `docs/partner-ledger-requirements
    - the Homes card shows the deposit field;
    - the bank page shows balances and Update balance only on upload accounts.
 7. **Migration text test:**
-   - the CHECKs on both tables are present;
-   - the `leases_deposit_guard` trigger exists;
+   - `lease_deposit_returns` exists, with RLS, no client write grants, and select-only for authenticated;
+   - **no new columns on `leases`**;
+   - the `leases_deposit_freeze` trigger and `lease_has_deposit_return` helper exist (SECURITY DEFINER, `search_path = ''`);
+   - `record_deposit_return` and `clear_deposit_return` are service-role-only and insert into `audit_logs`;
+   - the balance-triple CHECK on `bank_accounts`;
    - `save_bank_balances` is SECURITY DEFINER with `search_path = ''`, takes `for update` on `bank_connections`, uses a single `update … from jsonb_to_recordset`, and is service-role-only;
    - no grants to authenticated or anon;
    - no new tables.
@@ -193,10 +204,11 @@ The owner approved this on 2026-10-13. Source: `docs/partner-ledger-requirements
 
 **Claude will run live SQL (rolled back)** to prove:
 - authenticated users can't update `bank_accounts` balance columns directly;
-- **an otherwise-authorized owner and manager** (who can update the lease) can't change `deposit_returned_*` directly, and can't change `deposit_cents` after a return; the service role can;
 - `save_bank_balances` with a stale token writes nothing; if a concurrent lease acquire happens during the call, it waits for the call to finish (the row lock); an account missing from the payload, ineligible, or with null cents has its balance nulled; duplicate IDs raise;
-- the deposit guard blocks direct `UPDATE`s of `deposit_returned_*` from authenticated owners and managers **and** from the service role outside the RPCs; `record_deposit_return` and `clear_deposit_return` succeed and write an `audit_logs` row atomically; a forced audit failure rolls back the lease change;
-- every existing SECURITY DEFINER function that updates `leases` (Claude lists them from `pg_proc`) can't change `deposit_returned_*`;
+- an authenticated owner or manager who **can update the lease** can't insert, update or delete `lease_deposit_returns`, **even after running `set_config` with any custom setting in the same transaction**;
+- `record_deposit_return` and `clear_deposit_return` write their `audit_logs` row atomically; a forced audit failure rolls back; a repeated record returns `'already'` with no second audit row;
+- changing `deposit_cents` while a return exists fails for authenticated users **and** the service role;
+- `save_bank_balances` with `p_complete=false` leaves absent accounts' balances unchanged; with `true`, it nulls them;
 - the CHECKs reject a returned amount above the deposit and partial balance triples.
 
 ## 9. Report format
