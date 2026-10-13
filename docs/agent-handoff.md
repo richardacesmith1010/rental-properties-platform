@@ -893,3 +893,4 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Verify: gate 2125, smoke green, CI green. Phone walk of Reports "Rent & water by month" and the Rent list in light and dark, zero page errors.
 - **Not walked with real lines** (the smoke leases feed the owner's dry run). The first real water pass-through should be eyeballed on its next bill.
 - **Next partner sprints:** 221 managing-partner fee + settle-up suggestion; 222 deposits held / available cash; 223 shared duties. Then Face ID.
+- **2026-10-12 owner decision:** next is **bank sync** (Plaid production + `/transactions/sync` + webhook + persistent review queue, per `docs/bank-feed-design.md` Phase 2), ahead of partner sprints 221–223. No automatic manager-fee calculation (manual "Manager fee" partner payment only). Settle-up = equal shares, later. Plaid keys exist in Vercel prod (set ~203 days ago, likely sandbox); a production access application is needed (owner action).

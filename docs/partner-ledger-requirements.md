@@ -45,3 +45,8 @@ What she gets from it:
 3. **Managing partner fee and settling up (B3):** a member-level fee setting (e.g. 20%) and a "Who owes whom" suggestion.
 4. **Available cash (B5):** deposits held per lease, and LLC balance − deposits held.
 5. **Shared duties (B6):** a simple list with frequency and owner, shown to every member.
+
+## Owner decisions (2026-10-12)
+- **Order:** bank sync (Plaid live, automatic transactions) comes next, ahead of 221–223. Reason: bank connection is the adoption blocker for Alia and the siblings. The owner wants it Robinhood/Kalshi-easy: NFCU and Fidelity; Angel's Fidelity payment and the NFCU solar bill should show up in Domus without uploads. The owner would ideally move everything into one business account.
+- **Managing fee:** no automatic fee calculation. The sister's fee exists because she keeps the spreadsheets and talks to the tenant; the owner expects to drop it once Domus works. "Manager fee" stays available as a manual partner-payment kind (219).
+- **Settle-up:** "even" = equal shares among partners. Small add-on, later.
