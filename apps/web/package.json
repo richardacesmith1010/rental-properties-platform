@@ -24,7 +24,7 @@
     "@vercel/analytics": "^2.0.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "lucide-react": "^0.575.0",
+    "lucide-react": "^1.55.0",
     "next": "15.5.27",
     "plaid": "^41.4.0",
     "react": "19.2.8",
