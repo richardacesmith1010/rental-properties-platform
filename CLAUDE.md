@@ -77,7 +77,7 @@ Hypothesize only after one of these shows something.
 - **Repo-persisted state:**
   - status and sprint results → `docs/agent-handoff.md`;
   - lessons → `docs/lessons.md` (add a new L-0NN after every real mistake);
-  - grooming debt → AGENTS.md §13;
+  - grooming debt → `docs/grooming.md`;
   - durable preferences → auto-memory.
 - **Rotate the chat only on a threshold:** the transcript is near 50 MB, the chat has been compacted about twice, it feels sluggish, or the topic changes. Report the transcript size at each cycle close (L-010).
 
@@ -98,13 +98,13 @@ Hypothesize only after one of these shows something.
 - **Dead code:** no dead exports. Grep all of `apps/web` before calling a file orphaned (L-006).
 - **Auth:** shared auth helpers in server actions, not copied boilerplate.
 - **Errors:** every error path returns an explicit error state.
-- **Grooming rules** are in AGENTS.md §13.
+- **Grooming rules** are in `docs/grooming.md`.
 
 ## 11) Files, environment, fallbacks
 - **Ownership:**
   - `CLAUDE.md`, `docs/lessons.md` and `docs/agent-handoff.md` are Claude's (Codex may append status only);
-  - AGENTS.md §1–11 are Claude's;
-  - AGENTS.md §12–13 are Codex's.
+  - `AGENTS.md` is Claude's;
+  - `docs/codex-lessons.md` and `docs/grooming.md` are Codex's.
 - **Shell quirks:**
   - use `/usr/bin/grep`;
   - the Vercel CLI needs `env -u CLAUDECODE`;
