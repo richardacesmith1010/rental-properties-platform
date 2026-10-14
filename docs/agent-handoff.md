@@ -1002,3 +1002,23 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   - Skills `.claude/skills/{ship,codex-dispatch,chatgpt-review}`.
   - Hooks in `.claude/settings.json`: SessionStart repo summary; block `vercel deploy` with uncommitted app files in the main checkout; block commits containing secrets, `.env` or `* 2.*` files.
   - Codex runner with capacity retry: `.claude/skills/codex-dispatch/run-codex.sh`.
+
+## Sprint 229 SHIPPED (2026-10-14) — iPhone bank connect (L3 phone; ChatGPT REJECT → AWC → rev 3)
+- `8da74ef`. Codex gpt-6-astra high, ~180k tokens, plus 229b test fixes (astra medium).
+- **What shipped:**
+  - LinkKit 7.2.2 via SPM, with a `PlaidLinkBridge` message bridge that binds each session to its page and sign-in, and drops stale replies;
+  - Universal Link return on `/owner/bank/oauth-app`, plus `App.entitlements` (`applinks:domusbase.com`);
+  - AASA at `/.well-known/apple-app-site-association`, served from `APPLE_APP_ID` (Vercel env) and excluded from middleware;
+  - iOS link tokens fail closed without `PLAID_REDIRECT_URI_IOS`;
+  - the lock overlay moved into its own `UIWindow` (one per scene) above presented screens;
+  - the card shows Connect/Sign in again in the app only when the native handler exists; old builds keep the 228 message.
+- **Verify:**
+  - xcodebuild 103/103. Two failures were found by Claude (Codex's sandbox can't run the Simulator) and fixed in 229b: the trailing-slash path check, and a test needing a run-loop settle (diagnosed as a test artifact).
+  - Gate 2406; smoke green; CI gate success.
+  - AASA: 200 `application/json`, no redirect; the Apple CDN serves it.
+  - Production `/link/token/create` accepts `redirect_uri` = oauth-app.
+  - Plaid dashboard now lists both redirect URIs.
+- **Not yet walked:**
+  - in-app Connect on the Simulator (needs the owner signed in);
+  - a real OAuth connect on a physical iPhone. Blocked on Plaid Transactions approval plus NFCU/Fidelity OAuth review, and on a signed device build with the Associated Domains capability (Xcode automatic signing).
+- **Note:** the deploy hook works. It blocked a combined commit+deploy command, so `/ship` now says to deploy in a separate call.

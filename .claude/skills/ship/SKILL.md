@@ -12,7 +12,7 @@ Run each step; stop on the first failure and report the exact failing command an
    - for iOS changes, also `cd apps/ios/ios/App && xcodebuild test -project App.xcodeproj -scheme App -destination 'id=C79BDA37-1967-45CB-A369-85B260EA111D'`.
 2. **Migrations (if any):** apply them with Supabase MCP `apply_migration`. Then run the rolled-back attacker SQL listed in the packet, with `set local role authenticated` plus JWT claims (L-021). If a migration recreates a constraint, policy or function, diff it against the live definition first (L-012).
 3. **Commit only the sprint's files**, with the attribution trailer, then `git push origin main`. The commit hook blocks secrets and `* 2.*` files.
-4. **Deploy:** `env -u CLAUDECODE npx vercel deploy --prod --yes`.
+4. **Deploy** in a **separate** Bash call after the commit; the deploy hook checks the tree before the command runs, so commit + deploy in one command is blocked: `env -u CLAUDECODE npx vercel deploy --prod --yes`.
    - The deploy hook blocks it if app files are uncommitted in the main checkout.
    - If Codex is still working in the tree, deploy from a clean worktree instead: `git worktree add --detach <scratchpad>/deploy-wt HEAD`, copy `.vercel` into it, and deploy from there.
 5. **Smoke:** run `set -a; . apps/web/.env.local; set +a; APP_URL=https://domusbase.com npm run smoke:web`. Without the SMOKE_* variables loaded, it fails on missing credentials.
