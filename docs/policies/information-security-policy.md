@@ -55,7 +55,7 @@ This policy explains how Domus protects the data of property owners, managers, a
 
 ## 8. Vulnerability and patch management
 - **Software kept current:** frameworks and runtimes are kept on supported versions (for example, Next.js 15 and Node 20). Software nearing end of life is upgraded before support ends.
-- **Dependency alerts:** GitHub dependency alerts are reviewed at least monthly. *(To do: turn on Dependabot.)*
+- **Dependency alerts:** GitHub dependency alerts are reviewed at least monthly. Dependabot opens monthly update proposals (`.github/dependabot.yml`); each one passes the normal checks before it is merged.
 - **Patch deadlines** (from when a fix is available):
   - critical: within 7 days;
   - high: within 30 days;

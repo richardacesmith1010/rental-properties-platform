@@ -1022,3 +1022,14 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   - in-app Connect on the Simulator (needs the owner signed in);
   - a real OAuth connect on a physical iPhone. Blocked on Plaid Transactions approval plus NFCU/Fidelity OAuth review, and on a signed device build with the Associated Domains capability (Xcode automatic signing).
 - **Note:** the deploy hook works. It blocked a combined commit+deploy command, so `/ship` now says to deploy in a separate call.
+
+## Sprint 230 SHIPPED (2026-10-14) — security-policy promises (L2; no app code, so no Codex dispatch)
+- **90-day review-queue cleanup:** `supabase/migrations/20261017_sprint230_review_queue_purge.sql`, applied live.
+  - `purge_stale_bank_review_items()`: security definer, `search_path=''`; EXECUTE only for postgres.
+  - Deletes items more than 90 days after they entered the queue (`created_at`, not the posted date). Each leaves only its HMAC fingerprint in `bank_skipped_fingerprints`, so the next sync can't add it back.
+  - pg_cron job `domus-purge-stale-bank-review-items`, `30 9 * * *` UTC, runs as postgres.
+  - Live SQL (rolled back), 13/13: 91-day item gone + tombstoned; 89-day kept with no tombstone; an already-tombstoned item purges without conflict; an old posting new to the queue is kept; count 2 then 0 on a rerun; other rows untouched; anon, authenticated and service_role are denied EXECUTE. No leftovers.
+- **Dependabot:** `.github/dependabot.yml`, monthly: npm `/` (grouped minor+patch), npm `/apps/ios` (Capacitor grouped), github-actions. The SPM `Package.swift` is excluded because `cap sync` generates it and LinkKit is pinned.
+- Policy docs updated (the security-policy Dependabot to-do is done; the retention policy says the 90-day cleanup is automatic).
+- **Owner action pending:** turn on Dependabot alerts + security updates at GitHub → Settings → Code security (Claude can't check repo settings without a GitHub token).
+- **Follow-ups:** the 7-year purge job (needs the owner to set the retention years in the policy first); optional review-queue copy: "Items you don't answer go away after 90 days."

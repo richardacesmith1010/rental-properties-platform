@@ -49,4 +49,4 @@ When a user disconnects a bank in Domus:
 
 ## 7. Roles and review
 - **Owner's duties:** the owner enforces this policy and reviews it every year.
-- **Automation:** steps marked automatic are done by code. The 90-day review-queue cleanup and the 7-year purge job still need to be built and are tracked in `docs/agent-handoff.md`. Until then, the owner runs them by hand each quarter.
+- **Automation:** steps marked automatic are done by code. The 90-day review-queue cleanup runs every day on its own (since 2026-10-14). The 7-year purge job still needs to be built and is tracked in `docs/agent-handoff.md`. Until then, the owner runs it by hand each quarter.
