@@ -87,3 +87,15 @@ export const deleteDepositReturnSchema = z.object({ leaseId: z.string().uuid() }
 export const updateManualBalanceSchema = z.object({
   bankAccountId: z.string().uuid(), balanceCents: z.number().int().safe()
 });
+
+const taskFrequency = z.enum(["monthly", "quarterly", "yearly", "as_needed"]);
+const taskFields = z.object({
+  accountId: z.string().uuid(), title: trimmed(80), frequency: taskFrequency,
+  nextDueOn: z.string().date().nullable(), ownerPartnerId: z.string().uuid().nullable()
+}).refine((value) => (value.frequency === "as_needed") === (value.nextDueOn === null),
+  "Next due is required unless this is as needed.");
+export const createTaskSchema = taskFields;
+export const updateTaskSchema = taskFields.and(z.object({ taskId: z.string().uuid() }));
+export const deleteTaskSchema = z.object({ accountId: z.string().uuid(), taskId: z.string().uuid() });
+export const markTaskDoneSchema = deleteTaskSchema;
+export const addCommonTasksSchema = z.object({ accountId: z.string().uuid() });

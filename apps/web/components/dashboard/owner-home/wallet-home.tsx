@@ -35,6 +35,9 @@ export function WalletHome({ wallet, summary, bankState, showAccountName, llcSet
       expensesCents={wallet?.ok ? wallet.ytd.outCents : 0} expensesFailed={!wallet?.ok} />
     <NeedsYouList summary={summary} bankState={bankState} llcSetup={llcSetup}
       bankNeedsCount={wallet?.ok ? wallet.bankNeedsCount || 0 : 0}
+      myTasksDueCount={wallet?.ok ? wallet.myTasksDueCount || 0 : 0}
+      tasksHref={wallet?.ok ? `/owner/money?property=${encodeURIComponent(
+        wallet.homes.find((home) => home.accountType === "llc")?.id ?? "")}` : "/owner/money"}
       hasBankConnection={wallet?.ok ? wallet.hasBankConnection || false : false}
       hasPendingBankConnection={wallet?.ok ? wallet.hasPendingBankConnection || false : false}
       lateName={lateName ?? null} onOpenSection={onOpenSection} onOpenLeaseWizard={onOpenLeaseWizard}

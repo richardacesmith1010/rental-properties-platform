@@ -1,3 +1,4 @@
+import { countMyDueTasks } from "@/lib/account-tasks";
 import { depositHeldCents } from "@/lib/deposits";
 import { getNextDueDateForLease } from "@/lib/action-items";
 import { buildHomeMoney, type OwnerMoneyItem } from "@/lib/owner-recent-activity";
@@ -22,7 +23,7 @@ export interface WalletHomeEntry {
 export type OwnerWalletHomeResult = {
   ok: true; homes: WalletHomeEntry[]; ytd: { inCents: number; outCents: number }; recent: OwnerMoneyItem[];
   yearRentReceivedByPropertyId: Record<string, number>;
-  bankNeedsCount?: number; hasBankConnection?: boolean; hasPendingBankConnection?: boolean;
+  myTasksDueCount?: number; bankNeedsCount?: number; hasBankConnection?: boolean; hasPendingBankConnection?: boolean;
 } | { ok: false; error: "load_failed" };
 
 async function loadBankNeedState(admin: ReturnType<typeof createAdminClient>, ownerIds: string[]) {
@@ -55,9 +56,12 @@ export async function loadOwnerWalletHome(userId: string, today = new Date()): P
     const ids = [...new Set(administered.map((property) => property.id))];
     if (!ids.length) {
       const accounts = await getOwnershipAccountsForUser(userId);
-      const bankNeeds = await loadBankNeedState(createAdminClient(), accounts.map((account) => account.id));
+      const [bankNeeds, myTasksDueCount] = await Promise.all([
+        loadBankNeedState(createAdminClient(), accounts.map((account) => account.id)),
+        countMyDueTasks(userId, today)
+      ]);
       return { ok: true, homes: [], ytd: { inCents: 0, outCents: 0 }, recent: [],
-        yearRentReceivedByPropertyId: {}, ...bankNeeds };
+        yearRentReceivedByPropertyId: {}, ...bankNeeds, myTasksDueCount };
     }
     const admin = createAdminClient();
     const yearFrom = `${today.getUTCFullYear()}-01-01`;
@@ -67,7 +71,7 @@ export async function loadOwnerWalletHome(userId: string, today = new Date()): P
     const from = previousFrom < yearFrom ? previousFrom : yearFrom;
     const portfolioPromise = getPortfolioData(userId, null, ids);
     const accountsPromise = getOwnershipAccountsForUser(userId);
-    const [portfolio, accounts, rentRows, expenses, bankNeeds, lines] = await Promise.all([
+    const [portfolio, accounts, rentRows, expenses, bankNeeds, lines, myTasksDueCount] = await Promise.all([
       portfolioPromise,
       accountsPromise,
       loadRentRowsForProperties(ids, from, yearTo),
@@ -84,7 +88,8 @@ export async function loadOwnerWalletHome(userId: string, today = new Date()): P
           throw error;
         }
         return (data ?? []) as ChargeLine[];
-      })
+      }),
+      countMyDueTasks(userId, today)
     ]);
     if (expenses.error) throw expenses.error;
     const idSet = new Set(ids);
@@ -159,7 +164,7 @@ export async function loadOwnerWalletHome(userId: string, today = new Date()): P
     return { ok: true, homes, yearRentReceivedByPropertyId, ytd: {
       inCents: Object.values(inByProperty).reduce((sum, cents) => sum + cents, 0),
       outCents: [...outByProperty.values()].reduce((sum, cents) => sum + cents, 0)
-    }, recent: money.items.filter((item) => idSet.has(item.propertyId)), ...bankNeeds };
+    }, recent: money.items.filter((item) => idSet.has(item.propertyId)), ...bankNeeds, myTasksDueCount };
   } catch (error) {
     console.error("Owner wallet home load failed", error);
     return { ok: false, error: "load_failed" };

@@ -8,6 +8,7 @@ vi.mock("@/lib/property-access", () => ({ getAdministeredProperties: mocks.admin
 vi.mock("@/lib/portfolio", () => ({ getPortfolioData: mocks.portfolio }));
 vi.mock("@/lib/ownership", () => ({ getOwnershipAccountsForUser: mocks.accounts }));
 vi.mock("@/lib/owner-rent-rows", () => ({ loadRentRowsForProperties: mocks.rentRows }));
+vi.mock("@/lib/account-tasks", () => ({ countMyDueTasks: vi.fn().mockResolvedValue(0) }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ from: mocks.from }) }));
 import { loadOwnerWalletHome } from "@/lib/owner-wallet-home";
 

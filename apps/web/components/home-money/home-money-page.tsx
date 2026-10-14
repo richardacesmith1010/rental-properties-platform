@@ -9,6 +9,10 @@ import { MoneyHero } from "./money-hero";
 import { PeriodSwitch, monthLabel } from "./period-switch";
 import { CategoryCard } from "./category-card";
 import { PartnersCard } from "./partners-card";
+import { TasksCard } from "./tasks-card";
+import type { AccountTask } from "@/lib/account-tasks";
+import type { Partner } from "@/lib/partners";
+import type { addTask, updateTask, removeTask, markTaskDone, addCommonTasks } from "@/app/actions/account-tasks";
 import type { PartnerReport } from "@/lib/partners";
 import type { addPartner, renamePartner, deactivatePartner,
   addPartnerPayment, updatePartnerPayment, deletePartnerPayment } from "@/app/actions/partners";
@@ -22,13 +26,15 @@ export interface HomeMoneyPageData {
   properties: Array<{ id: string; name: string }>;
 }
 interface Props { cashAccounts?: CashOnHand[]; cashWarning?: string; data: HomeMoneyPageData; selectedMonth: string; months: string[];
-  partnerWarning?: string;
+  partnerWarning?: string; tasksWarning?: string;
+  tasksData?: { accountId: string; tasks: AccountTask[]; partners: Partner[]; onAdd: typeof addTask;
+    onUpdate: typeof updateTask; onRemove: typeof removeTask; onDone: typeof markTaskDone; onCommon: typeof addCommonTasks };
   partnerData?: { accountId: string; report: PartnerReport; period: string; allTimeHref: string; periodHref: string;
     onAddPartner: typeof addPartner; onRenamePartner: typeof renamePartner;
     onDeactivatePartner: typeof deactivatePartner; onAddPayment: typeof addPartnerPayment;
     onUpdatePayment: typeof updatePartnerPayment; onDeletePayment: typeof deletePartnerPayment } }
 
-export function HomeMoneyPage({ data, selectedMonth, months, partnerData, partnerWarning, cashAccounts = [], cashWarning }: Props) {
+export function HomeMoneyPage({ data, selectedMonth, months, partnerData, tasksData, partnerWarning, tasksWarning, cashAccounts = [], cashWarning }: Props) {
   const allHomes = !data.property;
   const propertyId = data.property?.id ?? null;
   const label = selectedMonth === "year" ? months[0]?.slice(0, 4) ?? "" : monthLabel(selectedMonth);
@@ -63,6 +69,11 @@ export function HomeMoneyPage({ data, selectedMonth, months, partnerData, partne
     <CategoryCard entries={data.entries} />
     <CashOnHandCard accounts={cashAccounts} warning={cashWarning} />
     {partnerData && <PartnersCard {...partnerData} />}
+    {tasksData && <TasksCard {...tasksData} />}
+    {tasksWarning && <section className="domus-card rounded-2xl p-4" aria-label="Tasks">
+      <h2 className="text-lg font-semibold">Tasks</h2>
+      <p className="text-sm text-[var(--muted)]">{tasksWarning}</p>
+    </section>}
     {partnerWarning && <section className="domus-card rounded-2xl p-4" aria-label="Partners">
       <h2 className="text-lg font-semibold">Partners</h2>
       <p className="text-sm text-[var(--muted)]">{partnerWarning}</p>

@@ -10,11 +10,11 @@ export interface NeedsYouSummary {
   newMessageCount: number;
 }
 
-export function NeedsYouList({ summary, bankState, llcSetup, lateName, bankNeedsCount = 0,
+export function NeedsYouList({ summary, bankState, llcSetup, lateName, bankNeedsCount = 0, myTasksDueCount = 0, tasksHref = "/owner/money",
   hasBankConnection = false, hasPendingBankConnection = false,
   onOpenSection, onOpenLeaseWizard, onSelectProperty }: {
   summary: NeedsYouSummary; bankState: OwnerBankCardState;
-  bankNeedsCount?: number;
+  bankNeedsCount?: number; myTasksDueCount?: number; tasksHref?: string;
   hasBankConnection?: boolean; hasPendingBankConnection?: boolean;
   llcSetup?: { accountName: string; onInviteMembers: () => void } | null;
   lateName?: string | null;
@@ -29,6 +29,7 @@ export function NeedsYouList({ summary, bankState, llcSetup, lateName, bankNeeds
     run: () => onOpenSection("charges") });
   if (bankNeedsCount > 0) rows.push({ key: "bank-items",
     label: `${bankNeedsCount} bank items to check`, href: "/owner/bank" });
+  if (myTasksDueCount > 0) rows.push({ key: "tasks", label: `${myTasksDueCount} tasks due`, href: tasksHref });
   if (hasPendingBankConnection) rows.push({ key: "bank-match", label: "Finish connecting", href: "/owner/bank" });
   else if (!hasBankConnection && bankState.status !== "connected") rows.push({ key: "bank",
     label: bankState.status === "needs_info"

@@ -9,6 +9,8 @@ import { resolveMoneySelection } from "./resolve";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 import { loadCashOnHand } from "@/lib/cash-on-hand";
 import { loadPartnerReport, singleSelectedAccount } from "@/lib/partners";
+import { loadAccountTasks } from "@/lib/account-tasks";
+import { addTask, updateTask, removeTask, markTaskDone, addCommonTasks } from "@/app/actions/account-tasks";
 import { logOwnerMoneyLoadFailure, withOneRetry } from "@/lib/retry-transient";
 import { addPartner, renamePartner, deactivatePartner,
   addPartnerPayment, updatePartnerPayment, deletePartnerPayment } from "@/app/actions/partners";
@@ -67,7 +69,12 @@ export default async function OwnerMoneyPage(props: { searchParams?: Promise<{ p
   }
   const partnerAccountId = singleSelectedAccount(propertyRows ?? [], selectedIds);
   const partnerRange = searchParams?.partners === "all" ? "all" as const : range;
-  const partnerResult = partnerAccountId ? await loadPartnerReport(partnerAccountId, partnerRange) : null;
+  const [partnerResult, tasksResult] = await Promise.all([
+    partnerAccountId ? loadPartnerReport(partnerAccountId, partnerRange) : null,
+    partnerAccountId ? loadAccountTasks(partnerAccountId) : null
+  ]);
+  const tasksData = tasksResult?.ok && partnerAccountId ? { accountId: partnerAccountId, ...tasksResult.data,
+    onAdd: addTask, onUpdate: updateTask, onRemove: removeTask, onDone: markTaskDone, onCommon: addCommonTasks } : undefined;
   const partnerQuery = `${selectedId ? `property=${encodeURIComponent(selectedId)}&` : ""}month=${selectedMonth}`;
   const partnerData = partnerResult?.ok && partnerAccountId ? {
     accountId: partnerAccountId, report: partnerResult.data,
@@ -101,7 +108,9 @@ export default async function OwnerMoneyPage(props: { searchParams?: Promise<{ p
       <div className="mx-auto max-w-[720px]">
     <Link href="/owner" className="hidden min-h-11 items-center text-sm text-[var(--muted)] lg:inline-flex">← Home</Link>
         <HomeMoneyPage cashAccounts={cashAccounts} cashWarning={cashWarning} data={data}
-          selectedMonth={selectedMonth} months={months} partnerData={partnerData}
+          selectedMonth={selectedMonth} months={months} partnerData={partnerData} tasksData={tasksData}
+          tasksWarning={tasksResult && !tasksResult.ok && tasksResult.error === "unavailable"
+            ? "This feature requires a database update." : undefined}
           partnerWarning={partnerResult && !partnerResult.ok && partnerResult.error === "unavailable"
             ? "This feature requires a database update." : undefined} />
       </div>
