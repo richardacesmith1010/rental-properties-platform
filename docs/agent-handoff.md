@@ -966,3 +966,14 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Codex 123k; 2290 tests; smoke green (owner Home p75 1.61 s). Real owner Money → Mom's House shows Cash on hand + Partners + Tasks (empty state), with zero console errors.
 - **The sister's-spreadsheet arc is complete:** 219 partners, 220 one monthly bill / ledger, 221 even it out, 222 deposits + cash on hand, 223 tasks (+ 224 bank sync, 225 speed, 226 fixes).
 - **Next:** Face ID (phone top tier: L3 + ChatGPT review + Simulator walk). **Owner action still pending:** sign in at dashboard.plaid.com for the Plaid production application.
+
+## 2026-10-13 — Plaid production live
+- Owner completed Plaid's security questionnaire (honest gaps, each promised before launch: user 2-step login = Face ID sprint; admin 2-step login not on all accounts; no written security policy; no written retention policy). Plaid **approved Production**; owner accepted the updated MSA.
+- Vercel prod: `PLAID_SECRET` = production secret (owner piped from clipboard; Claude never saw it), `PLAID_ENV=production`. Verified via production `/institutions/search`: Navy Federal `ins_15` and Fidelity `ins_12`, both OAuth.
+- **OAuth status (dashboard → Activity → Institutions → OAuth institutions):** Navy Federal and Fidelity **In review** (Plaid coordinating with the banks; no action for us). BofA/Capital One "Additional steps required" (not used).
+- `PLAID_REDIRECT_URI` not set and the app has no OAuth return page: fine for desktop web (Link uses a pop-up); **phone/mobile-web OAuth needs a redirect page sprint** before the iPhone app connects banks.
+- Webhook URL is sent per link token (`/api/webhooks/plaid`); no dashboard setting needed.
+- Owner to-dos before launch: turn on 2-step login on Supabase, Vercel, GitHub, Plaid and Google; Claude to draft a security policy and a retention policy.
+- **2026-10-14:** production `/link/token/create` returned `INVALID_PRODUCT` (Transactions not enabled; only Auth/Balance/Identity were). Owner requested **Transactions** (use case "SMB bookkeeping", $0.30/Item/month, agreed MSA) → dashboard shows **Requested**. Re-test with a direct production `/link/token/create` (vercel env pull to scratchpad, umask 077, delete after) until it returns a link token.
+- Drafts written: `docs/policies/information-security-policy.md`, `docs/policies/data-retention-policy.md` (owner to set retention years, patch SLAs, confirm privacy@ inbox, fill Adopted date). Follow-ups they commit to: Dependabot, 90-day review-queue cleanup + 7-year purge job (small sprint), admin 2-step login, Face ID.
+- Deploy `rental-properties-platform-actyme29g` (PLAID_ENV=production) live; smoke green (owner Home p75 1951 ms).
