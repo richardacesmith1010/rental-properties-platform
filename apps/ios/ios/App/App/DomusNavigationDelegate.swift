@@ -43,6 +43,7 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
     private(set) var pendingConnect = false
     var onMainFrameCommit: ((URL) -> Void)?
     var onNavigationFailure: (() -> Void)?
+    var onPlaidLink: ((PlaidLinkRequest) -> Void)?
     var onFaceId: ((FaceIdRequest) -> Void)?
 
     init(original: NSObject, downloads: DownloadHandler, offlineURL: URL?, startupURL: URL,
@@ -269,7 +270,9 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
     func handleMessage(name: String, body: Any, mainFrame: Bool, scheme: String, host: String, port: Int, currentURL: URL?) {
         guard MessageProvenance.accepts(mainFrame: mainFrame, scheme: scheme, host: host, port: port,
                                         currentURL: currentURL) else { return }
-        if name == "domusFaceId" {
+        if name == "domusPlaidLink" {
+            if let request = PlaidLinkRequest(body: body) { onPlaidLink?(request) }
+        } else if name == "domusFaceId" {
             if let request = FaceIdRequest(body: body) { onFaceId?(request) }
         } else if name == "domusShareCsv", let body = body as? [String: Any],
                   let filename = body["filename"] as? String, filename.lowercased().hasSuffix(".csv"),

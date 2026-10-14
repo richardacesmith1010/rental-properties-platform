@@ -13,23 +13,14 @@ enum InspectionPolicy {
 final class DomusBridgeViewController: CAPBridgeViewController {
     private var navigationHandler: DomusNavigationDelegate?
 
+    private(set) var plaidLinkBridge: PlaidLinkBridge?
+    weak var appWindow: UIWindow?
     private(set) var appLockController: AppLockController?
     var lockSettings: LockSettingsStoring = LockSettings()
 
     override func viewDidLoad() {
-        // Capacitor uses the WKWebView as its root. Give the overlay a sibling container,
-        // so hiding web accessibility does not also hide the lock's accessible controls.
+        // Install the scene's lock window before Capacitor starts loading the web page.
         if let webView {
-            let container = UIView(frame: webView.frame)
-            view = container
-            webView.translatesAutoresizingMaskIntoConstraints = false
-            container.addSubview(webView)
-            NSLayoutConstraint.activate([
-                webView.topAnchor.constraint(equalTo: container.topAnchor),
-                webView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-                webView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-                webView.trailingAnchor.constraint(equalTo: container.trailingAnchor)
-            ])
             let cookies = AuthCookies(store: WKWebsiteDataStore.default().httpCookieStore) { [weak webView] url in
                 webView?.load(URLRequest(url: url))
             }
@@ -38,9 +29,14 @@ final class DomusBridgeViewController: CAPBridgeViewController {
                 self?.reloadAfterConnectIfNeeded()
             }
             appLockController = controller
-            controller.install()
+            controller.install(window: appWindow)
+            plaidLinkBridge = PlaidLinkBridge(presenter: self, cookies: webView.configuration.websiteDataStore.httpCookieStore,
+                document: { [weak controller] in controller?.documentID ?? UUID() },
+                signingOut: { [weak controller] in controller?.lock.phase == .signingOut },
+                currentURL: { [weak webView] in webView?.url },
+                evaluate: { [weak webView] in webView?.evaluateJavaScript($0, completionHandler: nil) })
         }
-        // The overlay is already in the hierarchy before Capacitor starts its initial load.
+        // The lock window is already installed before Capacitor starts its initial load.
         super.viewDidLoad()
     }
 
@@ -58,12 +54,14 @@ final class DomusBridgeViewController: CAPBridgeViewController {
                                               serverHost: bridge.config.serverURL.host ?? "domusbase.com")
         handler.onMainFrameCommit = { [weak self] in self?.appLockController?.mainFrameCommitted($0) }
         handler.onNavigationFailure = { [weak self] in self?.appLockController?.navigationFailed() }
+        handler.onPlaidLink = { [weak self] in self?.plaidLinkBridge?.open($0) }
         handler.onFaceId = { [weak self] in self?.appLockController?.message($0) }
         navigationHandler = handler
         webView.navigationDelegate = handler
         webView.uiDelegate = handler
         webView.configuration.userContentController.add(handler, name: "domusShareCsv")
         webView.configuration.userContentController.add(handler, name: "domusFaceId")
+        webView.configuration.userContentController.add(handler, name: "domusPlaidLink")
     }
 
     func reloadAfterConnectIfNeeded() {

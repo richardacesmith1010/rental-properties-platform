@@ -36,6 +36,9 @@ final class FakeCookies: AuthCookieStoring {
 
 @MainActor
 final class AppLockControllerTests: XCTestCase {
+    private var appWindow: UIWindow?
+    private weak var priorKeyWindow: UIWindow?
+    private var testedLock: AppLockController?
     private var host = UIViewController()
     private var web = WKWebView()
     private var bio = FakeBiometrics()
@@ -45,6 +48,12 @@ final class AppLockControllerTests: XCTestCase {
     private var pendingConnect = true
     private func controller() throws -> AppLockController {
         store.cookies = [try FakeCookies.cookie()]
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        priorKeyWindow = scene.windows.first(where: \.isKeyWindow)
+        let window = UIWindow(windowScene: scene)
+        window.rootViewController = host
+        appWindow = window
+        window.makeKeyAndVisible()
         host.loadViewIfNeeded()
         host.view.addSubview(web)
         let cookies = AuthCookies(store: store, load: { _ in })
@@ -52,8 +61,16 @@ final class AppLockControllerTests: XCTestCase {
                                            biometrics: bio, cookies: cookies) { [self] in
             if pendingConnect { reloads += 1; pendingConnect = false }
         }
-        controller.install()
+        controller.install(window: appWindow)
+        testedLock = controller
         return controller
+    }
+    override func tearDown() {
+        testedLock?.lockWindow?.isHidden = true
+        appWindow?.isHidden = true
+        priorKeyWindow?.makeKeyAndVisible()
+        testedLock = nil
+        super.tearDown()
     }
     func testBackgroundImmediateForegroundStaysCoveredUntilSuccess() throws {
         let c = try controller()
@@ -122,11 +139,17 @@ final class AppLockControllerTests: XCTestCase {
         // The test runner uses the bundled offline page, never the production server.
         let bridge = DomusBridgeViewController()
         bridge.lockSettings = settings
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        priorKeyWindow = scene.windows.first(where: \.isKeyWindow)
+        let window = UIWindow(windowScene: scene)
+        appWindow = window; bridge.appWindow = window; window.rootViewController = bridge
         bridge.loadViewIfNeeded()
         let c = try XCTUnwrap(bridge.appLockController)
-        XCTAssertTrue(c.overlay.parent === bridge)
-        XCTAssertTrue(c.overlay.view.superview === bridge.view)
-        XCTAssertTrue(bridge.view.subviews.last === c.overlay.view)
+        testedLock = c
+        XCTAssertTrue(c.lockWindow?.rootViewController === c.overlay)
+        XCTAssertEqual(c.lockWindow?.windowLevel, .alert + 1)
+        XCTAssertEqual(c.lockWindow?.isHidden, false)
+        XCTAssertTrue(window.isHidden)
         XCTAssertFalse(c.overlay.view.isHidden)
         XCTAssertEqual(c.lock.phase, .locked)
         XCTAssertEqual(bridge.webView?.accessibilityElementsHidden, true)
@@ -298,4 +321,62 @@ final class AppLockControllerTests: XCTestCase {
               case .notEnrolled = BiometricAuth.failure(LAError(.biometryNotEnrolled)),
               case .failed = BiometricAuth.failure(LAError(.authenticationFailed)) else { return XCTFail("Wrong mapping") }
     }
+    func testOneLockWindowPerSceneReusedCoversPresentedControllersAndRestoresKeyPresentation() throws {
+        func settle() { RunLoop.main.run(until: Date().addingTimeInterval(0.3)) }
+        let c = try controller(), main = try XCTUnwrap(appWindow), cover = try XCTUnwrap(c.lockWindow)
+        c.send(.didBecomeActive); bio.completions[0](.success(Data([1])))
+        let first = UIViewController()
+        host.present(first, animated: false)
+        settle()
+        XCTAssertTrue(host.presentedViewController === first)
+        for event in [AppLock.Event.willResignActive, .didEnterBackground] {
+            c.send(event)
+            XCTAssertFalse(cover.isHidden); XCTAssertTrue(cover.isKeyWindow)
+            XCTAssertEqual(cover.windowLevel, .alert + 1)
+            XCTAssertGreaterThan(cover.windowLevel, main.windowLevel)
+            XCTAssertTrue(web.accessibilityElementsHidden)
+            XCTAssertTrue(host.presentedViewController === first)
+        }
+        c.send(.didBecomeActive); bio.completions.last?(.success(Data([1])))
+        XCTAssertTrue(cover.isHidden); XCTAssertFalse(cover.isKeyWindow); XCTAssertTrue(main.isKeyWindow)
+        XCTAssertTrue(c.lockWindow === cover)
+        host.dismiss(animated: false)
+        settle()
+        let second = UIViewController()
+        host.present(second, animated: false)
+        settle()
+        XCTAssertTrue(host.presentedViewController === second)
+        c.send(.willResignActive); c.send(.didBecomeActive)
+        XCTAssertTrue(c.lockWindow === cover)
+        let another = AppLockController(host: host, webView: web, settings: settings, biometrics: bio,
+                                        cookies: AuthCookies(store: store, load: { _ in }), reloadConnect: {})
+        another.install(window: main)
+        XCTAssertTrue(another.lockWindow === cover)
+        XCTAssertEqual(main.windowScene?.windows.filter { $0.windowLevel == .alert + 1 }.count, 1)
+        host.dismiss(animated: false)
+        settle()
+    }
+    func testOpenPlaidSessionSurvivesBackgroundLockUnlockAndInactiveCoverWithoutNavigation() throws {
+        pendingConnect = false
+        let c = try controller(), factory = FakeBankFactory()
+        var navigations = 0
+        let bridge = PlaidLinkBridge(presenter: host, cookies: store, document: { c.documentID },
+            signingOut: { c.lock.phase == .signingOut }, currentURL: { URL(string: "https://domusbase.com/owner/bank") },
+            evaluate: { _ in XCTFail("No callback yet") }, factory: factory)
+        let request = try XCTUnwrap(PlaidLinkRequest(body: ["action": "open", "requestId": "one", "linkToken": "link-synthetic"]))
+        c.send(.didBecomeActive); bio.completions[0](.success(Data([1])))
+        bridge.open(request); let session = factory.created
+        c.send(.willResignActive)
+        XCTAssertEqual(c.lock.phase, .covered); XCTAssertEqual(c.lockWindow?.isHidden, false)
+        c.send(.didBecomeActive)
+        XCTAssertEqual(c.lock.phase, .open); XCTAssertEqual(bio.completions.count, 1)
+        c.send(.didEnterBackground); XCTAssertEqual(c.lock.phase, .locked)
+        let activity = NSUserActivity(activityType: NSUserActivityTypeBrowsingWeb)
+        activity.webpageURL = URL(string: "https://domusbase.com/owner/bank/oauth-app")
+        SceneDelegate.route(activity, active: bridge.isActive, load: { _ in navigations += 1 }, forward: { navigations += 1 })
+        c.send(.willEnterForeground); c.send(.didBecomeActive); bio.completions.last?(.success(Data([1])))
+        XCTAssertEqual(c.lock.phase, .open); XCTAssertTrue(bridge.session === session)
+        XCTAssertTrue(bridge.isActive); XCTAssertEqual(navigations, 0); XCTAssertEqual(reloads, 0)
+    }
+
 }

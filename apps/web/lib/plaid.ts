@@ -47,7 +47,8 @@ function getPlaidClient(): PlaidApi {
   return new PlaidApi(config);
 }
 
-export function validRedirectUri(value: string): boolean {
+export function validRedirectUri(value: string, platform: "web" | "ios" = "web"): boolean {
+  if (platform === "ios") return value === "https://domusbase.com/owner/bank/oauth-app";
   try {
     const url = new URL(value);
     const allowedHost = (url.protocol === "https:" && url.hostname === "domusbase.com" && !url.port
@@ -59,16 +60,18 @@ export function validRedirectUri(value: string): boolean {
 }
 
 export async function createLinkToken(input: {
-  userId: string; mode: "create" | "update"; accessToken?: string;
+  userId: string; mode: "create" | "update"; accessToken?: string; platform?: "web" | "ios";
 }): Promise<{ linkToken: string }> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
   if (!appUrl || (input.mode === "update" && !input.accessToken)) {
     throw new Error("Bank connection is not set up yet.");
   }
+  const platform = input.platform ?? "web";
+  const redirectUri = platform === "ios" ? process.env.PLAID_REDIRECT_URI_IOS : process.env.PLAID_REDIRECT_URI;
+  const redirectValid = redirectUri ? validRedirectUri(redirectUri, platform) : false;
+  if (!redirectValid && (redirectUri || platform === "ios")) console.error("plaid_redirect_uri_invalid");
+  if (platform === "ios" && !redirectValid) throw new Error("Bank connection is not set up yet.");
   const client = getPlaidClient();
-  const redirectUri = process.env.PLAID_REDIRECT_URI;
-  const redirectValid = redirectUri ? validRedirectUri(redirectUri) : false;
-  if (redirectUri && !redirectValid) console.error("plaid_redirect_uri_invalid");
   const response = await client.linkTokenCreate({
     user: {
       client_user_id: input.userId

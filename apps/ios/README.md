@@ -320,11 +320,11 @@ Canceling or failing a biometric check does not count as an enrollment change.
 A success that arrives during an inactive interruption retains the privacy cover until the scene becomes active.
 Connect reloads are released only from an open phase; the navigation delegate consumes its pending flag exactly once.
 
-**Cold-launch hook:** Capacitor 8's final `loadView` creates its WKWebView but does not load the initial URL.
-`DomusBridgeViewController.viewDidLoad` first places that web view in a container and installs the lock child above it,
-then calls `super.viewDidLoad()` (which starts the page load). No asynchronous hop occurs before installing the overlay.
-The container makes the overlay a sibling, so hiding the web view from VoiceOver never hides the lock controls.
-All overlay modes hide web accessibility; removing the overlay restores it. Message updates announce themselves to VoiceOver.
+**Cold-launch hook:** Capacitor 8's final `loadView` creates its WKWebView without loading its initial URL.
+`SceneDelegate` supplies the app window before loading the bridge view.
+`DomusBridgeViewController.viewDidLoad` installs the scene's dedicated lock window before calling `super.viewDidLoad()`.
+The lock window sits above presented sheets. All overlay modes hide web accessibility; unlocking restores it.
+Message updates announce themselves to VoiceOver.
 
 The offer appears once after a signed-in main-frame commit and a cookie read. Settings → Security can enable or disable it later.
 Touch ID devices get the Touch ID copy, including the offer, lock buttons, Settings label, and timeout message.
@@ -352,3 +352,96 @@ Bridge requests require the trusted HTTPS Domus main frame and current page, and
 
 For local-only native tests, temporarily omit `server.url` from the generated, ignored `App/capacitor.config.json`
 so the test host loads bundled content; restore it afterward. Do not use live cookies or tokens in fixtures.
+
+
+## Connect a bank (Plaid)
+
+The App target uses LinkKit **7.2.2**, with SPM's Up to Next Major requirement starting at 7.2.2.
+The package is `https://github.com/plaid/plaid-link-ios-spm`, product `LinkKit`.
+The public `PlaidLinkSession` API has `open(using:)` and `sheet()`, but no Universal Link continuation method.
+Keep the session retained through OAuth and lock/unlock. LinkKit handles its own return.
+See [Plaid iOS: Standard Link](https://plaid.com/docs/link/ios/#standard-link).
+
+The trusted HTTPS Domus main frame posts `{action: "open", requestId, linkToken}` to `domusPlaidLink`.
+The native bridge replies through the `domus-plaid-link` CustomEvent with the same `requestId`:
+
+- Success: `{requestId, status: "success", publicToken, accountIds}`.
+- Cancellation: `{requestId, status: "exit"}`.
+- Error or an overlapping request: `{requestId, status: "error"}`.
+
+The page uses the existing finish actions. Native sessions never use `domus.plaidLink` localStorage.
+Old builds without the handler retain the computer fallback. Replies time out silently after 30 minutes.
+Each native session binds to the committed document and SHA-256 hashes of the auth-cookie value set.
+Navigation, changed auth, or signing out drops its reply and releases the session.
+Only event names and `plaid_link_reply_dropped` are logged; tokens and account IDs are never logged.
+
+### Universal Links and deployment settings
+
+`/.well-known/apple-app-site-association` serves JSON without authentication or redirects.
+It claims only `/owner/bank/oauth-app`. Mobile Safari keeps `/owner/bank/oauth`.
+`App/App.entitlements` enables `applinks:domusbase.com` in Debug and Release.
+The fallback page requires owner auth and links back to `/owner/bank`.
+
+Configure these after review; local implementation does not change live settings:
+
+- `APPLE_APP_ID`: the deployment team's app identifier, ending in `.com.domusbase.app`.
+  The prefix must contain ten uppercase letters or digits. Never commit the real value.
+- `PLAID_REDIRECT_URI_IOS`: exactly `https://domusbase.com/owner/bank/oauth-app`.
+  Both create and update modes fail before calling Plaid when this is absent or invalid.
+- `PLAID_REDIRECT_URI`: keep the existing web `/owner/bank/oauth` URI.
+- Existing `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV`, `NEXT_PUBLIC_APP_URL`, and `BANK_TOKEN_KEY` remain required.
+
+An active Plaid return never navigates the web view or forwards to Capacitor's proxy.
+Capacitor 8.5.3's `CAPSceneDelegateProxy` posts `capacitorOpenUniversalLink`;
+`AppPlugin.handleUniversalLink` turns that into `appUrlOpen`, which can compete with Link.
+Without an active session, including process death, the return loads `/owner/bank` and forwards normally.
+An app restart cannot resume an in-memory Link session.
+
+### Lock window
+
+The cover uses one reused `UIWindow` per scene, at `.alert + 1`, rooted in `LockViewController`.
+It covers Link and presented share sheets. Unlock hides the window and restores the bridge window as key.
+The hidden lock window never becomes key. Covered web content remains hidden from accessibility.
+Real scene lifecycle events still drive Sprint 227's policy, including stale biometric checks and sign-out coverage.
+There is no OAuth grace period or synthetic background event.
+
+### Sandbox Simulator checks
+
+Use a separately configured Plaid Sandbox environment and synthetic bank credentials.
+Never connect a real bank or send notifications for local testing.
+For native unit tests, omit `server.url` from the generated ignored Capacitor config temporarily;
+restore it afterward. This keeps the test host on bundled content.
+
+```sh
+cd apps/ios/ios/App
+xcodebuild -resolvePackageDependencies -project App.xcodeproj -scheme App
+xcodebuild test -project App.xcodeproj -scheme App \
+  -destination 'id=C79BDA37-1967-45CB-A369-85B260EA111D'
+```
+
+In a Sandbox app session, use **Connect a bank** and complete a test institution's flow.
+Confirm selected accounts reach the bank page. Test **Sign in again** with a Sandbox item requiring login.
+Cancel Link, retry after an error, and repeat with Face ID enabled.
+Check matching uploaded accounts, light/dark appearance, large text, and VoiceOver.
+Plaid notes Universal Links can be unreliable on Simulator; these checks do not prove device OAuth handoff.
+
+### Physical-iPhone deployment checklist
+
+- [ ] Verify AASA returns 200 JSON directly, anonymously, with the correct app ID and app-only path.
+- [ ] Verify the signed app's Associated Domains entitlement and Apple provisioning.
+- [ ] Register the exact iOS redirect URI in the Plaid dashboard.
+- [ ] Confirm Navy Federal and Fidelity OAuth handoffs and return on a physical iPhone.
+- [ ] Check both **Connect a bank** and **Sign in again**, cancellation, retry, and account selection.
+- [ ] Confirm mobile Safari's `/owner/bank/oauth` flow stays in Safari.
+- [ ] Complete the matrix below with Face ID enabled, including failed unlock and password fallback.
+- [ ] Confirm the hidden lock window does not capture taps or keyboard input after unlocking.
+
+| Test | Expected behavior |
+| --- | --- |
+| In-app OAuth sheet, inactive only | Privacy cover; no lock; same Link session remains usable. |
+| App-to-App OAuth | Actual background locks immediately; unlock reveals the retained session. |
+| Background/foreground return | Lock covers Link; one auto-prompt; no competing page navigation. |
+| Process-death recovery | Cold Universal Link opens banks; no claim of resuming the old session. |
+
+AASA availability, Plaid dashboard URI registration, and physical-iPhone OAuth success are **deployment gates**.
+They must be checked after deploy. Local unit tests and Simulator tests do not prove those outcomes.

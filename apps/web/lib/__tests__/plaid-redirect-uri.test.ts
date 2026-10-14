@@ -32,3 +32,35 @@ describe("§8.1 validRedirectUri", () => {
       else expect(log).not.toHaveBeenCalled();
     });
 });
+
+describe("229 §8.2 iOS redirects", () => {
+  const ios = "https://domusbase.com/owner/bank/oauth-app";
+  it("accepts only the app Universal Link", () => {
+    expect(validRedirectUri(ios, "ios")).toBe(true);
+    for (const uri of ["https://domusbase.com/owner/bank/oauth", ios + "/", ios + "?x=1", ios + "#x",
+      ios + "?", ios + "#", ios.replace("https:", "http:"), ios.replace(".com", ".com:443"),
+      ios.replace(".com", ".com:8443"), ios.replace("domus", "user:pass@domus"),
+      ios.replace("oauth-app", "*"), ios.replace("domusbase.com", "localhost"), ios.replace("oauth-app", "other")]) {
+      expect(validRedirectUri(uri, "ios"), uri).toBe(false);
+    }
+  });
+  it.each(["ios", "web"] as const)("sends the %s redirect to Plaid", async (platform) => {
+    vi.stubEnv("PLAID_CLIENT_ID", "synthetic-client"); vi.stubEnv("PLAID_SECRET", "synthetic-secret");
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://domusbase.com");
+    vi.stubEnv("PLAID_REDIRECT_URI_IOS", ios); vi.stubEnv("PLAID_REDIRECT_URI", ios.replace("-app", ""));
+    linkTokenCreate.mockResolvedValue({ data: { link_token: "link-synthetic" } });
+    await createLinkToken({ userId: "owner", mode: "create", platform });
+    expect(linkTokenCreate.mock.lastCall?.[0].redirect_uri).toBe(platform === "ios" ? ios : ios.replace("-app", ""));
+  });
+  it.each([
+    ["create", undefined], ["create", "https://evil.test"], ["update", undefined], ["update", "https://evil.test"]
+  ] as const)("§8.2b fails closed in %s with %s", async (mode, uri) => {
+    linkTokenCreate.mockClear();
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://domusbase.com"); vi.stubEnv("PLAID_REDIRECT_URI_IOS", uri);
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    await expect(createLinkToken({ userId: "owner", mode, platform: "ios", accessToken: "synthetic-access" }))
+      .rejects.toThrow("Bank connection is not set up yet.");
+    expect(linkTokenCreate).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith("plaid_redirect_uri_invalid");
+  });
+});

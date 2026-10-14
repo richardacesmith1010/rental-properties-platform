@@ -1,5 +1,5 @@
 {
-  "originHash" : "b93dcb47321bd798dfa8b05b9a751e92117aa4110cb09d2db3f2d6a7139fde99",
+  "originHash" : "20556daa3dfcb99158f1df1903c78e20ff25724a594c8e101076256474f9f1ff",
   "pins" : [
     {
       "identity" : "capacitor-swift-pm",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "4c7f346d16196e21fbe23d4a7a6fc7af62af6742",
         "version" : "8.5.3"
+      }
+    },
+    {
+      "identity" : "plaid-link-ios-spm",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/plaid/plaid-link-ios-spm",
+      "state" : {
+        "revision" : "3aff12979f81daab780628d7442a1b3f8e7eefc6",
+        "version" : "7.2.2"
       }
     }
   ],

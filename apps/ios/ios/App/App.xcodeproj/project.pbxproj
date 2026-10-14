@@ -31,6 +31,10 @@
 		50F3CC31157F0EA98995B391 /* AppLockControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4FCF2C47C97E3EAFB5D21A8; };
 		17C8A3E4F404A7D4E3BF7F42 /* MessageProvenanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1BC879198D1EA4C09CBA119; };
 		228000000000000000000001 = {isa = PBXBuildFile; fileRef = 228000000000000000000002; };
+		229000000000000000000001 = {isa = PBXBuildFile; productRef = 229000000000000000000002; };
+		229000000000000000000020 = {isa = PBXBuildFile; fileRef = 229000000000000000000010; };
+		229000000000000000000021 = {isa = PBXBuildFile; fileRef = 229000000000000000000011; };
+		229000000000000000000022 = {isa = PBXBuildFile; fileRef = 229000000000000000000012; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -102,6 +106,30 @@
 			path = LockViewControllerTests.swift;
 			sourceTree = "<group>";
 		};
+		229000000000000000000010 = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = PlaidLinkBridge.swift;
+            sourceTree = "<group>";
+        };
+		229000000000000000000011 = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = PlaidLinkBridgeTests.swift;
+            sourceTree = "<group>";
+        };
+		229000000000000000000012 = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = UniversalLinkTests.swift;
+            sourceTree = "<group>";
+        };
+		229000000000000000000013 = {
+            isa = PBXFileReference;
+            lastKnownFileType = text.plist.entitlements;
+            path = App.entitlements;
+            sourceTree = "<group>";
+        };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -110,6 +138,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */,
+				229000000000000000000001 /* LinkKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -140,6 +169,8 @@
 		504EC3061FED79650016851F /* App */ = {
 			isa = PBXGroup;
 			children = (
+                229000000000000000000013,
+                229000000000000000000010,
 				5BB3445715845A28A214CE1D,
 				DA272036EBF35121A968DC15,
 				8AB86F36D03C30F536859796,
@@ -163,6 +194,8 @@
 			sourceTree = "<group>";
 		};
 		121AA6494A737B2EB6B9172B = {isa = PBXGroup; children = (
+                229000000000000000000012,
+                229000000000000000000011,
 				228000000000000000000002,
 				A1BC879198D1EA4C09CBA119,
 				A4FCF2C47C97E3EAFB5D21A8,
@@ -187,6 +220,7 @@
 			name = App;
 			packageProductDependencies = (
 				4D22ABE82AF431CB00220026 /* CapApp-SPM */,
+				229000000000000000000002 /* LinkKit */,
 			);
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* App.app */;
@@ -225,6 +259,7 @@
 			);
 			mainGroup = 504EC2FB1FED79650016851F;
 			packageReferences = (
+				229000000000000000000003 /* plaid-link-ios-spm */,
 				D4C12C0A2AAA248700AAC8A2 /* XCLocalSwiftPackageReference "CapApp-SPM" */,
 			);
 			productRefGroup = 504EC3051FED79650016851F /* Products */;
@@ -259,6 +294,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+                229000000000000000000020,
 				D3BFB4CECD61F0CFF6D4D1CE,
 				D46C8A81A12D5690B07A32A4,
 				D0F3834AB7D629F6971EE134,
@@ -273,6 +309,8 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F955EC9AE42678A8AC7D6BC4 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (
+                229000000000000000000022,
+                229000000000000000000021,
 				228000000000000000000001,
 				17C8A3E4F404A7D4E3BF7F42,
 				50F3CC31157F0EA98995B391,
@@ -415,6 +453,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = App/Info.plist;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -437,6 +476,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = App/Info.plist;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -504,7 +544,19 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+        229000000000000000000003 = {
+            isa = XCRemoteSwiftPackageReference;
+            repositoryURL = "https://github.com/plaid/plaid-link-ios-spm";
+            requirement = {kind = upToNextMajorVersion; minimumVersion = 7.2.2; };
+        };
+/* End XCRemoteSwiftPackageReference section */
 /* Begin XCSwiftPackageProductDependency section */
+        229000000000000000000002 = {
+            isa = XCSwiftPackageProductDependency;
+            package = 229000000000000000000003;
+            productName = LinkKit;
+        };
 		4D22ABE82AF431CB00220026 /* CapApp-SPM */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D4C12C0A2AAA248700AAC8A2 /* XCLocalSwiftPackageReference "CapApp-SPM" */;

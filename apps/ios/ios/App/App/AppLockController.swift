@@ -4,7 +4,10 @@ import WebKit
 @MainActor
 final class AppLockController {
     private(set) var lock: AppLock
-    let overlay = LockViewController()
+    private(set) var overlay = LockViewController()
+    private(set) var lockWindow: UIWindow?
+    private weak var appWindow: UIWindow?
+    private static let windows = NSMapTable<UIWindowScene, UIWindow>.weakToWeakObjects()
     private weak var host: UIViewController?
     private weak var webView: WKWebView?
     private let biometrics: BiometricAuthenticating
@@ -14,7 +17,7 @@ final class AppLockController {
     private var background = false
     private var enableAttempt: UUID?
     private var committedURL: URL?
-    private var documentID = UUID()
+    private(set) var documentID = UUID()
     private var offer: UIAlertController?
 
     init(host: UIViewController, webView: WKWebView, settings: LockSettingsStoring,
@@ -27,18 +30,18 @@ final class AppLockController {
         lock = AppLock(settings: settings, kind: biometrics.availability().kind)
     }
 
-    func install() {
-        guard let host, let webView else { return }
-        host.addChild(overlay)
-        overlay.view.translatesAutoresizingMaskIntoConstraints = false
-        host.view.addSubview(overlay.view)
-        NSLayoutConstraint.activate([
-            overlay.view.topAnchor.constraint(equalTo: host.view.topAnchor),
-            overlay.view.bottomAnchor.constraint(equalTo: host.view.bottomAnchor),
-            overlay.view.leadingAnchor.constraint(equalTo: host.view.leadingAnchor),
-            overlay.view.trailingAnchor.constraint(equalTo: host.view.trailingAnchor)
-        ])
-        overlay.didMove(toParent: host)
+    func install(window: UIWindow? = nil) {
+        guard let webView else { return }
+        appWindow = window ?? host?.view.window
+        if let scene = appWindow?.windowScene {
+            let window = Self.windows.object(forKey: scene) ?? UIWindow(windowScene: scene)
+            if let existing = window.rootViewController as? LockViewController { overlay = existing }
+            window.windowLevel = .alert + 1
+            window.rootViewController = overlay
+            window.isHidden = true
+            lockWindow = window
+            Self.windows.setObject(window, forKey: scene)
+        }
         overlay.view.isHidden = true
         webView.accessibilityElementsHidden = false
         overlay.unlock = { [weak self] in self?.send(.unlockTapped) }
@@ -66,7 +69,9 @@ final class AppLockController {
             case .showCover: show(cover: true)
             case .showLockView: overlay.showMessage(nil); show(cover: false)
             case .hideOverlay:
+                lockWindow?.isHidden = true
                 overlay.view.isHidden = true
+                appWindow?.makeKeyAndVisible()
                 webView?.accessibilityElementsHidden = false
                 UIAccessibility.post(notification: .screenChanged, argument: nil)
             case let .startBiometric(id):
@@ -95,7 +100,8 @@ final class AppLockController {
 
     private func show(cover: Bool) {
         overlay.view.isHidden = false
-        host?.view.bringSubviewToFront(overlay.view)
+        lockWindow?.isHidden = false
+        lockWindow?.makeKey()
         webView?.accessibilityElementsHidden = true
         overlay.display(cover: cover, busy: lock.phase == .signingOut, kind: lock.kind)
         UIAccessibility.post(notification: .screenChanged, argument: overlay.view)

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/format";
+import { openNativePlaidLink, useNativePlaidLink } from "./native-plaid-link";
 import { loadPlaidScript } from "./plaid-script";
 import { clearLinkSession, finishLinkSession, saveLinkSession, type LinkSession } from "./link-session";
 
@@ -21,10 +22,10 @@ type Result = { success: boolean; error?: string; linkToken?: string; needsMatch
   connectionId?: string; plaidAccounts?: MatchView["plaidAccounts"];
   uploadAccounts?: MatchView["uploadAccounts"] };
 type Actions = {
-  start: (input: { ownerAccountId: string }) => Promise<Result>;
+  start: (input: { ownerAccountId: string; platform?: "web" | "ios" }) => Promise<Result>;
   finish: (input: { ownerAccountId: string; publicToken: string;
     selectedAccountIds: string[] }) => Promise<Result>;
-  startRelink: (input: { connectionId: string }) => Promise<Result>;
+  startRelink: (input: { connectionId: string; platform?: "web" | "ios" }) => Promise<Result>;
   finishRelink: (input: { connectionId: string }) => Promise<Result>;
   refresh: (input: { connectionId: string }) => Promise<Result>;
   disconnect: (input: { connectionId: string }) => Promise<Result>;
@@ -47,29 +48,26 @@ export function BankConnectionsCard({ ownerAccountId, connections, pendingMatch,
   ownerAccountId: string; connections: ConnectionView[]; pendingMatch?: MatchView; actions: Actions; nativeApp?: boolean;
 }) {
   const router = useRouter();
+  const nativeReady = useNativePlaidLink(nativeApp);
+  const unavailable = nativeApp && !nativeReady;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [match, setMatch] = useState<MatchView | null>(pendingMatch || null);
   const [choices, setChoices] = useState<Record<string, string>>({});
 
   async function openLink(connectionId?: string) {
+    if (unavailable || busy) return;
     setBusy(true); setError("");
     try {
-      const started = connectionId ? await actions.startRelink({ connectionId })
-        : await actions.start({ ownerAccountId });
+      const platform = nativeApp ? { platform: "ios" as const } : {};
+      const started = connectionId ? await actions.startRelink({ connectionId, ...platform })
+        : await actions.start({ ownerAccountId, ...platform });
       if (!started.success || !started.linkToken) {
         setError(started.error || "Try again."); setBusy(false); return;
       }
       const session: Omit<LinkSession, "expiresAt"> = { linkToken: started.linkToken,
         mode: connectionId ? "relink" : "create", ownerAccountId, connectionId, startedAt: Date.now() };
-      if (!saveLinkSession(session)) { setError("Try again."); setBusy(false); return; }
-      await loadPlaidScript();
-      if (!window.Plaid) throw new Error("Plaid Link unavailable.");
-      let handled = false;
-      window.Plaid.create({ token: started.linkToken, onSuccess: async (publicToken, metadata) => {
-        if (handled) return;
-        handled = true;
-        setBusy(true);
+      const finish = async (publicToken: string, metadata: { accounts?: Array<{ id?: string }> }) => {
         try {
           const result = await finishLinkSession(session, publicToken, metadata, actions);
           if (!result.success) { setError(result.error || "Try again."); return; }
@@ -79,12 +77,27 @@ export function BankConnectionsCard({ ownerAccountId, connections, pendingMatch,
           }
           router.refresh();
         } catch { setError("Try again."); }
-        finally { clearLinkSession(); setBusy(false); }
+        finally { if (!nativeApp) clearLinkSession(); setBusy(false); }
+      };
+      if (nativeApp) {
+        const reply = await openNativePlaidLink(started.linkToken);
+        if (reply.status === "success") await finish(reply.publicToken, { accounts: reply.accountIds.map((id) => ({ id })) });
+        else { if (reply.status === "error") setError("Try again."); setBusy(false); }
+        return;
+      }
+      if (!saveLinkSession(session)) { setError("Try again."); setBusy(false); return; }
+      await loadPlaidScript();
+      if (!window.Plaid) throw new Error("Plaid Link unavailable.");
+      let handled = false;
+      window.Plaid.create({ token: started.linkToken, onSuccess: async (publicToken, metadata) => {
+        if (handled) return;
+        handled = true;
+        await finish(publicToken, metadata);
       }, onExit: () => {
         if (handled) return;
         handled = true; clearLinkSession(); setBusy(false);
       } }).open();
-    } catch { clearLinkSession(); setError("Try again."); setBusy(false); }
+    } catch { if (!nativeApp) clearLinkSession(); setError("Try again."); setBusy(false); }
   }
 
   async function finishMatch(skip: boolean) {
@@ -110,10 +123,10 @@ export function BankConnectionsCard({ ownerAccountId, connections, pendingMatch,
   return <section className="domus-card space-y-4 p-4" aria-label="Your banks">
     <div className="flex items-center justify-between gap-2">
       <h2 className="text-xl font-semibold">Your banks</h2>
-      {!nativeApp ? <button type="button" title="Connect a bank" disabled={busy} onClick={() => void openLink()}
+      {!unavailable ? <button type="button" title="Connect a bank" disabled={busy} onClick={() => void openLink()}
         className="min-h-11 rounded-md bg-[var(--accent)] px-4 text-[var(--accent-contrast)]">Connect a bank</button> : null}
     </div>
-    {nativeApp ? <p className="text-sm text-[var(--muted)]">
+    {unavailable ? <p className="text-sm text-[var(--muted)]">
       To connect a bank, use Domus on a computer for now.</p> : null}
     {connections.map((connection) => <article key={connection.id} className="border-t border-[var(--line)] pt-3">
       <div className="flex items-start justify-between gap-2">
@@ -121,14 +134,15 @@ export function BankConnectionsCard({ ownerAccountId, connections, pendingMatch,
           {connection.accounts.map((account) => <p key={account.id} className="text-sm text-[var(--muted)]">
             {account.nickname}{account.balance_cents != null ? ` · ${formatCurrency(account.balance_cents)}` : ""}
             {account.balance_as_of ? ` · as of ${new Date(account.balance_as_of).toLocaleDateString("en-US")}` : ""}</p>)}
-          <p className="text-sm text-[var(--muted)]">{nativeApp && connection.status === "needs_login" ? null : statusText(connection)}</p>
+          <p className="text-sm text-[var(--muted)]">
+            {unavailable && connection.status === "needs_login" ? null : statusText(connection)}</p>
         </div>
         <details><summary title="Bank options" className="cursor-pointer px-3 py-2">⋯</summary>
           <button type="button" title="Disconnect" disabled={busy} onClick={() => void disconnect(connection)}
             className="min-h-11 text-[var(--crit)]">Disconnect</button></details>
       </div>
       <div className="mt-2 flex gap-3">
-        {!nativeApp && connection.status === "needs_login" ? <button type="button" title="Sign in again"
+        {!unavailable && connection.status === "needs_login" ? <button type="button" title="Sign in again"
           disabled={busy} onClick={() => void openLink(connection.id)} className="min-h-11 text-[var(--accent)]">
           Sign in again</button> : null}
         {connection.status === "error" ? <button type="button" title="Something went wrong. Try again."

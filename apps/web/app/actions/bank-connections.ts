@@ -8,7 +8,7 @@ import { bankFeedInstitution } from "@/lib/bank-feed/match";
 import { encryptBankToken, decryptBankToken, assertBankTokenKey } from "@/lib/bank-feed/token-crypto";
 import { syncConnection } from "@/lib/bank-feed/sync";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { createBankLinkSchema, finishBankLinkSchema, bankConnectionSchema } from "@/lib/validations-bank-feed";
+import { createBankLinkSchema, finishBankLinkSchema, bankConnectionSchema, startBankRelinkSchema } from "@/lib/validations-bank-feed";
 
 type Admin = ReturnType<typeof createAdminClient>;
 const ACCESS = "You do not have access to this account.";
@@ -39,7 +39,7 @@ export async function startBankLink(input: unknown) {
     if (!await ownerMember(admin, user.id, parsed.data.ownerAccountId)) return { success: false, error: ACCESS };
     assertBankTokenKey();
     if (!checkRateLimit(`bank-link:${user.id}`, 10, 60_000).allowed) return { success: false, error: FAILED };
-    const { linkToken } = await createLinkToken({ userId: user.id, mode: "create" });
+    const { linkToken } = await createLinkToken({ userId: user.id, mode: "create", platform: parsed.data.platform });
     return { success: true, linkToken };
   } catch (error) {
     console.error("bank_start_link", error instanceof Error ? error.name : "unknown");
@@ -114,7 +114,7 @@ export async function finishBankLink(input: unknown) {
 
 export async function startBankRelink(input: unknown) {
   const { user } = await requireAuth("owner");
-  const parsed = bankConnectionSchema.safeParse(input);
+  const parsed = startBankRelinkSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: FAILED };
   const admin = createAdminClient();
   const connection = await authorizedConnection(admin, user.id, parsed.data.connectionId);
@@ -124,7 +124,7 @@ export async function startBankRelink(input: unknown) {
     .eq("connection_id", connection.id).single();
   if (secret.error) return { success: false, error: FAILED };
   try {
-    const { linkToken } = await createLinkToken({ userId: user.id, mode: "update",
+    const { linkToken } = await createLinkToken({ userId: user.id, mode: "update", platform: parsed.data.platform,
       accessToken: decryptBankToken(secret.data.access_token_ciphertext) });
     return { success: true, linkToken };
   } catch (error) {

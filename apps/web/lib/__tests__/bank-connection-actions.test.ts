@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { finishBankLink, refreshBank, startBankLink } from "@/app/actions/bank-connections";
-import { decryptBankToken } from "@/lib/bank-feed/token-crypto";
+import { finishBankLink, refreshBank, startBankLink, startBankRelink } from "@/app/actions/bank-connections";
+import { encryptBankToken, decryptBankToken } from "@/lib/bank-feed/token-crypto";
 import { bankFeedInstitution } from "@/lib/bank-feed/match";
 
 vi.mock("server-only", () => ({}));
@@ -32,6 +32,7 @@ function fakeAdmin(options: { member?: boolean; rpcError?: string; upload?: bool
   const from = (table: string) => {
     const query = {
       select: () => query, eq: () => query,
+      single: async () => ({ data: { access_token_ciphertext: encryptBankToken("synthetic-access") }, error: null }),
       maybeSingle: async () => ({ data: table === "bank_connections"
         ? { id: "connection-1", owner_account_id: OWNER_ACCOUNT, status: options.connectionStatus ?? "ok" }
         : table === "ownership_account_members" && options.member !== false
@@ -125,5 +126,22 @@ describe("Sprint 224 link actions", () => {
     expect((admin.calls[0].args.p_accounts as Array<{ nickname: string }>).map((item) => item.nickname))
       .toEqual(["Old (2)", "Old (3)"]);
     expect(syncConnection).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("229 §8.3 start action platform", () => {
+  it.each(["ios", "web", undefined])("passes %s through both actions, defaulting to web", async (platform) => {
+    vi.mocked(createAdminClient).mockReturnValue(fakeAdmin({ connectionStatus: "needs_login" }) as never);
+    expect((await startBankLink({ ownerAccountId: OWNER_ACCOUNT, platform })).success).toBe(true);
+    expect(createLinkToken).toHaveBeenLastCalledWith({ userId: "owner", mode: "create", platform: platform ?? "web" });
+    expect((await startBankRelink({ connectionId: OWNER_ACCOUNT, platform })).success).toBe(true);
+    expect(createLinkToken).toHaveBeenLastCalledWith({ userId: "owner", mode: "update", platform: platform ?? "web",
+      accessToken: "synthetic-access" });
+  });
+  it("rejects invalid platforms before client creation", async () => {
+    expect((await startBankLink({ ownerAccountId: OWNER_ACCOUNT, platform: "android" })).success).toBe(false);
+    expect((await startBankRelink({ connectionId: OWNER_ACCOUNT, platform: "android" })).success).toBe(false);
+    expect(createAdminClient).not.toHaveBeenCalled(); expect(createLinkToken).not.toHaveBeenCalled();
   });
 });
