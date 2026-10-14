@@ -276,3 +276,79 @@ build checks. It never archives or uploads with real Xcode. Real Xcode checks ne
 local Xcode/Simulator service and writable developer caches. Failures remain failures, not skips.
 The suite requires `Signing.local.xcconfig` to be absent and refuses to overwrite it. Temporarily
 preserve your existing file outside the project before testing, then restore it afterward.
+
+## Face ID
+
+When Face ID is on, Domus asks for Face ID every time it starts and every time it comes back from the background.
+Short interruptions that do not leave the app (Control Center, alerts, the camera) only show a privacy cover.
+This is a lock on this iPhone, not a server check: your sign-in stays in iOS's protected app storage, and Face ID does not encrypt it.
+
+The password is never stored. Auth cookies stay in WebKit's default persistent store; they are never copied, moved, or rewritten.
+Password fallback deletes only Domus Supabase auth cookies, verifies deletion, then loads `/login`.
+The overlay remains until that main-frame commit and a second cookie check succeed. Failure or a 10-second timeout keeps it locked.
+After a failed sign-out, backgrounding or a biometric success cannot bypass the required login commit, even if cookies are gone.
+Face ID stays enabled after fallback. A successful biometric check with missing or changed enrollment state also signs out.
+Canceling or failing a biometric check does not count as an enrollment change.
+
+| Event | Phase and effects |
+| --- | --- |
+| Cold launch, enabled and signed in | `locked`; show lock before loading the page |
+| Cold launch otherwise | `open` |
+| Resign active from open | `covered`; privacy cover, no prompt |
+| Enter background, enabled and signed in | `locked` synchronously; invalidate attempt; reset automatic prompt |
+| Enter background otherwise | `covered`; retain privacy cover |
+| Become active from covered | `open`; remove cover; run pending Connect reload |
+| Become active from locked, first time | `authenticating(attempt)`; one automatic prompt |
+| Become active after prompt, or while authenticating | No new prompt |
+| Tap unlock from locked | `authenticating(attempt)`; retry |
+| Matching attempt succeeds with unchanged enrollment | `open`; remove overlay; run pending Connect reload |
+| Matching attempt succeeds with nil or changed enrollment | `signingOut`; keep opaque overlay |
+| Matching attempt cancels or fails | `locked`; clear message |
+| Biometrics unavailable, unenrolled, or locked out | `locked`; show password fallback message |
+| Stale biometric result | Ignore |
+| Tap password | `signingOut`; disable controls; retain enabled setting |
+| Signing out, any biometric or lifecycle event | Keep overlay; ignore biometric results |
+| Sign-out completes, cookies absent and login committed | `open`; signed out; remove overlay |
+| Sign-out error or timeout | `locked`; retry remains available |
+| Auth cookie read completes | Update signed-in setting from cookies only, never from the URL |
+| Enable confirmed with non-nil enrollment state | Persist enabled, offered, and enrollment state |
+| Enable confirmed with nil state | Stay off |
+| Disable | Clear enabled and enrollment state |
+| Offer answered, including Not now | Persist offered; Settings remains available |
+
+`AppLock` is a deterministic reducer. Its controller supplies attempt IDs and executes effects on the main thread.
+A success that arrives during an inactive interruption retains the privacy cover until the scene becomes active.
+Connect reloads are released only from an open phase; the navigation delegate consumes its pending flag exactly once.
+
+**Cold-launch hook:** Capacitor 8's final `loadView` creates its WKWebView but does not load the initial URL.
+`DomusBridgeViewController.viewDidLoad` first places that web view in a container and installs the lock child above it,
+then calls `super.viewDidLoad()` (which starts the page load). No asynchronous hop occurs before installing the overlay.
+The container makes the overlay a sibling, so hiding the web view from VoiceOver never hides the lock controls.
+All overlay modes hide web accessibility; removing the overlay restores it. Message updates announce themselves to VoiceOver.
+
+The offer appears once after a signed-in main-frame commit and a cookie read. Settings → Security can enable or disable it later.
+Touch ID devices get the Touch ID copy, including the offer, lock buttons, Settings label, and timeout message.
+Bridge requests require the trusted HTTPS Domus main frame and current page, and use correlated JSON replies.
+
+### Simulator verification
+
+1. Launch on the iPhone simulator; choose **Features → Face ID → Enrolled**.
+2. Sign in, choose **Use Face ID**, then **Features → Face ID → Matching Face**.
+3. Background and return. Verify the opaque lock appears, then use **Matching Face** to open Domus.
+4. Repeat using **Features → Face ID → Non-matching Face**. The page must remain inaccessible.
+5. Cancel; confirm no automatic re-prompt. Tap **Open with Face ID** to retry.
+6. Open and close Control Center, an alert, and the camera/photo picker without backgrounding.
+   Verify cover/uncover only. Backgrounding during a prompt must invalidate its result.
+7. Kill and relaunch the app. Verify the page never flashes before the lock appears.
+8. With VoiceOver on, verify the underlying page is unreachable while covered or locked.
+   Check large Dynamic Type, light/dark appearance, and both lock actions.
+9. Tap **Sign in with password**. Verify the cover remains until `/login` loads; cookies unrelated to auth survive.
+   Offline navigation must remain locked and allow another password attempt.
+10. Exercise a Stripe Connect Safari return: no reload before successful unlock, exactly one reload afterward.
+11. In Settings → Security, toggle Face ID off/on; verify only correlated replies change the switch.
+    Check Atlas Light, Noctis Neon, and Imperium Night; browser-only Settings must have no biometric row.
+12. Change biometric enrollment and return. A successful check with changed/unknown domain state must require the password.
+    Confirm enrollment changes on physical hardware as well; simulator enrollment does not model every hardware behavior.
+
+For local-only native tests, temporarily omit `server.url` from the generated, ignored `App/capacitor.config.json`
+so the test host loads bundled content; restore it afterward. Do not use live cookies or tokens in fixtures.

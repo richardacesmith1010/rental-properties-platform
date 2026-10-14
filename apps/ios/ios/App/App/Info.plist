@@ -59,6 +59,8 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Use Face ID to open Domus and keep your info safe.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Take photos of problems to send to your landlord.</string>
 </dict>

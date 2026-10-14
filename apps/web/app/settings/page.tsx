@@ -26,6 +26,7 @@ import { AutopayCard } from "@/components/dashboard/autopay-card";
 import { BankSettings } from "@/components/settings/bank-settings";
 import { NotificationPreferences } from "@/components/settings/notification-preferences";
 import { ThemeSettingsPanel } from "@/components/settings/theme-settings-panel";
+import { FaceIdSettings } from "@/components/settings/face-id-settings";
 import { PasswordSettings } from "@/components/settings/password-settings";
 import { ProfileSettings } from "@/components/settings/profile-settings";
 import { SettingsLayout } from "@/components/settings/settings-layout";
@@ -178,7 +179,7 @@ export default async function SettingsPage(props: SettingsPageProps) {
             },
             security: {
               title: "Security",
-              content: <PasswordSettings />
+              content: <div className="space-y-4"><FaceIdSettings /><PasswordSettings /></div>
             },
             yourData: {
               title: "Your data",

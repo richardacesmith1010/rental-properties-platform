@@ -14,10 +14,13 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)
     }
 
-    func sceneWillEnterForeground(_ scene: UIScene) {
-        // A Safari Connect handoff permits exactly one reload of the main view.
-        (window?.rootViewController as? DomusBridgeViewController)?.reloadAfterConnectIfNeeded()
+    private var appLock: AppLockController? {
+        (window?.rootViewController as? DomusBridgeViewController)?.appLockController
     }
+    func sceneWillResignActive(_ scene: UIScene) { appLock?.send(.willResignActive) }
+    func sceneDidEnterBackground(_ scene: UIScene) { appLock?.send(.didEnterBackground) }
+    func sceneDidBecomeActive(_ scene: UIScene) { appLock?.send(.didBecomeActive) }
+    func sceneWillEnterForeground(_ scene: UIScene) { appLock?.send(.willEnterForeground) }
 
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
         SceneDelegateProxy.shared.scene(scene, openURLContexts: URLContexts)

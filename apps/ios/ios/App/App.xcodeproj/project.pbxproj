@@ -23,6 +23,13 @@
 		AACDABC959F705AECF9287A4 = {isa = PBXBuildFile; fileRef = 193D5D6191284EECD7C7F609; };
 		C1CC201229BABFB69A3A07D3 = {isa = PBXBuildFile; fileRef = 4863FA5FB4566EE0F1023275; };
 		BE851A476258628FBE411AB9 = {isa = PBXBuildFile; fileRef = 0E6494EC87941FEE3BA78D10; };
+		CFEFCB55701A194D7EF3027F /* AppLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C3B50FD09E5053849B627D4; };
+		D0F3834AB7D629F6971EE134 /* AppLockController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AB86F36D03C30F536859796; };
+		D46C8A81A12D5690B07A32A4 /* BiometricAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA272036EBF35121A968DC15; };
+		D3BFB4CECD61F0CFF6D4D1CE /* LockViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BB3445715845A28A214CE1D; };
+		C4F84E4C25CB82D5935342E9 /* AppLockTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A69E2391FD1D44FBA9582A; };
+		50F3CC31157F0EA98995B391 /* AppLockControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4FCF2C47C97E3EAFB5D21A8; };
+		17C8A3E4F404A7D4E3BF7F42 /* MessageProvenanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1BC879198D1EA4C09CBA119; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -46,6 +53,48 @@
 		4863FA5FB4566EE0F1023275 /* NavigationPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationPolicyTests.swift; sourceTree = "<group>"; };
 		0E6494EC87941FEE3BA78D10 /* DownloadHandlerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadHandlerTests.swift; sourceTree = "<group>"; };
 		E52B4D3685975587B1075404 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = AppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		6C3B50FD09E5053849B627D4 /* AppLock.swift */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = AppLock.swift;
+			sourceTree = "<group>";
+		};
+		8AB86F36D03C30F536859796 /* AppLockController.swift */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = AppLockController.swift;
+			sourceTree = "<group>";
+		};
+		DA272036EBF35121A968DC15 /* BiometricAuth.swift */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = BiometricAuth.swift;
+			sourceTree = "<group>";
+		};
+		5BB3445715845A28A214CE1D /* LockViewController.swift */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = LockViewController.swift;
+			sourceTree = "<group>";
+		};
+		F1A69E2391FD1D44FBA9582A /* AppLockTests.swift */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = AppLockTests.swift;
+			sourceTree = "<group>";
+		};
+		A4FCF2C47C97E3EAFB5D21A8 /* AppLockControllerTests.swift */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = AppLockControllerTests.swift;
+			sourceTree = "<group>";
+		};
+		A1BC879198D1EA4C09CBA119 /* MessageProvenanceTests.swift */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = MessageProvenanceTests.swift;
+			sourceTree = "<group>";
+		};
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -84,6 +133,10 @@
 		504EC3061FED79650016851F /* App */ = {
 			isa = PBXGroup;
 			children = (
+				5BB3445715845A28A214CE1D,
+				DA272036EBF35121A968DC15,
+				8AB86F36D03C30F536859796,
+				6C3B50FD09E5053849B627D4,
 				193D5D6191284EECD7C7F609,
 				864D51E28446E6580CB20967,
 				FBABD62D7D3C2147AC3FACA7,
@@ -103,6 +156,9 @@
 			sourceTree = "<group>";
 		};
 		121AA6494A737B2EB6B9172B = {isa = PBXGroup; children = (
+				A1BC879198D1EA4C09CBA119,
+				A4FCF2C47C97E3EAFB5D21A8,
+				F1A69E2391FD1D44FBA9582A,
 				0E6494EC87941FEE3BA78D10,
 				4863FA5FB4566EE0F1023275,); path = AppTests; sourceTree = "<group>"; };
 /* End PBXGroup section */
@@ -195,6 +251,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D3BFB4CECD61F0CFF6D4D1CE,
+				D46C8A81A12D5690B07A32A4,
+				D0F3834AB7D629F6971EE134,
+				CFEFCB55701A194D7EF3027F,
 				AACDABC959F705AECF9287A4,
 				C97C4EE1D8C7B406116380ED,
 				3D1C69270C610AAB6C65F7D1,
@@ -205,6 +265,9 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F955EC9AE42678A8AC7D6BC4 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (
+				17C8A3E4F404A7D4E3BF7F42,
+				50F3CC31157F0EA98995B391,
+				C4F84E4C25CB82D5935342E9,
 				BE851A476258628FBE411AB9,
 				C1CC201229BABFB69A3A07D3,); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */

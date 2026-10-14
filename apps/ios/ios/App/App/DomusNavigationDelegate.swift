@@ -41,6 +41,9 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
     private let opener: NavigationOpening
     private weak var mainWebView: MainWebViewLoading?
     private(set) var pendingConnect = false
+    var onMainFrameCommit: ((URL) -> Void)?
+    var onNavigationFailure: (() -> Void)?
+    var onFaceId: ((FaceIdRequest) -> Void)?
 
     init(original: NSObject, downloads: DownloadHandler, offlineURL: URL?, startupURL: URL,
          mainWebView: MainWebViewLoading, opener: NavigationOpening? = nil,
@@ -51,7 +54,7 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
         self.startupURL = startupURL
         self.serverHost = serverHost.lowercased()
         self.lastSafeURL = Self.isSafeURL(startupURL, host: serverHost.lowercased(), offlineURL: offlineURL)
-            ? startupURL : URL(string: "https://domusbase.com/login")!
+            ? startupURL : (URL(string: "https://domusbase.com/login") ?? startupURL)
         self.mainWebView = mainWebView
         self.opener = opener ?? UIApplication.shared
     }
@@ -155,6 +158,7 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
     // WebKit supplies navigation identities; tests use ordinary objects with the same lifetime.
     // Commit/finish callbacks describe the main frame only.
     func handleCommittedMainFrame(url: URL?, navigation: AnyObject?) {
+        if let url { onMainFrameCommit?(url) }
         if let navigation, let url, !failedNavigations.contains(navigation),
            Self.isSafeURL(url, host: serverHost, offlineURL: offlineURL) {
             if committedNavigation !== navigation { previousSafeURL = lastSafeURL }
@@ -232,6 +236,7 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
     }
 
     func handleFailedNavigation(_ webView: WKWebView, navigation: AnyObject?, error: Error) {
+        onNavigationFailure?()
         discardFailedNavigation(navigation)
         handleFailure(webView, error: error)
     }
@@ -257,12 +262,48 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         let origin = message.frameInfo.securityOrigin
-        // UA is not authorization. Restrict this file-sharing bridge to the actual main-frame origin.
-        guard message.name == "domusShareCsv", message.frameInfo.isMainFrame,
-              origin.protocol == "https", origin.host == "domusbase.com", [0, 443].contains(origin.port),
-              let body = message.body as? [String: Any],
-              let filename = body["filename"] as? String, filename.lowercased().hasSuffix(".csv"),
-              let csv = body["csv"] as? String else { return }
-        downloads.shareCsv(filename: filename, csv: csv)
+        handleMessage(name: message.name, body: message.body, mainFrame: message.frameInfo.isMainFrame,
+                      scheme: origin.protocol, host: origin.host, port: origin.port, currentURL: message.webView?.url)
+    }
+
+    func handleMessage(name: String, body: Any, mainFrame: Bool, scheme: String, host: String, port: Int, currentURL: URL?) {
+        guard MessageProvenance.accepts(mainFrame: mainFrame, scheme: scheme, host: host, port: port,
+                                        currentURL: currentURL) else { return }
+        if name == "domusFaceId" {
+            if let request = FaceIdRequest(body: body) { onFaceId?(request) }
+        } else if name == "domusShareCsv", let body = body as? [String: Any],
+                  let filename = body["filename"] as? String, filename.lowercased().hasSuffix(".csv"),
+                  let csv = body["csv"] as? String {
+            downloads.shareCsv(filename: filename, csv: csv)
+        }
+    }
+}
+
+enum MessageProvenance {
+    static func trustedURL(_ url: URL?) -> Bool {
+        guard let url else { return false }
+        return url.scheme == "https" && url.host == "domusbase.com" && (url.port == nil || url.port == 443)
+            && url.user == nil && url.password == nil
+    }
+    static func accepts(mainFrame: Bool, scheme: String, host: String, port: Int, currentURL: URL?) -> Bool {
+        mainFrame && scheme == "https" && host == "domusbase.com" && [0, 443].contains(port) && trustedURL(currentURL)
+    }
+}
+
+struct FaceIdRequest {
+    let action: String
+    let requestId: String
+    init?(body: Any) {
+        guard let body = body as? [String: Any], let action = body["action"] as? String,
+              ["get", "enable", "disable"].contains(action), let id = body["requestId"] as? String,
+              id.utf16.count <= 64 else { return nil }
+        self.action = action
+        requestId = id
+    }
+    static func reply(requestId: String, available: Bool, enabled: Bool, kind: BiometricKind) -> String? {
+        let body: [String: Any] = ["requestId": requestId, "available": available, "enabled": enabled, "kind": kind.rawValue]
+        guard let data = try? JSONSerialization.data(withJSONObject: body, options: [.sortedKeys]),
+              let json = String(data: data, encoding: .utf8) else { return nil }
+        return "window.dispatchEvent(new CustomEvent('domus-face-id',{detail:" + json + "}))"
     }
 }
