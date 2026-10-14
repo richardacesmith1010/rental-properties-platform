@@ -984,3 +984,21 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Simulator walk (owner signed in): opt-in alert → Use Face ID → match enables; Home button → relaunch locked + auto prompt; non-matching face stays locked, Cancel → no re-prompt; Open with Face ID + match → unlocks without reload; cold launch in dark mode locked before any page shows; Settings → Security switch off/on (on requires Face ID); Sign in with password → /login; signed out → no lock.
 - **Polish findings (next UI pass):** lock-screen icon is a square (not rounded/app-icon style); title regular weight system font, button system blue #0A84FF instead of Domus accent #0A5BD3 — align with Wallet look.
 - Not verified: Touch ID copy (no Touch ID simulator run), enrollment-change sign-out on a real device, Control Center/camera cover (unit-tested only).
+
+## Sprint 228 SHIPPED + tooling cleanup (2026-10-14)
+- `803bb1f` Sprint 228 (Codex gpt-6-astra high, ~160k tokens; waited out a usage limit):
+  - Plaid OAuth return page `/owner/bank/oauth` (localStorage link session, 30 min);
+  - iPhone app shows "To connect a bank, use Domus on a computer for now.";
+  - lock-screen Wallet polish.
+- Gate 2375; xcodebuild 89/89.
+- Plaid dashboard: the allowed redirect URI `https://domusbase.com/owner/bank/oauth` is saved (owner verified the password). Vercel `PLAID_REDIRECT_URI` is set, redeployed, and production `/link/token/create` accepts it.
+- **Pending:**
+  - Transactions product: Requested (daily check task at 9:13 AM);
+  - NFCU/Fidelity OAuth: In review;
+  - Simulator check of the new lock look and in-app bank notice (needs the owner signed in);
+  - Sprint 229 (in-app bank connect via Plaid iOS SDK + universal links), not yet planned or approved.
+- **Tooling (`f020962`):**
+  - CLAUDE.md 612→115 lines. The old text is in `docs/claude/CLAUDE-full-2026-10-14.md`; lessons are in `docs/lessons.md`; verification, accounts and plain language are in `docs/claude/reference.md`.
+  - Skills `.claude/skills/{ship,codex-dispatch,chatgpt-review}`.
+  - Hooks in `.claude/settings.json`: SessionStart repo summary; block `vercel deploy` with uncommitted app files in the main checkout; block commits containing secrets, `.env` or `* 2.*` files.
+  - Codex runner with capacity retry: `.claude/skills/codex-dispatch/run-codex.sh`.
