@@ -1,4 +1,4 @@
-# Sprint 229 — iPhone app: connect a bank with Plaid's native iOS SDK (L3, phone top tier) · rev 1
+# Sprint 229 — iPhone app: connect a bank with Plaid's native iOS SDK (L3, phone top tier) · rev 2 (rev 1 ChatGPT REJECT → 5 required + 3 optional adopted)
 
 Approved by the owner on 2026-10-14 ("plan 229"). The owner reviews this plan before Codex starts.
 
@@ -49,7 +49,7 @@ Plaid's iOS docs (https://plaid.com/docs/link/ios/) say:
    - `createLinkToken` takes an optional `platform: "web" | "ios"` (default `"web"`).
    - For `ios`, use `PLAID_REDIRECT_URI_IOS`, validated by `validRedirectUri(value, "ios")`. That allows exactly `https://domusbase.com/owner/bank/oauth-app`, with the same no-port/query/hash/credential rules as web.
    - For `web`, keep today's behavior.
-   - An invalid or missing iOS value logs `plaid_redirect_uri_invalid` and omits `redirect_uri`.
+   - **iOS fails closed.** A missing or invalid `PLAID_REDIRECT_URI_IOS` logs `plaid_redirect_uri_invalid` and **throws** "Bank connection is not set up yet." **before calling Plaid**, in create and update mode alike. Plaid requires `redirect_uri` on iOS. Web behavior is unchanged.
 3. **Start actions.** `startBankLink` / `startBankRelink` accept an optional `platform` (Zod enum, default `"web"`) and pass it through. Nothing else in the actions changes.
 4. **`/owner/bank/oauth-app` page** (owner auth, like `/owner/bank/oauth`). It's what Safari shows if the app isn't installed or the link didn't open it:
    - heading "Open the Domus app to finish.";
@@ -86,13 +86,23 @@ Plaid's iOS docs (https://plaid.com/docs/link/ios/) say:
    - **Never log** the link token, public token or account ids.
 4. **Universal link return.**
    - In `SceneDelegate`, handle `scene(_:continue:)` **and** the cold-start `connectionOptions.userActivities`, for `NSUserActivityTypeBrowsingWeb` whose `webpageURL` is HTTPS `domusbase.com` with path exactly `/owner/bank/oauth-app`.
-   - **If a Plaid session is open,** hand the URL to LinkKit using the API the current LinkKit 7 docs specify for continuing OAuth from a Universal Link. Cite the doc section in a code comment; if LinkKit 7 resumes automatically, document that and do nothing.
-   - **Otherwise,** load `https://domusbase.com/owner/bank` in the web view (stale link).
+   - **If a Plaid session is open:**
+     - If the **resolved** LinkKit 7 version exposes a public API to continue OAuth from a Universal Link, call it, and cite the exact doc section and API in a code comment.
+     - If it exposes none (LinkKit continues by itself), **do not create an abstraction pretending one exists.** Do nothing except keep the session retained, and **never** navigate the web view away from the active flow.
+   - **If no session is open** (stale link, or a cold launch after the process died): load `https://domusbase.com/owner/bank` in the web view. Never claim a previous Link session was resumed; an in-memory session only needs to survive background/foreground and lock/unlock, not app termination.
    - **Always forward** the activity to `SceneDelegateProxy` too (unchanged).
 5. **The app lock must cover Plaid Link.** Today the overlay is a child view, so a presented Link sheet would sit above the lock.
-   - Move the lock/cover overlay into a dedicated `UIWindow` (same window scene, `windowLevel = .alert + 1`, `rootViewController = LockViewController`) that's shown and hidden by the existing effects. It then covers any presented controller, including Plaid Link and system share sheets.
+   - Move the lock/cover overlay into a dedicated `UIWindow`:
+     - **exactly one per `UIWindowScene`**, created once and reused;
+     - `windowLevel = .alert + 1`, `rootViewController = LockViewController`;
+     - shown with `isHidden = false` and hidden with `isHidden = true` by the existing effects.
+   - **It never becomes key while hidden.** When hidden, make the main bridge window key again (`makeKeyAndVisible` on the app window), so later presentations, keyboard input and taps go to the app normally.
+   - It then covers any presented controller, including Plaid Link and system share sheets.
    - **Keep every Sprint 227 rule** (phases, auto-prompt once, stale-attempt guard, signing-out keeps the overlay, cold launch covered before the web view is visible). While the lock window is visible, `webView.accessibilityElementsHidden` stays true.
-   - **The OAuth round trip leaves the app** (to Safari or the bank's app), so on return the app locks and asks for Face ID. **Do not add a grace period.** After unlock, the Link session continues (LinkKit keeps its state). A test proves a Link session reference survives lock → unlock.
+   - **Locking follows the real UIScene lifecycle, unchanged from Sprint 227.**
+     - If OAuth actually sends the app to the background (Safari or the bank's app), the existing rules lock it, the lock window covers Link, and unlock leaves the retained Link session usable.
+     - If OAuth stays in-app (an in-process browser sheet that only makes the app inactive), the existing cover-only rule applies.
+     - Add **no** synthetic lock because a flow is "OAuth", and **no grace period**.
 6. **README.** Add an `apps/ios/README.md` section "Connect a bank (Plaid)" covering: the bridge messages, the AASA path, the entitlement, the env vars, the lock-window change, and how to test with Plaid Sandbox on the Simulator.
 
 ## 4. Out of scope
@@ -115,7 +125,7 @@ Plaid's iOS docs (https://plaid.com/docs/link/ios/) say:
 - **Tests:**
   - `AppTests/PlaidLinkBridgeTests.swift` (new), `AppTests/UniversalLinkTests.swift` (new), and updates to `AppLockControllerTests.swift`;
   - web tests for the AASA route, the iOS redirect validation, the platform pass-through, the oauth-app page and the native card flow.
-- **Docs:** `apps/ios/README.md`.
+- **Docs:** `apps/ios/README.md`, including a **physical-iPhone checklist**. Plaid notes Universal Links can be unreliable on the Simulator, so Simulator tests don't prove the on-device OAuth handoff.
 
 ## 6. Implementation requirements
 - **Limits:** lines ≤ 140 characters; new files ≤ 200 lines; no force unwraps on message, JSON or URL paths.
@@ -138,7 +148,7 @@ Plaid's iOS docs (https://plaid.com/docs/link/ios/) say:
 - `cd apps/ios/ios/App && xcodebuild test -project App.xcodeproj -scheme App -destination 'id=C79BDA37-1967-45CB-A369-85B260EA111D'` (if the sandbox blocks it, compile the tests and say so; Claude runs it)
 
 ## 8. Acceptance criteria (binary; named tests that call real code)
-1. **AASA route:**
+1. **AASA route** (requested with no auth cookies and as a different user; the response is identical and user-independent):
    - with a valid `APPLE_APP_ID`, returns 200 JSON with exactly one component `/owner/bank/oauth-app` and `application/json`;
    - missing or invalid → 404;
    - the middleware matcher excludes `/.well-known/` (test the matcher regex or the middleware early-return).
@@ -146,6 +156,7 @@ Plaid's iOS docs (https://plaid.com/docs/link/ios/) say:
    - accepts only `https://domusbase.com/owner/bank/oauth-app`;
    - rejects the web path, other paths, ports, a query, a hash, `*` and credentials;
    - `createLinkToken({platform:"ios"})` sends that `redirect_uri`, and `platform:"web"` still sends the web one (mocked Plaid client, request body asserted).
+2b. **iOS fail-closed:** with `PLAID_REDIRECT_URI_IOS` missing **or** invalid, `createLinkToken({platform:"ios"})` throws and **the Plaid client is never called**, in both create and update mode.
 3. **Actions:**
    - `startBankLink` / `startBankRelink` pass `platform` through;
    - an invalid platform is rejected;
@@ -167,18 +178,22 @@ Plaid's iOS docs (https://plaid.com/docs/link/ios/) say:
    - the session is released after a callback.
 7. **Universal links:**
    - matches only the exact HTTPS `domusbase.com` `/owner/bank/oauth-app` path;
-   - with an active session, the URL goes to the session (fake);
-   - without one, the web view loads `/owner/bank`;
-   - cold-start `userActivities` are handled.
-8. **Lock window:**
-   - the overlay lives in a separate window above presented controllers (a test presents a dummy VC and asserts the lock window's level and visibility);
+   - **with an active session:** the session stays retained, the web view is **not** navigated, and the continuation API is called only if the resolved LinkKit exposes one (the test names the API, or asserts there is no call);
+   - **no session:** the web view loads `/owner/bank`;
+   - **cold start** (`userActivities` with no session, simulating process death): falls back to `/owner/bank` and reports no resume.
+8. **Lock window** (real-code tests):
+   - one lock window per scene, reused across locks;
+   - it covers a presented dummy VC while locked/covered (level and visibility asserted);
+   - after unlock the lock window is hidden and not key, the bridge window is key, and **a second dummy VC can be presented** from the normal app path;
+   - background → lock → unlock with an open fake Link session keeps the session retained and gives no navigation;
+   - an inactive-only resign (no background) shows the cover but never locks;
    - every Sprint 227 `AppLockControllerTests` case still passes;
    - an open Plaid session survives lock → unlock.
 9. **Entitlements:** the file contains `applinks:domusbase.com` and is referenced by `CODE_SIGN_ENTITLEMENTS` (plist/config test).
 10. **Validation:** all §7 commands are green.
 
 ## 9. Report format
-JSON per `docs/codex-report-schema.json`, with test names mapped to §8, the LinkKit version resolved, and line counts of the new files. Do NOT include "Claude prompt" or "recommended next steps for Claude" sections. Report compact status only.
+JSON per `docs/codex-report-schema.json`, with test names mapped to §8, the **exact resolved LinkKit version** (pin "Up to Next Major" from at least the newest 7.0.x patch available, not 7.0.0), whether a Universal Link continuation API exists in it, and line counts of the new files. Do NOT include "Claude prompt" or "recommended next steps for Claude" sections. Report compact status only.
 
 ## 10. Constraints
 - **No live or remote actions:** no DB access, deploy, commit or push. Don't run `gate:web`. No Plaid or Vercel changes. Don't change `Signing*.xcconfig`, and never write the team ID anywhere.

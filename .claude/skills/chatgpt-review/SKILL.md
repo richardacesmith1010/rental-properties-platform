@@ -9,7 +9,7 @@ description: Send an L3 or iPhone sprint packet to the owner's ChatGPT "Domus" p
 
 1. **Build the request.** `pbcopy` a framed request: a one-line role ("senior … reviewer"), the focus areas, "End with VERDICT: APPROVE / APPROVE WITH CHANGES / REJECT, then numbered REQUIRED and OPTIONAL lists", then `---` and the packet. Never include secrets.
 2. **Paste and send.**
-   - Open the project URL. Click the composer (`find` "chat message composer textbox") and press `cmd+v`.
+   - Open the project URL. Click the composer **by coordinate** (the empty box under "Domus", about x=800 y=157 at 1440 wide; clicking the `find` ref often does not take the paste) and press `cmd+v`.
    - Long text becomes a "Pasted text" attachment after about 5 seconds. If the first `cmd+v` does nothing, click and paste again.
    - Click the send arrow.
 3. **Wait for the reply.** Use `javascript_tool` loops shorter than 40 seconds (CDP times out at 45). Check `document.querySelector('main').innerText` for `VERDICT:`, and check that `[data-testid="stop-button"]` is gone.
