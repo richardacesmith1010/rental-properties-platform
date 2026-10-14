@@ -1,4 +1,4 @@
-# Sprint 229 — iPhone app: connect a bank with Plaid's native iOS SDK (L3, phone top tier) · rev 2 (rev 1 ChatGPT REJECT → 5 required + 3 optional adopted)
+# Sprint 229 — iPhone app: connect a bank with Plaid's native iOS SDK (L3, phone top tier) · rev 3 (rev 1 REJECT → rev 2 APPROVE WITH CHANGES → 2 required + 2 optional adopted)
 
 Approved by the owner on 2026-10-14 ("plan 229"). The owner reviews this plan before Codex starts.
 
@@ -83,6 +83,8 @@ Plaid's iOS docs (https://plaid.com/docs/link/ios/) say:
      - `onSuccess` → `{requestId, status:"success", publicToken, accountIds:[metadata.accounts.map(\.id)]}`;
      - `onExit` → `{requestId, status: error == nil ? "exit" : "error"}`.
      - Before evaluating JS, re-check `MessageProvenance.trustedURL(webView.url)`. Release the session after either callback.
+   - **Bind each session to its origin.** At open, record the web view's current main-frame **document id**: a counter bumped on every main-frame commit, already tracked by `AppLockController` as `documentID`; expose it. Also record the **auth-cookie snapshot**: the set of `sb-*-auth-token*` cookie values hashed with SHA-256, kept in memory only and never logged.
+   - **Drop stale replies.** At callback time, if the document id changed (navigation), the auth snapshot changed (sign-out or account switch), or the lock controller is in `signingOut`, **do not deliver the reply**. Release the session and log only `plaid_link_reply_dropped`. The web page's 30-minute timeout clears its busy state.
    - **Never log** the link token, public token or account ids.
 4. **Universal link return.**
    - In `SceneDelegate`, handle `scene(_:continue:)` **and** the cold-start `connectionOptions.userActivities`, for `NSUserActivityTypeBrowsingWeb` whose `webpageURL` is HTTPS `domusbase.com` with path exactly `/owner/bank/oauth-app`.
@@ -90,7 +92,7 @@ Plaid's iOS docs (https://plaid.com/docs/link/ios/) say:
      - If the **resolved** LinkKit 7 version exposes a public API to continue OAuth from a Universal Link, call it, and cite the exact doc section and API in a code comment.
      - If it exposes none (LinkKit continues by itself), **do not create an abstraction pretending one exists.** Do nothing except keep the session retained, and **never** navigate the web view away from the active flow.
    - **If no session is open** (stale link, or a cold launch after the process died): load `https://domusbase.com/owner/bank` in the web view. Never claim a previous Link session was resumed; an in-memory session only needs to survive background/foreground and lock/unlock, not app termination.
-   - **Always forward** the activity to `SceneDelegateProxy` too (unchanged).
+   - **Forward to `SceneDelegateProxy` only when no Plaid session is active,** or when the URL isn't the oauth-app path. Capacitor's proxy can trigger its own web-view navigation (App plugin `appUrlOpen`), and that must not compete with an active Plaid OAuth return. Verify this against Capacitor 8's `SceneDelegateProxy` / `ApplicationDelegateProxy` source and cite it in a comment.
 5. **The app lock must cover Plaid Link.** Today the overlay is a child view, so a presented Link sheet would sit above the lock.
    - Move the lock/cover overlay into a dedicated `UIWindow`:
      - **exactly one per `UIWindowScene`**, created once and reused;
@@ -125,7 +127,7 @@ Plaid's iOS docs (https://plaid.com/docs/link/ios/) say:
 - **Tests:**
   - `AppTests/PlaidLinkBridgeTests.swift` (new), `AppTests/UniversalLinkTests.swift` (new), and updates to `AppLockControllerTests.swift`;
   - web tests for the AASA route, the iOS redirect validation, the platform pass-through, the oauth-app page and the native card flow.
-- **Docs:** `apps/ios/README.md`, including a **physical-iPhone checklist**. Plaid notes Universal Links can be unreliable on the Simulator, so Simulator tests don't prove the on-device OAuth handoff.
+- **Docs:** `apps/ios/README.md`, including a **physical-iPhone checklist** and a short **test matrix** (in-app OAuth sheet, App-to-App OAuth, background/foreground return, process-death recovery). State that AASA availability, Plaid dashboard URI registration and physical-iPhone OAuth success are **deployment gates** checked after deploy, not outcomes local unit tests prove. Plaid notes Universal Links can be unreliable on the Simulator, so Simulator tests don't prove the on-device OAuth handoff.
 
 ## 6. Implementation requirements
 - **Limits:** lines ≤ 140 characters; new files ≤ 200 lines; no force unwraps on message, JSON or URL paths.
@@ -180,7 +182,9 @@ Plaid's iOS docs (https://plaid.com/docs/link/ios/) say:
    - matches only the exact HTTPS `domusbase.com` `/owner/bank/oauth-app` path;
    - **with an active session:** the session stays retained, the web view is **not** navigated, and the continuation API is called only if the resolved LinkKit exposes one (the test names the API, or asserts there is no call);
    - **no session:** the web view loads `/owner/bank`;
-   - **cold start** (`userActivities` with no session, simulating process death): falls back to `/owner/bank` and reports no resume.
+   - **cold start** (`userActivities` with no session, simulating process death): falls back to `/owner/bank` and reports no resume;
+   - **with an active session,** the oauth-app activity is **not** forwarded to `SceneDelegateProxy`; with no session, it is.
+6b. **Reply binding:** a callback after a main-frame navigation, after an auth-cookie change (sign-out or another account), or during `signingOut` delivers **no** JS and releases the session. A callback with the same document and same auth delivers normally.
 8. **Lock window** (real-code tests):
    - one lock window per scene, reused across locks;
    - it covers a presented dummy VC while locked/covered (level and visibility asserted);
