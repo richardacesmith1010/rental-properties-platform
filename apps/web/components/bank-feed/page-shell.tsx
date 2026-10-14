@@ -19,8 +19,8 @@ interface ImportResult { success: boolean; error?: string; filedCount?: number; 
     token?: string; suggestion?: Suggestion; ruleable?: boolean; alreadyRecorded?: boolean }> }
 
 export function BankFeedShell({ ownerAccountId, accounts, bankAccounts, properties, charges, recent, actions,
-  connections = [], pendingMatch, queued = [], changed = [], connectionActions, queueActions }: {
-  ownerAccountId: string; accounts: Array<{ id: string; display_name: string }>;
+  connections = [], pendingMatch, queued = [], changed = [], connectionActions, queueActions, nativeApp = false }: {
+  nativeApp?: boolean; ownerAccountId: string; accounts: Array<{ id: string; display_name: string }>;
   bankAccounts: AccountOption[]; properties: HomeOption[]; charges: RentOption[]; recent: RecentItem[];
   connections?: ConnectionView[]; pendingMatch?: MatchView; queued?: QueuedItem[]; changed?: ChangedItem[];
   connectionActions?: ComponentProps<typeof BankConnectionsCard>["actions"];
@@ -105,7 +105,7 @@ export function BankFeedShell({ ownerAccountId, accounts, bankAccounts, properti
           {item.display_name}</Link>)}
       </nav> : null}
       {connectionActions ? <BankConnectionsCard ownerAccountId={ownerAccountId} connections={connections}
-        pendingMatch={pendingMatch} actions={connectionActions} /> : null}
+        pendingMatch={pendingMatch} actions={connectionActions} nativeApp={nativeApp} /> : null}
       {queueActions ? <QueuedReviewList items={queued} changed={changed} properties={properties}
         charges={charges} actions={queueActions} /> : null}
       {connectionActions ? <h2 className="text-lg font-semibold">Or upload a statement file.</h2> : null}

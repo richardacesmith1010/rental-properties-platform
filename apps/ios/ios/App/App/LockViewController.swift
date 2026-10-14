@@ -2,6 +2,11 @@ import UIKit
 
 @MainActor
 final class LockViewController: UIViewController {
+    static let accent = UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 76 / 255, green: 141 / 255, blue: 1, alpha: 1)
+            : UIColor(red: 10 / 255, green: 91 / 255, blue: 211 / 255, alpha: 1)
+    }
     var unlock: (() -> Void)?
     var password: (() -> Void)?
     private let primary = UIButton(type: .system)
@@ -16,15 +21,36 @@ final class LockViewController: UIViewController {
         let icon = UIImageView(image: UIImage(named: "AppIcon60x60"))
         icon.contentMode = .scaleAspectFit
         icon.isAccessibilityElement = false
-        icon.heightAnchor.constraint(equalToConstant: 80).isActive = true
+        icon.layer.cornerRadius = 18
+        icon.layer.cornerCurve = .continuous
+        icon.clipsToBounds = true
+        let iconContainer = UIView()
+        icon.translatesAutoresizingMaskIntoConstraints = false
+        iconContainer.addSubview(icon)
+        NSLayoutConstraint.activate([
+            icon.widthAnchor.constraint(equalToConstant: 80), icon.heightAnchor.constraint(equalToConstant: 80),
+            icon.centerXAnchor.constraint(equalTo: iconContainer.centerXAnchor),
+            icon.topAnchor.constraint(equalTo: iconContainer.topAnchor),
+            icon.bottomAnchor.constraint(equalTo: iconContainer.bottomAnchor)
+        ])
         let title = UILabel()
         title.text = "Domus is locked"
-        title.font = .preferredFont(forTextStyle: .title1)
+        let titleFont = UIFont.preferredFont(forTextStyle: .title1)
+        title.font = UIFont(descriptor: titleFont.fontDescriptor.withSymbolicTraits(.traitBold)
+                            ?? titleFont.fontDescriptor, size: 0)
         title.adjustsFontForContentSizeCategory = true
         title.numberOfLines = 0
         title.textAlignment = .center
-        primary.configuration = .filled()
+        var primaryStyle = UIButton.Configuration.filled()
+        primaryStyle.baseBackgroundColor = Self.accent
+        primaryStyle.baseForegroundColor = UIColor { $0.userInterfaceStyle == .dark ? .black : .white }
+        primaryStyle.cornerStyle = .capsule
+        primary.configuration = primaryStyle
+        primary.heightAnchor.constraint(greaterThanOrEqualToConstant: 50).isActive = true
         primary.addTarget(self, action: #selector(openTapped), for: .touchUpInside)
+        var fallbackStyle = UIButton.Configuration.plain()
+        fallbackStyle.baseForegroundColor = Self.accent
+        fallback.configuration = fallbackStyle
         fallback.setTitle("Sign in with password", for: .normal)
         fallback.addTarget(self, action: #selector(passwordTapped), for: .touchUpInside)
         for button in [primary, fallback] {
@@ -39,7 +65,7 @@ final class LockViewController: UIViewController {
         message.textAlignment = .center
         message.isAccessibilityElement = true
         message.accessibilityTraits.insert(.updatesFrequently)
-        let stack = UIStackView(arrangedSubviews: [icon, title, primary, fallback, message])
+        let stack = UIStackView(arrangedSubviews: [iconContainer, title, primary, fallback, message])
         stack.axis = .vertical
         stack.spacing = 24
         // A scroll view keeps every action reachable at the largest Dynamic Type sizes.

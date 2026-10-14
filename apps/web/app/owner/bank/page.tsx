@@ -1,3 +1,4 @@
+import { isNativeAppServer } from "@/lib/native-app-server";
 import { requireRole } from "@/lib/auth";
 import Link from "next/link";
 import { OwnerBottomBar } from "@/components/dashboard/owner-bottom-bar";
@@ -57,6 +58,7 @@ function BankStatus({ message }: { message: string }) {
 export default async function BankPage(props: { searchParams?: Promise<{ account?: string }> }) {
   const searchParams = await props.searchParams;
   const { user } = await requireRole(["owner"]);
+  const nativeApp = await isNativeAppServer();
   const admin = createAdminClient();
   const members = await loadStep("ownership-members", () => admin.from("ownership_account_members").select("account_id")
     .eq("profile_id", user.id).eq("member_role", "owner").eq("active", true));
@@ -142,7 +144,7 @@ export default async function BankPage(props: { searchParams?: Promise<{ account
         ← Home
       </Link>
     <BankBalancesCard accounts={bankAccounts} save={setManualBalance} />
-    <BankFeedShell ownerAccountId={selected.id} accounts={accounts} bankAccounts={bankAccounts}
+    <BankFeedShell nativeApp={nativeApp} ownerAccountId={selected.id} accounts={accounts} bankAccounts={bankAccounts}
     properties={properties} charges={charges} recent={recent}
     connections={connections} pendingMatch={pendingMatch} queued={queueQuery.data || []}
     changed={changedQuery.data || []}

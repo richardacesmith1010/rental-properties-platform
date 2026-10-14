@@ -1,5 +1,8 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { renderToString } from "react-dom/server";
+import { BankFeedShell } from "@/components/bank-feed/page-shell";
+import { loadLinkSession } from "@/components/bank-feed/link-session";
 import { BankConnectionsCard } from "@/components/bank-feed/bank-connections-card";
 import { QueuedReviewList } from "@/components/bank-feed/queued-review-list";
 import { NeedsYouList } from "@/components/dashboard/owner-home/needs-you-list";
@@ -13,7 +16,8 @@ const actions = { start: vi.fn(async () => ({ success: true, linkToken: "link" }
   startRelink: vi.fn(), finishRelink: vi.fn(), refresh: vi.fn(async () => ({ success: true })),
   disconnect: vi.fn(async () => ({ success: true })), confirm: vi.fn(), skip: vi.fn() };
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => { vi.clearAllMocks(); localStorage.clear(); });
+afterEach(() => { vi.restoreAllMocks(); delete window.Plaid; });
 
 describe("Sprint 224 bank UI", () => {
   it("Connect a bank opens Plaid Link and sends only selected IDs and the public token", async () => {
@@ -94,5 +98,71 @@ describe("Sprint 224 bank UI", () => {
       actions={{ answer: vi.fn(), keep: vi.fn(), undo: undoBankItem }} />);
     fireEvent.click(screen.getByRole("button", { name: "Undo" }));
     await waitFor(() => expect(undoBankItem).toHaveBeenCalledWith({ bankTransactionId: "changed" }));
+  });
+});
+
+
+describe("§8.5 bank connection OAuth sessions", () => {
+  type Config = Parameters<NonNullable<Window["Plaid"]>["create"]>[0];
+  let config: Config;
+  function setup() {
+    const open = vi.fn(() => expect(loadLinkSession(Date.now())).toMatchObject({ linkToken: "link", mode: "create" }));
+    window.Plaid = { create: vi.fn((value) => { config = value; return { open }; }) };
+    render(<BankConnectionsCard ownerAccountId="owner" connections={[]} actions={actions} />);
+    fireEvent.click(screen.getByRole("button", { name: "Connect a bank" }));
+    return open;
+  }
+  it("saves before open and clears after success", async () => {
+    const open = setup(); await waitFor(() => expect(open).toHaveBeenCalled());
+    await act(async () => config.onSuccess("synthetic-public", {}));
+    expect(localStorage.getItem("domus.plaidLink")).toBeNull();
+  });
+  it("clears on exit", async () => {
+    const open = setup(); await waitFor(() => expect(open).toHaveBeenCalled());
+    act(() => config.onExit?.(null));
+    expect(localStorage.getItem("domus.plaidLink")).toBeNull();
+  });
+  it.each(["returned", "thrown"])("clears on %s finish failure", async (kind) => {
+    if (kind === "thrown") actions.finish.mockRejectedValueOnce(new Error("failed"));
+    else actions.finish.mockResolvedValueOnce({ success: false, connectionId: "" });
+    const open = setup(); await waitFor(() => expect(open).toHaveBeenCalled());
+    await act(async () => config.onSuccess("synthetic-public", {}));
+    expect(localStorage.getItem("domus.plaidLink")).toBeNull();
+    expect(screen.getByRole("alert")).toHaveTextContent("Try again.");
+  });
+  it("storage failure prevents opening Link and shows Try again", async () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("unavailable"); });
+    const open = setup();
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Try again."));
+    expect(open).not.toHaveBeenCalled(); expect(window.Plaid?.create).not.toHaveBeenCalled();
+  });
+  it("relink saves the connection and uses finishRelink", async () => {
+    actions.startRelink.mockResolvedValueOnce({ success: true, linkToken: "synthetic-relink" });
+    actions.finishRelink.mockResolvedValueOnce({ success: true });
+    const open = vi.fn(() => expect(loadLinkSession(Date.now())).toMatchObject({ mode: "relink", connectionId: "c" }));
+    window.Plaid = { create: vi.fn((value) => { config = value; return { open }; }) };
+    render(<BankConnectionsCard ownerAccountId="owner" actions={actions} connections={[
+      { id: "c", institution_name: "Bank", status: "needs_login", last_synced_at: null, accounts: [] }
+    ]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Sign in again" }));
+    await waitFor(() => expect(open).toHaveBeenCalled());
+    await act(async () => config.onSuccess("unused", {}));
+    expect(actions.finishRelink).toHaveBeenCalledWith({ connectionId: "c" });
+    expect(localStorage.getItem("domus.plaidLink")).toBeNull();
+  });
+  it.each([true, false])("nativeApp=%s produces correct first-render HTML through BankFeedShell", (nativeApp) => {
+    const html = renderToString(<BankFeedShell nativeApp={nativeApp} ownerAccountId="owner"
+      accounts={[]} bankAccounts={[]} properties={[]} charges={[]} recent={[]} connectionActions={actions}
+      actions={{ createBankAccount: vi.fn(), importBankRows: vi.fn(), answerBankItem: vi.fn(),
+        undoBankItem: vi.fn(), deleteBankAccount: vi.fn() }} connections={[
+        { id: "login", institution_name: "Bank", status: "needs_login", last_synced_at: null, accounts: [] },
+        { id: "ok", institution_name: "Bank 2", status: "ok", last_synced_at: null, accounts: [] },
+        { id: "match", institution_name: "Bank 3", status: "pending_account_match", last_synced_at: null, accounts: [] }
+      ]} />);
+    for (const copy of ["Connect a bank", "Sign in again"]) {
+      if (nativeApp) expect(html).not.toContain(copy); else expect(html).toContain(copy);
+    }
+    expect(html.includes("To connect a bank, use Domus on a computer for now.")).toBe(nativeApp);
+    for (const copy of ["Refresh", "Disconnect", "Finish connecting"]) expect(html).toContain(copy);
   });
 });

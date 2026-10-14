@@ -30,6 +30,7 @@
 		C4F84E4C25CB82D5935342E9 /* AppLockTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A69E2391FD1D44FBA9582A; };
 		50F3CC31157F0EA98995B391 /* AppLockControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4FCF2C47C97E3EAFB5D21A8; };
 		17C8A3E4F404A7D4E3BF7F42 /* MessageProvenanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1BC879198D1EA4C09CBA119; };
+		228000000000000000000001 = {isa = PBXBuildFile; fileRef = 228000000000000000000002; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -95,6 +96,12 @@
 			path = MessageProvenanceTests.swift;
 			sourceTree = "<group>";
 		};
+		228000000000000000000002 /* LockViewControllerTests.swift */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = LockViewControllerTests.swift;
+			sourceTree = "<group>";
+		};
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -156,6 +163,7 @@
 			sourceTree = "<group>";
 		};
 		121AA6494A737B2EB6B9172B = {isa = PBXGroup; children = (
+				228000000000000000000002,
 				A1BC879198D1EA4C09CBA119,
 				A4FCF2C47C97E3EAFB5D21A8,
 				F1A69E2391FD1D44FBA9582A,
@@ -265,6 +273,7 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F955EC9AE42678A8AC7D6BC4 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (
+				228000000000000000000001,
 				17C8A3E4F404A7D4E3BF7F42,
 				50F3CC31157F0EA98995B391,
 				C4F84E4C25CB82D5935342E9,

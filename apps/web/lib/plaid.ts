@@ -47,6 +47,17 @@ function getPlaidClient(): PlaidApi {
   return new PlaidApi(config);
 }
 
+export function validRedirectUri(value: string): boolean {
+  try {
+    const url = new URL(value);
+    const allowedHost = (url.protocol === "https:" && url.hostname === "domusbase.com" && !url.port
+      && /^https:\/\/domusbase\.com\//i.test(value))
+      || (url.protocol === "http:" && url.hostname === "localhost");
+    return allowedHost && url.pathname === "/owner/bank/oauth" && !url.username && !url.password
+      && !url.search && !url.hash && !/[?#*\s\\]/.test(value);
+  } catch { return false; }
+}
+
 export async function createLinkToken(input: {
   userId: string; mode: "create" | "update"; accessToken?: string;
 }): Promise<{ linkToken: string }> {
@@ -55,6 +66,9 @@ export async function createLinkToken(input: {
     throw new Error("Bank connection is not set up yet.");
   }
   const client = getPlaidClient();
+  const redirectUri = process.env.PLAID_REDIRECT_URI;
+  const redirectValid = redirectUri ? validRedirectUri(redirectUri) : false;
+  if (redirectUri && !redirectValid) console.error("plaid_redirect_uri_invalid");
   const response = await client.linkTokenCreate({
     user: {
       client_user_id: input.userId
@@ -69,7 +83,7 @@ export async function createLinkToken(input: {
       ] } }
     } : { access_token: input.accessToken }),
     webhook: `${appUrl.replace(/\/$/, "")}/api/webhooks/plaid`,
-    ...(process.env.PLAID_REDIRECT_URI ? { redirect_uri: process.env.PLAID_REDIRECT_URI } : {}),
+    ...(redirectValid ? { redirect_uri: redirectUri } : {}),
     country_codes: [CountryCode.Us],
     language: "en"
   });

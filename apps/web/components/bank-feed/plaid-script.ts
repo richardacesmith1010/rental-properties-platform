@@ -4,7 +4,7 @@ export interface PlaidAccountMetadata {
   mask?: string | null;
 }
 
-interface PlaidSuccessMetadata {
+export interface PlaidSuccessMetadata {
   institution?: { name?: string | null } | null;
   accounts?: PlaidAccountMetadata[];
 }
@@ -18,6 +18,7 @@ declare global {
   interface Window {
     Plaid?: { create: (config: {
       token: string;
+      receivedRedirectUri?: string;
       onSuccess: (publicToken: string, metadata: PlaidSuccessMetadata) => void;
       onExit?: (error: { display_message?: string | null } | null) => void;
     }) => PlaidHandler };

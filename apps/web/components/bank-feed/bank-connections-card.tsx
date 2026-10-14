@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/format";
 import { loadPlaidScript } from "./plaid-script";
+import { clearLinkSession, finishLinkSession, saveLinkSession, type LinkSession } from "./link-session";
 
 export interface ConnectionView {
   id: string; institution_name: string; status: string; last_synced_at: string | null;
@@ -42,8 +43,8 @@ function statusText(connection: ConnectionView): string {
   return `Up to date · ${hours < 1 ? "just now" : `${hours}h ago`}`;
 }
 
-export function BankConnectionsCard({ ownerAccountId, connections, pendingMatch, actions }: {
-  ownerAccountId: string; connections: ConnectionView[]; pendingMatch?: MatchView; actions: Actions;
+export function BankConnectionsCard({ ownerAccountId, connections, pendingMatch, actions, nativeApp = false }: {
+  ownerAccountId: string; connections: ConnectionView[]; pendingMatch?: MatchView; actions: Actions; nativeApp?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -59,14 +60,18 @@ export function BankConnectionsCard({ ownerAccountId, connections, pendingMatch,
       if (!started.success || !started.linkToken) {
         setError(started.error || "Try again."); setBusy(false); return;
       }
+      const session: Omit<LinkSession, "expiresAt"> = { linkToken: started.linkToken,
+        mode: connectionId ? "relink" : "create", ownerAccountId, connectionId, startedAt: Date.now() };
+      if (!saveLinkSession(session)) { setError("Try again."); setBusy(false); return; }
       await loadPlaidScript();
       if (!window.Plaid) throw new Error("Plaid Link unavailable.");
+      let handled = false;
       window.Plaid.create({ token: started.linkToken, onSuccess: async (publicToken, metadata) => {
+        if (handled) return;
+        handled = true;
         setBusy(true);
         try {
-          const result = connectionId ? await actions.finishRelink({ connectionId })
-            : await actions.finish({ ownerAccountId, publicToken,
-              selectedAccountIds: (metadata.accounts || []).flatMap((account) => account.id ? [account.id] : []) });
+          const result = await finishLinkSession(session, publicToken, metadata, actions);
           if (!result.success) { setError(result.error || "Try again."); return; }
           if (result.needsMatch && result.connectionId) {
             setMatch({ connectionId: result.connectionId, plaidAccounts: result.plaidAccounts || [],
@@ -74,9 +79,12 @@ export function BankConnectionsCard({ ownerAccountId, connections, pendingMatch,
           }
           router.refresh();
         } catch { setError("Try again."); }
-        finally { setBusy(false); }
-      }, onExit: () => setBusy(false) }).open();
-    } catch { setError("Try again."); setBusy(false); }
+        finally { clearLinkSession(); setBusy(false); }
+      }, onExit: () => {
+        if (handled) return;
+        handled = true; clearLinkSession(); setBusy(false);
+      } }).open();
+    } catch { clearLinkSession(); setError("Try again."); setBusy(false); }
   }
 
   async function finishMatch(skip: boolean) {
@@ -102,23 +110,25 @@ export function BankConnectionsCard({ ownerAccountId, connections, pendingMatch,
   return <section className="domus-card space-y-4 p-4" aria-label="Your banks">
     <div className="flex items-center justify-between gap-2">
       <h2 className="text-xl font-semibold">Your banks</h2>
-      <button type="button" title="Connect a bank" disabled={busy} onClick={() => void openLink()}
-        className="min-h-11 rounded-md bg-[var(--accent)] px-4 text-[var(--accent-contrast)]">Connect a bank</button>
+      {!nativeApp ? <button type="button" title="Connect a bank" disabled={busy} onClick={() => void openLink()}
+        className="min-h-11 rounded-md bg-[var(--accent)] px-4 text-[var(--accent-contrast)]">Connect a bank</button> : null}
     </div>
+    {nativeApp ? <p className="text-sm text-[var(--muted)]">
+      To connect a bank, use Domus on a computer for now.</p> : null}
     {connections.map((connection) => <article key={connection.id} className="border-t border-[var(--line)] pt-3">
       <div className="flex items-start justify-between gap-2">
         <div><p className="font-medium">{connection.institution_name}</p>
           {connection.accounts.map((account) => <p key={account.id} className="text-sm text-[var(--muted)]">
             {account.nickname}{account.balance_cents != null ? ` · ${formatCurrency(account.balance_cents)}` : ""}
             {account.balance_as_of ? ` · as of ${new Date(account.balance_as_of).toLocaleDateString("en-US")}` : ""}</p>)}
-          <p className="text-sm text-[var(--muted)]">{statusText(connection)}</p>
+          <p className="text-sm text-[var(--muted)]">{nativeApp && connection.status === "needs_login" ? null : statusText(connection)}</p>
         </div>
         <details><summary title="Bank options" className="cursor-pointer px-3 py-2">⋯</summary>
           <button type="button" title="Disconnect" disabled={busy} onClick={() => void disconnect(connection)}
             className="min-h-11 text-[var(--crit)]">Disconnect</button></details>
       </div>
       <div className="mt-2 flex gap-3">
-        {connection.status === "needs_login" ? <button type="button" title="Sign in again"
+        {!nativeApp && connection.status === "needs_login" ? <button type="button" title="Sign in again"
           disabled={busy} onClick={() => void openLink(connection.id)} className="min-h-11 text-[var(--accent)]">
           Sign in again</button> : null}
         {connection.status === "error" ? <button type="button" title="Something went wrong. Try again."

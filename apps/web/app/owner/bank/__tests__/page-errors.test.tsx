@@ -1,8 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ requireRole: vi.fn(), query: vi.fn(), error: vi.fn() }));
+const mocks = vi.hoisted(() => ({ requireRole: vi.fn(), query: vi.fn(), error: vi.fn(), native: vi.fn(), shell: vi.fn() }));
 
+vi.mock("@/lib/native-app-server", () => ({ isNativeAppServer: mocks.native }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }) }));
 vi.mock("@/lib/auth", () => ({ requireRole: mocks.requireRole }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({
   from: (table: string) => {
@@ -15,7 +17,9 @@ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({
     return builder;
   }
 }) }));
-vi.mock("@/components/bank-feed/page-shell", () => ({ BankFeedShell: () => <div>Bank loaded</div> }));
+vi.mock("@/components/bank-feed/page-shell", () => ({
+  BankFeedShell: (props: unknown) => { mocks.shell(props); return <div>Bank loaded</div>; }
+}));
 vi.mock("@/components/bank-feed/bank-balances-card", () => ({ BankBalancesCard: () => null }));
 vi.mock("@/components/dashboard/owner-bottom-bar", () => ({ OwnerBottomBar: () => null }));
 vi.mock("@/app/actions/bank-feed", () => ({ createBankAccount: vi.fn(), importBankRows: vi.fn(),
@@ -28,6 +32,7 @@ vi.mock("@/app/actions/bank-connection-management", () => ({ confirmBankLinks: v
 vi.mock("@/app/actions/bank-balances", () => ({ setManualBalance: vi.fn() }));
 
 import BankPage from "../page";
+import BankOAuthPage from "../oauth/page";
 
 const rows: Record<string, unknown[]> = {
   ownership_account_members: [{ account_id: "account-1" }],
@@ -39,9 +44,30 @@ describe("BankPage load failures", () => {
   afterEach(() => vi.restoreAllMocks());
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.native.mockResolvedValue(false);
     vi.spyOn(console, "error").mockImplementation(mocks.error);
     mocks.requireRole.mockResolvedValue({ user: { id: "owner-1" } });
     mocks.query.mockImplementation((table: string) => ({ data: rows[table] ?? [], error: null }));
+  });
+
+  it("§8.4 OAuth route requires owner auth before rendering the return UI", async () => {
+    render(await BankOAuthPage());
+    expect(mocks.requireRole).toHaveBeenCalledExactlyOnceWith(["owner"]);
+    expect(screen.getByRole("heading", { name: "Let's try that again" })).toBeInTheDocument();
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+
+  it("§3.A.6 OAuth route preserves the existing signed-out login redirect", async () => {
+    mocks.requireRole.mockRejectedValueOnce(new Error("NEXT_REDIRECT:/login"));
+    await expect(BankOAuthPage()).rejects.toThrow("NEXT_REDIRECT:/login");
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+
+  it.each([true, false])("§8.5 passes server nativeApp=%s to the bank shell", async (nativeApp) => {
+    mocks.native.mockResolvedValue(nativeApp);
+    render(await BankPage({}));
+    expect(mocks.native).toHaveBeenCalledTimes(1);
+    expect(mocks.shell).toHaveBeenCalledWith(expect.objectContaining({ nativeApp }));
   });
 
   it("retries a transient query result and renders the page", async () => {
