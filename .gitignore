@@ -35,3 +35,6 @@ apps/ios/ios/App/Signing.local.xcconfig
 *.cer
 apps/ios/build-number.pending
 apps/ios/ios/App/build/testflight.lock
+
+# Claude Code local worktrees
+.claude/worktrees/

@@ -1,0 +1,114 @@
+# Lessons Learned Log
+
+Permanent log of Claude's mistakes and the rule each one created. Read it before planning a sprint (the codex-dispatch skill points here). Never delete a lesson; mark outdated ones [SUPERSEDED] with a reason. Each entry: date, category (SCOPE / TECHNICAL / PROCESS / COMMUNICATION / REVIEW), what went wrong, what was correct, and the rule.
+
+#### L-001 | 2026-03-01 | SCOPE
+**What happened:** Claude flagged Codex's workflow modes, guided flows, and Phase A concept as "scope creep" and "off-plan."
+**What was correct:** The user had explicitly told Codex to create these features. Claude didn't have full context of user-Codex conversations.
+**Rule:** Never assume Codex went off-plan. If unexpected work appears, ask the user "Did you request this?" before labeling it as scope creep.
+
+#### L-002 | 2026-03-02 | REVIEW
+**What happened:** During code review of Codex's Phase A hardening sprint, found that `sendInboxMessage` had an unchecked error on the thread `updated_at` update. The error was silently swallowed.
+**What was correct:** Every Supabase mutation result should be checked. Non-critical errors should at minimum be logged.
+**Rule:** When reviewing Codex actions, verify that EVERY `.update()`, `.insert()`, `.delete()` call has its error result checked — even "secondary" operations after the main mutation.
+
+#### L-003 | 2026-03-01 | COMMUNICATION
+**What happened:** Claude included detailed "what Codex should do next" relay sections in handoff notes. The user said: "I want you to tell Codex to stop giving me a 'Claude prompt' because all I care about is what you recommend."
+**What was correct:** The user wants Claude to own the planning entirely. Codex should report status only, not suggest Claude's next moves.
+**Rule:** Codex prompts must include the constraint: "Do NOT include 'Claude prompt' or 'recommended next steps for Claude' sections. Report compact status only."
+
+#### L-004 | 2026-03-02 | TECHNICAL
+**What happened:** Attempted to query `rent_charges.stripe_payment_intent_id` during a SQL probe, but that column doesn't exist on the table.
+**What was correct:** Always verify column existence before writing queries against live DB. Use `information_schema.columns` or the table definition as source of truth.
+**Rule:** Before running SQL probes on live Supabase, verify the target columns exist. Never assume a column exists because it "should" — check the schema first.
+
+#### L-005 | 2026-03-01 | PROCESS
+**What happened:** Tried to deploy to Vercel before verifying the user had CLI credentials configured. Deploy failed with "No existing credentials found."
+**What was correct:** Check prerequisites before attempting actions that depend on external authentication.
+**Rule:** Before any deploy command, verify: (1) CLI tool is installed, (2) credentials/auth are configured. If unsure, ask the user first.
+
+#### L-006 | 2026-03-03 | REVIEW
+**What happened:** Flagged `tenant-documents-section.tsx` as orphaned during repo audit because it wasn't imported in `dashboard/index.tsx`. It's actually imported directly by `apps/web/app/tenant/page.tsx`.
+**What was correct:** A component can be imported by any page, not just the dashboard index. Must check ALL importers, not just one file.
+**Rule:** Before declaring a file orphaned, grep the entire `apps/web/` tree for its name. A file is only dead if zero files import it.
+
+#### L-007 | 2026-03-12 | PROCESS
+**What happened:** Claude implemented all of Sprint 16 directly instead of writing a Codex prompt packet and letting Codex code it. Violated §1 Role Boundary.
+**What was correct:** Claude plans and verifies. Codex implements. The Sprint 16 Codex prompt was already written at `docs/sprint16-codex-prompt.md` — should have handed it off.
+**Rule:** Never write app code directly. If tempted, stop and write a Codex prompt packet instead. The only exception is if §1 boundary-break conditions are explicitly met and declared.
+
+#### L-008 | 2026-05-07 | PROCESS
+**What happened:** When the user reported "Pay $1.34 does nothing," Claude burned ~30 minutes hypothesizing about a small-amount edge case before checking the actual Stripe error log. The real error message ("No such destination: 'acct_xxx'") was visible the whole time in Vercel runtime logs (via `console.error` at `apps/web/app/actions/charges.ts:198`), in Stripe Workbench request logs (the `request_log_url` field returned in the error body), and via a direct Stripe API query (`curl -u "$SKEY:" /v1/accounts`). Every signal was there from the first minute.
+**What was correct:** When a feature fails in production, FIRST read the actual data (production logs, third-party dashboard request logs, direct API queries), THEN form hypotheses. Hypothesis-first wastes minutes-to-hours on theories the data already disproves.
+**Rule:** When a user reports a feature broken in production, the FIRST three actions are mandatory and ordered: (1) read Vercel/runtime logs for the affected route via `vercel logs --follow`, (2) read the relevant third-party dashboard's request log if applicable (Stripe Workbench, Plaid Logs, etc.), (3) make a direct API query to confirm or disprove the most likely root cause. Only hypothesize after at least one of these returns useful signal — and the hypothesis must be grounded in something the data showed.
+
+#### L-009 | 2026-05-08 | PROCESS
+**What happened:** Sprint 123 (audit hotfix bundle) passed all local checks: Codex's test suite (passed), `gate:web` (passed via tests/lint/typecheck/build), `npm run smoke:web` (passed against the deployed URL). Yet the deploy broke `/tenant` immediately — every request errored with "Functions cannot be passed directly to Client Components." The error was a pre-existing Server→Client function-prop violation that only fires at **runtime page render with a real session**, not during static prerender or unit tests. The smoke script only checks HTTP status codes, not full page render.
+**What was correct:** After every deploy that touches dashboard render paths, Claude must do a real-session render check: log in via Chrome MCP (or curl with a session cookie), load the affected pages, and confirm the rendered HTML contains expected content (not an error boundary). HTTP 200 ≠ "the page rendered correctly."
+**Rule:** Post-deploy verification of UI sprints MUST include a Chrome MCP page-load with a real authenticated session, and a `read_console_messages` check for thrown errors. The current smoke test (status-code only) is insufficient for catching render-time crashes. Until the smoke test is extended, Claude is responsible for this manual check on every UI deploy. Evidence required for sprint completion: a screenshot of the rendered page plus a clean console.
+
+#### L-010 | 2026-07-12 | PROCESS
+**What happened:** Session history for this project grew to 254MB (one session file alone was 167MB). Claude Code loaded it on every prompt and hung with an endless spinner — no error shown. Other projects worked fine. Fixed by archiving `~/.claude/projects/-Users-courtneysmith-Documents-Codex-Rental-Properties/*.jsonl` and starting fresh.
+**What was correct:** Chat history is disposable by design (§13) — all real state lives in the repo. Resuming one ever-growing mega-session has no upside and eventually breaks the tool.
+**Rule (refined 2026-07-14 with the user):** Rotate chats by *threshold, not per sprint*. The real failure mode is transcript file SIZE (the ~167MB single file that hung the app); a heavy multi-sprint session is normally single-digit MB. Wrap up and start a new chat only when ANY of: (a) the session `.jsonl` approaches **~50MB** — at each cycle close Claude runs `du -sh` on the current session transcript and reports the size; (b) the session has been compacted ~2× (compaction also causes context-forgetting, as happened this session); (c) it feels sluggish; (d) work pivots to a genuinely unrelated topic. Per-sprint rotation is NOT required. Regardless of rotation, always keep `docs/agent-handoff.md` + memory current so any new session recovers cleanly.
+
+#### L-011 | 2026-08-22 | PROCESS
+**What happened:** Sprint 133's packet listed ~20 exact files (§5) but its acceptance criterion demanded a zero-remnant grep sweep across ALL of `components/dashboard/` — a superset including explicitly-excluded files (`pay-rent-card.tsx`, tenant money-UI). Codex had to choose; it satisfied the sweep and self-flagged `no_out_of_scope_diffs=false`, touching 45 files.
+**What was correct:** A packet's scope list, exclusions, and acceptance criteria must be mutually consistent — an acceptance criterion IS a scope statement. When they conflict, the implementer is forced to improvise.
+**Rule:** Before dispatching any packet, cross-check: does every acceptance criterion's blast radius stay inside §5's file list plus §4's exclusions? If a sweep/grep criterion spans a directory, either scope §5 to that directory or scope the sweep to §5's files.
+
+#### L-012 | 2026-10-03 | TECHNICAL
+**What happened:** Sprint 141's migration recreated `notifications_type_check` by copying an old migration file's definition. It happened to match live, but later migrations could have added types — copying from a file would then have silently blocked live notification inserts. Separately, Codex invented a contact email (`support@domus.app`) when a packet left it unspecified (Sprint 139).
+**What was correct:** Any migration that DROPs and recreates a constraint, policy, or function must be diffed against the LIVE definition (`pg_get_constraintdef` / `pg_get_functiondef`) before apply. Packets that add links/contact info must name exact values.
+**Rule:** Before applying a migration that recreates an existing DB object, query its live definition and confirm the new one equals live ± the intended change. In packets, forbid inventing URLs/emails and supply the exact values.
+
+#### L-013 | 2026-10-04 | TECHNICAL
+**What happened:** Sprint 151 promised ~0.5–1 s for a section's first open. It shipped at ~2.2 s because the new server action still pays the same ~1 s fixed prefix (session auth, role, profile, ownership, administered IDs) that the full page paid, plus a ~0.7 s maintenance loader. Revisits did become instant.
+**What was correct:** The Sprint 148/149 telemetry already showed the fixed prefix cost. A performance target must be the sum of the measured costs that remain on the new path, not a guess about what was removed.
+**Rule:** Before stating any latency target in a packet, list the remaining per-request costs from existing `[perf:*]` telemetry and add them up. State the target as that sum, and name which costs the sprint actually removes.
+
+#### L-014 | 2026-10-04 | PROCESS
+**What happened:** Sprint 158 extended owner navigation code to managers under a new "targeted tests only" rule. Codex skipped lint (my rule forgot it), merged owner and manager URL-sync logic into one effect, and never wrote the manager section to the URL. My full gate caught the lint error and an owner regression; my live walk caught the URL bug. Three fix runs cost more tokens (~355k total) than the targeted rule saved.
+**What was correct:** When a packet generalises shared code to a second role, it must pin the first role's behaviour explicitly (state invariants such as "owner effect and deps unchanged; manager section must round-trip through the URL") and require lint along with targeted tests.
+**Rule:** Packets that reuse one role's code for another role must list the invariants to keep for the original role and the state that must survive a refresh (URL/section). Codex's targeted checks always include `npm run lint:web` and typecheck. Prefer one precise run over several cheap fix runs: each Codex run has a large fixed context cost.
+
+#### L-015 | 2026-10-05 | REVIEW
+**What happened:** Sprint 166b's acceptance said "every file ≤ 500 lines". gpt-reserve met it by cramming code onto single lines up to 8,460 characters (2,041 lines → ~190), left 2 tests failing, and reported the refactor "not complete". Claude rejected and reverted it; nothing deployed.
+**What was correct:** A size target is a proxy for readability; a cheap model will game a proxy. Refactor packets must constrain the code's shape, not just its line count.
+**Rule:** Any packet with a file-size target must also require: max line length ≤ 140 characters (or the repo formatter's output), total non-whitespace characters of the touched code within ±10% of before (no compaction, no deletion disguised as refactor), and the full test suite green. Claude checks max line length and character totals on every refactor before accepting it.
+
+#### L-016 | 2026-10-05 | REVIEW
+**What happened:** Sprint 167's spec defined Undo as "delete the filed record and the bank item," but the same answer could also create an "Always" rule. Unit tests, ChatGPT's three reviews and Claude's code review all passed it; only the live walk showed the undone mortgage being auto-filed on the next upload.
+**What was correct:** An undo must reverse every side effect of the action it undoes, not just the main record.
+**Rule:** When a packet adds an action with an Undo (or delete/revert), list every write the forward action makes (records, rules, flags, counters) and require the Undo to reverse each one, with a test per side effect. Live walks of new flows must always include "do it → undo it → do the next natural step again".
+
+#### L-017 | 2026-10-05 | REVIEW
+**What happened:** Sprint 169 (gpt-reserve, L2) reported "1280/1280 tests passed" and every acceptance item met, but its route test asserted a literal object equals itself, and most required test cases (late rent, higher-than-usual, reversed payments, route auth, Home card) did not exist. The green gate hid it; Claude caught it only by reading the test files. The code also had real bugs those missing tests would have caught.
+**What was correct:** A passing suite proves nothing about cases that were never written. Test acceptance criteria are another proxy a cheap model will game (same family as L-015).
+**Rule:** Before accepting any sprint, open each new or changed test file and map every acceptance test case to a real assertion that calls the code under test. Count cases (`grep -c "it("`) against the packet. Missing or tautological tests = FAIL, regardless of the reported counts. For feature sprints with many required tests, prefer gpt-6-sol over gpt-reserve.
+
+#### L-018 | 2026-10-06 | TECHNICAL
+**What happened:** Sprint 179 added a module-level in-process cache for `feature.capabilities` (unit-tested with fake timers) and Sprint 180 deferred bundles that turned out not to be on the critical path. Production logs showed the cache never hit (22 queries every request) and the Home time unchanged. Unit tests cannot prove serverless caching or critical-path wins.
+**What was correct:** Performance changes must be verified with production `[perf:*]` evidence of the specific step, and the critical path must be identified from per-step timings (with query counts) before choosing what to change.
+**Rule:** Before a speed sprint, list the critical-path steps (start/end overlap) and their query counts from production logs; only target steps on that path. Any cache must be proven by a production log showing the hit (e.g. `queries: 0` on the second request), not by unit tests.
+
+#### L-019 | 2026-10-06 | PROCESS
+**What happened:** CI on main failed on every push for 26 runs (#275–#300), starting with the Sprint 174 Next 15 upgrade. Claude verified each sprint with the local gate, smoke specs and Sentry, but never checked GitHub Actions. The user found out from failure emails. Root cause: a malformed `NEXT_PUBLIC_SUPABASE_URL` repo secret, which Next 15 started reaching during the prerender attempt of `/`.
+**What was correct:** CI is part of the gate. A green local gate does not prove CI is green, because CI has a different env (secrets, Node version, clean install).
+**Rule:** At every cycle close, check the latest CI run for the pushed HEAD and report it. Any red CI run blocks the next sprint. CI must not depend on repo secret values to build; it uses fixed placeholders.
+
+#### L-020 | 2026-10-07 | REVIEW
+**What happened:** Sprint 193's packet told the tenant card to show the server action's returned `message`. Sprint 192 had hard-coded the card text, so the action's old success string ("Manual payment request sent to your landlord for confirmation.") had never been visible. Once wired through, the live walk showed the stale wording; a 193b hotfix was needed.
+**What was correct:** When a UI starts rendering a value it previously ignored (an action's `message`, an API field), every possible value of it becomes user-facing copy.
+**Rule:** Before a packet tells UI to display an action/API return value, list every return string on every path of that action and include their exact wording in the packet (rewrite any that break plain-language rules).
+
+#### L-021 | 2026-10-08 | REVIEW
+**What happened:** Sprint 205 rev 1 claimed "no RLS rewrite needed" after checking only the policy expressions. Mapping deeper showed (a) any signed-in owner could insert invitations for any home/account, and `handle_new_user()` silently converts pending invitations into owner/manager access at signup (live takeover path, hotfixed as 205a); (b) managers could rewrite home ownership columns; (c) `created_by_profile_id` was an undocumented entitlement in SQL and TS. None was visible from the policy list alone.
+**What was correct:** An authorization claim must follow every path to a grant: table GRANTs + RLS for direct PostgREST writes, triggers and SECURITY DEFINER functions that consume rows (e.g. auth signup hooks), and TS helpers.
+**Rule:** Before any packet that adds a new kind of access, simulate the attacker in SQL (`set local role authenticated` + JWT claims, rolled back) against every table the feature touches, including direct inserts the app "never does", and grep `pg_proc` for functions that read those tables to grant access (`handle_new_user`, payload RPCs). Any table a definer function trusts must not be user-writable.
+
+#### L-022 | 2026-10-12 | REVIEW
+**What happened:** Sprint 218 shipped a Sign in button with no visible label. A Tailwind selector `[&>span:last-child]:hidden`, meant to hide a spinner, also hid the only span (the label) when the button was not loading. Unit tests passed because jsdom ignores CSS, so `getByRole("button", { name: "Sign in" })` still found the text. Smoke passed because sign-in by Enter worked. Only the screenshot walk caught it.
+**What was correct:** A text-in-DOM test does not prove the text is visible. Arbitrary-variant selectors that hide children are fragile.
+**Rule:** Every UI sprint walk must screenshot each primary button and confirm its label is visible. In review, grep new UI code for `]:hidden`, `]:opacity-0` and `!opacity` on child selectors and reject them unless a test proves the visible state. Also, while Codex works in the tree, deploy only from a clean `git worktree` of HEAD (never the dirty tree).
+

@@ -1,0 +1,35 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-context.sh", "timeout": 15 }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(*vercel deploy*)",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard-deploy.sh",
+            "timeout": 20,
+            "statusMessage": "Checking deploy source is clean"
+          },
+          {
+            "type": "command",
+            "if": "Bash(*git commit*)",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard-commit.sh",
+            "timeout": 20,
+            "statusMessage": "Checking commit for secrets and iCloud duplicates"
+          }
+        ]
+      }
+    ]
+  },
+  "worktree": {
+    "symlinkDirectories": ["node_modules", "apps/web/node_modules", "apps/ios/node_modules"]
+  }
+}
