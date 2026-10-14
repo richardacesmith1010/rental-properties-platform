@@ -959,3 +959,10 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Removed nonexistent columns: `maintenance_tickets.updated_at` (analytics repair stats were silently empty → fixed) and the `ownership_account_members.deleted_at` filter (a 400 + fallback on every LLC lookup).
 - Supabase edge logs after 226: 521 requests, **0** 4xx/5xx (previously constant 400s).
 - 2269 tests; smoke all green after 226b (owner Home p75 **1.73 s**); no `load-failed` lines in the following 20 min. The intermittent "not ready" seen twice is now observable if it recurs. The earlier smoke failure had no DB errors in that window, so it was likely a cold-start timeout.
+
+## Sprint 223 SHIPPED (2026-10-13) — shared LLC tasks (L2)
+- `account_tasks` (owner-member RLS, LLC-only, column-level update grant without `last_done_by`, triggers set or clear done-by, composite FK to `account_partners`). Applied live.
+- Live SQL (rolled back), 12/12: forged done-by on insert is cleared; created_by spoof blocked; direct done-by update denied; mark done sets the caller; cross-LLC owner FK blocks; as-needed + date blocked; individual owner insert blocked; unrelated owner and manager see 0; co-owner sees it; anon denied. No leftovers.
+- Codex 123k; 2290 tests; smoke green (owner Home p75 1.61 s). Real owner Money → Mom's House shows Cash on hand + Partners + Tasks (empty state), with zero console errors.
+- **The sister's-spreadsheet arc is complete:** 219 partners, 220 one monthly bill / ledger, 221 even it out, 222 deposits + cash on hand, 223 tasks (+ 224 bank sync, 225 speed, 226 fixes).
+- **Next:** Face ID (phone top tier: L3 + ChatGPT review + Simulator walk). **Owner action still pending:** sign in at dashboard.plaid.com for the Plaid production application.
