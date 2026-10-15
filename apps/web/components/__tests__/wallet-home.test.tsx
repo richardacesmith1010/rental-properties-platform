@@ -26,7 +26,9 @@ describe("WalletHome", () => {
     const pending = { ...wallet, homes: wallet.homes.map((home) => ({ ...home,
       activeLeases: home.activeLeases.map((lease) => ({ ...lease, invitePending: home.id === "b" })) })) };
     const view = render(<WalletHome {...base} wallet={pending} />);
-    expect(screen.getByText("Maya · Invite sent")).toBeInTheDocument();
+    expect(screen.getByText("Maya")).toHaveClass("truncate");
+    expect(screen.getByText("· Invite sent")).toHaveClass("shrink-0");
+    expect(screen.getByText("· Invite sent")).not.toHaveClass("truncate");
     expect(screen.queryByText("Angel · Invite sent")).not.toBeInTheDocument();
     view.unmount();
     render(<HomesWallet wallet={pending} onAddHome={vi.fn()} onAddTenant={vi.fn()} manageContent={null} />);

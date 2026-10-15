@@ -133,6 +133,24 @@ describe("ChargesSection", () => {
     expect(screen.queryByRole("link", { name: "Add this month's rent now" })).not.toBeInTheDocument();
   });
 
+  it("shows rent timing for a filtered home with a lease and no current rent", () => {
+    const leaseB = { id: "lease-b", tenantLabel: "Sam", propertyLabel: "Home B" };
+    const oldRent = { id: "old-rent", leaseId: "lease-b", propertyId: "home-b",
+      dueDate: "2025-01-01", amountCents: 100000, status: "paid" as const, category: "rent" as const };
+    const view = render(<ChargesSection charges={[oldRent]} onPayCharge={async () => {}}
+      isOwnerView availableLeases={[leaseB]} onGenerateChargesHref="/owner/generate" />);
+    expect(screen.getByRole("heading", { name: "No rent yet" })).toBeInTheDocument();
+    expect(screen.getByText("This month's rent shows up by tomorrow morning.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Add this month's rent now" })).toBeInTheDocument();
+    view.rerender(<ChargesSection charges={[oldRent]} onPayCharge={async () => {}}
+      isOwnerView availableLeases={[]} onGenerateChargesHref="/owner/generate" />);
+    expect(screen.getByText("No rent matches this filter right now.")).toBeInTheDocument();
+    view.rerender(<ChargesSection charges={[]} onPayCharge={async () => {}}
+      isOwnerView availableLeases={[]} onGenerateChargesHref="/owner/generate" />);
+    expect(screen.getByText("Rent will appear here after you create a lease.")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Add this month's rent now" })).not.toBeInTheDocument();
+  });
+
   it("hides add-now when each active lease has this month's rent", () => {
     const month = new Date().toISOString().slice(0, 7);
     const lease = { id: "lease-1", tenantLabel: "Maya", propertyLabel: "Home" };
@@ -147,6 +165,8 @@ describe("ChargesSection", () => {
       charges={[{ id: "rent-1", leaseId: "lease-1", propertyId: "home",
         dueDate: `${month}-20`, amountCents: 100000, status: "pending", category: "rent" }]} />);
     expect(screen.getByRole("link", { name: "Add this month's rent now" })).toHaveAttribute("href", "/owner/generate");
+    expect(screen.getByRole("link", { name: "Add this month's rent now" }))
+      .toHaveAttribute("title", "Add this month's rent now.");
   });
 
   it("shows the generate charges link when href is provided", () => {
@@ -164,6 +184,7 @@ describe("ChargesSection", () => {
 
     expect(generateLink).toBeInTheDocument();
     expect(generateLink).toHaveAttribute("href", "/owner/generate");
+    expect(generateLink).toHaveAttribute("title", "Generate this month's rent.");
   });
 
   it("does not show the generate link when href is omitted", () => {

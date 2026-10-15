@@ -227,6 +227,7 @@ export function Dashboard(props: DashboardProps) {
     <div className="min-h-full">
       <SectionRenderer
         {...sectionRendererProps}
+        safePortfolio={activeSection === "charges" ? filteredPortfolio : safePortfolio}
         ownerWalletHome={props.ownerWalletHome}
         onAddHome={openPropertyWizard}
         onAddTenantToHome={(id) => { sectionRendererProps.onSelectProperty(id); openLeaseWizard(); }}
@@ -273,12 +274,13 @@ export function Dashboard(props: DashboardProps) {
                 }
               }}
               onCreatePropertyWithSetup={props.onCreatePropertyWithSetup}
+              bankConnected={isOwnerRole ? props.stripeConnected === true : undefined}
               onComplete={(propertyId) => {
                 closePropertyWizard();
-                if (propertyId) {
+                if (propertyId && !isOwnerRole) {
                   sectionRendererProps.onSelectProperty(propertyId);
                 }
-                sectionRendererProps.openSection(isOwnerRole ? "home" : "overview");
+                sectionRendererProps.openSection("overview");
               }}
             />
           ) : null}

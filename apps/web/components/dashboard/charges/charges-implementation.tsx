@@ -275,7 +275,7 @@ export function ChargesSection({
         onOpenManualPayment={openFirstManualPayment}
         onOpenCreateCharge={() => setShowCreateChargeForm(true)}
         onGenerateChargesHref={onGenerateChargesHref}
-        showAddRentNow={showAddRentNow && charges.length > 0}
+        showAddRentNow={showAddRentNow && filteredCharges.length > 0}
       />
       <CardContent>
         {simpleRentView ? (
@@ -353,7 +353,8 @@ export function ChargesSection({
         ) : null}
         {filteredCharges.length === 0 ? (
           <RentEmptyState isTenantView={isTenantView} hasRows={charges.length > 0}
-            hasActiveLeases={availableLeases.length > 0} generateHref={onGenerateChargesHref} />
+            hasActiveLeases={availableLeases.length > 0} hasCurrentMonthRent={chargedLeaseIds.size > 0}
+            generateHref={onGenerateChargesHref} />
         ) : (
           <>
             <div>

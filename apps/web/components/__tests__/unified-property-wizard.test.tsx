@@ -80,6 +80,13 @@ describe("UnifiedPropertyWizard", () => {
     expect(screen.getByRole("link", { name: "Connect your bank" })).toHaveAttribute("href", "/connect/onboard");
   });
 
+  it("hides bank setup for an invited tenant when the bank is connected", async () => {
+    await reachSuccess(true, undefined, { dueDay: "3" });
+    expect(screen.getByText("We emailed Maya an invite.")).toBeInTheDocument();
+    expect(screen.queryByText("Connect your bank so tenants can pay online.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Connect your bank" })).not.toBeInTheDocument();
+  });
+
   it("returns to the client after setup when requested", async () => {
     await reachSuccess(true, "/manager/clients/client-1");
     const button = await screen.findByRole("button", { name: "Back to client" });

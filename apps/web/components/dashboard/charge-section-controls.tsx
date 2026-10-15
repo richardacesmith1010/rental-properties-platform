@@ -54,7 +54,7 @@ export function ChargeSectionHeader({
               "bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--ink-2)] transition-colors",
               "hover:border-[var(--accent-line)] hover:bg-[var(--accent-weak)] hover:text-[var(--accent)] sm:w-auto"
             ].join(" ")}
-            title="Generate rent payments for the current billing period."
+            title={simpleRentView ? "Add this month's rent now." : "Generate this month's rent."}
           >
             {simpleRentView ? "Add this month's rent now" : "Generate this month's rent"}
           </Link>
@@ -111,21 +111,24 @@ export function ChargeSectionFilters({
   );
 }
 
-export function RentEmptyState({ isTenantView, hasRows, hasActiveLeases, generateHref }: {
+export function RentEmptyState({ isTenantView, hasRows, hasActiveLeases, hasCurrentMonthRent, generateHref }: {
   isTenantView: boolean;
   hasRows: boolean;
   hasActiveLeases: boolean;
+  hasCurrentMonthRent: boolean;
   generateHref?: string;
 }) {
+  const awaitingRent = !isTenantView && hasActiveLeases && !hasCurrentMonthRent;
   return <div>
     <EmptyState icon={CreditCard}
-      title={hasRows ? "No matching rent" : isTenantView ? "No rent posted yet" : "No rent yet"}
-      description={hasRows ? (isTenantView ? "No rent matches this view right now."
-        : "No rent matches this filter right now.") : isTenantView
+      title={awaitingRent ? "No rent yet" : hasRows ? "No matching rent" : isTenantView ? "No rent posted yet" : "No rent yet"}
+      description={awaitingRent ? "This month's rent shows up by tomorrow morning."
+        : hasRows ? (isTenantView ? "No rent matches this view right now."
+          : "No rent matches this filter right now.") : isTenantView
         ? "No rent posted yet. Rent is added each month from your lease."
         : hasActiveLeases ? "This month's rent shows up by tomorrow morning."
           : "Rent will appear here after you create a lease."} />
-    {!isTenantView && !hasRows && hasActiveLeases && generateHref ? (
+    {awaitingRent && generateHref ? (
       <Link href={generateHref} className="mx-auto mt-4 flex min-h-11 w-fit items-center
         rounded-md bg-[var(--accent)] px-4 text-[var(--accent-contrast)]">
         Add this month&apos;s rent now
