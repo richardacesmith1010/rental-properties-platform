@@ -12,9 +12,9 @@ export {
   initiateAccountStripeConnect,
   initiateMemberPayoutConnect,
   checkConnectStatus,
-  getExpressDashboardUrl,
-  updateManagementFee
+  getExpressDashboardUrl
 } from "./connect";
+export { updateManagementFee } from "./management-fee";
 export { updateDistributionConfig } from "./distributions";
 export {
   submitDistributionChangeRequest,

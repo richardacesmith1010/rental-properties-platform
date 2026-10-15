@@ -1,4 +1,4 @@
-import dynamic from "next/dynamic";
+import { AnalyticsSection } from "./analytics-section-lazy";
 import type { ReactNode } from "react";
 import { ClientsSection } from "../clients/clients-section";
 import { FeatureWarning } from "@/components/shared/feature-warning";
@@ -20,17 +20,6 @@ import { VendorsSection } from "../vendors-section";
 import { lazySectionComponents } from "../section-map";
 import type { SectionRendererComponentProps } from "../section-renderer";
 import { HomesWallet } from "../owner-homes/homes-wallet";
-const AnalyticsSection = dynamic(
-  () => import("../analytics-section").then((module) => module.AnalyticsSection),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground shadow-sm">
-        Loading analytics...
-      </div>
-    )
-  }
-);
 const {
   notifications: NotificationsSection,
   inbox: InboxSection,
