@@ -1059,3 +1059,11 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
     `accounts` 93–218 → `bank-needs` 104–335 (3); `expenses` ~100–125; `tasks` ~100–150;
   - `home.wallet` total 639–817 ms, 18 queries. Every single query ≈ 95–125 ms.
 - **Next (proposed):** 233b move Vercel functions sfo1 → pdx1 (next to Supabase us-west-2), measure; then 233c: rent-rows to one round trip, administered 3 → 1, so wallet ≈ max(portfolio+lines) ≈ 0.45 s.
+
+## Sprints 233b + 233d SHIPPED (2026-10-15) — functions to pdx1; Speed 77 → 85
+- 233b `f44d502` (Claude; `apps/web/vercel.json` `"regions": ["pdx1"]`; boundary exception stated: config only; rollback = remove the key and redeploy). Deploy `gsonsmaxx`.
+- Result (production): owner Home p75 1.65 → **0.82 s**, Rent 1.96 → 0.75 s, tenant 1.43 → 0.62 s; single query ~34 ms; `home.wallet` ~200 ms; owner data-assembly ~335 ms. Log lines still show `region=sfo1` (likely the entry region; the timings show functions next to the DB).
+- 233d `05c662b` (Codex luna low): theme smoke + dark-mode spec use `getByRole("main")`; the faster pages exposed React's hidden swap copy to `locator("main")` (strict mode, 2/4 runs). Claude probe: 0/12 duplicates on plain loads; Sentry clean → test-only. Theme smoke 5/5; full smoke 27/27.
+- CI on `05c662b`: attempt 1 failed in `next build` (`next/font` Google fetch: "Cannot read properties of null"), attempt 2 green. If it recurs, consider self-hosting Geist via `next/font/local`.
+- 233c (wallet rent-rows in one round trip) is no longer needed for the target; parked as an optional follow-up.
+- Lesson L-023 added.

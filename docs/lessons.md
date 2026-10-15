@@ -112,3 +112,8 @@ Permanent log of Claude's mistakes and the rule each one created. Read it before
 **What was correct:** A text-in-DOM test does not prove the text is visible. Arbitrary-variant selectors that hide children are fragile.
 **Rule:** Every UI sprint walk must screenshot each primary button and confirm its label is visible. In review, grep new UI code for `]:hidden`, `]:opacity-0` and `!opacity` on child selectors and reject them unless a test proves the visible state. Also, while Codex works in the tree, deploy only from a clean `git worktree` of HEAD (never the dirty tree).
 
+#### L-023 | 2026-10-15 | TECHNICAL
+**What happened:** For months every server query cost ~95–125 ms because Vercel functions ran in sfo1 while Supabase is in us-west-2. Sprints 179–184 and 225 tuned query counts and parallelism around that tax. Moving functions to pdx1 (Sprint 233b, one config line) cut owner Home p75 from 1.65 s to 0.82 s and every single query to ~34 ms. Separately, the 233a packet wrapped steps in nested `measurePerf` timers without checking that the query counter was scope-local; it silently zeroed the outer `home.wallet` count until Claude's review.
+**What was correct:** Check the fixed cost per round trip (and where it comes from) before optimizing query structure. Perf instrumentation is code: check how it composes.
+**Rule:** Any speed sprint starts by reading one single-query `[perf:*]` step: if one PostgREST call costs > 50 ms, check function region vs database region first. Any packet adding nested timers must state how counts roll up and test it. When a change makes pages faster, expect timing races in browser tests: use accessible locators (`getByRole`) over raw tags so hidden swap copies are not counted.
+
