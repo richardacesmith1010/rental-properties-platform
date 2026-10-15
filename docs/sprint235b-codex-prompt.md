@@ -1,4 +1,4 @@
-# Sprint 235b — Onboarding fixes from the live walk (L2) — rev 1
+# Sprint 235b — Onboarding fixes from the live walk (L2) — rev 2 (adds R1 from the 235a live walk)
 
 ## 1. Objective
 Fix the onboarding findings from the 2026-10-15 live walk (`docs/onboarding-walk-2026-10-15.md`) that are not money
@@ -6,7 +6,7 @@ logic: F15, K5, F5, K6, F8, F10, F13. Goal: a brand-new owner and tenant never m
 or a dead end between sign-up and first rent.
 
 ## 2. Context
-- HEAD `7bc2755` (main). Runs **after** 235a is merged (both touch `charges-implementation.tsx`); **do not touch any file listed in 235a** (tenant rent card,
+- HEAD `9d8433b` (main, 235a shipped). Shares `charges-implementation.tsx` and `charge-more-menu.tsx` with 235a; **do not touch any file listed in 235a** (tenant rent card,
   pay card, charges.ts, charge-more-menu, charges-implementation lines 68/95/366/388-405).
 - **F15 (owner Rent page).**
   - Empty state `components/dashboard/charges/charges-implementation.tsx:347-356`: owner text
@@ -43,7 +43,7 @@ or a dead end between sign-up and first rent.
   submit; sentences ≤ 12 words.
 
 ## 3. In scope
-F15, K5, F5, K6, F8, F10 as specified in §6.
+F15, K5, F5, K6, F8, F10 and R1 as specified in §6.
 
 ## 4. Out of scope
 Money calculations, rent generation timing (keep current + next month), tenant rent/pay cards, the DB trigger, emails
@@ -63,6 +63,7 @@ other than the invite greeting name, LLC flows, manager wizard differences beyon
 11. `apps/web/components/dashboard/owner-home/home-pass-card.tsx`
 12. `apps/web/components/dashboard/owner-homes/homes-wallet.tsx`
 13. `apps/web/components/dashboard/index.tsx` (onComplete target only)
+13b. `apps/web/components/dashboard/charge-more-menu.tsx` (R1 only)
 14. Tests: `components/__tests__/unified-property-wizard.test.tsx`, `app/actions/__tests__/unified-setup.test.ts`
     (create if missing), `components/__tests__/onboarding-form.test.tsx` (create if missing),
     `components/__tests__/charges-section.test.tsx` (empty-state cases only), `lib/__tests__/owner-wallet-home.test.ts`
@@ -99,6 +100,10 @@ other than the invite greeting name, LLC flows, manager wizard differences beyon
    for that lease's property and the tenant's email (case-insensitive). Home pass card and Homes card show
    `Invite sent` next to the tenant name when true. Query errors are checked: on error, log and treat as false
    (never fail the page).
+7b. **R1 (from the 235a live walk).** After a successful "Undo payment", `charge-more-menu.tsx:181` calls
+   `toast.success(...)` and then `window.location.reload()`, so the message vanishes and the Rent filter resets. Replace
+   the reload with `router.refresh()` (`next/navigation`) so the toast stays visible and the current filter stays.
+   Errors unchanged.
 8. Plain language: no banned words, sentences ≤ 12 words. Lines ≤ 140 chars. Every touched file ≤ 500 lines.
 9. **The user should never need to read instructions to complete this flow.**
 
@@ -129,6 +134,8 @@ Do NOT run `npm run gate:web`. Claude runs it.
    query error → false and the page still loads; `home.wallet.invites` is measured; home card and Homes card show
    `Invite sent` only when true.
 10. Plain-language test passes with no new exceptions.
+11. R1: after a successful undo the success toast is shown and `router.refresh` is called; `window.location.reload`
+    is not called (spy).
 
 ## 9. Report format
 Compact status only: files changed with line counts, tests per criterion, command results. Do NOT include

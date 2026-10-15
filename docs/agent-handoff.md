@@ -1073,3 +1073,19 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - 5 major findings (F17 tenant shown next month as due now; F15 no way to post first rent + wrong empty state; F19 no undo for Mark paid; K5 tenant name guessed from email; F3 Supabase default sender for sign-up email) + 6 medium + low. Full table: `docs/onboarding-walk-2026-10-15.md`.
 - Accounts kept for re-walk (owner decides later: keep as designated onboarding accounts or delete).
 - **Next:** Sprint 235 fix packet (F17 + F19 money display/undo = L3 + ChatGPT; F15, K5, F5, K6, F8, F10, F13 = L2), F3 = Supabase custom SMTP via Resend (config, owner approval).
+
+## Sprint 235a SHIPPED (2026-10-15) — future rent not "due"; Undo payment (L3; ChatGPT REJECT ×3 → rev 4 APPROVE WITH CHANGES → rev 5)
+- `9d8433b`. Codex gpt-6-sol high, 1 attempt. Migration `20261018_sprint235a_undo_manual_payment.sql` applied live by Claude
+  (owner_dashboard_payload: live body md5 matched repo before; new body differs by one line `and pay.reversed_at is null`).
+- F17: `isRentOpenForTenant` (due ≤ today+5 UTC) drives tenant card, pay card, pay state, "I paid this", checkout and owner
+  Due soon; server rejects "This rent is not due yet." F16 fixed live (Due soon (0) for a rent 31 days out).
+- F19: `undo_manual_payment` (SECURITY DEFINER, service_role only, row lock, newest payment of any source, manual only,
+  coverage by sum, audit with before/after, lock_timeout 5s → busy). `payments.recorded_via` (backfill: 11 → legacy) and
+  `created_at`; insert trigger locks parent rent; payment rent reassignment blocked. Notifications retained (known limitation).
+- Verify: SQL fixture `SPRINT235A_FIXTURE_PASSED` (Claude fixed 2 fixture bugs: missing ownership account; coverage amounts);
+  overlap test via a second client: insert blocked 8.8 s behind a held lock (note: FK key-share also conflicts, so the
+  guarantee holds even without the trigger); busy returned after 5.3 s. Gate 2462/2462; CI gate success; deploy `ky47un5jp`;
+  smoke 27/27 (owner Home p75 0.94 s); Sentry clean.
+- Live walk (walk owner): legacy Oct payment → "This payment is too old to undo here."; Nov Mark paid → Undo → Mark paid → Undo,
+  DB: pending, 2 reversed, 2 audits. **R1:** success toast lost to `window.location.reload()` → folded into 235b.
+- Follow-ups: store payment id on payment notifications (then undo can remove them); make payment writers atomic.
