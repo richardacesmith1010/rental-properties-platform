@@ -1049,3 +1049,13 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Verify: gate 2424/2424 + build; CI gate success; deploy `rental-properties-platform-byzamnpjm` (first upload hit a TLS error, retry OK); production smoke 27/27 (Analytics covered by the mobile-layout spec for owner + manager); Sentry clean. No live click-walk: no visible change.
 - Speed (same smoke): owner Home p75 1.65 s, Rent 1.83 s, tenant 1.43 s.
 - **Next:** Speed (77) — owner Home p75 back to ≤ 1.5 s (`home.wallet` 16 queries, 746–1011 ms).
+
+## Sprint 233a + 233a-b SHIPPED (2026-10-15) — owner Home wallet timings (L1)
+- `38b0dec` (Codex gpt-6-luna low ×2). `home.wallet.*` sub-step perf logs; nested `measureQueryCount` scopes roll up to parents (233a-b, found in Claude review: nested scopes hid queries from `home.wallet`).
+- Verify: gate 2431/2431; CI gate success; deploy `oxo05zouq`; smoke 27/27 (owner Home p75 1.65 s).
+- **Production breakdown (11 Home loads, 03:33 UTC, sfo1 functions → us-west-2 DB):**
+  - `administered` 209–283 ms (3 queries) runs ALONE before everything else;
+  - then in parallel: `rent-rows` **420–585 ms (4 queries, serial)** ← critical; `portfolio` 181–331 (4) → `charge-lines` 88–142 (1);
+    `accounts` 93–218 → `bank-needs` 104–335 (3); `expenses` ~100–125; `tasks` ~100–150;
+  - `home.wallet` total 639–817 ms, 18 queries. Every single query ≈ 95–125 ms.
+- **Next (proposed):** 233b move Vercel functions sfo1 → pdx1 (next to Supabase us-west-2), measure; then 233c: rent-rows to one round trip, administered 3 → 1, so wallet ≈ max(portfolio+lines) ≈ 0.45 s.
