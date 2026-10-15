@@ -20,15 +20,6 @@ function clampDueDay(startDate: string) {
   return String(Math.max(1, Math.min(28, day)));
 }
 
-function getTenantDisplayName(email: string) {
-  const local = email.split("@")[0] ?? "Tenant";
-  return local
-    .split(/[._-]+/)
-    .filter(Boolean)
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(" ") || "Tenant";
-}
-
 async function cleanupSetupDraft(propertyId: string | null, unitIds: string[]) {
   if (!propertyId) {
     return;
@@ -147,7 +138,7 @@ export async function createPropertyWithSetup(
 
   const tenantInviteFormData = new FormData();
   tenantInviteFormData.set("email", tenantEmail);
-  tenantInviteFormData.set("fullName", getTenantDisplayName(tenantEmail));
+  tenantInviteFormData.set("fullName", `${payload.lease.tenantFirstName} ${payload.lease.tenantLastName}`);
   tenantInviteFormData.set("propertyId", propertyId);
   tenantInviteFormData.set("unitId", leasedUnitId);
   tenantInviteFormData.set("monthlyRentDollars", String(payload.lease.monthlyRentDollars ?? 0));
@@ -182,9 +173,11 @@ export async function createPropertyWithSetup(
   leaseFormData.set("tenantProfileId", inviteResult.tenantProfileId);
   leaseFormData.set("startDate", payload.lease.startDate);
   leaseFormData.set("endDate", payload.lease.endDate);
-  leaseFormData.set("dueDayOfMonth", clampDueDay(payload.lease.startDate));
+  const dueDay = payload.lease.dueDayOfMonth ?? Number(clampDueDay(payload.lease.startDate));
+  leaseFormData.set("dueDayOfMonth", String(Math.max(1, Math.min(28, dueDay))));
   leaseFormData.set("monthlyRentDollars", String(payload.lease.monthlyRentDollars));
   leaseFormData.set("depositDollars", String(payload.lease.depositDollars ?? 0));
+  leaseFormData.set("collectsOutsideDomus", String(payload.lease.collectsOutsideDomus));
   leaseFormData.set("gracePeriodDays", "5");
   leaseFormData.set("lateFeeDollars", "0");
 

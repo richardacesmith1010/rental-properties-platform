@@ -5,6 +5,7 @@ const createNotificationWithDeliveryMock = vi.hoisted(() => vi.fn());
 const notifyPropertyTeamMock = vi.hoisted(() => vi.fn());
 const getPropertyNotificationDeliveryPreferencesMock = vi.hoisted(() => vi.fn());
 const createAdminClientMock = vi.hoisted(() => vi.fn());
+const createRentChargeWithLinesMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/notifications", () => ({
   createNotificationWithDelivery: createNotificationWithDeliveryMock,
@@ -15,12 +16,17 @@ vi.mock("@/lib/notification-preferences", () => ({
   getNotificationPreference: vi.fn().mockResolvedValue({ inAppEnabled: true, emailEnabled: true })
 }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: createAdminClientMock }));
+vi.mock("@/lib/charge-lines", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/charge-lines")>(),
+  createRentChargeWithLines: createRentChargeWithLinesMock
+}));
 import { createNotificationAdminClient, notificationUpserts } from "./notification-test-helpers";
 import {
   buildDueDatesByLeaseId,
   getCandidateMonths,
   isLeaseActiveForChargeMonth,
-  applyLateFeesToOverdueCharges
+  applyLateFeesToOverdueCharges,
+  generateMonthlyChargesForPropertyIdsWithClient
 } from "@/lib/charge-generation";
 
 function createLateFeeSupabaseMock(params: {
@@ -162,6 +168,31 @@ describe("charge generation", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllEnvs();
+  });
+
+  it("returns exact rent messages for two added rows and none", async () => {
+    setToday("2026-10-15T12:00:00.000Z");
+    createRentChargeWithLinesMock.mockResolvedValue(true);
+    createAdminClientMock.mockReturnValue({});
+    const lease = { id: "lease-1", unit_id: "unit-1", tenant_profile_id: "tenant-1",
+      start_date: "2026-10-01", end_date: "2027-12-31", created_at: "2026-10-01",
+      due_day_of_month: 20, monthly_rent_cents: 100000, lease_status: "active" };
+    let existing: { lease_id: string; due_date: string }[] = [];
+    const client = { from: (table: string) => ({ select: (columns: string) => {
+      let data: unknown[] = table === "units" ? [{ id: "unit-1", property_id: "property-1" }]
+        : table === "leases" ? [lease]
+          : columns === "lease_id, due_date" ? existing : [];
+      const query = { in: () => query, eq: () => query, is: () => query, lt: () => query,
+        then: (resolve: (value: unknown) => void) => Promise.resolve({ data, error: null }).then(resolve) };
+      return query;
+    } }) } as unknown as SupabaseClient;
+    expect(await generateMonthlyChargesForPropertyIdsWithClient(client, ["property-1"]))
+      .toBe("Rent added for this month.");
+    expect(createRentChargeWithLinesMock).toHaveBeenCalledTimes(2);
+    existing = [{ lease_id: "lease-1", due_date: "2026-10-20" },
+      { lease_id: "lease-1", due_date: "2026-11-20" }];
+    expect(await generateMonthlyChargesForPropertyIdsWithClient(client, ["property-1"]))
+      .toBe("Rent is already up to date.");
   });
 
   it("returns exactly the current month and next month as charge candidates", () => {

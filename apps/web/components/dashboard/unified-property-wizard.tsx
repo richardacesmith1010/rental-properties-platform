@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
@@ -29,10 +28,8 @@ import type { ClientOverview } from "@/lib/client-overview";
 import type { StatefulAction } from "./types";
 import { WhoseHomeStep } from "./clients/whose-home-step";
 import { cn, formatCurrency } from "@/lib/format";
-
 export type { UnifiedSetupAction } from "./property-wizard-drafts";
 import type { UnifiedSetupAction } from "./property-wizard-drafts";
-
 interface UnifiedPropertyWizardProps {
   open: boolean;
   accountId?: string | null;
@@ -102,7 +99,6 @@ export function UnifiedPropertyWizard({
     if (!open) {
       return;
     }
-
     const focusTarget = getFirstInput(contentRef.current);
     focusTarget?.focus();
   }, [open, step]);
@@ -119,12 +115,10 @@ export function UnifiedPropertyWizard({
       return current.length > 1 ? [current[0]] : current;
     });
   }, [hasMultipleUnits]);
-
   useEffect(() => {
     if (units.length === 0) {
       return;
     }
-
     setLease((current) => {
       const currentUnit = units.find((unit) => unit.id === current.leasedUnitId) ?? units[0];
       const nextRent = currentUnit?.monthlyRentDollars ?? "";
@@ -135,17 +129,14 @@ export function UnifiedPropertyWizard({
       };
     });
   }, [units]);
-
   const selectedLeaseUnit = useMemo(
     () => units.find((unit) => unit.id === lease.leasedUnitId) ?? units[0] ?? null,
     [lease.leasedUnitId, units],
   );
-
   useEffect(() => {
     if (!selectedLeaseUnit) {
       return;
     }
-
     setLease((current) =>
       current.leasedUnitId === selectedLeaseUnit.id &&
       current.monthlyRentDollars === selectedLeaseUnit.monthlyRentDollars
@@ -157,7 +148,6 @@ export function UnifiedPropertyWizard({
           },
     );
   }, [selectedLeaseUnit]);
-
   const propertyStepError = getPropertyStepError({
     propertyName,
     addressLine1,
@@ -175,7 +165,6 @@ export function UnifiedPropertyWizard({
       setStep(stepOrder[currentIndex - 1]);
     }
   };
-
   const goNext = () => {
     setErrorMessage(null);
     if (pickingClient) { if (selectedAccountId) setPickingClient(false); return; }
@@ -234,6 +223,10 @@ export function UnifiedPropertyWizard({
         hasTenant: lease.hasTenant,
         leasedUnitId: lease.leasedUnitId,
         tenantEmail: lease.tenantEmail.trim(),
+        tenantFirstName: lease.tenantFirstName.trim(),
+        tenantLastName: lease.tenantLastName.trim(),
+        dueDayOfMonth: Number(lease.dueDayOfMonth),
+        collectsOutsideDomus: lease.collectsOutsideDomus,
         startDate: lease.startDate,
         endDate: lease.endDate,
         monthlyRentDollars: parseNumber(lease.monthlyRentDollars, 0),
@@ -305,7 +298,7 @@ export function UnifiedPropertyWizard({
           className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-4 pt-5 sm:px-6 sm:pb-6"
         >
           {errorMessage ? <Alert variant="error">{errorMessage}</Alert> : null}
-          {successMessage && step === "success" ? (
+          {successMessage && step === "success" && managerClients ? (
             <Alert variant="success">{successMessage}</Alert>
           ) : null}
 
@@ -393,11 +386,16 @@ export function UnifiedPropertyWizard({
                     {lease.hasTenant ? (
                       <>
                         <h4 className="mt-2 text-xl font-semibold text-foreground">
-                          {lease.tenantEmail || "Tenant invite pending"}
+                          {`${lease.tenantFirstName} ${lease.tenantLastName}`.trim()}
                         </h4>
                         <p className="mt-1 text-sm text-muted-foreground">
+                          {lease.tenantEmail}<br />
                           {selectedLeaseUnit?.label ?? "Selected unit"} • {lease.startDate} to{" "}
                           {lease.endDate}
+                        </p>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          Due on day {lease.dueDayOfMonth}
+                          {lease.collectsOutsideDomus ? " • Pays outside Domus" : ""}
                         </p>
                         <p className="mt-3 text-sm text-muted-foreground">
                           Rent{" "}
@@ -430,6 +428,8 @@ export function UnifiedPropertyWizard({
           <PropertyWizardSuccess
             step={step}
             bankConnected={bankConnected}
+            tenantFirstName={lease.hasTenant ? lease.tenantFirstName.trim() : null}
+            paysOutsideDomus={lease.collectsOutsideDomus}
             bankSetupHref={bankSetupHref}
             finishSetup={finishSetup}
             returnToClientHref={returnToClientHref}

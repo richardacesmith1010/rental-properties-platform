@@ -638,6 +638,9 @@ describe("createPropertyWithSetupSchema", () => {
     lease: {
       hasTenant: true,
       leasedUnitId: "unit-a",
+      tenantFirstName: "Maya",
+      tenantLastName: "Lopez",
+      dueDayOfMonth: 1,
       tenantEmail: "tenant@example.com",
       startDate: "2026-04-01",
       endDate: "2027-03-31",
@@ -653,6 +656,23 @@ describe("createPropertyWithSetupSchema", () => {
     });
 
     expect(result.success).toBe(true);
+  });
+
+  it("requires the tenant first name when a tenant is added", () => {
+    const result = createPropertyWithSetupSchema.safeParse({
+      payload: JSON.stringify({
+        ...validPayload,
+        lease: {
+          ...validPayload.lease,
+          tenantFirstName: undefined
+        }
+      })
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toBe("Enter the tenant's first and last name.");
+    }
   });
 
   it("requires tenant details when the lease step says a tenant exists", () => {

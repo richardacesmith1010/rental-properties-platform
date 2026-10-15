@@ -15,7 +15,8 @@ export function HomePassCard({ home, index, single, showAccount = false }: {
   const next = nextDates[0];
   const nextAmount = nextDates.filter((item) => item.nextDueDate === next?.nextDueDate)
     .reduce((sum, item) => sum + item.rentCents, 0);
-  const names = [...new Set(home.activeLeases.flatMap((lease) => lease.tenantNames))].join(", ");
+  const names = [...new Set(home.activeLeases.flatMap((lease) =>
+    lease.tenantNames.map((name) => `${name}${lease.invitePending ? " · Invite sent" : ""}`)))].join(", ");
   return (
     <a href={`/owner/money?property=${encodeURIComponent(home.id)}`} title={`Open money for ${home.name}`}
       className={`flex min-h-64 snap-start flex-col justify-between p-5 text-white ${single

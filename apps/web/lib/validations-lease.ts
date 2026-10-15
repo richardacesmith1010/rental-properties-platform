@@ -56,6 +56,13 @@ const unifiedSetupLeaseSchema = z
       (value) => (value === "" || value == null ? undefined : value),
       z.string().min(1, "Choose a unit for the lease.").optional()
     ),
+    tenantFirstName: z.string().trim().max(60).optional(),
+    tenantLastName: z.string().trim().max(60).optional(),
+    dueDayOfMonth: z.preprocess(
+      (value) => value === 0 || value === "" || value == null ? undefined : value,
+      z.coerce.number().int().min(1).max(28).optional()
+    ),
+    collectsOutsideDomus: checkboxBooleanSchema.optional().default(false),
     tenantEmail: z.preprocess(
       (value) => (value === "" || value == null ? undefined : value),
       z.string().email("Enter a valid tenant email.").optional()
@@ -84,6 +91,14 @@ const unifiedSetupLeaseSchema = z
       });
     }
 
+    if (!data.tenantFirstName || !data.tenantLastName) {
+      context.addIssue({ code: z.ZodIssueCode.custom,
+        message: "Enter the tenant's first and last name.", path: ["tenantFirstName"] });
+    }
+    if (!data.dueDayOfMonth) {
+      context.addIssue({ code: z.ZodIssueCode.custom,
+        message: "Due day must be between 1 and 28.", path: ["dueDayOfMonth"] });
+    }
     if (!data.tenantEmail) {
       context.addIssue({
         code: z.ZodIssueCode.custom,

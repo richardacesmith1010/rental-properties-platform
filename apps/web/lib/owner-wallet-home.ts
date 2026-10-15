@@ -17,7 +17,7 @@ export interface WalletHomeEntry {
   id: string; name: string; city: string; state: string; accountId: string; accountName: string;
   accountType: "individual" | "llc"; addressLine1: string; leaseEndDate: string | null;
   rentDueThisYear: number; rentOnTimeThisYear: number;
-  activeLeases: { tenantNames: string[]; rentCents: number; nextDueDate: string | null }[];
+  activeLeases: { tenantNames: string[]; rentCents: number; nextDueDate: string | null; invitePending?: boolean }[];
   isLate: boolean; leftCents: number; depositCents: number; depositReturned: boolean;
 }
 
@@ -77,7 +77,7 @@ export async function loadOwnerWalletHome(userId: string, today = new Date()): P
       getPortfolioData(userId, null, ids));
     const accountsPromise = measurePerf("owner", "home.wallet.accounts", () =>
       getOwnershipAccountsForUser(userId));
-    const [portfolio, accounts, rentRows, expenses, bankNeeds, lines, myTasksDueCount] = await Promise.all([
+    const [portfolio, accounts, rentRows, expenses, bankNeeds, lines, myTasksDueCount, invites] = await Promise.all([
       portfolioPromise,
       accountsPromise,
       measurePerf("owner", "home.wallet.rent-rows", () => loadRentRowsForProperties(ids, from, yearTo)),
@@ -99,9 +99,17 @@ export async function loadOwnerWalletHome(userId: string, today = new Date()): P
           return (data ?? []) as ChargeLine[];
         });
       }),
-      measurePerf("owner", "home.wallet.tasks", () => countMyDueTasks(userId, today))
+      measurePerf("owner", "home.wallet.tasks", () => countMyDueTasks(userId, today)),
+      measurePerf("owner", "home.wallet.invites", async () => {
+        const result = await admin.from("invitations").select("property_id,email")
+          .in("property_id", ids).eq("role", "tenant").eq("status", "pending");
+        if (result.error) { console.error("Wallet invites load failed", result.error); return []; }
+        return result.data ?? [];
+      })
     ]);
     if (expenses.error) throw expenses.error;
+    const pendingInviteKeys = new Set(invites.map((invite) =>
+      `${invite.property_id}:${invite.email.toLowerCase()}`));
     const idSet = new Set(ids);
     const accountById = new Map(accounts.map((account) => [account.id, account]));
     const administeredById = new Map(administered.map((property) => [property.id, property.ownerAccountId]));
@@ -164,7 +172,8 @@ export async function loadOwnerWalletHome(userId: string, today = new Date()): P
         rentOnTimeThisYear: dueByProperty.get(property.id)?.onTime ?? 0,
         activeLeases: active
           .map((lease) => ({ tenantNames: [lease.tenantName].filter(Boolean), rentCents: lease.monthlyRentCents,
-            nextDueDate: getNextDueDateForLease(lease, today)?.toISOString().slice(0, 10) ?? null })),
+            nextDueDate: getNextDueDateForLease(lease, today)?.toISOString().slice(0, 10) ?? null,
+            invitePending: pendingInviteKeys.has(`${property.id}:${lease.tenantEmail.toLowerCase()}`) })),
         depositCents: active.reduce((sum, lease) => sum + depositHeldCents(
           { deposit_cents: lease.depositCents }, lease.depositReturn ?? null), 0),
         depositReturned: active.length > 0 && active.every((lease) => Boolean(lease.depositReturn)),

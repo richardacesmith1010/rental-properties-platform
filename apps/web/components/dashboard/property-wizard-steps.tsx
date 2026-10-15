@@ -1,10 +1,10 @@
 "use client";
-
 import type { Dispatch, SetStateAction } from "react";
 import { Building2, Home, UserRoundPlus } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Select } from "../ui/select";
+import { LeaseCollectionSetting } from "./lease-collection-setting";
 import {
   PROPERTY_TYPE_OPTIONS, createUnitDraft, shouldAdvanceOnEnter,
   type PropertyType, type UnitDraft, type LeaseDraft, type WizardStep
@@ -403,10 +403,19 @@ export function LeaseStep({ step, lease, setLease, units, goNext }: LeaseStepPro
                   </Select>
                 </label>
               ) : null}
+              <label className="space-y-1.5 text-sm font-medium text-foreground">
+                <span>Tenant first name</span>
+                <Input data-autofocus="true" value={lease.tenantFirstName} maxLength={60}
+                  onChange={(event) => setLease((current) => ({ ...current, tenantFirstName: event.target.value }))} />
+              </label>
+              <label className="space-y-1.5 text-sm font-medium text-foreground">
+                <span>Tenant last name</span>
+                <Input value={lease.tenantLastName} maxLength={60}
+                  onChange={(event) => setLease((current) => ({ ...current, tenantLastName: event.target.value }))} />
+              </label>
               <label className="space-y-1.5 text-sm font-medium text-foreground md:col-span-2">
                 <span>Tenant email</span>
                 <Input
-                  data-autofocus="true"
                   type="email"
                   value={lease.tenantEmail}
                   onChange={(event) =>
@@ -422,7 +431,10 @@ export function LeaseStep({ step, lease, setLease, units, goNext }: LeaseStepPro
                   type="date"
                   value={lease.startDate}
                   onChange={(event) =>
-                    setLease((current) => ({ ...current, startDate: event.target.value }))
+                    setLease((current) => ({ ...current, startDate: event.target.value,
+                      dueDayOfMonth: current.startDate && current.dueDayOfMonth &&
+                        current.dueDayOfMonth !== String(Math.min(28, Number(current.startDate.slice(-2)) || 1))
+                        ? current.dueDayOfMonth : String(Math.min(28, Number(event.target.value.slice(-2)) || 1)) }))
                   }
                   title="Enter the lease start date."
                 />
@@ -438,6 +450,16 @@ export function LeaseStep({ step, lease, setLease, units, goNext }: LeaseStepPro
                   title="Enter the lease end date."
                 />
               </label>
+              <label className="space-y-1.5 text-sm font-medium text-foreground">
+                <span>Rent due day</span>
+                <Input type="number" min="1" max="28" step="1" value={lease.dueDayOfMonth}
+                  onChange={(event) => setLease((current) => ({ ...current, dueDayOfMonth: event.target.value }))} />
+              </label>
+              <div className="md:col-span-2">
+                <LeaseCollectionSetting checked={lease.collectsOutsideDomus}
+                  onChange={(event) => setLease((current) => ({ ...current,
+                    collectsOutsideDomus: event.target.checked }))} />
+              </div>
               <label className="space-y-1.5 text-sm font-medium text-foreground">
                 <span>Monthly rent</span>
                 <Input

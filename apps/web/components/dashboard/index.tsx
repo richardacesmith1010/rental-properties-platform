@@ -278,7 +278,7 @@ export function Dashboard(props: DashboardProps) {
                 if (propertyId) {
                   sectionRendererProps.onSelectProperty(propertyId);
                 }
-                sectionRendererProps.openSection(isOwnerRole ? "portfolio" : "overview");
+                sectionRendererProps.openSection(isOwnerRole ? "home" : "overview");
               }}
             />
           ) : null}

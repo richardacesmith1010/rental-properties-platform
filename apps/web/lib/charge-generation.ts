@@ -485,8 +485,8 @@ export async function generateMonthlyChargesForPropertyIdsWithClient(
   await applyLateFeesToOverdueCharges(supabase, leaseIds, todayIso);
   await updateLeaseStatuses(supabase, propertyIds);
   return createdCount > 0
-    ? `Generated ${createdCount} new charge${createdCount === 1 ? "" : "s"}.`
-    : "No new charges generated (already up to date).";
+    ? "Rent added for this month."
+    : "Rent is already up to date.";
 }
 
 export async function generateMonthlyChargesForOwner(ownerUserId: string): Promise<string> {

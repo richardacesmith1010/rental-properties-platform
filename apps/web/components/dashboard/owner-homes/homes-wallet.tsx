@@ -21,7 +21,8 @@ function WalletCard({ home, index, onAddTenant }: {
   home: WalletHomeEntry; index: number; onAddTenant: (id: string) => void;
 }) {
   const leased = home.activeLeases.length > 0;
-  const names = [...new Set(home.activeLeases.flatMap((lease) => lease.tenantNames))].join(", ");
+  const names = [...new Set(home.activeLeases.flatMap((lease) =>
+    lease.tenantNames.map((name) => `${name}${lease.invitePending ? " · Invite sent" : ""}`)))].join(", ");
   const rent = home.activeLeases.reduce((sum, lease) => sum + lease.rentCents, 0);
   const chip = leased ? (home.isLate ? "Rent late" : "Rented") : "No lease yet";
   return <article className="overflow-hidden text-white" style={passCardStyle(index)}>

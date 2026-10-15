@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ChargesSection } from "@/components/dashboard/charges-section";
+import { ChargeMoreMenu } from "@/components/dashboard/charge-more-menu";
+import { toast } from "sonner";
 import { calculateCardFee, formatCentsAsDollars } from "@/lib/payment-fees";
 
 vi.mock("react-dom", async (importOriginal) => {
@@ -12,9 +14,11 @@ vi.mock("react-dom", async (importOriginal) => {
   };
 });
 
+const refresh = vi.hoisted(() => vi.fn());
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
-    refresh: vi.fn(),
+    refresh,
     push: vi.fn(),
     replace: vi.fn(),
     prefetch: vi.fn()
@@ -23,6 +27,16 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("ChargesSection", () => {
+  it("keeps the toast visible and refreshes after undo", async () => {
+    const undo = vi.fn(async () => ({ success: true as const, message: "Payment undone." }));
+    render(<ChargeMoreMenu onUndoPayment={undo} undoChargeId="rent-1" />);
+    fireEvent.click(screen.getByRole("button", { name: "Open more payment actions" }));
+    fireEvent.click(screen.getByRole("button", { name: "Undo payment" }));
+    fireEvent.click(screen.getByRole("dialog", { name: "Undo payment" })
+      .querySelectorAll("button")[1]);
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    expect(toast.success).toHaveBeenCalledWith("Payment undone.");
+  });
   it("counts only open pending rent in Due soon", () => {
     const today = new Date();
     const todayIso = today.toISOString().slice(0, 10);
@@ -104,6 +118,36 @@ describe("ChargesSection", () => {
     id: "550e8400-e29b-41d4-a716-446655440010",
     status: "paid" as const
   };
+
+  it("shows the lease-aware empty state with an add-rent link", () => {
+    const { rerender } = render(<ChargesSection charges={[]} onPayCharge={async () => {}}
+      isOwnerView availableLeases={[{ id: "lease-1", tenantLabel: "Maya", propertyLabel: "Home" }]}
+      onGenerateChargesHref="/owner/generate" />);
+    expect(screen.getByRole("heading", { name: "No rent yet" })).toBeInTheDocument();
+    expect(screen.getByText("This month's rent shows up by tomorrow morning.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Add this month's rent now" }))
+      .toHaveAttribute("href", "/owner/generate");
+    rerender(<ChargesSection charges={[]} onPayCharge={async () => {}} isOwnerView
+      onGenerateChargesHref="/owner/generate" />);
+    expect(screen.getByText("Rent will appear here after you create a lease.")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Add this month's rent now" })).not.toBeInTheDocument();
+  });
+
+  it("hides add-now when each active lease has this month's rent", () => {
+    const month = new Date().toISOString().slice(0, 7);
+    const lease = { id: "lease-1", tenantLabel: "Maya", propertyLabel: "Home" };
+    const { rerender } = render(<ChargesSection isOwnerView onPayCharge={async () => {}}
+      availableLeases={[lease]} onGenerateChargesHref="/owner/generate"
+      charges={[{ id: "rent-1", leaseId: "lease-1", propertyId: "home",
+        dueDate: `${month}-20`, amountCents: 100000, status: "pending", category: "rent" }]} />);
+    expect(screen.queryByRole("link", { name: "Add this month's rent now" })).not.toBeInTheDocument();
+    rerender(<ChargesSection isOwnerView onPayCharge={async () => {}}
+      availableLeases={[lease, { id: "lease-2", tenantLabel: "Ana", propertyLabel: "Home" }]}
+      onGenerateChargesHref="/owner/generate"
+      charges={[{ id: "rent-1", leaseId: "lease-1", propertyId: "home",
+        dueDate: `${month}-20`, amountCents: 100000, status: "pending", category: "rent" }]} />);
+    expect(screen.getByRole("link", { name: "Add this month's rent now" })).toHaveAttribute("href", "/owner/generate");
+  });
 
   it("shows the generate charges link when href is provided", () => {
     render(
@@ -313,11 +357,13 @@ describe("ChargesSection", () => {
     expect(screen.getByRole("button", { name: "Due soon (1)" })).toHaveClass("font-semibold");
   });
 
-  it("hides owner generation and preserves manager generation", () => {
+  it("shows owner add link when a lease has no current rent", () => {
     const { rerender } = render(
-      <ChargesSection charges={[]} onPayCharge={async () => {}} isOwnerView onGenerateChargesHref="/owner/generate" />
+      <ChargesSection charges={[]} onPayCharge={async () => {}} isOwnerView
+        availableLeases={[{ id: "lease-1", tenantLabel: "Maya", propertyLabel: "Home" }]}
+        onGenerateChargesHref="/owner/generate" />
     );
-    expect(screen.queryByRole("link", { name: "Generate this month's rent" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Add this month's rent now" })).toBeInTheDocument();
 
     rerender(<ChargesSection charges={[]} onPayCharge={async () => {}} onGenerateChargesHref="/owner/generate" />);
     expect(screen.getByRole("link", { name: "Generate this month's rent" })).toBeInTheDocument();

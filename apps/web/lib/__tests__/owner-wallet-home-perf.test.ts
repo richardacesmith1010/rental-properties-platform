@@ -21,7 +21,7 @@ const accounts = [{ id: "a1", displayName: "Personal", accountType: "individual"
 const portfolio = {
   properties: [{ id: "p1", name: "Home", city: "Denver", state: "CO", addressLine1: "1 Main St",
     ownerAccountName: "Personal" }],
-  leases: [{ id: "l1", propertyId: "p1", tenantName: "Maya", active: true, monthlyRentCents: 100000,
+  leases: [{ id: "l1", propertyId: "p1", tenantName: "Maya", tenantEmail: "maya@example.com", active: true, monthlyRentCents: 100000,
     depositCents: 0,
     dueDayOfMonth: 1, startDate: "2025-01-01", endDate: "2028-01-01" }]
 };
@@ -31,6 +31,8 @@ const rows = {
   charges: [], payments: []
 };
 const expenseRows = { data: [], error: null };
+let inviteResponse: { data: { property_id: string; email: string }[]; error: Error | null } =
+  { data: [], error: null };
 const expenseQuery: {
   select: ReturnType<typeof vi.fn>; in: ReturnType<typeof vi.fn>; gte: ReturnType<typeof vi.fn>;
   lt: ReturnType<typeof vi.fn>; then: (resolve: (value: unknown) => void) => Promise<void>;
@@ -39,12 +41,13 @@ const expectedHome = {
   id: "p1", name: "Home", city: "Denver", state: "CO", accountId: "a1", accountName: "Personal",
   accountType: "individual", addressLine1: "1 Main St", leaseEndDate: "2028-01-01",
   rentDueThisYear: 0, rentOnTimeThisYear: 0,
-  activeLeases: [{ tenantNames: ["Maya"], rentCents: 100000, nextDueDate: "2026-11-01" }],
+  activeLeases: [{ tenantNames: ["Maya"], rentCents: 100000, nextDueDate: "2026-11-01", invitePending: false }],
   isLate: false, leftCents: 0, depositCents: 0, depositReturned: false
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  inviteResponse = { data: [], error: null };
   mocks.measurePerf.mockImplementation(async (_scope: string, _name: string, work: () => Promise<unknown>) => work());
   mocks.administered.mockResolvedValue(properties);
   mocks.portfolio.mockResolvedValue(portfolio);
@@ -56,21 +59,24 @@ beforeEach(() => {
   expenseQuery.gte.mockReturnValue(expenseQuery);
   expenseQuery.lt.mockReturnValue(expenseQuery);
   expenseQuery.then = (resolve: (value: unknown) => void) => Promise.resolve(expenseRows).then(resolve);
-  mocks.from.mockImplementation((table: string) => table === "property_expenses" ? expenseQuery : {
+  mocks.from.mockImplementation((table: string) => table === "property_expenses" ? expenseQuery :
+    table === "invitations" ? { select: () => ({ in: () => ({ eq: () => ({ eq: () =>
+      Promise.resolve(inviteResponse) }) }) }) } : {
     select: () => ({ in: () => ({ not: () => Promise.resolve({ data: [], error: null, count: 0 }) }) })
   });
 });
 
 describe("loadOwnerWalletHome performance measurements", () => {
-  it("measures each of the eight steps once with homes", async () => {
+  it("measures each of the nine steps once with homes", async () => {
     await loadOwnerWalletHome("owner", today);
     const calls = mocks.measurePerf.mock.calls.map(([scope, name]) => [scope, name]);
-    expect(calls).toHaveLength(8);
+    expect(calls).toHaveLength(9);
     expect(calls).toEqual(expect.arrayContaining([
       ["owner", "home.wallet.administered"], ["owner", "home.wallet.portfolio"],
       ["owner", "home.wallet.accounts"], ["owner", "home.wallet.rent-rows"],
       ["owner", "home.wallet.expenses"], ["owner", "home.wallet.bank-needs"],
-      ["owner", "home.wallet.charge-lines"], ["owner", "home.wallet.tasks"]
+      ["owner", "home.wallet.charge-lines"], ["owner", "home.wallet.tasks"],
+      ["owner", "home.wallet.invites"]
     ]));
   });
 
@@ -92,6 +98,22 @@ describe("loadOwnerWalletHome performance measurements", () => {
       ytd: { inCents: 0, outCents: 0 }, recent: [], bankNeedsCount: 0,
       hasBankConnection: false, hasPendingBankConnection: false, myTasksDueCount: 0
     });
+  });
+
+  it("marks only a matching pending tenant invitation", async () => {
+    inviteResponse = { data: [{ property_id: "p1", email: "MAYA@EXAMPLE.COM" }], error: null };
+    const result = await loadOwnerWalletHome("owner", today);
+    expect(result.ok && result.homes[0].activeLeases[0].invitePending).toBe(true);
+    inviteResponse = { data: [], error: null };
+    const accepted = await loadOwnerWalletHome("owner", today);
+    expect(accepted.ok && accepted.homes[0].activeLeases[0].invitePending).toBe(false);
+  });
+
+  it("keeps the wallet available when the invitations query fails", async () => {
+    inviteResponse = { data: [], error: new Error("query failed") };
+    const result = await loadOwnerWalletHome("owner", today);
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.homes[0].activeLeases[0].invitePending).toBe(false);
   });
 
   it("starts charge-lines after portfolio resolves and bank-needs after accounts resolve", async () => {

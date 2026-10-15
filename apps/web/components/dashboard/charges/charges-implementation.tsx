@@ -2,11 +2,9 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useFormState } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/dashboard/empty-state";
 import { BatchToolbar } from "@/components/dashboard/batch-toolbar";
 import { AutopayCard } from "../autopay-card";
 import { AnimatedList } from "@/components/ui/animated-list";
@@ -23,6 +21,7 @@ import { isRentOpenForTenant } from "@/lib/rent-urgency";
 import {
   ChargeSectionFilters,
   ChargeSectionHeader,
+  RentEmptyState,
   type ChargeFilter
 } from "../charge-section-controls";
 import { InlineAlert, exportChargesCsv, unavailableAction } from "./helpers";
@@ -59,6 +58,11 @@ export function ChargesSection({
   hideTenantPaymentControls = false
 }: ChargesSectionProps) {
   const simpleRentView = simpleRentViewProp ?? isOwnerView;
+  const month = new Date().toISOString().slice(0, 7);
+  const chargedLeaseIds = new Set(charges.filter((charge) =>
+    (charge.category ?? "rent") === "rent" && charge.dueDate.startsWith(month))
+    .map((charge) => charge.leaseId));
+  const showAddRentNow = availableLeases.some((lease) => !chargedLeaseIds.has(lease.id));
   const router = useRouter();
   const stripeConfigured = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
   const searchParams = useSearchParams();
@@ -271,10 +275,11 @@ export function ChargesSection({
         onOpenManualPayment={openFirstManualPayment}
         onOpenCreateCharge={() => setShowCreateChargeForm(true)}
         onGenerateChargesHref={onGenerateChargesHref}
+        showAddRentNow={showAddRentNow && charges.length > 0}
       />
       <CardContent>
         {simpleRentView ? (
-          <p className="mb-4 text-sm text-[var(--muted)]">Rent is added each month from your leases.</p>
+          <p className="mb-4 text-sm text-[var(--muted)]">Rent is added each month for every lease.</p>
         ) : null}
         {(showBankConnectionNotice ?? isOwnerView) && !bankConnected ? (
           <p className="mb-4 text-sm text-[var(--muted)]">
@@ -347,17 +352,8 @@ export function ChargesSection({
           </>
         ) : null}
         {filteredCharges.length === 0 ? (
-          <EmptyState
-            icon={CreditCard}
-            title={charges.length === 0 ? (isTenantView ? "No rent posted yet" : "No rent yet") : (isTenantView ? "No matching rent" : "No matching rent")}
-            description={
-              charges.length === 0
-                ? isTenantView
-                  ? "No rent posted yet. Rent is added each month from your lease."
-                  : "Rent will appear here after you create a lease."
-                : isTenantView ? "No rent matches this view right now." : "No rent matches this filter right now."
-            }
-          />
+          <RentEmptyState isTenantView={isTenantView} hasRows={charges.length > 0}
+            hasActiveLeases={availableLeases.length > 0} generateHref={onGenerateChargesHref} />
         ) : (
           <>
             <div>

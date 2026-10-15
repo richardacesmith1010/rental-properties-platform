@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { WalletHome } from "@/components/dashboard/owner-home/wallet-home";
+import { HomesWallet } from "@/components/dashboard/owner-homes/homes-wallet";
 import type { OwnerWalletHomeResult } from "@/lib/owner-wallet-home";
 
 const wallet: Extract<OwnerWalletHomeResult, { ok: true }> = { ok: true, homes: [
@@ -21,6 +22,18 @@ const base = { summary, bankState: { status: "connected" as const, href: "/conne
   onOpenSection: vi.fn() };
 
 describe("WalletHome", () => {
+  it("shows Invite sent on Home and Homes only for pending leases", () => {
+    const pending = { ...wallet, homes: wallet.homes.map((home) => ({ ...home,
+      activeLeases: home.activeLeases.map((lease) => ({ ...lease, invitePending: home.id === "b" })) })) };
+    const view = render(<WalletHome {...base} wallet={pending} />);
+    expect(screen.getByText("Maya · Invite sent")).toBeInTheDocument();
+    expect(screen.queryByText("Angel · Invite sent")).not.toBeInTheDocument();
+    view.unmount();
+    render(<HomesWallet wallet={pending} onAddHome={vi.fn()} onAddTenant={vi.fn()} manageContent={null} />);
+    expect(screen.getByText("Maya · Invite sent")).toBeInTheDocument();
+    expect(screen.queryByText("Angel · Invite sent")).not.toBeInTheDocument();
+  });
+
   it("renders passes for leased homes across accounts in name order", () => {
     render(<WalletHome {...base} wallet={wallet} />);
     const passes = screen.getByLabelText("Rented homes").querySelectorAll("a");

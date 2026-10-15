@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CircleOff, MessageSquare, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import type { ActionState } from "@/app/actions";
 
 export function ChargeMoreMenu({
@@ -164,27 +165,37 @@ export function ChargeMoreMenu({
           ) : null}
         </div>
       ) : null}
-      {confirmUndo ? <div className={[
-        "fixed inset-0 z-50 flex items-center justify-center px-4",
-        "bg-[color:color-mix(in_srgb,var(--ink)_50%,transparent)]"
-      ].join(" ")}
-        role="dialog" aria-modal="true" aria-label="Undo payment">
-        <div className="w-full max-w-md rounded-xl bg-[var(--surface)] p-5 text-[var(--ink)]">
-          <p>Undo this payment? The rent may show as unpaid again.</p>
-          <div className="mt-5 flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={() => setConfirmUndo(false)}>Keep it</Button>
-            <Button type="button" onClick={() => {
-              setConfirmUndo(false);
-              if (!onUndoPayment || !undoChargeId) return;
-              const data = new FormData(); data.set("intent", "undo"); data.set("chargeId", undoChargeId);
-              void onUndoPayment(null, data).then((result) => {
-                if (result?.success) { toast.success(result.message); window.location.reload(); }
-                else toast.error(result?.error ?? "We could not undo this payment.");
-              });
-            }}>Undo payment</Button>
-          </div>
-        </div>
-      </div> : null}
+      {confirmUndo && onUndoPayment && undoChargeId ? (
+        <UndoPaymentDialog onUndoPayment={onUndoPayment} chargeId={undoChargeId}
+          onClose={() => setConfirmUndo(false)} />
+      ) : null}
     </div>
   );
+}
+
+function UndoPaymentDialog({ onUndoPayment, chargeId, onClose }: {
+  onUndoPayment: (prev: ActionState, formData: FormData) => Promise<ActionState>;
+  chargeId: string;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  return <div className={[
+    "fixed inset-0 z-50 flex items-center justify-center px-4",
+    "bg-[color:color-mix(in_srgb,var(--ink)_50%,transparent)]"
+  ].join(" ")} role="dialog" aria-modal="true" aria-label="Undo payment">
+    <div className="w-full max-w-md rounded-xl bg-[var(--surface)] p-5 text-[var(--ink)]">
+      <p>Undo this payment? The rent may show as unpaid again.</p>
+      <div className="mt-5 flex justify-end gap-3">
+        <Button type="button" variant="outline" onClick={onClose}>Keep it</Button>
+        <Button type="button" onClick={() => {
+          onClose();
+          const data = new FormData(); data.set("intent", "undo"); data.set("chargeId", chargeId);
+          void onUndoPayment(null, data).then((result) => {
+            if (result?.success) { toast.success(result.message); router.refresh(); }
+            else toast.error(result?.error ?? "We could not undo this payment.");
+          });
+        }}>Undo payment</Button>
+      </div>
+    </div>
+  </div>;
 }

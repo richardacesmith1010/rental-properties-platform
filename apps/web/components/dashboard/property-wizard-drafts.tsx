@@ -32,6 +32,10 @@ export interface LeaseDraft {
   hasTenant: boolean;
   leasedUnitId: string;
   tenantEmail: string;
+  tenantFirstName: string;
+  tenantLastName: string;
+  dueDayOfMonth: string;
+  collectsOutsideDomus: boolean;
   startDate: string;
   endDate: string;
   monthlyRentDollars: string;
@@ -65,6 +69,10 @@ export function createInitialLeaseDraft(unitId: string): LeaseDraft {
     hasTenant: false,
     leasedUnitId: unitId,
     tenantEmail: "",
+    tenantFirstName: "",
+    tenantLastName: "",
+    dueDayOfMonth: "",
+    collectsOutsideDomus: false,
     startDate: "",
     endDate: "",
     monthlyRentDollars: "",
@@ -131,10 +139,14 @@ export function getLeaseStepError(lease: LeaseDraft) {
     return null;
   }
 
+  if (!lease.tenantFirstName.trim() || !lease.tenantLastName.trim())
+    return "Enter the tenant's first and last name.";
   if (!lease.tenantEmail.trim()) return "Tenant email is required.";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(lease.tenantEmail.trim()))
     return "Enter a valid tenant email.";
   if (!lease.startDate) return "Lease start date is required.";
+  if (!Number.isInteger(Number(lease.dueDayOfMonth)) || Number(lease.dueDayOfMonth) < 1 ||
+    Number(lease.dueDayOfMonth) > 28) return "Due day must be between 1 and 28.";
   if (!lease.endDate) return "Lease end date is required.";
   if (lease.endDate <= lease.startDate) return "End date must be after start date.";
   if (parseNumber(lease.monthlyRentDollars, 0) <= 0) return "Monthly rent must be greater than $0.";
@@ -165,13 +177,15 @@ export function WizardProgress({ step }: { step: WizardStep }) {
 interface PropertyWizardSuccessProps {
   step: WizardStep;
   bankConnected?: boolean;
+  tenantFirstName: string | null;
+  paysOutsideDomus: boolean;
   bankSetupHref: string;
   finishSetup: () => void;
   returnToClientHref?: string;
 }
 
 export function PropertyWizardSuccess({
-  step, bankConnected, bankSetupHref, finishSetup, returnToClientHref
+  step, bankConnected, tenantFirstName, paysOutsideDomus, bankSetupHref, finishSetup, returnToClientHref
 }: PropertyWizardSuccessProps) {
   return (
     <>
@@ -188,13 +202,12 @@ export function PropertyWizardSuccess({
                   Your home is added.
                 </h3>
                 <p className="mx-auto max-w-2xl text-base leading-7 text-muted-foreground">
-                  {bankConnected === true
-                    ? "Your home is ready. Tenants can pay rent here."
-                    : bankConnected === false
-                      ? "Your home is added. Connect your bank so tenants can pay you."
-                      : "Your home is added. Check your bank setup before taking rent."}
+                  {tenantFirstName ? `We emailed ${tenantFirstName} an invite.` : "Add a tenant when you are ready."}
                 </p>
-                {bankConnected !== true ? (
+                {tenantFirstName && !paysOutsideDomus && bankConnected === false ? (
+                  <p>Connect your bank so tenants can pay online.</p>
+                ) : null}
+                {tenantFirstName && !paysOutsideDomus && bankConnected === false ? (
                   <Link
                     href={bankSetupHref}
                     className="inline-flex min-h-11 items-center font-semibold text-primary underline"
@@ -208,9 +221,9 @@ export function PropertyWizardSuccess({
                 type="button"
                 size="lg"
                 onClick={finishSetup}
-                title={returnToClientHref ? "Return to this client." : "Go to the property overview on the dashboard."}
+                title={returnToClientHref ? "Return to this client." : "Go to Home."}
               >
-                {returnToClientHref ? "Back to client" : "Go to Dashboard"}
+                {returnToClientHref ? "Back to client" : "Go to Home"}
               </Button>
             </div>
           ) : null}

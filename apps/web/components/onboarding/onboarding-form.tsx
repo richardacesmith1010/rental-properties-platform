@@ -20,9 +20,11 @@ interface OnboardingFormProps {
   onCompleteOnboarding: StatefulAction;
 }
 
-function splitName(fullName: string | null) {
+function splitName(fullName: string | null, email: string) {
   const trimmed = fullName?.trim() ?? "";
-  if (!trimmed) {
+  const localPart = email.split("@")[0] ?? "";
+  if (!trimmed || trimmed.includes("@") || trimmed.includes("+") ||
+    (!trimmed.includes(" ") && trimmed.toLowerCase() === localPart.toLowerCase())) {
     return { firstName: "", lastName: "" };
   }
 
@@ -61,7 +63,7 @@ export function OnboardingForm({
   role,
   onCompleteOnboarding
 }: OnboardingFormProps) {
-  const initialName = useMemo(() => splitName(fullName), [fullName]);
+  const initialName = useMemo(() => splitName(fullName, email), [fullName, email]);
   const [firstName, setFirstName] = useState(initialName.firstName);
   const [lastName, setLastName] = useState(initialName.lastName);
   const [nickname, setNickname] = useState("");

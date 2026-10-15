@@ -34,7 +34,7 @@ beforeEach(() => {
   mocks.accounts.mockResolvedValue([{ id: "a1", displayName: "Personal", accountType: "individual" },
     { id: "a2", displayName: "J&MSP", accountType: "llc" }]);
   mocks.portfolio.mockResolvedValue({ properties: homes, leases: [
-    { id: "l1", propertyId: "p1", unitId: "u1", tenantName: "Maya", active: true,
+    { id: "l1", propertyId: "p1", unitId: "u1", tenantName: "Maya", tenantEmail: "maya@example.com", active: true,
       monthlyRentCents: 100000, dueDayOfMonth: 1, startDate: "2025-01-01", endDate: "2028-01-01" }
   ] });
   mocks.rentRows.mockResolvedValue(rentRows());
@@ -45,7 +45,7 @@ beforeEach(() => {
       expense_date: "2026-09-02" }
   ], error: null });
   mocks.from.mockImplementation((table: string) => {
-    const query = { select: () => query, in: mocks.inIds, gte: mocks.gte, lt: mocks.lt,
+    const query = { select: () => query, in: mocks.inIds, eq: () => query, gte: mocks.gte, lt: mocks.lt,
       not: () => query, then: (resolve: (value: unknown) => void) => Promise.resolve(
         table === "property_expenses" ? mocks.expenses() : { data: [], error: null, count: 0 }).then(resolve) };
     mocks.inIds.mockReturnValue(query);
@@ -82,7 +82,7 @@ describe("loadOwnerWalletHome", () => {
   });
   it("does not mark a late charge on an outside-Domus lease late", async () => {
     mocks.portfolio.mockResolvedValue({ properties: homes, leases: [
-      { id: "l1", propertyId: "p1", unitId: "u1", tenantName: "Maya", active: true,
+      { id: "l1", propertyId: "p1", unitId: "u1", tenantName: "Maya", tenantEmail: "maya@example.com", active: true,
         monthlyRentCents: 100000, dueDayOfMonth: 1, startDate: "2025-01-01", endDate: "2028-01-01",
         collectsOutsideDomus: true }
     ] });
@@ -188,9 +188,9 @@ describe("loadOwnerWalletHome", () => {
       bank_review_items: [], bank_transactions: [], bank_connections: []
     };
     mocks.portfolio.mockResolvedValue({ properties: homes, leases: [
-      { id: "l1", propertyId: "p1", tenantName: "Maya", active: true, monthlyRentCents: 100000,
+      { id: "l1", propertyId: "p1", tenantName: "Maya", tenantEmail: "maya@example.com", active: true, monthlyRentCents: 100000,
         dueDayOfMonth: 1, startDate: "2025-01-01", endDate: "2028-01-01" },
-      { id: "l2", propertyId: "p2", tenantName: "Angel", active: true, monthlyRentCents: 50000,
+      { id: "l2", propertyId: "p2", tenantName: "Angel", tenantEmail: "angel@example.com", active: true, monthlyRentCents: 50000,
         dueDayOfMonth: 1, startDate: "2025-01-01", endDate: "2028-01-01" }
     ] });
     const queried: string[] = [];
@@ -199,6 +199,7 @@ describe("loadOwnerWalletHome", () => {
       let selected = rows[table] ?? [];
       const query = {
         select: () => query, order: () => query, range: () => query, is: () => query, not: () => query,
+        eq: (column: string, value: string) => { selected = selected.filter((row) => row[column] === value); return query; },
         in: (column: string, values: string[]) => {
           if (column !== "bank_accounts.owner_account_id") selected = selected.filter((row) => values.includes(String(row[column])));
           return query;
@@ -213,7 +214,7 @@ describe("loadOwnerWalletHome", () => {
     mocks.rentRows.mockImplementation(actual.loadRentRowsForProperties);
     const result = await loadOwnerWalletHome("owner", today);
     expect(result.ok).toBe(true);
-    expect(queried.length).toBeLessThanOrEqual(14);
+    expect(queried.length).toBeLessThanOrEqual(15);
     expect(queried.filter((table) => table === "units")).toHaveLength(1);
     expect(queried).not.toContain("profiles");
     expect(queried).not.toContain("properties");

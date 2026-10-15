@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { CreditCard, Plus } from "lucide-react";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { Button } from "@/components/ui/button";
 import { CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -13,7 +14,8 @@ export function ChargeSectionHeader({
   canCreateCharge,
   onOpenManualPayment,
   onOpenCreateCharge,
-  onGenerateChargesHref
+  onGenerateChargesHref,
+  showAddRentNow = false
 }: {
   isTenantView: boolean;
   simpleRentView: boolean;
@@ -23,6 +25,7 @@ export function ChargeSectionHeader({
   onOpenManualPayment: () => void;
   onOpenCreateCharge: () => void;
   onGenerateChargesHref?: string;
+  showAddRentNow?: boolean;
 }) {
   return (
     <CardHeader className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
@@ -43,7 +46,7 @@ export function ChargeSectionHeader({
             {simpleRentView ? "Add a one-time fee" : "Add rent"}
           </Button>
         ) : null}
-        {onGenerateChargesHref && !simpleRentView ? (
+        {onGenerateChargesHref && (!simpleRentView || showAddRentNow) ? (
           <Link
             href={onGenerateChargesHref}
             className={[
@@ -53,7 +56,7 @@ export function ChargeSectionHeader({
             ].join(" ")}
             title="Generate rent payments for the current billing period."
           >
-            Generate this month&apos;s rent
+            {simpleRentView ? "Add this month's rent now" : "Generate this month's rent"}
           </Link>
         ) : null}
       </div>
@@ -106,4 +109,27 @@ export function ChargeSectionFilters({
       </div>
     </>
   );
+}
+
+export function RentEmptyState({ isTenantView, hasRows, hasActiveLeases, generateHref }: {
+  isTenantView: boolean;
+  hasRows: boolean;
+  hasActiveLeases: boolean;
+  generateHref?: string;
+}) {
+  return <div>
+    <EmptyState icon={CreditCard}
+      title={hasRows ? "No matching rent" : isTenantView ? "No rent posted yet" : "No rent yet"}
+      description={hasRows ? (isTenantView ? "No rent matches this view right now."
+        : "No rent matches this filter right now.") : isTenantView
+        ? "No rent posted yet. Rent is added each month from your lease."
+        : hasActiveLeases ? "This month's rent shows up by tomorrow morning."
+          : "Rent will appear here after you create a lease."} />
+    {!isTenantView && !hasRows && hasActiveLeases && generateHref ? (
+      <Link href={generateHref} className="mx-auto mt-4 flex min-h-11 w-fit items-center
+        rounded-md bg-[var(--accent)] px-4 text-[var(--accent-contrast)]">
+        Add this month&apos;s rent now
+      </Link>
+    ) : null}
+  </div>;
 }
