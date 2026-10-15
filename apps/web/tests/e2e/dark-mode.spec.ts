@@ -30,7 +30,7 @@ test.describe.serial("Dark mode", () => {
     await page.goto("/owner");
     await page.waitForLoadState("networkidle").catch(() => {});
 
-    const colors = await page.locator("main").evaluate((node) => {
+    const colors = await page.getByRole("main").evaluate((node) => {
       const style = window.getComputedStyle(node as HTMLElement);
       return {
         background: style.backgroundColor,

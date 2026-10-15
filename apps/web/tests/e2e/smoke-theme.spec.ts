@@ -181,7 +181,7 @@ async function switchThemeInSession(page: Page, theme: Theme) {
 }
 
 async function waitForView(page: Page) {
-  await expect(page.locator("main")).toBeVisible({ timeout: 6_000 });
+  await expect(page.getByRole("main")).toBeVisible({ timeout: 6_000 });
   await page.waitForLoadState("networkidle", { timeout: 6_000 }).catch(() => {});
 }
 
