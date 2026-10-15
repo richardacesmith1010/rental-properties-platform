@@ -1106,3 +1106,14 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Second test home "Walk Test Home 2" + tenant `+walktenant2` ("Sam Tester", joined). Results table in `docs/onboarding-walk-2026-10-15.md`.
 - All majors verified fixed live except F3 (owner config). New small findings R2–R6.
 - **Next:** Sprint 235c (L1/L2: R2 Go to Home, R3 pass bankConnected, R4 filtered empty state, R5 aria-label, R6 truncation) + F3 Supabase SMTP via Resend (owner pastes the key). Then re-walk the success screen → Onboarding 80.
+
+## Sprint 235c SHIPPED + F3 done (2026-10-15)
+- `1dbaeae` (Codex gpt-6-sol medium). R2 root cause: owner Home section id is `overview` ("home" was not a section id),
+  so 235b's openSection("home") did nothing and onSelectProperty left Homes open. R3 bankConnected passed; R4 filtered
+  empty state; R5 link title = text; R6 "Invite sent" own element. Gate 2482/2482; CI success; deploy `j59m16tic`;
+  smoke 27/27 (owner Home p75 0.81 s). R2–R6 unit-tested; **not re-walked live** (needs an owner sign-in).
+- **F3:** Supabase Auth custom SMTP on: sender `notifications@domusbase.com` / "Domus", `smtp.resend.com:465`, user
+  `resend`, password = existing Resend key (owner piped it from `vercel env pull` to the clipboard; Claude never saw it;
+  clipboard cleared). Verified: `/auth/v1/recover` for +walkowner → "Reset Your Password" from notifications@domusbase.com.
+  Auth email rate limit now 30/hour (adjustable under Auth → Rate Limits).
+- Note: `RESEND_API_KEY` is NOT in `apps/web/.env.local` (only in Vercel).
