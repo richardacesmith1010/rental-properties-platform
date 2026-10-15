@@ -1089,3 +1089,15 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Live walk (walk owner): legacy Oct payment → "This payment is too old to undo here."; Nov Mark paid → Undo → Mark paid → Undo,
   DB: pending, 2 reversed, 2 audits. **R1:** success toast lost to `window.location.reload()` → folded into 235b.
 - Follow-ups: store payment id on payment notifications (then undo can remove them); make payment writers atomic.
+
+## Sprint 235b + 235b-b SHIPPED (2026-10-15) — onboarding fixes (L2)
+- `c0d3789` (Codex gpt-6-sol medium + luna for the fixture). F15 empty state + "Add this month's rent now"; plain generate
+  messages; K5 tenant first/last name in the wizard (no email-guessed names); F5 onboarding ignores email-prefix names;
+  K6 due day + "Tenant pays outside Domus"; F8 success copy + "Go to Home"; F10 "Invite sent" (wallet `home.wallet.invites`
+  in parallel); R1 undo keeps its toast (router.refresh).
+- Verify: gate 2476/2476; CI gate success; deploy `p7tb71oab` (first attempt TLS error, retry OK); smoke 27/27; speed
+  re-run owner Home p75 0.73–0.75 s (first post-deploy run 1.28 s = cold start).
+- Live (walk owner, wizard closed without saving): name fields + exact error "Enter the tenant's first and last name.";
+  due day 28 for an Oct 31 start; outside-Domus checkbox with plain helper.
+- **Not yet walked:** F8 success screen, F10 Invite sent, F15 empty state, F17 tenant view, F5 prefill — need a second test
+  home + a new test tenant (owner to approve the address). F3 (Supabase SMTP via Resend) still waits on the owner.
