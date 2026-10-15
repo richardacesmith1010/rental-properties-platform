@@ -31,3 +31,31 @@ No real money. Claude drives Chrome; one tab only; owner steps = password / emai
 
 **Expected outcome:** Manager 76 → 80 (walk + fixes + reminders built and permission-safe). A real manager month
 remains the step above 80.
+
+## Sprint 236 results — walked 2026-10-15 23:15–23:45 UTC (manager `+walkmanager` "Walk Manager", walk owner, tenant Sam)
+
+**Outcome:** core manager jobs work. Invite (two homes) → join → Home → Rent (Mark paid → Undo → Mark paid, toast stays —
+R1 ✅) → Repairs (status In Progress + comment) → Messages → Payments → Clients (add client, owner statement dialog).
+Permissions: as the manager, RLS shows 2 of 17 homes, 1 repair, own profile only. Sentry clean. 375 px / dark: covered by
+daily smoke (manager views), not re-walked.
+
+### Findings
+| # | Sev | Where | What |
+|---|---|---|---|
+| M10 | **Major (money)** | Manager Payments + many readers | Reversed payments shown as received (3 of 5 listed were reversed). Readers with no `reversed_at` filter: `lib/payment-history.ts`, `lib/dashboard-legacy.ts`, `app/payments/receipt/[chargeId]`, `app/payments/success`, `lib/pdf/pdf-data.ts`, `lib/analytics-loader.ts`, `lib/reports-rent-roll.ts`, `lib/property-detail-queries.ts`, `app/api/ai/chat/route.ts`. Also affects Stripe ACH reversals (since S114). |
+| M3 | Medium | Manager invite email | Supabase generic "You have been invited" — no inviter, home, or role (tenant invite is a full Domus email). |
+| M7 | Medium | Messages | Sidebar badge 1 vs inbox "0 unread". |
+| M8 | Medium | Messages | Create-thread jargon: "Maintenance Ticket", "Rent Payment", "Document Packet", "Create thread" (guard misses option labels). |
+| M1 | Medium | Add a manager | One home per invite; no "all homes" choice (second invite worked: "Added Walk Manager to this home"). |
+| M6 | Medium | Toasts | "Payment undone…" toast never auto-dismisses (stayed minutes, across sections); no confirmation on repair status update. |
+| M11 | Medium | Clients | Owners with Domus accounts (Walk Owner) aren't listed under "Owners whose homes you run"; statements only for clients. |
+| M9 | Design | Sidebar | 22 manager nav items. |
+| M4 | Design | Manager Home | Old layout, not the Wallet look. |
+| M5 | Low | Rent | After undo, stale green "Manual payment recorded." banner stays above the list. |
+| M2 | Low | Add a manager | Success banner text clipped inside the dialog; disabled "Next" shown beside Send. |
+| T1 | Low (tenant) | Tenant repair card | Shows landlord fields "Cost / Vendor / Assignment". |
+
+### Passed cleanly
+Manager Home "Needs you today" (1 open repair, 1 conversation), bank card for fees, rent progress; Rent list scoped to
+managed homes; repair status + comment; client add (clear "paid outside Domus" note); owner statement dialog; second
+invite recognized without a second email.

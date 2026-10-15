@@ -1117,3 +1117,10 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   clipboard cleared). Verified: `/auth/v1/recover` for +walkowner → "Reset Your Password" from notifications@domusbase.com.
   Auth email rate limit now 30/hour (adjustable under Auth → Rate Limits).
 - Note: `RESEND_API_KEY` is NOT in `apps/web/.env.local` (only in Vercel).
+
+## Sprint 236 DONE (2026-10-15) — manager live walk
+- Test manager `richard.ace.smith+walkmanager@gmail.com` ("Walk Manager") manages both walk homes; test client "Walk Client Test".
+- **Major M10:** reversed payments shown as received across ~9 readers (manager Payments, receipts, PDFs, charts, rent roll…).
+  Includes historical Stripe ACH reversals. → Sprint 237 (L3) first item.
+- Medium: M3 manager invite email generic, M7 message counts, M8 jargon, M1 one home per invite, M6 sticky toast, M11 Domus-account owners not under Clients.
+- Full table: `docs/manager-walk-plan-2026-10-16.md`. Next: Sprint 237 packet (M10 + mediums + manager reminders, L3 → ChatGPT).
