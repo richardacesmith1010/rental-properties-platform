@@ -1034,3 +1034,10 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - GitHub → Settings → Advanced Security: dependency graph, Dependabot alerts and Dependabot security updates turned **On** (Claude, in the owner's signed-in browser pane, with the owner's yes). Dependabot runs started on `1a1b02f`.
 - **Follow-ups:** the 7-year purge job (needs the owner to set the retention years in the policy first); optional review-queue copy: "Items you don't answer go away after 90 days."
 - **Next:** Sprint 231, the 7-year purge job (blocked until the owner sets the retention years in `docs/policies/data-retention-policy.md`). Still waiting on others: the Simulator walk of in-app bank Connect (owner signed in), Plaid Transactions approval, NFCU/Fidelity OAuth review.
+
+## 2026-10-14 — Dependabot triage, rescore, daily smoke live (Claude, no app code)
+- **Dependabot:** PR #1 (actions v4→v7) merged (`27ea2b3`); #3/#5/#6/#7/#8 closed (branches deleted); #4 (web group: @supabase/ssr 0.5→0.12 is auth-critical) and #2 (sharp, apps/ios) left open for planned sprints. `dependabot.yml` now ignores semver-major and `@types/node` ≥ 21 (`f32f84d`).
+- **Scorecard rescored** through Sprint 230 (`c967e23`): Speed 80 → 77, Code health 80 → 79, Manager 76, Phone 60, Notifications 45, Launch 64.
+- **Reliability 79 → 80:** owner added the 6 `SMOKE_*` GitHub secrets; schedule restored (`31390d8`); smoke skips the service-role capabilities check without the key (`e778720`; `gate:web` still runs it). Manual run #2 green (27 specs). First scheduled run 2026-10-15 13:30 UTC; check it.
+- **Found, not fixed:** Vercel flags 8 production secrets as readable (not "sensitive"); GitHub reported Dependabot security alerts on push (not yet read; needs sign-in).
+- **Next:** Code health (79): bring `app/actions/connect.ts` (508) and `components/dashboard/sections/render-section-cases.tsx` (501) under 500 lines (L1/L2, Codex). Then Speed (77): owner Home p75 1.59 s vs ≤ 1.5 s.
