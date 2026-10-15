@@ -4,7 +4,13 @@ set -euo pipefail
 APP_URL="${APP_URL:-http://localhost:3000}"
 
 echo "[smoke] Using APP_URL=$APP_URL"
-npm run verify:capabilities
+# The capabilities check reads the database with the service-role key. GitHub's daily smoke
+# does not hold that key on purpose; gate:web still runs this check before every ship.
+if [[ -f apps/web/.env.local || -n "${SUPABASE_SERVICE_ROLE_KEY:-}" ]]; then
+  npm run verify:capabilities
+else
+  echo "[smoke] Skipping capabilities check (no service-role key here; gate:web covers it)"
+fi
 
 echo "[smoke] Checking landing page"
 curl -fsS "$APP_URL/" >/dev/null
