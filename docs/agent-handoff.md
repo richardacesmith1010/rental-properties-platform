@@ -1041,3 +1041,11 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - **Reliability 79 → 80:** owner added the 6 `SMOKE_*` GitHub secrets; schedule restored (`31390d8`); smoke skips the service-role capabilities check without the key (`e778720`; `gate:web` still runs it). Manual run #2 green (27 specs). First scheduled run 2026-10-15 13:30 UTC; check it.
 - **Found, not fixed:** Vercel flags 8 production secrets as readable (not "sensitive"); GitHub reported Dependabot security alerts on push (not yet read; needs sign-in).
 - **Next:** Code health (79): bring `app/actions/connect.ts` (508) and `components/dashboard/sections/render-section-cases.tsx` (501) under 500 lines (L1/L2, Codex). Then Speed (77): owner Home p75 1.59 s vs ≤ 1.5 s.
+
+## Sprint 232 SHIPPED (2026-10-14) — Code health 79 → 80 (L3; ChatGPT rev 1 APPROVE WITH CHANGES → rev 2, all 7 REQUIRED + 4 OPTIONAL adopted)
+- `4107537`. Codex gpt-6-sol high, 1 attempt. `updateManagementFee` → `app/actions/management-fee.ts` (byte-identical, Claude `cmp`); `AnalyticsSection` → `sections/analytics-section-lazy.tsx` (`"use client"`, block identical). connect.ts 508 → 387; render-section-cases 501 → 490. `index.ts` re-exports from the new file.
+- 18 characterization tests (`management-fee.test.ts`): exact upsert payload, request-client write, audit, revalidate, every error branch incl. missing-schema. Claude ran them against pre-refactor HEAD in a clean worktree: 18/18.
+- Accepted deviation: 4 inherited lines in the moved function are 146–163 chars (verbatim beats the 140 rule; pre-existing).
+- Verify: gate 2424/2424 + build; CI gate success; deploy `rental-properties-platform-byzamnpjm` (first upload hit a TLS error, retry OK); production smoke 27/27 (Analytics covered by the mobile-layout spec for owner + manager); Sentry clean. No live click-walk: no visible change.
+- Speed (same smoke): owner Home p75 1.65 s, Rent 1.83 s, tenant 1.43 s.
+- **Next:** Speed (77) — owner Home p75 back to ≤ 1.5 s (`home.wallet` 16 queries, 746–1011 ms).
