@@ -1101,3 +1101,8 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   due day 28 for an Oct 31 start; outside-Domus checkbox with plain helper.
 - **Not yet walked:** F8 success screen, F10 Invite sent, F15 empty state, F17 tenant view, F5 prefill — need a second test
   home + a new test tenant (owner to approve the address). F3 (Supabase SMTP via Resend) still waits on the owner.
+
+## 2026-10-15 — Onboarding re-walk done; Onboarding 68 → 78
+- Second test home "Walk Test Home 2" + tenant `+walktenant2` ("Sam Tester", joined). Results table in `docs/onboarding-walk-2026-10-15.md`.
+- All majors verified fixed live except F3 (owner config). New small findings R2–R6.
+- **Next:** Sprint 235c (L1/L2: R2 Go to Home, R3 pass bankConnected, R4 filtered empty state, R5 aria-label, R6 truncation) + F3 Supabase SMTP via Resend (owner pastes the key). Then re-walk the success screen → Onboarding 80.

@@ -94,3 +94,25 @@ checklist with one obvious "Add Your First Home"; 4-step wizard with progress + 
 delivered in seconds; tenant welcome page with property/unit/rent context; tenant Home layout; "Online pay
 isn't on yet … Pay them the way you usually do"; "I paid this" → "Sent. Your landlord will check and mark it
 paid."; owner badge "Tenant says paid · Oct 15"; inline Mark paid form.
+
+## Re-walk after Sprints 235a/235b — 2026-10-15 22:45 UTC (walk owner, second home, tenant `+walktenant2`)
+| # | Was | Now |
+|---|---|---|
+| F17 | Tenant saw "$2,400 · 2 months" | ✅ "Rent due $1,100, due Oct 15 · today" + "Next rent: $1,100 on Nov 15." One "I paid this" (Oct). |
+| F19 | No undo | ✅ Mark paid → Undo → Mark paid → Undo on Nov; legacy payment refused "too old to undo here". |
+| F16 | Nov in "Due soon (2)" | ✅ Due soon (0) for a rent 31 days out. |
+| K5 | Name guessed from email | ✅ Wizard first/last name; email "Hi Sam Tester"; tenant form "Welcome to Domus, Sam!" prefilled Sam/Tester; empty names blocked with exact copy. |
+| K6 | No due day / outside-Domus | ✅ Due day (Oct 31 → 28; Oct 15 → 15) + "Tenant pays outside Domus" with plain helper; review "Due on day 15". |
+| F8 | Repeated heading, unexplained bank push | ✅ "Your home is added." once, "We emailed Sam an invite.", "Go to Home". |
+| F10 | No invite state | ✅ Homes card "Sam Tester · Invite sent". |
+| F15 | Dead end before first rent | ✅ "Add this month's rent now" → "Rent added for this month." |
+| F5 | Owner name = email prefix | ✅ (unit-tested; tenant prefill verified live). |
+| R1 | Undo toast lost to reload | ✅ code fixed (router.refresh); not re-clicked live. |
+
+**New / remaining (all small):**
+- **R2** "Go to Home" still lands on Homes: `index.tsx:276-281` calls `onSelectProperty` then `openSection("home")`; selecting a property switches to Homes.
+- **R3** Success-screen bank line never shows for owners: `index.tsx:265` does not pass `bankConnected` (line needs `=== false`).
+- **R4** With the home filter on, empty Rent says "No rent matches this filter right now." instead of the timing line.
+- **R5** "Add this month's rent now" has aria-label "Generate rent payments for the current billing period." (label ≠ visible text; jargon).
+- **R6** Home pass card truncates "Sam Tester · Invite s…" at 1440 px.
+- **F3** Sign-up email still from Supabase default sender (owner action: paste Resend key into Supabase SMTP).
