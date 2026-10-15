@@ -5,12 +5,13 @@ import { useFormState } from "react-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/shared/submit-button";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, formatMonthDay } from "@/lib/format";
 import type { TenantCharge } from "@/lib/tenant-payments";
 import type { TenantPayState } from "@/lib/tenant-pay-state";
 import { chargeBreakdown } from "@/lib/charge-breakdown";
 import { PayRentCard, type AutopayEnrollmentView } from "@/components/dashboard/pay-rent-card";
 import type { ActionState } from "@/app/actions";
+import { isRentOpenForTenant } from "@/lib/rent-urgency";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -26,10 +27,6 @@ interface TenantRentCardProps {
   onRequestManualPaymentConfirmation: StatefulAction;
   autopayEnrollments?: AutopayEnrollmentView[];
   onSetupAutopay?: StatefulAction;
-}
-
-function monthDay(value: string) {
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${value}T00:00:00.000Z`));
 }
 
 function relativeDueText(dueDate: string) {
@@ -49,7 +46,7 @@ function ReportPaidRow({ charge, action }: { charge: TenantCharge; action: State
     <div className="border-t border-[var(--line)] pt-3 first:border-t-0 first:pt-0">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm text-[var(--ink)]">
-          {monthDay(charge.dueDate)} rent · {formatCurrency(charge.amountCents)}
+          {formatMonthDay(charge.dueDate)} rent · {formatCurrency(charge.amountCents)}
         </span>
         {state?.success ? (
           <span className="text-sm text-[var(--pos)]">
@@ -57,7 +54,7 @@ function ReportPaidRow({ charge, action }: { charge: TenantCharge; action: State
           </span>
         ) : charge.tenantReportedPaidAt ? (
           <span className="text-sm text-[var(--pos)]">
-            Sent {monthDay(charge.tenantReportedPaidAt.slice(0, 10))}. Your landlord will check and mark it paid.
+            Sent {formatMonthDay(charge.tenantReportedPaidAt.slice(0, 10))}. Your landlord will check and mark it paid.
           </span>
         ) : (
           <form action={formAction}>
@@ -87,8 +84,13 @@ export function TenantRentCard({
   onSetupAutopay
 }: TenantRentCardProps) {
   const [showPayment, setShowPayment] = useState(false);
-  const charge = charges[0] ?? null;
-  const unpaidCharges = charges.filter((item) => item.status === "pending" || item.status === "late");
+  const today = new Date();
+  const unpaidCharges = charges.filter((item) =>
+    (item.status === "pending" || item.status === "late") && isRentOpenForTenant(item.dueDate, today));
+  const futureCharge = charges.filter((item) =>
+    (item.status === "pending" || item.status === "late") && !isRentOpenForTenant(item.dueDate, today))
+    .sort((left, right) => left.dueDate.localeCompare(right.dueDate))[0];
+  const charge = unpaidCharges[0] ?? null;
   const dueDate = unpaidCharges.map((item) => item.dueDate).sort()[0] ?? charge?.dueDate ?? rentDueDate;
   const amountCents = ["can_pay", "not_ready", "outside"].includes(payState)
     ? unpaidCharges.reduce((total, item) => total + item.amountCents, 0)
@@ -97,7 +99,7 @@ export function TenantRentCard({
   const amountLabel = ["can_pay", "not_ready", "outside"].includes(payState) && unpaidCharges.length > 1
     ? `${formatCurrency(amountCents)} · ${dueMonthCount} month${dueMonthCount === 1 ? "" : "s"}`
     : formatCurrency(amountCents);
-  const label = payState === "paid" && lastPaidAt
+  const label = futureCharge && !charge ? "Next rent" : payState === "paid" && lastPaidAt
     ? `${new Intl.DateTimeFormat("en-US", { month: "long", timeZone: "UTC" }).format(new Date(`${lastPaidAt}T00:00:00.000Z`))} rent`
     : payState === "not_posted" ? "Next rent" : "Rent due";
 
@@ -115,7 +117,10 @@ export function TenantRentCard({
   }
 
   if (showPayment && payState === "can_pay") {
-    return <PayRentCard charges={charges} onPayCharge={onPayCharge} onPayWithACH={onPayWithACH} onRequestManualPaymentConfirmation={onRequestManualPaymentConfirmation} chargesHref="/tenant?section=charges" autopayEnrollments={autopayEnrollments} onSetupAutopay={onSetupAutopay} payState={payState} rentDueDate={rentDueDate} rentAmountCents={rentAmountCents} lastPaidAt={lastPaidAt} />;
+    return <PayRentCard charges={charges} onPayCharge={onPayCharge} onPayWithACH={onPayWithACH}
+      onRequestManualPaymentConfirmation={onRequestManualPaymentConfirmation} chargesHref="/tenant?section=charges"
+      autopayEnrollments={autopayEnrollments} onSetupAutopay={onSetupAutopay} payState={payState}
+      rentDueDate={rentDueDate} rentAmountCents={rentAmountCents} lastPaidAt={lastPaidAt} />;
   }
 
   return (
@@ -123,15 +128,27 @@ export function TenantRentCard({
       <CardContent className="space-y-4 p-5 sm:p-7">
         <div>
           <p className="text-sm font-medium text-[var(--muted)]">{label}</p>
-          <p className="mt-1 text-4xl font-bold tabular-nums text-[var(--ink)]">{amountLabel}</p>
+          {futureCharge && !charge ? (
+            <p className="mt-1 text-sm text-[var(--ink)]">
+              Next rent: {formatCurrency(futureCharge.amountCents)} on {formatMonthDay(futureCharge.dueDate)}.
+            </p>
+          ) : <p className="mt-1 text-4xl font-bold tabular-nums text-[var(--ink)]">{amountLabel}</p>}
           {charge?.lines?.length ? <p className="mt-2 text-sm text-[var(--muted)]">
             Rent {formatCurrency(chargeBreakdown({ id: charge.id, amount_cents: charge.amountCents },
               charge.lines).rentCents)}
             {charge.lines.map((line) => ` · ${line.label} ${formatCurrency(line.amount_cents)}`).join("")}
           </p> : null}
-          {dueDate && payState !== "paid" ? <p className="mt-2 text-sm text-[var(--muted)]">{payState === "not_posted" ? `due ${monthDay(dueDate)}` : `due ${monthDay(dueDate)} · ${relativeDueText(dueDate)}`}</p> : null}
+          {dueDate && payState !== "paid" && !(futureCharge && !charge) ? (
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              {payState === "not_posted" ? `due ${formatMonthDay(dueDate)}`
+                : `due ${formatMonthDay(dueDate)} · ${relativeDueText(dueDate)}`}
+            </p>
+          ) : null}
+          {futureCharge && charge ? <p className="mt-2 text-sm text-[var(--muted)]">
+            Next rent: {formatCurrency(futureCharge.amountCents)} on {formatMonthDay(futureCharge.dueDate)}.
+          </p> : null}
         </div>
-        {payState === "can_pay" ? (
+        {payState === "can_pay" && unpaidCharges.length > 0 ? (
           <div className="space-y-3">
             <Button type="button" className="min-h-11 w-full sm:w-auto" onClick={() => setShowPayment(true)} title="Choose how to pay your rent.">Pay rent</Button>
             <p className="text-sm text-[var(--muted)]">Bank transfer is free. Cards have a small fee.</p>
@@ -151,7 +168,9 @@ export function TenantRentCard({
           </div>
         ) : null}
         {payState === "paid" && lastPaidAt ? <div className="rounded-xl bg-[var(--pos-bg)] p-4 text-sm font-semibold text-[var(--pos)]">Paid {formatDate(lastPaidAt)}. Thank you!</div> : null}
-        {payState === "not_posted" ? <p className="text-sm text-[var(--muted)]">You can pay once it&apos;s posted.</p> : null}
+        {payState === "not_posted" && !futureCharge ? (
+          <p className="text-sm text-[var(--muted)]">You can pay once it&apos;s posted.</p>
+        ) : null}
       </CardContent>
     </Card>
   );

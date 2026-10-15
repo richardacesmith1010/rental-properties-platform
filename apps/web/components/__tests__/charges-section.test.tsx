@@ -23,6 +23,51 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("ChargesSection", () => {
+  it("counts only open pending rent in Due soon", () => {
+    const today = new Date();
+    const todayIso = today.toISOString().slice(0, 10);
+    const futureIso = new Date(today.getTime() + 31 * 86400000).toISOString().slice(0, 10);
+    const base = { id: "open", propertyId: "home", dueDate: todayIso,
+      amountCents: 120000, status: "pending" as const, category: "rent" as const };
+    render(<ChargesSection charges={[base, { ...base, id: "future", dueDate: futureIso }]}
+      onPayCharge={async () => {}} isOwnerView />);
+    expect(screen.getByRole("button", { name: "Due soon (1)" })).toBeInTheDocument();
+    expect(document.getElementById("charge-open")).toBeInTheDocument();
+    expect(document.getElementById("charge-future")).not.toBeInTheDocument();
+  });
+
+  it("shows Undo payment on an owner paid row with exact confirmation copy", () => {
+    const charge = { id: "paid-1", propertyId: "home", dueDate: "2026-10-01",
+      amountCents: 120000, status: "paid" as const, category: "rent" as const };
+    const undo = vi.fn(async () => ({ success: true as const, message: "Payment undone. This rent is open again." }));
+    const view = render(<ChargesSection charges={[charge]} onPayCharge={async () => {}}
+      onRecordManualPayment={undo} isOwnerView />);
+    fireEvent.click(screen.getByRole("button", { name: "Paid" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open more payment actions" }));
+    fireEvent.click(screen.getByRole("button", { name: "Undo payment" }));
+    expect(screen.getByText("Undo this payment? The rent may show as unpaid again.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Keep it" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Keep it" }));
+    view.rerender(<ChargesSection charges={[charge]} onPayCharge={async () => {}}
+      onRecordManualPayment={undo} isTenantView />);
+    expect(screen.queryByRole("button", { name: "Open more payment actions" })).not.toBeInTheDocument();
+  });
+
+  it("keeps pending rent in Due soon through grace and late rent in Late", () => {
+    const due = new Date();
+    const twoDaysAgo = new Date(due.getTime() - 2 * 86400000).toISOString().slice(0, 10);
+    const sixDaysAgo = new Date(due.getTime() - 6 * 86400000).toISOString().slice(0, 10);
+    const base = { propertyId: "home", amountCents: 100000, category: "rent" as const };
+    render(<ChargesSection charges={[
+      { ...base, id: "inside-grace", dueDate: twoDaysAgo, status: "pending" as const },
+      { ...base, id: "past-grace", dueDate: sixDaysAgo, status: "late" as const }
+    ]} onPayCharge={async () => {}} isOwnerView />);
+    expect(screen.getByRole("button", { name: "Due soon (1)" })).toBeInTheDocument();
+    expect(document.getElementById("charge-past-grace")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Due soon (1)" }));
+    expect(document.getElementById("charge-inside-grace")).toBeInTheDocument();
+    expect(document.getElementById("charge-past-grace")).not.toBeInTheDocument();
+  });
   it("counts outside client rent in the Late tab while excluding owner outside rent", () => {
     const base = {
       id: "client-late", leaseId: "lease-1", propertyId: "home-1",

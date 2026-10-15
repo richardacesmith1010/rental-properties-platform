@@ -48,6 +48,36 @@ describe("PayRentCard", () => {
     }
   ];
 
+  it("pays October while November waits outside the open window", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-15T12:00:00Z"));
+    try {
+      const october = { ...charges[0], id: "oct", dueDate: "2026-10-15" };
+      const november = { ...charges[0], id: "nov", dueDate: "2026-11-15" };
+      const { container, rerender } = render(<PayRentCard charges={[november, october]}
+        onPayCharge={async () => ({ success: true })}
+        onRequestManualPaymentConfirmation={async () => ({ success: true })} chargesHref="/tenant" />);
+      expect(container.querySelector('input[name="chargeId"]')).toHaveValue("oct");
+      expect(screen.queryByText(/more month.*waiting/)).not.toBeInTheDocument();
+      rerender(<PayRentCard charges={[november]} onPayCharge={async () => ({ success: true })}
+        onRequestManualPaymentConfirmation={async () => ({ success: true })} chargesHref="/tenant" />);
+      expect(screen.queryByRole("button", { name: /^Pay \$/ })).not.toBeInTheDocument();
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("pays the oldest late rent before due rent", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-15T12:00:00Z"));
+    try {
+      const late = { ...charges[1], dueDate: "2026-10-01" };
+      const due = { ...charges[0], dueDate: "2026-10-15" };
+      const { container } = render(<PayRentCard charges={[due, late]}
+        onPayCharge={async () => ({ success: true })}
+        onRequestManualPaymentConfirmation={async () => ({ success: true })} chargesHref="/tenant" />);
+      expect(container.querySelector('input[name="chargeId"]')).toHaveValue(late.id);
+    } finally { vi.useRealTimers(); }
+  });
+
   it("calls both pay actions and shows returned errors under their buttons", async () => {
     const onPayCharge = vi.fn(async () => ({ success: false, error: "Card pay failed." }));
     const onPayWithACH = vi.fn(async () => ({ success: false, error: "Bank pay failed." }));

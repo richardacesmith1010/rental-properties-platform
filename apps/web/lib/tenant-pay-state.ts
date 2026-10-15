@@ -1,5 +1,6 @@
 import { MIN_ONLINE_PAYMENT_CENTS } from "@/lib/payment-fees";
 import { isCollectedOutsideDomus } from "@/lib/lease-collection";
+import { isRentOpenForTenant } from "@/lib/rent-urgency";
 
 export type TenantPayState = "can_pay" | "not_ready" | "outside" | "paid" | "not_posted" | "no_lease";
 
@@ -14,11 +15,13 @@ export interface TenantPayStateInput {
 
 export function getTenantPayState(input: TenantPayStateInput): TenantPayState {
   if (!input.lease) return "no_lease";
-  const outside = isCollectedOutsideDomus(input.charge) || isCollectedOutsideDomus(input.lease);
+  const charge = input.charge && isRentOpenForTenant(input.charge.dueDate, input.today)
+    ? input.charge : null;
+  const outside = isCollectedOutsideDomus(charge) || isCollectedOutsideDomus(input.lease);
   if (outside) return "outside";
-  if (input.lastPayment && !input.charge) return "paid";
-  if (!input.charge) return "not_posted";
-  if (!input.stripeConfigured || !input.ownerConnected || input.charge.amountCents < MIN_ONLINE_PAYMENT_CENTS) {
+  if (input.lastPayment && !charge) return "paid";
+  if (!charge) return "not_posted";
+  if (!input.stripeConfigured || !input.ownerConnected || charge.amountCents < MIN_ONLINE_PAYMENT_CENTS) {
     return "not_ready";
   }
   return "can_pay";

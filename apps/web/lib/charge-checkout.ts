@@ -14,6 +14,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { categorizeStripeError, userMessageForCategory } from "@/lib/stripe-errors";
 import { payChargeSchema, parseFormData } from "@/lib/validations";
 import { requireAuth } from "@/app/actions/auth-helpers";
+import { isRentOpenForTenant } from "@/lib/rent-urgency";
 import type { ActionState } from "@/app/actions/shared";
 
 export const PAYMENTS_UNAVAILABLE_MESSAGE =
@@ -104,14 +105,14 @@ export async function prepareCheckoutContext(
     () =>
       supabase
         .from("rent_charges")
-        .select("id, amount_cents, status, lease_id, deleted_at")
+        .select("id, amount_cents, status, lease_id, due_date, deleted_at")
         .eq("id", chargeId)
         .is("deleted_at", null)
         .single(),
     () =>
       supabase
         .from("rent_charges")
-        .select("id, amount_cents, status, lease_id")
+        .select("id, amount_cents, status, lease_id, due_date")
         .eq("id", chargeId)
         .single()
   );
@@ -128,6 +129,9 @@ export async function prepareCheckoutContext(
   }
   if (charge.status === "waived") {
     return { success: false, error: "This rent was cancelled by your landlord." };
+  }
+  if (!isRentOpenForTenant(charge.due_date)) {
+    return { success: false, error: "This rent is not due yet." };
   }
   if (charge.amount_cents < MIN_ONLINE_PAYMENT_CENTS) {
     return {

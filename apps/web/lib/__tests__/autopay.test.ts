@@ -293,6 +293,17 @@ function buildAutopayConfig(overrides: Partial<AutopaySupabaseConfig> = {}): Aut
 }
 
 describe("processAutopayCharges", () => {
+  it("does not select rent paid early when its due date arrives", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-05-02T12:00:00Z"));
+    try {
+      const config = buildAutopayConfig({ charges: [{ id: "paid-early", lease_id: "lease-1",
+        due_date: "2026-05-02", amount_cents: 125000, status: "paid", category: "rent", deleted_at: null }] });
+      const result = await processAutopayCharges(createSupabaseMock(config));
+      expect(result.processed).toBe(0);
+      expect(createOffSessionPaymentIntentMock).not.toHaveBeenCalled();
+    } finally { vi.useRealTimers(); }
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(console, "error").mockImplementation(() => {});

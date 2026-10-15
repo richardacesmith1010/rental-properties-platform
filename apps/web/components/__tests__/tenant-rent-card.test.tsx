@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TenantRentCard } from "@/components/dashboard/tenant-rent-card";
 
 const paymentStatus = vi.hoisted(() => ({ pending: false }));
@@ -32,6 +32,31 @@ const baseProps = {
 };
 
 describe("TenantRentCard", () => {
+  beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-10-28T12:00:00Z")); });
+  afterEach(() => vi.useRealTimers());
+
+  it("shows only October due and offers one report button with November waiting", () => {
+    vi.setSystemTime(new Date("2026-10-15T12:00:00Z"));
+    const october = { ...baseProps.charges[0], dueDate: "2026-10-15", status: "pending" as const,
+      amountCents: 120000 };
+    const november = { ...october, id: "november", dueDate: "2026-11-15" };
+    render(<TenantRentCard {...baseProps} charges={[october, november]} payState="outside" />);
+    expect(screen.getByText("$1,200")).toBeInTheDocument();
+    expect(screen.queryByText(/2 months/)).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "I paid this" })).toHaveLength(1);
+    expect(screen.getByText("Next rent: $1,200 on Nov 15.")).toBeInTheDocument();
+  });
+
+  it("shows future-only rent as one line without due or report controls", () => {
+    vi.setSystemTime(new Date("2026-10-15T12:00:00Z"));
+    const november = { ...baseProps.charges[0], dueDate: "2026-11-15", status: "pending" as const,
+      amountCents: 120000 };
+    render(<TenantRentCard {...baseProps} charges={[november]} payState="not_posted" />);
+    expect(screen.getByText("Next rent: $1,200 on Nov 15.")).toBeInTheDocument();
+    expect(screen.queryByText("Rent due")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "I paid this" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pay rent" })).not.toBeInTheDocument();
+  });
   it.each([
     ["not_ready", "Online pay isn't on yet"],
     ["outside", "You pay your landlord outside Domus."],

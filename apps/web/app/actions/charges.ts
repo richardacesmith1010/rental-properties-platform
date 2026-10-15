@@ -31,6 +31,7 @@ import { requireAuth } from "./auth-helpers";
 import type { ActionState } from "./shared";
 import { deleteCharge } from "./charge-management";
 import { managerFeeBaseForCharge } from "@/lib/charge-lines";
+import { undoManualPayment } from "./charge-undo";
 import {
   PAYMENTS_UNAVAILABLE_MESSAGE,
   handleStripeCheckoutFailure,
@@ -210,6 +211,9 @@ export async function recordManualPayment(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
+  if (formData.get("intent") === "undo") {
+    return undoManualPayment(String(formData.get("chargeId") ?? ""));
+  }
   const { user } = await requireAuth("owner", "manager");
 
   const paymentRate = checkRateLimit(`manual-payment:${user.id}`, 20, 60 * 60 * 1000);
@@ -301,7 +305,8 @@ export async function recordManualPayment(
     amount_cents: amountCents,
     method,
     reference_note: referenceNote || null,
-    paid_at: paidAt
+    paid_at: paidAt,
+    recorded_via: "manual"
   });
 
   if (paymentError) {

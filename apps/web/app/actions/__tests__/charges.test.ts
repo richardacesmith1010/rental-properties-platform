@@ -22,6 +22,8 @@ const requireAuthMock = vi.hoisted(() => vi.fn());
 const sendPlatformAlertMock = vi.hoisted(() => vi.fn());
 const sideEffectErrorMock = vi.hoisted(() => vi.fn());
 const assertStripeEligiblePropertyMock = vi.hoisted(() => vi.fn());
+const paymentInsertMock = vi.hoisted(() => vi.fn());
+const chargeUpdateInMock = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({ redirect: redirectMock }));
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
@@ -61,7 +63,7 @@ vi.mock("@/app/actions/auth-helpers", () => ({ requireAuth: requireAuthMock }));
 import { payWithACH, payWithACHState, payWithCard, payWithCardState, recordManualPayment } from "@/app/actions/charges";
 
 interface CheckoutConfig {
-  charge?: { id: string; amount_cents: number; status: string; lease_id: string } | null;
+  charge?: { id: string; amount_cents: number; status: string; lease_id: string; due_date?: string } | null;
   lease?: { id: string; tenant_profile_id: string; unit_id: string } | null;
   unit?: { id: string; property_id: string } | null;
   property?: { id: string } | null;
@@ -70,7 +72,7 @@ interface CheckoutConfig {
 interface ManualConfig {
   charge?: { id: string; lease_id: string; due_date: string; status: string; amount_cents: number } | null;
   lease?: {
-    id: string; tenant_profile_id: string; unit_id: string;
+    id: string; tenant_profile_id: string | null; unit_id: string;
     collects_outside_domus?: boolean | null;
   } | null;
   unit?: { id: string; property_id: string; unit_number: string } | null;
@@ -88,7 +90,7 @@ function createCheckoutSupabase(config: CheckoutConfig): SupabaseClient {
             single: vi.fn().mockResolvedValue({
               data:
                 table === "rent_charges"
-                  ? config.charge ?? null
+                  ? config.charge ? { due_date: "2026-03-01", ...config.charge } : null
                   : table === "leases"
                     ? config.lease ?? null
                     : table === "units"
@@ -100,7 +102,7 @@ function createCheckoutSupabase(config: CheckoutConfig): SupabaseClient {
           single: vi.fn().mockResolvedValue({
             data:
               table === "rent_charges"
-                ? config.charge ?? null
+                ? config.charge ? { due_date: "2026-03-01", ...config.charge } : null
                 : table === "leases"
                   ? config.lease ?? null
                   : table === "units"
@@ -122,7 +124,7 @@ function createManualAdminClient(config: ManualConfig): SupabaseClient {
       }
       if (table === "payments") {
         return {
-          insert: vi.fn().mockResolvedValue({ error: config.paymentError ?? null })
+          insert: paymentInsertMock.mockResolvedValue({ error: config.paymentError ?? null })
         };
       }
 
@@ -139,7 +141,7 @@ function createManualAdminClient(config: ManualConfig): SupabaseClient {
           })),
           update: vi.fn(() => ({
             eq: chargeUpdateEq,
-            in: vi.fn(() => ({
+            in: chargeUpdateInMock.mockImplementation(() => ({
               eq: chargeUpdateEq
             }))
           }))
@@ -232,6 +234,16 @@ describe("charges actions", () => {
     logAuditMock.mockResolvedValue(undefined);
     sendPlatformAlertMock.mockResolvedValue({ sent: true });
     sideEffectErrorMock.mockReturnValue(() => undefined);
+  });
+
+  it("rejects rent due in twenty days before checkout starts", async () => {
+    const dueDate = new Date(Date.now() + 20 * 86400000).toISOString().slice(0, 10);
+    parseFormDataMock.mockReturnValueOnce({ success: true, data: { chargeId: "charge-1" } });
+    requireAuthMock.mockResolvedValueOnce({ user: { id: "user-1" }, role: "tenant",
+      supabase: createCheckoutSupabase({ charge: { id: "charge-1", lease_id: "lease-1",
+        amount_cents: 125000, status: "pending", due_date: dueDate } }) });
+    expect(await payWithCard(new FormData())).toEqual({ success: false, error: "This rent is not due yet." });
+    expect(createStripeCheckoutSessionMock).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -615,6 +627,7 @@ describe("charges actions", () => {
     const result = await recordManualPayment(null, new FormData());
 
     expect(result).toEqual({ success: false, error: "This payment is already marked paid." });
+    expect(paymentInsertMock).not.toHaveBeenCalled();
   });
 
   it("returns an access denied error for unauthorized manual payment users", async () => {
@@ -667,9 +680,28 @@ describe("charges actions", () => {
     const result = await recordManualPayment(null, new FormData());
 
     expect(result).toEqual({ success: true, message: "Manual payment recorded." });
+    expect(paymentInsertMock).toHaveBeenCalledWith(expect.objectContaining({ recorded_via: "manual" }));
+    expect(chargeUpdateInMock).toHaveBeenCalledWith("status", ["pending", "late"]);
     expect(revalidatePathMock).toHaveBeenCalledWith("/");
     expect(revalidatePathMock).toHaveBeenCalledWith("/owner");
     expect(revalidatePathMock).toHaveBeenCalledWith("/manager");
+  });
+  it("leaves the inserted manual payment when marking rent paid fails", async () => {
+    parseFormDataMock.mockReturnValueOnce({ success: true, data: {
+      chargeId: "charge-1", amountDollars: 1250, method: "cash", referenceNote: ""
+    } });
+    createAdminClientMock.mockReturnValue(createManualAdminClient({
+      charge: { id: "charge-1", lease_id: "lease-1", due_date: "2026-03-01",
+        status: "pending", amount_cents: 125000 },
+      lease: { id: "lease-1", tenant_profile_id: null, unit_id: "unit-1" },
+      unit: { id: "unit-1", property_id: "property-1", unit_number: "1" },
+      chargeUpdateError: { message: "write failed" }
+    }));
+    expect(await recordManualPayment(null, new FormData())).toEqual({ success: false,
+      error: "Payment recorded, but failed to mark payment as paid." });
+    expect(paymentInsertMock).toHaveBeenCalledOnce();
+    expect(chargeUpdateInMock).toHaveBeenCalledWith("status", ["pending", "late"]);
+    expect(revalidatePathMock).not.toHaveBeenCalled();
   });
   it.each([
     [true, false],

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getChargeUrgency } from "@/lib/rent-urgency";
+import { getChargeUrgency, isRentOpenForTenant } from "@/lib/rent-urgency";
 
 const now = new Date("2026-03-18T12:00:00.000Z");
 
@@ -44,5 +44,20 @@ describe("getChargeUrgency", () => {
       level: "upcoming",
       daysUntilDue: 1
     });
+  });
+});
+
+describe("isRentOpenForTenant", () => {
+  it("opens past, today, and five days ahead on UTC dates", () => {
+    const today = new Date("2026-10-10T23:30:00Z");
+    expect(isRentOpenForTenant("2026-10-09", today)).toBe(true);
+    expect(isRentOpenForTenant("2026-10-10", today)).toBe(true);
+    expect(isRentOpenForTenant("2026-10-15", today)).toBe(true);
+    expect(isRentOpenForTenant("2026-10-16", today)).toBe(false);
+  });
+
+  it("uses UTC midnight even when the local evening is still yesterday", () => {
+    expect(isRentOpenForTenant("2026-10-15", new Date("2026-10-09T23:30:00Z"))).toBe(false);
+    expect(isRentOpenForTenant("2026-10-15", new Date("2026-10-10T00:30:00Z"))).toBe(true);
   });
 });

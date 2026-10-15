@@ -1,5 +1,4 @@
 "use client";
-"use client";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useFormState } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -20,14 +19,15 @@ import { ComposeMessageModal } from "../compose-message-modal";
 import { ChargeRow, getChargeLabel } from "../charge-row";
 import { NextBillLineSheet } from "../next-bill-line-sheet";
 import { tracksLateRent } from "@/lib/lease-collection";
+import { isRentOpenForTenant } from "@/lib/rent-urgency";
 import {
   ChargeSectionFilters,
   ChargeSectionHeader,
   type ChargeFilter
 } from "../charge-section-controls";
-
 import { InlineAlert, exportChargesCsv, unavailableAction } from "./helpers";
 import type { ChargesSectionProps } from "./types";
+
 export function ChargesSection({
   charges,
   onPayCharge,
@@ -65,7 +65,10 @@ export function ChargesSection({
   const lateCount = charges.filter(
     (charge) => charge.status === "late" && tracksLateRent(charge)
   ).length;
+  const today = new Date();
   const pendingCount = charges.filter((charge) => charge.status === "pending").length;
+  const dueSoonCount = charges.filter((c) => c.status === "pending" && isRentOpenForTenant(c.dueDate, today)).length;
+  const filterPendingCount = simpleRentView ? dueSoonCount : pendingCount;
   const [activeFilter, setActiveFilter] = useState<ChargeFilter>(
     simpleRentView ? (lateCount > 0 ? "late" : "due_soon") : "all"
   );
@@ -89,17 +92,15 @@ export function ChargesSection({
       setManualPaymentChargeId(null);
     }
   }, [manualPaymentState]);
-  const filteredCharges = useMemo(
-    () => charges.filter((charge) => {
+  const filteredCharges = charges.filter((charge) => {
       if (activeFilter === "all") return true;
-      if (activeFilter === "due_soon") return charge.status === "pending";
+      if (activeFilter === "due_soon") return charge.status === "pending" &&
+        isRentOpenForTenant(charge.dueDate, today);
       if (activeFilter === "late") {
         return charge.status === "late" && tracksLateRent(charge);
       }
       return charge.status === activeFilter;
-    }),
-    [activeFilter, charges]
-  );
+    });
   const visibleCharges = previewCount && !expanded ? filteredCharges.slice(0, previewCount) : filteredCharges;
   const hasMoreVisibleCharges = previewCount != null && filteredCharges.length > previewCount;
   useEffect(() => {
@@ -313,7 +314,9 @@ export function ChargesSection({
             })}
           </AnimatedList>
         ) : null}
-        {!isTenantView ? <ChargeSectionFilters simpleRentView={simpleRentView} activeFilter={activeFilter} pendingCount={pendingCount} lateCount={lateCount} paidThisMonthCount={paidThisMonthCount} onChange={setActiveFilter} /> : null}
+        {!isTenantView ? <ChargeSectionFilters simpleRentView={simpleRentView} activeFilter={activeFilter}
+          pendingCount={filterPendingCount} lateCount={lateCount} paidThisMonthCount={paidThisMonthCount}
+          onChange={setActiveFilter} /> : null}
         {showManualPayment ? (
           <InlineAlert state={manualPaymentState} defaultMessage="Payment recorded." />
         ) : null}
@@ -405,6 +408,7 @@ export function ChargesSection({
                         ? () => setConfirmDeleteChargeId(charge.id)
                         : undefined
                     }
+                    onUndoPayment={charge.status === "paid" && !isTenantView ? onRecordManualPayment : undefined}
                     onOpenMessage={
                       onSendMessageToTenant && charge.tenantProfileId && charge.tenantName
                         ? () => setActiveMessageChargeId(charge.id)

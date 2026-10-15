@@ -54,6 +54,7 @@ import { redirect } from "next/navigation";
 import { SectionNotFoundState } from "@/components/dashboard/section-renderer-support";
 import { TenantBottomBar } from "@/components/dashboard/tenant-bottom-bar";
 import { getTenantPayState, getNextRentDueDate } from "@/lib/tenant-pay-state";
+import { isRentOpenForTenant } from "@/lib/rent-urgency";
 import { logPerfEvent, measurePerf } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -163,7 +164,8 @@ export default async function TenantPage(props: TenantPageProps) {
       }
     : null;
   const hasActiveLease = leaseDetails.length > 0;
-  const currentCharge = paymentData.charges[0] ?? null;
+  const today = new Date();
+  const currentCharge = paymentData.charges.find((charge) => isRentOpenForTenant(charge.dueDate, today)) ?? null;
   const ownerConnected = currentCharge ? ownerConnectedMap.get(currentCharge.propertyId) ?? false : false;
   const stripeConfigured = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
   const payState = getTenantPayState({
@@ -171,10 +173,11 @@ export default async function TenantPage(props: TenantPageProps) {
     ownerConnected,
     stripeConfigured,
     lease: currentLease ? { monthlyRentCents: currentLease.monthlyRentCents, dueDayOfMonth: leaseDetails[0].dueDayOfMonth } : null,
-    lastPayment: paymentHistory[0] ? { paidAt: paymentHistory[0].paidAt } : null
+    lastPayment: paymentHistory[0] ? { paidAt: paymentHistory[0].paidAt } : null,
+    today
   });
-  const rentDueDate = currentCharge?.dueDate ?? (leaseDetails[0]
-    ? getNextRentDueDate(leaseDetails[0].dueDayOfMonth, new Date(), leaseDetails[0].startDate)
+  const rentDueDate = currentCharge?.dueDate ?? paymentData.charges[0]?.dueDate ?? (leaseDetails[0]
+    ? getNextRentDueDate(leaseDetails[0].dueDayOfMonth, today, leaseDetails[0].startDate)
     : null);
   const inboxProperties = Array.from(
     new Map(

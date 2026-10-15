@@ -90,7 +90,7 @@ export async function fileBankItem(ctx: FileContext, choice: BankChoice,
   if (claimed?.length !== 1) return { success: false, error: "This rent was just recorded. Refresh to see it." };
   const { data: payment, error: paymentError } = await admin.from("payments").insert({
     rent_charge_id: charge.id, amount_cents: row.amountCents, method: "ach",
-    reference_note: `From bank: ${ctx.nickname}`, paid_at: `${row.postedOn}T12:00:00.000Z`
+    reference_note: `From bank: ${ctx.nickname}`, paid_at: `${row.postedOn}T12:00:00.000Z`, recorded_via: "bank_feed"
   }).select("id").single();
   if (paymentError) {
     await restoreCharge(admin, charge.id, priorStatus);

@@ -67,6 +67,7 @@ export { createTenantActivity, getTenantActivityLog } from "./tenant-activity";
 export { payWithCard } from "./charges";
 export { deletePendingCharge } from "./charges";
 export { recordManualPayment } from "./charges";
+export { undoManualPayment } from "./charge-undo";
 export {
   createManualCharge,
   deleteCharge,

@@ -114,7 +114,7 @@ export function buildDueDatesByLeaseId(leases: LeaseRow[], todayIso: string) {
   }
   return dueDatesByLeaseId;
 }
-function isPastGraceWindow(dueDateIso: string, gracePeriodDays: number, today: Date) {
+export function isPastGraceWindow(dueDateIso: string, gracePeriodDays: number, today: Date) {
   const dueDate = new Date(`${dueDateIso}T00:00:00.000Z`);
   dueDate.setUTCDate(dueDate.getUTCDate() + gracePeriodDays);
   return startOfUtcDay(today).getTime() > dueDate.getTime();

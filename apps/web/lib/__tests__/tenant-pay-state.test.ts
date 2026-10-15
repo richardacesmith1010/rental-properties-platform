@@ -6,6 +6,11 @@ const lease = { monthlyRentCents: 150000, dueDayOfMonth: 1 };
 const charge = { amountCents: 150000, dueDate: "2026-10-01", status: "pending" as const };
 
 describe("getTenantPayState", () => {
+  it("ignores a future-only charge", () => {
+    const today = new Date("2026-10-15T12:00:00Z");
+    expect(getTenantPayState({ charge: { ...charge, dueDate: "2026-11-15" }, lease,
+      ownerConnected: true, stripeConfigured: true, today })).toBe("not_posted");
+  });
   it.each([
     ["can_pay", { charge, lease, ownerConnected: true, stripeConfigured: true }],
     ["not_ready", { charge, lease, ownerConnected: false, stripeConfigured: true }],

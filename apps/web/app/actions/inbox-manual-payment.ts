@@ -18,6 +18,7 @@ import {
   touchInboxThread,
 } from "@/lib/inbox/action-helpers";
 import { requireAuth } from "./auth-helpers";
+import { isRentOpenForTenant } from "@/lib/rent-urgency";
 import type { ActionState } from "./shared";
 
 export async function requestManualPaymentConfirmation(
@@ -64,6 +65,9 @@ export async function requestManualPaymentConfirmation(
 
   if (charge.status === "paid" || charge.status === "waived") {
     return { success: false, error: "This payment is already closed." };
+  }
+  if (!isRentOpenForTenant(charge.due_date)) {
+    return { success: false, error: "This rent is not due yet." };
   }
 
   const { data: claimed, error: claimError } = await admin

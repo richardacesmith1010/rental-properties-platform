@@ -23,6 +23,7 @@ import { requestManualPaymentConfirmation } from "@/app/actions/inbox-manual-pay
 const homeA = "11111111-1111-4111-8111-111111111111";
 
 type ReportFixture = {
+  dueDate?: string;
   owner?: string;
   status?: string;
   reportedAt?: string | null;
@@ -66,7 +67,7 @@ function reportDb(fixture: ReportFixture = {}) {
         calls.push(readCount === 1 ? "first_read" : "reread");
         if (readCount > 1 && fixture.rereadError) return { data: null, error: { code: "ERROR" } };
         const data = readCount > 1 && fixture.missingAfterClaim ? null : {
-          id: "charge-1", lease_id: "lease-1", due_date: "2026-10-01", amount_cents: 100,
+          id: "charge-1", lease_id: "lease-1", due_date: fixture.dueDate ?? "2026-10-01", amount_cents: 100,
           status: readCount > 1 ? fixture.afterClaimStatus ?? fixture.status ?? "late" : fixture.status ?? "late",
           tenant_reported_paid_at: reportedAt,
           deleted_at: readCount > 1 && fixture.deletedAfterClaim ? "2026-10-07" : null
@@ -118,6 +119,15 @@ describe("manual payment report claim", () => {
     vi.clearAllMocks();
     checkRateLimitMock.mockReturnValue({ allowed: true, remaining: 10 });
     ensureCapabilityEnabledMock.mockResolvedValue(null);
+  });
+
+  it("rejects future rent without changing it or sending a message", async () => {
+    const dueDate = new Date(Date.now() + 20 * 86400000).toISOString().slice(0, 10);
+    const db = reportDb({ dueDate });
+    expect(await requestManualPaymentConfirmation(null, new FormData()))
+      .toEqual({ success: false, error: "This rent is not due yet." });
+    expect(db.updates).toHaveLength(0);
+    expect(db.calls).not.toContain("message");
   });
 
   it("claims an open charge before creating one owner message", async () => {

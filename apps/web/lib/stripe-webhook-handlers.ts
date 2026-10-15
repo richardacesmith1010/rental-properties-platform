@@ -187,6 +187,7 @@ async function insertPaymentRecord(
     amount_cents: params.amountCents,
     method,
     reference_note: referenceNote,
+    recorded_via: "stripe",
     stripe_checkout_session_id: params.stripeCheckoutSessionId ?? null,
     stripe_payment_intent_id: params.stripePaymentIntentId ?? null
   });

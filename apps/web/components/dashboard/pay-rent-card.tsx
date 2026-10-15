@@ -7,9 +7,9 @@ import type { ActionState } from "@/app/actions";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { getChargeUrgency } from "@/lib/rent-urgency";
+import { getChargeUrgency, isRentOpenForTenant } from "@/lib/rent-urgency";
 import type { TenantCharge } from "@/lib/tenant-payments";
-import { cn, formatCurrency, formatDate, formatUnitLabel } from "@/lib/format";
+import { cn, formatCurrency, formatDate, formatMonthDay, formatUnitLabel } from "@/lib/format";
 import { calculateCardFee, formatCentsAsDollars } from "@/lib/payment-fees";
 import type { TenantPayState } from "@/lib/tenant-pay-state";
 import { chargeBreakdown } from "@/lib/charge-breakdown";
@@ -107,8 +107,23 @@ export function PayRentCard({
     onSetupAutopay ?? unavailableAutopayAction,
     null
   );
-  const orderedCharges = sortTenantChargesByUrgency(charges);
+  const today = new Date();
+  const openCharges = charges.filter((item) => isRentOpenForTenant(item.dueDate, today));
+  const futureCharge = charges.filter((item) => !isRentOpenForTenant(item.dueDate, today))
+    .sort((left, right) => left.dueDate.localeCompare(right.dueDate))[0];
+  const orderedCharges = sortTenantChargesByUrgency(openCharges, today);
   const charge = orderedCharges[0];
+  const emptyTitle = futureCharge || payState === "not_posted" ? "Next rent"
+    : payState === "paid" ? "Rent paid" : "No payments due right now";
+  let emptyDescription = "Your balance is clear. When new rent posts, it will show up here first.";
+  if (futureCharge) {
+    emptyDescription = `Next rent: ${formatCurrency(futureCharge.amountCents)} on ${formatMonthDay(futureCharge.dueDate)}.`;
+  } else if (payState === "paid" && lastPaidAt) {
+    emptyDescription = `Paid ${formatDate(lastPaidAt)}. Thank you!`;
+  } else if (payState === "not_posted" && rentDueDate) {
+    emptyDescription = `${rentAmountCents ? formatCurrency(rentAmountCents) : "Rent"} is due ${formatDate(rentDueDate)}. ` +
+      "You can pay once it is posted.";
+  }
 
   if (!charge) {
     return (
@@ -124,9 +139,9 @@ export function PayRentCard({
                   <CheckCircle2 className="h-4 w-4" />
                   You&apos;re all set
                 </div>
-                <h2 className="text-2xl font-bold text-foreground sm:text-3xl">{payState === "not_posted" ? "Next rent" : payState === "paid" ? "Rent paid" : "No payments due right now"}</h2>
+                <h2 className="text-2xl font-bold text-foreground sm:text-3xl">{emptyTitle}</h2>
                 <p className="max-w-xl text-sm text-muted-foreground">
-                  {payState === "paid" && lastPaidAt ? `Paid ${formatDate(lastPaidAt)}. Thank you!` : payState === "not_posted" && rentDueDate ? `${rentAmountCents ? formatCurrency(rentAmountCents) : "Rent"} is due ${formatDate(rentDueDate)}. You can pay once it is posted.` : "Your balance is clear. When new rent posts, it will show up here first."}
+                  {emptyDescription}
                 </p>
               </>
             ) : (
@@ -152,8 +167,8 @@ export function PayRentCard({
     );
   }
 
-  const urgency = getChargeUrgency(charge);
-  const additionalCharges = charges.filter((item) => item.id !== charge.id);
+  const urgency = getChargeUrgency(charge, today);
+  const additionalCharges = openCharges.filter((item) => item.id !== charge.id);
   const isLate = charge.status === "late" || urgency.level === "overdue";
   const Icon = isLate ? AlertTriangle : Clock3;
   const badgeLabel =
@@ -390,10 +405,10 @@ export function PayRentCard({
   );
 }
 
-export function sortTenantChargesByUrgency(charges: TenantCharge[]) {
+export function sortTenantChargesByUrgency(charges: TenantCharge[], today = new Date()) {
   return [...charges].sort((left, right) => {
-    const leftUrgency = getChargeUrgency(left);
-    const rightUrgency = getChargeUrgency(right);
+    const leftUrgency = getChargeUrgency(left, today);
+    const rightUrgency = getChargeUrgency(right, today);
 
     const priority = (level: ReturnType<typeof getChargeUrgency>["level"]) => {
       switch (level) {

@@ -14,6 +14,8 @@ import { calculateCardFee, formatCentsAsDollars } from "@/lib/payment-fees";
 import { getStatusClasses, statusAriaLabel, statusBadgeClasses } from "@/lib/status-colors";
 import { chargeCategoryLabel, type ChargeCategory } from "@/lib/charge-audit";
 import { chargeBreakdown, type ChargeLine } from "@/lib/charge-breakdown";
+import { isRentOpenForTenant } from "@/lib/rent-urgency";
+import type { ActionState } from "@/app/actions";
 
 export type ChargeStatus = "pending" | "paid" | "late" | "waived";
 
@@ -66,6 +68,7 @@ interface ChargeRowProps {
   onRemoveNextBillLine?: (lineId: string) => void;
   onWaive?: () => void;
   onDelete?: () => void;
+  onUndoPayment?: (prev: ActionState, formData: FormData) => Promise<ActionState>;
   onOpenMessage?: () => void;
   onSendReminder?: () => void;
   /** @deprecated Use simpleView. Kept for existing component tests. */
@@ -113,6 +116,7 @@ export function ChargeRow({
   onRemoveNextBillLine,
   onWaive,
   onDelete,
+  onUndoPayment,
   onOpenMessage,
   onSendReminder,
   ownerView = false,
@@ -254,7 +258,7 @@ export function ChargeRow({
               {isTenantView &&
               (tenantPayState === undefined || tenantPayState === "can_pay") &&
               charge.status !== "paid" &&
-              charge.status !== "waived" ? (
+              charge.status !== "waived" && isRentOpenForTenant(charge.dueDate) ? (
                 <div className="w-full space-y-2 xl:w-[18rem]">
                   <div
                     className={[
@@ -350,12 +354,14 @@ export function ChargeRow({
                 </Button>
               ) : null}
 
-              {canModify || onAddNextBill ? (
+              {canModify || onAddNextBill || onUndoPayment ? (
                 <ChargeMoreMenu
                   disabled={isMutatingCharges}
                   onEdit={onOpenEdit}
                   onWaive={onWaive}
                   onDelete={onDelete}
+                  onUndoPayment={onUndoPayment}
+                  undoChargeId={charge.id}
                   onAddNextBill={onAddNextBill}
               onMessage={simpleView ? onOpenMessage : undefined}
               compact={simpleView}

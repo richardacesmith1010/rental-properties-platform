@@ -21,6 +21,10 @@ function dueDateStart(dueDate: string) {
   return Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate());
 }
 
+export function isRentOpenForTenant(dueDate: string, today = new Date()): boolean {
+  return dueDateStart(dueDate) - startOfUtcDay(today) <= 5 * 86400000;
+}
+
 export function getChargeUrgency(
   charge: ChargeUrgencyInput,
   now: Date = new Date()
