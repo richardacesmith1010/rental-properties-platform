@@ -1067,3 +1067,9 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - CI on `05c662b`: attempt 1 failed in `next build` (`next/font` Google fetch: "Cannot read properties of null"), attempt 2 green. If it recurs, consider self-hosting Geist via `next/font/local`.
 - 233c (wallet rent-rows in one round trip) is no longer needed for the target; parked as an optional follow-up.
 - Lesson L-023 added.
+
+## Sprint 234 DONE (2026-10-15) — onboarding live walk (no code)
+- Fresh owner `+walkowner` and tenant `+walktenant` walked sign-up → first rent paid on production. Works end to end; DB exact; Sentry clean.
+- 5 major findings (F17 tenant shown next month as due now; F15 no way to post first rent + wrong empty state; F19 no undo for Mark paid; K5 tenant name guessed from email; F3 Supabase default sender for sign-up email) + 6 medium + low. Full table: `docs/onboarding-walk-2026-10-15.md`.
+- Accounts kept for re-walk (owner decides later: keep as designated onboarding accounts or delete).
+- **Next:** Sprint 235 fix packet (F17 + F19 money display/undo = L3 + ChatGPT; F15, K5, F5, K6, F8, F10, F13 = L2), F3 = Supabase custom SMTP via Resend (config, owner approval).

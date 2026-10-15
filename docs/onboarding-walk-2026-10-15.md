@@ -57,3 +57,40 @@ for the main screens; note every moment where the next step is unclear (zero-fri
 ## Output
 A findings table (step, what happened, screenshot, severity) → Sprint 235 fix packet for Codex →
 re-walk the failed steps → re-score Onboarding.
+
+## Results — walked 2026-10-15 04:22–04:50 UTC (owner's Chrome, desktop 1440 px)
+
+**Outcome:** the full path works end to end. Owner sign-up → confirm → profile → Individual → home + unit +
+lease + invite → tenant invite email → tenant join → rent posted → tenant "I paid this" → owner sees
+"Tenant says paid" → Mark paid. DB matches exactly (1 account, 1 home, lease $1,200 due 15th, Oct paid with
+tenant report + 1 cash payment, Nov pending, invite accepted). Sentry clean. Not walked: tenant receipt
+after payment (C14), dark-mode screenshots (theme smoke covers these pages), 375 px.
+
+### Findings
+| # | Sev | Step | What happened |
+|---|---|---|---|
+| F17 | **Major** | C12 | Tenant Home after first rent: "Rent due **$2,400 · 2 months**, due Oct 15 · today" — November (due Nov 15) counted as due now. Day-one tenant is told they owe double. |
+| F15 | **Major** | C11 | Owner Rent page: "No rent yet. Rent will appear here after you create a lease." although a lease exists. No way to post the first rent: the Generate link is hidden in the owner's simple view (`charge-section-controls.tsx:46` `!simpleRentView`). Owner waits for the 08:00 UTC cron with no explanation (K4). |
+| F19 | **Major** | C13 | No undo for "Mark paid": paid row menu has only Message / Add to next bill; no void/undo action exists in `app/actions`. |
+| K5 | **Major** | A5, B7, B9 | Tenant name guessed from email: owner card and invite email say "Richard Ace Smith+walktenant"; tenant's form prefilled "Richard" / "Ace Smith+walktenant". Wizard has no tenant name field. |
+| F3 | **Major (config)** | A1 | Sign-up confirmation comes from `noreply@mail.app.supabase.io`, subject "Confirm Your Signup" (Supabase default SMTP, low hourly limit). Invite emails already use Resend `notifications@domusbase.com`. |
+| F5 | Medium | A3 | Owner profile "First Name" prefilled with `richard.ace.smith+walkowner`. |
+| K6 | Medium | A5 | Wizard has no "tenant pays outside Domus" choice and no due-day choice (due day = start date). |
+| F8 | Medium | A5 | Success screen: "Your home is added." twice; pushes "Connect your bank" without saying why; doesn't say the tenant was invited. |
+| F10 | Medium | A6 | Home card doesn't show the tenant hasn't joined yet ("Invite sent"). |
+| F13 | Medium | B10 | Tenant: "You can pay once it's posted." — jargon, no date. |
+| F9 | Low | A6 | "Go to Dashboard" lands on Homes, not Home. |
+| F16 | Low | C11 | Generate made Oct + Nov; both under "Due soon (2)". |
+| F12 | Low | B8 | Invite email promises "pay rent" though online pay is off for this owner. |
+| F1/F2 | Low | A1 | Sign-up step 2 still asks "what brings you to Domus?" and doesn't show the chosen role; password rules not shown until broken. |
+| F7/F11 | Low | A5, B7 | Dates shown `2026-10-15`; invite rent "$1200.00". |
+| F18 | Low | C13 | "Manual payment recorded." (jargon). |
+| F4 | Low | A2 | Confirm email logo purple vs app blue. |
+| F14 | Check | C11 | Login page has two Email/Password forms in the accessibility tree. |
+
+### Passed cleanly
+Role picker; check-email screen with resend; confirm link → `/onboarding`; account-type screen; setup
+checklist with one obvious "Add Your First Home"; 4-step wizard with progress + review; invite email
+delivered in seconds; tenant welcome page with property/unit/rent context; tenant Home layout; "Online pay
+isn't on yet … Pay them the way you usually do"; "I paid this" → "Sent. Your landlord will check and mark it
+paid."; owner badge "Tenant says paid · Oct 15"; inline Mark paid form.
