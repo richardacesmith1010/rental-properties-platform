@@ -166,6 +166,49 @@ describe("Supabase round-trip counting", () => {
     expect(counts.at(-1)).toBe(0);
   });
 
+  test("counts nested requests in each enclosing scope", async () => {
+    let outer = -1;
+    let inner = -1;
+    await measureQueryCount(async () => {
+      countSupabaseRequest("https://db.example/rest/v1/outer");
+      await measureQueryCount(async () => {
+        for (let request = 0; request < 3; request++) {
+          countSupabaseRequest("https://db.example/rest/v1/inner");
+        }
+      }, count => { inner = count; });
+    }, count => { outer = count; });
+    expect(inner).toBe(3);
+    expect(outer).toBe(4);
+  });
+
+  test("counts parallel sibling scopes only in their shared parent", async () => {
+    let outer = -1;
+    const siblings: number[] = [];
+    await measureQueryCount(async () => {
+      await Promise.all([2, 3].map(requests => measureQueryCount(async () => {
+        for (let request = 0; request < requests; request++) {
+          countSupabaseRequest("https://db.example/rest/v1/sibling");
+        }
+      }, count => siblings.push(count))));
+    }, count => { outer = count; });
+    expect(siblings.sort()).toEqual([2, 3]);
+    expect(outer).toBe(5);
+  });
+
+  test("ignores non-REST requests at every scope and outside scopes", async () => {
+    let outer = -1;
+    let inner = -1;
+    expect(() => countSupabaseRequest("https://db.example/auth/v1/user")).not.toThrow();
+    await measureQueryCount(async () => {
+      countSupabaseRequest("https://db.example/auth/v1/user");
+      await measureQueryCount(async () => {
+        countSupabaseRequest("https://db.example/storage/v1/object");
+      }, count => { inner = count; });
+    }, count => { outer = count; });
+    expect(inner).toBe(0);
+    expect(outer).toBe(0);
+  });
+
   test("logs the query count on owner and tenant bundle events", async () => {
     const info = vi.spyOn(console, "info").mockImplementation(() => {});
     for (const scope of ["owner", "tenant"]) {

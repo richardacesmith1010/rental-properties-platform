@@ -5,13 +5,18 @@
  */
 import { AsyncLocalStorage } from "node:async_hooks";
 
-const queryScope = new AsyncLocalStorage<{ queries: number }>();
+type QueryScope = { queries: number; parent?: QueryScope };
+
+const queryScope = new AsyncLocalStorage<QueryScope>();
 
 export function countSupabaseRequest(input: RequestInfo | URL): void {
   const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
   if (url.includes("/rest/v1/")) {
-    const scope = queryScope.getStore();
-    if (scope) scope.queries++;
+    let scope = queryScope.getStore();
+    while (scope) {
+      scope.queries++;
+      scope = scope.parent;
+    }
   }
 }
 
@@ -19,7 +24,7 @@ export function countSupabaseRequest(input: RequestInfo | URL): void {
 Reflect.set(globalThis, Symbol.for("domus.perf.countSupabaseRequest"), countSupabaseRequest);
 
 export async function measureQueryCount<T>(work: () => Promise<T>, onComplete: (queries: number) => void): Promise<T> {
-  const scope = { queries: 0 };
+  const scope: QueryScope = { queries: 0, parent: queryScope.getStore() };
   return queryScope.run(scope, async () => {
     try {
       return await work();

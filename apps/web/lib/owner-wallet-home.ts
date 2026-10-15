@@ -11,6 +11,7 @@ import type { ChargeLine } from "@/lib/charge-lines";
 import { tracksLateRent } from "@/lib/lease-collection";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
+import { measurePerf } from "@/lib/logger";
 
 export interface WalletHomeEntry {
   id: string; name: string; city: string; state: string; accountId: string; accountName: string;
@@ -52,13 +53,16 @@ async function loadBankNeedState(admin: ReturnType<typeof createAdminClient>, ow
 
 export async function loadOwnerWalletHome(userId: string, today = new Date()): Promise<OwnerWalletHomeResult> {
   try {
-    const administered = await getAdministeredProperties(userId);
+    const administered = await measurePerf("owner", "home.wallet.administered", () =>
+      getAdministeredProperties(userId));
     const ids = [...new Set(administered.map((property) => property.id))];
     if (!ids.length) {
-      const accounts = await getOwnershipAccountsForUser(userId);
+      const accounts = await measurePerf("owner", "home.wallet.accounts", () =>
+        getOwnershipAccountsForUser(userId));
       const [bankNeeds, myTasksDueCount] = await Promise.all([
-        loadBankNeedState(createAdminClient(), accounts.map((account) => account.id)),
-        countMyDueTasks(userId, today)
+        measurePerf("owner", "home.wallet.bank-needs", () =>
+          loadBankNeedState(createAdminClient(), accounts.map((account) => account.id))),
+        measurePerf("owner", "home.wallet.tasks", () => countMyDueTasks(userId, today))
       ]);
       return { ok: true, homes: [], ytd: { inCents: 0, outCents: 0 }, recent: [],
         yearRentReceivedByPropertyId: {}, ...bankNeeds, myTasksDueCount };
@@ -69,27 +73,33 @@ export async function loadOwnerWalletHome(userId: string, today = new Date()): P
     const previousFrom = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1))
       .toISOString().slice(0, 10);
     const from = previousFrom < yearFrom ? previousFrom : yearFrom;
-    const portfolioPromise = getPortfolioData(userId, null, ids);
-    const accountsPromise = getOwnershipAccountsForUser(userId);
+    const portfolioPromise = measurePerf("owner", "home.wallet.portfolio", () =>
+      getPortfolioData(userId, null, ids));
+    const accountsPromise = measurePerf("owner", "home.wallet.accounts", () =>
+      getOwnershipAccountsForUser(userId));
     const [portfolio, accounts, rentRows, expenses, bankNeeds, lines, myTasksDueCount] = await Promise.all([
       portfolioPromise,
       accountsPromise,
-      loadRentRowsForProperties(ids, from, yearTo),
-      admin.from("property_expenses").select("id, property_id, category, description, amount_cents, expense_date")
-        .in("property_id", ids).gte("expense_date", from).lt("expense_date", yearTo),
-      accountsPromise.then((loaded) => loadBankNeedState(admin, loaded.map((account) => account.id))),
+      measurePerf("owner", "home.wallet.rent-rows", () => loadRentRowsForProperties(ids, from, yearTo)),
+      measurePerf("owner", "home.wallet.expenses", async () => await admin.from("property_expenses")
+        .select("id, property_id, category, description, amount_cents, expense_date")
+        .in("property_id", ids).gte("expense_date", from).lt("expense_date", yearTo)),
+      accountsPromise.then((loaded) => measurePerf("owner", "home.wallet.bank-needs", () =>
+        loadBankNeedState(admin, loaded.map((account) => account.id)))),
       portfolioPromise.then(async (loaded) => {
         const leaseIds = [...new Set(loaded.leases.map((lease) => lease.id))];
         if (!leaseIds.length) return [] as ChargeLine[];
-        const { data, error } = await admin.from("rent_charge_lines")
-          .select("id, lease_id, charge_id, kind, label, amount_cents, created_at").in("lease_id", leaseIds);
-        if (error) {
-          if (isMissingSchemaError(error)) return [] as ChargeLine[];
-          throw error;
-        }
-        return (data ?? []) as ChargeLine[];
+        return measurePerf("owner", "home.wallet.charge-lines", async () => {
+          const { data, error } = await admin.from("rent_charge_lines")
+            .select("id, lease_id, charge_id, kind, label, amount_cents, created_at").in("lease_id", leaseIds);
+          if (error) {
+            if (isMissingSchemaError(error)) return [] as ChargeLine[];
+            throw error;
+          }
+          return (data ?? []) as ChargeLine[];
+        });
       }),
-      countMyDueTasks(userId, today)
+      measurePerf("owner", "home.wallet.tasks", () => countMyDueTasks(userId, today))
     ]);
     if (expenses.error) throw expenses.error;
     const idSet = new Set(ids);
