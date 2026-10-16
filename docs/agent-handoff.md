@@ -1150,3 +1150,18 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - **Next:** live walk (owner turns on reminders → manager Remind → test-mode delivery to allowlist only; reversed
   payments show "Reversed"; M5–M8, M2, T1 light/dark) → re-score Manager. Then 237c (M3/M1/M11) and 237d
   (`ownership_accounts` grants packet, currently `docs/sprint237c-migration-packet.md`).
+
+## Sprint 237d SHIPPED — lock client writes to `ownership_accounts` (L3 security) — 2026-10-16
+- Commit `e5af488`; migration `20261020_sprint237d_ownership_accounts_grants` applied live (postcondition passed).
+  Packet `docs/sprint237d-migration-packet.md` (ChatGPT rev 2 APPROVE; written by side session "Lock down
+  ownership_accounts", renumbered from 237c). No app code.
+- Preflight (L-012) matched the audit plus 237b's additions (guard trigger, `set_managers_can_send_reminders` definer).
+- ACL now `{postgres=arwdDxtm, service_role=arwdDxtm, authenticated=r}`. Attacker SQL as smoke owner (rolled back):
+  A1–A5, A8, A9 and the 237b flag → 42501; own row readable, others 0; TRUNCATE false; anon SELECT 42501; service_role
+  update 1 row.
+- Production smoke green, CI `gate` success, logged-out `/`, `/login`, `/join/<id>`, `/join-llc` 200, no
+  `permission denied` in runtime logs (30 min). Local gate: 1 vitest failure while smoke ran in parallel; 2 clean reruns
+  (2536/2536) — treat as a flake.
+- Remaining: §7.8 24 h log check for `42501`/`ownership_accounts`.
+- **Next (urgent, found by the same audit):** `public.profiles` lets a tenant set its own `role = 'owner'` and Stripe
+  fields (no trigger, table-level UPDATE). Needs its own L3 packet. Then 237c (M3/M1/M11).
