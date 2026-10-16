@@ -117,3 +117,8 @@ Permanent log of Claude's mistakes and the rule each one created. Read it before
 **What was correct:** Check the fixed cost per round trip (and where it comes from) before optimizing query structure. Perf instrumentation is code: check how it composes.
 **Rule:** Any speed sprint starts by reading one single-query `[perf:*]` step: if one PostgREST call costs > 50 ms, check function region vs database region first. Any packet adding nested timers must state how counts roll up and test it. When a change makes pages faster, expect timing races in browser tests: use accessible locators (`getByRole`) over raw tags so hidden swap copies are not counted.
 
+#### L-024 | 2026-10-16 | VERIFICATION
+**What happened:** Walk 236 reported "the undo toast never auto-dismisses" (M6) and Sprint 237b added a forced dismiss. In the 237 re-walk a different toast also stayed up for 45 s; `document.visibilityState` was `hidden` because the driven Chrome window sat behind the Claude app. Sonner (and most timers using visibility) pause while the page is hidden, so "stuck" toasts were an artifact of the walk setup, not (only) a product bug.
+**What was correct:** Timing-based UI findings depend on the page being visible and focused.
+**Rule:** Before reporting a timing bug (toasts, auto-refresh, animations) from a driven browser, check `document.visibilityState` and `document.hasFocus()` with the javascript tool; only file it if it reproduces with `visible`. Note the state in the finding.
+

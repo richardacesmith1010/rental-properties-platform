@@ -59,3 +59,18 @@ daily smoke (manager views), not re-walked.
 Manager Home "Needs you today" (1 open repair, 1 conversation), bank card for fees, rent progress; Rent list scoped to
 managed homes; repair status + comment; client add (clear "paid outside Domus" note); owner statement dialog; second
 invite recognized without a second email.
+
+## Sprint 237 re-walk — 2026-10-16 03:00–03:35 UTC (production, `ea349c1`)
+| Item | Result |
+|---|---|
+| M10 reversed payments | ✅ Manager + owner Payments show 2 real payments (were 5); home Payments tab labels 4 "Reversed"; Nov "Not paid". Re-checked after 2 new undos. |
+| Reminders off | ✅ Manager sees no Remind. |
+| Owner switch | ✅ Settings → Notifications → "Let my manager send rent reminders" → On, "Setting saved."; DB flag true + audit before/after. Design: Off/On button, not toggle style. |
+| Manager Remind | ✅ Remind shown on both homes; "Saved. Domus is in test mode. Only test accounts can get notices."; log `test mode: skipped rent_due_reminder` (walk tenant not allowlisted); audit `actor_role: manager`, 1 charge. |
+| M5 | ✅ Alert cleared after undo. Do → undo → do again → undo OK (L-016). |
+| M6 | ✅ Undo toast gone < 10 s; "Repair updated." toast. Stuck-toast cause = hidden page (L-024). |
+| M7 / M8 | ✅ No badge, inbox 0 unread; "Start a conversation", General/Repair/Lease/Rent/Papers. |
+| M2 | ✅ No Next on final step; banner "Walk Manager already has access to this home. No email was sent." fully visible. |
+| T1 | ⏸ Not walked (needs tenant sign-in); unit test + manager card still shows Cost/Vendor/Assignment ✅. |
+| 375 px + dark | ✅ Manager Rent readable, Remind/Mark paid visible. Install Domus card covers the Rent list at 375 px (pre-existing). |
+
