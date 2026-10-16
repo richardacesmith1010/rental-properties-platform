@@ -1,4 +1,4 @@
-# Sprint 237e — Lock direct writes to `profiles` (L3: auth/money/schema) — rev 1
+# Sprint 237e — Lock direct writes to `profiles` (L3: auth/money/schema) — rev 2 (rev 1 ChatGPT APPROVE WITH CHANGES: 2 REQUIRED + 4 OPTIONAL adopted)
 
 Migration-only sprint. **Claude** writes and applies the migration (CLAUDE.md §1). **Codex writes no app code** — every
 app, script and test write to `profiles` already uses the service role (code map below). Same pattern as Sprint 237d
@@ -97,10 +97,18 @@ end $$;
 
 ## 7. Validation (Claude, after apply)
 1. Postcondition passes inside the migration.
-2. Re-run P1–P4 as the smoke tenant (rolled back) → every one `42501`; TRUNCATE privilege false; a self INSERT → `42501`.
+2. Re-run P1–P4 as the smoke tenant (rolled back) → every one `42501`; a self INSERT and a self DELETE → `42501`;
+   `has_table_privilege` TRUNCATE and MAINTAIN → false for `authenticated` and `anon`. Then re-read the tenant row and
+   assert `role`, `email`, `is_tester`, `stripe_account_id`, `stripe_onboarding_complete`, `stripe_customer_id` equal
+   their pre-test values.
+2b. **Real PostgREST check:** sign in as the smoke tenant with supabase-js (anon key + `SMOKE_*` credentials from
+   `apps/web/.env.local`, the same way smoke does) and `update profiles set role='owner', stripe_account_id=…,
+   stripe_customer_id=…, is_tester=true where id = self` → error code `42501`; then read the row with the service role and
+   assert those values are unchanged.
 3. As the smoke tenant: `select role from profiles where id = auth.uid()` → 1 row (reads unchanged).
 4. As `service_role`: no-op update on the smoke tenant → 1 row. A sign-up path test: `handle_new_user` still inserts
-   (run inside a rolled-back transaction: insert into `auth.users` as `postgres` → profile row exists).
+   (rolled back: insert into `auth.users` as `postgres` → exactly one profile row with that `id`, that `email`, and the
+   default role `handle_new_user` assigns when no role metadata is given).
 5. `npm run gate:web` green; `APP_URL=https://domusbase.com npm run smoke:web` green (owner, manager, tenant sign-in and
    pages); GitHub CI `gate` green for HEAD.
 6. Live: profile name save and notification-preference toggle (both admin writes) still work; Vercel runtime logs show no
@@ -109,7 +117,7 @@ end $$;
 
 ## 8. Acceptance
 1. Live ACL is exactly `{postgres=arwdDxtm, service_role=arwdDxtm, anon=r, authenticated=r}` (order may differ).
-2. §7.2 every write attack denied; §7.3 reads unchanged; §7.4 server writes and sign-up work.
+2. §7.2/§7.2b every write attack denied and values unchanged; §7.3 reads unchanged; §7.4 server writes and sign-up work.
 3. Gate, smoke and CI green (L-019); no `profiles` permission error in production logs.
 
 ## 9. Report format
