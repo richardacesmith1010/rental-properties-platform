@@ -1165,3 +1165,17 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Remaining: §7.8 24 h log check for `42501`/`ownership_accounts`.
 - **Next (urgent, found by the same audit):** `public.profiles` lets a tenant set its own `role = 'owner'` and Stripe
   fields (no trigger, table-level UPDATE). Needs its own L3 packet. Then 237c (M3/M1/M11).
+
+## Sprint 237e SHIPPED — lock client writes to `profiles` (L3 security) — 2026-10-16
+- Commit `e7fc4c8`; migration `20261021_sprint237e_profiles_grants` applied live (postcondition passed). Packet
+  `docs/sprint237e-profiles-grants-packet.md` (ChatGPT rev 1 APPROVE WITH CHANGES; 2 REQUIRED + 4 OPTIONAL adopted).
+- Hole proven before (rolled back): smoke tenant could set own `role='owner'`, Stripe account/customer, email, is_tester.
+- ACL now `{postgres, service_role = all; anon = r; authenticated = r}`. SQL as smoke tenant: P1–P4, insert, delete →
+  42501, values unchanged; TRUNCATE/MAINTAIN false for both roles; service_role write 1 row; signup via auth.users →
+  one profile, id/email correct, role `tenant`. **Real PostgREST** update as signed-in smoke tenant → `42501`, 0 rows,
+  values unchanged, self-read still works.
+- Anon SELECT was already failing before (a select policy reads `properties`, whose RLS calls `can_access_property`,
+  not executable by anon) — unchanged.
+- Smoke green (3 roles), logged-out pages 200, no `permission denied` in runtime logs.
+- **Next (high, separate L3):** `profiles_select_owner_for_management` / `…_for_managers` let any owner with ≥1 home read
+  every tenant/manager profile (email, phone, stripe_customer_id). Then default-grants audit of the other 55 tables.
