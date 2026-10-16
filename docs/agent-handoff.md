@@ -1135,3 +1135,18 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Not yet walked live in the UI (needs a signed-in session); fold into the 237b live walk.
 - **Next:** Sprint 237b (manager reminders + M7/M8/M5/M6/M2/T1) dispatched; then the ownership_accounts grants packet
   (`docs/sprint237c-migration-packet.md`, from the lock-down session — renumber to 237d, 237c stays M3/M1/M11).
+
+## Sprint 237b SHIPPED — manager rent reminders (owner opt-in) + manager walk fixes — 2026-10-15
+- Commit `ea349c1` (Codex gpt-6-sol high + 237b-b copy fixes, gpt-6-luna). Migration
+  `20261019_sprint237b_manager_reminders` applied live. Deployed prod; smoke green; CI `gate` success; gate 2536 tests.
+- Attacker fixture passed live (rolled back, 0 leftovers): owner-only RPC, no `authenticated` execute, direct
+  update/insert blocked even with the faked marker, client conversion forces off, check constraint proven alone.
+  Fixture fix: client accounts have no creator, so RLS gives 0 rows (safe) — case now accepts 0 rows or guard error.
+- Codex deviations accepted: outside-Domus rule now enforced in the reminder action for owners too (matches S211 policy);
+  `batch-toolbar.tsx` + `settings/page.tsx` + `notification-preferences.tsx` added to scope; M8 sweep touched ~30 files,
+  copy only (verified by a review agent: no identifiers/types/routes changed).
+- Risk noted: switch test-mode/allowlist covered by `notifications-switch` tests, not re-tested on the manager path.
+- Not yet walked live (237a + 237b): needs a signed-in walk owner + walk manager session.
+- **Next:** live walk (owner turns on reminders → manager Remind → test-mode delivery to allowlist only; reversed
+  payments show "Reversed"; M5–M8, M2, T1 light/dark) → re-score Manager. Then 237c (M3/M1/M11) and 237d
+  (`ownership_accounts` grants packet, currently `docs/sprint237c-migration-packet.md`).
