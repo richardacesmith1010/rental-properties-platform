@@ -1,4 +1,4 @@
-# Sprint 238a — iPhone shell: privacy manifest, photo-save crash, launch screen, upload safety (L3 iPhone) — rev 1
+# Sprint 238a — iPhone shell: privacy manifest, photo-save crash, launch screen, upload safety (L3 iPhone) — rev 2 (rev 1 ChatGPT REJECT: 9 REQUIRED adopted)
 
 ## 1. Objective
 Make the iPhone app (`apps/ios`, Capacitor 8 shell loading https://domusbase.com/login) safe to upload to TestFlight:
@@ -48,19 +48,39 @@ App Store Connect, account deletion (238b), any signing/team settings.
 8. `apps/ios/README.md`, `apps/ios/PRIVACY-AUDIT.md`
 
 ## 6. Implementation requirements
-1. **Manifest:** `NSPrivacyAccessedAPITypes` gets exactly one dict: `NSPrivacyAccessedAPIType` =
-   `NSPrivacyAccessedAPICategoryUserDefaults`, `NSPrivacyAccessedAPITypeReasons` = [`CA92.1`].
+1. **Manifest (audit first):** inspect the app target's Swift sources **and** every embedded framework/plugin
+   (Capacitor 8.5.3 core/iOS, @capacitor/app, splash-screen, status-bar, LinkKit 7.2.2 incl. `LinkKitSub`, any SPM/CocoaPods
+   frameworks in the built `App.app/Frameworks`) for all five required-reason categories: UserDefaults, file timestamps,
+   disk space, system boot time, active keyboards. For each use, record in `PRIVACY-AUDIT.md` which bundle declares it
+   (an SDK's own `PrivacyInfo.xcprivacy` covers its own use; the app target must declare uses made by app code and by any
+   embedded code that ships no manifest). The app target's `NSPrivacyAccessedAPITypes` must contain exactly the
+   categories the audit requires — at minimum `NSPrivacyAccessedAPICategoryUserDefaults` with [`CA92.1`] (AppLock).
 2. **Info.plist:** add `NSPhotoLibraryAddUsageDescription` = `Save photos from Domus to your phone.`; change
    `NSCameraUsageDescription` to `Take photos of repairs, receipts, and your profile.`
-3. **Splash:** `launchAutoHide: false` (keep `launchShowDuration` irrelevant). Hide the splash natively the **first** time
-   the main frame finishes loading a page (`didFinish` for the main frame), **or** the first `didFail`/
-   `didFailProvisionalNavigation` (so the offline page is visible), **or** after a 12-second fallback timer — whichever is
-   first; never hide twice; never block the Face ID lock overlay (the lock must still appear above content when enabled).
-   Keep the logic in a small pure, testable unit (e.g. `LaunchSplashGate`) called from the delegate.
+3. **Splash (rev 2):** `launchAutoHide: false`. A small pure state machine `LaunchSplashGate` decides; a concrete
+   adapter performs the hide by calling Capacitor's SplashScreen plugin through the bridge
+   (`bridge?.plugin(withName: "SplashScreen")` → its `hide`), on the main thread, only after `capacitorDidLoad`.
+   Invariant: **exactly one native hide, and the UI is never permanently obscured.** Rules:
+   - open on the first **main-frame** `didFinish` of a page that is the usable destination (redirects such as
+     `/login` → `/owner` keep the splash until the final page finishes; subframes never count);
+   - a genuine main-frame failure does **not** open the gate by itself: Capacitor then loads the bundled `offline.html`
+     (`errorPath`) — keep the splash until that offline page finishes, then open;
+   - cancelled/superseded navigations (`NSURLErrorCancelled` -999, WebKit "frame load interrupted" 102, or any failure
+     whose navigation is no longer the current one) never open the gate;
+   - a 12-second watchdog from launch always opens the gate (also covers the offline page itself failing);
+   - **Face ID lock:** when the app lock decides to show its lock screen at launch (cold or warm), the gate opens
+     immediately so the lock UI is the top, visible, interactive layer (the lock already hides content); the lock is never
+     under the splash;
+   - duplicate events (finish + timer, two sources) are no-ops after the first hide.
 4. **Offline link:** both `offline.html` files: "Try again" goes to `https://domusbase.com/login`.
-5. **testflight.sh:** run `env -u CAP_SERVER_URL npx cap sync ios`; after archive, read
-   `App.app/capacitor.config.json` and fail with a plain message unless `server.url` is exactly
-   `https://domusbase.com/login`.
+5. **testflight.sh (rev 2):** (a) before archiving, check `xcodebuild -version` is Xcode 26 or newer and the iOS SDK is
+   26 or newer (Apple's upload minimum), else fail with a plain message; (b) run `env -u CAP_SERVER_URL npx cap sync ios`;
+   (c) **before** archiving, read the generated `ios/App/App/capacitor.config.json` and fail unless `server.url` is
+   exactly `https://domusbase.com/login`; (d) after archiving, locate the archived `.app` robustly (the single `*.app`
+   under `Products/Applications`, error if 0 or >1), read its `capacitor.config.json` and require the same exact string;
+   (e) also require the archived app to contain `PrivacyInfo.xcprivacy` and an Info.plist with
+   `NSPhotoLibraryAddUsageDescription`. No normalization of the URL (exact string compare). Each failure prints a plain,
+   actionable message and exits non-zero.
 6. **Docs:** README lines that call Face ID / universal links future work → present tense with the sprint numbers;
    PRIVACY-AUDIT: close U1, U3, U4, U5, U6 with cited evidence, keep U2 open, add a LinkKit 7.2.2 section, note Plaid is
    Transactions only (`apps/web/lib/plaid.ts:81`), Face ID data stays on the device, add the e-sign IP/device row.
@@ -78,13 +98,20 @@ see `docs/agent-handoff.md:818`.) Do NOT run `testflight.sh` for real and do NOT
 test` and the Simulator walk.
 
 ## 8. Acceptance criteria
-1. `config.test.cjs` asserts: `NSPrivacyAccessedAPITypes` deep-equals exactly the one UserDefaults/CA92.1 entry; both
-   Info.plist strings exact; offline link `https://domusbase.com/login`; `launchAutoHide` false; a fake-tool case where
-   `CAP_SERVER_URL=http://localhost:3000` is set and `testflight.sh` still archives the production URL or fails.
+1. `config.test.cjs` asserts: `NSPrivacyAccessedAPITypes` deep-equals exactly the audited set (incl. UserDefaults/CA92.1);
+   both Info.plist strings exact; offline link `https://domusbase.com/login`; `launchAutoHide` false. Fake-tool cases for
+   `testflight.sh`, each non-zero with a plain message unless noted: hostile inherited `CAP_SERVER_URL`; generated config
+   wrong after sync; archived config wrong though source is right; archived config missing; malformed JSON; no
+   `server.url`; Xcode older than 26; happy path with the exact production URL (zero exit up to the stubbed upload).
 2. `plutil -lint` passes on both plists.
-3. XCTest: the splash gate hides once on first main-frame finish; hides on first failure; hides on the 12 s fallback;
-   never hides twice; subframe finishes do not count.
-4. (Claude) Simulator: cold launch shows the splash until the login/home page is visible — no black/white gap; airplane
+3. XCTest (`LaunchSplashGate` + adapter): success before timeout; timeout before success; real network failure then
+   offline-page finish (hide only after the offline finish); offline page itself fails → watchdog hides; `/login` →
+   `/owner` redirect hides once at the final page; cancelled/superseded navigation then success hides once at success;
+   the same event from two sources hides once; timer after a prior hide is a no-op; lock-enabled cold launch and
+   lock-enabled warm launch → splash yields to the lock; subframe finish never hides. One integration-level test proves
+   the gate calls the concrete splash-hide adapter exactly once, on the main thread, after `capacitorDidLoad`.
+4. (Claude) Built-bundle check: `plutil -p` on the built `App.app/PrivacyInfo.xcprivacy` and `Info.plist` shows the
+   audited API set and `NSPhotoLibraryAddUsageDescription`. Simulator: cold launch shows the splash until the login/home page is visible — no black/white gap; airplane
    mode → offline page visible → Try again → /login; full-size repair photo long-press → Save to Photos prompts, no crash.
 5. All existing XCTests stay green.
 

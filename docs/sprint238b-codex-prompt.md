@@ -1,0 +1,94 @@
+# Sprint 238b — In-app "Delete my account" request for every role (L3: auth/data; App Store 5.1.1(v)) — rev 1
+
+## 1. Objective
+Apple requires apps with sign-up to let users start account deletion inside the app. Today only owners see
+"Account & Data" (and its wipe tools never delete the sign-in); tenants and managers are told to "Tell us with Send
+feedback". Add one "Delete my account" request for **every role**: the user confirms, a request is recorded, they are
+signed out, and the account is deleted by hand within 30 days using a runbook (anonymize per the owner's 2026-10-07
+decision: keep shared rent/payment/repair records without the person's name or contact details).
+
+## 2. Context
+- HEAD after 238a packet (`docs/sprint238a-codex-prompt.md`). Plan: `docs/phone-readiness-plan-2026-10-16.md` Sprint C;
+  decision Q2 (in-app request, 30 days, confirm by typing DELETE, no password re-entry — zero-friction rule).
+- Full automatic deletion stays parked (`docs/account-deletion-design.md` rev 3) until the lawyer sets retention years.
+- `apps/web/components/settings/settings-layout.tsx:27-36` — nav: `account` ("Account & Data", owner only), `yourData`
+  ("Your data", tenant + manager). `apps/web/app/settings/page.tsx:217-221` wires `yourData` and `account` sections.
+- `apps/web/components/settings/your-data-settings.tsx:44-46` — "Want your account deleted? Tell us with Send feedback.
+  We will reply by email." (47 lines).
+- `apps/web/components/settings/account-data-settings.tsx` (159 lines) — owner wipe tools (`fullAccountWipe` etc. in
+  `app/actions/account-wipe.ts`, owner-only, data only). **Do not reuse or change the wipe actions.**
+- `apps/web/app/actions/feedback.ts:173` — feedback rows are inserted with the admin client.
+- Security rule L-025: new tables grant clients nothing; server actions write with the admin client after
+  `requireAuth` + checks (L-002: check every Supabase error).
+
+## 3. In scope
+New table (Claude writes and applies the migration — Codex does **not** write SQL), new server action, new settings
+section mounted for all roles, sign-out + confirmation notice on `/login`, tests. Runbook (Claude writes).
+
+## 4. Out of scope
+Automatic deletion/anonymization; changing the owner wipe tools; cancelling a request in-app; emails to the user
+(notifications stay off until launch); Stripe customer deletion.
+
+## 5. Exact files expected to change
+1. `apps/web/app/actions/account-deletion-request.ts` (new) + re-export in `apps/web/app/actions/index.ts` if that is the
+   convention
+2. `apps/web/components/settings/delete-account-section.tsx` (new)
+3. `apps/web/components/settings/your-data-settings.tsx` (replace the :44-46 sentence with the new section)
+4. `apps/web/components/settings/account-data-settings.tsx` (mount the same section at the top for owners)
+5. `apps/web/app/login/page.tsx` (show the "request received" notice when `?deleted=requested`)
+6. Tests: `apps/web/app/actions/__tests__/account-deletion-request.test.ts` (new),
+   `apps/web/components/settings/__tests__/delete-account-section.test.tsx` (new)
+7. (Claude) `supabase/migrations/20261024_sprint238b_account_deletion_requests.sql`, `docs/runbooks/account-deletion.md`
+
+## 6. Implementation requirements
+1. **Table (Claude):** `public.account_deletion_requests(id uuid pk default gen_random_uuid(), profile_id uuid not null
+   references profiles(id), email_at_request text not null, role_at_request text not null, requested_at timestamptz not
+   null default now(), status text not null default 'open' check (status in ('open','done','withdrawn')), handled_at
+   timestamptz)`, unique open request per profile (partial unique index on `profile_id where status = 'open'`), RLS
+   enabled, **no** client grants (anon/authenticated get nothing; service_role writes).
+2. **Action `requestAccountDeletion(prev, formData)`:** `requireAuth("owner","manager","tenant")`; rate limit
+   `requestAccountDeletion:<userId>` 3 per 10 minutes; `confirmation` must equal exactly `DELETE` else
+   `Type DELETE to confirm.`; with the admin client insert the open request (if one already exists, treat as success —
+   idempotent, no second row); insert a feedback row so it shows where the owner already reads feedback (message
+   `Account deletion requested (<role>).`, no other personal text); `logAudit` action `request_account_deletion`; then
+   sign the user out (server `supabase.auth.signOut()`) and return `{ success: true, redirectTo:
+   "/login?deleted=requested" }` (or redirect) — every Supabase error checked and mapped to
+   `We could not send your request. Please try again.`; nothing is deleted; no writes to any shared table other than
+   the two inserts.
+3. **Section `DeleteAccountSection` (all roles):** heading `Delete my account`; text `We will delete your account within
+   30 days.` and `We keep rent and payment records the law requires, without your name.`; input label
+   `Type DELETE to confirm`; button `Delete my account` (destructive style) disabled until the input is exactly
+   `DELETE`; pending label `Sending…`; error shown in an alert. Visible in "Your data" (tenant, manager) and at the top of
+   "Account & Data" (owner).
+4. **Login notice:** `/login?deleted=requested` shows `We got your request. Your account will be deleted within 30
+   days.` above the form (plain status box, not an error).
+5. Plain language (6th grade, ≤ 12 words per sentence), lines ≤ 140, files ≤ 500. The user should never need to read
+   instructions to complete this flow.
+
+## 7. Validation commands
+```
+cd apps/web && npx vitest run --reporter=dot
+cd apps/web && npx tsc --noEmit
+npm run lint:web
+```
+Do NOT run `npm run gate:web` or apply SQL. Claude applies the migration and runs attacker SQL.
+
+## 8. Acceptance criteria
+1. Unauthenticated → rejected by `requireAuth`; owner, manager and tenant → success (3 tests).
+2. Confirmation other than exactly `DELETE` (e.g. `delete`, ` DELETE`) → exact error, no insert.
+3. First request inserts one open row + one feedback row + audit; a repeat request → success, no second request row.
+4. Insert error → exact failure copy, no sign-out; success → sign-out called and redirect target
+   `/login?deleted=requested`.
+5. The action makes no delete/update calls on any table (asserted with the admin-client mock).
+6. Section: button disabled until exactly `DELETE`; exact copy; rendered for all three roles in the right settings
+   panels (owner in Account & Data, tenant/manager in Your data).
+7. `/login?deleted=requested` shows the exact notice; without the param it does not.
+8. Full suite + plain-language guard green.
+
+## 9. Report format
+Compact status only: files changed with line counts, tests per criterion, command results. Do NOT include "Claude
+prompt" or "recommended next steps for Claude" sections. Report compact status only.
+
+## 10. Constraints
+Only the files in §5 (Codex: items 1–6). No new dependencies. No SQL from Codex. Do not change `account-wipe.ts`.
+No emails sent.
