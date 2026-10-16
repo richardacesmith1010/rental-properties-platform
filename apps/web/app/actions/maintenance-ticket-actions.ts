@@ -109,13 +109,16 @@ export async function createMaintenanceTicket(
     }
   }
 
-  void logMaintenanceStatusChange(supabase, ticket.id, null, "submitted", user.id).catch(
+  try {
+    const admin = createAdminClient();
+    await logMaintenanceStatusChange(admin, ticket.id, null, "submitted", user.id);
+  } catch (historyError) {
     sideEffectError("createMaintenanceTicket", "log_status_history", {
       userId: user.id,
       entityType: "ticket",
       entityId: ticket.id
-    })
-  );
+    })(historyError);
+  }
 
   try {
     const admin = createAdminClient();
