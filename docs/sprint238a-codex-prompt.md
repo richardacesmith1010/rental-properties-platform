@@ -1,4 +1,4 @@
-# Sprint 238a — iPhone shell: privacy manifest, photo-save crash, launch screen, upload safety (L3 iPhone) — rev 2 (rev 1 ChatGPT REJECT: 9 REQUIRED adopted)
+# Sprint 238a — iPhone shell: privacy manifest, photo-save crash, launch screen, upload safety (L3 iPhone) — rev 3 (rev 1 REJECT → rev 2 APPROVE WITH CHANGES: 4 REQUIRED + 2 OPTIONAL adopted)
 
 ## 1. Objective
 Make the iPhone app (`apps/ios`, Capacitor 8 shell loading https://domusbase.com/login) safe to upload to TestFlight:
@@ -41,7 +41,8 @@ App Store Connect, account deletion (238b), any signing/team settings.
 1. `apps/ios/ios/App/App/PrivacyInfo.xcprivacy`
 2. `apps/ios/ios/App/App/Info.plist`
 3. `apps/ios/capacitor.config.ts` (+ the synced `apps/ios/ios/App/App/capacitor.config.json` via `npx cap sync ios`)
-4. `apps/ios/ios/App/App/DomusNavigationDelegate.swift` and/or `DomusBridgeViewController.swift` (splash hide)
+4. `apps/ios/ios/App/App/DomusNavigationDelegate.swift`, `DomusBridgeViewController.swift`, and a new
+   `LaunchSplashGate.swift` (gate + `LaunchCoverAdapter`); add the new Swift file to the App target in `App.xcodeproj`
 5. a new or existing XCTest file under `apps/ios/ios/App/AppTests/` for the splash rule (e.g. `LaunchSplashTests.swift`)
 6. `apps/ios/www/offline.html`, `apps/ios/ios/App/App/public/offline.html`
 7. `apps/ios/scripts/testflight.sh`, `apps/ios/scripts/config.test.cjs`
@@ -57,17 +58,29 @@ App Store Connect, account deletion (238b), any signing/team settings.
    categories the audit requires — at minimum `NSPrivacyAccessedAPICategoryUserDefaults` with [`CA92.1`] (AppLock).
 2. **Info.plist:** add `NSPhotoLibraryAddUsageDescription` = `Save photos from Domus to your phone.`; change
    `NSCameraUsageDescription` to `Take photos of repairs, receipts, and your profile.`
-3. **Splash (rev 2):** `launchAutoHide: false`. A small pure state machine `LaunchSplashGate` decides; a concrete
-   adapter performs the hide by calling Capacitor's SplashScreen plugin through the bridge
-   (`bridge?.plugin(withName: "SplashScreen")` → its `hide`), on the main thread, only after `capacitorDidLoad`.
-   Invariant: **exactly one native hide, and the UI is never permanently obscured.** Rules:
-   - open on the first **main-frame** `didFinish` of a page that is the usable destination (redirects such as
-     `/login` → `/owner` keep the splash until the final page finishes; subframes never count);
-   - a genuine main-frame failure does **not** open the gate by itself: Capacitor then loads the bundled `offline.html`
-     (`errorPath`) — keep the splash until that offline page finishes, then open;
+3. **Splash (rev 3): Domus-owned launch cover.** Do not drive Capacitor's SplashScreen plugin for this. Set the plugin to
+   `launchShowDuration: 0`, `launchAutoHide: true` so it never covers anything. Instead `DomusBridgeViewController` adds
+   its own full-screen cover view (built from the app's LaunchScreen storyboard so it looks identical to the system launch
+   screen) in `viewDidLoad`, before the web view's first frame. A small pure state machine `LaunchSplashGate` decides when
+   to open; a concrete `LaunchCoverAdapter` removes the cover (fade ≤ 0.2 s) on the main thread. If the gate opens
+   before the cover is installed, the adapter records it and never installs the cover (no pending stuck state).
+   Invariant: **exactly one removal, and the UI is never permanently obscured.** Rules:
+   - **destination tracking:** `didFinish` gives a `WKNavigation`, not a frame. Track the identity of the latest main-frame
+     navigation (record it from `decidePolicyFor navigationAction` where `targetFrame?.isMainFrame == true` and from
+     `didStartProvisionalNavigation`, replacing the tracked one each time); open on `didFinish` only when the finished
+     navigation is the tracked current one. HTTP redirects (`/login` → 307 → `/owner`, the magic-link callback) stay in one
+     navigation and finish once at the final page. **Stated limit:** client-side route changes after the server-rendered
+     page finishes are not waited for — the first finished server-rendered page counts as loaded for this sprint;
+   - a genuine main-frame failure does **not** open the gate by itself. Verify against the installed Capacitor 8.5.3
+     source (`node_modules/@capacitor/ios/...WebViewDelegationHandler`) that the original failure handler still runs
+     through `DomusNavigationDelegate`'s forwarding and loads `errorPath`; track that offline navigation like any other and
+     open when it finishes. A failure of the offline page itself must not start another offline load (no reload loop) —
+     the watchdog releases the cover;
    - cancelled/superseded navigations (`NSURLErrorCancelled` -999, WebKit "frame load interrupted" 102, or any failure
      whose navigation is no longer the current one) never open the gate;
-   - a 12-second watchdog from launch always opens the gate (also covers the offline page itself failing);
+   - a 12-second watchdog from launch **always** opens the gate, even if no navigation callback ever arrives;
+   - backgrounding/foregrounding or the Face ID prompt during the first 12 s never re-installs the cover or restarts the
+     watchdog;
    - **Face ID lock:** when the app lock decides to show its lock screen at launch (cold or warm), the gate opens
      immediately so the lock UI is the top, visible, interactive layer (the lock already hides content); the lock is never
      under the splash;
@@ -103,13 +116,20 @@ test` and the Simulator walk.
    `testflight.sh`, each non-zero with a plain message unless noted: hostile inherited `CAP_SERVER_URL`; generated config
    wrong after sync; archived config wrong though source is right; archived config missing; malformed JSON; no
    `server.url`; Xcode older than 26; happy path with the exact production URL (zero exit up to the stubbed upload).
+   Distinct expectation: inherited `CAP_SERVER_URL=http://localhost:3000` that is **successfully removed** by
+   `env -u` → **pass**, with both the generated and archived URLs verified as production; a generated or archived config
+   that still contains localhost → **fail before upload**. Every failing case asserts the upload command never ran.
+   Also assert the **generated** `ios/App/App/capacitor.config.json` has `launchShowDuration` 0 / `launchAutoHide` true
+   (plugin splash off), not only the TypeScript source.
 2. `plutil -lint` passes on both plists.
 3. XCTest (`LaunchSplashGate` + adapter): success before timeout; timeout before success; real network failure then
    offline-page finish (hide only after the offline finish); offline page itself fails → watchdog hides; `/login` →
    `/owner` redirect hides once at the final page; cancelled/superseded navigation then success hides once at success;
    the same event from two sources hides once; timer after a prior hide is a no-op; lock-enabled cold launch and
-   lock-enabled warm launch → splash yields to the lock; subframe finish never hides. One integration-level test proves
-   the gate calls the concrete splash-hide adapter exactly once, on the main thread, after `capacitorDidLoad`.
+   lock-enabled warm launch → cover yields to the lock; subframe finish never hides; a finish for a stale (non-current)
+   navigation never hides; backgrounding during launch never re-installs the cover. One integration-level test (real
+   `DomusBridgeViewController` view hierarchy) proves the cover view is installed before load and removed exactly once on
+   the main thread when the gate opens, and that opening before install leaves no cover.
 4. (Claude) Built-bundle check: `plutil -p` on the built `App.app/PrivacyInfo.xcprivacy` and `Info.plist` shows the
    audited API set and `NSPhotoLibraryAddUsageDescription`. Simulator: cold launch shows the splash until the login/home page is visible — no black/white gap; airplane
    mode → offline page visible → Try again → /login; full-size repair photo long-press → Save to Photos prompts, no crash.
