@@ -1179,3 +1179,15 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Smoke green (3 roles), logged-out pages 200, no `permission denied` in runtime logs.
 - **Next (high, separate L3):** `profiles_select_owner_for_management` / `…_for_managers` let any owner with ≥1 home read
   every tenant/manager profile (email, phone, stripe_customer_id). Then default-grants audit of the other 55 tables.
+
+## Sprint 237f SHIPPED — narrow `profiles` SELECT to related people (L3 privacy) — 2026-10-16
+- Commit `27d56b6`; migration `20261022_sprint237f_profiles_read_policy` applied live (postcondition: exact SELECT policy
+  set, helper definer/owner/search_path/stable/grants, `can_administer_property` unchanged, no FORCE RLS).
+- `can_view_profile(id, role)` + `profiles_select_related` replace `profiles_select_owner_for_management/_for_managers`.
+  Visible: self; current tenants with any lease on a home you administer; current managers with an active assignment.
+- Before: smoke owner saw 14 tenants / 4 managers (related 2 / 1). After (real PostgREST): 2 / 1, 0 Stripe customers.
+  Exact-set check 35/35 viewers, 0 mismatches (dry run and post-apply); inactive manager hidden; anon 0 rows, no error;
+  manager query 8.5 ms. ChatGPT rev 1 APPROVE WITH CHANGES (5 REQUIRED + 4 OPTIONAL adopted).
+- Code map: only 3 user-client reads touch other profiles (late-fee tenant emails, application reviewers, tenant's
+  inviter); none loses data (inviter and co-owner reads already returned nothing). Smoke 3 roles + CI green; no errors.
+- **Next:** 237c (M3/M1/M11); default-grants audit for the other 55 `public` tables; scorecard Security held 80.
