@@ -1,7 +1,26 @@
--- Sprint 237g (rev 2): signed-in (authenticated) clients keep only the table writes the app performs with the user's own
+-- Sprint 237g (rev 3): signed-in (authenticated) clients keep only the table writes the app performs with the user's own
 -- Supabase client (code map 2026-10-16); anon keeps no table writes; nobody on the client side keeps TRUNCATE,
 -- REFERENCES, TRIGGER or MAINTAIN. service_role and SECURITY DEFINER functions are unaffected. SELECT is unchanged
 -- (RLS still decides which rows are visible). New tables created by postgres no longer get client write grants.
+-- Preflight (rev 3): the live anon/authenticated table+column ACLs must still match the 2026-10-16 baseline that the
+-- rollback file was generated from (948 entries). If they drifted, abort and regenerate the rollback snapshot.
+do $$
+declare v text;
+begin
+  select md5(string_agg(x, ',' order by x)) into v from (
+    select c.relname || ':' || a.grantee::regrole::text || ':' || a.privilege_type x
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace, aclexplode(c.relacl) a
+    where n.nspname = 'public' and c.relkind in ('r','p') and a.grantee in ('anon'::regrole, 'authenticated'::regrole)
+    union all
+    select c.relname || '.' || att.attname || ':' || a.grantee::regrole::text || ':' || a.privilege_type
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+      join pg_attribute att on att.attrelid = c.oid and att.attnum > 0 and att.attacl is not null, aclexplode(att.attacl) a
+    where n.nspname = 'public' and c.relkind in ('r','p') and a.grantee in ('anon'::regrole, 'authenticated'::regrole)) s;
+  if v is distinct from 'e2776adb1cd220f3233cf372338e6753' then
+    raise exception 'sprint237g preflight: ACL baseline drifted (%); regenerate supabase/rollback/20261023_sprint237g_rollback.sql', v;
+  end if;
+end $$;
+
 do $$
 declare
   t record;
@@ -57,6 +76,42 @@ grant update (status) on table public.rent_charges to authenticated;
 grant update (name, address_line1, city, state, postal_code, active, owner_account_id) on table public.properties
   to authenticated;
 grant update (status, resolved_at, actual_cost_cents) on table public.maintenance_tickets to authenticated;
+
+-- rev 3: values guard for direct client writes to rent_charges. Column grants limit WHICH columns change; this limits
+-- WHAT values a signed-in client may write directly. The app's only user-client writes are (a) pending -> late status
+-- (charge-generation.ts:268) and (b) inserting a pending late fee for an open rent charge on the same lease with that
+-- lease's late fee and the parent's due date (charge-generation.ts:296-318). service_role and SECURITY DEFINER functions
+-- (current_user = postgres) are unaffected.
+create function public.guard_client_rent_charge_write()
+returns trigger
+language plpgsql security invoker set search_path = ''
+as $f$
+begin
+  if current_user not in ('authenticated', 'anon') then
+    return new;
+  end if;
+  if tg_op = 'INSERT' then
+    if new.category is distinct from 'late_fee' or new.status is distinct from 'pending' or new.parent_charge_id is null
+       or new.deleted_at is not null or new.waived_at is not null or new.tenant_reported_paid_at is not null
+       or not exists (
+         select 1 from public.rent_charges p join public.leases l on l.id = p.lease_id
+         where p.id = new.parent_charge_id and p.lease_id = new.lease_id and p.category = 'rent'
+           and p.status in ('pending', 'late') and p.due_date = new.due_date and p.deleted_at is null
+           and l.late_fee_cents = new.amount_cents) then
+      raise exception 'rent_charges: clients may only add the late fee for an open rent charge' using errcode = '42501';
+    end if;
+  elsif tg_op = 'UPDATE' then
+    if new.status is distinct from old.status and not (old.status = 'pending' and new.status = 'late') then
+      raise exception 'rent_charges: clients may only change status from pending to late' using errcode = '42501';
+    end if;
+  end if;
+  return new;
+end;
+$f$;
+revoke execute on function public.guard_client_rent_charge_write() from public, anon, authenticated;
+create trigger rent_charges_guard_client_write
+  before insert or update on public.rent_charges
+  for each row execute function public.guard_client_rent_charge_write();
 
 alter default privileges for role postgres in schema public
   revoke insert, update, delete, truncate, references, trigger, maintain on tables from anon, authenticated;
@@ -126,6 +181,10 @@ begin
                                              or d.defaclnamespace = 0)
                and a.grantee in (0, 'anon'::regrole, 'authenticated'::regrole) and a.privilege_type <> 'SELECT') then
     bad := bad || 'default_acl ';
+  end if;
+  if not exists (select 1 from pg_trigger where tgrelid = 'public.rent_charges'::regclass
+                 and tgname = 'rent_charges_guard_client_write' and tgenabled = 'O') then
+    bad := bad || 'rent_charges_guard_missing ';
   end if;
   if bad <> '' then raise exception 'sprint237g postcondition failed: %', bad; end if;
 end $$;

@@ -3,6 +3,8 @@
 -- run manually as postgres only if 237g must be undone. Intentionally preserves 237d/237e locks (they are part of the
 -- snapshot) instead of re-granting everything.
 begin;
+drop trigger if exists rent_charges_guard_client_write on public.rent_charges;
+drop function if exists public.guard_client_rent_charge_write();
 do $$
 declare t record;
 begin

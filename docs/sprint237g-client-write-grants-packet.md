@@ -1,4 +1,4 @@
-# Sprint 237g — Remove unneeded client write privileges on every `public` table (L3: money/auth/schema) — rev 2 (rev 1 ChatGPT REJECT: 5 REQUIRED + 3 OPTIONAL adopted)
+# Sprint 237g — Remove unneeded client write privileges on every `public` table (L3: money/auth/schema) — rev 3 (rev 1 REJECT → rev 2 APPROVE WITH CHANGES: 5 REQUIRED adopted)
 
 Migration-only sprint. **Claude** writes and applies the migration (CLAUDE.md §1). **Codex writes no app code.**
 Finishes the default-grants audit started in 237d (`ownership_accounts`) and 237e (`profiles`).
@@ -86,6 +86,22 @@ client; remove everything else; stop new tables inheriting client write grants.
 - **Dry run 2 (rollback equivalence, rolled back):** snapshot → migration (64 tables changed) → rollback logic (revoke all
   from anon/authenticated, replay the snapshot's 149 grant statements, restore default ACL) → **0 tables differ** (normalized
   grant sets incl. column grants), default ACL identical.
+
+## Rev 3 changes (ChatGPT rev 2 APPROVE WITH CHANGES)
+1. **`rent_charges` values guard** — trigger `rent_charges_guard_client_write` (security invoker; only acts when
+   `current_user` is `authenticated`/`anon`): client INSERT only a `pending` `late_fee` whose parent is an open `rent`
+   charge on the same lease, same due date, amount = the lease's `late_fee_cents`, no deleted/waived/reported-paid fields;
+   client UPDATE of `status` only `pending → late`. Matches the only user-client writes (`charge-generation.ts:268,296-318`).
+2. **Partner/fee tables attacked** (dry run 3, rolled back): outsider (owner of another LLC) insert/update/delete on
+   `partner_payments` → denied/0/0; relink or add `account_partners` → 0/denied; member relinking a partner to a non-member
+   → denied (WITH CHECK `is_active_owner_member`); manager inserting/updating `manager_payment_configs` → denied/0.
+3. **Status boundary** (dry run 3): fake `paid` charge insert, wrong-amount late fee, `pending→paid`, `→waived`,
+   `late→pending` → all `42501`; legitimate late-fee insert and `pending→late` → 1 row each.
+4. **Real PostgREST positive paths** after apply as the smoke owner: leases, units, rent_charges, maintenance_tickets,
+   properties updates on own rows + one upsert (§7.4).
+5. **Deployment-specific rollback:** migration preflight compares an md5 of the live anon/authenticated table+column ACL
+   entries (948) with the baseline `e2776adb1cd220f3233cf372338e6753` used to build the rollback file; any drift aborts.
+   The rollback file also drops the new trigger/function.
 
 ## 3. In scope
 Migration `supabase/migrations/20261023_sprint237g_client_write_grants.sql` and Claude's rolled-back verification.
