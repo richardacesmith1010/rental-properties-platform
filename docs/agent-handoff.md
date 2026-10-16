@@ -1230,3 +1230,11 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Not walked in the UI: a real tenant sending a repair on domusbase.com (needs the smoke tenant signed in).
 - **Next:** fix the flaky wizard test (`findByText`); `updateTicketStatus` history oddities (`open → reviewed` plus
   `open → in_progress` double row, and same-status `in_progress → in_progress` rows).
+
+## 2026-10-16 — Standing authority + owner decisions (owner away; autonomous run)
+- CLAUDE.md §2a: Claude runs full cycles without asking; stops only for passwords/real accounts, money, legal, real-people
+  notifications, deleting real data, a FAIL after 2 attempts, or a second ChatGPT REJECT.
+- Decisions: priority tonight = **phone app readiness**; M3 manager invite email = **build it, allowlist-only until launch**;
+  maintenance word = **Repair** (reference table updated); manager menu = **~6 everyday items + "More"**.
+- Queue: phone walks/fixes/TestFlight prep → 237c manager follow-ups (M3 gated, M1, M11, menu, Wallet manager Home, reminder
+  switch toggle style, Install card overlap) → Money/Owner honest rescore → security advisors (L3) → prep owner-only items.

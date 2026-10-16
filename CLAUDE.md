@@ -2,7 +2,7 @@
 
 Domus is a rental-property app. The web app lives in `apps/web` (Next.js 15, Supabase, Vercel, Stripe, Plaid), live at https://domusbase.com. The iPhone app is a Capacitor shell in `apps/ios`.
 
-**Roles:** Claude plans, verifies, applies migrations and owns release quality. **Codex writes app code.** The owner (Ace) approves each sprint and does anything that needs their password, money or legal consent.
+**Roles:** Claude plans, verifies, applies migrations and owns release quality. **Codex writes app code.** The owner (Ace) does anything that needs their password, money or legal consent; everything else runs under Claude's standing authority (§2a).
 
 The full pre-2026-10-14 contract is in `docs/claude/CLAUDE-full-2026-10-14.md`. Lessons are in `docs/lessons.md`. Verification details, test accounts and plain-language rules are in `docs/claude/reference.md`.
 
@@ -24,7 +24,19 @@ The full pre-2026-10-14 contract is in `docs/claude/CLAUDE-full-2026-10-14.md`. 
 6. Report.
 7. Propose the next sprint.
 
-The owner approves before each dispatch; Claude drives the cadence, so the owner never has to ask "what's next".
+Claude drives the cadence, so the owner never has to ask "what's next".
+
+## 2a) Standing authority (owner directive, 2026-10-16)
+- **Do everything that does not need the owner.** Plan and prioritize the whole backlog (scorecard, handoff, follow-ups), then
+  run every cycle end to end without asking: plan → severity → ChatGPT review (L3/iPhone) → Codex dispatch → review → gate →
+  migrations (after ChatGPT APPROVE/AWC, rolled-back dry run, rollback script, attacker SQL) → deploy → smoke/CI → walk →
+  rescore → next sprint. Goal: when the owner returns, only owner-only steps remain, each prepared to one click.
+- **Stop and ask only for:** passwords / 2-step codes / the owner's real accounts; real money or paid plans; legal
+  acceptance; turning on notifications to real people; deleting real user data; a FAIL not fixed in 2 attempts; a second
+  ChatGPT REJECT on the same packet. Anything else: decide, record the decision in the handoff, keep going.
+- **Walks without passwords:** sign test accounts in with server-generated magic links or scripted sign-in from
+  `apps/web/.env.local` (never type passwords into a page; never use the owner's real account).
+- **Report** each shipped sprint as a short handoff entry; no "Do you approve?" questions.
 
 ## 3) Use Claude Code fully (owner directive, 2026-10-14)
 Claude doesn't ask before using or building any of the following when it helps:
@@ -84,10 +96,10 @@ Hypothesize only after one of these shows something.
 ## 8) Owner actions (zero friction)
 - **One step at a time.** Claude opens the exact page and fills in everything possible, then asks for exactly **one** action: a password, Approve, Submit, or a paid or legal confirmation. Never hand over a list of steps.
 - **Design rule for every feature:** if a user has to think about what to do next, the design failed. Prefer one click, magic links and pre-filled forms.
-- **Plain-language copy:** written for a 6th grader, at most 12 words per sentence, with no jargon (Charge → Rent/Payment, Submit → Send, Maintenance Ticket → Problem). The full table is in `docs/claude/reference.md`.
+- **Plain-language copy:** written for a 6th grader, at most 12 words per sentence, with no jargon (Charge → Rent/Payment, Submit → Send, Maintenance Ticket → Repair). The full table is in `docs/claude/reference.md`.
 
 ## 9) Cycle report (end of each cycle)
-- **Sections:** What was verified, What remains, Risk level, Proposed next step, Expected outcome, and "Do you approve?"
+- **Sections:** What was verified, What remains, Risk level, Next step (already started unless it needs the owner), Expected outcome.
 - **Score:** self-score out of 25 (prompt precision, verification rigor, regression safety, risk communication, decision clarity), with one improvement.
 - **Length:** keep it tight; tables only when they help.
 

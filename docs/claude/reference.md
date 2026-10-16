@@ -38,7 +38,7 @@ Most Americans read below an 8th grade level. ALL user-facing text in Domus must
 1. **No jargon.** "Charge" → "Rent". "Submit" → "Send". "Delinquency" → "Overdue". "Reconciliation" → never use this word.
 2. **Short sentences.** Max 12 words per sentence in UI text. If you need more, split into two.
 3. **Common words only.** If a word wouldn't appear in a 5th grader's vocabulary, replace it.
-4. **Verbs over nouns.** "Pay Rent" not "Payment Processing". "Report a Problem" not "Maintenance Ticket Submission".
+4. **Verbs over nouns.** "Pay Rent" not "Payment Processing". "Report a repair" not "Maintenance Ticket Submission".
 5. **Tell them what happens.** "You'll get a receipt by email" not "A confirmation will be dispatched to your registered email address."
 6. **No acronyms without explanation.** First use: "LLC (a type of business account)". After that: "LLC" is fine.
 7. **Test it:** Read every piece of UI text out loud. If it sounds like a lawyer wrote it, rewrite it.
@@ -49,7 +49,7 @@ Most Americans read below an 8th grade level. ALL user-facing text in Domus must
 |---|---|
 | Charge | Rent (for tenants), Payment (for owners) |
 | Submit | Send |
-| Maintenance Ticket | Problem / Issue |
+| Maintenance Ticket | Repair (owner decision 2026-10-16) |
 | Delinquency | Overdue |
 | Disbursement | Payout |
 | Reconciliation | (don't use — explain the concept instead) |
