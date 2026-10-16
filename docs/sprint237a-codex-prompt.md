@@ -1,4 +1,4 @@
-# Sprint 237a — Reversed payments never show as received (L3: money) — rev 1
+# Sprint 237a — Reversed payments never show as received (L3: money) — rev 3 (rev 1 REJECT → rev 2 APPROVE WITH CHANGES: 3 REQUIRED + optional adopted)
 
 ## 1. Objective
 `payments.reversed_at` marks a payment that no longer counts (Stripe ACH failure since Sprint 114; "Undo payment" since
@@ -36,13 +36,25 @@ Make every reader either **exclude** reversed payments (money, proof of payment)
   `createTransfersForPayment` lookups; `app/payments/success/page.tsx` (card only — optional label, see §6.9).
 
 ## 3. In scope
-Readers 1–12 as specified in §6, plus tests.
+Readers 1–12 as specified in §6, plus tests, plus **step 0: an exhaustive reader audit** (a sprint gate):
+- Before changing code, list every read of `payments` in `apps/web` (any `.from("payments")`, embedded `payments(`
+  selects, RPC calls whose SQL reads payments — check `supabase/migrations` for `from public.payments` /
+  `join public.payments`), plus every producer of a receipt link and every notification / activity surface that says a
+  payment was received. Put the table (file:line, surface, exclude / label / n-a + reason) in the report.
+- If the audit finds a reader not in §2, fix it under the same rules and add it to the report (the file list in §5 may
+  grow for that reason only).
+- **SQL readers are audited too** (functions/RPCs in `supabase/migrations`). This sprint makes no migration: if an SQL reader
+  is unsafe (counts or shows reversed payments as received), **stop**, do not work around it in TypeScript, and report it as
+  a blocker with file:line — Claude will handle it as a migration.
+- Add one shared convention so the next reader can't repeat the bug: a tiny typed helper in `lib/payments-active.ts`
+  (e.g. `activePayments(query)` that appends `.is("reversed_at", null)`) **only if** it keeps Supabase result types and
+  error handling intact; otherwise use the plain `.is("reversed_at", null)` and document the convention in that file.
 
 ## 4. Out of scope
 Changing what reverses a payment; undo flow; manager fee math (it does not read `payments`); SQL functions; UI redesign.
 
 ## 5. Exact files expected to change
-`lib/dashboard-legacy.ts`, `lib/payment-history.ts`, `app/tenant/page.tsx` (only for the history label / receipt link /
+`lib/payments-active.ts` (new helper), `app/payments/success/page.tsx`, `lib/dashboard-legacy.ts`, `lib/payment-history.ts`, `app/tenant/page.tsx` (only for the history label / receipt link /
 lastPayment), `app/payments/receipt/[chargeId]/page.tsx`, `lib/pdf/pdf-data.ts`, `app/api/pdf/receipt/[chargeId]/route.ts`
 (only if needed for the reversed case), `lib/analytics-loader.ts`, `lib/reports-rent-roll.ts`,
 `lib/property-detail-queries.ts`, `lib/property-detail.ts` / `components/dashboard/property-detail-view.tsx` (label only),
@@ -66,17 +78,30 @@ new `lib/__tests__/ai-chat-payments.test.ts`, `lib/__tests__/account-export.test
 4. **Receipt PDF (4) — exclude.** Same rule; when only reversed payments exist the route returns the existing
    not-found/forbidden response (no PDF is generated). Yearly receipts PDF (5) excludes reversed rows.
 5. **Analytics (6), rent roll (7), AI chat (9) — exclude** (filter in the query, before any limit).
-6. **Property detail (8) — split.** `paymentDate` uses non-reversed payments only; the Payments tab lists reversed rows with
-   the `Reversed` label (select `reversed_at`).
-7. **Account export (10) — show.** Include `reversedAt` (ISO string or null) on each payment; nothing removed.
-8. **Autopay (11) — keep behavior, scope the query.** Query only `rent_charge_id in (<candidate charge ids>)` (batched with
-   `.in()`, no full-table read). **Keep the current rule** that a charge with any payment row — including a reversed one —
-   is not auto-charged again (a bounced bank payment must not auto-retry; the owner/tenant retries by hand). Pin it with a
-   test and a one-line comment.
+6. **Property detail (8) — split.** `paymentDate` comes from a query that filters `reversed_at is null` **in the query**
+   (never by filtering an already-limited mixed list); the Payments tab lists reversed rows with the `Reversed` label
+   (select `reversed_at`).
+7. **Account export (10) — show.** Include `reversedAt` (ISO string or null) and `status` (`"reversed"` | `"active"`) on
+   each payment; nothing removed.
+8. **Autopay (11) — scope the query and use the payment source.** Query only `rent_charge_id in (<candidate ids>)`
+   (batched `.in()`, no full-table read), selecting `reversed_at, recorded_via`. A charge is **skipped** when it has
+   (a) any active payment, or (b) a reversed payment with `recorded_via` in (`stripe`, `legacy`) — a bounced bank payment
+   must not auto-retry (owner/tenant retries by hand). A charge whose only reversed payments are `manual` (an owner's
+   "Undo payment") is no longer *blocked by that payment* — every existing autopay gate (charge status pending/late, not
+   waived/deleted, tenant enrolled, due date reached, amount rules, any processing safeguard) still decides; the manual
+   undo only removes the historical-payment block and never forces a charge. `legacy` rows were all written before undo
+   existed, so a reversed legacy row can only be a Stripe ACH reversal — keep it blocking.
+   **Complete lookup:** read the blocking rows with explicit pagination (`.range()` pages until a short page) or batch the
+   candidate ids small enough that one page always suffices **and** verify by count; on any query error or incomplete
+   read, **fail closed**: start no automatic payment in that run and log it.
 9. **Webhook (12).** In `recordPayment`'s duplicate branch, select `reversed_at`; if the existing row is reversed, do **not**
-   call `markChargePaid` (return the existing "already_recorded"-style result). Duplicate detection itself still counts
-   reversed rows. Optional (allowed): `app/payments/success/page.tsx` selects `reversed_at` and, if set, shows
-   `This payment did not go through.` instead of success.
+   run **any** paid-path side effect (no `markChargePaid`, no transfer creation, no paid notification, no receipt) —
+   return the existing "already_recorded"-style result. Duplicate detection itself still counts reversed rows.
+   **Required:** `app/payments/success/page.tsx` selects `reversed_at` and, if set, shows `This payment did not go through.`
+   instead of success (card payments rarely reverse, but a refund/dispute path could set it).
+9b. **Notifications / activity history.** Past "Payment received" notifications and activity rows are **historical event
+   text** and stay as written (they were true when sent). Any *current-state* surface that derives "paid" from a payment
+   (badges, "last paid", receipts, counts) must exclude reversed payments. The audit table marks each one.
 10. Every Supabase error is checked (L-002). Plain language (`docs/plain-language.md`). Lines ≤ 140 chars; files ≤ 500 lines.
 
 ## 7. Validation commands
@@ -88,19 +113,28 @@ npm run lint:web
 Do NOT run `npm run gate:web`. Claude runs it and a live check on the walk accounts (3 reversed payments exist).
 
 ## 8. Acceptance criteria (tests that call real code; each asserts the query filter or the rendered result)
-1. Dashboard legacy: the payments query chain includes `is("reversed_at", null)` before `limit(10)`; a reversed row in the
-   mock is absent from `recentPayments` and `paidChargeIds`.
+1. Dashboard legacy: the query chain applies `is("reversed_at", null)` **before** `limit(10)`, and a test with **11 reversed
+   + 2 active** rows (newer reversed ones would fill the slots) returns both active rows and no reversed row in
+   `recentPayments` / `paidChargeIds`. The same "enough reversed rows to fill the limit" test exists for every capped
+   exclude-style query (AI chat, receipts `limit(1)`, analytics if capped).
 2. Tenant history: reversed row present with `Reversed`, no receipt link; `lastPayment` skips it.
-3. Receipt page: (a) active payment → normal receipt; (b) only reversed → "This payment was reversed" state, no "Paid";
-   (c) reversed newer + active older → receipt for the active one.
-4. Receipt PDF: only-reversed → no PDF (route returns the existing not-found response); yearly PDF excludes reversed.
+3. Receipt page: (a) active payment → normal receipt; (b) only reversed → "This payment was reversed" state with **no**
+   receipt number, amount-paid line, "Paid" badge, PDF/download link or print button; (c) newer reversed + older active →
+   receipt for the active one; (d) no payment at all → today's not-found behavior (distinct from b).
+4. Receipt PDF: (a) active → PDF; (b) only reversed → no PDF (existing not-found response); (c) newer reversed + older
+   active → PDF for the active one; (d) no payment → not-found. Yearly PDF excludes reversed.
 5. Analytics, rent roll, AI chat: reversed payment ignored in average-days / last-payment / recent list.
-6. Property detail: `paymentDate` ignores reversed; Payments tab shows it labelled `Reversed`.
-7. Export: `reversedAt` present for a reversed payment and null for an active one.
-8. Autopay: query scoped to candidate ids (no unscoped select); a charge whose only payment is reversed is **not**
-   auto-charged (pinned rule).
-9. Webhook: duplicate session id whose row is reversed → `markChargePaid` not called; non-reversed duplicate keeps today's
-   repair behavior.
+6. Property detail: `paymentDate` query filters `reversed_at is null` before any limit (assert the chain); with a newer
+   reversed payment, `paymentDate` is the older active one; Payments tab shows the reversed row labelled `Reversed`.
+7. Export: `reversedAt` + `status` correct for reversed and active payments.
+8. Autopay: query scoped to candidate ids (no unscoped select); only-reversed **stripe** → not charged; only-reversed
+   **legacy** → not charged; any active payment → not charged; only-reversed **manual** on an otherwise eligible charge →
+   charged; only-reversed manual but charge paid / waived / tenant not enrolled / not yet due → **not** charged; more
+   blocking rows than one page → every blocked charge still skipped; lookup query error → zero charges started.
+9. Webhook: duplicate session id whose row is reversed → none of `markChargePaid`, transfer creation, paid notification is
+   called; non-reversed duplicate keeps today's repair behavior. Success page shows `This payment did not go through.` for a
+   reversed session payment.
+9c. Audit table present in the report; every newly found reader has a test.
 10. Full suite green; plain-language guard green.
 
 ## 9. Report format
