@@ -1,4 +1,4 @@
-# Sprint 237b — Manager rent reminders (owner-approved) + manager walk fixes (L3: permission + schema) — rev 2 (rev 1 ChatGPT REJECT: 10 REQUIRED + 4 OPTIONAL adopted)
+# Sprint 237b — Manager rent reminders (owner-approved) + manager walk fixes (L3: permission + schema) — rev 3 (rev 1 REJECT → rev 2 APPROVE WITH CHANGES: 3 REQUIRED + 4 OPTIONAL adopted)
 
 ## 1. Objective
 1. Let a manager send rent reminders for homes they manage, **only when the owner turned it on** ("Let my manager send rent
@@ -75,8 +75,10 @@ repair; payload trimming is a later privacy item).
    - Check constraint `not (managed_client and managers_can_send_reminders)` (client accounts can never have it on).
    - **Write guard:** a `BEFORE INSERT OR UPDATE` trigger (security invoker) on `ownership_accounts` that raises
      `managers_can_send_reminders is changed only by set_managers_can_send_reminders` when the value differs from OLD
-     (or is true on INSERT), unless a transaction-local setting `domus.allow_manager_reminder_write = 'on'` is present
-     (set only inside the RPC with `set_config(..., true)`). Also: when `managed_client` becomes true, the trigger forces
+     (or is true on INSERT), unless **both** hold: the transaction-local setting `domus.allow_manager_reminder_write = 'on'`
+     (set only inside the RPC with `set_config(..., true)`) **and** `current_user` is the RPC's owner role (`postgres`; the
+     trigger is security invoker, so inside the SECURITY DEFINER RPC `current_user` is the owner, while a client is
+     `authenticated`/`anon`). The marker alone never allows the write. Also: when `managed_client` becomes true, the trigger forces
      `managers_can_send_reminders = false` (so a later client conversion cannot leave it on). Do **not** change existing
      grants or the existing `ownership_accounts_guard_client` trigger.
    - RPC `set_managers_can_send_reminders(p_account_id uuid, p_actor_id uuid, p_value boolean) returns text`
@@ -99,7 +101,9 @@ repair; payload trimming is a later privacy item).
      requested id is not found / not readable, any home is not in `getAdministeredPropertyIds(user.id)`, any account has
      the flag off, or any account is `managed_client`. Never authorize by filtering unauthorized ids out. Only after the
      preflight passes run the existing send loop.
-   - The flag is read at request time; turning it off blocks later requests (a request already past preflight may finish).
+   - Empty id list → validation error, zero notification and audit side effects.
+   - Preflight is a snapshot: the flag **and** the manager's access are read at request time. Turning the flag off or
+     removing the manager blocks later requests; a request already past preflight may finish.
    - Delivery: every reminder still goes through `createNotificationWithDelivery`; the switch and the outside-Domus-tenant
      rule are unchanged and authoritative.
    - Audit: success metadata includes `actor_role` (server-derived). If Domus already audits denied sensitive actions with
@@ -144,11 +148,15 @@ Manual (Claude, after deploy): M2 banner at 375 px and 1440 px, light and dark; 
    `authenticated` cannot execute the RPC; as `authenticated` (JWT of an owner member, and of a manager who created a
    client account) a direct `update ownership_accounts set managers_can_send_reminders = true` raises; direct insert with
    true raises; setting `managed_client = true` on an account with the flag on leaves the flag false; the check
-   constraint rejects both true.
+   constraint rejects both true — tested **independently of the trigger** (as the table owner inside the fixture:
+   `alter table ... disable trigger <new trigger>` within the rolled-back transaction, or a direct insert that the trigger
+   would allow), so the constraint's existence is proven on its own. Attacker: as `authenticated`, `select
+   set_config('domus.allow_manager_reminder_write','on',true)` then a direct update → still raises. Assert the RPC's
+   owner is `postgres` and it is `prosecdef` (so a later ownership change can't silently weaken the guard).
 2. Action, manager, flag on, managed home → reminders created through `createNotificationWithDelivery` (mock) for exactly
    those charges; audit `actor_role = "manager"`.
 3. Manager, flag off → exact rejection copy, zero notification calls.
-4. Manager, flag on: one charge on a home they don't manage → whole request rejected, zero calls; a random unknown charge
+4. Empty id list → validation error, zero notification/audit calls. Manager, flag on: one charge on a home they don't manage → whole request rejected, zero calls; a random unknown charge
    UUID → rejected, zero calls; duplicate ids → each charge reminded once; one charge on a `managed_client` account →
    rejected, zero calls.
 5. Owner behavior unchanged (existing tests pass); an owner who also manages a home → owner path; tenant → rejected by
@@ -167,8 +175,8 @@ Manual (Claude, after deploy): M2 banner at 375 px and 1440 px, light and dark; 
 10. Full suite + plain-language guard green.
 
 ## 9. Report format
-Compact status only: files changed with line counts, tests per criterion, command results, the M6 root cause in one line,
-and the M8 file/exception list. Do NOT include "Claude prompt" or "recommended next steps for Claude" sections. Report
+Compact status only: files changed with line counts, tests per criterion, command results, the M6 root cause in one line
+**with its regression test name**, and the M8 file/exception list. Do NOT include "Claude prompt" or "recommended next steps for Claude" sections. Report
 compact status only.
 
 ## 10. Constraints
