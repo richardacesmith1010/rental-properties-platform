@@ -1,4 +1,4 @@
-# Sprint 237g — Remove unneeded client write privileges on every `public` table (L3: money/auth/schema) — rev 1
+# Sprint 237g — Remove unneeded client write privileges on every `public` table (L3: money/auth/schema) — rev 2 (rev 1 ChatGPT REJECT: 5 REQUIRED + 3 OPTIONAL adopted)
 
 Migration-only sprint. **Claude** writes and applies the migration (CLAUDE.md §1). **Codex writes no app code.**
 Finishes the default-grants audit started in 237d (`ownership_accounts`) and 237e (`profiles`).
@@ -63,8 +63,29 @@ client; remove everything else; stop new tables inheriting client write grants.
 - **Column-level grants:** revoking table-level UPDATE also revokes column UPDATE grants, so the migration only revokes
   ops **not** in the keep list (tables with column grants — `account_partners`, `account_tasks`,
   `expense_partner_attributions`, `partner_payments`, `notifications` — keep their exact column grants).
-- **Dry run (live, rolled back):** postcondition passed; every kept op still granted (`keptMissing=[]`); W1–W6 → `42501`;
-  tables with any client write = 22.
+- **Relation kinds (rev 2):** `public` contains only ordinary tables (`relkind = 'r'`); no views, materialized views,
+  foreign tables or partitions. The postcondition fails if any appear.
+- **Default ACLs (rev 2):** no global default ACL exists (`pg_default_acl` with `defaclnamespace = 0`: none). The only
+  table defaults in `public` are `postgres` (changed here) and `supabase_admin` (not used by our migrations; left as is).
+- **Retained-table hardening (rev 2):** the 26 UPDATE policies on kept tables have no `WITH CHECK`, so PostgreSQL applies
+  their `USING` to the new row (rows cannot be moved into homes the user does not administer). In addition, UPDATE on the
+  5 core tables becomes **column-limited** to the columns the app's user-client updates write:
+  `leases` (lease_status, active, termination_reason, terminated_at, end_date, due_day_of_month, monthly_rent_cents,
+  deposit_cents, grace_period_days, late_fee_cents, collects_outside_domus); `units` (unit_number, bedrooms, bathrooms,
+  monthly_rent_cents, occupied, active); `rent_charges` (status); `properties` (name, address_line1, city, state,
+  postal_code, active, owner_account_id); `maintenance_tickets` (status, resolved_at, actual_cost_cents). Sources:
+  `lease-mutations.ts:43-51,96-104,177,261-265`, `lease-lifecycle-actions.ts:74,150,160`, `charge-generation.ts:166,177,268`,
+  `units.ts:118,187 (unit_number | monthly_rent_cents),265`, `properties.ts:176,231,303`, `ownership.ts:241`,
+  `maintenance-comment-actions.ts:55`, `maintenance-ticket-actions.ts:250-255`. `property_tax_years` (client INSERT/UPDATE
+  today) is written only via admin (`actions/property-tax-year.ts:23`) → revoked.
+- **Dry run 1 (live, rolled back, rev 2 SQL incl. postcondition):** postcondition passed; W1–W6 → `42501`. As the smoke
+  owner on their own rows: lease `tenant_profile_id` swap, lease `unit_id` move, charge `amount_cents`, charge `lease_id`
+  move, charge `deleted_at`, property `owner_profile_id`, unit `property_id` move → all `42501`; property moved to an account
+  they do not administer → `42501` (RLS); app columns still update (lease, charge status, unit, property name → 1 row each);
+  `service_role` charge update → 1 row.
+- **Dry run 2 (rollback equivalence, rolled back):** snapshot → migration (64 tables changed) → rollback logic (revoke all
+  from anon/authenticated, replay the snapshot's 149 grant statements, restore default ACL) → **0 tables differ** (normalized
+  grant sets incl. column grants), default ACL identical.
 
 ## 3. In scope
 Migration `supabase/migrations/20261023_sprint237g_client_write_grants.sql` and Claude's rolled-back verification.
@@ -81,21 +102,23 @@ Migration `supabase/migrations/20261023_sprint237g_client_write_grants.sql` and 
 ## 6. Requirements — the migration
 1. For every `public` table/partition: revoke INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER/MAINTAIN from `anon`;
    revoke TRUNCATE/REFERENCES/TRIGGER/MAINTAIN from `authenticated`; revoke from `authenticated` each of INSERT/UPDATE/DELETE
-   that is not in the §2 keep list for that table. No GRANT statements.
+   that is not in the §2 keep list for that table.
+1b. Column-limited UPDATE on `leases`, `units`, `rent_charges`, `properties`, `maintenance_tickets` (exact lists in §2).
 2. `alter default privileges for role postgres in schema public revoke insert, update, delete, truncate, references,
    trigger, maintain on tables from anon, authenticated;`
-3. Postcondition (raises on any mismatch): for every table, `authenticated` holds INSERT/UPDATE/DELETE (table or column
-   level) only where the keep list allows; `anon` holds none; nobody client-side holds TRUNCATE/REFERENCES/TRIGGER/
-   MAINTAIN; postgres's default ACL for tables gives anon/authenticated nothing but SELECT.
-- **Rollback:** `grant insert, update, delete, truncate, references, trigger, maintain on all tables in schema public to
-  anon, authenticated;` then re-run 237d/237e's revokes and restore the default ACL with `alter default privileges for
-  role postgres in schema public grant all on tables to anon, authenticated;` (restores today's state exactly except
-  column grants, which this migration never removes).
+3. Postcondition (raises on any mismatch), **both sides**: every kept op present and no other op (table or column level);
+   exact UPDATE column sets on the 5 core tables and no table-level UPDATE there; exactly 22 tables with any client write;
+   `anon` holds no writes; nobody client-side holds TRUNCATE/REFERENCES/TRIGGER/MAINTAIN; no view/matview/foreign relation in
+   `public`; no default ACL (postgres in `public`, or any global one) grants anon/authenticated/PUBLIC more than SELECT.
+- **Rollback (rev 2):** `supabase/rollback/20261023_sprint237g_rollback.sql` — revoke all from anon/authenticated on every
+  `public` table, replay the exact pre-237g snapshot (131 table grants + 18 column grants captured live 2026-10-16, which
+  already include the 237d/237e locks), restore postgres's default ACL. Proven equivalent in dry run 2.
 
 ## 7. Validation (Claude, after apply; rolled back)
 1. Postcondition passes; re-read live ACLs: kept ops present for all 22 tables, 22 tables total with client writes.
 2. W1–W6 → `42501`, values unchanged.
 3. Real PostgREST as the smoke tenant: insert into `payments` on own charge → `42501`.
+3b. Kept-table attacks (dry run 1 list) re-run after apply → all `42501`.
 4. Real PostgREST positive path: as the smoke owner, an UPDATE the app does on a kept table (`properties` name to the same
    value on their own home) → success, 1 row.
 5. `APP_URL=https://domusbase.com npm run smoke:web` green; GitHub CI `gate` green; Vercel runtime logs: no
