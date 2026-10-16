@@ -5,17 +5,19 @@ import { ChargeMoreMenu } from "@/components/dashboard/charge-more-menu";
 import { toast } from "sonner";
 import { calculateCardFee, formatCentsAsDollars } from "@/lib/payment-fees";
 
+const manualState = vi.hoisted(() => ({ current: null as null | { success: true; message: string } }));
+
 vi.mock("react-dom", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-dom")>();
   return {
     ...actual,
-    useFormState: () => [null, async () => null] as const,
+    useFormState: () => [manualState.current, async () => null] as const,
     useFormStatus: () => ({ pending: false })
   };
 });
 
 const refresh = vi.hoisted(() => vi.fn());
-vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("sonner", () => ({ toast: { success: vi.fn(() => "undo-toast"), error: vi.fn(), dismiss: vi.fn() } }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     refresh,
@@ -36,6 +38,39 @@ describe("ChargesSection", () => {
       .querySelectorAll("button")[1]);
     await waitFor(() => expect(refresh).toHaveBeenCalled());
     expect(toast.success).toHaveBeenCalledWith("Payment undone.");
+  });
+  it("dismisses an undo toast even when pointer hover pauses Sonner", async () => {
+    vi.useFakeTimers();
+    try {
+      render(<ChargeMoreMenu onUndoPayment={async () => ({ success: true, message: "Payment undone." })}
+        undoChargeId="rent-1" />);
+      fireEvent.click(screen.getByRole("button", { name: "Open more payment actions" }));
+      fireEvent.click(screen.getByRole("button", { name: "Undo payment" }));
+      fireEvent.click(screen.getByRole("dialog", { name: "Undo payment" }).querySelectorAll("button")[1]);
+      await Promise.resolve();
+      await Promise.resolve();
+      vi.advanceTimersByTime(4000);
+      expect(toast.dismiss).toHaveBeenCalledWith("undo-toast");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it("clears the prior manual-payment alert after a successful undo", async () => {
+    manualState.current = { success: true, message: "Manual payment recorded." };
+    try {
+      render(<ChargesSection charges={[{ id: "paid", propertyId: "home", dueDate: "2026-10-01",
+        amountCents: 100000, status: "paid", category: "rent" }]}
+        onPayCharge={async () => {}} onRecordManualPayment={async () => ({ success: true })}
+        isOwnerView showManualPayment />);
+      expect(screen.getByText("Manual payment recorded.")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Paid" }));
+      fireEvent.click(screen.getByRole("button", { name: "Open more payment actions" }));
+      fireEvent.click(screen.getByRole("button", { name: "Undo payment" }));
+      fireEvent.click(screen.getByRole("dialog", { name: "Undo payment" }).querySelectorAll("button")[1]);
+      await waitFor(() => expect(screen.queryByText("Manual payment recorded.")).not.toBeInTheDocument());
+    } finally {
+      manualState.current = null;
+    }
   });
   it("counts only open pending rent in Due soon", () => {
     const today = new Date();
@@ -411,6 +446,24 @@ describe("ChargesSection", () => {
     expect(screen.queryByRole("button", { name: "Message Maya Bell" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Open more payment actions" }));
     expect(screen.getByRole("button", { name: "Message" })).toBeInTheDocument();
+  });
+
+  it("allows manager reminders only for approved homes and disables mixed batches", () => {
+    const remind = vi.fn(async () => ({ success: true as const }));
+    const managerCharges = [
+      { ...charges[0], id: "allowed", propertyId: "home-1", status: "late", managerReminderAllowed: true },
+      { ...charges[0], id: "blocked", propertyId: "home-2", status: "late", managerReminderAllowed: false }
+    ] as const;
+    render(<ChargesSection charges={[...managerCharges]} onPayCharge={async () => {}}
+      onSendBatchPaymentReminder={remind} simpleRentView />);
+    expect(screen.getAllByRole("button", { name: "Remind" })).toHaveLength(1);
+    const rows = [document.getElementById("charge-allowed"), document.getElementById("charge-blocked")];
+    rows.forEach((row) => fireEvent.click(row!.querySelector('input[type="checkbox"]')!));
+    const bulk = screen.getByRole("button", { name: "Send Reminder" });
+    expect(bulk).toBeDisabled();
+    expect(bulk).toHaveAttribute("title", "Some homes can't get reminders yet.");
+    fireEvent.click(rows[1]!.querySelector('input[type="checkbox"]')!);
+    expect(bulk).toBeEnabled();
   });
 
   it("shows the bank line only for an owner whose bank is not ready", () => {

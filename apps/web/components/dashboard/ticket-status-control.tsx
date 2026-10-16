@@ -1,6 +1,8 @@
 "use client";
 
 import { useFormState } from "react-dom";
+import { useEffect } from "react";
+import { toast } from "sonner";
 import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/shared/submit-button";
 import type { ActionState } from "@/app/actions";
@@ -22,6 +24,9 @@ export function TicketStatusControl({
   onUpdateStatus,
 }: TicketStatusControlProps) {
   const [state, action] = useFormState(onUpdateStatus, null);
+  useEffect(() => {
+    if (state?.success) toast.success("Repair updated.");
+  }, [state]);
 
   return (
     <form action={action} className="flex items-center gap-2">
@@ -32,7 +37,7 @@ export function TicketStatusControl({
         <option value="resolved">Resolved</option>
         <option value="closed">Closed</option>
       </Select>
-      <SubmitButton size="sm" variant="outline" title="Save this updated ticket status.">
+      <SubmitButton size="sm" variant="outline" title="Save this updated repair status.">
         Update
       </SubmitButton>
       {state && !state.success && (

@@ -23,7 +23,7 @@ test.describe("Settings page", () => {
 
     await page.getByRole("button", { name: "Notifications" }).click();
     await expect(page.getByRole("heading", { name: "Notifications" })).toBeVisible();
-    await expect(page.getByText("Maintenance ticket updates")).toBeVisible();
+    await expect(page.getByText("Repair updates")).toBeVisible();
     await expect(page.getByText("Rent due reminders")).toBeVisible();
     await expect(page.getByRole("button", { name: /pause for 24 hours/i })).toBeVisible();
   });

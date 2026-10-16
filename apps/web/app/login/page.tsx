@@ -91,7 +91,7 @@ export default async function LoginPage(props: LoginPageProps) {
                     See what matters first
                   </div>
                   <p className="mt-2 leading-6 text-[var(--muted)]">
-                    Revenue, occupancy, open tickets, and overdue balances stay visible without a spreadsheet.
+                    Revenue, occupancy, open repairs, and overdue balances stay visible without a spreadsheet.
                   </p>
                 </div>
                 <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-4">

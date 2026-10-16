@@ -11,6 +11,7 @@ import {
   markNotificationReadForUser
 } from "@/lib/notifications";
 import { updateNotificationPreference } from "@/lib/notification-preferences";
+import { tenantEligibleForEvent } from "@/lib/notification-policy";
 import { notificationMode, notificationsEnabled } from "@/lib/notifications-switch";
 import { getAdministeredPropertyIds } from "@/lib/property-access";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -144,7 +145,7 @@ export async function sendBatchPaymentReminder(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const { user } = await requireAuth("owner");
+  const { user, role } = await requireAuth("owner", "manager");
   if (!checkRateLimit(`sendBatchPaymentReminder:${user.id}`, 10, 60_000).allowed) {
     return { success: false, error: "Too many requests. Please try again later." };
   }
@@ -169,6 +170,7 @@ export async function sendBatchPaymentReminder(
   }
 
   const chargeIds = Array.from(new Set(parsed.data.chargeIds));
+  const managerDenied = { success: false, error: "Your owner has not turned on reminders for this home." };
   const admin = createAdminClient();
   const { data: charges, error: chargeError } = await admin
     .from("rent_charges")
@@ -176,24 +178,27 @@ export async function sendBatchPaymentReminder(
     .in("id", chargeIds);
 
   if (chargeError) {
-    return { success: false, error: "Unable to load the selected payments right now." };
+    return role === "manager" ? managerDenied
+      : { success: false, error: "Unable to load the selected payments right now." };
   }
 
   if (!charges || charges.length !== chargeIds.length) {
-    return { success: false, error: "Some selected payments could not be found." };
+    return role === "manager" ? managerDenied : { success: false, error: "Some selected payments could not be found." };
   }
 
   const leaseIds = Array.from(new Set(charges.map((charge) => charge.lease_id)));
   const { data: leases, error: leaseError } = await admin
     .from("leases")
-    .select("id, tenant_profile_id, unit_id")
+    .select("id, tenant_profile_id, unit_id, collects_outside_domus")
     .in("id", leaseIds);
 
   if (leaseError) {
-    return { success: false, error: "Unable to load lease details for the selected payments." };
+    return role === "manager" ? managerDenied
+      : { success: false, error: "Unable to load lease details for the selected payments." };
   }
 
   const leaseRows = leases ?? [];
+  if (role === "manager" && leaseRows.length !== leaseIds.length) return managerDenied;
   const unitIds = Array.from(new Set(leaseRows.map((lease) => lease.unit_id)));
   const { data: units, error: unitError } = await admin
     .from("units")
@@ -201,10 +206,12 @@ export async function sendBatchPaymentReminder(
     .in("id", unitIds);
 
   if (unitError) {
-    return { success: false, error: "Unable to load unit details for the selected payments." };
+    return role === "manager" ? managerDenied
+      : { success: false, error: "Unable to load unit details for the selected payments." };
   }
 
   const unitRows = units ?? [];
+  if (role === "manager" && unitRows.length !== unitIds.length) return managerDenied;
   const propertyIds = Array.from(new Set(unitRows.map((unit) => unit.property_id)));
   const administeredPropertyIds = await getAdministeredPropertyIds(user.id);
   const hasUnauthorizedCharge = propertyIds.some(
@@ -212,16 +219,32 @@ export async function sendBatchPaymentReminder(
   );
 
   if (hasUnauthorizedCharge) {
-    return { success: false, error: "You do not have access to one or more selected payments." };
+    return role === "manager" ? managerDenied
+      : { success: false, error: "You do not have access to one or more selected payments." };
   }
 
   const { data: properties, error: propertyError } = await admin
     .from("properties")
-    .select("id, name")
+    .select("id, name, owner_account_id")
     .in("id", propertyIds);
 
   if (propertyError) {
-    return { success: false, error: "Unable to load property details for the selected payments." };
+    return role === "manager" ? managerDenied
+      : { success: false, error: "Unable to load property details for the selected payments." };
+  }
+
+  if (role === "manager") {
+    const propertyRows = (properties ?? []) as Array<{ id: string; name: string; owner_account_id?: string | null }>;
+    if (propertyRows.length !== propertyIds.length || propertyRows.some((property) => !property.owner_account_id)) {
+      return managerDenied;
+    }
+    const accountIds = Array.from(new Set(propertyRows.map((property) => property.owner_account_id!)));
+    const { data: accounts, error: accountError } = await admin.from("ownership_accounts")
+      .select("id, managers_can_send_reminders, managed_client").in("id", accountIds);
+    if (accountError || !accounts || accounts.length !== accountIds.length ||
+        accounts.some((account) => !account.managers_can_send_reminders || account.managed_client)) {
+      return managerDenied;
+    }
   }
 
   const leaseById = new Map(leaseRows.map((lease) => [lease.id, lease]));
@@ -251,7 +274,8 @@ export async function sendBatchPaymentReminder(
     const lease = leaseById.get(charge.lease_id);
     const unit = lease ? unitById.get(lease.unit_id) : undefined;
     const property = unit ? propertyById.get(unit.property_id) : undefined;
-    if (!lease?.tenant_profile_id || !unit) {
+    if (!lease?.tenant_profile_id || !unit ||
+        !tenantEligibleForEvent("rent_due_reminder", lease.collects_outside_domus)) {
       return [];
     }
 
@@ -297,7 +321,8 @@ export async function sendBatchPaymentReminder(
     entityType: "charge",
     metadata: {
       chargeCount: notifications.length,
-      chargeIds
+      chargeIds,
+      actor_role: role
     }
   }).catch(
     sideEffectError("sendBatchPaymentReminder", "log_audit", {
@@ -308,6 +333,7 @@ export async function sendBatchPaymentReminder(
 
   revalidatePath("/owner");
   revalidatePath("/tenant");
+  revalidatePath("/manager");
   return {
     success: true,
     message: notificationMode() === "test"

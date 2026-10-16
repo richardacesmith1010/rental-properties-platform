@@ -42,12 +42,12 @@ export async function updateTicketCost(
     .single();
 
   if (!ticket) {
-    return { success: false, error: "Ticket not found." };
+    return { success: false, error: "Repair not found." };
   }
 
   const canAdminister = await canUserAdministerProperty(user.id, ticket.property_id);
   if (!canAdminister) {
-    return { success: false, error: "You do not have access to this ticket." };
+    return { success: false, error: "You do not have access to this repair." };
   }
 
   const { error } = await supabase
@@ -91,12 +91,12 @@ export async function addTicketComment(
 
   if (ticketError) console.error(`[notifications] ticket_lookup: ${ticketError.code ?? "unknown"}`);
   if (ticketError || !ticket) {
-    return { success: false, error: "Ticket not found." };
+    return { success: false, error: "Repair not found." };
   }
 
   if (role === "tenant") {
     if (ticket.tenant_profile_id !== user.id) {
-      return { success: false, error: "You do not have access to this ticket." };
+      return { success: false, error: "You do not have access to this repair." };
     }
     if (internalNote) {
       return { success: false, error: "Internal notes are only available to owners and managers." };
@@ -104,7 +104,7 @@ export async function addTicketComment(
   } else {
     const canAdminister = await canUserAdministerProperty(user.id, ticket.property_id);
     if (!canAdminister) {
-      return { success: false, error: "You do not have access to this ticket." };
+      return { success: false, error: "You do not have access to this repair." };
     }
   }
 

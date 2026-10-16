@@ -90,7 +90,11 @@ export function ChargesSection({
     onRecordManualPayment ?? unavailableAction,
     null
   );
-  const batchActionsEnabled = Boolean(onSendBatchPaymentReminder) && !isTenantView && !simpleRentView;
+  const [dismissedManualPaymentState, setDismissedManualPaymentState] = useState<typeof manualPaymentState>(null);
+  const managerView = charges.some((charge) => "managerReminderAllowed" in charge);
+  const reminderAllowed = (charge: ChargesSectionProps["charges"][number]) =>
+    !managerView || (charge as typeof charge & { managerReminderAllowed?: boolean }).managerReminderAllowed === true;
+  const batchActionsEnabled = Boolean(onSendBatchPaymentReminder) && !isTenantView && (!simpleRentView || managerView);
   useEffect(() => {
     if (manualPaymentState?.success) {
       setManualPaymentChargeId(null);
@@ -142,6 +146,7 @@ export function ChargesSection({
   }, [charges, isTenantView]);
   const autopayStatus = searchParams?.get("autopay") ?? null;
   const selectedVisibleCharges = visibleCharges.filter((charge) => selectedChargeIds.has(charge.id));
+  const selectionCanRemind = selectedVisibleCharges.every(reminderAllowed);
   const allVisibleSelected =
     visibleCharges.length > 0 && visibleCharges.every((charge) => selectedChargeIds.has(charge.id));
   const chargePendingDeletion = confirmDeleteChargeId
@@ -185,39 +190,23 @@ export function ChargesSection({
       return next;
     });
   };
-  const handleSendReminder = () => {
-    if (!onSendBatchPaymentReminder || selectedChargeIds.size === 0) {
-      return;
-    }
+  const sendReminders = (chargeIds: string[], single: boolean) => {
+    if (!onSendBatchPaymentReminder || chargeIds.length === 0 || (!single && !selectionCanRemind)) return;
     startSendingReminders(async () => {
       const formData = new FormData();
-      for (const chargeId of selectedChargeIds) {
-        formData.append("chargeIds", chargeId);
-      }
+      chargeIds.forEach((chargeId) => formData.append("chargeIds", chargeId));
       const result = await onSendBatchPaymentReminder(null, formData);
       if (!result?.success) {
-        toast.error(result?.error ?? "Unable to send reminders right now.");
+        toast.error(result?.error ?? (single ? "Unable to send this reminder." : "Unable to send reminders right now."));
         return;
       }
-      toast.success(result.message ?? "Payment reminders sent.");
-      setSelectedChargeIds(new Set());
+      toast.success(result.message ?? (single ? "Reminder sent." : "Payment reminders sent."));
+      if (!single) setSelectedChargeIds(new Set());
       router.refresh();
     });
   };
-  const handleSingleReminder = (chargeId: string) => {
-    if (!onSendBatchPaymentReminder) return;
-    startSendingReminders(async () => {
-      const formData = new FormData();
-      formData.append("chargeIds", chargeId);
-      const result = await onSendBatchPaymentReminder(null, formData);
-      if (!result?.success) {
-        toast.error(result?.error ?? "Unable to send this reminder.");
-        return;
-      }
-      toast.success(result.message ?? "Reminder sent.");
-      router.refresh();
-    });
-  };
+  const handleSendReminder = () => sendReminders(Array.from(selectedChargeIds), false);
+  const handleSingleReminder = (chargeId: string) => sendReminders([chargeId], true);
   const openFirstManualPayment = () => {
     const charge = charges.find(
       (item) => item.status === "late" && tracksLateRent(item)
@@ -323,7 +312,8 @@ export function ChargesSection({
           pendingCount={filterPendingCount} lateCount={lateCount} paidThisMonthCount={paidThisMonthCount}
           onChange={setActiveFilter} /> : null}
         {showManualPayment ? (
-          <InlineAlert state={manualPaymentState} defaultMessage="Payment recorded." />
+          <InlineAlert state={manualPaymentState === dismissedManualPaymentState ? null : manualPaymentState}
+            defaultMessage="Payment recorded." />
         ) : null}
         {batchActionsEnabled ? (
           <>
@@ -331,6 +321,9 @@ export function ChargesSection({
               selectedCount={selectedChargeIds.size}
               onDeselectAll={() => setSelectedChargeIds(new Set())}
               onSendReminder={handleSendReminder}
+              reminderDisabled={managerView && !selectionCanRemind}
+              reminderDisabledReason={managerView && !selectionCanRemind
+                ? "Some homes can't get reminders yet." : undefined}
               onExport={() => exportChargesCsv(selectedVisibleCharges)}
               sendingReminders={isSendingReminders}
             />
@@ -405,14 +398,19 @@ export function ChargesSection({
                         ? () => setConfirmDeleteChargeId(charge.id)
                         : undefined
                     }
-                    onUndoPayment={charge.status === "paid" && !isTenantView ? onRecordManualPayment : undefined}
+                    onUndoPayment={charge.status === "paid" && !isTenantView && onRecordManualPayment
+                      ? async (previous, data) => {
+                          const result = await onRecordManualPayment(previous, data);
+                          if (result?.success) setDismissedManualPaymentState(manualPaymentState);
+                          return result;
+                        } : undefined}
                     onOpenMessage={
                       onSendMessageToTenant && charge.tenantProfileId && charge.tenantName
                         ? () => setActiveMessageChargeId(charge.id)
                         : undefined
                     }
                     onSendReminder={
-                      simpleRentView && onSendBatchPaymentReminder
+                      simpleRentView && onSendBatchPaymentReminder && reminderAllowed(charge)
                         ? () => handleSingleReminder(charge.id)
                         : undefined
                     }

@@ -40,7 +40,7 @@ export interface InboxSectionProps {
 
 export const unavailableAction: StatefulAction = async () => ({
   success: false,
-  error: "Thread actions are unavailable right now."
+  error: "Conversation actions are unavailable right now."
 });
 
 function mapNotificationToSection(type: NotificationDTO["type"]): string {

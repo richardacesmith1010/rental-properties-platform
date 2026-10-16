@@ -72,7 +72,7 @@ export async function getSignedMaintenancePhotoAsset(
       .single();
 
     if (ticketError || !ticket) {
-      return { ok: false, status: 404, error: "Ticket not found for photo." };
+      return { ok: false, status: 404, error: "Repair not found for photo." };
     }
 
     const { data: property, error: propertyError } = await admin
@@ -146,7 +146,7 @@ export async function getSignedDocumentPacketAsset(
       .single();
 
     if (packetError || !packet) {
-      return { ok: false, status: 404, error: "Document packet not found." };
+      return { ok: false, status: 404, error: "Document not found." };
     }
 
     const { data: property, error: propertyError } = await admin
@@ -159,7 +159,7 @@ export async function getSignedDocumentPacketAsset(
       return {
         ok: false,
         status: 404,
-        error: "Property not found for document packet.",
+        error: "Property not found for document.",
       };
     }
 
@@ -222,7 +222,7 @@ export async function getSignedDocumentPacketAsset(
       return {
         ok: false,
         status: 500,
-        error: "Failed to list document files for this packet.",
+        error: "Failed to list document files for this paper.",
       };
     }
 
@@ -234,7 +234,7 @@ export async function getSignedDocumentPacketAsset(
       return {
         ok: false,
         status: 404,
-        error: "No files uploaded for this document packet yet.",
+        error: "No files uploaded for this document yet.",
       };
     }
 
@@ -262,7 +262,7 @@ export async function getSignedDocumentPacketAsset(
       error:
         error instanceof Error
           ? error.message
-          : "Failed to access document packet files.",
+          : "We could not open these papers.",
     };
   }
 }

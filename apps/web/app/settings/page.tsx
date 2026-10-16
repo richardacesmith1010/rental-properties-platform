@@ -19,12 +19,14 @@ import {
   resumeNotificationEmails,
   setupAutopay,
   updateNotificationPreferences,
+  setManagerReminderPermission,
   updateProfile
 } from "@/app/actions";
 import { getAutopayEnrollments } from "@/app/actions/autopay";
 import { AutopayCard } from "@/components/dashboard/autopay-card";
 import { BankSettings } from "@/components/settings/bank-settings";
-import { NotificationPreferences } from "@/components/settings/notification-preferences";
+import { ManagerReminderPermissions, NotificationPreferences } from "@/components/settings/notification-preferences";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { ThemeSettingsPanel } from "@/components/settings/theme-settings-panel";
 import { FaceIdSettings } from "@/components/settings/face-id-settings";
 import { PasswordSettings } from "@/components/settings/password-settings";
@@ -63,6 +65,33 @@ export default async function SettingsPage(props: SettingsPageProps) {
     getUserNotificationPreferenceSettings(user.id)
   ]);
   const rentCollectionStatus = role === "owner" ? await getRentCollectionConnectStatus(user.id) : null;
+  const managerReminderAccounts: Array<{ id: string; name: string; enabled: boolean }> = [];
+  if (role === "owner") {
+    const admin = createAdminClient();
+    const { data: memberships, error: membershipError } = await admin.from("ownership_account_members")
+      .select("account_id").eq("profile_id", user.id).eq("member_role", "owner").eq("active", true);
+    if (!membershipError && memberships?.length) {
+      const accountIds = memberships.map((member) => member.account_id);
+      const [{ data: accounts, error: accountError }, { data: homes, error: homeError }] = await Promise.all([
+        admin.from("ownership_accounts").select("id, display_name, managers_can_send_reminders, managed_client")
+          .in("id", accountIds),
+        admin.from("properties").select("id, owner_account_id").in("owner_account_id", accountIds)
+      ]);
+      if (!accountError && !homeError && homes?.length) {
+        const { data: managers, error: managerError } = await admin.from("property_managers")
+          .select("property_id").in("property_id", homes.map((home) => home.id)).eq("active", true);
+        if (!managerError) {
+          const managedHomes = new Set((managers ?? []).map((manager) => manager.property_id));
+          const accountIdsWithManagers = new Set(homes.filter((home) => managedHomes.has(home.id))
+            .map((home) => home.owner_account_id));
+          managerReminderAccounts.push(...(accounts ?? [])
+            .filter((account) => !account.managed_client && accountIdsWithManagers.has(account.id))
+            .map((account) => ({ id: account.id, name: account.display_name,
+              enabled: account.managers_can_send_reminders })));
+        }
+      }
+    }
+  }
   const connectMessage =
     typeof searchParams?.connect === "string"
       ? searchParams.connect
@@ -159,6 +188,7 @@ export default async function SettingsPage(props: SettingsPageProps) {
               title: "Notifications",
               description: "Choose how you want Domus to contact you.",
               content: (
+                <div className="space-y-4">
                 <NotificationPreferences
                   options={NOTIFICATION_EMAIL_PREFERENCE_OPTIONS}
                   settings={notificationPreferences}
@@ -166,6 +196,9 @@ export default async function SettingsPage(props: SettingsPageProps) {
                   onPauseNotifications={pauseNotificationEmails}
                   onResumeNotifications={resumeNotificationEmails}
                 />
+                {role === "owner" ? <ManagerReminderPermissions accounts={managerReminderAccounts}
+                  onSetPermission={setManagerReminderPermission} /> : null}
+                </div>
               )
             },
             appearance: {

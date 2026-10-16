@@ -216,9 +216,9 @@ export function InboxSection({
                 onChange={(event) => setTypeFilter(event.target.value as NotificationFilter)}
               >
                 <option value="all">All event types</option>
-                <option value="new_ticket">New ticket</option>
+                <option value="new_ticket">New repair</option>
                 <option value="late_rent">Late rent</option>
-                <option value="ticket_resolved">Ticket resolved</option>
+                <option value="ticket_resolved">Repair resolved</option>
                 <option value="payment_recorded">Payment recorded</option>
                 <option value="owner_message">Messages</option>
                 <option value="lease_updated">Lease updated</option>
@@ -268,7 +268,7 @@ export function InboxSection({
                 className="rounded-2xl border border-border/50 bg-[var(--surface-2)] p-3 shadow-sm"
               >
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-                  Create thread
+                  Start a conversation
                 </p>
                 <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <Select
@@ -276,7 +276,7 @@ export function InboxSection({
                     value={selectedPropertyId}
                     onChange={(event) => setSelectedPropertyId(event.target.value)}
                     required
-                    title="Select property for this thread."
+                    title="Select property for this conversation."
                   >
                     <option value="">Select property</option>
                     {properties.map((property) => (
@@ -288,26 +288,26 @@ export function InboxSection({
                   <Select
                     name="entityType"
                     defaultValue="general"
-                    title="Link this thread to a related workflow entity."
+                    title="Pick what this is about."
                   >
                     <option value="general">General</option>
-                    <option value="maintenance_ticket">Maintenance Ticket</option>
+                    <option value="maintenance_ticket">Repair</option>
                     <option value="lease">Lease</option>
-                    <option value="rent_charge">Rent Payment</option>
-                    <option value="document_packet">Document Packet</option>
+                    <option value="rent_charge">Rent</option>
+                    <option value="document_packet">Papers</option>
                   </Select>
                 </div>
                 <Input name="subject" className="mt-2" placeholder="Subject" required />
                 <div className="mt-2 flex justify-end">
-                  <SubmitButton size="sm" title="Create a new inbox conversation thread.">
-                    Create thread
+                  <SubmitButton size="sm" title="Start a conversation.">
+                    Start conversation
                   </SubmitButton>
                 </div>
                 {createThreadState && !createThreadState.success && (
                   <p className="mt-2 text-xs text-[var(--crit)]">{createThreadState.error}</p>
                 )}
                 {createThreadState && createThreadState.success && (
-                  <p className="mt-2 text-xs text-[var(--pos)]">Thread created.</p>
+                  <p className="mt-2 text-xs text-[var(--pos)]">Conversation started.</p>
                 )}
               </form>
             ) : null}
@@ -382,7 +382,7 @@ export function InboxSection({
                             ? "border-[var(--accent-line)] bg-[var(--accent-weak)]"
                             : "border-[var(--line)] bg-[var(--surface-2)] hover:bg-[var(--surface-3)]"
                         }`}
-                        title="Open this conversation thread."
+                        title="Open this conversation."
                       >
                         <div className="flex items-center justify-between gap-2">
                           <p className="truncate text-base font-medium text-[var(--ink)]">
@@ -455,7 +455,7 @@ export function InboxSection({
                           <SubmitButton
                             size="sm"
                             className="min-h-11"
-                            title="Send a new in-app message in this thread."
+                            title="Send a new in-app message in this conversation."
                           >
                             Send message
                           </SubmitButton>

@@ -37,7 +37,7 @@ export function TicketVendorControl({
           </option>
         ))}
       </Select>
-      <SubmitButton size="sm" variant="outline" title="Assign this vendor to the maintenance ticket.">
+      <SubmitButton size="sm" variant="outline" title="Pick who will fix this.">
         Assign
       </SubmitButton>
       {state && !state.success && (

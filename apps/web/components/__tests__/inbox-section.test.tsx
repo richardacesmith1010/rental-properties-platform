@@ -152,4 +152,17 @@ describe("InboxSection tenant conversation", () => {
     expect(screen.queryByPlaceholderText("Entity ID (optional)")).not.toBeInTheDocument();
   });
 
+  it("uses the approved conversation copy and keeps workflow values", () => {
+    render(<InboxSection viewerRole="owner" notifications={[]} threads={[thread]}
+      properties={[home]} onMarkRead={noop} onCreateThread={noop} />);
+    expect(screen.getByText("Start a conversation")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start conversation" })).toBeInTheDocument();
+    const category = screen.getByTitle("Pick what this is about.") as HTMLSelectElement;
+    expect(Array.from(category.options).map((option) => [option.value, option.text])).toEqual([
+      ["general", "General"], ["maintenance_ticket", "Repair"], ["lease", "Lease"],
+      ["rent_charge", "Rent"], ["document_packet", "Papers"]
+    ]);
+    expect(screen.getByPlaceholderText("Subject")).toBeInTheDocument();
+  });
+
 });

@@ -15,7 +15,7 @@ const banned = [
   "terminates?", "commences?", "pursuant", "herein", "utilizes?",
   "facilitates?", "subsequent", "prior\\s+to", "inquires?", "endeavors?",
   "transactions?", "ledgers?", "CSV", "ACH", "onboard(?:ing|ings|s)?",
-  "command\\s+center", "premiums?",
+  "command\\s+center", "premiums?", "tickets?", "threads?", "entity", "packets?",
 ];
 const bannedPattern = new RegExp(`\\b(?:${banned.join("|")})\\b`, "gi");
 const displayAttributes = new Set(["title", "placeholder", "aria-label", "alt", "label"]);
@@ -41,7 +41,7 @@ function shouldCheck(value: string): boolean {
   if (!/[a-z]/i.test(value) || /^https?:\/\//i.test(value)) return false;
   if (/^(?:\/|@\/|\.\/|\.\.\/)/.test(value)) return false;
   if (!value.includes(" ") && /^[\w./@:#?=&{}%-]+$/.test(value)) {
-    return /^(?:charge|charges|submit|CSV|ACH|ledger|premium)$/i.test(value);
+    return /^(?:charge|charges|submit|CSV|ACH|ledger|premium|ticket|tickets|thread|threads|entity|packet|packets)$/i.test(value);
   }
   if (/^(?:[\w.-]+\/)+[\w.-]+$/.test(value)) return false;
   if (bannedPattern.test(value)) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   BellOff,
   BellRing,
@@ -338,4 +339,42 @@ export function NotificationPreferences({
       </div>
     </div>
   );
+}
+
+export function ManagerReminderPermissions({ accounts, onSetPermission }: {
+  accounts: Array<{ id: string; name: string; enabled: boolean }>;
+  onSetPermission: StatefulAction;
+}) {
+  const router = useRouter();
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  if (accounts.length === 0) return null;
+  return <div className="space-y-3">
+    {accounts.map((account) => <div key={account.id}
+      className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--line)] p-4">
+      <div className="min-w-0">
+        <p className="font-semibold text-[var(--ink)]">{account.name}</p>
+        <p className="text-sm text-[var(--ink)]">Let my manager send rent reminders</p>
+        <p className="text-sm text-[var(--muted)]">Your manager can remind tenants about rent.</p>
+      </div>
+      <button type="button" role="switch" aria-label={`Let my manager send rent reminders for ${account.name}`}
+        aria-checked={account.enabled} disabled={isPending && pendingId === account.id}
+        className="min-h-11 rounded-full border border-[var(--line)] px-4 text-sm text-[var(--ink)]"
+        onClick={() => {
+          const data = new FormData();
+          data.set("accountId", account.id);
+          data.set("enabled", String(!account.enabled));
+          setFeedback(null);
+          setPendingId(account.id);
+          startTransition(async () => {
+            const result = await onSetPermission(null, data);
+            setFeedback(result?.success ? "Setting saved." : result?.error ?? "We could not change this setting.");
+            setPendingId(null);
+            if (result?.success) router.refresh();
+          });
+        }}>{account.enabled ? "On" : "Off"}</button>
+    </div>)}
+    {feedback ? <p role="status" className="text-sm text-[var(--ink)]">{feedback}</p> : null}
+  </div>;
 }

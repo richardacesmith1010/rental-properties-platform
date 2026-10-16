@@ -109,7 +109,7 @@ export function getNotificationActionLink(notification: {
     notification.entityType === "maintenance_ticket" ||
     notification.entityType === "ticket"
   ) {
-    return { label: "View Ticket", sectionId: "maintenance" };
+    return { label: "View Repair", sectionId: "maintenance" };
   }
 
   if (

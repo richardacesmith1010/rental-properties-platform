@@ -245,8 +245,8 @@ export function useDashboardKpiData(
   const maintenanceBadgeCount = safeTickets.filter(
     (ticket) => ticket.status === "open" || ticket.status === "in_progress"
   ).length;
-  const inboxBadgeCount = params.safeInboxThreads.length;
   const notificationBadgeCount = params.safeNotifications.filter((notification) => !notification.readAt).length;
+  const inboxBadgeCount = notificationBadgeCount;
   const hasNotificationsSection = Boolean(props.onMarkNotificationRead);
   const hasActivitySection = isOwnerRole || isManagerRole;
   const hasInboxSection = Boolean(props.onMarkNotificationRead);

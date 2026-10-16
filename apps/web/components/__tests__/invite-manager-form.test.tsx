@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { InviteManagerForm } from "@/components/dashboard/invitations/invite-manager-form";
 
@@ -27,6 +27,19 @@ describe("manager invite form", () => {
     state.current = { success: true, message };
     render(<InviteManagerForm properties={[]} onInviteManager={async () => null} />);
     expect(screen.getByText(message)).toBeInTheDocument();
+    expect(screen.getByText(message).closest(".overflow-hidden")).toBeNull();
     expect(screen.queryByText(["Skip", "for now"].join(" "))).not.toBeInTheDocument();
+  });
+
+  it("hides Next on the final invite step", () => {
+    render(<InviteManagerForm properties={[{ id: "home-1", name: "Home" }]}
+      onInviteManager={async () => null} />);
+    fireEvent.change(screen.getByRole("combobox", { name: "Home" }), { target: { value: "home-1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    fireEvent.change(screen.getByPlaceholderText("manager@email.com"), { target: { value: "m@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    fireEvent.change(screen.getByPlaceholderText("Manager full name"), { target: { value: "Manager" } });
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.queryByRole("button", { name: "Next" })).not.toBeInTheDocument();
   });
 });

@@ -114,7 +114,7 @@ export function DashboardHeader({
           },
           {
             icon: Wrench,
-            label: "Open tickets",
+            label: "Open repairs",
             target: kpis.openMaintenanceCount,
           },
           {
@@ -143,7 +143,7 @@ export function DashboardHeader({
           },
           {
             icon: Wrench,
-            label: "Open tickets",
+            label: "Open repairs",
             target: kpis.openMaintenanceCount,
           },
           {

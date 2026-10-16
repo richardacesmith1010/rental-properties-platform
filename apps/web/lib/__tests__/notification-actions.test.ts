@@ -45,9 +45,9 @@ describe("notification actions", () => {
       entityId: "ticket-1"
     };
 
-    expect(getNotificationActions(notification, "owner")[0]?.label).toBe("Review Ticket");
-    expect(getNotificationActions(notification, "tenant")[0]?.label).toBe("Track Your Ticket");
-    expect(getNotificationActions(notification, "manager")[0]?.label).toBe("Respond to Ticket");
+    expect(getNotificationActions(notification, "owner")[0]?.label).toBe("Review Repair");
+    expect(getNotificationActions(notification, "tenant")[0]?.label).toBe("Track Your Repair");
+    expect(getNotificationActions(notification, "manager")[0]?.label).toBe("Respond to Repair");
   });
 
   it("builds an absolute URL for email CTAs", () => {

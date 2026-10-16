@@ -13,6 +13,13 @@ describe("plain language guard", () => {
     expect(hits.filter((hit) => hit.reason.startsWith("sentence has"))).toHaveLength(1);
   });
 
+  it("flags ticket, thread and packet in displayed copy", () => {
+    const source = '<p>Ticket thread packet</p>';
+    expect(scanSource(source, "apps/web/components/fixture.tsx").map((hit) => hit.reason)).toEqual([
+      "banned word: Ticket", "banned word: thread", "banned word: packet"
+    ]);
+  });
+
   it("scans user-facing copy in non-email lib files", () => {
     const source = 'const copy = { title: "View Charge" };';
     const hits = scanSource(source, "apps/web/lib/fixture.ts");

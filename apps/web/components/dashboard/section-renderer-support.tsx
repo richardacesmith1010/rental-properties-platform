@@ -92,7 +92,7 @@ function OverviewSummaryStrip({ props }: { props: SectionRendererProps }) {
     { label: "Units", value: pluralize(unitCount, "unit"), icon: Building2 },
     { label: "Occupancy", value: `${occupancy}% occupied` },
     { label: "Monthly rent", value: formatCurrency(summary?.monthlyRentCents ?? props.data.kpis.monthlyGrossRentCents) },
-    { label: "Open tickets", value: pluralize(openTickets, "ticket"), icon: Wrench }
+    { label: "Open repairs", value: pluralize(openTickets, "repair"), icon: Wrench }
   ];
 
   return (

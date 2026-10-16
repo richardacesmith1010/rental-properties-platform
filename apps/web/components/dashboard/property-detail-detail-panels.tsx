@@ -205,25 +205,25 @@ export function PropertyDetailMaintenancePanel({
               href={`${dashboardHref}?section=maintenance&property=${encodeURIComponent(data.property.id)}`}
               title="Open the maintenance workflow for this property."
             >
-              Open ticket
+              Open repair
             </Link>
           </Button>
           <FilterButton
             active={filter === "active"}
             label="Active maintenance"
-            title="Show open and in-progress tickets."
+            title="Show open and in-progress repairs."
             onClick={() => onFilterChange("active")}
           />
           <FilterButton
             active={filter === "completed"}
             label="Completed maintenance"
-            title="Show resolved and closed tickets."
+            title="Show resolved and closed repairs."
             onClick={() => onFilterChange("completed")}
           />
           <FilterButton
             active={filter === "all"}
             label="All"
-            title="Show every ticket for this property."
+            title="Show every repair for this property."
             onClick={() => onFilterChange("all")}
           />
         </div>
@@ -261,8 +261,8 @@ export function PropertyDetailMaintenancePanel({
                           onClick={() => onToggleTicket(ticket.id)}
                           title={
                             isExpanded
-                              ? "Hide maintenance ticket details."
-                              : "Show maintenance ticket details."
+                              ? "Hide repair details."
+                              : "Show repair details."
                           }
                         >
                           <p className="font-medium text-foreground">{ticket.title}</p>

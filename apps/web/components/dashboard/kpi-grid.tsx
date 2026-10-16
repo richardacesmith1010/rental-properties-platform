@@ -77,7 +77,7 @@ export function KpiGrid({
         ariaLabel={`Outstanding Balance: ${formatCurrency(kpis.outstandingCents)} across ${outstandingSubtitleCount}.`}
       />
       <KpiCard
-        title="Open Tickets"
+        title="Open Repairs"
         value={String(kpis.openMaintenanceCount)}
         subtitle={
           kpis.highPriorityMaintenanceCount > 0
@@ -86,7 +86,8 @@ export function KpiGrid({
         }
         gradient="var(--warn-bg)"
         trend={maintenanceTrend}
-        ariaLabel={`Open Tickets: ${kpis.openMaintenanceCount}. ${kpis.highPriorityMaintenanceCount > 0 ? `${kpis.highPriorityMaintenanceCount} high priority.` : "No urgent issues."}`}
+        ariaLabel={`Open Repairs: ${kpis.openMaintenanceCount}. ${kpis.highPriorityMaintenanceCount > 0
+          ? `${kpis.highPriorityMaintenanceCount} high priority.` : "No urgent issues."}`}
       />
       <KpiCard
         title="Net Cash Flow"

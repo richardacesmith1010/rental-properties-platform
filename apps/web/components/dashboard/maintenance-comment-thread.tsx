@@ -120,7 +120,7 @@ export function MaintenanceCommentThread({
             <span>Internal note (visible only to owner/manager)</span>
           </label>
         ) : null}
-        <SubmitButton size="sm" title="Add this maintenance comment to the thread.">
+        <SubmitButton size="sm" title="Add this maintenance comment to the conversation.">
           Add Comment
         </SubmitButton>
       </form>

@@ -26,17 +26,17 @@ export async function canAccessMaintenanceTicketForPhotos(params: {
     .single();
 
   if (error || !ticket) {
-    return { ticket: null, error: "Ticket not found." };
+    return { ticket: null, error: "Repair not found." };
   }
 
   if (params.role === "tenant") {
     if (ticket.tenant_profile_id !== params.userId) {
-      return { ticket: null, error: "You do not have access to this ticket." };
+      return { ticket: null, error: "You do not have access to this repair." };
     }
   } else {
     const canAdminister = await canUserAdministerProperty(params.userId, ticket.property_id);
     if (!canAdminister) {
-      return { ticket: null, error: "You do not have access to this ticket." };
+      return { ticket: null, error: "You do not have access to this repair." };
     }
   }
 
@@ -116,7 +116,7 @@ export async function uploadPhotosForTicket(params: {
   });
 
   if (!access.ticket) {
-    return { success: false as const, error: access.error ?? "Ticket not found." };
+    return { success: false as const, error: access.error ?? "Repair not found." };
   }
 
   const admin = createAdminClient();

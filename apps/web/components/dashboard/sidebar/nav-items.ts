@@ -93,7 +93,7 @@ export const defaultNavItems: NavItem[] = [
     id: "documents",
     label: "Documents",
     icon: FileSignature,
-    description: "Lease packets and property file vault.",
+    description: "Lease papers and property file vault.",
     clickHint: "open document tools"
   },
   {
@@ -178,7 +178,7 @@ export const tenantNavItems: NavItem[] = [
     label: "Your lease",
     icon: FileSignature,
     href: "/tenant?section=documents",
-    description: "Open your lease packet and rental documents.",
+    description: "Open your lease paper and rental documents.",
     clickHint: "open lease"
   }
 ];

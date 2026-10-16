@@ -20,11 +20,12 @@ const charges = homes.map((home) => ({ propertyId: home.id, status: "late", amou
   collectsOutsideDomus: true, clientHome: home.ownerAccountIsClient }));
 const tickets = homes.map((home) => ({ propertyId: home.id, status: "open", priority: "high" }));
 
-function renderScope(role: "manager" | "owner", initialPropertyId?: string, initialAccountId?: string) {
+function renderScope(role: "manager" | "owner", initialPropertyId?: string, initialAccountId?: string,
+  notifications: Array<{ readAt: string | null }> = [], threads: Array<{ id: string }> = []) {
   const props = { initialPropertyId, initialAccountId } as never;
   const params = {
-    safePortfolio: portfolio, safeTickets: tickets, safeVendors: [], safeInboxThreads: [],
-    safeNotifications: [], safeCapabilities: { leasingPipelineEnabled: false, ownershipEnabled: false },
+    safePortfolio: portfolio, safeTickets: tickets, safeVendors: [], safeInboxThreads: threads,
+    safeNotifications: notifications, safeCapabilities: { leasingPipelineEnabled: false, ownershipEnabled: false },
     safeManagerPaymentManagers: [],
     safeDashboardData: { profileRole: role, charges, kpis: {} },
     safeExpenses: { expenses: [], pnlByProperty: homes.map((home) => ({ propertyId: home.id, netCents: 10 })) },
@@ -39,6 +40,15 @@ describe("dashboard home scope", () => {
   it("counts only client outside-Domus late rent in the manager nav badge", () => {
     const { result } = renderScope("manager");
     expect(result.current.chargeBadgeCount).toBe(2);
+  });
+
+  it("uses inbox unread notifications for the Messages badge, including zero", () => {
+    const unread = renderScope("manager", undefined, undefined,
+      [{ readAt: null }, { readAt: "2026-10-15" }], [{ id: "a" }, { id: "b" }, { id: "c" }]);
+    expect(unread.result.current.inboxBadgeCount).toBe(1);
+    unread.unmount();
+    const none = renderScope("manager", undefined, undefined, [{ readAt: "2026-10-15" }], [{ id: "a" }]);
+    expect(none.result.current.inboxBadgeCount).toBe(0);
   });
 
   it("filters manager portfolio, charges, tickets, KPIs and cash flow by account or home", () => {

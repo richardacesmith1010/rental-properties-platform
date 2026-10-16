@@ -332,7 +332,7 @@ describe("inbox actions", () => {
 
     const result = await sendMessageToTenant(null, new FormData());
 
-    expect(result).toEqual({ success: true, message: "Message sent." });
+    expect(result).toEqual({ success: true, message: "Message sent. It may take a moment to show." });
     expect(createNotificationWithDeliveryMock).toHaveBeenCalledWith(
       expect.objectContaining({
         recipientProfileId: "tenant-1",

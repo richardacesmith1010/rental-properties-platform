@@ -217,7 +217,7 @@ export async function assignVendorToTicket(
     .single();
 
   if (!ticket) {
-    return { success: false, error: "Ticket not found." };
+    return { success: false, error: "Repair not found." };
   }
 
   const { data: property } = await admin
@@ -227,12 +227,12 @@ export async function assignVendorToTicket(
     .single();
 
   if (!property) {
-    return { success: false, error: "Property not found for ticket." };
+    return { success: false, error: "Property not found for repair." };
   }
 
   const canAdminister = await canUserAdministerProperty(user.id, property.id);
   if (!canAdminister) {
-    return { success: false, error: "You do not have access to this ticket." };
+    return { success: false, error: "You do not have access to this repair." };
   }
 
   const { data: vendor } = await admin

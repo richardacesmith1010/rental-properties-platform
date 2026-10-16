@@ -1,5 +1,6 @@
 import { recordDepositReturn, clearDepositReturn } from "@/app/actions/deposits";
 import { getClientsOverview } from "@/lib/client-overview";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClientAccount } from "@/app/actions/client-accounts";
 import { createPropertyWithSetup } from "@/app/actions/unified-setup";
 import { Dashboard } from "@/components/dashboard";
@@ -58,6 +59,7 @@ import {
   revokeInvite,
   markNotificationRead,
   markAllNotificationsRead,
+  sendBatchPaymentReminder,
   createInboxThread,
   sendMessageToTenant,
   sendInboxMessage,
@@ -230,10 +232,26 @@ export default async function ManagerPage(props: ManagerPageProps) {
     portfolio.properties.map((property) => property.id)
   );
   const dashboardWithLines = await enrichDashboardChargeLines(dashboard);
+  const accountIds = Array.from(new Set(portfolio.properties.map((property) => property.ownerAccountId)
+    .filter((id): id is string => Boolean(id))));
+  const { data: reminderAccounts, error: reminderAccountsError } = accountIds.length
+    ? await createAdminClient().from("ownership_accounts")
+        .select("id, managers_can_send_reminders, managed_client").in("id", accountIds)
+    : { data: [], error: null };
+  const allowedAccountIds = new Set(reminderAccountsError ? [] : (reminderAccounts ?? [])
+    .filter((account) => account.managers_can_send_reminders && !account.managed_client)
+    .map((account) => account.id));
+  const allowedReminderPropertyIds = new Set(portfolio.properties
+    .filter((property) => property.ownerAccountId && allowedAccountIds.has(property.ownerAccountId))
+    .map((property) => property.id));
+  const chargesWithReminderPermission = dashboardWithLines.charges.map((charge) => ({
+    ...charge,
+    managerReminderAllowed: allowedReminderPropertyIds.has(charge.propertyId)
+  }));
 
   return (
     <Dashboard
-      data={dashboardWithLines}
+      data={{ ...dashboardWithLines, charges: chargesWithReminderPermission }}
       clients={clients}
       onCreateClientAccount={createClientAccount}
       onCreatePropertyWithSetup={createPropertyWithSetup}
@@ -271,6 +289,7 @@ export default async function ManagerPage(props: ManagerPageProps) {
       rentCollectionConnectHref="/connect/onboard"
       ownerConnectedMap={ownerConnectedMap}
       onSignOut={signOut}
+      onSendBatchPaymentReminder={sendBatchPaymentReminder}
       onCreateProperty={createProperty}
       onCreateUnit={createUnit}
       onCreateLease={createLease}

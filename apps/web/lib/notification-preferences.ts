@@ -81,8 +81,8 @@ export const NOTIFICATION_EMAIL_PREFERENCE_OPTIONS: NotificationPreferenceOption
     },
     {
       key: "maintenance_updates",
-      label: "Maintenance ticket updates",
-      description: "Send emails for new tickets and maintenance status changes."
+      label: "Repair updates",
+      description: "Send emails for new repairs and maintenance status changes."
     },
     {
       key: "lease_expiration",

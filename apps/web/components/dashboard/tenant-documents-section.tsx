@@ -165,7 +165,7 @@ function PacketSignRow({
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-medium text-[var(--ink-2)] hover:bg-[var(--surface-2)]"
-              title="Open this document packet file."
+              title="Open this paper."
             >
               Open File
             </Link>
@@ -176,7 +176,7 @@ function PacketSignRow({
         <form action={action} className="space-y-2">
           <input type="hidden" name="packetId" value={packet.id} />
           <Input name="signatureText" placeholder="Type full legal name" required />
-          <SubmitButton size="sm" title="Sign this packet with the entered legal name.">
+          <SubmitButton size="sm" title="Sign this paper with the entered legal name.">
             Sign
           </SubmitButton>
           {state && !state.success && <p className="text-xs text-[var(--crit)]">{state.error}</p>}

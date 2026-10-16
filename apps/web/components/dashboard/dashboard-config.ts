@@ -189,7 +189,7 @@ export function buildAllSectionItems(params: BuildAllSectionItemsParams): NavIte
       id: "documents",
       label: "Documents",
       icon: FileSignature,
-      description: "Templates, packets, and property file vault.",
+      description: "Templates, papers, and property file vault.",
       clickHint: "open document workflows"
     });
   }

@@ -87,7 +87,7 @@ export function PacketManager({ templates, leases, onCreatePacket, onCancel }: P
         ) : null}
         {step === 1 ? (
           <div className="space-y-3">
-            <p className="text-sm text-[var(--ink-2)]">Step 2: Select lease to attach this packet.</p>
+            <p className="text-sm text-[var(--ink-2)]">Step 2: Select lease to attach this paper.</p>
             <Select value={draft.leaseId} onChange={(event) => setDraft((current) => ({ ...current, leaseId: event.target.value }))}>
               <option value="">Select lease</option>
               {activeLeases.map((lease) => (
@@ -98,7 +98,7 @@ export function PacketManager({ templates, leases, onCreatePacket, onCancel }: P
         ) : null}
         {step === 2 ? (
           <div className="space-y-3">
-            <p className="text-sm text-[var(--ink-2)]">Final step: review and create draft packet.</p>
+            <p className="text-sm text-[var(--ink-2)]">Final step: review and create draft paper.</p>
             <div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-3 py-3 text-sm text-[var(--ink-2)]">
               <p><span className="font-semibold">Template:</span> {templates.find((template) => template.id === draft.templateId)?.name ?? "Not set"}</p>
               <p><span className="font-semibold">Lease:</span> {activeLeases.find((lease) => lease.id === draft.leaseId)?.unitLabel ?? "Not set"}</p>
@@ -106,7 +106,7 @@ export function PacketManager({ templates, leases, onCreatePacket, onCancel }: P
             <form className="space-y-2" action={action}>
               <input type="hidden" name="templateId" value={draft.templateId} />
               <input type="hidden" name="leaseId" value={draft.leaseId} />
-              <SubmitButton className="w-full" disabled={!requiredComplete} title="Create draft packet.">Create Draft Packet</SubmitButton>
+              <SubmitButton className="w-full" disabled={!requiredComplete} title="Create draft paper.">Create Draft Paper</SubmitButton>
             </form>
           </div>
         ) : null}

@@ -61,7 +61,7 @@ export function TicketPhotoUpload({
       />
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-xs text-muted-foreground">
-          {state && !state.success ? state.error : state?.message ?? "Attach follow-up or completion photos to this ticket."}
+          {state && !state.success ? state.error : state?.message ?? "Attach follow-up or completion photos to this repair."}
         </div>
         <Button
           type="button"

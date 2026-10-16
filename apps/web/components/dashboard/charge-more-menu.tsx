@@ -191,7 +191,12 @@ function UndoPaymentDialog({ onUndoPayment, chargeId, onClose }: {
           onClose();
           const data = new FormData(); data.set("intent", "undo"); data.set("chargeId", chargeId);
           void onUndoPayment(null, data).then((result) => {
-            if (result?.success) { toast.success(result.message); router.refresh(); }
+            if (result?.success) {
+              const id = toast.success(result.message);
+              // A pointer left over the toast pauses Sonner's timer after this dialog closes.
+              window.setTimeout(() => toast.dismiss(id), 4000);
+              router.refresh();
+            }
             else toast.error(result?.error ?? "We could not undo this payment.");
           });
         }}>Undo payment</Button>

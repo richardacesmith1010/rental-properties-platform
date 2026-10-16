@@ -90,7 +90,10 @@ export function DocumentsSection({
 
       <div className="flex flex-wrap gap-2">
         <Button type="button" size="sm" variant={activeFlow === "template" ? "default" : "outline"} onClick={() => setActiveFlow("template")} title="Create or update reusable document templates.">Templates</Button>
-        <Button type="button" size="sm" variant={activeFlow === "packet" ? "default" : "outline"} onClick={() => setActiveFlow("packet")} title="Create lease document packets from templates.">Send papers</Button>
+        <Button type="button" size="sm" variant={activeFlow === "packet" ? "default" : "outline"}
+          onClick={() => setActiveFlow("packet")} title="Create lease papers from templates.">
+          Send papers
+        </Button>
         <Button type="button" size="sm" variant={activeFlow === "file" ? "default" : "outline"} onClick={() => setActiveFlow("file")} title="Upload property files with visibility controls.">Files</Button>
       </div>
 
@@ -112,7 +115,7 @@ export function DocumentsSection({
       </Card>
 
       <Card className="border border-border/50 shadow-sm">
-        <CardHeader><CardTitle className="text-xl font-semibold">Document Packets</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-xl font-semibold">Documents to Sign</CardTitle></CardHeader>
         <CardContent>
           {packets.length === 0 ? <EmptyState icon={FileText} title="No documents yet" description="Send lease agreements, notices, and other packets from your saved templates." /> : <AnimatedList>{packets.map((packet, index) => <PacketRow key={packet.id} packet={packet} last={index === packets.length - 1} onSendPacket={onSendPacket} assetAccessEnabled={assetAccessEnabled} />)}</AnimatedList>}
         </CardContent>
@@ -178,16 +181,24 @@ function PacketRow({ packet, last, onSendPacket, assetAccessEnabled }: { packet:
         <p className="mt-0.5 text-sm text-[var(--faint)]">Created {formatDate(packet.createdAt)}</p>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           <Badge variant={packet.status === "signed" ? "success" : packet.status === "sent" ? "warning" : "outline"}>{packet.status.toUpperCase()}</Badge>
-          {assetAccessEnabled ? <Link href={`/api/assets/document-packet/${packet.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-medium text-[var(--ink-2)] hover:bg-[var(--surface-2)]" title="Open this document packet file.">Open File</Link> : null}
+          {assetAccessEnabled ? <Link href={`/api/assets/document-packet/${packet.id}`} target="_blank"
+            rel="noreferrer" className="inline-flex items-center rounded-md border border-[var(--line)] px-2 py-1
+              text-[11px] font-medium text-[var(--ink-2)] hover:bg-[var(--surface-2)]"
+            title="Open this document file.">Open File</Link> : null}
           {packet.signers.map((signer) => <Badge key={`${packet.id}-${signer.email}`} variant={signer.status === "signed" ? "success" : "outline"}>{signer.role}: {signer.status}</Badge>)}
         </div>
       </div>
       {packet.status !== "signed" && packet.status !== "void" ? (
         <form action={action}>
           <input type="hidden" name="packetId" value={packet.id} />
-          <SubmitButton size="sm" variant="outline" title={packet.status === "draft" ? "Send this packet to signers." : "Resend this packet to signers."}>{packet.status === "draft" ? "Send" : "Resend"}</SubmitButton>
+          <SubmitButton size="sm" variant="outline"
+            title={packet.status === "draft" ? "Send this paper to signers." : "Resend this paper to signers."}>
+            {packet.status === "draft" ? "Send" : "Resend"}
+          </SubmitButton>
           {state && !state.success ? <p className="mt-1 text-xs text-[var(--crit)]">{state.error}</p> : null}
-          {state && state.success ? <p className="mt-1 text-xs text-[var(--pos)]">{packet.status === "draft" ? "Packet sent." : "Packet resent."}</p> : null}
+          {state && state.success ? <p className="mt-1 text-xs text-[var(--pos)]">
+            {packet.status === "draft" ? "Paper sent." : "Paper resent."}
+          </p> : null}
         </form>
       ) : null}
     </DataRow>

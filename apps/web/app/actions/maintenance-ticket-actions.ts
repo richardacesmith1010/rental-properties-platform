@@ -65,7 +65,7 @@ export async function createMaintenanceTicket(
       .maybeSingle();
 
     if (!lease) {
-      return { success: false, error: "You can only send tickets for your leased unit." };
+      return { success: false, error: "You can only send repairs for your leased unit." };
     }
   } else {
     const canAdminister = await canUserAdministerProperty(user.id, unit.property_id);
@@ -171,7 +171,7 @@ export async function createMaintenanceTicket(
       propertyId: unit.property_id,
       event: "ticket_created",
       type: "new_ticket",
-      title: "New maintenance ticket",
+      title: "New repair",
       body: `${fromActor} submitted "${title}" for ${propertyName}.`,
       entityType: "maintenance_ticket",
       entityId: ticket.id,
@@ -239,12 +239,12 @@ export async function updateTicketStatus(
     .single();
 
   if (!ticket) {
-    return { success: false, error: "Ticket not found." };
+    return { success: false, error: "Repair not found." };
   }
 
   const canAdminister = await canUserAdministerProperty(user.id, ticket.property_id);
   if (!canAdminister) {
-    return { success: false, error: "You do not have access to this ticket." };
+    return { success: false, error: "You do not have access to this repair." };
   }
 
   const updateData: Record<string, unknown> = { status };
@@ -255,7 +255,7 @@ export async function updateTicketStatus(
   const { error } = await supabase.from("maintenance_tickets").update(updateData).eq("id", ticketId);
 
   if (error) {
-    return { success: false, error: "Failed to update ticket status." };
+    return { success: false, error: "Failed to update repair status." };
   }
 
   void (async () => {
@@ -276,7 +276,7 @@ export async function updateTicketStatus(
       propertyId: ticket.property_id,
       event: "ticket_resolved",
       type: "ticket_resolved",
-      title: "Maintenance ticket resolved",
+      title: "Repair resolved",
       body: `"${ticket.title}" was marked ${status}.`,
       entityType: "maintenance_ticket",
       entityId: ticket.id,

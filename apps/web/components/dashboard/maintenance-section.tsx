@@ -80,14 +80,14 @@ function isCompletedMaintenanceStatus(status: MaintenanceTicket["status"]) {
 
 function emptyStateMessage(filter: MaintenanceFilter) {
   if (filter === "active") {
-    return "No active tickets right now.";
+    return "No active repairs right now.";
   }
 
   if (filter === "completed") {
-    return "No completed tickets yet.";
+    return "No completed repairs yet.";
   }
 
-  return "No tickets yet.";
+  return "No repairs yet.";
 }
 
 export function MaintenanceSection({
@@ -144,10 +144,10 @@ export function MaintenanceSection({
     filter === "all"
       ? viewerRole === "tenant"
         ? "Your reported problems and landlord updates will show up here."
-        : "Tickets submitted by tenants will appear here."
+        : "Repairs submitted by tenants will appear here."
       : viewerRole === "tenant"
         ? "Switch filters to review your other maintenance updates."
-        : "Switch filters to review the rest of your ticket history.";
+        : "Switch filters to review the rest of your repair history.";
 
   return (
     <Card id="maintenance" className="border border-border/50 shadow-sm">
@@ -160,7 +160,7 @@ export function MaintenanceSection({
             variant={filter === "active" ? "default" : "outline"}
             aria-pressed={filter === "active"}
             onClick={() => setFilter("active")}
-            title="Show open and in-progress tickets."
+            title="Show open and in-progress repairs."
           >
             Active ({activeCount})
           </Button>
@@ -170,7 +170,7 @@ export function MaintenanceSection({
             variant={filter === "completed" ? "default" : "outline"}
             aria-pressed={filter === "completed"}
             onClick={() => setFilter("completed")}
-            title="Show resolved and closed tickets."
+            title="Show resolved and closed repairs."
           >
             Completed ({completedCount})
           </Button>
@@ -180,7 +180,7 @@ export function MaintenanceSection({
             variant={filter === "all" ? "default" : "outline"}
             aria-pressed={filter === "all"}
             onClick={() => setFilter("all")}
-            title="Show every maintenance ticket."
+            title="Show every repair."
           >
             All ({totalCount})
           </Button>
@@ -257,15 +257,11 @@ export function MaintenanceSection({
                         </p>
                       </div>
                       <div className="space-y-1">
-                        <p>
-                          <span className="font-medium text-foreground">Cost:</span> {meta.cost}
-                        </p>
-                        <p>
-                          <span className="font-medium text-foreground">Vendor:</span> {meta.vendor}
-                        </p>
-                        <p>
-                          <span className="font-medium text-foreground">Assignment:</span> {meta.assignment}
-                        </p>
+                        {viewerRole !== "tenant" ? <>
+                          <p><span className="font-medium text-foreground">Cost:</span> {meta.cost}</p>
+                          <p><span className="font-medium text-foreground">Vendor:</span> {meta.vendor}</p>
+                          <p><span className="font-medium text-foreground">Assignment:</span> {meta.assignment}</p>
+                        </> : null}
                         <p>
                           <span className="font-medium text-foreground">Photos:</span> {meta.photos}
                           {ticket.photoCount > 0 && !photoWorkflowEnabled ? " (access unavailable)" : ""}
@@ -363,7 +359,7 @@ export function MaintenanceSection({
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex h-8 items-center justify-center rounded-md border border-border px-3 text-xs font-medium text-foreground hover:bg-muted"
-                          title="Open the latest maintenance photo for this ticket."
+                          title="Open the latest maintenance photo for this repair."
                         >
                           View Photo
                         </Link>
@@ -380,9 +376,9 @@ export function MaintenanceSection({
                   type="button"
                   onClick={() => setExpanded((current) => !current)}
                   className="text-sm font-medium text-primary transition-colors hover:text-primary/80"
-                  title={expanded ? "Collapse the maintenance ticket preview." : "Show the full maintenance ticket list."}
+                  title={expanded ? "Collapse the repair preview." : "Show the full repair list."}
                 >
-                  {expanded ? "Show Less" : `View All Tickets (${filteredTickets.length})`}
+                  {expanded ? "Show Less" : `View All Repairs (${filteredTickets.length})`}
                 </button>
               </div>
             ) : null}

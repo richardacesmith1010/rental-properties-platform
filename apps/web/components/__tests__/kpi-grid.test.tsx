@@ -35,7 +35,7 @@ describe("KpiGrid", () => {
     expect(screen.getByText("Occupancy")).toBeInTheDocument();
     expect(screen.getByText("Rent Collection")).toBeInTheDocument();
     expect(screen.getByText("Outstanding")).toBeInTheDocument();
-    expect(screen.getByText("Open Tickets")).toBeInTheDocument();
+    expect(screen.getByText("Open Repairs")).toBeInTheDocument();
     expect(screen.getByText("Net Cash Flow")).toBeInTheDocument();
   });
 

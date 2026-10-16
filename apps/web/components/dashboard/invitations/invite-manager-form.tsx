@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/shared/submit-button";
-import { FormError, FormSuccess } from "@/components/dashboard/forms";
+import { FormError } from "@/components/dashboard/forms";
+import { Alert } from "@/components/ui/alert";
+import { toast } from "sonner";
 
 const MANAGER_STEPS = ["Home", "Email", "Name", "Send"] as const;
 
@@ -45,6 +47,7 @@ export function InviteManagerForm({ properties, onInviteManager, onSuccess }: {
     if (!state?.success) return;
     if (handledRef.current === state) return;
     handledRef.current = state;
+    toast.success(state.message ?? "Invite complete.");
     setDraft({ propertyId: "", email: "", fullName: "" });
     setStep(0);
     onSuccess?.();
@@ -59,7 +62,9 @@ export function InviteManagerForm({ properties, onInviteManager, onSuccess }: {
   return (
       <div className="space-y-4">
       <FormError state={state} />
-      <FormSuccess state={state} message={state?.success ? state.message ?? "Invite complete." : ""} />
+      {state?.success ? <Alert variant="success" className="h-auto whitespace-normal break-words">
+        {state.message ?? "Invite complete."}
+      </Alert> : null}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {MANAGER_STEPS.map((label, index) => (
           <StepPill key={label} label={label} active={step === index} done={stepComplete(index)} skipped={false} />
@@ -120,11 +125,11 @@ export function InviteManagerForm({ properties, onInviteManager, onSuccess }: {
           disabled={step === 0} title="Go back one step.">
           Back
         </Button>
-        <Button type="button" onClick={() => setStep((current) => Math.min(current + 1, MANAGER_STEPS.length - 1))}
-          disabled={step >= MANAGER_STEPS.length - 1 || !stepComplete(step)}
-          title="Complete this step and move to the next one.">
+        {step < MANAGER_STEPS.length - 1 ? <Button type="button"
+          onClick={() => setStep((current) => Math.min(current + 1, MANAGER_STEPS.length - 1))}
+          disabled={!stepComplete(step)} title="Complete this step and move to the next one.">
           Next
-        </Button>
+        </Button> : null}
       </div>
     </div>
   );

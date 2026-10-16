@@ -1,4 +1,5 @@
 export type { ActionState } from "./shared";
+export { setManagerReminderPermission } from "./manager-permissions";
 export type StatefulAction = (
   prev: import("./shared").ActionState,
   formData: FormData

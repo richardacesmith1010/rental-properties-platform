@@ -192,7 +192,7 @@ export async function createInboxThread(
   });
 
   if (error) {
-    return { success: false, error: "Failed to create inbox thread." };
+    return { success: false, error: "Failed to create conversation." };
   }
 
   revalidatePath("/owner");
@@ -238,7 +238,7 @@ export async function sendMessageToTenant(
   });
 
   if (!threadId) {
-    return { success: false, error: "Failed to create a message thread." };
+    return { success: false, error: "Failed to create a conversation." };
   }
 
   const messageError = await insertInboxMessage({
@@ -275,11 +275,11 @@ export async function sendMessageToTenant(
   if (threadUpdateError) {
     return {
       success: true,
-      message: "Message sent, but the thread activity timestamp is catching up.",
+      message: "Message sent. It may take a moment to show.",
     };
   }
 
-  return { success: true, message: "Message sent." };
+  return { success: true, message: "Message sent. It may take a moment to show." };
 }
 
 export async function sendInboxMessage(
@@ -311,7 +311,7 @@ export async function sendInboxMessage(
     .maybeSingle();
 
   if (!thread) {
-    return { success: false, error: "Thread not found." };
+    return { success: false, error: "Conversation not found." };
   }
 
   const canAccess =
@@ -322,7 +322,7 @@ export async function sendInboxMessage(
       : await canUserAdministerProperty(user.id, thread.property_id);
 
   if (!canAccess) {
-    return { success: false, error: "You do not have access to this thread." };
+    return { success: false, error: "You do not have access to this conversation." };
   }
 
   const direction = role === "tenant" ? "inbound" : "outbound";
@@ -383,7 +383,7 @@ export async function sendInboxMessage(
   if (threadUpdateError) {
     return {
       success: true,
-      message: "Message sent, but the thread activity timestamp is catching up.",
+      message: "Message sent. It may take a moment to show.",
     };
   }
 

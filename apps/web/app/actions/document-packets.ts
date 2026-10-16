@@ -79,7 +79,7 @@ export async function createDocumentPacket(_prev: ActionState, formData: FormDat
     status: "draft",
     created_by_profile_id: user.id
   });
-  if (error) return { success: false, error: "Failed to create document packet." };
+  if (error) return { success: false, error: "Failed to create document." };
 
   revalidatePath("/owner");
   revalidatePath("/manager");
@@ -104,13 +104,13 @@ export async function sendDocumentPacket(_prev: ActionState, formData: FormData)
     .eq("id", parsed.data.packetId)
     .single();
 
-  if (!packet) return { success: false, error: "Document packet not found." };
+  if (!packet) return { success: false, error: "Document not found." };
   if (!(await canUserAdministerProperty(user.id, packet.property_id))) {
-    return { success: false, error: "You do not have access to this packet." };
+    return { success: false, error: "You do not have access to this paper." };
   }
-  if (packet.status === "signed" || packet.status === "void") return { success: false, error: "This packet can no longer be sent." };
+  if (packet.status === "signed" || packet.status === "void") return { success: false, error: "This paper can no longer be sent." };
   if (packet.status === "sent" && shouldThrottleDocumentPacketSend(packet.sent_at)) return { success: true };
-  if (!packet.lease_id) return { success: false, error: "Packet must be linked to a lease before sending." };
+  if (!packet.lease_id) return { success: false, error: "Paper must be linked to a lease before sending." };
 
   const { data: lease } = await admin.from("leases").select("id, tenant_profile_id").eq("id", packet.lease_id).single();
   if (!lease?.tenant_profile_id) return { success: false, error: "No tenant linked to this lease." };
@@ -127,13 +127,13 @@ export async function sendDocumentPacket(_prev: ActionState, formData: FormData)
     { packet_id: packet.id, profile_id: tenantProfile.id, email: tenantProfile.email, role: "tenant", status: "pending" },
     { onConflict: "packet_id,email" }
   );
-  if (signerError) return { success: false, error: "Failed to set packet signer." };
+  if (signerError) return { success: false, error: "We could not add the signer." };
 
   const { error: packetError } = await supabase
     .from("document_packets")
     .update({ status: "sent", sent_at: new Date().toISOString() })
     .eq("id", packet.id);
-  if (packetError) return { success: false, error: "Failed to send packet." };
+  if (packetError) return { success: false, error: "Failed to send paper." };
 
   void createNotificationWithDelivery({
     recipientProfileId: tenantProfile.id,
@@ -148,7 +148,7 @@ export async function sendDocumentPacket(_prev: ActionState, formData: FormData)
   void notifyPropertyTeam({
     propertyId: packet.property_id,
     type: "document_sent",
-    title: "Document packet sent",
+    title: "Document sent",
     body: `"${packetTitle}" was sent to the tenant for signature.`,
     entityType: "document_packet",
     entityId: packet.id,
@@ -232,7 +232,7 @@ export async function signDocumentPacket(_prev: ActionState, formData: FormData)
   if (!remaining || remaining.length === 0) {
     const { error: packetUpdateError } = await admin.from("document_packets")
       .update({ status: "signed", signed_at: signedAt }).eq("id", packetId);
-    if (packetUpdateError) return { success: false, error: "Document signed, but the packet could not be finalized." };
+    if (packetUpdateError) return { success: false, error: "Signed, but we could not finish the papers." };
 
     const { data: packet } = await admin.from("document_packets").select("id, property_id, template_id").eq("id", packetId).single();
     if (packet?.property_id) {

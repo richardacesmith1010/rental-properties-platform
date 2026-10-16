@@ -70,7 +70,7 @@ describe("ticket comment notification recipients", () => {
   it("rejects an allowlisted tenant who does not own the stored ticket", async () => {
     mocks.auth.mockResolvedValue({ user: { id: "other-tenant" }, role: "tenant" });
     const result = await addTicketComment(null, form());
-    expect(result).toMatchObject({ success: false, error: "You do not have access to this ticket." });
+    expect(result).toMatchObject({ success: false, error: "You do not have access to this repair." });
     expect(mocks.team).not.toHaveBeenCalled();
     expect(mocks.notification).not.toHaveBeenCalled();
   });

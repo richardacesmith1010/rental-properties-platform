@@ -161,7 +161,7 @@ describe("MaintenanceSection", () => {
   it("shows the active empty state when there are no active tickets", () => {
     render(<MaintenanceSection tickets={completedOnlyTickets} />);
 
-    expect(screen.getByText("No active tickets right now.")).toBeInTheDocument();
+    expect(screen.getByText("No active repairs right now.")).toBeInTheDocument();
   });
 
   it("shows the completed empty state when there are no completed tickets", () => {
@@ -169,17 +169,17 @@ describe("MaintenanceSection", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Completed (0)" }));
 
-    expect(screen.getByText("No completed tickets yet.")).toBeInTheDocument();
+    expect(screen.getByText("No completed repairs yet.")).toBeInTheDocument();
   });
 
   it("shows the all empty state when no tickets exist and all is selected", () => {
     render(<MaintenanceSection tickets={[]} />);
 
-    expect(screen.getByText("No active tickets right now.")).toBeInTheDocument();
+    expect(screen.getByText("No active repairs right now.")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "All (0)" }));
 
-    expect(screen.getByText("No tickets yet.")).toBeInTheDocument();
+    expect(screen.getByText("No repairs yet.")).toBeInTheDocument();
   });
 
   it("renders the ticket list when tickets exist", () => {
@@ -191,7 +191,7 @@ describe("MaintenanceSection", () => {
   it("shows the active empty state when no tickets exist by default", () => {
     render(<MaintenanceSection tickets={[]} />);
 
-    expect(screen.getByText("No active tickets right now.")).toBeInTheDocument();
+    expect(screen.getByText("No active repairs right now.")).toBeInTheDocument();
   });
 
   it("shows ticket title and property details", () => {
@@ -238,5 +238,18 @@ describe("MaintenanceSection", () => {
     const { container } = render(<MaintenanceSection tickets={[ticket]} />);
 
     expect(container.querySelector("summary")).toHaveTextContent("Conversation");
+  });
+
+  it("hides repair cost, vendor and assignment from tenants only", () => {
+    const { rerender } = render(<MaintenanceSection tickets={[ticket]} viewerRole="tenant" />);
+    for (const label of ["Cost:", "Vendor:", "Assignment:"]) {
+      expect(screen.queryByText(label)).not.toBeInTheDocument();
+    }
+    rerender(<MaintenanceSection tickets={[ticket]} viewerRole="owner" />);
+    for (const label of ["Cost:", "Vendor:", "Assignment:"]) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    }
+    rerender(<MaintenanceSection tickets={[ticket]} viewerRole="manager" />);
+    expect(screen.getByText("Cost:")).toBeInTheDocument();
   });
 });

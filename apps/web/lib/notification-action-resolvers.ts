@@ -120,7 +120,7 @@ export function resolveMaintenanceActions(
     return [
       {
         kind: "navigate",
-        label: "Review Ticket",
+        label: "Review Repair",
         href: buildDashboardHref("owner", "maintenance", { ticketId }),
         variant: "default",
         sectionId: "maintenance"
@@ -132,7 +132,7 @@ export function resolveMaintenanceActions(
     return [
       {
         kind: "navigate",
-        label: "Track Your Ticket",
+        label: "Track Your Repair",
         href: buildDashboardHref("tenant", "maintenance", { ticketId }),
         variant: "default",
         sectionId: "maintenance"
@@ -143,7 +143,7 @@ export function resolveMaintenanceActions(
   return [
     {
       kind: "navigate",
-      label: "Respond to Ticket",
+      label: "Respond to Repair",
       href: buildDashboardHref("manager", "maintenance", { ticketId }),
       variant: "default",
       sectionId: "maintenance"

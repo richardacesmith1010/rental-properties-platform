@@ -114,7 +114,7 @@ function buildLeasingStages(params: {
     {
       id: "docs_sent",
       label: "Docs Sent for Signature",
-      description: "Send lease packet(s) and confirm signature workflow is in motion.",
+      description: "Send the lease papers to sign.",
       done: sentOrSignedPackets.length > 0,
       metric: `${sentOrSignedPackets.length} packets sent/signed`,
       targetSection: "documents",

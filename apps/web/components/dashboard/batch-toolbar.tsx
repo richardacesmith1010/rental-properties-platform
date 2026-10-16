@@ -9,6 +9,8 @@ interface BatchToolbarProps {
   onSendReminder: () => void;
   onExport: () => void;
   sendingReminders?: boolean;
+  reminderDisabled?: boolean;
+  reminderDisabledReason?: string;
 }
 
 export function BatchToolbar({
@@ -16,7 +18,9 @@ export function BatchToolbar({
   onDeselectAll,
   onSendReminder,
   onExport,
-  sendingReminders = false
+  sendingReminders = false,
+  reminderDisabled = false,
+  reminderDisabledReason
 }: BatchToolbarProps) {
   const firstActionRef = useRef<HTMLButtonElement>(null);
   const previousSelectedCountRef = useRef(0);
@@ -56,8 +60,9 @@ export function BatchToolbar({
           variant="outline"
           onClick={onSendReminder}
           loading={sendingReminders}
+          disabled={reminderDisabled}
           className="min-h-11 w-full sm:min-h-9 sm:w-auto"
-          title="Send payment reminders for the selected payments."
+          title={reminderDisabledReason ?? "Send payment reminders for the selected payments."}
         >
           Send Reminder
         </Button>
