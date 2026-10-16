@@ -1124,3 +1124,14 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   Includes historical Stripe ACH reversals. → Sprint 237 (L3) first item.
 - Medium: M3 manager invite email generic, M7 message counts, M8 jargon, M1 one home per invite, M6 sticky toast, M11 Domus-account owners not under Clients.
 - Full table: `docs/manager-walk-plan-2026-10-16.md`. Next: Sprint 237 packet (M10 + mediums + manager reminders, L3 → ChatGPT).
+
+## Sprint 237a SHIPPED — reversed payments never count as received (M10) — 2026-10-15
+- Commit `a06ceac` (Codex gpt-6-sol high + 237a-b build fix, gpt-6-luna). Deployed prod; smoke green; CI `gate` success.
+- Readers fixed: dashboard-legacy, payment-history (label "Reversed", last paid skips), receipt page + PDF + yearly PDF,
+  analytics, rent roll, property detail, AI chat (now `lib/ai-recent-payments.ts`), export (reversedAt + status), success
+  page, webhook reversed duplicate = no-op, **plus reports-pnl tax summary** (found by the audit). SQL readers audited: safe.
+- Autopay: scoped paged lookup; active or reversed stripe/legacy block; undone manual only lifts the block; lookup error
+  aborts the run (zero charges). Gate 2512 tests green.
+- Not yet walked live in the UI (needs a signed-in session); fold into the 237b live walk.
+- **Next:** Sprint 237b (manager reminders + M7/M8/M5/M6/M2/T1) dispatched; then the ownership_accounts grants packet
+  (`docs/sprint237c-migration-packet.md`, from the lock-down session — renumber to 237d, 237c stays M3/M1/M11).
