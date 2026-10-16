@@ -1238,3 +1238,16 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   maintenance word = **Repair** (reference table updated); manager menu = **~6 everyday items + "More"**.
 - Queue: phone walks/fixes/TestFlight prep → 237c manager follow-ups (M3 gated, M1, M11, menu, Wallet manager Home, reminder
   switch toggle style, Install card overlap) → Money/Owner honest rescore → security advisors (L3) → prep owner-only items.
+
+## 2026-10-16 — Sprint 238b PARKED for the owner (second ChatGPT REJECT; CLAUDE.md §2a stop rule)
+- Packet `docs/sprint238b-codex-prompt.md` rev 2 + `docs/runbooks/account-deletion.md`. Review rev 2: the **code**
+  design (server-only identity, forged-field test, unique-index idempotency, request row as source of truth, global
+  sign-out tolerant of failure) is accepted. Remaining REQUIRED items concern the **manual runbook**: (1) auth.users →
+  profiles FK — **refuted live**: `profiles` has 0 outgoing FKs; `auth.users` has only the `on_auth_user_created`
+  (`handle_new_user`) trigger, so deleting a sign-in cannot cascade to profiles; (2) recoverable step log instead of one
+  transaction; (3) obligations must not block forever; (4) audit retained data for direct identifiers; (5) truthful
+  completion/cleanup; (6) logout failure path; (7) copy fixes; (8) rate-limit/CSRF/DB access criteria; (9) validate the
+  runbook on a disposable multi-role fixture; (10) identity-provider obligations (no Sign in with Apple → n/a).
+- **Owner decision needed:** dispatch the code part now (the button + queue) with the runbook hardening as a follow-up
+  before the first real request, or wait for a third review. Only App Store **submission** needs it; internal
+  TestFlight does not.
