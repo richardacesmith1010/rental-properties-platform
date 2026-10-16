@@ -1210,3 +1210,23 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Pre-existing bug found (not caused by 237g): tenant-created repairs never write `maintenance_status_history` (RLS policy
   allows admins only; app logs and continues). Follow-up.
 - Note: Vercel Hobby keeps runtime logs 1 hour, so the "24 h no 42501" check must use Sentry instead.
+
+## Sprint 237h SHIPPED — first repair-history row for tenant repairs (L3, closes the 237g follow-up) — 2026-10-16
+- Commit `c23e8d1` (packet `b9d99c4`, `docs/sprint237h-codex-prompt.md`). No RLS/grant/schema change. ChatGPT: rev 1
+  REJECT (error contract, deny-path tests, backfill scope) → rev 2 APPROVE WITH CHANGES → rev 3 all adopted.
+- `createMaintenanceTicket` now writes `null → submitted` with the admin client, awaited, only after auth, rate limit,
+  parse, lease/admin check and a successful ticket insert; all values server-fixed. Chosen over a tenant INSERT policy,
+  which would let tenants add history rows with forged `created_at`/`notes` directly (L-025).
+- Tests: `maintenance-ticket-history.test.ts` (12): admin client identity, awaited, thrown failure non-fatal + telemetry,
+  no lease / insert error / staff denied / bad input / missing unit → no admin client and no history, call order,
+  manager + owner success, forged form fields ignored. Ordinary Supabase `{error}` stays logged inside the helper.
+- Live attacker SQL as smoke tenant (rolled back, after deploy): own-ticket insert, forged date/notes, other ticket,
+  update, delete → all 42501; service role insert OK.
+- Backfill (data only, one transaction, creator from the single `audit_logs` `create_ticket` row = tenant): rows
+  `480822cd-9c67-460c-8840-c5a388991902` (ticket 904e93fd…) and `b0518158-8d1e-4231-aabd-b9347768873c` (82818d61…).
+  Rerun inserts 0. Rollback: delete those 2 ids.
+- Gate green, smoke green. CI on `c23e8d1` failed in `unified-property-wizard.test.tsx:85` (untouched; `getByText` right
+  after `reachSuccess`, passes 3/3 locally in UTC → flaky race). CI re-checked on the handoff commit.
+- Not walked in the UI: a real tenant sending a repair on domusbase.com (needs the smoke tenant signed in).
+- **Next:** fix the flaky wizard test (`findByText`); `updateTicketStatus` history oddities (`open → reviewed` plus
+  `open → in_progress` double row, and same-status `in_progress → in_progress` rows).
