@@ -12,6 +12,7 @@ export interface PaymentHistoryItem {
   propertyName: string;
   unitNumber: string;
   referenceNote: string | null;
+  reversedAt: string | null;
 }
 
 export async function getTenantPaymentHistory(userId: string): Promise<PaymentHistoryItem[]> {
@@ -65,26 +66,36 @@ export async function getTenantPaymentHistory(userId: string): Promise<PaymentHi
     property_id: string;
   }>;
   const propertyIds = Array.from(new Set(unitRows.map((unit) => unit.property_id)));
-  const [paymentResult, propertyResult] = await Promise.all([
+  const [paymentResult, activePaymentResult, propertyResult] = await Promise.all([
     supabase.from("payments")
-      .select("id, rent_charge_id, paid_at, amount_cents, method, reference_note")
+      .select("id, rent_charge_id, paid_at, amount_cents, method, reference_note, reversed_at")
       .in("rent_charge_id", chargeIds)
       .order("paid_at", { ascending: false })
       .limit(50),
+    supabase.from("payments")
+      .select("id, rent_charge_id, paid_at, amount_cents, method, reference_note, reversed_at")
+      .in("rent_charge_id", chargeIds)
+      .is("reversed_at", null)
+      .order("paid_at", { ascending: false })
+      .limit(1),
     supabase.from("properties").select("id, name").in("id", propertyIds)
   ]);
   if (paymentResult.error) throw paymentResult.error;
+  if (activePaymentResult.error) throw activePaymentResult.error;
   if (propertyResult.error) throw propertyResult.error;
-  const payments = paymentResult.data;
+  const payments = paymentResult.data ?? [];
+  const lastActive = activePaymentResult.data?.[0];
+  if (lastActive && !payments.some((payment) => payment.id === lastActive.id)) payments.push(lastActive);
 
   const paymentRows =
-    (payments ?? []) as Array<{
+    payments as Array<{
       id: string;
       rent_charge_id: string;
       paid_at: string;
       amount_cents: number;
       method: string;
       reference_note: string | null;
+      reversed_at: string | null;
     }>;
   if (paymentRows.length === 0) {
     return [];
@@ -117,7 +128,8 @@ export async function getTenantPaymentHistory(userId: string): Promise<PaymentHi
         dueDate: charge.due_date,
         propertyName: property?.name ?? "Your Rental",
         unitNumber: unit?.unit_number ?? "?",
-        referenceNote: payment.reference_note
+        referenceNote: payment.reference_note,
+        reversedAt: payment.reversed_at
       };
     })
     .filter((payment): payment is PaymentHistoryItem => payment !== null);

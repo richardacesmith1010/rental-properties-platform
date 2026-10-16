@@ -17,17 +17,21 @@ vi.mock("@/lib/charge-audit", async (importOriginal) => {
 
 import { getRentRollReport } from "@/lib/reports-rent-roll";
 
-function queryResult<T>(data: T) {
+function queryResult<T extends Record<string, unknown>>(data: T[]) {
+  const filters: Array<(row: T) => boolean> = [];
   const builder: Record<string, unknown> = {};
   for (const method of ["in", "is", "order", "eq"]) {
-    builder[method] = vi.fn(() => builder);
+    builder[method] = vi.fn((key: string, value: unknown) => {
+      if (method === "is") filters.push((row) => (row[key] ?? null) === value);
+      return builder;
+    });
   }
-  builder.then = (resolve: (value: { data: T; error: null }) => unknown) =>
-    Promise.resolve({ data, error: null }).then(resolve);
+  builder.then = (resolve: (value: { data: T[]; error: null }) => unknown) =>
+    Promise.resolve({ data: data.filter((row) => filters.every((filter) => filter(row))), error: null }).then(resolve);
   return builder;
 }
 
-function createAdmin(collectsOutsideDomus: boolean) {
+function createAdmin(collectsOutsideDomus: boolean, payments: Array<Record<string, unknown>> = []) {
   return {
     from: vi.fn((table: string) => ({
       select: vi.fn(() => {
@@ -80,7 +84,7 @@ function createAdmin(collectsOutsideDomus: boolean) {
           ]);
         }
         if (table === "payments") {
-          return queryResult([]);
+          return queryResult(payments);
         }
         throw new Error(`Unexpected table ${table}`);
       })
@@ -105,5 +109,14 @@ describe("rent roll outside-Domus accounting", () => {
     expect(ordinary[0]?.currentBalance).toBe(235000);
     expect(outsideDomus[0]?.currentBalance).toBe(ordinary[0]?.currentBalance);
     expect(outsideDomus[0]?.chargeDetails[0]?.status).toBe("late");
+  });
+
+  it("uses the older active payment for last payment date", async () => {
+    createAdminClientMock.mockReturnValue(createAdmin(false, [
+      { rent_charge_id: "charge-1", paid_at: "2026-10-05", reversed_at: "2026-10-06" },
+      { rent_charge_id: "charge-1", paid_at: "2026-10-03", reversed_at: null }
+    ]));
+    const result = await getRentRollReport("owner-1");
+    expect(result[0]?.lastPaymentDate).toBe("2026-10-03");
   });
 });

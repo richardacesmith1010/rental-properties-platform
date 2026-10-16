@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getPropertyDetailData } from "@/lib/property-detail";
+import { createElement } from "react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { PropertyDetailView } from "@/components/dashboard/property-detail-view";
 
 const createAdminClientMock = vi.hoisted(() => vi.fn());
 const canUserAdministerPropertyMock = vi.hoisted(() => vi.fn());
@@ -311,5 +314,63 @@ describe("getPropertyDetailData", () => {
     expect(result?.activity).toEqual([
       { id: "activity-1", propertyId: "property-1" }
     ]);
+  });
+});
+
+describe("property payment query", () => {
+  it("gets payment dates from active rows while retaining reversed history", async () => {
+    const actual = await vi.importActual<typeof import("@/lib/property-detail-queries")>("@/lib/property-detail-queries");
+    const calls: string[] = [];
+    const rows: Record<string, Array<Record<string, unknown>>> = {
+      units: [{ id: "unit-1", unit_number: "1", property_id: "property-1" }],
+      leases: [{ id: "lease-1", unit_id: "unit-1", tenant_profile_id: "tenant-1" }],
+      profiles: [{ id: "tenant-1", full_name: "Tenant", email: null }],
+      rent_charges: [{ id: "charge-1", lease_id: "lease-1", due_date: "2026-10-01",
+        amount_cents: 10000, status: "paid", category: "rent" }],
+      payments: [
+        { id: "reversed", rent_charge_id: "charge-1", paid_at: "2026-10-05", amount_cents: 10000,
+          method: "ach", reversed_at: "2026-10-06" },
+        { id: "active", rent_charge_id: "charge-1", paid_at: "2026-10-03", amount_cents: 10000,
+          method: "ach", reversed_at: null }
+      ]
+    };
+    const admin = { from: (table: string) => {
+      const filters: Array<(row: Record<string, unknown>) => boolean> = [];
+      const result = () => ({ data: (rows[table] ?? []).filter((row) => filters.every((filter) => filter(row)))
+        .sort((a, b) => String(b.paid_at).localeCompare(String(a.paid_at))), error: null });
+      const query = {
+        select: () => query,
+        eq: (key: string, value: unknown) => { filters.push((row) => row[key] === value); return query; },
+        in: (key: string, values: unknown[]) => { filters.push((row) => values.includes(row[key])); return query; },
+        is: (key: string, value: unknown) => { if (table === "payments") calls.push(`is:${key}`);
+          filters.push((row) => (row[key] ?? null) === value); return query; },
+        order: () => query,
+        then: (resolve: (value: ReturnType<typeof result>) => unknown) => Promise.resolve(result()).then(resolve)
+      };
+      return query;
+    } };
+    const result = await actual.getPropertyChargeData(admin as never, "property-1");
+    expect(result.charges[0].paymentDate).toBe("2026-10-03");
+    expect(result.payments.map((payment) => payment.id)).toEqual(["reversed", "active"]);
+    expect((result.payments[0] as typeof result.payments[0] & { reversedAt: string }).reversedAt).toBe("2026-10-06");
+    expect(calls).toEqual(["is:reversed_at"]);
+  });
+
+  it("labels reversed payment history on the property Payments tab", () => {
+    const data = {
+      property: { id: "property-1", name: "Forum House", addressLine1: "1 Main St",
+        city: "Denver", state: "CO", postalCode: "80000", ownerAccountName: "Owner" },
+      units: [], leases: [], tenants: [], charges: [], maintenance: [], activity: [],
+      documents: { files: [], propertyFilesEnabled: false, propertyFilesWarning: null },
+      payments: [{ id: "payment-1", chargeId: "charge-1", propertyId: "property-1",
+        tenantProfileId: "tenant-1", tenantName: "Tenant", unitNumber: "1", amountCents: 120000,
+        paidAt: "2026-10-03", method: "ach", reversedAt: "2026-10-04" }]
+    };
+    render(createElement(PropertyDetailView, { data, role: "owner",
+      onCreateTenantActivity: vi.fn(), onGetTenantActivityLog: vi.fn(), onSendMessageToTenant: vi.fn(),
+      onAddTicketComment: vi.fn(), onUpdateTicketStatus: vi.fn() } as never));
+    fireEvent.click(screen.getByRole("button", { name: /payments/i }));
+    expect(screen.getByText("Reversed")).toBeTruthy();
+    expect(screen.getByText(/\$1,200/)).toBeTruthy();
   });
 });

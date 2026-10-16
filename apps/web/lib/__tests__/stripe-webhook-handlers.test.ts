@@ -52,6 +52,7 @@ import {
 
 interface TestSupabaseConfig {
   existingManagerTransferId?: string | null;
+  existingDuplicatePayment?: { id: string; reversed_at: string | null } | null;
   existingAsyncFailurePayment?: {
     id: string;
     stripe_transfer_id: string | null;
@@ -90,10 +91,15 @@ function createWebhookSupabase(config: TestSupabaseConfig = {}) {
   const paymentsUpdateMock = vi.fn(() => ({
     eq: vi.fn().mockResolvedValue({ error: config.paymentUpdateError ?? null })
   }));
+  const chargeUpdateMock = vi.fn(() => ({
+    eq: vi.fn(() => ({ in: vi.fn(() => ({
+      select: vi.fn().mockResolvedValue({ data: [{ id: charge.id }], error: null, count: 1 })
+    })) }))
+  }));
 
   return {
     __mocks: {
-      paymentsUpdateMock
+      paymentsUpdateMock, chargeUpdateMock
     },
     from: vi.fn((table: string) => {
       if (table === "payments") {
@@ -105,7 +111,7 @@ function createWebhookSupabase(config: TestSupabaseConfig = {}) {
                   ? config.existingAsyncFailurePayment ?? null
                   : columns.includes("manager_transfer_id")
                     ? { manager_transfer_id: config.existingManagerTransferId ?? null }
-                    : null,
+                  : config.existingDuplicatePayment ?? null,
                 error: null
               })
             }))
@@ -122,13 +128,7 @@ function createWebhookSupabase(config: TestSupabaseConfig = {}) {
               maybeSingle: vi.fn().mockResolvedValue({ data: charge, error: null })
             }))
           })),
-          update: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              in: vi.fn(() => ({
-                select: vi.fn().mockResolvedValue({ data: [{ id: charge.id }], error: null, count: 1 })
-              }))
-            }))
-          }))
+          update: chargeUpdateMock
         };
       }
 
@@ -241,6 +241,32 @@ describe("stripe webhook handlers", () => {
     planCustomDistributionTransfersMock.mockReturnValue({ memberShares: [], llcFallbackAmount: 0 });
     recordPaymentDistributionMock.mockResolvedValue(undefined);
     sideEffectErrorMock.mockReturnValue(() => undefined);
+  });
+
+  it("does not repair or send paid side effects for a reversed duplicate session", async () => {
+    const supabase = createWebhookSupabase({ existingDuplicatePayment: {
+      id: "payment-1", reversed_at: "2026-05-05"
+    } });
+    const result = await handleCheckoutSessionCompleted(supabase as never, {
+      id: "cs_duplicate", url: null, payment_status: "paid", amount_total: 125000,
+      payment_intent: "pi_duplicate",
+      metadata: { charge_id: "charge-1", user_id: "tenant-1", payment_method: "card" }
+    });
+    expect(await result.json()).toMatchObject({ status: "already_recorded" });
+    expect(supabase.__mocks.chargeUpdateMock).not.toHaveBeenCalled();
+    expect(createStripeTransferMock).not.toHaveBeenCalled();
+    expect(createNotificationWithDeliveryMock).not.toHaveBeenCalled();
+    expect(notifyPropertyTeamMock).not.toHaveBeenCalled();
+  });
+
+  it("still repairs an unpaid charge for an active duplicate session", async () => {
+    const supabase = createWebhookSupabase({ existingDuplicatePayment: { id: "payment-1", reversed_at: null } });
+    await handleCheckoutSessionCompleted(supabase as never, {
+      id: "cs_duplicate", url: null, payment_status: "paid", amount_total: 125000,
+      payment_intent: "pi_duplicate",
+      metadata: { charge_id: "charge-1", user_id: "tenant-1", payment_method: "card" }
+    });
+    expect(supabase.__mocks.chargeUpdateMock).toHaveBeenCalledTimes(1);
   });
 
   it.each([true, null])(

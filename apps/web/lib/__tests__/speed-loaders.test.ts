@@ -10,7 +10,9 @@ const state = vi.hoisted(() => ({
 
 function query(table: string) {
   const filters: Array<(row: Record<string, unknown>) => boolean> = [];
-  const execute = () => ({ data: (state.rows[table] ?? []).filter((row) => filters.every((filter) => filter(row))), error: null });
+  let cap = Infinity;
+  const execute = () => ({ data: (state.rows[table] ?? []).filter((row) => filters.every((filter) => filter(row)))
+    .slice(0, cap), error: null });
   const builder = {
     select: () => builder,
     eq: (column: string, value: unknown) => {
@@ -26,7 +28,7 @@ function query(table: string) {
       return builder;
     },
     order: () => builder,
-    limit: () => builder,
+    limit: (value: number) => { if (table === "payments") cap = value; return builder; },
     maybeSingle: async () => {
       const result = execute();
       return { data: result.data[0] ?? null, error: result.error };
@@ -50,6 +52,7 @@ import { getOwnerExpenseData } from "@/lib/expenses";
 import { getInboxThreadsForUser } from "@/lib/inbox";
 import { getTenantPaymentData } from "@/lib/tenant-payments";
 import { getTenantPaymentHistory } from "@/lib/payment-history";
+import { isActivePayment } from "@/lib/payments-active";
 
 describe("speed loader output preservation", () => {
   beforeEach(() => {
@@ -59,6 +62,41 @@ describe("speed loader output preservation", () => {
     state.administeredPropertyIdsForAccount.mockResolvedValue(["property-1"]);
     state.administeredOwnerAccountIds.mockResolvedValue(["account-1"]);
     state.role.mockResolvedValue("owner");
+  });
+
+  it("keeps a reversed tenant payment in history but skips it for last paid", async () => {
+    state.rows.leases = [{ id: "lease-1", unit_id: "unit-1", tenant_profile_id: "tenant-1" }];
+    state.rows.units = [{ id: "unit-1", property_id: "property-1", unit_number: "1" }];
+    state.rows.properties = [{ id: "property-1", name: "Forum House" }];
+    state.rows.rent_charges = [{ id: "charge-1", lease_id: "lease-1", due_date: "2026-10-01",
+      amount_cents: 120000, category: "rent", deleted_at: null }];
+    state.rows.payments = [
+      { id: "reversed", rent_charge_id: "charge-1", paid_at: "2026-10-04", amount_cents: 120000,
+        method: "ach", reference_note: null, reversed_at: "2026-10-05" },
+      { id: "active", rent_charge_id: "charge-1", paid_at: "2026-10-02", amount_cents: 120000,
+        method: "ach", reference_note: null, reversed_at: null }
+    ];
+    const history = await getTenantPaymentHistory("tenant-1");
+    expect(history.find((payment) => payment.paymentId === "reversed")?.reversedAt).toBe("2026-10-05");
+    expect(history.find(isActivePayment)?.paymentId).toBe("active");
+  });
+
+  it("finds the last active payment behind fifty reversed history rows", async () => {
+    state.rows.leases = [{ id: "lease-1", unit_id: "unit-1", tenant_profile_id: "tenant-1" }];
+    state.rows.units = [{ id: "unit-1", property_id: "property-1", unit_number: "1" }];
+    state.rows.properties = [{ id: "property-1", name: "Forum House" }];
+    state.rows.rent_charges = [{ id: "charge-1", lease_id: "lease-1", due_date: "2026-10-01",
+      amount_cents: 120000, category: "rent", deleted_at: null }];
+    state.rows.payments = [
+      ...Array.from({ length: 51 }, (_, index) => ({ id: `reversed-${index}`,
+        rent_charge_id: "charge-1", paid_at: "2026-10-04", amount_cents: 120000,
+        method: "ach", reference_note: null, reversed_at: "2026-10-05" })),
+      { id: "active", rent_charge_id: "charge-1", paid_at: "2026-10-02", amount_cents: 120000,
+        method: "ach", reference_note: null, reversed_at: null }
+    ];
+    const history = await getTenantPaymentHistory("tenant-1");
+    expect(history).toHaveLength(51);
+    expect(history.find(isActivePayment)?.paymentId).toBe("active");
   });
 
   it("keeps ownership account fields and member counts", async () => {

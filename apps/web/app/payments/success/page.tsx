@@ -103,6 +103,28 @@ export default async function PaymentSuccessPage(props: SuccessPageProps) {
     );
   }
 
+  const supabase = createClient();
+
+  // Check if the webhook has already recorded this payment
+  const { data: existingPayment, error: paymentError } = await supabase
+    .from("payments")
+    .select("id, reversed_at")
+    .eq("stripe_checkout_session_id", sessionId)
+    .maybeSingle();
+  if (paymentError) throw paymentError;
+
+  if (existingPayment?.reversed_at) {
+    return (
+      <StatusCard
+        icon={<Clock className="h-7 w-7 text-[var(--warn)]" />}
+        iconBg="bg-[var(--warn-bg)]"
+        title="This payment did not go through."
+        body="It no longer counts as paid."
+        buttonLabel="Back to Dashboard"
+      />
+    );
+  }
+
   if (method === "ach") {
     return (
       <StatusCard
@@ -114,15 +136,6 @@ export default async function PaymentSuccessPage(props: SuccessPageProps) {
       />
     );
   }
-
-  const supabase = createClient();
-
-  // Check if the webhook has already recorded this payment
-  const { data: existingPayment } = await supabase
-    .from("payments")
-    .select("id")
-    .eq("stripe_checkout_session_id", sessionId)
-    .maybeSingle();
 
   if (existingPayment) {
     return (

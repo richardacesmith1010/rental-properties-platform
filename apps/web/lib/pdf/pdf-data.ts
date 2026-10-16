@@ -33,13 +33,14 @@ async function fetchReceiptShape(chargeId: string): Promise<ReceiptQueryShape | 
         .eq("id", chargeId)
         .maybeSingle()
   );
+  if (chargeQuery.error) throw chargeQuery.error;
   const charge = chargeQuery.data;
 
   if (!charge) {
     return null;
   }
 
-  const [{ data: lease }, { data: payment }] = await Promise.all([
+  const [leaseResult, paymentResult] = await Promise.all([
     admin
       .from("leases")
       .select(
@@ -52,16 +53,21 @@ due_day_of_month, late_fee_cents, grace_period_days, lease_status"
       .from("payments")
       .select("id, paid_at, amount_cents, method, reference_note")
       .eq("rent_charge_id", charge.id)
+      .is("reversed_at", null)
       .order("paid_at", { ascending: false })
       .limit(1)
       .maybeSingle()
   ]);
+  if (leaseResult.error) throw leaseResult.error;
+  if (paymentResult.error) throw paymentResult.error;
+  const lease = leaseResult.data;
+  const payment = paymentResult.data;
 
   if (!lease || !payment) {
     return null;
   }
 
-  const [{ data: unit }, { data: tenantProfile }] = await Promise.all([
+  const [unitResult, tenantProfileResult] = await Promise.all([
     admin
       .from("units")
       .select("id, unit_number, property_id")
@@ -73,16 +79,21 @@ due_day_of_month, late_fee_cents, grace_period_days, lease_status"
       .eq("id", lease.tenant_profile_id)
       .maybeSingle()
   ]);
+  if (unitResult.error) throw unitResult.error;
+  if (tenantProfileResult.error) throw tenantProfileResult.error;
+  const unit = unitResult.data;
+  const tenantProfile = tenantProfileResult.data;
 
   if (!unit) {
     return null;
   }
 
-  const { data: property } = await admin
+  const { data: property, error: propertyError } = await admin
     .from("properties")
     .select("id, name, address_line1, city, state, postal_code")
     .eq("id", unit.property_id)
     .maybeSingle();
+  if (propertyError) throw propertyError;
 
   if (!property) {
     return null;
@@ -208,10 +219,11 @@ export async function getReceiptsPdfDataForYear(
   }
 
   const admin = createAdminClient();
-  const { data: properties } = await admin
+  const { data: properties, error: propertiesError } = await admin
     .from("properties")
     .select("id, name, address_line1, city, state, postal_code")
     .in("id", propertyIds);
+  if (propertiesError) throw propertiesError;
 
   const propertyRows =
     (properties ?? []) as Array<{
@@ -226,10 +238,11 @@ export async function getReceiptsPdfDataForYear(
     return { ok: true, data: [] };
   }
 
-  const { data: units } = await admin
+  const { data: units, error: unitsError } = await admin
     .from("units")
     .select("id, unit_number, property_id")
     .in("property_id", propertyIds);
+  if (unitsError) throw unitsError;
 
   const unitRows = (units ?? []) as Array<{ id: string; unit_number: string; property_id: string }>;
   if (unitRows.length === 0) {
@@ -237,13 +250,14 @@ export async function getReceiptsPdfDataForYear(
   }
 
   const unitIds = unitRows.map((unit) => unit.id);
-  const { data: leases } = await admin
+  const { data: leases, error: leasesError } = await admin
     .from("leases")
     .select(
       "id, tenant_profile_id, unit_id, start_date, end_date, monthly_rent_cents, deposit_cents, \
 due_day_of_month, late_fee_cents, grace_period_days, lease_status"
     )
     .in("unit_id", unitIds);
+  if (leasesError) throw leasesError;
 
   const leaseRows =
     (leases ?? []) as Array<{
@@ -264,7 +278,7 @@ due_day_of_month, late_fee_cents, grace_period_days, lease_status"
   }
 
   const leaseIds = leaseRows.map((lease) => lease.id);
-  const { data: charges } = await withChargeEditingFallback(
+  const { data: charges, error: chargesError } = await withChargeEditingFallback(
     () =>
       admin
         .from("rent_charges")
@@ -277,6 +291,7 @@ due_day_of_month, late_fee_cents, grace_period_days, lease_status"
         .select("id, lease_id, due_date, amount_cents, category")
         .in("lease_id", leaseIds)
   );
+  if (chargesError) throw chargesError;
 
   const chargeRows =
     (charges ?? []) as Array<{
@@ -299,13 +314,15 @@ due_day_of_month, late_fee_cents, grace_period_days, lease_status"
   }
   const startIso = `${year}-01-01T00:00:00.000Z`;
   const endIso = `${year + 1}-01-01T00:00:00.000Z`;
-  const { data: payments } = await admin
+  const { data: payments, error: paymentsError } = await admin
     .from("payments")
     .select("id, rent_charge_id, paid_at, amount_cents, method, reference_note")
     .in("rent_charge_id", chargeIds)
+    .is("reversed_at", null)
     .gte("paid_at", startIso)
     .lt("paid_at", endIso)
     .order("paid_at", { ascending: false });
+  if (paymentsError) throw paymentsError;
 
   const paymentRows =
     (payments ?? []) as Array<{

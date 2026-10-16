@@ -49,7 +49,7 @@ export async function buildAccountExport(userId: string, role: "tenant" | "manag
       .select("id, lease_id, due_date, amount_cents, status, category")
       .in("lease_id", ids).is("deleted_at", null).order("id").range(from, to));
     const payments = await chunks(idsOf(charges, "id"), (ids, from, to) => db.from("payments")
-      .select("id, rent_charge_id, amount_cents, paid_at, method")
+      .select("id, rent_charge_id, amount_cents, paid_at, method, reversed_at")
       .in("rent_charge_id", ids).order("id").range(from, to));
     const repairs = await pages((from, to) => db.from("maintenance_tickets")
       .select("id, title, status, created_at, resolved_at")
@@ -75,7 +75,8 @@ export async function buildAccountExport(userId: string, role: "tenant" | "manag
       rent: charges.map((row) => ({ ...homeForLease(row.lease_id), dueDate: iso(row.due_date),
         amount: dollars(row.amount_cents), status: row.status, kind: row.category })),
       payments: payments.map((row) => ({ dueDate: iso(chargeMap.get(row.rent_charge_id)?.due_date ?? null),
-        amount: dollars(row.amount_cents), paidAt: iso(row.paid_at), method: paymentMethodLabel(row.method) })),
+        amount: dollars(row.amount_cents), paidAt: iso(row.paid_at), method: paymentMethodLabel(row.method),
+        reversedAt: iso(row.reversed_at), status: row.reversed_at ? "reversed" : "active" })),
       repairs: repairs.map((row) => ({ title: row.title, status: row.status,
         reportedAt: iso(row.created_at), resolvedAt: iso(row.resolved_at) })),
       messagesYouSent: sentMessages(messages, threads, homeMap)

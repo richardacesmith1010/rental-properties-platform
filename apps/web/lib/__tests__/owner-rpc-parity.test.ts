@@ -4,7 +4,8 @@ const state = vi.hoisted(() => ({
   rows: {} as Record<string, Array<Record<string, unknown>>>,
   rpcError: null as { code: string } | null,
   rpcCalls: [] as string[],
-  ownerAccountIds: [] as string[]
+  ownerAccountIds: [] as string[],
+  paymentQueryCalls: [] as string[]
 }));
 function query(table: string) {
   const filters: Array<(row: Record<string, unknown>) => boolean> = [];
@@ -22,12 +23,14 @@ function query(table: string) {
     select: () => builder,
     eq: (column: string, value: unknown) => { filters.push(row => row[column] === value); return builder; },
     in: (column: string, values: unknown[]) => { filters.push(row => values.includes(row[column])); return builder; },
-    is: (column: string, value: unknown) => { filters.push(row => (row[column] ?? null) === value); return builder; },
+    is: (column: string, value: unknown) => { if (table === "payments") state.paymentQueryCalls.push(`is:${column}`);
+      filters.push(row => (row[column] ?? null) === value); return builder; },
     gte: (column: string, value: string) => { filters.push(row => String(row[column]) >= value); return builder; },
     order: (column: string, options: { ascending: boolean }) => {
       sort = { column, ascending: options.ascending }; return builder;
     },
-    limit: (count: number) => { take = count; return builder; },
+    limit: (count: number) => { if (table === "payments") state.paymentQueryCalls.push(`limit:${count}`);
+      take = count; return builder; },
     single: async () => ({ data: result().data[0] ?? null, error: null }),
     then: (resolve: (value: ReturnType<typeof result>) => unknown) => Promise.resolve(result()).then(resolve)
   };
@@ -120,7 +123,27 @@ function setup(homes: number, llc = false) {
   state.ownerAccountIds = llc ? ["account-1"] : [];
 }
 describe("owner RPC parity", () => {
-  beforeEach(() => { state.rpcError = null; state.rpcCalls = []; setup(0); });
+  beforeEach(() => { state.rpcError = null; state.rpcCalls = []; state.paymentQueryCalls = []; setup(0); });
+  it("legacy dashboard skips eleven newer reversed rows before its payment limit", async () => {
+    setup(2);
+    state.rows.rent_charges.push({ id: "reversed-paid", lease_id: "lease-2", due_date: due,
+      amount_cents: 20000, status: "paid", category: "rent", notes: null });
+    const now = new Date();
+    state.rows.payments = [
+      ...Array.from({ length: 11 }, (_, index) => ({ id: `reversed-${index}`, rent_charge_id: "reversed-paid",
+        paid_at: new Date(now.getTime() - index * 1000).toISOString(), amount_cents: 20000,
+        method: "ach", reversed_at: "2026-10-15" })),
+      { id: "active-1", rent_charge_id: "paid", paid_at: new Date(now.getTime() - 100000).toISOString(),
+        amount_cents: 20000, method: "ach", reversed_at: null },
+      { id: "active-2", rent_charge_id: "paid", paid_at: new Date(now.getTime() - 200000).toISOString(),
+        amount_cents: 20000, method: "ach", reversed_at: null }
+    ];
+    const result = await getDashboardDataLegacy("owner-1", null, ["home-1", "home-2"], "owner");
+    expect(result.recentPayments.map((payment) => payment.id)).toEqual(["active-1", "active-2"]);
+    expect(state.paymentQueryCalls).toEqual(["is:reversed_at", "limit:10"]);
+    expect(result.charges.some((charge) => charge.id === "paid")).toBe(true);
+    expect(result.charges.some((charge) => charge.id === "reversed-paid")).toBe(false);
+  });
   it.each([
     ["no homes", 0, false], ["one home with late and pending", 1, false],
     ["two homes with paid charge", 2, false], ["LLC account", 0, true]

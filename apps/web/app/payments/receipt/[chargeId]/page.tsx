@@ -49,27 +49,30 @@ export default async function ReceiptPage(props: ReceiptPageProps) {
         .eq("id", params.chargeId)
         .maybeSingle()
   );
+  if (chargeQuery.error) throw chargeQuery.error;
   const charge = chargeQuery.data;
 
   if (!charge) {
     notFound();
   }
 
-  const { data: lease } = await supabase
+  const { data: lease, error: leaseError } = await supabase
     .from("leases")
     .select("id, tenant_profile_id, unit_id")
     .eq("id", charge.lease_id)
     .maybeSingle();
+  if (leaseError) throw leaseError;
 
   if (!lease || lease.tenant_profile_id !== user.id) {
     notFound();
   }
 
-  const [{ data: payment }, { data: unit }] = await Promise.all([
+  const [paymentResult, unitResult] = await Promise.all([
     supabase
       .from("payments")
       .select("id, paid_at, amount_cents, method, reference_note")
       .eq("rent_charge_id", charge.id)
+      .is("reversed_at", null)
       .order("paid_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
@@ -79,16 +82,39 @@ export default async function ReceiptPage(props: ReceiptPageProps) {
       .eq("id", lease.unit_id)
       .maybeSingle()
   ]);
+  if (paymentResult.error) throw paymentResult.error;
+  if (unitResult.error) throw unitResult.error;
+  const payment = paymentResult.data;
+  const unit = unitResult.data;
 
-  if (!payment || !unit) {
+  if (!unit) {
     notFound();
   }
 
-  const { data: property } = await supabase
+  if (!payment) {
+    const { data: reversedPayment, error } = await supabase.from("payments")
+      .select("id").eq("rent_charge_id", charge.id).not("reversed_at", "is", null).limit(1).maybeSingle();
+    if (error) throw error;
+    if (!reversedPayment) notFound();
+    return (
+      <main className="app-surface min-h-screen px-6 py-8 lg:px-8">
+        <div className="mx-auto max-w-3xl space-y-4">
+          <h1 className="text-2xl font-semibold text-[var(--ink)]">This payment was reversed</h1>
+          <p className="text-[var(--muted)]">It no longer counts as paid.</p>
+          <Link href="/tenant?section=charges" className="inline-flex min-h-11 items-center text-[var(--accent)]">
+            Back to Dashboard
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  const { data: property, error: propertyError } = await supabase
     .from("properties")
     .select("id, name")
     .eq("id", unit.property_id)
     .maybeSingle();
+  if (propertyError) throw propertyError;
 
   if (!property) {
     notFound();

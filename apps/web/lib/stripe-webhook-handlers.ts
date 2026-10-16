@@ -557,12 +557,14 @@ async function recordPayment({
   baseAmountCents = null,
   managerFeeCents = null
 }: PaymentParams) {
-  const { data: existingPayment } = await supabase
+  const { data: existingPayment, error: existingPaymentError } = await supabase
     .from("payments")
-    .select("id")
+    .select("id, reversed_at")
     .eq(paymentMatch.column, paymentMatch.value)
     .maybeSingle();
+  if (existingPaymentError) return retryableWebhookError("db_error");
   if (existingPayment) {
+    if (existingPayment.reversed_at) return received("already_recorded");
     const ctxResult = await getCtx(supabase, chargeId);
     if (!ctxResult.ok) {
       if (ctxResult.reason === "db_error") {

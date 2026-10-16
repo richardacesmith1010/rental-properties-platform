@@ -212,6 +212,7 @@ export async function getDashboardDataLegacy(
           .select("id, amount_cents, paid_at, method, rent_charge_id")
           .in("rent_charge_id", chargeIdsForLease)
           .gte("paid_at", thirtyDaysAgo.toISOString())
+          .is("reversed_at", null)
           .order("paid_at", { ascending: false })
           .limit(10)
       : { data: [] as Array<{ id: string; amount_cents: number; paid_at: string; method: string; rent_charge_id: string }>, error: null };

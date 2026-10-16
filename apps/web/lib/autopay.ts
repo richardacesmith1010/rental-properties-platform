@@ -83,7 +83,7 @@ export async function processAutopayCharges(
   const todayIso = new Date().toISOString().slice(0, 10);
   const userIds = Array.from(new Set(activeEnrollments.map((row) => row.tenant_profile_id)));
 
-  const [chargesResult, profilesResult, paymentsResult] = await Promise.all([
+  const [chargesResult, profilesResult] = await Promise.all([
     supabase
       .from("rent_charges")
       .select("id, lease_id, due_date, amount_cents, status")
@@ -93,13 +93,35 @@ export async function processAutopayCharges(
       .lte("due_date", todayIso)
       .is("deleted_at", null)
       .order("due_date", { ascending: true }),
-    supabase.from("profiles").select("id, stripe_customer_id").in("id", userIds),
-    supabase.from("payments").select("id, rent_charge_id")
+    supabase.from("profiles").select("id, stripe_customer_id").in("id", userIds)
   ]);
 
   if (chargesResult.error) throw chargesResult.error;
   if (profilesResult.error) throw profilesResult.error;
-  if (paymentsResult.error) throw paymentsResult.error;
+
+  const candidateIds = (chargesResult.data ?? []).map((charge) => charge.id);
+  const existingPaymentChargeIds = new Set<string>();
+  try {
+    for (let batch = 0; batch < candidateIds.length; batch += 100) {
+      const ids = candidateIds.slice(batch, batch + 100);
+      for (let from = 0; ; from += 500) {
+        const { data, error } = await supabase.from("payments")
+          .select("id, rent_charge_id, reversed_at, recorded_via")
+          .in("rent_charge_id", ids).order("id").range(from, from + 499);
+        if (error) throw error;
+        if (!data) throw new Error("Payment lookup was incomplete.");
+        for (const payment of data) {
+          if (!payment.reversed_at || payment.recorded_via === "stripe" || payment.recorded_via === "legacy") {
+            existingPaymentChargeIds.add(payment.rent_charge_id);
+          }
+        }
+        if (data.length < 500) break;
+      }
+    }
+  } catch (error) {
+    console.error("[autopay] Payment lookup failed. No payments started.", error);
+    throw error;
+  }
 
   const leaseUnitIds = Array.from(new Set(activeLeases.map((lease) => lease.unit_id)));
   const { data: units, error: unitsError } = leaseUnitIds.length
@@ -109,7 +131,6 @@ export async function processAutopayCharges(
     throw unitsError;
   }
 
-  const existingPaymentChargeIds = new Set((paymentsResult.data ?? []).map((payment) => payment.rent_charge_id));
   const chargesByLease = new Map<string, Array<{ id: string; amount_cents: number }>>();
   for (const charge of chargesResult.data ?? []) {
     if (existingPaymentChargeIds.has(charge.id)) {

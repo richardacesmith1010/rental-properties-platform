@@ -26,6 +26,7 @@ import {
 } from "@/lib/auth";
 import { getTenantPaymentData } from "@/lib/tenant-payments";
 import { getTenantPaymentHistory } from "@/lib/payment-history";
+import { isActivePayment } from "@/lib/payments-active";
 import { getTenantLeaseDetails } from "@/lib/leases";
 import { getTenantMaintenanceData } from "@/lib/maintenance";
 import { getTenantDocumentsData } from "@/lib/documents";
@@ -164,6 +165,7 @@ export default async function TenantPage(props: TenantPageProps) {
       }
     : null;
   const hasActiveLease = leaseDetails.length > 0;
+  const lastActivePayment = paymentHistory.find(isActivePayment);
   const today = new Date();
   const currentCharge = paymentData.charges.find((charge) => isRentOpenForTenant(charge.dueDate, today)) ?? null;
   const ownerConnected = currentCharge ? ownerConnectedMap.get(currentCharge.propertyId) ?? false : false;
@@ -173,7 +175,7 @@ export default async function TenantPage(props: TenantPageProps) {
     ownerConnected,
     stripeConfigured,
     lease: currentLease ? { monthlyRentCents: currentLease.monthlyRentCents, dueDayOfMonth: leaseDetails[0].dueDayOfMonth } : null,
-    lastPayment: paymentHistory[0] ? { paidAt: paymentHistory[0].paidAt } : null,
+    lastPayment: lastActivePayment ? { paidAt: lastActivePayment.paidAt } : null,
     today
   });
   const rentDueDate = currentCharge?.dueDate ?? paymentData.charges[0]?.dueDate ?? (leaseDetails[0]
@@ -308,7 +310,7 @@ export default async function TenantPage(props: TenantPageProps) {
                 payState={payState}
                 rentDueDate={rentDueDate}
                 rentAmountCents={currentLease?.monthlyRentCents}
-                lastPaidAt={paymentHistory[0]?.paidAt ?? null}
+                lastPaidAt={lastActivePayment?.paidAt ?? null}
                 lateFeeCents={leaseDetails[0]?.lateFeeCents ?? 0}
                 onPayCharge={payWithCardState}
                 onPayWithACH={payWithACHState}
@@ -328,7 +330,7 @@ export default async function TenantPage(props: TenantPageProps) {
                 payState={payState}
                 rentDueDate={rentDueDate}
                 rentAmountCents={currentLease?.monthlyRentCents ?? null}
-                lastPaidAt={paymentHistory[0]?.paidAt ?? null}
+                lastPaidAt={lastActivePayment?.paidAt ?? null}
                 lateFeeCents={leaseDetails[0]?.lateFeeCents ?? 0}
                 onPayCharge={payWithCardState}
                 onPayWithACH={payWithACHState}
@@ -378,12 +380,14 @@ export default async function TenantPage(props: TenantPageProps) {
                                 {payment.category === "late_fee" ? "Late Fee" : "Rent"}
                               </Badge>
                               <Badge variant="outline">{paymentMethodLabel(payment.method)}</Badge>
+                              {payment.reversedAt ? <Badge variant="outline">Reversed</Badge> : null}
                             </div>
                             <p className="mt-1 text-xs text-[var(--muted)]">
                               {payment.propertyName} • {formatUnitLabel(payment.unitNumber)}
                             </p>
                             <p className="mt-1 text-xs tabular-nums text-[var(--muted)]">
-                              Paid {formatDateTime(payment.paidAt)} • Due {formatDate(payment.dueDate)}
+                              {payment.reversedAt ? "Reversed" : "Paid"} {formatDateTime(payment.paidAt)}
+                              {" • Due "}{formatDate(payment.dueDate)}
                             </p>
                             {payment.referenceNote ? (
                               <p className="mt-1 text-xs tabular-nums text-[var(--muted)]">
@@ -391,11 +395,11 @@ export default async function TenantPage(props: TenantPageProps) {
                               </p>
                             ) : null}
                           </div>
-                          <Button asChild variant="outline">
+                          {!payment.reversedAt ? <Button asChild variant="outline">
                             <Link href={`/payments/receipt/${payment.chargeId}`} title="Open a printable payment receipt.">
                               View Receipt
                             </Link>
-                          </Button>
+                          </Button> : null}
                         </div>
                       ))}
                     </div>

@@ -6,7 +6,7 @@ import { Building2, FileText, Receipt, Users, Wrench } from "lucide-react";
 import type { TenantActivityEntry } from "@/app/actions/tenant-activity";
 import type { ActionState } from "@/app/actions";
 import type { PropertyDetailData } from "@/lib/property-detail";
-import { pluralize } from "@/lib/format";
+import { formatCurrency, formatDate, pluralize } from "@/lib/format";
 import { ComposeMessageModal } from "@/components/dashboard/compose-message-modal";
 import {
   PropertyDetailDocumentsPanel,
@@ -128,11 +128,26 @@ export function PropertyDetailView({
 
         {activeTab === "overview" ? <PropertyDetailOverviewPanel data={data} /> : null}
         {activeTab === "payments" ? (
-          <PropertyDetailPaymentsPanel
-            charges={data.charges}
-            filter={paymentFilter}
-            onFilterChange={setPaymentFilter}
-          />
+          <div className="space-y-4">
+            <PropertyDetailPaymentsPanel
+              charges={data.charges}
+              filter={paymentFilter}
+              onFilterChange={setPaymentFilter}
+            />
+            {(data.payments as Array<(typeof data.payments)[number] & { reversedAt?: string | null }>)
+              .filter((payment) => payment.reversedAt)
+              .map((payment) => (
+                <div key={payment.id} className="domus-card flex flex-wrap items-center justify-between gap-3 p-4">
+                  <div>
+                    <p className="font-medium text-[var(--ink)]">{payment.tenantName} • {payment.unitNumber}</p>
+                    <p className="text-sm text-[var(--muted)]">
+                      {formatCurrency(payment.amountCents)} • {formatDate(payment.paidAt)}
+                    </p>
+                  </div>
+                  <span className="text-sm font-semibold text-[var(--crit)]">Reversed</span>
+                </div>
+              ))}
+          </div>
         ) : null}
         {activeTab === "maintenance" ? (
           <PropertyDetailMaintenancePanel

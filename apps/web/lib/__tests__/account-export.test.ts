@@ -50,7 +50,8 @@ beforeEach(() => {
         status: "paid", category: "rent", deleted_at: null }
     ],
     payments: [
-      { id: "payment-me", rent_charge_id: "charge-me", amount_cents: 125050, paid_at: "2026-10-02T00:00:00Z", method: "ach" },
+      { id: "payment-me", rent_charge_id: "charge-me", amount_cents: 125050, paid_at: "2026-10-02T00:00:00Z",
+        method: "ach", reversed_at: null },
       { id: "payment-other", rent_charge_id: "charge-other", amount_cents: 90000, paid_at: "2026-10-02T00:00:00Z", method: "card" }
     ],
     maintenance_tickets: [{ id: "repair", tenant_profile_id: "me", title: "Tap", status: "open",
@@ -70,6 +71,19 @@ beforeEach(() => {
 });
 
 describe("account export", () => {
+  it("labels reversed rows and keeps active payment status in the tenant export", async () => {
+    fixture.tables.payments = [
+      { id: "reversed", rent_charge_id: "charge-me", amount_cents: 5000,
+        paid_at: "2026-10-03T00:00:00Z", method: "ach", reversed_at: "2026-10-04T00:00:00Z" },
+      { id: "active", rent_charge_id: "charge-me", amount_cents: 6000,
+        paid_at: "2026-10-05T00:00:00Z", method: "card", reversed_at: null }
+    ];
+    const result = await buildAccountExport("me", "tenant", "2026-10-07T00:00:00Z");
+    if (!("payments" in result)) throw new Error("Expected tenant export");
+    const statuses = result.payments.map((payment) => ({ status: payment.status, reversedAt: payment.reversedAt }));
+    expect(statuses).toContainEqual({ status: "active", reversedAt: null });
+    expect(statuses).toContainEqual({ status: "reversed", reversedAt: "2026-10-04T00:00:00.000Z" });
+  });
   it("exports only the tenant's allowlisted data through scoped queries", async () => {
     const result = await buildAccountExport("me", "tenant", "2026-10-07T00:00:00.000Z");
     if (!("leases" in result)) throw new Error("Expected tenant export");
@@ -78,13 +92,13 @@ describe("account export", () => {
     expect(keys(result.profile)).toEqual(["createdAt", "email", "fullName", "nickname", "phone", "role"]);
     expect(keys(result.leases[0])).toEqual(["active", "deposit", "dueDay", "endDate", "home", "monthlyRent", "startDate", "unit"]);
     expect(keys(result.rent[0])).toEqual(["amount", "dueDate", "home", "kind", "status", "unit"]);
-    expect(keys(result.payments[0])).toEqual(["amount", "dueDate", "method", "paidAt"]);
+    expect(keys(result.payments[0])).toEqual(["amount", "dueDate", "method", "paidAt", "reversedAt", "status"]);
     expect(keys(result.repairs[0])).toEqual(["reportedAt", "resolvedAt", "status", "title"]);
     expect(keys(result.messagesYouSent[0])).toEqual(["conversation", "sentAt", "text"]);
     expect(result.leases).toHaveLength(1);
     expect(result.rent).toHaveLength(1);
     expect(result.payments).toEqual([{ dueDate: "2026-10-01T00:00:00.000Z", amount: 1250.5,
-      paidAt: "2026-10-02T00:00:00.000Z", method: "Bank transfer" }]);
+      paidAt: "2026-10-02T00:00:00.000Z", method: "Bank transfer", reversedAt: null, status: "active" }]);
     expect(result.messagesYouSent).toEqual([{ conversation: "Hill House", sentAt: "2026-10-01T00:00:00.000Z", text: "My words" }]);
     expect(JSON.stringify(result)).not.toMatch(/other@example|Private|payment-other|charge-other|secret/);
     expect(fixture.calls.every((call) => !call.columns.includes("*"))).toBe(true);
@@ -94,7 +108,7 @@ describe("account export", () => {
       inbox_threads: "id, property_id",
       leases: "id, unit_id, start_date, end_date, monthly_rent_cents, deposit_cents, due_day_of_month, active",
       rent_charges: "id, lease_id, due_date, amount_cents, status, category",
-      payments: "id, rent_charge_id, amount_cents, paid_at, method",
+      payments: "id, rent_charge_id, amount_cents, paid_at, method, reversed_at",
       maintenance_tickets: "id, title, status, created_at, resolved_at",
       units: "id, property_id, unit_number",
       properties: "id, name"

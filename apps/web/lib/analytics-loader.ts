@@ -212,6 +212,7 @@ export async function getOwnerAnalyticsData(
           .from("payments")
           .select("rent_charge_id, paid_at")
           .in("rent_charge_id", chargeIds)
+          .is("reversed_at", null)
       : {
           data: [] as Array<{ rent_charge_id: string; paid_at: string }>,
           error: null

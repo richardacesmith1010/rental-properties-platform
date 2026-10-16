@@ -166,17 +166,25 @@ export async function getPropertyChargeData(
   }
 
   const chargeIds = chargeRows.map((charge) => charge.id);
-  const { data: payments, error: paymentsError } = await admin
-    .from("payments")
-    .select("id, rent_charge_id, paid_at, amount_cents, method")
-    .in("rent_charge_id", chargeIds)
-    .order("paid_at", { ascending: false });
+  const [paymentResult, activePaymentResult] = await Promise.all([
+    admin.from("payments")
+      .select("id, rent_charge_id, paid_at, amount_cents, method, reversed_at")
+      .in("rent_charge_id", chargeIds)
+      .order("paid_at", { ascending: false }),
+    admin.from("payments")
+      .select("rent_charge_id, paid_at")
+      .in("rent_charge_id", chargeIds)
+      .is("reversed_at", null)
+      .order("paid_at", { ascending: false })
+  ]);
+  const { data: payments, error: paymentsError } = paymentResult;
+  const { data: activePayments, error: activePaymentsError } = activePaymentResult;
 
-  if (paymentsError) {
-    if (isMissingSchemaError(paymentsError)) {
+  if (paymentsError || activePaymentsError) {
+    if (isMissingSchemaError(paymentsError ?? activePaymentsError)) {
       return { charges: [], payments: [] };
     }
-    throw paymentsError;
+    throw paymentsError ?? activePaymentsError;
   }
 
   const paymentRows = (payments ?? []) as Array<{
@@ -185,6 +193,7 @@ export async function getPropertyChargeData(
     paid_at: string;
     amount_cents: number;
     method: string;
+    reversed_at: string | null;
   }>;
   const unitById = new Map(unitRows.map((unit) => [unit.id, unit]));
   const leaseById = new Map(leaseRows.map((lease) => [lease.id, lease]));
@@ -197,7 +206,7 @@ export async function getPropertyChargeData(
   );
   const latestPaymentByChargeId = new Map<string, string>();
 
-  for (const payment of paymentRows) {
+  for (const payment of activePayments ?? []) {
     if (!latestPaymentByChargeId.has(payment.rent_charge_id)) {
       latestPaymentByChargeId.set(payment.rent_charge_id, payment.paid_at);
     }
@@ -245,11 +254,12 @@ export async function getPropertyChargeData(
           unitNumber: unit?.unit_number ?? "-",
           amountCents: payment.amount_cents,
           paidAt: payment.paid_at,
-          method: payment.method
+          method: payment.method,
+          reversedAt: payment.reversed_at
         };
       })
       .filter(
-        (payment): payment is PropertyPaymentRecord => payment !== null
+        (payment): payment is PropertyPaymentRecord & { reversedAt: string | null } => payment !== null
       )
   };
 }

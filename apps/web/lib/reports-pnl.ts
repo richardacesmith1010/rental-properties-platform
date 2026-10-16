@@ -310,6 +310,7 @@ export async function getTaxSummaryReport(
           .from("payments")
           .select("rent_charge_id, amount_cents, paid_at")
           .in("rent_charge_id", Array.from(chargeById.keys()))
+          .is("reversed_at", null)
           .gte("paid_at", startOfYear(year))
           .lte("paid_at", `${endOfYear(year)}T23:59:59.999Z`)
       : { data: [], error: null };

@@ -7,6 +7,7 @@ const getAdministeredPropertyIdsMock = vi.hoisted(() => vi.fn());
 const getOwnerStripeAccountForPropertyMock = vi.hoisted(() => vi.fn());
 const createOffSessionPaymentIntentMock = vi.hoisted(() => vi.fn());
 const assertStripeEligiblePropertyMock = vi.hoisted(() => vi.fn());
+const paymentInMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/client-accounts", () => ({
   assertStripeEligibleProperty: assertStripeEligiblePropertyMock,
@@ -55,6 +56,8 @@ interface ProfileRow {
 interface PaymentRow {
   id: string;
   rent_charge_id: string | null;
+  reversed_at?: string | null;
+  recorded_via?: string;
 }
 
 interface UnitRow {
@@ -83,6 +86,7 @@ interface AutopaySupabaseConfig {
   profiles: ProfileRow[];
   charges: ChargeRow[];
   payments?: PaymentRow[];
+  paymentLookupError?: boolean;
   units: UnitRow[];
   recheckByChargeId?: Record<string, ChargeRecheckRow | null>;
   recheckErrorByChargeId?: Record<string, { message: string } | null>;
@@ -129,9 +133,16 @@ function createSupabaseMock(config: AutopaySupabaseConfig): SupabaseClient {
 
       if (table === "payments") {
         return {
-          select: vi.fn(async () => ({
-            data: config.payments ?? [],
-            error: null
+          select: vi.fn(() => ({
+            in: paymentInMock.mockImplementation((_column: string, ids: string[]) => ({
+              order: vi.fn(() => ({
+                range: vi.fn(async (from: number, to: number) => ({
+                  data: (config.payments ?? []).filter((row) => ids.includes(row.rent_charge_id ?? ""))
+                    .sort((a, b) => a.id.localeCompare(b.id)).slice(from, to + 1),
+                  error: config.paymentLookupError ? { message: "lookup failed" } : null
+                }))
+              }))
+            }))
           }))
         };
       }
@@ -292,6 +303,14 @@ function buildAutopayConfig(overrides: Partial<AutopaySupabaseConfig> = {}): Aut
   };
 }
 
+const paymentRow = (source: string, reversedAt: string | null): PaymentRow => ({
+  id: "payment-1", rent_charge_id: "charge-1", reversed_at: reversedAt, recorded_via: source
+});
+const dueCharge = (status: string, dueDate = "2026-05-01"): ChargeRow => ({
+  id: "charge-1", lease_id: "lease-1", due_date: dueDate, amount_cents: 125000,
+  status, category: "rent", deleted_at: null
+});
+
 describe("processAutopayCharges", () => {
   it("does not select rent paid early when its due date arrives", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
@@ -326,28 +345,65 @@ describe("processAutopayCharges", () => {
     expect(console.log).toHaveBeenCalledWith("[autopay] skipped client home", "property-1");
   });
 
+  it.each(["stripe", "legacy"])("keeps a reversed %s payment from automatic retry", async (source) => {
+    const supabase = createSupabaseMock(buildAutopayConfig({ payments: [paymentRow(source, "2026-05-02")] }));
+    const result = await processAutopayCharges(supabase);
+    expect(result.processed).toBe(0);
+    expect(createOffSessionPaymentIntentMock).not.toHaveBeenCalled();
+    expect(paymentInMock).toHaveBeenCalledWith("rent_charge_id", ["charge-1"]);
+  });
+
+  it("does not charge when an active payment exists", async () => {
+    const result = await processAutopayCharges(createSupabaseMock(buildAutopayConfig({
+      payments: [paymentRow("manual", null)] })));
+    expect(result.processed).toBe(0);
+    expect(createOffSessionPaymentIntentMock).not.toHaveBeenCalled();
+  });
+
+  it("allows an eligible charge after its only manual payment was reversed", async () => {
+    const result = await processAutopayCharges(createSupabaseMock(buildAutopayConfig({
+      payments: [paymentRow("manual", "2026-05-02")] })));
+    expect(result.succeeded).toBe(1);
+    expect(createOffSessionPaymentIntentMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["paid", { charges: [dueCharge("paid")] }],
+    ["waived", { charges: [dueCharge("waived")] }],
+    ["unenrolled", { enrollments: [] }],
+    ["not due", { charges: [dueCharge("pending", "2099-05-01")] }]
+  ])("does not force a %s charge after a manual reversal", async (_reason, override) => {
+    const config = buildAutopayConfig({ ...override, payments: [paymentRow("manual", "2026-05-02")] });
+    const result = await processAutopayCharges(createSupabaseMock(config));
+    expect(result.processed).toBe(0);
+    expect(createOffSessionPaymentIntentMock).not.toHaveBeenCalled();
+  });
+
+  it("never starts autopay when the scoped payment lookup fails", async () => {
+    await expect(processAutopayCharges(createSupabaseMock(buildAutopayConfig({
+      paymentLookupError: true
+    })))).rejects.toBeTruthy();
+    expect(createOffSessionPaymentIntentMock).not.toHaveBeenCalled();
+  });
+
+  it("reads another payment page before deciding a charge can retry", async () => {
+    const payments = Array.from({ length: 500 }, (_, i) => ({
+      id: `a-${String(i).padStart(3, "0")}`, rent_charge_id: "charge-1",
+      reversed_at: "2026-05-02", recorded_via: "manual"
+    }));
+    payments.push({ id: "z-blocker", rent_charge_id: "charge-1",
+      reversed_at: "2026-05-02", recorded_via: "stripe" });
+    const result = await processAutopayCharges(createSupabaseMock(buildAutopayConfig({ payments })));
+    expect(result.processed).toBe(0);
+    expect(createOffSessionPaymentIntentMock).not.toHaveBeenCalled();
+  });
+
   it("skips a paid charge during the re-check and continues to later due charges", async () => {
     const supabase = createSupabaseMock(
       buildAutopayConfig({
         charges: [
-          {
-            id: "charge-1",
-            lease_id: "lease-1",
-            due_date: "2026-05-01",
-            amount_cents: 125000,
-            status: "pending",
-            category: "rent",
-            deleted_at: null
-          },
-          {
-            id: "charge-2",
-            lease_id: "lease-1",
-            due_date: "2026-05-02",
-            amount_cents: 135000,
-            status: "late",
-            category: "rent",
-            deleted_at: null
-          }
+          dueCharge("pending"),
+          { ...dueCharge("late", "2026-05-02"), id: "charge-2", amount_cents: 135000 }
         ],
         recheckByChargeId: {
           "charge-1": { status: "paid", deleted_at: null },
@@ -390,24 +446,8 @@ describe("processAutopayCharges", () => {
     const supabase = createSupabaseMock(
       buildAutopayConfig({
         charges: [
-          {
-            id: "charge-deleted",
-            lease_id: "lease-1",
-            due_date: "2026-05-01",
-            amount_cents: 125000,
-            status: "pending",
-            category: "rent",
-            deleted_at: "2026-05-01T00:00:00.000Z"
-          },
-          {
-            id: "charge-active",
-            lease_id: "lease-1",
-            due_date: "2026-05-02",
-            amount_cents: 135000,
-            status: "pending",
-            category: "rent",
-            deleted_at: null
-          }
+          { ...dueCharge("pending"), id: "charge-deleted", deleted_at: "2026-05-01T00:00:00.000Z" },
+          { ...dueCharge("pending", "2026-05-02"), id: "charge-active", amount_cents: 135000 }
         ],
         recheckByChargeId: {
           "charge-deleted": {

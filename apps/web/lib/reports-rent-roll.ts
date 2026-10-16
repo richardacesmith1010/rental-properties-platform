@@ -354,12 +354,14 @@ export async function getRentRollReport(userId: string): Promise<RentRollItem[]>
         leaseIdByChargeId.set(detail.id, leaseId);
       }
     }
-    const { data: payments } = leaseIdByChargeId.size
+    const { data: payments, error: paymentsError } = leaseIdByChargeId.size
       ? await admin
           .from("payments")
           .select("rent_charge_id, paid_at")
           .in("rent_charge_id", Array.from(leaseIdByChargeId.keys()))
-      : { data: [] };
+          .is("reversed_at", null)
+      : { data: [], error: null };
+    if (paymentsError) throw paymentsError;
 
     const balanceByLeaseId = new Map<string, number>();
     for (const [leaseId, details] of detailsByLeaseId.entries()) {
