@@ -1,4 +1,4 @@
-# Sprint 238b — In-app "Delete my account" request for every role (L3: auth/data; App Store 5.1.1(v)) — rev 1
+# Sprint 238b — In-app "Delete my account" request for every role (L3: auth/data; App Store 5.1.1(v)) — rev 2 (rev 1 ChatGPT REJECT: 7 REQUIRED adopted)
 
 ## 1. Objective
 Apple requires apps with sign-up to let users start account deletion inside the app. Today only owners see
@@ -41,20 +41,28 @@ Automatic deletion/anonymization; changing the owner wipe tools; cancelling a re
 7. (Claude) `supabase/migrations/20261024_sprint238b_account_deletion_requests.sql`, `docs/runbooks/account-deletion.md`
 
 ## 6. Implementation requirements
-1. **Table (Claude):** `public.account_deletion_requests(id uuid pk default gen_random_uuid(), profile_id uuid not null
-   references profiles(id), email_at_request text not null, role_at_request text not null, requested_at timestamptz not
-   null default now(), status text not null default 'open' check (status in ('open','done','withdrawn')), handled_at
-   timestamptz)`, unique open request per profile (partial unique index on `profile_id where status = 'open'`), RLS
-   enabled, **no** client grants (anon/authenticated get nothing; service_role writes).
+1. **Table (Claude) — the deletion queue and source of truth:** `public.account_deletion_requests(id uuid pk default
+   gen_random_uuid(), profile_id uuid null references profiles(id) on delete set null, email_at_request text null,
+   role_at_request text not null, requested_at timestamptz not null default now(), status text not null default 'open'
+   check (status in ('open','done','withdrawn')), handled_at timestamptz, confirmation_sent_at timestamptz)`; partial unique
+   index `account_deletion_requests_one_open` on `(profile_id) where status = 'open'`; RLS enabled; **no** client grants.
+   PII lifecycle: after completion the runbook clears `profile_id` and `email_at_request` (keeps id, role, timestamps,
+   status) — documented in the runbook and in a table comment.
 2. **Action `requestAccountDeletion(prev, formData)`:** `requireAuth("owner","manager","tenant")`; rate limit
-   `requestAccountDeletion:<userId>` 3 per 10 minutes; `confirmation` must equal exactly `DELETE` else
-   `Type DELETE to confirm.`; with the admin client insert the open request (if one already exists, treat as success —
-   idempotent, no second row); insert a feedback row so it shows where the owner already reads feedback (message
-   `Account deletion requested (<role>).`, no other personal text); `logAudit` action `request_account_deletion`; then
-   sign the user out (server `supabase.auth.signOut()`) and return `{ success: true, redirectTo:
-   "/login?deleted=requested" }` (or redirect) — every Supabase error checked and mapped to
-   `We could not send your request. Please try again.`; nothing is deleted; no writes to any shared table other than
-   the two inserts.
+   `requestAccountDeletion:<userId>` 3 per 10 minutes; FormData is read for **`confirmation` only** — `profile_id`,
+   `email_at_request` and `role_at_request` come solely from the authenticated user/profile returned by `requireAuth`
+   (any other form fields are ignored). `confirmation` must equal exactly `DELETE` else `Type DELETE to confirm.`.
+   - **Primary write (source of truth):** admin-client insert of the open request. The partial unique index is the final
+     authority: a unique violation (`23505`) whose constraint is `account_deletion_requests_one_open` means an open request
+     already exists → idempotent success with **no** feedback row and no second audit; any other error (including other
+     23505s) → `We could not send your request. Please try again.` and no sign-out.
+   - **Secondary effects, only when a new request was inserted:** a feedback row (message `Account deletion requested
+     (<role>).`, no other personal text) and `logAudit` (`request_account_deletion`). Their failures are logged
+     (`console.error` with a stable tag) and **never** turn the result into a failure — the request is already accepted.
+     The feedback inbox is a heads-up only; the queue is the table.
+   - **Sign-out:** `supabase.auth.signOut({ scope: "global" })` (leave Domus on every device). A sign-out error after the
+     request is stored is logged and the result is still success.
+   - Return success with redirect target `/login?deleted=requested`. Nothing is deleted; no update/delete calls anywhere.
 3. **Section `DeleteAccountSection` (all roles):** heading `Delete my account`; text `We will delete your account within
    30 days.` and `We keep rent and payment records the law requires, without your name.`; input label
    `Type DELETE to confirm`; button `Delete my account` (destructive style) disabled until the input is exactly
@@ -76,9 +84,14 @@ Do NOT run `npm run gate:web` or apply SQL. Claude applies the migration and run
 ## 8. Acceptance criteria
 1. Unauthenticated → rejected by `requireAuth`; owner, manager and tenant → success (3 tests).
 2. Confirmation other than exactly `DELETE` (e.g. `delete`, ` DELETE`) → exact error, no insert.
-3. First request inserts one open row + one feedback row + audit; a repeat request → success, no second request row.
-4. Insert error → exact failure copy, no sign-out; success → sign-out called and redirect target
-   `/login?deleted=requested`.
+3. First request inserts one open row + one feedback row + one audit; a repeat (simulated `23505` on
+   `account_deletion_requests_one_open`) → success, no feedback row, no audit; a `23505` on a different constraint →
+   failure copy.
+4. Primary insert error → exact failure copy, no sign-out, no feedback/audit; success → `signOut` called with
+   `{ scope: "global" }` and redirect target `/login?deleted=requested`; feedback error, audit error, or sign-out error
+   after a stored request → still success (each logged).
+4b. Forged fields: FormData with `profile_id`, `email`, `role=owner` from a tenant session → the inserted request and
+   feedback use only the session identity (tenant id/email/role).
 5. The action makes no delete/update calls on any table (asserted with the admin-client mock).
 6. Section: button disabled until exactly `DELETE`; exact copy; rendered for all three roles in the right settings
    panels (owner in Account & Data, tenant/manager in Your data).
