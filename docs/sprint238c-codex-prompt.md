@@ -1,4 +1,4 @@
-# Sprint 238c — App Store requirements in the web app: Privacy/Terms links, Ask Domus consent, /support, upload types (L3: privacy + schema) — rev 1
+# Sprint 238c — App Store requirements in the web app: Privacy/Terms links, Ask Domus consent, /support, upload types (L3: privacy + schema) — rev 2 (rev 1 ChatGPT APPROVE WITH CHANGES: all REQUIRED adopted)
 
 ## 1. Objective
 Close the web-side App Store findings from the readiness audit (`docs/phone-readiness-plan-2026-10-16.md` Sprint B):
@@ -52,17 +52,30 @@ Privacy/Terms **text** changes (owner/lawyer); analytics; account deletion (238b
 ## 6. Implementation requirements
 1. **Links:** text links `Privacy` → `/privacy`, `Terms` → `/terms` (and `Support` → `/support` in the help menu and
    landing footer). Visible at 375 px; same style as nearby small text; no "you agree" wording.
-2. **Consent sheet:** before the first message (typed or a starter prompt), if the user has not consented, show a sheet:
-   title `Ask Domus uses AI`; body `Your question and your Domus info go to Anthropic, our AI provider.` and `They use it
-   only to answer you.`; buttons `Allow` and `Not now`. `Not now` sends nothing and closes. `Allow` calls the server action,
-   then sends the pending message.
-3. **Server action `setAskDomusConsent`:** `requireAuth()` (any role allowed to use Ask Domus); rate limit; input
-   `enabled` boolean only; admin client updates **only the session user's own** `profiles.ai_consent_at` (now or null);
-   every error checked → `We could not save this. Please try again.`
-4. **API gate:** `POST /api/ai/chat` loads the session user's `ai_consent_at`; null → HTTP 403 JSON
-   `{ error: "Turn on Ask Domus in Settings first." }` and **no** Anthropic call.
-5. **Settings switch:** `Ask Domus` panel with a toggle `Let Ask Domus answer my questions` and helper `Your questions go to
-   Anthropic to get an answer.`; turning it off clears consent; the next request returns 403.
+0. **Precondition + call-site audit (do first, report it):** verify `profiles.ai_consent_at timestamptz null` exists (Claude
+   applied it; no client write grants — 237e). Search the repo (`Anthropic`, `anthropic`, `@anthropic-ai/sdk`,
+   `.messages.create`, any AI wrapper, callers of `/api/ai/chat` and of `lib/ai-assistant.ts`, server actions/cron that
+   build AI context). Every production path that can send user or Domus data to Anthropic must go through the gated API
+   route or enforce the same server-side consent check itself. List every call site in the report.
+2. **Consent sheet:** before the first message from **any** entry (typed message with button or Enter, and every
+   starter-prompt handler), if the server says the user has not consented, show a sheet: title `Ask Domus uses AI`; body
+   `Your question and rental details go to Anthropic, our AI provider.`, `This includes homes, leases, rent, payments, and
+   repairs.` (adjust the list to exactly what the route sends — no more, no less) and `Anthropic uses this to write your
+   answer.`; buttons `Allow` and `Not now`. `Not now` sends nothing. `Allow`: one consent save in flight at a time; disable
+   Allow, the send controls and starter prompts while saving; keep exactly one pending message; send it exactly once
+   **after** the server confirms; on failure send nothing and show the error; no optimistic local "consented".
+3. **Server action `setAskDomusConsent`:** `requireAuth` with exactly the roles that can use Ask Domus today (verify in the
+   route; enforce the same set server-side); rate limit; the only input is `enabled` (boolean) — no ids, roles or other
+   fields are read; admin client `update({ ai_consent_at })` filtered solely by the session user's id, updating only that
+   column, with `select("id")` and a postcondition that exactly one row changed; any error or row count ≠ 1 →
+   `We could not save this. Please try again.`
+4. **API gate (last check before sending):** order = authenticate → validate request → authorize role → build context
+   (reads are fine) → **load current `ai_consent_at`** → construct/call Anthropic. Null → HTTP 403 JSON
+   `{ error: "Turn on Ask Domus in Settings first." }`, no Anthropic client constructed, no call. Invariant: no request that
+   begins after a successful revocation passes the gate (a request already sent cannot be recalled — do not promise that).
+5. **Settings switch:** `Ask Domus` panel with a toggle `Let Ask Domus answer my questions` and helper `Your questions and
+   rental details go to Anthropic.`; initial value comes from the server (`ai_consent_at` not null), never local storage;
+   the UI changes only after the server confirms and reverts on failure; off clears consent; the next request is 403.
 6. **Name:** the system prompt uses nickname or first name only; never an email or anything containing `@`.
 7. **/support page (public, signed-out OK):** heading `Get help`; short FAQ (5 items max: sign-in help → Forgot password,
    paying rent, reporting a repair, deleting your account → Settings, privacy questions); contact lines
@@ -81,12 +94,14 @@ npm run lint:web
 Do NOT run `npm run gate:web` or write/apply SQL. Claude applies the migration first.
 
 ## 8. Acceptance criteria
-1. No consent → `POST /api/ai/chat` returns 403 with the exact JSON and the Anthropic SDK mock records zero calls; with
-   consent → unchanged behavior.
-2. Sheet appears before the first send, including a starter-prompt tap; `Not now` sends nothing; `Allow` calls the action
-   then sends.
-3. Action updates only the session user's profile (forged ids ignored); switch off clears consent and the next request
-   is 403.
+1. No consent → `POST /api/ai/chat` returns 403 with the exact JSON; the Anthropic constructor and `messages.create` mocks
+   record zero calls; with consent → unchanged behavior. Revocation race: consent on → disable action resolves → immediate
+   POST → 403, no additional Anthropic calls.
+2. Pre-consent, every entry path makes **zero** requests to `/api/ai/chat`: typed + button, Enter key, each distinct
+   starter-prompt handler; `Not now` sends nothing; save failure sends nothing; rapid double-tap on `Allow` → one action
+   call and exactly one send after success.
+3. Action: user A's call changes only profile A (B unchanged); extra form fields (`profile_id`, `role`) are ignored;
+   row-count ≠ 1 → failure copy; switch initial state from server; switch off → next request 403.
 4. System prompt never contains the user's email (test with nickname null, full name null, email set).
 5. Privacy/Terms links render on `/login`, sign-up, Settings (all roles) and the help menu; `/support` renders
    signed-out with both emails and is in the sitemap.
@@ -96,6 +111,10 @@ Do NOT run `npm run gate:web` or write/apply SQL. Claude applies the migration f
 ## 9. Report format
 Compact status only: files changed with line counts, tests per criterion, command results. Do NOT include "Claude
 prompt" or "recommended next steps for Claude" sections. Report compact status only.
+
+## 9b. Release item (Claude, outside code)
+`docs/app-store/app-privacy-answers.md` must disclose the categories sent to Anthropic (user content + the rental details
+above) and the purpose (app functionality), before the App Privacy section is published.
 
 ## 10. Constraints
 Only the files in §5. No new dependencies. No SQL from Codex. Do not edit Privacy/Terms page text.
