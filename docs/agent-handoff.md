@@ -1191,3 +1191,22 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Code map: only 3 user-client reads touch other profiles (late-fee tenant emails, application reviewers, tenant's
   inviter); none loses data (inviter and co-owner reads already returned nothing). Smoke 3 roles + CI green; no errors.
 - **Next:** 237c (M3/M1/M11); default-grants audit for the other 55 `public` tables; scorecard Security held 80.
+
+## Sprint 237g SHIPPED — remove unneeded client write privileges on every `public` table (L3) — 2026-10-16
+- Commit `53713d5`; migration `20261023_sprint237g_client_write_grants` applied live (preflight ACL md5 matched baseline;
+  postcondition passed). Rollback: `supabase/rollback/20261023_sprint237g_rollback.sql` (exact snapshot, proven
+  equivalent in a rolled-back dry run). ChatGPT: rev 1 REJECT → rev 2 APPROVE WITH CHANGES → rev 3 all adopted.
+- Holes proven then closed (attacker SQL, rolled back): tenant inserts own `payments` row (W1); stranger votes on another
+  LLC's withdrawal / distribution change (W2/W3); forged `charge_edit_history` (W4); LLC co-owner edits/removes another
+  partner's member row incl. payout account (W5/W6). All → 42501.
+- Client writes: 60 tables → 22 (exact code-mapped ops). anon: no writes anywhere. TRUNCATE/REFERENCES/TRIGGER/MAINTAIN
+  removed client-side. postgres default ACL no longer grants client writes to new tables (no global default ACL exists).
+- Column-limited UPDATE on leases/units/rent_charges/properties/maintenance_tickets; `rent_charges_guard_client_write`
+  trigger: clients may only add a matching pending late fee and move status pending→late. Lease tenant/unit swap, charge
+  amount/lease/deleted_at, unit move, property owner_profile_id, cross-account property move, fake paid charge, mark
+  paid/waived → all 42501. Partner/fee tables: outsiders and managers denied.
+- Real PostgREST: owner updates on leases/units/properties/charges/tickets OK; charge amount + lease tenant → 42501;
+  tenant payment insert → 42501. Upsert (insert + conflict update) OK. Smoke green, CI green, no permission errors.
+- Pre-existing bug found (not caused by 237g): tenant-created repairs never write `maintenance_status_history` (RLS policy
+  allows admins only; app logs and continues). Follow-up.
+- Note: Vercel Hobby keeps runtime logs 1 hour, so the "24 h no 42501" check must use Sentry instead.

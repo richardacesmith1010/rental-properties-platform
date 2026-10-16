@@ -122,3 +122,16 @@ Permanent log of Claude's mistakes and the rule each one created. Read it before
 **What was correct:** Timing-based UI findings depend on the page being visible and focused.
 **Rule:** Before reporting a timing bug (toasts, auto-refresh, animations) from a driven browser, check `document.visibilityState` and `document.hasFocus()` with the javascript tool; only file it if it reproduces with `visible`. Note the state in the finding.
 
+#### L-025 | 2026-10-16 | SECURITY
+**What happened:** Supabase's default ACL gave `anon`/`authenticated` every privilege on each new `public` table, and many
+RLS write policies were written for "the app's own server action" without asking what a client could do directly through
+PostgREST. Result: a tenant could record their own rent as paid, strangers could vote on another LLC's withdrawal, a
+co-owner could redirect a partner's payout, a tenant could make themselves an owner (237d–237g). Policies looked fine one by
+one; the exposure was grants + loose policies + server actions that use the admin client anyway.
+**What was correct:** Grants are the first gate. A table the app only writes with the service role should grant clients
+nothing but SELECT; client-written tables should grant only the exact ops (and columns) the code map shows.
+**Rule:** Every new table migration revokes client writes (now the default) and lists any client write it needs with the
+code site. Any packet that adds a user-client write must name the table, op and columns, and add them to the 237g keep
+map (`supabase/migrations/20261023_sprint237g_client_write_grants.sql`) with an attacker test. Money columns written by
+clients get a values guard (trigger), not just a column grant.
+
