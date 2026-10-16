@@ -1,4 +1,4 @@
-# Sprint 237f — Narrow who can read `profiles` (L3: privacy/auth/schema) — rev 1
+# Sprint 237f — Narrow who can read `profiles` (L3: privacy/auth/schema) — rev 2 (rev 1 ChatGPT APPROVE WITH CHANGES: 5 REQUIRED + 4 OPTIONAL adopted)
 
 Migration-only sprint. **Claude** writes and applies the migration (CLAUDE.md §1). **Codex writes no app code.**
 Follows Sprint 237e (`profiles` writes locked, `e7fc4c8`).
@@ -55,42 +55,69 @@ administer, and managers assigned to a home they administer.
 
 ## 6. Requirements — the migration (exact SQL; the migration runner provides the transaction)
 ```sql
--- Sprint 237f: a signed-in user may read their own profile, tenants who have/had a lease on a home they administer,
--- and managers assigned to a home they administer. Replaces two policies that exposed every tenant/manager to any owner.
-create function public.can_view_profile(p_profile_id uuid)
+-- Sprint 237f: a signed-in user may read their own profile, CURRENT tenants who have/had a lease on a home they
+-- administer (historical leases intentional: rent history needs past tenants), and CURRENT managers with an ACTIVE
+-- assignment on a home they administer (inactive assignments intentionally excluded). Replaces two policies that
+-- exposed every tenant/manager to any owner. Nested SECURITY DEFINER helpers run as postgres (no FORCE RLS on the
+-- tables they read), so nothing recurses into profiles RLS.
+create function public.can_view_profile(p_profile_id uuid, p_role text)
 returns boolean
 language sql stable security definer set search_path = ''
 as $f$
   select p_profile_id = auth.uid()
-    or exists (
+    or (p_role = 'tenant' and exists (
       select 1 from public.leases l join public.units u on u.id = l.unit_id
-      where l.tenant_profile_id = p_profile_id and public.can_administer_property(u.property_id))
-    or exists (
+      where l.tenant_profile_id = p_profile_id and public.can_administer_property(u.property_id)))
+    or (p_role = 'manager' and exists (
       select 1 from public.property_managers pm
-      where pm.manager_profile_id = p_profile_id and public.can_administer_property(pm.property_id));
+      where pm.manager_profile_id = p_profile_id and pm.active = true
+        and public.can_administer_property(pm.property_id)));
 $f$;
-revoke execute on function public.can_view_profile(uuid) from public, anon;
-grant execute on function public.can_view_profile(uuid) to authenticated, service_role;
+revoke execute on function public.can_view_profile(uuid, text) from public, anon;
+grant execute on function public.can_view_profile(uuid, text) to authenticated, service_role;
 
 drop policy profiles_select_owner_for_management on public.profiles;
 drop policy profiles_select_owner_for_managers on public.profiles;
 create policy profiles_select_related on public.profiles
-  for select to authenticated using (public.can_view_profile(id));
+  for select to authenticated using (public.can_view_profile(id, role));
 
 do $$
+declare v_fn oid := 'public.can_view_profile(uuid, text)'::regprocedure; v_adm oid := 'public.can_administer_property(uuid)'::regprocedure;
 begin
-  if exists (select 1 from pg_policy where polrelid = 'public.profiles'::regclass
-             and polname in ('profiles_select_owner_for_management', 'profiles_select_owner_for_managers'))
-     or not exists (select 1 from pg_policy where polrelid = 'public.profiles'::regclass and polname = 'profiles_select_related')
-     or not exists (select 1 from pg_policy where polrelid = 'public.profiles'::regclass and polname = 'profiles_select_self')
-     or has_function_privilege('anon', 'public.can_view_profile(uuid)', 'execute')
-     or not (select prosecdef from pg_proc where oid = 'public.can_view_profile(uuid)'::regprocedure) then
+  -- exactly two SELECT-capable policies, both the intended ones, both permissive
+  if (select count(*) from pg_policy where polrelid = 'public.profiles'::regclass and polcmd in ('r', '*')) <> 2
+     or not exists (select 1 from pg_policy where polrelid = 'public.profiles'::regclass and polname = 'profiles_select_self'
+                    and polcmd = 'r' and polpermissive and pg_get_expr(polqual, polrelid) = '(auth.uid() = id)')
+     or not exists (select 1 from pg_policy where polrelid = 'public.profiles'::regclass and polname = 'profiles_select_related'
+                    and polcmd = 'r' and polpermissive and polroles = array['authenticated'::regrole]::oid[]
+                    and pg_get_expr(polqual, polrelid) = 'can_view_profile(id, role)')
+     -- helper: definer, owner postgres, empty search_path, stable, boolean, execute only authenticated/service_role
+     or not (select prosecdef and proowner = 'postgres'::regrole and provolatile = 's' and prorettype = 'boolean'::regtype
+               and proconfig = array['search_path=""'] from pg_proc where oid = v_fn)
+     or has_function_privilege('anon', v_fn, 'execute')
+     or not has_function_privilege('authenticated', v_fn, 'execute')
+     or not has_function_privilege('service_role', v_fn, 'execute')
+     or exists (select 1 from aclexplode((select proacl from pg_proc where oid = v_fn)) a where a.grantee = 0)
+     -- dependency unchanged in the properties we rely on
+     or not (select prosecdef and proowner = 'postgres'::regrole and proconfig = array['search_path=""'] from pg_proc where oid = v_adm)
+     -- no FORCE RLS on tables the helpers read
+     or exists (select 1 from pg_class where oid in ('public.leases'::regclass, 'public.units'::regclass,
+                 'public.property_managers'::regclass, 'public.properties'::regclass, 'public.ownership_accounts'::regclass,
+                 'public.ownership_account_members'::regclass, 'public.ownership_account_managers'::regclass)
+                 and relforcerowsecurity) then
     raise exception 'sprint237f postcondition failed';
   end if;
 end $$;
 ```
 - **Rollback:** `drop policy profiles_select_related on public.profiles;` then recreate the two old policies with their
-  exact §2 expressions; `drop function public.can_view_profile(uuid);`.
+  exact §2 expressions; `drop function public.can_view_profile(uuid, text);`.
+- **Intentional semantics (rev 2):** historical tenants stay visible (rent history, receipts); managers are visible only
+  while their assignment is active; both branches require the target's **current** `profiles.role` (passed from the row),
+  so a role-changed profile is not exposed through an old FK row. Own row is always visible.
+- **Safety facts checked 2026-10-16:** `can_administer_property` SECURITY DEFINER, owner postgres, `search_path=""`; no
+  FORCE RLS on `leases`, `units`, `property_managers`, `properties`, `ownership_accounts`, `ownership_account_members`,
+  `ownership_account_managers`; indexes on `leases(tenant_profile_id)`, `leases(unit_id)`,
+  `property_managers(manager_profile_id)`, `property_managers(property_id, …)`, `properties(owner_account_id)`.
 - **Preflight (L-012):** SELECT policies exactly as §2; `can_administer_property` definition unchanged since 2026-10-16.
 
 ## 7. Validation (Claude, after apply; all rolled back)
@@ -98,7 +125,13 @@ end $$;
 2. As the smoke owner: `visible_tenants` = number of distinct tenants with a lease on their homes, `visible_managers` = their
    homes' managers; a named unrelated tenant (another owner's tenant) → 0 rows; `stripe_customer_id` of an unrelated tenant
    unreadable.
-3. Every profile as viewer: related rows lost = 0 (re-run the §2 dry-run query after apply); tenants still read only self.
+3. **Exact sets** for every profile as viewer: compute the expected set independently with explicit joins (self ∪
+   current tenants with any lease on a home where the viewer is an active owner member / account creator / active manager
+   (client accounts: plus active `ownership_account_managers`) ∪ current managers with an active assignment on such a
+   home) and assert actual = expected in both directions (no missing, no unexpected rows). Tenants still read only self.
+3b. Inactive-manager negative case (rolled back): set one walk manager assignment `active = false` → the owner no longer
+   sees that manager (unless another active assignment exists); re-activate.
+3c. EXPLAIN (ANALYZE) of `select id from profiles` as the smoke owner — record the plan and time.
 4. As the smoke manager: sees own homes' tenants; an unrelated tenant → 0 rows.
 5. As anon: 0 rows, no error.
 6. Real PostgREST: smoke owner signed in with supabase-js → `select id from profiles where role='tenant'` returns exactly the
