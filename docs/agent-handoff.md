@@ -1349,3 +1349,10 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   `9dcd385d…` with a 24 KB PNG created by `apps/web/.tmp-photo-ticket.mjs`). Fix direction: portal the viewer to body +
   an explicit "Save photo" button via the native share sheet. Audit U7 stays open.
 - Device checks that passed on the real iPhone: TestFlight install, sign-in, Face ID lock + "Sign in with password".
+- **SECURITY (found by upload sweep `wf_1291c3c0-101`, verified live 21:50):** storage policies
+  `property_files_storage_select/insert/delete` allow any `authenticated` user on bucket `property-files` (attacker SQL as
+  the walk tenant: insert ALLOWED, select ALLOWED; delete refused by table privilege). Bucket is empty today (0 objects), so
+  nothing leaked. `profile_avatars_public_read` lets anyone read every avatar (0 avatars stored). Every app Storage call
+  uses the service-role admin client (`lib/assets.ts`, `lib/uploads.ts`, `app/actions/*`), so dropping these policies breaks
+  nothing. Next: L3 migration (drop the 3 property-files policies + avatar public read) → ChatGPT review after 22:47 → apply
+  with attacker SQL. Also: `maintenance-photos` file_size_limit 20 MB is live but not in any migration (drift).
