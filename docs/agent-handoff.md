@@ -1401,3 +1401,10 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   attempts with no changes (L-027; `run-codex.sh` fixed `22977e1`). Requeued: **238j** (`bkkcyl3w9`) and **238h**
   (`bs2ec75hi`) sleep until ~03:49 then run. After 238j: 237c-1 round 2 → 238i → 238b rev 4 → 237c-2 → 238e (web, one at a
   time). iOS: 238a-b round 2 under XCTest now; 238f needs a failing snapshot from the next full-suite runs.
+
+## Sprint 238a-b committed (2026-10-16 ~23:55) — PASS_WITH_RISK (iOS; ships in TestFlight build 3)
+- Round 1 + round 2 (dark-mode white background: WebKit resolves dynamic colors; now resolved + re-applied on trait change).
+- XCTest x3: LaunchSplash all green; AppLock flake remains (238f, cause proven: dismissal still in flight after 0.3 s).
+- Simulator launch timing (Release relaunch): process running 26.55 → first app log 28.56 → cover installed 28.72 → scene
+  ready 28.88 → cover removed `finished` 31.43. Black before the first frame = simulator process spawn + black launch
+  snapshot (not app code). **Risk:** confirm on a real iPhone (owner's batched TestFlight check, build 3).
