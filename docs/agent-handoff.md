@@ -1318,3 +1318,5 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - ~20:55: Content Rights saved (no third-party content). Age rating saved: override **18+** (owner Q8; Apple calculated
   4+); UGC answered No under Apple's "broad distribution" wording, Messaging Yes (details in `docs/app-store/listing.md` §12).
   `ITSAppUsesNonExemptEncryption = false` already in Info.plist (no export-compliance prompt per build).
+- Queue add: **238h** (iPhone, small): privacy manifest 19 → 17 types (drop Device ID and Browsing History; analytics is
+  off, Q6) so it matches the App Privacy label (gate G2). Needs ChatGPT review (after 10:47 PM reset).
