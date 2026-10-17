@@ -66,9 +66,23 @@ final class AppLockControllerTests: XCTestCase {
         return controller
     }
     override func tearDown() {
+        let presented = host.presentedViewController
+        if waitForPresentation("teardown transitions finished", first: presented, until: {
+            self.transitionsFinished(self.host, presented)
+        }), host.presentedViewController != nil {
+            var dismissed = false
+            host.dismiss(animated: false) { dismissed = true }
+            waitForPresentation("teardown dismissal completed", first: presented) {
+                dismissed && self.host.presentedViewController == nil && self.transitionsFinished(self.host, presented)
+            }
+        }
         testedLock?.lockWindow?.isHidden = true
+        testedLock?.lockWindow?.resignKey()
         appWindow?.isHidden = true
-        priorKeyWindow?.makeKeyAndVisible()
+        if let priorKeyWindow {
+            priorKeyWindow.makeKey()
+            waitForPresentation("prior key window restored") { priorKeyWindow.isKeyWindow }
+        }
         testedLock = nil
         super.tearDown()
     }
@@ -321,13 +335,64 @@ final class AppLockControllerTests: XCTestCase {
               case .notEnrolled = BiometricAuth.failure(LAError(.biometryNotEnrolled)),
               case .failed = BiometricAuth.failure(LAError(.authenticationFailed)) else { return XCTFail("Wrong mapping") }
     }
+    private func transitionsFinished(_ controllers: UIViewController?...) -> Bool {
+        controllers.allSatisfy { controller in
+            guard let controller else { return true }
+            return !controller.isBeingPresented && !controller.isBeingDismissed && controller.transitionCoordinator == nil
+        }
+    }
+    @discardableResult
+    private func waitForPresentation(
+        _ state: String, first: UIViewController? = nil, second: UIViewController? = nil,
+        file: StaticString = #filePath, line: UInt = #line, until predicate: () -> Bool
+    ) -> Bool {
+        let deadline = Date().addingTimeInterval(3)
+        while !predicate() {
+            guard Date() < deadline else {
+                XCTFail("Timed out: \(state); " + presentationSnapshot(first: first, second: second), file: file, line: line)
+                return false
+            }
+            RunLoop.main.run(until: min(deadline, Date().addingTimeInterval(0.01)))
+        }
+        return true
+    }
+    private func presentationSnapshot(first: UIViewController? = nil, second: UIViewController? = nil) -> String {
+        func identity(_ object: AnyObject?) -> String {
+            guard let object else { return "nil" }
+            return "\(type(of: object))@\(ObjectIdentifier(object))"
+        }
+        func controllerState(_ controller: UIViewController?) -> String {
+            guard let controller else { return "nil" }
+            return identity(controller)
+                + "{isBeingPresented=\(controller.isBeingPresented),isBeingDismissed=\(controller.isBeingDismissed)"
+                + ",hasTransitionCoordinator=\(controller.transitionCoordinator != nil)}"
+        }
+        func windowState(_ window: UIWindow?) -> String {
+            guard let window else { return "nil" }
+            return "\(identity(window)){isKeyWindow=\(window.isKeyWindow),isHidden=\(window.isHidden)}"
+        }
+        return [
+            "host.presentedViewController === second: \(host.presentedViewController === second)",
+            "presentedViewController=\(controllerState(host.presentedViewController))",
+            "first=\(controllerState(first))", "second=\(controllerState(second))",
+            "host=\(controllerState(host))", "host.view.window=\(identity(host.view.window))",
+            "main=\(windowState(appWindow))", "cover=\(windowState(testedLock?.lockWindow))",
+            "priorKeyWindow=\(windowState(priorKeyWindow))"
+        ].joined(separator: "; ")
+    }
     func testOneLockWindowPerSceneReusedCoversPresentedControllersAndRestoresKeyPresentation() throws {
-        func settle() { RunLoop.main.run(until: Date().addingTimeInterval(0.3)) }
         let c = try controller(), main = try XCTUnwrap(appWindow), cover = try XCTUnwrap(c.lockWindow)
         c.send(.didBecomeActive); bio.completions[0](.success(Data([1])))
-        let first = UIViewController()
-        host.present(first, animated: false)
-        settle()
+        let first = UIViewController(), second = UIViewController()
+        guard waitForPresentation("host ready", first: first, second: second, until: {
+            self.host.view.window === main && main.isKeyWindow && !main.isHidden && cover.isHidden
+                && self.host.presentedViewController == nil && self.transitionsFinished(self.host)
+        }) else { return }
+        var firstPresented = false
+        host.present(first, animated: false) { firstPresented = true }
+        guard waitForPresentation("first presentation completed", first: first, second: second, until: {
+            firstPresented && self.host.presentedViewController === first && self.transitionsFinished(self.host, first)
+        }) else { return }
         XCTAssertTrue(host.presentedViewController === first)
         for event in [AppLock.Event.willResignActive, .didEnterBackground] {
             c.send(event)
@@ -340,12 +405,18 @@ final class AppLockControllerTests: XCTestCase {
         c.send(.didBecomeActive); bio.completions.last?(.success(Data([1])))
         XCTAssertTrue(cover.isHidden); XCTAssertFalse(cover.isKeyWindow); XCTAssertTrue(main.isKeyWindow)
         XCTAssertTrue(c.lockWindow === cover)
-        host.dismiss(animated: false)
-        settle()
-        let second = UIViewController()
-        host.present(second, animated: false)
-        settle()
-        XCTAssertTrue(host.presentedViewController === second)
+        var firstDismissed = false
+        host.dismiss(animated: false) { firstDismissed = true }
+        guard waitForPresentation("first dismissal completed", first: first, second: second, until: {
+            firstDismissed && self.host.presentedViewController == nil && self.transitionsFinished(self.host, first)
+        }) else { return }
+        var secondPresented = false
+        host.present(second, animated: false) { secondPresented = true }
+        guard waitForPresentation("second presentation completed", first: first, second: second, until: {
+            secondPresented && self.host.presentedViewController === second && self.transitionsFinished(self.host, second)
+        }) else { return }
+        XCTAssertTrue(host.presentedViewController === second,
+                      presentationSnapshot(first: first, second: second))
         c.send(.willResignActive); c.send(.didBecomeActive)
         XCTAssertTrue(c.lockWindow === cover)
         let another = AppLockController(host: host, webView: web, settings: settings, biometrics: bio,
@@ -353,8 +424,11 @@ final class AppLockControllerTests: XCTestCase {
         another.install(window: main)
         XCTAssertTrue(another.lockWindow === cover)
         XCTAssertEqual(main.windowScene?.windows.filter { $0.windowLevel == .alert + 1 }.count, 1)
-        host.dismiss(animated: false)
-        settle()
+        var secondDismissed = false
+        host.dismiss(animated: false) { secondDismissed = true }
+        waitForPresentation("second dismissal completed", first: first, second: second) {
+            secondDismissed && self.host.presentedViewController == nil && self.transitionsFinished(self.host, second)
+        }
     }
     func testOpenPlaidSessionSurvivesBackgroundLockUnlockAndInactiveCoverWithoutNavigation() throws {
         pendingConnect = false
