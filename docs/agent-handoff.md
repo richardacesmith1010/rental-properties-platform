@@ -1251,3 +1251,15 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - **Owner decision needed:** dispatch the code part now (the button + queue) with the runbook hardening as a follow-up
   before the first real request, or wait for a third review. Only App Store **submission** needs it; internal
   TestFlight does not.
+
+## 2026-10-16 evening — autonomous run progress (owner at dinner)
+- Phone: Simulator walk of owner/tenant/manager via test-only magic-link sign-in (no passwords typed) → 
+  `docs/phone-walk-2026-10-16.md`; 30-agent readiness audit → `docs/phone-readiness-plan-2026-10-16.md` (decisions table).
+- Packets and review status: 238a iPhone shell rev 3 (REJECT → AWC, adopted) — **Codex done, verifying**; 238b deletion
+  request **parked (2nd REJECT)**; 238c store requirements rev 2 (AWC adopted) — **Codex running**; migration
+  `profiles.ai_consent_at` applied; 238d phone polish (L2) ready; 237c-1 manager invites/clients rev 3 (REJECT → AWC,
+  adopted) ready; 237c-2 manager menu/home (L2) ready.
+- App Store paperwork drafted and fact-checked: `docs/app-store/{listing,app-review-notes,app-privacy-answers}.md`.
+- Verified: AASA returns 200 (APPLE_APP_ID set); Vercel Analytics already off in production (flag unset).
+- 238a XCTest: 115/116; `AppLockControllerTests/testOneLockWindowPerScene…` fails ~1 in 3 runs — checking whether it is a
+  pre-existing flake on a clean pre-238a worktree.
