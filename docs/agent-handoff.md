@@ -1356,3 +1356,12 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   uses the service-role admin client (`lib/assets.ts`, `lib/uploads.ts`, `app/actions/*`), so dropping these policies breaks
   nothing. Next: L3 migration (drop the 3 property-files policies + avatar public read) → ChatGPT review after 22:47 → apply
   with attacker SQL. Also: `maintenance-photos` file_size_limit 20 MB is live but not in any migration (drift).
+
+## 2026-10-16 ~21:55 — Owner decisions (one batch)
+- **238b account deletion: build it now.** Dispatch the code part (button + request queue, design ChatGPT-accepted); Claude
+  hardens `docs/runbooks/account-deletion.md` before the first real request.
+- **Q3 account type: Individual.** Seller = owner's personal name; no D-U-N-S.
+- **Q9 legal name: Richard Smith.** Copyright "2026 Richard Smith"; same name in Terms/Privacy. (Still open in Q9: retention
+  years and response time — Claude proposes defaults for one approval.)
+- **App Review demo emails:** `appreview-owner@domusbase.com`, `appreview-tenant@domusbase.com` (set in
+  `apps/web/.env.local`; 238g seed confirms them, so no mail must arrive).
