@@ -1460,3 +1460,7 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Risk: real-iPhone memory on 48 MP decode (TestFlight build 3 batch check). Test data left on test accounts: repair
   "Test 238j large photos check" (+walktenant).
 - Scorecard: Phone 65 → 70, Tenant 78 → 79. Transcript **113 MB** — rotate the chat after 237c-1 round 2 is reviewed.
+- ~04:50 **238l done by Claude (declared §1 boundary break)**: Codex usage limit again (resets 08:50; 237c-1 round 2
+  runner sleeping, partial edits in the tree), daily smoke at 13:30 UTC would have failed. Two string literals changed
+  (`smoke-keyboard.spec.ts:80`, `smoke-speed.spec.ts:61` → "Report a repair", speed uses `exact: true`). Verified on
+  production: 5/5 passed (tenant Home p75 744 ms). Rollback: revert the 238l commit.
