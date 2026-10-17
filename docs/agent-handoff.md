@@ -1315,3 +1315,6 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   - Still owner-only in App Store Connect: updated Program License Agreement (Account Holder), EU trader status (DSA),
     Content Rights, Age Rating (Q8), App Privacy publish (after Q9 legal text), App Review contact + demo login (238g),
     Copyright (Q3/Q9), screenshots (Claude, after demo seed), first TestFlight upload at the Mac.
+- ~20:55: Content Rights saved (no third-party content). Age rating saved: override **18+** (owner Q8; Apple calculated
+  4+); UGC answered No under Apple's "broad distribution" wording, Messaging Yes (details in `docs/app-store/listing.md` §12).
+  `ITSAppUsesNonExemptEncryption = false` already in Info.plist (no export-compliance prompt per build).

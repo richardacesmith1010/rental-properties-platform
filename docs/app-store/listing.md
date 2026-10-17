@@ -220,6 +220,12 @@ property,manager,lease,maintenance,autopay,apartment,expense,receipt,tax,LLC,scr
 
 ## 12. Age rating (OWNER: confirm, Q8, draft 18+)
 
+**Saved 2026-10-16 (owner confirmed Q8):** override **Age 18+** (Apple calculated 4+). Shows 18+ in 173 regions, A18 in
+Brazil, 19+ in Korea; 17+ on OS versions before 26. Answers entered: all No/None except **Messaging and Chat = Yes**.
+**User-Generated Content = No** (deviation from the draft below): Apple's 2026 wording is "broad distribution of content
+created by users"; Domus shares photos, documents and notes only inside one home. Social Media = No; under-13 social
+control = No (no social features, no Declared Age Range API). Content Rights saved: No third-party content.
+
 Draft answers. Apple's question wording may differ. Answer to match these facts.
 
 | Topic | Draft answer | Why |
