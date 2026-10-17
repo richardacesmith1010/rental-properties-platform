@@ -1411,3 +1411,11 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Transcript is **80 MB** (rotation threshold 50 MB, CLAUDE.md §7). Kept alive overnight only because the queued Codex
   runners (238j `bkkcyl3w9`, 238h `bs2ec75hi`, 238f round 2 `bz2ltg6r4`, all waking ~03:49) report back here.
   **Rotate the chat in the morning** after they land; a new chat starts from this handoff.
+
+## Sprint 238f + 238h committed (2026-10-17 ~04:00) — iOS; ship in TestFlight build 3
+- **238f** (`e9c7292`): Face ID lock test waits on real dismiss/present completions (3 s timeout + diagnostic snapshot).
+  Claude XCTest: full suite 5/5 runs green (122 tests), the lock test isolated x20 = 20/20. Flake closed.
+- **238h** (`1d2bdb6`): privacy manifest 19 → 17 types (Device ID + Browsing History removed; analytics off in production).
+  `config.test.cjs` 68/68 run by Claude (Codex's sandbox could not build the Xcode bundles), incl. both built Release
+  bundles carry the exact manifest and the analytics-off guard on `layout.tsx`. App Privacy gate G2 now met.
+- Codex 238j (`bkkcyl3w9`) still running after the 03:48 limit reset; 237c-1 round 2 is next (fix attempt 2 of 2).
