@@ -10,7 +10,8 @@ for m in $model $model $model gpt-6-sol; do
     -c sandbox_workspace_write.network_access=true --output-schema docs/codex-report-schema.json \
     -o "$out/$tag-report.json" "$note$(cat $packet)" < /dev/null > "$out/$tag-$n.log" 2>&1
   [ -s "$out/$tag-report.json" ] && { echo "DONE $m attempt $n -> $out/$tag-report.json"; exit 0; }
-  t=$(/usr/bin/grep -o "try again at [0-9:]* [AP]M" "$out/$tag-$n.log" | tail -1 | sed 's/try again at //')
+  # Matches "try again at 10:47 PM" and "try again at Oct 17th, 2026 3:48 AM"; keeps only the clock time.
+  t=$(/usr/bin/grep -o "try again at [^.]*[0-9]:[0-9][0-9] [AP]M" "$out/$tag-$n.log" | tail -1 | /usr/bin/grep -o "[0-9]*:[0-9][0-9] [AP]M")
   if [ -n "$t" ]; then
     target=$(date -j -f "%I:%M %p" "$t" +%s 2>/dev/null); now=$(date +%s)
     [ -n "$target" ] && [ $target -lt $now ] && target=$((target+86400))

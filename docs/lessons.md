@@ -145,3 +145,12 @@ months: a failed second insert was only logged, so a pending manager silently go
 table's unique keys, constraints and triggers live (`pg_constraint`, `pg_indexes`) and quote them in the packet's Context.
 **Rule:** Packets that add rows to an existing table list its live unique keys. A logged-and-ignored insert error is a
 bug; packets that touch such a path make the error explicit.
+
+#### L-027 | 2026-10-16 | TOOLING
+**What happened:** Codex hit its usage limit with the message "try again at Oct 17th, 2026 3:48 AM". `run-codex.sh` only
+recognized "try again at 3:48 AM", so it treated each failure as a normal miss, retried every 3 minutes and used up all
+four attempts in 10 minutes. 238j and 238h "completed" with exit 0 and no report and no file changes; the queue looked
+alive while nothing was happening for 4 hours.
+**What was correct:** Parse the clock time out of any "try again at …" form and sleep until then.
+**Rule:** After every Codex run, check that a report file exists before reading the result; "exit 0" from the runner is not
+success. When a reset message appears, re-dispatch only after confirming the runner parsed the time ("waiting until …").
