@@ -1528,3 +1528,16 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Follow-ups: add the open-request queue check to the SessionStart hook; the withdrawn 238b test request (`f66a7cb4…`)
   still holds the test account's email (clear it in the dry-run session); a Plaid removal script before any sole owner
   with a bank link deletes.
+
+## 2026-10-17 ~12:10 — 237c-1 round 3 reviewed: FAIL (third attempt) → back to the owner
+- Codex round 3 done (all 11 items implemented; Codex mutation notes). Isolated gate: 322 files / 2,757 tests, lint,
+  tsc green; build green on re-run (first run hit a transient Google Fonts download error in next/font).
+- 43-agent review (`wf_76037fc5-775`): 19 confirmed findings (0 disputed), one **root cause in Claude's packet (L-029)**:
+  invite rows are written before the Auth invite, but the live trigger fires on `auth.users` insert at invite time →
+  invites show Accepted at once (no Resend/Revoke), a failed branded email can never be re-sent, re-invite after a revoke
+  says "Invite sent" but grants nothing, invented 1-hour retry wait with false copy. Also: multi-account owner's invite
+  uses accounts[0] after `?account=` is stripped; 8 untested error branches; unchunked Clients queries (perf, live max 2).
+- **Clients + statements half (M11) reviewed clean** apart from perf + test-pin follow-ups. Split prepared: 18 M11 files
+  (`scratchpad/237c1-m11-files.txt`) vs 11 invite files; split gate running. Nothing of 237c-1 is live.
+- Owner decision asked: ship the M11 half now and send the invite flow back to design (rows after Auth; resend via a
+  fresh link; reopen revoked rows), or park all of 237c-1.

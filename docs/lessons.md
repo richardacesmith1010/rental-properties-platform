@@ -164,3 +164,15 @@ checked the action was called. Three acceptance tests passed with compression sw
 blocks around server actions, call `unstable_rethrow(error)` from `next/navigation` first.
 **Rule:** Packets that add a `catch` around a server action require `unstable_rethrow` first plus a redirect test, and say
 "no `expect` inside a mock implementation". Reviews mutate the unit (return the raw input) to prove such tests can fail.
+
+#### L-029 | 2026-10-17 | PLANNING
+**What happened:** Sprint 237c-1's packet required writing pending invitation rows before the Auth invite call, on the
+belief that the `handle_new_user` trigger converts invitations "at sign-up". The trigger runs AFTER INSERT on
+`auth.users`, and `inviteUserByEmail` / `generateLink({type:"invite"})` insert that row at invite time. So access was
+granted and rows marked accepted the moment the owner pressed Send: Resend/Revoke vanished, failed emails could never be
+re-sent, and re-invites after a revoke silently granted nothing. Three Codex rounds built faithfully on the wrong premise;
+a 43-agent review found it only by reading the live trigger.
+**What was correct:** Before mandating an order of writes around Auth, read the live trigger definition and the Auth
+API's side effects (when is the `auth.users` row created?) and quote both in the packet's Context.
+**Rule:** Packets that touch sign-up/invite flows quote the live trigger (`pg_get_triggerdef`, function body) and state,
+per Auth call, whether it inserts `auth.users`. Reviews of such sprints include a lens that traces live trigger effects.
