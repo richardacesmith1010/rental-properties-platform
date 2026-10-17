@@ -1332,3 +1332,20 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - 21:12 TestFlight internal group **"Owner"** created (automatic distribution on) with build 2; owner added as tester
   (Invited). Next owner step: accept the invite on the iPhone and install. Then device checks one at a time: Face ID lock,
   repair-photo camera, save a repair photo to Photos (closes audit U7).
+
+## 2026-10-16 ~21:40 — Real-iPhone findings (TestFlight build 2) — owner asked for no more walk-throughs
+- Owner directive: stop step-by-step owner assistance; Claude verifies on the Simulator and batches owner-only items
+  (memory `feedback_minimize_owner_assist.md`).
+- **F1 (high): file uploads over 1 MB fail.** Vercel log 03:23:56Z `POST /tenant` → "Body exceeded 1 MB limit" (413) when
+  the walk tenant sent a repair with an iPhone camera photo; the error boundary showed "We couldn't load your tenant
+  dashboard"; no ticket saved. The form promises "Up to 5 photos, 10MB each". Next.js server actions default to 1 MB and
+  Vercel caps bodies near 4.5 MB → needs direct-to-Storage signed uploads (sweep of every upload path running: workflow
+  `wf_1291c3c0-101`).
+- **F2 (med): owners cannot sign out on the phone.** Sign Out lives only in `UserMenuPopover` (top-bar avatar); the owner
+  tab-bar layout hides it, the More drawer has Settings/Help/Theme only, and /settings has no sign-out. Workaround used:
+  Face ID lock → "Sign in with password".
+- **F3 (med): repair photo viewer is trapped inside the repair card** (fixed overlay under a containing ancestor; image
+  partly behind the tab bar) and **long-press shows no Save menu** (Simulator, walk tenant, test ticket
+  `9dcd385d…` with a 24 KB PNG created by `apps/web/.tmp-photo-ticket.mjs`). Fix direction: portal the viewer to body +
+  an explicit "Save photo" button via the native share sheet. Audit U7 stays open.
+- Device checks that passed on the real iPhone: TestFlight install, sign-in, Face ID lock + "Sign in with password".
