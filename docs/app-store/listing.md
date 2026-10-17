@@ -129,6 +129,11 @@ Privacy policy: https://domusbase.com/privacy
 Terms: https://domusbase.com/terms
 ```
 
+**Entered in App Store Connect 2026-10-16 (1.0 version page, pending owner Save):** this block **minus** the two
+deletion lines ("• Want to leave? …" and "• We finish deleting it within 30 days."), 1693 characters, checksum-verified.
+Add those two lines back when Sprint 238b is live. Promotional text, keywords, Support and Marketing URLs entered as
+below; Copyright left blank (`OWNER:` legal name, Q3/Q9).
+
 Lines that depend on unshipped work (do not submit until each is true):
 
 | Line | Needs |
