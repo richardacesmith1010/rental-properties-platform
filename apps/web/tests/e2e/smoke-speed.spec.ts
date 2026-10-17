@@ -58,7 +58,7 @@ test.describe("authenticated content speed", () => {
       name: "tenant Home",
       budgetMs: 3_000,
       visible: async (current) => {
-        await expect(current.getByText("Report a problem")).toBeVisible();
+        await expect(current.getByText("Report a repair", { exact: true })).toBeVisible();
       }
     });
   });

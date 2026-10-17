@@ -77,7 +77,7 @@ test.describe("keyboard smoke", () => {
     expect(await loginAsRole(page, "Tenant", process.env.SMOKE_TENANT_EMAIL!, process.env.SMOKE_TENANT_PASSWORD!)).toBe(true);
     await expect(page.getByRole("main")).toBeVisible();
     await page.waitForLoadState("networkidle");
-    await tabTo(page, page.getByRole("link", { name: "Report a problem" }));
+    await tabTo(page, page.getByRole("link", { name: "Report a repair" }));
     await tabTo(page, page.getByRole("link", { name: "Message landlord" }));
   });
 });
