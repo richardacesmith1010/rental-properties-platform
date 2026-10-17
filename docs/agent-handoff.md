@@ -1365,3 +1365,6 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   years and response time — Claude proposes defaults for one approval.)
 - **App Review demo emails:** `appreview-owner@domusbase.com`, `appreview-tenant@domusbase.com` (set in
   `apps/web/.env.local`; 238g seed confirms them, so no mail must arrive).
+- ~22:00 Owner accepted the updated Apple Developer Program License Agreement (banner gone). Membership card: the web
+  "Add card" page (`secure.store.apple.com/us/account/setup`) shows a Chrome error; not urgent — renewal date
+  **2027-10-10**. Later path: iPhone Settings → name → Payment & Shipping.
