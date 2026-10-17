@@ -107,3 +107,24 @@ Claude" sections. Report compact status only.
 
 ## 10. Constraints
 Only the files in §5. No new dependencies. No signing/entitlement changes.
+
+## Round 2 (Claude's XCTest, 2026-10-16 ~23:20) — fix the no-black fallback; everything else passed
+Full suite twice on the iPhone 18 Pro Simulator: `LaunchSplashTests.testNoBlackFallbackIsConfiguredBeforeLoadInLightAndDark`
+fails both runs (all other 238a-b tests pass):
+- `:374` `backgroundsReadyAtLoad` is false: at load, `web.backgroundColor` reads back as `kCGColorSpaceModelRGB 1 1 1 1`,
+  not `.systemBackground`.
+- `:383-384`: the read-back colors are static white, so in **dark** mode the web view and under-page area stay white
+  (expected `UIExtendedGrayColorSpace 0 1`). WebKit stores these colors resolved at the moment they are set; a dynamic
+  `UIColor` does not stay dynamic.
+
+Required (only `DomusBridgeViewController.swift` and `LaunchSplashTests.swift`):
+1. Apply the backgrounds as **resolved** colors: `UIColor.systemBackground.resolvedColor(with: traitCollection)` for
+   `webView.backgroundColor`, `webView.scrollView.backgroundColor` and `webView.underPageBackgroundColor`; keep
+   `appWindow?.backgroundColor = .systemBackground` (UIView keeps dynamic colors). Do it before the first load (as now).
+2. Re-apply them whenever the user-interface style changes (`registerForTraitChanges([UITraitUserInterfaceStyle.self])`
+   on iOS 17+, else `traitCollectionDidChange`), so switching light/dark never leaves a white or black web view.
+3. Fix the test to compare resolved RGBA values (convert both sides with `getRed`/`getWhite` into one canonical tuple
+   with a small tolerance) instead of `UIColor` identity, in light AND dark: set the window's
+   `overrideUserInterfaceStyle`, trigger the re-apply, and assert all three web view colors equal the resolved system
+   background for that style (white-ish in light, near-black in dark). `backgroundsReadyAtLoad` compares resolved values too.
+4. No other behavior changes. Report the before/after values you expect and which API you used for trait changes.
