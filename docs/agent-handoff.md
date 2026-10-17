@@ -1501,3 +1501,7 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   contradicts its Logging bullet (Codex chose the safer one) — fix the packet text.
 - App Store listing: deletion lines' gate met (`docs/app-store/listing.md`). **Runbook hardening** (ChatGPT REQUIRED
   items 2–9 on `docs/runbooks/account-deletion.md`) is still due before the first real request (owner decision 2026-10-16).
+
+## 2026-10-17 ~09:55 — Owner: "Yes, run 237c-1 round 3 as written." → dispatched (third and final attempt)
+- Packet "Round 3" marked APPROVED. Round-2 state saved (`scratchpad/237c1-round2.patch` + untracked tar) for diffing.
+- If round 3 fails review, 237c-1 stops and goes back to the owner (no fourth round without a new decision).

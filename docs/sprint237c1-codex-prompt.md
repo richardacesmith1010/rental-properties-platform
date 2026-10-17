@@ -204,7 +204,7 @@ Claude decisions (recorded in the handoff): **managers keep inviting co-managers
 
 Validation as §7. Report each item 1–8 with the test that proves it.
 
-## Round 3 (PROPOSED — waits for the owner's yes; CLAUDE.md §2a: FAIL after 2 attempts) — Claude review 2026-10-17 ~09:20
+## Round 3 (APPROVED by the owner 2026-10-17 — third and final attempt) — Claude review 2026-10-17 ~09:20
 Round 2 state: isolated gate green (319 files / 2,696 tests, build). Fix verification PASS_WITH_RISK (all 8 Round 2 items
 fixed or partial, no blocker). Security: no blocker, 4 should-fix. **Tests-are-real FAIL (L-017)**: mutation proves the
 decision "managed-client statements behave exactly as before" has no test that fails when it breaks. The code itself is
