@@ -1351,7 +1351,7 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Device checks that passed on the real iPhone: TestFlight install, sign-in, Face ID lock + "Sign in with password".
 - **SECURITY (found by upload sweep `wf_1291c3c0-101`, verified live 21:50):** storage policies
   `property_files_storage_select/insert/delete` allow any `authenticated` user on bucket `property-files` (attacker SQL as
-  the walk tenant: insert ALLOWED, select ALLOWED; delete refused by table privilege). Bucket is empty today (0 objects), so
+  the walk tenant: insert ALLOWED, select ALLOWED; delete refused in SQL only by the `protect_objects_delete` trigger, which the Storage API bypasses — so through the API delete was open too). Bucket is empty today (0 objects), so
   nothing leaked. `profile_avatars_public_read` lets anyone read every avatar (0 avatars stored). Every app Storage call
   uses the service-role admin client (`lib/assets.ts`, `lib/uploads.ts`, `app/actions/*`), so dropping these policies breaks
   nothing. Next: L3 migration (drop the 3 property-files policies + avatar public read) → ChatGPT review after 22:47 → apply
@@ -1379,3 +1379,7 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Claude-only: **238k** storage lockdown migration (critic panel + ChatGPT → apply with attacker SQL).
 - After 238a-b + 238j + 238i ship: TestFlight build 3 (`testflight.sh`; keychain already allowed) → Simulator walk.
 - Transcript ~46 MB: rotate the chat after this run (CLAUDE.md §7).
+- ~22:50 238k revised (critic panel): the migration now drops **all 8** `property-files`/`profile-avatars` policies on
+  `storage.objects` (the 4 own-folder avatar policies too: unused by the app, and they let any sign-up host files in an
+  unlimited bucket). Attacker test `docs/sprint238k-attacker-test.md` (seeded objects, run before = 9/9 open, after = 9/9
+  closed, always rolled back). Rollback recreates all 8 verbatim.

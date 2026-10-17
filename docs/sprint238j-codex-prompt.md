@@ -1,84 +1,270 @@
-# Sprint 238j — Uploads over 1 MB: shrink photos in the browser, guard sizes, never crash the page (L3: prod config + upload validation) — rev 1
+# Sprint 238j — Big uploads: shrink photos, check bytes, never crash (L3) — rev 2 (critic panel: 16 REQUIRED + 5 checker fixes)
 
 ## 1. Objective
 Real-iPhone finding **F1** (2026-10-16): a tenant sent a repair with a camera photo and got "We couldn't load your tenant
 dashboard"; nothing was saved. Vercel log 03:23:56Z `POST /tenant`: `Body exceeded 1 MB limit` (413). Every file upload in
-Domus goes through a server action, and Next.js 15.5.27 rejects server-action bodies over 1 MB by default; Vercel also caps
-request bodies near 4.5 MB. iPhone photos are 2–6 MB. This sprint makes every **image** upload work by resizing it in the
-browser first, raises the server-action limit to fit, checks file bytes on the server, and turns any upload failure into a
-plain message instead of a crash. Large PDFs/documents get a clear "too big" message now; direct-to-Storage uploads for
-them are a later sprint (238j-2). The user should never need to read instructions to complete this flow.
+Domus goes through a server action. Next.js 15.5.27 rejects server-action bodies over 1 MB by default, and Vercel caps request
+bodies near 4.5 MB. iPhone photos are 2–6 MB. This sprint:
+- shrinks every **image** in the browser before it is sent, inside the same `try` as the action call;
+- raises the server-action body limit to 4 MB;
+- checks real file bytes on the server, with an allowlist per upload path;
+- turns every upload failure into a plain message instead of a crash.
 
-## 2. Context (verified by a 5-agent sweep, workflow `wf_1291c3c0-101`, and live checks)
-- `apps/web/next.config.mjs:43-48`: `experimental` has only `staleTimes`; no `serverActions.bodySizeLimit` (default 1 MB,
-  enforced while the multipart body streams, before the action runs). The thrown 413 reaches the route error boundary
-  (`app/tenant/error.tsx`, `app/owner/error.tsx`, `app/manager/error.tsx`, `app/error.tsx`).
-- No client code resizes or compresses anything. `lib/maintenance-photos.ts:3-11`: 5 photos, 10 MB each, accepts JPEG,
-  PNG, WebP, **HEIC, HEIF**; validation trusts the client `file.type` (no byte check).
-- Upload paths (all server actions, all break at 1 MB):
-  1. New repair + photos: `components/dashboard/ticket-form.tsx` `handleSubmit` (`:137-157`, appends `photos`, awaits the
-     action in `startTransition` with no try/catch) → `createMaintenanceTicket` → `app/actions/maintenance-queries.ts`
-     (`uploadPhotosForTicket :101-182`, validation `:132`, path `:143`, upload `:145`).
-  2. More photos on an existing repair: `components/dashboard/ticket-photo-upload.tsx:31-52` → `uploadMaintenancePhoto`
-     (`app/actions/maintenance-photo-actions.ts:20`).
-  3. Expense receipt on create/edit: `components/dashboard/expenses/expense-form.tsx` (`:70`) and `expense-list.tsx`
-     (`:112-122`) → `app/actions/expenses.ts` (`:20`, `:112`) → `lib/uploads.ts:14-52`.
-  4. Document vault upload: `components/dashboard/documents/signer-flow.tsx` (`:58`) → `uploadPropertyFile`
-     (`app/actions/document-templates.ts:123-170`).
-  5. Profile photo: `components/settings/profile-settings.tsx` (`:50`) → `updateProfile` and
-     `components/onboarding/onboarding-form.tsx` (`:73`) → `completeOnboarding` (`app/actions/profile.ts:143,179`,
-     `storeAvatar` `:57`).
-- File extensions come straight from the user's file name (`maintenance-queries.ts:142`, `lib/uploads.ts:14`,
-  `document-templates.ts:143`).
-- Copy today: `photo-upload.tsx:91` "Up to 5 photos, 10MB each. JPEG, PNG, WebP, and HEIC are supported."
-- iPhone: the camera input (`capture="environment"`) returns one JPEG of about 2–5 MB. If `image/heic` is not in `accept`,
-  iOS converts library HEIC picks to JPEG before handing them over.
+Large PDFs and documents get a clear "too big" message now. Direct-to-Storage uploads for them are a later sprint (238j-2).
+The user should never need to read instructions to complete this flow.
+
+## 2. Context (rev 1: 5-agent sweep `wf_1291c3c0-101`; rev 2: re-read by Claude at HEAD 47061fc)
+All paths are under `apps/web/` unless they start with `node_modules/` (repo root).
+
+**Config and test runner**
+- `next.config.mjs:43-48`: `experimental` has only `staleTimes` (`dynamic: 30`, `static: 300`); no `serverActions`. The default
+  export is `withSentryConfig(nextConfig, …)`, an object whose `experimental` keeps our keys (Sentry adds `clientTraceMetadata`).
+- `vitest.config.ts:11` only collects `**/__tests__/**/*.test.{ts,tsx}`. A test placed beside its source never runs.
+- `tsconfig.json`: `allowJs: false`, `strict: true`, so a static `import` of `next.config.mjs` from a `.ts` test has no types.
+
+**Upload paths (client → server)**
+1. New repair: `components/dashboard/ticket-form.tsx` `handleSubmit` (`:137-157`) appends `photos` and awaits
+   `onCreateTicket` inside `startTransition` with no try/catch → `createMaintenanceTicket`
+   (`app/actions/maintenance-ticket-actions.ts:23`). It inserts the repair row (`:77-92`), then calls `uploadPhotosForTicket`
+   (`:96-101`). Any photo failure becomes the success message `Maintenance request submitted, but the photo upload did not finish.`
+   (`:103-104`). The tenant view always shows `Sent. You'll see updates on Home.` (`ticket-form.tsx:173-176`), so a tenant
+   never learns the photo was lost.
+2. More photos: `components/dashboard/ticket-photo-upload.tsx:31-52` (raw-file check `:32`, then `startTransition`, no
+   try/catch) → `uploadMaintenancePhoto` (`app/actions/maintenance-photo-actions.ts:20`), which returns the helper's error as is.
+3. Shared photo helper `uploadPhotosForTicket` (`app/actions/maintenance-queries.ts:101-182`): access check `:112-120`, count
+   query `:122-130`, `validateMaintenancePhotoSelection` `:132-135`, extension from the file name `:141`, key `:143`, upload
+   `:145-150`. Metadata `file_type` comes from the client `file.type` (`:75`).
+4. Receipts: `components/dashboard/expenses/expense-form.tsx` (`saveExpense` `:68-89`, `<form action>` `:253-267`, file input
+   `:264`) and `expense-list.tsx` (`updateWithPayer` `:111-121`, `useFormState` `:122`, `<form action>` `:144-173`, file input
+   `:160`) → `createExpense` / `updateExpense` (`app/actions/expenses.ts`: `requireAuth("owner")` `:24`/`:116`, admin check
+   `:46-49`/`:156-158`) → `uploadExpenseReceiptFile` (`lib/uploads.ts:4-57`: size check `:10-12`, extension from name `:14`,
+   key `:15`, `file_type` from `file.type` `:16-20`, upload `:22-25`). No type check today.
+5. Document vault: `components/dashboard/documents/signer-flow.tsx` (`useFormState` `:58`, `<form action>` `:149-156`, accept
+   `image/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt` `:154`, pinned by
+   `components/dashboard/__tests__/upload-accept.test.tsx:36-44`) → `uploadPropertyFile` (`app/actions/document-templates.ts`:
+   `requireAuth("owner","manager")` `:124`, capability `:128-129`, file present/size `:134-136`, admin check `:139-141`,
+   extension from name `:143`, key `:144`, `file_type` `:146`, upload `:148-151`). No type check today.
+6. Avatars: `components/settings/profile-settings.tsx` (`useFormState` `:50`, form `:109`, hint `:142`) → `updateProfile`
+   (`app/actions/profile.ts:179`); `components/onboarding/onboarding-form.tsx` (pick-time 5 MB check `:14`, `:95-98`,
+   `useFormState` `:73`, hint `:202`) → `completeOnboarding` (`profile.ts:143`). Both reach `storeAvatar` (`profile.ts:45`,
+   upload `:57-62`) through `applyProfileUpdate` (`:106-107`); `uploadAvatar` (`:218`) also calls it. The zod avatar schema
+   (`lib/validations-auth.ts:85`, `:88`) checks size ≤ 5 MB and the client type first. `getAvatarExtension` (`:19-39`) falls
+   back to the file name.
+
+**Current storage key templates (this sprint changes only where `${extension}` comes from)**
+- Repair photo: `${params.ticketId}/${crypto.randomUUID()}-${safeName}.${extension}` (`maintenance-queries.ts:143`)
+- Receipt: `${propertyId}/receipts/${crypto.randomUUID()}.${extension}` (`lib/uploads.ts:15`)
+- Vault: `${propertyId}/${crypto.randomUUID()}.${extension}` (`document-templates.ts:144`)
+- Avatar: `${userId}/avatar.${extension}` with `upsert: true` (`profile.ts:55`, `:60`)
+
+**Platform facts**
+- `@supabase/storage-js` 2.7.1 ignores `options.contentType` for a `Blob`/`File` body; it appends the body to `FormData`, so the
+  part's type is the Blob's own `type` (`node_modules/@supabase/storage-js/dist/main/packages/StorageFileApi.js:49-55` vs `:67`).
+- React 19.2.8: a `<form action={fn}>` is reset after every action, success or error (`startHostTransition` →
+  `requestFormReset$1`, `node_modules/react-dom/cjs/react-dom-client.development.js:8940-8958`; `form.reset()` at `:15152`).
+  File inputs clear. A controlled `<select>` never sets `defaultSelected` (`updateOptions`, `:1775-1797`), so the reset moves it
+  to its first option. `SubmitButton` gets `pending` from `useFormStatus` (`components/shared/submit-button.tsx:25`), which only
+  tracks form actions.
+- Plain-language guard (`lib/plain-language/scan.ts:12-18`) bans `CSV`, `ticket(s)`, `submit(s)`, `charge(s)` in shown copy.
+- Tests that must stay green **unchanged**: `upload-accept.test.tsx` (accept lists), `components/__tests__/expense-partners.test.tsx`
+  (clicks the title `Save updates to this expense.`), `components/__tests__/onboarding-form.test.tsx`,
+  `app/actions/__tests__/maintenance-ticket-history.test.ts` and `maintenance-ticket-notifications.test.ts` (both stub
+  `uploadPhotosForTicket`). No test runs the real code of any upload path today.
+- HEIC: `lib/maintenance-photos.ts:9-10` accepts `image/heic`/`image/heif`; copy `:35` and tests
+  `lib/__tests__/maintenance-photos.test.ts:23`, `:31` and `tests/e2e/maintenance-photos.spec.ts:75` assert HEIC. On iPhone, if
+  `image/heic` is not in `accept`, iOS converts library HEIC picks to JPEG; the camera input returns one JPEG of about 2–5 MB.
 
 ## 3. In scope
-Browser-side image resizing for every image upload; server-action body limit; server byte checks and safe extensions;
-size guards for non-image files; try/catch around every upload call with plain error copy; tests.
+Browser image shrinking for every image upload; the 4 MB body limit; per-path server byte allowlists with safe extensions and
+content types; size guards for non-image files; try/catch with exact copy at all 7 client call sites; the tenant "photo did
+not go through" notice; raising the onboarding pick-time avatar limit; named tests, including L-014 pin tests per server path.
 
 ## 4. Out of scope
-Direct-to-Storage signed uploads (238j-2); Storage policies (Claude, Sprint 238k); bucket limits; avatar display
-(`getPublicUrl` on a private bucket); the bank CSV import (JSON rows, not a file); any SQL.
+Direct-to-Storage signed uploads and a retry idempotency key (both 238j-2); Storage policies (238k); bucket limits; avatar
+display (`getPublicUrl` on a private bucket); cleanup of old `avatar.png`/`avatar.webp` objects; the bank CSV import (JSON
+rows); raising any server size check or the shared 10 MB `validateMaintenancePhotoSelection` limit; any SQL.
 
 ## 5. Exact files expected to change
-1. `apps/web/next.config.mjs` (`experimental.serverActions.bodySizeLimit: "4mb"` only)
-2. `apps/web/lib/image-compress.ts` (new) and `apps/web/lib/__tests__/image-compress.test.ts` (new)
-3. `apps/web/lib/file-signature.ts` (new: byte sniffing + safe extension) and `apps/web/lib/__tests__/file-signature.test.ts`
-4. `apps/web/lib/maintenance-photos.ts` (accept list without HEIC/HEIF; per-request byte budget constant)
-5. `apps/web/components/dashboard/maintenance/photo-upload.tsx` (accept list, copy)
-6. `apps/web/components/dashboard/ticket-form.tsx`, `apps/web/components/dashboard/ticket-photo-upload.tsx`
-7. `apps/web/components/dashboard/expenses/expense-form.tsx`, `apps/web/components/dashboard/expenses/expense-list.tsx`
-8. `apps/web/components/dashboard/documents/signer-flow.tsx`
-9. `apps/web/components/settings/profile-settings.tsx`, `apps/web/components/onboarding/onboarding-form.tsx`
-10. `apps/web/app/actions/maintenance-queries.ts`, `apps/web/lib/uploads.ts`, `apps/web/app/actions/document-templates.ts`,
-    `apps/web/app/actions/profile.ts` (byte checks + safe extensions only)
-11. Tests next to each changed component/action (name them in the report)
+App code:
+1. `apps/web/next.config.mjs` (add `experimental.serverActions.bodySizeLimit: "4mb"` only)
+2. `apps/web/lib/image-compress.ts` (new: browser shrinking, budget, error classes, copy, error-to-copy helper)
+3. `apps/web/lib/file-signature.ts` (new: byte sniffing and the per-path type table)
+4. `apps/web/lib/maintenance-photos.ts` (accept list, copy `:35`, new exported message constant)
+5. `apps/web/components/dashboard/maintenance/photo-upload.tsx` (copy `:91` only)
+6. `apps/web/components/dashboard/ticket-form.tsx`
+7. `apps/web/components/dashboard/ticket-photo-upload.tsx`
+8. `apps/web/components/dashboard/expenses/expense-form.tsx`
+9. `apps/web/components/dashboard/expenses/expense-list.tsx`
+10. `apps/web/components/dashboard/documents/signer-flow.tsx`
+11. `apps/web/components/settings/profile-settings.tsx`
+12. `apps/web/components/onboarding/onboarding-form.tsx`
+13. `apps/web/app/actions/maintenance-queries.ts` (byte check, extension, content type only)
+14. `apps/web/app/actions/maintenance-ticket-actions.ts` (use the constant at `:104` only; returned text unchanged)
+15. `apps/web/lib/uploads.ts`, `apps/web/app/actions/document-templates.ts`, `apps/web/app/actions/profile.ts`
+    (byte check, extension, content type only)
+
+Tests (all inside `__tests__` folders except the e2e spec):
+16. `apps/web/lib/__tests__/image-compress.test.ts` (new)
+17. `apps/web/lib/__tests__/file-signature.test.ts` (new)
+18. `apps/web/lib/__tests__/maintenance-photos.test.ts` (edit `:23`, `:31`; add HEIF)
+19. `apps/web/lib/__tests__/next-config.test.ts` (new)
+20. `apps/web/components/__tests__/ticket-form.test.tsx` (edit: replace the `PhotoUpload: () => null` stub)
+21. `apps/web/components/__tests__/ticket-photo-upload.test.tsx` (new)
+22. `apps/web/components/dashboard/__tests__/upload-budget.test.tsx` (new: expense form, expense list, signer flow)
+23. `apps/web/components/__tests__/avatar-upload.test.tsx` (new: profile settings and onboarding, real `useFormState`)
+24. `apps/web/app/actions/__tests__/maintenance-photo-upload.test.ts` (new: real `uploadPhotosForTicket`)
+25. `apps/web/app/actions/__tests__/maintenance-ticket-photo-result.test.ts` (new: `createMaintenanceTicket` photo failure)
+26. `apps/web/app/actions/__tests__/expense-receipt-upload.test.ts` (new: real `createExpense`/`updateExpense` + `lib/uploads`)
+27. `apps/web/app/actions/__tests__/upload-property-file.test.ts` (new: real `uploadPropertyFile`)
+28. `apps/web/app/actions/__tests__/profile-avatar.test.ts` (new: real `updateProfile`/`completeOnboarding` + `storeAvatar`)
+29. `apps/web/tests/e2e/maintenance-photos.spec.ts` (edit `:75` only)
 
 ## 6. Implementation requirements
-1. **`compressImage(file, { maxEdge, quality })`** in `lib/image-compress.ts`: decode with `new Image()` + `img.decode()`
-   from an object URL (no `createImageBitmap` resize options); draw to a canvas no larger than `maxEdge` on the long edge
-   (keep aspect, never upscale); `canvas.toBlob("image/jpeg", quality)`; return a `File` named `<base>.jpg`, type
-   `image/jpeg`. Defaults: photos `maxEdge 2048, quality 0.8`; if the result is still over 900 KB retry once at
-   `1600 / 0.7`. Avatars: `maxEdge 512, quality 0.85`. Process files one at a time and release each canvas/object URL.
-   PNG/WebP inputs are converted to JPEG too. If decoding fails, return the original file only if it is ≤ 900 KB, else throw
-   `PhotoTooLargeError`. Inject the decode/encode steps so tests can run without a real canvas.
-2. **Per-request budget:** before calling any upload action, the sum of file sizes must be ≤ 3.5 MB (constant in
-   `lib/maintenance-photos.ts`). Over budget → do not send; show `These photos are too big. Try fewer photos.` (repair) or
-   `This file is too big. Use a file under 3 MB.` (receipts, documents, PDFs).
-3. **Body limit:** `experimental.serverActions.bodySizeLimit: "4mb"` (below Vercel's cap; nothing else in next.config).
-4. **Accept lists:** remove `image/heic` and `image/heif` from `ACCEPTED_MAINTENANCE_PHOTO_TYPES`; copy at
-   `photo-upload.tsx:91` becomes `Up to 5 photos.`
-5. **Server byte checks (`lib/file-signature.ts`):** `sniffFileType(bytes)` recognizes JPEG (`FF D8 FF`), PNG
-   (`89 50 4E 47 0D 0A 1A 0A`), WebP (`RIFF....WEBP`), PDF (`%PDF-`). Every server upload path checks the first bytes match
-   an allowed type for that path and derives the stored extension from the sniffed type (never from the user's file name;
-   strip anything but `[a-z0-9]`). Mismatch → the path's existing invalid-type error copy; nothing uploaded. Keep every
-   existing auth, role, permission and count check exactly as is (L-014: pin current behavior with tests).
-6. **No crash:** wrap every upload action call in try/catch. A thrown error (including a 413) shows
-   `We could not send that. Please try again.` in the form and keeps what the user typed. For the repair form, the
-   description stays filled in.
-7. Plain language (≤ 12 words per sentence), lines ≤ 140, files ≤ 500, every Supabase error checked. No new dependencies.
+**R1. `lib/image-compress.ts` (browser only; no new dependencies)**
+- Constants: `UPLOAD_BUDGET_BYTES = 3.5 * 1024 * 1024` (3,670,016); `PHOTO_MAX_BYTES = 900 * 1024` (921,600);
+  `PHOTO_STEPS = [{ maxEdge: 2048, quality: 0.8 }, { maxEdge: 1600, quality: 0.7 }, { maxEdge: 1280, quality: 0.6 }]`;
+  `AVATAR_STEPS = [{ maxEdge: 512, quality: 0.85 }]`.
+- Error classes: `PhotoTooLargeError`, `FileTooLargeError`.
+- Test seam: export a mutable `imageCodec = { decode, encode }`. Production code always calls `imageCodec.decode/encode`, so
+  tests can `vi.spyOn(imageCodec, …)` while the real `compressImage`/`preparePhotos` run.
+  - `decode(file)` → `{ width, height, source, release() }`. It uses `URL.createObjectURL`, `new Image()` and `img.decode()`.
+    It does not use `createImageBitmap` resize options. `release()` revokes the object URL. Do not rotate by hand; the browser
+    applies EXIF orientation when drawing.
+  - `encode(decoded, { width, height, quality })` → `Blob | null`. It creates a canvas of exactly `width × height`. If
+    `getContext("2d")` is `null`, it returns `null`. It fills white (`#ffffff`) before `drawImage`, so transparent PNG/WebP
+    pixels do not turn black. It calls `canvas.toBlob(cb, "image/jpeg", quality)`. In a `finally`, it sets canvas width and
+    height to `0`.
+- `compressImage(file, { targetBytes, steps })` → `File`:
+  1. Decode. For each step, scale so the long edge is `min(step.maxEdge, original long edge)`, keeping aspect (round to
+     whole pixels; never upscale), then encode.
+  2. The first blob with `size <= targetBytes` wins. Return `new File([blob], "<base>.jpg", { type: "image/jpeg" })`, where
+     `<base>` is the name without its last extension, or `photo` if empty.
+  3. If every step is still over `targetBytes`, throw `PhotoTooLargeError`.
+  4. If decode throws, encode throws, or encode returns `null`: return the original file when `file.size <= targetBytes`,
+     else throw `PhotoTooLargeError`.
+  5. Always call `release()` in a `finally`. Process files one at a time.
+- `preparePhotos(files)` → `File[]`, in order. For photo `i` of `n`:
+  `target = Math.min(PHOTO_MAX_BYTES, Math.floor((UPLOAD_BUDGET_BYTES - bytesAlreadyChosen) / (n - i)))`, then
+  `compressImage(file, { targetBytes: target, steps: PHOTO_STEPS })`. So the total is always ≤ `UPLOAD_BUDGET_BYTES`.
+- `prepareUploadFile(file, kind: "receipt" | "document" | "avatar")` → `File`:
+  - `avatar`: `compressImage(file, { targetBytes: PHOTO_MAX_BYTES, steps: AVATAR_STEPS })`;
+  - else if `file.type.startsWith("image/")`: `compressImage(file, { targetBytes: PHOTO_MAX_BYTES, steps: PHOTO_STEPS })`;
+  - else if `file.size > UPLOAD_BUDGET_BYTES`: throw `FileTooLargeError`;
+  - else return the same `File` object.
+- Exact copy constants, and `uploadErrorCopy(error, { photoCount?: number; formFile?: boolean })` that maps errors to them:
+
+| Case | Exact copy |
+|---|---|
+| `PhotoTooLargeError`, `photoCount` ≥ 2 | `These photos are too big. Try fewer photos.` |
+| `PhotoTooLargeError`, otherwise | `This photo is too big. Try a different photo.` |
+| `FileTooLargeError` | `This file is too big. Use a file under 3.5 MB.` |
+| Anything else (including a 413), `formFile: true` | `We could not send that. Please choose the file again.` |
+| Anything else, otherwise | `We could not send that. Please try again.` |
+
+**R2. Client call sites (all 7).** The `try` wraps the shrinking **and** the action call. A caught error never reaches an error
+boundary. If a form's file field is missing or has `size === 0`, send the `FormData` unchanged.
+1. `ticket-form.tsx` `handleSubmit`: inside the `startTransition` callback,
+   `try { const photos = await preparePhotos(photoFiles); …build FormData…; const result = await onCreateTicket(null, formData);
+   setState(result); …existing refresh… } catch (error) { setState({ success: false, error: uploadErrorCopy(error,
+   { photoCount: photoFiles.length }) }); … }`. In the catch, call `router.refresh()` unless the error is a
+   `PhotoTooLargeError` or `FileTooLargeError` (a thrown action may already have saved; the refresh shows it). `draft` and
+   `photoFiles` stay as they were.
+   **Tenant view only:** when `state.success` and `state.message === PHOTO_UPLOAD_UNFINISHED_MESSAGE`, show
+   `<Alert variant="warning">Sent. Your photos did not go through. Add them to the repair again.</Alert>` in place of the
+   success alert. The owner/manager view stays as is (it already shows `state.message`).
+2. `ticket-photo-upload.tsx`: keep the raw-file check at `:32` before the transition (L-014). Inside the transition, use the
+   same try/catch shape with `{ photoCount: selectedPhotos.length }` and the same `router.refresh()` rule. `selectedPhotos`
+   stays on failure.
+3. `expense-form.tsx` `saveExpense`: wrap only the receipt prep and the `onCreateExpense` call:
+   `prepareUploadFile(file, "receipt")`, then `formData.set("receiptFile", prepared)`. On catch, return
+   `{ success: false, error: uploadErrorCopy(error, { formFile: hadFile }) }`. The payer and bill-tenant logic after a
+   successful create is unchanged.
+4. `expense-list.tsx` (typed edits must survive; see §2 platform facts):
+   - Remove `action={updateAction}` from the update `<form>`. Add `onSubmit` that calls `event.preventDefault()`, reads
+     `new FormData(event.currentTarget)`, and runs `startTransition(() => updateAction(formData))`.
+   - Keep every **named** field uncontrolled with the same `name`, `defaultValue` and `defaultChecked`, so the sent
+     `FormData` is identical. With no form action, React never resets them. The "Who paid?" `<Select value={payerId}>`
+     (`expense-list.tsx:155`) has no `name` and stays controlled exactly as today.
+   - Read `isPending` as the third value of `useFormState`. The Save button stays `type="submit"`, label `Save Expense`, title
+     `Save updates to this expense.`. Use `Button` with `loading={isPending}` and `disabled={isPending}`, because
+     `SubmitButton`'s `useFormStatus` no longer sees a pending form action.
+   - `updateWithPayer` gains the same receipt prep and try/catch around `onUpdateExpense` (`formFile: false`: the file stays
+     picked). Payer saving, `Expense updated.`, and closing on success are unchanged. The delete form is unchanged.
+5. `signer-flow.tsx`: pass a wrapper to `useFormState` when `onUploadPropertyFile` is set (keep `unavailableAction`
+   otherwise). The wrapper does `prepareUploadFile(file, "document")` and the try/catch with `formFile: true`.
+6. `profile-settings.tsx` and 7. `onboarding-form.tsx`: wrap `onUpdateProfile` / `onCompleteOnboarding` the same way for
+   `avatarFile` (`prepareUploadFile(file, "avatar")`, `formFile: hadFile`). In the catch path also clear the preview
+   (`setPreviewUrl(null)`) and reset the file input (bump its `key`), so the screen never shows a photo that will not
+   send. In onboarding, change `MAX_AVATAR_SIZE_BYTES` to
+   `25 * 1024 * 1024` and the pick-time copy to `Image must be under 25 MB.`. Change both hints (`profile-settings.tsx:142`,
+   `onboarding-form.tsx:202`) to `JPG, PNG, or WebP.`.
+
+**R3. Body limit.** `next.config.mjs`: `experimental: { staleTimes: { dynamic: 30, static: 300 }, serverActions:
+{ bodySizeLimit: "4mb" } }`. "4mb" = 4,194,304 bytes. That leaves 524,288 bytes above the budget for multipart overhead and
+text fields, and stays under Vercel's cap. Nothing else changes in this file.
+
+**R4. HEIC removal and copy.** `ACCEPTED_MAINTENANCE_PHOTO_TYPES` = `image/jpeg`, `image/png`, `image/webp`. `:35` copy becomes
+`Photos must be JPEG, PNG, or WebP.`. `photo-upload.tsx:91` becomes `Up to {maxPhotos} photos.` (renders `Up to 5 photos.`).
+Add `export const PHOTO_UPLOAD_UNFINISHED_MESSAGE = "Maintenance request submitted, but the photo upload did not finish.";` to
+`lib/maintenance-photos.ts`. `maintenance-ticket-actions.ts:104` uses it; the returned text is unchanged. (A `"use server"`
+file may only export async functions, so the constant cannot live there.)
+
+**R5. Server byte checks (`lib/file-signature.ts`).**
+- `sniffFileType(bytes: Uint8Array)` returns one of these, or `null`:
+  - `"jpeg"`: `FF D8 FF` at offset 0;
+  - `"png"`: `89 50 4E 47 0D 0A 1A 0A`;
+  - `"webp"`: `RIFF` at 0 and `WEBP` at 8;
+  - `"pdf"`: `%PDF-` within the first 1024 bytes;
+  - `"zip"`: `50 4B 03 04`;
+  - `"ole"`: `D0 CF 11 E0 A1 B1 1A E1`.
+- `isPlainText(bytes)`: true when `sniffFileType` is `null` and there is no `0x00` byte in the first 4096 bytes.
+- `resolveUploadType(path: "maintenance" | "avatar" | "receipt" | "vault", bytes, fileName)` returns
+  `{ extension, contentType, category } | null`. `category` is `"image" | "pdf" | "document"`. The name's extension is
+  lowercased and used **only** to choose within a sniffed family from the fixed lists below; it is never stored raw.
+
+| Sniffed bytes | Name ext needed | Stored ext | contentType | category | Paths |
+|---|---|---|---|---|---|
+| jpeg | any | `jpg` | `image/jpeg` | image | all four |
+| png | any | `png` | `image/png` | image | all four |
+| webp | any | `webp` | `image/webp` | image | all four |
+| pdf | any | `pdf` | `application/pdf` | pdf | receipt, vault |
+| zip | `docx` | `docx` | `application/vnd.openxmlformats-officedocument.wordprocessingml.document` | document | vault |
+| zip | `xlsx` | `xlsx` | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` | document | vault |
+| ole | `doc` | `doc` | `application/msword` | document | vault |
+| ole | `xls` | `xls` | `application/vnd.ms-excel` | document | vault |
+| plain text | `csv` | `csv` | `text/csv` | document | vault |
+| plain text | `txt` | `txt` | `text/plain` | document | vault |
+
+  Anything else → `null`. HTML or SVG saved as `.txt`/`.csv` is accepted but stored as inert text; that is intended. GIF,
+  HEIC or SVG originals that reach the server without being shrunk are refused (the browser normally turns them into JPEG).
+- Placement in each server path. The check runs **after** every existing auth, role, rate-limit, capability, parse, count and
+  size check, and **before** the first `storage.upload`. Read `new Uint8Array(await file.arrayBuffer())`. On `null`, return
+  the path's copy below with zero `storage.upload` calls and zero DB inserts/updates. On success, build
+  `new File([bytes], file.name, { type: contentType })` and pass that object to `storage.upload` and to the metadata code.
+  Set the `contentType` option to the same value. Do not rely on the option alone (§2: storage-js ignores it for File bodies).
+
+  Per path (the key keeps its current template; only `${ext}` changes, and it now comes from the sniff):
+  - **Repair photos** (`"maintenance"`), in `uploadPhotosForTicket`: check **all** files after `:132-135`, before the loop.
+    - Mismatch copy: `Photos must be JPEG, PNG, or WebP.`
+    - Key: `${params.ticketId}/${crypto.randomUUID()}-${safeName}.${ext}` (`safeName` is built as today).
+    - `maintenance_photos.file_type` = contentType.
+  - **Receipts** (`"receipt"`), in `uploadExpenseReceiptFile`, after `:10-12`.
+    - Mismatch copy: `Receipt must be a photo or a PDF.`
+    - Key: `${propertyId}/receipts/${crypto.randomUUID()}.${ext}`. `property_files.file_type` = category.
+  - **Vault** (`"vault"`), in `uploadPropertyFile`, after `:139-141`.
+    - Mismatch copy: `This file type is not allowed. Use a photo, PDF, Word, Excel, or text file.`
+    - Key: `${propertyId}/${crypto.randomUUID()}.${ext}`. `property_files.file_type` = category.
+  - **Avatars** (`"avatar"`), in `storeAvatar`: the sniff replaces `getAvatarExtension` (delete it; nothing else uses it).
+    - Mismatch copy: `Profile photo must be a JPG, PNG, or WebP image.`
+    - Key: `${userId}/avatar.${ext}` with `upsert: true`. The `profiles.avatar_url` update is unchanged.
+
+- `createMaintenanceTicket` keeps saving the repair first and returning `PHOTO_UPLOAD_UNFINISHED_MESSAGE` on any photo
+  failure. Do not move the byte check ahead of the repair insert. `file_name` columns keep `file.name`.
+
+**R6. General.** Plain language: at most 12 words per sentence, and no banned words (§2). Lines ≤ 140 characters, files ≤ 500
+lines. Every Supabase error is checked. No new dependencies. Keep every auth, role, permission, rate-limit, capability, count
+and server-side size check, and its order, exactly as is (L-014). The one client-side change is the onboarding pick-time
+limit in R2.7 (`onboarding-form.tsx:14`, `:95-98`).
 
 ## 7. Validation commands
 ```
@@ -86,25 +272,119 @@ cd apps/web && npx vitest run --reporter=dot
 cd apps/web && npx tsc --noEmit
 npm run lint:web
 ```
-Do NOT run `npm run gate:web`. Claude walks the iPhone Simulator with large photos (`xcrun simctl addmedia`).
+Do NOT run `npm run gate:web` or Playwright. Claude runs the gate, the e2e spec, and an iPhone Simulator walk with large photos
+(`xcrun simctl addmedia`).
 
 ## 8. Acceptance criteria
-1. `image-compress.test.ts`: a 4000×3000 input → output long edge 2048, JPEG, named `.jpg`; a still-too-big result retries
-   at 1600/0.7; never upscales a 800×600 input; decode failure → original if ≤ 900 KB else `PhotoTooLargeError`.
-2. `file-signature.test.ts`: JPEG/PNG/WebP/PDF bytes detected; an HTML file renamed `.jpg` with `type image/jpeg` → rejected;
-   extension always from the sniffed type.
-3. Repair form test: two 3 MB photos are compressed before the action is called (action receives JPEGs under budget); an
-   action that throws → `We could not send that. Please try again.`, description kept, no error boundary.
-4. Budget test: files over 3.5 MB total → action not called, exact copy shown (repair and receipt variants).
-5. Server tests: each upload path rejects a mismatched signature with its existing invalid-type copy and stores
-   `<uuid>.<sniffed ext>`; all existing auth/role/permission/count tests stay green.
-6. `next.config.mjs` test or assertion: `experimental.serverActions.bodySizeLimit === "4mb"`.
-7. Copy: `Up to 5 photos.`; HEIC/HEIF absent from the accept list.
-8. Full suite + plain-language guard green.
+Each item names its file. "Exact copy" means the string from §6.
+1. `lib/__tests__/image-compress.test.ts` (spies on `imageCodec`; real `compressImage`, `preparePhotos`, `prepareUploadFile`,
+   `uploadErrorCopy`):
+   a. A 4000×3000 decode is encoded at 2048×1536. Output is `image/jpeg` and named `IMG_1.jpg` for input `IMG_1.HEIC`.
+   b. Step order: over target at 2048/0.8 → 1600/0.7 → 1280/0.6. Over target at all three → `PhotoTooLargeError`.
+   c. An 800×600 decode is encoded at 800×600 (never upscales).
+   d. Decode throws, or encode returns `null`: the original is returned when `size <= targetBytes`; otherwise
+      `PhotoTooLargeError`. `release()` is called in every case.
+   e. `preparePhotos` with five 3 MB inputs, where encode returns 819,200 bytes at step 1 and 614,400 at step 2: returns 5 JPEG
+      files, each ≤ 921,600, summing ≤ 3,670,016. With one input, its target is 921,600.
+   f. `prepareUploadFile`: a 3,670,017-byte PDF → `FileTooLargeError`; a 1 MB PDF → the same `File` object; `avatar` encodes at
+      most 512 px on the long edge.
+   g. Default codec, with stubbed `getContext`/`toBlob`/`decode`/`createObjectURL`: fills `#ffffff` before `drawImage`; the
+      canvas is 0×0 after encode; `getContext` returning `null` → `encode` returns `null`; `revokeObjectURL` runs on release.
+   h. `uploadErrorCopy` returns each of the 5 exact strings for its case.
+2. `lib/__tests__/file-signature.test.ts`:
+   - Each signature in R5 is detected, including `%PDF-` at offset 10.
+   - Every row of the R5 table resolves to its exact ext, contentType and category, and only on its listed paths.
+   - An HTML file named `x.jpg` → `null` on all four paths.
+   - PNG bytes named `a.jpg` → `png`. ZIP bytes named `lease.pdf` → `null`. OLE bytes named `a.docx` → `null`.
+   - `Lease.DOCX` (ZIP bytes) → `docx`. Text containing a `0x00` byte named `notes.txt` → `null`.
+3. `lib/__tests__/maintenance-photos.test.ts`: `image/heic` and `image/heif` → `false`; a PDF selection →
+   `Photos must be JPEG, PNG, or WebP.`; the other existing cases unchanged.
+4. `lib/__tests__/next-config.test.ts` (`// @vitest-environment node`): load the config with `await import(configUrl)`, where
+   `configUrl` is a `string`, so `tsc` needs no `.mjs` types. Assert `experimental.serverActions.bodySizeLimit === "4mb"` and
+   `experimental.staleTimes` equals `{ dynamic: 30, static: 300 }`.
+5. `components/__tests__/ticket-form.test.tsx`: the `PhotoUpload` stub gets a button that calls `onPhotosSelected(files)`.
+   a. Tenant, two 3 MB JPEGs: the action gets two `photos` Files, each `image/jpeg`, named `.jpg`, summing ≤ 3,670,016.
+   b. The action throws → `We could not send that. Please try again.` is shown. The textarea keeps its typed text, the
+      `Send to landlord` button is still rendered (no error boundary), and `router.refresh` is called once.
+   c. One photo whose encode returns `null` and whose size is 3 MB → `This photo is too big. Try a different photo.`; the action is
+      not called; `router.refresh` is not called.
+   d. Five 3 MB photos with the 1e encoder → the action is called once with 5 files under budget.
+   e. Tenant, the action returns `{ success: true, message: PHOTO_UPLOAD_UNFINISHED_MESSAGE }` →
+      `Sent. Your photos did not go through. Add them to the repair again.`, and the success alert is not shown.
+   f. Tenant plain success → `Sent. You'll see updates on Home.` (pin). The existing no-lease case is unchanged.
+6. `components/__tests__/ticket-photo-upload.test.tsx`: two 3 MB photos → `ticketId` plus two JPEG `photos` under budget; a
+   throwing action → `We could not send that. Please try again.`, photos still selected, `router.refresh` called; one photo
+   that cannot shrink → `This photo is too big. Try a different photo.` and no call; 4 existing + 2 picked →
+   `You can attach up to 5 photos per ticket.` and no call (pin).
+7. `components/dashboard/__tests__/upload-budget.test.tsx`:
+   a. ExpenseForm: a 3 MB JPEG receipt → `onCreateExpense` gets a `receiptFile` that is `image/jpeg`, ≤ 921,600 bytes and
+      named `.jpg`. A 4 MB PDF → `This file is too big. Use a file under 3.5 MB.` and no call. A throw with a receipt picked →
+      `We could not send that. Please choose the file again.`; the Save button is still rendered; the hidden `amountDollars`
+      still holds the typed amount.
+   b. ExpenseList: change the amount to `25` and the description to `New roof`; the action throws →
+      `We could not send that. Please try again.`; the amount input is still `25` and the description is still `New roof`.
+   c. ExpenseList pin: an unchanged save sends `expenseId`, `category=repair`, `amountDollars=10`, `expenseDate`,
+      `description=""`, `recurringFrequency=""`, `vendorId=""`, `receiptFileId=""`, the empty `receiptFile` entry, and no
+      `recurring` key. A 4 MB PDF → the file-too-big copy and no call.
+   d. SignerFlow: a 4 MB `.docx` → file-too-big copy, no call. A 3 MB JPEG → a JPEG ≤ 921,600 is sent. A throw →
+      `We could not send that. Please choose the file again.`, with the hidden `propertyId`/`category` values kept.
+8. `components/__tests__/avatar-upload.test.tsx` (real `useFormState`), for ProfileSettings and OnboardingForm:
+   - a 3 MB PNG avatar → the action gets a JPEG `avatarFile` encoded at ≤ 512 px;
+   - a throw → `We could not send that. Please choose the file again.`, the typed first name is kept, and the avatar
+     preview is cleared;
+   - an empty file input → the action gets the `FormData` unchanged;
+   - onboarding: a 6 MB JPEG is accepted at pick time and a 26 MB file shows `Image must be under 25 MB.`;
+   - both hints read `JPG, PNG, or WebP.`.
+9. `app/actions/__tests__/maintenance-photo-upload.test.ts` (real `uploadPhotosForTicket`; mocked admin client and
+   `canUserAdministerProperty`). Pins:
+   - a tenant on another tenant's repair → `You do not have access to this repair.`;
+   - an owner without admin rights → the same copy;
+   - 4 existing + 2 new → `You can attach up to 5 photos per ticket.`.
+   Each pin sends **HTML bytes** (so a byte check moved ahead of the access check would show the wrong copy) and still gets
+   the access/count copy above, with zero `storage.upload` calls. Byte checks:
+   - HTML bytes named `x.jpg` with type `image/jpeg` → `Photos must be JPEG, PNG, or WebP.`, with zero uploads and inserts;
+   - one good and one bad file → zero uploads;
+   - JPEG bytes named `Sink Leak.JPG` → key matches `^<ticketId>/[0-9a-f-]{36}-Sink-Leak\.jpg$`, the uploaded body's `.type`
+     is `image/jpeg`, and the inserted `file_type` is `image/jpeg`;
+   - PNG bytes named `p.jpg` → key ends `-p.png`.
+10. `app/actions/__tests__/maintenance-ticket-photo-result.test.ts`: `createMaintenanceTicket` with one photo, where
+    `uploadPhotosForTicket` returns `{ success: false, error: "Photos must be JPEG, PNG, or WebP." }` → `{ success: true,
+    message: "Maintenance request submitted, but the photo upload did not finish." }` and the repair insert ran once (pin).
+11. `app/actions/__tests__/expense-receipt-upload.test.ts` (real `createExpense`, `updateExpense`, `lib/uploads`):
+    - `requireAuth` is called with `"owner"` only;
+    - a non-admin on create and on update, sending HTML bytes → `You do not have access to this property.`, zero uploads;
+    - HTML bytes as `r.jpg` → `Receipt must be a photo or a PDF.`, with zero uploads, zero `property_files` inserts and zero
+      expense inserts;
+    - PDF bytes → key matches `^<propertyId>/receipts/[0-9a-f-]{36}\.pdf$`, the body `.type` is `application/pdf`, and
+      `file_type` is `pdf` with `category` `receipt`.
+12. `app/actions/__tests__/upload-property-file.test.ts` (real `uploadPropertyFile`):
+    - `requireAuth` is called with `"owner", "manager"`;
+    - a non-admin, sending HTML bytes → `You do not have access to this property.`, zero uploads;
+    - HTML bytes named `lease.docx` → the exact vault copy, zero uploads and inserts;
+    - DOCX header bytes named `Lease.DOCX` → key `^<propertyId>/[0-9a-f-]{36}\.docx$`, with the OOXML word contentType on the
+      body and `file_type` `document`;
+    - `a,b\n1,2` named `rent.csv` → `.csv`, `text/csv`;
+    - JPEG bytes named `scan.png` → `.jpg`, `image/jpeg`, `file_type` `image`.
+13. `app/actions/__tests__/profile-avatar.test.ts`:
+    - `updateProfile` with PNG bytes → upload key `<userId>/avatar.png` with `upsert: true`, the body `.type` is `image/png`,
+      and `profiles.avatar_url` is `profile-avatars/<userId>/avatar.png`;
+    - JPEG bytes → `<userId>/avatar.jpg`;
+    - HTML bytes typed `image/png` → `Profile photo must be a JPG, PNG, or WebP image.`, with zero uploads and zero `profiles`
+      updates;
+    - `completeOnboarding` with JPEG bytes → `<userId>/avatar.jpg` and the mocked `redirect` is called.
+14. `tests/e2e/maintenance-photos.spec.ts:75` asserts `image/heic` is **not** in the camera `accept`.
+15. `next.config.mjs` diff touches only `experimental`. `photo-upload.tsx` shows `Up to 5 photos.`. The tests listed as
+    unchanged in §2 pass without edits.
+16. The full suite (including `lib/__tests__/plain-language.test.ts`), `tsc` and lint are green.
 
 ## 9. Report format
-Compact status only: files changed with line counts, tests per criterion, command results. Do NOT include "Claude
-prompt" or "recommended next steps for Claude" sections. Report compact status only.
+Files changed with line counts, the test file and test name for each acceptance item, and command results.
+Do NOT include 'Claude prompt' or 'recommended next steps for Claude' sections. Report compact status only.
 
 ## 10. Constraints
-Only the files in §5. No new dependencies. No SQL. No change to who may upload where.
+- Only the files in §5. No new dependencies. No SQL.
+- No change to who may upload where, to any auth/role/permission/rate-limit/capability/count or server-side size check or
+  its order, to bucket names, or to key templates beyond the extension. (Only exception: the onboarding pick-time limit, R2.7.)
+- Do not edit `upload-accept.test.tsx`, `expense-partners.test.tsx`, `onboarding-form.test.tsx` or the two maintenance-ticket
+  action tests.
+- Lines ≤ 140 characters; files ≤ 500 lines; every Supabase error checked; exact copy only, with no invented URLs or emails.
