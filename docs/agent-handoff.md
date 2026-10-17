@@ -1323,3 +1323,9 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - ~21:30 App Privacy: privacy policy URL saved; 17 data types saved as **drafts** (owner OK; not published) with the
   purposes from `docs/app-store/app-privacy-answers.md` §1a; preview = 7 "Linked to You" categories, no tracking.
   Publish waits on 238h (manifest 17) and Q9 legal text.
+- 21:09 **TestFlight build 2 uploaded** (`testflight.sh`, owner approved the keychain prompt; `** EXPORT SUCCEEDED **`;
+  counter committed `f541a7b`). App Store Connect shows 1.0 (2) "Processing". Warning only: no dSYM for Plaid
+  `LinkKit.framework` (third-party binary; crash symbols for that framework will be missing). Build 2 has the known black
+  launch gap (238a-b fixes it; build 3 after it ships).
+- Owner money item seen on developer.apple.com: "Your default payment method cannot be used to automatically renew your
+  membership" (add a card). Program License Agreement update due by 2026-10-28 (Account Holder).
