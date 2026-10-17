@@ -1558,3 +1558,16 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   switch keeps the old theme until reopened — pre-existing, cosmetic).
 - Next: invite-flow redesign packet **237c-5** (design workflow `wf_d47da41f-39e` running: map → 3 designs → 3 judges →
   draft; live trigger quoted per L-029) → ChatGPT review (L3) → Codex.
+
+## 2026-10-17 ~17:45 — Sprint 237c-5 (manager invite redesign) packet rev 2 written — next: split → ChatGPT → Codex
+- Design panel `wf_d47da41f-39e` (map → 3 designs → 3 judges): 3/3 picked **Auth user first, then invitation rows +
+  grant, email last, rows accepted at sign-in** (rows-before-Auth and "no Auth user until click" both had fatal flaws:
+  early/wrong-role grants via the trigger, or changed email for non-allowlisted people).
+- Critic panel `wf_bd601a97-773`: all cited code/DB facts verified (HEAD `240667d`; live trigger md5
+  `2c51636368d7ef759fd151508e904240`; auth-js 2.68.0); 71/72 issues folded into **rev 2**
+  (`docs/sprint237c5-codex-prompt.md`). Open items in `docs/sprint237c5-critic-notes.md`: **split into smaller sprints**
+  (rev 2 = 902 lines, ~52 tests, fake Postgres+GoTrue model — too big for one Codex run) and 16 completeness items
+  (Send-vs-Revoke re-check untested, revoked invitee can still get a session, row actions' copy unmounts, …).
+- Not dispatched; not ChatGPT-reviewed yet. Production invite flow = HEAD (unchanged).
+- Also today: wizard flake fix (`unified-property-wizard.test.tsx:72` → `findByText`) still queued (L1).
+- **Rotate the chat now**: transcript is ~135 MB (threshold 50 MB). The redesign continues in a fresh session.
