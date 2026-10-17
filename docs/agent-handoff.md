@@ -1424,3 +1424,19 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   a 2nd open request for one profile is blocked by `account_deletion_requests_one_open`; a withdrawn + open pair is allowed;
   a bad role is blocked; `authenticated` select/insert/update/delete and `anon` select/insert are all denied. Live rows: 0.
   The table is unused until the 238b code ships (queue: 237c-1 round 2 → 238i → 238b).
+
+## Sprint 238j round 1 reviewed (2026-10-17 ~04:30) — FAIL → round 2 dispatched (fix attempt 1 of 2)
+- Codex round 1 done (report present). Claude isolated gate (worktree with only 238j's 34 files): 317 files / 2,651 tests,
+  lint, tsc, build all green. Three review agents: **security PASS** (all 4 storage write paths sniff bytes before any write;
+  stored type/extension come from bytes; OOXML scan bounded); **client** found a real bug — the new `catch` blocks swallow
+  Next's `redirect()` error (every successful onboarding would show an error); **tests FAIL** — 3 tautological tests
+  (expects inside the mocked action, swallowed by the component's catch; proven by mutation) + 8 weak pins + 1 flaky test.
+- Claude decision (recorded): raise the **browser pick-time** photo limit to 50 MB (server stays 10 MB; shrunk files are
+  ≤ 900 KB), because a 48 MP library photo converted to JPEG is 10–20 MB and was refused before shrinking.
+- Round 2 = `docs/sprint238j-codex-prompt.md` "Round 2" (F1–F7), runner `bspiy7rdk` (gpt-6-sol high). Lesson L-028.
+- Follow-ups (not in 238j): `lib/file-signature.ts` NITs (PDF signature may end past byte 1024; a dot-less name `txt` is
+  read as `.txt`; OOXML entry names matched anywhere in the ZIP — read the central directory if it ever matters);
+  unchecked storage `remove` errors in cleanup paths (`uploads.ts:46,51`, `document-templates.ts`,
+  `maintenance-queries.ts:51-58`, pre-existing L-002); shared `Alert` has no `role`; pinned copy "per ticket" uses a
+  banned word.
+- Test media for the walk: `scratchpad/media/` (48 MP 15 MB JPEG, 12 MP JPEG, 12 MP portrait HEIC).

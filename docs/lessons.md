@@ -154,3 +154,13 @@ alive while nothing was happening for 4 hours.
 **What was correct:** Parse the clock time out of any "try again at …" form and sleep until then.
 **Rule:** After every Codex run, check that a report file exists before reading the result; "exit 0" from the runner is not
 success. When a reset message appears, re-dispatch only after confirming the runner parsed the time ("waiting until …").
+
+#### L-028 | 2026-10-17 | TESTING
+**What happened:** Sprint 238j wrapped each form's action call in a new `try/catch`. Its tests put the `expect`s inside the
+mocked action. A failing `expect` throws, the component's `catch` swallowed it and showed friendly copy, and the test only
+checked the action was called. Three acceptance tests passed with compression switched off (proven by mutation). The same
+`catch` also swallowed Next's `redirect()` error, so a successful onboarding would show an error.
+**What was correct:** Capture calls with `vi.fn`, then assert on `action.mock.calls` after `waitFor`. In client `catch`
+blocks around server actions, call `unstable_rethrow(error)` from `next/navigation` first.
+**Rule:** Packets that add a `catch` around a server action require `unstable_rethrow` first plus a redirect test, and say
+"no `expect` inside a mock implementation". Reviews mutate the unit (return the raw input) to prove such tests can fail.
