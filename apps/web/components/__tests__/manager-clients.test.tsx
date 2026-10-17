@@ -10,7 +10,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 const toast = vi.hoisted(() => ({ success: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
 
-const client = { id: "client-1", name: "Taylor Homes", accountType: "llc" as const,
+const client = { id: "client-1", kind: "client" as const, name: "Taylor Homes", accountType: "llc" as const,
   contactEmail: null, homeCount: 1, summary: "1 rent overdue" };
 
 describe("manager clients", () => {

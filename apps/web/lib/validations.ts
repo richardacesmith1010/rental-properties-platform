@@ -59,7 +59,8 @@ export const updatePropertyTaxYearSchema = z.object({
 
 export const ownerStatementRequestSchema = z.object({
   accountId: z.string().uuid(),
-  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)
+  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+  propertyIds: z.array(z.string().uuid()).max(100).optional()
 });
 
 export const createPartnerSchema = z.object({ accountId: z.string().uuid(), displayName: trimmed(80) });

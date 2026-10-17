@@ -4,7 +4,7 @@ import { getCheckedAuthUser, getCurrentUserRole } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import { ownerStatementRequestSchema } from "@/lib/validations";
-import { isActiveClientManager } from "@/lib/client-accounts";
+import { getManagedHomeIds, isActiveClientManager } from "@/lib/client-accounts";
 import { paymentMethodLabel } from "@/lib/payment-method-label";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { chunks, fetchAllPages } from "@/lib/supabase-pagination";
@@ -36,6 +36,9 @@ export type OwnerStatement = {
   owed: Array<{ homeLabel: string; dueDate: string; amountCents: number }>;
 };
 export class StatementAccessError extends Error { constructor() { super("Statement unavailable."); } }
+export class StatementHomeAccessError extends StatementAccessError {
+  constructor() { super(); this.message = "You do not manage this home."; }
+}
 export class StatementInvariantError extends Error { constructor() { super("Statement totals do not match."); } }
 const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
 const cmp = (a: string, b: string) => a.localeCompare(b, "en");
@@ -62,20 +65,37 @@ function tenantName(name: string | null | undefined): string {
 }
 
 export async function getOwnerStatement(managerId: string, accountId: string, month: string,
-  now = new Date()): Promise<OwnerStatement> {
-  if (!(await isActiveClientManager(managerId, accountId))) throw new StatementAccessError();
+  now = new Date(), requestedPropertyIds?: string[]): Promise<OwnerStatement> {
+  const clientManager = await isActiveClientManager(managerId, accountId);
   if (!isStatementMonth(month, now)) throw new Error("Invalid statement month.");
   const admin = createAdminClient();
   const { data: account, error: accountError } = await admin.from("ownership_accounts")
     .select("id, display_name, account_type, managed_client").eq("id", accountId).maybeSingle();
   if (accountError) throw accountError;
-  if (!account?.managed_client) throw new StatementAccessError();
+  if (!account) throw new StatementAccessError();
+  if (account.managed_client && !clientManager) throw new StatementAccessError();
+  const managedIds = account.managed_client ? [] : await getManagedHomeIds(managerId);
+  const managedSet = new Set(managedIds);
+  if (!account.managed_client && !managedIds.length) throw new StatementAccessError();
+  const accountHomes = account.managed_client ? [] : (await Promise.all(chunks(managedIds).map((part) =>
+    fetchAllPages<Home>((from, to) => admin.from("properties").select("id, name, active")
+      .eq("owner_account_id", accountId).in("id", part).order("id").range(from, to))))).flat();
+  if (!account.managed_client && !accountHomes.length) throw new StatementAccessError();
+  if (!account.managed_client && requestedPropertyIds?.some((id) => !managedSet.has(id))) {
+    throw new StatementHomeAccessError();
+  }
+  const allowedIds = requestedPropertyIds?.length ? [...new Set(requestedPropertyIds)] : managedIds;
   const { data: manager, error: managerError } = await admin.from("profiles")
     .select("id, full_name, email").eq("id", managerId).maybeSingle();
   if (managerError) throw managerError;
   if (!manager) throw new Error("Manager profile unavailable.");
-  const homes = await fetchAllPages<Home>((from, to) => admin.from("properties")
-    .select("id, name, active").eq("owner_account_id", accountId).order("id").range(from, to));
+  const homes = account.managed_client
+    ? await fetchAllPages<Home>((from, to) => admin.from("properties").select("id, name, active")
+      .eq("owner_account_id", accountId).order("id").range(from, to))
+    : accountHomes.filter((home) => allowedIds.includes(home.id));
+  if (!account.managed_client && (!homes.length || (requestedPropertyIds && homes.length !== allowedIds.length))) {
+    throw new StatementHomeAccessError();
+  }
   const homeIds = homes.map((row) => row.id);
   const inPages = async <T>(ids: string[], query: (ids: string[], from: number, to: number) =>
     PromiseLike<{ data: T[] | null; error: unknown }>): Promise<T[]> =>
@@ -218,11 +238,14 @@ export async function loadStatementDownload(request: Request, now = new Date()):
     if (!checkRateLimit(`ownerStatement:${user.id}`, 30, 3_600_000).allowed)
       return failure(429, "Too many downloads. Try again later.");
     const params = new URL(request.url).searchParams;
-    const parsed = ownerStatementRequestSchema.safeParse({ accountId: params.get("accountId"), month: params.get("month") });
+    const parsed = ownerStatementRequestSchema.safeParse({ accountId: params.get("accountId"), month: params.get("month"),
+      propertyIds: params.getAll("propertyId").length ? params.getAll("propertyId") : undefined });
     if (!parsed.success || !isStatementMonth(parsed.data.month, now)) return failure(400, "Pick a month from the list.");
-    const statement = await getOwnerStatement(user.id, parsed.data.accountId, parsed.data.month, now);
+    const statement = await getOwnerStatement(user.id, parsed.data.accountId, parsed.data.month, now,
+      parsed.data.propertyIds);
     return { ok: true, statement };
   } catch (error) {
+    if (error instanceof StatementHomeAccessError) return failure(403, error.message);
     if (error instanceof StatementAccessError) return failure(404, "Statement unavailable.");
     console.error("Owner statement download failed", error);
     return failure(500, "Could not make the statement. Please try again.");

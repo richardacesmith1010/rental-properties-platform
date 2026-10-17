@@ -1,7 +1,8 @@
 import "server-only";
 
-import { isActiveClientManager } from "@/lib/client-accounts";
+import { getManagedHomeIds, isActiveClientManager } from "@/lib/client-accounts";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { chunks } from "@/lib/supabase-pagination";
 
 export type ClientHome = {
   id: string;
@@ -13,6 +14,7 @@ export type ClientHome = {
 };
 export type ClientOverview = {
   id: string;
+  kind: "client" | "domusOwner";
   name: string;
   accountType: "individual" | "llc";
   contactEmail: string | null;
@@ -71,23 +73,37 @@ export function summarizeClientHomes(homes: ClientHome[]) {
 
 async function load(managerId: string, accountId?: string) {
   const admin = createAdminClient();
-  const { data: links, error: linksError } = await admin.from("ownership_account_managers")
-    .select("account_id").eq("manager_profile_id", managerId).eq("active", true);
+  const [{ data: links, error: linksError }, managedIds] = await Promise.all([
+    admin.from("ownership_account_managers")
+      .select("account_id").eq("manager_profile_id", managerId).eq("active", true),
+    getManagedHomeIds(managerId)
+  ]);
   if (linksError) throw linksError;
-  const ids = [...new Set((links ?? []).map((link) => link.account_id))]
+  const clientIds = [...new Set((links ?? []).map((link) => link.account_id))];
+  const assignedResults = await Promise.all(chunks(managedIds).map((part) => admin.from("properties")
+    .select("id, owner_account_id, active").in("id", part)));
+  for (const result of assignedResults) if (result.error) throw result.error;
+  const activeAssignedHomes = assignedResults.flatMap((result) => result.data ?? [])
+    .filter((home) => home.active !== false);
+  const assignedSet = new Set(activeAssignedHomes.map((home) => home.id));
+  const ids = [...new Set([...clientIds, ...activeAssignedHomes.map((home) => home.owner_account_id)])]
     .filter((id) => !accountId || id === accountId);
   if (!ids.length) return [];
-  const { data: rawAccounts, error: accountError } = await admin.from("ownership_accounts")
-    .select("id, display_name, account_type, client_contact_email, managed_client").in("id", ids);
-  if (accountError) throw accountError;
-  const accounts = (rawAccounts ?? [] as AccountRow[]).filter((account) => account.managed_client) as AccountRow[];
+  const accountResults = await Promise.all(chunks(ids).map((part) => admin.from("ownership_accounts")
+    .select("id, display_name, account_type, client_contact_email, managed_client").in("id", part)));
+  for (const result of accountResults) if (result.error) throw result.error;
+  const accounts = (accountResults.flatMap((result) => result.data ?? []) as AccountRow[]).filter((account) =>
+    account.managed_client ? clientIds.includes(account.id) : ids.includes(account.id))
+    .sort((a, b) => Number(b.managed_client) - Number(a.managed_client)) as AccountRow[];
   if (!accounts.length) return [];
   const accountIds = accounts.map((account) => account.id);
   const { data: rawProperties, error: propertyError } = await admin.from("properties")
     .select("id, owner_account_id, name, address_line1, city, state, postal_code, active")
     .in("owner_account_id", accountIds);
   if (propertyError) throw propertyError;
-  const properties = ((rawProperties ?? []) as PropertyRow[]).filter((property) => property.active !== false);
+  const properties = ((rawProperties ?? []) as PropertyRow[]).filter((property) =>
+    property.active !== false && (accounts.find((account) => account.id === property.owner_account_id)?.managed_client
+      ? true : assignedSet.has(property.id)));
   const propertyIds = properties.map((property) => property.id);
   let units: UnitRow[] = [];
   let leases: LeaseRow[] = [];
@@ -121,8 +137,10 @@ async function load(managerId: string, accountId?: string) {
         ...getHomeStatus(activeLeases, rents)
       } satisfies ClientHome;
     });
-    return { id: account.id, name: account.display_name, accountType: account.account_type,
-      contactEmail: account.client_contact_email, homeCount: homes.length, summary: summarizeClientHomes(homes), homes };
+    return { id: account.id, kind: account.managed_client ? "client" as const : "domusOwner" as const,
+      name: account.display_name, accountType: account.account_type,
+      contactEmail: account.client_contact_email, homeCount: homes.length,
+      summary: account.managed_client ? summarizeClientHomes(homes) : "Domus owner", homes };
   });
 }
 
@@ -131,7 +149,8 @@ export async function getClientsOverview(managerId: string): Promise<ClientOverv
 }
 
 export async function getClientDetail(managerId: string, accountId: string): Promise<ClientDetail | null> {
-  if (!(await isActiveClientManager(managerId, accountId))) return null;
+  const managedIds = await getManagedHomeIds(managerId);
+  if (!(await isActiveClientManager(managerId, accountId)) && !managedIds.length) return null;
   const result = (await load(managerId, accountId))[0];
   if (!result) return null;
   const { homeCount: _homeCount, summary: _summary, ...detail } = result;

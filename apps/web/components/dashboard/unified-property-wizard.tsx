@@ -60,7 +60,7 @@ export function UnifiedPropertyWizard({
   const [step, setStep] = useState<WizardStep>("property");
   const [pickingClient, setPickingClient] = useState(Boolean(managerClients));
   const [selectedAccountId, setSelectedAccountId] = useState(accountId ?? "");
-  const [clients, setClients] = useState(managerClients ?? []);
+  const [clients, setClients] = useState((managerClients ?? []).filter((client) => client.kind === "client"));
   const [propertyName, setPropertyName] = useState("");
   const [addressLine1, setAddressLine1] = useState("");
   const [city, setCity] = useState("");

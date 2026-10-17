@@ -49,9 +49,9 @@ export function ClientsSection({ clients, onCreateClientAccount }: Props) {
     <div className="space-y-5">
       {items.length ? <>
         <div className="space-y-2">{items.map((client) => <ClientRow key={client.id} client={client} />)}</div>
-        <p className="text-sm text-[var(--muted)]">
+        {items.some((client) => client.kind === "client") && <p className="text-sm text-[var(--muted)]">
           Rent for client homes is paid outside Domus. You mark it paid when it comes in.
-        </p>
+        </p>}
       </> : <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-8 text-center">
         <h2 className="text-xl font-semibold">Add your first client</h2>
         <p className="mx-auto mt-2 max-w-sm text-sm text-[var(--muted)]">
@@ -61,7 +61,7 @@ export function ClientsSection({ clients, onCreateClientAccount }: Props) {
       </div>}
       <AddClientSheet open={open} onClose={() => setOpen(false)} onCreateClientAccount={onCreateClientAccount}
         onAdded={(client) => { setItems((current) => [...current, {
-          ...client, contactEmail: null, homeCount: 0, summary: "No tenants yet"
+          ...client, kind: "client", contactEmail: null, homeCount: 0, summary: "No tenants yet"
         }]); router.refresh(); }} />
     </div>
   );

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ClientDetail } from "@/components/dashboard/clients/client-detail";
+import { WhoseHomeStep } from "@/components/dashboard/clients/whose-home-step";
 import { ClientsSection } from "@/components/dashboard/clients/clients-section";
 import { Dashboard } from "@/components/dashboard";
 import { SectionFrame } from "@/components/dashboard/section-renderer-support";
@@ -8,7 +9,7 @@ import type { DashboardProps } from "@/components/dashboard/types";
 import type { SectionRendererProps } from "@/components/dashboard/section-map";
 import type { ClientDetail as Detail } from "@/lib/client-overview";
 
-const client = { id: "client-1", name: "Taylor Homes", accountType: "llc" as const,
+const client = { id: "client-1", kind: "client" as const, name: "Taylor Homes", accountType: "llc" as const,
   contactEmail: null, homeCount: 1, summary: "No tenants yet" };
 const detail: Detail = { ...client, homes: [] };
 const home = { id: "home-1", name: "Atlas House", address: "123 Forum Ave", status: "no_tenant" as const };
@@ -48,6 +49,11 @@ function renderFrame(activeSection: string, profileRole: "owner" | "manager") {
 }
 
 describe("client page shell", () => {
+  it("shows the Domus owner label in Clients", () => {
+    render(<ClientsSection clients={[{ ...client, summary: "Domus owner" }]} onCreateClientAccount={vi.fn()} />);
+    expect(screen.getByText("Domus owner")).toBeInTheDocument();
+    expect(screen.getByText("Taylor Homes")).toBeInTheDocument();
+  });
   it("shows one manager Add client action and opens its sheet", () => {
     render(<Dashboard {...{ userEmail: "manager@example.test", data: { profileRole: "manager" }, clients: [client] } as DashboardProps} />);
     expect(screen.getAllByRole("button", { name: "Add client" })).toHaveLength(1);
@@ -69,6 +75,17 @@ describe("client page shell", () => {
     unmount();
     render(<ClientDetail {...detailProps([home])} />);
     expect(screen.getAllByRole("button", { name: "Add a home" })).toHaveLength(1);
+  });
+  it("hides Add a home and the outside-payment note for a Domus owner", () => {
+    render(<ClientDetail {...detailProps()} client={{ ...detail, kind: "domusOwner" }} />);
+    expect(screen.queryByRole("button", { name: "Add a home" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/paid outside Domus/i)).not.toBeInTheDocument();
+  });
+  it("does not offer Domus owners in the home picker", () => {
+    render(<WhoseHomeStep clients={[client, { ...client, id: "owner-1", kind: "domusOwner", name: "Domus Owner" }]}
+      selectedId="" onSelect={vi.fn()} onCreateClientAccount={vi.fn()} />);
+    expect(screen.getByRole("radio", { name: /Taylor Homes/ })).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: /Domus Owner/ })).not.toBeInTheDocument();
   });
 
   it("renders home and clients links without sign out", () => {

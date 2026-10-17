@@ -4,7 +4,7 @@ import { ClientDetail } from "@/components/dashboard/clients/client-detail";
 const mocks = vi.hoisted(() => ({ summary: vi.fn() }));
 vi.mock("@/app/actions/owner-statement", () => ({ getOwnerStatementSummary: mocks.summary }));
 vi.mock("@/components/dashboard/unified-property-wizard", () => ({ UnifiedPropertyWizard: () => null }));
-const client = { id: "00000000-0000-4000-8000-000000000001", name: "Example Homes",
+const client = { id: "00000000-0000-4000-8000-000000000001", kind: "client" as const, name: "Example Homes",
   accountType: "llc" as const, contactEmail: null, homes: [] };
 const props = { client, defaultMonth: "2026-09", monthOptions: ["2026-10", "2026-09"],
   onCreatePropertyWithSetup: vi.fn(), onCreateClientAccount: vi.fn() };

@@ -19,7 +19,7 @@ export function WhoseHomeStep({ clients, selectedId, onSelect, onCreateClientAcc
     <div className="space-y-3">
       <h2 className="text-xl font-semibold text-[var(--ink)]">Whose home is this?</h2>
       <div role="radiogroup" aria-label="Client" className="space-y-2">
-        {clients.map((client) => (
+        {clients.filter((client) => client.kind === "client").map((client) => (
           <button key={client.id} type="button" role="radio" aria-checked={selectedId === client.id}
             onClick={() => onSelect(client.id)} title={`Choose ${client.name}`}
             className={`flex min-h-11 w-full items-center justify-between rounded-lg border p-3 text-left text-[var(--ink)] ${
@@ -44,7 +44,7 @@ export function WhoseHomeStep({ clients, selectedId, onSelect, onCreateClientAcc
       <AddClientSheet open={open} onClose={() => setOpen(false)} onCreateClientAccount={onCreateClientAccount}
         onAdded={(client) => {
           onSelect(client.id);
-          onClientAdded?.({ ...client, contactEmail: null, homeCount: 0, summary: "No tenants yet" });
+          onClientAdded?.({ ...client, kind: "client", contactEmail: null, homeCount: 0, summary: "No tenants yet" });
         }} />
     </div>
   );

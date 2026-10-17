@@ -6,12 +6,13 @@ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: admin }));
 import {
   assertStripeEligibleAccount, assertStripeEligibleProperty, getClientState,
   getClientStateForProperty, getPropertyIdForLease, isActiveClientManager, isUnclaimedClientAccount,
-  isUnclaimedClientProperty, listClientAccountsForManager, StripeNotEligibleError
+  isUnclaimedClientProperty, listClientAccountsForManager, getManagedHomeIds, StripeNotEligibleError
 } from "@/lib/client-accounts";
 
 function query(result: { data?: unknown; error?: unknown }) {
   const builder: Record<string, unknown> = {};
-  for (const method of ["select", "eq", "in"]) builder[method] = vi.fn(() => builder);
+  for (const method of ["select", "eq", "in", "order"]) builder[method] = vi.fn(() => builder);
+  builder.range = vi.fn().mockResolvedValue(result);
   builder.maybeSingle = vi.fn().mockResolvedValue(result);
   builder.then = (resolve: (value: unknown) => unknown) => Promise.resolve(result).then(resolve);
   return builder;
@@ -20,6 +21,26 @@ function query(result: { data?: unknown; error?: unknown }) {
 beforeEach(() => vi.clearAllMocks());
 
 describe("client account helpers", () => {
+  it("pages active manager homes beyond the Supabase row limit", async () => {
+    const rows = Array.from({ length: 1001 }, (_, index) => ({ property_id: `h${index}` }));
+    const ranges: Array<[number, number]> = [];
+    const builder = query({ data: [] });
+    builder.range = vi.fn(async (from: number, to: number) => {
+      ranges.push([from, to]);
+      return { data: rows.slice(from, to + 1), error: null };
+    });
+    admin.mockReturnValue({ from: () => builder });
+    expect(await getManagedHomeIds("manager")).toHaveLength(1001);
+    expect(ranges).toEqual([[0, 999], [1000, 1999]]);
+  });
+  it("reads only active manager assignments", async () => {
+    const builder = query({ data: [{ property_id: "h1" }, { property_id: "h2" }] });
+    builder.eq = vi.fn((key: string, value: unknown) => key === "active" && value === true
+      ? query({ data: [{ property_id: "h1" }] }) : builder);
+    admin.mockReturnValue({ from: () => builder });
+    expect(await getManagedHomeIds("manager")).toEqual(["h1"]);
+    expect(builder.eq).toHaveBeenCalledWith("active", true);
+  });
   it("throws on every state and manager lookup error", async () => {
     admin.mockReturnValue({ from: () => query({ error: { code: "PGRST205" } }) });
     await expect(getClientState("account")).rejects.toEqual({ code: "PGRST205" });
@@ -51,6 +72,7 @@ describe("client account helpers", () => {
   it("lists only active links and counts homes in one query", async () => {
     const from = vi.fn((table: string) => {
       if (table === "ownership_account_managers") return query({ data: [{ account_id: "Y" }] });
+      if (table === "property_managers") return query({ data: [] });
       if (table === "ownership_accounts") return query({ data: [
         { id: "Y", display_name: "Client Y", account_type: "llc", claim_state: "unclaimed", managed_client: true }
       ] });
@@ -58,13 +80,14 @@ describe("client account helpers", () => {
     });
     admin.mockReturnValue({ from });
     expect(await listClientAccountsForManager("manager")).toEqual([{
-      id: "Y", name: "Client Y", accountType: "llc", claimState: "unclaimed", homeCount: 1
+      id: "Y", kind: "client", name: "Client Y", accountType: "llc", claimState: "unclaimed", homeCount: 1
     }]);
     expect(from.mock.calls.filter(([table]) => table === "properties")).toHaveLength(1);
   });
 
   it("keeps managers' client lists isolated", async () => {
     const from = vi.fn((table: string) => {
+      if (table === "property_managers") return query({ data: [] });
       if (table === "ownership_account_managers") {
         const builder = query({ data: [] });
         builder.eq = vi.fn((column: string, value: string) => column === "manager_profile_id"
@@ -80,6 +103,53 @@ describe("client account helpers", () => {
     admin.mockReturnValue({ from });
     expect((await listClientAccountsForManager("A")).map((row) => row.id)).toEqual(["client-A"]);
     expect((await listClientAccountsForManager("B")).map((row) => row.id)).toEqual(["client-B"]);
+  });
+  it("lists a Domus owner with only actively assigned homes", async () => {
+    const from = vi.fn((table: string) => {
+      if (table === "ownership_account_managers") return query({ data: [] });
+      if (table === "property_managers") return query({ data: [{ property_id: "h1" }] });
+      if (table === "properties") return query({ data: [{ id: "h1", owner_account_id: "owner", active: true }] });
+      if (table === "ownership_accounts") return query({ data: [{ id: "owner", display_name: "Domus Owner",
+        account_type: "individual", claim_state: "claimed", managed_client: false }] });
+      return query({ data: [] });
+    });
+    admin.mockReturnValue({ from });
+    expect(await listClientAccountsForManager("manager")).toEqual([{
+      id: "owner", kind: "domusOwner", name: "Domus Owner", accountType: "individual",
+      claimState: "claimed", homeCount: 1
+    }]);
+  });
+  it("does not list a managed client reached only through a home assignment", async () => {
+    const from = vi.fn((table: string) => {
+      if (table === "ownership_account_managers") return query({ data: [] });
+      if (table === "property_managers") return query({ data: [{ property_id: "h1" }] });
+      if (table === "properties") return query({ data: [{ id: "h1", owner_account_id: "client", active: true }] });
+      if (table === "ownership_accounts") return query({ data: [{ id: "client", display_name: "Client",
+        account_type: "individual", claim_state: "claimed", managed_client: true }] });
+      return query({ data: [] });
+    });
+    admin.mockReturnValue({ from });
+    expect(await listClientAccountsForManager("manager")).toEqual([]);
+  });
+  it("chunks managed home IDs before loading linked owner accounts", async () => {
+    const rows = Array.from({ length: 201 }, (_, index) => ({ property_id: `h${index}` }));
+    const propertyLists: number[] = [];
+    const from = vi.fn((table: string) => {
+      if (table === "property_managers") return query({ data: rows });
+      if (table === "ownership_account_managers") return query({ data: [] });
+      if (table === "properties") {
+        const builder = query({ data: [] });
+        builder.in = vi.fn((_key: string, ids: string[]) => {
+          propertyLists.push(ids.length);
+          return builder;
+        });
+        return builder;
+      }
+      return query({ data: [] });
+    });
+    admin.mockReturnValue({ from });
+    expect(await listClientAccountsForManager("manager")).toEqual([]);
+    expect(propertyLists).toEqual([200, 1]);
   });
 
   it("throws when list queries fail", async () => {

@@ -64,12 +64,12 @@ export function ClientDetail({ client, defaultMonth, monthOptions, onCreatePrope
       </header>
       <OwnerStatementSheet open={statementOpen} onClose={() => setStatementOpen(false)}
         client={client} defaultMonth={defaultMonth} monthOptions={monthOptions} />
-      <p className="rounded-lg border border-[var(--line)] bg-[var(--surface-2)] p-4 text-sm">
+      {client.kind === "client" && <p className="rounded-lg border border-[var(--line)] bg-[var(--surface-2)] p-4 text-sm">
         Rent here is paid outside Domus. Mark it paid when it comes in.
-      </p>
+      </p>}
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-xl font-semibold">Homes</h2>{addButton}
+          <h2 className="text-xl font-semibold">Homes</h2>{client.kind === "client" && addButton}
         </div>
         {client.homes.length ? client.homes.map((home) => (
           <Link key={home.id} href={`/manager/properties/${home.id}`} title={`View ${home.name}`}
@@ -84,11 +84,11 @@ export function ClientDetail({ client, defaultMonth, monthOptions, onCreatePrope
           <p>No homes yet.</p>
         </div>}
       </section>
-      <UnifiedPropertyWizard open={open} accountId={client.id}
+      {client.kind === "client" && <UnifiedPropertyWizard open={open} accountId={client.id}
         managerClients={[{ ...client, homeCount: client.homes.length, summary: "" }]}
         onCreateClientAccount={onCreateClientAccount} onOpenChange={setOpen}
         onCreatePropertyWithSetup={onCreatePropertyWithSetup}
-        returnToClientHref={`/manager/clients/${client.id}`} />
+        returnToClientHref={`/manager/clients/${client.id}`} />}
       </main>
     </div>
   );

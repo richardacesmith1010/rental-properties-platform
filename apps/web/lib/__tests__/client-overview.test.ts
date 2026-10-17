@@ -2,9 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const admin = vi.hoisted(() => vi.fn());
 const active = vi.hoisted(() => vi.fn());
+const managed = vi.hoisted(() => vi.fn());
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: admin }));
-vi.mock("@/lib/client-accounts", () => ({ isActiveClientManager: active }));
+vi.mock("@/lib/client-accounts", () => ({ isActiveClientManager: active, getManagedHomeIds: managed }));
 import { getHomeStatus, getClientsOverview, getClientDetail, summarizeClientHomes } from "@/lib/client-overview";
 
 const now = new Date("2026-11-01T03:00:00Z"); // October 31 in Denver
@@ -52,9 +53,12 @@ describe("client rent status", () => {
   });
 });
 
-function mockDatabase(clientCount: number, rows?: Record<string, unknown[]>, errorTable?: string) {
+function mockDatabase(clientCount: number, rows?: Record<string, unknown[]>, errorTable?: string,
+  onIn?: (table: string, key: string, values: unknown[]) => void) {
   const tables: Record<string, unknown[]> = rows ?? {
-    ownership_account_managers: Array.from({ length: clientCount }, (_, i) => ({ account_id: `client-${i}` })),
+    ownership_account_managers: Array.from({ length: clientCount }, (_, i) => ({
+      account_id: `client-${i}`, manager_profile_id: "manager", active: true
+    })),
     ownership_accounts: Array.from({ length: clientCount }, (_, i) => ({ id: `client-${i}`, display_name: `Client ${i}`,
       account_type: "individual", client_contact_email: null, managed_client: true })),
     properties: Array.from({ length: clientCount }, (_, i) => ({ id: `home-${i}`, owner_account_id: `client-${i}`,
@@ -64,15 +68,22 @@ function mockDatabase(clientCount: number, rows?: Record<string, unknown[]>, err
   const calls: string[] = [];
   admin.mockImplementation(() => ({ from: (table: string) => {
     calls.push(table);
-    const response = { data: tables[table] ?? [], error: table === errorTable ? new Error("db") : null };
-    const chain = { select: () => chain, eq: () => chain, in: () => chain,
-      then: (resolve: (value: typeof response) => unknown) => Promise.resolve(response).then(resolve) };
+    let rows = tables[table] ?? [];
+    const error = table === errorTable ? new Error("db") : null;
+    const chain = { select: () => chain,
+      eq: (key: string, value: unknown) => { rows = rows.filter((row) => (row as Record<string, unknown>)[key] === value); return chain; },
+      in: (key: string, values: unknown[]) => {
+        onIn?.(table, key, values);
+        rows = rows.filter((row) => values.includes((row as Record<string, unknown>)[key])); return chain;
+      },
+      then: (resolve: (value: { data: unknown[]; error: Error | null }) => unknown) =>
+        Promise.resolve({ data: rows, error }).then(resolve) };
     return chain;
   } }));
   return calls;
 }
 
-beforeEach(() => { vi.clearAllMocks(); active.mockResolvedValue(true); });
+beforeEach(() => { vi.clearAllMocks(); active.mockResolvedValue(true); managed.mockResolvedValue([]); });
 
 describe("client overview queries", () => {
   it("keeps query count constant for one and five clients", async () => {
@@ -90,16 +101,64 @@ describe("client overview queries", () => {
   });
   it("does not count inactive homes", async () => {
     const rows = {
-      ownership_account_managers: [{ account_id: "client-0" }],
-      ownership_accounts: [{ id: "client-0", display_name: "Client 0", account_type: "individual", client_contact_email: null, managed_client: true }],
+      ownership_account_managers: [{ account_id: "client-0", manager_profile_id: "manager", active: true }],
+      ownership_accounts: [{ id: "client-0", display_name: "Client 0", account_type: "individual",
+        client_contact_email: null, managed_client: true }],
       properties: [
-        { id: "active-home", owner_account_id: "client-0", name: "Active", address_line1: "1 Main", city: "Denver", state: "CO", postal_code: "80202", active: true },
-        { id: "archived-home", owner_account_id: "client-0", name: "Archived", address_line1: "2 Main", city: "Denver", state: "CO", postal_code: "80202", active: false }
+        { id: "active-home", owner_account_id: "client-0", name: "Active", address_line1: "1 Main", city: "Denver",
+          state: "CO", postal_code: "80202", active: true },
+        { id: "archived-home", owner_account_id: "client-0", name: "Archived", address_line1: "2 Main", city: "Denver",
+          state: "CO", postal_code: "80202", active: false }
       ], units: [], leases: [], rent_charges: []
     };
     mockDatabase(0, rows);
     const [client] = await getClientsOverview("manager");
     expect(client.homeCount).toBe(1);
+  });
+  it("lists a Domus owner with only the manager's active homes", async () => {
+    managed.mockResolvedValue(["home-0"]);
+    mockDatabase(0, {
+      ownership_account_managers: [],
+      ownership_accounts: [{ id: "owner-0", display_name: "Owner 0", account_type: "individual",
+        client_contact_email: null, managed_client: false }],
+      properties: [{ id: "home-0", owner_account_id: "owner-0", name: "Home", address_line1: "1 Main",
+        city: "Denver", state: "CO", postal_code: "80202", active: true },
+      { id: "home-1", owner_account_id: "owner-0", name: "Other", address_line1: "2 Main",
+        city: "Denver", state: "CO", postal_code: "80202", active: true }],
+      units: [], leases: [], rent_charges: []
+    });
+    expect(await getClientsOverview("manager")).toMatchObject([{
+      id: "owner-0", kind: "domusOwner", summary: "Domus owner", homeCount: 1
+    }]);
+  });
+  it("does not list a managed client reached only through a home assignment", async () => {
+    managed.mockResolvedValue(["home-0"]);
+    mockDatabase(0, {
+      ownership_account_managers: [],
+      ownership_accounts: [{ id: "client-0", display_name: "Client 0", account_type: "individual",
+        client_contact_email: null, managed_client: true }],
+      properties: [{ id: "home-0", owner_account_id: "client-0", name: "Home", address_line1: "1 Main",
+        city: "Denver", state: "CO", postal_code: "80202", active: true }],
+      units: [], leases: [], rent_charges: []
+    });
+    expect(await getClientsOverview("manager")).toEqual([]);
+  });
+  it("chunks manager home IDs before loading their owner accounts", async () => {
+    const ids = Array.from({ length: 201 }, (_, index) => `h${index}`);
+    managed.mockResolvedValue(ids);
+    const sizes: number[] = [];
+    mockDatabase(0, {
+      ownership_account_managers: [],
+      ownership_accounts: [{ id: "owner", display_name: "Owner", account_type: "individual",
+        client_contact_email: null, managed_client: false }],
+      properties: ids.map((id) => ({ id, owner_account_id: "owner", name: id,
+        address_line1: "1 Main", city: "Denver", state: "CO", postal_code: "80202", active: true })),
+      units: [], leases: [], rent_charges: []
+    }, undefined, (table, key, values) => {
+      if (table === "properties" && key === "id") sizes.push(values.length);
+    });
+    expect((await getClientsOverview("manager"))[0].homeCount).toBe(201);
+    expect(sizes).toEqual([200, 1]);
   });
   it("throws on a query error", async () => {
     mockDatabase(1, undefined, "properties");

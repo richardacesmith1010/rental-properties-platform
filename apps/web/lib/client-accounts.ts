@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { chunks, fetchAllPages } from "@/lib/supabase-pagination";
 
 export type ClientState = {
   managedClient: boolean;
@@ -61,32 +62,57 @@ export async function isActiveClientManager(userId: string, accountId: string): 
   return Boolean(data);
 }
 
+export async function getManagedHomeIds(userId: string): Promise<string[]> {
+  const admin = createAdminClient();
+  const rows = await fetchAllPages<{ property_id: string }>((from, to) => admin.from("property_managers")
+    .select("property_id").eq("manager_profile_id", userId).eq("active", true).order("property_id").range(from, to));
+  return [...new Set(rows.map((row) => row.property_id))];
+}
+
 export async function listClientAccountsForManager(userId: string): Promise<Array<{
-  id: string; name: string; accountType: "individual" | "llc";
+  id: string; kind: "client" | "domusOwner"; name: string; accountType: "individual" | "llc";
   claimState: "claimed" | "unclaimed"; homeCount: number;
 }>> {
   const admin = createAdminClient();
-  const { data: links, error: linksError } = await admin.from("ownership_account_managers")
-    .select("account_id").eq("manager_profile_id", userId).eq("active", true);
+  const [{ data: links, error: linksError }, managedIds] = await Promise.all([
+    admin.from("ownership_account_managers")
+      .select("account_id").eq("manager_profile_id", userId).eq("active", true),
+    getManagedHomeIds(userId)
+  ]);
   if (linksError) throw linksError;
   const ids = [...new Set((links ?? []).map((link) => link.account_id))];
-  if (!ids.length) return [];
-  const [{ data: accounts, error: accountError }, { data: homes, error: homeError }] = await Promise.all([
-    admin.from("ownership_accounts").select("id, display_name, account_type, claim_state, managed_client").in("id", ids),
-    admin.from("properties").select("id, owner_account_id").in("owner_account_id", ids)
+  const managedHomes = (await Promise.all(chunks(managedIds).map((part) => admin.from("properties")
+    .select("id, owner_account_id, active").in("id", part)))).flatMap((result) => {
+      if (result.error) throw result.error;
+      return result.data ?? [];
+    });
+  const activeManagedHomes = managedHomes.filter((home) => home.active !== false);
+  const ownerIds = [...new Set(activeManagedHomes.map((home) => home.owner_account_id))];
+  const allIds = [...new Set([...ids, ...ownerIds])];
+  if (!allIds.length) return [];
+  const [accountResults, homeResults] = await Promise.all([
+    Promise.all(chunks(allIds).map((part) => admin.from("ownership_accounts")
+      .select("id, display_name, account_type, claim_state, managed_client").in("id", part))),
+    Promise.all(chunks(ids).map((part) => admin.from("properties")
+      .select("id, owner_account_id").in("owner_account_id", part)))
   ]);
-  if (accountError) throw accountError;
-  if (homeError) throw homeError;
+  for (const result of [...accountResults, ...homeResults]) if (result.error) throw result.error;
+  const accounts = accountResults.flatMap((result) => result.data ?? []);
+  const homes = homeResults.flatMap((result) => result.data ?? []);
   const counts = new Map<string, number>();
   for (const home of homes ?? []) {
     counts.set(home.owner_account_id, (counts.get(home.owner_account_id) ?? 0) + 1);
   }
-  return (accounts ?? []).filter((account) => ids.includes(account.id) && account.managed_client).map((account) => ({
+  return (accounts ?? []).filter((account) => account.managed_client ? ids.includes(account.id) : ownerIds.includes(account.id))
+    .sort((a, b) => Number(b.managed_client) - Number(a.managed_client))
+  .map((account) => ({
     id: account.id,
+    kind: account.managed_client ? "client" as const : "domusOwner" as const,
     name: account.display_name,
     accountType: account.account_type,
     claimState: account.claim_state,
-    homeCount: counts.get(account.id) ?? 0
+    homeCount: account.managed_client ? counts.get(account.id) ?? 0
+      : activeManagedHomes.filter((home) => home.owner_account_id === account.id).length
   }));
 }
 

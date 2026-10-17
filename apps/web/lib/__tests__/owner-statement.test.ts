@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ active: vi.fn(), tables: {} as Record<string, Array<Record<string, unknown>>>, failPage: false }));
+const mocks = vi.hoisted(() => ({ active: vi.fn(), managed: vi.fn(),
+  tables: {} as Record<string, Array<Record<string, unknown>>>, failPage: false, propertyFilters: [] as string[][] }));
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/client-accounts", () => ({ isActiveClientManager: mocks.active }));
+vi.mock("@/lib/client-accounts", () => ({ isActiveClientManager: mocks.active, getManagedHomeIds: mocks.managed }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ from: (name: string) => query(name) }) }));
 import { assertStatementInvariants, getOwnerStatement, StatementAccessError, StatementInvariantError } from "../owner-statement";
 import { ownerStatementToCsv } from "../owner-statement-csv";
@@ -16,7 +17,10 @@ function query(name: string) {
   const builder = {
     select: () => builder,
     eq: (key: string, value: unknown) => { rows = rows.filter((row) => row[key] === value); return builder; },
-    in: (key: string, values: unknown[]) => { rows = rows.filter((row) => values.includes(row[key])); return builder; },
+    in: (key: string, values: unknown[]) => {
+      if (name === "properties" && key === "id") mocks.propertyFilters.push(values as string[]);
+      rows = rows.filter((row) => values.includes(row[key])); return builder;
+    },
     gte: (key: string, value: string) => { rows = rows.filter((row) => String(row[key]) >= value); return builder; },
     lt: (key: string, value: string) => { rows = rows.filter((row) => String(row[key]) < value); return builder; },
     order: (key: string) => { rows.sort((a, b) => String(a[key]).localeCompare(String(b[key]))); return builder; },
@@ -49,9 +53,47 @@ function fixture() {
   };
 }
 const statement = (month = "2026-10") => getOwnerStatement("m", "a", month, now);
-beforeEach(() => { fixture(); mocks.failPage = false; mocks.active.mockReset().mockResolvedValue(true); });
+beforeEach(() => { fixture(); mocks.failPage = false; mocks.propertyFilters = [];
+  mocks.active.mockReset().mockResolvedValue(true);
+  mocks.managed.mockReset().mockResolvedValue(["h1", "h2", "h3", "h4"]); });
 
 describe("owner statement cash rules", () => {
+  it("keeps every client home without reading managed home IDs", async () => {
+    mocks.managed.mockRejectedValue(new Error("managed lookup must not run"));
+    const result = await statement();
+    expect(result.homes.map((home) => home.id)).toEqual(["h1", "h2", "h3"]);
+    expect(mocks.managed).not.toHaveBeenCalled();
+    expect(mocks.propertyFilters).toEqual([]);
+  });
+  it("refuses an unrelated Domus owner without revealing the account name", async () => {
+    mocks.tables.ownership_accounts[0].managed_client = false;
+    mocks.managed.mockResolvedValue(["elsewhere"]);
+    mocks.tables.properties.push({ id: "elsewhere", owner_account_id: "other", name: "Other", active: true });
+    await expect(statement()).rejects.toMatchObject({ message: "Statement unavailable." });
+    expect(mocks.propertyFilters).toEqual([["elsewhere"]]);
+  });
+  it("limits a Domus owner's statement queries to active manager homes", async () => {
+    mocks.tables.ownership_accounts[0].managed_client = false;
+    mocks.managed.mockResolvedValue(["h1"]);
+    const result = await statement();
+    expect(result.homes.map((home) => home.id)).toEqual(["h1"]);
+    expect(mocks.propertyFilters).toEqual([["h1"]]);
+  });
+  it("chunks a large manager home list before querying an owner's homes", async () => {
+    mocks.tables.ownership_accounts[0].managed_client = false;
+    const ids = Array.from({ length: 201 }, (_, index) => `h${index}`);
+    mocks.managed.mockResolvedValue(ids);
+    mocks.tables.properties = ids.map((id) => ({ id, owner_account_id: "a", name: id, active: true }));
+    expect((await statement()).homes).toHaveLength(201);
+    expect(mocks.propertyFilters.map((part) => part.length)).toEqual([200, 1]);
+  });
+  it("rejects mixed managed and unmanaged requested homes before querying properties", async () => {
+    mocks.tables.ownership_accounts[0].managed_client = false;
+    mocks.managed.mockResolvedValue(["h1"]);
+    await expect(getOwnerStatement("m", "a", "2026-10", now, ["h1", "h2"]))
+      .rejects.toMatchObject({ message: "You do not manage this home." });
+    expect(mocks.propertyFilters).toEqual([["h1"]]);
+  });
   it("blocks foreign managers before data queries", async () => {
     mocks.active.mockResolvedValue(false);
     await expect(statement()).rejects.toBeInstanceOf(StatementAccessError);

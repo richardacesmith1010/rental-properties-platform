@@ -65,7 +65,7 @@ export function PropertyForm({
   const handledStateRef = useRef<ActionState>(null);
   const [stepIndex, setStepIndex] = useState(0);
   const [pickingClient, setPickingClient] = useState(Boolean(managerClients));
-  const [clients, setClients] = useState(managerClients ?? []);
+  const [clients, setClients] = useState((managerClients ?? []).filter((client) => client.kind === "client"));
   const [skippedSteps, setSkippedSteps] = useState<number[]>([]);
   const [draft, setDraft] = useState<PropertyDraft>({
     name: "",

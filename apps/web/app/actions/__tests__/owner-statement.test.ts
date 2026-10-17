@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), load: vi.fn() }));
 vi.mock("@/app/actions/auth-helpers", () => ({ requireAuth: mocks.auth }));
 vi.mock("@/lib/owner-statement", () => ({ getOwnerStatement: mocks.load,
-  StatementAccessError: class StatementAccessError extends Error {} }));
+  StatementAccessError: class StatementAccessError extends Error {},
+  StatementHomeAccessError: class StatementHomeAccessError extends Error {} }));
 import { getOwnerStatementSummary } from "../owner-statement";
 import { StatementAccessError } from "@/lib/owner-statement";
 const id = "00000000-0000-4000-8000-000000000001";
