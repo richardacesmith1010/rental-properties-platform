@@ -1,4 +1,4 @@
-# Sprint 237c-1 — Manager invites and clients: branded invite email (allowlist-only), all-homes invite, Domus owners in Clients (L3: auth/email/access) — rev 2 (rev 1 ChatGPT REJECT: REQUIRED adopted)
+# Sprint 237c-1 — Manager invites and clients: branded invite email (allowlist-only), all-homes invite, Domus owners in Clients (L3: auth/email/access) — rev 3 (rev 1 REJECT → rev 2 APPROVE WITH CHANGES: REQUIRED adopted)
 
 ## 1. Objective
 Fix the manager-walk findings M3, M1, M11 (`docs/manager-walk-plan-2026-10-16.md`):
@@ -25,6 +25,28 @@ Fix the manager-walk findings M3, M1, M11 (`docs/manager-walk-plan-2026-10-16.md
   via `ownership_account_managers`. Owner statement: `lib/owner-statement.ts`, `lib/owner-statement-csv.ts`,
   `ownerStatementRequestSchema` (`lib/validations.ts:60`) and its action (find it). Manager access to a home's data =
   `can_administer_property` (active `property_managers` row).
+
+## Rev 3 additions (ChatGPT rev 2 APPROVE WITH CHANGES)
+1. **Auth succeeded, email failed:** `generateLink` (and `inviteUserByEmail`) create the Auth user, which fires
+   `handle_new_user` and may convert the pending invitations at once. A retry must therefore detect the existing,
+   never-signed-in Auth user for that email and only **generate a fresh link and resend** (no new invitation rows, no
+   second Auth user); if the user has already signed in, return `This manager already has an account. They'll see the
+   homes next time they sign in.` Test: email failure → retry → exactly one Auth user, rows unchanged, one email sent.
+2. **Account scoping:** every selected home must belong to the **active** ownership account the owner is acting in (not
+   just any home they administer); mixed accounts → reject, zero writes.
+3. **Existing manager:** activate or insert `property_managers` per home idempotently (no duplicates; re-activating an
+   inactive row is allowed; homes already active are a no-op) in one multi-row write.
+4. **handle_new_user:** read the live definition first and describe in the report exactly how pending manager invitations
+   are matched, validated, consumed and converted. If any invariant (only pending, same email, owner-authorized home)
+   does not hold, stop and report — Claude handles database work.
+5. **Statements at the data layer:** the owner-statement loaders, aggregates, PDF and CSV builders take the
+   manager-authorized property id list and filter every query by it (no post-filtering after fetching wider data); every
+   caller passes the list computed at request time from active `property_managers` rows.
+6. **Fail closed:** any error or unknown mode in the branded-email gate → generic behavior (never branded to a
+   non-allowlisted address). Check `lib/invite-resend.ts` and every other manager-invite/resend path: none may send the
+   branded email without the same gate.
+7. **Extra tests:** concurrent double submission (one set of rows, one Auth user), mixed existing/new assignments,
+   cross-account home ids, gate error → generic, resend path gated, statement loader never queries unauthorized ids.
 
 ## 3. In scope
 M3 (gated email), M1 (all homes), M11 (list + statement for Domus owners whose homes the manager actively runs), tests.
