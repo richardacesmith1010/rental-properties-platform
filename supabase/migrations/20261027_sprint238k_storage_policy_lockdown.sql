@@ -37,6 +37,11 @@ drop policy profile_avatars_delete on storage.objects;
 
 do $$
 begin
+  -- ChatGPT review (AWC, 2026-10-16): the intended state is ZERO policies on storage.objects (all eight were for these
+  -- two buckets), so a catch-all policy added later could not silently reopen them.
+  if (select count(*) from pg_policies where schemaname = 'storage' and tablename = 'objects') <> 0 then
+    raise exception 'storage.objects still has policies';
+  end if;
   if exists (
     select 1 from pg_policies
     where schemaname = 'storage' and tablename = 'objects'

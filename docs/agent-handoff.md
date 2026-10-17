@@ -1383,3 +1383,11 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   `storage.objects` (the 4 own-folder avatar policies too: unused by the app, and they let any sign-up host files in an
   unlimited bucket). Attacker test `docs/sprint238k-attacker-test.md` (seeded objects, run before = 9/9 open, after = 9/9
   closed, always rolled back). Rollback recreates all 8 verbatim.
+
+## Sprint 238k SHIPPED (2026-10-16 ~23:20) — Storage policy lockdown (L3, Claude-only migration)
+- ChatGPT APPROVE WITH CHANGES (REQUIRED adopted: postcondition = zero policies on storage.objects). Applied live
+  (`sprint238k_storage_policy_lockdown`). Attacker test `docs/sprint238k-attacker-test.md` after apply:
+  `mode=after-apply open=0/9 closed=9/9 PASS`; all 8 controls ok (service role reads/uploads/updates/deletes; direct SQL
+  delete still refused by `protect_objects_delete`). storage.objects now has 0 policies; RLS on; both buckets private.
+- Rollback: `supabase/rollback/20261027_sprint238k_rollback.sql` (reopens the holes; only if a real flow breaks).
+- Pending: one real app round trip (upload/open/delete a property document as a test owner) during the 238j walk.
