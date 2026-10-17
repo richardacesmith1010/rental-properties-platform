@@ -152,3 +152,54 @@ prompt" or "recommended next steps for Claude" sections. Report compact status o
 
 ## 10. Constraints
 Only the files in §5. No new dependencies. No SQL. No email to non-allowlisted people beyond today's behavior.
+
+## Round 2 (Claude review 2026-10-16 ~23:30: 21-agent review `wf_5e10752c-84e`, every finding verified against the diff)
+Round 1 is in the working tree. Keep what works; fix all of the below. Same files as §5 plus the files named here.
+Claude decisions (recorded in the handoff): **managers keep inviting co-managers** (L-014: today's behavior); **managed-client
+(client account) statements behave exactly as before**.
+
+**Blockers**
+1. **Empty or oversized home lists.** `inviteManagerSchema` (`lib/validations-entity.ts`) must always parse `propertyIds` with
+   one `z.preprocess(parseJsonArray, z.array(z.string().uuid()).min(1).max(100))`; reject a request that sends both
+   `propertyId` and `propertyIds`, or neither; no second `JSON.parse` in the action. After dedupe, an empty list returns
+   `Pick at least one home.` with zero writes and zero Auth calls.
+2. **Authorization in one query.** Load `const allowed = new Set(await getAdministeredPropertyIds(user.id))`
+   (`lib/property-access.ts:192`) once; reject unless every id is in it (`You can only add a manager to your own homes.`).
+   Owners also keep the active-account check (`owner_account_id === accountId`). **Managers** (role `manager`) are authorized
+   by the same `allowed` set only and skip the ownership-account check, as before 237c-1.
+3. **Real tests, not tautologies (L-017).** In `app/actions/__tests__/invitations.test.ts`:
+   - dedupe: assert the upsert payload's `property_id`s equal `["h1","h2"]` for input `[h1,h1,h2]`, and make the mock
+     throw like Postgres (`cardinality_violation`) if one payload hits the same key twice;
+   - new user: assert the invitations upsert payload `expect.objectContaining({ email, role: "manager", property_id,
+     invited_by, status: "pending", accepted_at: null, invited_profile_id: null, created_at: expect.any(String) })` and
+     options `{ onConflict: "email,role,invited_by,property_id" }`;
+   - generic path: `inviteUserByEmail` called with `("manager@example.com", { redirectTo: expect.stringMatching(/\/auth\/callback$/),
+     data: { role: "manager", full_name: "Alex Manager" } })`; branded path: `generateLink` with `type: "invite"` and the same
+     redirect; non-allowlisted → zero `generateLink`, zero branded sends;
+   - existing manager: zero `generateLink`, zero `inviteUserByEmail`, zero sends; one case with `h1` inactive → one upsert
+     with all selected homes active.
+4. **Restore deleted pins (AC4).** Re-add, against the new mocks: the `inviteOwner` claimed-client refusal (HEAD `:71-84`);
+   the unclaimed-owner assertions (`ownershipAccess` not called; no upsert); rate-limited → no `from`, no upsert, no Auth
+   call; `requireAuth` rejects → no rate-limit call, no `from`; the client-home refusal with the exact copy `This home's
+   managers are set by its client account.`. Do not change `inviteOwner`.
+
+**Should-fix**
+5. **Messages from `delivery`** (not from `last_sign_in_at` alone): `added` → `Added {name} to {this home | N homes}. They'll
+   see it next time they sign in.`; `already` → `{name} already has access to {this home | these homes}. No email was
+   sent.`; new user → `Invite sent to {email}. They'll get an email from Domus.` (keep today's text if it differs; pin it);
+   the Rev 3 signed-in retry copy only for that case. Assert exact `message` in each test; update the M2 dialog test
+   (`components/__tests__/invite-manager-form.test.tsx`) only where the action's strings changed by design.
+6. **Audit.** `logAudit({ action: "invite_manager", … })` after the property_managers upsert (with `propertyIds`,
+   `managerProfileId`) and right after the invitations upsert succeeds, before the Auth call (so pending grants are recorded
+   even if delivery fails). Assert both.
+7. **Domus owners are not clients for the Add-a-home picker.** Add `kind: "client" | "domusOwner"` to the overview/detail
+   types (`lib/client-overview.ts`, `lib/client-accounts.ts`). Filter `domusOwner` out of the list passed to
+   `components/dashboard/clients/whose-home-step.tsx` (via `unified-property-wizard.tsx` / `forms/property-form.tsx`); in the
+   client detail view hide "Add a home" and the paid-outside-Domus note for `domusOwner`. Test: a Domus owner is not offered
+   in WhoseHomeStep; the client detail for a Domus owner shows no Add-a-home.
+8. **Managed-client statements unchanged.** Apply the new `managedIds` gates only to non-`managed_client` accounts; for
+   `managed_client` keep the old authorization and let a zero-home client produce an empty statement. Restore the original
+   `properties: []` fixture in `lib/__tests__/owner-statement-download.test.ts` ("200 for a valid client") and add a test
+   that the client check runs before any data read.
+
+Validation as §7. Report each item 1–8 with the test that proves it.
