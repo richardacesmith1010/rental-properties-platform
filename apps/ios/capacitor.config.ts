@@ -26,7 +26,7 @@ const config: CapacitorConfig = {
     limitsNavigationsToAppBoundDomains: false
   },
   plugins: {
-    SplashScreen: { launchAutoHide: true, launchShowDuration: 1500, backgroundColor: "#FFFFFF" },
+    SplashScreen: { launchAutoHide: true, launchShowDuration: 0, backgroundColor: "#FFFFFF" },
     StatusBar: { overlaysWebView: true, style: "DEFAULT" }
   }
 };

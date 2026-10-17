@@ -117,13 +117,14 @@ print_command() { printf '%q ' "$@"; printf '\n'; }
 if $DRY; then
   printf 'Dry run: no commands executed or files written. Build %s; team <team>.\n' "$NEXT"
   print_command xcodebuild -version
+  print_command xcodebuild -sdk iphoneos -version SDKVersion
   print_command xcodebuild -help
   print_command git -C "$IOS_DIR" status --porcelain -- .
   print_command mkdir "$BUILD_DIR.lock"
   print_command rm -rf "$BUILD_DIR"
   print_command mkdir -p "$BUILD_DIR"
   printf 'Generate %s from ExportOptions.template.plist (teamID=<team>).\n' "$BUILD_DIR/ExportOptions.plist"
-  printf 'cd %q && npx cap sync ios\n' "$IOS_DIR"
+  printf 'cd %q && env -u CAP_SERVER_URL npx cap sync ios\n' "$IOS_DIR"
   print_command "${ARCHIVE[@]}"
   printf 'Validate App.app, bundle ID, build %s and PrivacyInfo.xcprivacy.\n' "$NEXT"
   printf 'Atomically write pending build %s before export.\n' "$NEXT"
@@ -132,7 +133,12 @@ if $DRY; then
   print_command rmdir "$BUILD_DIR.lock"
   exit 0
 fi
-xcodebuild -version >/dev/null 2>&1 || fail 'Install Xcode and select it as the active developer tools before uploading.'
+XCODE_VERSION="$(xcodebuild -version 2>/dev/null)" || fail 'Install Xcode 26 or newer before uploading.'
+XCODE_MAJOR="$(printf '%s\n' "$XCODE_VERSION" | sed -nE 's/^Xcode ([0-9]+).*/\1/p')"
+[[ "$XCODE_MAJOR" =~ ^[0-9]+$ ]] && [[ "$XCODE_MAJOR" -ge 26 ]] || fail 'Select Xcode 26 or newer before uploading.'
+SDK_VERSION="$(xcodebuild -sdk iphoneos -version SDKVersion 2>/dev/null)" || fail 'Install the iOS 26 SDK or newer.'
+SDK_MAJOR="${SDK_VERSION%%.*}"
+[[ "$SDK_MAJOR" =~ ^[0-9]+$ ]] && [[ "$SDK_MAJOR" -ge 26 ]] || fail 'Select the iOS 26 SDK or newer.'
 XCODE_HELP="$(xcodebuild -help 2>&1)" || fail 'Unable to read Xcode export support.'
 [[ "$XCODE_HELP" == *-exportArchive* ]] || fail 'This Xcode does not support -exportArchive. Select a supported Xcode version.'
 DIRTY="$(git -C "$IOS_DIR" status --porcelain -- .)" || fail 'Unable to check the apps/ios git working tree.'
@@ -144,17 +150,40 @@ rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 # Only this generated file contains the team; it is ignored by git.
 sed "s/__TEAM__/$TEAM/" "$IOS_DIR/scripts/ExportOptions.template.plist" > "$BUILD_DIR/ExportOptions.plist"
+# Read both copies independently. Do not normalize this production URL.
+require_production_url() {
+  node - "$1" "$2" <<'NODE'
+const fs = require("node:fs");
+const [file, label] = process.argv.slice(2);
+function fail(message) { console.error(`${label}: ${message}`); process.exit(1); }
+if (!fs.existsSync(file)) fail("Missing capacitor.config.json. Sync and build again.");
+let config;
+try { config = JSON.parse(fs.readFileSync(file, "utf8")); }
+catch { fail("Invalid capacitor.config.json. Sync and build again."); }
+if (config?.server?.url !== "https://domusbase.com/login") {
+  fail("Set server.url to https://domusbase.com/login. Sync and build again.");
+}
+NODE
+}
 STEP=sync
-(cd "$IOS_DIR" && npx cap sync ios) 2>&1 | redact
+(cd "$IOS_DIR" && env -u CAP_SERVER_URL npx cap sync ios) 2>&1 | redact
+require_production_url "$IOS_DIR/ios/App/App/capacitor.config.json" 'Generated app'
 STEP=archive
 "${ARCHIVE[@]}" 2>&1 | redact
 STEP='archive validation'
-APP="$BUILD_DIR/Domus.xcarchive/Products/Applications/App.app"
-[[ -d "$APP" ]] || fail 'The archive does not contain App.app.'
+shopt -s nullglob
+APPS=("$BUILD_DIR/Domus.xcarchive/Products/Applications/"*.app)
+[[ ${#APPS[@]} -eq 1 && -d "${APPS[0]}" ]] || fail 'The archive must contain exactly one app. Build again.'
+APP="${APPS[0]}"
+require_production_url "$APP/capacitor.config.json" 'Archived app'
+[[ -f "$APP/Info.plist" ]] || fail 'The archive lacks Info.plist. Build again.'
+PHOTOS="$(/usr/libexec/PlistBuddy -c 'Print :NSPhotoLibraryAddUsageDescription' "$APP/Info.plist" 2>/dev/null)" \
+  || fail 'Add the Photos save message, then build again.'
+[[ -n "$PHOTOS" ]] || fail 'Add the Photos save message, then build again.'
 [[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")" == com.domusbase.app ]] || fail 'The archive has the wrong bundle identifier.'
 [[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist")" == "$NEXT" ]] || fail 'The archive has the wrong build number.'
-[[ -f "$APP/PrivacyInfo.xcprivacy" ]] || fail 'The archive is missing PrivacyInfo.xcprivacy.'
-plutil -lint "$APP/PrivacyInfo.xcprivacy" >/dev/null
+[[ -f "$APP/PrivacyInfo.xcprivacy" ]] || fail 'Add PrivacyInfo.xcprivacy, then build again.'
+plutil -lint "$APP/PrivacyInfo.xcprivacy" >/dev/null || fail 'Fix PrivacyInfo.xcprivacy, then build again.'
 STEP='pending guard'
 atomic_write "$PENDING" "$NEXT"
 STEP=export

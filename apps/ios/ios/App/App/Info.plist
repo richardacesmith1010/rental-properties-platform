@@ -62,6 +62,8 @@
 	<key>NSFaceIDUsageDescription</key>
 	<string>Use Face ID to open Domus and keep your info safe.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Take photos of problems to send to your landlord.</string>
+	<string>Take photos of repairs, receipts, and your profile.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Save photos from Domus to your phone.</string>
 </dict>
 </plist>

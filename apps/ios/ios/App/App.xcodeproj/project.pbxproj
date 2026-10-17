@@ -35,6 +35,8 @@
 		229000000000000000000020 = {isa = PBXBuildFile; fileRef = 229000000000000000000010; };
 		229000000000000000000021 = {isa = PBXBuildFile; fileRef = 229000000000000000000011; };
 		229000000000000000000022 = {isa = PBXBuildFile; fileRef = 229000000000000000000012; };
+		238A00000000000000000011 /* LaunchSplashGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 238A00000000000000000001; };
+		238A00000000000000000012 /* LaunchSplashTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 238A00000000000000000002; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -130,6 +132,18 @@
             path = App.entitlements;
             sourceTree = "<group>";
         };
+		238A00000000000000000001 = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = LaunchSplashGate.swift;
+            sourceTree = "<group>";
+        };
+		238A00000000000000000002 = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = LaunchSplashTests.swift;
+            sourceTree = "<group>";
+        };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -169,6 +183,7 @@
 		504EC3061FED79650016851F /* App */ = {
 			isa = PBXGroup;
 			children = (
+                238A00000000000000000001,
                 229000000000000000000013,
                 229000000000000000000010,
 				5BB3445715845A28A214CE1D,
@@ -194,6 +209,7 @@
 			sourceTree = "<group>";
 		};
 		121AA6494A737B2EB6B9172B = {isa = PBXGroup; children = (
+                238A00000000000000000002,
                 229000000000000000000012,
                 229000000000000000000011,
 				228000000000000000000002,
@@ -294,6 +310,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+                238A00000000000000000011,
                 229000000000000000000020,
 				D3BFB4CECD61F0CFF6D4D1CE,
 				D46C8A81A12D5690B07A32A4,
@@ -309,6 +326,7 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F955EC9AE42678A8AC7D6BC4 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (
+                238A00000000000000000012,
                 229000000000000000000022,
                 229000000000000000000021,
 				228000000000000000000001,

@@ -35,9 +35,10 @@ for (const url of ["https://domusbase.invalid", "https://domusbase.com/tenant", 
 }
 test("keeps the exact offline message and retry action", () => {
   const offline = readFileSync("www/offline.html", "utf8");
+  assert.equal(readFileSync("ios/App/App/public/offline.html", "utf8"), offline);
   assert.ok(offline.includes("<h1>Can't reach Domus right now.</h1>"));
   assert.ok(offline.includes("<p>Check your connection, then try again.</p>"));
-  assert.match(offline, /<a href="https:\/\/domusbase.com"[^>]*>Try again<\/a>/);
+  assert.match(offline, /<a href="https:\/\/domusbase.com\/login"[^>]*>Try again<\/a>/);
 });
 for (const url of ["http://domusbase.com", "http://localhost.evil.com", "http:localhost", "//domusbase.com",
   "javascript:alert(1)", "ftp://example.com", "https://user:password@example.com", "https://", " https://example.com"]) {
@@ -67,14 +68,19 @@ function configurations(project, name) {
   return project.objects[target.buildConfigurationList].buildConfigurations.map(id => project.objects[id]);
 }
 const manifestFile = "ios/App/App/PrivacyInfo.xcprivacy";
-test("App Store plist values preserve camera text", () => {
+test("App Store plist has exact camera and Photos save messages", () => {
   const info = plist("ios/App/App/Info.plist");
   assert.deepEqual(info.UIRequiredDeviceCapabilities, ["arm64"]);
   assert.equal(info.ITSAppUsesNonExemptEncryption, false);
-  const original = JSON.parse(successful(run("plutil", ["-convert", "json", "-o", "-", "--", "-"], {
-    input: successful(run("git", ["show", "HEAD:apps/ios/ios/App/App/Info.plist"]))
-  })));
-  assert.equal(info.NSCameraUsageDescription, original.NSCameraUsageDescription);
+  assert.equal(info.NSCameraUsageDescription, "Take photos of repairs, receipts, and your profile.");
+  assert.equal(info.NSPhotoLibraryAddUsageDescription, "Save photos from Domus to your phone.");
+});
+test("source and generated config disable the plugin launch splash", () => {
+  const generated = JSON.parse(readFileSync("ios/App/App/capacitor.config.json", "utf8"));
+  for (const value of [config(), generated]) {
+    assert.equal(value.plugins.SplashScreen.launchShowDuration, 0);
+    assert.equal(value.plugins.SplashScreen.launchAutoHide, true);
+  }
 });
 test("privacy manifest matches audit flags/purposes and App Resources", () => {
   successful(run("plutil", ["-lint", manifestFile]));
@@ -94,7 +100,9 @@ test("privacy manifest matches audit flags/purposes and App Resources", () => {
   assert.deepEqual(manifest.NSPrivacyCollectedDataTypes, expected);
   assert.equal(manifest.NSPrivacyTracking, false);
   assert.deepEqual(manifest.NSPrivacyTrackingDomains, []);
-  assert.deepEqual(manifest.NSPrivacyAccessedAPITypes, []);
+  assert.deepEqual(manifest.NSPrivacyAccessedAPITypes, [{
+    NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategoryUserDefaults", NSPrivacyAccessedAPITypeReasons: ["CA92.1"]
+  }]);
   const { objects } = plist(projectFile);
   const target = Object.values(objects).find(o => o.isa === "PBXNativeTarget" && o.name === "App");
   const resources = target.buildPhases.map(id => objects[id]).find(o => o.isa === "PBXResourcesBuildPhase");
@@ -146,7 +154,82 @@ test("build numbers are bounded, monotonic, and reject corrupt counters/override
 // Everything that can archive/export is exercised only in isolated fake-tool fixtures.
 const teamMessage = "Add your Apple Team ID to apps/ios/ios/App/Signing.local.xcconfig (see Signing.local.xcconfig.example).";
 const { fixture: uploadFixture } = require("./config-upload-fixture.cjs");
-const fixture = t => uploadFixture(t, { run, manifestFile, ios });
+// Extend the existing fixture in-place; every executable still lives in its temporary root.
+const fixture = t => {
+  const f = uploadFixture(t, { run, manifestFile, ios });
+  const bin = path.join(f.dir, "bin");
+  let fake = readFileSync(path.join(bin, "xcodebuild"), "utf8");
+  fake = fake.replace("console.log('Xcode fake')", "console.log(mode === 'old-xcode' ? 'Xcode 25.4' : 'Xcode 26.1')");
+  fake = fake.replace("if (args[0] === '-version')", `
+if (args.includes('SDKVersion')) { console.log(mode === 'old-sdk' ? '25.5' : '26.1'); process.exit(0); }
+if (args[0] === '-version')`);
+  fake = fake.replace("console.log('sync team ABCDE12345');", `
+const generated = path.join(root, 'ios/App/App'); fs.mkdirSync(generated, {recursive:true});
+if (process.env.CAP_SERVER_URL) process.exit(97);
+fs.writeFileSync(path.join(root, 'inherited-url-removed'), 'yes');
+writeConfig(path.join(generated, 'capacitor.config.json'), 'generated');
+console.log('sync team ABCDE12345');`);
+  fake = fake.replace("const app = path.join", "let app = path.join");
+  fake = fake.replace("fs.mkdirSync(app, {recursive:true});", `
+if (mode === 'renamed-app') app = app.replace('App.app', 'Domus.app');
+fs.mkdirSync(app, {recursive:true});
+if (mode === 'multiple-apps') fs.mkdirSync(app.replace('App.app', 'Extra.app'));
+writeConfig(path.join(app, 'capacitor.config.json'), 'archived');`);
+  fake = fake.replace("</string></dict></plist>", "</string><key>NSPhotoLibraryAddUsageDescription</key>" +
+    "<string>Save photos from Domus to your phone.</string></dict></plist>");
+  fake = fake.replace("console.log('archive team ABCDE12345');", `
+if (mode === 'missing-photos') {
+  const info = path.join(app, 'Info.plist');
+  fs.writeFileSync(info, fs.readFileSync(info, 'utf8').replace(
+    '<key>NSPhotoLibraryAddUsageDescription</key><string>Save photos from Domus to your phone.</string>', ''));
+}
+console.log('archive team ABCDE12345');`);
+  fake += `
+function writeConfig(file, stage) {
+  if (mode === stage + '-missing') return;
+  const url = mode === stage + '-wrong' ? 'http://localhost:3000' : 'https://domusbase.com/login';
+  const value = mode === stage + '-no-url' ? {} : {server:{url}};
+  fs.writeFileSync(file, mode === stage + '-malformed' ? '{bad' : JSON.stringify(value));
+}
+`;
+  for (const name of ["xcodebuild", "npx", "git", "mv"]) fs.writeFileSync(path.join(bin, name), fake, { mode: 0o755 });
+  return f;
+};
+for (const stage of ["generated", "archived"]) {
+  for (const [problem, message] of [["wrong", /Set server.url/], ["missing", /Missing capacitor.config/],
+    ["malformed", /Invalid capacitor.config/], ["no-url", /Set server.url/]]) {
+    test(`${stage} ${problem} config stops before upload`, t => {
+      const f = fixture(t), result = f.run([], `${stage}-${problem}`);
+      assert.equal(result.status, 1, result.output);
+      assert.match(result.output, message);
+      assert.doesNotMatch(f.read("calls"), /"-exportArchive"/);
+      if (stage === "generated") assert.doesNotMatch(f.read("calls"), /"archive"/);
+    });
+  }
+}
+for (const [mode, message] of [["old-xcode", /Xcode 26 or newer/], ["old-sdk", /iOS 26 SDK or newer/],
+  ["multiple-apps", /exactly one app/], ["missing-photos", /Add the Photos save message/]]) {
+  test(`${mode} stops before upload with an actionable message`, t => {
+    const f = fixture(t), result = f.run([], mode);
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, message);
+    assert.doesNotMatch(f.read("calls"), /"-exportArchive"/);
+  });
+}
+test("hostile inherited URL is removed; both production copies pass, including a renamed app", t => {
+  const f = fixture(t), previous = process.env.CAP_SERVER_URL;
+  process.env.CAP_SERVER_URL = "http://localhost:3000";
+  try { successful(f.run([], "renamed-app")); }
+  finally {
+    if (previous === undefined) delete process.env.CAP_SERVER_URL;
+    else process.env.CAP_SERVER_URL = previous;
+  }
+  assert.equal(f.read("inherited-url-removed"), "yes");
+  for (const prefix of ["ios/App/App", "ios/App/build/testflight/Domus.xcarchive/Products/Applications/Domus.app"]) {
+    assert.equal(JSON.parse(f.read(`${prefix}/capacitor.config.json`)).server.url, "https://domusbase.com/login");
+  }
+  assert.match(f.read("calls"), /"-exportArchive"/);
+});
 test("dry run prints commands, redacts team, and executes/writes nothing", t => {
   const f = fixture(t), result = f.run(["--dry-run"]);
   successful(result);

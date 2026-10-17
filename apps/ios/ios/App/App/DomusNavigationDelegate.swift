@@ -33,6 +33,10 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
     private let startupURL: URL
     private let serverHost: String
     private(set) var lastSafeURL: URL
+    private var currentNavigation: AnyObject?
+    private var requestedMainURL: URL?
+    private var currentIsOffline = false
+    var onLaunchEvent: ((LaunchSplashGate.Event) -> Void)?
     private var committedNavigation: AnyObject?
     private var previousSafeURL: URL?
     private let failedNavigations = NSHashTable<AnyObject>.weakObjects()
@@ -77,7 +81,12 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
                  decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         handleNavigationAction(url: action.request.url, mainFrame: action.targetFrame?.isMainFrame ?? true,
-                               shouldPerformDownload: action.shouldPerformDownload, decisionHandler: decisionHandler)
+                               shouldPerformDownload: action.shouldPerformDownload) { policy in
+            if policy == .allow, action.targetFrame?.isMainFrame == true {
+                self.recordMainFrameRequest(action.request.url)
+            }
+            decisionHandler(policy)
+        }
     }
 
     func handleNavigationAction(url: URL?, mainFrame: Bool, shouldPerformDownload: Bool = false,
@@ -151,6 +160,22 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
         return nil
     }
 
+    func recordMainFrameRequest(_ url: URL?) {
+        requestedMainURL = url
+        onLaunchEvent?(.mainFrameRequested(url))
+    }
+
+    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        if let navigation { handleStartedMainFrame(navigation: navigation) }
+        (original as? WKNavigationDelegate)?.webView?(webView, didStartProvisionalNavigation: navigation)
+    }
+
+    func handleStartedMainFrame(navigation: AnyObject) {
+        currentNavigation = navigation
+        currentIsOffline = offlineURL != nil && requestedMainURL == offlineURL
+        onLaunchEvent?(.started(navigation))
+    }
+
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
         handleCommittedMainFrame(url: webView.url, navigation: navigation)
         (original as? WKNavigationDelegate)?.webView?(webView, didCommit: navigation)
@@ -159,6 +184,7 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
     // WebKit supplies navigation identities; tests use ordinary objects with the same lifetime.
     // Commit/finish callbacks describe the main frame only.
     func handleCommittedMainFrame(url: URL?, navigation: AnyObject?) {
+        if let navigation { onLaunchEvent?(.committed(navigation, url)) }
         if let url { onMainFrameCommit?(url) }
         if let navigation, let url, !failedNavigations.contains(navigation),
            Self.isSafeURL(url, host: serverHost, offlineURL: offlineURL) {
@@ -175,6 +201,7 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
     }
 
     func handleFinishedMainFrame(navigation: AnyObject?) {
+        if let navigation { onLaunchEvent?(.finished(navigation, mainFrame: true)) }
         if let navigation, committedNavigation === navigation {
             previousSafeURL = nil
             committedNavigation = nil
@@ -229,17 +256,34 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        handleFailedNavigation(webView, navigation: navigation, error: error)
+        handleFailedNavigation(webView, navigation: navigation, error: error, provisional: true)
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
         handleFailedNavigation(webView, navigation: navigation, error: error)
     }
 
-    func handleFailedNavigation(_ webView: WKWebView, navigation: AnyObject?, error: Error) {
-        onNavigationFailure?()
+    func handleFailedNavigation(_ webView: WKWebView, navigation: AnyObject?, error: Error, provisional: Bool = false) {
         discardFailedNavigation(navigation)
-        handleFailure(webView, error: error)
+        if let navigation { onLaunchEvent?(.failed(navigation)) }
+        let failure = error as NSError
+        if failure.domain == NSURLErrorDomain && failure.code == NSURLErrorCancelled { return }
+        if failure.domain == "WebKitErrorDomain" && failure.code == 102 { return }
+        if let currentNavigation, currentNavigation !== navigation { return }
+        onNavigationFailure?()
+        // Capacitor 8.5.3 loads errorPath in BOTH failure callbacks without a loop guard.
+        // A provisional offline failure can still report the previous webView.url.
+        guard !currentIsOffline, webView.url != offlineURL else { return }
+        currentIsOffline = true
+        if provisional {
+            if let callback = (original as? WKNavigationDelegate)?.webView(_:didFailProvisionalNavigation:withError:) {
+                callback(webView, navigation as? WKNavigation, error)
+            } else if let offlineURL { webView.load(URLRequest(url: offlineURL)) }
+        } else {
+            if let callback = (original as? WKNavigationDelegate)?.webView(_:didFail:withError:) {
+                callback(webView, navigation as? WKNavigation, error)
+            } else if let offlineURL { webView.load(URLRequest(url: offlineURL)) }
+        }
     }
 
     private func discardFailedNavigation(_ navigation: AnyObject?) {
@@ -250,15 +294,6 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
             previousSafeURL = nil
             committedNavigation = nil
         }
-    }
-
-    private func handleFailure(_ webView: WKWebView, error: Error) {
-        let error = error as NSError
-        // Cancelling navigation for Safari or WKDownload must keep the current page intact.
-        if error.domain == NSURLErrorDomain && error.code == NSURLErrorCancelled { return }
-        if error.domain == "WebKitErrorDomain" && error.code == 102 { return }
-        webView.isOpaque = true
-        if let offlineURL, webView.url != offlineURL { webView.load(URLRequest(url: offlineURL)) }
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {

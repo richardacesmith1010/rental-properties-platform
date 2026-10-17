@@ -10,15 +10,25 @@ enum InspectionPolicy {
     #endif
 }
 
-final class DomusBridgeViewController: CAPBridgeViewController {
+class DomusBridgeViewController: CAPBridgeViewController {
     private var navigationHandler: DomusNavigationDelegate?
 
     private(set) var plaidLinkBridge: PlaidLinkBridge?
     weak var appWindow: UIWindow?
     private(set) var appLockController: AppLockController?
+    let launchCover = LaunchCoverAdapter()
     var lockSettings: LockSettingsStoring = LockSettings()
 
     override func viewDidLoad() {
+        launchCover.startWatchdog()
+        launchCover.install(in: view)
+        NotificationCenter.default.addObserver(self, selector: #selector(lockWindowShown(_:)),
+                                               name: UIWindow.didBecomeVisibleNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(lockWindowShown(_:)),
+                                               name: UIWindow.didBecomeKeyNotification, object: nil)
+        for name in [UIScene.didEnterBackgroundNotification, UIScene.willEnterForegroundNotification] {
+            NotificationCenter.default.addObserver(self, selector: #selector(launchSceneChanged), name: name, object: nil)
+        }
         // Install the scene's lock window before Capacitor starts loading the web page.
         if let webView {
             let cookies = AuthCookies(store: WKWebsiteDataStore.default().httpCookieStore) { [weak webView] url in
@@ -30,6 +40,7 @@ final class DomusBridgeViewController: CAPBridgeViewController {
             }
             appLockController = controller
             controller.install(window: appWindow)
+            yieldLaunchCoverToLock()
             plaidLinkBridge = PlaidLinkBridge(presenter: self, cookies: webView.configuration.websiteDataStore.httpCookieStore,
                 document: { [weak controller] in controller?.documentID ?? UUID() },
                 signingOut: { [weak controller] in controller?.lock.phase == .signingOut },
@@ -52,6 +63,7 @@ final class DomusBridgeViewController: CAPBridgeViewController {
                                               startupURL: bridge.config.appStartServerURL,
                                               mainWebView: webView,
                                               serverHost: bridge.config.serverURL.host ?? "domusbase.com")
+        handler.onLaunchEvent = { [weak self] in self?.launchCover.send($0) }
         handler.onMainFrameCommit = { [weak self] in self?.appLockController?.mainFrameCommitted($0) }
         handler.onNavigationFailure = { [weak self] in self?.appLockController?.navigationFailed() }
         handler.onPlaidLink = { [weak self] in self?.plaidLinkBridge?.open($0) }
@@ -62,6 +74,24 @@ final class DomusBridgeViewController: CAPBridgeViewController {
         webView.configuration.userContentController.add(handler, name: "domusShareCsv")
         webView.configuration.userContentController.add(handler, name: "domusFaceId")
         webView.configuration.userContentController.add(handler, name: "domusPlaidLink")
+    }
+
+    @objc private func launchSceneChanged() {
+        yieldLaunchCoverToLock()
+    }
+
+    @objc private func lockWindowShown(_ notification: Notification) {
+        guard let window = notification.object as? UIWindow,
+              window === appLockController?.lockWindow else { return }
+        yieldLaunchCoverToLock()
+    }
+
+    private func yieldLaunchCoverToLock() {
+        guard let lock = appLockController?.lock else { return }
+        switch lock.phase {
+        case .locked, .authenticating, .signingOut: launchCover.send(.lockShown)
+        case .open, .covered: break
+        }
     }
 
     func reloadAfterConnectIfNeeded() {

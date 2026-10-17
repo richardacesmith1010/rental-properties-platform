@@ -66,8 +66,8 @@ excluding `/connect`, `/connect/*`, `/auth/*`, the offline document and failed n
 It falls back to the validated configured start URL, or `https://domusbase.com/login`.
 If the main view is blank or left on Connect, the handoff immediately loads that safe page once.
 Duplicate handoff callbacks do not reopen Safari or repeat recovery.
-`SceneDelegate.sceneWillEnterForeground` consumes the pending flag and loads the safe page once
-to refresh Stripe status, including when the user cancels onboarding. It never reloads a Connect URL.
+`AppLockController` consumes the pending flag after foreground unlock.
+It loads the safe page once, including after cancelled onboarding. It never reloads a Connect URL.
 Ordinary app switching never refreshes, regardless of the current URL.
 Stripe return/refresh URLs may remain in Safari; switching back keeps Domus usable.
 This uses the generated Capacitor 8 scene lifecycle, without a JavaScript hook.
@@ -188,17 +188,27 @@ Restore the production configuration before building the normal app:
 npx cap sync ios
 ```
 
+## Launch cover (Sprint 238a)
+
+Domus shows the LaunchScreen storyboard until the current main-frame page finishes.
+The Capacitor plugin launch splash is disabled with duration zero.
+HTTP redirects finish on their final page. Later client-side routes are not awaited.
+Network failure waits for the bundled offline page to finish.
+An offline-page failure cannot reload itself. A twelve-second watchdog releases the cover.
+Face ID lock takes priority immediately. App switching never restarts the deadline.
+Duplicate events cannot remove or install another cover.
+
 ## Submission boundary
 
 **This sprint is not App Store submission-ready.**
-Before submission, a separately reviewed sprint must demonstrate app-specific utility.
-Guideline 4.2 evidence must include biometric re-entry, actionable native push,
-native photo capture/upload, native file/share flows, and universal links.
-That sprint must document the utility for App Review.
+Face ID re-entry shipped in Sprint 227.
+Native Plaid Link and universal-link handling shipped in Sprint 229.
+Camera uploads and native file sharing also provide app-specific utility.
+Push remains out of scope. App Review evidence still needs device verification.
 It must provide a reviewer account and verify major physical-iPhone workflows.
 Signing and the TestFlight script are prepared. A real signed archive, upload, physical-device install,
 and App Store Connect records were not performed or created by Sprint 212.
-Account deletion, native features and Guideline 4.2 compliance remain future work.
+Account deletion remains separate work. Guideline 4.2 approval is still pending.
 
 ## Required runtime verification
 
@@ -277,7 +287,7 @@ local Xcode/Simulator service and writable developer caches. Failures remain fai
 The suite requires `Signing.local.xcconfig` to be absent and refuses to overwrite it. Temporarily
 preserve your existing file outside the project before testing, then restore it afterward.
 
-## Face ID
+## Face ID (Sprint 227)
 
 When Face ID is on, Domus asks for Face ID every time it starts and every time it comes back from the background.
 Short interruptions that do not leave the app (Control Center, alerts, the camera) only show a privacy cover.
