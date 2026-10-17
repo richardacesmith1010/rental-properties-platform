@@ -22,7 +22,7 @@ function getSectionHelpText(sectionId: string, role: string) {
 
   if (sectionId === "maintenance") {
     return role === "tenant"
-      ? "Report a problem to see updates from your landlord here."
+      ? "Report a repair to see updates from your landlord here."
       : "Tenant reports appear here with status and photo updates.";
   }
 

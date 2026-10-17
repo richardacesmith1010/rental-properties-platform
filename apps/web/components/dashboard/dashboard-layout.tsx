@@ -96,7 +96,8 @@ export function DashboardLayout({
         id="main-content"
         tabIndex={-1}
         className={`min-h-0 overflow-x-hidden ${role === "owner"
-          ? "pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] lg:pb-0" : ""} ${mainClassName}`}
+          ? "pb-[calc(env(safe-area-inset-bottom,0px)+10rem)] lg:pb-0"
+          : "pb-[calc(env(safe-area-inset-bottom,0px)+5rem)] lg:pb-0"} ${mainClassName}`}
       >
         {children}
       </main>

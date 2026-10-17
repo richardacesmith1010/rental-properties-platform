@@ -19,7 +19,8 @@ export const dynamic = "force-dynamic";
 
 function MoneyStatus({ message }: { message: string }) {
   return <>
-    <main className="app-surface min-h-screen p-5 pb-[calc(env(safe-area-inset-bottom,0px)+5.25rem)] lg:pb-5">
+    <main className="app-surface min-h-screen p-5 pt-[calc(env(safe-area-inset-top,0px)+1.25rem)]
+      pb-[calc(env(safe-area-inset-bottom,0px)+10rem)] lg:pb-5">
       {message}
     </main>
     <OwnerBottomBar />
@@ -103,8 +104,8 @@ export default async function OwnerMoneyPage(props: { searchParams?: Promise<{ p
     return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
   });
   return <>
-    <main className="app-surface min-h-screen px-4 py-5 text-[var(--ink)] lg:pb-5
-      pb-[calc(env(safe-area-inset-bottom,0px)+5.25rem)]">
+    <main className="app-surface min-h-screen px-4 pb-5 pt-[calc(env(safe-area-inset-top,0px)+1.25rem)] text-[var(--ink)] lg:pt-5 lg:pb-5
+      pb-[calc(env(safe-area-inset-bottom,0px)+10rem)]">
       <div className="mx-auto max-w-[720px]">
     <Link href="/owner" className="hidden min-h-11 items-center text-sm text-[var(--muted)] lg:inline-flex">← Home</Link>
         <HomeMoneyPage cashAccounts={cashAccounts} cashWarning={cashWarning} data={data}

@@ -209,7 +209,7 @@ export default async function TenantPage(props: TenantPageProps) {
     ...maintenanceData.tickets.map((ticket) => ({
       id: `ticket:${ticket.id}`,
       label: ticket.title,
-      category: "Problems",
+      category: "Repairs",
       href: "/tenant?section=maintenance",
       description: `${ticket.propertyName}${ticket.unitNumber ? ` • ${formatUnitLabel(ticket.unitNumber)}` : ""}`,
       keywords: [ticket.title, ticket.description, ticket.propertyName, ticket.unitNumber ?? ""]
@@ -267,14 +267,15 @@ export default async function TenantPage(props: TenantPageProps) {
         searchItems={searchItems}
       />
 
-      <main id="main-content" tabIndex={-1} className="relative flex-1 lg:ml-[260px]">
+      <main id="main-content" tabIndex={-1} className="relative flex-1 pb-[calc(env(safe-area-inset-bottom,0px)+10rem)]
+        lg:ml-[260px] lg:pb-0">
         <div className="flex flex-col gap-4 px-6 pt-6 sm:flex-row sm:items-start sm:justify-between lg:px-8 lg:pt-8">
           <div id="overview">
             <h1 className="text-2xl font-bold tracking-tight text-[var(--ink)]">
               {activeSection === "overview" ? `Hi, ${displayName}` : tenantSectionLabel[activeSection]}
             </h1>
             <p className="mt-1 text-sm text-[var(--muted)]">
-              {activeSection === "overview" ? "Your rent, problems, and lease at a glance."
+              {activeSection === "overview" ? "Your rent, repairs, and lease at a glance."
                 : activeSection === "charges" ? "Pay rent and see what you've paid."
                   : activeSection === "notifications" ? "Talk with your landlord."
                     : "Everything you need for your home."}

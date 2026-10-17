@@ -44,7 +44,7 @@ describe("InboxSection tenant conversation", () => {
       />
     );
     expect(screen.getByText(
-      "Once your landlord sets up your lease, you can report problems. You can also send messages."
+      "Once your landlord sets up your lease, you can report repairs. You can also send messages."
     )).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Your message"), { target: { value: "Hello landlord" } });
     const send = screen.getByRole("button", { name: "Send" });
@@ -163,6 +163,16 @@ describe("InboxSection tenant conversation", () => {
       ["rent_charge", "Rent"], ["document_packet", "Papers"]
     ]);
     expect(screen.getByPlaceholderText("Subject")).toBeInTheDocument();
+  });
+
+  it("shows singular and plural message counts in a fixed pill", () => {
+    const { rerender } = render(<InboxSection viewerRole="owner" notifications={[]} threads={[thread]}
+      properties={[home]} onMarkRead={noop} onCreateThread={noop} />);
+    const one = screen.getByText("1 message");
+    expect(one).toHaveClass("shrink-0", "whitespace-nowrap");
+    rerender(<InboxSection viewerRole="owner" notifications={[]} threads={[{ ...thread, messageCount: 3 }]}
+      properties={[home]} onMarkRead={noop} onCreateThread={noop} />);
+    expect(screen.getByText("3 messages")).toHaveClass("shrink-0", "whitespace-nowrap");
   });
 
 });

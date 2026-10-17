@@ -172,7 +172,7 @@ export function TenantInboxView({
       <CardContent className="space-y-4 p-4 sm:p-5">
         {!hasActiveLease ? (
           <p className="text-sm text-[var(--muted)]">
-            Once your landlord sets up your lease, you can report problems. You can also send
+            Once your landlord sets up your lease, you can report repairs. You can also send
             messages.
           </p>
         ) : null}

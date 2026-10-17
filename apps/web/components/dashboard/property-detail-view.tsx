@@ -78,7 +78,8 @@ export function PropertyDetailView({
       : activeLeases.find((lease) => lease.id === activeMessageLeaseId) ?? null;
 
   return (
-    <main id="main-content" className="app-surface min-h-screen px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
+    <main id="main-content" className="app-surface min-h-screen px-4 pb-5 pt-[calc(env(safe-area-inset-top,0px)+1.25rem)]
+      sm:px-6 lg:pt-5 sm:py-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-3">

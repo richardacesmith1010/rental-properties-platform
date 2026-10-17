@@ -388,7 +388,9 @@ export function InboxSection({
                           <p className="truncate text-base font-medium text-[var(--ink)]">
                             {threadDisplayTitle(thread.subject, viewerRole ?? "owner")}
                           </p>
-                          <Badge variant="outline">{thread.messageCount} msg</Badge>
+                          <Badge variant="outline" className="shrink-0 whitespace-nowrap">
+                            {thread.messageCount} {thread.messageCount === 1 ? "message" : "messages"}
+                          </Badge>
                         </div>
                         <p className="mt-0.5 text-sm text-[var(--muted)]">{thread.propertyName}</p>
                         <p className="mt-0.5 truncate text-sm text-[var(--ink-2)]">

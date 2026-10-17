@@ -2,6 +2,7 @@ import {
   Banknote,
   BarChart3,
   Bell,
+  MessageCircle,
   BriefcaseBusiness,
   Building2,
   CreditCard,
@@ -159,16 +160,16 @@ export const tenantNavItems: NavItem[] = [
   },
   {
     id: "maintenance",
-    label: "Problems",
+    label: "Repairs",
     icon: Wrench,
     href: "/tenant?section=maintenance",
     description: "Report issues in your home and track updates.",
-    clickHint: "open problems"
+    clickHint: "open repairs"
   },
   {
     id: "notifications",
     label: "Messages",
-    icon: Bell,
+    icon: MessageCircle,
     href: "/tenant?section=notifications",
     description: "Read landlord updates and reply in one place.",
     clickHint: "open messages"

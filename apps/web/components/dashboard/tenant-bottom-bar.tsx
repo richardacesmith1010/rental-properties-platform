@@ -8,7 +8,7 @@ import Link from "next/link";
 const items = [
   ["overview", "Home", Home],
   ["charges", "Rent", Receipt],
-  ["maintenance", "Problems", Wrench],
+  ["maintenance", "Repairs", Wrench],
   ["notifications", "Messages", Bell]
 ] as const;
 

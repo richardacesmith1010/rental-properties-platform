@@ -6,7 +6,7 @@ describe("tenant navigation", () => {
     expect(tenantNavItems.map(({ id, label }) => ({ id, label }))).toEqual([
       { id: "overview", label: "Home" },
       { id: "charges", label: "Rent" },
-      { id: "maintenance", label: "Problems" },
+      { id: "maintenance", label: "Repairs" },
       { id: "notifications", label: "Messages" },
       { id: "documents", label: "Your lease" }
     ]);

@@ -3,7 +3,7 @@ export type TenantSection = "overview" | "charges" | "maintenance" | "documents"
 export const tenantSectionLabel: Record<TenantSection, string> = {
   overview: "Home",
   charges: "Rent",
-  maintenance: "Problems",
+  maintenance: "Repairs",
   documents: "Lease",
   notifications: "Messages"
 };

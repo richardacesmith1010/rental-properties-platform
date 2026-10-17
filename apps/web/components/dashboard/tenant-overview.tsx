@@ -79,8 +79,12 @@ export function TenantOverview({
       />
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <Link href={buildSectionHref("maintenance")} className="domus-card flex min-h-16 items-center justify-between p-4" title="Report a problem.">
-          <span className="flex items-center gap-3"><Wrench className="h-5 w-5 text-[var(--accent)]" /><span className="font-semibold">Report a problem</span></span><ChevronRight className="h-4 w-4" />
+        <Link href={buildSectionHref("maintenance")}
+          className="domus-card flex min-h-16 items-center justify-between p-4" title="Report a repair.">
+          <span className="flex items-center gap-3">
+            <Wrench className="h-5 w-5 text-[var(--accent)]" /><span className="font-semibold">Report a repair</span>
+          </span>
+          <ChevronRight className="h-4 w-4" />
         </Link>
         <Link href={buildSectionHref("notifications")} className="domus-card flex min-h-16 items-center justify-between p-4" title="Message your landlord.">
           <span className="font-semibold">Message landlord</span><ChevronRight className="h-4 w-4" />
@@ -89,16 +93,25 @@ export function TenantOverview({
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Your problems</h2>
+          <h2 className="text-lg font-semibold">Your repairs</h2>
           <Link
             href={buildSectionHref("maintenance")}
             className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--accent)]"
-            title="See all problems."
+            title="See all repairs."
           >
             See all
           </Link>
         </div>
-        {tickets.length > 0 ? tickets.slice(0, 3).map((ticket) => <div key={ticket.id} className="domus-card flex items-center justify-between p-4"><span className="truncate text-sm font-medium">{ticket.title}</span><span className="rounded-full bg-[var(--accent-weak)] px-2 py-1 text-xs capitalize text-[var(--accent)]">{ticket.status.replaceAll("_", " ")}</span></div>) : <p className="text-sm text-muted-foreground">{openTicketCount > 0 ? `${openTicketCount} open problems.` : "No open problems."}</p>}
+        {tickets.length > 0 ? tickets.slice(0, 3).map((ticket) => (
+          <div key={ticket.id} className="domus-card flex items-center justify-between p-4">
+            <span className="truncate text-sm font-medium">{ticket.title}</span>
+            <span className="rounded-full bg-[var(--accent-weak)] px-2 py-1 text-xs capitalize text-[var(--accent)]">
+              {ticket.status.replaceAll("_", " ")}
+            </span>
+          </div>
+        )) : <p className="text-sm text-muted-foreground">
+          {openTicketCount > 0 ? `${openTicketCount} open repair${openTicketCount === 1 ? "" : "s"}.` : "No open repairs."}
+        </p>}
       </section>
 
       {lease ? (

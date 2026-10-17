@@ -130,7 +130,7 @@ export function TenantRentCard({
           <p className="text-sm font-medium text-[var(--muted)]">{label}</p>
           {futureCharge && !charge ? (
             <p className="mt-1 text-sm text-[var(--ink)]">
-              Next rent: {formatCurrency(futureCharge.amountCents)} on {formatMonthDay(futureCharge.dueDate)}.
+              {formatCurrency(futureCharge.amountCents)} on {formatMonthDay(futureCharge.dueDate)}.
             </p>
           ) : <p className="mt-1 text-4xl font-bold tabular-nums text-[var(--ink)]">{amountLabel}</p>}
           {charge?.lines?.length ? <p className="mt-2 text-sm text-[var(--muted)]">
@@ -145,7 +145,7 @@ export function TenantRentCard({
             </p>
           ) : null}
           {futureCharge && charge ? <p className="mt-2 text-sm text-[var(--muted)]">
-            Next rent: {formatCurrency(futureCharge.amountCents)} on {formatMonthDay(futureCharge.dueDate)}.
+            {formatCurrency(futureCharge.amountCents)} on {formatMonthDay(futureCharge.dueDate)}.
           </p> : null}
         </div>
         {payState === "can_pay" && unpaidCharges.length > 0 ? (

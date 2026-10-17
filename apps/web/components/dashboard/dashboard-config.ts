@@ -2,6 +2,7 @@ import {
   Banknote,
   BarChart3,
   Bell,
+  MessageCircle,
   BriefcaseBusiness,
   Building2,
   ClipboardList,
@@ -125,8 +126,8 @@ export function buildAllSectionItems(params: BuildAllSectionItemsParams): NavIte
   if (params.hasInboxSection) {
     items.push({
       id: "inbox",
-      label: "Inbox",
-      icon: Bell,
+      label: "Messages",
+      icon: MessageCircle,
       badgeCount: params.inboxBadgeCount,
       description: "Central event timeline for operational communication.",
       clickHint: "open domus inbox"

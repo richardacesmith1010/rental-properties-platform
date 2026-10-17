@@ -351,7 +351,8 @@ export function Dashboard(props: DashboardProps) {
         </>
       }
     >
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 pb-24 pt-3 sm:px-4 sm:pb-24 sm:pt-4 lg:px-8 lg:pb-24 lg:pt-8">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 pb-40 pt-3
+        sm:px-4 sm:pb-40 sm:pt-4 lg:px-8 lg:pb-24 lg:pt-8">
         {props.generatedMessage ? (
           <Alert variant="success" className="mt-3 rounded-xl px-4 py-3">
             {props.generatedMessage}
@@ -462,7 +463,8 @@ export function Dashboard(props: DashboardProps) {
                 }
               />
 
-              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scroll-smooth px-3 pb-24 pt-3 sm:px-5 sm:pb-24 [-webkit-overflow-scrolling:touch]">
+              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scroll-smooth px-3 pb-40 pt-3
+                sm:px-5 sm:pb-40 [-webkit-overflow-scrolling:touch]">
                 <section id={activeSection} className="min-h-full">
                   {renderedSectionContent}
                 </section>

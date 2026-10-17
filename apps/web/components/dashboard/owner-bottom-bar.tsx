@@ -17,7 +17,7 @@ interface OwnerBottomBarProps {
   unreadNotificationCount?: number;
 }
 
-type OwnerTab = "Home" | "Money" | "Homes" | "Inbox" | "More";
+type OwnerTab = "Home" | "Money" | "Homes" | "Messages" | "More";
 
 export function resolveOwnerTab(pathname: string, section?: string | null): OwnerTab {
   if (pathname === "/owner/money" || pathname === "/owner/bank") return "Money";
@@ -25,7 +25,7 @@ export function resolveOwnerTab(pathname: string, section?: string | null): Owne
   if (pathname !== "/owner") return "More";
   if (!section || section === "overview" || section === "daily-ops-home") return "Home";
   if (["portfolio", "units", "leases", "tenants"].includes(section)) return "Homes";
-  if (section === "inbox") return "Inbox";
+  if (section === "inbox") return "Messages";
   return "More";
 }
 
@@ -37,7 +37,7 @@ function tabHref(tab: OwnerTab, search: string) {
     if (value) params.set(key, value);
   }
   if (tab === "Homes") params.set("section", "portfolio");
-  if (tab === "Inbox") params.set("section", "inbox");
+  if (tab === "Messages") params.set("section", "inbox");
   const pathname = tab === "Money" ? "/owner/money" : "/owner";
   const query = params.toString();
   return `${pathname}${query ? `?${query}` : ""}`;
@@ -88,7 +88,7 @@ export function OwnerBottomBar({ items = [], activeItemId, onOpenMore,
     { label: "Home", icon: Home, count: lateCount },
     { label: "Money", icon: BarChart3 },
     { label: "Homes", icon: Building2 },
-    { label: "Inbox", icon: MessageCircle, count: inboxCount },
+    { label: "Messages", icon: MessageCircle, count: inboxCount },
     { label: "More", icon: Menu, count: unreadNotificationCount }
   ];
   const bar = <>

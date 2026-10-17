@@ -70,7 +70,7 @@ export function HelpMenu({ onSubmitFeedback }: HelpMenuProps) {
   return (
     <div
       ref={containerRef}
-      className={pathname.startsWith("/owner")
+      className={pathname.startsWith("/owner") || pathname.startsWith("/tenant")
         ? "fixed bottom-[calc(env(safe-area-inset-bottom,0px)+6rem)] right-4 z-40 print:hidden lg:bottom-6 lg:right-6"
         : "fixed bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)] right-4 z-40 print:hidden sm:bottom-6 sm:right-6"}
     >

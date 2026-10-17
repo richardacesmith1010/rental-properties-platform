@@ -44,7 +44,7 @@ describe("TenantRentCard", () => {
     expect(screen.getByText("$1,200")).toBeInTheDocument();
     expect(screen.queryByText(/2 months/)).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "I paid this" })).toHaveLength(1);
-    expect(screen.getByText("Next rent: $1,200 on Nov 15.")).toBeInTheDocument();
+    expect(screen.getByText("$1,200 on Nov 15.")).toBeInTheDocument();
   });
 
   it("shows future-only rent as one line without due or report controls", () => {
@@ -52,7 +52,7 @@ describe("TenantRentCard", () => {
     const november = { ...baseProps.charges[0], dueDate: "2026-11-15", status: "pending" as const,
       amountCents: 120000 };
     render(<TenantRentCard {...baseProps} charges={[november]} payState="not_posted" />);
-    expect(screen.getByText("Next rent: $1,200 on Nov 15.")).toBeInTheDocument();
+    expect(screen.getByText("$1,200 on Nov 15.")).toBeInTheDocument();
     expect(screen.queryByText("Rent due")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "I paid this" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Pay rent" })).not.toBeInTheDocument();

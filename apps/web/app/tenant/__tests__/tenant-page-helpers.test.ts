@@ -2,10 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   getTenantDisplayName,
   isTenantSection,
-  parseSearchParam
+  parseSearchParam,
+  tenantSectionLabel
 } from "../tenant-page-helpers";
 
 describe("tenant page helpers", () => {
+  it("names the maintenance section Repairs", () => {
+    expect(tenantSectionLabel.maintenance).toBe("Repairs");
+  });
   it("parses search parameters", () => {
     expect(parseSearchParam("charges")).toBe("charges");
     expect(parseSearchParam(["documents", "charges"])).toBe("documents");

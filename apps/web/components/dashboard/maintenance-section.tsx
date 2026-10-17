@@ -139,11 +139,11 @@ export function MaintenanceSection({
   const visibleTickets =
     previewCount && !expanded ? filteredTickets.slice(0, previewCount) : filteredTickets;
   const hasMore = previewCount != null && filteredTickets.length > previewCount;
-  const sectionTitle = viewerRole === "tenant" ? "Problems" : "Repairs";
+  const sectionTitle = "Repairs";
   const emptyDescription =
     filter === "all"
       ? viewerRole === "tenant"
-        ? "Your reported problems and landlord updates will show up here."
+        ? "Your repairs and landlord updates will show up here."
         : "Repairs submitted by tenants will appear here."
       : viewerRole === "tenant"
         ? "Switch filters to review your other maintenance updates."

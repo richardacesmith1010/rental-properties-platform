@@ -30,6 +30,17 @@ describe("TenantOverview outside-Domus status", () => {
     vi.useRealTimers();
   });
 
+  it.each([[0, "No open repairs."], [1, "1 open repair."], [3, "3 open repairs."]])(
+    "shows repair wording for %i open tickets", (openTicketCount, copy) => {
+      render(<TenantOverview userName="Resident" charges={[]} nextCharge={null} lease={null}
+        openTicketCount={openTicketCount} payState="no_lease" onPayCharge={async () => null}
+        onRequestManualPaymentConfirmation={async () => null} />);
+      expect(screen.getByText("Report a repair")).toBeInTheDocument();
+      expect(screen.getByText("Your repairs")).toBeInTheDocument();
+      expect(screen.getByText(copy)).toBeInTheDocument();
+    }
+  );
+
   it("explains the missing lease without showing zero rent", () => {
     render(
       <TenantOverview

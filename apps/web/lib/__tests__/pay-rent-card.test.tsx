@@ -65,6 +65,19 @@ describe("PayRentCard", () => {
     } finally { vi.useRealTimers(); }
   });
 
+  it("shows the next rent amount without repeating the label", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-15T12:00:00Z"));
+    try {
+      const november = { ...charges[0], dueDate: "2026-11-15", amountCents: 120000 };
+      render(<PayRentCard charges={[november]} onPayCharge={async () => ({ success: true })}
+        onRequestManualPaymentConfirmation={async () => ({ success: true })} chargesHref="/tenant" />);
+      expect(screen.getByRole("heading", { name: "Next rent" })).toBeInTheDocument();
+      expect(screen.getByText("$1,200 on Nov 15.")).toBeInTheDocument();
+      expect(screen.queryByText(/Next rent: /)).not.toBeInTheDocument();
+    } finally { vi.useRealTimers(); }
+  });
+
   it("pays the oldest late rent before due rent", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-10-15T12:00:00Z"));

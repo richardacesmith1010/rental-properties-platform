@@ -153,7 +153,7 @@ export function renderSectionCases({
     case "inbox":
       if (!props.hasInboxSection) break;
       return renderSection(
-        "Inbox",
+        "Messages",
         <InboxSection
           viewerRole={props.data.profileRole === "manager" ? "manager" : "owner"}
           notifications={props.safeNotifications}

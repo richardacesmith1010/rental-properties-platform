@@ -117,7 +117,7 @@ export function PayRentCard({
     : payState === "paid" ? "Rent paid" : "No payments due right now";
   let emptyDescription = "Your balance is clear. When new rent posts, it will show up here first.";
   if (futureCharge) {
-    emptyDescription = `Next rent: ${formatCurrency(futureCharge.amountCents)} on ${formatMonthDay(futureCharge.dueDate)}.`;
+    emptyDescription = `${formatCurrency(futureCharge.amountCents)} on ${formatMonthDay(futureCharge.dueDate)}.`;
   } else if (payState === "paid" && lastPaidAt) {
     emptyDescription = `Paid ${formatDate(lastPaidAt)}. Thank you!`;
   } else if (payState === "not_posted" && rentDueDate) {

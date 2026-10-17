@@ -14,7 +14,7 @@ vi.mock("@/components/theme-provider", () => ({
 
 const items = [
   { id: "charges", label: "Rent", icon: Receipt, badgeCount: 2 },
-  { id: "inbox", label: "Inbox", icon: MessageCircle, badgeCount: 3 }
+  { id: "inbox", label: "Messages", icon: MessageCircle, badgeCount: 3 }
 ];
 
 beforeEach(() => {
@@ -29,7 +29,7 @@ describe("owner phone bar", () => {
     ["/owner/money", null, "Money"], ["/owner/bank", null, "Money"],
     ["/owner", "portfolio", "Homes"], ["/owner", "units", "Homes"],
     ["/owner", "leases", "Homes"], ["/owner", "tenants", "Homes"],
-    ["/owner/properties/id", null, "Homes"], ["/owner", "inbox", "Inbox"],
+    ["/owner/properties/id", null, "Homes"], ["/owner", "inbox", "Messages"],
     ["/owner", "charges", "More"]
   ])("marks %s %s as %s", (path, section, expected) => {
     expect(resolveOwnerTab(path, section)).toBe(expected);
@@ -41,11 +41,11 @@ describe("owner phone bar", () => {
     const nav = screen.getByRole("navigation", { name: "Owner shortcuts" });
     expect(screen.getAllByRole("navigation", { name: "Owner shortcuts" })).toHaveLength(1);
     expect(Array.from(nav.children).map((child) => child.getAttribute("aria-label")))
-      .toEqual(["Home, 2 late rent payments", "Money", "Homes", "Inbox, 3 unread", "More"]);
+      .toEqual(["Home, 2 late rent payments", "Money", "Homes", "Messages, 3 unread", "More"]);
     expect(within(nav).getByRole("link", { name: "Home, 2 late rent payments" })).toHaveAttribute("href", "/owner");
     expect(within(nav).getByRole("link", { name: "Money" })).toHaveAttribute("href", "/owner/money");
     expect(within(nav).getByRole("link", { name: "Homes" })).toHaveAttribute("href", "/owner?section=portfolio");
-    expect(within(nav).getByRole("link", { name: "Inbox, 3 unread" })).toHaveAttribute("href", "/owner?section=inbox");
+    expect(within(nav).getByRole("link", { name: "Messages, 3 unread" })).toHaveAttribute("href", "/owner?section=inbox");
     expect(within(nav).getByRole("link", { name: "Home, 2 late rent payments" }))
       .toHaveAttribute("aria-current", "page");
     expect(nav.querySelectorAll("[aria-hidden='true']")).not.toHaveLength(0);
@@ -97,11 +97,11 @@ describe("owner phone bar", () => {
   it("keeps bottom space and one bar in dashboard, Money and Bank page branches", () => {
     const source = (name: string) => readFileSync(resolve(__dirname, `../../${name}`), "utf8");
     expect(source("components/dashboard/dashboard-layout.tsx"))
-      .toContain("pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)]");
+      .toContain("pb-[calc(env(safe-area-inset-bottom,0px)+10rem)]");
     for (const page of ["app/owner/money/page.tsx", "app/owner/bank/page.tsx"]) {
       const text = source(page);
       expect(text).toContain("<OwnerBottomBar />");
-      expect(text).toContain("pb-[calc(env(safe-area-inset-bottom,0px)+5.25rem)]");
+      expect(text).toContain("pb-[calc(env(safe-area-inset-bottom,0px)+10rem)]");
     }
   });
 });

@@ -81,7 +81,7 @@ function onEnterNext(
 }
 
 function buildTenantTicketTitle(description: string) {
-  const summary = description.trim().split(/[.!?]/)[0] || "Reported problem";
+  const summary = description.trim().split(/[.!?]/)[0] || "Reported repair";
   return summary.slice(0, 200);
 }
 
@@ -162,7 +162,7 @@ export function TicketForm({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Report a Problem</CardTitle>
+          <CardTitle>Report a repair</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-[var(--ink-2)]">
@@ -182,7 +182,7 @@ export function TicketForm({
           ) : null}
 
           <label className="block space-y-2">
-            <span className="text-sm font-medium text-foreground">What&apos;s the problem?</span>
+            <span className="text-sm font-medium text-foreground">What needs repair?</span>
             <Textarea
               value={draft.description}
               onChange={(event) =>
@@ -219,7 +219,7 @@ export function TicketForm({
 
           {!hasActiveLease ? (
             <p className="text-sm text-[var(--muted)]">
-              Once your landlord sets up your lease, you can report problems. You can also send messages.
+              Once your landlord sets up your lease, you can report repairs. You can also send messages.
             </p>
           ) : null}
 
@@ -229,7 +229,7 @@ export function TicketForm({
             className="w-full"
             disabled={!canSubmit || isSubmitting}
             onClick={handleSubmit}
-            title="Report this problem."
+            title="Report this repair."
           >
             {isSubmitting ? "Sending..." : "Send to landlord"}
           </Button>

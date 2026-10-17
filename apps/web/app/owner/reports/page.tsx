@@ -75,7 +75,8 @@ export default async function ReportsPage(props: ReportsPageProps) {
   }));
 
   return (
-    <main id="main-content" className="app-surface min-h-screen px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
+    <main id="main-content" className="app-surface min-h-screen px-4 pb-5 pt-[calc(env(safe-area-inset-top,0px)+1.25rem)]
+      sm:px-6 lg:pt-5 sm:py-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-6">
         <header className="domus-card space-y-3 px-5 py-5 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
@@ -102,9 +103,9 @@ export default async function ReportsPage(props: ReportsPageProps) {
               <Link
                 href={getRoleHomePath(role)}
                 className="inline-flex min-h-11 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-2)] shadow-sm transition-shadow hover:border-[var(--accent-line)] hover:bg-[var(--accent-weak)] hover:text-[var(--accent)] sm:min-h-0"
-                title="Return to your workspace."
+                title="Return to Home."
               >
-                Back to Workspace
+                Back to Home
               </Link>
               <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                 <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">

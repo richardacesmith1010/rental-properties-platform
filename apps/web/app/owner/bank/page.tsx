@@ -48,7 +48,8 @@ async function loadStep<T>(step: string, query: () => PromiseLike<{ data: T; err
 
 function BankStatus({ message }: { message: string }) {
   return <>
-    <main className="min-h-screen p-5 pb-[calc(env(safe-area-inset-bottom,0px)+5.25rem)] lg:pb-5">
+    <main className="min-h-screen p-5 pt-[calc(env(safe-area-inset-top,0px)+1.25rem)]
+      pb-[calc(env(safe-area-inset-bottom,0px)+10rem)] lg:pb-5">
       {message}
     </main>
     <OwnerBottomBar />
@@ -138,7 +139,8 @@ export default async function BankPage(props: { searchParams?: Promise<{ account
   const recent = (recentQuery.data || []).map((item) => ({ ...item,
     propertyName: item.property_id ? propertyMap.get(item.property_id) || "Home" : "—" }));
   return <>
-    <div className="pb-[calc(env(safe-area-inset-bottom,0px)+5.25rem)] lg:pb-0">
+    <div className="pb-[calc(env(safe-area-inset-bottom,0px)+10rem)]
+      pt-[calc(env(safe-area-inset-top,0px)+1.25rem)] lg:pb-0 lg:pt-0">
       <Link href="/owner" title="Return home."
         className="hidden min-h-11 items-center px-4 text-sm text-[var(--muted)] lg:inline-flex">
         ← Home
