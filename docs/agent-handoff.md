@@ -1464,3 +1464,13 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   runner sleeping, partial edits in the tree), daily smoke at 13:30 UTC would have failed. Two string literals changed
   (`smoke-keyboard.spec.ts:80`, `smoke-speed.spec.ts:61` → "Report a repair", speed uses `exact: true`). Verified on
   production: 5/5 passed (tenant Home p75 744 ms). Rollback: revert the 238l commit.
+
+## 2026-10-17 ~09:20 — 237c-1 round 2 reviewed: FAIL (tests) → **owner decision needed** (2 attempts used, §2a)
+- Isolated gate green (319 files / 2,696 tests, build). Fix verification PASS_WITH_RISK; security no blocker (4 should-fix);
+  **tests-are-real FAIL**: no test protects "managed-client statements unchanged" (mutation survives), plus 4 medium test
+  gaps. Code paths verified correct (form posts JSON). Should-fix: "All my homes" always fails for managers who also run a
+  client home; accepted invite can be reset to pending by a second request; retry branch skips access/cooldown;
+  unbounded `.in()` lists; per-account queries.
+- Round 3 written (packet "Round 3 (PROPOSED)"), **not dispatched** — waits for the owner. 237c-1 changes stay uncommitted
+  in the tree; nothing of it is live.
+- Meanwhile **238i** (photo viewer + Save photo, L2, no file overlap) dispatched (`bvc9sa43e`, gpt-6-sol medium).

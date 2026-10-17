@@ -203,3 +203,39 @@ Claude decisions (recorded in the handoff): **managers keep inviting co-managers
    that the client check runs before any data read.
 
 Validation as §7. Report each item 1–8 with the test that proves it.
+
+## Round 3 (PROPOSED — waits for the owner's yes; CLAUDE.md §2a: FAIL after 2 attempts) — Claude review 2026-10-17 ~09:20
+Round 2 state: isolated gate green (319 files / 2,696 tests, build). Fix verification PASS_WITH_RISK (all 8 Round 2 items
+fixed or partial, no blocker). Security: no blocker, 4 should-fix. **Tests-are-real FAIL (L-017)**: mutation proves the
+decision "managed-client statements behave exactly as before" has no test that fails when it breaks. The code itself is
+correct for the form contract (hidden `propertyIds` = JSON). Fix only the items below; keep everything else.
+
+**Tests (all REQUIRED; prove each with the named mutation in the report):**
+- T1 `owner-statement.test.ts`: for managed-client statements make `getManagedHomeIds` return `[]` (or throw) and assert it
+  is never called and every client home still appears (mutation: filter client statements by managed homes).
+- T2 `owner-statement-download.test.ts`: for a manager not linked to the client account, assert the only table read before
+  the not-found result is `ownership_accounts` (mutation: read homes before rejecting).
+- T3 `invite-manager-form.test.tsx`: the hidden `propertyIds` equals `JSON.stringify(selectedIds)` (both one home and "All
+  my homes") and `ownershipAccountId` equals the active account (mutation: post a comma list).
+- T4 statements: a manager with homes elsewhere asks for an unrelated Domus owner's statement → refused, no account name in
+  the result (mutation: zero matching homes still returns a statement).
+- T5 `client-accounts.test.ts` + `client-overview.test.ts`: a managed-client account reachable only through a
+  `property_managers` row is NOT listed (mutation: drop the client-link requirement).
+- T6 (low): singular "this home" messages; the email HTML contains the footer; the gate receives the normalized email.
+
+**Code (REQUIRED):**
+- C1 "All my homes" for managers: the manager's invite list (`render-section-cases.tsx:292` → `invite-manager-form.tsx`)
+  leaves out client-account homes, which the server refuses (`invitations.ts:59-63`). Test it.
+- C2 Never downgrade an accepted invitation: the pending-row write must not change an existing row's status (use
+  `ignoreDuplicates: true` / ON CONFLICT DO NOTHING on `invitations_email_role_invited_by_property_key`). Test: an accepted
+  row stays accepted after a second invite (closes the two-requests race).
+- C3 Retry branch (`invitations.ts:97-116`): use it only when all selected homes already have a **pending** row and no
+  profile exists. Apply `lib/invite-resend.ts`'s existing minimum-age rule and its exact "too soon" copy before re-sending;
+  otherwise follow the normal path (existing profile → activate assignments + audit). Tests for each branch.
+- C4 Bounded queries: page `getManagedHomeIds` (`client-accounts.ts:64-69`) and pass id lists through the existing `chunks()`
+  helper in `owner-statement.ts:87-88`, `client-overview.ts:83`, `client-accounts.ts:84`; replace the per-account
+  `getClientState` calls (`invitations.ts:59-60`) with one `.in()` read; add `.max(100)` to
+  `ownerStatementRequestSchema.propertyIds`.
+- C5 One answer for "no access": a manager with no homes for an account gets the same not-found response as an unknown
+  account (no 403/404 difference). Keep HEAD's not-found copy.
+**Not in round 3 (follow-up, needs design):** granting access to an existing but unconfirmed account (pre-existing, S4).
