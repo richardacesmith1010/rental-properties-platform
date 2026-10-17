@@ -1263,3 +1263,23 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Verified: AASA returns 200 (APPLE_APP_ID set); Vercel Analytics already off in production (flag unset).
 - 238a XCTest: 115/116; `AppLockControllerTests/testOneLockWindowPerScene…` fails ~1 in 3 runs — checking whether it is a
   pre-existing flake on a clean pre-238a worktree.
+
+## 2026-10-16 — Sprints 238a, 238c, 238d SHIPPED; 237c-1 migration applied
+- **238a** (`2fdda7b`, iOS code only; ships with the next TestFlight build): privacy manifest, photo-save string, upload
+  guard, launch cover, `testflight.sh` guards. XCTest 115/116 (the AppLock flake below). **Launch cover not visible** in the
+  Simulator (black until the page) → fix sprint **238a-b** (rev 2, ChatGPT AWC adopted: cover in its own window at
+  `.normal + 1`, strict lock-visible rule, no-black fallback) dispatched to Codex (`gpt-6-astra` high).
+- **238c** (`f8807c1`): Ask Domus consent (`profiles.ai_consent_at`, 403 until allowed), `/support`, Privacy/Terms links,
+  upload `accept` types. Walked light + dark; "Not now" sends 0 chat requests. Smoke + CI green.
+- **238d** (`962152b`): deployed `rental-properties-platform-61j3oafu6` → domusbase.com; smoke 10/10; CI `gate` success.
+  Simulator walk (walk owner + walk tenant, light + dark): Money and Settings headers clear the status bar; owner tab
+  "Messages"; "Back to Home"; tenant "Report a repair" / "Your repairs" / "Repairs" tab; rent card says it once.
+  Remaining nit: at rest the **?** help button still overlaps the last row's chevron on Home/Money (content scrolls clear).
+- **237c-1**: Codex stopped (correctly) on `UNIQUE (email, role, invited_by)`. Migration
+  `20261026_sprint237c1_invitations_per_home_key.sql` applied live → `UNIQUE NULLS NOT DISTINCT (email, role, invited_by,
+  property_id)` (ChatGPT AWC adopted). Verified (rolled back): two homes per email; same-home reinvite updates one row;
+  owner null-home stays unique; duplicate in one upsert → `cardinality_violation` (packet dedupes); sign-up converts both
+  homes and accepts both rows; `authenticated` insert/update/upsert denied. Side fix: the same inviter can now link an
+  existing tenant to a second home (that insert used to fail on the old key). Packet rev 4 re-dispatched (`gpt-6-sol` high).
+- Flaky: `AppLockControllerTests/testOneLockWindowPerSceneReusedCoversPresentedControllersAndRestoresKeyPresentation`
+  fails ~1 in 3; the pre-238a comparison hung the Simulator. Follow-up: stabilize (likely window/scene timing).
