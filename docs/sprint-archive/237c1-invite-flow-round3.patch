@@ -1,0 +1,1286 @@
+diff --git a/apps/web/app/actions/__tests__/invitations.test.ts b/apps/web/app/actions/__tests__/invitations.test.ts
+index 6d2adfe..bdc44ef 100644
+--- a/apps/web/app/actions/__tests__/invitations.test.ts
++++ b/apps/web/app/actions/__tests__/invitations.test.ts
+@@ -2,140 +2,408 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
+ 
+ const mocks = vi.hoisted(() => ({
+   auth: vi.fn(), rate: vi.fn(), access: vi.fn(), admin: vi.fn(), parse: vi.fn(), audit: vi.fn(),
+-  clientProperty: vi.fn(), clientAccount: vi.fn(), ownershipAccess: vi.fn()
++  clientAccount: vi.fn(), ownershipAccess: vi.fn(), accounts: vi.fn(), branded: vi.fn(), send: vi.fn()
+ }));
+-vi.mock("@/lib/ownership", () => ({ canUserAdministerOwnershipAccount: mocks.ownershipAccess }));
+-vi.mock("@/app/actions/shared", () => ({ ensureCapabilityEnabled: vi.fn().mockResolvedValue(null) }));
+-vi.mock("@/lib/client-accounts", () => ({
+-  getClientStateForProperty: mocks.clientProperty, getClientState: mocks.clientAccount
++vi.mock("@/lib/ownership", () => ({
++  canUserAdministerOwnershipAccount: mocks.ownershipAccess, getOwnershipAccountsForUser: mocks.accounts
+ }));
+-vi.mock("next/cache", () => ({ revalidatePath: vi.fn(), unstable_cache: (fn: unknown) => fn }));
++vi.mock("@/app/actions/shared", () => ({ ensureCapabilityEnabled: vi.fn().mockResolvedValue(null) }));
++vi.mock("@/lib/client-accounts", () => ({ getClientState: mocks.clientAccount }));
++vi.mock("@/lib/invite-email", () => ({ canSendBrandedManagerInvite: mocks.branded, sendManagerInviteEmail: mocks.send }));
++vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+ vi.mock("@/app/actions/auth-helpers", () => ({ requireAuth: mocks.auth }));
+ vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: mocks.rate }));
+-vi.mock("@/lib/property-access", () => ({ canUserAdministerProperty: mocks.access }));
++vi.mock("@/lib/property-access", () => ({ getAdministeredPropertyIds: mocks.access }));
+ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.admin }));
+ vi.mock("@/lib/audit", () => ({ logAudit: mocks.audit }));
+-vi.mock("@/lib/validations", () => ({
+-  inviteManagerSchema: {}, inviteOwnerSchema: {}, parseFormData: mocks.parse
+-}));
++vi.mock("@/lib/validations", () => ({ inviteManagerSchema: {}, inviteOwnerSchema: {}, parseFormData: mocks.parse }));
+ import { inviteManager, inviteOwner } from "@/app/actions/invitations";
+ 
+ const form = new FormData();
+-function setup(profile: { id: string; role: string } | null, active: boolean | null = null) {
+-  const invite = vi.fn().mockResolvedValue({ data: { user: { id: "new-manager" } }, error: null });
+-  const upsert = vi.fn().mockResolvedValue({ error: null });
+-  const insert = vi.fn().mockResolvedValue({ error: null });
+-  const profileLookup = vi.fn().mockResolvedValue({ data: profile, error: null });
+-  const assignmentLookup = vi.fn().mockResolvedValue({ data: active === null ? null : { active }, error: null });
+-  const propertyLookup = vi.fn().mockResolvedValue({ data: { id: "home" }, error: null });
++const homes = ["h1", "h2", "h3"];
++function setup(profile: { id: string; role: string } | null = null, activeIds: string[] = [],
++  accountIds = ["a", "a", "a"], inactiveIds: string[] = []) {
++  let currentProfile = profile;
++  const events: string[] = [];
++  const records: Array<Record<string, unknown>> = [];
++  const invite = vi.fn(async () => { events.push("auth"); return { data: { user: { id: "new" } }, error: null }; });
++  const link = vi.fn(async () => {
++    events.push("link");
++    return { data: { properties: { action_link: "https://test/link" } }, error: null };
++  });
++  const upsert = vi.fn(async (rows: Array<Record<string, unknown>> | Record<string, unknown>,
++    options?: { ignoreDuplicates?: boolean }) => {
++    events.push("upsert");
++    if (Array.isArray(rows) && rows.some((row) => row.role === "manager")) {
++      const keys = rows.map((row) => `${row.email}:${row.role}:${row.invited_by}:${row.property_id}`);
++      if (new Set(keys).size !== keys.length) throw new Error("cardinality_violation");
++    }
++    if (Array.isArray(rows)) for (const row of rows) {
++      const old = records.find((item) => item.property_id === row.property_id && item.invited_by === row.invited_by);
++      if (old && !options?.ignoreDuplicates) Object.assign(old, row);
++      if (!old) records.push({ ...row });
++    }
++    return { error: null };
++  });
++  const insert = vi.fn(async () => ({ error: null }));
+   const from = vi.fn((table: string) => {
+-    if (table === "properties") return { select: () => ({ eq: () => ({ single: propertyLookup }) }) };
+-    if (table === "profiles") return { select: () => ({ eq: () => ({ single: profileLookup }) }) };
+-    if (table === "property_managers") return {
+-      select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: assignmentLookup }) }) }), upsert
+-    };
+-    return { insert };
+-  });
+-  mocks.admin.mockReturnValue({ from, auth: { admin: { inviteUserByEmail: invite } } });
+-  return { invite, upsert, profileLookup, assignmentLookup, from };
++    if (table === "ownership_accounts") return { select: () => ({ in: async (_key: string, ids: string[]) => ({
++      data: await Promise.all(ids.map(async (id) => ({ id, managed_client: (await mocks.clientAccount(id))?.managedClient ?? false }))),
++      error: null
++    }) }) };
++    if (table === "invitations") return { upsert, insert, update: (values: Record<string, unknown>) => {
++      const filters: Array<[string, unknown]> = [];
++      const chain = { eq: (key: string, value: unknown) => { filters.push([key, value]); return chain; },
++        in: async (_key: string, ids: string[]) => {
++          for (const row of records.filter((item) => filters.every(([key, value]) => item[key] === value) &&
++            ids.includes(String(item.property_id)))) Object.assign(row, values);
++          return { error: null };
++        } };
++      return chain;
++    }, select: () => {
++      const filters: Array<[string, unknown]> = [];
++      const chain = { eq: (key: string, value: unknown) => { filters.push([key, value]); return chain; },
++        in: async (_key: string, ids: string[]) => ({ data: records.filter((row) =>
++          filters.every(([key, value]) => row[key] === value) && ids.includes(String(row.property_id))), error: null }),
++        maybeSingle: async () => ({ data: null, error: null }) };
++      return chain;
++    } };
++    if (table === "property_managers") return { upsert, select: () => ({ eq: () => ({
++      in: async () => ({ data: [...activeIds.map((id) => ({ property_id: id, active: true })),
++        ...inactiveIds.map((id) => ({ property_id: id, active: false }))], error: null })
++    }) }) };
++    if (table === "properties") return { select: () => ({ in: async (_key: string, ids: string[]) => ({
++      data: ids.map((id) => ({ id, name: id.toUpperCase(), owner_account_id: accountIds[homes.indexOf(id)] ?? "a" })),
++      error: null
++    }) }) };
++    if (table === "profiles") return { select: () => ({ eq: (key: string) => ({
++      maybeSingle: async () => ({ data: key === "id" ? { full_name: "Owner" } : currentProfile, error: null })
++    }) }) };
++    return { insert, upsert, select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) };
++  });
++  const getUser = vi.fn(async () => ({ data: { user: { last_sign_in_at: "2026-10-01" } }, error: null }));
++  mocks.admin.mockReturnValue({ from, auth: { admin: {
++    inviteUserByEmail: invite, generateLink: link,
++    getUserById: getUser
++  } } });
++  return { events, records, invite, link, upsert, insert, from, getUser,
++    setProfile: (next: { id: string; role: string } | null) => { currentProfile = next; } };
+ }
+ 
+ beforeEach(() => {
+   vi.clearAllMocks();
+-  mocks.auth.mockResolvedValue({ user: { id: "owner" }, supabase: {
+-    from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: { id: "home" } }) }) }) })
+-  } });
++  mocks.auth.mockResolvedValue({ user: { id: "owner" }, role: "owner" });
+   mocks.rate.mockReturnValue({ allowed: true });
+-  mocks.access.mockResolvedValue(true);
+-  mocks.clientProperty.mockResolvedValue(null);
++  mocks.access.mockResolvedValue(homes);
+   mocks.clientAccount.mockResolvedValue(null);
+   mocks.ownershipAccess.mockResolvedValue(true);
++  mocks.accounts.mockResolvedValue([{ id: "a" }]);
++  mocks.branded.mockReturnValue(false);
++  mocks.send.mockResolvedValue(true);
+   mocks.parse.mockReturnValue({ success: true, data: {
+-    email: "manager@example.com", fullName: "Alex Manager", propertyId: "home"
++    email: "manager@example.com", fullName: "Alex Manager", propertyIds: homes
+   } });
+   mocks.audit.mockResolvedValue(undefined);
+ });
+ 
+ describe("inviteOwner", () => {
+-  it("refuses unclaimed clients before membership or email", async () => {
+-    const calls = setup(null);
++  it("refuses client account before membership or email", async () => {
++    const calls = setup();
+     mocks.parse.mockReturnValue({ success: true, data: {
+       email: "owner@example.com", fullName: "Owner", ownershipAccountId: "client"
+     } });
+     mocks.clientAccount.mockResolvedValue({ managedClient: true, claimState: "unclaimed" });
+     expect(await inviteOwner(null, form)).toEqual({ success: false, error: "This client can't have owners yet." });
+-    expect(mocks.ownershipAccess).not.toHaveBeenCalled();
+     expect(calls.invite).not.toHaveBeenCalled();
++    expect(mocks.ownershipAccess).not.toHaveBeenCalled();
+     expect(calls.upsert).not.toHaveBeenCalled();
+   });
+-  it("refuses claimed client membership through the generic invite", async () => {
+-    const calls = setup(null);
++  it("refuses claimed client owners before any write", async () => {
++    const calls = setup();
+     mocks.parse.mockReturnValue({ success: true, data: {
+       email: "owner@example.com", fullName: "Owner", ownershipAccountId: "client"
+     } });
+     mocks.clientAccount.mockResolvedValue({ managedClient: true, claimState: "claimed" });
+-    expect(await inviteOwner(null, form)).toEqual({
+-      success: false, error: "This client's owners are set by its client account."
+-    });
+-    expect(calls.invite).not.toHaveBeenCalled();
++    expect(await inviteOwner(null, form)).toEqual({ success: false,
++      error: "This client's owners are set by its client account." });
+     expect(calls.upsert).not.toHaveBeenCalled();
++    expect(calls.invite).not.toHaveBeenCalled();
++    expect(calls.link).not.toHaveBeenCalled();
+   });
+ });
+ 
+ describe("inviteManager", () => {
+-  it("refuses client home before assignment or email", async () => {
+-    const calls = setup(null);
+-    mocks.clientProperty.mockResolvedValue({ managedClient: true, claimState: "unclaimed" });
+-    expect(await inviteManager(null, form)).toEqual({
+-      success: false, error: "This home's managers are set by its client account."
+-    });
++  it("stops before database and Auth calls when rate limited", async () => {
++    const calls = setup();
++    mocks.rate.mockReturnValue({ allowed: false });
++    expect(await inviteManager(null, form)).toMatchObject({ success: false });
++    expect(calls.from).not.toHaveBeenCalled();
+     expect(calls.upsert).not.toHaveBeenCalled();
+     expect(calls.invite).not.toHaveBeenCalled();
++    expect(calls.link).not.toHaveBeenCalled();
+   });
+-  it("refuses a claimed client's generic manager invitation", async () => {
+-    const calls = setup(null);
+-    mocks.clientProperty.mockResolvedValue({ managedClient: true, claimState: "claimed" });
+-    expect(await inviteManager(null, form)).toMatchObject({ success: false });
++  it("stops before rate limit when authentication rejects", async () => {
++    const calls = setup();
++    mocks.auth.mockRejectedValue(new Error("Unauthorized"));
++    await expect(inviteManager(null, form)).rejects.toThrow("Unauthorized");
++    expect(mocks.rate).not.toHaveBeenCalled();
++    expect(calls.from).not.toHaveBeenCalled();
++    expect(calls.upsert).not.toHaveBeenCalled();
++    expect(calls.invite).not.toHaveBeenCalled();
++  });
++  it("lets a manager invite a co-manager to administered homes", async () => {
++    const calls = setup();
++    mocks.auth.mockResolvedValue({ user: { id: "manager" }, role: "manager" });
++    mocks.accounts.mockRejectedValue(new Error("owners only"));
++    expect(await inviteManager(null, form)).toMatchObject({ success: true });
++    expect(mocks.accounts).not.toHaveBeenCalled();
++    expect(mocks.access).toHaveBeenCalledOnce();
++    expect(calls.invite).toHaveBeenCalledOnce();
++  });
++  it("checks client account state in one read for homes across accounts", async () => {
++    const calls = setup(null, [], ["a", "b", "c"]);
++    mocks.auth.mockResolvedValue({ user: { id: "manager" }, role: "manager" });
++    expect(await inviteManager(null, form)).toMatchObject({ success: true });
++    expect(calls.from.mock.calls.filter(([table]) => table === "ownership_accounts")).toHaveLength(1);
++    expect(mocks.clientAccount).toHaveBeenCalledTimes(3);
++  });
++  it("rejects an empty deduped list before writes or Auth", async () => {
++    const calls = setup();
++    mocks.parse.mockReturnValue({ success: true, data: {
++      email: "manager@example.com", fullName: "Alex Manager", propertyIds: []
++    } });
++    expect(await inviteManager(null, form)).toEqual({ success: false, error: "Pick at least one home." });
++    expect(calls.from).not.toHaveBeenCalled();
+     expect(calls.invite).not.toHaveBeenCalled();
++  });
++  it("refuses client homes with the original copy", async () => {
++    const calls = setup();
++    mocks.clientAccount.mockResolvedValue({ managedClient: true, claimState: "claimed" });
++    expect(await inviteManager(null, form)).toEqual({ success: false,
++      error: "This home's managers are set by its client account." });
+     expect(calls.upsert).not.toHaveBeenCalled();
++    expect(calls.invite).not.toHaveBeenCalled();
++  });
++  it("writes one row per home before one generic Auth invite", async () => {
++    const calls = setup();
++    expect(await inviteManager(null, form)).toMatchObject({ success: true, delivery: "email",
++      message: "Invite sent to manager@example.com. They'll get an email from Domus." });
++    expect(calls.records).toHaveLength(3);
++    expect(calls.events).toEqual(["upsert", "auth"]);
++    expect(mocks.access).toHaveBeenCalledOnce();
++    expect(mocks.access).toHaveBeenCalledWith("owner");
++    expect(calls.invite).toHaveBeenCalledOnce();
++    expect(mocks.audit.mock.invocationCallOrder[0]).toBeLessThan(calls.invite.mock.invocationCallOrder[0]);
++    expect(calls.upsert.mock.invocationCallOrder[0]).toBeLessThan(mocks.audit.mock.invocationCallOrder[0]);
++    expect(calls.upsert).toHaveBeenCalledWith(homes.map((property_id) => expect.objectContaining({
++      email: "manager@example.com", role: "manager", property_id, invited_by: "owner", status: "pending",
++      accepted_at: null, invited_profile_id: null, created_at: expect.any(String)
++    })), { onConflict: "email,role,invited_by,property_id", ignoreDuplicates: true });
++    expect(calls.invite).toHaveBeenCalledWith("manager@example.com", {
++      redirectTo: expect.stringMatching(/\/auth\/callback$/),
++      data: { role: "manager", full_name: "Alex Manager" }
++    });
++    expect(calls.link).not.toHaveBeenCalled();
++    expect(mocks.send).not.toHaveBeenCalled();
++    expect(mocks.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "invite_manager",
++      metadata: expect.objectContaining({ propertyIds: homes }) }));
++  });
++  it("coalesces concurrent double submission in one process", async () => {
++    const calls = setup();
++    const [first, second] = await Promise.all([inviteManager(null, form), inviteManager(null, form)]);
++    expect(first).toMatchObject({ success: true });
++    expect(second).toMatchObject({ success: true });
++    expect(calls.records).toHaveLength(3);
++    expect(mocks.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "invite_manager" }));
++    expect(calls.upsert).toHaveBeenCalledOnce();
++    expect(calls.invite).toHaveBeenCalledOnce();
+   });
+-  it("adds an existing manager without sending email", async () => {
+-    const calls = setup({ id: "manager", role: "manager" });
+-    expect(await inviteManager(null, form)).toMatchObject({ success: true, delivery: "added" });
++  it("keeps concurrent submissions in different account contexts separate", async () => {
++    const calls = setup();
++    const data = { email: "manager@example.com", fullName: "Alex Manager", propertyIds: homes };
++    mocks.parse.mockReturnValueOnce({ success: true, data: { ...data, ownershipAccountId: "a" } })
++      .mockReturnValueOnce({ success: true, data: { ...data, ownershipAccountId: "b" } });
++    const [allowed, denied] = await Promise.all([inviteManager(null, form), inviteManager(null, form)]);
++    expect(allowed).toMatchObject({ success: true });
++    expect(denied).toEqual({ success: false, error: "You can only add a manager to your own homes." });
+     expect(calls.upsert).toHaveBeenCalledOnce();
++    expect(calls.invite).toHaveBeenCalledOnce();
++  });
++  it("uses the branded link once for allowed test recipients", async () => {
++    const calls = setup();
++    mocks.branded.mockReturnValue(true);
++    mocks.parse.mockReturnValue({ success: true, data: {
++      email: " Foo@Example.com ", fullName: "Foo", propertyIds: ["h1"]
++    } });
++    expect(await inviteManager(null, form)).toMatchObject({ success: true });
++    expect(calls.records[0].email).toBe("foo@example.com");
++    expect(mocks.branded).toHaveBeenCalledWith("foo@example.com");
++    expect(calls.link).toHaveBeenCalledOnce();
++    expect(calls.link).toHaveBeenCalledWith({ type: "invite", email: "foo@example.com",
++      options: { redirectTo: expect.stringMatching(/\/auth\/callback$/),
++        data: { role: "manager", full_name: "Foo" } } });
+     expect(calls.invite).not.toHaveBeenCalled();
++    expect(mocks.send).toHaveBeenCalledWith(expect.objectContaining({ email: "foo@example.com", homeNames: ["H1"] }));
+   });
+-  it("reports an already active manager without sending email", async () => {
+-    const calls = setup({ id: "manager", role: "manager" }, true);
+-    expect(await inviteManager(null, form)).toMatchObject({ success: true, delivery: "already" });
++  it("reactivates an inactive home with other missing assignments in one write", async () => {
++    const calls = setup({ id: "manager", role: "manager" }, [], ["a", "a", "a"], ["h1"]);
++    expect(await inviteManager(null, form)).toMatchObject({ success: true, delivery: "added",
++      message: "Added Alex Manager to 3 homes. They'll see it next time they sign in." });
++    expect(calls.upsert).toHaveBeenCalledWith([
++      { property_id: "h1", manager_profile_id: "manager", active: true },
++      { property_id: "h2", manager_profile_id: "manager", active: true },
++      { property_id: "h3", manager_profile_id: "manager", active: true }
++    ], { onConflict: "property_id,manager_profile_id" });
+     expect(calls.invite).not.toHaveBeenCalled();
++    expect(calls.link).not.toHaveBeenCalled();
++    expect(mocks.send).not.toHaveBeenCalled();
++    expect(mocks.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "invite_manager",
++      metadata: expect.objectContaining({ managerProfileId: "manager", propertyIds: homes }) }));
++    expect(calls.upsert.mock.invocationCallOrder[0]).toBeLessThan(mocks.audit.mock.invocationCallOrder[0]);
+   });
+-  it("sends new manager email with callback redirect", async () => {
+-    const calls = setup(null);
+-    expect(await inviteManager(null, form)).toMatchObject({ success: true, delivery: "email" });
+-    expect(calls.invite).toHaveBeenCalledWith("manager@example.com", expect.objectContaining({
+-      redirectTo: expect.stringMatching(/\/auth\/callback$/)
+-    }));
++  it("uses singular home copy for an added manager", async () => {
++    setup({ id: "manager", role: "manager" });
++    mocks.parse.mockReturnValue({ success: true, data: {
++      email: "manager@example.com", fullName: "Alex Manager", propertyIds: ["h1"]
++    } });
++    expect(await inviteManager(null, form)).toMatchObject({ success: true,
++      message: "Added Alex Manager to this home. They'll see it next time they sign in." });
+   });
+-  it("stops before lookup and writes when rate limited", async () => {
+-    const calls = setup(null);
+-    mocks.rate.mockReturnValue({ allowed: false });
+-    expect(await inviteManager(null, form)).toMatchObject({ success: false });
+-    expect(calls.from).not.toHaveBeenCalled();
++  it("uses singular home copy when access already exists", async () => {
++    setup({ id: "manager", role: "manager" }, ["h1"]);
++    mocks.parse.mockReturnValue({ success: true, data: {
++      email: "manager@example.com", fullName: "Alex Manager", propertyIds: ["h1"]
++    } });
++    expect(await inviteManager(null, form)).toMatchObject({ success: true,
++      message: "Alex Manager already has access to this home. No email was sent." });
++  });
++  it("keeps an already active manager without another write or email", async () => {
++    const calls = setup({ id: "manager", role: "manager" }, homes);
++    expect(await inviteManager(null, form)).toMatchObject({ success: true, delivery: "already",
++      message: "Alex Manager already has access to these homes. No email was sent." });
++    expect(calls.upsert).not.toHaveBeenCalled();
+     expect(calls.invite).not.toHaveBeenCalled();
++    expect(calls.link).not.toHaveBeenCalled();
++    expect(mocks.send).not.toHaveBeenCalled();
+   });
+-  it("stops before lookup and writes for a non-admin", async () => {
+-    const calls = setup(null);
+-    mocks.access.mockResolvedValue(false);
+-    expect(await inviteManager(null, form)).toMatchObject({ success: false });
+-    expect(calls.from).not.toHaveBeenCalled();
++  it("rejects a cross-account or unauthorized home before any write", async () => {
++    const calls = setup(null, [], ["a", "other", "a"]);
++    expect(await inviteManager(null, form)).toEqual({ success: false,
++      error: "You can only add a manager to your own homes." });
++    expect(calls.upsert).not.toHaveBeenCalled();
+     expect(calls.invite).not.toHaveBeenCalled();
+   });
+-  it("stops before rate limit or lookup when authentication rejects", async () => {
+-    const calls = setup(null);
+-    mocks.auth.mockRejectedValue(new Error("Unauthorized"));
+-    await expect(inviteManager(null, form)).rejects.toThrow("Unauthorized");
+-    expect(mocks.rate).not.toHaveBeenCalled();
++  it("does not read home names or insert when one home is unauthorized", async () => {
++    const calls = setup();
++    mocks.access.mockResolvedValue(["h1", "h3"]);
++    expect(await inviteManager(null, form)).toEqual({ success: false,
++      error: "You can only add a manager to your own homes." });
+     expect(calls.from).not.toHaveBeenCalled();
++    expect(calls.upsert).not.toHaveBeenCalled();
++    expect(calls.invite).not.toHaveBeenCalled();
++  });
++  it("deduplicates home IDs before upsert", async () => {
++    const calls = setup();
++    mocks.parse.mockReturnValue({ success: true, data: {
++      email: "manager@example.com", fullName: "Alex", propertyIds: ["h1", "h1", "h2"]
++    } });
++    await inviteManager(null, form);
++    expect(calls.records).toHaveLength(2);
++    expect(calls.upsert).toHaveBeenCalledOnce();
++    expect((calls.upsert.mock.calls[0][0] as Array<{ property_id: string }>).map((row) => row.property_id))
++      .toEqual(["h1", "h2"]);
++  });
++  it("keeps rows when Auth fails", async () => {
++    const calls = setup();
++    calls.invite.mockResolvedValue({ data: null, error: new Error("down") } as never);
++    expect(await inviteManager(null, form)).toEqual({ success: false,
++      error: "We added the homes but could not send the invite. Try again." });
++    expect(calls.records).toHaveLength(3);
++  });
++  it("resends after branded email fails without new rows or another Auth user", async () => {
++    const calls = setup();
++    mocks.branded.mockReturnValue(true);
++    mocks.send.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
++    expect(await inviteManager(null, form)).toMatchObject({ success: false });
++    for (const row of calls.records) row.created_at = "2020-01-01T00:00:00Z";
++    expect(await inviteManager(null, form)).toMatchObject({ success: true, delivery: "email" });
++    expect(calls.records).toHaveLength(3);
++    expect(calls.records.every((row) => row.status === "pending")).toBe(true);
++    expect(calls.records.every((row) => row.created_at !== "2020-01-01T00:00:00Z")).toBe(true);
++    expect(calls.upsert).toHaveBeenCalledOnce();
++    expect(calls.link).toHaveBeenCalledTimes(2);
++    expect(mocks.send).toHaveBeenCalledTimes(2);
++  });
++  it("retries generic delivery for an invited manager without new rows", async () => {
++    const calls = setup();
++    calls.invite.mockResolvedValueOnce({ data: null, error: new Error("email failed") } as never);
++    expect(await inviteManager(null, form)).toMatchObject({ success: false });
++    for (const row of calls.records) row.created_at = "2020-01-01T00:00:00Z";
++    expect(await inviteManager(null, form)).toMatchObject({ success: true, delivery: "email" });
++    expect(calls.records).toHaveLength(3);
++    expect(calls.upsert).toHaveBeenCalledOnce();
++    expect(calls.invite).toHaveBeenCalledTimes(2);
++    expect(mocks.send).not.toHaveBeenCalled();
++  });
++  it("activates an existing manager instead of retrying email", async () => {
++    const calls = setup();
++    calls.invite.mockResolvedValueOnce({ data: null, error: new Error("email failed") } as never);
++    await inviteManager(null, form);
++    calls.setProfile({ id: "new", role: "manager" });
++    expect(await inviteManager(null, form)).toMatchObject({ success: true, delivery: "added",
++      message: "Added Alex Manager to 3 homes. They'll see it next time they sign in." });
++    expect(calls.invite).toHaveBeenCalledOnce();
++    expect(calls.upsert).toHaveBeenCalledTimes(2);
++  });
++  it("does not reopen revoked rows through a duplicate insert", async () => {
++    const calls = setup();
++    await inviteManager(null, form);
++    calls.records[0].status = "expired";
++    calls.records[0].created_at = "2020-01-01T00:00:00Z";
++    await inviteManager(null, form);
++    expect(calls.records).toHaveLength(3);
++    expect(calls.records[0]).toMatchObject({ status: "expired", created_at: "2020-01-01T00:00:00Z" });
++  });
++  it("does not downgrade an accepted invite on a second request", async () => {
++    const calls = setup();
++    await inviteManager(null, form);
++    calls.records[0].status = "accepted";
++    calls.records[0].accepted_at = "2026-10-01T00:00:00Z";
++    await inviteManager(null, form);
++    expect(calls.records[0]).toMatchObject({ status: "accepted", accepted_at: "2026-10-01T00:00:00Z" });
++    expect(calls.upsert.mock.calls[1][1]).toMatchObject({ ignoreDuplicates: true });
++  });
++  it("waits before retrying a pending invite without a profile", async () => {
++    const calls = setup();
++    await inviteManager(null, form);
++    expect(await inviteManager(null, form)).toEqual({ success: false,
++      error: "Too many emails. Try again in an hour." });
++    expect(calls.invite).toHaveBeenCalledOnce();
++    expect(calls.upsert).toHaveBeenCalledOnce();
++  });
++  it("uses normal issue path when one selected home has no pending row", async () => {
++    const calls = setup();
++    await inviteManager(null, form);
++    calls.records[0].status = "accepted";
++    await inviteManager(null, form);
++    expect(calls.upsert).toHaveBeenCalledTimes(2);
++    expect(calls.invite).toHaveBeenCalledTimes(2);
++  });
++  it("lets a second authorized inviter issue their own rows", async () => {
++    const calls = setup();
++    await inviteManager(null, form);
++    mocks.auth.mockResolvedValue({ user: { id: "co-owner" }, role: "owner" });
++    await inviteManager(null, form);
++    expect(calls.records).toHaveLength(6);
++    expect(new Set(calls.records.map((row) => row.invited_by))).toEqual(new Set(["owner", "co-owner"]));
++  });
++  it("refuses managed clients and a failed home permission", async () => {
++    const calls = setup();
++    mocks.clientAccount.mockResolvedValue({ managedClient: true });
++    expect(await inviteManager(null, form)).toMatchObject({ success: false });
++    mocks.clientAccount.mockResolvedValue(null);
++    mocks.access.mockResolvedValue([]);
++    expect(await inviteManager(null, form)).toMatchObject({ success: false });
++    expect(calls.upsert).not.toHaveBeenCalled();
+   });
+ });
+diff --git a/apps/web/app/actions/invitations.ts b/apps/web/app/actions/invitations.ts
+index 10e9e66..9d3711c 100644
+--- a/apps/web/app/actions/invitations.ts
++++ b/apps/web/app/actions/invitations.ts
+@@ -2,12 +2,14 @@
+ 
+ import { revalidatePath } from "next/cache";
+ import { createAdminClient } from "@/lib/supabase/admin";
+-import { canUserAdministerProperty } from "@/lib/property-access";
+-import { canUserAdministerOwnershipAccount } from "@/lib/ownership";
+-import { getClientState, getClientStateForProperty } from "@/lib/client-accounts";
++import { getAdministeredPropertyIds } from "@/lib/property-access";
++import { canSendBrandedManagerInvite, sendManagerInviteEmail } from "@/lib/invite-email";
++import { canUserAdministerOwnershipAccount, getOwnershipAccountsForUser } from "@/lib/ownership";
++import { getClientState } from "@/lib/client-accounts";
+ import { logAudit } from "@/lib/audit";
+ import { sideEffectError } from "@/lib/logger";
+ import { checkRateLimit } from "@/lib/rate-limit";
++import { chunks } from "@/lib/supabase-pagination";
+ import {
+   inviteManagerSchema,
+   inviteOwnerSchema,
+@@ -16,179 +18,164 @@ import {
+ import { requireAuth } from "./auth-helpers";
+ import { ensureCapabilityEnabled, type ActionState } from "./shared";
+ 
+-export async function inviteManager(
+-  _prev: ActionState,
+-  formData: FormData
+-): Promise<ActionState> {
+-  const { supabase, user } = await requireAuth("owner", "manager");
+-
+-  const inviteRate = checkRateLimit(`invite:${user.id}`, 10, 60 * 60 * 1000);
+-  if (!inviteRate.allowed) {
+-    return { success: false, error: "Too many invitations sent. Please try again later." };
+-  }
++const managerInvitesInFlight = new Map<string, Promise<ActionState>>();
+ 
++export async function inviteManager(_prev: ActionState, formData: FormData): Promise<ActionState> {
++  const { user, role } = await requireAuth("owner", "manager");
+   const parsed = parseFormData(inviteManagerSchema, formData);
+-  if (!parsed.success) {
+-    return parsed;
+-  }
+-
+-  const { email, fullName, propertyId } = parsed.data;
+-  const admin = createAdminClient();
+-  const normalizedEmail = email.toLowerCase();
+-
+-  const { data: property } = await supabase
+-    .from("properties")
+-    .select("id")
+-    .eq("id", propertyId)
+-    .single();
+-
+-  if (!property || !(await canUserAdministerProperty(user.id, property.id))) {
+-    return { success: false, error: "Property not found." };
+-  }
+-
+-  try {
+-    if ((await getClientStateForProperty(propertyId))?.managedClient) {
+-      return { success: false, error: "This home's managers are set by its client account." };
++  if (!parsed.success) return parsed;
++  const { fullName } = parsed.data;
++  const email = parsed.data.email.trim().toLowerCase();
++  const rawIds = parsed.data.propertyIds ?? (parsed.data.propertyId ? [parsed.data.propertyId] : []);
++  const propertyIds = [...new Set(rawIds)];
++  if (!propertyIds.length) return { success: false, error: "Pick at least one home." };
++  const requestKey = `${user.id}:${parsed.data.ownershipAccountId ?? ""}:${email}:${[...propertyIds].sort().join(",")}`;
++  const running = managerInvitesInFlight.get(requestKey);
++  if (running) return running;
++  const pending = (async (): Promise<ActionState> => {
++    if (!checkRateLimit(`invite:${user.id}`, 10, 60 * 60 * 1000).allowed) {
++      return { success: false, error: "Too many invitations sent. Please try again later." };
+     }
+-  } catch {
+-    return { success: false, error: "Unable to check this home's client account." };
+-  }
+-
+-  const { data: existingProfile } = await admin
+-    .from("profiles")
+-    .select("id, role")
+-    .eq("email", normalizedEmail)
+-    .single();
+-
+-  if (existingProfile) {
+-    if (existingProfile.role === "manager") {
+-      const { data: existingAssignment, error: lookupError } = await admin
+-        .from("property_managers")
+-        .select("active")
+-        .eq("property_id", propertyId)
+-        .eq("manager_profile_id", existingProfile.id)
+-        .maybeSingle();
+-
+-      if (lookupError) {
+-        return { success: false, error: "Unable to check manager access. Please try again." };
++    let accountId: string | undefined;
++    if (role === "owner") {
++      const accounts = await getOwnershipAccountsForUser(user.id);
++      accountId = parsed.data.ownershipAccountId ?? accounts[0]?.id;
++      if (!accountId || !accounts.some((account) => account.id === accountId) ||
++        !(await canUserAdministerOwnershipAccount(user.id, accountId))) {
++        return { success: false, error: "You can only add a manager to your own homes." };
+       }
+-
+-      const { error: assignError } = await admin.from("property_managers").upsert(
+-        {
+-          property_id: propertyId,
+-          manager_profile_id: existingProfile.id,
+-          active: true
+-        },
+-        { onConflict: "property_id,manager_profile_id" }
+-      );
+-
+-      if (assignError) {
+-        return { success: false, error: "Failed to assign manager to property." };
++    }
++    const allowed = new Set(await getAdministeredPropertyIds(user.id));
++    if (propertyIds.some((id) => !allowed.has(id))) {
++      return { success: false, error: "You can only add a manager to your own homes." };
++    }
++    const admin = createAdminClient();
++    const { data: homes, error: homesError } = await admin.from("properties")
++      .select("id, name, owner_account_id").in("id", propertyIds);
++    if (homesError || !homes || homes.length !== propertyIds.length ||
++      (role === "owner" && homes.some((home) => home.owner_account_id !== accountId))) {
++      return { success: false, error: "You can only add a manager to your own homes." };
++    }
++    try {
++      const accountIds = [...new Set(homes.map((home) => home.owner_account_id))]
++        .filter((id): id is string => Boolean(id));
++      const accountResults = await Promise.all(chunks(accountIds).map((ids) =>
++        admin.from("ownership_accounts").select("id, managed_client").in("id", ids)));
++      if (accountResults.some((result) => result.error)) throw new Error("Client account lookup failed.");
++      if (accountResults.flatMap((result) => result.data ?? []).some((account) => account.managed_client)) {
++        return { success: false, error: "This home's managers are set by its client account." };
++      }
++    } catch {
++      return { success: false, error: "Unable to check this home's client account." };
++    }
++    const { data: inviter, error: inviterError } = await admin.from("profiles")
++      .select("full_name").eq("id", user.id).maybeSingle();
++    if (inviterError) return { success: false, error: "Could not load your name. Try again." };
++    const inviterName = inviter?.full_name?.trim() || "A Domus owner";
++    const homeNames = propertyIds.map((id) => homes.find((home) => home.id === id)!.name);
++    const { data: existingProfile, error: profileError } = await admin.from("profiles")
++      .select("id, role").eq("email", email).maybeSingle();
++    if (profileError) return { success: false, error: "Could not check this manager. Try again." };
++    if (existingProfile && existingProfile.role !== "manager") {
++      return { success: false, error: "A user with this email already exists with a different role." };
++    }
++    const redirectTo = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com"}/auth/callback`;
++    const metadata = { role: "manager", full_name: fullName };
++    const branded = canSendBrandedManagerInvite(email);
++    if (existingProfile) {
++      const { data: assignments, error: assignmentError } = await admin.from("property_managers")
++        .select("property_id, active").eq("manager_profile_id", existingProfile.id).in("property_id", propertyIds);
++      if (assignmentError) return { success: false, error: "Unable to check manager access. Please try again." };
++      const activeIds = new Set((assignments ?? []).filter((row) => row.active).map((row) => row.property_id));
++      const missing = propertyIds.filter((id) => !activeIds.has(id));
++      if (missing.length) {
++        const { error } = await admin.from("property_managers").upsert(missing.map((id) => ({
++          property_id: id, manager_profile_id: existingProfile.id, active: true
++        })), { onConflict: "property_id,manager_profile_id" });
++        if (error) return { success: false, error: "Failed to assign manager to homes." };
++        void logAudit({ userId: user.id, action: "invite_manager", entityType: "invitation",
++          metadata: { propertyIds, tenantEmail: email, managerProfileId: existingProfile.id } })
++          .catch(sideEffectError("inviteManager", "log_audit", {
++            userId: user.id, entityType: "invitation", entityId: existingProfile.id
++          }));
+       }
+-
+-      void logAudit({
+-        userId: user.id,
+-        action: "invite_manager",
+-        entityType: "invitation",
+-        metadata: {
+-          propertyId,
+-          tenantEmail: normalizedEmail,
+-          managerProfileId: existingProfile.id
+-        }
+-      }).catch(
+-        sideEffectError("inviteManager", "log_audit", {
+-          userId: user.id,
+-          entityType: "invitation",
+-          entityId: existingProfile.id
+-        })
+-      );
+-
+       revalidatePath("/owner");
+       revalidatePath("/manager");
+-      const result = {
+-        success: true,
+-        delivery: existingAssignment?.active ? "already" : "added",
+-        message: existingAssignment?.active
+-          ? `${fullName || normalizedEmail} already has access to this home. No email was sent.`
+-          : `Added ${fullName || normalizedEmail} to this home. They'll see it next time they sign in.`,
+-        email: normalizedEmail,
+-        name: fullName
+-      } as const;
+-      return result;
++      return { success: true, delivery: missing.length ? "added" : "already",
++        message: missing.length
++          ? `Added ${fullName || email} to ${propertyIds.length === 1 ? "this home" : `${propertyIds.length} homes`}. ` +
++            "They'll see it next time they sign in."
++          : `${fullName || email} already has access to ${propertyIds.length === 1 ? "this home" : "these homes"}. ` +
++            "No email was sent.", email, name: fullName } as ActionState;
+     }
+-
+-    return {
+-      success: false,
+-      error: "A user with this email already exists with a different role."
+-    };
+-  }
+-
+-  const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
+-    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com"}/auth/callback`,
+-    data: {
+-      role: "manager",
+-      full_name: fullName
++    const { data: priorInvites, error: priorError } = await admin.from("invitations")
++      .select("property_id, status, created_at").eq("email", email).eq("role", "manager").eq("invited_by", user.id)
++      .in("property_id", propertyIds);
++    if (priorError) return { success: false, error: "Unable to check manager access. Please try again." };
++    const retry = propertyIds.every((id) =>
++      priorInvites?.some((invite) => invite.property_id === id && invite.status === "pending"));
++    if (retry) {
++      const tooSoon = priorInvites?.some((invite) => {
++        const age = Date.now() - new Date(invite.created_at).getTime();
++        return invite.status === "pending" && (!Number.isFinite(age) || age < 60 * 60 * 1000);
++      });
++      if (tooSoon) return { success: false, error: "Too many emails. Try again in an hour." };
++      if (branded) {
++        const link = await admin.auth.admin.generateLink({ type: "invite", email, options: { redirectTo, data: metadata } });
++        if (link.error || !link.data.properties?.action_link ||
++          !(await sendManagerInviteEmail({ email, inviterName, homeNames, inviteUrl: link.data.properties.action_link }))) {
++          console.error("Manager invite retry delivery failed");
++          return { success: false, error: "We added the homes but could not send the invite. Try again." };
++        }
++      } else {
++        const { error } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo, data: metadata });
++        if (error) {
++          console.error("Manager invite retry delivery failed");
++          return { success: false, error: "We added the homes but could not send the invite. Try again." };
++        }
++      }
++      const { error: timestampError } = await admin.from("invitations").update({ created_at: new Date().toISOString() })
++        .eq("email", email).eq("role", "manager").eq("invited_by", user.id).eq("status", "pending")
++        .in("property_id", propertyIds);
++      if (timestampError) console.error("Manager invite retry timestamp failed", timestampError);
++      return { success: true, delivery: "email",
++        message: `Invite sent to ${email}. They'll get an email from Domus.`, email, name: fullName } as ActionState;
+     }
+-  });
+-
+-  if (inviteError) {
+-    return { success: false, error: "Failed to send invitation. Please try again." };
+-  }
+-
+-  const { error: trackInviteError } = await admin.from("invitations").insert({
+-    email: normalizedEmail,
+-    full_name: fullName,
+-    role: "manager",
+-    property_id: propertyId,
+-    invited_by: user.id,
+-    status: "pending"
+-  });
+-
+-  if (trackInviteError) {
+-    console.error("Failed to track manager invitation:", trackInviteError);
+-  }
+-
+-  if (inviteData?.user?.id) {
+-    const { error: managerAssignmentError } = await admin.from("property_managers").upsert(
+-      {
+-        property_id: propertyId,
+-        manager_profile_id: inviteData.user.id,
+-        active: true
+-      },
+-      { onConflict: "property_id,manager_profile_id" }
+-    );
+-
+-    if (managerAssignmentError) {
+-      return { success: false, error: "Manager invited, but property assignment failed." };
++    const issuedAt = new Date().toISOString();
++    const { error: rowsError } = await admin.from("invitations").upsert(propertyIds.map((id) => ({
++      email, full_name: fullName, role: "manager", property_id: id, invited_by: user.id,
++      status: "pending", accepted_at: null, invited_profile_id: null, created_at: issuedAt
++    })), { onConflict: "email,role,invited_by,property_id", ignoreDuplicates: true });
++    if (rowsError) return { success: false, error: "Could not add these homes. Try again." };
++    void logAudit({ userId: user.id, action: "invite_manager", entityType: "invitation",
++      metadata: { propertyIds, tenantEmail: email } }).catch(sideEffectError("inviteManager", "log_audit", {
++      userId: user.id, entityType: "invitation", entityId: propertyIds[0]
++    }));
++    if (branded) {
++      const link = await admin.auth.admin.generateLink({ type: "invite", email, options: { redirectTo, data: metadata } });
++      if (link.error || !link.data.properties?.action_link ||
++        !(await sendManagerInviteEmail({ email, inviterName, homeNames, inviteUrl: link.data.properties.action_link }))) {
++        console.error("Manager invite delivery failed");
++        return { success: false, error: "We added the homes but could not send the invite. Try again." };
++      }
++    } else {
++      const { error } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo, data: metadata });
++      if (error) {
++        console.error("Manager invite delivery failed");
++        return { success: false, error: "We added the homes but could not send the invite. Try again." };
++      }
+     }
++    revalidatePath("/owner");
++    revalidatePath("/manager");
++    return { success: true, delivery: "email",
++      message: `Invite sent to ${email}. They'll get an email from Domus.`, email, name: fullName } as ActionState;
++  })();
++  managerInvitesInFlight.set(requestKey, pending);
++  try {
++    return await pending;
++  } finally {
++    if (managerInvitesInFlight.get(requestKey) === pending) managerInvitesInFlight.delete(requestKey);
+   }
+-
+-  void logAudit({
+-    userId: user.id,
+-    action: "invite_manager",
+-    entityType: "invitation",
+-    metadata: {
+-      propertyId,
+-      tenantEmail: normalizedEmail
+-    }
+-  }).catch(
+-    sideEffectError("inviteManager", "log_audit", {
+-      userId: user.id,
+-      entityType: "invitation",
+-      entityId: propertyId
+-    })
+-  );
+-
+-  revalidatePath("/owner");
+-  revalidatePath("/manager");
+-  const result = {
+-    success: true,
+-    delivery: "email",
+-    message: `Invite sent to ${normalizedEmail}. They'll get an email from Domus.`,
+-    email: normalizedEmail,
+-    name: fullName
+-  } as const;
+-  return result;
+ }
+ 
+ export async function inviteOwner(
+diff --git a/apps/web/components/__tests__/invite-manager-form.test.tsx b/apps/web/components/__tests__/invite-manager-form.test.tsx
+index e6f4dcb..4edcb9d 100644
+--- a/apps/web/components/__tests__/invite-manager-form.test.tsx
++++ b/apps/web/components/__tests__/invite-manager-form.test.tsx
+@@ -1,6 +1,7 @@
+ import { fireEvent, render, screen } from "@testing-library/react";
+ import { beforeEach, describe, expect, it, vi } from "vitest";
+ import { InviteManagerForm } from "@/components/dashboard/invitations/invite-manager-form";
++import { InvitationsSection } from "@/components/dashboard/invitations-section";
+ 
+ const state = vi.hoisted(() => ({ current: null as null | { success: true; message: string } }));
+ vi.mock("react-dom", async (importOriginal) => ({
+@@ -11,9 +12,9 @@ vi.mock("react-dom", async (importOriginal) => ({
+ 
+ beforeEach(() => { state.current = null; });
+ describe("manager invite form", () => {
+-  it("names the home select and shows the plain-language steps", () => {
++  it("names the home choices and shows the plain-language steps", () => {
+     render(<InviteManagerForm properties={[]} onInviteManager={async () => null} />);
+-    expect(screen.getByRole("combobox", { name: /home/i })).toBeInTheDocument();
++    expect(screen.getByRole("checkbox", { name: "All my homes" })).toBeInTheDocument();
+     for (const label of ["Home", "Email", "Name", "Send"]) {
+       expect(screen.getByText(label)).toBeInTheDocument();
+     }
+@@ -34,7 +35,7 @@ describe("manager invite form", () => {
+   it("hides Next on the final invite step", () => {
+     render(<InviteManagerForm properties={[{ id: "home-1", name: "Home" }]}
+       onInviteManager={async () => null} />);
+-    fireEvent.change(screen.getByRole("combobox", { name: "Home" }), { target: { value: "home-1" } });
++    fireEvent.click(screen.getByRole("checkbox", { name: "Home" }));
+     fireEvent.click(screen.getByRole("button", { name: "Next" }));
+     fireEvent.change(screen.getByPlaceholderText("manager@email.com"), { target: { value: "m@example.com" } });
+     fireEvent.click(screen.getByRole("button", { name: "Next" }));
+@@ -42,4 +43,43 @@ describe("manager invite form", () => {
+     fireEvent.click(screen.getByRole("button", { name: "Next" }));
+     expect(screen.queryByRole("button", { name: "Next" })).not.toBeInTheDocument();
+   });
++  it("selects and clears all homes with one choice", () => {
++    render(<InviteManagerForm properties={[{ id: "h1", name: "Oak" }, { id: "h2", name: "Pine" },
++      { id: "h3", name: "Maple" }]} onInviteManager={async () => null} />);
++    fireEvent.click(screen.getByRole("checkbox", { name: "All my homes" }));
++    expect(screen.getByRole("checkbox", { name: "Oak" })).toBeChecked();
++    expect(screen.getByRole("checkbox", { name: "Pine" })).toBeChecked();
++    expect(screen.getByRole("checkbox", { name: "Maple" })).toBeChecked();
++    fireEvent.click(screen.getByRole("checkbox", { name: "All my homes" }));
++    expect(screen.getByRole("checkbox", { name: "Oak" })).not.toBeChecked();
++  });
++  it.each([false, true])("posts JSON home IDs and the active account (all=%s)", (all) => {
++    window.history.replaceState({}, "", "/manager?account=active-account");
++    const { container } = render(<InviteManagerForm properties={[{ id: "h1", name: "Oak" }, { id: "h2", name: "Pine" }]}
++      onInviteManager={async () => null} />);
++    fireEvent.click(screen.getByRole("checkbox", { name: all ? "All my homes" : "Oak" }));
++    fireEvent.click(screen.getByRole("button", { name: "Next" }));
++    fireEvent.change(screen.getByPlaceholderText("manager@email.com"), { target: { value: "m@example.com" } });
++    fireEvent.click(screen.getByRole("button", { name: "Next" }));
++    fireEvent.change(screen.getByPlaceholderText("Manager full name"), { target: { value: "Manager" } });
++    fireEvent.click(screen.getByRole("button", { name: "Next" }));
++    expect(container.querySelector<HTMLInputElement>('input[name="propertyIds"]')?.value)
++      .toBe(JSON.stringify(all ? ["h1", "h2"] : ["h1"]));
++    expect(container.querySelector<HTMLInputElement>('input[name="ownershipAccountId"]')?.value).toBe("active-account");
++    window.history.replaceState({}, "", "/");
++  });
++  it("leaves client-account homes out of a manager's invite choices", () => {
++    const action = async () => null;
++    render(<InvitationsSection ownershipAccounts={[]} invitations={[]} onInviteTenant={action}
++      onInviteManager={action} onResendInvite={action} properties={[
++        { id: "client-home", name: "Client Home", ownerAccountIsClient: true },
++        { id: "owner-home", name: "Owner Home", ownerAccountIsClient: false }
++      ]} />);
++    fireEvent.click(screen.getByRole("button", { name: "Send Invitation" }));
++    fireEvent.click(screen.getByRole("button", { name: "Manager Invite" }));
++    expect(screen.getByRole("checkbox", { name: "Owner Home" })).toBeInTheDocument();
++    expect(screen.queryByRole("checkbox", { name: "Client Home" })).not.toBeInTheDocument();
++    fireEvent.click(screen.getByRole("checkbox", { name: "All my homes" }));
++    expect(screen.getByRole("checkbox", { name: "Owner Home" })).toBeChecked();
++  });
+ });
+diff --git a/apps/web/components/dashboard/invitations-section.tsx b/apps/web/components/dashboard/invitations-section.tsx
+index e909b23..6867dc8 100644
+--- a/apps/web/components/dashboard/invitations-section.tsx
++++ b/apps/web/components/dashboard/invitations-section.tsx
+@@ -29,7 +29,7 @@ interface OwnerInviteDraft {
+ 
+ interface InvitationsSectionProps {
+   ownershipAccounts: Array<{ id: string; displayName: string }>;
+-  properties: Array<{ id: string; name: string }>;
++  properties: Array<{ id: string; name: string; ownerAccountIsClient?: boolean }>;
+   invitations: InvitationListItem[];
+   onInviteTenant: StatefulAction;
+   onInviteManager: StatefulAction;
+@@ -124,7 +124,8 @@ export function InvitationsSection({ ownershipAccounts, properties, invitations,
+             {onInviteOwner ? <Button type="button" size="sm" variant={activeFlow === "owner" ? "default" : "outline"} onClick={() => setActiveFlow("owner")} title="Start co-owner invitation workflow.">Co-owner Invite</Button> : null}
+           </div>
+           {activeFlow === "tenant" ? <InviteTenantForm properties={properties} onInviteTenant={onInviteTenant} onSuccess={onTenantInviteSuccess} /> : null}
+-          {activeFlow === "manager" ? <InviteManagerForm properties={properties} onInviteManager={onInviteManager} onSuccess={onManagerInviteSuccess} /> : null}
++          {activeFlow === "manager" ? <InviteManagerForm properties={properties.filter((home) => !home.ownerAccountIsClient)}
++            onInviteManager={onInviteManager} onSuccess={onManagerInviteSuccess} /> : null}
+           {activeFlow === "owner" && onInviteOwner ? (
+             <div className="space-y-4">
+               <FormError state={ownerState} />
+diff --git a/apps/web/components/dashboard/invitations/invite-manager-form.tsx b/apps/web/components/dashboard/invitations/invite-manager-form.tsx
+index 5933723..47e5197 100644
+--- a/apps/web/components/dashboard/invitations/invite-manager-form.tsx
++++ b/apps/web/components/dashboard/invitations/invite-manager-form.tsx
+@@ -5,7 +5,6 @@ import { useFormState } from "react-dom";
+ import type { StatefulAction, ActionState } from "@/app/actions";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+-import { Select } from "@/components/ui/select";
+ import { SubmitButton } from "@/components/shared/submit-button";
+ import { FormError } from "@/components/dashboard/forms";
+ import { Alert } from "@/components/ui/alert";
+@@ -14,7 +13,7 @@ import { toast } from "sonner";
+ const MANAGER_STEPS = ["Home", "Email", "Name", "Send"] as const;
+ 
+ interface ManagerInviteDraft {
+-  propertyId: string;
++  propertyIds: string[];
+   email: string;
+   fullName: string;
+ }
+@@ -38,22 +37,27 @@ export function InviteManagerForm({ properties, onInviteManager, onSuccess }: {
+   const [state, action] = useFormState(onInviteManager, null);
+   const handledRef = useRef<ActionState>(null);
+   const [step, setStep] = useState(0);
+-  const [draft, setDraft] = useState<ManagerInviteDraft>({ propertyId: "", email: "", fullName: "" });
+-  const requiredComplete = Boolean(draft.propertyId && draft.email && draft.fullName);
+-  const stepComplete = (index: number) => index === 0 ? Boolean(draft.propertyId)
++  const [activeAccountId, setActiveAccountId] = useState("");
++  const [draft, setDraft] = useState<ManagerInviteDraft>({ propertyIds: [], email: "", fullName: "" });
++  const requiredComplete = Boolean(draft.propertyIds.length && draft.email && draft.fullName);
++  const stepComplete = (index: number) => index === 0 ? Boolean(draft.propertyIds.length)
+     : index === 1 ? Boolean(draft.email) : index === 2 ? Boolean(draft.fullName) : requiredComplete;
+ 
++  useEffect(() => {
++    setActiveAccountId(new URLSearchParams(window.location.search).get("account") ?? "");
++  }, []);
++
+   useEffect(() => {
+     if (!state?.success) return;
+     if (handledRef.current === state) return;
+     handledRef.current = state;
+     toast.success(state.message ?? "Invite complete.");
+-    setDraft({ propertyId: "", email: "", fullName: "" });
++    setDraft({ propertyIds: [], email: "", fullName: "" });
+     setStep(0);
+     onSuccess?.();
+   }, [onSuccess, state]);
+ 
+-  const onEnterNext = (event: KeyboardEvent<HTMLInputElement | HTMLSelectElement>, canAdvance: boolean, nextStep: number) => {
++  const onEnterNext = (event: KeyboardEvent<HTMLInputElement>, canAdvance: boolean, nextStep: number) => {
+     if (event.key !== "Enter") return;
+     event.preventDefault();
+     if (canAdvance) setStep(nextStep);
+@@ -72,13 +76,19 @@ export function InviteManagerForm({ properties, onInviteManager, onSuccess }: {
+       </div>
+       {step === 0 ? (
+         <div className="space-y-3">
+-          <p className="text-sm text-[var(--ink-2)]">Step 1: Pick the home.</p>
+-          <Select aria-label="Home" value={draft.propertyId}
+-            onChange={(event) => setDraft((current) => ({ ...current, propertyId: event.target.value }))}
+-            onKeyDown={(event) => onEnterNext(event, stepComplete(step), 1)} required>
+-            <option value="">Pick a home</option>
+-            {properties.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}
+-          </Select>
++          <p className="text-sm text-[var(--ink-2)]">Step 1: Pick homes.</p>
++          <label className="flex min-h-11 items-center gap-3 text-[var(--ink)]">
++            <input type="checkbox" checked={properties.length > 0 && draft.propertyIds.length === properties.length}
++              onChange={(event) => setDraft((current) => ({ ...current,
++                propertyIds: event.target.checked ? properties.map((property) => property.id) : [] }))} />
++            All my homes
++          </label>
++          {properties.map((property) => <label key={property.id} className="flex min-h-11 items-center gap-3 text-[var(--ink)]">
++            <input type="checkbox" checked={draft.propertyIds.includes(property.id)}
++              onChange={(event) => setDraft((current) => ({ ...current, propertyIds: event.target.checked
++                ? [...current.propertyIds, property.id] : current.propertyIds.filter((id) => id !== property.id) }))} />
++            {property.name}
++          </label>)}
+         </div>
+       ) : null}
+       {step === 1 ? (
+@@ -104,14 +114,15 @@ export function InviteManagerForm({ properties, onInviteManager, onSuccess }: {
+           <p className="text-sm text-[var(--ink-2)]">Final step: review and send manager invite.</p>
+           <div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-3 py-3 text-sm text-[var(--ink-2)]">
+             <p>
+-              <span className="font-semibold">Property:</span>{" "}
+-              {properties.find((property) => property.id === draft.propertyId)?.name ?? "Not set"}
++              <span className="font-semibold">Homes:</span>{" "}
++              {properties.filter((property) => draft.propertyIds.includes(property.id)).map((property) => property.name).join(", ")}
+             </p>
+             <p><span className="font-semibold">Email:</span> {draft.email || "Not set"}</p>
+             <p><span className="font-semibold">Name:</span> {draft.fullName || "Not set"}</p>
+           </div>
+           <form className="space-y-2" action={action}>
+-            <input type="hidden" name="propertyId" value={draft.propertyId} />
++            <input type="hidden" name="propertyIds" value={JSON.stringify(draft.propertyIds)} />
++            <input type="hidden" name="ownershipAccountId" value={activeAccountId} />
+             <input type="hidden" name="email" value={draft.email} />
+             <input type="hidden" name="fullName" value={draft.fullName} />
+             <SubmitButton className="w-full" disabled={!requiredComplete} title="Send manager invitation.">
+diff --git a/apps/web/lib/__tests__/invite-email.test.ts b/apps/web/lib/__tests__/invite-email.test.ts
+index 6473bbf..aaa876a 100644
+--- a/apps/web/lib/__tests__/invite-email.test.ts
++++ b/apps/web/lib/__tests__/invite-email.test.ts
+@@ -1,6 +1,6 @@
+ import { afterEach, describe, expect, it, vi } from "vitest";
+ import { buildTenantInviteEmail } from "@/lib/email-templates";
+-import { sendTenantInviteEmail } from "@/lib/invite-email";
++import { canSendBrandedManagerInvite, sendTenantInviteEmail } from "@/lib/invite-email";
+ 
+ describe("tenant invite email", () => {
+   afterEach(() => {
+@@ -97,3 +97,20 @@ describe("tenant invite email", () => {
+     expect(sent).toBe(false);
+   });
+ });
++
++describe("manager invite recipient gate", () => {
++  afterEach(() => vi.unstubAllEnvs());
++  it("allows test addresses across case and whitespace", () => {
++    vi.stubEnv("DOMUS_NOTIFICATIONS_ALLOWLIST", "foo@example.com");
++    vi.stubEnv("DOMUS_NOTIFICATIONS_ENABLED", "false");
++    expect(canSendBrandedManagerInvite(" Foo@Example.com ")).toBe(true);
++    expect(canSendBrandedManagerInvite("other@example.com")).toBe(false);
++  });
++  it("uses generic delivery when off and branded delivery when on", () => {
++    vi.stubEnv("DOMUS_NOTIFICATIONS_ALLOWLIST", "");
++    vi.stubEnv("DOMUS_NOTIFICATIONS_ENABLED", "false");
++    expect(canSendBrandedManagerInvite("foo@example.com")).toBe(false);
++    vi.stubEnv("DOMUS_NOTIFICATIONS_ENABLED", "true");
++    expect(canSendBrandedManagerInvite("foo@example.com")).toBe(true);
++  });
++});
+diff --git a/apps/web/lib/__tests__/validations.test.ts b/apps/web/lib/__tests__/validations.test.ts
+index dfaf10f..0a25a1c 100644
+--- a/apps/web/lib/__tests__/validations.test.ts
++++ b/apps/web/lib/__tests__/validations.test.ts
+@@ -1136,6 +1136,19 @@ describe("inviteManagerSchema", () => {
+     });
+     expect(result.success).toBe(false);
+   });
++  it("parses one bounded JSON home list and normalizes email", () => {
++    const parsed = inviteManagerSchema.safeParse({ email: " Foo@Example.com ", fullName: "Jane Manager",
++      propertyIds: JSON.stringify([validUUID]) });
++    expect(parsed.success).toBe(true);
++    if (parsed.success) expect(parsed.data).toMatchObject({ email: "foo@example.com", propertyIds: [validUUID] });
++  });
++  it("rejects empty, oversized, missing, and conflicting home choices", () => {
++    const base = { email: "manager@example.com", fullName: "Jane Manager" };
++    for (const choice of [
++      { propertyIds: "[]" }, { propertyIds: JSON.stringify(Array(101).fill(validUUID)) },
++      { propertyIds: "not json" }, { propertyId: validUUID, propertyIds: JSON.stringify([validUUID]) }, {}
++    ]) expect(inviteManagerSchema.safeParse({ ...base, ...choice }).success).toBe(false);
++  });
+ });
+ 
+ /* ─── resendInviteSchema ─── */
+diff --git a/apps/web/lib/invite-email.ts b/apps/web/lib/invite-email.ts
+index 1fec45e..ed6ea73 100644
+--- a/apps/web/lib/invite-email.ts
++++ b/apps/web/lib/invite-email.ts
+@@ -1,4 +1,6 @@
+-import { buildTenantInviteEmail, type TenantInviteEmailParams } from "@/lib/email-templates";
++import { buildTenantInviteEmail, buildBrandedEmailShell, escapeHtml,
++  type TenantInviteEmailParams } from "@/lib/email-templates";
++import { notificationMode, notificationAllowlist, isNotificationRecipientAllowed } from "@/lib/notifications-switch";
+ 
+ export interface SendTenantInviteEmailParams extends TenantInviteEmailParams {
+   tenantEmail: string;
+@@ -7,6 +9,41 @@ export interface SendTenantInviteEmailParams extends TenantInviteEmailParams {
+ export async function sendTenantInviteEmail(
+   params: SendTenantInviteEmailParams
+ ): Promise<boolean> {
++  return sendInviteEmail(params.tenantEmail, buildTenantInviteEmail(params));
++}
++
++export function canSendBrandedManagerInvite(email: string): boolean {
++  try {
++    const mode = notificationMode();
++    return (mode === "on" || mode === "test") &&
++      isNotificationRecipientAllowed(mode, email, notificationAllowlist());
++  } catch {
++    return false;
++  }
++}
++
++export function buildManagerInviteEmail(params: {
++  inviterName: string; homeNames: string[]; inviteUrl: string;
++}) {
++  const subject = `${params.inviterName} added you to Domus`;
++  const homes = params.homeNames.length === 1 ? params.homeNames[0] : `${params.homeNames.length} homes`;
++  const body = `${params.inviterName} wants you to manage ${homes} on Domus.`;
++  const footer = "If you were not expecting this, you can ignore it.";
++  return { subject,
++    html: buildBrandedEmailShell({ titleHtml: "Manage homes on Domus",
++      bodyHtml: `<p>${escapeHtml(body)}</p><p>${escapeHtml(footer)}</p>`,
++      ctaText: "Set up your account", ctaUrl: params.inviteUrl, preheaderText: subject }),
++    text: `${body}\n\nSet up your account: ${params.inviteUrl}\n\n${footer}` };
++}
++
++export async function sendManagerInviteEmail(params: {
++  email: string; inviterName: string; homeNames: string[]; inviteUrl: string;
++}): Promise<boolean> {
++  if (!canSendBrandedManagerInvite(params.email)) return false;
++  return sendInviteEmail(params.email, buildManagerInviteEmail(params));
++}
++
++async function sendInviteEmail(to: string, message: { subject: string; html: string; text: string }): Promise<boolean> {
+   const apiKey = process.env.RESEND_API_KEY;
+   const fromEmail = process.env.RESEND_FROM_EMAIL;
+ 
+@@ -14,8 +51,6 @@ export async function sendTenantInviteEmail(
+     return false;
+   }
+ 
+-  const { subject, html, text } = buildTenantInviteEmail(params);
+-
+   try {
+     const response = await fetch("https://api.resend.com/emails", {
+       method: "POST",
+@@ -25,10 +60,8 @@ export async function sendTenantInviteEmail(
+       },
+       body: JSON.stringify({
+         from: fromEmail,
+-        to: [params.tenantEmail],
+-        subject,
+-        html,
+-        text
++        to: [to],
++        ...message
+       })
+     });
+ 
+diff --git a/apps/web/lib/validations-entity.ts b/apps/web/lib/validations-entity.ts
+index fdfd53c..647a567 100644
+--- a/apps/web/lib/validations-entity.ts
++++ b/apps/web/lib/validations-entity.ts
+@@ -108,10 +108,22 @@ export const addTicketCommentSchema = z.object({
+   isInternal: z.enum(["true", "false"]).optional().default("false")
+ });
+ 
++function parseJsonArray(value: unknown): unknown {
++  if (typeof value !== "string") return value;
++  try { return JSON.parse(value); } catch { return value; }
++}
++
+ export const inviteManagerSchema = z.object({
+-  email: z.string().min(1, "Email is required.").email("Enter a valid email address."),
++  email: z.string().trim().toLowerCase().min(1, "Email is required.").email("Enter a valid email address."),
+   fullName: z.string().min(1, "Full name is required.").max(100, "Name must be under 100 characters."),
+-  propertyId: z.string().uuid("Invalid property selection.")
++  propertyId: z.string().uuid().optional(),
++  propertyIds: z.preprocess(parseJsonArray, z.array(z.string().uuid()).min(1, "Pick at least one home.")
++    .max(100, "Pick up to 100 homes.")).optional(),
++  ownershipAccountId: z.preprocess((value) => value === "" ? undefined : value, z.string().uuid().optional())
++}).superRefine((value, context) => {
++  if (Boolean(value.propertyId) === Boolean(value.propertyIds)) {
++    context.addIssue({ code: "custom", message: "Pick at least one home." });
++  }
+ });
+ 
+ export const inviteOwnerSchema = z.object({
+diff --git a/apps/web/lib/__tests__/invite-resend-manager.test.ts b/apps/web/lib/__tests__/invite-resend-manager.test.ts
+new file mode 100644
+index 0000000..d17fe87
+--- /dev/null
++++ b/apps/web/lib/__tests__/invite-resend-manager.test.ts
+@@ -0,0 +1,23 @@
++import { describe, expect, it, vi } from "vitest";
++const mocks = vi.hoisted(() => ({ invite: vi.fn(), link: vi.fn(), send: vi.fn() }));
++vi.mock("server-only", () => ({}));
++vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ auth: { admin: {
++  inviteUserByEmail: mocks.invite, generateLink: mocks.link
++} } }) }));
++vi.mock("@/lib/invite-email", () => ({ sendTenantInviteEmail: vi.fn(), sendManagerInviteEmail: mocks.send }));
++vi.mock("@/app/actions/tenant-invitation-support", () => ({ buildTenantResendPayload: vi.fn(),
++  createTenantInviteLink: vi.fn(), deleteGeneratedInviteUser: vi.fn(), fallbackToSupabaseInvite: vi.fn() }));
++import { resendInvitationEmail } from "../invite-resend";
++
++describe("manager resend gate", () => {
++  it("uses the generic resend path and never sends branded mail", async () => {
++    mocks.invite.mockResolvedValue({ data: { user: { id: "manager" } }, error: null });
++    const result = await resendInvitationEmail({ id: "invite", email: "manager@example.com", full_name: "Morgan",
++      role: "manager", status: "pending", property_id: "home", ownership_account_id: null,
++      invited_profile_id: null }, "owner");
++    expect(result.ok).toBe(true);
++    expect(mocks.invite).toHaveBeenCalledOnce();
++    expect(mocks.link).not.toHaveBeenCalled();
++    expect(mocks.send).not.toHaveBeenCalled();
++  });
++});
+diff --git a/apps/web/lib/__tests__/manager-invite-email.test.ts b/apps/web/lib/__tests__/manager-invite-email.test.ts
+new file mode 100644
+index 0000000..b853160
+--- /dev/null
++++ b/apps/web/lib/__tests__/manager-invite-email.test.ts
+@@ -0,0 +1,49 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++const gate = vi.hoisted(() => ({ mode: vi.fn(), list: vi.fn(), allowed: vi.fn() }));
++vi.mock("@/lib/notifications-switch", () => ({ notificationMode: gate.mode,
++  notificationAllowlist: gate.list, isNotificationRecipientAllowed: gate.allowed }));
++import { buildManagerInviteEmail, canSendBrandedManagerInvite, sendManagerInviteEmail } from "../invite-email";
++
++afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
++describe("manager invite email", () => {
++  it("uses exact subject, body, button and plain text", () => {
++    const email = buildManagerInviteEmail({ inviterName: "Ace", homeNames: ["Oak Home"], inviteUrl: "https://test/link" });
++    expect(email.subject).toBe("Ace added you to Domus");
++    expect(email.html).toContain("Ace wants you to manage Oak Home on Domus.");
++    expect(email.html).toContain("Set up your account");
++    expect(email.html).toContain("If you were not expecting this, you can ignore it.");
++    expect(email.text).toContain("If you were not expecting this, you can ignore it.");
++    expect(buildManagerInviteEmail({ inviterName: "Ace", homeNames: ["A", "B"], inviteUrl: "https://test/link" }).text)
++      .toContain("manage 2 homes on Domus.");
++  });
++  it("fails closed for off, unknown mode, lookup error and non-allowlisted test recipients", () => {
++    gate.list.mockReturnValue(["allowed@example.com"]);
++    gate.allowed.mockImplementation((_mode: string, email: string) => email === "allowed@example.com");
++    gate.mode.mockReturnValue("test");
++    expect(canSendBrandedManagerInvite("allowed@example.com")).toBe(true);
++    expect(canSendBrandedManagerInvite("other@example.com")).toBe(false);
++    gate.mode.mockReturnValue("off");
++    expect(canSendBrandedManagerInvite("allowed@example.com")).toBe(false);
++    gate.mode.mockReturnValue("on");
++    gate.allowed.mockReturnValue(true);
++    expect(canSendBrandedManagerInvite("other@example.com")).toBe(true);
++    gate.mode.mockReturnValue("unknown");
++    expect(canSendBrandedManagerInvite("allowed@example.com")).toBe(false);
++    gate.mode.mockImplementation(() => { throw new Error("gate failed"); });
++    expect(canSendBrandedManagerInvite("allowed@example.com")).toBe(false);
++  });
++  it("sends only when the gate allows the recipient", async () => {
++    vi.stubEnv("RESEND_API_KEY", "test-key");
++    vi.stubEnv("RESEND_FROM_EMAIL", "test@example.com");
++    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
++    vi.stubGlobal("fetch", fetchMock);
++    gate.mode.mockReturnValue("test");
++    gate.list.mockReturnValue(["allowed@example.com"]);
++    gate.allowed.mockImplementation((_mode: string, email: string) => email === "allowed@example.com");
++    const payload = { email: "blocked@example.com", inviterName: "Ace", homeNames: ["Oak"], inviteUrl: "https://test/link" };
++    expect(await sendManagerInviteEmail(payload)).toBe(false);
++    expect(fetchMock).not.toHaveBeenCalled();
++    expect(await sendManagerInviteEmail({ ...payload, email: "allowed@example.com" })).toBe(true);
++    expect(fetchMock).toHaveBeenCalledOnce();
++  });
++});
