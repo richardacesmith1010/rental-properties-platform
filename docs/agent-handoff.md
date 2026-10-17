@@ -1505,3 +1505,26 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 ## 2026-10-17 ~09:55 — Owner: "Yes, run 237c-1 round 3 as written." → dispatched (third and final attempt)
 - Packet "Round 3" marked APPROVED. Round-2 state saved (`scratchpad/237c1-round2.patch` + untracked tar) for diffing.
 - If round 3 fails review, 237c-1 stops and goes back to the owner (no fourth round without a new decision).
+
+## 2026-10-17 — Account deletion runbook rev 3.3 (ChatGPT APPROVE WITH CHANGES ×3, every REQUIRED item adopted)
+- `docs/runbooks/account-deletion.md` rewritten (rev 2 → 3.3) plus a new no-PII step log
+  `docs/runbooks/account-deletion-log.md`. Docs only: no data changed, no account touched, no destructive SQL run.
+- Covers the rev-2 REQUIRED items 1–8: ordered, resumable steps A1–D4, each with a done-when check, and a step log in
+  the repo holding the request id only; day-3 contact, run date by day 21, done by day 30; a 70-column free-text audit
+  (Appendix A search by email, name, phone). Rows linked by profile id change automatically. Rows that only match an
+  identifier are reviewed mention by mention. A C3b gate runs before C9. The completion email goes out only after D1
+  passes, with lines matched to what was kept. Re-sign-in (`last_sign_in_at` or session use) triggers a 7-day confirm.
+  The 238b code-side checks are recorded (grants/RLS re-checked live today). Disposable 3-account fixture dry run.
+- Reviews in the Domus project chat "Specification Review": rev 3 AWC (3 REQUIRED) → 3.1 AWC (2) → 3.2 AWC (2, called
+  "the final runbook changes") → 3.3.
+- Live read-only checks: every table and column verified; every SQL block plan-checked with EXPLAIN; the search run
+  against the withdrawn 238b test request. Found and fixed: `rental_applications.applicant_email` is NOT NULL; unique
+  email keys on invitations, signers, LLC invitations (placeholders now hold the row id); unique partner names per LLC;
+  managed-client guard triggers (`set local domus.client_sync`); `storage.objects.owner_id` is null on every object (files
+  found via app rows); the `.env.local` Stripe key is test mode (C6/C7 use the live Dashboard).
+- Signed leases are now a tripwire, deleted by default unless the lawyer confirms retention; 0 exist today.
+- **Owner action (one):** say "go" for the fixture dry run (runbook §15). It must pass before any real request reaches
+  Phase B.
+- Follow-ups: add the open-request queue check to the SessionStart hook; the withdrawn 238b test request (`f66a7cb4…`)
+  still holds the test account's email (clear it in the dry-run session); a Plaid removal script before any sole owner
+  with a bank link deletes.
