@@ -1446,3 +1446,17 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   storage.objects still has 0 policies. 238k fully closed.
   - Follow-up seen: **Open File leaves the app for Safari** (signed URL opens externally; "◀ Domus" to return). Fold an
     in-app viewer for vault files into 238i's viewer work or a later sprint.
+
+## Sprint 238j SHIPPED (2026-10-17 ~04:45) — Large photos + byte-checked uploads — PASS_WITH_RISK
+- Commit `197c2d9` (34 files; round 1 + round 2). Production deploy `dpl_FWtbL7DrGYyUZ3t3RZ6bhNwUF66n` READY. CI `gate` success.
+- Gate (isolated worktree, 238j files only): 317 files / 2,664 tests, lint, tsc, build green. Reviews: security PASS,
+  client PASS (round 2), tests-are-real PASS (mutation-proven; all 7 redirect tests fail without `unstable_rethrow`).
+- **Simulator walk on production** (test tenant `+walktenant`, Report a repair): picked a 15 MB 48 MP JPEG + 12 MP JPEG +
+  12 MP portrait HEIC (iOS converted to JPEG) → accepted at pick (50 MB limit), sent as one repair "3 photos". Stored:
+  297 KB 2048×1536, 296 KB **1536×2048 (portrait kept)**, 282 KB 2048×1536; EXIF/location stripped. Dark mode readable.
+- Smoke: 24/25. **The 1 failure is pre-existing from 238d** (`962152b` renamed "Report a problem" → "Report a repair";
+  `smoke-keyboard.spec.ts:80` and `smoke-speed.spec.ts:61` still use the old text). Fix = Sprint 238l (L1, packet
+  committed `1f14265`), dispatch after 237c-1 round 2; must land before the daily smoke (13:30 UTC).
+- Risk: real-iPhone memory on 48 MP decode (TestFlight build 3 batch check). Test data left on test accounts: repair
+  "Test 238j large photos check" (+walktenant).
+- Scorecard: Phone 65 → 70, Tenant 78 → 79. Transcript **113 MB** — rotate the chat after 237c-1 round 2 is reviewed.
