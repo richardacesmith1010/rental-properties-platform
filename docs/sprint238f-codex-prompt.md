@@ -1,4 +1,4 @@
-# Sprint 238f — iPhone: make the Face ID lock presentation test deterministic (iPhone, test-only) — rev 1
+# Sprint 238f — iPhone: make the Face ID lock presentation test deterministic (iPhone, test-only) — rev 2 (rev 1 AWC adopted)
 
 ## 1. Objective
 `AppLockControllerTests/testOneLockWindowPerSceneReusedCoversPresentedControllersAndRestoresKeyPresentation` fails in the
@@ -29,14 +29,23 @@ other test classes; `LaunchSplashTests.swift` (Sprint 238a-b owns it).
 1. `apps/ios/ios/App/AppTests/AppLockControllerTests.swift`
 
 ## 6. Implementation requirements
+0. **Diagnose before fixing.** First add (temporarily, then keep as the timeout message) a one-line state snapshot at
+   `:348`: controller type + `ObjectIdentifier` of `host.presentedViewController`, `first`, `second`;
+   `isBeingPresented`/`isBeingDismissed`; `host.view.window`; `main`/`cover` `isKeyWindow` and `isHidden`. Claude runs
+   the full suite until it fails and reports the snapshot; the cause line in the report must quote the false predicate
+   (e.g. "presentedViewController was still `first` after dismiss"), not "UIKit race". Codex writes the snapshot code;
+   Claude provides the failing snapshot back if Codex cannot run XCTest.
 1. Replace fixed-time `settle()` waits in this test with condition waits (spin the main run loop until a predicate holds or
    a 3 s timeout, then fail with a message that prints `presentedViewController`, `isBeingDismissed`/`isBeingPresented`,
-   key window and lock window state). Use `present`/`dismiss` completion handlers where they exist.
-2. `tearDown` (or a helper it calls) dismisses anything `host` presented and waits until dismissed; hides and resigns the
-   lock window; restores the prior key window and waits until it is key. Do not reset the static per-scene map (the test
-   proves reuse).
+   key window and lock window state). Use `present`/`dismiss` completion handlers where they exist. Each wait only
+   observes: it never repeats a `present`, `dismiss` or `makeKey` call while polling.
+2. `tearDown` touches only `host`, `appWindow`, `testedLock?.lockWindow` and `priorKeyWindow` (never walk the shared
+   scene or dismiss other controllers/windows), in this order: dismiss what `host` presented and wait until
+   `presentedViewController == nil` with no transition in progress (while `appWindow` is still visible); hide and resign
+   the lock window; hide `appWindow`; if `priorKeyWindow` is non-nil, make it key and wait until it is. Do not reset the
+   static per-scene map (the test proves reuse).
 3. Keep every existing assertion and its order; do not loosen `===` checks or key-window checks.
-4. Lines ≤ 140; no new dependencies; no sleeps longer than the timeout.
+4. Each line ≤ 140 characters (line length, not file length); no new dependencies; no sleeps longer than the timeout.
 
 ## 7. Validation commands
 ```
