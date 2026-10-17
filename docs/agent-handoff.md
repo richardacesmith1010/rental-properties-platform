@@ -1397,3 +1397,7 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   the Add-a-home client picker, managed-client statement change, query per home with no cap). Claude decisions:
   **managers keep inviting co-managers; managed-client statements stay as before.** Round 2 appended to
   `docs/sprint237c1-codex-prompt.md`; dispatch after 238j (web runs one at a time). Fix attempt 1 of 2.
+- ~23:45 **Codex usage limit again (resets 2026-10-17 03:48).** The runner misread the new reset format and burned 238j/238h
+  attempts with no changes (L-027; `run-codex.sh` fixed `22977e1`). Requeued: **238j** (`bkkcyl3w9`) and **238h**
+  (`bs2ec75hi`) sleep until ~03:49 then run. After 238j: 237c-1 round 2 → 238i → 238b rev 4 → 237c-2 → 238e (web, one at a
+  time). iOS: 238a-b round 2 under XCTest now; 238f needs a failing snapshot from the next full-suite runs.
