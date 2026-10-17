@@ -1,8 +1,9 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { unstable_rethrow, useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
 import type { MaintenancePhotoDTO } from "@/lib/maintenance";
 
@@ -17,12 +18,38 @@ export function PhotoGallery({ photos, canDeletePhoto, onDelete }: PhotoGalleryP
   const [activePhotoId, setActivePhotoId] = useState<string | null>(null);
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [savingPhotoId, setSavingPhotoId] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const openingThumbnail = useRef<HTMLButtonElement | null>(null);
 
   const activeIndex = useMemo(
     () => photos.findIndex((photo) => photo.id === activePhotoId),
     [activePhotoId, photos]
   );
   const activePhoto = activeIndex >= 0 ? photos[activeIndex] : null;
+  const viewerIconClass = "inline-flex h-11 w-11 items-center justify-center rounded-full " +
+    "bg-[var(--surface-2)] text-[var(--ink)] shadow-sm";
+
+  useEffect(() => {
+    if (!activePhoto) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setActivePhotoId(null);
+        openingThumbnail.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [activePhoto]);
 
   if (photos.length === 0) {
     return null;
@@ -39,6 +66,7 @@ export function PhotoGallery({ photos, canDeletePhoto, onDelete }: PhotoGalleryP
       setDeleteError(null);
       router.refresh();
     } catch (error) {
+      unstable_rethrow(error);
       setDeleteError(error instanceof Error ? error.message : "Unable to delete this photo right now.");
     } finally {
       setDeletingPhotoId(null);
@@ -52,6 +80,50 @@ export function PhotoGallery({ photos, canDeletePhoto, onDelete }: PhotoGalleryP
 
     const nextIndex = (activeIndex + offset + photos.length) % photos.length;
     setActivePhotoId(photos[nextIndex]?.id ?? null);
+    setSaveError(null);
+  };
+
+  const closeViewer = () => {
+    setActivePhotoId(null);
+    setSaveError(null);
+    openingThumbnail.current?.focus();
+  };
+
+  const savePhoto = async () => {
+    if (!activePhoto || savingPhotoId) {
+      return;
+    }
+
+    setSavingPhotoId(activePhoto.id);
+    setSaveError(null);
+    let blobUrl: string | null = null;
+    let link: HTMLAnchorElement | null = null;
+    try {
+      if (!activePhoto.url) {
+        throw new Error("Missing photo URL");
+      }
+      const response = await fetch(activePhoto.url);
+      if (!response.ok) {
+        throw new Error("Photo download failed");
+      }
+      const downloadUrl = URL.createObjectURL(await response.blob());
+      blobUrl = downloadUrl;
+      link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = activePhoto.fileName;
+      document.body.appendChild(link);
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 5_000);
+      blobUrl = null;
+    } catch {
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
+      setSaveError("Could not save the photo. Try again.");
+    } finally {
+      link?.remove();
+      setSavingPhotoId(null);
+    }
   };
 
   return (
@@ -67,7 +139,11 @@ export function PhotoGallery({ photos, canDeletePhoto, onDelete }: PhotoGalleryP
                 <button
                   type="button"
                   className="block w-full"
-                  onClick={() => setActivePhotoId(photo.id)}
+                  onClick={(event) => {
+                    openingThumbnail.current = event.currentTarget;
+                    setSaveError(null);
+                    setActivePhotoId(photo.id);
+                  }}
                   title={`Open ${photo.fileName}`}
                 >
                   <img
@@ -80,7 +156,8 @@ export function PhotoGallery({ photos, canDeletePhoto, onDelete }: PhotoGalleryP
                 {canDelete && onDelete ? (
                   <button
                     type="button"
-                    className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-background/90 text-foreground shadow-sm transition hover:bg-background"
+                    className={"absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center " +
+                      "rounded-full bg-background/90 text-foreground shadow-sm transition hover:bg-background"}
                     onClick={() => void handleDelete(photo.id)}
                     title={`Delete ${photo.fileName}`}
                     disabled={deletingPhotoId === photo.id}
@@ -101,51 +178,67 @@ export function PhotoGallery({ photos, canDeletePhoto, onDelete }: PhotoGalleryP
         </div>
       </div>
 
-      {activePhoto ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 p-4 backdrop-blur-sm">
-          <button
-            type="button"
-            className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-card text-foreground shadow-sm"
-            onClick={() => setActivePhotoId(null)}
-            title="Close photo viewer"
-          >
-            <X className="h-5 w-5" />
-          </button>
-          {photos.length > 1 ? (
+      {activePhoto && typeof document !== "undefined" ? createPortal(
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Photo viewer"
+          className={"fixed inset-0 z-[100] flex h-[100dvh] flex-col overflow-hidden bg-[var(--surface)] px-4 " +
+            "pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] text-[var(--ink)]"}
+        >
+          <div className="flex h-12 shrink-0 items-center justify-end">
             <button
               type="button"
-              className="absolute left-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-card text-foreground shadow-sm"
-              onClick={() => showAdjacentPhoto(-1)}
-              title="Previous photo"
+              className={viewerIconClass}
+              onClick={closeViewer}
+              title="Close photo viewer"
             >
-              <ChevronLeft className="h-5 w-5" />
+              <X className="h-5 w-5" />
             </button>
-          ) : null}
-          <div className="max-h-[90vh] max-w-4xl overflow-hidden rounded-2xl border border-border/50 bg-card shadow-xl">
+          </div>
+          <div className="relative flex min-h-0 flex-1 items-center justify-center">
+            {photos.length > 1 ? (
+              <button
+                type="button"
+                className={`absolute left-0 z-10 ${viewerIconClass}`}
+                onClick={() => showAdjacentPhoto(-1)}
+                title="Previous photo"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+            ) : null}
             <img
               src={activePhoto.url}
               alt={activePhoto.caption ?? activePhoto.fileName}
-              className="max-h-[75vh] w-full object-contain bg-black/5"
+              className="h-full max-h-full w-full max-w-4xl object-contain"
             />
-            <div className="space-y-1 p-4">
-              <p className="text-sm font-semibold text-foreground">{activePhoto.fileName}</p>
-              {activePhoto.caption ? (
-                <p className="text-sm text-muted-foreground">{activePhoto.caption}</p>
-              ) : null}
-            </div>
+            {photos.length > 1 ? (
+              <button
+                type="button"
+                className={`absolute right-0 z-10 ${viewerIconClass}`}
+                onClick={() => showAdjacentPhoto(1)}
+                title="Next photo"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            ) : null}
           </div>
-          {photos.length > 1 ? (
+          <div className="flex shrink-0 flex-col items-center gap-2 pt-3">
+            <p className="max-w-full truncate text-sm font-semibold">{activePhoto.fileName}</p>
+            {activePhoto.caption ? <p className="max-w-full truncate text-sm text-[var(--muted)]">{activePhoto.caption}</p> : null}
             <button
               type="button"
-              className="absolute right-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-card text-foreground shadow-sm"
-              onClick={() => showAdjacentPhoto(1)}
-              title="Next photo"
+              className="domus-card min-h-11 min-w-44 px-5 py-2 text-sm font-semibold text-[var(--ink)]"
+              title="Save or share this photo."
+              onClick={() => void savePhoto()}
+              disabled={savingPhotoId !== null}
             >
-              <ChevronRight className="h-5 w-5" />
+              {savingPhotoId ? "Saving..." : "Save photo"}
             </button>
-          ) : null}
+            {saveError ? <p role="alert" className="text-sm text-[var(--crit)]">{saveError}</p> : null}
+          </div>
         </div>
-      ) : null}
+      , document.body) : null}
     </>
   );
 }
