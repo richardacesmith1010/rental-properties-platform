@@ -135,3 +135,13 @@ code site. Any packet that adds a user-client write must name the table, op and 
 map (`supabase/migrations/20261023_sprint237g_client_write_grants.sql`) with an attacker test. Money columns written by
 clients get a values guard (trigger), not just a column grant.
 
+
+#### L-026 | 2026-10-16 | PLANNING
+**What happened:** Packet 237c-1 told Codex to insert one pending `invitations` row per home ("All my homes"), but the live
+table had `UNIQUE (email, role, invited_by)`, so a second home for the same email could never be stored. Two ChatGPT
+reviews missed it; Codex caught it on dispatch and stopped, costing a round trip. The old code had hidden the same bug for
+months: a failed second insert was only logged, so a pending manager silently got one home.
+**What was correct:** Before a packet asks for more rows of an existing shape (per home, per month, per member), read the
+table's unique keys, constraints and triggers live (`pg_constraint`, `pg_indexes`) and quote them in the packet's Context.
+**Rule:** Packets that add rows to an existing table list its live unique keys. A logged-and-ignored insert error is a
+bug; packets that touch such a path make the error explicit.
