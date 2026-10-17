@@ -1440,3 +1440,9 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   `maintenance-queries.ts:51-58`, pre-existing L-002); shared `Alert` has no `role`; pinned copy "per ticket" uses a
   banned word.
 - Test media for the walk: `scratchpad/media/` (48 MP 15 MB JPEG, 12 MP JPEG, 12 MP portrait HEIC).
+- ~04:22 **238k app round trip PASS** (Simulator, Debug shell on live domusbase.com, test owner `+walkowner`, Walk Test
+  Home → Documents → Files): upload "File uploaded." → `storage.objects` row `cbb2395f…/03746fc3….jpeg`, `image/jpeg`,
+  44,613 bytes (exact) → Open File shows the photo from a signed Supabase URL → Delete File → object gone, list empty,
+  storage.objects still has 0 policies. 238k fully closed.
+  - Follow-up seen: **Open File leaves the app for Safari** (signed URL opens externally; "◀ Domus" to return). Fold an
+    in-app viewer for vault files into 238i's viewer work or a later sprint.
