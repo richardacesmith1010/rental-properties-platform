@@ -64,3 +64,14 @@ or "recommended next steps for Claude" sections. Report compact status only.
 
 ## 10. Constraints
 Only the file in §5. No app code. No new dependencies. No signing/entitlement changes.
+
+## Round 2 — the failing snapshot (Claude, full suite, 2026-10-16 23:22, iPhone 18 Pro Simulator)
+Round 1 (diagnostic message only) is in the working tree. The full suite then failed at `:368` with:
+`host.presentedViewController === second: false; presentedViewController=<first>{isBeingPresented=false,
+isBeingDismissed=true, hasTransitionCoordinator=true}; second={isBeingPresented=false, isBeingDismissed=false,
+hasTransitionCoordinator=false}; host={hasTransitionCoordinator=true}; main isKeyWindow=true; cover isHidden=true`.
+**Proven cause:** after `host.dismiss(animated: false)` plus the fixed 0.3 s `settle()`, `first` was still being dismissed
+(transition coordinator active), so `host.present(second)` was ignored by UIKit. Now do §6 items 1–4: wait (observe only)
+until `host.presentedViewController == nil` and no transition is in progress before presenting `second`, using the dismiss
+completion handler; same pattern after presenting; and the scoped teardown. Keep the diagnostic message as the timeout text.
+Report the cause line above in the report. Do not touch `LaunchSplashTests.swift` or any app code.
