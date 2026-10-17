@@ -1368,3 +1368,14 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - ~22:00 Owner accepted the updated Apple Developer Program License Agreement (banner gone). Membership card: the web
   "Add card" page (`secure.store.apple.com/us/account/setup`) shows a Chrome error; not urgent — renewal date
   **2027-10-10**. Later path: iPhone Settings → name → Payment & Shipping.
+
+## 2026-10-16 ~22:10 — Overnight dispatch plan (Codex resumes 22:47; ChatGPT review resets 22:47)
+- Running (auto-resume): **238a-b** (iOS launch cover) and **237c-1 rev 4** (web manager invites). Review → gate → ship.
+- Web, one at a time (shared tsc/vitest): **237c-2** (L2) → **238i** (L2, photo viewer) → **238j** (L3 uploads; critic panel
+  `wf_d6b52543-e27` then ChatGPT) → **238b rev 3** (L3 deletion; owner said build now; Claude applies
+  `20261024_sprint238b_account_deletion_requests.sql` first) → **238e rev 2** (L2 menus + Sign out; after 237c-2).
+- iOS, parallel with web: **238f** (test flake) → **238h** (manifest 17; ChatGPT first).
+- Scripts: **238g** (demo seed; emails set) — then Claude runs it per `docs/runbooks/appreview-seed.md`.
+- Claude-only: **238k** storage lockdown migration (critic panel + ChatGPT → apply with attacker SQL).
+- After 238a-b + 238j + 238i ship: TestFlight build 3 (`testflight.sh`; keychain already allowed) → Simulator walk.
+- Transcript ~46 MB: rotate the chat after this run (CLAUDE.md §7).
