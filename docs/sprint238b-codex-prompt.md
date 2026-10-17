@@ -1,4 +1,4 @@
-# Sprint 238b — In-app "Delete my account" request for every role (L3: auth/data; App Store 5.1.1(v)) — rev 2 (rev 1 ChatGPT REJECT: 7 REQUIRED adopted)
+# Sprint 238b — In-app "Delete my account" request for every role (L3: auth/data; App Store 5.1.1(v)) — rev 3 (rev 1 REJECT → rev 2 REJECT on the runbook only → owner 2026-10-16: build the code now)
 
 ## 1. Objective
 Apple requires apps with sign-up to let users start account deletion inside the app. Today only owners see
@@ -8,6 +8,12 @@ signed out, and the account is deleted by hand within 30 days using a runbook (a
 decision: keep shared rent/payment/repair records without the person's name or contact details).
 
 ## 2. Context
+- **Owner decision 2026-10-16:** build the code part now. ChatGPT accepted the code design in rev 2; its remaining REQUIRED
+  items were about the manual runbook, which Claude hardens before the first real request. Rev 3 also adopts the
+  code-side items from that review (sign-out failure path, copy, request-safety notes below).
+- The table exists before your work ships: Claude applies
+  `supabase/migrations/20261024_sprint238b_account_deletion_requests.sql` (dry-run passed: one open request per profile,
+  clients have no access).
 - HEAD after 238a packet (`docs/sprint238a-codex-prompt.md`). Plan: `docs/phone-readiness-plan-2026-10-16.md` Sprint C;
   decision Q2 (in-app request, 30 days, confirm by typing DELETE, no password re-entry — zero-friction rule).
 - Full automatic deletion stays parked (`docs/account-deletion-design.md` rev 3) until the lawyer sets retention years.
@@ -60,11 +66,15 @@ Automatic deletion/anonymization; changing the owner wipe tools; cancelling a re
      (<role>).`, no other personal text) and `logAudit` (`request_account_deletion`). Their failures are logged
      (`console.error` with a stable tag) and **never** turn the result into a failure — the request is already accepted.
      The feedback inbox is a heads-up only; the queue is the table.
-   - **Sign-out:** `supabase.auth.signOut({ scope: "global" })` (leave Domus on every device). A sign-out error after the
-     request is stored is logged and the result is still success.
+   - **Sign-out:** `supabase.auth.signOut({ scope: "global" })` (leave Domus on every device). If it returns an error,
+     call `supabase.auth.signOut({ scope: "local" })` so this device's session cookies are cleared anyway. Each error is
+     logged with a stable tag and the result is still success. The section then sends the browser to
+     `/login?deleted=requested` with `window.location.href` (a full load, so no signed-in page state survives).
+   - **Request safety:** this is a Next.js server action, which already rejects cross-site posts (origin check); do not
+     add a GET route. The rate limit above applies before any database call.
    - Return success with redirect target `/login?deleted=requested`. Nothing is deleted; no update/delete calls anywhere.
 3. **Section `DeleteAccountSection` (all roles):** heading `Delete my account`; text `We will delete your account within
-   30 days.` and `We keep rent and payment records the law requires, without your name.`; input label
+   30 days.` and `We may keep rent and payment records, without your name.`; input label
    `Type DELETE to confirm`; button `Delete my account` (destructive style) disabled until the input is exactly
    `DELETE`; pending label `Sending…`; error shown in an alert. Visible in "Your data" (tenant, manager) and at the top of
    "Account & Data" (owner).
@@ -88,8 +98,9 @@ Do NOT run `npm run gate:web` or apply SQL. Claude applies the migration and run
    `account_deletion_requests_one_open`) → success, no feedback row, no audit; a `23505` on a different constraint →
    failure copy.
 4. Primary insert error → exact failure copy, no sign-out, no feedback/audit; success → `signOut` called with
-   `{ scope: "global" }` and redirect target `/login?deleted=requested`; feedback error, audit error, or sign-out error
-   after a stored request → still success (each logged).
+   `{ scope: "global" }` and redirect target `/login?deleted=requested`; a global sign-out error → `signOut` called again
+   with `{ scope: "local" }`; feedback error, audit error, or sign-out errors after a stored request → still success (each
+   logged).
 4b. Forged fields: FormData with `profile_id`, `email`, `role=owner` from a tenant session → the inserted request and
    feedback use only the session identity (tenant id/email/role).
 5. The action makes no delete/update calls on any table (asserted with the admin-client mock).
