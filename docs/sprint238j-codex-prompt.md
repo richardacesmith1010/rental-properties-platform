@@ -410,3 +410,83 @@ Do NOT include 'Claude prompt' or 'recommended next steps for Claude' sections. 
 - Do not edit `expense-partners.test.tsx`, `onboarding-form.test.tsx` or the two maintenance-ticket
   action tests.
 - Lines ≤ 140 characters; files ≤ 500 lines; every Supabase error checked; exact copy only, with no invented URLs or emails.
+
+## Round 2 (Claude review, 2026-10-17 ~04:30) — FAIL: fix these, nothing else
+Claude's isolated gate on round 1 is green (317 files / 2,651 tests, lint, tsc, build). Three independent reviews found:
+the server byte checks are correct (no changes needed there); one real runtime bug; three tests that can never fail
+(proven by mutation: their `expect`s run inside the mocked action, the component's new `catch` swallows the failure);
+weak pins; one flaky test; and the 10 MB pick-time photo limit still blocks a large library photo before it is shrunk.
+Leave every other file alone, including the uncommitted invitation/owner-statement/client-accounts files (another
+sprint's work in the same tree). Same report format as §9.
+
+**Files (all already in §5):** the 7 components below, `apps/web/lib/maintenance-photos.ts`,
+`apps/web/components/dashboard/maintenance/photo-upload.tsx`, `apps/web/lib/image-compress.ts`, and the test files named.
+
+**F1 — Next.js redirects are swallowed (BLOCKER, runtime).** In Next 15.5 a server action that calls `redirect()`
+rejects the client promise with a redirect error that the RedirectBoundary must receive
+(`next/dist/client/components/router-reducer/reducers/server-action-reducer.js`). `completeOnboarding` always ends with
+`redirect()` and `requireAuth` redirects to `/login` when the session expired, so today every successful onboarding shows
+`We could not send that…` and clears the preview. Fix: `import { unstable_rethrow } from "next/navigation";` and make
+`unstable_rethrow(error);` the **first line** of each new catch: `onboarding-form.tsx:80`, `profile-settings.tsx:57`,
+`signer-flow.tsx:67`, `expense-form.tsx:77`, `expense-list.tsx:121`, `ticket-form.tsx:160`, `ticket-photo-upload.tsx:54`.
+Tests (one per component, 7 total, in the existing test files: `avatar-upload.test.tsx` for onboarding + profile settings,
+`upload-budget.test.tsx` for expense form + expense list + signer flow, `ticket-form.test.tsx`,
+`ticket-photo-upload.test.tsx`): the mocked action throws the **real** error from `redirect("/x")` (import `redirect` from
+`next/navigation` inside the mock). Render inside a small test error boundary and assert: the boundary received an error
+whose `digest` starts with `NEXT_REDIRECT`; the upload error copy is **not** shown; for onboarding/profile the preview is
+not cleared before the rethrow. Keep a plain `new Error("413")` case per component proving the friendly copy still shows.
+
+**F2 — Tautological tests (BLOCKER, L-017).** No `expect(...)` may run inside a mock implementation in any 238j test.
+Capture with `vi.fn(async () => ...)`, then `await waitFor(() => expect(action).toHaveBeenCalledTimes(1))` and assert on
+`action.mock.calls[0]` afterwards (as `ticket-form.test.tsx` 5a/5d already do). Fix:
+- `ticket-photo-upload.test.tsx:21-38` (compressed send + ticketId: JPEG type, `.jpg`, ≤ 921,600 bytes each, ticketId).
+- `upload-budget.test.tsx:60-73` (receipt compressed: JPEG type, `.jpg`, ≤ 921,600) and `:117-123` (key list,
+  `category=repair`, `amountDollars=10`, `description=""`).
+- `avatar-upload.test.tsx:72-80` (empty file field passes FormData unchanged: `size === 0`), and **add** the same case for
+  `OnboardingForm`.
+Prove each: in the report, name the production change each fixed test now catches (for example "returning the raw file
+from `prepareUploadFile`").
+
+**F3 — Flaky test.** `ticket-form.test.tsx:54` checks the `Send to landlord` button synchronously; it failed 1 of 7
+runs. Use `await screen.findByRole("button", { name: "Send to landlord" })`. Run `npx vitest run
+components/__tests__/ticket-form.test.tsx` 20 times in a loop; all 20 must pass (report the count).
+
+**F4 — Pick-time photo limit (client only; server unchanged).** A 48 MP library photo that iOS converts to JPEG is
+10–20 MB and is refused with `Each photo must be under 10MB.` before it is shrunk. In `lib/maintenance-photos.ts` add
+`export const MAX_MAINTENANCE_PHOTO_PICK_BYTES = 50 * 1024 * 1024;` and an optional third parameter
+`maxBytes = MAX_MAINTENANCE_PHOTO_BYTES` to `validateMaintenancePhotoSelection`. When `maxBytes` is the default, the
+message stays exactly `Each photo must be under 10MB.` (the server call at `maintenance-queries.ts:133` is unchanged);
+when it is the pick limit, the message is `Each photo must be under 50 MB.`. The two browser callers
+(`photo-upload.tsx:53`, `ticket-photo-upload.tsx:33`) pass `MAX_MAINTENANCE_PHOTO_PICK_BYTES`. Tests:
+`maintenance-photos.test.ts` — default rejects 11 MB with the old copy; pick limit accepts 15 MB and rejects 51 MB with
+the new copy. `ticket-photo-upload.test.tsx` — a 15 MB JPEG pick is accepted and the action receives a file ≤ 921,600
+bytes. `ticket-form.test.tsx` — same for the tenant form (through the real `PhotoUpload` if the test already renders it,
+otherwise through the picker callback it uses).
+
+**F5 — Weak pins (SHOULD-FIX).**
+- `image-compress.test.ts` (AC1e): an encoder returning 921,601 bytes at step 1 for a single photo must move to step 2;
+  921,600 bytes is accepted at step 1. This must fail if `Math.min(PHOTO_MAX_BYTES, …)` is removed.
+- `ticket-form.test.tsx:92-97` (AC5e): also assert `Sent. You'll see updates on Home.` is **absent**.
+- `expense-receipt-upload.test.ts:60` (AC11): `expect(mocks.auth.mock.calls).toEqual([["owner"], ["owner"]])` (or the
+  exact sequence the test drives).
+- `maintenance-photo-upload.test.ts` and `profile-avatar.test.ts` (AC9, AC13): in the PNG-bytes-named-`p.jpg` case and
+  the JPEG-bytes-typed-`image/png` avatar case, assert the uploaded body's `.type` is the sniffed type (and `file_type`
+  for repairs), so uploading the original file instead of the rebuilt one fails.
+- `file-signature.test.ts` (AC2): a ZIP with only `[Content_Types].xml` named `.docx` → `null`; a Word package named
+  `.xlsx` → `null`.
+- `upload-property-file.test.ts:76-77` (AC12): for `scan.png` with JPEG bytes also assert `image/jpeg` and
+  `file_type: "image"`.
+
+**F6 — e2e spec without `sharp`.** `tests/e2e/maintenance-photos.spec.ts` imports `sharp`, which no `package.json`
+declares. Replace it with a tiny in-spec helper that reads width/height from the JPEG SOF0/SOF2 marker of the captured
+bytes; keep the `height > width` assertion. No new dependency.
+
+**F7 — Small fixes.**
+- `image-compress.ts:65`: if `edge === 0` (no intrinsic size), treat it like a decode failure (the existing fallback), never
+  encode a 1×1 image. Add one test.
+- `ticket-form.tsx:141-160` and `ticket-photo-upload.tsx:40-54`: indent the code inside the new `try` blocks.
+- New plain-text upload error elements you added (`ticket-photo-upload.tsx`, `expense-list.tsx`, `onboarding-form.tsx`)
+  get `role="alert"`.
+
+**Validation (Codex):** `cd apps/web && npx vitest run` (full suite), `npx tsc --noEmit`, `npm run lint:web` from the
+repo root, `git diff --check`, plus the F3 loop. Do NOT run `gate:web`, Playwright or `testflight.sh`.
