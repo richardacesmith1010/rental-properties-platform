@@ -1408,3 +1408,6 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Simulator launch timing (Release relaunch): process running 26.55 → first app log 28.56 → cover installed 28.72 → scene
   ready 28.88 → cover removed `finished` 31.43. Black before the first frame = simulator process spawn + black launch
   snapshot (not app code). **Risk:** confirm on a real iPhone (owner's batched TestFlight check, build 3).
+- Transcript is **80 MB** (rotation threshold 50 MB, CLAUDE.md §7). Kept alive overnight only because the queued Codex
+  runners (238j `bkkcyl3w9`, 238h `bs2ec75hi`, 238f round 2 `bz2ltg6r4`, all waking ~03:49) report back here.
+  **Rotate the chat in the morning** after they land; a new chat starts from this handoff.
