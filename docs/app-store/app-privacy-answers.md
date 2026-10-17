@@ -14,7 +14,7 @@ App Privacy must be published before App Store submission. TestFlight does not n
 | # | Check | Why | If not true |
 |---|---|---|---|
 | G1 | Sprint 238c is live: `<Analytics/>` does not render inside the iPhone app (`apps/web/app/layout.tsx:125`) | Q6 drops Device ID and Browsing History | Use the 19-type fallback in section 2. Never publish 17 while the app still runs analytics. |
-| G2 | `apps/ios/ios/App/App/PrivacyInfo.xcprivacy` lists the same 17 types and purposes as section 1 | Label and manifest must agree | Fix the manifest first (Codex, iPhone sprint). Today it still has 19 types. |
+| G2 | `apps/ios/ios/App/App/PrivacyInfo.xcprivacy` lists the same 17 types and purposes as section 1 | Label and manifest must agree | **Met 2026-10-17 (Sprint 238h):** manifest has 17 types; a test fails if analytics is turned back on without updating both. |
 | G3 | The e-sign IP/device row (238a) in `PRIVACY-AUDIT.md` maps to a type in section 1 | `app/actions/document-packets.ts:180-181, 221-227` stores signer IP and browser | Mirror that row here. If it says Coarse Location for App Functionality, tick F on row 8. |
 | G4 | https://domusbase.com/privacy shows the owner-approved policy | Apple links the label to it | Wait for owner step 6 (Q9). Entity name: `[OWNER: legal entity name]`. |
 | G5 | Ask Domus asks first (238c, `profiles.ai_consent_at`) and no longer sends email as the name (`route.ts:191`) | Rows 1, 7 and 12 describe the consented flow | Hold Publish until 238c is live. |

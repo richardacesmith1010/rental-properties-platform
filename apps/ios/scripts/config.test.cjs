@@ -85,6 +85,8 @@ test("source and generated config disable the plugin launch splash", () => {
 test("privacy manifest matches audit flags/purposes and App Resources", () => {
   successful(run("plutil", ["-lint", manifestFile]));
   const manifest = plist(manifestFile);
+  assert.equal(manifest.NSPrivacyCollectedDataTypes.length, 17);
+  assert.doesNotMatch(readFileSync(manifestFile, "utf8"), /NSPrivacyCollectedDataType(?:DeviceID|BrowsingHistory)/);
   const table = readFileSync("PRIVACY-AUDIT.md", "utf8")
     .split("<!-- manifest-data:start -->")[1].split("<!-- manifest-data:end -->")[0];
   const rows = table.split("\n").filter(line => line.startsWith("| NSPrivacyCollectedDataType"));
@@ -107,6 +109,45 @@ test("privacy manifest matches audit flags/purposes and App Resources", () => {
   const target = Object.values(objects).find(o => o.isa === "PBXNativeTarget" && o.name === "App");
   const resources = target.buildPhases.map(id => objects[id]).find(o => o.isa === "PBXResourcesBuildPhase");
   assert.ok(resources.files.some(id => objects[objects[id].fileRef].path === "PrivacyInfo.xcprivacy"));
+});
+const analyticsMessage = "Re-add Device ID and Browsing History to the manifest and App Store label if analytics is turned on.";
+function assertAnalyticsGuard(source) {
+  const file = ts.createSourceFile("layout.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const renders = [];
+  function visit(node) {
+    if ((ts.isJsxSelfClosingElement(node) || ts.isJsxOpeningElement(node)) && node.tagName.getText(file) === "Analytics") {
+      renders.push(ts.isJsxOpeningElement(node) ? node.parent : node);
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(file);
+  assert.ok(renders.length === 1, analyticsMessage);
+  const render = renders[0], branch = render.parent;
+  assert.ok(ts.isConditionalExpression(branch) && branch.whenTrue === render &&
+    branch.whenFalse.kind === ts.SyntaxKind.NullKeyword, analyticsMessage);
+  const condition = branch.condition;
+  assert.ok(ts.isBinaryExpression(condition) && condition.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken &&
+    condition.left.getText(file) === "process.env.NEXT_PUBLIC_ENABLE_ANALYTICS" &&
+    ts.isStringLiteral(condition.right) && condition.right.text === "true", analyticsMessage);
+}
+const layoutSource = readFileSync(path.join(ios, "../web/app/layout.tsx"), "utf8");
+test("analytics render requires the explicit production privacy guard", () => assertAnalyticsGuard(layoutSource));
+test("analytics guard rejects an unconditional render in a copy of today's layout", () => {
+  const unconditional = layoutSource.replace(
+    /\{process\.env\.NEXT_PUBLIC_ENABLE_ANALYTICS === "true" \? <Analytics \/> : null\}/, "<Analytics />"
+  );
+  assert.notEqual(unconditional, layoutSource);
+  assert.throws(() => assertAnalyticsGuard(unconditional), { message: analyticsMessage });
+});
+test("analytics guard rejects extra renders and weakened or inverted conditions", () => {
+  for (const changed of [
+    layoutSource.replace("<SonnerProvider />", "<SonnerProvider /><Analytics />"),
+    layoutSource.replace('NEXT_PUBLIC_ENABLE_ANALYTICS === "true"', 'NEXT_PUBLIC_ENABLE_ANALYTICS !== "true"'),
+    layoutSource.replace('NEXT_PUBLIC_ENABLE_ANALYTICS === "true"', "NEXT_PUBLIC_ENABLE_ANALYTICS")
+  ]) {
+    assert.notEqual(changed, layoutSource);
+    assert.throws(() => assertAnalyticsGuard(changed), { message: analyticsMessage });
+  }
 });
 test("signing is target-scoped; original test settings and versions are preserved", () => {
   const project = plist(projectFile);
