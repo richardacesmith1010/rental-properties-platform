@@ -1306,3 +1306,12 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   Submission" (verified on the Apps list). This unblocks the TestFlight upload (`testflight.sh` → `destination=upload`).
 - Still shown on the Apps page (owner-only): "Apple Developer Program License Agreement Updated" (Account Holder must
   accept before submitting); EU trader status (Digital Services Act) not set.
+- ~20:30 App Store Connect (Claude filled, owner saved each page; all verified after reload):
+  - App Information: subtitle "For landlords and tenants", Business / Productivity.
+  - 1.0 version page: promotional text, description (listing §5 minus the 2 deletion lines until 238b; checksum match),
+    keywords (97), Support `https://domusbase.com/support`, Marketing `https://domusbase.com`. Copyright blank (Q3/Q9).
+  - Pricing: Free ($0.00, base US). Availability: United States only ("1 Available"). Mac and Vision Pro unticked
+    (pending owner Save).
+  - Still owner-only in App Store Connect: updated Program License Agreement (Account Holder), EU trader status (DSA),
+    Content Rights, Age Rating (Q8), App Privacy publish (after Q9 legal text), App Review contact + demo login (238g),
+    Copyright (Q3/Q9), screenshots (Claude, after demo seed), first TestFlight upload at the Mac.
