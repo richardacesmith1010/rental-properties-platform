@@ -1391,3 +1391,9 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   delete still refused by `protect_objects_delete`). storage.objects now has 0 policies; RLS on; both buckets private.
 - Rollback: `supabase/rollback/20261027_sprint238k_rollback.sql` (reopens the holes; only if a real flow breaks).
 - Pending: one real app round trip (upload/open/delete a property document as a test owner) during the 238j walk.
+- ~23:35 **237c-1 not shipped: review FAIL → round 2.** 21-agent review (`wf_5e10752c-84e`): 3 blockers (tautological
+  dedupe/upsert tests proven by mutation, deleted AC4 pins incl. inviteOwner, empty `propertyIds` skips authorization yet
+  calls Auth) + 15 should-fix (wrong success copy, no audit on grants, managers lost co-manager invites, Domus owners shown in
+  the Add-a-home client picker, managed-client statement change, query per home with no cap). Claude decisions:
+  **managers keep inviting co-managers; managed-client statements stay as before.** Round 2 appended to
+  `docs/sprint237c1-codex-prompt.md`; dispatch after 238j (web runs one at a time). Fix attempt 1 of 2.
