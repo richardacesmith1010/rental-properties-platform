@@ -1,4 +1,4 @@
-# Sprint 238g — App Review demo accounts seed (L3: production logins + data) — rev 2 (rev 1 REJECT → all items adopted)
+# Sprint 238g — App Review demo accounts seed (L3: production logins + data) — rev 3 (rev 1 REJECT → rev 2 AWC → all items adopted)
 
 ## 1. Objective
 Add an idempotent seed that builds a fake App Review owner + tenant graph covering every promise in
@@ -90,10 +90,21 @@ Running any seed; SQL, migrations, RLS; `apps/**` code; App Store text; docs (Cl
    row → `SeedRefusedError("unexpected access for <role>")`, no graph writes, exit 1; Claude then removes the demo user by
    hand. Residual risk (stated, accepted): detection happens after the trigger ran; nothing is shown to App Review until
    Claude finishes the run and checks it. On later runs the same check allows only the demo graph's own rows.
+   The refusal prints only non-secret ids (auth user id, invitation ids, membership/assignment/lease ids) so Claude can
+   investigate. The seed never cleans up invitations or access rows itself; Claude follows
+   `docs/runbooks/appreview-seed.md` (Claude writes it) to restore the invitation and remove only the unintended access.
+   **Order (both users):** (1) read and validate auth identities (`app_metadata`); (2) read invitations and access rows
+   and refuse on anything outside the demo graph; (3) only then generate/persist passwords, call `updateUserById`, or
+   write the graph. A new user gets the post-create check right after `createUser`, before anything else.
 4. **Passwords.** Per role: use `APPREVIEW_<ROLE>_PASSWORD` from env, else that key from the env file, else generate
    `randomBytes(24).toString("base64url") + "-Aa1"` and append `KEY=value\n` (newline first only if the file lacks one;
-   never if the key exists) before creating or updating the user. If the file must be created, create it with mode
-   `0o600`. Never print, log or throw a password; print only `<role> password: saved to apps/web/.env.local (not shown)`
+   never if the key exists) before creating or updating the user, and only after every read-only check in §6.3 passed.
+   **File safety:** `lstat` the path: a symlink → refuse; an existing file whose mode allows group/other access
+   (`mode & 0o077`) → refuse with "run chmod 600 on the env file"; a new file is created with mode `0o600`. Write
+   atomically: read the file, append the new keys in memory, write a temp file in the same folder (mode `0o600`, fsync),
+   then rename over the original. An interrupted write leaves the original unchanged; the next run starts again. Never
+   remove or change an existing key. Never print, log or throw a password; print only
+   `<role> password: saved to apps/web/.env.local (not shown)`
    when this run wrote it, else `<role> password: configured (not shown)`. Dry-run never generates or writes. The file defaults to
    `new URL("../apps/web/.env.local", import.meta.url)`; tests pass a temp path.
 5. **Users.** `createUser({ email, password, email_confirm: true, user_metadata: { full_name, role }, app_metadata:
@@ -114,7 +125,8 @@ Running any seed; SQL, migrations, RLS; `apps/**` code; App Store text; docs (Cl
      400 cents, occupied. Lease 2026-07-01 to 2028-06-30: 400 cents, due day 1, grace 5, no late fee, deposit 0,
      `collects_outside_domus` false, active.
    - Paid months `M0-3..M0-1` (not before lease start): find by (lease, due_date, 'rent', not deleted). Missing → insert
-     `paid`; pending/late → set `paid`; waived → leave; amount ≠ 400 → throw. Exactly one non-reversed
+     `paid`; pending/late → set `paid`; amount ≠ 400 → throw. **Waived → leave as is and never add a payment;** an active
+     payment on a waived charge → `SeedRefusedError`. Exactly one non-reversed
      payment of 400 on that charge → existing; none → insert one: 400, `check`, `recorded_via 'manual'`, `paid_at` = due
      date 15:00Z, note "Demo payment"; another amount or more than one → `SeedRefusedError` (never edit a payment).
    - Open month `M0`: insert a `pending` charge only if none exists; never change an existing one (a cron-made one is
@@ -132,7 +144,8 @@ Running any seed; SQL, migrations, RLS; `apps/**` code; App Store text; docs (Cl
      A plumber will come this week." Both `in_app`, sender's email; `created_at` on insert only (`now`-2h, `now`-1h).
    - Repair "Kitchen sink drips": "Water drips under the kitchen sink. It started this week.", medium, tenant's unit and
      id; reset to `open` (`resolved_at` null) if changed. Photo `${ticketId}/${photoId}-sink.png`, `image/png`, caption
-     "Drip under the sink", by tenant; upload (`upsert: false`) only if `storage.list(ticketId, { search })` misses it.
+     "Drip under the sink", by tenant; upload (`upsert: false`) only if no object in `storage.list(ticketId, { search })`
+     has a `name` exactly equal to the expected file name (a similar name does not count).
      PNG: 480×360, deterministic, under 50 KB.
    - Stripe: read owner profile + account `stripe_account_id` / `stripe_onboarding_complete`; never write; warn if set.
 7. **Idempotent + dry-run.** Compare fields, never timestamps; update only on a difference. Summary lines
@@ -140,7 +153,8 @@ Running any seed; SQL, migrations, RLS; `apps/**` code; App Store text; docs (Cl
    client so insert/update/upsert/delete/rpc/createUser/updateUserById/upload throw; it prints the plan and writes
    nothing. Missing users get placeholder ids `appreview-dryrun-<role>`.
 8. **Strict fake (`fake-admin.mjs`):** throws on unknown tables, unsupported builder chains or filters, any `rpc`, any
-   write not expected by the test, an unchecked `{ error }` (the fake returns errors in tests that assert handling),
+   write not expected by the test; error handling is proven by injected `{ error }` results that must stop the run with
+   no later writes (not by an "inspection detector");
    duplicate keys under the live unique keys listed in §2, storage upload of an existing path with `upsert: false`, and
    `createUser`/`updateUserById` payloads outside the shape in §6.5; any invite/OTP/magic-link/recovery/reset call throws.
 9. Check every Supabase error (L-002). Never call `rpc`. Never write `notifications`, `notification_deliveries`,
@@ -186,7 +200,17 @@ Running any seed; SQL, migrations, RLS; `apps/**` code; App Store text; docs (Cl
     no duplicate (file 4).
 19. "conflicting payment refuses": an active payment of 300 on a demo paid charge → refused, no write (file 4).
 20. "env password status is truthful": password only in env → "configured (not shown)", file untouched (file 3).
-21. "strict fake catches mistakes": an unchecked error, an unknown table and an invite call each make the run fail (file 6).
+21. "strict fake catches mistakes": an injected error stops the run with no later writes; an unknown table and an invite
+    call each make the run fail (file 6).
+22. "existing demo user with foreign access": a marked demo user with an unrelated membership and a changed password
+    hash → refused, `updateUserById` never called, no password written (files 3-4).
+23. "waived month stays waived": a waived `M0-2` charge → no status change, no payment; with an active payment → refused (4).
+24. "password file safety": symlink → refused; mode 0644 → refused; a refusal in §6.3 → file unchanged; an interrupted
+    write (fake rename throws) → original bytes unchanged and the rerun succeeds (file 3).
+25. "resume after a crash": a run failing after several graph writes, then a rerun, gives the same rows as a clean run,
+    with no duplicates (files 3-4).
+26. "photo name match is exact": an unrelated object with a similar name does not stop the upload (file 4).
+27. "December to January": `now` in December then January keeps month keys, ids and charge lookups consistent (file 4).
 
 ## 9. Report format
 Status (PASS/FAIL); files changed with line counts; the pin test result before and after the move; test count;
