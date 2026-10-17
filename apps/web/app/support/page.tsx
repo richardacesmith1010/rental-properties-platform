@@ -12,7 +12,8 @@ export default function SupportPage() {
         <section><h2 className="font-semibold">How do I report a repair?</h2>
           <p>Sign in and open Maintenance.</p></section>
         <section><h2 className="font-semibold">How do I delete my account?</h2>
-          <p>Open Settings and send us feedback.</p></section>
+          <p>Sign in and open Settings. Tap Your data, then Delete my account. Owners tap Account &amp; Data instead.</p>
+        </section>
         <section><h2 className="font-semibold">Have a privacy question?</h2>
           <p>Email <a href="mailto:privacy@domusbase.com" className="underline">privacy@domusbase.com</a>.</p></section>
       </div>

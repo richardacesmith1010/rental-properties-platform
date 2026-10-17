@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { DeleteAccountSection } from "./delete-account-section";
 
 export function YourDataSettings() {
   const [error, setError] = useState("");
@@ -41,9 +42,7 @@ export function YourDataSettings() {
       {downloading ? "Preparing download…" : "Download my data"}
     </Button>
     {error ? <p role="alert" className="text-sm text-[var(--crit)]">{error}</p> : null}
-    <p className="text-sm text-[var(--ink-2)]">
-      Want your account deleted? Tell us with Send feedback. We will reply by email.
-    </p>
+    <DeleteAccountSection />
     <nav aria-label="Legal links" className="flex gap-5 text-sm text-[var(--ink-2)]">
       <Link href="/privacy" className="min-h-11 py-3 underline">Privacy</Link>
       <Link href="/terms" className="min-h-11 py-3 underline">Terms</Link>

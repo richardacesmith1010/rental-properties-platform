@@ -16,6 +16,9 @@ describe("App Store links and support", () => {
   it("renders a public support page and sitemap entry", () => {
     const html = renderToStaticMarkup(<SupportPage />);
     expect(html).toContain("Get help");
+    expect(html).toContain("Tap Your data, then Delete my account.");
+    expect(html).toContain("Owners tap Account &amp; Data instead.");
+    expect(html).not.toContain("send us feedback");
     expect(html).toContain("mailto:support@domusbase.com");
     expect(html).toContain("mailto:privacy@domusbase.com");
     expect(sitemap().some((entry) => entry.url === "https://domusbase.com/support")).toBe(true);

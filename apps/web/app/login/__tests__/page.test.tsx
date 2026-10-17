@@ -33,6 +33,25 @@ describe("LoginPage", () => {
     expect(getRole).toHaveBeenCalledWith("test-user");
   });
 
+  it("still redirects a signed-in user with a deletion notice", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "test-user" } } });
+    getRole.mockResolvedValue("tenant");
+    await expect(LoginPage({ searchParams: Promise.resolve({ deleted: "requested" }) }))
+      .rejects.toThrow("REDIRECT:/tenant");
+  });
+
+  it("shows the deletion request notice only for the requested value", async () => {
+    const { unmount } = render(await LoginPage({ searchParams: Promise.resolve({ deleted: "requested" }) }));
+    expect(screen.getByRole("status")).toHaveTextContent("We got your request.");
+    expect(screen.getByRole("status")).toHaveTextContent("Your account will be deleted within 30 days.");
+    unmount();
+    const empty = render(await LoginPage({ searchParams: Promise.resolve({}) }));
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    empty.unmount();
+    render(await LoginPage({ searchParams: Promise.resolve({ deleted: "yes" }) }));
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
   it("places the native safe-area hook on the login top container", async () => {
     const page = await LoginPage({});
     expect(page.props.className.split(" ")).toContain("domus-login-page");

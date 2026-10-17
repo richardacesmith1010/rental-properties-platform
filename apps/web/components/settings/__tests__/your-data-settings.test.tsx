@@ -3,16 +3,20 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { SettingsLayout } from "@/components/settings/settings-layout";
 import { YourDataSettings } from "@/components/settings/your-data-settings";
 
+const deletionAction = vi.hoisted(() => vi.fn());
+vi.mock("@/app/actions/account-deletion-request", () => ({ requestAccountDeletion: deletionAction }));
+
 const sections = { profile: { title: "Profile", content: <div>Profile</div> },
   yourData: { title: "Your data", content: <YourDataSettings /> } };
 
 describe("Your data settings", () => {
-  it.each(["tenant", "manager"] as const)("shows download and deletion note for %s", (role) => {
+  it.each(["tenant", "manager"] as const)("shows download and deletion request for %s", (role) => {
     render(<SettingsLayout role={role} sections={sections} />);
     fireEvent.click(screen.getAllByTitle("Open Your data settings.")[0]);
     expect(screen.getByText("Get a copy of your Domus data as a file.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Download my data" })).toBeTruthy();
-    expect(screen.getByText("Want your account deleted? Tell us with Send feedback. We will reply by email.")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Delete my account" })).toBeInTheDocument();
+    expect(screen.queryByText(/Tell us with Send feedback/)).not.toBeInTheDocument();
   });
 
   it("hides Your data from owners", () => {

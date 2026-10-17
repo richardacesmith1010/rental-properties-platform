@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
 import type { ActionState } from "@/app/actions";
+import { DeleteAccountSection } from "./delete-account-section";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -118,6 +119,7 @@ export function AccountDataSettings({
 }: AccountDataSettingsProps) {
   return (
     <div className="space-y-4">
+      <DeleteAccountSection />
       <nav aria-label="Legal links" className="flex gap-5 text-sm text-[var(--ink-2)]">
         <Link href="/privacy" className="min-h-11 py-3 underline">Privacy</Link>
         <Link href="/terms" className="min-h-11 py-3 underline">Terms</Link>

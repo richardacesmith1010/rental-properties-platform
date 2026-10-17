@@ -17,6 +17,7 @@ interface LoginPageProps {
     password_reset?: string;
     mode?: string;
     role?: string;
+    deleted?: string;
   }>;
 }
 
@@ -119,6 +120,12 @@ export default async function LoginPage(props: LoginPageProps) {
               <h1 className="text-[34px] font-bold leading-tight text-[var(--ink)]">Welcome back</h1>
               <p className="mt-2 text-[17px] text-[var(--muted)]">Sign in to see your rent, bills and homes.</p>
               <div className="mt-8 space-y-4">
+                {searchParams?.deleted === "requested" ? (
+                  <Alert variant="success" role="status" className="px-4 py-3">
+                    <p className="font-medium">We got your request.</p>
+                    <p className="mt-1">Your account will be deleted within 30 days.</p>
+                  </Alert>
+                ) : null}
                 {sessionExpired ? (
                   <Alert variant="warning" className="px-4 py-3">
                     <p className="font-medium">Your session expired.</p>
