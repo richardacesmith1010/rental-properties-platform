@@ -1283,3 +1283,14 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   existing tenant to a second home (that insert used to fail on the old key). Packet rev 4 re-dispatched (`gpt-6-sol` high).
 - Flaky: `AppLockControllerTests/testOneLockWindowPerSceneReusedCoversPresentedControllersAndRestoresKeyPresentation`
   fails ~1 in 3; the pre-238a comparison hung the Simulator. Follow-up: stabilize (likely window/scene timing).
+
+## 2026-10-16 ~19:40 — Codex usage limit; queue for 10:47 PM
+- Codex hit its usage limit (resets 10:47 PM). `run-codex.sh` waits and resumes on its own: **238a-b** (iOS, task
+  `bbb8ck3d1`) and **237c-1 rev 4** (web, task `btbt7wssc`) resume together (disjoint files). No partial edits were left.
+- Queue after those ship: **237c-2** (L2, manager menu/tab bar/Wallet Home) → **238e** (L2, phone Help moves into the
+  menus; needs 237c-2's manager More drawer) → **238f** (iPhone test-only: the AppLock flake, pinned to
+  `AppLockControllerTests.swift:348`, fails 2/3 full-suite runs, 8/8 alone) → **238g** (L3, App Review demo seed; ChatGPT
+  review in progress; running it needs the owner to choose the two demo emails).
+- Advisors 2026-10-16: security unchanged and accepted (13 RLS helpers need `authenticated` EXECUTE; `pg_net` stays;
+  leaked-password protection needs Supabase Pro → owner). Performance: 92 unindexed FKs, 122 `auth_rls_initplan`,
+  301 multiple permissive policies — tables are small and Speed is 85; parked as a later L3 index/policy sweep.
