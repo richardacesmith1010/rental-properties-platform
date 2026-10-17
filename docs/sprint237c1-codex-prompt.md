@@ -1,4 +1,4 @@
-# Sprint 237c-1 — Manager invites and clients: branded invite email (allowlist-only), all-homes invite, Domus owners in Clients (L3: auth/email/access) — rev 3 (rev 1 REJECT → rev 2 APPROVE WITH CHANGES: REQUIRED adopted)
+# Sprint 237c-1 — Manager invites and clients: branded invite email (allowlist-only), all-homes invite, Domus owners in Clients (L3: auth/email/access) — rev 4 (rev 1 REJECT → rev 2 APPROVE WITH CHANGES: REQUIRED adopted → rev 3 Codex stop: unique key → rev 4 schema fixed by Claude; ChatGPT APPROVE WITH CHANGES adopted)
 
 ## 1. Objective
 Fix the manager-walk findings M3, M1, M11 (`docs/manager-walk-plan-2026-10-16.md`):
@@ -53,6 +53,28 @@ Fix the manager-walk findings M3, M1, M11 (`docs/manager-walk-plan-2026-10-16.md
    branded email without the same gate.
 7. **Extra tests:** concurrent double submission (one set of rows, one Auth user), mixed existing/new assignments,
    cross-account home ids, gate error → generic, resend path gated, statement loader never queries unauthorized ids.
+
+## Rev 4 addition (Codex's second stop: the invitations unique key)
+Codex correctly stopped: the live key `UNIQUE (email, role, invited_by)` allowed one invitation per inviter, email and
+role, so one row per home was impossible. **Claude replaced it before this dispatch** (migration
+`supabase/migrations/20261026_sprint237c1_invitations_per_home_key.sql`, applied live): the key is now
+`invitations_email_role_invited_by_property_key UNIQUE NULLS NOT DISTINCT (email, role, invited_by, property_id)`.
+Owner invitations (`property_id` null) stay unique per inviter. Clients still have no write grant on `invitations`.
+- **New-user write (replaces "insert" in §6.3f):** one multi-row `upsert` with
+  `onConflict: "email,role,invited_by,property_id"` that sets `status: "pending"`, `full_name`, `accepted_at: null`,
+  `invited_profile_id: null` and `created_at` = now (a re-opened invite is a new issuance; resend/expiry logic reads
+  `created_at`). This re-opens an expired row for the same inviter, email and home and never makes a duplicate. Only use
+  it when no profile exists for the email (that path is already "new user").
+- **Deduplicate before the write:** the payload must never hold the same home twice (Postgres rejects a multi-row upsert
+  that hits one key twice — Claude verified `cardinality_violation` live). Dedupe `propertyIds` right after validation.
+- Tests: (1) re-invite after a revoked (expired) invite for the same home → one row, `pending`, fresh `created_at`;
+  (2) duplicate home ids in the request → one row per home, one write; (3) `Foo@Example.com ` and `foo@example.com`
+  produce the same stored email; (4) two different authorized inviters (owner and co-owner of the account) may each
+  invite the same email to the same home (allowed by design; the key includes `invited_by`).
+- Claude verified live (rolled back): two homes for one email insert fine; same-home reinvite updates one row; an owner
+  invite with no home stays unique per inviter; sign-up converts both homes to active `property_managers` and marks both
+  invitations accepted; `authenticated` cannot insert, update or upsert `invitations`.
+- Do not write SQL. If anything else in the schema blocks you, stop and report again.
 
 ## 3. In scope
 M3 (gated email), M1 (all homes), M11 (list + statement for Domus owners whose homes the manager actively runs), tests.
