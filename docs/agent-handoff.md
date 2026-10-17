@@ -1474,3 +1474,14 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Round 3 written (packet "Round 3 (PROPOSED)"), **not dispatched** — waits for the owner. 237c-1 changes stay uncommitted
   in the tree; nothing of it is live.
 - Meanwhile **238i** (photo viewer + Save photo, L2, no file overlap) dispatched (`bvc9sa43e`, gpt-6-sol medium).
+
+## Sprint 238i SHIPPED (2026-10-17 ~09:25) — Repair photo viewer + Save photo — PASS
+- Commit `271c55c` (2 files). Deploy `dpl_EEcckQm7VL5RCqg5fHvQCzHgYV3S` READY. CI `gate` success. Smoke 27/27 (incl. the
+  238l keyboard/speed fixes; CI for `dbd0c54` success too). Isolated gate 318 files / 2,668 tests + build.
+- Simulator (fresh Debug build of current source — the old scratch build lacked the 238a photo-save string): viewer is a
+  full-screen portal above the tab bar, whole image visible (portrait and landscape), light + dark readable; **Save photo
+  → share sheet with "Save Image"** (big-48mp, JPEG 297 KB). Not tapped (would grant Photos access on the device).
+- U7 (save photo) closed. **TestFlight build 3 is now ready to build** (238a-b, 238f, 238h iOS + 238i/238j live web):
+  needs the owner's keychain approval at upload → batched owner item.
+- 238b (Delete my account, L3) dispatched with an L-028 note (its action ends with a redirect). 237c-1 still waits for the
+  owner's round-3 decision.
