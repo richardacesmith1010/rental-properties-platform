@@ -1320,3 +1320,6 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   `ITSAppUsesNonExemptEncryption = false` already in Info.plist (no export-compliance prompt per build).
 - Queue add: **238h** (iPhone, small): privacy manifest 19 → 17 types (drop Device ID and Browsing History; analytics is
   off, Q6) so it matches the App Privacy label (gate G2). Needs ChatGPT review (after 10:47 PM reset).
+- ~21:30 App Privacy: privacy policy URL saved; 17 data types saved as **drafts** (owner OK; not published) with the
+  purposes from `docs/app-store/app-privacy-answers.md` §1a; preview = 7 "Linked to You" categories, no tracking.
+  Publish waits on 238h (manifest 17) and Q9 legal text.

@@ -23,6 +23,11 @@ Re-check this file whenever the website changes. The app loads the website, so w
 
 ## 1) App Privacy, click by click (17 types)
 
+**Entered 2026-10-16 as a draft (not published; owner said "do not click Publish").** Privacy Policy URL saved; all 17
+types saved with the purposes in 1a, linked = yes, tracking = no (verified after reload). Preview: Data Linked to You =
+7 categories; nothing used to track; nothing unlinked. Publish waits on G2 (Sprint 238h manifest 17) and G4 (Q9 legal
+text live).
+
 Claude fills every screen. The owner clicks only **Publish** (step 7).
 
 1. App Store Connect → **Apps** → **Domus: Rent & Repairs** → left sidebar → **App Privacy** (under General).
