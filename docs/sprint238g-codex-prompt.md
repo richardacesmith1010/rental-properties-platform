@@ -1,4 +1,4 @@
-# Sprint 238g — App Review demo accounts seed (L3: production logins + data) — rev 1
+# Sprint 238g — App Review demo accounts seed (L3: production logins + data) — rev 2 (rev 1 REJECT → all items adopted)
 
 ## 1. Objective
 Add an idempotent seed that builds a fake App Review owner + tenant graph covering every promise in
@@ -81,26 +81,44 @@ Running any seed; SQL, migrations, RLS; `apps/**` code; App Store text; docs (Cl
    - `APPREVIEW_OWNER_EMAIL` or `APPREVIEW_TENANT_EMAIL` is missing or blank, or the two are equal;
    - an email lacks "appreview" (case-insensitive) or equals any env var matching `/^SMOKE_[A-Z0-9_]*EMAIL$/` (trimmed, any case);
    - `NEXT_PUBLIC_SUPABASE_URL` or `SUPABASE_SERVICE_ROLE_KEY` is missing.
-   After reads, refuse when an auth user with a demo email lacks `user_metadata.appreview_seed === "domus-appreview-v1"`,
-   or a `pending` `invitations` row has `lower(email)` equal to a demo email.
+   After reads, refuse when an auth user with a demo email lacks **`app_metadata.appreview_seed === "domus-appreview-v1"`
+   and `app_metadata.appreview_role` equal to its role** (admin-only fields; `user_metadata` is user-editable and never
+   proves ownership), or a `pending` `invitations` row has `lower(email)` equal to a demo email.
+   **Post-create check (invitation race):** the pre-read cannot stop a real invitation inserted between the read and
+   `createUser` (`handle_new_user` would accept it). Right after each `createUser`, and before any graph write, read
+   `ownership_account_members`, `property_managers`, `leases` and `invitations` (`invited_profile_id` = the new user id). Any
+   row → `SeedRefusedError("unexpected access for <role>")`, no graph writes, exit 1; Claude then removes the demo user by
+   hand. Residual risk (stated, accepted): detection happens after the trigger ran; nothing is shown to App Review until
+   Claude finishes the run and checks it. On later runs the same check allows only the demo graph's own rows.
 4. **Passwords.** Per role: use `APPREVIEW_<ROLE>_PASSWORD` from env, else that key from the env file, else generate
    `randomBytes(24).toString("base64url") + "-Aa1"` and append `KEY=value\n` (newline first only if the file lacks one;
-   never if the key exists) before creating or updating the user. Never print, log or throw a password; print only
-   `<role> password: saved to apps/web/.env.local (not shown)`. Dry-run never generates or writes. The file defaults to
+   never if the key exists) before creating or updating the user. If the file must be created, create it with mode
+   `0o600`. Never print, log or throw a password; print only `<role> password: saved to apps/web/.env.local (not shown)`
+   when this run wrote it, else `<role> password: configured (not shown)`. Dry-run never generates or writes. The file defaults to
    `new URL("../apps/web/.env.local", import.meta.url)`; tests pass a temp path.
-5. **Users.** `createUser({ email, password, email_confirm: true, user_metadata })` with `{ full_name, role, appreview_seed,
-   appreview_role, appreview_password_hash }` (the `ensureSmokeUser` pattern); `updateUserById` only when the hash or
-   metadata differ. Owner "Jordan Demo", tenant "Riley Demo". Then `ensureProfile`.
+5. **Users.** `createUser({ email, password, email_confirm: true, user_metadata: { full_name, role }, app_metadata:
+   { appreview_seed, appreview_role, appreview_password_hash } })` (`role` stays in `user_metadata` only because
+   `handle_new_user` reads it at creation). `updateUserById` only when the `app_metadata` hash or markers or the name
+   differ, and only for a user that passed the `app_metadata` guard. Never call invite, magic-link, OTP, recovery or
+   reset methods. Owner "Jordan Demo", tenant "Riley Demo". Then `ensureProfile`.
 6. **Graph.** Ids are `deterministicUuid("appreview-…")`; month-keyed rows add `YYYY-MM`. `now` is injectable (UTC);
    `M0` = first day of `now`'s month. Simple rows use the new `ensureRowById` (select by id → insert, or update diffs).
+   **Ownership check before any update:** `ensureRowById` takes an `owns(row)` predicate; a row that exists but fails it
+   → `SeedRefusedError`, never "repaired". Predicates: account `created_by_profile_id` = demo owner; membership = demo account + owner;
+   property = demo account + `owner_profile_id`; unit = demo property; lease = demo unit + demo tenant; charge = demo lease;
+   payment = expected demo charge; expense = demo property; bank account = demo account; review item = demo bank account
+   + demo account; thread = demo property + demo tenant entity; message = demo thread; ticket = demo tenant + demo unit;
+   photo row = demo ticket. Rows found by natural key (charges, thread) are checked the same way.
    - Account "Jordan Demo Homes" (individual) + owner membership, with the smoke-style conflict checks.
    - Property "Sample Lane House": 42 Sample Lane, Springfield, IL 62704, `single_family`. Unit "Main": 2 bed, 1 bath,
      400 cents, occupied. Lease 2026-07-01 to 2028-06-30: 400 cents, due day 1, grace 5, no late fee, deposit 0,
      `collects_outside_domus` false, active.
    - Paid months `M0-3..M0-1` (not before lease start): find by (lease, due_date, 'rent', not deleted). Missing → insert
-     `paid`; pending/late → set `paid`; waived → leave; amount ≠ 400 → throw. No non-reversed payment → insert one:
-     400, `check`, `recorded_via 'manual'`, `paid_at` = due date 15:00Z, note "Demo payment".
-   - Open month `M0`: insert a `pending` charge only if none exists; never change an existing one.
+     `paid`; pending/late → set `paid`; waived → leave; amount ≠ 400 → throw. Exactly one non-reversed
+     payment of 400 on that charge → existing; none → insert one: 400, `check`, `recorded_via 'manual'`, `paid_at` = due
+     date 15:00Z, note "Demo payment"; another amount or more than one → `SeedRefusedError` (never edit a payment).
+   - Open month `M0`: insert a `pending` charge only if none exists; never change an existing one (a cron-made one is
+     adopted as is). Never touch charges after `M0` (the cron may have made `M0+1`).
    - Expenses for `M0-1`: "Gutter cleaning" (maintenance, 12000, day 10), "Fix porch step" (repair, 6500, day 20), by owner.
    - Bank account "Demo Bank" / "Rent checking": `source 'upload'`, mask "4321", no balance, no connection.
    - Three review items: `posted_on` `M0`, `external_id` `appreview-YYYY-MM-<slug>`, `fingerprint`
@@ -121,7 +139,11 @@ Running any seed; SQL, migrations, RLS; `apps/**` code; App Store text; docs (Cl
    created/updated/existing (would-create/would-update in dry-run), prefix `[appreview-seed]`. `--dry-run` wraps the
    client so insert/update/upsert/delete/rpc/createUser/updateUserById/upload throw; it prints the plan and writes
    nothing. Missing users get placeholder ids `appreview-dryrun-<role>`.
-8. Check every Supabase error (L-002). Never call `rpc`. Never write `notifications`, `notification_deliveries`,
+8. **Strict fake (`fake-admin.mjs`):** throws on unknown tables, unsupported builder chains or filters, any `rpc`, any
+   write not expected by the test, an unchecked `{ error }` (the fake returns errors in tests that assert handling),
+   duplicate keys under the live unique keys listed in §2, storage upload of an existing path with `upsert: false`, and
+   `createUser`/`updateUserById` payloads outside the shape in §6.5; any invite/OTP/magic-link/recovery/reset call throws.
+9. Check every Supabase error (L-002). Never call `rpc`. Never write `notifications`, `notification_deliveries`,
    `message_deliveries`, `communication_logs` or `audit_logs`. No imports from `apps/`. Demo copy: at most 12 words per
    sentence. Script header: "Claude runs this after the owner sets both emails. Codex never runs it."
 
@@ -129,7 +151,8 @@ Running any seed; SQL, migrations, RLS; `apps/**` code; App Store text; docs (Cl
 - `node --test scripts/__tests__/*.test.mjs` and `npm run test:scripts` (fake client only; tests pass `env` explicitly
   and never read `process.env` secrets or the real `apps/web/.env.local`).
 - `for f in scripts/seed-smoke-accounts.mjs scripts/seed-appreview-accounts.mjs scripts/lib/*.mjs; do node --check "$f"; done`
-- `wc -l scripts/*.mjs scripts/lib/*.mjs` (each ≤ 500); `awk 'length > 140' scripts/*.mjs scripts/lib/*.mjs` prints nothing.
+- `wc -l scripts/*.mjs scripts/lib/*.mjs` (each ≤ 500, **except `scripts/seed-smoke-accounts.mjs`**, which only shrinks
+  this sprint; do not move more smoke-only code to hit a number); `awk 'length > 140' scripts/*.mjs scripts/lib/*.mjs` prints nothing.
 - `git diff --stat` lists only §5 files. Do NOT run `node scripts/seed-*.mjs` in any mode, against any database.
 
 ## 8. Acceptance criteria (test → assertion; file numbers from §5)
@@ -154,6 +177,16 @@ Running any seed; SQL, migrations, RLS; `apps/**` code; App Store text; docs (Cl
     photo is uploaded to `maintenance-photos` as `image/png` with PNG signature and 480×360 IHDR; ≥ 1 expense (files 4-5).
 12. "no notifications and no RPC": fake `rpc` throws and is never called; no writes to §6.8 tables; no `apps/` import (3-4).
 13. "warns but never writes Stripe": a fake owner with `stripe_account_id` gets a warning and no write to it (file 4).
+14. "forged user_metadata is refused": demo email with `user_metadata.appreview_seed` set but no matching `app_metadata`
+    → refused, zero writes (file 3).
+15. "post-create access aborts": the fake trigger adds a membership on `createUser` → refused before any graph write (3-4).
+16. "foreign row at a demo id is refused": each graph level with a row whose parent differs → refused, no update (1, 4).
+17. "cron M0 adopted": a cron-made `M0` pending or late charge with a random id is adopted unchanged, no insert (file 4).
+18. "cron M0+1 untouched, then adopted": a run leaves `M0+1` alone; with `now` + 1 month that exact row is the new `M0`,
+    no duplicate (file 4).
+19. "conflicting payment refuses": an active payment of 300 on a demo paid charge → refused, no write (file 4).
+20. "env password status is truthful": password only in env → "configured (not shown)", file untouched (file 3).
+21. "strict fake catches mistakes": an unchecked error, an unknown table and an invite call each make the run fail (file 6).
 
 ## 9. Report format
 Status (PASS/FAIL); files changed with line counts; the pin test result before and after the move; test count;
@@ -164,4 +197,4 @@ Do NOT include 'Claude prompt' or 'recommended next steps for Claude' sections. 
 - Change only §5 files. No new dependencies (`node:crypto`, `node:zlib`, `node:fs`, `node:test` and supabase-js only).
 - No SQL, migrations or schema changes. Never run either seed, including `--dry-run`, against production or any database.
 - Never read, print or commit `.env.local` values. Use env var names only; never invent emails or URLs (L-012, L-020).
-- Lines ≤ 140 characters; every file ≤ 500 lines; smoke seed behavior is pinned (L-014).
+- Lines ≤ 140 characters; every new file ≤ 500 lines (the existing smoke seed only shrinks); smoke behavior pinned (L-014).
