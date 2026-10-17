@@ -1294,3 +1294,8 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Advisors 2026-10-16: security unchanged and accepted (13 RLS helpers need `authenticated` EXECUTE; `pg_net` stays;
   leaked-password protection needs Supabase Pro → owner). Performance: 92 unindexed FKs, 122 `auth_rls_initplan`,
   301 multiple permissive policies — tables are small and Speed is 85; parked as a later L3 index/policy sweep.
+- ~19:55: queue packets reviewed and committed: **238f** rev 2 (ChatGPT AWC adopted: diagnose first, observe-only
+  waits, scoped teardown), **238g** rev 3 (rev 1 REJECT → rev 2 AWC → adopted: `app_metadata` marker, access checks
+  before any user update, ownership predicates, waived months, password-file safety; runbook
+  `docs/runbooks/appreview-seed.md`). 237c-2 and 238e are L2 (no review). `apps/web/.env.local` set to mode 600 (it holds
+  production secrets; the 238g seed refuses a group/other-readable file).
