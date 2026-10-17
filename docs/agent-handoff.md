@@ -1419,3 +1419,8 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   `config.test.cjs` 68/68 run by Claude (Codex's sandbox could not build the Xcode bundles), incl. both built Release
   bundles carry the exact manifest and the analytics-off guard on `layout.tsx`. App Privacy gate G2 now met.
 - Codex 238j (`bkkcyl3w9`) still running after the 03:48 limit reset; 237c-1 round 2 is next (fix attempt 2 of 2).
+- ~04:10 **238b migration APPLIED live** (`sprint238b_account_deletion_requests`; file sha1 469192fa, unchanged since the
+  dry run). Rolled-back checks before and after apply: RLS on, 0 policies, 0 client grants, service role can insert;
+  a 2nd open request for one profile is blocked by `account_deletion_requests_one_open`; a withdrawn + open pair is allowed;
+  a bad role is blocked; `authenticated` select/insert/update/delete and `anon` select/insert are all denied. Live rows: 0.
+  The table is unused until the 238b code ships (queue: 237c-1 round 2 → 238i → 238b).
