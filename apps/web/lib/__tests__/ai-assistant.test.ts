@@ -4,6 +4,7 @@ import { buildAiContextSummary, buildAiSystemPrompt } from "@/lib/ai-assistant";
 const getUserMock = vi.hoisted(() => vi.fn());
 const getCurrentUserRoleMock = vi.hoisted(() => vi.fn());
 const checkRateLimitMock = vi.hoisted(() => vi.fn());
+const consentSingleMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () => ({
@@ -15,7 +16,11 @@ vi.mock("@/lib/supabase/server", () => ({
 
 vi.mock("@/lib/auth", () => ({
   getCurrentUserRole: getCurrentUserRoleMock,
-  getUserProfileSummary: vi.fn()
+  getUserProfileSummary: vi.fn().mockResolvedValue({ nickname: null, fullName: null })
+}));
+
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: () => ({ from: () => ({ select: () => ({ eq: () => ({ single: consentSingleMock }) }) }) })
 }));
 
 vi.mock("@/lib/rate-limit", () => ({
@@ -23,16 +28,20 @@ vi.mock("@/lib/rate-limit", () => ({
 }));
 
 vi.mock("@/lib/dashboard", () => ({
-  getDashboardData: vi.fn()
+  getDashboardData: vi.fn().mockResolvedValue({ charges: [] })
 }));
 
 vi.mock("@/lib/portfolio", () => ({
-  getPortfolioData: vi.fn()
+  getPortfolioData: vi.fn().mockResolvedValue({ properties: [], leases: [] })
 }));
 
 vi.mock("@/lib/maintenance", () => ({
-  getAdminMaintenanceTickets: vi.fn()
+  getAdminMaintenanceTickets: vi.fn().mockResolvedValue([])
 }));
+
+vi.mock("@/lib/ai-recent-payments", () => ({ getRecentPaymentsForAi: vi.fn().mockResolvedValue([]) }));
+
+vi.mock("@/app/actions/ai-consent", () => ({ setAskDomusConsent: vi.fn() }));
 
 import { POST } from "@/app/api/ai/chat/route";
 
@@ -43,6 +52,7 @@ describe("Ask Domus API route", () => {
     vi.clearAllMocks();
     process.env = { ...originalEnv };
     checkRateLimitMock.mockReturnValue({ allowed: true, remaining: 19 });
+    consentSingleMock.mockResolvedValue({ data: { ai_consent_at: "2026-10-16T00:00:00Z" }, error: null });
   });
 
   afterEach(() => {
@@ -188,5 +198,11 @@ describe("Ask Domus API route", () => {
     expect(prompt).toContain("Oak Street House");
     expect(prompt).toContain("Sarah T.");
     expect(prompt).toContain("James R.");
+  });
+
+  it("never adds an email to the system prompt", () => {
+    const prompt = buildAiSystemPrompt({ ownerFirstName: "owner@example.com", contextSummary: "No homes." });
+    expect(prompt).not.toContain("owner@example.com");
+    expect(prompt).toContain("for there.");
   });
 });

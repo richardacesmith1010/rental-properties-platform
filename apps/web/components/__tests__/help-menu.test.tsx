@@ -14,6 +14,13 @@ vi.mock("@/lib/supabase/client", () => ({
 }));
 
 describe("HelpMenu", () => {
+  it("offers Privacy, Terms, and Support links", async () => {
+    render(<HelpMenu onSubmitFeedback={async () => ({ success: true })} />);
+    fireEvent.click(screen.getByRole("button", { name: "Help" }));
+    expect(screen.getByRole("menuitem", { name: "Privacy" })).toHaveAttribute("href", "/privacy");
+    expect(screen.getByRole("menuitem", { name: "Terms" })).toHaveAttribute("href", "/terms");
+    expect(screen.getByRole("menuitem", { name: "Support" })).toHaveAttribute("href", "/support");
+  });
   it("only shows feedback when the assistant is unavailable", async () => {
     const user = userEvent.setup();
     render(<HelpMenu onSubmitFeedback={async () => ({ success: true })} />);

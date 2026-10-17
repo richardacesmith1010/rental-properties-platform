@@ -34,6 +34,8 @@ import { ProfileSettings } from "@/components/settings/profile-settings";
 import { SettingsLayout } from "@/components/settings/settings-layout";
 import { AccountDataSettings } from "@/components/settings/account-data-settings";
 import { YourDataSettings } from "@/components/settings/your-data-settings";
+import { AskDomusSettings } from "@/components/settings/ask-domus-settings";
+import { setAskDomusConsent } from "@/app/actions/ai-consent";
 import { InstallDomusSettingsCard } from "@/components/pwa/install-prompt";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -60,6 +62,10 @@ export default async function SettingsPage(props: SettingsPageProps) {
   const role = await getCurrentUserRole(user.id);
   const workspacePath = getRoleHomePath(role);
   const profile = await getUserProfileSummary(user.id);
+  const consentResult = role === "owner" || role === "manager"
+    ? await createAdminClient().from("profiles").select("ai_consent_at").eq("id", user.id).single()
+    : null;
+  if (consentResult?.error) throw new Error("We could not load Ask Domus settings.");
   const [enrollments, notificationPreferences] = await Promise.all([
     role === "tenant" ? getAutopayEnrollments(user.id) : Promise.resolve([]),
     getUserNotificationPreferenceSettings(user.id)
@@ -200,6 +206,11 @@ export default async function SettingsPage(props: SettingsPageProps) {
                   onSetPermission={setManagerReminderPermission} /> : null}
                 </div>
               )
+            },
+            askDomus: {
+              title: "Ask Domus",
+              content: <AskDomusSettings initialEnabled={Boolean(consentResult?.data?.ai_consent_at)}
+                onSetConsent={setAskDomusConsent} />
             },
             appearance: {
               title: "Appearance",

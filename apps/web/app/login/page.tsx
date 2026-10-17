@@ -168,7 +168,11 @@ export default async function LoginPage(props: LoginPageProps) {
             </> : <CreateAccountForm initialRole={searchParams?.role} />}
 
             <footer className="mt-6 text-center text-xs text-muted-foreground">
-              &copy; {currentYear} Domus. All rights reserved.
+              <p>&copy; {currentYear} Domus. All rights reserved.</p>
+              <nav className="mt-2 flex justify-center gap-5" aria-label="Legal links">
+                <Link href="/privacy" className="min-h-11 py-3 underline">Privacy</Link>
+                <Link href="/terms" className="min-h-11 py-3 underline">Terms</Link>
+              </nav>
             </footer>
           </div>
         </section>

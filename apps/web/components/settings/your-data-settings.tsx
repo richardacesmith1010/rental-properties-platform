@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export function YourDataSettings() {
@@ -43,5 +44,9 @@ export function YourDataSettings() {
     <p className="text-sm text-[var(--ink-2)]">
       Want your account deleted? Tell us with Send feedback. We will reply by email.
     </p>
+    <nav aria-label="Legal links" className="flex gap-5 text-sm text-[var(--ink-2)]">
+      <Link href="/privacy" className="min-h-11 py-3 underline">Privacy</Link>
+      <Link href="/terms" className="min-h-11 py-3 underline">Terms</Link>
+    </nav>
   </div>;
 }

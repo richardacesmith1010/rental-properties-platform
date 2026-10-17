@@ -53,6 +53,12 @@ describe("LoginPage", () => {
     expect(screen.queryByText(/500\+|2,000\+/)).not.toBeInTheDocument();
   });
 
+  it("shows Privacy and Terms links on the sign-in page", async () => {
+    render(await LoginPage({}));
+    expect(screen.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy");
+    expect(screen.getByRole("link", { name: "Terms" })).toHaveAttribute("href", "/terms");
+  });
+
   it.each([
     ["session expired", { cookie: "1" }, "Your session expired."],
     ["confirmed=true", { confirmed: "true" }, "Email confirmed!"],

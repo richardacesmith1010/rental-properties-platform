@@ -9,6 +9,7 @@ import {
   OPEN_AI_ASSISTANT_EVENT
 } from "@/components/help-menu";
 import { cn } from "@/lib/format";
+import { getAskDomusConsent, setAskDomusConsent } from "@/app/actions/ai-consent";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -59,6 +60,14 @@ export function AiAssistant({ accountId, ownerName }: AiAssistantProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [checkingConsent, setCheckingConsent] = useState(false);
+  const [savingConsent, setSavingConsent] = useState(false);
+  const [showConsent, setShowConsent] = useState(false);
+  const [consentError, setConsentError] = useState("");
+  const pendingMessageRef = useRef<string | null>(null);
+  const checkingRef = useRef(false);
+  const savingRef = useRef(false);
+  const sendingRef = useRef(false);
   const openerRef = useRef<HTMLElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
@@ -75,6 +84,8 @@ export function AiAssistant({ accountId, ownerName }: AiAssistantProps) {
     abortRef.current?.abort();
     abortRef.current = null;
     setIsLoading(false);
+    pendingMessageRef.current = null;
+    setShowConsent(false);
     setIsOpen(false);
     window.requestAnimationFrame(() => openerRef.current?.focus());
   }, []);
@@ -98,9 +109,10 @@ export function AiAssistant({ accountId, ownerName }: AiAssistantProps) {
   const sendMessage = useCallback(
     async (rawValue: string) => {
       const trimmed = rawValue.trim();
-      if (!trimmed || isLoading) {
+      if (!trimmed || sendingRef.current) {
         return;
       }
+      sendingRef.current = true;
 
       const userMessage: ChatMessage = {
         role: "user",
@@ -181,10 +193,53 @@ export function AiAssistant({ accountId, ownerName }: AiAssistantProps) {
       } finally {
         abortRef.current = null;
         setIsLoading(false);
+        sendingRef.current = false;
       }
     },
-    [accountId, isLoading, messages]
+    [accountId, messages]
   );
+
+  const attemptSend = useCallback(async (rawValue: string) => {
+    const trimmed = rawValue.trim();
+    if (!trimmed || checkingRef.current || savingRef.current || sendingRef.current || pendingMessageRef.current) return;
+    checkingRef.current = true;
+    setCheckingConsent(true);
+    setConsentError("");
+    try {
+      const data = await getAskDomusConsent();
+      if (data.error) throw new Error(data.error);
+      if (data.enabled) void sendMessage(trimmed);
+      else {
+        pendingMessageRef.current = trimmed;
+        setShowConsent(true);
+      }
+    } catch (error) {
+      setConsentError(error instanceof Error ? error.message : "Something went wrong. Try again.");
+    } finally {
+      checkingRef.current = false;
+      setCheckingConsent(false);
+    }
+  }, [sendMessage]);
+
+  const allowConsent = useCallback(async () => {
+    if (savingRef.current || !pendingMessageRef.current) return;
+    savingRef.current = true;
+    setSavingConsent(true);
+    setConsentError("");
+    try {
+      const result = await setAskDomusConsent(true);
+      if (!result.success) throw new Error(result.error ?? "We could not save this. Please try again.");
+      const pending = pendingMessageRef.current;
+      pendingMessageRef.current = null;
+      setShowConsent(false);
+      if (pending) void sendMessage(pending);
+    } catch (error) {
+      setConsentError(error instanceof Error ? error.message : "We could not save this. Please try again.");
+    } finally {
+      savingRef.current = false;
+      setSavingConsent(false);
+    }
+  }, [sendMessage]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -264,7 +319,8 @@ export function AiAssistant({ accountId, ownerName }: AiAssistantProps) {
                       key={prompt}
                       type="button"
                       className="rounded-full border border-border bg-background px-3 py-2 text-left text-sm text-foreground transition hover:bg-muted"
-                      onClick={() => void sendMessage(prompt)}
+                      onClick={() => void attemptSend(prompt)}
+                      disabled={isLoading || checkingConsent || savingConsent || showConsent}
                       title={prompt}
                     >
                       {prompt}
@@ -313,7 +369,7 @@ export function AiAssistant({ accountId, ownerName }: AiAssistantProps) {
             className="border-t border-border px-4 py-3"
             onSubmit={(event) => {
               event.preventDefault();
-              void sendMessage(input);
+              void attemptSend(input);
             }}
           >
             <label className="sr-only" htmlFor="ask-domus-input">
@@ -328,19 +384,19 @@ export function AiAssistant({ accountId, ownerName }: AiAssistantProps) {
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && !event.shiftKey) {
                     event.preventDefault();
-                    void sendMessage(input);
+                    void attemptSend(input);
                   }
                 }}
                 placeholder="Ask anything about your properties..."
                 className="min-h-11 flex-1 resize-none rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-line)]"
                 rows={1}
-                disabled={isLoading}
+                disabled={isLoading || checkingConsent || savingConsent || showConsent}
               />
               <Button
                 type="submit"
                 size="icon"
                 className="h-11 w-11 rounded-full"
-                disabled={input.trim().length === 0 || isLoading}
+                disabled={input.trim().length === 0 || isLoading || checkingConsent || savingConsent || showConsent}
                 title="Send your question"
                 aria-label="Send"
               >
@@ -348,6 +404,26 @@ export function AiAssistant({ accountId, ownerName }: AiAssistantProps) {
               </Button>
             </div>
           </form>
+          {consentError && !showConsent ? <p role="alert" className="px-4 pb-2 text-sm text-[var(--crit)]">
+            {consentError}</p> : null}
+          {showConsent ? <div className="absolute inset-0 z-10 flex items-center justify-center rounded-3xl
+            bg-[var(--surface)] p-5" role="dialog" aria-modal="true" aria-label="Ask Domus uses AI">
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-[var(--ink)]">Ask Domus uses AI</h3>
+              <p className="text-sm text-[var(--ink-2)]">Your question and rental details go to Anthropic, our AI provider.</p>
+              <p className="text-sm text-[var(--ink-2)]">This includes homes, leases, rent, payments, and repairs.</p>
+              <p className="text-sm text-[var(--ink-2)]">Anthropic uses this to write your answer.</p>
+              {consentError ? <p role="alert" className="text-sm text-[var(--crit)]">{consentError}</p> : null}
+              <div className="flex gap-3">
+                <Button type="button" disabled={savingConsent} onClick={() => void allowConsent()}>Allow</Button>
+                <Button type="button" variant="outline" disabled={savingConsent} onClick={() => {
+                  pendingMessageRef.current = null;
+                  setShowConsent(false);
+                  setConsentError("");
+                }}>Not now</Button>
+              </div>
+            </div>
+          </div> : null}
         </section>
       ) : null}
     </>

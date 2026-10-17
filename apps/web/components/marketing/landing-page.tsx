@@ -107,7 +107,11 @@ export function LandingPage() {
       <footer className="border-t border-[var(--line)] bg-[var(--surface)]">
         <div className={`${containerClass} flex flex-wrap items-center justify-between gap-4 py-7 text-sm text-[var(--muted)]`}>
           <span>© 2026 Domus</span>
-          <nav className="flex gap-5" aria-label="Footer navigation"><Link href="/terms" className="hover:text-[var(--ink)]" title="Read the terms of service.">Terms</Link><Link href="/privacy" className="hover:text-[var(--ink)]" title="Read the privacy policy.">Privacy</Link><a href="mailto:support@domusbase.com" className="hover:text-[var(--ink)]" title="Email Domus support.">Help</a></nav>
+          <nav className="flex gap-5" aria-label="Footer navigation">
+            <Link href="/terms" className="hover:text-[var(--ink)]" title="Read the terms of service.">Terms</Link>
+            <Link href="/privacy" className="hover:text-[var(--ink)]" title="Read the privacy policy.">Privacy</Link>
+            <Link href="/support" className="hover:text-[var(--ink)]" title="Get help.">Support</Link>
+          </nav>
         </div>
       </footer>
     </main>

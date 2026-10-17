@@ -52,12 +52,12 @@ function getMonthYear(value: string) {
 
 function getFirstName(value: string | null | undefined) {
   const trimmed = value?.trim();
-  if (!trimmed) {
+  if (!trimmed || trimmed.includes("@")) {
     return "there";
   }
 
   const [firstName] = trimmed.split(/\s+/);
-  return firstName || "there";
+  return firstName && !firstName.includes("@") ? firstName : "there";
 }
 
 function getDueStatusLabel(dueDate: string, now: Date) {

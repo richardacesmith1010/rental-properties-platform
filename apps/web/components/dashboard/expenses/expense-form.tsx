@@ -261,7 +261,7 @@ export function ExpenseForm({ data, vendors, propertyFiles, onCreateExpense, onA
             <input type="hidden" name="vendorId" value={draft.vendorId} />
             <input type="hidden" name="receiptFileId" value={draft.receiptFileId} />
             <input type="hidden" name="description" value={draft.description} />
-            <Input name="receiptFile" type="file" />
+            <Input name="receiptFile" type="file" accept="image/*,application/pdf" />
             <SubmitButton className="w-full" disabled={!requiredComplete || Boolean(retry) || Boolean(retryBillId)}
               title="Create this expense record.">Save Expense</SubmitButton>
           </form>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CircleHelp, Sparkles } from "lucide-react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import type { StatefulAction } from "@/app/actions";
 import { FeedbackButton } from "@/components/feedback/feedback-button";
 
@@ -107,6 +108,10 @@ export function HelpMenu({ onSubmitFeedback }: HelpMenuProps) {
           </button>
         ) : null}
         <FeedbackButton onSubmit={onSubmitFeedback} onOpen={() => setOpen(false)} />
+        {([ ["Privacy", "/privacy"], ["Terms", "/terms"], ["Support", "/support"] ] as const)
+          .map(([label, href]) => <Link key={href} href={href} role="menuitem" onClick={() => setOpen(false)}
+            className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-[var(--ink-2)]
+              hover:bg-[var(--surface-2)]" title={`Open ${label}.`}>{label}</Link>)}
       </div>
     </div>
   );

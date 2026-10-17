@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useFormState } from "react-dom";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import { SubmitButton } from "@/components/shared/submit-button";
@@ -117,6 +118,10 @@ export function AccountDataSettings({
 }: AccountDataSettingsProps) {
   return (
     <div className="space-y-4">
+      <nav aria-label="Legal links" className="flex gap-5 text-sm text-[var(--ink-2)]">
+        <Link href="/privacy" className="min-h-11 py-3 underline">Privacy</Link>
+        <Link href="/terms" className="min-h-11 py-3 underline">Terms</Link>
+      </nav>
       <DangerActionCard
         title="Delete All Properties"
         description="This will deactivate all your properties, units, leases, charges, payments, expenses, files, maintenance tickets, and vendors."

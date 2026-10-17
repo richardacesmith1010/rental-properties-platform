@@ -15,6 +15,7 @@ import { getPortfolioData } from "@/lib/portfolio";
 import { getRecentPaymentsForAi } from "@/lib/ai-recent-payments";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
@@ -141,8 +142,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const body = await request.json().catch(() => null);
+  const parsed = aiChatRequestSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Please send a message." }, { status: 400 });
+  }
+
   const role = await getCurrentUserRole(user.id);
-  if (role === "tenant") {
+  if (role !== "owner" && role !== "manager") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -153,20 +161,9 @@ export async function POST(request: Request) {
     );
   }
 
-  const body = await request.json().catch(() => null);
-  const parsed = aiChatRequestSchema.safeParse(body);
-
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Please send a message." }, { status: 400 });
-  }
-
   const accountId = parsed.data.accountId && parsed.data.accountId.length > 0
     ? parsed.data.accountId
     : undefined;
-
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return createTextStreamResponse(MISSING_KEY_MESSAGE);
-  }
 
   try {
     const [profile, portfolio, dashboard, tickets, recentPayments] = await Promise.all([
@@ -188,9 +185,17 @@ export async function POST(request: Request) {
       }))
     });
     const system = buildAiSystemPrompt({
-      ownerFirstName: profile.nickname ?? profile.fullName ?? user.email ?? null,
+      ownerFirstName: profile.nickname ?? profile.fullName ?? null,
       contextSummary
     });
+
+    const { data: consent, error: consentError } = await createAdminClient().from("profiles")
+      .select("ai_consent_at").eq("id", user.id).single();
+    if (consentError) throw consentError;
+    if (!consent?.ai_consent_at) {
+      return NextResponse.json({ error: "Turn on Ask Domus in Settings first." }, { status: 403 });
+    }
+    if (!process.env.ANTHROPIC_API_KEY) return createTextStreamResponse(MISSING_KEY_MESSAGE);
 
     const anthropic = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY

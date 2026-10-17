@@ -120,6 +120,10 @@ export function CreateAccountForm({ initialRole }: { initialRole?: string }) {
         <Button type="submit" loading={loading} disabled={!canSubmit || loading}
           className="h-[54px] w-full rounded-2xl text-[var(--accent-contrast)]"
           title="Create your Domus account.">Create account</Button>
+        <nav aria-label="Legal links" className="flex justify-center gap-5 text-sm text-[var(--muted)]">
+          <Link href="/privacy" className="min-h-11 py-3 underline">Privacy</Link>
+          <Link href="/terms" className="min-h-11 py-3 underline">Terms</Link>
+        </nav>
       </form>
     </div>}
   </>;

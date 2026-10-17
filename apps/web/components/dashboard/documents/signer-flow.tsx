@@ -151,7 +151,7 @@ export function SignerFlow({ properties, propertyFilesEnabled = true, onUploadPr
                 <input type="hidden" name="category" value={draft.category} />
                 <input type="hidden" name="visibility" value={draft.visibility} />
                 <input type="hidden" name="description" value={draft.description} />
-                <Input name="file" type="file" required />
+                <Input name="file" type="file" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt" required />
                 <SubmitButton className="w-full" disabled={!metadataComplete} title="Upload file to property vault.">Upload File</SubmitButton>
               </form>
             ) : (

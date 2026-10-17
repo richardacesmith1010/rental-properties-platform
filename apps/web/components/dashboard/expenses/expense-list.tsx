@@ -157,7 +157,7 @@ function ExpenseRow({ expense, vendors, receiptFiles, onUpdateExpense, onDeleteE
                   {partnerAccount.partners.filter((partner) => partner.active || partner.id === savedPayerId)
                     .map((partner) => <option key={partner.id} value={partner.id}>{partner.displayName}</option>)}
                 </Select></label>}
-              <Input name="receiptFile" type="file" className="sm:col-span-2" />
+              <Input name="receiptFile" type="file" accept="image/*,application/pdf" className="sm:col-span-2" />
               <div className="sm:col-span-3 flex items-center gap-2"><SubmitButton size="sm" variant="outline" title="Save updates to this expense.">Save Expense</SubmitButton><Badge variant="outline">{formatCurrency(expense.amountCents)}</Badge></div>
               {retryPayer !== null && <div className="sm:col-span-3 space-y-2 text-sm text-[var(--crit)]">
                 <p>We saved the bill but not who paid. Try again.</p>
