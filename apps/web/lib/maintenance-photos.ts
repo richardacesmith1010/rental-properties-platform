@@ -2,13 +2,14 @@ import type { MaintenancePhotoDTO } from "@/lib/maintenance";
 
 export const MAX_MAINTENANCE_PHOTOS = 5;
 export const MAX_MAINTENANCE_PHOTO_BYTES = 10 * 1024 * 1024;
+export const MAX_MAINTENANCE_PHOTO_PICK_BYTES = 50 * 1024 * 1024;
 export const ACCEPTED_MAINTENANCE_PHOTO_TYPES = [
   "image/jpeg",
   "image/png",
-  "image/webp",
-  "image/heic",
-  "image/heif"
+  "image/webp"
 ] as const;
+
+export const PHOTO_UPLOAD_UNFINISHED_MESSAGE = "Maintenance request submitted, but the photo upload did not finish.";
 
 export type MaintenancePhotoMimeType = (typeof ACCEPTED_MAINTENANCE_PHOTO_TYPES)[number];
 
@@ -24,7 +25,8 @@ export function isAcceptedMaintenancePhotoType(type: string) {
 
 export function validateMaintenancePhotoSelection(
   files: MaintenancePhotoLike[],
-  existingCount = 0
+  existingCount = 0,
+  maxBytes = MAX_MAINTENANCE_PHOTO_BYTES
 ): string | null {
   if (existingCount + files.length > MAX_MAINTENANCE_PHOTOS) {
     return `You can attach up to ${MAX_MAINTENANCE_PHOTOS} photos per ticket.`;
@@ -32,11 +34,12 @@ export function validateMaintenancePhotoSelection(
 
   for (const file of files) {
     if (!isAcceptedMaintenancePhotoType(file.type)) {
-      return "Photos must be JPEG, PNG, WebP, or HEIC.";
+      return "Photos must be JPEG, PNG, or WebP.";
     }
 
-    if (file.size > MAX_MAINTENANCE_PHOTO_BYTES) {
-      return "Each photo must be under 10MB.";
+    if (file.size > maxBytes) {
+      return maxBytes === MAX_MAINTENANCE_PHOTO_PICK_BYTES
+        ? "Each photo must be under 50 MB." : "Each photo must be under 10MB.";
     }
   }
 

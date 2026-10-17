@@ -18,6 +18,7 @@ import {
 import { checkRateLimit } from "@/lib/rate-limit";
 import { requireAuth } from "./auth-helpers";
 import { getMaintenancePhotoFiles, uploadPhotosForTicket } from "./maintenance-queries";
+import { PHOTO_UPLOAD_UNFINISHED_MESSAGE } from "@/lib/maintenance-photos";
 import { ensureCapabilityEnabled, type ActionState } from "./shared";
 
 export async function createMaintenanceTicket(
@@ -101,7 +102,7 @@ export async function createMaintenanceTicket(
     });
 
     if (!uploadResult.success) {
-      successMessage = "Maintenance request submitted, but the photo upload did not finish.";
+      successMessage = PHOTO_UPLOAD_UNFINISHED_MESSAGE;
     } else if (uploadResult.uploadedCount > 0) {
       successMessage = `Maintenance request submitted with ${uploadResult.uploadedCount} photo${
         uploadResult.uploadedCount === 1 ? "" : "s"

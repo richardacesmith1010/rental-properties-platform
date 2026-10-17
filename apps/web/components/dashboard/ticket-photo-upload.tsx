@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { unstable_rethrow, useRouter } from "next/navigation";
 import type { ActionState } from "@/app/actions";
 import type { MaintenancePhotoDTO } from "@/lib/maintenance";
-import { validateMaintenancePhotoSelection } from "@/lib/maintenance-photos";
+import { MAX_MAINTENANCE_PHOTO_PICK_BYTES, validateMaintenancePhotoSelection } from "@/lib/maintenance-photos";
 import { Button } from "@/components/ui/button";
 import { PhotoUpload } from "@/components/dashboard/maintenance/photo-upload";
+import { preparePhotos, uploadErrorCopy, PhotoTooLargeError, FileTooLargeError } from "@/lib/image-compress";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -29,24 +30,31 @@ export function TicketPhotoUpload({
   const hasPhotos = useMemo(() => selectedPhotos.length > 0, [selectedPhotos.length]);
 
   const handleSubmit = () => {
-    const validationError = validateMaintenancePhotoSelection(selectedPhotos, existingPhotos.length);
+    const validationError = validateMaintenancePhotoSelection(selectedPhotos, existingPhotos.length, MAX_MAINTENANCE_PHOTO_PICK_BYTES);
     if (validationError) {
       setState({ success: false, error: validationError });
       return;
     }
 
     startTransition(async () => {
-      const formData = new FormData();
-      formData.append("ticketId", ticketId);
-      for (const file of selectedPhotos) {
-        formData.append("photos", file);
-      }
+      try {
+        const photos = await preparePhotos(selectedPhotos);
+        const formData = new FormData();
+        formData.append("ticketId", ticketId);
+        for (const file of photos) {
+          formData.append("photos", file);
+        }
 
-      const result = await onUploadPhoto(null, formData);
-      setState(result);
-      if (result?.success) {
-        setSelectedPhotos([]);
-        router.refresh();
+        const result = await onUploadPhoto(null, formData);
+        setState(result);
+        if (result?.success) {
+          setSelectedPhotos([]);
+          router.refresh();
+        }
+      } catch (error) {
+        unstable_rethrow(error);
+        setState({ success: false, error: uploadErrorCopy(error, { photoCount: selectedPhotos.length }) });
+        if (!(error instanceof PhotoTooLargeError || error instanceof FileTooLargeError)) router.refresh();
       }
     });
   };
@@ -60,7 +68,7 @@ export function TicketPhotoUpload({
         disabled={isPending}
       />
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-xs text-muted-foreground">
+        <div role={state && !state.success ? "alert" : undefined} className="text-xs text-muted-foreground">
           {state && !state.success ? state.error : state?.message ?? "Attach follow-up or completion photos to this repair."}
         </div>
         <Button

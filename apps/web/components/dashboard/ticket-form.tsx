@@ -1,7 +1,7 @@
 "use client";
 
 import { type KeyboardEvent, useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { unstable_rethrow, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +12,8 @@ import type { TenantUnit } from "@/lib/maintenance";
 import { Alert } from "@/components/ui/alert";
 import { PhotoUpload } from "@/components/dashboard/maintenance/photo-upload";
 import { formatUnitLabel } from "@/lib/format";
+import { preparePhotos, uploadErrorCopy, PhotoTooLargeError, FileTooLargeError } from "@/lib/image-compress";
+import { PHOTO_UPLOAD_UNFINISHED_MESSAGE } from "@/lib/maintenance-photos";
 
 type StatefulAction = (
   prev: ActionState,
@@ -136,22 +138,29 @@ export function TicketForm({
 
   const handleSubmit = () => {
     startTransition(async () => {
-      const formData = new FormData();
-      formData.append("unitId", draft.unitId);
-      formData.append(
-        "title",
-        viewerRole === "tenant" ? buildTenantTicketTitle(draft.description) : draft.title
-      );
-      formData.append("description", draft.description);
-      formData.append("priority", draft.priority);
-      for (const file of photoFiles) {
-        formData.append("photos", file);
-      }
+      try {
+        const photos = await preparePhotos(photoFiles);
+        const formData = new FormData();
+        formData.append("unitId", draft.unitId);
+        formData.append(
+          "title",
+          viewerRole === "tenant" ? buildTenantTicketTitle(draft.description) : draft.title
+        );
+        formData.append("description", draft.description);
+        formData.append("priority", draft.priority);
+        for (const file of photos) {
+          formData.append("photos", file);
+        }
 
-      const result = await onCreateTicket(null, formData);
-      setState(result);
-      if (result?.success) {
-        router.refresh();
+        const result = await onCreateTicket(null, formData);
+        setState(result);
+        if (result?.success) {
+          router.refresh();
+        }
+      } catch (error) {
+        unstable_rethrow(error);
+        setState({ success: false, error: uploadErrorCopy(error, { photoCount: photoFiles.length }) });
+        if (!(error instanceof PhotoTooLargeError || error instanceof FileTooLargeError)) router.refresh();
       }
     });
   };
@@ -170,10 +179,9 @@ export function TicketForm({
           </p>
 
           <FormError state={state} />
-          <FormSuccess
-            state={state}
-            message="Sent. You&apos;ll see updates on Home."
-          />
+          {state?.success && state.message === PHOTO_UPLOAD_UNFINISHED_MESSAGE ? (
+            <Alert variant="warning">Sent. Your photos did not go through. Add them to the repair again.</Alert>
+          ) : <FormSuccess state={state} message="Sent. You&apos;ll see updates on Home." />}
 
           {activeUnit ? (
             <div className="rounded-xl border border-border/60 bg-muted/40 px-4 py-3 text-sm text-muted-foreground">

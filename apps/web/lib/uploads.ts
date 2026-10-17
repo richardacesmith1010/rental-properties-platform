@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
+import { resolveUploadType } from "@/lib/file-signature";
 
 export async function uploadExpenseReceiptFile(
   admin: ReturnType<typeof createAdminClient>,
@@ -11,16 +12,14 @@ export async function uploadExpenseReceiptFile(
     return { error: "Receipt file must be under 20MB." };
   }
 
-  const extension = file.name.split(".").pop()?.toLowerCase() ?? "bin";
-  const storagePath = `${propertyId}/receipts/${crypto.randomUUID()}.${extension}`;
-  const fileType = file.type.startsWith("image/")
-    ? "image"
-    : file.type.includes("pdf")
-      ? "pdf"
-      : "document";
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const resolved = resolveUploadType("receipt", bytes, file.name);
+  if (!resolved) return { error: "Receipt must be a photo or a PDF." };
+  const storagePath = `${propertyId}/receipts/${crypto.randomUUID()}.${resolved.extension}`;
+  const uploadFile = new File([bytes], file.name, { type: resolved.contentType });
 
-  const { error: uploadError } = await admin.storage.from("property-files").upload(storagePath, file, {
-    contentType: file.type || "application/octet-stream",
+  const { error: uploadError } = await admin.storage.from("property-files").upload(storagePath, uploadFile, {
+    contentType: resolved.contentType,
     upsert: false
   });
 
@@ -35,7 +34,7 @@ export async function uploadExpenseReceiptFile(
       uploaded_by_profile_id: userId,
       file_name: file.name,
       storage_path: storagePath,
-      file_type: fileType,
+      file_type: resolved.category,
       category: "receipt",
       visibility: "owner_manager",
       description: "Expense receipt upload"

@@ -7,6 +7,7 @@ import type { MaintenancePhotoDTO } from "@/lib/maintenance";
 import {
   ACCEPTED_MAINTENANCE_PHOTO_TYPES,
   MAX_MAINTENANCE_PHOTOS,
+  MAX_MAINTENANCE_PHOTO_PICK_BYTES,
   validateMaintenancePhotoSelection
 } from "@/lib/maintenance-photos";
 import { Button } from "@/components/ui/button";
@@ -50,7 +51,7 @@ export function PhotoUpload({
     }
 
     const merged = [...selectedPhotos, ...nextFiles];
-    const validationError = validateMaintenancePhotoSelection(merged, existingPhotos.length);
+    const validationError = validateMaintenancePhotoSelection(merged, existingPhotos.length, MAX_MAINTENANCE_PHOTO_PICK_BYTES);
     if (validationError) {
       setError(validationError);
       if (input) {
@@ -88,7 +89,7 @@ export function PhotoUpload({
         <div>
           <p className="text-sm font-semibold text-foreground">Attach maintenance photos</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Up to {maxPhotos} photos, 10MB each. JPEG, PNG, WebP, and HEIC are supported.
+            Up to {maxPhotos} photos.
           </p>
         </div>
         <div className="text-xs text-muted-foreground">{totalPhotos}/{maxPhotos} attached</div>

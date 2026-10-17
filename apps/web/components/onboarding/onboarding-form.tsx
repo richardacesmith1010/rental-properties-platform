@@ -1,5 +1,6 @@
 "use client";
 
+import { unstable_rethrow } from "next/navigation";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { useFormState } from "react-dom";
@@ -8,10 +9,11 @@ import { Input } from "@/components/ui/input";
 import { SubmitButton } from "@/components/shared/submit-button";
 import type { ActionState } from "@/app/actions";
 import { Alert } from "@/components/ui/alert";
+import { prepareUploadFile, uploadErrorCopy } from "@/lib/image-compress";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
-const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_AVATAR_SIZE_BYTES = 15 * 1024 * 1024;
 
 interface OnboardingFormProps {
   email: string;
@@ -70,7 +72,20 @@ export function OnboardingForm({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
-  const [state, formAction] = useFormState(onCompleteOnboarding, null);
+  const saveOnboarding: StatefulAction = async (previous, formData) => {
+    const file = formData.get("avatarFile");
+    const hadFile = file instanceof File && file.size > 0;
+    try {
+      if (hadFile) formData.set("avatarFile", await prepareUploadFile(file, "avatar"));
+      return await onCompleteOnboarding(previous, formData);
+    } catch (error) {
+      unstable_rethrow(error);
+      setPreviewUrl(null);
+      setFileInputKey((current) => current + 1);
+      return { success: false, error: uploadErrorCopy(error, { formFile: hadFile }) };
+    }
+  };
+  const [state, formAction] = useFormState(saveOnboarding, null);
   const roleMeta = getRoleMeta(role);
   const RoleIcon = roleMeta.Icon;
 
@@ -93,7 +108,7 @@ export function OnboardingForm({
     }
 
     if (file.size > MAX_AVATAR_SIZE_BYTES) {
-      setAvatarError("Image must be under 5 MB.");
+      setAvatarError("Image must be under 15 MB.");
       event.target.value = "";
       return;
     }
@@ -199,7 +214,7 @@ export function OnboardingForm({
               onChange={handleAvatarChange}
               className="block text-sm text-[var(--ink-2)] file:mr-3 file:rounded-xl file:border file:border-[var(--line)] file:bg-[var(--surface)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[var(--accent)] hover:file:border-[var(--accent-line)] hover:file:bg-[var(--accent-weak)]"
             />
-            <p className="mt-1 text-xs domus-muted">JPG, PNG, or WebP. Max 5 MB.</p>
+            <p className="mt-1 text-xs domus-muted">JPG, PNG, or WebP.</p>
             {avatarError ? (
               <p className="mt-1 text-xs text-[var(--crit)]">{avatarError}</p>
             ) : null}
@@ -231,7 +246,7 @@ export function OnboardingForm({
       </div>
 
       {state && !state.success ? (
-        <Alert variant="error">
+        <Alert role="alert" variant="error">
           {state.error}
         </Alert>
       ) : null}

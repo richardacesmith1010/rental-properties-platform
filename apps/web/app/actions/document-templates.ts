@@ -6,6 +6,7 @@ import { getFeatureCapabilities } from "@/lib/feature-capabilities";
 import { getAdministeredOwnerAccountIds, canUserAdministerProperty } from "@/lib/property-access";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
+import { resolveUploadType } from "@/lib/file-signature";
 import { sideEffectError } from "@/lib/logger";
 import { logAudit } from "@/lib/audit";
 import {
@@ -140,13 +141,17 @@ export async function uploadPropertyFile(_prev: ActionState, formData: FormData)
     return { success: false, error: "You do not have access to this property." };
   }
 
-  const extension = file.name.split(".").pop()?.toLowerCase() ?? "bin";
-  const storagePath = `${propertyId}/${crypto.randomUUID()}.${extension}`;
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const resolved = resolveUploadType("vault", bytes, file.name);
+  if (!resolved) {
+    return { success: false, error: "This file type is not allowed. Use a photo, PDF, Word, Excel, or text file." };
+  }
+  const storagePath = `${propertyId}/${crypto.randomUUID()}.${resolved.extension}`;
   const admin = createAdminClient();
-  const fileType = file.type.startsWith("image/") ? "image" : file.type.includes("pdf") ? "pdf" : "document";
+  const uploadFile = new File([bytes], file.name, { type: resolved.contentType });
 
-  const { error: uploadError } = await admin.storage.from("property-files").upload(storagePath, file, {
-    contentType: file.type || "application/octet-stream",
+  const { error: uploadError } = await admin.storage.from("property-files").upload(storagePath, uploadFile, {
+    contentType: resolved.contentType,
     upsert: false
   });
   if (uploadError) return { success: false, error: "Failed to upload file to storage." };
@@ -156,7 +161,7 @@ export async function uploadPropertyFile(_prev: ActionState, formData: FormData)
     uploaded_by_profile_id: user.id,
     file_name: file.name,
     storage_path: storagePath,
-    file_type: fileType,
+    file_type: resolved.category,
     category,
     visibility,
     description: description || null

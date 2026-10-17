@@ -1,5 +1,6 @@
 "use client";
 
+import { unstable_rethrow } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useFormState } from "react-dom";
 import { FileArchive } from "lucide-react";
@@ -11,6 +12,7 @@ import { Select } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Alert } from "@/components/ui/alert";
+import { prepareUploadFile, uploadErrorCopy } from "@/lib/image-compress";
 
 type ActionState = Awaited<ReturnType<StatefulAction>>;
 
@@ -55,7 +57,20 @@ function FormSuccess({ state }: { state: ActionState }) {
 }
 
 export function SignerFlow({ properties, propertyFilesEnabled = true, onUploadPropertyFile, onCancel }: SignerFlowProps) {
-  const [state, action] = useFormState(onUploadPropertyFile ?? unavailableAction, null);
+  const uploadAction: StatefulAction = async (previous, formData) => {
+    if (!onUploadPropertyFile) return unavailableAction(previous, formData);
+    const file = formData.get("file");
+    try {
+      if (file instanceof File && file.size > 0) {
+        formData.set("file", await prepareUploadFile(file, "document"));
+      }
+      return await onUploadPropertyFile(previous, formData);
+    } catch (error) {
+      unstable_rethrow(error);
+      return { success: false, error: uploadErrorCopy(error, { formFile: true }) };
+    }
+  };
+  const [state, action] = useFormState(uploadAction, null);
   const [step, setStep] = useState(0);
   const [skippedSteps, setSkippedSteps] = useState<number[]>([]);
   const [draft, setDraft] = useState<FileDraft>({
@@ -151,7 +166,8 @@ export function SignerFlow({ properties, propertyFilesEnabled = true, onUploadPr
                 <input type="hidden" name="category" value={draft.category} />
                 <input type="hidden" name="visibility" value={draft.visibility} />
                 <input type="hidden" name="description" value={draft.description} />
-                <Input name="file" type="file" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt" required />
+                <Input name="file" type="file"
+                  accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt" required />
                 <SubmitButton className="w-full" disabled={!metadataComplete} title="Upload file to property vault.">Upload File</SubmitButton>
               </form>
             ) : (

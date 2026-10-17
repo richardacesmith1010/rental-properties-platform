@@ -1,5 +1,6 @@
 "use client";
 
+import { unstable_rethrow } from "next/navigation";
 import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { useFormState } from "react-dom";
 import type { StatefulAction } from "@/app/actions";
@@ -16,6 +17,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { FormError, FormSuccess } from "@/components/dashboard/forms";
+import { prepareUploadFile, uploadErrorCopy } from "@/lib/image-compress";
 
 const expenseCategories = ["mortgage", "insurance", "property_tax", "hoa", "repair", "maintenance",
   "improvement", "utility", "management_fee", "legal", "other"];
@@ -67,7 +69,16 @@ export function ExpenseForm({ data, vendors, propertyFiles, onCreateExpense, onA
   const billRetryCopy = "We saved the bill but didn't add it to the rent bill. Try again.";
   const saveExpense: StatefulAction = async (previous, formData) => {
     setRetrySaved(false);
-    const result = await onCreateExpense(previous, formData);
+    let result;
+    const file = formData.get("receiptFile");
+    const hadFile = file instanceof File && file.size > 0;
+    try {
+      if (hadFile) formData.set("receiptFile", await prepareUploadFile(file, "receipt"));
+      result = await onCreateExpense(previous, formData);
+    } catch (error) {
+      unstable_rethrow(error);
+      return { success: false, error: uploadErrorCopy(error, { formFile: hadFile }) };
+    }
     if (!result?.success || !result.expenseId) return result;
     let partnerFailed = false;
     if (payerId && onSetPaidBy) {
@@ -261,7 +272,7 @@ export function ExpenseForm({ data, vendors, propertyFiles, onCreateExpense, onA
             <input type="hidden" name="vendorId" value={draft.vendorId} />
             <input type="hidden" name="receiptFileId" value={draft.receiptFileId} />
             <input type="hidden" name="description" value={draft.description} />
-            <Input name="receiptFile" type="file" accept="image/*,application/pdf" />
+            <Input name="receiptFile" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" />
             <SubmitButton className="w-full" disabled={!requiredComplete || Boolean(retry) || Boolean(retryBillId)}
               title="Create this expense record.">Save Expense</SubmitButton>
           </form>

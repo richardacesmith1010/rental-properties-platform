@@ -3,12 +3,13 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { useFormState } from "react-dom";
-import { useRouter } from "next/navigation";
+import { unstable_rethrow, useRouter } from "next/navigation";
 import { UserCircle2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { SubmitButton } from "@/components/shared/submit-button";
 import type { ActionState } from "@/app/actions";
 import { Alert } from "@/components/ui/alert";
+import { prepareUploadFile, uploadErrorCopy } from "@/lib/image-compress";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -47,7 +48,20 @@ export function ProfileSettings({
   const [nicknameValue, setNicknameValue] = useState(nickname ?? "");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
-  const [state, formAction] = useFormState(onUpdateProfile, null);
+  const saveProfile: StatefulAction = async (previous, formData) => {
+    const file = formData.get("avatarFile");
+    const hadFile = file instanceof File && file.size > 0;
+    try {
+      if (hadFile) formData.set("avatarFile", await prepareUploadFile(file, "avatar"));
+      return await onUpdateProfile(previous, formData);
+    } catch (error) {
+      unstable_rethrow(error);
+      setPreviewUrl(null);
+      setFileInputKey((current) => current + 1);
+      return { success: false, error: uploadErrorCopy(error, { formFile: hadFile }) };
+    }
+  };
+  const [state, formAction] = useFormState(saveProfile, null);
 
   useEffect(() => {
     if (!previewUrl) {
@@ -139,7 +153,7 @@ export function ProfileSettings({
             onChange={handleAvatarChange}
             className="block w-full max-w-full min-w-0 text-sm text-[var(--ink-2)] file:mr-3 file:rounded-md file:border-0 file:bg-[var(--accent-weak)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[var(--accent)] hover:file:bg-[var(--accent-line)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ground)]"
           />
-          <p className="text-xs text-[var(--muted)]">JPG, PNG, or WebP up to 5MB.</p>
+          <p className="text-xs text-[var(--muted)]">JPG, PNG, or WebP.</p>
           {previewUrl ? (
             <button
               type="button"

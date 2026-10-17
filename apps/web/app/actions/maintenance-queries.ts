@@ -4,6 +4,7 @@ import {
   validateMaintenancePhotoSelection
 } from "@/lib/maintenance-photos";
 import { canUserAdministerProperty } from "@/lib/property-access";
+import { resolveUploadType } from "@/lib/file-signature";
 import { isMissingSchemaError } from "./shared";
 
 export function getMaintenancePhotoFiles(formData: FormData) {
@@ -134,18 +135,29 @@ export async function uploadPhotosForTicket(params: {
     return { success: false as const, error: validationError };
   }
 
+  const resolvedFiles: { file: File; extension: string; contentType: string }[] = [];
+  for (const file of params.files) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const resolved = resolveUploadType("maintenance", bytes, file.name);
+    if (!resolved) return { success: false as const, error: "Photos must be JPEG, PNG, or WebP." };
+    resolvedFiles.push({
+      file: new File([bytes], file.name, { type: resolved.contentType }),
+      extension: resolved.extension,
+      contentType: resolved.contentType
+    });
+  }
+
   const uploadedStoragePaths: string[] = [];
   const insertedPhotoIds: string[] = [];
 
-  for (const file of params.files) {
-    const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+  for (const { file, extension, contentType } of resolvedFiles) {
     const safeName = sanitizeMaintenancePhotoFileName(file.name.replace(/\.[^.]+$/, ""));
     const storagePath = `${params.ticketId}/${crypto.randomUUID()}-${safeName}.${extension}`;
 
     const { error: uploadError } = await admin.storage
       .from("maintenance-photos")
       .upload(storagePath, file, {
-        contentType: file.type || "application/octet-stream",
+        contentType,
         upsert: false
       });
 

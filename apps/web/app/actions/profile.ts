@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getRoleHomePath } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { resolveUploadType } from "@/lib/file-signature";
 import {
   completeOnboardingSchema,
   updateProfileSchema,
@@ -16,35 +17,14 @@ import type { ActionState } from "./shared";
 
 const AVATAR_BUCKET = "profile-avatars";
 
-function getAvatarExtension(file: File) {
-  if (file.type === "image/jpeg") {
-    return "jpg";
-  }
-  if (file.type === "image/png") {
-    return "png";
-  }
-  if (file.type === "image/webp") {
-    return "webp";
-  }
-
-  const nameExtension = file.name.split(".").pop()?.toLowerCase();
-  if (nameExtension === "jpg" || nameExtension === "jpeg") {
-    return "jpg";
-  }
-  if (nameExtension === "png" || nameExtension === "webp") {
-    return nameExtension;
-  }
-
-  return null;
-}
-
 function buildFullName(firstName: string, lastName: string) {
   return `${firstName.trim()} ${lastName.trim()}`.trim();
 }
 
 async function storeAvatar(userId: string, file: File) {
-  const extension = getAvatarExtension(file);
-  if (!extension) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const resolved = resolveUploadType("avatar", bytes, file.name);
+  if (!resolved) {
     return {
       success: false as const,
       error: "Profile photo must be a JPG, PNG, or WebP image."
@@ -52,13 +32,14 @@ async function storeAvatar(userId: string, file: File) {
   }
 
   const admin = createAdminClient();
-  const storageKey = `${userId}/avatar.${extension}`;
+  const storageKey = `${userId}/avatar.${resolved.extension}`;
   const storagePath = `${AVATAR_BUCKET}/${storageKey}`;
+  const uploadFile = new File([bytes], file.name, { type: resolved.contentType });
   const { error: uploadError } = await admin.storage
     .from(AVATAR_BUCKET)
-    .upload(storageKey, file, {
+    .upload(storageKey, uploadFile, {
       upsert: true,
-      contentType: file.type || "application/octet-stream"
+      contentType: resolved.contentType
     });
 
   if (uploadError) {

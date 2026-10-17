@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   MAX_MAINTENANCE_PHOTOS,
+  MAX_MAINTENANCE_PHOTO_PICK_BYTES,
   buildMaintenancePhotoUrl,
   isAcceptedMaintenancePhotoType,
   normalizeMaintenancePhotoRecord,
@@ -16,11 +17,20 @@ describe("maintenance photo helpers", () => {
     expect(error).toBe("Each photo must be under 10MB.");
   });
 
+  it("allows large picks while retaining the server limit", () => {
+    const photo = { name: "camera.jpg", type: "image/jpeg", size: 15 * 1024 * 1024 };
+    expect(validateMaintenancePhotoSelection([photo])).toBe("Each photo must be under 10MB.");
+    expect(validateMaintenancePhotoSelection([photo], 0, MAX_MAINTENANCE_PHOTO_PICK_BYTES)).toBeNull();
+    expect(validateMaintenancePhotoSelection([{ ...photo, size: 51 * 1024 * 1024 }],
+      0, MAX_MAINTENANCE_PHOTO_PICK_BYTES)).toBe("Each photo must be under 50 MB.");
+  });
+
   it("accepts supported image types", () => {
     expect(isAcceptedMaintenancePhotoType("image/jpeg")).toBe(true);
     expect(isAcceptedMaintenancePhotoType("image/png")).toBe(true);
     expect(isAcceptedMaintenancePhotoType("image/webp")).toBe(true);
-    expect(isAcceptedMaintenancePhotoType("image/heic")).toBe(true);
+    expect(isAcceptedMaintenancePhotoType("image/heic")).toBe(false);
+    expect(isAcceptedMaintenancePhotoType("image/heif")).toBe(false);
   });
 
   it("rejects unsupported file types", () => {
@@ -28,7 +38,7 @@ describe("maintenance photo helpers", () => {
       { name: "invoice.pdf", type: "application/pdf", size: 1024 }
     ]);
 
-    expect(error).toBe("Photos must be JPEG, PNG, WebP, or HEIC.");
+    expect(error).toBe("Photos must be JPEG, PNG, or WebP.");
   });
 
   it("enforces the max photo count", () => {

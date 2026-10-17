@@ -24,13 +24,15 @@ describe("upload input types", () => {
     fireEvent.click(next);
     fireEvent.change(document.querySelector('input[type="date"]')!, { target: { value: "2026-10-16" } });
     for (let index = 0; index < 5; index += 1) fireEvent.click(next);
-    expect(document.querySelector('input[name="receiptFile"]')).toHaveAttribute("accept", "image/*,application/pdf");
+    expect(document.querySelector('input[name="receiptFile"]')).toHaveAttribute("accept",
+      "image/jpeg,image/png,image/webp,application/pdf");
   });
 
   it("limits edited expense receipts to images and PDFs", () => {
     render(<ExpenseList data={data} vendors={[]} propertyFiles={[]} onUpdateExpense={action} onDeleteExpense={action} />);
     fireEvent.click(screen.getByRole("button", { name: "Manage" }));
-    expect(document.querySelector('input[name="receiptFile"]')).toHaveAttribute("accept", "image/*,application/pdf");
+    expect(document.querySelector('input[name="receiptFile"]')).toHaveAttribute("accept",
+      "image/jpeg,image/png,image/webp,application/pdf");
   });
 
   it("offers images, PDFs, and documents for signer uploads", () => {
@@ -40,6 +42,6 @@ describe("upload input types", () => {
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "lease_agreement" } });
     for (let index = 0; index < 3; index += 1) fireEvent.click(screen.getByRole("button", { name: "Next" }));
     expect(document.querySelector('input[name="file"]')).toHaveAttribute("accept",
-      "image/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt");
+      "image/jpeg,image/png,image/webp,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt");
   });
 });

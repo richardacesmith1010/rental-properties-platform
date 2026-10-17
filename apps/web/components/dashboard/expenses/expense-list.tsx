@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { unstable_rethrow } from "next/navigation";
+import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useFormState } from "react-dom";
 import type { StatefulAction } from "@/app/actions";
 import type { setExpensePaidBy } from "@/app/actions/partners";
@@ -20,6 +21,7 @@ import { SubmitButton } from "@/components/shared/submit-button";
 import { Textarea } from "@/components/ui/textarea";
 import { AnimatedList } from "@/components/ui/animated-list";
 import { expenseCategories, formatCategory } from "./expense-form";
+import { prepareUploadFile, uploadErrorCopy } from "@/lib/image-compress";
 
 const recurringFrequencies = ["monthly", "quarterly", "annually"];
 
@@ -108,8 +110,19 @@ function ExpenseRow({ expense, vendors, receiptFiles, onUpdateExpense, onDeleteE
   const [payerId, setPayerId] = useState(expense.paidById ?? "");
   const [savedPayerId, setSavedPayerId] = useState(expense.paidById ?? "");
   const [retryPayer, setRetryPayer] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
   const updateWithPayer: StatefulAction = async (previous, formData) => {
-    const result = await onUpdateExpense(previous, formData);
+    let result;
+    const file = formData.get("receiptFile");
+    try {
+      if (file instanceof File && file.size > 0) {
+        formData.set("receiptFile", await prepareUploadFile(file, "receipt"));
+      }
+      result = await onUpdateExpense(previous, formData);
+    } catch (error) {
+      unstable_rethrow(error);
+      return { success: false, error: uploadErrorCopy(error) };
+    }
     if (!result?.success || !onSetPaidBy || payerId === savedPayerId) return result;
     const saved = await onSetPaidBy(expense.id, payerId || null);
     if (!saved.ok) {
@@ -119,7 +132,7 @@ function ExpenseRow({ expense, vendors, receiptFiles, onUpdateExpense, onDeleteE
     setSavedPayerId(payerId);
     return result;
   };
-  const [updateState, updateAction] = useFormState(updateWithPayer, null);
+  const [updateState, updateAction, isPending] = useActionState(updateWithPayer, null);
   const [deleteState, deleteAction] = useFormState(onDeleteExpense, null);
   const [isManaging, setIsManaging] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -141,7 +154,11 @@ function ExpenseRow({ expense, vendors, receiptFiles, onUpdateExpense, onDeleteE
         {expense.description ? <p className="mt-0.5 text-sm text-[var(--muted)]">{expense.description}</p> : null}
         {isManaging ? (
           <>
-            <form action={updateAction} className="mt-3 grid gap-2 sm:grid-cols-3">
+            <form onSubmit={(event) => {
+              event.preventDefault();
+              const formData = new FormData(event.currentTarget);
+              startTransition(() => updateAction(formData));
+            }} className="mt-3 grid gap-2 sm:grid-cols-3">
               <input type="hidden" name="expenseId" value={expense.id} />
               <Select name="category" defaultValue={expense.category}>{expenseCategories.map((category) => <option key={category} value={category}>{formatCategory(category)}</option>)}</Select>
               <Input name="amountDollars" type="number" min={0.01} step="0.01" defaultValue={expense.amountCents / 100} required />
@@ -157,8 +174,11 @@ function ExpenseRow({ expense, vendors, receiptFiles, onUpdateExpense, onDeleteE
                   {partnerAccount.partners.filter((partner) => partner.active || partner.id === savedPayerId)
                     .map((partner) => <option key={partner.id} value={partner.id}>{partner.displayName}</option>)}
                 </Select></label>}
-              <Input name="receiptFile" type="file" accept="image/*,application/pdf" className="sm:col-span-2" />
-              <div className="sm:col-span-3 flex items-center gap-2"><SubmitButton size="sm" variant="outline" title="Save updates to this expense.">Save Expense</SubmitButton><Badge variant="outline">{formatCurrency(expense.amountCents)}</Badge></div>
+              <Input name="receiptFile" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"
+                className="sm:col-span-2" />
+              <div className="sm:col-span-3 flex items-center gap-2"><Button type="submit" size="sm" variant="outline"
+                loading={isPending} disabled={isPending} title="Save updates to this expense.">Save Expense</Button>
+                <Badge variant="outline">{formatCurrency(expense.amountCents)}</Badge></div>
               {retryPayer !== null && <div className="sm:col-span-3 space-y-2 text-sm text-[var(--crit)]">
                 <p>We saved the bill but not who paid. Try again.</p>
                 <Button type="button" title="Retry saving who paid" onClick={async () => {
@@ -168,7 +188,7 @@ function ExpenseRow({ expense, vendors, receiptFiles, onUpdateExpense, onDeleteE
                 }}>Try again</Button></div>}
               {updateState && !updateState.success &&
                 updateState.error !== "We saved the bill but not who paid. Try again."
-                ? <p className="sm:col-span-3 text-xs text-[var(--crit)]">{updateState.error}</p> : null}
+                ? <p role="alert" className="sm:col-span-3 text-xs text-[var(--crit)]">{updateState.error}</p> : null}
               {updateState && updateState.success ? <p className="sm:col-span-3 text-xs text-[var(--pos)]">Expense updated.</p> : null}
             </form>
             <form action={deleteAction} className="mt-2" ref={deleteFormRef}>

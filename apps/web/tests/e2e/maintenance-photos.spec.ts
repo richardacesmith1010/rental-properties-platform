@@ -1,5 +1,24 @@
 import { expect, test, type Page } from "@playwright/test";
+import { fileURLToPath } from "node:url";
 import { DEMO_USERS, loginAs } from "./helpers";
+
+function jpegSize(bytes: Buffer) {
+  if (bytes[0] !== 0xff || bytes[1] !== 0xd8) throw new Error("Missing JPEG header");
+  for (let offset = 2; offset + 4 < bytes.length;) {
+    if (bytes[offset] !== 0xff) throw new Error("Invalid JPEG marker");
+    while (bytes[offset] === 0xff) offset += 1;
+    const marker = bytes[offset++];
+    if (marker === 0xd9 || marker === 0xda) break;
+    if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) continue;
+    const length = bytes.readUInt16BE(offset);
+    if (length < 2 || offset + length > bytes.length) throw new Error("Invalid JPEG segment");
+    if (marker === 0xc0 || marker === 0xc2) {
+      return { height: bytes.readUInt16BE(offset + 3), width: bytes.readUInt16BE(offset + 5) };
+    }
+    offset += length;
+  }
+  throw new Error("JPEG frame size missing");
+}
 
 async function loginTenantOrSkip(page: Page) {
   const loggedIn = await loginAs(page, DEMO_USERS.tenant1.email, DEMO_USERS.tenant1.password);
@@ -72,7 +91,28 @@ test.describe.serial("Maintenance photo support", () => {
     );
 
     expect(acceptValues.some((value) => value.includes("image/jpeg"))).toBe(true);
-    expect(acceptValues.some((value) => value.includes("image/heic"))).toBe(true);
+    expect(acceptValues.some((value) => value.includes("image/heic"))).toBe(false);
+  });
+
+  test("portrait EXIF photo reaches the repair action as a portrait JPEG", async ({ page }) => {
+    await loginTenantOrSkip(page);
+    await openTenantMaintenance(page);
+    test.skip((await page.getByRole("heading", { name: "Report a repair" }).count()) === 0,
+      "Tenant repair form is unavailable.");
+    await page.getByLabel("What needs repair?").fill("The sink leaks.");
+    const picker = page.locator('input[type="file"]:not([capture])').first();
+    await picker.setInputFiles(fileURLToPath(new URL("../fixtures/portrait-exif6.jpg", import.meta.url)));
+    const requestPromise = page.waitForRequest((request) =>
+      request.method() === "POST" && new URL(request.url()).pathname === "/tenant");
+    await page.getByRole("button", { name: "Send to landlord" }).click();
+    const body = (await requestPromise).postDataBuffer();
+    expect(body).not.toBeNull();
+    const start = body!.indexOf(Buffer.from([0xff, 0xd8, 0xff]));
+    const end = body!.indexOf(Buffer.from([0xff, 0xd9]), start);
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    const dimensions = jpegSize(body!.subarray(start, end + 2));
+    expect(dimensions.height).toBeGreaterThan(dimensions.width);
   });
 
   test("maintenance views expose photo gallery affordances when photos exist", async ({ page }) => {
