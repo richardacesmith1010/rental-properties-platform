@@ -1,4 +1,4 @@
-# Sprint 238j — Big uploads: shrink photos, check bytes, never crash (L3) — rev 2 (critic panel: 16 REQUIRED + 5 checker fixes)
+# Sprint 238j — Big uploads: shrink photos, check bytes, never crash (L3) — rev 3 (critic panel → rev 2; ChatGPT AWC: 5 REQUIRED adopted)
 
 ## 1. Objective
 Real-iPhone finding **F1** (2026-10-16): a tenant sent a repair with a camera photo and got "We couldn't load your tenant
@@ -66,7 +66,11 @@ All paths are under `apps/web/` unless they start with `node_modules/` (repo roo
   to its first option. `SubmitButton` gets `pending` from `useFormStatus` (`components/shared/submit-button.tsx:25`), which only
   tracks form actions.
 - Plain-language guard (`lib/plain-language/scan.ts:12-18`) bans `CSV`, `ticket(s)`, `submit(s)`, `charge(s)` in shown copy.
-- Tests that must stay green **unchanged**: `upload-accept.test.tsx` (accept lists), `components/__tests__/expense-partners.test.tsx`
+- Pickers must offer only what the server accepts (ChatGPT review). New `accept` lists: receipts (`expense-form.tsx:264`,
+  `expense-list.tsx:160`) `image/jpeg,image/png,image/webp,application/pdf`; vault (`signer-flow.tsx:154`)
+  `image/jpeg,image/png,image/webp,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt`. Without `image/heic` in the list, iOS
+  hands over JPEG. Update `upload-accept.test.tsx` to pin the new lists (its other assertions stay).
+- Tests that must stay green **unchanged**: `components/__tests__/expense-partners.test.tsx`
   (clicks the title `Save updates to this expense.`), `components/__tests__/onboarding-form.test.tsx`,
   `app/actions/__tests__/maintenance-ticket-history.test.ts` and `maintenance-ticket-notifications.test.ts` (both stub
   `uploadPhotosForTicket`). No test runs the real code of any upload path today.
@@ -117,7 +121,10 @@ Tests (all inside `__tests__` folders except the e2e spec):
 26. `apps/web/app/actions/__tests__/expense-receipt-upload.test.ts` (new: real `createExpense`/`updateExpense` + `lib/uploads`)
 27. `apps/web/app/actions/__tests__/upload-property-file.test.ts` (new: real `uploadPropertyFile`)
 28. `apps/web/app/actions/__tests__/profile-avatar.test.ts` (new: real `updateProfile`/`completeOnboarding` + `storeAvatar`)
-29. `apps/web/tests/e2e/maintenance-photos.spec.ts` (edit `:75` only)
+29. `apps/web/tests/e2e/maintenance-photos.spec.ts` (edit `:75`; add the portrait-orientation case below)
+30. `apps/web/components/dashboard/__tests__/upload-accept.test.tsx` (edit: pin the narrowed accept lists)
+31. `apps/web/tests/fixtures/portrait-exif6.jpg` (new, < 50 KB: stored 400×300 with EXIF Orientation 6; build it with a
+    small Node script from bytes, no new dependency) and `apps/web/tests/fixtures/README.md` (how it was made)
 
 ## 6. Implementation requirements
 **R1. `lib/image-compress.ts` (browser only; no new dependencies)**
@@ -128,7 +135,8 @@ Tests (all inside `__tests__` folders except the e2e spec):
 - Test seam: export a mutable `imageCodec = { decode, encode }`. Production code always calls `imageCodec.decode/encode`, so
   tests can `vi.spyOn(imageCodec, …)` while the real `compressImage`/`preparePhotos` run.
   - `decode(file)` → `{ width, height, source, release() }`. It uses `URL.createObjectURL`, `new Image()` and `img.decode()`.
-    It does not use `createImageBitmap` resize options. `release()` revokes the object URL. Do not rotate by hand; the browser
+    It does not use `createImageBitmap` resize options. `release()` sets `img.src = ""`, drops the
+    reference and revokes the object URL, so decoded pixels can be freed at once. Do not rotate by hand; the browser
     applies EXIF orientation when drawing.
   - `encode(decoded, { width, height, quality })` → `Blob | null`. It creates a canvas of exactly `width × height`. If
     `getContext("2d")` is `null`, it returns `null`. It fills white (`#ffffff`) before `drawImage`, so transparent PNG/WebP
@@ -185,7 +193,9 @@ boundary. If a form's file field is missing or has `size === 0`, send the `FormD
    - Keep every **named** field uncontrolled with the same `name`, `defaultValue` and `defaultChecked`, so the sent
      `FormData` is identical. With no form action, React never resets them. The "Who paid?" `<Select value={payerId}>`
      (`expense-list.tsx:155`) has no `name` and stays controlled exactly as today.
-   - Read `isPending` as the third value of `useFormState`. The Save button stays `type="submit"`, label `Save Expense`, title
+   - Switch this one form to React 19's `useActionState` (from `react`): `const [state, updateAction, isPending] =
+     useActionState(updateWithPayer, initialState)`, and dispatch with `startTransition(() => updateAction(formData))`.
+     (`useFormState` has no third value; ChatGPT review.) The Save button stays `type="submit"`, label `Save Expense`, title
      `Save updates to this expense.`. Use `Button` with `loading={isPending}` and `disabled={isPending}`, because
      `SubmitButton`'s `useFormStatus` no longer sees a pending form action.
    - `updateWithPayer` gains the same receipt prep and try/catch around `onUpdateExpense` (`formFile: false`: the file stays
@@ -196,7 +206,7 @@ boundary. If a form's file field is missing or has `size === 0`, send the `FormD
    `avatarFile` (`prepareUploadFile(file, "avatar")`, `formFile: hadFile`). In the catch path also clear the preview
    (`setPreviewUrl(null)`) and reset the file input (bump its `key`), so the screen never shows a photo that will not
    send. In onboarding, change `MAX_AVATAR_SIZE_BYTES` to
-   `25 * 1024 * 1024` and the pick-time copy to `Image must be under 25 MB.`. Change both hints (`profile-settings.tsx:142`,
+   `15 * 1024 * 1024` and the pick-time copy to `Image must be under 15 MB.`. Change both hints (`profile-settings.tsx:142`,
    `onboarding-form.tsx:202`) to `JPG, PNG, or WebP.`.
 
 **R3. Body limit.** `next.config.mjs`: `experimental: { staleTimes: { dynamic: 30, static: 300 }, serverActions:
@@ -235,6 +245,12 @@ file may only export async functions, so the constant cannot live there.)
 | plain text | `csv` | `csv` | `text/csv` | document | vault |
 | plain text | `txt` | `txt` | `text/plain` | document | vault |
 
+  **OOXML check (ChatGPT review):** a `zip` is accepted as `docx` only if the bytes contain the ASCII entry names
+  `[Content_Types].xml` and `word/document.xml`, and as `xlsx` only with `[Content_Types].xml` and `xl/workbook.xml` (scan the
+  whole buffer; ZIP local and central-directory headers store names as plain bytes). Any other ZIP → `null`. `ole`
+  (`.doc`/`.xls`) is a container check plus the name only; say so in a code comment ("not proof of Word/Excel").
+  `isPlainText` is a weak check ("no known binary signature and no NUL in 4 KB"); these files are only stored and
+  downloaded, never parsed by the server. Name it in a comment the same way.
   Anything else → `null`. HTML or SVG saved as `.txt`/`.csv` is accepted but stored as inert text; that is intended. GIF,
   HEIC or SVG originals that reach the server without being shrunk are refused (the browser normally turns them into JPEG).
 - Placement in each server path. The check runs **after** every existing auth, role, rate-limit, capability, parse, count and
@@ -272,8 +288,10 @@ cd apps/web && npx vitest run --reporter=dot
 cd apps/web && npx tsc --noEmit
 npm run lint:web
 ```
-Do NOT run `npm run gate:web` or Playwright. Claude runs the gate, the e2e spec, and an iPhone Simulator walk with large photos
-(`xcrun simctl addmedia`).
+Do NOT run `npm run gate:web` or Playwright. Claude runs the gate, the e2e spec (Chromium, real canvas: the
+portrait-orientation case must store a JPEG whose decoded size is taller than wide), an iPhone Simulator walk with large
+photos (`xcrun simctl addmedia`, including a 48 MP sample), and then the owner's one batched real-iPhone check on TestFlight
+build 3 (one camera photo and one large library photo on a repair; WKWebView memory on a real device).
 
 ## 8. Acceptance criteria
 Each item names its file. "Exact copy" means the string from §6.
@@ -284,6 +302,8 @@ Each item names its file. "Exact copy" means the string from §6.
    c. An 800×600 decode is encoded at 800×600 (never upscales).
    d. Decode throws, or encode returns `null`: the original is returned when `size <= targetBytes`; otherwise
       `PhotoTooLargeError`. `release()` is called in every case.
+   - (optional, adopted) a JPEG `File` with an empty `type` is detected by its first bytes on the client and shrunk like any
+     photo (not sent raw on the non-image path).
    e. `preparePhotos` with five 3 MB inputs, where encode returns 819,200 bytes at step 1 and 614,400 at step 2: returns 5 JPEG
       files, each ≤ 921,600, summing ≤ 3,670,016. With one input, its target is 921,600.
    f. `prepareUploadFile`: a 3,670,017-byte PDF → `FileTooLargeError`; a 1 MB PDF → the same `File` object; `avatar` encodes at
@@ -333,7 +353,7 @@ Each item names its file. "Exact copy" means the string from §6.
    - a throw → `We could not send that. Please choose the file again.`, the typed first name is kept, and the avatar
      preview is cleared;
    - an empty file input → the action gets the `FormData` unchanged;
-   - onboarding: a 6 MB JPEG is accepted at pick time and a 26 MB file shows `Image must be under 25 MB.`;
+   - onboarding: a 6 MB JPEG is accepted at pick time and a 16 MB file shows `Image must be under 15 MB.`;
    - both hints read `JPG, PNG, or WebP.`.
 9. `app/actions/__tests__/maintenance-photo-upload.test.ts` (real `uploadPhotosForTicket`; mocked admin client and
    `canUserAdministerProperty`). Pins:
@@ -361,8 +381,10 @@ Each item names its file. "Exact copy" means the string from §6.
     - `requireAuth` is called with `"owner", "manager"`;
     - a non-admin, sending HTML bytes → `You do not have access to this property.`, zero uploads;
     - HTML bytes named `lease.docx` → the exact vault copy, zero uploads and inserts;
-    - DOCX header bytes named `Lease.DOCX` → key `^<propertyId>/[0-9a-f-]{36}\.docx$`, with the OOXML word contentType on the
-      body and `file_type` `document`;
+    - a minimal OOXML Word package (bytes containing `PK\x03\x04`, `[Content_Types].xml` and `word/document.xml`) named
+      `Lease.DOCX` → key `^<propertyId>/[0-9a-f-]{36}\.docx$`, with the OOXML word contentType and `file_type` `document`;
+    - a plain ZIP (`PK\x03\x04` without those entries) named `evil.docx` → the exact vault copy, zero uploads;
+    - JPEG bytes typed `application/pdf` named `x.pdf` → stored as `.jpg`, `image/jpeg` (client MIME is ignored);
     - `a,b\n1,2` named `rent.csv` → `.csv`, `text/csv`;
     - JPEG bytes named `scan.png` → `.jpg`, `image/jpeg`, `file_type` `image`.
 13. `app/actions/__tests__/profile-avatar.test.ts`:
@@ -385,6 +407,6 @@ Do NOT include 'Claude prompt' or 'recommended next steps for Claude' sections. 
 - Only the files in §5. No new dependencies. No SQL.
 - No change to who may upload where, to any auth/role/permission/rate-limit/capability/count or server-side size check or
   its order, to bucket names, or to key templates beyond the extension. (Only exception: the onboarding pick-time limit, R2.7.)
-- Do not edit `upload-accept.test.tsx`, `expense-partners.test.tsx`, `onboarding-form.test.tsx` or the two maintenance-ticket
+- Do not edit `expense-partners.test.tsx`, `onboarding-form.test.tsx` or the two maintenance-ticket
   action tests.
 - Lines ≤ 140 characters; files ≤ 500 lines; every Supabase error checked; exact copy only, with no invented URLs or emails.
