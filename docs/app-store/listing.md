@@ -140,7 +140,7 @@ Lines that depend on unshipped work (do not submit until each is true):
 |---|---|
 | "It asks for your OK before it uses your data." / "You can turn it off in Settings." | Sprint 238c (Ask Domus consent sheet and Settings switch) live |
 | "Or visit https://domusbase.com/support." | Sprint 238c (`/support` page) live. Until then, use `https://domusbase.com`. |
-| "Ask to delete your account in Settings." / "within 30 days" | Sprint 238b live: Settings → Your data / Account & Data → Delete my account |
+| "Ask to delete your account in Settings." / "within 30 days" | **Met 2026-10-17** (238b `cda681a` live; walked on the Simulator). Claude adds both lines back in App Store Connect. |
 | "Privacy policy: https://domusbase.com/privacy" | Page is live today; the updated legal text waits on Q9 |
 
 Notes:
@@ -267,7 +267,7 @@ Never write real passwords in this file.
 
 ## 14. Before submitting
 
-1. Sprint 238b live (delete request in Settings).
+1. ~~Sprint 238b live (delete request in Settings).~~ Done 2026-10-17 (`cda681a`).
 2. Sprint 238c live (`/support`, Ask Domus consent, Privacy and Terms links in app).
 3. Swap the Support URL to `https://domusbase.com/support`.
 4. `OWNER:` Q3 (account type), Q8 (age rating), Q9 (legal name, legal text).

@@ -1485,3 +1485,19 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   needs the owner's keychain approval at upload → batched owner item.
 - 238b (Delete my account, L3) dispatched with an L-028 note (its action ends with a redirect). 237c-1 still waits for the
   owner's round-3 decision.
+
+## Sprint 238b SHIPPED (2026-10-17 ~09:45) — Delete my account (L3, App Store 5.1.1(v)) — PASS
+- Commit `cda681a` (11 files). Deploy `dpl_6naNfCVqtKHKcbFm4YFdB8XApASy` READY. CI `gate` success. Migration was applied
+  earlier today (attacker-checked). Isolated gate 320 files / 2,705 tests + build.
+- Reviews: security PASS (packet rev 4 line by line; live grants/RLS/triggers re-checked; no PII logged; nothing sent
+  to real people); tests-are-real PASS (57 mutations, 49 killed; survivors = test-hardening follow-ups below).
+- **Simulator walk on production** (`+walktenant2`): Settings → Your data shows the section between Download and the
+  legal links; keyboard opens in capitals; "DELETEDELETE" keeps the button disabled; exact "DELETE" enables it; tap →
+  signed out → `/login` shows "We got your request. / Your account will be deleted within 30 days." DB: 1 open row
+  (profile, email, role tenant correct) + 1 feedback row + 1 audit row. **Test request withdrawn** (`f66a7cb4…`,
+  status `withdrawn`); the test account itself is untouched (sign-in still works with a new magic link).
+- Follow-ups (L1, not blocking): `account-deletion-request.test.ts` run `writesAreScoped()` and a no-email-in-logs check
+  in `afterEach`; placement test "between download and legal links"; pin the button title. Packet §6.2 log-line text
+  contradicts its Logging bullet (Codex chose the safer one) — fix the packet text.
+- App Store listing: deletion lines' gate met (`docs/app-store/listing.md`). **Runbook hardening** (ChatGPT REQUIRED
+  items 2–9 on `docs/runbooks/account-deletion.md`) is still due before the first real request (owner decision 2026-10-16).
