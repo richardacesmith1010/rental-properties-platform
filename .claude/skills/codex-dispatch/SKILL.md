@@ -25,6 +25,7 @@ Before sending, check it against `docs/lessons.md`:
 - Copy is exact, and the packet invents no URLs or emails (L-012, L-020).
 - The packet says how Undo reverses every side effect (L-016).
 - If the code is generalized to another role, the packet pins the original role's behavior (L-014).
+- A `catch` around a server action starts with `unstable_rethrow(error)` and has a redirect test; tests never put `expect` inside a mock implementation (L-028).
 
 Always include these lines:
 - "Do NOT include 'Claude prompt' or 'recommended next steps for Claude' sections. Report compact status only."
