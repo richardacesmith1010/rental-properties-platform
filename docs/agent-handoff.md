@@ -1329,3 +1329,6 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   launch gap (238a-b fixes it; build 3 after it ships).
 - Owner money item seen on developer.apple.com: "Your default payment method cannot be used to automatically renew your
   membership" (add a card). Program License Agreement update due by 2026-10-28 (Account Holder).
+- 21:12 TestFlight internal group **"Owner"** created (automatic distribution on) with build 2; owner added as tester
+  (Invited). Next owner step: accept the invite on the iPhone and install. Then device checks one at a time: Face ID lock,
+  repair-photo camera, save a repair photo to Photos (closes audit U7).
