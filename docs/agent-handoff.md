@@ -1299,3 +1299,10 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   before any user update, ownership predicates, waived months, password-file safety; runbook
   `docs/runbooks/appreview-seed.md`). 237c-2 and 238e are L2 (no review). `apps/web/.env.local` set to mode 600 (it holds
   production secrets; the 238g seed refuses a group/other-readable file).
+
+## 2026-10-16 ~20:05 — App Store Connect app record created
+- Owner signed in, accepted the App Store Connect terms and clicked Create on the form Claude filled: iOS, "Domus: Rent &
+  Repairs", English (U.S.), `com.domusbase.app`, SKU `domus-ios`, Full Access. Apple ID **6823839749**; iOS 1.0 "Prepare for
+  Submission" (verified on the Apps list). This unblocks the TestFlight upload (`testflight.sh` → `destination=upload`).
+- Still shown on the Apps page (owner-only): "Apple Developer Program License Agreement Updated" (Account Holder must
+  accept before submitting); EU trader status (Digital Services Act) not set.

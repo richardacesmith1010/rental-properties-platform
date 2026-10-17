@@ -29,6 +29,9 @@ Re-count after any edit. Search for `OWNER:` to find every item that waits on th
 
 ## 1. App record (New App form, owner clicks Create)
 
+**Created 2026-10-16** by the owner (Claude filled the form). Apple ID **6823839749**; iOS 1.0 "Prepare for Submission".
+App page: https://appstoreconnect.apple.com/apps/6823839749
+
 | Field | Value |
 |---|---|
 | Platform | iOS |
