@@ -1541,3 +1541,20 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   (`scratchpad/237c1-m11-files.txt`) vs 11 invite files; split gate running. Nothing of 237c-1 is live.
 - Owner decision asked: ship the M11 half now and send the invite flow back to design (rows after Auth; resend via a
   fresh link; reopen revoked rows), or park all of 237c-1.
+
+## Sprint 237c-1 (Clients half) SHIPPED (2026-10-17 ~15:35) — Domus owners in Clients + their statements — PASS
+- Owner decision: "Ship the Clients and statements half of 237c-1 now. Put the invite flow back to how production works
+  today, and redesign it as a new sprint."
+- Commit `83154c8` (18 files, byte-identical to the split-gated copy: 320 files / 2,726 tests + build). Deploy READY.
+  The invite half (11 files) was never live; it is archived as `docs/sprint-archive/237c1-invite-flow-round3.patch`
+  (`0219a70`, reverse-applies cleanly) and the working tree is back to HEAD for those files.
+- CI: `83154c8` gate **failure** = known flaky `unified-property-wizard.test.tsx:72` (sync `getByText` after an async
+  success, listed in the handoff since 235c). Same app code at `0219a70` (HEAD): gate **success**. Local 15/15 on shipped
+  code and 15/15 before the sprint. Queued fix: `findByText` (L1).
+- **Simulator walk on production** (`+walkmanager`): Clients lists "Walk's Account · Person · 2 homes · Domus owner"
+  (was missing before) next to the managed client "Walk Client Test" (unchanged); detail shows both homes Paid with no
+  Add-a-home; Owner statement October 2026 = Payments $2,300.00 / Expenses $0 / Net $2,300 / Still owed $0 — **SQL
+  matches to the cent** (2 non-reversed payments, $2,300.00). Light + dark readable (a sheet already open during a theme
+  switch keeps the old theme until reopened — pre-existing, cosmetic).
+- Next: invite-flow redesign packet **237c-5** (design workflow `wf_d47da41f-39e` running: map → 3 designs → 3 judges →
+  draft; live trigger quoted per L-029) → ChatGPT review (L3) → Codex.
