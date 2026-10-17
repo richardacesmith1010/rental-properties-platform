@@ -39,6 +39,12 @@ Fix the manager-walk findings M3, M1, M11 (`docs/manager-walk-plan-2026-10-16.md
 4. **handle_new_user:** read the live definition first and describe in the report exactly how pending manager invitations
    are matched, validated, consumed and converted. If any invariant (only pending, same email, owner-authorized home)
    does not hold, stop and report — Claude handles database work.
+   **Claude's ruling (2026-10-16, after Codex's first stop):** the live trigger converts pending invitations by email and
+   status and does not re-check the inviter. The "owner-authorized home" invariant is enforced **at write time**: verified
+   live, `anon`/`authenticated` have no INSERT/UPDATE (table or column) on `public.invitations` and no client-callable
+   function inserts into it, so only service-role server actions create rows, and `inviteManager` re-authorizes every home
+   (§6.3d) **before** the insert. Proceed; keep that ordering and add a test that an unauthorized home never reaches the
+   insert. No trigger change in this sprint.
 5. **Statements at the data layer:** the owner-statement loaders, aggregates, PDF and CSV builders take the
    manager-authorized property id list and filter every query by it (no post-filtering after fetching wider data); every
    caller passes the list computed at request time from active `property_managers` rows.
