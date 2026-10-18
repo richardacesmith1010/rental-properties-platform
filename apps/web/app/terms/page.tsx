@@ -12,67 +12,86 @@ export default function TermsPage() {
       <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 pb-16 pt-10 md:px-10">
         <header className="space-y-3">
           <h1 className="text-3xl font-semibold tracking-tight text-white">Terms of Service</h1>
-          <p className="text-sm text-[var(--faint)]">Last updated: March 4, 2026</p>
+          <p className="text-sm text-[var(--faint)]">Last updated: October 18, 2026</p>
           <p className="rounded-xl border border-[var(--warn)] bg-[var(--warn-bg)] px-4 py-3 text-sm text-[var(--warn)]">
-            This document was last updated on March 4, 2026. Please review periodically for changes.
+            Early access version. A lawyer is reviewing these terms. We will tell you before a final version takes effect.
           </p>
         </header>
 
-        <section className="space-y-6 rounded-2xl border border-white/10 bg-[color-mix(in_srgb,var(--surface)_3%,transparent)] p-6 text-sm leading-7 text-[var(--faint)]">
+        <section className="space-y-6 rounded-2xl border border-white/10 bg-[color-mix(in_srgb,var(--surface)_3%,transparent)] p-6
+          text-sm leading-7 text-[var(--faint)]">
           <article className="space-y-2">
-            <h2 className="text-base font-semibold text-white">Service Description</h2>
+            <h2 className="text-base font-semibold text-white">Who we are</h2>
+            <p>Domus (&quot;we&quot;) is run by Richard Smith, an individual. You can reach us at support@domusbase.com.</p>
+          </article>
+
+          <article className="space-y-2">
+            <h2 className="text-base font-semibold text-white">What Domus does</h2>
+            <p>Domus helps landlords, property managers, and tenants handle rent, repairs, leases, documents, and messages in one place.</p>
+          </article>
+
+          <article className="space-y-2">
+            <h2 className="text-base font-semibold text-white">Your account</h2>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>Keep your sign-in details safe. You are responsible for what happens in your account.</li>
+              <li>Give true, current information.</li>
+              <li>Only add homes, tenants, or managers you have the right to manage.</li>
+            </ul>
+          </article>
+
+          <article className="space-y-2">
+            <h2 className="text-base font-semibold text-white">Early access and price</h2>
             <p>
-              Domus provides software tools for rental property operations, including payment tracking,
-              maintenance workflows, documents, and role-based access controls.
+              Domus is free while it is in early access. We will tell you at least 30 days before we start charging. You can stop
+              using Domus before any charge starts.
             </p>
           </article>
 
           <article className="space-y-2">
-            <h2 className="text-base font-semibold text-white">Account Terms</h2>
+            <h2 className="text-base font-semibold text-white">Payments</h2>
             <p>
-              You are responsible for maintaining accurate account information and safeguarding account
-              credentials. You must have authority to act for the properties and users you manage in Domus.
+              Online rent payments are handled by Stripe. Stripe&apos;s terms apply to those payments. Domus does not hold your
+              money. Fees shown before you pay are the fees you pay.
             </p>
           </article>
 
           <article className="space-y-2">
-            <h2 className="text-base font-semibold text-white">Payment Terms</h2>
+            <h2 className="text-base font-semibold text-white">Bank data</h2>
             <p>
-              Paid plans are billed according to the selected tier and billing cycle. Fees are non-refundable
-              except where required by law or explicitly stated in a written agreement.
+              If you link a bank (through Plaid) or upload a bank file, you allow Domus to read those transactions to sort your
+              rental money. You can delete them at any time.
             </p>
           </article>
 
           <article className="space-y-2">
-            <h2 className="text-base font-semibold text-white">Acceptable Use</h2>
+            <h2 className="text-base font-semibold text-white">AI helper</h2>
             <p>
-              You may not use Domus to violate applicable laws, transmit malicious content, interfere with the
-              platform, or access data without authorization.
+              Some features use an AI helper (Anthropic&apos;s Claude) to answer questions about your data. Its answers can be
+              wrong. Check anything important before you act on it.
             </p>
           </article>
 
           <article className="space-y-2">
-            <h2 className="text-base font-semibold text-white">Account Closure</h2>
+            <h2 className="text-base font-semibold text-white">Rules</h2>
+            <p>Don&apos;t use Domus to break the law, harm others, send spam or harmful code, or get into data that isn&apos;t yours.</p>
+          </article>
+
+          <article className="space-y-2">
+            <h2 className="text-base font-semibold text-white">Ending your account</h2>
+            <p>You can ask to delete your account at any time in Settings. We can pause or close accounts that break these terms.</p>
+          </article>
+
+          <article className="space-y-2">
+            <h2 className="text-base font-semibold text-white">No guarantees</h2>
             <p>
-              We may suspend or end accounts for violations of these terms, non-payment, or misuse of the
-              service. You may cancel your account at any time subject to plan terms.
+              Domus is provided &quot;as is&quot;. We work to keep it running and correct, but we can&apos;t promise it will
+              always be available or error-free.
             </p>
           </article>
 
           <article className="space-y-2">
-            <h2 className="text-base font-semibold text-white">Limitation of Liability</h2>
-            <p>
-              Domus is provided on an &quot;as is&quot; basis. To the maximum extent permitted by law, Domus is not
-              liable for indirect, incidental, or consequential damages arising from use of the platform.
-            </p>
-          </article>
-
-          <article className="space-y-2">
-            <h2 className="text-base font-semibold text-white">Contact Information</h2>
-            <p>
-              Questions about these terms can be sent to
-              {" "}<a className="text-[var(--accent)] underline-offset-4 hover:underline" href="mailto:support@domusbase.com">support@domusbase.com</a>.
-            </p>
+            <h2 className="text-base font-semibold text-white">Changes</h2>
+            <p>If we change these terms in a way that matters, we will tell you in the app or by email before the change takes effect.</p>
           </article>
         </section>
       </main>
