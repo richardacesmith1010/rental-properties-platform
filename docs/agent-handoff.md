@@ -1726,3 +1726,6 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   automation** (0 paying managers today: Alia comped, 10 test accounts); bill the first managers manually — Claude makes a
   monthly door statement per the same rules, owner sends a Stripe Dashboard invoice; build automation at ~5 paying
   managers from rev 5 + round 4 items.
+- **Owner 2026-10-18: "Yes. Park billing automation; invoice the first paying managers manually with your monthly door
+  statement, and build automation at about 5 paying managers. Back to Phase 1."** Runbook
+  `docs/runbooks/manager-manual-invoicing.md`; design kept at rev 5 (+ round-4 items) in `docs/design/manager-billing-design.md`.
