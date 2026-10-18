@@ -21,6 +21,7 @@ export interface ResendInvitation {
 }
 
 export async function resendInvitationEmail(invitation: ResendInvitation, inviterProfileId: string) {
+  if (invitation.role === "manager") return { ok: false } as const;
   const admin = createAdminClient();
   let nextInvitedProfileId = invitation.invited_profile_id ?? null;
 

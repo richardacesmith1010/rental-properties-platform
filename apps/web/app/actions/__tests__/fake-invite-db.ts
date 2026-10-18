@@ -287,5 +287,5 @@ export type FakeWorld = ReturnType<typeof createFakeWorld>;
 export function expectNoWrites(world: FakeWorld) {
   expect(world.ops.filter((op) => /^db:[^:]+:(insert|upsert|update|delete)$/.test(op)
     || op.startsWith("rpc:") || ["auth.insert", "auth.createUser", "auth.generateLink",
-      "auth.inviteUserByEmail"].includes(op))).toEqual([]);
+      "auth.inviteUserByEmail", "auth.email"].includes(op))).toEqual([]);
 }

@@ -6,6 +6,8 @@ import { canUserAdministerProperty } from "@/lib/property-access";
 import { logAudit } from "@/lib/audit";
 import { sendTenantInviteEmail } from "@/lib/invite-email";
 import { resendInvitationEmail } from "@/lib/invite-resend";
+import { resendManagerInvite, revokeManagerInvite } from "@/lib/manager-invite-rows";
+import type { ManagerInviteRow } from "@/lib/manager-invite";
 import { sideEffectError } from "@/lib/logger";
 import { notifyOwnerMembersOfAcceptedTenantInvite } from "@/lib/notifications";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -308,6 +310,34 @@ export async function resendInvite(
     return { success: false, error: "This invitation has already been accepted." };
   }
 
+  if (invitation.role === "manager") {
+    const delivery = await resendManagerInvite(invitation as ManagerInviteRow, { inviterId: user.id, grant: true });
+    if (!delivery.ok) {
+      if (delivery.reason === "already_joined") {
+        revalidatePath("/owner");
+        revalidatePath("/manager");
+      }
+      const error = {
+        not_pending: "This invite was revoked. Send a new invite.",
+        already_joined: "They already signed in. No email was sent.",
+        login_gone: "This person's login is gone. Revoke this invite.",
+        no_access: "You no longer manage this home.",
+        client_home: "This home's managers are set by its client account.",
+        lookup_failed: "Failed to resend invitation.",
+        grant_failed: "Failed to resend invitation.",
+        send_failed: "Failed to resend invitation."
+      }[delivery.reason];
+      return { success: false, error };
+    }
+    const { error } = await admin.from("invitations")
+      .update({ created_at: new Date().toISOString(), invited_profile_id: delivery.invitedProfileId })
+      .eq("id", invitationId).eq("status", "pending");
+    revalidatePath("/owner");
+    revalidatePath("/manager");
+    if (error) return { success: false, error: "Email sent. The list did not update. Refresh the page." };
+    return { success: true, message: "Invitation resent." };
+  }
+
   const delivery = await resendInvitationEmail(invitation, user.id);
   if (!delivery.ok) {
     return { success: false, error: "Failed to resend invitation." };
@@ -345,7 +375,7 @@ export async function revokeInvite(
   const admin = createAdminClient();
   const { data: invitation } = await admin
     .from("invitations")
-    .select("id, status, invited_profile_id")
+    .select("id, status, role, email, full_name, property_id, invited_profile_id")
     .eq("id", parsed.data.invitationId)
     .eq("invited_by", user.id)
     .single();
@@ -354,8 +384,12 @@ export async function revokeInvite(
     return { success: false, error: "Invitation not found." };
   }
 
-  if (invitation.status === "accepted") {
+  if (invitation.status === "accepted" && invitation.role !== "manager") {
     return { success: false, error: "Accepted invitations cannot be revoked." };
+  }
+
+  if (invitation.role === "manager") {
+    return revokeManagerInvite({ row: invitation as ManagerInviteRow, userId: user.id });
   }
 
   await deleteGeneratedInviteUser(invitation.invited_profile_id ?? null);

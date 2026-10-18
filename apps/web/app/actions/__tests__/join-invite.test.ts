@@ -1,13 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  admin: vi.fn(), rate: vi.fn(), headers: vi.fn(), resend: vi.fn(), log: vi.fn()
+  admin: vi.fn(), rate: vi.fn(), headers: vi.fn(), resend: vi.fn(), managerResend: vi.fn(), log: vi.fn()
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("next/headers", () => ({ headers: mocks.headers }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.admin }));
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: mocks.rate }));
 vi.mock("@/lib/invite-resend", () => ({ resendInvitationEmail: mocks.resend }));
+vi.mock("@/lib/manager-invite-rows", () => ({ resendManagerInvite: mocks.managerResend }));
 vi.mock("@/lib/logger", () => ({ sideEffectError: () => mocks.log }));
 
 import { resendFromJoinLink } from "@/app/actions/join-invite";
@@ -30,17 +31,21 @@ function setup(rows: Array<typeof row | null> = [row, row]) {
   const chain = { select: vi.fn(), eq: vi.fn(), maybeSingle: single };
   chain.select.mockReturnValue(chain);
   chain.eq.mockReturnValue(chain);
-  const updateEq = vi.fn().mockResolvedValue({ error: null });
-  const update = vi.fn(() => ({ eq: updateEq }));
+  const updateChain = { eq: vi.fn(), then: vi.fn((resolve: (value: { error: unknown }) => void) =>
+    Promise.resolve({ error: null }).then(resolve)) };
+  updateChain.eq.mockReturnValue(updateChain);
+  const updateEq = updateChain.eq;
+  const update = vi.fn(() => updateChain);
   const from = vi.fn(() => ({ ...chain, update }));
   mocks.admin.mockReturnValue({ from });
-  return { single, update, updateEq, from, chain };
+  return { single, update, updateEq, updateChain, from, chain };
 }
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.rate.mockReturnValue({ allowed: true });
   mocks.headers.mockResolvedValue({ get: () => null });
   mocks.resend.mockResolvedValue({ ok: true, invitedProfileId: "generated" });
+  mocks.managerResend.mockResolvedValue({ ok: true, invitedProfileId: "manager-profile" });
 });
 
 describe("public join resend", () => {
@@ -54,6 +59,7 @@ describe("public join resend", () => {
     expect(mocks.resend).toHaveBeenCalledWith(row, "stored-inviter");
     expect(calls.chain.select).toHaveBeenCalledWith(expect.stringContaining("invited_by"));
     expect(calls.update).toHaveBeenCalledWith(expect.objectContaining({ invited_profile_id: "generated" }));
+    expect(calls.updateEq).not.toHaveBeenCalledWith("status", "pending");
   });
 
   it("blocks the fourth request for one invite", async () => {
@@ -108,8 +114,37 @@ describe("public join resend", () => {
 
   it("returns success and logs a timestamp error after sending", async () => {
     const calls = setup();
-    calls.updateEq.mockResolvedValue({ error: { message: "update failed" } });
+    calls.updateChain.then.mockImplementation((resolve) =>
+      Promise.resolve({ error: { message: "update failed" } }).then(resolve));
     expect(await resendFromJoinLink(null, form())).toEqual({ success: true, message: "Sent. Check your email in a few minutes." });
     expect(mocks.log).toHaveBeenCalled();
+  });
+
+  it("B19 routes manager rows to the restricted resend", async () => {
+    const manager = { ...row, role: "manager" };
+    const calls = setup([manager, manager]);
+    expect(await resendFromJoinLink(null, form())).toEqual({
+      success: true, message: "Sent. Check your email in a few minutes."
+    });
+    expect(mocks.managerResend).toHaveBeenCalledWith(manager, { inviterId: row.invited_by, grant: false });
+    expect(mocks.resend).not.toHaveBeenCalled();
+    expect(calls.updateEq).toHaveBeenCalledWith("status", "pending");
+  });
+
+  it.each([
+    ["already_joined", "This invite was already used. Sign in instead."],
+    ["not_pending", INACTIVE_INVITE_MESSAGE],
+    ["login_gone", INACTIVE_INVITE_MESSAGE],
+    ["no_access", INACTIVE_INVITE_MESSAGE],
+    ["client_home", INACTIVE_INVITE_MESSAGE],
+    ["lookup_failed", "Could not send. Please try again."],
+    ["grant_failed", "Could not send. Please try again."],
+    ["send_failed", "Could not send. Please try again."]
+  ])("B19 maps manager %s to join copy", async (reason, error) => {
+    const manager = { ...row, role: "manager" };
+    setup([manager, manager]);
+    mocks.managerResend.mockResolvedValue({ ok: false, reason });
+    expect(await resendFromJoinLink(null, form())).toEqual({ success: false, error });
+    expect(mocks.resend).not.toHaveBeenCalled();
   });
 });

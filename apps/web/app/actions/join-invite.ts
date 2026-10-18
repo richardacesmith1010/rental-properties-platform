@@ -6,6 +6,7 @@ import { resendFromJoinLinkSchema } from "@/lib/validations";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isJoinInviteActive, INACTIVE_INVITE_MESSAGE } from "@/lib/join-invite";
 import { resendInvitationEmail } from "@/lib/invite-resend";
+import { resendManagerInvite } from "@/lib/manager-invite-rows";
 import { sideEffectError } from "@/lib/logger";
 import type { ActionState } from "./shared";
 
@@ -48,16 +49,30 @@ export async function resendFromJoinLink(_prev: ActionState, formData: FormData)
 
   let delivery: Awaited<ReturnType<typeof resendInvitationEmail>>;
   try {
-    delivery = await resendInvitationEmail(fresh, fresh.invited_by);
+    if (fresh.role === "manager") {
+      const managerDelivery = await resendManagerInvite(fresh, { inviterId: fresh.invited_by, grant: false });
+      if (!managerDelivery.ok) {
+        const reason = managerDelivery.reason;
+        if (reason === "already_joined") {
+          return { success: false, error: "This invite was already used. Sign in instead." };
+        }
+        if (["not_pending", "login_gone", "no_access", "client_home"].includes(reason)) {
+          return { success: false, error: INACTIVE_INVITE_MESSAGE };
+        }
+        return { success: false, error: "Could not send. Please try again." };
+      }
+      delivery = managerDelivery;
+    } else delivery = await resendInvitationEmail(fresh, fresh.invited_by);
   } catch {
     return { success: false, error: "Could not send. Please try again." };
   }
   if (!delivery.ok) return { success: false, error: "Could not send. Please try again." };
 
   try {
-    const { error: updateError } = await admin.from("invitations")
+    const update = admin.from("invitations")
       .update({ created_at: new Date().toISOString(), invited_profile_id: delivery.invitedProfileId })
       .eq("id", inviteId);
+    const { error: updateError } = await (fresh.role === "manager" ? update.eq("status", "pending") : update);
     if (updateError) sideEffectError("resendFromJoinLink", "update_resend_timestamp", { entityType: "invitation" })(updateError);
   } catch (error) {
     sideEffectError("resendFromJoinLink", "update_resend_timestamp", { entityType: "invitation" })(error);
