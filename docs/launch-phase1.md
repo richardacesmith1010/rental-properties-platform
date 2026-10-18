@@ -52,3 +52,12 @@ Questions: (1) retention period for rent/payment records (we propose 7 years); (
 of Domus in rent payments (Stripe Connect platform; we never hold funds) and required disclosures; (4) e-sign and IP
 logging disclosure; (5) landlord-tenant data: who is the controller for tenant data; (6) AI features (Anthropic API,
 no training) disclosure wording; (7) anything needed before charging managers (§D).
+
+## Phase 1 in five stages (2026-10-18)
+| Stage | Goal | Claude/Codex | Owner (one step at a time) | Exit | When |
+|---|---|---|---|---|---|
+| 1A Foundations ✅ mostly | Decisions locked | Legal defaults applied, retention policy adopted, deletion dry run PASS, billing parked → manual invoicing | Pick a lawyer (B4) | Lawyer engaged | Done except B4 |
+| 1B Store-ready app | App passes App Review | 238g demo accounts + walk; 239a early-access Terms/Privacy live; screenshots, status-bar fix (IOS-4), reset-email fix (IOS-5); TestFlight build 3 | Tap Install on build 3; one check at a time (B5) | Build 3 OK on a real iPhone | Weeks 1–2 |
+| 1C Legal & trust | Final legal text | Lawyer packet sent; fold edits; publish final Terms/Privacy; 7-year purge job (Sprint 231) | Send packet; approve final text; Publish App Privacy (B6) | Lawyer-reviewed pages live | Weeks 2–5 (lawyer pace) |
+| 1D Real rent month | Domus runs a real month | Notifications-on readiness (A5); Plaid sync once approved; fix anything the month finds | Run 1st Home + Mom's House on Domus (B7); confirm Plaid (B8); say when notifications go on (B9) | One clean month; Owner/Money/Tenant ≥ 80 | Weeks 2–6 (parallel) |
+| 1E Submit & launch | Live in the App Store | App Review notes, listing, Pricing & Availability prepared; answer review questions; launch checklist + first-users list | Submit for review (B6) | App approved; first outside user invited | Weeks 6–8 |
