@@ -1622,3 +1622,8 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   password (no takeover). Decision: fix round goes straight to Codex (same approved spec, no design change) —
   `docs/sprint237c5a-fix1-codex-prompt.md` (`6e93909`), dispatched gpt-6-sol high.
 - Follow-up (perf, L-013): the callback now awaits `manager_invite_accept` on every session; measure `[perf:*]` after ship.
+- **5a fix round reviewed: PASS.** F1-F3, T1-T14, K1-K8 spot-checked (8b error order, runtime RPC result checks, A9 retry
+  ordering, A24(c) after Send again, upsert keeps ids); new mutations caught; gate 325 files / 2,810 tests + build green.
+  **5a committed locally `09ae479` (not deployed).** Deploy guard verified blocking HEAD with 5a but no 5b.
+  Grooming nit: the fake's DO UPDATE path can overwrite unspecified columns with defaults (no current caller).
+- **5b dispatched** to Codex (gpt-6-sol high) on top of `09ae479`.
