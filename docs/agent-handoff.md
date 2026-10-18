@@ -1762,3 +1762,19 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   "updated: <role> profile" (same value rewritten; smoke seed has the same quirk). Harmless; fix with a Date compare.
 - **Next:** Simulator walk as both demo users over app-review-notes 1c/2c; then IOS-4 status bar, IOS-5 reset email,
   screenshots, TestFlight build 3 (Phase 1 stage 1B).
+
+## 2026-10-18 — App Review demo walk on Simulator (iPhone 18 Pro, iOS 27, fresh Debug build)
+- **PASS (matches notes 1c):** owner + tenant sign-in; Face ID offer, lock on leave, auto-prompt on return, unlock to
+  same page, password fallback shown; Plaid native sheet opens and closes cleanly (≈12 s load); CSV export → share sheet
+  (167 B file); receipt Download PDF → share sheet (4 KB); bank items (3) on Bank page; tenant messages thread; repair
+  with photo, full-size viewer + Save photo; tenant Settings → Your data → Delete my account (not pressed); Security
+  Face ID switch. Demo rent $4, "Online pay isn't on yet" shown.
+- **Findings (fix sprint next, L2 web + notes):**
+  1. Notes say "More → Reports": from the Money tab, More opens `StandaloneDrawer` (owner-bottom-bar.tsx) without
+     Reports. Reports also needs "scroll to a report, then Export CSV" in the notes.
+  2. Receipt page (`/payments/receipt/[chargeId]`) is a dead end in the app: no tab bar, no back link, no swipe back.
+  3. Receipt "Receipt timestamp" renders in UTC (10:55 PM shown at 4:55 PM MDT).
+  4. Owner More → Members shows "Section not found … doesn't exist for your role" while the menu lists it.
+  5. Tenant Messages tab uses a bell icon (owner uses a chat bubble); headings repeat ("Rent" ×3, "Repairs" ×2).
+  6. Cold launch shows a black screen ~2 s before the splash.
+- **Not walked yet:** owner Settings → Bank Account (Stripe in Safari), Ask Domus consent, offline page, owner delete.
