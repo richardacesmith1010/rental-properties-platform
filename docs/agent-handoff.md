@@ -1804,3 +1804,13 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Remaining before build 3: owner answer on the demo Stripe tap; offline page on a real device; backlog items above.
 - **Owner 2026-10-18: "Yes, keep it. App Review can tap Set up rent payments on the demo owner; a live Stripe account for
   the fake owner is fine."** Notes unchanged. After review, delete that Express account (runbook account-deletion C6 style).
+
+## 2026-10-18 — IOS-5 (reset/confirm email dead end): already fixed, verified
+- Supabase templates checked (read only): "Reset password" and "Confirm sign up" already link to
+  `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery|email`; Site URL `https://domusbase.com`. No owner
+  Save needed.
+- Verified: a recovery link for the demo tenant (admin generateLink, same URL shape) opened in Simulator **Safari** (no app
+  cookies) → "Reset your password" → Continue → `/reset-password` form. Password not changed.
+- Small findings (backlog): `/reset-password` repeats its subtitle twice; Safari shows an "Install Domus … Add to Home
+  Screen" banner that now competes with the App Store app.
+- **Next:** IOS-4 status-bar theme (iPhone code → L3, ChatGPT review, gpt-6-astra high).
