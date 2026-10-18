@@ -6,11 +6,11 @@ Store, under reviewed legal terms. Done = every row below is ✅. Claude drives;
 ## A. What Claude/Codex do (no owner time)
 | # | Item | Status |
 |---|---|---|
-| A1 | 238g App Review demo accounts (seed + runbook) | Codex running (2026-10-18) |
+| A1 | 238g App Review demo accounts (seed + runbook) | Seeded live 2026-10-18; Simulator walk next |
 | A2 | Rescore + scorecard upkeep after each sprint | Ongoing |
 | A3 | Manager plan billing | Parked by owner 2026-10-18: manual invoicing (`docs/runbooks/manager-manual-invoicing.md`); automate at ~5 paying managers |
 | A4 | Lawyer packet: current drafts + exact questions (§E) | Ready to send once the owner picks a lawyer |
-| A8 | Early-access `/terms` + `/privacy` live (Sprint 239a; text `docs/legal/early-access-terms-privacy-2026-10-18.md`) | Queued after 238g |
+| A8 | Early-access `/terms` + `/privacy` live (Sprint 239a; text `docs/legal/early-access-terms-privacy-2026-10-18.md`) | ✅ Live 2026-10-18 (239a–c) |
 | A5 | Notifications "on" readiness: review the test week, per-user settings for rent due / late / receipt / repairs | Next sprint after 238g |
 | A6 | App Store polish: screenshots (ASC-14), status-bar theme (IOS-4), reset-email dead end (IOS-5) | Queue |
 | A7 | Account-deletion fixture dry run (runbook §15) | ✅ PASS 2026-10-18; runbook rev 3.4 |

@@ -1752,7 +1752,7 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   tests); smoke green; CI `gate` success; live pages show "October 18, 2026" + the lawyer banner, no March text.
 - **239b** (`d58045f`, L1): live walk found headings/bold labels `text-white` on the light background → invisible
   (pre-existing since March, L-022). Now theme tokens (`--ink`, `--line`, `--surface`); test asserts no `white` class.
-  Light + dark screenshots readable. **239c** (L1, Codex running): body text `--faint` (≈3.4:1) → `--muted` (≈6:1).
+  Light + dark screenshots readable. **239c** (`96be13c`, L1) SHIPPED: body text `--faint` (≈3.4:1) → `--muted` (≈6:1); live check rgb(93,97,104) on white; smoke + CI green.
 - **238g** (`ab50e94`): review agent found no safety blockers; fix1 (`docs/sprint238g-fix1-codex-prompt.md`) fixed the
   dry-run placeholder ids (would have failed live with 22P02), removes stale rent review items on month rollover (App
   Review double-payment hazard), and strengthened 9 weak tests (34/34). Live: dry run clean → seed created the full graph
