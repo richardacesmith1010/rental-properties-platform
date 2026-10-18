@@ -1,4 +1,4 @@
--- Sprint 237c-5 (rev 5): atomic, serialized access changes for manager invitations.
+-- Sprint 237c-5 (rev 6): atomic, serialized access changes for manager invitations.
 -- Rev 4 (ChatGPT round 1) made grant and revoke single transactions. Rev 5 (ChatGPT round 2) adds:
 --   R1 one shared lock per (home, manager profile), taken by every function before it reads or changes access, so two
 --      concurrent final revokes (or a grant racing a revoke) cannot both see the other row as live;
@@ -6,12 +6,26 @@
 --      bound only to the manager profile with that row's email); a missing or mismatched id raises and rolls back all;
 --   R3 acceptance only with access: rows turn accepted only when the grant for that home is active (manager_invite_accept)
 --      or in the same transaction that grants it (manager_invite_grant with p_accept).
+-- Rev 6 (ChatGPT round 3): property_managers.assigned_directly records where access came from. true = added directly
+--   (an owner's confirmed-manager add, client-account sync, the trigger, every row that existed before this migration);
+--   false = created by an invitation grant. Revoke removes only invitation-created access (false) when no other live
+--   invitation remains; a direct add made at any time is never removed by revoking an invitation.
+--   Writers audited 2026-10-18: apps/web invitations.ts (replaced by these functions), account-wipe.ts (deletes rows),
+--   handle_new_user, add_client_home, ownership_account_managers_sync (client homes; cannot be invited). All but these
+--   functions use the default (true).
 -- Lock protocol: advisory transaction locks keyed 'domus.manager_access:<property_id>:<profile_id>', always taken in
 -- ascending key order and always before any row lock, so concurrent calls never deadlock on each other.
 -- All five functions are security invoker, search_path public, EXECUTE for service_role only (apps/web admin client).
 -- Guards: property_managers_guard_client (42501 on client homes) raises inside a function and rolls back everything.
 
 begin;
+
+alter table public.property_managers
+  add column if not exists assigned_directly boolean not null default true;
+
+comment on column public.property_managers.assigned_directly is
+  'true: access added directly (owner add, client sync, trigger, pre-2026-10-28 rows). false: created by a manager '
+  'invitation grant; only these are removed when the last live invitation for that home is revoked (sprint 237c-5).';
 
 create or replace function public.manager_access_lock(p_keys text[])
 returns void
@@ -47,9 +61,9 @@ begin
     select pm.active into was_active
     from property_managers pm
     where pm.property_id = h and pm.manager_profile_id = p_profile_id;
-    insert into property_managers as pm (property_id, manager_profile_id, active)
-    values (h, p_profile_id, true)
-    on conflict on constraint property_managers_pkey do update set active = true;
+    insert into property_managers as pm (property_id, manager_profile_id, active, assigned_directly)
+    values (h, p_profile_id, true, true)
+    on conflict on constraint property_managers_pkey do update set active = true, assigned_directly = true;
     property_id := h;
     added := coalesce(was_active, false) = false;
     return next;
@@ -107,9 +121,11 @@ begin
     invitation_id := r.id;
     property_id := r.property_id;
     if r.status = 'pending' then
-      insert into property_managers as pm (property_id, manager_profile_id, active)
-      values (r.property_id, p_profile_id, true)
-      on conflict on constraint property_managers_pkey do update set active = true;
+      insert into property_managers as pm (property_id, manager_profile_id, active, assigned_directly)
+      values (r.property_id, p_profile_id, true, false)
+      on conflict on constraint property_managers_pkey do update
+        set active = true,
+            assigned_directly = case when pm.active then pm.assigned_directly else false end;
       update invitations
         set invited_profile_id = p_profile_id,
             status = case when p_accept then 'accepted' else status end,
@@ -128,7 +144,7 @@ $$;
 
 -- Revoke one of this inviter's rows: expire it and remove access unless another live row still gives that home.
 create or replace function public.manager_invite_revoke(p_invitation_id uuid, p_inviter_id uuid)
-returns table (outcome text, profile_id uuid, released boolean, other_live boolean)
+returns table (outcome text, profile_id uuid, released boolean, other_live boolean, kept_direct boolean)
 language plpgsql
 security invoker
 set search_path = public
@@ -139,13 +155,14 @@ declare
   v_status text;
   v_other boolean := false;
   v_released boolean := false;
+  v_direct boolean := false;
 begin
   select i.id, i.email, i.property_id, i.invited_profile_id
     into r
   from invitations i
   where i.id = p_invitation_id and i.invited_by = p_inviter_id and i.role = 'manager';
   if not found then
-    outcome := 'not_found'; profile_id := null; released := false; other_live := false;
+    outcome := 'not_found'; profile_id := null; released := false; other_live := false; kept_direct := false;
     return next; return;
   end if;
 
@@ -164,11 +181,11 @@ begin
   where i.id = p_invitation_id
   for update;
   if v_status = 'expired' then
-    outcome := 'already_revoked'; profile_id := v_profile; released := false; other_live := false;
+    outcome := 'already_revoked'; profile_id := v_profile; released := false; other_live := false; kept_direct := false;
     return next; return;
   end if;
   if v_status <> 'pending' then
-    outcome := 'accepted'; profile_id := v_profile; released := false; other_live := false;
+    outcome := 'accepted'; profile_id := v_profile; released := false; other_live := false; kept_direct := false;
     return next; return;
   end if;
 
@@ -184,16 +201,23 @@ begin
         and o.status in ('pending', 'accepted')
     ) into v_other;
     if not v_other then
-      update property_managers pm
-        set active = false
-      where pm.property_id = r.property_id
-        and pm.manager_profile_id = v_profile
-        and pm.active is distinct from false;
-      v_released := found;
+      select coalesce(pm.active and pm.assigned_directly, false) into v_direct
+      from property_managers pm
+      where pm.property_id = r.property_id and pm.manager_profile_id = v_profile;
+      v_direct := coalesce(v_direct, false);
+      if not v_direct then
+        update property_managers pm
+          set active = false
+        where pm.property_id = r.property_id
+          and pm.manager_profile_id = v_profile
+          and pm.assigned_directly = false
+          and pm.active is distinct from false;
+        v_released := found;
+      end if;
     end if;
   end if;
 
-  outcome := 'revoked'; profile_id := v_profile; released := v_released; other_live := v_other;
+  outcome := 'revoked'; profile_id := v_profile; released := v_released; other_live := v_other; kept_direct := v_direct;
   return next;
 end;
 $$;

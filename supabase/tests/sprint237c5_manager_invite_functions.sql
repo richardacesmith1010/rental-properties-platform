@@ -1,4 +1,4 @@
--- Rolled-back tests for 20261028_sprint237c5_manager_invite_functions.sql (rev 5). Claude runs them; nothing persists.
+-- Rolled-back tests for 20261028_sprint237c5_manager_invite_functions.sql (rev 6). Claude runs them; nothing persists.
 -- Run with the migration body (without begin/commit) in one implicit transaction, or after apply. Ends with RAISE.
 -- Concurrency (two real sessions) is in supabase/tests/sprint237c5_manager_invite_concurrency.md.
 -- Fixtures: smoke owner (inviter A), smoke manager (inviter B), Smoke Test Property (H); a second home H2 created here;
@@ -15,6 +15,9 @@ declare
   ra uuid; rb uuid; rq uuid; t record; n int; acct uuid; ok boolean; log text := '';
 begin
   if a is null or b is null or h is null then raise exception 'fixture missing'; end if;
+  -- S0 every row that existed before the migration counts as a direct add
+  if exists (select 1 from property_managers where not assigned_directly) then raise exception 'S0'; end if;
+  log := log || 'S0 ';
   insert into profiles (id, full_name, email, role) values (p, 'Fn Test', e, 'manager'), (q, 'Fn Test', eq, 'manager');
   insert into invitations (email, full_name, role, property_id, invited_by, status, invited_profile_id)
     values (e, 'Fn Test', 'manager', h, a, 'pending', p) returning id into ra;
@@ -22,7 +25,8 @@ begin
   -- G1 grant binds and grants; outcome granted; row stays pending
   select count(*) into n from manager_invite_grant(array[ra], p, a) g where g.outcome = 'granted';
   if n <> 1 or not exists (select 1 from property_managers where property_id = h and manager_profile_id = p and active)
-     or (select status from invitations where id = ra) <> 'pending' then raise exception 'G1'; end if;
+     or (select status from invitations where id = ra) <> 'pending'
+     or (select assigned_directly from property_managers where property_id = h and manager_profile_id = p) then raise exception 'G1'; end if;
   log := log || 'G1 ';
 
   -- G2 identity binding: wrong profile, wrong inviter, unknown id each raise and change nothing
@@ -113,6 +117,39 @@ begin
   select count(*) into n from manager_grant_homes(q, array[h]) x where x.added;
   if n <> 0 then raise exception 'H1b'; end if;
   log := log || 'H1 ';
+
+  -- D1 ChatGPT round 3: A's invite made the access; B then adds P directly (no row); A's revoke keeps the direct add
+  update invitations set status = 'pending', accepted_at = null where id = ra;
+  update invitations set status = 'expired' where id in (rb, rq);
+  update property_managers set active = false, assigned_directly = false where property_id = h and manager_profile_id = p;
+  perform manager_invite_grant(array[ra], p, a);
+  if (select assigned_directly from property_managers where property_id = h and manager_profile_id = p) then raise exception 'D1a'; end if;
+  select count(*) into n from manager_grant_homes(p, array[h]) x where x.added;
+  if n <> 0 or not (select assigned_directly from property_managers where property_id = h and manager_profile_id = p)
+    then raise exception 'D1b'; end if;
+  select * into t from manager_invite_revoke(ra, a);
+  if t.outcome <> 'revoked' or t.released or t.other_live or not t.kept_direct
+     or not (select active from property_managers where property_id = h and manager_profile_id = p) then raise exception 'D1c %', t; end if;
+  log := log || 'D1 ';
+
+  -- D2 an active direct grant stays direct when an invite grants the same home; revoking that invite keeps it
+  update invitations set status = 'pending' where id = ra;
+  perform manager_invite_grant(array[ra], p, a);
+  if not (select assigned_directly from property_managers where property_id = h and manager_profile_id = p) then raise exception 'D2a'; end if;
+  select * into t from manager_invite_revoke(ra, a);
+  if not t.kept_direct or t.released or not (select active from property_managers where property_id = h and manager_profile_id = p)
+    then raise exception 'D2b %', t; end if;
+  log := log || 'D2 ';
+
+  -- D3 an inactive row (direct or not) re-granted by an invite becomes invitation-made; its revoke removes it
+  update property_managers set active = false, assigned_directly = true where property_id = h and manager_profile_id = p;
+  update invitations set status = 'pending' where id = ra;
+  perform manager_invite_grant(array[ra], p, a);
+  if (select assigned_directly from property_managers where property_id = h and manager_profile_id = p) then raise exception 'D3a'; end if;
+  select * into t from manager_invite_revoke(ra, a);
+  if t.kept_direct or not t.released or (select active from property_managers where property_id = h and manager_profile_id = p)
+    then raise exception 'D3b %', t; end if;
+  log := log || 'D3 ';
 
   -- X1 client-home guard: grant raises 42501 and rolls back every write of the call
   update invitations set status = 'pending' where id = ra;
