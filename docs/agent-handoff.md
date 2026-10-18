@@ -1717,3 +1717,12 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   Stripe invoice via resumable keyed steps (create → item → finalize → pay); card saved with setup-mode Checkout;
   enrollment / coverage / write entitlement separated; 0 doors → no invoice; fail closed on plan lookup (allowlist
   still works); unresolved chains isolated per chain; termination voids open invoices; Test Clock proof before build.
+- **Billing design ChatGPT round 4 (rev 5, monthly invoices): REJECT** — 7 REQUIRED (refinements): historical month-end
+  snapshot can't be rebuilt from live tables (needs an append-only door ledger); explicit enrollment + payment
+  authorization before collectible invoices; consistent due dates / 7-day grace / account-wide delinquency; Stripe
+  remote-state recovery for uncertain outcomes (search by metadata before create); in-flight charges at deletion +
+  unexpected-charge handling; unresolved-payer rule conflict + immutable attribution; app-time tests + real invoice
+  verification instead of subscription Test Clocks. Fourth REJECT → owner decision asked. Recommendation: **park billing
+  automation** (0 paying managers today: Alia comped, 10 test accounts); bill the first managers manually — Claude makes a
+  monthly door statement per the same rules, owner sends a Stripe Dashboard invoice; build automation at ~5 paying
+  managers from rev 5 + round 4 items.
