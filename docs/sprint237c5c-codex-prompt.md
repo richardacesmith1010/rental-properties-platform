@@ -190,8 +190,8 @@ C2 (iv) fails. M17 drop the eligibility filter → C1 and C2's hidden-home cases
   manager profile whose `auth.users` row has `last_sign_in_at` not null, run `select * from manager_invite_accept(<profile>)`.
   That function takes the same locks and accepts only rows whose grant for that home is active; every other row stays
   pending (a confirmed email alone is not enough). Today: 1 row. The dry run lists any pending manager row still without
-  `invited_profile_id`. After ChatGPT APPROVE, a rolled-back dry run and the rollback file. Also re-count before deploy and list every unconfirmed
-  manager user without `app_metadata.domus_manager_invite` (0 on 2026-10-18; 5a D7 refuses them) for Claude to review.
+  `invited_profile_id`. After ChatGPT APPROVE, a rolled-back dry run and the rollback file. Also re-count before deploy
+  and list every unconfirmed manager user without `app_metadata.domus_manager_invite` (0 on 2026-10-18; 5a D7 refuses them) for Claude to review.
   Note: the 5a §6.12 migration makes every existing grant `assigned_directly = true`, so no pre-existing access is ever
   removed by a revoke; the backfill does not change that column.
 - Claude C6 Handoff: D1-D10, the D2 send occasion, and follow-ups: convert manager and owner rows on email confirmation (L3,
