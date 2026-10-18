@@ -26,6 +26,8 @@ Before sending, check it against `docs/lessons.md`:
 - The packet says how Undo reverses every side effect (L-016).
 - If the code is generalized to another role, the packet pins the original role's behavior (L-014).
 - A `catch` around a server action starts with `unstable_rethrow(error)` and has a redirect test; tests never put `expect` inside a mock implementation (L-028).
+- Test packets name shared assertion helpers (e.g. "no writes" = every db write, RPC and Auth write) and say: assert every listed fact, exact copy with `toEqual`, final state after every retry (L-030). Review maps each item's facts to assertions.
+- Access-granting designs name the server-only identity source, the lock for each check-then-act, and each grant's source (L-031).
 
 Always include these lines:
 - "Do NOT include 'Claude prompt' or 'recommended next steps for Claude' sections. Report compact status only."

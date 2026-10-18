@@ -176,3 +176,26 @@ a 43-agent review found it only by reading the live trigger.
 API's side effects (when is the `auth.users` row created?) and quote both in the packet's Context.
 **Rule:** Packets that touch sign-up/invite flows quote the live trigger (`pg_get_triggerdef`, function body) and state,
 per Auth call, whether it inserts `auth.users`. Reviews of such sprints include a lens that traces live trigger effects.
+
+#### L-030 | 2026-10-18 | TESTING
+**What happened:** In sprints 237c-5a and 5b, Codex's tests passed every mutation it was asked to run, but independent
+review found 7 (5a) and 15 (5b) acceptance items under-asserted: "no writes" checked one op name instead of all writes,
+end states after a retry were never asserted, `indexOf` matched the failed first attempt, exact copy became
+`toMatchObject({ success: true })`. Each needed a fix round.
+**What was correct:** Mutation proofs only cover the mutations listed; a reviewer must still map every listed fact of
+every acceptance item to an assertion (L-017), and the packet must say how to assert the common shapes.
+**Rule:** Model-test packets define shared assertion helpers up front (e.g. `expectNoWrites(world)` covering every db
+write, every `rpc:*` and every Auth write/email) and state: "assert every fact listed for an item; exact copy with
+`toEqual`; assert the final state after every retry". Reviews of model tests always include a per-item fact table.
+
+#### L-031 | 2026-10-18 | PLANNING
+**What happened:** ChatGPT rejected sprint 237c-5's design three times, each for a real flaw found on paper: (1) account
+provenance inferred from client-writable `user_metadata` (racable pre-hijack); (2) access decisions with row locks only,
+so two concurrent "last" revokes each saw the other as live (reproduced live: access stayed on); (3) no record of where
+access came from, so revoking an invite removed an owner's direct add.
+**What was correct:** Provenance from server-only state (`app_metadata`, create-only `createUser`); every check-then-act
+on shared access serialized by one lock per (home, person) taken in key order; access rows carry their source. Each was
+proven with live probes and real two-session tests, not only fakes.
+**Rule:** For any access-granting design: name the server-only source of identity, the lock that serializes each
+check-then-act, and the source of every grant, before the packet goes to review. Prove concurrency claims with two real
+database sessions (`supabase/tests/sprint237c5_manager_invite_race*.mjs` is the template).
