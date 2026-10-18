@@ -1705,3 +1705,10 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   daily reporter with a DB lease + 20 s timeout; payer overflow → bills no one; checkout-intent state machine + orphan
   recovery; explicit `requireManagerWrite` + static guard test; entitlement (paid-through) + comp transitions;
   termination fence for deletion; per-account price-change notices.
+- **Billing design ChatGPT round 3 (rev 4, metered): REJECT** — 8 REQUIRED: period-cutoff snapshot; no $15 for free
+  periods; separate payment status / coverage / write entitlement; immutable, identifiable, retryable snapshots; fail
+  closed for privileged manager writes on lookup failure; isolate unresolved chains without dropping other payers;
+  prove meter ordering/timeout/finalization in test mode; billing-period fields moved in API 2025-03-31+.
+  Third REJECT → **owner decision asked**. Recommendation: pivot the mechanism (not the decisions) to Domus-run monthly
+  invoicing — one immutable per-manager monthly snapshot → one Stripe invoice (saved card, idempotency key per
+  manager-month), no subscription/meter; 0 doors → no invoice.
