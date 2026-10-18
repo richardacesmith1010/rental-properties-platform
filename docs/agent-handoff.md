@@ -1729,3 +1729,19 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - **Owner 2026-10-18: "Yes. Park billing automation; invoice the first paying managers manually with your monthly door
   statement, and build automation at about 5 paying managers. Back to Phase 1."** Runbook
   `docs/runbooks/manager-manual-invoicing.md`; design kept at rev 5 (+ round-4 items) in `docs/design/manager-billing-design.md`.
+
+## 2026-10-18 — Account deletion §15 dry run: PASS (owner: "Go: run the account-deletion fixture dry run per the runbook (§15), test accounts only.")
+- Fixture (test accounts +deldry1/2/3 only): X tenant + sole LLC owner + co-owner + manager of Y's home with pending pay,
+  messages/repair/photos (one shared with Y)/home file/avatar/feedback/notifications/audit/invitation/unsigned packet,
+  Stripe TEST customer + 2 test Connect accounts; Z look-alike (same name + phone); vendor "Sam Drytest" with X's email.
+- X pressed the real "Delete my account" (request recorded, signed out), then signed in again. Tripwire test: a signed
+  packet made A2 stop before B (§13). Main run A1–D4; forced stops after C5 part 2 and after the C6 Stripe delete (before
+  logging) — each resumed by a fresh agent from the log only, cleanly.
+- **All 6 pass checks met:** D1 all true; Y's/Z's data byte-identical to the baseline except the intended removals of X
+  (Y's comment lost only X's email; the two-name message changed only X's mention); shared photo object + Y's row kept;
+  LLC B kept Y, dropped X; home A kept records; Stripe test customer + both accounts deleted; every re-run 0/"already
+  done" (C9 exception fixed in 3.4); log has only the request id; smoke green.
+- Fixture removed (0 sign-ins, profiles, files, accounts, requests left). Runbook **rev 3.4** folds in 9 fixes (bash +
+  in-shell id lookups, C3 "different name points elsewhere" + no-link money rows are "unsure", full first-name scan,
+  C5 avatar resume check, C6/C7 Stripe done-when + test-mode API + in-transit check, C9 idempotence guard, dry-run log
+  words). The runbook is ready for a first real request (owner "go" per request still required).

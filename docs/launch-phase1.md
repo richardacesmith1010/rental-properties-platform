@@ -13,12 +13,12 @@ Store, under reviewed legal terms. Done = every row below is ✅. Claude drives;
 | A8 | Early-access `/terms` + `/privacy` live (Sprint 239a; text `docs/legal/early-access-terms-privacy-2026-10-18.md`) | Queued after 238g |
 | A5 | Notifications "on" readiness: review the test week, per-user settings for rent due / late / receipt / repairs | Next sprint after 238g |
 | A6 | App Store polish: screenshots (ASC-14), status-bar theme (IOS-4), reset-email dead end (IOS-5) | Queue |
-| A7 | Account-deletion fixture dry run (runbook §15) | Waits on owner "go" (B1) |
+| A7 | Account-deletion fixture dry run (runbook §15) | ✅ PASS 2026-10-18; runbook rev 3.4 |
 
 ## B. Owner one-steps (Claude prepares each page first; one action each)
 | # | Step | Why it matters |
 |---|---|---|
-| B1 | Say **"go"** for the account-deletion fixture dry run | Must pass before any real deletion request |
+| B1 ✅ 2026-10-18 (PASS) | Say **"go"** for the account-deletion fixture dry run | Must pass before any real deletion request |
 | B2 ✅ 2026-10-18 | **Approve the legal defaults** (§C) | Unblocks App Privacy, the 7-year purge job, publishing Terms/Privacy |
 | B3 ✅ 2026-10-18 (option 1) | **Pick a pricing option** (§D) | Everything after launch depends on it; App Store rules depend on it |
 | B4 | **Choose a lawyer** (small-business / SaaS; flat fee) and send the packet (§E) | Strangers should not sign unreviewed terms |

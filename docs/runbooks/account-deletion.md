@@ -1,4 +1,4 @@
-# Runbook — finishing an account deletion request (rev 3.3, 2026-10-17)
+# Runbook — finishing an account deletion request (rev 3.4, 2026-10-18 — §15 dry run PASSED; its fixes are marked "(3.4)")
 
 Review history: rev 1 with the 238b packet → rev 2 REJECT → rev 2 REJECT again (2026-10-16) → rev 3 APPROVE WITH
 CHANGES (2026-10-17; matching rows reviewed before change, signed leases a tripwire, full D1 profile check, look-alike
@@ -28,6 +28,14 @@ request and found that test account's email and name.
   row, so you never paste their id or email into SQL. Run SQL as the database owner (Supabase MCP `execute_sql` or the
   SQL editor). Shell calls that need the person's id read it from the A1 output; never log it.
 - **Point of no return:** step C1. Before C1 the request can still be withdrawn cleanly (§11).
+- **(3.4) Shell steps run in `bash`** (in zsh an unquoted `$(… | xargs)` stays one word). Never paste an id into a
+  command: look it up inside the command from the request id, e.g.
+  ```bash
+  PID=$(curl -sS "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/account_deletion_requests?id=eq.<rid>&select=profile_id" \
+    -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+    | python3 -c 'import json,sys;print(json.load(sys.stdin)[0]["profile_id"])')
+  ```
+  — the value stays in the shell variable and is never printed.
 
 ## 1. Timeline (day 0 = `requested_at`)
 | Day | What happens | Who |
@@ -55,7 +63,8 @@ from public.account_deletion_requests where status = 'open' order by requested_a
 ## 2. Step log
 - **Where:** `docs/runbooks/account-deletion-log.md` in this repo. Append only. Commit it at the end of each session.
 - **Format:** one line per step: `| <rid> | <step> | <UTC time> | <result> |`. Result is one of `ok`, `ok <n> rows`,
-  `skip — already done`, `skip — none`, `waiting — until <date>`, `fail — <short reason>`.
+  `skip — already done`, `skip — none`, `waiting — until <date>`, `fail — <short reason>`; (3.4) dry runs only:
+  `skip — dry run`, `stopped — forced stop <n>`.
 - **Never** write a name, email, phone, profile id, Stripe or Plaid id, file path, or message text in it.
 - **Resume:** find the request's last `ok` or `skip` line. Run the next step's done-when check, then carry on.
   After a `fail`, fix the cause and run that same step again. Never skip ahead past a failed step.
@@ -333,13 +342,19 @@ each row: one message can name both this person and a look-alike.
   application they were part of. An exact email match with no look-alike (A4) and nothing pointing elsewhere also counts.
 - **A mention means someone else** when a look-alike exists and the context points to that other person, or the name
   matches but the context is unrelated. Leave it as it is.
-- **Unsure:** leave it and ask the owner in chat, naming only the table, row id and mention number.
+- **Unsure:** leave it and ask the owner in chat, naming only the table, row id and mention number. (3.4) A row about
+  money or a repair with no link to a lease, charge or ticket (e.g. a notification without `entity_id`) that could fit
+  this person or a look-alike is "unsure" — the dry run hit exactly this case.
+- **(3.4) A different name on the same row points elsewhere.** A4's look-alike check only compares `profiles`; an exact
+  email match on a vendor, contact or application row that carries a **different** name (a shared family mailbox) means
+  someone else.
 - **Clean only what means this person** (Appendix B):
   - Identity columns (invitations, signers, feedback, sender emails, applications and their screening reports, vendors,
     client contact emails): Part 1, with the ids you confirmed.
   - Free text where **every** mention in the field means this person: Part 2 (replaces them all).
   - Free text that mixes people: Part 3. It lists each mention by number and replaces only the numbers you pick.
-- **First-name review:** the first-name query under Appendix A lists rows with the first name alone. Same rules.
+- **First-name review:** the first-name query under Appendix A lists rows with the first name alone. Same rules. (3.4) Run it
+  over the **full** Appendix A `docs` list, not a subset.
 - A phone hit the template can't remove is digits from separate numbers. Check it, then count it as "someone else".
 - Log three counts: rows cleaned, rows left with only "someone else" mentions, rows asked about.
 - **Done when** a fresh A4 run lists only rows whose remaining mentions were all judged "someone else".
@@ -416,7 +431,8 @@ rows. Delete the files first, check, then delete the rows.
    The answer lists the objects it deleted. One entry with that exact name = deleted. `[]` = it was already gone; part 3
    confirms it. More than one entry, or an error: stop and log `fail`. The dry run proves this on a shared file.
 3. Check both lists against `storage.objects` (same bucket and name). Every delete-list object must be gone. Every
-   keep-list object must still be there. After a partial failure, run 1–3 again: list 1 still comes from the rows,
+   keep-list object must still be there. (3.4) The profile photo is found only through Storage, so after part 2 it drops
+   out of list 1; on resume, check it as "0 objects under `profile-avatars/<pid>/`". After a partial failure, run 1–3 again: list 1 still comes from the rows,
    which part 4 hasn't deleted yet.
 4. Delete the rows. An expense that used a deleted file as its receipt keeps its row; the database clears the link
    (`property_expenses.receipt_file_id` is `on delete set null`).
@@ -430,7 +446,9 @@ Done when list 1 returns 0 rows.
 
 **C6 Stripe customer (tenant).** Skip if A2 `stripe_customer` = 0. Use the **live-mode** Stripe Dashboard in the
 owner's signed-in Chrome (`apps/web/.env.local` holds a test-mode key, so it can't reach live customers). Find the
-customer by the id in `profiles.stripe_customer_id` and delete it. Deleting a customer removes its saved cards and banks
+customer by the id in `profiles.stripe_customer_id` and delete it. (3.4) **Done when** Stripe shows the customer as
+deleted: the id stays in `profiles` until C9, so the database can't prove C6 — after a crash, look the id up at Stripe.
+Dry runs use the test-mode API instead (`DELETE /v1/customers/<id>` with the `sk_test_` key; done = `deleted: true`). Deleting a customer removes its saved cards and banks
 and cancels anything recurring. Stripe keeps its own legally required payment records. Done when the Dashboard shows
 the customer as deleted, or a search finds nothing. Never copy the live secret key.
 
@@ -439,6 +457,10 @@ Find the ids in `profiles.stripe_account_id`, `ownership_account_members.payout_
 `ownership_accounts.stripe_account_id` (only accounts where this person is the sole member). For each, in the live-mode
 Dashboard (Connect → the account):
 - **Balance zero, no payout on the way:** delete or close the account from its menu. Then clear the id in Domus.
+  (3.4) "No payout on the way" = available 0, pending 0, and no payout with status `in_transit`. Dry runs use the
+  test-mode API (`GET /v1/balance` and `GET /v1/payouts?status=in_transit` with `Stripe-Account: <id>`, then
+  `DELETE /v1/accounts/<id>`). Run the clear statement below from a shell that holds the id in a variable (PostgREST
+  `PATCH` with the same filters), so the id is never pasted into chat or SQL text.
 - **Money still there:** Stripe pays it out to the person's bank on its normal schedule. Re-check once a day. Delete it
   once it's empty.
 - **Still not empty on day 28:** don't wait longer. Clear the id in Domus and leave the account with the person at Stripe.
@@ -478,7 +500,11 @@ update public.profiles set full_name = 'Deleted user', email = 'deleted+' || id 
        phone = null, nickname = null, avatar_url = null, notification_preferences = '{}'::jsonb,
        notifications_paused_until = null, stripe_customer_id = null, stripe_account_id = null,
        stripe_onboarding_complete = false, stripe_status = null, stripe_last_verified_at = null, ai_consent_at = null
- where id = (select profile_id from public.account_deletion_requests where id = '<rid>');
+ where id = (select profile_id from public.account_deletion_requests where id = '<rid>')
+   and (full_name is distinct from 'Deleted user'
+        or email is distinct from 'deleted+' || id || '@deleted.domusbase.invalid'
+        or phone is not null or avatar_url is not null or stripe_customer_id is not null
+        or stripe_account_id is not null or ai_consent_at is not null);   -- (3.4) a second run changes 0 rows
 ```
 `'{}'` is the column's default (checked 2026-10-17). The placeholder email is unique because it holds the profile id.
 
@@ -678,6 +704,10 @@ there), and once after the C6 Stripe delete but before logging it.
    repeated work.
 5. The log holds only the request id: no `@`, no "Drytest", no 10-digit numbers.
 6. `npm run smoke:web` is green afterwards.
+
+**Result (2026-10-18): PASS** — request `407bebfe-ed06-48cc-9034-9b98040f4651`; all 6 checks met; both forced stops
+resumed in fresh sessions from the log only; tripwire stopped before B; fixture removed (0 rows, 0 files, 0 sign-ins left;
+Stripe test objects deleted). Fixes folded in as rev 3.4 (marked "(3.4)").
 
 **After.** Log the result in the handoff. Then remove the whole fixture (X, Y, Z, homes, leases, packets, files). Use a
 cleanup script limited to rows tied to the three fixture profile ids. Fixes found by the dry run go into this runbook
