@@ -1680,3 +1680,6 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   Interpretation (recorded): `/terms` and `/privacy` are public web pages, so "publish to testers now" = replace the
   March 4 text with the approved draft now, labeled as an early-access version under legal review (only testers use
   Domus today); the lawyer's edits become the final version. Unblocked: the 7-year purge job (Sprint 231).
+- **Owner decision 2026-10-18 (pricing):** "Yes: free for self-managing landlords, Manager plan at $1.50 per door per month
+  with a $15 minimum, billed on the website." Next: Manager billing design (L3: research Apple US rules + Stripe/door facts
+  → design + critic → ChatGPT → Codex). Terms require 30 days' notice before charging anyone.
