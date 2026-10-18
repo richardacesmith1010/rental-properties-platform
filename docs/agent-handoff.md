@@ -1698,3 +1698,10 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   deletion fencing vs late webhooks; 30-day notice for future price increases). Product decisions untouched.
   **Stopped per §2a (second REJECT): owner decision asked** — rev 4 + round 3, with a simplification (set quantity once
   per billing cycle on `invoice.upcoming` + verify-after-write instead of continuous sync).
+- **Owner: "Yes. Do billing design rev 4 with the once-per-cycle quantity simplification and send ChatGPT round 3."**
+  Rev 4: metered Stripe usage with `last` aggregation (verified in Stripe API docs: formula `count|last|sum`, added
+  2025-03-31; duplicate `identifier` rejected ≥ 24 h; whether `last` orders by timestamp or arrival is undocumented →
+  test-mode C-check before build), graduated price ($15 flat for 1-10 doors, $1.50 after), billed in arrears; single
+  daily reporter with a DB lease + 20 s timeout; payer overflow → bills no one; checkout-intent state machine + orphan
+  recovery; explicit `requireManagerWrite` + static guard test; entitlement (paid-through) + comp transitions;
+  termination fence for deletion; per-account price-change notices.
