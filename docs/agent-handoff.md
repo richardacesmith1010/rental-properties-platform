@@ -1683,3 +1683,8 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - **Owner decision 2026-10-18 (pricing):** "Yes: free for self-managing landlords, Manager plan at $1.50 per door per month
   with a $15 minimum, billed on the website." Next: Manager billing design (L3: research Apple US rules + Stripe/door facts
   → design + critic → ChatGPT → Codex). Terms require 30 days' notice before charging anyone.
+- **Owner decisions 2026-10-18 (Manager plan, via question card):** co-managers → "Inviting manager pays" (team seats);
+  no plan → "30-day trial, then read-only"; Alia (only real manager today) → "Free forever".
+  Research: Apple — no IAP needed if the iPhone app shows no price/buy UI and managers subscribe on the web (3.1.3(c)
+  business sales; rent stays 3.1.3(e)); Stripe — no Billing today (Connect + Checkout payments via REST, no API version
+  pinned); doors — 10/18 homes have no unit rows; 1 live home shared by 2 managers; 10/11 managers are test accounts.
