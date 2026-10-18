@@ -10,6 +10,7 @@ Store, under reviewed legal terms. Done = every row below is ✅. Claude drives;
 | A2 | Rescore + scorecard upkeep after each sprint | Ongoing |
 | A3 | Pricing options memo (below, §D) → build the chosen plan (billing on the web, Stripe) | Memo ready; build after D1 |
 | A4 | Lawyer packet: current drafts + exact questions (§E) | Ready to send once the owner picks a lawyer |
+| A8 | Early-access `/terms` + `/privacy` live (Sprint 239a; text `docs/legal/early-access-terms-privacy-2026-10-18.md`) | Queued after 238g |
 | A5 | Notifications "on" readiness: review the test week, per-user settings for rent due / late / receipt / repairs | Next sprint after 238g |
 | A6 | App Store polish: screenshots (ASC-14), status-bar theme (IOS-4), reset-email dead end (IOS-5) | Queue |
 | A7 | Account-deletion fixture dry run (runbook §15) | Waits on owner "go" (B1) |
@@ -18,7 +19,7 @@ Store, under reviewed legal terms. Done = every row below is ✅. Claude drives;
 | # | Step | Why it matters |
 |---|---|---|
 | B1 | Say **"go"** for the account-deletion fixture dry run | Must pass before any real deletion request |
-| B2 | **Approve the legal defaults** (§C) | Unblocks App Privacy, the 7-year purge job, publishing Terms/Privacy |
+| B2 ✅ 2026-10-18 | **Approve the legal defaults** (§C) | Unblocks App Privacy, the 7-year purge job, publishing Terms/Privacy |
 | B3 | **Pick a pricing option** (§D) | Everything after launch depends on it; App Store rules depend on it |
 | B4 | **Choose a lawyer** (small-business / SaaS; flat fee) and send the packet (§E) | Strangers should not sign unreviewed terms |
 | B5 | TestFlight build 3: install on your iPhone, one check at a time | Real-device proof for the launch cover and Face ID |
