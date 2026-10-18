@@ -1,3 +1,4 @@
+Superseded by rev 3: docs/sprint237c5-index.md
 # Sprint 237c-5 — Manager invite redesign: All my homes + allowlist-only branded email (L3) — rev 2 (rev 1 → Claude critic panel: 71 adopted)
 
 Severity L3 (auth/invite, access grants, outbound email). `/chatgpt-review` before `/codex-dispatch`. History: 237c-1's invite
