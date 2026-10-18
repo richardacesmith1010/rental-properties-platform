@@ -1,12 +1,13 @@
-# Sprint 238g — App Review demo accounts seed (L3: production logins + data) — rev 3 (rev 1 REJECT → rev 2 AWC → all items adopted)
+# Sprint 238g — App Review demo accounts seed (L3: production logins + data) — rev 3.1 (rev 3 approved; facts re-verified)
 
 ## 1. Objective
 Add an idempotent seed that builds a fake App Review owner + tenant graph covering every promise in
 `docs/app-store/app-review-notes.md` §5 (lines 259-272). Move shared helpers out of the smoke seed without changing smoke behavior.
-Codex writes and tests the code against a fake client only. Claude runs the seed later, after the owner sets the two emails.
+Codex writes and tests the code against a fake client only. Claude runs the seed later (both demo emails are set).
 
 ## 2. Context
-- HEAD `a7a3915`. Needs: app-review-notes §5 and block 1c (`:60-150`; bank `:112-117`, payout `:119-123`);
+- HEAD `c6d8d2c` (facts re-verified 2026-10-18; nothing under `scripts/` changed since `a7a3915`). Needs: app-review-notes §5 and block 1c
+  (`:60-150`; bank `:112-117`, payout `:119-123`);
   `docs/phone-readiness-plan-2026-10-16.md:247-252` (item 8), `:16` (Q10). No `appreview` auth users exist yet (live).
 - `scripts/seed-smoke-accounts.mjs` (758 lines) calls `main()` at import (`:758`), so tests cannot import it today.
   Shared candidates: `deterministicUuid :20-26`, `hashPassword :28-30`, `createAdminClient :65-72`, `createSummary/record :74-84`,
@@ -20,7 +21,7 @@ Codex writes and tests the code against a fake client only. Claude runs the seed
 - Cron `generate-charges` (`lib/charge-generation.ts:59-71, :452-476`) adds current + next month charges due on or
   after the lease `created_at` date, skips existing (lease, due_date, 'rent') rows, and marks pending charges `late`
   after grace (`:186-275`). The seed must find charges by that key, never by id alone.
-- Bank: Home count `lib/owner-wallet-home.ts:30-52`; rows `components/dashboard/owner-home/needs-you-list.tsx:30-36`
+- Bank: Home count `lib/owner-wallet-home.ts:30-52`; rows `components/dashboard/owner-home/needs-you-list.tsx:30-37`
   ("Connect … bank" only without `bank_connections`); page `app/owner/bank/page.tsx:76-97`; `Suggestion` in
   `lib/bank-feed/types.ts:55-58`; `components/bank-feed/review-card.tsx:29-35, 121-125`; rent text `lib/bank-feed/match.ts:70`.
   `answerQueuedBankItem` (`app/actions/bank-feed.ts:230-262`) calls live `resolve_bank_review_item`, which DELETES the
@@ -28,9 +29,11 @@ Codex writes and tests the code against a fake client only. Claude runs the seed
 - Messages: `lib/inbox/action-helpers.ts:133-201`; tenant `inbound` (`app/actions/inbox.ts:79-91`), owner `outbound`
   (`:233-249`); subject "Messages with your landlord" (`lib/inbox/thread-title.ts:1`); tenants see threads only with an
   active lease (`lib/inbox.ts:173-231`).
-- Repairs: insert `app/actions/maintenance-ticket-actions.ts:77-87`; tenant list by `tenant_profile_id`
-  (`lib/maintenance/read.ts:14`). Photos: bucket `maintenance-photos`, path `${ticketId}/${uuid}-${name}.${ext}`,
-  metadata insert (`app/actions/maintenance-queries.ts:61-83, :139-166`).
+- Repairs: insert `app/actions/maintenance-ticket-actions.ts:78-88` (`property_id` is NOT NULL); tenant list
+  `lib/maintenance/read.ts:47-53`, and it needs an active lease (`:11-21`). Photos: bucket `maintenance-photos`, path
+  `${ticketId}/${uuid}-${name}.${ext}`, metadata insert (`app/actions/maintenance-queries.ts:62-84`); the app now checks the
+  file's bytes (JPEG/PNG/WebP only) and sets the content type from them (`:138-148`, upload loop `:153-180`). The photo
+  reader selects `file_name`, `file_type`, `file_size_bytes` (`lib/maintenance/enrichment.ts:320, :401-402`).
 - "Set up rent payments" shows when Stripe is not connected (`components/settings/bank-settings.tsx:61-73`).
   Notifications are off (`lib/notifications-switch.ts:45`); the seed writes rows directly and calls no app code.
 - Live schema (read-only check, 2026-10-16):
@@ -89,7 +92,9 @@ Running any seed; SQL, migrations, RLS; `apps/**` code; App Store text; docs (Cl
    `ownership_account_members`, `property_managers`, `leases` and `invitations` (`invited_profile_id` = the new user id). Any
    row → `SeedRefusedError("unexpected access for <role>")`, no graph writes, exit 1; Claude then removes the demo user by
    hand. Residual risk (stated, accepted): detection happens after the trigger ran; nothing is shown to App Review until
-   Claude finishes the run and checks it. On later runs the same check allows only the demo graph's own rows.
+   Claude finishes the run and checks it. On later runs the same check allows only the demo graph's own rows. Rows App
+   Review itself creates by trying "Delete my account" (`account_deletion_requests`, `feedback`, audit) are not access
+   rows and are not read by this check.
    The refusal prints only non-secret ids (auth user id, invitation ids, membership/assignment/lease ids) so Claude can
    investigate. The seed never cleans up invitations or access rows itself; Claude follows
    `docs/runbooks/appreview-seed.md` (Claude writes it) to restore the invitation and remove only the unintended access.
@@ -111,7 +116,8 @@ Running any seed; SQL, migrations, RLS; `apps/**` code; App Store text; docs (Cl
    { appreview_seed, appreview_role, appreview_password_hash } })` (`role` stays in `user_metadata` only because
    `handle_new_user` reads it at creation). `updateUserById` only when the `app_metadata` hash or markers or the name
    differ, and only for a user that passed the `app_metadata` guard. Never call invite, magic-link, OTP, recovery or
-   reset methods. Owner "Jordan Demo", tenant "Riley Demo". Then `ensureProfile`.
+   reset methods. Owner "Jordan Demo", tenant "Riley Demo". Then `ensureProfile`. Never set `profiles.ai_consent_at`
+   (it stays null so App Review sees the first-time AI consent prompt promised in `app-review-notes.md:132`).
 6. **Graph.** Ids are `deterministicUuid("appreview-…")`; month-keyed rows add `YYYY-MM`. `now` is injectable (UTC);
    `M0` = first day of `now`'s month. Simple rows use the new `ensureRowById` (select by id → insert, or update diffs).
    **Ownership check before any update:** `ensureRowById` takes an `owns(row)` predicate; a row that exists but fails it
@@ -141,10 +147,13 @@ Running any seed; SQL, migrations, RLS; `apps/**` code; App Store text; docs (Cl
      filed (`bank_transactions`, same external id) or skipped (`bank_skipped_fingerprints`, same fingerprint) is `existing`.
    - Thread: adopt by (property, `tenant_profile`, tenant id, "Messages with your landlord") or insert (created by tenant).
      Tenant `inbound`: "Hi! The kitchen sink drips. I sent a repair with a photo." Owner `outbound`: "Thanks, Riley.
-     A plumber will come this week." Both `in_app`, sender's email; `created_at` on insert only (`now`-2h, `now`-1h).
-   - Repair "Kitchen sink drips": "Water drips under the kitchen sink. It started this week.", medium, tenant's unit and
-     id; reset to `open` (`resolved_at` null) if changed. Photo `${ticketId}/${photoId}-sink.png`, `image/png`, caption
-     "Drip under the sink", by tenant; upload (`upsert: false`) only if no object in `storage.list(ticketId, { search })`
+     A plumber will come this week." Both `in_app`; tenant `sender_email` null and owner `sender_email` = the owner's email,
+     as the app writes them (`app/actions/inbox.ts:87-92`, `:244-249`); `created_at` on insert only (`now`-2h, `now`-1h).
+   - Repair "Kitchen sink drips": "Water drips under the kitchen sink. It started this week.", medium, `property_id` = the
+     demo property, tenant's unit and id (ownership check: demo property + demo unit + demo tenant); reset to `open` (`resolved_at` null)
+     if changed. Photo `${ticketId}/${photoId}-sink.png`, `image/png`, caption
+     "Drip under the sink", by tenant, `file_name` "sink.png", `file_type` "image/png", `file_size_bytes` = the PNG's
+     byte length; upload (`upsert: false`) only if no object in `storage.list(ticketId, { search })`
      has a `name` exactly equal to the expected file name (a similar name does not count).
      PNG: 480×360, deterministic, under 50 KB.
    - Stripe: read owner profile + account `stripe_account_id` / `stripe_onboarding_complete`; never write; warn if set.
@@ -155,7 +164,10 @@ Running any seed; SQL, migrations, RLS; `apps/**` code; App Store text; docs (Cl
 8. **Strict fake (`fake-admin.mjs`):** throws on unknown tables, unsupported builder chains or filters, any `rpc`, any
    write not expected by the test; error handling is proven by injected `{ error }` results that must stop the run with
    no later writes (not by an "inspection detector");
-   duplicate keys under the live unique keys listed in §2, storage upload of an existing path with `upsert: false`, and
+   duplicate keys under the live unique keys listed in §2 (plus `profiles_email_key`, `units_property_id_unit_number_key`,
+   `idx_ownership_accounts_individual_creator`; checks: `maintenance_tickets.property_id` not null, `leases` active ⇒ status
+   active|expiring_soon and due day 1-28, `payments.recorded_via` manual|stripe|bank_feed|legacy), storage upload of an existing path with
+   `upsert: false`, and
    `createUser`/`updateUserById` payloads outside the shape in §6.5; any invite/OTP/magic-link/recovery/reset call throws.
 9. Check every Supabase error (L-002). Never call `rpc`. Never write `notifications`, `notification_deliveries`,
    `message_deliveries`, `communication_logs` or `audit_logs`. No imports from `apps/`. Demo copy: at most 12 words per
@@ -166,7 +178,10 @@ Running any seed; SQL, migrations, RLS; `apps/**` code; App Store text; docs (Cl
   and never read `process.env` secrets or the real `apps/web/.env.local`).
 - `for f in scripts/seed-smoke-accounts.mjs scripts/seed-appreview-accounts.mjs scripts/lib/*.mjs; do node --check "$f"; done`
 - `wc -l scripts/*.mjs scripts/lib/*.mjs` (each ≤ 500, **except `scripts/seed-smoke-accounts.mjs`**, which only shrinks
-  this sprint; do not move more smoke-only code to hit a number); `awk 'length > 140' scripts/*.mjs scripts/lib/*.mjs` prints nothing.
+  this sprint; do not move more smoke-only code to hit a number); `awk 'length > 140' scripts/lib/*.mjs
+  scripts/seed-appreview-accounts.mjs` prints nothing; in `seed-smoke-accounts.mjs` only
+  the pre-existing `:632` may exceed 140 (`deterministicUuid`'s long line 25 may be re-wrapped when moved — formatting only,
+  the pin test proves identical output).
 - `git diff --stat` lists only §5 files. Do NOT run `node scripts/seed-*.mjs` in any mode, against any database.
 
 ## 8. Acceptance criteria (test → assertion; file numbers from §5)

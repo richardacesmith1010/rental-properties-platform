@@ -3,8 +3,8 @@
 Claude runs this. Codex never runs the seed. Nothing here sends email or notifications.
 
 ## Before the first run
-1. The owner picks two demo emails that contain `appreview` and sets `APPREVIEW_OWNER_EMAIL` and
-   `APPREVIEW_TENANT_EMAIL` in `apps/web/.env.local` (one owner step).
+1. Done 2026-10-16: `APPREVIEW_OWNER_EMAIL` and `APPREVIEW_TENANT_EMAIL` are set in `apps/web/.env.local` (verified
+   2026-10-18: both contain `appreview`, differ, and match no `SMOKE_*EMAIL`).
 2. `apps/web/.env.local` must be mode 600 (`stat -f %Sp apps/web/.env.local` → `-rw-------`). Set 2026-10-16.
 3. Dry run: `node scripts/seed-appreview-accounts.mjs --dry-run` with the env loaded. Read the plan; it writes nothing.
 
@@ -17,7 +17,8 @@ Claude runs this. Codex never runs the seed. Nothing here sends email or notific
 1. Sign-in check without printing secrets: a short Node script calls `signInWithPassword` for each demo user with the
    env values and prints only `ok`/`failed` and the role.
 2. SQL check (read-only): each demo user has exactly the demo graph — one account membership (owner), one active lease
-   (tenant), no `property_managers` rows, no accepted invitations.
+   (tenant), no `property_managers` rows, no accepted invitations, `profiles.ai_consent_at IS NULL` for both, and no open
+   `account_deletion_requests` row for either.
 3. Simulator walk as each demo user over every path in `docs/app-store/app-review-notes.md` 1c and 2c.
 
 ## If the seed refuses with "unexpected access for <role>"
@@ -30,3 +31,9 @@ The sign-up trigger accepted a real pending invitation in the moment between the
    can still accept it.
 5. Delete the demo auth user and its profile. Re-check that no row anywhere references the demo user id.
 6. Write a handoff entry with what changed. Rerun the seed only after the inviter's invitation is accepted or revoked.
+
+## If App Review taps "Delete my account" on a demo account
+The review notes invite them to (`docs/app-store/app-review-notes.md:138-143`). Treat the request as a test: close it as
+`withdrawn` with the note "App Review demo account" and delete nothing until review ends. This is the one exception to
+`docs/runbooks/account-deletion.md`; never apply it to any other account. Re-run the seed afterwards if needed.
+

@@ -1665,3 +1665,12 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Decision (standing authority): no Codex sprint, no deploy. Follow-up removed from the 237c-5 list.
 - **Next:** scorecard rule picks the next category (237c-5 L3 follow-ups: remove a signed-in manager from a home; convert
   manager/owner rows on email confirmation in `handle_new_user`).
+
+## 2026-10-18 — Owner: "start sprint 238g … rescore the Phone app row … merge the L-032 docs branch"
+- L-032 branch merged (docs only). Scorecard: Phone app 70 → 74 (238b had shipped 10-17); Manager row's checkbox gap removed.
+- 238g packet rev 3 (ChatGPT AWC, 10-16) re-verified at HEAD `c6d8d2c` by a read-only agent: 44/49 citations held, all
+  schema facts held; 7 drift fixes + new constraints (repair `property_id` NOT NULL, photo `file_name/type/size`,
+  never set `ai_consent_at`, tenant `sender_email` null, strict-fake unique keys/checks, line-length exemption). Runbook:
+  owner steps marked done; after-run checks add `ai_consent_at IS NULL` + no open deletion request; new rule: an App Review
+  "Delete my account" request on a demo account is withdrawn, nothing deleted. **Decision:** factual drift within the
+  approved design → rev 3.1 goes to Codex without another ChatGPT round.
