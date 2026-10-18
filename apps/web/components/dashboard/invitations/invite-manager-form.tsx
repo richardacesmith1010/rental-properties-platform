@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useFormState } from "react-dom";
 import type { StatefulAction, ActionState } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { FormError } from "@/components/dashboard/forms";
 import { Alert } from "@/components/ui/alert";
@@ -14,7 +13,7 @@ import { toast } from "sonner";
 const MANAGER_STEPS = ["Home", "Email", "Name", "Send"] as const;
 
 interface ManagerInviteDraft {
-  propertyId: string;
+  propertyIds: string[];
   email: string;
   fullName: string;
 }
@@ -31,29 +30,51 @@ function StepPill({ label, active, done, skipped }: { label: string; active: boo
 }
 
 export function InviteManagerForm({ properties, onInviteManager, onSuccess }: {
-  properties: Array<{ id: string; name: string }>;
+  properties: Array<{ id: string; name: string; ownerAccountIsClient?: boolean; active?: boolean }>;
   onInviteManager: StatefulAction;
   onSuccess?: () => void;
 }) {
   const [state, action] = useFormState(onInviteManager, null);
   const handledRef = useRef<ActionState>(null);
+  const eligibleHomes = useMemo(
+    () => properties.filter((property) => property.ownerAccountIsClient !== true && property.active !== false),
+    [properties]
+  );
+  const eligibleIds = useMemo(() => eligibleHomes.map((property) => property.id), [eligibleHomes]);
+  const eligibilityKey = eligibleIds.join("\0");
+  const previousEligibility = useRef(eligibilityKey);
   const [step, setStep] = useState(0);
-  const [draft, setDraft] = useState<ManagerInviteDraft>({ propertyId: "", email: "", fullName: "" });
-  const requiredComplete = Boolean(draft.propertyId && draft.email && draft.fullName);
-  const stepComplete = (index: number) => index === 0 ? Boolean(draft.propertyId)
+  const [draft, setDraft] = useState<ManagerInviteDraft>({
+    propertyIds: eligibleIds.length === 1 ? eligibleIds : [], email: "", fullName: ""
+  });
+  const pickedIds = eligibleIds.filter((id) => draft.propertyIds.includes(id));
+  const requiredComplete = Boolean(pickedIds.length && draft.email && draft.fullName);
+  const stepComplete = (index: number) => index === 0 ? Boolean(pickedIds.length)
     : index === 1 ? Boolean(draft.email) : index === 2 ? Boolean(draft.fullName) : requiredComplete;
+
+  useEffect(() => {
+    const eligibilityChanged = previousEligibility.current !== eligibilityKey;
+    previousEligibility.current = eligibilityKey;
+    setDraft((current) => {
+      const stillEligible = current.propertyIds.filter((id) => eligibleIds.includes(id));
+      const next = eligibilityChanged && stillEligible.length === 0 && eligibleIds.length === 1
+        ? eligibleIds : stillEligible;
+      return next.length === current.propertyIds.length && next.every((id, index) => id === current.propertyIds[index])
+        ? current : { ...current, propertyIds: next };
+    });
+  }, [eligibilityKey, eligibleIds]);
 
   useEffect(() => {
     if (!state?.success) return;
     if (handledRef.current === state) return;
     handledRef.current = state;
     toast.success(state.message ?? "Invite complete.");
-    setDraft({ propertyId: "", email: "", fullName: "" });
+    setDraft({ propertyIds: eligibleIds.length === 1 ? eligibleIds : [], email: "", fullName: "" });
     setStep(0);
     onSuccess?.();
-  }, [onSuccess, state]);
+  }, [eligibleIds, onSuccess, state]);
 
-  const onEnterNext = (event: KeyboardEvent<HTMLInputElement | HTMLSelectElement>, canAdvance: boolean, nextStep: number) => {
+  const onEnterNext = (event: KeyboardEvent<HTMLInputElement>, canAdvance: boolean, nextStep: number) => {
     if (event.key !== "Enter") return;
     event.preventDefault();
     if (canAdvance) setStep(nextStep);
@@ -72,13 +93,29 @@ export function InviteManagerForm({ properties, onInviteManager, onSuccess }: {
       </div>
       {step === 0 ? (
         <div className="space-y-3">
-          <p className="text-sm text-[var(--ink-2)]">Step 1: Pick the home.</p>
-          <Select aria-label="Home" value={draft.propertyId}
-            onChange={(event) => setDraft((current) => ({ ...current, propertyId: event.target.value }))}
-            onKeyDown={(event) => onEnterNext(event, stepComplete(step), 1)} required>
-            <option value="">Pick a home</option>
-            {properties.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}
-          </Select>
+          <p className="text-sm text-[var(--ink-2)]">Step 1: Pick homes.</p>
+          {eligibleHomes.length === 0 ? <p className="text-sm text-[var(--muted)]">No homes here can get a manager.</p> : (
+            <div className="space-y-1">
+              <label className="flex min-h-11 items-center gap-3 text-sm text-[var(--ink)]">
+                <input type="checkbox" checked={pickedIds.length === eligibleHomes.length}
+                  onChange={(event) => setDraft((current) => ({
+                    ...current, propertyIds: event.target.checked ? eligibleIds : []
+                  }))} />
+                All my homes
+              </label>
+              {eligibleHomes.map((property) => (
+                <label key={property.id} className="flex min-h-11 items-center gap-3 text-sm text-[var(--ink)]">
+                  <input type="checkbox" checked={pickedIds.includes(property.id)}
+                    onChange={(event) => setDraft((current) => ({
+                      ...current,
+                      propertyIds: event.target.checked
+                        ? [...current.propertyIds, property.id] : current.propertyIds.filter((id) => id !== property.id)
+                    }))} />
+                  {property.name}
+                </label>
+              ))}
+            </div>
+          )}
         </div>
       ) : null}
       {step === 1 ? (
@@ -104,14 +141,14 @@ export function InviteManagerForm({ properties, onInviteManager, onSuccess }: {
           <p className="text-sm text-[var(--ink-2)]">Final step: review and send manager invite.</p>
           <div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-3 py-3 text-sm text-[var(--ink-2)]">
             <p>
-              <span className="font-semibold">Property:</span>{" "}
-              {properties.find((property) => property.id === draft.propertyId)?.name ?? "Not set"}
+              <span className="font-semibold">Homes:</span>{" "}
+              {eligibleHomes.filter((property) => pickedIds.includes(property.id)).map((property) => property.name).join(", ")}
             </p>
             <p><span className="font-semibold">Email:</span> {draft.email || "Not set"}</p>
             <p><span className="font-semibold">Name:</span> {draft.fullName || "Not set"}</p>
           </div>
           <form className="space-y-2" action={action}>
-            <input type="hidden" name="propertyId" value={draft.propertyId} />
+            <input type="hidden" name="propertyIds" value={JSON.stringify(pickedIds)} />
             <input type="hidden" name="email" value={draft.email} />
             <input type="hidden" name="fullName" value={draft.fullName} />
             <SubmitButton className="w-full" disabled={!requiredComplete} title="Send manager invitation.">

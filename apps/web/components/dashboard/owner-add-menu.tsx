@@ -13,7 +13,7 @@ export function OwnerAddMenu({ onAddHome, onAddTenant, onAddUnit, onInviteManage
   onAddTenant: () => void;
   onAddUnit?: () => void;
   onInviteManager?: StatefulAction;
-  properties: Array<{ id: string; name: string }>;
+  properties: Array<{ id: string; name: string; ownerAccountIsClient?: boolean; active?: boolean }>;
   role?: "owner" | "manager";
   homeStyle?: boolean;
   onSendAnnouncement?: () => void;

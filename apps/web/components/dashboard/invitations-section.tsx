@@ -18,6 +18,7 @@ import { InviteManagerForm } from "./invitations/invite-manager-form";
 import { InviteTenantForm } from "./invitations/invite-tenant-form";
 import { Alert } from "@/components/ui/alert";
 import { CopyInviteLinkButton, ExpiredInviteLinkNote } from "./invitations-panel";
+import { toast } from "sonner";
 
 type InvitationFlow = "tenant" | "manager" | "owner";
 
@@ -29,7 +30,7 @@ interface OwnerInviteDraft {
 
 interface InvitationsSectionProps {
   ownershipAccounts: Array<{ id: string; displayName: string }>;
-  properties: Array<{ id: string; name: string }>;
+  properties: Array<{ id: string; name: string; ownerAccountIsClient?: boolean; active?: boolean }>;
   invitations: InvitationListItem[];
   onInviteTenant: StatefulAction;
   onInviteManager: StatefulAction;
@@ -46,6 +47,24 @@ const statusVariant: Record<string, "warning" | "success" | "outline"> = {
   accepted: "success",
   expired: "outline"
 };
+
+type RowAction = StatefulAction;
+const resendWithToast = new WeakMap<RowAction, RowAction>();
+const revokeWithToast = new WeakMap<RowAction, RowAction>();
+
+function withRowToast(action: RowAction, toastSuccess: boolean): RowAction {
+  const cache = toastSuccess ? revokeWithToast : resendWithToast;
+  const cached = cache.get(action);
+  if (cached) return cached;
+  const wrapped: RowAction = async (prev, formData) => {
+    const result = await action(prev, formData);
+    if (result && !result.success && result.error) toast.error(result.error);
+    else if (result?.success && toastSuccess) toast.success(result.message ?? "Invitation revoked.");
+    return result;
+  };
+  cache.set(action, wrapped);
+  return wrapped;
+}
 
 const OWNER_STEPS = ["Pick Account", "Owner Email", "Owner Name", "Review & Send"] as const;
 
@@ -166,8 +185,8 @@ export function InvitationsSection({ ownershipAccounts, properties, invitations,
 }
 
 function InvitationRow({ invitation, last, onResendInvite, onRevokeInvite }: { invitation: InvitationListItem; last: boolean; onResendInvite: StatefulAction; onRevokeInvite?: StatefulAction }) {
-  const [resendState, resendAction] = useFormState(onResendInvite, null);
-  const [revokeState, revokeAction] = useFormState(onRevokeInvite ?? onResendInvite, null);
+  const [resendState, resendAction] = useFormState(withRowToast(onResendInvite, false), null);
+  const [, revokeAction] = useFormState(withRowToast(onRevokeInvite ?? onResendInvite, true), null);
 
   return (
     <DataRow last={last}>
@@ -175,7 +194,9 @@ function InvitationRow({ invitation, last, onResendInvite, onRevokeInvite }: { i
         <p className="text-sm font-semibold text-[var(--ink)]">{invitation.fullName}</p>
         <p className="mt-0.5 text-xs text-[var(--muted)]">{invitation.email}</p>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
-          <Badge variant={statusVariant[invitation.status] ?? "outline"}>{invitation.status.charAt(0).toUpperCase() + invitation.status.slice(1)}</Badge>
+          <Badge variant={statusVariant[invitation.status] ?? "outline"}>
+            {invitation.status === "expired" ? "Revoked" : invitation.status.charAt(0).toUpperCase() + invitation.status.slice(1)}
+          </Badge>
           <Badge variant="outline">{invitation.role.charAt(0).toUpperCase() + invitation.role.slice(1)}</Badge>
           {invitation.propertyName ? <Badge variant="outline">{invitation.propertyName}</Badge> : null}
           {invitation.ownershipAccountName ? <Badge variant="outline">{invitation.ownershipAccountName}</Badge> : null}
@@ -187,7 +208,6 @@ function InvitationRow({ invitation, last, onResendInvite, onRevokeInvite }: { i
           <div className="space-y-2">
             <form action={resendAction}>
               <input type="hidden" name="invitationId" value={invitation.id} />
-              <FormError state={resendState} />
               <FormSuccess state={resendState} message="Resent!" />
               <SubmitButton variant="outline" size="sm" title="Resend this pending invitation email.">Resend</SubmitButton>
             </form>
@@ -196,8 +216,6 @@ function InvitationRow({ invitation, last, onResendInvite, onRevokeInvite }: { i
             {onRevokeInvite ? (
               <form action={revokeAction}>
                 <input type="hidden" name="invitationId" value={invitation.id} />
-                <FormError state={revokeState} />
-                <FormSuccess state={revokeState} message="Revoked!" />
                 <SubmitButton variant="outline" size="sm" title="Revoke this pending invitation.">Revoke</SubmitButton>
               </form>
             ) : null}
