@@ -89,7 +89,7 @@ The Plaid sheet then finishes linking the bank.
 
 4. Share sheet for PDF and CSV files
 Tenant: Rent tab → View Receipt → Download PDF.
-Owner: More → Reports → open a report → Export CSV.
+Owner: More → Reports → open a report → scroll down → Export CSV.
 The iPhone share sheet opens. Save the file or share it.
 
 5. Camera and photos
@@ -195,7 +195,7 @@ Both accounts use fake homes and fake people.
 iPhone features to try:
 Face ID lock: Settings → Security.
 Native Plaid bank sheet: Home → "bank items to check" → Connect a bank.
-Share sheet: More → Reports → open a report → Export CSV.
+Share sheet: More → Reports → open a report → scroll down → Export CSV.
 
 Plaid is live, so please do not connect a real bank.
 The demo rent is under $5, so no real money can move.

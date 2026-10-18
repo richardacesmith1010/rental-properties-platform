@@ -1778,3 +1778,20 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   5. Tenant Messages tab uses a bell icon (owner uses a chat bubble); headings repeat ("Rent" ×3, "Repairs" ×2).
   6. Cold launch shows a black screen ~2 s before the splash.
 - **Not walked yet:** owner Settings → Bank Account (Stripe in Safari), Ask Domus consent, offline page, owner delete.
+
+## 2026-10-18 — Sprint 240a SHIPPED (App Review walk fixes) + walk finished
+- **240a** (`3e967f5`, L2): More menu off the dashboard lists Reports and hides Members/Manager pay; receipt has
+  "Back to Rent", clears the notch, shows dates not UTC times; tenant Messages uses the chat icon. Gate green (2,901),
+  smoke green, CI `gate` success. Re-walked on Simulator: all four verified.
+- **Rest of the walk:** Ask Domus consent names Anthropic, Not now sends nothing ✅; owner Settings → Bank Account shows
+  Set up rent payments ✅ (not tapped: it creates a LIVE Stripe Express account for the demo owner via `/connect/onboard`;
+  connect.stripe.com is outside allowNavigation so it opens Safari per notes); owner Account & Data → Delete my account ✅
+  (not pressed). Offline page NOT verified: the Simulator can't drop network and a fake host opens Safari (policy), so
+  the real offline path still needs a device check (TestFlight build 3, airplane mode).
+- **Notes fixed:** app-review-notes 1c/2d now say "open a report → scroll down → Export CSV".
+- **240b queued (L2):** receipt header overflows at phone width (Print Receipt off-screen); tenant Rent "Paid … 3:00 PM"
+  is UTC; Ask Domus Send button sits under the help "?" button.
+- **Backlog (not urgent):** sign-in callback ignores `next` (always role home); the More drawer opens ~1 s late and keeps
+  scrolling after a swipe (taps land on the wrong row); black screen ~2 s on cold launch.
+- **Owner list addition:** App Review following the notes will create one live Stripe connected account for the demo
+  owner (no money moves). Acceptable, or say "skip" and I'll change the notes to not ask them to tap it.
