@@ -69,20 +69,20 @@ describe("UnifiedPropertyWizard", () => {
     const payload = JSON.parse(((action.mock.calls as unknown as [null, FormData][])[0][1]).get("payload") as string);
     expect(payload.lease).toMatchObject({ tenantFirstName: "Maya", tenantLastName: "Lopez",
       dueDayOfMonth: 3, collectsOutsideDomus: true });
-    expect(screen.getByText("We emailed Maya an invite.")).toBeInTheDocument();
+    expect(await screen.findByText("We emailed Maya an invite.")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Connect your bank" })).not.toBeInTheDocument();
     expect(screen.getAllByText("Your home is added.")).toHaveLength(1);
   });
 
   it("offers bank setup for an invited tenant who pays online", async () => {
     await reachSuccess(false, undefined, { dueDay: "3" });
-    expect(screen.getByText("Connect your bank so tenants can pay online.")).toBeInTheDocument();
+    expect(await screen.findByText("Connect your bank so tenants can pay online.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Connect your bank" })).toHaveAttribute("href", "/connect/onboard");
   });
 
   it("hides bank setup for an invited tenant when the bank is connected", async () => {
     await reachSuccess(true, undefined, { dueDay: "3" });
-    expect(screen.getByText("We emailed Maya an invite.")).toBeInTheDocument();
+    expect(await screen.findByText("We emailed Maya an invite.")).toBeInTheDocument();
     expect(screen.queryByText("Connect your bank so tenants can pay online.")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Connect your bank" })).not.toBeInTheDocument();
   });
