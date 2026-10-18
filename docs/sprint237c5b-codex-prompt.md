@@ -1,4 +1,4 @@
-# Sprint 237c-5b — Manager invite "Resend, Revoke, join page" (L3) — rev 4 (rev 3 ChatGPT REJECT → rev 4)
+# Sprint 237c-5b — Manager invite "Resend, Revoke, join page" (L3) — rev 5 (rev 3 REJECT → rev 4 REJECT → rev 5)
 
 Severity L3 (auth/invite, access removal). `/chatgpt-review` before `/codex-dispatch`. Part 2 of 3; the index is
 `docs/sprint237c5-index.md`. **Depends on 5a.** HEAD = the local 5a commit (reviewed, committed by Claude, not deployed). Line
@@ -14,11 +14,11 @@ Manager rows written by 5a's Send get working row actions:
   re-opens the row).
 - The **join-page resend** (unauthenticated) never grants and never sends a link for a home without an active grant (D8).
 
-Invariant (restated from 5a §1): a pending manager row means the person never signed in and can get a fresh link. It has an
-active grant, except after a failed grant step, which shows "Could not add access. Press Send again." and is repaired by Send
-again or Resend. An expired row never leaves access behind: revoke expires the row and removes access in one transaction
-(D10, 5a §6.12). The join page never sends a link without an active grant (§6.6 step 7). Every runtime failure converges
-through normal app retries.
+Invariant (restated from 5a §1): an `expired` row never leaves access behind (revoke expires it and removes access in one
+locked transaction). An `accepted` row means the person signed in and has access to that home. A `pending` row means the
+person never signed in and can get a fresh link; it lacks access only after a failed grant step ("Could not add access.
+Press Send again."), repaired by Send again or Resend. The join page never sends a link without an active grant. Every
+runtime failure converges through normal app retries. Concurrency follows 5a §6.13 (restated in §2.2).
 
 This sprint ships nothing alone. 5a, 5b and 5c go to production together. At HEAD, Revoke on a manager row deletes the Auth
 user and keeps the grant; this sprint replaces that before any 5a row reaches production.
@@ -41,22 +41,30 @@ schema (5a §2.3), decisions D1-D10 (5a §2.6). Facts the requirements below dep
 
 ### 2.2 5a pieces this sprint uses (as committed in 5a)
 `lib/manager-invite.ts`: `ManagerInviteRow`, `managerInviteRedirect()`, `managerInviteMetadata(fullName)`,
-`isAuthUserConfirmed(user)`, `isUserNotFoundError(error)`, `logManagerInvite(tag, error)`, `grantInvitedRows(invitationIds,
-profileId)` → `{ error, rows: { property_id, granted }[] }` (wraps `manager_invite_grant`), and `deliverManagerInvite({ email,
-fullName, inviterId, homeNames, authEmail })` → `"email_branded" | "email_basic" | "already_joined" | "not_sent"`. It refuses
-with `not_sent` when `authEmail` differs from `email`; its branded path mints a link with `generateLink`, which never inserts
-for an existing user. `markManagerInvitationsAccepted(profileId)` (`lib/invitations.ts`) updates only `pending` rows. Do not
-change their behavior. 5a's Send grants through `manager_invite_grant`, so it skips rows revoked meanwhile.
+`isAuthUserConfirmed(user)`, `isUserNotFoundError(error)`, `logManagerInvite(tag, error)`, and these `rpc` wrappers, each
+returning `{ error, rows }`:
+- `grantInvitedRows({ invitationIds, profileId, inviterId, accept })` → rows `{ invitation_id, property_id, outcome }`,
+  outcome `granted` | `accepted` | `already_accepted` | `not_pending` (`manager_invite_grant`).
+- `acceptManagerInvites(profileId)` → rows `{ invitation_id, property_id, outcome }`, outcome `accepted` | `no_access`
+  (`manager_invite_accept`).
+`deliverManagerInvite({ email, fullName, inviterId, homeNames, authEmail })` → `"email_branded" | "email_basic" |
+"already_joined" | "not_sent"`. It refuses with `not_sent` when `authEmail` differs from `email`; its branded path mints a
+link with `generateLink`, which never inserts for an existing user. `markManagerInvitationsAccepted(profileId)`
+(`lib/invitations.ts`) calls `manager_invite_accept`. Do not change their behavior.
 
-SQL functions (5a §6.12; Claude's migration; `service_role` only; call with `createAdminClient().rpc(name, args)`):
-- `manager_invite_grant({ p_invitation_ids, p_profile_id })` → rows `{ property_id, granted }`. One transaction under row
-  locks: `pending` rows get an active grant (`granted: true`); other rows `granted: false`, no write; a guard error rolls back
-  all.
-- `manager_invite_revoke({ p_invitation_id, p_inviter_id })` → one row `{ outcome, profile_id, released, other_live }`. Locks
-  the row (id, `invited_by`, role manager). `not_found`; `already_revoked` (`expired`); `accepted`; or `revoked`: status
-  `expired`, `accepted_at` null (`invited_profile_id` kept), and, when no other `pending`/`accepted` manager row for that email
-  and home exists, the grant set inactive (`released` = a grant row was found). One transaction: an error leaves the row
-  pending with its grant.
+SQL functions (5a §6.12, source of truth `supabase/migrations/20261028_sprint237c5_manager_invite_functions.sql`;
+`service_role` only; every function takes one advisory lock per (home, manager profile) before reading or changing access):
+- `manager_invite_grant`: every id must be a manager row of that inviter bound to that profile (`invited_profile_id`, or null
+  with the profile's email), else `P0002` and nothing changes (non-manager profile: `22023`). `pending` → active grant
+  (`granted`, or `accepted` with `p_accept`); `accepted` → `already_accepted`; `expired` → `not_pending`.
+- `manager_invite_accept(p_profile_id)`: pending rows turn `accepted` only where the grant is active; others `no_access`.
+- `manager_invite_revoke({ p_invitation_id, p_inviter_id })` → one row `{ outcome, profile_id, released, other_live }`:
+  `not_found`; `already_revoked`; `accepted`; or `revoked` (status `expired`, `accepted_at` null, `invited_profile_id` kept;
+  grant inactive unless another `pending`/`accepted` row for that email and home exists). One transaction: an error leaves
+  the row pending with its grant.
+- Linearization (5a §6.13): a Send or Resend takes effect when `manager_invite_grant` commits. A Revoke that commits after that
+  and before the email still wins (row `expired`, access off). The success copy and the email may still go out; the link
+  signs the person in but gives no access to that home. No app-level lock is held across the email.
 
 ### 2.3 Today's code
 Line counts (`apps/web/`): `app/actions/tenant-invitations.ts` 379, `join-invite.ts` 66; `lib/invite-resend.ts` 107. Tests:
@@ -100,7 +108,7 @@ Codex:
 4. `apps/web/app/actions/join-invite.ts` (manager branch only)
 5. Tests (each new file ≤ 500 lines):
    - `apps/web/app/actions/__tests__/manager-invite-revoke.test.ts` (new, B1-B10)
-   - `apps/web/app/actions/__tests__/manager-invite-resend.test.ts` (new, B11-B16)
+   - `apps/web/app/actions/__tests__/manager-invite-resend.test.ts` (new, B11-B16, B21, B22)
    - `apps/web/app/actions/__tests__/fake-invite-db.ts`, `fake-gotrue.ts` (5a files; extend only if a test needs it; keep
      every 5a test green; each stays ≤ 500 lines)
    - `apps/web/app/actions/__tests__/tenant-invitations.test.ts` (edit, B17-B18), `join-invite.test.ts` (edit, B19)
@@ -117,21 +125,24 @@ Claude (not Codex): `supabase/migrations/20261028_sprint237c5_charge_edit_histor
 1. `row.status !== "pending"` → `not_pending`.
 2. `profileId = row.invited_profile_id ??` `profiles.select("id, role").eq("email", row.email).maybeSingle()`. Error, none, or
    not manager → `lookup_failed`.
-3. `getUserById(profileId)`. `user_not_found` or none → `login_gone`. Other error → `lookup_failed`. Confirmed → `update({
-   status: "accepted", accepted_at: user.last_sign_in_at ?? user.email_confirmed_at ?? now, invited_profile_id: profileId })
-   .eq("id", row.id).eq("status", "pending")`. Error → `lookup_failed`; else `already_joined`.
-4. `properties.select("id, name").eq("id", row.property_id).maybeSingle()`. Error or none → `lookup_failed`.
-5. `canUserAdministerProperty(inviterId, row.property_id)` false → `no_access`.
-6. `getClientStateForProperty(row.property_id)`: a throw → `lookup_failed`; `managedClient` → `client_home`.
-7. Access:
-   - `grant: true` (owner Resend): `grantInvitedRows([row.id], profileId)`. Error → `grant_failed`. The row returned `granted:
-     false` (revoked in another tab) → `not_pending`. No re-read and no release: the function skips a revoked row.
+3. Authorization first, before any confirmed check: `properties.select("id, name").eq("id", row.property_id).maybeSingle()`.
+   Error or none → `lookup_failed`.
+4. `canUserAdministerProperty(inviterId, row.property_id)` false → `no_access`.
+5. `getClientStateForProperty(row.property_id)`: a throw → `lookup_failed`; `managedClient` → `client_home`.
+6. `getUserById(profileId)`. `user_not_found` or none → `login_gone`. Other error → `lookup_failed`. Confirmed:
+   - `grant: true`: `grantInvitedRows({ invitationIds: [row.id], profileId, inviterId, accept: true })`. Error →
+     `grant_failed`. `accepted` or `already_accepted` → `already_joined`; `not_pending` → `not_pending`.
+   - `grant: false` (join page): `acceptManagerInvites(profileId)`. Error → `lookup_failed`. This row `accepted`, or absent
+     (no longer pending) → `already_joined`; `no_access` → `no_access`. It never writes grants (D8).
+7. Unconfirmed, access:
+   - `grant: true` (owner Resend): `grantInvitedRows({ invitationIds: [row.id], profileId, inviterId, accept: false })`. Error
+     → `grant_failed`. `not_pending` (revoked in another tab) → `not_pending`.
    - `grant: false` (join page, D8): `property_managers.select("active").eq("property_id", row.property_id)
      .eq("manager_profile_id", profileId).maybeSingle()`. Error → `lookup_failed`; none or inactive → `no_access`. It never
      writes `property_managers`.
 8. `deliverManagerInvite({ email: row.email, fullName: row.full_name, inviterId, homeNames: [home.name], authEmail: user.email
-   })` (step 3's user). Sent → `{ ok: true, invitedProfileId: profileId }`. `already_joined` → mark the row as in step 3,
-   `already_joined`. `not_sent` → `send_failed`.
+   })` (step 6's user). Sent → `{ ok: true, invitedProfileId: profileId }`. `already_joined` (signed in meanwhile) → run step
+   6's confirmed branch and return its reason. `not_sent` → `send_failed`.
 
 Owner Resend (`resendInvite`): after :307-309, `if (invitation.role === "manager")` → `resendManagerInvite(invitation, {
 inviterId: user.id, grant: true })`:
@@ -164,15 +175,16 @@ user.id })`. Tenant and owner rows keep :361-378 exactly.
    its client account."` No `canUserAdministerProperty` check (D6).
 3. `profileId = row.invited_profile_id ??` profile by email (`maybeSingle`). Error → `"Failed to revoke invitation."` None, or
    not manager → `profileId = null` (no access to remove).
-4. If `profileId`: `getUserById`. `user_not_found` or none → `loginGone = true` (keep `profileId`; its grant can still go).
-   Other error → `"Failed to revoke invitation."` Confirmed → mark the row accepted (§6.6 step 3; error → `"Failed to revoke
-   invitation."`), revalidate, `"They already signed in. This invite can't be revoked."` Else `unconfirmed = true`.
+4. If `profileId`: `getUserById`, only to decide `loginGone` and the link reset. `user_not_found` or none → `loginGone = true`
+   (keep `profileId`; its grant can still go). Other error → `"Failed to revoke invitation."` Unconfirmed → `unconfirmed =
+   true`. A confirmed person is **not** a special case: a pending row is always revoked through step 5, even if they signed
+   in. They lose that home unless another live row gives it (Undo (6)).
 5. `createAdminClient().rpc("manager_invite_revoke", { p_invitation_id: row.id, p_inviter_id: userId })`, whether or not
    `profileId` is set. Error or no row → log `revoke_failed`, `"Failed to revoke invitation."` The row stays pending with its
    grant, Revoke still shows, and a retry converges. By `outcome`:
    - `not_found` → `"Failed to revoke invitation."`
    - `already_revoked` → `"This invite was already revoked."`
-   - `accepted` (signed in meanwhile) → no writes, revalidate, step 4's signed-in copy.
+   - `accepted` → no writes, revalidate, `"They already signed in. This invite can't be revoked."`
    - `revoked` → keep `released` and `other_live`; steps 8-10.
 6. (Removed in rev 4: the function expires the row and removes access in one transaction.)
 7. (Removed in rev 4: the row lock serializes Revoke with a sign-in, Resend or Send. Their grants skip an expired row, and
@@ -193,13 +205,15 @@ user.id })`. Tenant and owner rows keep :361-378 exactly.
     gives them this home."` when `other_live`. Every other return is `{ success: false, error }`.
 
 Undo (L-016). A Send writes: (1) for a new invitee, an Auth user and its `profiles` row (role manager); (2) one pending row per
-home; (3) one active grant per home; (4) a live link. Revoke undoes one home: its row and its grant, in one transaction (step 5). It kills
-the link (step 8) only when no other pending manager row remains for the email, so an N-home Send needs N Revokes and the link
-works until the last. (1) is never undone (D4): the email stays a manager profile, so later tenant or owner invites to it are
-refused with today's copy (`tenant-invitations.ts:157`, `invitations.ts:239-244`), as at HEAD. Re-invite ("do again") re-opens
-the same row id, re-grants and sends a new link. (5) A Send to a signed-in manager (5a §6.3) only adds grants, with no row and
-no email. Nothing in the app can undo it: Revoke needs a row, and no remove-manager action exists. With many homes this is N
-homes in one click. Removing a signed-in manager is a C6 follow-up (5c).
+home; (3) one active grant per home; (4) a live link. Revoke undoes one home: its row and its grant, in one locked transaction
+(step 5). It kills the link (step 8) only when no other pending manager row remains for the email, so an N-home Send needs N
+Revokes and the link works until the last. (1) is never undone (D4): the email stays a manager profile, so later tenant or
+owner invites to it are refused with today's copy (`tenant-invitations.ts:157`, `invitations.ts:239-244`), as at HEAD.
+Re-invite ("do again") re-opens the same row id, re-grants and sends a new link. (5) A Send to a signed-in manager (5a §6.3)
+on a home with no row of this inviter only adds grants, with no row and no email. Nothing in the app can undo it: Revoke
+needs a row, and no remove-manager action exists. With many homes this is N homes in one click. Removing a signed-in manager
+is a C6 follow-up (5c). (6) Revoking a pending row of a person who already signed in removes that home, unless another live
+row gives it. Re-adding them from the form gives it back (5a §6.3 re-opens the row and grants it).
 
 ### 6.11 Logging, errors, safety
 - Every Supabase call's `{ error }` is read (L-002). No path returns success for work it did not do.
@@ -234,7 +248,7 @@ Test rules: as 5a §8 (real actions and helpers; no `expect` in a mock; `@exampl
 builder or Auth API). The two new files mock **only** `@/app/actions/auth-helpers`, `@/lib/supabase/admin` (the 5a fake world),
 `@/lib/audit`, `next/cache`, `next/headers`, `server-only` and global `fetch`; everything else is real, including
 `manager-invite`, `manager-invite-rows`, `invite-resend`, `tenant-invitations` and `join-invite`. The only seed is the live
-legacy shape (B4). Op names and hooks are 5a's: `db:<table>:<op>`, `auth.<method>`, `auth.insert|rotate|email`,
+legacy shape (B4). Op names and hooks are 5a's: `db:<table>:<op>`, `rpc:<name>`, `auth.<method>`, `auth.insert|rotate|email`,
 `beforeOp`/`afterOp`/`failNext`/`failAuth`, and the helpers `clickLink`, `dropAuthUser`, `setAuthEmail`, `selfSignUp`.
 
 **`manager-invite-revoke.test.ts`:**
@@ -246,19 +260,20 @@ legacy shape (B4). Op names and hooks are 5a's: `db:<table>:<op>`, `auth.<method
 - B3 "re-add after revoke". Invite, Revoke, the person signs in through another inviter's link, re-add from the form: the same
   row id reads `accepted`.
 - B4 "live legacy row heals" (seeded: user created first, confirmed, grant active, `invited_profile_id` null), no email in any
-  case: (b) Resend → `"They already signed in. No email was sent."`, accepted; (c) Revoke → `"They already signed in. This
-  invite can't be revoked."`, grant active; (d) join-page resend → `"This invite was already used. Sign in instead."`
+  case: (b) Resend → `"They already signed in. No email was sent."`, accepted; (c) Revoke → `"Invitation revoked."`; row `expired`;
+  grant inactive (no other live row); (d) join-page resend → `"This invite was already used. Sign in instead."`
 - B5 "two inviters, one person". Both rows pending; one sign-in accepts both. Revoke by A while B's row is live keeps the
   grant: `"Invitation revoked. Another invite still gives them this home."`; no link reset.
-- B6 "revoke after the invitee signed in". `clickLink` only (row still pending). Revoke → `"They already signed in. This
-  invite can't be revoked."`; row `accepted`; grant active.
+- B6 "revoke after the invitee signed in". `clickLink` only (row still pending). Revoke → `"Invitation revoked."`; row
+  `expired`; grant inactive. With B's row live on that home, the grant stays and the copy names the other invite.
 - B7 "revoke vs sign-in". (a) `beforeOp("rpc:manager_invite_revoke", …)` runs `clickLink` and
-  `markManagerInvitationsAccepted`: the function returns `accepted`; B6's copy; row `accepted`; grant active. (b)
+  `markManagerInvitationsAccepted`: the function returns `accepted`; `"They already signed in. This invite can't be
+  revoked."`; row `accepted`; grant active. (b)
   `afterOp("rpc:manager_invite_revoke", …)` runs the same: Revoke wins; `"Invitation revoked."`; row `expired`; grant
   inactive; `markManagerInvitationsAccepted` changed 0 rows.
 - B8 races:
   - (a) "revoke during Resend". `beforeOp("rpc:manager_invite_grant", …)` during Resend runs a full Revoke: the grant returns
-    `granted: false`; Resend returns `"This invite was revoked. Send a new invite."`; row `expired`; grant inactive; 0 emails.
+    `not_pending`; Resend returns `"This invite was revoked. Send a new invite."`; row `expired`; grant inactive; 0 emails.
   - (b) "resend during Revoke". `afterOp("rpc:manager_invite_revoke", …)` during Revoke runs a full Resend: Resend returns
     `"This invite was revoked. Send a new invite."`; row `expired`; grant inactive; 0 emails. Variant with `beforeOp`: the
     Resend email goes out first, then Revoke expires the row, removes the grant and resets the link; the emailed token fails
@@ -266,6 +281,13 @@ legacy shape (B4). Op names and hooks are 5a's: `db:<table>:<op>`, `auth.<method
   - (c) "revoke during Send". New invitee, one home, mode off. `beforeOp("rpc:manager_invite_grant", …)` during
     `inviteManager` runs a full `revokeInvite` of that row. Send returns `"This invite was revoked. Send a new invite."`; row
     `expired`; no active `property_managers` row for that home and person; 0 `auth.email`; 0 `fetch`.
+  - (d) "revoke after the grant, during Send" (5a §6.13). New invitee, one home, mode off. `afterOp("rpc:manager_invite_grant",
+    …)` during `inviteManager` runs a full `revokeInvite`. The success copy is allowed. The row ends `expired`, the grant
+    inactive, exactly 1 `auth.email`. `clickLink(<emailed token>)` + `markManagerInvitationsAccepted(P)` → the row stays
+    `expired` with no active grant.
+  - (e) "revoke after the grant, during Resend". As (d) with `afterOp("rpc:manager_invite_grant", …)` during owner Resend:
+    `"Invitation resent."` is allowed; row `expired`; grant inactive; exactly 1 `auth.email` from the Resend; `clickLink` +
+    `markManagerInvitationsAccepted(P)` → still `expired`, no grant.
 - B9 "revoke when the login is gone". (a) Invite, then `dropAuthUser(P)`. Revoke → `"Invitation revoked."`; row `expired`;
   grant inactive; no `generateLink`; no `auth.insert`. (b) Invite, then `dropAuthUser(P)`. Resend → `"This person's login is
   gone. Revoke this invite."`; 0 Auth writes. (c) Invite, then `setAuthEmail(P, "other@example.com")`. Revoke →
@@ -299,14 +321,22 @@ legacy shape (B4). Op names and hooks are 5a's: `db:<table>:<op>`, `auth.<method
   `resendManagerInvite(fresh, { inviterId: fresh.invited_by, grant: false })`; each reason (including `login_gone`) → its §6.6
   join copy; tenant rows still use `resendInvitationEmail` and their unfiltered bump.
 - B20 Full suite (every 5a test still green), `tsc`, lint and `lib/__tests__/plain-language.test.ts` are green.
+- B21 (resend file) "Resend checks access before the confirmed check". The invitee signed in (`clickLink`; row pending).
+  (a) The inviter lost the home → `"You no longer manage this home."`; row `pending`; no `rpc:manager_invite_grant`. (b) The
+  home's account became `managed_client` → `"This home's managers are set by its client account."`; no grant call. (c) The
+  join page for that row with the inviter's access gone → `INACTIVE_INVITE_MESSAGE`; no `rpc:manager_invite_accept`.
+- B22 (resend file) "join page accepts only with access". Send with `failNext("rpc", "manager_invite_grant")`, then
+  `clickLink`. Join resend → `rpc:manager_invite_accept` returns `no_access` → `INACTIVE_INVITE_MESSAGE`; row `pending`; 0
+  emails; 0 `property_managers` writes. Owner Resend then → `"They already signed in. No email was sent."`; row
+  `accepted`; grant active.
 
 **Mutation proofs (in the report; revert each):** M2 pass `grant: true` from the join page → B12. M5a call
-`deleteGeneratedInviteUser(profileId)` in `revokeManagerInvite` → B1; M5b in `revokeInvite`'s manager branch → B18. M7 drop
-`.eq("status", "pending")` from `markManagerInvitationsAccepted` → B7(b) (the expired row turns `accepted`; the function keeps
-`invited_profile_id`, so that filter is what stops it). M8 make 5a §6.2 step 11 a plain `property_managers` upsert that
-ignores row status → B8(c). M10 make Resend upsert `property_managers` directly instead of `grantInvitedRows` → B8(a). M7 and
-M8 temporarily edit 5a files (`lib/invitations.ts`, `app/actions/invitations.ts`); revert them; the final diff must not
-touch them.
+`deleteGeneratedInviteUser(profileId)` in `revokeManagerInvite` → B1; M5b in `revokeInvite`'s manager branch → B18. M7
+restore the Revoke "confirmed → mark accepted" branch → B6 and B4(c). M8 make 5a §6.2 step 11 a plain `property_managers`
+upsert that ignores row status → B8(c) (temporarily edits `app/actions/invitations.ts`, a 5a file; revert it; the final diff
+must not touch it). M10 make Resend upsert `property_managers` directly instead of `grantInvitedRows` → B8(a). M20 move the
+confirmed check (step 6) before the authorization checks (steps 3-5) → B21. M21 let the fake's `manager_invite_accept` ignore
+the grant → B22 (it mutates the model; the SQL suite A1 proves the real guard).
 
 **Claude only (not Codex):**
 - C2 Before ship. md5 of `handle_new_user` still `2c51636368d7ef759fd151508e904240` (L-012). Rolled-back proof (an email with
@@ -314,9 +344,11 @@ touch them.
   `auth.users` insert with manager metadata → row accepted, grant active; a second new email inserted into `auth.users`
   first, then its pending row → row pending, no `property_managers` row; ROLLBACK. Attacker SQL as `authenticated`: INSERT and
   UPDATE on `invitations` and `property_managers` are denied (L-021). As `authenticated` and `anon`,
-  `has_function_privilege(…, 'EXECUTE')` is false for `manager_invite_grant` and `manager_invite_revoke`; the rolled-back
-  `supabase/tests/sprint237c5_manager_invite_functions.sql` (5a C7) covers every branch of both functions plus the
-  client-home guard rollback. Revoke leaves `property_managers.active = false` and
+  `has_function_privilege(…, 'EXECUTE')` is false for all five functions. Re-run the rolled-back
+  `supabase/tests/sprint237c5_manager_invite_functions.sql` (G1-G4, R1-R5, A1, H1, X1, P1) and the race harness
+  `supabase/tests/sprint237c5_manager_invite_race.mjs` (control A reproduces the bug; B-E pass; see
+  `supabase/tests/sprint237c5_manager_invite_concurrency.md`). The vitest fakes are sequential and only model the
+  functions; Postgres proves the locking. Revoke leaves `property_managers.active = false` and
   keeps the Auth user (D4). A revoked invitee can still get a session (Forgot password, or Create account re-sends a confirm
   link). As `authenticated` with that user's JWT (rolled back), SELECT every table whose policy or definer function reads
   `property_managers` for that home; each returns 0 rows. Live 2026-10-17, `charge_edit_history` policy "Property owners can
@@ -330,18 +362,19 @@ touch them.
 - Before 5c dispatch, Claude reviews this sprint and commits it locally on top of 5a; it is not deployed.
 
 ## 9. Report format
-Compact status only: files changed with line counts, the test for each criterion (B1-B20), `grep -c "it("` per new test
-file, mutation results (M2, M5a, M5b, M7, M8, M10), command results.
+Compact status only: files changed with line counts, the test for each criterion (B1-B22), `grep -c "it("` per new test
+file, mutation results (M2, M5a, M5b, M7, M8, M10, M20, M21), command results.
 Do NOT include 'Claude prompt' or 'recommended next steps for Claude' sections. Report compact status only.
 
 ## 10. Constraints
 - Only the files in §5. No new dependencies. No SQL from Codex.
 - `inviteTenant` stays byte-identical. Tenant and owner resend and revoke keep their behavior; they see only the wider revoke
-  select. 5a's files do not change (except M7's and M8's reverted mutations).
+  select. 5a's files do not change (except M8's reverted mutation).
 - Never call an Auth API that inserts `auth.users` after writing a pending row for that email (L-029). §6.7 step 8 never runs
   when `profileId` is null, `loginGone`, or the Auth email differs.
 - No `deleteUser` or `deleteGeneratedInviteUser` in any manager path. No `fetch` outside 5a's `sendInviteEmail`.
-- Manager grants from rows go only through `grantInvitedRows`; manager revokes only through `manager_invite_revoke` (D10).
+- Access and acceptance change only through 5a's §6.12 wrappers and `manager_invite_revoke` (D10): no `property_managers`
+  write and no `accepted` status write from 5b code.
 - Exact copy only. Invent no strings, URLs or emails. Fixtures use `@example.com`.
 - Size, line-length and catch rules as §6.11.
 - If anything in the live schema or GoTrue behavior blocks you, stop and report. Do not work around it.

@@ -1,12 +1,10 @@
-# Sprint 237c-5 — Manager invite redesign: index (rev 4)
+# Sprint 237c-5 — Manager invite redesign: index (rev 5)
 
-Rev 4 (5a, 5b): rev 3 ChatGPT REJECT → rev 4; see "ChatGPT round 1". 5c and this index only update references.
+Rev 5 (5a, 5b): rev 3 REJECT → rev 4 REJECT → rev 5 (owner approved); see "ChatGPT round 1" and "round 2". 5c and this
+index only update references.
 
 Rev 3 splits rev 2 (`docs/sprint237c5-codex-prompt.md`, now superseded) into three L3 Codex packets and folds in all 16
 completeness-critic items (`docs/sprint237c5-critic-notes.md` §2) plus the C1 live results. HEAD `0e4a85c`.
-
-## Why split
-Rev 2 was too big for one Codex run (critic §1: 14 source files, 12 test files, ~52 tests). Section numbers stay from rev 2.
 
 ## The three sprints
 - **5a Send** (`docs/sprint237c5a-codex-prompt.md`, A1-A36): §6.1 helpers, §6.2 `inviteManager`, §6.3, §6.4, §6.5 accept
@@ -24,7 +22,7 @@ Rev 2 was too big for one Codex run (critic §1: 14 source files, 12 test files,
 - 5a + 5b + 5c ship to production together in one release, after all three pass review. 5a alone would leave HEAD's Revoke
   (deletes the Auth user, keeps the grant) in front of the new rows; 5c needs 5a's schema.
 - Before that release deploys: Claude applies the `charge_edit_history` `pm.active` migration (5b C2) and the
-  `manager_invite_grant` / `manager_invite_revoke` functions (5a C7), each with its rollback.
+  five §6.12 functions (5a C7), each with its rollback, after re-running the SQL suite and race harness.
   After deploy: Claude C4 backfill, C5 checks, Claude C3 walk, C6 handoff.
 
 ## Critic §2 items → where
@@ -53,6 +51,20 @@ Rev 2 was too big for one Codex run (critic §1: 14 source files, 12 test files,
   retargeted (M7 is falsifiable because revoke keeps `invited_profile_id`). 5b C2 adds EXECUTE checks.
 - Optional: A1 narrowed to "embedded SQL text equals the latest migration" — ADOPTED. Legit same-name race — ADOPTED (A24(d)).
 
+## ChatGPT round 2 (rev 4: REJECT; provenance Pass) → rev 5
+Proof files (commit `5ead674`, not applied): `supabase/migrations/20261028_sprint237c5_manager_invite_functions.sql` (5
+functions), `supabase/tests/sprint237c5_manager_invite_functions.sql` (rolled-back; G1-G4, R1-R5, A1, H1, X1, P1 pass),
+`supabase/tests/sprint237c5_manager_invite_race.mjs` + `…_concurrency.md` (live two sessions; no-lock control A breaks, B-E ok).
+- R1 concurrent final revokes — ADOPTED: one advisory lock per (home, manager), ascending, before row locks (5a §6.12, D10).
+- R2 identity binding — ADOPTED: `manager_invite_grant(ids, profile, inviter, p_accept)`; `P0002` / `22023` roll back all
+  (5a §6.12; fake contract A37; M18).
+- R3 accept only with access — ADOPTED: `manager_invite_accept` (5a §6.5), `p_accept` grants and accepts together,
+  `manager_grant_homes` for §6.3. `grantManagerHomes` / `markManagerRowsAccepted` deleted. Tests A9, B22; M19, M21.
+- R4 linearization — ADOPTED: 5a §6.13, 5b §2.2; tests B8(d) Send and B8(e) Resend (`afterOp` grant → full revoke).
+- R5 real Postgres tests — ADOPTED as Claude items: 5a C7 and 5b C2 re-run both SQL files and the race harness.
+- App: §6.3 re-opens expired rows as an explicit re-add; Resend authorizes before the confirmed check (B21, M20); Revoke always
+  revokes a pending row, even after sign-in (B4(c), B6, M7; 5b Undo (6)).
+
 ## Live results round 2 (Claude, 2026-10-18 01:27Z; X2, X3 = `+c5probe2`/`+c5probe3`, both now used)
 `createUser({ email_confirm: false })` inserts (trigger fires, role from `user_metadata`), sends no mail (`user_signedup`), and
 is create-only (existing email → `email_exists` 422). The `app_metadata` marker survives `generateLink` and `verifyOtp`;
@@ -71,9 +83,10 @@ Vercel Production: allowlist set, `DOMUS_NOTIFICATIONS_ENABLED` absent → mode 
 
 ## Old → new test map
 - 5a: 1-10 → A1-A10 (Resend halves of 7, 9 → B16); 13 → A11; 30 → A12 (M4 is 5a); 14(a) → A13; 15(a) → A14; 16-24 →
-  A15-A23; 25 → A24 ((a) tenant race, (b), (c) attack, (d) same name); 26(b) → A25; new → A26; 38-39, 43-49 → A27-A35; 52 → A36.
+  A15-A23; 25 → A24 ((a) tenant race, (b), (c) attack, (d) same name); 26(b) → A25; new → A26; 38-39, 43-49 → A27-A35; 52 → A36;
+  rev 5 new → A37.
 - 5b: 11, 12 → B1, B2; 14(b) → B3; 15(b-d) → B4; 26-28 → B5-B7; 29 → B8; 34 → B9; 35 → B10; 31-33 → B11-B13; 36, 37 →
-  B14, B15; Resend halves → B16; 40-42 → B17-B19; 52 → B20. 5c: 50 → C1; 51 → C2; 52 → C3.
+  B14, B15; Resend halves → B16; 40-42 → B17-B19; 52 → B20; rev 5 new → B8(d, e), B21, B22. 5c: 50 → C1; 51 → C2; 52 → C3.
 
 ## Residual risk
 Two inviters sending to one brand-new email at the same moment: the second gets "Could not check this email. Try again."

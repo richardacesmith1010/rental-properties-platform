@@ -1,4 +1,4 @@
-# Sprint 237c-5a — Manager invite "Send" (L3) — rev 4 (rev 3 ChatGPT REJECT → rev 4)
+# Sprint 237c-5a — Manager invite "Send" (L3) — rev 5 (rev 3 REJECT → rev 4 REJECT → rev 5)
 
 Severity L3 (auth/invite, access grants, outbound email). `/chatgpt-review` before `/codex-dispatch`. Part 1 of 3; the index
 is `docs/sprint237c5-index.md`. 5b (Resend, Revoke, join page) and 5c (UI) build on this commit. HEAD is `0e4a85c` (app code
@@ -18,10 +18,12 @@ The order of work is the whole fix (L-029):
 3. Send the email last.
 4. Mark rows accepted when the person signs in (`/auth/callback`).
 
-Invariant: a pending manager row means the person never signed in and can get a fresh link. It has an active grant, except
-after a failed grant step, which shows "Could not add access. Press Send again." and is repaired by Send again or Resend. An
-expired row never leaves access behind: revoke expires the row and removes access in one transaction (D10, §6.12). The join
-page never sends a link without an active grant (5b §6.6 step 7). Every runtime failure converges through normal app retries.
+Invariant: an `expired` row never leaves access behind (revoke expires it and removes access in one locked transaction).
+An `accepted` row means the person signed in and has access to that home (rows turn accepted only together with, or after,
+an active grant). A `pending` row means the person never signed in and can get a fresh link; it lacks access only after a
+failed grant step, which shows "Could not add access. Press Send again." and is repaired by Send again or Resend. The join
+page never sends a link without an active grant (5b §6.6). Every runtime failure converges through normal app retries.
+Concurrency is defined in §6.13.
 
 This sprint ships nothing alone. 5a, 5b and 5c go to production together (index, "Ship plan").
 
@@ -233,15 +235,16 @@ Do **not** reuse: the write order; the in-flight `Map` (:528); the retry branch 
 - **D8** The join-page resend never writes grants and never sends a link for a home without an active grant (5b).
 - **D9** The branded link is `/auth/confirm?token_hash=…&type=invite` (prefetch-safe; no tokens in the URL). Tenant emails keep
   `action_link`.
-- **D10** A row's grant and a row's revoke each run in one SQL transaction (§6.12, Claude's functions), so a row's status and
-  its access never split.
+- **D10** Every access change for a (home, manager) pair runs in one of Claude's SQL functions (§6.12), each in one
+  transaction under one shared advisory lock per (home, manager profile). Grants are bound to the inviter and profile;
+  rows turn accepted only with an active grant. The app never writes `property_managers` or an `accepted` status directly.
 
 ## 3. In scope
 - Rewrite `inviteManager` (many homes; Auth, then rows and grant, then email). The §6.1 helpers, used again by 5b.
 - Sign-in acceptance of manager rows. The branded email and its gate. The schema's `propertyIds` (legacy `propertyId` kept, so
   today's form keeps working until 5c).
-- Calls to Claude's two SQL functions (§6.12) through `admin.rpc`.
-- Fakes that replay the live trigger, GoTrue and the two functions, and the tests in §8.
+- Calls to Claude's SQL functions (§6.12) through `admin.rpc`.
+- Fakes that replay the live trigger, GoTrue and the functions (sequentially), and the tests in §8.
 
 ## 4. Out of scope
 - Owner Resend, Revoke, the join-page resend, the `invite-resend.ts` guard (5b). The form, entry points, badge and toasts (5c).
@@ -265,15 +268,18 @@ Codex:
    - `apps/web/app/actions/__tests__/fake-invite-db.ts`, `fake-gotrue.ts` (new helpers; not test files)
    - `apps/web/app/actions/__tests__/manager-invite-trigger-model.test.ts` (new, A1-A12)
    - `apps/web/app/actions/__tests__/manager-invite-guards.test.ts` (new, A13-A26)
+   - `apps/web/app/actions/__tests__/manager-invite-rpc-model.test.ts` (new, A37: the fake's function contract)
    - `apps/web/app/actions/__tests__/invitations.test.ts` (edit, A27-A28)
    - `apps/web/app/auth/__tests__/callback-route.test.ts` (new, A29)
    - `apps/web/lib/__tests__/invitations.test.ts` (edit, A30)
    - `apps/web/lib/__tests__/manager-invite-email.test.ts` (new, A31-A33); `invite-email.test.ts` (edit, A34)
    - `apps/web/lib/__tests__/validations.test.ts` (edit only the `inviteManagerSchema` block, :1101-1138; A35)
 
-Claude (not Codex): `supabase/migrations/20261028_sprint237c5_manager_invite_functions.sql` (§6.12),
+Claude (not Codex; written and proved in commit `5ead674`, not applied):
+`supabase/migrations/20261028_sprint237c5_manager_invite_functions.sql` (§6.12),
 `supabase/rollback/20261028_sprint237c5_manager_invite_functions_rollback.sql`,
-`supabase/tests/sprint237c5_manager_invite_functions.sql` (rolled-back test of every branch). C1 is done (index).
+`supabase/tests/sprint237c5_manager_invite_functions.sql` (rolled-back suite), `supabase/tests/sprint237c5_manager_invite_race.mjs`
+and `supabase/tests/sprint237c5_manager_invite_concurrency.md` (live two-session proof). C1 is done (index).
 
 ## 6. Implementation requirements
 
@@ -281,7 +287,6 @@ Claude (not Codex): `supabase/migrations/20261028_sprint237c5_manager_invite_fun
 ```ts
 export type ManagerInviteRow = { id: string; email: string; full_name: string; status: string;
   property_id: string; invited_profile_id: string | null };
-type DbResult = Promise<{ error: unknown | null }>;
 managerInviteRedirect(): string        // `${APP}/auth/callback`
 managerInviteUrl(hashedToken: string): string // `${APP}/auth/confirm?token_hash=${encodeURIComponent(hashedToken)}&type=invite`
 managerInviteMetadata(fullName: string) // { role: "manager", full_name: fullName } (HEAD :128-131)
@@ -293,10 +298,14 @@ isUserNotFoundError(error): boolean    // error?.code === "user_not_found"
 logManagerInvite(tag: string, error: unknown): void
 writeManagerRows(p: { email: string; fullName: string; inviterId: string; propertyIds: string[]; profileId: string })
   : Promise<{ error: unknown | null; rows: Array<{ id: string; property_id: string }> }>
-grantManagerHomes(profileId: string, propertyIds: string[]): DbResult // §6.3 only (no rows there)
-grantInvitedRows(invitationIds: string[], profileId: string)
-  : Promise<{ error: unknown | null; rows: Array<{ property_id: string; granted: boolean }> }>
-markManagerRowsAccepted(p: { inviterId: string; email: string; propertyIds: string[]; profileId: string }): DbResult
+type GrantOutcome = "granted" | "accepted" | "already_accepted" | "not_pending";
+grantInvitedRows(p: { invitationIds: string[]; profileId: string; inviterId: string; accept: boolean })
+  : Promise<{ error: unknown | null; rows: Array<{ invitation_id: string; property_id: string; outcome: GrantOutcome }> }>
+grantNewHomes(profileId: string, propertyIds: string[])   // §6.3 homes with no row of this inviter
+  : Promise<{ error: unknown | null; rows: Array<{ property_id: string; added: boolean }> }>
+acceptManagerInvites(profileId: string)                   // 5b join page; sign-in uses §6.5
+  : Promise<{ error: unknown | null; rows: Array<{ invitation_id: string; property_id: string; outcome: "accepted" |
+    "no_access" }> }>
 deliverManagerInvite(p: { email: string; fullName: string; inviterId: string; homeNames: string[];
   authEmail: string | null })
   : Promise<"email_branded" | "email_basic" | "already_joined" | "not_sent">
@@ -306,13 +315,12 @@ deliverManagerInvite(p: { email: string; fullName: string; inviterId: string; ho
   `revokeManagerInvite`) map errors to copy.
 - `logManagerInvite`: `` console.error(`[manager-invite] ${tag}`, { code: error?.code ?? null, message }) ``, `message` being
   the error message or `String(error)`. Never log an email, a name, a link, a token or FormData.
-- `grantManagerHomes` (§6.3 only): one `property_managers.upsert(propertyIds.map((id) => ({ property_id: id, manager_profile_id:
-  profileId, active: true })), { onConflict: "property_id,manager_profile_id" })`.
-- `markManagerRowsAccepted`: `invitations.update({ status: "accepted", accepted_at: now, invited_profile_id: profileId })
-  .eq("invited_by", inviterId).eq("email", email).eq("role", "manager").in("property_id", propertyIds)
-  .in("status", ["pending", "expired"])`. Call it only when every home in `propertyIds` has an active grant.
-- `grantInvitedRows`: `admin.rpc("manager_invite_grant", { p_invitation_ids: invitationIds, p_profile_id: profileId })`;
-  `{ data, error }` → `{ error, rows: data ?? [] }` (§6.12). Used by §6.2 step 11 and 5b's Resend.
+- `grantInvitedRows`: `admin.rpc("manager_invite_grant", { p_invitation_ids, p_profile_id, p_inviter_id, p_accept })`.
+  `grantNewHomes`: `admin.rpc("manager_grant_homes", { p_profile_id, p_property_ids })`. `acceptManagerInvites`:
+  `admin.rpc("manager_invite_accept", { p_profile_id })`. Each maps `{ data, error }` to `{ error, rows: data ?? [] }`
+  (§6.12). A raised `P0002` or `22023` is an `error` like any other; nothing was changed.
+- There is no `grantManagerHomes` and no `markManagerRowsAccepted`: no app code writes `property_managers` or sets
+  `accepted` itself (D10).
 
 ### 6.2 `inviteManager` (replaces `invitations.ts:19-192`)
 "Stop" means return at once; nothing more is written or sent. `{name}` is `fullName || email`. All reads and writes use one
@@ -361,10 +369,10 @@ deliverManagerInvite(p: { email: string; fullName: string; inviterId: string; ho
     - Return every `{ id, property_id }` that (a) and (b) returned.
     - Error → log `rows_failed`, `"Could not save the invite. Press Send again."` Stop. The user exists unconfirmed, so Send
       again takes the pending-invitee path.
-11. `grantInvitedRows(rowIds, profileId)` (§6.12 `manager_invite_grant`; skip the call when there are no row ids). Error →
-    log `grant_failed`, `"Could not add access. Press Send again."` Stop; nothing changed. The function grants only rows
-    still `pending`, under their row locks. A row returned `granted: false` was revoked meanwhile (another tab): drop its home.
-    Kept homes = picked homes minus the dropped ones. None kept → `"This invite was revoked. Send a new invite."`
+11. `grantInvitedRows({ invitationIds: rowIds, profileId, inviterId: user.id, accept: false })` (§6.12
+    `manager_invite_grant`; skip the call when there are no row ids). Error → log `grant_failed`, `"Could not add access.
+    Press Send again."` Stop; nothing changed. Rows returned `not_pending` were revoked meanwhile (another tab): drop their
+    homes. Kept homes = picked homes minus the dropped ones. None kept → `"This invite was revoked. Send a new invite."`
 12. (Removed in rev 4: step 11's function skips revoked rows, so there is no re-check and no release.)
 13. `deliverManagerInvite({ email, fullName, inviterId: user.id, homeNames, authEmail })` (§6.4), always last. `homeNames` are
     the kept homes' names.
@@ -372,9 +380,10 @@ deliverManagerInvite(p: { email: string; fullName: string; inviterId: string; ho
     result;` (HEAD :184-191).
     - `email_branded` / `email_basic` → `success: true`, `delivery: "email"`, `email`, `name: fullName`, `"Invite sent to
       {email}. They'll get an email from Domus."`
-    - `already_joined` → `markManagerRowsAccepted` for the kept homes. Error → `success: false`, `"Access is set. The list did
-      not update. Press Send again."` Else `success: true`, `delivery: "already_joined"`, `"Added {name}. They already signed
-      in."`
+    - `already_joined` → `grantInvitedRows({ invitationIds: <kept row ids>, profileId, inviterId: user.id, accept: true })`.
+      Error → `success: false`, `"Access is set. The list did not update. Press Send again."` Else `success: true`,
+      `delivery: "already_joined"`, `"Added {name}. They already signed in."` (Rows returned `not_pending` lost to a Revoke,
+      §6.13.)
     - `not_sent` → `success: false`, `"Access added. The email did not send. Press Send again."` Rows stay pending.
 15. ```ts
     void logAudit({ userId: user.id, action: "invite_manager", entityType: "invitation",
@@ -384,23 +393,28 @@ deliverManagerInvite(p: { email: string; fullName: string; inviterId: string; ho
 16. `revalidatePath("/owner"); revalidatePath("/manager");`
 
 ### 6.3 Existing confirmed manager P (HEAD :63-118, many homes)
-1. `property_managers.select("property_id, active").eq("manager_profile_id", P).in("property_id", propertyIds)`. Error →
-   `"Unable to check manager access. Please try again."` (HEAD :73).
-2. `toAdd` = picked homes without an active row. If any: `grantManagerHomes(P, toAdd)`. Error → `"Failed to assign manager to
-   property."` (HEAD :86).
-3. `markManagerRowsAccepted({ inviterId: user.id, email, propertyIds, profileId: P })`. It heals this inviter's pending rows
-   (the live HEAD-era row) and a row they revoked earlier. Error → audit and revalidate, then `success: false`, `"Access is set.
-   The list did not update. Press Send again."`
-4. Audit as §6.2 step 15 with `metadata: { propertyIds, addedPropertyIds: toAdd, tenantEmail: email, managerProfileId: P,
-   delivery: toAdd.length ? "added" : "already" }`, on every call. Revalidate. No invitations insert, no Auth write, no email.
-5. Return `{ success: true, delivery: "added" | "already", message, email, name: fullName }`:
+1. Before: `property_managers.select("property_id, active").eq("manager_profile_id", P).in("property_id", propertyIds)`.
+   Error → `"Unable to check manager access. Please try again."` (HEAD :73). `activeBefore` = homes with `active = true`.
+2. This inviter's rows: `invitations.select("id, property_id, status").eq("invited_by", user.id).eq("email", email)
+   .eq("role", "manager").in("property_id", propertyIds)`. Error → step 1's copy.
+3. Re-add: rows with `status = "expired"` → `invitations.update({ status: "pending", accepted_at: null, invited_profile_id: P
+   }).in("id", expiredIds).eq("status", "expired")`. Error → `"Failed to assign manager to property."` (HEAD :86). This is an
+   explicit re-add that changes access (the inviter picked that home again), not a repair.
+4. Homes with no row of this inviter → `grantNewHomes(P, thoseHomes)`. Error → step 3's copy.
+5. This inviter's row ids on picked homes → `grantInvitedRows({ invitationIds, profileId: P, inviterId: user.id, accept: true
+   })`. Error → step 3's copy (a retry converges). Rows returned `not_pending` (revoked in another tab after step 3) → drop
+   their homes; every picked home dropped → `"This invite was revoked. Send a new invite."`
+6. `added` = step 4 rows with `added: true`, plus step 5 rows with outcome `accepted` whose home is not in `activeBefore`.
+7. Audit as §6.2 step 15 with `metadata: { propertyIds, addedPropertyIds: added, tenantEmail: email, managerProfileId: P,
+   delivery: added.length ? "added" : "already" }`, on every call. Revalidate. No invitations insert, no Auth write, no email.
+8. Return `{ success: true, delivery: "added" | "already", message, email, name: fullName }` (counts use the kept homes):
    - Nothing added, one home picked → `"{name} already has access to this home. No email was sent."`
    - Nothing added, several picked → `"{name} already has access to these homes. No email was sent."`
    - One home picked and added → `"Added {name} to this home. They'll see it next time they sign in."`
    - Several picked, 1 added → `"Added {name} to 1 home. They'll see it next time they sign in."`
    - Several picked, N > 1 added → `"Added {name} to {N} homes. They'll see them next time they sign in."`
 
-This path only adds grants, with no row and no email. Nothing in the app can undo it (5b §6.7 Undo (5)).
+Step 4 only adds grants, with no row and no email. Nothing in the app can undo it (5b §6.7 Undo (5)).
 
 ### 6.4 `deliverManagerInvite` (never throws)
 0. `authEmail?.toLowerCase() !== email` → log `send_failed`, `not_sent`, no Auth call. Both invite calls are keyed by email,
@@ -419,9 +433,10 @@ This path only adds grants, with no row and no email. Nothing in the app can und
 
 ### 6.5 Accept at sign-in
 - `lib/invitations.ts`: `export async function markManagerInvitationsAccepted(profileId: string): Promise<void>` next to
-  `markTenantInvitationAccepted` (unchanged): `invitations.update({ status: "accepted", accepted_at: now }).eq("role",
-  "manager").eq("invited_profile_id", profileId).eq("status", "pending")`. An error that is not `isMissingSchemaError`, or a
-  throw → `console.error("[manager-invite] accept_failed", { code, message })`. It never throws.
+  `markTenantInvitationAccepted` (unchanged): `createAdminClient().rpc("manager_invite_accept", { p_profile_id: profileId
+  })`. The function accepts this manager's pending rows only where the grant is active; the others stay pending (`no_access`),
+  so the inviter still sees Resend. An error that is not `isMissingSchemaError`, or a throw → `console.error("[manager-invite]
+  accept_failed", { code, message })`. It never throws.
 - `trackAuthenticatedUser` (:78-105): after the `user?.id` check, for **every** session, outside `hasInvitedSession`:
   ```ts
   try { await markManagerInvitationsAccepted(user.id); }
@@ -464,24 +479,44 @@ and the new email replaces their earlier link.
 - Exactly one of the two, else `"Pick at least one home."` Output `{ email, fullName, propertyIds }`, ids deduped in first-seen
   order. No `ownershipAccountId` key (zod strips it).
 
-### 6.12 SQL functions (Claude writes, tests and applies them; Codex only calls them)
-In `supabase/migrations/20261028_sprint237c5_manager_invite_functions.sql`. Both are `security invoker`, `set search_path =
-public`; EXECUTE is revoked from `public`, `anon` and `authenticated` and granted to `service_role` only. Codex calls them with
-`createAdminClient().rpc(name, args)` and reads `{ data, error }`.
-1. `manager_invite_grant(p_invitation_ids uuid[], p_profile_id uuid) returns table(property_id uuid, granted boolean)`. One
-   transaction. Locks the given rows `FOR UPDATE` (role manager). Each `pending` row → upsert `property_managers (property_id,
-   p_profile_id, active true)`, on conflict set `active = true` → `granted: true`. A row not pending → `granted: false`, no
-   write. A guard error (client home) raises and rolls back everything.
-2. `manager_invite_revoke(p_invitation_id uuid, p_inviter_id uuid) returns table(outcome text, profile_id uuid, released
-   boolean, other_live boolean)`. Locks the row `FOR UPDATE` where id, `invited_by` and role manager match. None →
-   `not_found`. `expired` → `already_revoked`; `accepted` → `accepted`; no writes. `pending` → status `expired`, `accepted_at`
-   null; profile = `coalesce(invited_profile_id, the manager profile with lower(email) = lower(row.email))`. With a profile:
-   `other_live` = another manager row for that email and home is `pending` or `accepted`; if not `other_live`,
-   `property_managers.active = false` for that home and profile, and `released` = a grant row was found. Outcome `revoked`.
-   One transaction: an error leaves the row pending with its grant, so Revoke still shows and a retry converges.
-The fake (§8) models both. Claude's rolled-back `supabase/tests/sprint237c5_manager_invite_functions.sql` is the authority on
-the real functions.
+### 6.12 SQL functions (source of truth: Claude's migration; Codex only calls them)
+`supabase/migrations/20261028_sprint237c5_manager_invite_functions.sql` (commit `5ead674`). All five are `security invoker`,
+`set search_path = public`, EXECUTE for `service_role` only. Codex calls the four public ones with
+`createAdminClient().rpc(name, args)` and reads `{ data, error }`. A raise rolls back the whole call.
+- Lock protocol: `manager_access_lock(p_keys text[])` takes one `pg_advisory_xact_lock` per key `<property_id>:<profile_id>`,
+  in ascending key order, before any row lock. Every function below takes it for each (home, manager profile) it reads or
+  changes, so two final revokes, or a grant and a revoke, never interleave.
+1. `manager_invite_grant(p_invitation_ids uuid[], p_profile_id uuid, p_inviter_id uuid, p_accept boolean default false)`
+   → rows `(invitation_id, property_id, outcome)`. Raises `22023` when the profile is not a manager or the id list is empty.
+   Every id must be a manager row of `p_inviter_id` with a home, bound to the profile: `invited_profile_id = p_profile_id`,
+   or null with `lower(email)` = the profile's email. Otherwise it raises `P0002` and changes nothing. Under the locks and
+   `FOR UPDATE`: `pending` → upsert an active grant, set `invited_profile_id`, and with `p_accept` set `accepted` +
+   `accepted_at` → outcome `granted` or `accepted`; `accepted` → `already_accepted`; `expired` → `not_pending`; no write for
+   those two. A guard error (`42501`, client home) rolls back everything.
+2. `manager_grant_homes(p_profile_id uuid, p_property_ids uuid[])` → rows `(property_id, added)`. For §6.3 homes with no row
+   of this inviter. Takes the same locks; upserts an active grant per home; `added` = it was not active before.
+3. `manager_invite_revoke(p_invitation_id uuid, p_inviter_id uuid)` → one row `(outcome, profile_id, released, other_live)`.
+   No manager row of that inviter → `not_found`. Profile = `invited_profile_id`, else the manager profile with that email.
+   Takes the lock, then `FOR UPDATE`: `expired` → `already_revoked`; `accepted` → `accepted`; no writes. `pending` → status
+   `expired`, `accepted_at` null (`invited_profile_id` kept); `other_live` = another manager row for that email and home is
+   `pending` or `accepted`; if not, the grant goes inactive and `released` = a grant row changed. Outcome `revoked`.
+4. `manager_invite_accept(p_profile_id uuid)` → rows `(invitation_id, property_id, outcome)`. Not a manager profile → no rows.
+   For this profile's pending manager rows (bound as in 1), under the locks: active grant → `accepted` (+ `accepted_at`,
+   `invited_profile_id`); else `no_access`, row stays pending.
+Proof: the rolled-back suite `supabase/tests/sprint237c5_manager_invite_functions.sql` (G1-G4, R1-R5, A1, H1, X1, P1 pass) and
+the live two-session race (`supabase/tests/sprint237c5_manager_invite_concurrency.md`: with no lock, two final revokes leave
+both rows expired and the grant active; with the lock, scenarios B-E are correct). The vitest fakes are sequential and only
+model these functions; Postgres proves the locking.
 
+### 6.13 Linearization (Send, Resend, Revoke)
+- A Send or Resend takes effect when `manager_invite_grant` commits.
+- A Revoke that commits after that and before the email still wins: row `expired`, access off.
+- Send may still say `"Invite sent to {email}. They'll get an email from Domus."`, and the email may still arrive.
+- Its link signs the person in but gives no access to that home: sign-in accept skips expired rows, and the join page
+  refuses.
+- No app-level lock is held across the email. (Tests: 5b B8(d), B8(e).)
+
+### 6.11 Logging, errors, safety
 ### 6.11 Logging, errors, safety
 - Every Supabase call's `{ error }` is read (L-002). No path returns success for work it did not do.
 - Log tags (`[manager-invite]`, `{ code, message }` only): `auth_failed`, `rows_failed`, `grant_failed`, `send_failed`,
@@ -503,10 +538,12 @@ the real functions.
 From the repo root, in order. Every file in the `ls` must exist.
 ```
 ls apps/web/app/actions/__tests__/{fake-invite-db.ts,fake-gotrue.ts,manager-invite-trigger-model.test.ts} \
-  apps/web/app/actions/__tests__/manager-invite-guards.test.ts apps/web/app/auth/__tests__/callback-route.test.ts \
+  apps/web/app/actions/__tests__/{manager-invite-guards.test.ts,manager-invite-rpc-model.test.ts} \
+  apps/web/app/auth/__tests__/callback-route.test.ts \
   apps/web/lib/__tests__/manager-invite-email.test.ts
 (cd apps/web && npx vitest run app/actions/__tests__/manager-invite-trigger-model.test.ts \
-  app/actions/__tests__/manager-invite-guards.test.ts app/actions/__tests__/invitations.test.ts \
+  app/actions/__tests__/manager-invite-guards.test.ts app/actions/__tests__/manager-invite-rpc-model.test.ts \
+  app/actions/__tests__/invitations.test.ts \
   app/auth/__tests__/callback-route.test.ts lib/__tests__/invitations.test.ts lib/__tests__/manager-invite-email.test.ts \
   lib/__tests__/invite-email.test.ts lib/__tests__/validations.test.ts)
 (cd apps/web && npx vitest run --reporter=dot)
@@ -520,7 +557,7 @@ Test rules (L-017, L-028, L-029):
 - Exercise the real actions and helpers. No `expect` inside a mock. Assert after the awaited call.
 - Fixtures use `@example.com`; `NEXT_PUBLIC_APP_URL` is stubbed to `https://app.example.com`. Tokens and fake links are not
   URLs. Every fake id is `crypto.randomUUID()` (the real zod `.uuid()` runs).
-- The two `manager-invite-*.test.ts` files mock **only** `@/app/actions/auth-helpers` (`requireAuth`), `@/lib/supabase/admin`
+- The three `manager-invite-*.test.ts` files mock **only** `@/app/actions/auth-helpers` (`requireAuth`), `@/lib/supabase/admin`
   (the fake), `@/lib/audit`, `next/cache`, `next/headers`, `server-only` and global `fetch`. Everything else is real,
   including validations, `checkRateLimit` (`resetRateLimitState()` in `beforeEach`), the notifications switch (`vi.stubEnv`),
   `invite-email`, the templates, `client-accounts`, `property-access` (against the fake), `manager-invite`, `invitations`.
@@ -541,14 +578,16 @@ Test rules (L-017, L-028, L-029):
 - Rules: a DO UPDATE upsert hitting one key twice fails with `code: "21000"`; with `ignoreDuplicates` the later row is skipped.
   A `property_managers` write on a `managed_client` home, or a manager/owner `invitations` write on an unclaimed one, fails
   with `code: "42501"`. Error messages copy Postgres wording and never contain an email, link or token.
-- `rpc(name, args)` implements both §6.12 functions exactly, row-level and all-or-nothing (a simulated failure changes
-  nothing; a guard error inside the grant rolls back every row). The fake models the SQL; Claude's SQL test is the authority.
+- `rpc(name, args)` models the four public §6.12 functions exactly, including identity binding and all-or-nothing raises
+  (`P0002`, `22023`, and a `42501` guard error inside a grant roll back every write of that call). `manager_access_lock` is
+  a recorded no-op: the fake is sequential, so it cannot model concurrency; Postgres proves the locking (§6.12).
 - Both fakes share one world. `createFakeWorld()` (fake-invite-db.ts) returns `{ ops, beforeOp, afterOp, failNext, failAuth,
   admin }`, and `createFakeGoTrue(world)` (fake-gotrue.ts) attaches Auth to it. `admin` is what the mocked
   `createAdminClient()` returns: `{ from, rpc, auth: { admin: { createUser, generateLink, inviteUserByEmail, getUserById,
   deleteUser } } }`. `ops: string[]` is one ordered log. Names: `db:<table>:<select|insert|upsert|update|delete>`;
-  `rpc:manager_invite_grant`, `rpc:manager_invite_revoke`; `auth.createUser`, `auth.generateLink`, `auth.inviteUserByEmail`,
-  `auth.getUserById`, `auth.deleteUser` (logged on entry); `auth.insert`, `auth.rotate`, `auth.email` (effects);
+  `rpc:<name>` (`manager_invite_grant`, `manager_grant_homes`, `manager_invite_revoke`, `manager_invite_accept`);
+  `auth.createUser`, `auth.generateLink`, `auth.inviteUserByEmail`, `auth.getUserById`, `auth.deleteUser` (logged on entry);
+  `auth.insert`, `auth.rotate`, `auth.email` (effects);
   `trigger.converted:<n>`, `trigger.granted:<n>`. `beforeOp`/`afterOp` take any name, including `rpc:` names. `failNext(table,
   op)` applies to `db:` ops, `failNext("rpc", name)` to `rpc:<name>`, and `failAuth(method)` to `auth.<method>`. Failures
   are one-shot. `beforeOp(op, fn)` / `afterOp(op, fn)` run async `fn` once, before or after the next matching operation
@@ -597,20 +636,22 @@ Test rules (L-017, L-028, L-029):
 - A8 "rows write fails". `failNext("invitations", "update")` → `"Could not save the invite. Press Send again."`; 1
   unconfirmed user, 0 rows, 0 grants, 0 emails. Send again → still 1 user, rows pending, 1 email.
 - A9 "grant fails". `failNext("rpc", "manager_invite_grant")` → `"Could not add access. Press Send again."`, 0 emails. Send
-  again → the grant is active before `auth.email`. (The Resend half is 5b B16.)
+  again → the grant is active before `auth.email`. Accept only with access: after the failed grant, `clickLink` +
+  `markManagerInvitationsAccepted(P)` leaves the row `pending` (`no_access`). (The Resend half is 5b B16.)
 - A10 "Send again for a pending invitee does not duplicate". 1 user, the same 2 row ids, new `created_at`, 1 more email; the
   old token fails `clickLink`.
 - A11 "sign-in accepts only P's manager rows". P's pending rows from inviters A and B both turn `accepted` after
-  `markManagerInvitationsAccepted(P)`; Q's row stays `pending`. (A30 proves the `role = manager` filter.)
+  `markManagerInvitationsAccepted(P)`; Q's row stays `pending`. (A37 pins the fake's filters.)
 - A12 "accepted row is never downgraded". Invite h1, then `markManagerInvitationsAccepted(P)` without `clickLink`. Re-invite
   h1 and h2: h1 stays `accepted` (same id); h2 is `pending`.
 
 **`manager-invite-guards.test.ts`:**
-- A13 "existing signed-in manager": 1 of 3 homes active: one upsert of 2 homes; no invitations insert, no Auth write, no
-  email; audit `addedPropertyIds` = the 2 ids; `"Added Alex Manager to 2 homes. They'll see them next time they sign in."`;
-  and the four other §6.3 messages.
+- A13 "existing signed-in manager": 1 of 3 homes active, no rows: one `rpc:manager_grant_homes` with the 3 homes, 2
+  `added`; no `db:property_managers` write, no invitations insert, no Auth write, no email; audit `addedPropertyIds` = the 2
+  ids; `"Added Alex Manager to 2 homes. They'll see them next time they sign in."`; and the four other §6.3 messages.
 - A14 "live legacy row heals" (seeded: user created first, confirmed, grant active, `invited_profile_id` null): re-add from
-  the form → accepted; no email.
+  the form → `rpc:manager_invite_grant` with `p_accept: true`; row accepted; `"Alex Manager already has access to this home.
+  No email was sent."`; no email.
 - A15 "other-role email refused before any Auth call or write".
 - A16 "orphan manager profile refused". `generateLink` for a new email, then `dropAuthUser`. Invite → `"Could not find this
   person's account. Try a different email."`; no writes; no `auth.insert`.
@@ -658,8 +699,8 @@ Test rules (L-017, L-028, L-029):
 - A29 `callback-route.test.ts` (first line `// @vitest-environment node`): `markManagerInvitationsAccepted(user.id)` once on
   the code, token_hash invite, token_hash magiclink and setSession branches; `markTenantInvitationAccepted` only when
   `hasInvitedSession`; a rejection keeps the `resolveAuthRoute` redirect; the PKCE miss does not call it.
-- A30 `lib/__tests__/invitations.test.ts`: `markManagerInvitationsAccepted` filters `role = manager`, `invited_profile_id`
-  and `status = pending`; an error is logged, a throw swallowed. `markTenantInvitationAccepted` unchanged.
+- A30 `lib/__tests__/invitations.test.ts`: `markManagerInvitationsAccepted` calls `rpc("manager_invite_accept", {
+  p_profile_id })` once and writes no table; an error is logged, a throw swallowed. `markTenantInvitationAccepted` unchanged.
 - A31 `manager-invite-email.test.ts`, gate truth table on the **real** switch (`vi.stubEnv` of
   `DOMUS_NOTIFICATIONS_ALLOWLIST` and `DOMUS_NOTIFICATIONS_ENABLED`): `off`; `on`; `" Listed@Example.com "` with allowlist
   `listed@example.com` → `true`; unlisted → `false`; allowlist `not-an-email` → `false`. A throwing switch, in its own
@@ -677,25 +718,33 @@ Test rules (L-017, L-028, L-029):
   `"Pick up to 100 homes."`; `propertyIds` not JSON, and a JSON object, → `"Pick at least one home."`; a non-UUID →
   `"Invalid property selection."`; no `ownershipAccountId` in the output.
 - A36 Full suite, `tsc`, lint and `lib/__tests__/plain-language.test.ts` are green.
+- A37 `manager-invite-rpc-model.test.ts`, the fake's contract (mirrors the SQL suite G1-G4, R1-R5, A1, H1, X1):
+  grant binds and grants; another profile, another inviter, or an unknown id → `P0002`, nothing changed; a non-manager
+  profile → `22023`; a null `invited_profile_id` binds only by email; `p_accept` grants and accepts, then
+  `already_accepted`; an expired row → `not_pending`, no write; revoke outcomes `revoked` (`released`, `other_live`),
+  `already_revoked`, `not_found`, `accepted`; accept → `no_access` without a grant, `accepted` with one; `manager_grant_homes`
+  `added` only for inactive homes; a `42501` guard inside a grant rolls back every row.
 
 **Mutation proofs (in the report; revert each):** M1 write rows before `createUser` → A3 fails. M3 open the gate in `on` →
 A4 and A31. M4 make §6.2 step 10 a plain DO UPDATE upsert → A12. M6 send the email before the grant → A3's op order. M9 map
 `email_exists` to `not_sent` in §6.4 → A25. M11 move `markManagerInvitationsAccepted` inside `hasInvitedSession` → A29. M12
 skip §6.2 step 9a → A18. M13 treat 9b's `email_exists` as a pending invitee (continue with the existing user) → A24(c). M14
 make `isDomusManagerInvitee` ignore the marker (any unconfirmed user passes) → A24(c) Send again. M15 let 9c continue
-without the marker → A23(b).
+without the marker → A23(b). M18 drop the inviter/profile binding from the fake's `manager_invite_grant` → A37. M19 let the
+fake's `manager_invite_accept` ignore the grant → A9's accept check and A37. (M18 and M19 mutate the model; the real guards
+are proved by the SQL suite, G2/G3 and A1.)
 
 **Claude only (not Codex):**
 - C1 is done (index, "C1 live results" and "round 2").
-- C7 Before 5a review: write the §6.12 migration, its rollback and `supabase/tests/sprint237c5_manager_invite_functions.sql`.
-  The rolled-back test covers every branch of both functions (granted true and false; `not_found`, `already_revoked`,
-  `accepted`, `revoked` with and without `other_live`, `released` true and false) and the client-home guard rolling back the
-  whole grant. Apply after ChatGPT APPROVE and before the release deploys. 5b C2 adds the EXECUTE checks.
+- C7 Done (commit `5ead674`, not applied): the §6.12 migration, its rollback, the rolled-back suite (G1-G4, R1-R5, A1, H1,
+  X1, P1 pass) and the live two-session race proof. Before ship, Claude re-runs both SQL files and the race harness
+  `supabase/tests/sprint237c5_manager_invite_race.mjs` (control A must reproduce the bug; B-E must pass), then applies the
+  migration after ChatGPT APPROVE and before the release deploys. 5b C2 adds the EXECUTE checks.
 - Before 5b dispatch, Claude reviews this sprint and commits it locally; it is not deployed.
 
 ## 9. Report format
-Compact status only: files changed with line counts, the test for each criterion (A1-A36), `grep -c "it("` per new test
-file, mutation results (M1, M3, M4, M6, M9, M11-M15), command results.
+Compact status only: files changed with line counts, the test for each criterion (A1-A37), `grep -c "it("` per new test
+file, mutation results (M1, M3, M4, M6, M9, M11-M15, M18, M19), command results.
 Do NOT include 'Claude prompt' or 'recommended next steps for Claude' sections. Report compact status only.
 
 ## 10. Constraints
@@ -704,7 +753,8 @@ Do NOT include 'Claude prompt' or 'recommended next steps for Claude' sections. 
   components are not touched (5b, 5c).
 - Never call an Auth API that inserts `auth.users` after writing a pending row for that email (L-029). The only insert is
   9b's `createUser`.
-- Grants for invitation rows go only through `manager_invite_grant` (D10).
+- Access and acceptance change only through the §6.12 functions (D10): no `property_managers` write and no `accepted`
+  status write from app code.
 - No `deleteUser` or `deleteGeneratedInviteUser` in any manager path.
 - No in-memory dedupe, no `window.location`, no `accounts[0]`, no `ownershipAccountId`.
 - No `fetch` outside `sendInviteEmail`. No other new email type.

@@ -1,4 +1,4 @@
-# Sprint 237c-5c — Manager invite "UI": pick homes, Revoked badge, row toasts (L3) — rev 3 (references updated for 5a/5b rev 4)
+# Sprint 237c-5c — Manager invite "UI": pick homes, Revoked badge, row toasts (L3) — rev 3 (references updated for 5a/5b rev 5)
 
 Severity L3 (part of the invite redesign; UI only). `/chatgpt-review` before `/codex-dispatch`. Part 3 of 3; the index is
 `docs/sprint237c5-index.md`. **Depends on 5a and 5b.** HEAD = the local 5b commit (on top of the local 5a commit; both reviewed,
@@ -23,7 +23,7 @@ Unchanged context is in 5a §2 and 5b §2. Facts the requirements below depend o
   `already_joined`).
 - `revokeInvite` returns `{ success: true, message }` with `"Invitation revoked."` (every role; HEAD :378) or `"Invitation
   revoked. Another invite still gives them this home."` (5b §6.7 step 10). Its error `"They already signed in. This invite
-  can't be revoked."` revalidates and turns the row Accepted (5b §6.7 step 4 and step 5's `accepted`).
+  can't be revoked."` revalidates and turns the row Accepted (5b §6.7 step 5's `accepted` outcome).
 - Revoke writes status `expired` for every role.
 
 ### 2.2 Today's components
@@ -97,7 +97,7 @@ Claude (not Codex): `supabase/migrations/20261028_sprint237c5_manager_invite_bac
   them this home.` Resend (:191) keeps `Resent!`.
 - Row-action errors are toasts. When `resendState` or `revokeState` becomes a new failure, call `toast.error(state.error)`
   once, using a second `handledRef` per state. Remove the two inline `FormError` lines (:190, :199) so nothing shows twice.
-  The rows that revalidate (5b §6.6 already_joined, 5b §6.7 step 4 and step 5) turn Accepted and unmount their actions; the toast
+  The rows that revalidate (5b §6.6 already_joined, 5b §6.7 step 5) turn Accepted and unmount their actions; the toast
   still shows. This applies to every role. Other row actions do not change.
 
 ### 6.11 Rules
