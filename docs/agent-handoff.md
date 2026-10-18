@@ -1712,3 +1712,8 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   Third REJECT → **owner decision asked**. Recommendation: pivot the mechanism (not the decisions) to Domus-run monthly
   invoicing — one immutable per-manager monthly snapshot → one Stripe invoice (saved card, idempotency key per
   manager-month), no subscription/meter; 0 doors → no invoice.
+- **Owner: "Yes. Switch billing to Domus-run monthly invoices from a fixed monthly snapshot, write rev 5, and send ChatGPT
+  round 4."** Rev 5: immutable per-manager monthly snapshot (end-of-month doors, UTC, full months only, arrears) → one
+  Stripe invoice via resumable keyed steps (create → item → finalize → pay); card saved with setup-mode Checkout;
+  enrollment / coverage / write entitlement separated; 0 doors → no invoice; fail closed on plan lookup (allowlist
+  still works); unresolved chains isolated per chain; termination voids open invoices; Test Clock proof before build.

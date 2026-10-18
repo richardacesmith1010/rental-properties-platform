@@ -1,10 +1,14 @@
-# Manager plan billing — design rev 4 (2026-10-18) — rev 1 → 3 critics → rev 2 → ChatGPT REJECT (12) → rev 3 → REJECT (7) → rev 4
+# Manager plan billing — design rev 5 (2026-10-18) — … → rev 4 (metered) REJECT (8) → owner: Domus-run monthly invoices → rev 5
 
 ## 0. Owner decisions (2026-10-18, `docs/agent-handoff.md`)
 - Free for self-managing landlords and tenants. **Manager plan: $1.50/door/month, $15 minimum, billed on the website.**
 - Co-managers: **the inviting manager pays** (team seats). **Downstream: the original payer pays** — a whole team on a
   home costs its payer once, whoever invited whom. No plan: **30-day trial, then read-only**. Alia: **free forever**.
 - Terms: 30 days' notice before charging; 30 days' notice before price changes.
+- **Mechanism (owner, 2026-10-18): Domus-run monthly invoices from a fixed monthly snapshot** — no Stripe subscription,
+  no meter. Claude decisions inside it: calendar months (UTC); doors counted at the end of the month; only full months
+  are billed (the first billed month is the first one that starts on or after `charge_eligible_at`); billing in arrears
+  (the invoice for October is made on November 1).
 - Claude decisions (recorded): managers an **owner** adds directly to one home are separate businesses → each pays. A
   read-only manager may still message, edit their profile and notification settings, give Ask Domus consent, delete or
   wipe their own account, use billing, and run the five read actions in §6.4. When a temporary comp ends, the manager
@@ -39,87 +43,78 @@
   payer), is listed by the C5 diagnostic and logged `[billing] payer_unresolved`. Tests pin chains of 50 (resolves) and
   51 (unresolved), a cycle, an inactive middle link, and a reactivated row (its `granted_by` is the reactivating actor).
 - **Payers of H** = distinct `payer(H, M)` over active rows. Every managed home has ≥ 1 payer, except an
-  `unresolved` chain (bills no one, §2 overflow). A home counts once per payer. **Billable doors(P)** = Σ doors(H) over homes where P is a payer. **Reported doors(P)** = billable doors (the
-  metered price in §5.1 applies the $15 minimum; 0 doors for a whole period → cancel at period end, §3).
+  `unresolved` chain (bills no one, §2 overflow). A home counts once per payer. **Billable doors(P)** = Σ doors(H) over homes where P is a
+  payer. Monthly amount: §5.3 ($15 minimum; 0 doors →
+  no invoice).
 - **Team seat:** M has an active row on H and `payer(H, M) ≠ M`.
 
-## 3. Entitlement and plan state (one SQL function, exact precedence)
-- **Paid-through:** `entitled_until = current_period_end` while Stripe status is `active|trialing|past_due`, including
-  `cancel_at_period_end = true` (the manager paid for this period). After cancellation completes (`canceled`), it stays
-  the last `current_period_end`. A comp never extends it.
-1. `terminated` — `terminated_at is not null` (account deletion; §5.7). No billing action, no access change by billing.
-2. `comped` — `comped and (comped_until is null or now() < comped_until)`.
-3. `past_due` — `past_due_since is not null and now() < past_due_since + 7 days` (writable).
-4. `read_only` — `past_due_since is not null and now() ≥ past_due_since + 7 days` (the cron cancels collection, §5.5).
-5. `paid` — `now() < entitled_until` (covers active, trialing-delay, and cancel-at-period-end until the period ends).
-6. `no_homes` — 0 billable doors and no team seats (also: no billing row).
-7. `team_seat_only` — 0 billable doors, ≥ 1 team seat.
-8. `trialing` — `now() < trial_ends_at`.
-9. `read_only` — everything else.
-- **Comp transitions:** comp ON for a subscriber → set `cancel_at_period_end = true` at once (collection stops after the
-  period already paid); state is `comped` immediately. Comp OFF (or `comped_until` passes) → fresh 30-day trial
-  (§4 eligibility applies). Collection after a comp needs a new **Start plan**.
-- **Zero doors:** quantity is never sent (§5); at period close the daily job sets `cancel_at_period_end = true` if the
-  manager had 0 billable doors for the whole period, and clears it if doors returned before the period ended.
+## 3. Three separate things (round 3 REQUIRED 3)
+- **Enrollment:** the manager saved a card (Checkout `mode=setup`) and it is the customer's default payment method.
+- **Coverage of a month:** that month's snapshot is `paid`, `zero` (0 doors), `comped`, or `not_billed` (before the
+  first billed month). Coverage is history; it never grants write access by itself.
+- **Write entitlement (plan state, one SQL function, precedence):**
+  1. `terminated` — `terminated_at` set (account deletion, §5.8). 2. `comped` — comp flag (until `comped_until`).
+  3. `read_only` — any snapshot `invoiced` whose invoice is unpaid **7 days after its due date** (`past_due_since + 7
+  days ≤ now()`). 4. `past_due` — an unpaid invoice within those 7 days (writable). 5. `enrolled` — card on file.
+  6. `no_homes` — 0 billable doors, no team seats. 7. `team_seat_only` — 0 billable doors, ≥ 1 team seat.
+  8. `trialing` — `now() < trial_ends_at`. 9. `read_only`.
+  Paying the late invoice (hosted invoice page or a new card in the Portal) clears `past_due_since` → back to
+  `enrolled`. Comp ON voids nothing already paid; it stops future snapshots from billing (status `comped`).
 
-## 4. Charge eligibility (server-enforced, Stripe-enforced)
-- `manager_billing.charge_eligible_at` = the latest of: `trial_ends_at`; `billing_launched_at + 30 days` (existing
-  managers); `comped_until + 30 days` (expired comps); `terms_live_at` (from `BILLING_TERMS_LIVE_AT`, unset = never).
-- **Start plan** refuses when `terms_live_at` is unset, and otherwise creates the subscription with
-  `subscription_data.trial_end = charge_eligible_at` when that is in the future — **Stripe itself cannot charge before
-  it.** Domus treats that Stripe `trialing` as `paid` (plan started, `entitled_until` = trial end).
-- **Price changes (G):** Stripe Prices are immutable; a new price is a new Price. Table `price_change_notices
-  (manager_profile_id, from_price_id, to_price_id, notified_at, channel, effective_at)` with `effective_at = notified_at
-  + 30 days`; `notified_at` is written only when a notice is actually shown in the app or delivered by email to **that**
-  manager (per-account proof; Terms publication alone does not count). A job moves a subscription to the new price only
-  when `now() ≥ effective_at`; without a notice row it never moves. A retired price keeps billing existing subscribers
-  until their own effective date. No price change is planned; the table and job ship with 240b, unused.
+## 4. Charge eligibility and price changes
+- `charge_eligible_at` = latest of `trial_ends_at`, `billing_launched_at + 30 days`, `comped_until + 30 days`,
+  `terms_live_at` (`BILLING_TERMS_LIVE_AT`, unset = never). **No snapshot may bill a month that starts before it**
+  (status `not_billed`) — enforced in the snapshot function, not the UI.
+- Price changes: `price_change_notices` from rev 4 (per-account `notified_at`, `effective_at = notified_at + 30 days`).
+  A snapshot uses the price in effect for **that manager** at the start of the month. No change planned.
 
-## 5. Stripe (rev 4: metered "last" usage — no subscription quantity writes)
-- **5.1 Price model:** one Billing **Meter** (`event_name = domus_manager_doors`, `default_aggregation.formula = last`,
-  customer mapping by id; API `2025-03-31` or later). One metered **Price** on it, `billing_scheme = tiered`,
-  `tiers_mode = graduated`: tier 1 `up_to 10`, `flat_amount 1500`, `unit_amount 0`; tier 2 `up_to inf`,
-  `unit_amount 150`. → 1-10 doors = $15, 11 doors = $16.50, ... Usage is billed **in arrears** at period end on the
-  last reported door count — the owner-approved once-per-cycle model.
-- **5.2 Reporting (single writer, ordered):** one daily job (and a final run 1 hour before `current_period_end`) per
-  current subscription. It takes a **DB lease** `update manager_billing set report_lease_token = gen_random_uuid(),
-  report_lease_until = now() + 5 min where … and (report_lease_until is null or report_lease_until < now()) returning
-  report_lease_token`; only the holder reports. Stripe calls use a **20 s timeout** (≪ 5 min lease), so a stale writer's
-  request is finished or abandoned long before another lease is granted; the daily cadence means two reports for one
-  manager never overlap in practice. Meter event: `{event_name, payload: {stripe_customer_id, value: billable_doors},
-  timestamp: <computed_at>, identifier: "doors:<manager>:<subscription>:<YYYY-MM-DD>"}` — Stripe rejects a duplicate
-  identifier (≥ 24 h), and the day-keyed identifier makes a same-day retry a no-op. After each report: write
-  `last_reported_doors`, `last_reported_at` with compare-and-set on the lease token. **Verify:** a reconciliation report
-  (Claude command + C5) compares Domus door counts with Stripe meter event summaries for the current period; drift
-  still unresolved 24 h before period end raises `[billing] usage_drift` (Sentry).
-- **5.3 Pre-build C-check (Claude, Stripe test mode, before 240a dispatch):** prove (a) `last` uses the latest event
-  in the period when events arrive out of timestamp order (and record which ordering applies); (b) graduated tier-1
-  `flat_amount` with usage 0 vs 1 (does 0 bill $15?); (c) duplicate identifier → 400; (d) metered price + `trial_end`
-  bills nothing for the trial. If (a) is arrival-order, §5.2's single writer already satisfies it; if (b) bills $15 at
-  0, §3's zero-door cancel stands as written.
-- **5.4 Checkout intent state machine:** `billing_checkout_intents (id, manager_profile_id, status pending|open|completed
-  |expired|failed, idempotency_key, stripe_session_id, session_url, params_hash, created_at, updated_at)`; one row with
-  status `pending|open` per manager (partial unique index). Start plan: if an `open` intent's session is unexpired →
-  return its URL. If a `pending` intent exists (a create that timed out) → re-call Stripe with **the same
-  idempotency key and identical params** (metered line item has no quantity, so params are stable) → Stripe returns the
-  original session → save as `open`. If params must differ (e.g. `charge_eligible_at` changed) → expire the old
-  session (`POST /checkout/sessions/:id/expire`) and mark the intent `failed`, then a new intent. Webhooks:
-  `checkout.session.completed` → `completed`; `checkout.session.expired` → `expired`. A cron fails `pending` intents
-  older than 1 h. **Orphan recovery** (daily): list subscriptions on our price per customer; attach the oldest live one
-  to a manager with none; cancel any other (`mgr-dup:<sub>`), log `[billing] orphan_sub`.
-- **5.5 Webhooks** (rev 3 rules kept): raw body, any valid `v1`, timing-safe, ±300 s, livemode check; atomic claim
-  table with stale reclaim; re-fetch the subscription; act only on our price and the manager's current subscription;
-  `past_due_since` from Stripe status; never touch a `terminated` row (§5.7) except to cancel. **Past-due cron**
-  cancels collection 7 days after `past_due_since` (`mgr-pastdue:<sub>`).
-- **5.6 Customer creation** under compare-and-set (`mgr-cust:<manager>`); refused when `terminated`.
-- **5.7 Termination fence (account deletion, F):** the 238b deletion job **first** sets `manager_billing.terminated_at`
-  (one UPDATE). Every billing write path includes `terminated_at is null` in its own UPDATE/INSERT predicate, so a
-  checkout, customer create, report or webhook write that loses the race changes nothing. Then the job: lists **all**
-  subscriptions of the customer and cancels each immediately (`mgr-del:<sub>`), expires open checkout sessions, marks
-  intents `failed`, deletes the customer. Late webhooks for a terminated manager only record the event and, if a live
-  subscription appears, cancel it; they never restore access or rows.
-- Portal config: payment method + invoices + cancel at period end only. `Stripe-Version` pinned; `Request-Id` stored on
-  failures.
+## 5. Monthly snapshot → one invoice
+- **5.1 Snapshot (immutable, identifiable):** `manager_billing_periods (id, manager_profile_id, period 'YYYY-MM',
+  snapshot_at, billable_doors, homes_json, unit_price_cents, minimum_cents, amount_cents, status pending|zero|comped
+  |not_billed|terminated|invoiced|paid|void|uncollectible, stripe_invoice_id, stripe_invoice_item_id, step, attempts,
+  last_error, past_due_since)`, `unique (manager_profile_id, period)`. Created by `create_billing_snapshot(manager,
+  period)` with `insert … on conflict do nothing` — the **first** snapshot for a manager-month wins forever. A trigger
+  forbids changing `billable_doors`, `homes_json`, prices or `amount_cents` after insert (only status/step/ids/errors
+  move). `homes_json` lists each home, its doors and why it is billed (payer evidence) — the audit record.
+- **5.2 Cutoff (round 3 REQUIRED 1):** the snapshot for month M is taken by the job at or after **00:00 UTC on day 1
+  of M+1** and counts doors **as of that instant** (end of M), using `manager_billable_doors(manager)` evaluated in one
+  statement. A manager first eligible mid-month is `not_billed` for that month.
+- **5.3 Amount:** 0 billable doors → `amount 0`, status `zero`, **no invoice** (no stray $15). Otherwise
+  `amount = max(doors, 10) × unit_price` (`$15` minimum). Comped → `comped`, no invoice. Terminated → `terminated`.
+- **5.4 Invoice (retryable, resumable):** for `pending` rows with amount > 0, the job (daily from day 1 until done)
+  runs steps, each with its own Idempotency-Key derived from the snapshot id, saving the id after each:
+  (1) `POST /v1/invoices` (`customer`, `collection_method=charge_automatically`, `auto_advance=false`,
+  `pending_invoice_items_behavior=exclude`, `metadata.snapshot_id`, `metadata.period`) — key `mgr-inv:<snapshot>`;
+  (2) `POST /v1/invoiceitems` (`invoice`, `amount=amount_cents`, `currency=usd`, description "Domus Manager plan —
+  October 2026 — 12 doors") — key `mgr-ii:<snapshot>`; (3) `POST /v1/invoices/:id/finalize` — key `mgr-fin:<snapshot>`;
+  (4) `POST /v1/invoices/:id/pay` — key `mgr-pay:<snapshot>`. Params are fixed by the immutable snapshot, so a retry
+  sends identical params. A row is claimed with a lease (`step_lease_until`, 5 min; Stripe timeout 20 s). After step 4
+  status `invoiced`; `invoice.paid` → `paid`. Nothing in this path mutates anything shared between two snapshots, so
+  no cross-request ordering exists to protect (each snapshot owns its own invoice).
+- **5.5 Webhooks:** rev 3 signature rules (raw body, any valid `v1`, timing-safe, ±300 s, livemode) and the atomic
+  claim table with stale reclaim. Handle `invoice.paid`, `invoice.payment_failed`, `invoice.voided`,
+  `invoice.marked_uncollectible`, `checkout.session.completed` (setup mode), `setup_intent.succeeded`,
+  `payment_method.detached`. Match an invoice **only** by `metadata.snapshot_id` and the stored `stripe_invoice_id`;
+  re-fetch the invoice (`GET /v1/invoices/:id`) and write its status. `past_due_since = coalesce(…, due/attempt
+  failed time)` on failure; cleared on paid. Unknown or foreign invoices are ignored.
+- **5.6 Card on file (Start plan):** web only; refuses `DomusApp/1`, `terms_live_at` unset, `comped`, `terminated`.
+  Customer created once (`mgr-cust:<manager>`, compare-and-set). Checkout `mode=setup`, `customer`,
+  `setup_intent_data.metadata.manager_profile_id`, `expires_at` +30 min, through the checkout-intent state machine of
+  rev 4 §5.4 (same-key recovery, expire-and-replace). On completion set the default payment method; state `enrolled`.
+  Portal: payment methods + invoice history only.
+- **5.7 Unresolved payer chains (round 3 REQUIRED 6):** an unresolved chain removes only **that chain's** obligation on
+  that home; independent payers on the same home (owner-added managers, other resolved chains) still bill it. The
+  snapshot's `homes_json` marks the unresolved home; the C5 diagnostic lists it for Claude.
+- **5.8 Termination fence:** deletion sets `terminated_at` first; snapshot/invoice/customer/checkout writes predicate on
+  `terminated_at is null`; then the job voids every open (draft or unpaid) Domus invoice of the customer, expires open
+  checkout sessions, deletes the customer. Late webhooks only record; they never restore.
+- **5.9 Test-mode proof (round 3 REQUIRED 7, before 240a dispatch):** with Stripe Test Clocks: setup-mode Checkout saves
+  a default card; invoice create → item → finalize → pay succeeds; each step retried with the same key returns the same
+  object; a declined card → `invoice.payment_failed` → `past_due_since`; 7 days → read-only; paying the hosted invoice →
+  paid → `enrolled`; 0-door month → no invoice; terminated → voided. Results recorded in this doc.
+- **5.10 API version (round 3 REQUIRED 8):** no subscription or `current_period_*` fields are used anywhere; billing
+  calls pin one `Stripe-Version` (the latest at build time, recorded) on invoices, items, customers, setup Checkout and
+  the Portal.
 
 ## 6. Read-only enforcement
 - **6.1 UI (primary):** pages render with the plan state; read-only managers see everything; edit controls disabled with
@@ -136,8 +131,11 @@
   (`POST|PUT|PATCH|DELETE`), cron-triggerable endpoint and RPC reachable by a manager session, with what it writes.
   **Guard test (future-proof):** a static test walks `app/actions/**/*.ts` and `app/api/**/route.ts`; any export reachable
   by role `manager` that writes must call `requireManagerWrite` or be listed in `billing-allowlist.ts` with a reason —
-  else the test fails. `requireManagerWrite` throws `ReadOnlyManagerError`; it fails **open** on a plan-lookup error
-  (logged), while RLS (6.2) fails closed for direct writes. The 8 client catch sites show "Changes are paused. Start your
+  else the test fails. `requireManagerWrite` throws `ReadOnlyManagerError`; on a plan-lookup error it fails **closed**
+  (round 3 REQUIRED 5): the write is refused with "We could not check your plan. Try again in a minute." and
+  `[billing] plan_lookup_failed` alerts (Sentry). Allowlisted actions never call it, so messages, profile, settings,
+  billing and deletion keep working during a billing outage. RLS (6.2) also fails closed. The 8 client catch sites show "Changes are
+  paused. Start your
   plan to make changes."
 - **6.4 Allowlist** (exact exports): as rev 2 §5.4 (messages ×3, profile ×3, deletion request, self-wipe, notification
   ×5 + preferences ×3, AI consent ×2, the five reads, billing actions).
@@ -150,18 +148,16 @@
   demo account + notes citing 3.1.3(f).
 
 ## 8. Rollout (dark until complete)
-- `BILLING_ENABLED` env (default off): when off, no trial rows, no gate, no billing UI, no Stripe calls; triggers only
-  mark sync rows. 240a ships dark. Turn on only after 240b, Terms with plan text live (`BILLING_TERMS_LIVE_AT`), the
-  live Stripe Product/Price/Portal/webhook config, and a full lifecycle test with Stripe **Test Clocks** (trial end →
-  charge-eligible → paid → failed → 7-day read-only → recovery → zero doors → back → cancel → deletion). Owner approves
-  the switch.
+- `BILLING_ENABLED` env (default off): when off, no trial rows, no gate, no billing UI, no Stripe calls; the snapshot job
+  does nothing. 240a ships dark. Turn on only after 240b, Terms with plan text live (`BILLING_TERMS_LIVE_AT`), the
+  live Stripe Portal + webhook config, and the §5.9 Test Clock lifecycle proof. Owner approves the switch.
 
 ## 9. Sprints
 - **240a (L3):** migration (tables, `granted_by` + 237c-5 function updates, payer/doors/state/eligibility functions,
   RLS restrictive + inventory test, grants), SQL suite + two-session races (Claude); Codex:
-  `lib/manager-billing/*`, Stripe Billing client (idempotency, version, request-id), Start plan / Portal actions (dark),
-  webhook branch + atomic claim + signature hardening, daily usage reporter (lease) + reconciliation + past-due cron,
-  checkout-intent state machine + orphan recovery, termination fence + deletion step, `requireManagerWrite` + guard test.
+  `lib/manager-billing/*`, Stripe invoices client (idempotency, version, request-id), Start plan (setup Checkout) / Portal (dark),
+  webhook branch + atomic claim + signature hardening, monthly snapshot + resumable invoice job (lease) + C5 report,
+  checkout-intent state machine (setup mode), termination fence + deletion step, `requireManagerWrite` + guard test.
 - **240b (L3):** requireAuth backstop + allowlist + catch sites, plan state in pages + disabled controls, Settings →
   Billing, banners, iPhone suppression, Terms plan text (owner approves), listing + App Review notes + manager demo seed
   (Claude), Test Clock lifecycle walk, owner switch.
