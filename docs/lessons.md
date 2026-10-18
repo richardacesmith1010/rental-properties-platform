@@ -199,3 +199,14 @@ proven with live probes and real two-session tests, not only fakes.
 **Rule:** For any access-granting design: name the server-only source of identity, the lock that serializes each
 check-then-act, and the source of every grant, before the packet goes to review. Prove concurrency claims with two real
 database sessions (`supabase/tests/sprint237c5_manager_invite_race*.mjs` is the template).
+
+#### L-032 | 2026-10-17 | VERIFICATION
+**What happened:** The 237c-5 live walk logged "home checkboxes have no accessible name" because the Browser pane's
+`find` / `read_page` printed them as `checkbox "on"`. An L1 fix sprint was planned. A live check showed each input is
+wrapped in its `<label>` (`input.labels.length === 1`, correct text), the jsdom tests already pass with
+`getByRole("checkbox", { name })`, and a probe proved the tool names `htmlFor` and `aria-label` checkboxes but prints the
+default value "on" for a wrapping label. It also names buttons from `title`, not visible text.
+**What was correct:** Before filing an a11y bug from the pane's tree, check the DOM: `input.labels`, `aria-label`,
+`aria-labelledby`. Wrapping labels are valid HTML and name the control in Chrome and VoiceOver.
+**Rule:** The Browser pane's accessibility output is a heuristic, not Chrome's accessibility tree. Confirm any "no name"
+finding with `input.labels` (or a jsdom `getByRole(..., { name })` test) before planning a fix.
