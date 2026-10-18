@@ -1692,3 +1692,9 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   charge eligibility, team-seat chains, zero-door recovery, locks can't span Stripe I/O → durable intents + idempotency,
   atomic webhook claim, invoice/subscription matching, signature details, RLS allowlist by data effect + inventory test,
   Apple 3.1.3(f) + manager demo, ship dark). Owner decision: **downstream team seats → original payer pays**. Rev 3 written.
+- **Billing design ChatGPT round 2: REJECT** (narrower: 7 REQUIRED — Stripe quantity ordering across stalled/expired
+  workers; payer-chain overflow/invalid chains; checkout intent lifecycle + orphaned subscriptions; audit all privileged
+  manager mutations (not header-only); effective entitlement + comp/subscription transitions incl. collection stop;
+  deletion fencing vs late webhooks; 30-day notice for future price increases). Product decisions untouched.
+  **Stopped per §2a (second REJECT): owner decision asked** — rev 4 + round 3, with a simplification (set quantity once
+  per billing cycle on `invoice.upcoming` + verify-after-write instead of continuous sync).
