@@ -1745,3 +1745,20 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   in-shell id lookups, C3 "different name points elsewhere" + no-link money rows are "unsure", full first-name scan,
   C5 avatar resume check, C6/C7 Stripe done-when + test-mode API + in-transit check, C9 idempotence guard, dry-run log
   words). The runbook is ready for a first real request (owner "go" per request still required).
+
+## 2026-10-18 — Sprint 239a/239b SHIPPED (early-access Terms + Privacy live); 238g seed run (App Review demo accounts)
+- **239a** (`7ce8221`, L2): `/terms` and `/privacy` now carry the owner-approved early-access text
+  (`docs/legal/early-access-terms-privacy-2026-10-18.md`). Word-for-word diff vs the source: exact. Gate green (2,893
+  tests); smoke green; CI `gate` success; live pages show "October 18, 2026" + the lawyer banner, no March text.
+- **239b** (`d58045f`, L1): live walk found headings/bold labels `text-white` on the light background → invisible
+  (pre-existing since March, L-022). Now theme tokens (`--ink`, `--line`, `--surface`); test asserts no `white` class.
+  Light + dark screenshots readable. **239c** (L1, Codex running): body text `--faint` (≈3.4:1) → `--muted` (≈6:1).
+- **238g** (`ab50e94`): review agent found no safety blockers; fix1 (`docs/sprint238g-fix1-codex-prompt.md`) fixed the
+  dry-run placeholder ids (would have failed live with 22P02), removes stale rent review items on month rollover (App
+  Review double-payment hazard), and strengthened 9 weak tests (34/34). Live: dry run clean → seed created the full graph
+  → second run all `existing`. Both demo users sign in (scripted); SQL check: owner 1 membership, tenant 1 active lease,
+  0 manager rows/invites/deletion requests, `ai_consent_at` null. Passwords only in `apps/web/.env.local` (not shown).
+- Grooming: `ensureProfile` compares `onboarding_completed_at` as text (`…000Z` vs `…+00:00`), so every run prints
+  "updated: <role> profile" (same value rewritten; smoke seed has the same quirk). Harmless; fix with a Date compare.
+- **Next:** Simulator walk as both demo users over app-review-notes 1c/2c; then IOS-4 status bar, IOS-5 reset email,
+  screenshots, TestFlight build 3 (Phase 1 stage 1B).

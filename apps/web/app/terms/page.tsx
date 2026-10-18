@@ -19,7 +19,7 @@ export default function TermsPage() {
         </header>
 
         <section className="space-y-6 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6
-          text-sm leading-7 text-[var(--faint)]">
+          text-sm leading-7 text-[var(--muted)]">
           <article className="space-y-2">
             <h2 className="text-base font-semibold text-[var(--ink)]">Who we are</h2>
             <p>Domus (&quot;we&quot;) is run by Richard Smith, an individual. You can reach us at support@domusbase.com.</p>

@@ -33,6 +33,9 @@ describe("early-access legal pages", () => {
       const { container, unmount } = render(<Page />);
       expect(container.querySelectorAll('[class*="white"]')).toHaveLength(0);
       expect(container.querySelector("h1")?.className).toContain("text-[var(--ink)]");
+      const sectionClass = container.querySelector("main section")?.className ?? "";
+      expect(sectionClass).toContain("text-[var(--muted)]");
+      expect(sectionClass).not.toContain("text-[var(--faint)]");
       for (const heading of container.querySelectorAll("h2")) {
         expect(heading.className).toContain("text-[var(--ink)]");
       }

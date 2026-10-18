@@ -19,7 +19,7 @@ export default function PrivacyPage() {
         </header>
 
         <section className="space-y-6 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6
-          text-sm leading-7 text-[var(--faint)]">
+          text-sm leading-7 text-[var(--muted)]">
           <article className="space-y-2">
             <h2 className="text-base font-semibold text-[var(--ink)]">What we collect</h2>
             <ul className="list-disc space-y-1 pl-5">
