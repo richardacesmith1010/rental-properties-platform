@@ -11,8 +11,8 @@ Manager rows written by 5a's Send get working row actions:
 - **Resend** re-grants the home and sends a fresh link, or heals the row to Accepted when the person already signed in.
 - **Revoke** removes the access that invitation created: in one transaction the row reads `expired` and the grant goes
   inactive, unless another live invitation or a direct add (`assigned_directly`) still gives that home; then the grant stays
-  and the copy says so. The link dies when no other pending manager row remains. It never deletes the Auth user (D4). Re-invite after a revoke works (5a's Send
-  re-opens the row).
+  and the copy says so. The link dies when no other pending manager row remains. It never deletes the Auth user (D4).
+  Re-invite after a revoke works (5a's Send re-opens the row).
 - The **join-page resend** (unauthenticated) never grants and never sends a link for a home without an active grant (D8).
 
 Invariant (restated from 5a §1): access to a home is active if and only if a live (`pending` or `accepted`) manager
