@@ -94,9 +94,11 @@
   role is manager, the request is a server action (`next-action` header **or** a `multipart/form-data` /
   `application/x-www-form-urlencoded` POST) and the state is `read_only`, it **returns early with an error the action
   can't proceed past**: `redirect("/manager?paused=1")` is not used (it loses drafts and 8 client catches swallow it);
-  instead `requireAuth` throws a typed `ReadOnlyManagerError`, every manager-reachable action already wraps errors into
-  `{ success:false, error }`, and the 8 client `catch` sites get `unstable_rethrow` + a shared message
-  "Changes are paused. Start your plan to make changes." Allowlisted actions call `requireAuthAllowReadOnly`.
+  instead `requireAuth` throws a typed `ReadOnlyManagerError`. Not every action turns thrown errors into
+  `{ success:false, error }` (unverified across 56 files), so a crafted or mid-session request may land on the app's
+  error page; that is acceptable only because §5.1 already disables every edit control and §5.2 enforces in the
+  database. The 8 client `catch` sites show "Changes are paused. Start your plan to make changes." for this error type.
+  Allowlisted actions call `requireAuthAllowReadOnly`.
   Fails **open** on a lookup error (log `[billing] plan_lookup_failed`); RLS (5.2) fails closed — deliberate.
 - **5.4 Allowlist** (exact exports): `inbox.ts` `createInboxThread`, `sendMessageToTenant`, `sendInboxMessage`;
   `profile.ts` `completeOnboarding`, `updateProfile`, `uploadAvatar`; `account-deletion-request.ts`
