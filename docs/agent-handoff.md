@@ -1606,3 +1606,10 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   impossible; (3) invariant must cover direct assignments. Proposed rev 6: `property_managers.assigned_directly boolean not
   null default true` (existing grants stay protected), direct adds set it, invite grants set false only when they create
   access, revoke releases only invite-created access. **Owner decision asked** (third REJECT).
+- **Rev 6 (owner: "Build rev 6 with the assigned_directly source flag, re-prove it, and send ChatGPT round 4")**: SQL `62a10ed`
+  (`property_managers.assigned_directly`, default true; revoke removes only invite-made access; `kept_direct`); writer audit
+  (only the 237c-5 functions write false); suite 17/17 rolled back; live race re-run (scratch table, F/G correct, control
+  still reproduces the bug; all temp objects dropped). Packets `0c3ec71`.
+- **ChatGPT round 4: APPROVE WITH CHANGES** — "previous three rejection grounds are now resolved". REQUIRED B4(c) + 3 optional
+  adopted in rev 6.1 (`43ed82d`, `942df59`). **5a dispatched to Codex** (gpt-6-sol high, 2026-10-18). Next: review 5a → commit
+  locally → 5b (reviewed) → 5c needs its own ChatGPT pass (UI) → one release with both migrations + C-checks.
