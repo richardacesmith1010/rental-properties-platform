@@ -1,6 +1,7 @@
 # DRAFT — Domus Terms of Service and Privacy Policy (for owner + lawyer review)
 
-> **Status:** draft, not published. Written by Claude on 2026-10-07 from what the app does today (launch audit B3). **Not legal advice.** A lawyer licensed where Domus operates should review it before it replaces `/terms` and `/privacy`. Items marked **[DECISION]** need the owner's answer; items marked **[LAWYER]** need legal review.
+> **Status:** owner-approved draft (2026-10-18: name, 30-day notice, 30-day response, 7 years pending lawyer). Live for early-access testers; public final after the lawyer's edits. Remaining [LAWYER] items are for the lawyer.
+> Earlier status: draft, not published. Written by Claude on 2026-10-07 from what the app does today (launch audit B3). **Not legal advice.** A lawyer licensed where Domus operates should review it before it replaces `/terms` and `/privacy`. Items marked **[DECISION]** need the owner's answer; items marked **[LAWYER]** need legal review.
 >
 > **Main changes from the March 4 versions:** names the services Domus uses; covers bank-file and bank-link data, payments and the AI helper; removes "Paid plans are billed…" (Domus is free in early access); adds retention, deletion/export and state-rights wording; adds a real contact path (needs the support@/privacy@ inboxes, launch audit B1).
 
@@ -10,7 +11,7 @@
 
 **Last updated:** [DATE OF PUBLISHING]
 
-**Who we are.** Domus ("we") is run by **[DECISION: legal name of the person or company, e.g. "Domus LLC, a Colorado limited liability company"]**. You can reach us at support@domusbase.com.
+**Who we are.** Domus ("we") is run by **Richard Smith**, an individual. You can reach us at support@domusbase.com.
 
 **What Domus does.** Domus helps landlords, property managers, and tenants handle rent, repairs, leases, documents, and messages in one place.
 
@@ -19,7 +20,7 @@
 - Give true, current information.
 - Only add homes, tenants, or managers you have the right to manage.
 
-**Early access and price.** Domus is free while it is in early access. We will tell you at least **[DECISION: e.g. 30] days** before we start charging. You can stop using Domus before any charge starts.
+**Early access and price.** Domus is free while it is in early access. We will tell you at least **30 days** before we start charging. You can stop using Domus before any charge starts.
 
 **Payments.** Online rent payments are handled by Stripe. Stripe's terms apply to those payments. Domus does not hold your money. Fees shown before you pay are the fees you pay. **[LAWYER: confirm wording on refunds, chargebacks and failed bank payments.]**
 
@@ -64,13 +65,13 @@
   - Cloudflare: domain and email routing
 - **The law:** if a valid legal request requires it.
 
-**How long we keep it.** While your account is open. If you delete your account, we remove your login and personal details right away. Shared rental records (rent, payments, repairs, messages) stay for the other people in that rental, with your name removed, because they need them for their records and taxes. **[LAWYER/DECISION: retention period for financial records, e.g. 7 years; backup deletion window, e.g. 30 days.]**
+**How long we keep it.** While your account is open. If you delete your account, we remove your login and personal details right away. Shared rental records (rent, payments, repairs, messages) stay for the other people in that rental, with your name removed, because they need them for their records and taxes. Financial records (rent, payments, expenses) are kept for 7 years after the tax year they belong to. **[LAWYER: confirm 7 years; backup deletion window, e.g. 30 days.]**
 
 **Your choices and rights.**
 - **Download your data:** Settings → Your data → Download my data.
 - **Delete your account:** Settings → Your data → Delete my account. (Owners: Settings → Account & Data.)
 - **Fix your details:** Settings → Profile.
-- **Ask us anything:** privacy@domusbase.com. We answer within **[DECISION: e.g. 30] days**.
+- **Ask us anything:** privacy@domusbase.com. We answer within **30 days**.
 - Some states (for example California, Colorado, Virginia) give extra rights. We honor those requests through the same steps. **[LAWYER: confirm whether CCPA/CPRA or state laws apply at Domus's size, and any required wording.]**
 
 **Cookies.** We use cookies only to keep you signed in and keep Domus secure. We don't use ad cookies.

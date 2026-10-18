@@ -1,7 +1,7 @@
 # Domus Data Retention and Deletion Policy
 
 **Owner:** Richard Ace Smith, Owner — privacy@domusbase.com
-**Version:** 1.0 (draft) · **Adopted:** ____ · **Next review:** 12 months after adoption, or when laws or vendors change
+**Version:** 1.0 · **Adopted:** 2026-10-18 (owner approved 7 years; lawyer to confirm) · **Next review:** 12 months after adoption, or when laws or vendors change
 
 ## 1. Purpose
 This policy covers how long Domus keeps each kind of data, how it is deleted, and how people can ask for their data to be deleted. It follows our [privacy policy](https://domusbase.com/privacy) and applicable U.S. privacy laws, including the California Consumer Privacy Act (CCPA/CPRA) where it applies. It also follows our agreements with Plaid and Stripe.

@@ -1674,3 +1674,9 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   owner steps marked done; after-run checks add `ai_consent_at IS NULL` + no open deletion request; new rule: an App Review
   "Delete my account" request on a demo account is withdrawn, nothing deleted. **Decision:** factual drift within the
   approved design → rev 3.1 goes to Codex without another ChatGPT round.
+- **Owner decision 2026-10-18 (legal defaults):** "Approved: Richard Smith (individual), 30-day privacy response, 7-year
+  record retention (lawyer to confirm), 30-day notice before price changes, publish to testers now and publicly after the
+  lawyer." Filled into `docs/legal-draft-terms-privacy-2026-10.md` and `docs/policies/data-retention-policy.md` (adopted).
+  Interpretation (recorded): `/terms` and `/privacy` are public web pages, so "publish to testers now" = replace the
+  March 4 text with the approved draft now, labeled as an early-access version under legal review (only testers use
+  Domus today); the lawyer's edits become the final version. Unblocked: the 7-year purge job (Sprint 231).
