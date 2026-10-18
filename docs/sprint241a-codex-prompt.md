@@ -1,4 +1,4 @@
-# Sprint 241a — IOS-4: iPhone status bar follows the Domus theme (L3, iPhone app + web) — rev 1
+# Sprint 241a — IOS-4: iPhone status bar follows the Domus theme (L3, iPhone app + web) — rev 2 (rev 1 ChatGPT APPROVE WITH CHANGES → 2 required + 2 optional folded in)
 
 ## 1. Objective
 When the Domus theme (Settings → Appearance: Light / Dark / System) differs from the iPhone's own light/dark setting, the
@@ -45,8 +45,9 @@ theme colors or CSS, the Settings UI, Android, the web app outside the two web f
 ## 6. Implementation requirements
 ### Native
 1. `ThemeRequest` (in file 1, next to `FaceIdRequest`): `init?(body: Any)` accepts only a dictionary with exactly the key
-   `theme` whose value is one of `"light"`, `"dark"`, `"system"`; anything else returns nil. Property
-   `var interfaceStyle: UIUserInterfaceStyle` maps light → `.light`, dark → `.dark`, system → `.unspecified`.
+   `theme` whose value is one of `"light"`, `"dark"`, `"system"`; anything else returns nil. Properties
+   `let theme: String` (the validated raw value) and `var interfaceStyle: UIUserInterfaceStyle` (light → `.light`,
+   dark → `.dark`, system → `.unspecified`).
 2. `DomusNavigationDelegate.handleMessage`: add `else if name == "domusTheme", let request = ThemeRequest(body: body)
    { onTheme?(request) }` after the provenance check (the check stays first and unchanged). Add `var onTheme:
    ((ThemeRequest) -> Void)?` like `onFaceId`.
@@ -57,8 +58,10 @@ theme colors or CSS, the Settings UI, Android, the web app outside the two web f
 4. In `DomusBridgeViewController`: register `webView.configuration.userContentController.add(handler, name: "domusTheme")`
    next to the other three; set `handler.onTheme = { [weak self] in self?.applyTheme($0) }`. `applyTheme(_ request:)` sets
    `overrideUserInterfaceStyle = request.interfaceStyle` on `appWindow` and on `appLockController?.lockWindow` (if any),
-   saves the raw value with `ThemeStore.save`, and calls `setNeedsStatusBarAppearanceUpdate()`. Skip all work if the
-   style is unchanged on `appWindow` and the stored value is unchanged (no repeated writes).
+   saves `request.theme` with `ThemeStore.save`, and calls `setNeedsStatusBarAppearanceUpdate()`. Always set the lock
+   window first (when it exists and differs). Then skip the remaining work only when ALL hold: `appWindow` already has
+   `request.interfaceStyle`, the stored value already equals `request.theme`, and the lock window is nil or already has
+   `request.interfaceStyle`. A repeated same-theme request must therefore still repair a mismatched lock window.
 5. `SceneDelegate`: right after creating `window`, set `window?.overrideUserInterfaceStyle = ThemeStore.load()` so a cold
    launch shows the right status bar before the page loads. Nothing else in SceneDelegate changes.
 6. When the lock window is created later, it must match: in `DomusBridgeViewController`, wherever the lock controller
@@ -95,7 +98,12 @@ If `xcodebuild` cannot run in your sandbox, say so in the report; Claude runs it
    `save("dark")` it is `.dark`; after writing `"sepia"` directly under the key it is `.unspecified`.
 4. `testApplyThemeSetsWindowsAndPersists`: a `DomusBridgeViewController` with a test `appWindow` and test defaults (inject
    defaults through a property, default `.standard`) → `applyTheme(dark)` sets the window to `.dark` and stores "dark";
-   `applyTheme(system)` sets `.unspecified` and stores "system".
+   `applyTheme(system)` sets `.unspecified` and stores "system". Attach a controller/view to the test window as its root
+   (make it visible) and assert the effective trait: after dark, that view's `traitCollection.userInterfaceStyle == .dark`;
+   after light, `.light`. For system assert only the override is `.unspecified` (do not assert the Simulator's own trait).
+4b. `testRepeatedThemeRepairsMismatchedLockWindow`: give the controller a lock window (inject through a test seam, e.g. an
+   internal `lockWindowProvider` closure defaulting to `appLockController?.lockWindow`), apply dark, then set the lock
+   window to `.light` by hand, apply dark again → the lock window is `.dark` again.
 5. `theme.test.ts` "tells the iPhone app the theme": with `window.webkit.messageHandlers.domusTheme.postMessage` mocked,
    `applyTheme("dark")`, `applyTheme("system")` and `setTheme("light")` post `{ theme: "dark" }`, `{ theme: "system" }`,
    `{ theme: "light" }` in that order.
@@ -103,7 +111,8 @@ If `xcodebuild` cannot run in your sandbox, say so in the report; Claude runs it
    sets `data-theme="dark"`; with a `postMessage` that throws, `applyTheme` still does not throw.
 7. Same file, "boot script tells the app": run `THEME_INIT_SCRIPT` (e.g. `new Function(THEME_INIT_SCRIPT)()`) with
    `localStorage["domus-theme"] = "dark"` and a mocked handler → one post of `{ theme: "dark" }` and `data-theme="dark"`;
-   with no `window.webkit` it does not throw.
+   with no `window.webkit` it does not throw; with `localStorage["domus-theme"] = "sepia"` it posts `{ theme: "system" }`
+   and removes `data-theme` (existing fallback).
 8. All existing web tests and all existing `AppTests` still pass.
 
 ## 9. Report format
