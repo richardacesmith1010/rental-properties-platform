@@ -1571,3 +1571,29 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Not dispatched; not ChatGPT-reviewed yet. Production invite flow = HEAD (unchanged).
 - Also today: wizard flake fix (`unified-property-wizard.test.tsx:72` → `findByText`) still queued (L1).
 - **Rotate the chat now**: transcript is ~135 MB (threshold 50 MB). The redesign continues in a fresh session.
+
+## Sprint 237c-6 SHIPPED (2026-10-18) — wizard test flake fix (L1, test-only) — PASS
+- `unified-property-wizard.test.tsx` :72, :78, :84 now `await screen.findByText(...)` (Codex gpt-6-luna low, 3 lines,
+  byte-exact to the packet). Gate 320 files / 2,726 tests + build; commit `dde75d7`; CI `gate` success. No deploy (test-only).
+
+## 2026-10-18 — Sprint 237c-5 rev 3: C1 live probe, split into 5a/5b/5c, charge_edit_history migration ready
+- **C1 Auth probe (live, test addresses `+c5probe0`/`+c5probe1`, now used):** `generateLink` invite inserts and sends no mail;
+  `inviteUserByEmail` right after re-sends and kills the old token; `hashed_token` verifies to a session; `email_exists` 422 /
+  `user_not_found` 404; GoTrue lowercases. **Confirmed critic NIT:** an invite call on a self-signup user sets `invited_at`
+  and keeps its metadata, so 5a also requires `full_name` to match. Production notifications mode = `test` (allowlist set).
+- Rev 3 (`1bfaaa1`): `docs/sprint237c5-index.md` + `sprint237c5a/b/c-codex-prompt.md`; all 16 critic items placed.
+  Ship plan: each sprint reviewed/dispatched/gated separately and committed locally; 5a+5b+5c deploy together.
+- Migration `20261028_sprint237c5_charge_edit_history_active.sql` (+ rollback): adds `pm.active = true` to the only policy
+  missing it. Rolled-back dry run: new qual has the check; rollback text equals live. **Not applied** (applies with 5b).
+- Next: ChatGPT review of 5a (sent 2026-10-18 01:25Z) → Codex 5a (gpt-6-sol high) → 5b review → 5c.
+- **ChatGPT round 1 (rev 3): REJECT** — user_metadata provenance racable; expired+active state unrepairable. Fixed in rev 4
+  (`22e80e9`): `createUser` + server-only `app_metadata.domus_manager_invite` marker (live-proven: create-only, no mail,
+  marker not client-settable, survives generateLink/verify); atomic `manager_invite_grant` / `manager_invite_revoke` SQL
+  functions (dry run 9/9, rolled back, nothing persisted).
+- **ChatGPT round 2 (rev 4): REJECT** — provenance now Pass. New REQUIRED: (1) concurrent final revokes on two rows for one
+  person+home both skip release (needs a shared per-email+home lock in both functions); (2) grant must verify
+  invited_profile_id = p_profile_id and define missing ids; (3) self-heal "accepted" must first ensure an active grant;
+  (4) define Send/Resend linearization vs a revoke between grant and email, and test it; (5) real two-session Postgres
+  concurrency tests. **Stopped per §2a (second REJECT on the same packet): owner decision asked** — rev 5 + round 3, or park.
+- Standing rule (owner, 2026-10-18): Claude picks effort/model per task (memory `feedback_self_tune_effort_model`); the app
+  blocks a session changing its own, so Claude asks in one line for this chat.
