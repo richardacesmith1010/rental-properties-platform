@@ -1613,3 +1613,12 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - **ChatGPT round 4: APPROVE WITH CHANGES** — "previous three rejection grounds are now resolved". REQUIRED B4(c) + 3 optional
   adopted in rev 6.1 (`43ed82d`, `942df59`). **5a dispatched to Codex** (gpt-6-sol high, 2026-10-18). Next: review 5a → commit
   locally → 5b (reviewed) → 5c needs its own ChatGPT pass (UI) → one release with both migrations + C-checks.
+- **5c ChatGPT review: APPROVE WITH CHANGES**, all adopted (5c rev 3.1 `6b3032c`: action-owned row toasts, walk keeps the
+  shared link until the last revoke, backfill accepts only via `manager_invite_accept` for users who signed in).
+- **Codex 5a run 1 reviewed** (gate 325 files / 2,799 tests green; 4 reviewers): spec conformance clean except 8b error
+  order + a `propertyIds` nit; mutations 12/12 caught (independent re-run); **tests reviewer: 7 weak/tautological items
+  (L-017 FAIL) + 8 fake-vs-SQL mismatches**; adversarial: untyped RPC results; 5a must never ship without 5b (now
+  **enforced in `guard-deploy.sh`**). Live probe: attacker `signUp` on a Domus-created unconfirmed user cannot plant a
+  password (no takeover). Decision: fix round goes straight to Codex (same approved spec, no design change) —
+  `docs/sprint237c5a-fix1-codex-prompt.md` (`6e93909`), dispatched gpt-6-sol high.
+- Follow-up (perf, L-013): the callback now awaits `manager_invite_accept` on every session; measure `[perf:*]` after ship.
