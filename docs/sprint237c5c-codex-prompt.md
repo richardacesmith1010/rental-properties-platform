@@ -1,4 +1,4 @@
-# Sprint 237c-5c — Manager invite "UI": pick homes, Revoked badge, row toasts (L3) — rev 3 (references updated for 5a/5b rev 6)
+# Sprint 237c-5c — Manager invite "UI": pick homes, Revoked badge, row toasts (L3) — rev 3.1 (ChatGPT 5c AWC adopted)
 
 Severity L3 (part of the invite redesign; UI only). `/chatgpt-review` before `/codex-dispatch`. Part 3 of 3; the index is
 `docs/sprint237c5-index.md`. **Depends on 5a and 5b.** HEAD = the local 5b commit (on top of the local 5a commit; both reviewed,
@@ -92,14 +92,31 @@ Claude (not Codex): `supabase/migrations/20261028_sprint237c5_manager_invite_bac
 `invitations-section.tsx`:
 - Widen the `properties` type at :32. The tenant form keeps every home.
 - Badge (:178): `Revoked` for `expired`, as `invitations-panel.tsx:153`; wrap the line. It applies to every role.
-- In `InvitationRow`, replace the revoke `FormSuccess` (:200) with a toast: when `revokeState` becomes a new success, call
-  `toast.success(revokeState.message ?? "Invitation revoked.")` once (the `handledRef` pattern, `invite-manager-form.tsx:46-54`).
-  Visible strings (L-020): `Invitation revoked.` (every role; HEAD :378), `Invitation revoked. Another invite still gives
-  them this home.` and `Invitation revoked. They still manage this home.` Resend (:191) keeps `Resent!`.
-- Row-action errors are toasts. When `resendState` or `revokeState` becomes a new failure, call `toast.error(state.error)`
-  once, using a second `handledRef` per state. Remove the two inline `FormError` lines (:190, :199) so nothing shows twice.
-  The rows that revalidate (5b §6.6 already_joined, 5b §6.7 step 5) turn Accepted and unmount their actions; the toast
-  still shows. This applies to every role. Other row actions do not change.
+- Row-action toasts are owned by the action call, not by the row (ChatGPT 5c REQUIRED 1). A row can re-render from Pending
+  to Accepted (5b §6.6 already_joined, 5b §6.7) and unmount its forms, so no toast may depend on a `useEffect` or a
+  `handledRef` inside `InvitationRow`. Add one module-level helper in `invitations-section.tsx`:
+  ```ts
+  function withRowToast(action: RowAction, toastSuccess: boolean): RowAction {
+    return async (prev, formData) => {
+      const result = await action(prev, formData);
+      if (!result.success && result.error) toast.error(result.error);
+      else if (result.success && toastSuccess) toast.success(result.message ?? "Invitation revoked.");
+      return result;
+    };
+  }
+  const resendWithToast = withRowToast(resendInvite, false);
+  const revokeWithToast = withRowToast(revokeInvite, true);
+  ```
+  `RowAction` is the `(prev: ActionState, formData: FormData) => Promise<ActionState>` shape the two actions already have.
+  Both constants are module-level, so their identity is stable across renders. `InvitationRow` passes them to
+  `useFormState` instead of the raw actions. It adds no `try/catch` (L-028: a `redirect()` from the action propagates).
+  Result: exactly one toast per submit, fired when the result arrives, whatever the row renders next. The same error
+  returned by two submits toasts twice, once per submit. A re-render without a submit never toasts.
+- Remove the revoke `FormSuccess` (:200) and the two inline `FormError` lines (:190, :199), so nothing shows twice.
+  Resend success keeps its inline `Resent!` (:191); the row stays Pending on a resend success.
+- Visible strings (L-020): `Invitation revoked.` (every role; HEAD :378), `Invitation revoked. Another invite still gives
+  them this home.` and `Invitation revoked. They still manage this home.` The success toast shows the server's
+  `state.message` exactly. This applies to every role. Other row actions do not change.
 
 ### 6.11 Rules
 - L-028: the forms keep `useFormState`; add no client `try/catch` around `inviteManager`, `resendInvite` or `revokeInvite`.
@@ -141,26 +158,39 @@ Test rules: no `expect` inside a mock; assert after the awaited render or event;
   same for `"Invitation revoked. They still manage this home."` A
   Resend that returns `{ success: false, error: "They already signed in. No email was sent." }`, with the row re-rendered
   `accepted`, calls `toast.error` once with that text. Same for Revoke's `"They already signed in. This invite can't be
-  revoked."`. A tenant Revoke failure also toasts. No error text renders twice.
+  revoked."`. A tenant Revoke failure also toasts. No error text renders twice. Toast ownership: (i) a Resend failure whose
+  re-render shows the row `accepted` (its forms unmount) → `toast.error` exactly once; (ii) two submits that return the same
+  error → exactly two `toast.error` calls; (iii) re-rendering the section with unchanged props and no submit → no new toast
+  call; (iv) the success toast text equals the server `message` for each of the three revoke strings.
 - C3 Full suite (every 5a and 5b test still green), `tsc`, lint and `lib/__tests__/plain-language.test.ts` are green.
 
 **Mutation proofs (in the report; revert each):** M16 render the revoke error inline again instead of `toast.error` → C2's
-already-signed-in Revoke case. M17 drop the eligibility filter → C1 and C2's hidden-home cases.
+already-signed-in Revoke case. M23 move the error toast into a `useEffect` on `resendState` in `InvitationRow` → C2 (i)
+fails (the row unmounts before the effect runs) or (ii)/(iii) fail. M24 pass the raw `revokeInvite` to `useFormState` →
+C2 (iv) fails. M17 drop the eligibility filter → C1 and C2's hidden-home cases.
 
 **Claude only (not Codex), after this sprint passes review, on the combined 5a+5b+5c release:**
 - Claude C3 Walk (test accounts, magic-link sign-in). Setup: never-used plus-addresses X4 and X5 (SQL: no user, no profile; X0-X3
   were used by C1); add only X4 to Production `DOMUS_NOTIFICATIONS_ALLOWLIST`, redeploy, re-read; give the smoke owner
   a second account B with one home through the app; call no `generateLink` magiclink/signup for X4 or X5. Then: on account B,
-  invite X4 to "All my homes" → N Pending rows with Resend, Copy link, Revoke, and one branded email whose link opens
-  `/auth/confirm`, then the callback; invite X5 → the generic invite; revoke one home (access gone, toast shown, old link
-  dead), re-invite it (Pending), open the link (rows Accepted). The page stays on account B. Light and dark screenshots of the
+  invite X4 to "All my homes" (account B has at least 2 eligible homes; add one through the app if needed) → N Pending rows
+  with Resend, Copy link, Revoke, and one branded email whose link opens `/auth/confirm`, then the callback (do not open it
+  yet). Revoke one home: that row reads Revoked, the toast shows, X4's access to that home is gone (SQL), and the emailed
+  link still works because X4's other rows are still pending (no link reset, 5b §6.7). Re-invite that home (Pending, one
+  new email; the newest link is the live one). Open the newest link → every X4 row Accepted, access active (SQL).
+  Final-revoke reset: invite X5 to one home → the generic Supabase invite; revoke it → Revoked, access gone, and the link
+  from X5's email no longer signs in (link reset, because no pending row remains). "All my homes" means every eligible
+  home in the list being viewed (account B); the walk confirms no home from another account is posted (SQL on the rows)
+  and that the page stays on account B after each action. The page stays on account B. Light and dark screenshots of the
   form and list (L-009, L-022). Record X4-X5 as used in `docs/claude/reference.md`. Do not add a signed-in smoke manager to
   All my homes. If a walk does, Claude removes the extra grants by SQL and records it.
 - Claude C4 After deploy (HEAD writes HEAD-shape rows until then): re-count, then backfill manager rows with
   `invited_profile_id` null: (1) pending rows get the profile with `lower(p.email) = lower(i.email)` and `p.role = 'manager'`;
-  (2) pending manager rows whose user has `email_confirmed_at` become accepted, `accepted_at = coalesce(u.last_sign_in_at,
-  u.email_confirmed_at)`. Today: 1 row. The dry run lists any pending manager row still without `invited_profile_id`. After
-  ChatGPT APPROVE, a rolled-back dry run and the rollback file. Also re-count before deploy and list every unconfirmed
+  (2) a pending manager row turns accepted only with evidence of sign-in AND access (ChatGPT 5c REQUIRED 3): for each
+  manager profile whose `auth.users` row has `last_sign_in_at` not null, run `select * from manager_invite_accept(<profile>)`.
+  That function takes the same locks and accepts only rows whose grant for that home is active; every other row stays
+  pending (a confirmed email alone is not enough). Today: 1 row. The dry run lists any pending manager row still without
+  `invited_profile_id`. After ChatGPT APPROVE, a rolled-back dry run and the rollback file. Also re-count before deploy and list every unconfirmed
   manager user without `app_metadata.domus_manager_invite` (0 on 2026-10-18; 5a D7 refuses them) for Claude to review.
   Note: the 5a §6.12 migration makes every existing grant `assigned_directly = true`, so no pre-existing access is ever
   removed by a revoke; the backfill does not change that column.
