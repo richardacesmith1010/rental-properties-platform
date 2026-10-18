@@ -1795,3 +1795,10 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   scrolling after a swipe (taps land on the wrong row); black screen ~2 s on cold launch.
 - **Owner list addition:** App Review following the notes will create one live Stripe connected account for the demo
   owner (no money moves). Acceptable, or say "skip" and I'll change the notes to not ask them to tap it.
+
+## 2026-10-18 — Sprint 240b SHIPPED
+- `c0e9b52` (L2): receipt header stacks on phones (Print Receipt on screen, "Back to Rent" one line); tenant Rent "Paid"
+  lines show dates only; Ask Domus input row clears the help "?" (pr-16). Gate green (2,904), smoke green, CI success.
+  Re-walked on Simulator: all three verified.
+- Notes: Ask Domus is only in the "?" menu on the owner Home dashboard (not Money/Reports) — notes now say "on Home".
+- Remaining before build 3: owner answer on the demo Stripe tap; offline page on a real device; backlog items above.

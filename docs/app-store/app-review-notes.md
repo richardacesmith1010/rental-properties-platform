@@ -129,7 +129,7 @@ To report abuse, email support@domusbase.com.
 Or tap the ? button, then Send feedback.
 
 ASK DOMUS (AI HELPER)
-Owner: tap the ? button, then Ask Domus.
+Owner: on Home, tap the ? button, then Ask Domus.
 The first time, Domus asks before it sends anything.
 It names Anthropic, the AI company that writes the answers.
 Tap Allow or Not now. Not now sends nothing.
