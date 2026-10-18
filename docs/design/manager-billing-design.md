@@ -1,135 +1,138 @@
-# Manager plan billing — design rev 2 (2026-10-18) — rev 1 → 3 critics (6 blockers, ~20 should-fix) → rev 2
+# Manager plan billing — design rev 3 (2026-10-18) — rev 1 → 3 critics → rev 2 → ChatGPT REJECT (12 REQUIRED) → rev 3
 
 ## 0. Owner decisions (2026-10-18, `docs/agent-handoff.md`)
 - Free for self-managing landlords and tenants. **Manager plan: $1.50/door/month, $15 minimum, billed on the website.**
-- Co-managers: **the inviting manager pays** (team seats). No plan: **30-day trial, then read-only**. Alia: **free forever**.
+- Co-managers: **the inviting manager pays** (team seats). **Downstream: the original payer pays** — a whole team on a
+  home costs its payer once, whoever invited whom. No plan: **30-day trial, then read-only**. Alia: **free forever**.
 - Terms: 30 days' notice before charging; 30 days' notice before price changes.
-- Claude decisions (recorded): two managers an **owner** adds directly to one home are separate businesses → each pays for
-  it. A read-only manager may still message, edit their profile, change notification settings, use Ask Domus consent,
-  delete or wipe their own account, and run the five read actions in §5.4.
+- Claude decisions (recorded): managers an **owner** adds directly to one home are separate businesses → each pays. A
+  read-only manager may still message, edit their profile and notification settings, give Ask Domus consent, delete or
+  wipe their own account, use billing, and run the five read actions in §6.4. When a temporary comp ends, the manager
+  gets a fresh **30-day** trial (the notice period; no other trial length exists).
 
-## 1. Facts (research + critics, verified 2026-10-18)
-- Apple (guidelines 2026-10-16): iPhone app shows **no price, no subscribe button, no link out**; managers subscribe on the
-  web (3.1.3(c) business sales; risk: written for organizations — fallback is IAP if rejected). Rent stays 3.1.3(e).
-- The app's web view sends `DomusApp/1` in the user agent (`capacitor.config.ts:25`; `lib/native-app-server.ts:7`).
-  `checkout.stripe.com` opens inside the app (`NavigationPolicy.swift:9-11`); `billing.stripe.com` would open Safari.
-  In-app paths to a future price: `/login` logo → `/marketing`; `/terms` linked from help menu, sign-up, account settings.
-- Stripe: REST via `fetch`, no SDK, no pinned version, no Billing, no idempotency keys, no processed-events table.
-  Webhook signature check reads one `v1` and compares non-constant-time. `handleCheckoutSessionCompleted` returns
-  "received" for sessions without `charge_id` (`lib/stripe-webhook-handlers.ts:973-980`).
-- `inviteManager` → existing confirmed manager uses `manager_grant_homes` (no invitation row, `assigned_directly=true`,
-  `app/actions/invitations.ts:90-92`); new invitee rows are `pending` with **active access** until sign-in.
-- Managers can write directly through PostgREST under RLS (`can_administer_property`): `properties` UPDATE (incl.
-  `active`), INSERT on `units`, `leases`, `rent_charges`, `vendors`, `inbox_threads`, `rent_increase_history`,
-  `maintenance_status_history`, `screening_reports`; INSERT/UPDATE on `document_packets`, `rental_listings`,
-  `rental_applications`, `automation_rules`; I/U/D on `document_templates`. No storage write policies exist.
-- Next 15.5 treats a POST with `next-action` **or** a form content type as a server action. Five manager **reads** run as
-  server actions (§5.4). 8 client components catch action errors and would swallow a `redirect()`.
-- `requireAuth` already does `auth.getUser` + an uncached `profiles.select("role")`.
-- Live: 11 managers (10 test + Alia's), 10/18 homes have no unit rows, 0 inactive units, 1 home with 2 managers.
+## 1. Facts (research + critics + ChatGPT, verified 2026-10-18)
+- **Apple:** primary rationale **3.1.3(f)** — a free stand-alone companion to a paid web tool needs no IAP "provided
+  there is no purchasing inside the app, or calls to action for purchase outside of the app" (the listed services are
+  examples). 3.1.3(c) is secondary. The iPhone app shows **no price, no billing tab, no checkout, no portal, no buy CTA,
+  no link out**; billing actions refuse the `DomusApp/1` user agent. App Review gets a **manager demo account** (comped)
+  and notes explaining the web-only plan. Rent stays 3.1.3(e).
+- The app web view sends `DomusApp/1` (`capacitor.config.ts:25`; `lib/native-app-server.ts:7`). In-app paths to a future
+  price: `/login` logo → `/marketing`; `/terms` (help menu, sign-up, account settings).
+- Stripe: REST via `fetch`, no SDK/version/idempotency/Billing/events table. One live webhook endpoint (4 events today).
+- `inviteManager` → existing manager uses `manager_grant_homes` (no invitation row); new invitee rows are `pending`
+  with active access until sign-in (237c-5).
+- Managers can write directly via PostgREST under RLS on 14 tables (rev 2 §1 list); no storage write policies exist.
+- Supabase server code uses PostgREST/RPC over HTTP: a Postgres advisory lock lives only inside one RPC transaction and
+  **cannot span a Stripe request**. Concurrency therefore uses durable state + Stripe idempotency (§5).
 
 ## 2. Definitions
-- **Doors of a home H** (active): `greatest(1, count(active units of H))`. Inactive homes: 0.
-- **Grant source:** new column `property_managers.granted_by uuid null` — the manager whose action gave the access
-  (set by `manager_invite_grant` and `manager_grant_homes` when the caller is a manager); `null` for owner adds, client
-  sync, trigger, and every row before this migration.
-- **Team seat:** M is a team seat on H iff `pm(H,M).active` and `pm.granted_by = P`, P's role is `manager`, and P is a
-  payer of H. **Payers of H** = managers with an active row on H who are not team seats there. If that set is empty
-  (the inviter left, a chain whose root left, or a cycle), the payer is the active manager with the earliest grant on H
-  (`created_at`, then id). Every managed home has ≥ 1 payer; a home counts **once per payer**.
-- **Billable doors of M** = sum of doors over homes where M is a payer. **Quantity** = 0 when billable doors = 0, else
-  `max(billable_doors, 10)` (the $15 minimum = 10 × $1.50).
-- **Plan state** (precedence top-down): `comped` (flag, until `comped_until` if set) → `active` (subscription active) →
-  `past_due` (≤ 7 days since `past_due_since`) → `no_homes` (0 billable doors and no team seats) → `team_seat_only` (0
-  billable doors, ≥ 1 team seat) → `trialing` (now < `trial_ends_at`) → `read_only`. A manager with no billing row is
-  `no_homes` until a row exists (never read-only).
+- **Doors of home H** (active home): `greatest(1, count(active units))`; inactive home: 0.
+- **Grant source:** `property_managers.granted_by uuid null` = the manager whose action created or reactivated the row
+  (set by `manager_invite_grant` / `manager_grant_homes` when the caller is a manager; never overwritten on an already
+  active row); `null` for owner adds, client sync, the trigger, and all rows before this migration.
+- **Payer of a row** `payer(H, M)`: walk `granted_by` up from M on H while the granter has an active row on H and role
+  `manager`; the first row with `granted_by` null, or whose granter no longer qualifies, is the **root**; the root's
+  manager pays. A revisited manager (cycle) stops the walk; the payer is then the manager with the earliest
+  `created_at` (then id) among the cycle. Implemented as one SQL function (recursive CTE, depth ≤ 50).
+- **Payers of H** = distinct `payer(H, M)` over active rows. Every managed home has ≥ 1 payer. A home counts once per
+  payer. **Billable doors(P)** = Σ doors(H) over homes where P is a payer. **Quantity(P)** = 0 if billable doors = 0,
+  else `max(billable_doors, 10)`.
+- **Team seat:** M has an active row on H and `payer(H, M) ≠ M`.
 
-## 3. Data (Claude migration)
-- `manager_billing (manager_profile_id pk → profiles, trial_started_at, trial_ends_at, comped bool default false,
-  comped_until, comp_reason, stripe_customer_id unique, stripe_subscription_id unique, subscription_status,
-  current_period_end, past_due_since, last_quantity, updated_at)`. `revoke all … from public, anon, authenticated`;
-  `grant select` to authenticated; RLS: a manager selects only their own row. Writes: service role only.
-- `stripe_webhook_events (event_id pk, type, livemode, created, processed_at)` — insert **after** a successful write.
-- `property_managers.granted_by` (+ the two 237c-5 functions set it; the grant-from-invite path passes the inviter).
-- Functions (security invoker, `revoke execute … from public, anon, authenticated`, grant service_role):
-  `manager_billable_doors(p_manager)`, `manager_plan_state(p_manager)`, `manager_billing_payers(p_property)`.
-  Plus `is_read_only_manager()` — **security definer**, keyed on `auth.uid()`, used by RLS (§5.2); fails closed.
-- Trial row: created by service code only, `insert … on conflict do nothing` under the per-manager advisory lock
-  `domus.manager_billing:<id>`, the first time M has ≥ 1 billable door **and has signed in** (`last_sign_in_at` not
-  null). Never deleted or reset. Existing managers at launch: trial starts on billing launch day (= 30-day notice).
-- Comps by **fixed profile ids** in the migration (the 10 test managers, Alia with `comp_reason 'early access, owner
-  2026-10-18'`). Seed scripts that create managers insert a comp row. Turning a comp on cancels any subscription at period
-  end; when `comped_until` passes the manager gets a fresh 14-day trial (no instant read-only).
+## 3. Plan state (one SQL function, exact precedence)
+1. `comped` — `comped and (comped_until is null or now() < comped_until)`.
+2. `past_due` — `past_due_since is not null and now() < past_due_since + 7 days` (writable; wins over Stripe "active").
+3. `read_only` — `past_due_since is not null and now() ≥ past_due_since + 7 days` (the cron also cancels, §5).
+4. `active` — `subscription_status in ('active','trialing') and past_due_since is null` (Stripe `trialing` = the
+   charge-eligibility delay of §4, still "active" to Domus).
+5. `no_homes` — 0 billable doors and no team seats (also: no billing row).
+6. `team_seat_only` — 0 billable doors, ≥ 1 team seat.
+7. `trialing` — `now() < trial_ends_at`.
+8. `read_only` — everything else.
 
-## 4. Stripe (web only, `Stripe-Version` pinned on new calls)
-- One Product + one Price ($1.50/month per unit); ids in `STRIPE_MANAGER_PRICE_ID` (test + live). Created by Claude after
-  review. Customer Portal config: payment method + invoices + **cancel at period end only** (no quantity/plan changes).
-- **Start plan** (web action): refuses when the app user agent is present, when `BILLING_TERMS_VERSION` is not set (terms
-  not live), when state is `comped`/`active`/`past_due`/`no_homes`/`team_seat_only`, or at 0 billable doors. Under the
-  per-manager lock: create the customer once (`Idempotency-Key: mgr-cust-<id>`, compare-and-set
-  `stripe_customer_id`); reuse an open Checkout session; else create `mode=subscription`, `quantity`, `expires_at`
-  +30 min, `subscription_data.metadata.manager_profile_id`, no Stripe trial.
-- **Change card or plan** (Portal): same refusals for the app user agent and comped.
-- **Webhooks** (same route; branch on `session.mode === 'subscription'` and on subscription event types **before** the
-  rent handlers): verify every `v1` signature with a timing-safe compare; reject `livemode` ≠ key mode; skip events
-  already in `stripe_webhook_events`; for `checkout.session.completed` (subscription) and `customer.subscription.*`
-  **re-fetch** `GET /v1/subscriptions/:id` and write that state (order-proof); ignore subscriptions whose price is not
-  ours; map the manager from `metadata.manager_profile_id`; a second live subscription for the same manager → cancel the
-  newer one, log `[billing] duplicate_sub`. `invoice.paid` clears `past_due_since`; `invoice.payment_failed` sets it.
-  Status `incomplete|incomplete_expired|unpaid|paused|canceled` → not active. Live endpoint event list updated by Claude.
-- **Quantity sync** (daily cron + after every access change for **every payer it affects**: grants, revokes, accepts at
-  the callback, owner unit/home add/remove/activate): under the per-manager lock, recompute and send the full quantity
-  (`proration_behavior=none`); quantity 0 → `cancel_at_period_end=true`. Webhooks never write `last_quantity`.
-- **Past due:** our cron cancels a subscription 7 days after `past_due_since` (no reliance on Stripe retry settings).
-- **Account deletion:** add a `manager_billing` step to the 238b deletion job: cancel the subscription immediately and
-  delete the customer (idempotent). Runbook updated by Claude.
+## 4. Charge eligibility (server-enforced, Stripe-enforced)
+- `manager_billing.charge_eligible_at` = the latest of: `trial_ends_at`; `billing_launched_at + 30 days` (existing
+  managers); `comped_until + 30 days` (expired comps); `terms_live_at` (from `BILLING_TERMS_LIVE_AT`, unset = never).
+- **Start plan** refuses when `terms_live_at` is unset, and otherwise creates the subscription with
+  `subscription_data.trial_end = charge_eligible_at` when that is in the future — **Stripe itself cannot charge before
+  it.** Domus treats that Stripe `trialing` as `active` (plan started).
 
-## 5. Read-only enforcement
-- **5.1 UI (primary):** pages get the plan state at render. Read-only managers see everything; edit controls are
-  disabled with "Start your plan to make changes." (web) / "Changes are paused for now." (app).
-- **5.2 Database (truth):** for each manager-writable table/op in §1, an `AS RESTRICTIVE` policy `with check (not
-  public.is_read_only_manager())` (and `using` for update/delete). Drop `active` from the `properties` UPDATE column
-  grant for `authenticated` (an action changes it). Messages tables (`inbox_threads`) excluded per §0.
-- **5.3 Server backstop:** `requireAuth` reads `role` + the billing row in the **same** query it already makes. If the
-  role is manager, the request is a server action (`next-action` header **or** a `multipart/form-data` /
-  `application/x-www-form-urlencoded` POST) and the state is `read_only`, it **returns early with an error the action
-  can't proceed past**: `redirect("/manager?paused=1")` is not used (it loses drafts and 8 client catches swallow it);
-  instead `requireAuth` throws a typed `ReadOnlyManagerError`. Not every action turns thrown errors into
-  `{ success:false, error }` (unverified across 56 files), so a crafted or mid-session request may land on the app's
-  error page; that is acceptable only because §5.1 already disables every edit control and §5.2 enforces in the
-  database. The 8 client `catch` sites show "Changes are paused. Start your plan to make changes." for this error type.
-  Allowlisted actions call `requireAuthAllowReadOnly`.
-  Fails **open** on a lookup error (log `[billing] plan_lookup_failed`); RLS (5.2) fails closed — deliberate.
-- **5.4 Allowlist** (exact exports): `inbox.ts` `createInboxThread`, `sendMessageToTenant`, `sendInboxMessage`;
-  `profile.ts` `completeOnboarding`, `updateProfile`, `uploadAvatar`; `account-deletion-request.ts`
-  `requestAccountDeletion`; `account-wipe.ts` (manager self-wipe); `notifications.ts` dismiss / mark read / clear all /
-  mark all read / `saveNotificationPreference` (not `sendBatchPaymentReminder`); `notification-preferences.ts` (3);
-  `ai-consent.ts` (2); reads `tenant-activity.ts` `getTenantActivityLog`, `announcements.ts`
-  `getEstimatedRecipientCount`, `owner-statement.ts` `getOwnerStatementSummary`, `connect.ts` `getExpressDashboardUrl`;
-  billing actions. `signOut`, `submitFeedback`, password (browser client) need nothing.
+## 5. Stripe: durable intents + idempotency (no lock spans Stripe I/O)
+- **Tables:** `manager_billing` (§3/§4 fields + `stripe_customer_id`, `stripe_subscription_id`, `subscription_status`,
+  `current_period_end`, `cancel_at_period_end`, `past_due_since`, `desired_quantity`, `synced_quantity`,
+  `sync_needed_at`, `sync_claimed_at`, `sync_version int`, `last_stripe_request_id`); `billing_checkout_intents (id,
+  manager_profile_id, created_at, stripe_session_id, status)`; `stripe_webhook_events (event_id pk, type, livemode,
+  status processing|done, claimed_at, attempts, done_at)`.
+- **Sync marking in the database:** triggers on `property_managers`, `units`, `properties` (active/insert/delete) call
+  `mark_billing_sync(affected payers before ∪ after)` in the same transaction as the access change — sets
+  `sync_needed_at = now()`, `sync_version += 1`. No Stripe call happens inside an access change.
+- **Sync worker** (cron every 5 min + a best-effort kick after access actions): claims rows with
+  `update … set sync_claimed_at = now() where sync_needed_at is not null and (sync_claimed_at is null or < now()-10 min)
+  returning *` (atomic claim). Computes quantity; Stripe `POST /subscriptions/:id` with item quantity, and
+  `cancel_at_period_end = (quantity = 0)` — **so a return from 0 doors clears the cancellation** — `proration_behavior
+  =none`, `Idempotency-Key: mgr-qty:<sub>:<sync_version>`; on success writes `synced_quantity`, clears
+  `sync_needed_at` only if `sync_version` is unchanged (compare-and-set), else leaves it for the next pass. Failure:
+  release the claim; retry next pass. Reconciliation report (Claude command): Domus quantity vs Stripe quantity.
+- **Customer:** `Idempotency-Key: mgr-cust:<manager_id>` (fixed params: metadata only); compare-and-set
+  `stripe_customer_id where … is null`; a lost race reads the winner's id.
+- **Checkout:** refuse if a live subscription exists (`active|trialing|past_due|incomplete`); insert a checkout intent
+  (unique open intent per manager — a second click returns the same intent); create the session with
+  `Idempotency-Key: mgr-checkout:<intent_id>`, `expires_at` +30 min, `subscription_data.metadata.manager_profile_id`,
+  `trial_end` per §4; reuse an open session.
+- **Duplicate subscription** (webhook sees a second live subscription for the manager): cancel the newer one
+  (`Idempotency-Key: mgr-dup:<sub_id>`), log `[billing] duplicate_sub`.
+- **Webhooks:** raw body bytes; parse `Stripe-Signature`; accept if **any** `v1` matches (timing-safe) and `|now - t|`
+  ≤ 300 s; reject if `event.livemode` ≠ key mode. **Atomic claim:** `insert … (event_id, status 'processing') on
+  conflict do nothing`; if no row inserted and the existing row is `processing` and older than 10 min, reclaim it
+  (`attempts += 1`); if `done`, return 200. Process; on success set `done`; on failure delete the claim (Stripe retries
+  → reprocessed). For every subscription-related event (`checkout.session.completed` subscription mode,
+  `customer.subscription.*`, `invoice.paid`, `invoice.payment_failed`): **re-fetch** the subscription
+  (`GET /v1/subscriptions/:id`); ignore it unless its price is `STRIPE_MANAGER_PRICE_ID` **and** it is the manager's
+  current `stripe_subscription_id` (or the first one, which becomes current); write `subscription_status`,
+  `current_period_end`, `cancel_at_period_end`; set `past_due_since = coalesce(past_due_since, now())` when Stripe status
+  is `past_due|unpaid`; clear it only when status is `active|trialing` **and** the latest invoice is paid. Old or
+  duplicate subscriptions never overwrite current state.
+- **Past-due cron:** cancels a current subscription 7 days after `past_due_since` (`Idempotency-Key: mgr-pastdue:<sub>`).
+- **Account deletion:** a 238b job step cancels the current subscription immediately (`mgr-del:<sub>`) and deletes the
+  customer (idempotent).
+- Portal config (Claude): payment method + invoices + cancel at period end only. `Stripe-Version` pinned on new calls.
+  Persist `Request-Id` on failed billing calls.
 
-## 6. UI and copy (≤ 12 words per sentence)
-- Web Settings → **Billing** (managers; `?tab=billing` added): trial "Free trial ends Nov 17." · active "Your plan is on."
-  · past due "Your card didn't go through. Update it by Nov 24." · comped "Free for you. No card needed." · read-only
-  "Your free trial ended. Start your plan to make changes." · team seat "Alia pays for these homes. You pay nothing." ·
-  price "You have 4 doors. Your price is $15 a month." / "Each door is $1.50. The lowest price is $15." · per home
-  "<manager> pays for this home." · buttons **Start plan**, **Change card or plan**.
-- Web read-only banner: "Your free trial ended. You can still see everything." + **Start plan** button (straight to
-  Billing). App banner: "You can still see everything. Changes are paused for now." No button, no link.
-- **iPhone app (server-side, `DomusApp/1`):** no Billing tab; no prices on `/marketing` or `/terms` (shows "Plan prices
-  are on our website." — no link); Start plan / Portal actions refuse. Listing text: "Free for landlords and tenants."
-  App Review notes per research (§1); the App Review demo accounts stay owner/tenant (no manager).
+## 6. Read-only enforcement
+- **6.1 UI (primary):** pages render with the plan state; read-only managers see everything; edit controls disabled with
+  "Start your plan to make changes." (web) / "Changes are paused for now." (app).
+- **6.2 Database (truth):** `AS RESTRICTIVE` policies `not public.is_read_only_manager()` on every manager-writable
+  business table/op (rev 2 §1 list). **Allowlist audited by data effect:** 240a lists, for each allowlisted action, every
+  table, bucket and RPC it writes, and proves none is under a restrictive policy (messages tables, profiles, notification
+  prefs, AI consent, deletion requests, wipe, billing). **Inventory test** (SQL, in the suite and `/ship` C-checks):
+  fails if any table grants INSERT/UPDATE/DELETE to `authenticated` with a policy a manager can satisfy, without a
+  restrictive billing policy or an entry in the allowlist-exemption table.
+- **6.3 Server backstop:** `requireAuth` reads role + billing row in its existing query; for a manager server action
+  (`next-action` header or a form-content-type POST) in `read_only`, throws `ReadOnlyManagerError` (fails open on lookup
+  error). The 8 client catch sites show "Changes are paused. Start your plan to make changes."; elsewhere the error page
+  is acceptable because 6.1 and 6.2 already apply.
+- **6.4 Allowlist** (exact exports): as rev 2 §5.4 (messages ×3, profile ×3, deletion request, self-wipe, notification
+  ×5 + preferences ×3, AI consent ×2, the five reads, billing actions).
 
-## 7. Undo and money safety
-- Never charge before: owner-approved Terms with plan text live (`BILLING_TERMS_VERSION` set) **and** 30 days since
-  billing launch for existing managers. Comped/test/Alia never reach Checkout. Cancel = Portal (period end) or quantity 0.
-  Proration off. No automatic refunds (owner handles in Stripe).
+## 7. UI and copy (≤ 12 words per sentence; rev 2 §6 copy unchanged)
+- Web Settings → Billing, banners, buttons **Start plan** / **Change card or plan** as rev 2. During the Stripe delay:
+  "Your plan starts Nov 17. No charge before then."
+- iPhone (`DomusApp/1`, server-side): no Billing tab, no prices on `/marketing` or `/terms` ("Plan prices are on our
+  website." — no link), billing actions refuse. Listing: "Free for landlords and tenants." App Review: comped manager
+  demo account + notes citing 3.1.3(f).
 
-## 8. Sprints
-- **240a (L3, DB + Stripe core):** migration (§3, `granted_by`, RLS restrictive §5.2, grants), SQL suite + two-session
-  race (lock, trial creation, payer resolution), comps by id (Claude); `lib/manager-billing/*`, Stripe Billing client,
-  Start plan / Portal actions, webhook branch + events table, quantity sync + past-due cron, deletion step (Codex).
-- **240b (L3, gate + UI):** `requireAuth` backstop + allowlist + 8 catches, plan state in pages + disabled controls,
-  Settings → Billing, banners, iPhone suppression (Billing tab, marketing/terms prices), Terms plan text (owner approves),
-  listing + App Review notes (Claude). Then Claude creates the Stripe Product/Price/Portal config and webhook events
-  (test mode first), walks it, and the owner approves going live.
+## 8. Rollout (dark until complete)
+- `BILLING_ENABLED` env (default off): when off, no trial rows, no gate, no billing UI, no Stripe calls; triggers only
+  mark sync rows. 240a ships dark. Turn on only after 240b, Terms with plan text live (`BILLING_TERMS_LIVE_AT`), the
+  live Stripe Product/Price/Portal/webhook config, and a full lifecycle test with Stripe **Test Clocks** (trial end →
+  charge-eligible → paid → failed → 7-day read-only → recovery → zero doors → back → cancel → deletion). Owner approves
+  the switch.
+
+## 9. Sprints
+- **240a (L3):** migration (tables, `granted_by` + 237c-5 function updates, payer/doors/state/eligibility functions,
+  sync triggers, RLS restrictive + inventory test, grants), SQL suite + two-session races (Claude); Codex:
+  `lib/manager-billing/*`, Stripe Billing client (idempotency, version, request-id), Start plan / Portal actions (dark),
+  webhook branch + atomic claim + signature hardening, sync worker + past-due cron, deletion step.
+- **240b (L3):** requireAuth backstop + allowlist + catch sites, plan state in pages + disabled controls, Settings →
+  Billing, banners, iPhone suppression, Terms plan text (owner approves), listing + App Review notes + manager demo seed
+  (Claude), Test Clock lifecycle walk, owner switch.

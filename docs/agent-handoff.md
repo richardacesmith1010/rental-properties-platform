@@ -1688,3 +1688,7 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   Research: Apple — no IAP needed if the iPhone app shows no price/buy UI and managers subscribe on the web (3.1.3(c)
   business sales; rent stays 3.1.3(e)); Stripe — no Billing today (Connect + Checkout payments via REST, no API version
   pinned); doors — 10/18 homes have no unit rows; 1 live home shared by 2 managers; 10/11 managers are test accounts.
+- Billing design: rev 2 (3 critics) → **ChatGPT round 1 REJECT** (12 REQUIRED: past_due precedence, server-enforced
+  charge eligibility, team-seat chains, zero-door recovery, locks can't span Stripe I/O → durable intents + idempotency,
+  atomic webhook claim, invoice/subscription matching, signature details, RLS allowlist by data effect + inventory test,
+  Apple 3.1.3(f) + manager demo, ship dark). Owner decision: **downstream team seats → original payer pays**. Rev 3 written.
