@@ -1,4 +1,4 @@
-# Sprint 237c-5b — Manager invite "Resend, Revoke, join page" (L3) — rev 6 (rev 3 REJECT → rev 4 REJECT → rev 5 REJECT → rev 6)
+# Sprint 237c-5b — Manager invite "Resend, Revoke, join page" (L3) — rev 6.1 (ChatGPT: 3× REJECT → rev 6 AWC, adopted)
 
 Severity L3 (auth/invite, access removal). `/chatgpt-review` before `/codex-dispatch`. Part 2 of 3; the index is
 `docs/sprint237c5-index.md`. **Depends on 5a.** HEAD = the local 5a commit (reviewed, committed by Claude, not deployed). Line
@@ -9,8 +9,9 @@ numbers below for `tenant-invitations.ts`, `join-invite.ts`, `invite-resend.ts` 
 ## 1. Objective
 Manager rows written by 5a's Send get working row actions:
 - **Resend** re-grants the home and sends a fresh link, or heals the row to Accepted when the person already signed in.
-- **Revoke** really removes access: in one transaction the row reads `expired` and the grant goes inactive. The link dies
-  when no other pending manager row remains. It never deletes the Auth user (D4). Re-invite after a revoke works (5a's Send
+- **Revoke** removes the access that invitation created: in one transaction the row reads `expired` and the grant goes
+  inactive, unless another live invitation or a direct add (`assigned_directly`) still gives that home; then the grant stays
+  and the copy says so. The link dies when no other pending manager row remains. It never deletes the Auth user (D4). Re-invite after a revoke works (5a's Send
   re-opens the row).
 - The **join-page resend** (unauthenticated) never grants and never sends a link for a home without an active grant (D8).
 
@@ -269,8 +270,10 @@ and hooks are 5a's: `db:<table>:<op>`, `rpc:<name>`, `auth.<method>`, `auth.inse
 - B3 "re-add after revoke". Invite, Revoke, the person signs in through another inviter's link, re-add from the form: the same
   row id reads `accepted`.
 - B4 "live legacy row heals" (seeded: user created first, confirmed, grant active, `invited_profile_id` null), no email in any
-  case: (b) Resend → `"They already signed in. No email was sent."`, accepted; (c) Revoke → `"Invitation revoked."`; row `expired`;
-  grant inactive (no other live row); (d) join-page resend → `"This invite was already used. Sign in instead."`
+  case: (b) Resend → `"They already signed in. No email was sent."`, accepted; (c) Revoke → the RPC returns `revoked`,
+  `released: false`, `kept_direct: true`; copy `"Invitation revoked. They still manage this home."`; row `expired`; grant
+  still active with `assigned_directly` true (the seeded legacy grant predates the migration, so it counts as a direct add);
+  (d) join-page resend → `"This invite was already used. Sign in instead."`
 - B5 "two inviters, one person". A and B each invite P (new, unconfirmed) to h1: two pending rows, one active grant
   (invitation-made). Revoke by A → `"Invitation revoked. Another invite still gives them this home."`; A's row `expired`;
   grant active; no link reset (B's row is pending). Then `clickLink` + `markManagerInvitationsAccepted(P)` → B's row

@@ -1,4 +1,4 @@
-# Sprint 237c-5a — Manager invite "Send" (L3) — rev 6 (rev 3 REJECT → rev 4 REJECT → rev 5 REJECT → rev 6)
+# Sprint 237c-5a — Manager invite "Send" (L3) — rev 6.1 (ChatGPT: 3× REJECT → rev 6 AWC, adopted)
 
 Severity L3 (auth/invite, access grants, outbound email). `/chatgpt-review` before `/codex-dispatch`. Part 1 of 3; the index
 is `docs/sprint237c5-index.md`. 5b (Resend, Revoke, join page) and 5c (UI) build on this commit. HEAD is `0e4a85c` (app code
@@ -526,7 +526,8 @@ last revoke). The vitest fakes are sequential and only model these functions; Po
 
 ### 6.13 Linearization (Send, Resend, Revoke)
 - A Send or Resend takes effect when `manager_invite_grant` commits.
-- A Revoke that commits after that and before the email still wins: row `expired`, access off.
+- A Revoke that commits after that and before the email still wins: row `expired`, and the access that invitation created
+  is off. Access stays only when another live invitation or a direct add (`assigned_directly`) gives that home (§6.12).
 - Send may still say `"Invite sent to {email}. They'll get an email from Domus."`, and the email may still arrive.
 - Its link signs the person in but gives no access to that home: sign-in accept skips expired rows, and the join page
   refuses.

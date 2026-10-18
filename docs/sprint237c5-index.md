@@ -110,3 +110,10 @@ Vercel Production: allowlist set, `DOMUS_NOTIFICATIONS_ENABLED` absent → mode 
 ## Residual risk
 Two inviters sending to one brand-new email at the same moment: the second gets "Could not check this email. Try again."
 once (9b `email_exists`); Send again works via 8b, since the marker is set.
+
+## ChatGPT round 4 (rev 6): APPROVE WITH CHANGES — adopted in rev 6.1
+- REQUIRED 1: B4(c) now expects the legacy (pre-migration, `assigned_directly` true) grant to stay: `kept_direct` copy, flag
+  and grant asserted. OPTIONAL: 5a §6.13 qualified (direct adds / other live invitations keep access); 5b objective says the
+  same. Release gate (kept): apply `20261028_sprint237c5_charge_edit_history_active.sql` **before** the release deploy (no
+  inactive manager grant can exist before 5b ships); re-run both SQL files and both race harnesses before ship.
+
