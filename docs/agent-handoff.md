@@ -1627,3 +1627,11 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   **5a committed locally `09ae479` (not deployed).** Deploy guard verified blocking HEAD with 5a but no 5b.
   Grooming nit: the fake's DO UPDATE path can overwrite unspecified columns with defaults (no current caller).
 - **5b dispatched** to Codex (gpt-6-sol high) on top of `09ae479`.
+- **Codex 5b run 1 reviewed** (gate 327 files / 2,866 tests green): spec conformance no blockers (3 nits); mutations 9/9 +
+  2 extra caught (independent); adversarial no High/Medium (Low: revoke row not shape-checked; the old `handle_new_user`
+  trigger can still grant on a pending manager row if that Auth user is deleted outside the app — covered by the existing
+  "convert on email confirmation" L3 follow-up); **tests reviewer: 15/24 items under-asserted** → fix round
+  `docs/sprint237c5b-fix1-codex-prompt.md` dispatched (gpt-6-sol high). Lessons L-030 (Codex under-asserts; packets define
+  assertion helpers) and L-031 (identity source, lock, grant source before review) added; codex-dispatch checklist updated.
+- **5b fix round reviewed: PASS** (F1-F3 read; B12 retry convergence, B15 logging, new B25 join-page bypass test read;
+  14 mutations caught; gate 327 files / 2,875 tests + build green). **5b committed locally (not deployed).** 5c dispatched.
