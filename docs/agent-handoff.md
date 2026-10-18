@@ -1802,3 +1802,5 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   Re-walked on Simulator: all three verified.
 - Notes: Ask Domus is only in the "?" menu on the owner Home dashboard (not Money/Reports) — notes now say "on Home".
 - Remaining before build 3: owner answer on the demo Stripe tap; offline page on a real device; backlog items above.
+- **Owner 2026-10-18: "Yes, keep it. App Review can tap Set up rent payments on the demo owner; a live Stripe account for
+  the fake owner is fine."** Notes unchanged. After review, delete that Express account (runbook account-deletion C6 style).
