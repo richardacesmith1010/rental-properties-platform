@@ -1635,3 +1635,23 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   assertion helpers) and L-031 (identity source, lock, grant source before review) added; codex-dispatch checklist updated.
 - **5b fix round reviewed: PASS** (F1-F3 read; B12 retry convergence, B15 logging, new B25 join-page bypass test read;
   14 mutations caught; gate 327 files / 2,875 tests + build green). **5b committed locally (not deployed).** 5c dispatched.
+
+## Sprint 237c-5 (a+b+c) SHIPPED (2026-10-18 ~03:45Z) — manager invite redesign — PASS_WITH_RISK (low)
+- Commits `09ae479` (5a), `0dcc704` (5b), `9583bf9` (5c); pushed; deployed (domusbase.com); CI `gate` success on `9583bf9`;
+  gate 328 files / 2,891 tests + build; smoke green.
+- Migrations applied (after ChatGPT AWC, rolled-back dry runs, rollback files): `20261028_sprint237c5_charge_edit_history_active`,
+  `20261028_sprint237c5_manager_invite_functions` (assigned_directly + 5 functions), then post-deploy
+  `20261029_sprint237c5_manager_invite_backfill` (1 legacy row → bound + accepted; backup table kept). L-012 re-read before
+  apply (trigger md5 unchanged). Attacker SQL as `authenticated`: 7/7 denied. Live rolled-back suite 17/17. C5 diagnostic 0/0.
+- **Live walk (smoke owner, magic link; test addresses +c5walk4 allowlisted, +c5walk5 not):** All my homes (2 homes) →
+  exact copy + toast, user via `createUser` + marker, branded path (`generate_link`, no Supabase `/invite`), 2 Pending rows
+  with Resend/Copy link/Revoke, grants invite-made; revoke one home → "Revoked" + toast, that access off, link NOT rotated
+  (other row pending); re-invite → same row reopened, access back, link rotated, 1 user; open newest link → both rows
+  Accepted on sign-in; +c5walk5 → Supabase `/invite` (generic); final revoke → access off, link rotated (old dead), user
+  kept. Light + dark readable. Production allowlist now also has `+c5walk4` (owner test inbox).
+- Follow-ups: (L1) home checkboxes in the manager form have no accessible name ("on") — link labels; (L3) remove a
+  signed-in manager from a home; (L3) convert manager/owner rows on email confirmation in `handle_new_user` (also closes
+  the deleted-Auth-user re-arm window); one Revoke for an All-my-homes send; measure `[perf:*]` for the callback's
+  `manager_invite_accept` call; grooming: fake DO UPDATE default-column nit.
+- Scorecard: Manager 80 → 83. Transcript 7 MB.
+- **Next:** L1 checkbox labels (quick), then scorecard rule picks the next category.

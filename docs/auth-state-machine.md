@@ -238,3 +238,21 @@ stateDiagram-v2
 
     note right of S5_NoProfile : INVARIANT VIOLATION\nShould not persist
 ```
+
+## 8. Manager invitations (sprint 237c-5, shipped 2026-10-18)
+- **Send (new person):** `auth.admin.createUser` (create-only) with server-only `app_metadata.domus_manager_invite = true`
+  → `handle_new_user` makes the manager profile and converts nothing (no pending row exists yet) → pending invitation
+  rows (bound to the profile) → `manager_invite_grant` (atomic, per-home lock) → email last (branded only in `test` mode
+  for allowlisted addresses; otherwise Supabase's own invite email).
+- **Provenance:** an unconfirmed manager account counts as a Domus invitee only with the `app_metadata` marker. Anything
+  else (self sign-up) is refused (D7). Clients cannot set `app_metadata`.
+- **States of a manager invitation row:** `pending` (not accepted yet; normally with access, which may be missing only
+  after a failed grant step, repaired by Send again or Resend) → `accepted` (person signed in while access was active;
+  set by `manager_invite_accept` at `/auth/callback`, or by grant-with-accept) → `expired` (revoked; shown as "Revoked").
+- **Access sources:** `property_managers.assigned_directly` — `true` for direct adds (owner adds a signed-in manager,
+  client-account sync, the trigger, every row before 2026-10-28), `false` for access an invitation created. Revoke removes
+  only invitation-created access, and only when no other live invitation gives that home.
+- **Concurrency:** every access change takes one advisory lock per (home, manager profile) in key order before row
+  locks (`manager_access_lock`). Proven with two real database sessions (`supabase/tests/sprint237c5_*`).
+- Not yet: removing a signed-in manager from a home; converting rows on email confirmation in the trigger (L3 follow-ups).
+

@@ -136,6 +136,15 @@ Dedicated test accounts must exist for every role. Claude uses these for flow wa
 | Manager (smoke) | richard.ace.smith+smokemanager@gmail.com | Active — assigned to Smoke Test Property only |
 | Tenant (smoke) | richard.ace.smith+smoketenant@gmail.com | Active — $1/mo lease (below online-payment minimum) |
 
+Used plus-addresses (never reuse for "never-used" probes or walks):
+- `+c5probe0`–`+c5probe3`, `+c5probe6` (237c-5 Auth probes, 2026-10-18). `+c5probe1` and `+c5probe3` are unconfirmed
+  self-sign-up managers with no Domus marker: 5a's D7 refuses them by design.
+- `+c5walk4` (manager, accepted on Smoke Test Property + Walk Home Two; on the Production notifications allowlist) and
+  `+c5walk5` (manager invite revoked, unconfirmed) — 237c-5 C3 walk. The smoke owner also has a second test home,
+  "Walk Home Two" (2 Walk Test St, Denver), added through the app for that walk.
+- Sign-in for walks: server-generated `generateLink({ type: "magiclink" })` → `/auth/confirm?token_hash=…&type=magiclink`
+  (script pattern: `supabase/tests/sprint237c5_manager_invite_race.mjs` env loading).
+
 Smoke-account credentials live in `apps/web/.env.local` (`SMOKE_*` vars, gitignored); rotation procedure in `docs/smoke-accounts.md`. With those vars set, `APP_URL=https://domusbase.com npm run smoke:web` runs authenticated render checks (3 roles, zero-console-error assertion) — this satisfies the L-009 post-deploy render check for routine deploys; manual Chrome walks remain required for sprints that change specific flows.
 
 If a required test account is missing for a planned flow walk, Claude must request its creation as part of that sprint's scope rather than skipping verification.
