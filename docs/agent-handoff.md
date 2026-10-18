@@ -1597,3 +1597,12 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   concurrency tests. **Stopped per §2a (second REJECT on the same packet): owner decision asked** — rev 5 + round 3, or park.
 - Standing rule (owner, 2026-10-18): Claude picks effort/model per task (memory `feedback_self_tune_effort_model`); the app
   blocks a session changing its own, so Claude asks in one line for this chat.
+- **Rev 5 (owner: "Fix all five round-2 items in rev 5 and send ChatGPT round 3")**: SQL `5ead674` (5 functions: per-home/profile
+  advisory lock, identity binding, accept-only-with-access; rolled-back suite 13/13; **live two-session race proof** via
+  temporary `zz_c5_*` copies over PostgREST — no-lock control reproduced the bug, lock version correct in 4 scenarios; all
+  temp objects + fixtures dropped, verified 0). Packets `b83d68e`.
+- **ChatGPT round 3: REJECT** (concurrency/binding/linearization now Pass). REQUIRED: (1) revoke can remove a *direct*
+  assignment made by `manager_grant_homes` (no invite row) because `property_managers` has no source; (2) B5 test sequence
+  impossible; (3) invariant must cover direct assignments. Proposed rev 6: `property_managers.assigned_directly boolean not
+  null default true` (existing grants stay protected), direct adds set it, invite grants set false only when they create
+  access, revoke releases only invite-created access. **Owner decision asked** (third REJECT).
