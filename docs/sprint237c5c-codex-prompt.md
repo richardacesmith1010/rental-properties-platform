@@ -1,4 +1,4 @@
-# Sprint 237c-5c — Manager invite "UI": pick homes, Revoked badge, row toasts (L3) — rev 3 (references updated for 5a/5b rev 5)
+# Sprint 237c-5c — Manager invite "UI": pick homes, Revoked badge, row toasts (L3) — rev 3 (references updated for 5a/5b rev 6)
 
 Severity L3 (part of the invite redesign; UI only). `/chatgpt-review` before `/codex-dispatch`. Part 3 of 3; the index is
 `docs/sprint237c5-index.md`. **Depends on 5a and 5b.** HEAD = the local 5b commit (on top of the local 5a commit; both reviewed,
@@ -22,7 +22,8 @@ Unchanged context is in 5a §2 and 5b §2. Facts the requirements below depend o
   errors revalidate the page and turn the row Accepted: `"They already signed in. No email was sent."` (5b §6.6
   `already_joined`).
 - `revokeInvite` returns `{ success: true, message }` with `"Invitation revoked."` (every role; HEAD :378) or `"Invitation
-  revoked. Another invite still gives them this home."` (5b §6.7 step 10). Its error `"They already signed in. This invite
+  revoked. Another invite still gives them this home."` or `"Invitation revoked. They still manage this home."` (5b §6.7
+  step 10). Its error `"They already signed in. This invite
   can't be revoked."` revalidates and turns the row Accepted (5b §6.7 step 5's `accepted` outcome).
 - Revoke writes status `expired` for every role.
 
@@ -93,8 +94,8 @@ Claude (not Codex): `supabase/migrations/20261028_sprint237c5_manager_invite_bac
 - Badge (:178): `Revoked` for `expired`, as `invitations-panel.tsx:153`; wrap the line. It applies to every role.
 - In `InvitationRow`, replace the revoke `FormSuccess` (:200) with a toast: when `revokeState` becomes a new success, call
   `toast.success(revokeState.message ?? "Invitation revoked.")` once (the `handledRef` pattern, `invite-manager-form.tsx:46-54`).
-  Visible strings (L-020): `Invitation revoked.` (every role; HEAD :378) and `Invitation revoked. Another invite still gives
-  them this home.` Resend (:191) keeps `Resent!`.
+  Visible strings (L-020): `Invitation revoked.` (every role; HEAD :378), `Invitation revoked. Another invite still gives
+  them this home.` and `Invitation revoked. They still manage this home.` Resend (:191) keeps `Resent!`.
 - Row-action errors are toasts. When `resendState` or `revokeState` becomes a new failure, call `toast.error(state.error)`
   once, using a second `handledRef` per state. Remove the two inline `FormError` lines (:190, :199) so nothing shows twice.
   The rows that revalidate (5b §6.6 already_joined, 5b §6.7 step 5) turn Accepted and unmount their actions; the toast
@@ -136,7 +137,8 @@ Test rules: no `expect` inside a mock; assert after the awaited render or event;
 - C2 `manager-invite-entry-points.test.tsx`: `OwnerAddMenu` (owner → "Add a manager") and `InvitationsSection` ("Send
   Invitation" → "Manager Invite") hide client and inactive homes; the tenant form lists every home. A pending row shows
   Resend, Copy link and Revoke; an accepted row none; an `expired` row (manager or tenant) reads `Revoked`. A Revoke that
-  returns `"Invitation revoked. Another invite still gives them this home."` calls `toast.success` once with that text. A
+  returns `"Invitation revoked. Another invite still gives them this home."` calls `toast.success` once with that text; the
+  same for `"Invitation revoked. They still manage this home."` A
   Resend that returns `{ success: false, error: "They already signed in. No email was sent." }`, with the row re-rendered
   `accepted`, calls `toast.error` once with that text. Same for Revoke's `"They already signed in. This invite can't be
   revoked."`. A tenant Revoke failure also toasts. No error text renders twice.
@@ -160,6 +162,8 @@ already-signed-in Revoke case. M17 drop the eligibility filter → C1 and C2's h
   u.email_confirmed_at)`. Today: 1 row. The dry run lists any pending manager row still without `invited_profile_id`. After
   ChatGPT APPROVE, a rolled-back dry run and the rollback file. Also re-count before deploy and list every unconfirmed
   manager user without `app_metadata.domus_manager_invite` (0 on 2026-10-18; 5a D7 refuses them) for Claude to review.
+  Note: the 5a §6.12 migration makes every existing grant `assigned_directly = true`, so no pre-existing access is ever
+  removed by a revoke; the backfill does not change that column.
 - Claude C6 Handoff: D1-D10, the D2 send occasion, and follow-ups: convert manager and owner rows on email confirmation (L3,
   diffed against the live body); the tenant `deleteUser` fallbacks; `inviteOwner` rows that never convert; the branded email
   at launch; a revoked, never-signed-in manager email cannot become a tenant or owner; remove a signed-in manager from a home

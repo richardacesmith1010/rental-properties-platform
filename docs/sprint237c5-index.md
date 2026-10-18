@@ -1,7 +1,12 @@
-# Sprint 237c-5 — Manager invite redesign: index (rev 5)
+# Sprint 237c-5 — Manager invite redesign: index (rev 6)
 
-Rev 5 (5a, 5b): rev 3 REJECT → rev 4 REJECT → rev 5 (owner approved); see "ChatGPT round 1" and "round 2". 5c and this
-index only update references.
+Rev 6 (5a, 5b): rev 3 REJECT → rev 4 REJECT → rev 5 REJECT → rev 6 (owner approved); see "ChatGPT round 1-3". 5c and
+this index only update references.
+
+Access invariant (rev 6): access to a home is active iff a live (`pending`/`accepted`) manager invitation exists for that
+person and home, OR the grant is `assigned_directly`. Exceptions: a pending row right after a failed grant ("Could not add
+access. Press Send again."; repaired by Send again or Resend); client-account sync and account wipe manage their own rows.
+Expired never removes a direct add; accepted means the person signed in while access was active.
 
 Rev 3 splits rev 2 (`docs/sprint237c5-codex-prompt.md`, now superseded) into three L3 Codex packets and folds in all 16
 completeness-critic items (`docs/sprint237c5-critic-notes.md` §2) plus the C1 live results. HEAD `0e4a85c`.
@@ -65,6 +70,19 @@ functions), `supabase/tests/sprint237c5_manager_invite_functions.sql` (rolled-ba
 - App: §6.3 re-opens expired rows as an explicit re-add; Resend authorizes before the confirmed check (B21, M20); Revoke always
   revokes a pending row, even after sign-in (B4(c), B6, M7; 5b Undo (6)).
 
+## ChatGPT round 3 (rev 5: REJECT; concurrency, binding, atomicity, provenance, linearization Pass) → rev 6
+Proof (commit `62a10ed`, not applied): migration adds `property_managers.assigned_directly` (default true; rollback drops it,
+no access lost); rolled-back suite S0, G1-G4, R1-R5, A1, H1, D1-D3, X1, P1 pass; live race re-run
+`supabase/tests/sprint237c5_manager_invite_race_rev6.mjs` (F, G: direct add vs last revoke) and the C5 diagnostic query in
+`…_concurrency.md`.
+- R1 revoke keeps independent access — ADOPTED: 5a §6.12 (flag, `kept_direct`), D10; 5b §6.7 step 10 copy "Invitation
+  revoked. They still manage this home.", Undo (7); 5c toast list. Tests 5b B23 (ChatGPT's sequence), B24 (seeded grant),
+  5a A37 source cases; M22.
+- R2 B5 unreachable — ADOPTED: 5b B5 rewritten (both pending; A revokes while B's row is live; sign-in accepts B's only).
+- R3 invariant for two sources — ADOPTED: 5a §1, 5b §1, this index.
+- Optional: writer audit → 5a §2.3; C5 diagnostic → 5b C5; duplicate 5a §6.11 heading removed; "pending" reworded (5a §1,
+  5b §1); C4 note on `assigned_directly = true` → 5c.
+
 ## Live results round 2 (Claude, 2026-10-18 01:27Z; X2, X3 = `+c5probe2`/`+c5probe3`, both now used)
 `createUser({ email_confirm: false })` inserts (trigger fires, role from `user_metadata`), sends no mail (`user_signedup`), and
 is create-only (existing email → `email_exists` 422). The `app_metadata` marker survives `generateLink` and `verifyOtp`;
@@ -84,9 +102,10 @@ Vercel Production: allowlist set, `DOMUS_NOTIFICATIONS_ENABLED` absent → mode 
 ## Old → new test map
 - 5a: 1-10 → A1-A10 (Resend halves of 7, 9 → B16); 13 → A11; 30 → A12 (M4 is 5a); 14(a) → A13; 15(a) → A14; 16-24 →
   A15-A23; 25 → A24 ((a) tenant race, (b), (c) attack, (d) same name); 26(b) → A25; new → A26; 38-39, 43-49 → A27-A35; 52 → A36;
-  rev 5 new → A37.
+  rev 5 new → A37 (rev 6 adds source-flag cases).
 - 5b: 11, 12 → B1, B2; 14(b) → B3; 15(b-d) → B4; 26-28 → B5-B7; 29 → B8; 34 → B9; 35 → B10; 31-33 → B11-B13; 36, 37 →
-  B14, B15; Resend halves → B16; 40-42 → B17-B19; 52 → B20; rev 5 new → B8(d, e), B21, B22. 5c: 50 → C1; 51 → C2; 52 → C3.
+  B14, B15; Resend halves → B16; 40-42 → B17-B19; 52 → B20; rev 5 new → B8(d, e), B21, B22;
+  rev 6 new → B23, B24. 5c: 50 → C1; 51 → C2; 52 → C3.
 
 ## Residual risk
 Two inviters sending to one brand-new email at the same moment: the second gets "Could not check this email. Try again."

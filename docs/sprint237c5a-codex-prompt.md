@@ -1,4 +1,4 @@
-# Sprint 237c-5a — Manager invite "Send" (L3) — rev 5 (rev 3 REJECT → rev 4 REJECT → rev 5)
+# Sprint 237c-5a — Manager invite "Send" (L3) — rev 6 (rev 3 REJECT → rev 4 REJECT → rev 5 REJECT → rev 6)
 
 Severity L3 (auth/invite, access grants, outbound email). `/chatgpt-review` before `/codex-dispatch`. Part 1 of 3; the index
 is `docs/sprint237c5-index.md`. 5b (Resend, Revoke, join page) and 5c (UI) build on this commit. HEAD is `0e4a85c` (app code
@@ -18,11 +18,14 @@ The order of work is the whole fix (L-029):
 3. Send the email last.
 4. Mark rows accepted when the person signs in (`/auth/callback`).
 
-Invariant: an `expired` row never leaves access behind (revoke expires it and removes access in one locked transaction).
-An `accepted` row means the person signed in and has access to that home (rows turn accepted only together with, or after,
-an active grant). A `pending` row means the person never signed in and can get a fresh link; it lacks access only after a
-failed grant step, which shows "Could not add access. Press Send again." and is repaired by Send again or Resend. The join
-page never sends a link without an active grant (5b §6.6). Every runtime failure converges through normal app retries.
+Invariant (access has two sources): access to a home is active if and only if a live (`pending` or `accepted`) manager
+invitation exists for that person and home, OR the grant is `assigned_directly` (added directly, §6.12). Exceptions: a
+`pending` row right after a failed grant step (shows "Could not add access. Press Send again."; repaired by Send again or
+Resend), and client-account sync and account wipe, which manage their own rows. Revoking an invitation (`expired`) never
+removes a direct add. `accepted` means the person signed in while access was active. `pending` means the invitation is not
+accepted yet: the person may have signed in after a failed grant (A9); the row turns accepted when access is set (Resend, or
+the next sign-in accept). The join page never sends a link without an active grant (5b §6.6). Every runtime failure
+converges through normal app retries.
 Concurrency is defined in §6.13.
 
 This sprint ships nothing alone. 5a, 5b and 5c go to production together (index, "Ship plan").
@@ -161,6 +164,9 @@ Both invite calls ignore `data` for an existing user. On a confirmed user neithe
   manager); step 8a gives those emails the different-role copy. `property_managers` PK `(property_id, manager_profile_id)`.
 - Rows: manager/pending 1, tenant/accepted 5, tenant/expired 1, tenant/pending 1, owner 0; 0 pending rows for an email with
   no profile. The manager row has the HEAD shape (user created first, confirmed, grant active, `invited_profile_id` null).
+- `property_managers` writers (audit 2026-10-18): HEAD `app/actions/invitations.ts` (replaced here), `account-wipe.ts`
+  (deletes rows), and the `handle_new_user`, `add_client_home` and `ownership_account_managers_sync` triggers/functions
+  (client homes). All use the default `assigned_directly = true` (§6.12). Only the 237c-5 functions ever write `false`.
 
 ### 2.4 Today's code (HEAD)
 Line counts (`apps/web/`): `app/actions/invitations.ts` 343; `lib/invite-email.ts` 39, `email/invites.ts` 129,
@@ -238,6 +244,7 @@ Do **not** reuse: the write order; the in-flight `Map` (:528); the retry branch 
 - **D10** Every access change for a (home, manager) pair runs in one of Claude's SQL functions (§6.12), each in one
   transaction under one shared advisory lock per (home, manager profile). Grants are bound to the inviter and profile;
   rows turn accepted only with an active grant. The app never writes `property_managers` or an `accepted` status directly.
+  `property_managers.assigned_directly` records the source; revoking an invitation removes only invitation-made access.
 
 ## 3. In scope
 - Rewrite `inviteManager` (many homes; Auth, then rows and grant, then email). The §6.1 helpers, used again by 5b.
@@ -275,11 +282,12 @@ Codex:
    - `apps/web/lib/__tests__/manager-invite-email.test.ts` (new, A31-A33); `invite-email.test.ts` (edit, A34)
    - `apps/web/lib/__tests__/validations.test.ts` (edit only the `inviteManagerSchema` block, :1101-1138; A35)
 
-Claude (not Codex; written and proved in commit `5ead674`, not applied):
+Claude (not Codex; written and proved, rev 6 in commit `62a10ed`, not applied):
 `supabase/migrations/20261028_sprint237c5_manager_invite_functions.sql` (§6.12),
 `supabase/rollback/20261028_sprint237c5_manager_invite_functions_rollback.sql`,
-`supabase/tests/sprint237c5_manager_invite_functions.sql` (rolled-back suite), `supabase/tests/sprint237c5_manager_invite_race.mjs`
-and `supabase/tests/sprint237c5_manager_invite_concurrency.md` (live two-session proof). C1 is done (index).
+`supabase/tests/sprint237c5_manager_invite_functions.sql` (rolled-back suite), `supabase/tests/sprint237c5_manager_invite_race.mjs`,
+`supabase/tests/sprint237c5_manager_invite_race_rev6.mjs` and `supabase/tests/sprint237c5_manager_invite_concurrency.md` (live
+two-session proof and the C5 diagnostic). C1 is done (index).
 
 ## 6. Implementation requirements
 
@@ -480,9 +488,12 @@ and the new email replaces their earlier link.
   order. No `ownershipAccountId` key (zod strips it).
 
 ### 6.12 SQL functions (source of truth: Claude's migration; Codex only calls them)
-`supabase/migrations/20261028_sprint237c5_manager_invite_functions.sql` (commit `5ead674`). All five are `security invoker`,
-`set search_path = public`, EXECUTE for `service_role` only. Codex calls the four public ones with
+`supabase/migrations/20261028_sprint237c5_manager_invite_functions.sql` (rev 6, commit `62a10ed`). All five are `security
+invoker`, `set search_path = public`, EXECUTE for `service_role` only. Codex calls the four public ones with
 `createAdminClient().rpc(name, args)` and reads `{ data, error }`. A raise rolls back the whole call.
+- Column: `property_managers.assigned_directly boolean not null default true`. `true` = added directly (an owner's
+  confirmed-manager add, client-account sync, the trigger, every row that existed before the migration); `false` = created
+  by an invitation grant. The app never writes it; only these functions set it.
 - Lock protocol: `manager_access_lock(p_keys text[])` takes one `pg_advisory_xact_lock` per key `<property_id>:<profile_id>`,
   in ascending key order, before any row lock. Every function below takes it for each (home, manager profile) it reads or
   changes, so two final revokes, or a grant and a revoke, never interleave.
@@ -490,23 +501,28 @@ and the new email replaces their earlier link.
    → rows `(invitation_id, property_id, outcome)`. Raises `22023` when the profile is not a manager or the id list is empty.
    Every id must be a manager row of `p_inviter_id` with a home, bound to the profile: `invited_profile_id = p_profile_id`,
    or null with `lower(email)` = the profile's email. Otherwise it raises `P0002` and changes nothing. Under the locks and
-   `FOR UPDATE`: `pending` → upsert an active grant, set `invited_profile_id`, and with `p_accept` set `accepted` +
-   `accepted_at` → outcome `granted` or `accepted`; `accepted` → `already_accepted`; `expired` → `not_pending`; no write for
-   those two. A guard error (`42501`, client home) rolls back everything.
+   `FOR UPDATE`: `pending` → upsert an active grant (insert `assigned_directly = false`; on conflict keep the flag if the
+   grant was active, else set `false`: the invite created the access), set `invited_profile_id`, and with `p_accept` set
+   `accepted` + `accepted_at` → outcome `granted` or `accepted`; `accepted` → `already_accepted`; `expired` →
+   `not_pending`; no write for those two. A guard error (`42501`, client home) rolls back everything.
 2. `manager_grant_homes(p_profile_id uuid, p_property_ids uuid[])` → rows `(property_id, added)`. For §6.3 homes with no row
-   of this inviter. Takes the same locks; upserts an active grant per home; `added` = it was not active before.
-3. `manager_invite_revoke(p_invitation_id uuid, p_inviter_id uuid)` → one row `(outcome, profile_id, released, other_live)`.
-   No manager row of that inviter → `not_found`. Profile = `invited_profile_id`, else the manager profile with that email.
-   Takes the lock, then `FOR UPDATE`: `expired` → `already_revoked`; `accepted` → `accepted`; no writes. `pending` → status
-   `expired`, `accepted_at` null (`invited_profile_id` kept); `other_live` = another manager row for that email and home is
-   `pending` or `accepted`; if not, the grant goes inactive and `released` = a grant row changed. Outcome `revoked`.
+   of this inviter. Takes the same locks; upserts an active grant per home with `assigned_directly = true`, even when access
+   was already active (an explicit add); `added` = it was not active before.
+3. `manager_invite_revoke(p_invitation_id uuid, p_inviter_id uuid)` → one row `(outcome, profile_id, released, other_live,
+   kept_direct)`. No manager row of that inviter → `not_found`. Profile = `invited_profile_id`, else the manager profile with
+   that email. Takes the lock, then `FOR UPDATE`: `expired` → `already_revoked`; `accepted` → `accepted`; no writes.
+   `pending` → status `expired`, `accepted_at` null (`invited_profile_id` kept); `other_live` = another manager row for that
+   email and home is `pending` or `accepted`. If not `other_live`: an active `assigned_directly` grant stays on
+   (`kept_direct: true`); otherwise the invitation-made grant goes inactive and `released` = a grant row changed. Outcome
+   `revoked`.
 4. `manager_invite_accept(p_profile_id uuid)` → rows `(invitation_id, property_id, outcome)`. Not a manager profile → no rows.
    For this profile's pending manager rows (bound as in 1), under the locks: active grant → `accepted` (+ `accepted_at`,
    `invited_profile_id`); else `no_access`, row stays pending.
-Proof: the rolled-back suite `supabase/tests/sprint237c5_manager_invite_functions.sql` (G1-G4, R1-R5, A1, H1, X1, P1 pass) and
-the live two-session race (`supabase/tests/sprint237c5_manager_invite_concurrency.md`: with no lock, two final revokes leave
-both rows expired and the grant active; with the lock, scenarios B-E are correct). The vitest fakes are sequential and only
-model these functions; Postgres proves the locking.
+Rollback (`supabase/rollback/20261028_sprint237c5_manager_invite_functions_rollback.sql`) drops the functions and the column;
+no access is lost. Proof: the rolled-back suite `supabase/tests/sprint237c5_manager_invite_functions.sql` (S0, G1-G4, R1-R5,
+A1, H1, D1-D3, X1, P1 pass) and the live two-session races (`supabase/tests/sprint237c5_manager_invite_concurrency.md`: with
+no lock, two final revokes leave access on; with the lock, B-G are correct, including F and G for a direct add racing the
+last revoke). The vitest fakes are sequential and only model these functions; Postgres proves the locking.
 
 ### 6.13 Linearization (Send, Resend, Revoke)
 - A Send or Resend takes effect when `manager_invite_grant` commits.
@@ -516,7 +532,6 @@ model these functions; Postgres proves the locking.
   refuses.
 - No app-level lock is held across the email. (Tests: 5b B8(d), B8(e).)
 
-### 6.11 Logging, errors, safety
 ### 6.11 Logging, errors, safety
 - Every Supabase call's `{ error }` is read (L-002). No path returns success for work it did not do.
 - Log tags (`[manager-invite]`, `{ code, message }` only): `auth_failed`, `rows_failed`, `grant_failed`, `send_failed`,
@@ -570,7 +585,8 @@ Test rules (L-017, L-028, L-029):
 
 **`fake-invite-db.ts`:**
 - Tables: `profiles` (PK id, UNIQUE email); `invitations` (UNIQUE NULLS NOT DISTINCT `(email, role, invited_by, property_id)`,
-  status check); `property_managers` (PK `(property_id, manager_profile_id)`); `properties` (`id, name, owner_account_id,
+  status check); `property_managers` (PK `(property_id, manager_profile_id)`,
+  `active`, `assigned_directly` default `true` for seeds and fixtures); `properties` (`id, name, owner_account_id,
   active`); `ownership_accounts` (`id, managed_client, claim_state`); `ownership_account_members` (`account_id, profile_id,
   member_role, active`).
 - Builder: `select`, `eq`, `neq`, `in`, `limit`, `maybeSingle`, `single`, `insert`, `upsert` (`onConflict`,
@@ -718,12 +734,15 @@ Test rules (L-017, L-028, L-029):
   `"Pick up to 100 homes."`; `propertyIds` not JSON, and a JSON object, → `"Pick at least one home."`; a non-UUID →
   `"Invalid property selection."`; no `ownershipAccountId` in the output.
 - A36 Full suite, `tsc`, lint and `lib/__tests__/plain-language.test.ts` are green.
-- A37 `manager-invite-rpc-model.test.ts`, the fake's contract (mirrors the SQL suite G1-G4, R1-R5, A1, H1, X1):
+- A37 `manager-invite-rpc-model.test.ts`, the fake's contract (mirrors the SQL suite S0, G1-G4, R1-R5, A1, H1, D1-D3, X1):
   grant binds and grants; another profile, another inviter, or an unknown id → `P0002`, nothing changed; a non-manager
   profile → `22023`; a null `invited_profile_id` binds only by email; `p_accept` grants and accepts, then
   `already_accepted`; an expired row → `not_pending`, no write; revoke outcomes `revoked` (`released`, `other_live`),
   `already_revoked`, `not_found`, `accepted`; accept → `no_access` without a grant, `accepted` with one; `manager_grant_homes`
-  `added` only for inactive homes; a `42501` guard inside a grant rolls back every row.
+  `added` only for inactive homes; a `42501` guard inside a grant rolls back every row. Source flag: a seeded grant is
+  `assigned_directly` true; an invite grant on a new or inactive grant writes `false`, on an active direct grant keeps `true`;
+  `manager_grant_homes` sets `true`; the last revoke of an invite on a direct grant → `kept_direct: true`, access on; on an
+  invite-made grant → `released`, access off.
 
 **Mutation proofs (in the report; revert each):** M1 write rows before `createUser` → A3 fails. M3 open the gate in `on` →
 A4 and A31. M4 make §6.2 step 10 a plain DO UPDATE upsert → A12. M6 send the email before the grant → A3's op order. M9 map
@@ -732,19 +751,21 @@ skip §6.2 step 9a → A18. M13 treat 9b's `email_exists` as a pending invitee (
 make `isDomusManagerInvitee` ignore the marker (any unconfirmed user passes) → A24(c) Send again. M15 let 9c continue
 without the marker → A23(b). M18 drop the inviter/profile binding from the fake's `manager_invite_grant` → A37. M19 let the
 fake's `manager_invite_accept` ignore the grant → A9's accept check and A37. (M18 and M19 mutate the model; the real guards
-are proved by the SQL suite, G2/G3 and A1.)
+are proved by the SQL suite, G2/G3 and A1.) M22 let the fake's `manager_invite_revoke` ignore `assigned_directly` → A37's
+source-flag cases (and 5b B23, B24).
 
 **Claude only (not Codex):**
 - C1 is done (index, "C1 live results" and "round 2").
-- C7 Done (commit `5ead674`, not applied): the §6.12 migration, its rollback, the rolled-back suite (G1-G4, R1-R5, A1, H1,
-  X1, P1 pass) and the live two-session race proof. Before ship, Claude re-runs both SQL files and the race harness
-  `supabase/tests/sprint237c5_manager_invite_race.mjs` (control A must reproduce the bug; B-E must pass), then applies the
-  migration after ChatGPT APPROVE and before the release deploys. 5b C2 adds the EXECUTE checks.
+- C7 Done (rev 6, commit `62a10ed`, not applied): the §6.12 migration (with `assigned_directly`), its rollback, the
+  rolled-back suite (S0, G1-G4, R1-R5, A1, H1, D1-D3, X1, P1 pass) and the live race runs (`…_race.mjs`, rev 6
+  `…_race_rev6.mjs`). Before ship, Claude re-runs both SQL files and both race harnesses in `supabase/tests/` (control A must
+  reproduce the bug; B-G must pass), then applies the migration after ChatGPT APPROVE and before the release deploys. 5b C2
+  adds the EXECUTE checks; 5b C5 is the source diagnostic.
 - Before 5b dispatch, Claude reviews this sprint and commits it locally; it is not deployed.
 
 ## 9. Report format
 Compact status only: files changed with line counts, the test for each criterion (A1-A37), `grep -c "it("` per new test
-file, mutation results (M1, M3, M4, M6, M9, M11-M15, M18, M19), command results.
+file, mutation results (M1, M3, M4, M6, M9, M11-M15, M18, M19, M22), command results.
 Do NOT include 'Claude prompt' or 'recommended next steps for Claude' sections. Report compact status only.
 
 ## 10. Constraints
