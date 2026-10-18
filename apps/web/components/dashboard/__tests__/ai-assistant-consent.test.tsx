@@ -32,6 +32,12 @@ describe("Ask Domus consent sheet", () => {
     fetchMock.mockResolvedValue(new Response("Done", { status: 200 }));
   });
 
+  it("send button clears the help button", () => {
+    openAssistant();
+    const sendButton = screen.getByRole("button", { name: "Send" });
+    expect(sendButton.closest("form")).toHaveClass("pr-16");
+  });
+
   it.each(["button", "Enter"])("shows consent before a typed %s send", async (entry) => {
     openAssistant();
     const input = screen.getByPlaceholderText("Ask anything about your properties...");

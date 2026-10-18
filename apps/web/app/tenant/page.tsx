@@ -45,7 +45,7 @@ import { TenantOverview } from "@/components/dashboard/tenant-overview";
 import { TenantRentCard } from "@/components/dashboard/tenant-rent-card";
 import { EmptyState as DashboardEmptyState } from "@/components/shared/empty-state";
 import { StripeTestModeBanner } from "@/components/shared/stripe-test-mode-banner";
-import { formatCurrency, formatDate, formatDateTime, formatUnitLabel } from "@/lib/format";
+import { formatCurrency, formatDate, formatUnitLabel } from "@/lib/format";
 import { arePropertyOwnersConnected } from "@/lib/stripe-connect";
 import { CreditCard } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -387,7 +387,7 @@ export default async function TenantPage(props: TenantPageProps) {
                               {payment.propertyName} • {formatUnitLabel(payment.unitNumber)}
                             </p>
                             <p className="mt-1 text-xs tabular-nums text-[var(--muted)]">
-                              {payment.reversedAt ? "Reversed" : "Paid"} {formatDateTime(payment.paidAt)}
+                              {payment.reversedAt ? "Reversed" : "Paid"} {formatDate(payment.paidAt)}
                               {" • Due "}{formatDate(payment.dueDate)}
                             </p>
                             {payment.referenceNote ? (

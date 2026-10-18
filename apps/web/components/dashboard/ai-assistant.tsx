@@ -366,7 +366,7 @@ export function AiAssistant({ accountId, ownerName }: AiAssistantProps) {
           </div>
 
           <form
-            className="border-t border-border px-4 py-3"
+            className="border-t border-border pl-4 pr-16 py-3 sm:pr-4"
             onSubmit={(event) => {
               event.preventDefault();
               void attemptSend(input);

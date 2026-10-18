@@ -69,6 +69,17 @@ describe("tenant receipt page with reversed payments", () => {
     expect(link?.closest('[data-print-controls="receipt"]')).not.toBeNull();
   });
 
+  it("header stacks on phones", async () => {
+    state.payments = [row("active-123", "2026-08-01T15:00:00Z", null)];
+    const container = document.createElement("div");
+    container.innerHTML = await render();
+    const header = container.querySelector('[data-print-controls="receipt"]');
+    const backLink = Array.from(header?.querySelectorAll("a") ?? [])
+      .find((link) => link.textContent?.includes("Back to Rent"));
+    expect(header).toHaveClass("flex-col", "sm:flex-row");
+    expect(backLink).toHaveClass("whitespace-nowrap");
+  });
+
   it("shows dates, not UTC times", async () => {
     state.payments = [row("active-123", "2026-08-01T15:00:00Z", null)];
     const container = document.createElement("div");

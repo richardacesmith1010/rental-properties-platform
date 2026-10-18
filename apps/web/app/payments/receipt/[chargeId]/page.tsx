@@ -207,16 +207,16 @@ export default async function ReceiptPage(props: ReceiptPageProps) {
         }}
       />
       <div className="mx-auto max-w-3xl space-y-4">
-        <div className="flex items-start justify-between gap-3" data-print-controls="receipt">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between" data-print-controls="receipt">
           <div>
             <Link href="/tenant?section=charges"
-              className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--accent)]">
+              className="inline-flex min-h-11 items-center whitespace-nowrap text-sm font-semibold text-[var(--accent)]">
               <ChevronLeft className="h-4 w-4" aria-hidden="true" />Back to Rent
             </Link>
             <p className="text-xs uppercase tracking-[0.3em] text-[var(--accent)]">Domus</p>
             <h1 className="mt-2 text-2xl font-semibold text-[var(--ink)]">Payment Receipt</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Link
               href={`/api/pdf/receipt/${params.chargeId}`}
               className="inline-flex h-11 items-center gap-2 rounded-xl border border-transparent bg-[var(--accent)] px-5 py-2 text-sm font-semibold text-white shadow-[var(--domus-shadow-sm)] transition hover:bg-[var(--accent-strong)] sm:h-10"
