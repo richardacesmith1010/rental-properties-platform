@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Home, Receipt, Wrench } from "lucide-react";
+import { Home, MessageCircle, Receipt, Wrench } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
@@ -9,7 +9,7 @@ const items = [
   ["overview", "Home", Home],
   ["charges", "Rent", Receipt],
   ["maintenance", "Repairs", Wrench],
-  ["notifications", "Messages", Bell]
+  ["notifications", "Messages", MessageCircle]
 ] as const;
 
 export function TenantBottomBar({ activeItemId }: { activeItemId: string }) {

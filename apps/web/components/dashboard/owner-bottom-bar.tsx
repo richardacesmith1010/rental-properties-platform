@@ -51,11 +51,16 @@ function StandaloneDrawer({ open, onOpenChange, search }: {
     <div className="space-y-5">
       {ownerMenuGroups.map((group) => <div key={group.label}>
         <p className="mb-2 text-xs font-semibold text-[var(--muted)]">{group.label}</p>
-        {group.items.map(([id, label]) => {
+        {group.items.filter(([id]) => id !== "members" && id !== "manager-payments").map(([id, label]) => {
           const params = new URLSearchParams(search);
           params.set("section", id);
-          return <a key={id} href={`/owner?${params}`} title={`Open ${label}.`}
-            className="sidebar-shell-button block min-h-11 px-3 py-3 text-sm">{label}</a>;
+          const account = new URLSearchParams(search).get("account");
+          return <div key={id}>
+            <a href={`/owner?${params}`} title={`Open ${label}.`}
+              className="sidebar-shell-button block min-h-11 px-3 py-3 text-sm">{label}</a>
+            {id === "analytics" ? <a href={`/owner/reports${account !== null ? `?account=${encodeURIComponent(account)}` : ""}`}
+              title="Open Reports." className="sidebar-shell-button block min-h-11 px-3 py-3 text-sm">Reports</a> : null}
+          </div>;
         })}
       </div>)}
       <a href="/settings" title="Open settings." className="sidebar-shell-button block min-h-11 px-3 py-3 text-sm">Settings</a>

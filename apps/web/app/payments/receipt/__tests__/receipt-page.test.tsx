@@ -60,6 +60,36 @@ describe("tenant receipt page with reversed payments", () => {
     expect(html).toContain("Download PDF");
   });
 
+  it("has a way back to Rent", async () => {
+    state.payments = [row("active-123", "2026-08-01T15:00:00Z", null)];
+    const container = document.createElement("div");
+    container.innerHTML = await render();
+    const link = Array.from(container.querySelectorAll("a")).find((item) => item.textContent?.includes("Back to Rent"));
+    expect(link).toHaveAttribute("href", "/tenant?section=charges");
+    expect(link?.closest('[data-print-controls="receipt"]')).not.toBeNull();
+  });
+
+  it("shows dates, not UTC times", async () => {
+    state.payments = [row("active-123", "2026-08-01T15:00:00Z", null)];
+    const container = document.createElement("div");
+    container.innerHTML = await render();
+    expect(container.textContent).toContain("Aug 1, 2026");
+    expect(container.textContent).not.toContain("3:00 PM");
+    expect(container.textContent).toContain("Receipt Date");
+    expect(container.textContent).not.toContain("Receipt Timestamp");
+  });
+
+  it("clears the notch", async () => {
+    state.payments = [row("active-123", "2026-08-01T15:00:00Z", null)];
+    const active = document.createElement("div");
+    active.innerHTML = await render();
+    expect(active.querySelector("main")?.className).toContain("safe-area-inset-top");
+    state.payments = [row("reversed", "2026-08-01T15:00:00Z", "2026-08-02")];
+    const reversed = document.createElement("div");
+    reversed.innerHTML = await render();
+    expect(reversed.querySelector("main")?.className).toContain("safe-area-inset-top");
+  });
+
   it("shows a plain reversed state when every payment was reversed", async () => {
     state.payments = [row("reversed", "2026-10-03", "2026-10-04")];
     const html = await render();

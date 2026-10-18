@@ -81,6 +81,36 @@ describe("owner phone bar", () => {
     expect(screen.queryByRole("dialog", { name: "Menu" })).not.toBeInTheDocument();
   });
 
+  it("standalone More menu lists Reports and hides account-only sections", () => {
+    state.path = "/owner/money";
+    window.history.replaceState(null, "", "/owner/money");
+    render(<OwnerBottomBar />);
+    fireEvent.click(screen.getByRole("button", { name: "More" }));
+    const menu = screen.getByRole("dialog", { name: "Menu" });
+    expect(within(menu).getByRole("link", { name: "Reports" })).toHaveAttribute("href", "/owner/reports");
+    expect(within(menu).queryByRole("link", { name: "Members" })).not.toBeInTheDocument();
+    expect(within(menu).queryByRole("link", { name: "Manager pay" })).not.toBeInTheDocument();
+    expect(within(menu).getByRole("link", { name: "Charts" })).toBeInTheDocument();
+    expect(within(menu).getByRole("link", { name: "Documents" })).toBeInTheDocument();
+  });
+
+  it("Reports keeps the account", () => {
+    state.path = "/owner/money";
+    window.history.replaceState(null, "", "/owner/money?account=abc");
+    render(<OwnerBottomBar />);
+    fireEvent.click(screen.getByRole("button", { name: "More" }));
+    expect(screen.getByRole("link", { name: "Reports" }))
+      .toHaveAttribute("href", "/owner/reports?account=abc");
+  });
+
+  it("dashboard More still uses the sidebar", () => {
+    const onOpenMore = vi.fn();
+    render(<OwnerBottomBar onOpenMore={onOpenMore} />);
+    fireEvent.click(screen.getByRole("button", { name: "More" }));
+    expect(onOpenMore).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("link", { name: "Reports" })).not.toBeInTheDocument();
+  });
+
   it("covers owner property and report routes without duplicating Money or Bank bars", () => {
     state.path = "/owner/properties/home-a";
     const { rerender } = render(<OwnerLayout><main>Property</main></OwnerLayout>);

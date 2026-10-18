@@ -1,11 +1,11 @@
 import { paymentMethodLabel } from "@/lib/payment-method-label";
 import Link from "next/link";
-import { Download } from "lucide-react";
+import { ChevronLeft, Download } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { withChargeEditingFallback } from "@/lib/charge-audit";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserRole } from "@/lib/auth";
-import { formatCurrency, formatDate, formatDateTime, formatUnitLabel } from "@/lib/format";
+import { formatCurrency, formatDate, formatUnitLabel } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
 import { PrintButton } from "./print-button";
@@ -97,7 +97,7 @@ export default async function ReceiptPage(props: ReceiptPageProps) {
     if (error) throw error;
     if (!reversedPayment) notFound();
     return (
-      <main className="app-surface min-h-screen px-6 py-8 lg:px-8">
+      <main className="app-surface min-h-screen px-6 pb-8 pt-[calc(env(safe-area-inset-top,0px)+2rem)] lg:px-8">
         <div className="mx-auto max-w-3xl space-y-4">
           <h1 className="text-2xl font-semibold text-[var(--ink)]">This payment was reversed</h1>
           <p className="text-[var(--muted)]">It no longer counts as paid.</p>
@@ -126,7 +126,7 @@ export default async function ReceiptPage(props: ReceiptPageProps) {
   const parts = chargeBreakdown(charge, lines);
 
   return (
-    <main className="app-surface min-h-screen px-6 py-8 lg:px-8">
+    <main className="app-surface min-h-screen px-6 pb-8 pt-[calc(env(safe-area-inset-top,0px)+2rem)] lg:px-8">
       <style
         dangerouslySetInnerHTML={{
           __html: `
@@ -209,6 +209,10 @@ export default async function ReceiptPage(props: ReceiptPageProps) {
       <div className="mx-auto max-w-3xl space-y-4">
         <div className="flex items-start justify-between gap-3" data-print-controls="receipt">
           <div>
+            <Link href="/tenant?section=charges"
+              className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--accent)]">
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />Back to Rent
+            </Link>
             <p className="text-xs uppercase tracking-[0.3em] text-[var(--accent)]">Domus</p>
             <h1 className="mt-2 text-2xl font-semibold text-[var(--ink)]">Payment Receipt</h1>
           </div>
@@ -237,8 +241,8 @@ export default async function ReceiptPage(props: ReceiptPageProps) {
                 <p className="text-sm text-[var(--muted)]">{formatUnitLabel(unit.unit_number)}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs uppercase tracking-wide text-[var(--faint)]">Receipt Timestamp</p>
-                <p className="font-medium text-[var(--ink)]">{formatDateTime(new Date())}</p>
+                <p className="text-xs uppercase tracking-wide text-[var(--faint)]">Receipt Date</p>
+                <p className="font-medium text-[var(--ink)]">{formatDate(new Date())}</p>
                 <p className="text-sm text-[var(--muted)]">Receipt #{payment.id.slice(0, 8).toUpperCase()}</p>
               </div>
             </div>
@@ -257,7 +261,7 @@ export default async function ReceiptPage(props: ReceiptPageProps) {
               </div>
               <div className="space-y-1">
                 <p className="text-xs uppercase tracking-wide text-[var(--faint)]">Payment Details</p>
-                <p className="font-medium text-[var(--ink)]">{formatDateTime(payment.paid_at)}</p>
+                <p className="font-medium text-[var(--ink)]">{formatDate(payment.paid_at)}</p>
                 <p className="text-sm text-[var(--muted)]">Method: {paymentMethodLabel(payment.method)}</p>
                 {payment.reference_note ? (
                   <p className="text-sm text-[var(--muted)]">Reference: {payment.reference_note}</p>
