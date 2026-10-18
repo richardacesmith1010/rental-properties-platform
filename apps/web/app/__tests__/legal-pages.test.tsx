@@ -28,6 +28,18 @@ function expectHeaderAndCopy(headings: string[]) {
 }
 
 describe("early-access legal pages", () => {
+  it("uses theme colors, never white", () => {
+    for (const Page of [TermsPage, PrivacyPage]) {
+      const { container, unmount } = render(<Page />);
+      expect(container.querySelectorAll('[class*="white"]')).toHaveLength(0);
+      expect(container.querySelector("h1")?.className).toContain("text-[var(--ink)]");
+      for (const heading of container.querySelectorAll("h2")) {
+        expect(heading.className).toContain("text-[var(--ink)]");
+      }
+      unmount();
+    }
+  });
+
   it("renders the approved Terms date, banner, headings, and key sentences without old copy", () => {
     render(<TermsPage />);
     expectHeaderAndCopy([
