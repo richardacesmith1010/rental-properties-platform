@@ -1655,3 +1655,13 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   `manager_invite_accept` call; grooming: fake DO UPDATE default-column nit.
 - Scorecard: Manager 80 → 83. Transcript 7 MB.
 - **Next:** L1 checkbox labels (quick), then scorecard rule picks the next category.
+
+## L1 checkbox labels (2026-10-17) — closed, no code change (tool false positive)
+- Live check (smoke owner, server magic link, Add → Add a manager on domusbase.com): all 3 checkboxes ("All my homes",
+  "Smoke Test Property", "Walk Home Two") are wrapped in their `<label>`; `input.labels` resolves each with the right text.
+  Existing tests (`invite-manager-form.test.tsx`) already query each by role + name and pass.
+- The "on" came from the Browser pane tool: an injected probe showed it names `htmlFor` / `aria-label` checkboxes but prints
+  the default value "on" for wrapping labels (and names buttons from `title`). Not an app bug; recorded as L-032.
+- Decision (standing authority): no Codex sprint, no deploy. Follow-up removed from the 237c-5 list.
+- **Next:** scorecard rule picks the next category (237c-5 L3 follow-ups: remove a signed-in manager from a home; convert
+  manager/owner rows on email confirmation in `handle_new_user`).
