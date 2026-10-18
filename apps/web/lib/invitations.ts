@@ -272,3 +272,20 @@ export async function markTenantInvitationAccepted(profileId: string) {
     console.error("markTenantInvitationAccepted error:", error);
   }
 }
+
+export async function markManagerInvitationsAccepted(profileId: string): Promise<void> {
+  try {
+    const { error } = await createAdminClient().rpc("manager_invite_accept", { p_profile_id: profileId });
+    if (error && !isMissingSchemaError(error)) {
+      const detail = error as { code?: string; message?: string };
+      console.error("[manager-invite] accept_failed", {
+        code: detail.code ?? null, message: detail.message ?? String(error)
+      });
+    }
+  } catch (error) {
+    const detail = error && typeof error === "object" ? error as { code?: string; message?: string } : null;
+    console.error("[manager-invite] accept_failed", {
+      code: detail?.code ?? null, message: detail?.message ?? String(error)
+    });
+  }
+}

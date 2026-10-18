@@ -18,6 +18,33 @@ interface LLCInviteEmailParams {
   acceptUrl: string;
 }
 
+export function buildManagerInviteEmail({ inviterName, homeNames, inviteUrl }: {
+  inviterName: string;
+  homeNames: string[];
+  inviteUrl: string;
+}) {
+  const subject = `${inviterName} added you to Domus`;
+  const home = homeNames.length === 1 ? homeNames[0] : `${homeNames.length} homes`;
+  const bodyHtml = [
+    `<p style="margin:0;">${escapeHtml(inviterName)} wants you to manage ${escapeHtml(home)} on Domus.</p>`,
+    `<p style="margin:16px 0 0 0;">If you were not expecting this, you can ignore it.</p>`
+  ].join("");
+  const html = buildBrandedEmailShell({
+    titleHtml: "Manage homes on Domus",
+    bodyHtml,
+    ctaText: "Set up your account",
+    ctaUrl: inviteUrl,
+    preheaderText: subject
+  });
+  const text = [
+    "Manage homes on Domus",
+    `${inviterName} wants you to manage ${home} on Domus.`,
+    `Set up your account: ${inviteUrl}`,
+    "If you were not expecting this, you can ignore it."
+  ].join("\n");
+  return { subject, html, text };
+}
+
 export function buildTenantInviteEmail({
   tenantName,
   ownerName,
@@ -126,4 +153,3 @@ export function buildLLCInviteEmail({
 
   return { subject, html, text };
 }
-

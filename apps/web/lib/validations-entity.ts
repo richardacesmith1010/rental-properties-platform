@@ -108,11 +108,32 @@ export const addTicketCommentSchema = z.object({
   isInternal: z.enum(["true", "false"]).optional().default("false")
 });
 
+function parseJsonArray(value: unknown): unknown {
+  if (typeof value !== "string") return value === undefined ? undefined : [];
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) && parsed.every((id) => z.string().uuid().safeParse(id).success) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 export const inviteManagerSchema = z.object({
-  email: z.string().min(1, "Email is required.").email("Enter a valid email address."),
-  fullName: z.string().min(1, "Full name is required.").max(100, "Name must be under 100 characters."),
-  propertyId: z.string().uuid("Invalid property selection.")
-});
+  email: z.string().trim().toLowerCase().min(1, "Email is required.").email("Enter a valid email address."),
+  fullName: z.string().trim().min(1, "Full name is required.").max(100, "Name must be under 100 characters."),
+  propertyId: z.string().uuid("Invalid property selection.").optional(),
+  propertyIds: z.preprocess(
+    parseJsonArray,
+    z.array(z.string().uuid("Invalid property selection."))
+      .min(1, "Pick at least one home.").max(100, "Pick up to 100 homes.").optional()
+  )
+}).superRefine((value, context) => {
+  if (Boolean(value.propertyId) === Boolean(value.propertyIds)) {
+    context.addIssue({ code: "custom", message: "Pick at least one home." });
+  }
+}).transform(({ email, fullName, propertyId, propertyIds }) => ({
+  email, fullName, propertyIds: Array.from(new Set(propertyIds ?? (propertyId ? [propertyId] : [])))
+}));
 
 export const inviteOwnerSchema = z.object({
   email: z.string().min(1, "Email is required.").email("Enter a valid email address."),

@@ -79,6 +79,14 @@ describe("tenant invite email", () => {
       "https://api.resend.com/emails",
       expect.objectContaining({ method: "POST" })
     );
+    const payload = JSON.parse(fetchMock.mock.calls[0][1].body);
+    const template = buildTenantInviteEmail({
+      tenantName: "Alex Tenant",
+      ownerName: "Courtney Smith",
+      propertyAddress: "123 Oak Street, Denver CO 80203",
+      inviteUrl: "https://domusbase.com/auth/callback"
+    });
+    expect(payload).toEqual({ from: "noreply@domusbase.com", to: ["alex@example.com"], ...template });
   });
 
   it("returns false when the Resend API rejects the invite email", async () => {

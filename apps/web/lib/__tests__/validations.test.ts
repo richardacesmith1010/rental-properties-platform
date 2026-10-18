@@ -1100,7 +1100,8 @@ describe("inviteTenantSchema", () => {
 
 /* ─── inviteManagerSchema ─── */
 describe("inviteManagerSchema", () => {
-  const validUUID = "550e8400-e29b-41d4-a716-446655440000";
+  const validUUID = crypto.randomUUID();
+  const secondUUID = crypto.randomUUID();
 
   it("accepts valid manager invite data", () => {
     const result = inviteManagerSchema.safeParse({
@@ -1109,6 +1110,9 @@ describe("inviteManagerSchema", () => {
       propertyId: validUUID,
     });
     expect(result.success).toBe(true);
+    if (result.success) expect(result.data).toEqual({
+      email: "manager@example.com", fullName: "Jane Manager", propertyIds: [validUUID]
+    });
   });
 
   it("rejects missing property ID", () => {
@@ -1135,6 +1139,49 @@ describe("inviteManagerSchema", () => {
       propertyId: validUUID,
     });
     expect(result.success).toBe(false);
+  });
+
+  it("normalizes the email and deduplicates multi-home IDs in first-seen order", () => {
+    const result = inviteManagerSchema.safeParse({ email: " A@B.COM ", fullName: " Jane Manager ",
+      propertyIds: JSON.stringify([validUUID, validUUID, secondUUID]), ownershipAccountId: crypto.randomUUID() });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data).toEqual({
+      email: "a@b.com", fullName: "Jane Manager", propertyIds: [validUUID, secondUUID]
+    });
+  });
+
+  it.each([
+    {},
+    { propertyId: validUUID, propertyIds: JSON.stringify([secondUUID]) },
+    { propertyIds: "[]" },
+    { propertyIds: "not-json" },
+    { propertyIds: "{}" }
+  ])("asks for one property source when absent, doubled, or invalid JSON", (fields) => {
+    const result = inviteManagerSchema.safeParse({ email: "manager@example.com", fullName: "Jane Manager", ...fields });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.issues[0]?.message).toBe("Pick at least one home.");
+  });
+
+  it("limits a multi-home send to 100 IDs", () => {
+    const ids = Array.from({ length: 101 }, () => crypto.randomUUID());
+    const result = inviteManagerSchema.safeParse({ email: "manager@example.com", fullName: "Jane Manager",
+      propertyIds: JSON.stringify(ids) });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.issues[0]?.message).toBe("Pick up to 100 homes.");
+  });
+
+  it("rejects a non-UUID in the multi-home field", () => {
+    const result = inviteManagerSchema.safeParse({ email: "manager@example.com", fullName: "Jane Manager",
+      propertyIds: JSON.stringify(["not-a-uuid"]) });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.issues[0]?.message).toBe("Pick at least one home.");
+  });
+
+  it("T11-F2 invalid propertyIds cannot fall back to a valid propertyId", () => {
+    const result = inviteManagerSchema.safeParse({ email: "manager@example.com", fullName: "Jane Manager",
+      propertyIds: "x", propertyId: validUUID });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.issues[0]?.message).toBe("Pick at least one home.");
   });
 });
 

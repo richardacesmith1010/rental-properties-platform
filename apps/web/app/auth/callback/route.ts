@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthState } from "@/lib/auth";
-import { markTenantInvitationAccepted } from "@/lib/invitations";
+import { markManagerInvitationsAccepted, markTenantInvitationAccepted } from "@/lib/invitations";
 import { sideEffectError } from "@/lib/logger";
 import { notifyOwnerMembersOfAcceptedTenantInvite } from "@/lib/notifications";
 import { resolveAuthRoute } from "@/lib/route-resolver";
@@ -87,6 +87,12 @@ async function trackAuthenticatedUser(params: {
   const { user, type, rawNext } = params;
   if (!user?.id) {
     return null;
+  }
+
+  try {
+    await markManagerInvitationsAccepted(user.id);
+  } catch (error) {
+    console.error("[manager-invite] accept_failed", { code: null, message: String(error) });
   }
 
   if (hasInvitedSession(type, rawNext, user)) {
