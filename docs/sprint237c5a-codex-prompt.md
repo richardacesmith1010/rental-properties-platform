@@ -1,4 +1,4 @@
-# Sprint 237c-5a — Manager invite "Send": Auth first, rows + grant, email last, accept at sign-in (L3) — rev 3
+# Sprint 237c-5a — Manager invite "Send" (L3) — rev 4 (rev 3 ChatGPT REJECT → rev 4)
 
 Severity L3 (auth/invite, access grants, outbound email). `/chatgpt-review` before `/codex-dispatch`. Part 1 of 3; the index
 is `docs/sprint237c5-index.md`. 5b (Resend, Revoke, join page) and 5c (UI) build on this commit. HEAD is `0e4a85c` (app code
@@ -18,11 +18,10 @@ The order of work is the whole fix (L-029):
 3. Send the email last.
 4. Mark rows accepted when the person signs in (`/auth/callback`).
 
-Invariant: a pending manager row means the person never signed in, has a grant on that home, and can get a fresh link. Two
-failure states break the grant clause until repaired: a failed grant (Send again or Resend re-grants) and a half-done revoke
-(the next Revoke finishes it). Neither can get a link from the join page (5b §6.6 step 7). A third state: a revoked row whose
-access release failed (errors in §6.2 step 12, 5b §6.6 step 7 or 5b §6.7 step 7) is `expired` with an active grant. The app
-cannot repair it, because Revoke stops at 5b §6.7 step 1 and the row has no buttons. 5b's C5 lists it and Claude fixes it by SQL.
+Invariant: a pending manager row means the person never signed in and can get a fresh link. It has an active grant, except
+after a failed grant step, which shows "Could not add access. Press Send again." and is repaired by Send again or Resend. An
+expired row never leaves access behind: revoke expires the row and removes access in one transaction (D10, §6.12). The join
+page never sends a link without an active grant (5b §6.6 step 7). Every runtime failure converges through normal app retries.
 
 This sprint ships nothing alone. 5a, 5b and 5c go to production together (index, "Ship plan").
 
@@ -107,6 +106,7 @@ marks **every** pending row (any role) accepted. It never runs again for that us
 |---|---|---|---|
 | `generateLink` invite | **inserts** (trigger fires); no email | no insert; `invited_at = now`; new token; no email | `email_exists` 422 |
 | `inviteUserByEmail` | **inserts** (trigger fires); email | no insert; `invited_at = now`; new token; **re-sends** | `email_exists` 422 |
+| `createUser` (`email_confirm: false`) | **inserts** (trigger fires); no email | `email_exists` 422 | `email_exists` 422 |
 | `getUserById` | read only | read only | read only |
 
 Both invite calls ignore `data` for an existing user. On a confirmed user neither sends an email.
@@ -132,8 +132,17 @@ Both invite calls ignore `data` for an existing user. On a confirmed user neithe
     404. (f) `inviteUserByEmail` on a confirmed account → `email_exists` 422, no mail.
   - (g) Self sign-up (`signUp` with data `{ role: "manager" }`), then `generateLink` invite on it: same user, still
     unconfirmed, `invited_at` goes from null to set, and `user_metadata` is unchanged (no `full_name`; it has `sub`, `email`,
-    `email_verified`, `phone_verified` from sign-up). So any invite call launders D7's `invited_at` signal (§6.2 8b, 9b).
+    `email_verified`, `phone_verified` from sign-up). So `invited_at` and `user_metadata` prove nothing (D7).
   - (h) An upper-case email to `generateLink` matched the existing user (`email_exists`), so GoTrue lowercases.
+- **Proven live, round 2** (Claude, 2026-10-18 01:27Z, X2 = `+c5probe2` and X3 = `+c5probe3`, both now used):
+  - `auth.admin.createUser({ email, email_confirm: false, user_metadata, app_metadata })` inserts `auth.users` (the trigger
+    fires; profile role manager from `user_metadata`) and sends **no** mail (auth log action `user_signedup`, no
+    confirmation). It is create-only: an existing email, including a racing self sign-up, → `email_exists` 422.
+  - `app_metadata.domus_manager_invite = true` is stored server-side. A later `generateLink` invite keeps it (it only sets
+    `invited_at` and rotates the token), and it is still there after `verifyOtp`.
+  - Clients cannot set it: `signUp` `options.data` (even a key named `app_metadata`) lands in `user_metadata`, and
+    `updateUser({ data })` only changes `user_metadata`.
+  - Live today: 0 unconfirmed manager users, so no marker backfill is needed (5c Claude C4 re-counts before deploy).
 - Not read: the Supabase "invite" email template text. Vercel Production has `DOMUS_NOTIFICATIONS_ALLOWLIST` set and
   `DOMUS_NOTIFICATIONS_ENABLED` absent, so `notificationMode()` is `test` in production today: allowlisted → branded,
   everyone else → the generic Supabase invite.
@@ -215,23 +224,28 @@ Do **not** reuse: the write order; the in-flight `Map` (:528); the retry branch 
 - **D3** Branded email only when `notificationMode() === "test"` and the address is allowlisted. `on` stays generic.
 - **D4** No manager path calls `deleteUser` or `deleteGeneratedInviteUser`.
 - **D5** Rows turn accepted at sign-in, or by self-heal in Send, Resend, Revoke and the join-page resend.
-- **D6** Revoke removes access before it marks the row, and resets the link when no other pending manager row remains. The
+- **D6** Revoke expires the row and removes access in one transaction (D10), and resets the link when no other pending
+  manager row remains. The
   inviter can always revoke their own invite, even after losing the home (5b).
-- **D7** An unconfirmed account **not** created by an invite is refused: `invited_at` null, or no `full_name` in its
-  `user_metadata`. Every invite call sets `invited_at` (C1(b), (g)); self sign-up never sets `full_name`.
+- **D7** An unconfirmed account without the server-only marker `app_metadata.domus_manager_invite = true` is refused
+  (`self_signup_blocked`). Only §6.2 step 9b's `createUser` sets the marker. `invited_at`, role, `full_name` and timing are
+  client-writable or reset by any invite call (C1(g)), so they prove nothing.
 - **D8** The join-page resend never writes grants and never sends a link for a home without an active grant (5b).
 - **D9** The branded link is `/auth/confirm?token_hash=…&type=invite` (prefetch-safe; no tokens in the URL). Tenant emails keep
   `action_link`.
+- **D10** A row's grant and a row's revoke each run in one SQL transaction (§6.12, Claude's functions), so a row's status and
+  its access never split.
 
 ## 3. In scope
 - Rewrite `inviteManager` (many homes; Auth, then rows and grant, then email). The §6.1 helpers, used again by 5b.
 - Sign-in acceptance of manager rows. The branded email and its gate. The schema's `propertyIds` (legacy `propertyId` kept, so
   today's form keeps working until 5c).
-- Fakes that replay the live trigger and GoTrue, and the tests in §8.
+- Calls to Claude's two SQL functions (§6.12) through `admin.rpc`.
+- Fakes that replay the live trigger, GoTrue and the two functions, and the tests in §8.
 
 ## 4. Out of scope
 - Owner Resend, Revoke, the join-page resend, the `invite-resend.ts` guard (5b). The form, entry points, badge and toasts (5c).
-- Any SQL, DDL, trigger, policy or grant change. Changing `handle_new_user` (follow-up L3).
+- Any SQL from Codex (Claude writes and applies the §6.12 functions). Changing `handle_new_user` (follow-up L3).
 - `inviteOwner` and owner rows, `inviteTenant` and tenant resend/revoke behavior, including their `deleteUser` fallbacks
   (pinned, L-014).
 - Grant-at-accept. Accepting rows on dashboard load. Removing a signed-in manager from a home.
@@ -257,7 +271,9 @@ Codex:
    - `apps/web/lib/__tests__/manager-invite-email.test.ts` (new, A31-A33); `invite-email.test.ts` (edit, A34)
    - `apps/web/lib/__tests__/validations.test.ts` (edit only the `inviteManagerSchema` block, :1101-1138; A35)
 
-Claude (not Codex): none in this sprint (C1 is done; see the index).
+Claude (not Codex): `supabase/migrations/20261028_sprint237c5_manager_invite_functions.sql` (§6.12),
+`supabase/rollback/20261028_sprint237c5_manager_invite_functions_rollback.sql`,
+`supabase/tests/sprint237c5_manager_invite_functions.sql` (rolled-back test of every branch). C1 is done (index).
 
 ## 6. Implementation requirements
 
@@ -269,18 +285,20 @@ type DbResult = Promise<{ error: unknown | null }>;
 managerInviteRedirect(): string        // `${APP}/auth/callback`
 managerInviteUrl(hashedToken: string): string // `${APP}/auth/confirm?token_hash=${encodeURIComponent(hashedToken)}&type=invite`
 managerInviteMetadata(fullName: string) // { role: "manager", full_name: fullName } (HEAD :128-131)
+managerInviteAppMetadata()             // { domus_manager_invite: true } (the D7 marker; only createUser sets it)
 isAuthUserConfirmed(user): boolean     // Boolean(user?.email_confirmed_at || user?.phone_confirmed_at)
-isInvitedAuthUser(user): boolean       // Boolean(user?.invited_at) && non-empty string user?.user_metadata?.full_name (D7)
+isDomusManagerInvitee(user): boolean   // user?.app_metadata?.domus_manager_invite === true && !isAuthUserConfirmed(user)
 isEmailExistsError(error): boolean     // error?.code === "email_exists"
 isUserNotFoundError(error): boolean    // error?.code === "user_not_found"
 logManagerInvite(tag: string, error: unknown): void
-writeManagerRows(p: { email: string; fullName: string; inviterId: string; propertyIds: string[]; profileId: string }): DbResult
-grantManagerHomes(profileId: string, propertyIds: string[]): DbResult
+writeManagerRows(p: { email: string; fullName: string; inviterId: string; propertyIds: string[]; profileId: string })
+  : Promise<{ error: unknown | null; rows: Array<{ id: string; property_id: string }> }>
+grantManagerHomes(profileId: string, propertyIds: string[]): DbResult // §6.3 only (no rows there)
+grantInvitedRows(invitationIds: string[], profileId: string)
+  : Promise<{ error: unknown | null; rows: Array<{ property_id: string; granted: boolean }> }>
 markManagerRowsAccepted(p: { inviterId: string; email: string; propertyIds: string[]; profileId: string }): DbResult
-releaseManagerHome(p: { email: string; propertyId: string; profileId: string; exceptId?: string })
-  : Promise<{ error: unknown | null; released: boolean; otherLive: boolean }>
 deliverManagerInvite(p: { email: string; fullName: string; inviterId: string; homeNames: string[];
-  inviteLink: string | null; authEmail: string | null })
+  authEmail: string | null })
   : Promise<"email_branded" | "email_basic" | "already_joined" | "not_sent">
 ```
 - `APP` is `process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com"`, read at call time (HEAD :127).
@@ -288,15 +306,13 @@ deliverManagerInvite(p: { email: string; fullName: string; inviterId: string; ho
   `revokeManagerInvite`) map errors to copy.
 - `logManagerInvite`: `` console.error(`[manager-invite] ${tag}`, { code: error?.code ?? null, message }) ``, `message` being
   the error message or `String(error)`. Never log an email, a name, a link, a token or FormData.
-- `grantManagerHomes`: one `property_managers.upsert(propertyIds.map((id) => ({ property_id: id, manager_profile_id:
+- `grantManagerHomes` (§6.3 only): one `property_managers.upsert(propertyIds.map((id) => ({ property_id: id, manager_profile_id:
   profileId, active: true })), { onConflict: "property_id,manager_profile_id" })`.
 - `markManagerRowsAccepted`: `invitations.update({ status: "accepted", accepted_at: now, invited_profile_id: profileId })
   .eq("invited_by", inviterId).eq("email", email).eq("role", "manager").in("property_id", propertyIds)
   .in("status", ["pending", "expired"])`. Call it only when every home in `propertyIds` has an active grant.
-- `releaseManagerHome`: `invitations.select("id").eq("role", "manager").eq("email", email).eq("property_id", propertyId)
-  .in("status", ["pending", "accepted"])`, plus `.neq("id", exceptId)` when given, `.limit(1)`. Error → `{ error }`. A row →
-  `otherLive: true`, no write. None → `property_managers.update({ active: false }).eq("property_id", propertyId)
-  .eq("manager_profile_id", profileId)` → `released: !error`.
+- `grantInvitedRows`: `admin.rpc("manager_invite_grant", { p_invitation_ids: invitationIds, p_profile_id: profileId })`;
+  `{ data, error }` → `{ error, rows: data ?? [] }` (§6.12). Used by §6.2 step 11 and 5b's Resend.
 
 ### 6.2 `inviteManager` (replaces `invitations.ts:19-192`)
 "Stop" means return at once; nothing more is written or sent. `{name}` is `fullName || email`. All reads and writes use one
@@ -316,27 +332,23 @@ deliverManagerInvite(p: { email: string; fullName: string; inviterId: string; ho
    - **8a.** Role not manager → `"A user with this email already exists with a different role."` (HEAD :122).
    - **8b.** Role manager → `getUserById(profile.id)`. `user_not_found` or no user → `"Could not find this person's account.
      Try a different email."` Other error → step 7's copy. Confirmed → §6.3, then stop. Unconfirmed and not
-     `isInvitedAuthUser` (D7) → log `self_signup_blocked`, `"We can't invite this email right now. Try a different email."`
-     Unconfirmed and `isInvitedAuthUser` → pending invitee: `profileId = profile.id`, `inviteLink = null`, `authEmail =
-     user.email`, step 10.
+     `isDomusManagerInvitee` (D7) → log `self_signup_blocked`, `"We can't invite this email right now. Try a different
+     email."` Unconfirmed and `isDomusManagerInvitee` → pending invitee: `profileId = profile.id`, `authEmail = user.email`,
+     step 10.
    - **8c.** No profile → step 9.
 9. New invitee:
    - **9a.** `invitations.select("id").eq("email", email).eq("status", "pending").limit(1)`. Error → step 7's copy. A row → log
      `stale_pending_row`, 8b's D7 copy. The trigger must find nothing pending at the insert.
-   - **9b.** `generateLink({ type: "invite", email, options: { data: managerInviteMetadata(fullName), redirectTo:
-     managerInviteRedirect() } })`. It inserts `auth.users`; the trigger makes the profile (role manager), converts 0 rows,
-     grants nothing; no email (C1(a)). On success, read `profiles.select("role").eq("id", data.user.id).maybeSingle()`:
-     - Profile read error or no row → log `auth_failed`, step 7's copy `"Could not check this email. Try again."`, write
-       nothing. Send again takes the 8b pending-invitee path.
-     - Role not manager (a tenant invite or sign-up made the user first) → log `auth_failed`, 8b's D7 copy, write nothing.
-     - Also refuse (8b's D7 copy, log `self_signup_blocked`) when `data.user.user_metadata?.full_name !== fullName`. GoTrue
-       ignores `data` for an existing user (C1(g)), and self sign-up metadata is only `{ role }`
-       (`components/auth/create-account-form.tsx:57-58`).
-     - Else `profileId = data.user.id`, `authEmail = data.user.email`, `inviteLink = hashed_token ?
-       managerInviteUrl(hashed_token) : null`.
-   - **9c.** Error, or no user id (the insert may have committed): log `auth_failed`, re-read the profile by email. Manager, and
-     `getUserById` shows unconfirmed and `isInvitedAuthUser` → continue with that id, `authEmail = user.email`, `inviteLink =
-     null`. Else → `"Failed to send invitation. Please try again."` (HEAD :135).
+   - **9b.** `createUser({ email, email_confirm: false, user_metadata: managerInviteMetadata(fullName), app_metadata:
+     managerInviteAppMetadata() })`. It inserts `auth.users`; the trigger makes the profile (role manager), converts 0 rows,
+     grants nothing; no email (§2.2 round 2). It is create-only.
+     - Success with a user id → `profileId = data.user.id`, `authEmail = data.user.email`, step 10.
+     - `email_exists` (lost a race: a self sign-up, a tenant invite, or another inviter's Send) → log `auth_failed`, step 7's
+       copy `"Could not check this email. Try again."`, write nothing. Send again takes 8a or 8b, where the marker decides.
+     - Other error, or no user id → 9c.
+   - **9c.** The insert may have committed: log `auth_failed`, re-read the profile by email. Role manager, and `getUserById`
+     passes `isDomusManagerInvitee` (the same predicate as 8b) → continue with that id, `authEmail = user.email`. Else →
+     `"Failed to send invitation. Please try again."` (HEAD :135). No role re-read and no metadata comparison anywhere.
 10. `writeManagerRows` (never downgrades an accepted row; no `auth.users` insert):
     - **(a)** `now = new Date().toISOString()`; `invitations.update({ status: "pending", full_name: fullName, accepted_at: null,
       invited_profile_id: profileId, ownership_account_id: null, created_at: now }).eq("email", email).eq("role", "manager")
@@ -345,17 +357,17 @@ deliverManagerInvite(p: { email: string; fullName: string; inviterId: string; ho
     - **(b)** Ids (a) did not return: `invitations.upsert(rows, { onConflict: "email,role,invited_by,property_id",
       ignoreDuplicates: true }).select("id, property_id")`, each row `{ email, full_name, role: "manager", property_id,
       invited_by: user.id, status: "pending", invited_profile_id: profileId, created_at: now }`. Skip when none are missing. A
-      home still uncovered has this inviter's **accepted** row; leave it.
+      home still uncovered has this inviter's **accepted** row; leave it (its grant was set while it was pending).
+    - Return every `{ id, property_id }` that (a) and (b) returned.
     - Error → log `rows_failed`, `"Could not save the invite. Press Send again."` Stop. The user exists unconfirmed, so Send
       again takes the pending-invitee path.
-11. `grantManagerHomes(profileId, propertyIds)`. Error → log `grant_failed`, `"Could not add access. Press Send again."` Stop.
-12. Re-check (another tab may have revoked): `invitations.select("property_id, status").eq("email", email).eq("role",
-    "manager").eq("invited_by", user.id).in("property_id", propertyIds)`. Error → log `rows_failed`, step 10's copy. Each
-    `expired` home → `releaseManagerHome({ email, propertyId, profileId })` and drop it. `releaseManagerHome` error → log
-    `revoke_failed`, return `"Could not save the invite. Press Send again."` Nothing is sent. Send again re-opens the row and
-    re-grants. None left → `"This invite was revoked. Send a new invite."` Later steps use the kept homes. (Tested in 5b B8(c):
-    expired rows only come from 5b's Revoke.)
-13. `deliverManagerInvite({ email, fullName, inviterId: user.id, homeNames, inviteLink, authEmail })` (§6.4), always last.
+11. `grantInvitedRows(rowIds, profileId)` (§6.12 `manager_invite_grant`; skip the call when there are no row ids). Error →
+    log `grant_failed`, `"Could not add access. Press Send again."` Stop; nothing changed. The function grants only rows
+    still `pending`, under their row locks. A row returned `granted: false` was revoked meanwhile (another tab): drop its home.
+    Kept homes = picked homes minus the dropped ones. None kept → `"This invite was revoked. Send a new invite."`
+12. (Removed in rev 4: step 11's function skips revoked rows, so there is no re-check and no release.)
+13. `deliverManagerInvite({ email, fullName, inviterId: user.id, homeNames, authEmail })` (§6.4), always last. `homeNames` are
+    the kept homes' names.
 14. Outcome. Audit (step 15) and revalidate (step 16) in every case. Build results as `const result = { … } as const; return
     result;` (HEAD :184-191).
     - `email_branded` / `email_basic` → `success: true`, `delivery: "email"`, `email`, `name: fullName`, `"Invite sent to
@@ -394,8 +406,8 @@ This path only adds grants, with no row and no email. Nothing in the app can und
 0. `authEmail?.toLowerCase() !== email` → log `send_failed`, `not_sent`, no Auth call. Both invite calls are keyed by email,
    and a user whose Auth email differs would make them insert a new `auth.users` row and fire the trigger (§2.2).
 1. If `canSendBrandedManagerInvite(email)` (§6.8):
-   - `link = inviteLink`. When null: `generateLink({ type: "invite", email, options: { data: managerInviteMetadata(fullName),
-     redirectTo: managerInviteRedirect() } })` (the user exists unconfirmed: no insert, new token). `email_exists` →
+   - `generateLink({ type: "invite", email, options: { data: managerInviteMetadata(fullName), redirectTo:
+     managerInviteRedirect() } })` (the user exists unconfirmed: no insert, new token, marker kept). `email_exists` →
      `already_joined`. Other error or no `hashed_token` → step 2. Else `link = managerInviteUrl(hashed_token)`.
    - `inviterName`: `profiles.select("full_name").eq("id", inviterId).maybeSingle()`. Error → log `inviter_lookup_failed`.
      Error or empty → `"Someone"` (join page precedent, `page.tsx:43`).
@@ -452,10 +464,28 @@ and the new email replaces their earlier link.
 - Exactly one of the two, else `"Pick at least one home."` Output `{ email, fullName, propertyIds }`, ids deduped in first-seen
   order. No `ownershipAccountId` key (zod strips it).
 
+### 6.12 SQL functions (Claude writes, tests and applies them; Codex only calls them)
+In `supabase/migrations/20261028_sprint237c5_manager_invite_functions.sql`. Both are `security invoker`, `set search_path =
+public`; EXECUTE is revoked from `public`, `anon` and `authenticated` and granted to `service_role` only. Codex calls them with
+`createAdminClient().rpc(name, args)` and reads `{ data, error }`.
+1. `manager_invite_grant(p_invitation_ids uuid[], p_profile_id uuid) returns table(property_id uuid, granted boolean)`. One
+   transaction. Locks the given rows `FOR UPDATE` (role manager). Each `pending` row → upsert `property_managers (property_id,
+   p_profile_id, active true)`, on conflict set `active = true` → `granted: true`. A row not pending → `granted: false`, no
+   write. A guard error (client home) raises and rolls back everything.
+2. `manager_invite_revoke(p_invitation_id uuid, p_inviter_id uuid) returns table(outcome text, profile_id uuid, released
+   boolean, other_live boolean)`. Locks the row `FOR UPDATE` where id, `invited_by` and role manager match. None →
+   `not_found`. `expired` → `already_revoked`; `accepted` → `accepted`; no writes. `pending` → status `expired`, `accepted_at`
+   null; profile = `coalesce(invited_profile_id, the manager profile with lower(email) = lower(row.email))`. With a profile:
+   `other_live` = another manager row for that email and home is `pending` or `accepted`; if not `other_live`,
+   `property_managers.active = false` for that home and profile, and `released` = a grant row was found. Outcome `revoked`.
+   One transaction: an error leaves the row pending with its grant, so Revoke still shows and a retry converges.
+The fake (§8) models both. Claude's rolled-back `supabase/tests/sprint237c5_manager_invite_functions.sql` is the authority on
+the real functions.
+
 ### 6.11 Logging, errors, safety
 - Every Supabase call's `{ error }` is read (L-002). No path returns success for work it did not do.
 - Log tags (`[manager-invite]`, `{ code, message }` only): `auth_failed`, `rows_failed`, `grant_failed`, `send_failed`,
-  `inviter_lookup_failed`, `stale_pending_row`, `self_signup_blocked`, `accept_failed`, `revoke_failed`. (5b adds
+  `inviter_lookup_failed`, `stale_pending_row`, `self_signup_blocked`, `accept_failed`. (5b adds `revoke_failed` and
   `link_reset_failed`.)
 - L-028: add no client `try/catch` around `inviteManager`. A new `catch` in `app/actions/*.ts` starts with
   `unstable_rethrow(error)`. No new `catch` wraps `requireAuth` (it calls `redirect()`). Lib helpers and the route use the
@@ -511,40 +541,48 @@ Test rules (L-017, L-028, L-029):
 - Rules: a DO UPDATE upsert hitting one key twice fails with `code: "21000"`; with `ignoreDuplicates` the later row is skipped.
   A `property_managers` write on a `managed_client` home, or a manager/owner `invitations` write on an unclaimed one, fails
   with `code: "42501"`. Error messages copy Postgres wording and never contain an email, link or token.
+- `rpc(name, args)` implements both §6.12 functions exactly, row-level and all-or-nothing (a simulated failure changes
+  nothing; a guard error inside the grant rolls back every row). The fake models the SQL; Claude's SQL test is the authority.
 - Both fakes share one world. `createFakeWorld()` (fake-invite-db.ts) returns `{ ops, beforeOp, afterOp, failNext, failAuth,
   admin }`, and `createFakeGoTrue(world)` (fake-gotrue.ts) attaches Auth to it. `admin` is what the mocked
-  `createAdminClient()` returns: `{ from, auth: { admin: { generateLink, inviteUserByEmail, getUserById, deleteUser } } }`.
-  `ops: string[]` is one ordered log. Names: `db:<table>:<select|insert|upsert|update|delete>`; `auth.generateLink`,
-  `auth.inviteUserByEmail`, `auth.getUserById`, `auth.deleteUser` (logged on entry); `auth.insert`, `auth.rotate`,
-  `auth.email` (effects); `trigger.converted:<n>`, `trigger.granted:<n>`. `beforeOp`/`afterOp` take any name. `failNext(table,
-  op)` applies to `db:` ops and `failAuth(method)` to `auth.<method>`. Failures are one-shot. `beforeOp(op, fn)` / `afterOp(op,
-  fn)` run async `fn` once, before or after the next matching operation commits, before that call resolves.
+  `createAdminClient()` returns: `{ from, rpc, auth: { admin: { createUser, generateLink, inviteUserByEmail, getUserById,
+  deleteUser } } }`. `ops: string[]` is one ordered log. Names: `db:<table>:<select|insert|upsert|update|delete>`;
+  `rpc:manager_invite_grant`, `rpc:manager_invite_revoke`; `auth.createUser`, `auth.generateLink`, `auth.inviteUserByEmail`,
+  `auth.getUserById`, `auth.deleteUser` (logged on entry); `auth.insert`, `auth.rotate`, `auth.email` (effects);
+  `trigger.converted:<n>`, `trigger.granted:<n>`. `beforeOp`/`afterOp` take any name, including `rpc:` names. `failNext(table,
+  op)` applies to `db:` ops, `failNext("rpc", name)` to `rpc:<name>`, and `failAuth(method)` to `auth.<method>`. Failures
+  are one-shot. `beforeOp(op, fn)` / `afterOp(op, fn)` run async `fn` once, before or after the next matching operation
+  commits, before that call resolves.
 
 **`fake-gotrue.ts`** (Auth, as §2.2, including the proven-live rows):
 - Exports `HANDLE_NEW_USER_SQL` (the §2.1 body verbatim) and `runHandleNewUser`, a step-for-step copy that logs
   `trigger.converted:<n>` and `trigger.granted:<n>`. If it fails, the insert rolls back and the call returns `{ code:
   "unexpected_failure", status: 500, message: "Database error saving new user" }`.
-- Users carry `email`, `email_confirmed_at`, `last_sign_in_at`, `invited_at`, `user_metadata` and a current token
-  `tok:<userId>:<n>`. Emails are stored lowercased (C1(h)).
+- Users carry `email`, `email_confirmed_at`, `last_sign_in_at`, `invited_at`, `user_metadata`, `app_metadata` and a current
+  token `tok:<userId>:<n>`. Emails are stored lowercased (C1(h)).
+- `createUser({ email, email_confirm: false, user_metadata, app_metadata })`: new email → `auth.insert` (`invited_at` null,
+  unconfirmed, both metadata stored), then the trigger, no email; existing email → `{ code: "email_exists", status: 422 }`.
 - `generateLink` invite and `inviteUserByEmail`: new email → `auth.insert` (`invited_at` set, unconfirmed, `user_metadata` =
-  `data`), then the trigger; existing unconfirmed → `auth.rotate`, `invited_at = now`, `data` ignored (`user_metadata`
+  `data`), then the trigger; existing unconfirmed → `auth.rotate`, `invited_at = now`, `data` ignored (both metadata
   unchanged); confirmed → `{ code: "email_exists", status: 422 }` and no email. `generateLink` returns `properties: {
   action_link: "fake-link:" + token, hashed_token: token }` and the user, and records no email. `inviteUserByEmail` records `{
   to, token }` (`auth.email`). `getUserById` miss → `{ code: "user_not_found", status: 404 }`. `deleteUser` is recorded only.
-- Test helpers (not GoTrue): `commitThenError` (`generateLink` inserts and runs the trigger, then errors); `selfSignUp(email,
-  role)` (insert with `invited_at` null and `user_metadata` `{ role }` only, then the trigger); `dropAuthUser(id)` (removes the
+- Test helpers (not GoTrue): `commitThenError(o?: { dropMarker?: boolean })` (the next `createUser` inserts and runs the
+  trigger, then errors; `dropMarker` stores no `app_metadata`); `selfSignUp(email, { role, full_name? })` (insert with
+  `invited_at` null and `user_metadata` `{ role, full_name? }`, never `app_metadata`, then the trigger); `dropAuthUser(id)` (removes the
   user, keeps the profile and grants); `setAuthEmail(id, email)` (changes only the Auth user's email); `clickLink(token)`
   (only the current token works; sets `email_confirmed_at` and `last_sign_in_at`; no insert).
 
 **`manager-invite-trigger-model.test.ts`:**
-- A1 "fake trigger matches the live definition". Scan `path.resolve(__dirname, "../../../../../supabase/migrations")` for
+- A1 "embedded trigger SQL equals the latest migration". Scan `path.resolve(__dirname, "../../../../../supabase/migrations")` for
   `*.sql` with `create or replace function public.handle_new_user` (any case). The last match in full-filename sort is
   `20260228_phase9_llc_and_shared_operator_access.sql`; its whitespace-normalized body equals `HANDLE_NEW_USER_SQL`.
+  This proves only the text; the trigger's behavior is proved by A2 onward (`runHandleNewUser`).
 - A2 "control: rows written before an Auth insert are auto-accepted (L-029)". Seed a pending manager row, then the fake's
   `generateLink`: row accepted, grant active, `trigger.converted:1`.
-- A3 "new manager, 2 homes: rows stay pending". 1 unconfirmed user with `invited_at`; 2 `pending` rows with
+- A3 "new manager, 2 homes: rows stay pending". 1 unconfirmed user with the marker; 2 `pending` rows with
   `invited_profile_id` = the new id; 2 active grants; `trigger.converted:0`. Op order: `auth.insert` < invitations write <
-  `db:property_managers:upsert` < `auth.email`. Exact success copy.
+  `rpc:manager_invite_grant` < `auth.email`. Exact success copy.
 - A4 "non-allowlisted gets today's Supabase invite". In `off`, `test` with the address unlisted, and `on`:
   `inviteUserByEmail` once with `(email, { redirectTo: "https://app.example.com/auth/callback", data: { role: "manager",
   full_name } })`; no `fetch`.
@@ -558,7 +596,7 @@ Test rules (L-017, L-028, L-029):
   → 1 email, the new `created_at`. (The Resend half is 5b B16.)
 - A8 "rows write fails". `failNext("invitations", "update")` → `"Could not save the invite. Press Send again."`; 1
   unconfirmed user, 0 rows, 0 grants, 0 emails. Send again → still 1 user, rows pending, 1 email.
-- A9 "grant fails". `failNext("property_managers", "upsert")` → `"Could not add access. Press Send again."`, 0 emails. Send
+- A9 "grant fails". `failNext("rpc", "manager_invite_grant")` → `"Could not add access. Press Send again."`, 0 emails. Send
   again → the grant is active before `auth.email`. (The Resend half is 5b B16.)
 - A10 "Send again for a pending invitee does not duplicate". 1 user, the same 2 row ids, new `created_at`, 1 more email; the
   old token fails `clickLink`.
@@ -576,25 +614,32 @@ Test rules (L-017, L-028, L-029):
 - A15 "other-role email refused before any Auth call or write".
 - A16 "orphan manager profile refused". `generateLink` for a new email, then `dropAuthUser`. Invite → `"Could not find this
   person's account. Try a different email."`; no writes; no `auth.insert`.
-- A17 "self sign-up refused (D7)". `selfSignUp(email, "manager")` → `"We can't invite this email right now. Try a different
+- A17 "self sign-up refused (D7)". `selfSignUp(email, { role: "manager" })` → `"We can't invite this email right now. Try a different
   email."`; 0 rows, 0 grants, 0 emails.
-- A18 "stale pending row blocks the Auth call". Seeded pending row for an unknown email → no `generateLink`; the same copy.
+- A18 "stale pending row blocks the Auth call". Seeded pending row for an unknown email → no `auth.createUser`; the same copy.
 - A19 "client home refused before any write". One of 2 homes `managed_client` → exact copy, zero writes, zero Auth calls.
 - A20 "account scope". An owner with homes in accounts A and B: B's homes posted with `ownershipAccountId` = A succeed
   (ignored). Another owner's home → `"Property not found."`, zero writes.
 - A21 "a manager invites a co-manager". `requireAuth` role manager; homes from active `property_managers`; rows carry
   `invited_by` = that manager.
 - A22 "rate limit counts once per multi-home submit". 10 submits of 3 homes pass; the 11th gives the exact copy, zero writes.
-- A23 "generateLink commits, then errors" (`commitThenError`) → continues as a pending invitee: 1 user, rows pending, grants,
-  1 email.
-- A24 "9b refusals":
-  - (a) `beforeOp("auth.generateLink", …)` runs the fake's `inviteUserByEmail(email, { data: { role: "tenant", full_name:
-    fullName } })` (a tenant invite made the user first). Result: 8b's D7 copy; 0 rows, 0 grants; only that tenant invite's 1
-    `auth.email`.
-  - (b) `afterOp("auth.generateLink", () => failNext("profiles", "select"))` → step 7's copy, 0 rows. Send again → 1 user,
-    rows pending, 1 email.
-  - (c) `beforeOp("auth.generateLink", …)` runs `selfSignUp(email, "manager")` → 8b's D7 copy, a `self_signup_blocked` log;
-    0 rows, 0 grants, 0 emails. Send again → the same copy from 8b, and no `auth.generateLink` in that call.
+- A23 "createUser commits, then errors". (a) `commitThenError()` → 9c finds the marker and continues as a pending invitee: 1
+  user, rows pending, grants, 1 email. (b) `commitThenError({ dropMarker: true })` (the committed user has no marker) →
+  `"Failed to send invitation. Please try again."`; 0 rows, 0 grants, 0 emails.
+- A24 "lost races at 9b" (D7; the name plays no role):
+  - (a) `beforeOp("auth.createUser", …)` runs the fake's `inviteUserByEmail(email, { data: { role: "tenant", full_name:
+    fullName } })` (a tenant invite made the user first). Result: step 7's copy; 0 rows, 0 grants; only that tenant invite's 1
+    `auth.email`. Send again → `"A user with this email already exists with a different role."` (8a).
+  - (b) `failNext("profiles", "select")` before Send → step 7's copy, 0 Auth calls, 0 rows. Send again → 1 user, rows
+    pending, 1 email.
+  - (c) Attack (R3): `beforeOp("auth.createUser", () => selfSignUp(email, { role: "manager", full_name: fullName }))`, i.e.
+    after the no-profile read, with role manager and the exact name. `createUser` → `email_exists` → step 7's copy; 0 rows, 0
+    grants, 0 emails. Send again → 8b's D7 copy and a `self_signup_blocked` log; still 0 rows, 0 grants, 0 emails; no
+    `auth.createUser`, `auth.generateLink` or `auth.inviteUserByEmail` in that call.
+  - (d) Legit same-name race: `beforeOp("auth.createUser", …)` runs the fake's `createUser({ email, email_confirm: false,
+    user_metadata: { role: "manager", full_name: fullName }, app_metadata: { domus_manager_invite: true } })` (another
+    inviter's Send won the Auth step). Our Send → step 7's copy, 0 rows. Send again → 8b pending invitee: 1 user, our rows
+    pending, grants active, 1 email.
 - A25 "P signs in during B's Send". A invites P (new) to h1. B sends P to h2 with `beforeOp("auth.inviteUserByEmail", …)`
   running `clickLink(<P's current token>)`. B gets `{ success: true, delivery: "already_joined" }` and `"Added {name}. They
   already signed in."`; B's h2 row is `accepted`; grant active; no new `auth.email`. Allowlisted variant: the same with
@@ -633,14 +678,20 @@ Test rules (L-017, L-028, L-029):
   `"Invalid property selection."`; no `ownershipAccountId` in the output.
 - A36 Full suite, `tsc`, lint and `lib/__tests__/plain-language.test.ts` are green.
 
-**Mutation proofs (in the report; revert each):** M1 write rows before `generateLink` → A3 fails. M3 open the gate in `on` →
+**Mutation proofs (in the report; revert each):** M1 write rows before `createUser` → A3 fails. M3 open the gate in `on` →
 A4 and A31. M4 make §6.2 step 10 a plain DO UPDATE upsert → A12. M6 send the email before the grant → A3's op order. M9 map
 `email_exists` to `not_sent` in §6.4 → A25. M11 move `markManagerInvitationsAccepted` inside `hasInvitedSession` → A29. M12
-skip §6.2 step 9a → A18. M13 skip the 9b role check → A24(a). M14 skip the 9b `full_name` check → A24(c). M15 make 8b accept
-`invited_at` alone (drop the `full_name` part of `isInvitedAuthUser`) → A24(c) Send again.
+skip §6.2 step 9a → A18. M13 treat 9b's `email_exists` as a pending invitee (continue with the existing user) → A24(c). M14
+make `isDomusManagerInvitee` ignore the marker (any unconfirmed user passes) → A24(c) Send again. M15 let 9c continue
+without the marker → A23(b).
 
-**Claude only (not Codex):** C1 is done (index, "C1 live results"). Before 5b dispatch, Claude reviews this sprint and commits
-it locally; it is not deployed.
+**Claude only (not Codex):**
+- C1 is done (index, "C1 live results" and "round 2").
+- C7 Before 5a review: write the §6.12 migration, its rollback and `supabase/tests/sprint237c5_manager_invite_functions.sql`.
+  The rolled-back test covers every branch of both functions (granted true and false; `not_found`, `already_revoked`,
+  `accepted`, `revoked` with and without `other_live`, `released` true and false) and the client-home guard rolling back the
+  whole grant. Apply after ChatGPT APPROVE and before the release deploys. 5b C2 adds the EXECUTE checks.
+- Before 5b dispatch, Claude reviews this sprint and commits it locally; it is not deployed.
 
 ## 9. Report format
 Compact status only: files changed with line counts, the test for each criterion (A1-A36), `grep -c "it("` per new test
@@ -651,7 +702,9 @@ Do NOT include 'Claude prompt' or 'recommended next steps for Claude' sections. 
 - Only the files in §5. No new dependencies. No SQL from Codex.
 - `inviteOwner` and `inviteTenant` stay byte-identical. `tenant-invitations.ts`, `join-invite.ts`, `invite-resend.ts` and all
   components are not touched (5b, 5c).
-- Never call an Auth API that inserts `auth.users` after writing a pending row for that email (L-029).
+- Never call an Auth API that inserts `auth.users` after writing a pending row for that email (L-029). The only insert is
+  9b's `createUser`.
+- Grants for invitation rows go only through `manager_invite_grant` (D10).
 - No `deleteUser` or `deleteGeneratedInviteUser` in any manager path.
 - No in-memory dedupe, no `window.location`, no `accounts[0]`, no `ownershipAccountId`.
 - No `fetch` outside `sendInviteEmail`. No other new email type.

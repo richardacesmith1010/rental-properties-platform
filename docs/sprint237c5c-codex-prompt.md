@@ -1,4 +1,4 @@
-# Sprint 237c-5c — Manager invite "UI": pick homes, Revoked badge, row toasts (L3) — rev 3
+# Sprint 237c-5c — Manager invite "UI": pick homes, Revoked badge, row toasts (L3) — rev 3 (references updated for 5a/5b rev 4)
 
 Severity L3 (part of the invite redesign; UI only). `/chatgpt-review` before `/codex-dispatch`. Part 3 of 3; the index is
 `docs/sprint237c5-index.md`. **Depends on 5a and 5b.** HEAD = the local 5b commit (on top of the local 5a commit; both reviewed,
@@ -23,7 +23,7 @@ Unchanged context is in 5a §2 and 5b §2. Facts the requirements below depend o
   `already_joined`).
 - `revokeInvite` returns `{ success: true, message }` with `"Invitation revoked."` (every role; HEAD :378) or `"Invitation
   revoked. Another invite still gives them this home."` (5b §6.7 step 10). Its error `"They already signed in. This invite
-  can't be revoked."` revalidates and turns the row Accepted (5b §6.7 steps 4 and 6).
+  can't be revoked."` revalidates and turns the row Accepted (5b §6.7 step 4 and step 5's `accepted`).
 - Revoke writes status `expired` for every role.
 
 ### 2.2 Today's components
@@ -97,7 +97,7 @@ Claude (not Codex): `supabase/migrations/20261028_sprint237c5_manager_invite_bac
   them this home.` Resend (:191) keeps `Resent!`.
 - Row-action errors are toasts. When `resendState` or `revokeState` becomes a new failure, call `toast.error(state.error)`
   once, using a second `handledRef` per state. Remove the two inline `FormError` lines (:190, :199) so nothing shows twice.
-  The rows that revalidate (5b §6.6 already_joined, 5b §6.7 steps 4 and 6) turn Accepted and unmount their actions; the toast
+  The rows that revalidate (5b §6.6 already_joined, 5b §6.7 step 4 and step 5) turn Accepted and unmount their actions; the toast
   still shows. This applies to every role. Other row actions do not change.
 
 ### 6.11 Rules
@@ -146,20 +146,21 @@ Test rules: no `expect` inside a mock; assert after the awaited render or event;
 already-signed-in Revoke case. M17 drop the eligibility filter → C1 and C2's hidden-home cases.
 
 **Claude only (not Codex), after this sprint passes review, on the combined 5a+5b+5c release:**
-- Claude C3 Walk (test accounts, magic-link sign-in). Setup: never-used plus-addresses X2 and X3 (SQL: no user, no profile; X0
-  and X1 were used by C1); add only X2 to Production `DOMUS_NOTIFICATIONS_ALLOWLIST`, redeploy, re-read; give the smoke owner
-  a second account B with one home through the app; call no `generateLink` magiclink/signup for X2 or X3. Then: on account B,
-  invite X2 to "All my homes" → N Pending rows with Resend, Copy link, Revoke, and one branded email whose link opens
-  `/auth/confirm`, then the callback; invite X3 → the generic invite; revoke one home (access gone, toast shown, old link
+- Claude C3 Walk (test accounts, magic-link sign-in). Setup: never-used plus-addresses X4 and X5 (SQL: no user, no profile; X0-X3
+  were used by C1); add only X4 to Production `DOMUS_NOTIFICATIONS_ALLOWLIST`, redeploy, re-read; give the smoke owner
+  a second account B with one home through the app; call no `generateLink` magiclink/signup for X4 or X5. Then: on account B,
+  invite X4 to "All my homes" → N Pending rows with Resend, Copy link, Revoke, and one branded email whose link opens
+  `/auth/confirm`, then the callback; invite X5 → the generic invite; revoke one home (access gone, toast shown, old link
   dead), re-invite it (Pending), open the link (rows Accepted). The page stays on account B. Light and dark screenshots of the
-  form and list (L-009, L-022). Record X2-X3 as used in `docs/claude/reference.md`. Do not add a signed-in smoke manager to
+  form and list (L-009, L-022). Record X4-X5 as used in `docs/claude/reference.md`. Do not add a signed-in smoke manager to
   All my homes. If a walk does, Claude removes the extra grants by SQL and records it.
 - Claude C4 After deploy (HEAD writes HEAD-shape rows until then): re-count, then backfill manager rows with
   `invited_profile_id` null: (1) pending rows get the profile with `lower(p.email) = lower(i.email)` and `p.role = 'manager'`;
   (2) pending manager rows whose user has `email_confirmed_at` become accepted, `accepted_at = coalesce(u.last_sign_in_at,
   u.email_confirmed_at)`. Today: 1 row. The dry run lists any pending manager row still without `invited_profile_id`. After
-  ChatGPT APPROVE, a rolled-back dry run and the rollback file.
-- Claude C6 Handoff: D1-D9, the D2 send occasion, and follow-ups: convert manager and owner rows on email confirmation (L3,
+  ChatGPT APPROVE, a rolled-back dry run and the rollback file. Also re-count before deploy and list every unconfirmed
+  manager user without `app_metadata.domus_manager_invite` (0 on 2026-10-18; 5a D7 refuses them) for Claude to review.
+- Claude C6 Handoff: D1-D10, the D2 send occasion, and follow-ups: convert manager and owner rows on email confirmation (L3,
   diffed against the live body); the tenant `deleteUser` fallbacks; `inviteOwner` rows that never convert; the branded email
   at launch; a revoked, never-signed-in manager email cannot become a tenant or owner; remove a signed-in manager from a home
   (the undo for 5a §6.3 and All my homes; L3); one Revoke for all rows of one All my homes send (today N Revokes; the link
