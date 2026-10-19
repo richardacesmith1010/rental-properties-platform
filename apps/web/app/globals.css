@@ -6,37 +6,44 @@
 
 @layer base {
   :root {
-    --ground: #F2F2F5;
+    --ground: #F3F4F6;
     --surface: #FFFFFF;
-    --surface-2: #F7F7F9;
-    --surface-3: #ECEDF0;
-    --ink: #111214;
-    --ink-2: #3A3D42;
-    --muted: #5D6168;
+    --surface-2: #F7F8F9;
+    --surface-3: #ECEEF1;
+    --ink: #0B0C0E;
+    --ink-2: #2E3238;
+    --muted: #4D535C;
     --muted-foreground: var(--muted);
     --background: var(--ground);
-    --faint: #8A8E95;
-    --line: #E3E4E8;
-    --line-2: #D3D5DB;
-    --accent: #0A5BD3;
+    --faint: #6B717B;
+    --line: #D9DCE1;
+    --line-2: #C2C7CE;
+    --accent: #2442B8;
     --accent-contrast: #FFFFFF;
-    --accent-strong: #0848A8;
-    --accent-weak: #E6EEFB;
-    --accent-line: #BFD3F5;
-    --crit: #B4361C;
-    --crit-bg: #FBE6E1;
+    --hero-line: #2A2D33;
+    --hero-muted: #A5ABB4;
+    --hero-ink: #FFFFFF;
+    --hero: #0B0C0E;
+    --action-contrast: #FFFFFF;
+    --action-strong: #2E3238;
+    --action: #0B0C0E;
+    --accent-strong: #182F8A;
+    --accent-weak: #E8ECFA;
+    --accent-line: #BAC5EE;
+    --crit: #B4232A;
+    --crit-bg: #FBE7E7;
     --warn: #7A4B00;
     --warn-bg: #FFF1D6;
     --warn-line: #F2D49B;
     --pos: #0E7A3E;
     --pos-bg: #DDF3E6;
-    --radius-card: 16px;
-    --radius-pass: 22px;
-    --radius-control: 12px;
+    --radius-card: 4px;
+    --radius-pass: 6px;
+    --radius-control: 4px;
     --radius-pill: 999px;
-    --shadow-sm: 0 1px 2px rgba(17,18,20,.06);
-    --shadow-md: 0 4px 16px -4px rgba(17,18,20,.12);
-    --shadow-lg: 0 12px 30px -12px rgba(17,18,20,.35);
+    --shadow-sm: 0 1px 2px rgba(11,12,14,.05);
+    --shadow-md: 0 1px 3px rgba(11,12,14,.08);
+    --shadow-lg: 0 8px 24px -12px rgba(11,12,14,.25);
     --domus-skeleton-highlight: hsl(0 0% 100% / 0.55);
 
     --domus-primary: var(--accent);
@@ -79,23 +86,30 @@
 
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --ground: #000000;
-      --surface: #1C1C1E;
-      --surface-2: #2C2C2E;
-      --surface-3: #3A3A3C;
-      --ink: #F5F5F7;
-      --ink-2: #D1D1D6;
-      --muted: #A1A1A6;
-      --accent-contrast: #000000;
-      --faint: #8E8E93;
-      --line: #2C2C2E;
-      --line-2: #3A3A3C;
-      --accent: #4C8DFF;
-      --accent-strong: #7AA9FF;
-      --accent-weak: #16233A;
-      --accent-line: #2A4475;
-      --crit: #FF7A66;
-      --crit-bg: #331410;
+      --ground: #0E0F11;
+      --surface: #17191C;
+      --surface-2: #1F2226;
+      --surface-3: #2A2D32;
+      --ink: #F2F3F5;
+      --ink-2: #C9CDD3;
+      --muted: #A3A9B2;
+      --accent-contrast: #0B0C0E;
+      --hero-line: #383C42;
+      --hero-muted: #A3A9B2;
+      --hero-ink: #F2F3F5;
+      --hero: #1F2226;
+      --action-contrast: #0B0C0E;
+      --action-strong: #FFFFFF;
+      --action: #F2F3F5;
+      --faint: #8A9099;
+      --line: #2A2D32;
+      --line-2: #383C42;
+      --accent: #8DA2F0;
+      --accent-strong: #B0BFF6;
+      --accent-weak: #1A2140;
+      --accent-line: #2E3A70;
+      --crit: #FF7A70;
+      --crit-bg: #33100F;
       --warn: #FFC56B;
       --warn-bg: #2E2209;
       --warn-line: #5A4417;
@@ -110,23 +124,30 @@
   }
 
   :root[data-theme="dark"] {
-    --ground: #000000;
-    --surface: #1C1C1E;
-    --surface-2: #2C2C2E;
-    --surface-3: #3A3A3C;
-    --ink: #F5F5F7;
-    --ink-2: #D1D1D6;
-    --muted: #A1A1A6;
-    --accent-contrast: #000000;
-    --faint: #8E8E93;
-    --line: #2C2C2E;
-    --line-2: #3A3A3C;
-    --accent: #4C8DFF;
-    --accent-strong: #7AA9FF;
-    --accent-weak: #16233A;
-    --accent-line: #2A4475;
-    --crit: #FF7A66;
-    --crit-bg: #331410;
+    --ground: #0E0F11;
+    --surface: #17191C;
+    --surface-2: #1F2226;
+    --surface-3: #2A2D32;
+    --ink: #F2F3F5;
+    --ink-2: #C9CDD3;
+    --muted: #A3A9B2;
+    --accent-contrast: #0B0C0E;
+    --hero-line: #383C42;
+    --hero-muted: #A3A9B2;
+    --hero-ink: #F2F3F5;
+    --hero: #1F2226;
+    --action-contrast: #0B0C0E;
+    --action-strong: #FFFFFF;
+    --action: #F2F3F5;
+    --faint: #8A9099;
+    --line: #2A2D32;
+    --line-2: #383C42;
+    --accent: #8DA2F0;
+    --accent-strong: #B0BFF6;
+    --accent-weak: #1A2140;
+    --accent-line: #2E3A70;
+    --crit: #FF7A70;
+    --crit-bg: #33100F;
     --warn: #FFC56B;
     --warn-bg: #2E2209;
     --warn-line: #5A4417;
@@ -164,6 +185,10 @@
     border-radius: var(--radius-control);
   }
 
+  h1 {
+    font-family: var(--font-display), Georgia, serif;
+  }
+
   h1,
   h2,
   h3,
@@ -185,21 +210,21 @@
   }
 
   .gradient-btn {
-    background: var(--accent);
-    color: var(--accent-contrast);
+    background: var(--action);
+    color: var(--action-contrast);
     box-shadow: var(--domus-shadow-sm);
     @apply font-semibold;
   }
 
   .gradient-btn:hover {
-    background: var(--accent-strong);
+    background: var(--action-strong);
   }
 
   .domus-card {
     background: var(--domus-card-bg);
-    border: 1px solid transparent;
+    border: 1px solid var(--line);
     border-radius: var(--radius-card);
-    box-shadow: var(--domus-shadow-sm);
+    box-shadow: none;
     @apply transition-[border-color,box-shadow,transform] duration-150;
   }
 
@@ -218,8 +243,8 @@
   }
 
   .domus-input {
-    background: var(--domus-input-bg);
-    border: 1px solid var(--domus-input-border);
+    background: var(--surface);
+    border: 1px solid var(--line-2);
     color: var(--domus-heading-text);
     @apply rounded-xl px-3 py-2 text-sm transition-[border-color,box-shadow,background-color] duration-150;
   }
@@ -241,7 +266,7 @@
 
   .domus-input:focus-visible {
     border-color: var(--accent);
-    box-shadow: 0 0 0 2px var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-line);
     outline: none;
   }
 
@@ -255,28 +280,33 @@
   }
 
   .domus-badge {
-    background: var(--domus-badge-bg);
-    border: 1px solid var(--accent-line);
-    color: var(--domus-badge-text);
-    @apply rounded-full px-2.5 py-0.5 text-xs font-semibold;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    @apply rounded-[2px] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em];
   }
 
   .domus-badge-success {
-    background: var(--domus-success-bg);
-    border-color: color-mix(in srgb, var(--domus-success-text) 28%, var(--domus-success-bg));
-    color: var(--domus-success-text);
+    border-color: var(--pos);
+    color: var(--pos);
   }
 
   .domus-badge-warning {
-    background: var(--domus-warning-bg);
-    border-color: color-mix(in srgb, var(--domus-warning-text) 28%, var(--domus-warning-bg));
-    color: var(--domus-warning-text);
+    border-color: var(--warn);
+    color: var(--warn);
   }
 
   .domus-badge-danger {
-    background: var(--domus-danger-bg);
-    border-color: color-mix(in srgb, var(--domus-danger-text) 28%, var(--domus-danger-bg));
-    color: var(--domus-danger-text);
+    border-color: var(--crit);
+    color: var(--crit);
+  }
+
+  .domus-section-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--muted);
   }
 
   .domus-heading {

@@ -19,6 +19,9 @@ const pairs: ReadonlyArray<readonly [string, string, number]> = [
   ["accent", "surface", 4.5],
   ["accent", "accent-weak", 4.5],
   ["accent-contrast", "accent", 4.5],
+  ["action-contrast", "action", 4.5],
+  ["hero-ink", "hero", 4.5],
+  ["hero-muted", "hero", 4.5],
   ["faint", "surface", 3],
   ["accent", "surface", 3]
 ];
@@ -58,15 +61,24 @@ describe("theme text contrast tokens", () => {
   }
 });
 
-it("keeps both dark token blocks identical", () => {
+it("dark blocks match", () => {
   const tokens = (block: string) => Object.fromEntries([...block.matchAll(/--([\w-]+):\s*([^;]+);/g)]
     .map(([, name, value]) => [name, value.trim()]));
   expect(tokens(darkAutomatic)).toEqual(tokens(dark));
 });
 
-it("defines the Wallet radius and shadow tokens", () => {
+it("spec values", () => {
+  expect(token("action", light)).toBe("#0B0C0E");
+  expect(token("accent", light)).toBe("#2442B8");
+  expect(token("ground", light)).toBe("#F3F4F6");
+  for (const theme of [dark, darkAutomatic]) {
+    expect(token("action", theme)).toBe("#F2F3F5");
+    expect(token("hero", theme)).toBe("#1F2226");
+  }
   for (const [name, value] of Object.entries({
-    "radius-card": "16px", "radius-pass": "22px", "radius-control": "12px", "radius-pill": "999px"
+    "radius-card": "4px", "radius-pass": "6px", "radius-control": "4px", "radius-pill": "999px"
   })) expect(token(name, light)).toBe(value);
-  expect(token("shadow-sm", light)).toContain("0 1px 2px");
+  expect(token("shadow-sm", light)).toBe("0 1px 2px rgba(11,12,14,.05)");
+  expect(token("shadow-md", light)).toBe("0 1px 3px rgba(11,12,14,.08)");
+  expect(token("shadow-lg", light)).toBe("0 8px 24px -12px rgba(11,12,14,.25)");
 });

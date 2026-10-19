@@ -3,7 +3,8 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/format";
 
 const badgeVariants = cva(
-  "tabular-nums inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors",
+  "tabular-nums inline-flex items-center rounded-[2px] border px-2 py-0.5 text-[11px] " +
+    "font-semibold uppercase tracking-[0.08em] transition-colors",
   {
     variants: {
       variant: {
@@ -11,7 +12,7 @@ const badgeVariants = cva(
         success: "domus-badge domus-badge-success",
         warning: "domus-badge domus-badge-warning",
         destructive: "domus-badge domus-badge-danger",
-        outline: "border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)]",
+        outline: "border-[var(--line-2)] bg-transparent text-[var(--ink-2)]",
       },
     },
     defaultVariants: {

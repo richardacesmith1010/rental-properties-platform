@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+import { Public_Sans, Source_Serif_4 } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { submitFeedback } from "@/app/actions/feedback";
 import { HelpMenu } from "@/components/help-menu";
@@ -10,11 +10,18 @@ import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import { isNativeAppServer } from "@/lib/native-app-server";
 import "./globals.css";
 
-const geist = Geist({
+const publicSans = Public_Sans({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600"],
   display: "swap",
-  variable: "--font-geist",
+  variable: "--font-sans",
+});
+
+const sourceSerif = Source_Serif_4({
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  display: "swap",
+  variable: "--font-display",
 });
 
 export const metadata: Metadata = {
@@ -66,8 +73,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F2F2F5" },
-    { media: "(prefers-color-scheme: dark)", color: "#000000" }
+    { media: "(prefers-color-scheme: light)", color: "#F3F4F6" },
+    { media: "(prefers-color-scheme: dark)", color: "#0E0F11" }
   ]
 };
 
@@ -82,7 +89,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           }}
         />
       </head>
-      <body className={`${geist.variable} font-sans`}>
+      <body className={`${publicSans.variable} ${sourceSerif.variable} font-sans`}>
         <a
           href="#main-content"
           className={[
