@@ -164,9 +164,9 @@ export function WizardProgress({ step }: { step: WizardStep }) {
         <span className="font-medium text-foreground">Step {current} of 4</span>
         <span className="text-muted-foreground">{percent}%</span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-muted">
+      <div className="h-2 overflow-hidden rounded-[1px] bg-muted">
         <div
-          className="h-full rounded-full bg-primary transition-all duration-300"
+          className="h-full rounded-[1px] bg-[var(--action)] transition-all duration-300"
           style={{ width: `${percent}%` }}
         />
       </div>
@@ -194,7 +194,7 @@ export function PropertyWizardSuccess({
               <Badge variant="success" className="px-3 py-1 text-sm">
                 Setup complete
               </Badge>
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--line)]">
+              <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-[var(--surface-2)] ring-1 ring-[var(--line)]">
                 <CheckCircle2 className="h-8 w-8 text-[var(--pos)]" />
               </div>
               <div className="space-y-2">

@@ -39,7 +39,8 @@ export function BatchToolbar({
 
   return (
     <div
-      className="mb-4 flex flex-col gap-2 rounded-xl border border-border bg-primary/10 px-4 py-3 shadow-sm sm:flex-row sm:flex-wrap sm:items-center sm:gap-3"
+      className={["mb-4 flex flex-col gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface-2)]",
+        "px-4 py-3 shadow-sm sm:flex-row sm:flex-wrap sm:items-center sm:gap-3"].join(" ")}
       role="toolbar"
       aria-label="Batch actions for selected payments"
     >

@@ -59,7 +59,10 @@ export function OwnerStatementSheet({ open, onClose, client, defaultMonth, month
     </div> : summary ? <p role="alert" className="text-[var(--warn)]">{summary.error}</p> : null}
     <div className="grid grid-cols-2 gap-3">
       <a href={`/api/pdf/owner-statement?${params}`} download title="Download owner statement PDF"
-        className="flex min-h-11 items-center justify-center rounded-lg bg-[var(--accent)] px-3 text-center text-white">Download PDF</a>
+        className={[
+          "flex min-h-11 items-center justify-center rounded-lg bg-[var(--action)] px-3 text-center",
+          "text-[var(--action-contrast)]"
+        ].join(" ")}>Download PDF</a>
       <a href={`/api/owner-statement/csv?${params}`} download title="Download owner statement CSV"
         className="flex min-h-11 items-center justify-center rounded-lg border border-[var(--line)] px-3 text-center">Download CSV</a>
     </div>

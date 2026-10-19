@@ -89,10 +89,10 @@ export function PropertyDetailView({
               </Link>
             </Button>
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+              <p className="domus-section-label">
                 Property Details
               </p>
-              <h1 className="mt-1 text-[22px] font-[640] tracking-[-0.02em] text-[var(--ink)] sm:text-[28px]">
+              <h1 className="font-display mt-1 text-[22px] font-[640] tracking-[-0.02em] text-[var(--ink)] sm:text-[28px]">
                 {data.property.name}
               </h1>
               <p className="mt-2 text-sm text-[var(--muted)]">
@@ -107,7 +107,7 @@ export function PropertyDetailView({
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 rounded-[16px] border border-[color:color-mix(in_srgb,var(--line)_84%,transparent)] bg-[color:color-mix(in_srgb,var(--surface)_94%,transparent)] p-2 shadow-sm">
+        <div className="flex flex-wrap gap-2 rounded-2xl border border-[var(--line)] bg-[var(--surface-3)] p-2 shadow-sm">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -116,7 +116,9 @@ export function PropertyDetailView({
                 type="button"
                 size="sm"
                 variant={activeTab === tab.id ? "default" : "outline"}
-                className={activeTab === tab.id ? "bg-[var(--accent)]" : "border-[var(--line)] bg-[var(--surface)]"}
+                className={activeTab === tab.id
+                  ? "bg-[var(--surface)] text-[var(--ink)] shadow-[var(--shadow-sm)] hover:bg-[var(--surface)]"
+                  : "border-[var(--line)] bg-[var(--surface-3)]"}
                 onClick={() => setActiveTab(tab.id)}
                 title={`Open the ${tab.label.toLowerCase()} tab.`}
               >

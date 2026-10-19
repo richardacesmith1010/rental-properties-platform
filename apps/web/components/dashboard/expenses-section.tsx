@@ -47,17 +47,32 @@ export function ExpensesSection({ data, vendors, propertyFiles, onCreateExpense,
           onCreateExpense={onCreateExpense} onAddPartner={onAddPartner} onSetPaidBy={onSetPaidBy}
           onBillTenantForExpense={onBillTenantForExpense} />
         <Card className="border border-border/50 shadow-sm">
-          <CardHeader><CardTitle className="text-xl font-semibold">Money in and out by home</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="font-display text-[18px] font-semibold">Money in and out by home</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             {selectedSummary ? (
               <>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                  <div className="rounded-xl border border-border bg-card px-3 py-2 shadow-sm"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Income</p><p className="text-lg font-semibold text-[var(--pos)]">{formatCurrency(selectedSummary.incomeCents)}</p></div>
-                  <div className="rounded-xl border border-border bg-card px-3 py-2 shadow-sm"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Expenses</p><p className="text-lg font-semibold text-[var(--crit)]">{formatCurrency(selectedSummary.expenseCents)}</p></div>
-                  <div className="rounded-xl border border-border bg-card px-3 py-2 shadow-sm"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Net Cashflow</p><p className="text-lg font-semibold text-primary">{formatCurrency(selectedSummary.netCents)}</p></div>
+                  <div className="rounded-xl border border-border bg-card px-3 py-2 shadow-sm">
+                    <p className="domus-section-label">Income</p>
+                    <p className="font-display text-lg font-semibold text-[var(--pos)]">
+                      {formatCurrency(selectedSummary.incomeCents)}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-border bg-card px-3 py-2 shadow-sm">
+                    <p className="domus-section-label">Expenses</p>
+                    <p className="font-display text-lg font-semibold text-[var(--crit)]">
+                      {formatCurrency(selectedSummary.expenseCents)}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-border bg-card px-3 py-2 shadow-sm">
+                    <p className="domus-section-label">Net Cashflow</p>
+                    <p className="font-display text-lg font-semibold text-[var(--ink)]">
+                      {formatCurrency(selectedSummary.netCents)}
+                    </p>
+                  </div>
                 </div>
                 <div>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Last 12 Months</p>
+                  <p className="domus-section-label mb-2">Last 12 Months</p>
                   <div className="space-y-1">
                     {(data.monthlyByProperty[selectedPropertyId] ?? []).map((row) => (
                       <div key={row.month} className="flex items-center justify-between rounded-xl border border-border/50 px-3 py-2 text-xs shadow-sm">

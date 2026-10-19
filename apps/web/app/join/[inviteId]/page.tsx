@@ -49,7 +49,7 @@ export default async function JoinPage({ params }: { params: Promise<{ inviteId:
       <div className="w-full max-w-md rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6 shadow-[var(--domus-shadow-sm)]">
         {state === "active" ? (
           <>
-            <h1 className="text-2xl font-semibold">You&apos;re invited to Domus</h1>
+            <h1 className="font-display text-2xl font-semibold">You&apos;re invited to Domus</h1>
             <p className="mt-4 text-[var(--ink-2)]">
               {inviterFirstName} invited you{homeName ? ` to ${homeName}` : ""}.
             </p>
@@ -61,7 +61,7 @@ export default async function JoinPage({ params }: { params: Promise<{ inviteId:
           </>
         ) : state === "accepted" ? (
           <>
-            <h1 className="text-2xl font-semibold">This invite was already used.</h1>
+            <h1 className="font-display text-2xl font-semibold">This invite was already used.</h1>
             <Link href="/login" className="mt-4 inline-block text-[var(--accent)] underline" title="Sign in to Domus.">
               Sign in
             </Link>

@@ -27,7 +27,7 @@ function KpiMiniCard({
 }) {
   return (
     <div className="domus-card p-4 shadow-sm">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+      <p className="domus-section-label">
         {label}
       </p>
       <p
@@ -56,7 +56,7 @@ function ChartCard({
 }) {
   return (
     <div className="domus-card p-5 shadow-sm">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+      <p className="domus-section-label">
         Analytics
       </p>
       <h3 className="mt-1 text-base font-semibold text-[var(--ink)]">{title}</h3>

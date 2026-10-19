@@ -53,13 +53,13 @@ export function WelcomeCard({
 
   return (
     <div className="mx-auto w-full max-w-3xl rounded-2xl border border-border/60 bg-card px-6 py-8 text-center shadow-sm sm:px-8">
-      <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--line)]">
+      <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-xl bg-[var(--surface-2)] ring-1 ring-[var(--line)]">
         <Landmark className="h-7 w-7 text-[var(--accent)]" />
       </div>
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+      <p className="domus-section-label">
         Owner setup
       </p>
-      <h2 className="mt-2 text-2xl font-bold tracking-tight text-foreground">
+      <h2 className="mt-2 font-display text-2xl font-semibold text-foreground">
         Welcome, {displayName}!
       </h2>
       <p className="mx-auto mt-2 max-w-2xl text-sm text-muted-foreground">

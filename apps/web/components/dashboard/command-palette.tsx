@@ -227,7 +227,7 @@ export function CommandPalette({
         aria-modal="true"
         aria-label="Search commands"
         onKeyDown={handleDialogKeyDown}
-        className="w-full max-w-2xl overflow-hidden rounded-3xl border border-border/60 bg-card shadow-2xl"
+        className="w-full max-w-2xl overflow-hidden rounded-2xl border border-border/60 bg-card shadow-2xl"
       >
         <div className="border-b border-border/60 px-5 py-4">
           <div className="relative">
@@ -264,7 +264,7 @@ export function CommandPalette({
           </p>
           {groupedResults.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
-              <div className="rounded-full bg-muted p-3">
+              <div className="rounded-xl bg-muted p-3">
                 <Search className="h-5 w-5 text-muted-foreground" />
               </div>
               <p className="mt-4 text-sm font-semibold text-foreground">No matching results</p>
@@ -276,7 +276,7 @@ export function CommandPalette({
             <div id="command-palette-results" role="listbox" aria-label="Command results">
               {groupedResults.map((group) => (
                 <div key={group.label} className="pb-3 last:pb-0">
-                  <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  <p className="px-3 pb-2 domus-section-label">
                     {group.label}
                   </p>
                   <div className="space-y-1">
@@ -317,7 +317,7 @@ export function CommandPalette({
                           className={cn(
                             "flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition",
                             active
-                              ? "bg-primary/10 text-foreground shadow-sm ring-1 ring-primary/20"
+                              ? "bg-[var(--surface-3)] text-[var(--ink)] shadow-[var(--shadow-sm)]"
                               : "text-foreground hover:bg-muted/70"
                           )}
                           title={`Open ${result.label}.`}
@@ -327,7 +327,7 @@ export function CommandPalette({
                             className={cn(
                               "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border",
                               active
-                                ? "border-primary/20 bg-primary/15 text-primary"
+                                ? "border-[var(--line)] bg-[var(--surface)] text-[var(--ink)]"
                                 : "border-border/60 bg-background text-muted-foreground"
                             )}
                           >

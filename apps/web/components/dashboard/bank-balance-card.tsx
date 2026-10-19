@@ -55,7 +55,7 @@ export function BankBalanceCard({
     <div className={cn("domus-card mt-3 px-4 py-4 shadow-sm", className)}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+          <p className="domus-section-label">
             {bankName ?? "Connected bank"}
             {bankMask ? ` ••••${bankMask}` : ""}
           </p>

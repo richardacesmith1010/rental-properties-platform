@@ -27,23 +27,23 @@ export function LeaseWizardReview({
       <div className="rounded-2xl border border-border bg-muted/40 p-5 text-sm">
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Property</p>
+            <p className="domus-section-label">Property</p>
             <p className="mt-2 font-medium text-foreground">
               {property ? `${property.name} - ${property.addressLine1}` : "Not set"}
             </p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Unit</p>
+            <p className="domus-section-label">Unit</p>
             <p className="mt-2 font-medium text-foreground">
               {unit ? `${unit.unitNumber} (${unit.bedrooms} bd / ${unit.bathrooms} ba)` : "Not set"}
             </p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Tenant</p>
+            <p className="domus-section-label">Tenant</p>
             <p className="mt-2 font-medium text-foreground">{tenantLabel}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Lease term</p>
+            <p className="domus-section-label">Lease term</p>
             <p className="mt-2 font-medium text-foreground">
               {draft.startDate ? formatDate(draft.startDate) : "Not set"}
               {draft.startDate ? " to " : ""}
@@ -52,13 +52,13 @@ export function LeaseWizardReview({
             </p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Rent</p>
+            <p className="domus-section-label">Rent</p>
             <p className="mt-2 font-medium text-foreground">
               {draft.monthlyRentDollars ? `$${Number(draft.monthlyRentDollars).toFixed(2)}/month` : "Not set"}
             </p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Deposit</p>
+            <p className="domus-section-label">Deposit</p>
             <p className="mt-2 font-medium text-foreground">
               ${Number(draft.depositDollars || "0").toFixed(2)}
             </p>

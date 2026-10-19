@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { ClientDetail as Detail } from "@/lib/client-overview";
 import type { StatefulAction } from "../types";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { OwnerStatementSheet } from "./owner-statement-sheet";
 import { UnifiedPropertyWizard } from "../unified-property-wizard";
 
@@ -19,8 +20,8 @@ interface Props {
 function ClientAvatar({ name }: { name: string }) {
   const initials = name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
   return (
-    <span className="flex size-14 items-center justify-center rounded-full bg-[var(--accent-weak)]
-      text-lg font-semibold text-[var(--accent)]">
+    <span className="flex size-14 items-center justify-center rounded-full bg-[var(--surface-3)]
+      text-lg font-semibold text-[var(--ink)]">
       {initials}
     </span>
   );
@@ -29,10 +30,8 @@ function ClientAvatar({ name }: { name: string }) {
 function HomeStatus({ home }: { home: Detail["homes"][number] }) {
   const label = home.status === "overdue" ? "Overdue" : home.status === "paid" ? "Paid"
     : home.status === "due" ? `Due ${home.dueLabel}` : "No tenant";
-  const color = home.status === "overdue" ? "bg-[var(--warn-bg)] text-[var(--warn)]"
-    : home.status === "paid" ? "bg-[var(--pos-bg)] text-[var(--pos)]"
-      : "bg-[var(--surface-2)] text-[var(--muted)]";
-  return <span className={`shrink-0 rounded-full px-2 py-1 text-xs ${color}`}>{label}</span>;
+  const variant = home.status === "overdue" ? "warning" : home.status === "paid" ? "success" : "outline";
+  return <Badge variant={variant} className="shrink-0">{label}</Badge>;
 }
 
 export function ClientDetail({ client, defaultMonth, monthOptions, onCreatePropertyWithSetup, onCreateClientAccount }: Props) {
@@ -52,10 +51,10 @@ export function ClientDetail({ client, defaultMonth, monthOptions, onCreatePrope
           className="inline-flex min-h-11 items-center text-[var(--accent)]">‹ Clients</Link>
       </header>
       <main className="mx-auto max-w-4xl space-y-6 px-4 py-6 text-[var(--ink)]">
-      <header className="flex items-center gap-4">
+      <header className="flex items-center gap-4 border-b-2 border-[var(--ink)] pb-3">
         <ClientAvatar name={client.name} />
         <div>
-          <h1 className="text-2xl font-semibold">{client.name}</h1>
+          <h1 className="font-display text-2xl font-semibold">{client.name}</h1>
           <p className="text-sm text-[var(--muted)]">{client.accountType === "llc" ? "LLC" : "Person"}</p>
           {client.contactEmail && <p className="text-sm text-[var(--muted)]">{client.contactEmail}</p>}
         </div>

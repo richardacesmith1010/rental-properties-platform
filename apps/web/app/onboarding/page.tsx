@@ -35,10 +35,13 @@ export default async function OnboardingPage() {
     <main className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
       <div className="w-full max-w-2xl rounded-2xl border border-border bg-card p-8 shadow-sm">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--line)]">
+          <div className={[
+            "mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-xl bg-[var(--surface-2)] ring-1",
+            "ring-[var(--line)]"
+          ].join(" ")}>
             <ClipboardCheck className="h-7 w-7 text-[var(--accent)]" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+          <h1 className="font-display text-2xl font-semibold text-foreground">
             {role === "tenant" && inviteContext?.propertyAddress
               ? `Welcome to Domus, ${profile?.full_name?.split(/\s+/)[0] ?? "there"}!`
               : "Finish your profile"}

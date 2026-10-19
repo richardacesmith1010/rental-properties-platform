@@ -42,11 +42,11 @@ function InviteErrorState({
 }) {
   return (
     <main className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
-      <div className="w-full max-w-lg rounded-3xl border border-border bg-card p-8 shadow-xl">
-        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+      <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 shadow-xl">
+        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-xl bg-[var(--accent-weak)] text-[var(--accent)]">
           <ShieldCheck className="h-8 w-8" />
         </div>
-        <h1 className="text-center text-2xl font-semibold text-foreground">{title}</h1>
+        <h1 className="text-center font-display text-2xl font-semibold text-foreground">{title}</h1>
         <p className="mt-3 text-center text-sm leading-6 text-muted-foreground">{description}</p>
         <div className="mt-6 flex justify-center">
           <Button asChild title="Return to the Domus marketing page.">
@@ -107,11 +107,11 @@ export default async function JoinLlcPage(props: JoinLlcPageProps) {
     if (normalizeInvitationEmail(user.email) !== normalizeInvitationEmail(invitation.email)) {
       return (
         <main className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
-          <div className="w-full max-w-xl rounded-3xl border border-border bg-card p-8 shadow-xl">
+          <div className="w-full max-w-xl rounded-2xl border border-border bg-card p-8 shadow-xl">
             <Alert variant="warning" className="px-4 py-3">
               You&apos;re signed in as <span className="font-semibold text-foreground">{user.email}</span>, but this invitation was sent to <span className="font-semibold text-foreground">{invitation.email}</span>.
             </Alert>
-            <h1 className="mt-6 text-2xl font-semibold text-foreground">Wrong account open</h1>
+            <h1 className="font-display mt-6 text-2xl font-semibold text-foreground">Wrong account open</h1>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
               Sign out. Then reopen the invite using the invited email address {invitation.accountName}.
             </p>
@@ -155,59 +155,68 @@ export default async function JoinLlcPage(props: JoinLlcPageProps) {
   return (
     <div className="app-surface min-h-screen">
       <div className="flex min-h-screen flex-col lg:grid lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(196,181,253,0.45),transparent_30%),linear-gradient(135deg,#5b21b6_0%,#7c3aed_42%,#0f172a_100%)] px-5 py-8 text-white sm:px-8 lg:flex lg:flex-col lg:justify-between lg:px-12 lg:py-12">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_18%,rgba(255,255,255,0.12),transparent_24%),radial-gradient(circle_at_20%_85%,rgba(52,211,153,0.16),transparent_22%)]" />
+        <section className={[
+          "relative overflow-hidden bg-[var(--hero)] px-5 py-8 text-[var(--hero-ink)] sm:px-8 lg:flex",
+          "lg:flex-col lg:justify-between lg:px-12 lg:py-12"
+        ].join(" ")}>
           <div className="relative z-10 flex items-center justify-between">
             <Link href="/marketing" className="inline-flex items-center gap-3" title="Return to the Domus marketing page.">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--surface)_15%,transparent)] text-lg font-bold shadow-lg backdrop-blur-sm">
+              <div className={["flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--hero-ink)]",
+                "text-lg font-bold text-[var(--hero)]"].join(" ")}>
                 D
               </div>
               <div>
                 <p className="text-lg font-semibold tracking-tight">Domus</p>
-                <p className="text-xs uppercase tracking-[0.2em] text-white/70">Rental operations</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--hero-muted)]">Rental operations</p>
               </div>
             </Link>
-            <div className="hidden rounded-full border border-white/15 bg-[color-mix(in_srgb,var(--surface)_10%,transparent)] px-4 py-2 text-sm font-medium text-white/90 lg:inline-flex">
+            <div className={[
+              "hidden rounded-[2px] border border-[var(--hero-line)] bg-[var(--hero)] px-4 py-2 text-sm",
+              "font-medium text-[var(--hero-ink)] lg:inline-flex"
+            ].join(" ")}>
               LLC invitation
             </div>
           </div>
 
           <div className="relative z-10 mt-8 grid gap-6 lg:mt-16 lg:grid-cols-[1fr_auto] lg:items-center lg:gap-10">
             <div className="max-w-2xl space-y-5">
-              <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-[color-mix(in_srgb,var(--surface)_10%,transparent)] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-white/85">
+              <p className={[
+                "inline-flex items-center gap-2 rounded-[2px] border border-[var(--hero-line)] bg-[var(--hero)]",
+                "px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--hero-ink)]"
+              ].join(" ")}>
                 <Users className="h-3.5 w-3.5" />
                 Shared ownership workspace
               </p>
               <div className="space-y-4">
-                <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-5xl">
+                <h1 className="font-display text-3xl font-semibold leading-tight sm:text-5xl">
                   You&apos;ve been invited to join {invitation.accountName}.
                 </h1>
-                <p className="max-w-xl text-base leading-7 text-white/78 sm:text-lg">
+                <p className="max-w-xl text-base leading-7 text-[var(--hero-muted)] sm:text-lg">
                   {invitation.invitedByName ?? "A Domus owner"} invited you to manage properties and money with your LLC.
                 </p>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-white/[0.14] bg-[color-mix(in_srgb,var(--surface)_10%,transparent)] px-4 py-4 backdrop-blur-sm">
+                <div className="rounded-2xl border border-[var(--hero-line)] bg-[var(--hero)] px-4 py-4 backdrop-blur-sm">
                   <div className="flex items-center gap-2 font-semibold">
                     <Building2 className="h-4 w-4" />
                     LLC account
                   </div>
-                  <p className="mt-2 text-sm text-white/72">{invitation.accountName}</p>
+                  <p className="mt-2 text-sm text-[var(--hero-muted)]">{invitation.accountName}</p>
                 </div>
-                <div className="rounded-2xl border border-white/[0.14] bg-[color-mix(in_srgb,var(--surface)_10%,transparent)] px-4 py-4 backdrop-blur-sm">
+                <div className="rounded-2xl border border-[var(--hero-line)] bg-[var(--hero)] px-4 py-4 backdrop-blur-sm">
                   <div className="flex items-center gap-2 font-semibold">
                     <ShieldCheck className="h-4 w-4" />
                     Invited email
                   </div>
-                  <p className="mt-2 text-sm text-white/72">{invitation.email}</p>
+                  <p className="mt-2 text-sm text-[var(--hero-muted)]">{invitation.email}</p>
                 </div>
               </div>
             </div>
 
             <div className="mx-auto hidden lg:mx-0 lg:block">
-              <div className="rounded-[32px] border border-white/[0.14] bg-[color-mix(in_srgb,var(--surface)_10%,transparent)] p-6 shadow-2xl backdrop-blur-md">
-                <Building2 className="mx-auto h-16 w-16 text-white" />
+              <div className="rounded-2xl border border-[var(--hero-line)] bg-[var(--hero)] p-6 shadow-2xl backdrop-blur-md">
+                <Building2 className="mx-auto h-16 w-16 text-[var(--hero-ink)]" />
               </div>
             </div>
           </div>
@@ -215,10 +224,10 @@ export default async function JoinLlcPage(props: JoinLlcPageProps) {
 
         <section className="flex flex-1 items-center justify-center bg-background/95 px-4 py-8 sm:px-6 lg:px-10">
           <div className="w-full max-w-xl">
-            <div className="domus-card overflow-hidden border border-border/60 shadow-[0_30px_90px_-45px_rgba(15,23,42,0.35)]">
+            <div className="domus-card overflow-hidden border border-border/60 shadow-[var(--shadow-sm)]">
               <div className="border-b border-border/60 bg-background/90 px-6 py-6 sm:px-8">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">{mode === "signin" ? "Sign in" : "Create account"}</p>
-                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
+                <p className="domus-section-label">{mode === "signin" ? "Sign in" : "Create account"}</p>
+                <h2 className="mt-3 font-display text-3xl font-semibold text-foreground">
                   {mode === "signin"
                     ? `Sign in to join ${invitation.accountName}`
                     : `Create your account to join ${invitation.accountName}`}
@@ -302,7 +311,10 @@ export default async function JoinLlcPage(props: JoinLlcPageProps) {
                 <p>
                   Need a different link? Ask {invitation.invitedByName ?? "the LLC owner"} to resend the invitation from the Members page.
                 </p>
-                <Link href="/marketing" className="mt-3 inline-flex items-center gap-2 font-semibold text-primary hover:text-primary/80" title="Explore Domus before you join.">
+                <Link href="/marketing" className={[
+                  "mt-3 inline-flex items-center gap-2 font-semibold text-[var(--accent)]",
+                  "hover:text-[var(--accent-strong)]"
+                ].join(" ")} title="Explore Domus before you join.">
                   Explore Domus
                   <ArrowRight className="h-4 w-4" />
                 </Link>

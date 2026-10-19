@@ -6,6 +6,7 @@ import { X } from "lucide-react";
 import { toast } from "sonner";
 import type { ActionState } from "@/app/actions";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { RelativeTime } from "@/components/ui/relative-time";
 import { cn, formatDateTime } from "@/lib/format";
 import type { NotificationDTO } from "@/lib/notifications";
@@ -192,13 +193,11 @@ export function ActionableNotification({
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            <span className="domus-section-label">
               {presentation.eyebrow}
             </span>
             {!notification.readAt ? (
-              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
-                New
-              </span>
+              <Badge variant="outline">New</Badge>
             ) : null}
           </div>
           <p className="mt-1 text-sm font-semibold text-foreground sm:text-base">
@@ -240,7 +239,7 @@ export function ActionableNotification({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-9 w-9 min-h-11 min-w-11 shrink-0 rounded-full sm:min-h-0 sm:min-w-0"
+          className="h-9 w-9 min-h-11 min-w-11 shrink-0 rounded-xl sm:min-h-0 sm:min-w-0"
           loading={isPending && pendingAction === "dismiss"}
           onClick={handleDismiss}
           title={`Dismiss ${notification.title}`}

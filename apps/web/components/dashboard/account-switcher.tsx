@@ -223,20 +223,21 @@ export function AccountSwitcher({
       title={renameTitle}
       aria-label={renameTitle}
     >
-      <span className="block min-w-0 flex-1 truncate text-sm font-semibold text-white">
+      <span className="block min-w-0 flex-1 truncate text-sm font-semibold text-[var(--hero-ink)]">
         {activeAccount.displayName}
       </span>
       {onRenameOwnershipAccount ? (
-        <Pencil className="h-3.5 w-3.5 shrink-0 text-white/80 opacity-80 transition group-hover:text-white group-hover:opacity-100" />
+        <Pencil className={["h-3.5 w-3.5 shrink-0 text-[var(--hero-muted)] opacity-80 transition",
+          "group-hover:text-[var(--hero-ink)] group-hover:opacity-100"].join(" ")} />
       ) : null}
     </button>
   );
 
   if (accounts.length <= 1) {
     return (
-      <div className="sidebar-shell-panel px-3.5 py-3.5 text-white shadow-sm">
+      <div className="sidebar-shell-panel px-3.5 py-3.5 text-[var(--hero-ink)] shadow-sm">
         <div className="flex items-center gap-2">
-          <Building2 className="h-4 w-4 text-white/90" />
+          <Building2 className="h-4 w-4 text-[var(--hero-muted)]" />
           {nameRow}
         </div>
         {activePendingRenameRequest ? (
@@ -258,9 +259,9 @@ export function AccountSwitcher({
   }
 
   return (
-    <div className="sidebar-shell-panel px-3.5 py-3.5 text-white shadow-sm">
+    <div className="sidebar-shell-panel px-3.5 py-3.5 text-[var(--hero-ink)] shadow-sm">
       <div className="flex items-center gap-2">
-        <Building2 className="h-4 w-4 text-white/90" />
+        <Building2 className="h-4 w-4 text-[var(--hero-muted)]" />
         {nameRow}
       </div>
       {activePendingRenameRequest ? (
@@ -281,15 +282,15 @@ export function AccountSwitcher({
           aria-controls={menuId}
         >
           <span className="min-w-0 flex-1">
-            <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
+            <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--hero-muted)]">
               Switch account
             </span>
-            <span className="block truncate text-sm font-semibold text-white">
+            <span className="block truncate text-sm font-semibold text-[var(--hero-ink)]">
               {activeAccount.displayName}
             </span>
           </span>
           <ChevronDown
-            className={`h-4 w-4 shrink-0 text-white/80 transition-transform ${isMenuOpen ? "rotate-180" : ""}`}
+            className={`h-4 w-4 shrink-0 text-[var(--hero-muted)] transition-transform ${isMenuOpen ? "rotate-180" : ""}`}
           />
         </button>
 
@@ -299,7 +300,10 @@ export function AccountSwitcher({
             ref={menuRef}
             role="listbox"
             aria-label="Available ownership accounts"
-            className="z-[60] mt-3 overflow-hidden rounded-[12px] border border-white/18 bg-[var(--ink)] p-1 shadow-[var(--shadow-lg)] backdrop-blur sm:absolute sm:left-0 sm:right-0 sm:mt-2"
+            className={[
+              "z-[60] mt-3 overflow-hidden rounded-2xl border border-[var(--hero-line)] bg-[var(--hero)] p-1",
+              "shadow-[var(--shadow-lg)] backdrop-blur sm:absolute sm:left-0 sm:right-0 sm:mt-2"
+            ].join(" ")}
           >
             {accounts.map((account) => {
               const isActive = account.id === activeAccount.id;
@@ -310,7 +314,8 @@ export function AccountSwitcher({
                   role="option"
                   aria-selected={isActive}
                   onClick={() => handleAccountChange(account.id)}
-                  className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-[10px] px-3 py-2 text-left text-sm transition sm:min-h-0 ${
+                  className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-xl px-3 py-2
+                    text-left text-sm transition sm:min-h-0 ${
                     isActive
                       ? "bg-[var(--surface-3)] text-[var(--ink)]"
                       : "text-[var(--ink-2)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"

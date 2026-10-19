@@ -107,7 +107,7 @@ export function TenantRentCard({
     return (
       <Card className="domus-card">
         <CardContent className="space-y-2 p-5 sm:p-7">
-          <h2 className="text-lg font-semibold text-[var(--ink)]">Your lease isn&apos;t set up yet</h2>
+          <h2 className="font-display text-[18px] font-semibold text-[var(--ink)]">Your lease isn&apos;t set up yet</h2>
           <p className="text-sm text-[var(--muted)]">
             Your landlord is still setting things up. You&apos;ll see your rent here once it&apos;s ready.
           </p>
@@ -132,7 +132,7 @@ export function TenantRentCard({
             <p className="mt-1 text-sm text-[var(--ink)]">
               {formatCurrency(futureCharge.amountCents)} on {formatMonthDay(futureCharge.dueDate)}.
             </p>
-          ) : <p className="mt-1 text-4xl font-bold tabular-nums text-[var(--ink)]">{amountLabel}</p>}
+          ) : <p className="mt-1 font-display text-4xl font-semibold tabular-nums text-[var(--ink)]">{amountLabel}</p>}
           {charge?.lines?.length ? <p className="mt-2 text-sm text-[var(--muted)]">
             Rent {formatCurrency(chargeBreakdown({ id: charge.id, amount_cents: charge.amountCents },
               charge.lines).rentCents)}
@@ -155,7 +155,12 @@ export function TenantRentCard({
             {dueDate && new Date(`${dueDate}T00:00:00.000Z`) < new Date() && lateFeeCents > 0 ? <p className="text-sm text-[var(--warn)]">A {formatCurrency(lateFeeCents)} late fee may apply.</p> : null}
           </div>
         ) : null}
-        {payState === "not_ready" ? <div className="rounded-xl bg-[var(--surface-2)] p-4 text-sm text-[var(--muted)]"><p className="font-semibold text-[var(--ink)]">Online pay isn&apos;t on yet</p><p className="mt-1">Your landlord is still setting it up. Pay them the way you usually do for now.</p></div> : null}
+        {payState === "not_ready" ? (
+          <div className="border-l-[3px] border-[var(--accent)] bg-[var(--surface-2)] p-4 text-sm text-[var(--muted)]">
+            <p className="font-semibold text-[var(--ink)]">Online pay isn&apos;t on yet</p>
+            <p className="mt-1">Your landlord is still setting it up. Pay them the way you usually do for now.</p>
+          </div>
+        ) : null}
         {payState === "outside" ? <div className="rounded-xl bg-[var(--surface-2)] p-4 text-sm text-[var(--muted)]">You pay your landlord outside Domus.</div> : null}
         {(payState === "not_ready" || payState === "outside") && unpaidCharges.length > 0 ? (
           <div className="space-y-3">

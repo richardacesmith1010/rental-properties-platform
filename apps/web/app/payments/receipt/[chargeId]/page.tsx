@@ -99,7 +99,7 @@ export default async function ReceiptPage(props: ReceiptPageProps) {
     return (
       <main className="app-surface min-h-screen px-6 pb-8 pt-[calc(env(safe-area-inset-top,0px)+2rem)] lg:px-8">
         <div className="mx-auto max-w-3xl space-y-4">
-          <h1 className="text-2xl font-semibold text-[var(--ink)]">This payment was reversed</h1>
+          <h1 className="font-display text-2xl font-semibold text-[var(--ink)]">This payment was reversed</h1>
           <p className="text-[var(--muted)]">It no longer counts as paid.</p>
           <Link href="/tenant?section=charges" className="inline-flex min-h-11 items-center text-[var(--accent)]">
             Back to Dashboard
@@ -136,29 +136,29 @@ export default async function ReceiptPage(props: ReceiptPageProps) {
               }
               body, .app-surface {
                 background: white !important;
-                color: #191B1E !important;
+                color: #0B0C0E !important;
               }
               [data-print-document="receipt"] {
-                --ground: #FBFBF9;
+                --ground: #F3F4F6;
                 --surface: #FFFFFF;
-                --surface-2: #F5F5F1;
-                --surface-3: #EFEFE9;
-                --ink: #191B1E;
-                --ink-2: #3A3F45;
-                --muted: #6F757C;
-                --faint: #9AA0A6;
-                --line: #E6E6E0;
-                --line-2: #EEEEE8;
-                --accent: #1D4ED8;
-                --accent-strong: #1A3FAE;
-                --accent-weak: #E8EEFC;
-                --accent-line: #C7D6F8;
-                --crit: #B91C1C;
-                --crit-bg: #FDE8E8;
-                --warn: #B45309;
-                --warn-bg: #FCF0DC;
-                --pos: #15803D;
-                --pos-bg: #E4F5E9;
+                --surface-2: #F7F8F9;
+                --surface-3: #ECEEF1;
+                --ink: #0B0C0E;
+                --ink-2: #2E3238;
+                --muted: #4D535C;
+                --faint: #6B717B;
+                --line: #D9DCE1;
+                --line-2: #C2C7CE;
+                --accent: #2442B8;
+                --accent-strong: #182F8A;
+                --accent-weak: #E8ECFA;
+                --accent-line: #BAC5EE;
+                --crit: #B4232A;
+                --crit-bg: #FBE7E7;
+                --warn: #7A4B00;
+                --warn-bg: #FFF1D6;
+                --pos: #0E7A3E;
+                --pos-bg: #DDF3E6;
                 --shadow-sm: 0 8px 20px -18px rgba(25, 27, 30, 0.16);
                 --shadow-md: 0 18px 40px -28px rgba(25, 27, 30, 0.2);
                 --shadow-lg: 0 28px 64px -36px rgba(25, 27, 30, 0.34);
@@ -199,7 +199,7 @@ export default async function ReceiptPage(props: ReceiptPageProps) {
                 --domus-shadow-lg: var(--shadow-lg);
                 --domus-glow: 0 0 0 transparent;
                 background: #FFFFFF !important;
-                border-color: #E6E6E0 !important;
+                border-color: #D9DCE1 !important;
                 box-shadow: none !important;
               }
             }
@@ -214,12 +214,16 @@ export default async function ReceiptPage(props: ReceiptPageProps) {
               <ChevronLeft className="h-4 w-4" aria-hidden="true" />Back to Rent
             </Link>
             <p className="text-xs uppercase tracking-[0.3em] text-[var(--accent)]">Domus</p>
-            <h1 className="mt-2 text-2xl font-semibold text-[var(--ink)]">Payment Receipt</h1>
+            <h1 className="font-display mt-2 text-2xl font-semibold text-[var(--ink)]">Payment Receipt</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href={`/api/pdf/receipt/${params.chargeId}`}
-              className="inline-flex h-11 items-center gap-2 rounded-xl border border-transparent bg-[var(--accent)] px-5 py-2 text-sm font-semibold text-white shadow-[var(--domus-shadow-sm)] transition hover:bg-[var(--accent-strong)] sm:h-10"
+              className={[
+                "inline-flex h-11 items-center gap-2 rounded-xl border border-transparent bg-[var(--action)]",
+                "px-5 py-2 text-sm font-semibold text-[var(--action-contrast)] shadow-[var(--domus-shadow-sm)]",
+                "transition hover:bg-[var(--action-strong)] sm:h-10"
+              ].join(" ")}
               title="Download this receipt as a PDF."
             >
               <Download className="h-4 w-4" />

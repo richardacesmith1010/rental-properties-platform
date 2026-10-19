@@ -30,7 +30,7 @@ export function NextBillLineSheet({ leaseId, onClose, onAdd }: {
   return <div role="dialog" aria-modal="true" aria-label="Add to next bill"
     className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
     <div className="w-full max-w-md space-y-4 rounded-t-2xl bg-[var(--surface)] p-5 shadow-xl sm:rounded-2xl">
-      <h2 className="text-lg font-semibold text-[var(--ink)]">Add to next bill</h2>
+      <h2 className="font-display text-[18px] font-semibold text-[var(--ink)]">Add to next bill</h2>
       <label className="block space-y-1 text-sm text-[var(--ink)]">Type
         <Select value={kind} onChange={(event) => {
           const next = event.target.value as "utility" | "credit";

@@ -27,7 +27,7 @@ export function PhotoGallery({ photos, canDeletePhoto, onDelete }: PhotoGalleryP
     [activePhotoId, photos]
   );
   const activePhoto = activeIndex >= 0 ? photos[activeIndex] : null;
-  const viewerIconClass = "inline-flex h-11 w-11 items-center justify-center rounded-full " +
+  const viewerIconClass = "inline-flex h-11 w-11 items-center justify-center rounded-xl " +
     "bg-[var(--surface-2)] text-[var(--ink)] shadow-sm";
 
   useEffect(() => {
@@ -157,7 +157,7 @@ export function PhotoGallery({ photos, canDeletePhoto, onDelete }: PhotoGalleryP
                   <button
                     type="button"
                     className={"absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center " +
-                      "rounded-full bg-background/90 text-foreground shadow-sm transition hover:bg-background"}
+                      "rounded-xl bg-background/90 text-foreground shadow-sm transition hover:bg-background"}
                     onClick={() => void handleDelete(photo.id)}
                     title={`Delete ${photo.fileName}`}
                     disabled={deletingPhotoId === photo.id}

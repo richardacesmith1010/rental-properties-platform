@@ -58,7 +58,7 @@ export function DepositReturnSheet({ leaseId, depositCents, recorded, onRecord, 
         <input className="domus-input mt-1 w-full" title="Return date" type="date" max={new Date().toISOString().slice(0, 10)}
           value={date} onChange={(event) => setDate(event.target.value)} /></label>
       <button type="button" title="Save" disabled={busy} onClick={() => void save()}
-        className="min-h-11 rounded-md bg-[var(--accent)] px-4 text-[var(--accent-contrast)]">Save</button>
+        className="min-h-11 rounded-md bg-[var(--action)] px-4 text-[var(--action-contrast)]">Save</button>
       <button type="button" title="Cancel" onClick={() => setOpen(false)}
         className="min-h-11 px-4 text-[var(--muted)]">Cancel</button>
       </div>

@@ -6,6 +6,7 @@ import { Loader2, MailPlus, RotateCcw, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { RelativeTime } from "@/components/ui/relative-time";
@@ -128,9 +129,9 @@ export function LLCInviteForm({
                   Resend or cancel any invitation that has not been accepted yet.
                 </p>
               </div>
-              <span className="rounded-full border border-border/70 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              <Badge variant="outline">
                 {pendingInvitations.length}
-              </span>
+              </Badge>
             </div>
 
             <div className="space-y-2">

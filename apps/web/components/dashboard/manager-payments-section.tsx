@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/dashboard/empty-state";
 import { EntityEditModal } from "@/components/dashboard/entity-edit-modal";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FeatureWarning } from "@/components/shared/feature-warning";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -202,11 +203,11 @@ export function ManagerPaymentsSection({
                         <p className="text-sm text-muted-foreground">{config.managerName}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+                        <Badge variant="outline">
                           {config.paymentType === "percentage"
                             ? `${config.percentageRate?.toFixed(2) ?? "0.00"}%`
                             : formatCurrency(config.flatAmountCents ?? 0)}
-                        </span>
+                        </Badge>
                         {onUpdateManagerInfo ? (
                           <Button
                             type="button"

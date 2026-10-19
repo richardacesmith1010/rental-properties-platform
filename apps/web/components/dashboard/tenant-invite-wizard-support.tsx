@@ -92,8 +92,8 @@ export function TenantInviteWizardProgress({ step }: { step: WizardStep }) {
         <span className="font-medium text-foreground">Step {current} of {STEP_TITLES.length}</span>
         <span className="text-muted-foreground">{percent}%</span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-muted">
-        <div className="h-full rounded-full bg-primary transition-all duration-300" style={{ width: `${percent}%` }} />
+      <div className="h-2 overflow-hidden rounded-[1px] bg-muted">
+        <div className="h-full rounded-[1px] bg-[var(--action)] transition-all duration-300" style={{ width: `${percent}%` }} />
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {STEP_TITLES.map((label, index) => (
@@ -102,7 +102,7 @@ export function TenantInviteWizardProgress({ step }: { step: WizardStep }) {
             className={[
               "rounded-lg border px-3 py-2 text-xs font-medium transition-all duration-300",
               step === index
-                ? "border-primary/40 bg-primary/10 text-foreground"
+                ? "border-[var(--line)] bg-[var(--surface-3)] text-[var(--ink)]"
                 : step > index
                   ? "border-[var(--pos)] bg-[var(--pos-bg)] text-[var(--pos)]"
                   : "border-border bg-card text-muted-foreground"
@@ -350,7 +350,7 @@ export function TenantInviteSuccess({
 }) {
   return (
     <div className="space-y-5 text-center">
-      <div className="mx-auto inline-flex rounded-full bg-[var(--pos-bg)] p-4 text-[var(--pos)]">
+      <div className="mx-auto inline-flex rounded-xl bg-[var(--pos-bg)] p-4 text-[var(--pos)]">
         <CheckCircle2 className="h-8 w-8" />
       </div>
       <div>

@@ -90,11 +90,11 @@ export function MaintenanceTracker({
               ) : null}
               <div
                 className={[
-                  "relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-bold transition-all",
+                  "relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border text-xs font-bold transition-all",
                   isCurrent
-                    ? "border-[var(--accent-line)] bg-[var(--accent)] text-white shadow-[0_0_0_6px_var(--accent-weak)] animate-pulse"
+                    ? "border-[var(--ink)] bg-[var(--action)] text-[var(--action-contrast)]"
                     : isCompleted
-                      ? "border-[var(--accent)] bg-[var(--accent)] text-white"
+                      ? "border-[var(--ink)] bg-[var(--action)] text-[var(--action-contrast)]"
                       : "border-border bg-background text-muted-foreground"
                 ].join(" ")}
               >

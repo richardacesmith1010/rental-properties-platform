@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, Circle, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/format";
+import { Badge } from "@/components/ui/badge";
 
 export type OnboardingStepId = "profile" | "account" | "property" | "unit" | "lease";
 
@@ -53,7 +54,7 @@ export function OnboardingChecklist({ steps, className }: OnboardingChecklistPro
   return (
     <div className={cn("space-y-4 text-left", className)}>
       <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/30 p-3">
-        <div className="shrink-0 rounded-full bg-primary/10 p-2">
+        <div className="shrink-0 rounded-xl bg-primary/10 p-2">
           <ClipboardList className="h-5 w-5 text-[var(--accent)]" />
         </div>
         <div className="min-w-0 flex-1 space-y-2">
@@ -64,9 +65,9 @@ export function OnboardingChecklist({ steps, className }: OnboardingChecklistPro
             <div className="text-sm text-muted-foreground">
               {completedSteps} of {totalSteps} complete
             </div>
-            <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+            <div className="h-2 flex-1 overflow-hidden rounded-[1px] bg-muted">
               <div
-                className="h-full rounded-full bg-primary transition-all duration-500"
+                className="h-full rounded-[1px] bg-[var(--action)] transition-all duration-500"
                 style={{ width: `${progressPct}%` }}
               />
             </div>
@@ -86,7 +87,7 @@ export function OnboardingChecklist({ steps, className }: OnboardingChecklistPro
               className={cn(
                 "flex items-start gap-3 rounded-xl border border-border/60 bg-background/60 p-3 transition-all duration-300",
                 step.completed && "opacity-65",
-                isActive && "bg-primary/5 ring-1 ring-primary/20 shadow-sm",
+                isActive && "bg-[var(--surface-2)] ring-1 ring-[var(--line)] shadow-[var(--shadow-sm)]",
                 animateCompletion && "scale-[1.01]"
               )}
             >
@@ -96,7 +97,7 @@ export function OnboardingChecklist({ steps, className }: OnboardingChecklistPro
                   step.completed
                     ? "bg-[var(--pos-bg)] text-[var(--pos)]"
                     : isActive
-                      ? "bg-primary/10 text-primary"
+                      ? "bg-[var(--surface-3)] text-[var(--ink)]"
                       : "border border-border bg-muted/50 text-muted-foreground",
                   animateCompletion && "animate-bounce"
                 )}
@@ -118,9 +119,7 @@ export function OnboardingChecklist({ steps, className }: OnboardingChecklistPro
                     {step.label}
                   </p>
                   {isActive ? (
-                    <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
-                      Next up
-                    </span>
+                    <Badge variant="outline">Next up</Badge>
                   ) : null}
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">{step.description}</p>

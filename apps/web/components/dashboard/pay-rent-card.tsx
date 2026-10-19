@@ -129,24 +129,27 @@ export function PayRentCard({
     return (
       <Card className="overflow-hidden border border-[var(--pos)] bg-[var(--pos-bg)] shadow-[var(--domus-shadow-md)]">
         <CardContent className="flex min-h-[220px] flex-col items-center justify-center gap-4 p-5 text-center sm:min-h-[260px] sm:gap-5 sm:p-8">
-          <div className="rounded-full bg-[var(--surface)] p-4 shadow-[var(--domus-shadow-sm)] ring-1 ring-[var(--pos)]">
+          <div className="rounded-xl bg-[var(--surface)] p-4 shadow-[var(--domus-shadow-sm)] ring-1 ring-[var(--pos)]">
             <CheckCircle2 className="h-8 w-8 text-[var(--pos)]" />
           </div>
           <div className="space-y-2">
             {hasActiveLease ? (
               <>
-                <div className="inline-flex items-center gap-2 rounded-full border border-[var(--pos)] bg-[var(--pos-bg)] px-3 py-1 text-sm font-medium text-[var(--pos)]">
+                <div className={[
+                  "inline-flex items-center gap-2 rounded-[2px] border border-[var(--pos)] bg-[var(--pos-bg)] px-3",
+                  "py-1 text-sm font-medium text-[var(--pos)]"
+                ].join(" ")}>
                   <CheckCircle2 className="h-4 w-4" />
                   You&apos;re all set
                 </div>
-                <h2 className="text-2xl font-bold text-foreground sm:text-3xl">{emptyTitle}</h2>
+                <h2 className="font-display text-2xl font-semibold text-foreground sm:text-3xl">{emptyTitle}</h2>
                 <p className="max-w-xl text-sm text-muted-foreground">
                   {emptyDescription}
                 </p>
               </>
             ) : (
               <>
-                <h2 className="text-2xl font-bold text-foreground sm:text-3xl">
+                <h2 className="font-display text-2xl font-semibold text-foreground sm:text-3xl">
                   Your landlord hasn&apos;t set up your lease yet
                 </h2>
                 <p className="max-w-xl text-sm text-muted-foreground">
@@ -203,10 +206,10 @@ export function PayRentCard({
             <div className="space-y-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="space-y-1">
-                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  <p className="domus-section-label">
                     Your Rent
                   </p>
-                  <h2 className="tabular-nums text-[34px] font-bold leading-none tracking-[-0.03em] text-[var(--ink)] sm:text-[38px]">
+                  <h2 className="tabular-nums font-display text-[34px] font-semibold leading-none text-[var(--ink)] sm:text-[38px]">
                     {formatCurrency(charge.amountCents)}
                   </h2>
                   {charge.lines?.length ? <p className="text-sm text-[var(--muted)]">
@@ -218,7 +221,7 @@ export function PayRentCard({
                 <Badge
                   variant="outline"
                   className={cn(
-                    "rounded-full px-3 py-1 text-sm",
+                    "rounded-[2px] px-3 py-1 text-sm",
                     isLate
                       ? "border-[var(--crit)] bg-[var(--crit-bg)] text-[var(--crit)]"
                       : "border-[var(--accent-line)] bg-[var(--surface)] text-[var(--accent)]"
@@ -346,7 +349,7 @@ export function PayRentCard({
                 </div>
               ) : onSetupAutopay ? (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  <div className="flex items-center gap-3 domus-section-label">
                     <span className="h-px flex-1 bg-border" />
                     <span>or</span>
                     <span className="h-px flex-1 bg-border" />

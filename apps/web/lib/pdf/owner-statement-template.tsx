@@ -1,22 +1,24 @@
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import type { OwnerStatement } from "@/lib/owner-statement";
 import { madeDate } from "@/lib/statement-month";
+import { colors } from "./pdf-styles";
 
 const s = StyleSheet.create({
-  page: { padding: 36, paddingBottom: 55, fontFamily: "Helvetica", fontSize: 9, color: "#20252b" },
-  brand: { fontSize: 18, fontFamily: "Helvetica-Bold", marginBottom: 12 },
-  title: { fontSize: 20, fontFamily: "Helvetica-Bold", marginBottom: 5 },
-  muted: { color: "#666d75" },
+  page: { padding: 36, paddingBottom: 55, fontFamily: "Helvetica", fontSize: 9, color: colors.text },
+  brand: { fontSize: 18, fontFamily: "Times-Bold", marginBottom: 12 },
+  title: { fontSize: 20, fontFamily: "Times-Bold", marginBottom: 5 },
+  muted: { color: colors.textMuted },
   totals: { flexDirection: "row", marginTop: 20, marginBottom: 18, gap: 8 },
-  total: { width: "25%", backgroundColor: "#f1f2f4", padding: 8, borderRadius: 4 },
-  totalValue: { fontSize: 14, fontFamily: "Helvetica-Bold", marginTop: 5 },
+  total: { width: "25%", backgroundColor: colors.surface2, padding: 8, borderRadius: 2 },
+  totalValue: { fontSize: 14, fontFamily: "Times-Bold", marginTop: 5 },
   section: { fontSize: 12, fontFamily: "Helvetica-Bold", marginTop: 16, marginBottom: 5 },
-  row: { flexDirection: "row", paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: "#e5e7eb" },
-  header: { backgroundColor: "#eef0f2", fontFamily: "Helvetica-Bold" },
+  row: { flexDirection: "row", paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: colors.border },
+  header: { borderBottomWidth: 1, borderBottomColor: colors.text, fontFamily: "Helvetica-Bold" },
+  headerLabel: { fontSize: 8, textTransform: "uppercase", letterSpacing: 0.8 },
   cell: { flexGrow: 1, flexBasis: 0, paddingRight: 5 },
   amount: { width: 78, textAlign: "right" },
-  footer: { position: "absolute", left: 36, right: 36, bottom: 23, fontSize: 8, color: "#666d75" },
-  pageNumber: { position: "absolute", right: 36, bottom: 10, fontSize: 8, color: "#666d75" }
+  footer: { position: "absolute", left: 36, right: 36, bottom: 23, fontSize: 8, color: colors.textMuted },
+  pageNumber: { position: "absolute", right: 36, bottom: 10, fontSize: 8, color: colors.textMuted }
 });
 export const formatStatementMoney = (cents: number) => `${cents < 0 ? "-" : ""}$${(Math.abs(cents) / 100).toLocaleString("en-US", {
   minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -27,7 +29,7 @@ function Table({ title, headers, rows }: { title: string; headers: string[]; row
   return <View>{groups.map((group, groupIndex) => <View key={groupIndex} wrap={false}>
     <Text style={s.section}>{title}</Text>
     <View style={[s.row, s.header]}>{headers.map((cell, index) =>
-      <Text key={index} style={index === headers.length - 1 ? s.amount : s.cell}>{cell}</Text>)}</View>
+      <Text key={index} style={[index === headers.length - 1 ? s.amount : s.cell, s.headerLabel]}>{cell}</Text>)}</View>
     {group.length ? group.map((row, index) => <View key={index} style={s.row}>
       {row.map((cell, column) => <Text key={column} style={column === row.length - 1 ? s.amount : s.cell}>{cell}</Text>)}
     </View>) : <Text style={[s.row, s.muted]}>None this month.</Text>}

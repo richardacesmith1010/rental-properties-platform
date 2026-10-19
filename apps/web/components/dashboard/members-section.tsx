@@ -156,13 +156,14 @@ export function MembersSection({
                     key={member.profileId}
                     className={`rounded-2xl border px-4 py-4 ${
                       isCurrentUser
-                        ? "border-primary/30 bg-primary/5"
+                        ? "border-[var(--line)] bg-[var(--surface-2)]"
                         : "border-border/60 bg-card"
                     }`}
                   >
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                       <div className="flex min-w-0 items-start gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                        <div className={["flex h-11 w-11 items-center justify-center rounded-full",
+                          "bg-[var(--surface-3)] text-sm font-semibold text-[var(--ink)]"].join(" ")}>
                           {getInitials(member.fullName)}
                         </div>
                         <div className="min-w-0">

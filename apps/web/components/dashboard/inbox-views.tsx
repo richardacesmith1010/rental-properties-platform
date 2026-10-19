@@ -182,7 +182,7 @@ export function TenantInboxView({
             onSubmit={!hasActiveLease ? (event) => event.preventDefault() : undefined}
             className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4"
           >
-            <h2 className="text-lg font-semibold text-[var(--ink)]">Message your landlord</h2>
+            <h2 className="font-display text-[18px] font-semibold text-[var(--ink)]">Message your landlord</h2>
             {properties.length > 1 ? (
               <label className="block text-sm text-[var(--ink)]">
                 Which home?
@@ -259,7 +259,7 @@ export function TenantInboxView({
             {tenantThread ? (
               <div className="space-y-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-[var(--ink)]">
+                  <h2 className="font-display text-[18px] font-semibold text-[var(--ink)]">
                     {tenantThread.propertyName}
                   </h2>
                   <p className="text-sm text-[var(--muted)]">Chat with your landlord</p>
@@ -277,7 +277,7 @@ export function TenantInboxView({
                           className={[
                             "max-w-[85%] rounded-2xl px-3 py-2",
                             mine
-                              ? "bg-[var(--accent)] text-[var(--accent-contrast)]"
+                              ? "bg-[var(--action)] text-[var(--action-contrast)]"
                               : "bg-[var(--surface-2)] text-[var(--ink)]"
                           ].join(" ")}
                         >
@@ -324,7 +324,7 @@ export function TenantInboxView({
                 onSubmit={!hasActiveLease ? (event) => event.preventDefault() : undefined}
                 className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4"
               >
-                <h2 className="text-lg font-semibold text-[var(--ink)]">Message your landlord</h2>
+                <h2 className="font-display text-[18px] font-semibold text-[var(--ink)]">Message your landlord</h2>
                 <label className="block text-sm text-[var(--ink)]">
                   Which home?
                   <Select

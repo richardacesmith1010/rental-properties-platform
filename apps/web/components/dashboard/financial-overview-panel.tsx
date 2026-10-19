@@ -79,9 +79,9 @@ function FinanceViewButton({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex-1 rounded-[10px] px-3 py-2 text-sm font-medium transition-colors min-h-11 sm:min-h-0 sm:flex-none",
+        "flex-1 rounded-xl px-3 py-2 text-sm font-medium transition-colors min-h-11 sm:min-h-0 sm:flex-none",
         active
-          ? "bg-[var(--surface)] text-[var(--accent)] shadow-sm ring-1 ring-[var(--accent-line)]"
+          ? "bg-[var(--surface)] text-[var(--ink)] shadow-[var(--shadow-sm)]"
           : "text-[var(--muted)] hover:text-[var(--ink)]"
       )}
       title={`Show the ${label} finance view.`}
@@ -110,7 +110,7 @@ function UnavailableBankState({
   return (
     <div className="rounded-xl border border-dashed border-border bg-card/70 p-5">
       <div className="flex flex-col items-center justify-center gap-3 py-4 text-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
           <Landmark className="h-6 w-6 text-muted-foreground" />
         </div>
         <div className="space-y-1">
@@ -206,7 +206,7 @@ export function FinancialOverviewPanel({
       <div className="flex flex-col gap-4 border-b border-[color:color-mix(in_srgb,var(--line)_84%,transparent)] pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-weak)] text-[var(--accent)]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent-weak)] text-[var(--accent)]">
               <Wallet className="h-5 w-5" />
             </div>
             <div>
@@ -226,7 +226,7 @@ export function FinancialOverviewPanel({
           ) : null}
         </div>
 
-        <div className="inline-flex w-full rounded-[12px] border border-[color:color-mix(in_srgb,var(--line)_84%,transparent)] bg-[var(--surface-2)] p-1 sm:w-fit">
+        <div className="inline-flex w-full rounded-xl border border-[var(--line)] bg-[var(--surface-3)] p-1 sm:w-fit">
           <FinanceViewButton
             active={activeTab === "bank"}
             label="Bank"

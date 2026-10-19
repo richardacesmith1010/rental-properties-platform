@@ -5,6 +5,7 @@ import { Loader2, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import { FieldLabel } from "@/components/dashboard/forms";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ModalOverlay } from "@/components/ui/modal-overlay";
 import { Select } from "@/components/ui/select";
@@ -157,13 +158,16 @@ export function EntityEditModal({
 
   return (
     <ModalOverlay open={open} onClose={isSaving ? undefined : onClose}>
-      <div className="mx-auto flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-[28px] border border-border bg-card shadow-xl">
+      <div className={[
+        "mx-auto flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border",
+        "border-border bg-card shadow-xl"
+      ].join(" ")}>
         <div className="flex items-start justify-between gap-4 border-b border-border/70 px-6 py-5">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            <Badge variant="outline" className="gap-2">
               <Pencil className="h-3.5 w-3.5" />
               Edit {entityType}
-            </div>
+            </Badge>
             <h3 className="mt-3 text-2xl font-semibold text-foreground">{title}</h3>
           </div>
           <Button

@@ -38,10 +38,10 @@ function StatusCard({
     <main className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
       <Card variant="elevated" className="w-full max-w-lg text-center">
         <CardContent className="pt-8 pb-8">
-          <div className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full ${iconBg}`}>
+          <div className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl ${iconBg}`}>
             {icon}
           </div>
-          <h1 className="text-lg font-bold text-[var(--ink)]">{title}</h1>
+          <h1 className="font-display text-lg font-semibold text-[var(--ink)]">{title}</h1>
           <p className="mt-2 text-sm text-[var(--muted)]">{body}</p>
           {redirectMessage && (
             <>

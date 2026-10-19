@@ -26,10 +26,13 @@ export default async function CompleteProfilePage() {
     <main className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
       <div className="domus-card w-full max-w-lg p-8 shadow-[var(--domus-shadow-md)]">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--line)]">
+          <div className={[
+            "mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-xl bg-[var(--surface-2)] ring-1",
+            "ring-[var(--line)]"
+          ].join(" ")}>
             <UserRoundCheck className="h-7 w-7 text-[var(--accent)]" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--ink)]">Welcome to Domus!</h1>
+          <h1 className="font-display font-display text-2xl font-semibold text-[var(--ink)]">Welcome to Domus!</h1>
           <p className="mt-2 text-sm text-[var(--muted)]">
             {inviteContext?.propertyAddress
               ? `${inviteContext.ownerName ?? "Your landlord"} invited you to ${inviteContext.propertyAddress}${inviteContext.unitLabel ? `, ${inviteContext.unitLabel}` : ""}. Set your password to continue.`

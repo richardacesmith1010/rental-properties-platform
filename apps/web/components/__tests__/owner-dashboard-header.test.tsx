@@ -73,7 +73,7 @@ describe("owner header", () => {
     expect(screen.queryByText("Your bank connection is missing")).not.toBeInTheDocument();
   });
 
-  it("shows the large Home title and circular Add with announcements inside its menu", () => {
+  it("shows the large Home title and square Add with announcements inside its menu", () => {
     state.section = "overview";
     try {
       render(<Dashboard {...{
@@ -85,7 +85,7 @@ describe("owner header", () => {
       expect(screen.getByRole("heading", { name: "Home" })).toHaveClass("text-[34px]");
       expect(screen.getByRole("heading", { name: "Home" }).closest(".domus-card")).toBeNull();
       expect(screen.getByText("Wallet Home").closest(".domus-card")).toBeNull();
-      expect(screen.getByRole("button", { name: "Add" })).toHaveClass("rounded-full");
+      expect(screen.getByRole("button", { name: "Add" })).toHaveClass("rounded-xl");
       expect(screen.queryByRole("button", { name: "Send Announcement" })).not.toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: "Add" }));
       expect(screen.getByRole("menuitem", { name: "Send Announcement" })).toBeInTheDocument();

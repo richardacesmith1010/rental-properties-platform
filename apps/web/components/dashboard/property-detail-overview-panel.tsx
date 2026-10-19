@@ -52,7 +52,7 @@ export function PropertyDetailOverviewPanel({
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl border border-border/60 bg-card/70 p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+              <p className="domus-section-label">
                 Monthly revenue
               </p>
               <p className="tabular-nums mt-3 text-[25px] font-[660] tracking-[-0.025em] text-[var(--ink)]">
@@ -60,7 +60,7 @@ export function PropertyDetailOverviewPanel({
               </p>
             </div>
             <div className="rounded-2xl border border-border/60 bg-card/70 p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+              <p className="domus-section-label">
                 Outstanding balance
               </p>
               <p className="tabular-nums mt-3 text-[25px] font-[660] tracking-[-0.025em] text-[var(--ink)]">
@@ -68,7 +68,7 @@ export function PropertyDetailOverviewPanel({
               </p>
             </div>
             <div className="rounded-2xl border border-border/60 bg-card/70 p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+              <p className="domus-section-label">
                 Units
               </p>
               <p className="tabular-nums mt-3 text-[25px] font-[660] tracking-[-0.025em] text-[var(--ink)]">
@@ -79,7 +79,7 @@ export function PropertyDetailOverviewPanel({
               </p>
             </div>
             <div className="rounded-2xl border border-border/60 bg-card/70 p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+              <p className="domus-section-label">
                 Open maintenance
               </p>
               <p className="tabular-nums mt-3 text-[25px] font-[660] tracking-[-0.025em] text-[var(--ink)]">

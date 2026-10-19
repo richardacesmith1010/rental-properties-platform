@@ -350,7 +350,7 @@ export function LeaseWizard({
     <ModalOverlay open={open} onClose={handleClose}>
       <div className={[
           "flex max-h-[90svh] w-full max-w-4xl flex-col overflow-hidden rounded-t-[1.5rem]",
-          "border border-border bg-card px-4 pb-4 pt-5 shadow-2xl sm:rounded-[28px] sm:p-8"
+          "border border-border bg-card px-4 pb-4 pt-5 shadow-2xl sm:rounded-2xl sm:p-8"
         ].join(" ")}>
         <div className="shrink-0 flex flex-col gap-4 border-b border-border pb-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -364,7 +364,7 @@ export function LeaseWizard({
               </p>
             </div>
             <div className={[
-                  "flex h-14 w-14 shrink-0 items-center justify-center self-center rounded-full",
+                  "flex h-14 w-14 shrink-0 items-center justify-center self-center rounded-xl",
                   "bg-[var(--surface-2)] ring-1 ring-[var(--line)] sm:self-start"
                 ].join(" ")}><FileText className="h-6 w-6 text-[var(--accent)]" /></div>
           </div>

@@ -11,7 +11,7 @@ import { ChargeMoreMenu } from "@/components/dashboard/charge-more-menu";
 import { ManualPaymentForm } from "@/components/dashboard/manual-payment-form";
 import { cn, formatCurrency, formatDate } from "@/lib/format";
 import { calculateCardFee, formatCentsAsDollars } from "@/lib/payment-fees";
-import { getStatusClasses, statusAriaLabel, statusBadgeClasses } from "@/lib/status-colors";
+import { getStatusClasses, getStatusCategory, statusAriaLabel } from "@/lib/status-colors";
 import { chargeCategoryLabel, type ChargeCategory } from "@/lib/charge-audit";
 import { chargeBreakdown, type ChargeLine } from "@/lib/charge-breakdown";
 import { isRentOpenForTenant } from "@/lib/rent-urgency";
@@ -157,9 +157,11 @@ export function ChargeRow({
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="truncate text-base font-semibold text-foreground">{label}</p>
-                <p className="text-xl font-bold text-foreground">{formatCurrency(charge.amountCents)}</p>
-                <span
-                  className={statusBadgeClasses(charge.status)}
+                <p className="font-display text-xl font-semibold text-foreground">{formatCurrency(charge.amountCents)}</p>
+                <Badge
+                  variant={getStatusCategory(charge.status) === "danger" ? "destructive"
+                    : getStatusCategory(charge.status) === "success" ? "success"
+                      : getStatusCategory(charge.status) === "warning" ? "warning" : "outline"}
                   aria-label={statusAriaLabel(charge.status, "Charge status")}
                 >
                   <span
@@ -167,20 +169,16 @@ export function ChargeRow({
                     className={`h-1.5 w-1.5 rounded-full ${getStatusClasses(charge.status).dot}`}
                   />
                   {statusLabel(charge.status)}
-                </span>
+                </Badge>
                 {!isTenantView && category === "rent" && (charge.status === "pending" || charge.status === "late")
                   && charge.tenantReportedPaidAt ? (
-                    <span
-                      className={[
-                        "inline-flex items-center rounded-full border border-[var(--accent-line)]",
-                        "px-2 py-0.5 text-xs text-[var(--accent)]"
-                      ].join(" ")}
+                    <Badge variant="outline"
                       title="Your tenant says they paid. Check, then tap Mark paid."
                     >
                       Tenant says paid · {new Intl.DateTimeFormat("en-US", {
                         month: "short", day: "numeric", timeZone: "UTC"
                       }).format(new Date(`${charge.tenantReportedPaidAt.slice(0, 10)}T00:00:00.000Z`))}
-                    </span>
+                    </Badge>
                   ) : null}
                 {category !== "rent" ? (
                   <Badge variant="outline">{chargeCategoryLabel(category)}</Badge>
@@ -208,7 +206,7 @@ export function ChargeRow({
                       type="button"
                       size="sm"
                       variant="ghost"
-                      className="h-11 min-w-[44px] rounded-full px-3 sm:h-8 sm:rounded-md"
+                      className="h-11 min-w-[44px] rounded-[2px] px-3 sm:h-8 sm:rounded-md"
                       onClick={onOpenMessage}
                       title={`Message ${charge.tenantName}`}
                       aria-label={`Message ${charge.tenantName}`}

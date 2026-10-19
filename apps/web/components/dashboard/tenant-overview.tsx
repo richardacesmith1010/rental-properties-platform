@@ -6,6 +6,7 @@ import type { ActionState } from "@/app/actions";
 import { formatCurrency, formatDate, formatUnitLabel } from "@/lib/format";
 import type { TenantCharge } from "@/lib/tenant-payments";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { TenantRentCard } from "@/components/dashboard/tenant-rent-card";
 import type { AutopayEnrollmentView } from "@/components/dashboard/pay-rent-card";
 import type { TenantPayState } from "@/lib/tenant-pay-state";
@@ -93,7 +94,7 @@ export function TenantOverview({
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Your repairs</h2>
+          <h2 className="font-display text-[18px] font-semibold">Your repairs</h2>
           <Link
             href={buildSectionHref("maintenance")}
             className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--accent)]"
@@ -105,9 +106,9 @@ export function TenantOverview({
         {tickets.length > 0 ? tickets.slice(0, 3).map((ticket) => (
           <div key={ticket.id} className="domus-card flex items-center justify-between p-4">
             <span className="truncate text-sm font-medium">{ticket.title}</span>
-            <span className="rounded-full bg-[var(--accent-weak)] px-2 py-1 text-xs capitalize text-[var(--accent)]">
+            <Badge variant="outline">
               {ticket.status.replaceAll("_", " ")}
-            </span>
+            </Badge>
           </div>
         )) : <p className="text-sm text-muted-foreground">
           {openTicketCount > 0 ? `${openTicketCount} open repair${openTicketCount === 1 ? "" : "s"}.` : "No open repairs."}

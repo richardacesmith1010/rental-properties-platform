@@ -101,7 +101,7 @@ function OverviewSummaryStrip({ props }: { props: SectionRendererProps }) {
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+              <p className="domus-section-label">
                 Show
               </p>
               <p className="mt-1 text-[22px] font-[640] tracking-[-0.02em] text-[var(--ink)]">
@@ -132,7 +132,7 @@ function OverviewSummaryStrip({ props }: { props: SectionRendererProps }) {
             <div
               key={label}
               className={[
-                "rounded-full border border-[color:color-mix(in_srgb,var(--line)_84%,transparent)]",
+                "rounded-xl border border-[color:color-mix(in_srgb,var(--line)_84%,transparent)]",
                 "bg-[color:color-mix(in_srgb,var(--surface)_94%,transparent)] px-3 py-2 text-sm"
               ].join(" ")}
             >

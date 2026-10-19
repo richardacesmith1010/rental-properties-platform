@@ -274,10 +274,10 @@ export function UnifiedPropertyWizard({
     <ModalOverlay open={open} onClose={() => onOpenChange(false)}>
       <div className={[
           "flex max-h-[90svh] w-full max-w-4xl flex-col overflow-hidden rounded-t-[1.5rem]",
-          "border border-border bg-background shadow-2xl sm:max-h-[85vh] sm:rounded-[28px]"
+          "border border-border bg-background shadow-2xl sm:max-h-[85vh] sm:rounded-2xl"
         ].join(" ")}>
         <div className="shrink-0 border-b border-border/60 px-4 pb-0 pt-5 sm:px-6 sm:pt-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+          <p className="domus-section-label">
             {managerClients ? "Add a home" : "New Property"}
           </p>
           <h2 className="mt-2 text-2xl font-semibold text-foreground sm:text-3xl">
@@ -344,7 +344,7 @@ export function UnifiedPropertyWizard({
               <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
                 <div className="domus-card space-y-4 px-5 py-5">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                    <p className="domus-section-label">
                       Property
                     </p>
                     <h4 className="mt-2 text-xl font-semibold text-foreground">{propertyName}</h4>
@@ -353,7 +353,7 @@ export function UnifiedPropertyWizard({
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                    <p className="domus-section-label">
                       Units
                     </p>
                     <div className="mt-3 space-y-3">
@@ -380,7 +380,7 @@ export function UnifiedPropertyWizard({
 
                 <div className="domus-card space-y-4 px-5 py-5">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                    <p className="domus-section-label">
                       Lease
                     </p>
                     {lease.hasTenant ? (

@@ -150,7 +150,10 @@ export function PhotoUpload({
               />
               <button
                 type="button"
-                className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-background/90 text-foreground shadow-sm transition hover:bg-background"
+                className={[
+                  "absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-xl",
+                  "bg-background/90 text-foreground shadow-sm transition hover:bg-background"
+                ].join(" ")}
                 onClick={() => removeSelectedPhoto(index)}
                 title={`Remove ${preview.file.name}`}
               >

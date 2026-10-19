@@ -42,7 +42,7 @@ export function PropertySelector({
     <div className="w-full sm:max-w-sm">
       <label
         htmlFor={selectId}
-        className="mb-1.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+        className="mb-1.5 flex items-center gap-2 domus-section-label"
       >
         <Building2 className="h-3.5 w-3.5" />
         Show

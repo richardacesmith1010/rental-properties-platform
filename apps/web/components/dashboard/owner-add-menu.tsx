@@ -45,7 +45,7 @@ export function OwnerAddMenu({ onAddHome, onAddTenant, onAddUnit, onInviteManage
   ];
   return (
     <div ref={container} className="relative">
-      <Button ref={trigger} type="button" className={homeStyle ? "h-11 w-11 rounded-full p-0" : "min-h-11"}
+      <Button ref={trigger} type="button" className={homeStyle ? "h-11 w-11 rounded-xl p-0" : "min-h-11"}
         title={role === "owner" ? "Add a home, tenant, or manager." : "Add a home or tenant."}
         aria-label="Add" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
         {homeStyle ? <Plus className="h-5 w-5" aria-hidden="true" /> : "Add"}</Button>

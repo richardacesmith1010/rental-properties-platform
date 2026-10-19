@@ -98,7 +98,7 @@ export function ChargeSectionFilters({
             size="sm"
             variant="outline"
             className={activeFilter === value
-              ? "min-h-11 border-primary/40 bg-primary/10 font-semibold text-primary shadow-sm"
+              ? "min-h-11 border-[var(--line)] bg-[var(--surface)] font-semibold text-[var(--ink)] shadow-[var(--shadow-sm)]"
               : "min-h-11 font-medium"}
             onClick={() => onChange(value)}
             title={`Show ${label.toLowerCase()} payments.`}
@@ -130,7 +130,7 @@ export function RentEmptyState({ isTenantView, hasRows, hasActiveLeases, hasCurr
           : "Rent will appear here after you create a lease."} />
     {awaitingRent && generateHref ? (
       <Link href={generateHref} className="mx-auto mt-4 flex min-h-11 w-fit items-center
-        rounded-md bg-[var(--accent)] px-4 text-[var(--accent-contrast)]">
+        rounded-md bg-[var(--action)] px-4 text-[var(--action-contrast)]">
         Add this month&apos;s rent now
       </Link>
     ) : null}

@@ -269,9 +269,12 @@ export default async function TenantPage(props: TenantPageProps) {
 
       <main id="main-content" tabIndex={-1} className="relative flex-1 pb-[calc(env(safe-area-inset-bottom,0px)+10rem)]
         lg:ml-[260px] lg:pb-0">
-        <div className="flex flex-col gap-4 px-6 pt-6 sm:flex-row sm:items-start sm:justify-between lg:px-8 lg:pt-8">
+        <div className={[
+          "flex flex-col gap-4 border-b-2 border-[var(--ink)] px-6 pb-3 pt-6 sm:flex-row sm:items-start",
+          "sm:justify-between lg:px-8 lg:pt-8"
+        ].join(" ")}>
           <div id="overview">
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--ink)]">
+            <h1 className="font-display text-2xl font-semibold text-[var(--ink)]">
               {activeSection === "overview" ? `Hi, ${displayName}` : tenantSectionLabel[activeSection]}
             </h1>
             <p className="mt-1 text-sm text-[var(--muted)]">
@@ -287,7 +290,7 @@ export default async function TenantPage(props: TenantPageProps) {
           <StripeTestModeBanner />
           {activeSection !== "overview" || hasUnknownSection ? (
             <div className="flex items-center justify-between">
-              {activeSection !== "notifications" ? <h2 className="text-lg font-semibold text-[var(--ink)]">
+              {activeSection !== "notifications" ? <h2 className="font-display text-[18px] font-semibold text-[var(--ink)]">
                 {hasUnknownSection ? "Section not found" : tenantSectionLabel[activeSection]}
               </h2> : null}
             </div>

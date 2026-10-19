@@ -3,6 +3,7 @@
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/format";
 import { getStatusClasses } from "@/lib/status-colors";
+import { Badge } from "@/components/ui/badge";
 
 export interface DomusFinancialsCardProps {
   monthlyCollectedCents: number;
@@ -63,20 +64,23 @@ function MetricTile({
   return (
     <div
       className={cn(
-        "rounded-[16px] border px-4 py-4 shadow-sm",
+        "rounded-2xl border px-4 py-4 shadow-sm",
         tone?.border ?? "border-[color:color-mix(in_srgb,var(--line)_80%,transparent)]",
         tone?.bg ?? "bg-[color:color-mix(in_srgb,var(--surface)_94%,transparent)]"
       )}
     >
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+      <p className="domus-section-label">
         {label}
       </p>
       <div className="mt-3 flex items-start justify-between gap-3">
-        <p className={cn("tabular-nums text-[25px] font-[660] tracking-[-0.025em] text-[var(--ink)]", tone?.text)}>
+        <p className={cn("font-display tabular-nums text-[25px] font-semibold text-[var(--ink)]", tone?.text)}>
           {value}
         </p>
         {icon ? (
-          <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full border border-current/10 bg-[color:color-mix(in_srgb,var(--surface)_70%,transparent)]">
+          <div className={[
+            "mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl border border-current/10",
+            "bg-[color:color-mix(in_srgb,var(--surface)_70%,transparent)]"
+          ].join(" ")}>
             {icon}
           </div>
         ) : null}
@@ -104,29 +108,23 @@ export function DomusFinancialsCard({
   return (
     <section className={cn("domus-card overflow-hidden p-5 shadow-sm", className)}>
       <div className="flex flex-col gap-2 border-b border-[color:color-mix(in_srgb,var(--line)_84%,transparent)] pb-4">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+        <p className="domus-section-label">
           Your numbers
         </p>
         <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h3 className="text-[22px] font-[640] tracking-[-0.02em] text-[var(--ink)]">
+            <h3 className="font-display text-[18px] font-semibold text-[var(--ink)]">
               Domus totals
             </h3>
             <p className="mt-1 text-sm text-[var(--muted)]">
               Live rent and expense totals from the records already in Domus.
             </p>
           </div>
-          <span
-            className={cn(
-              "inline-flex items-center gap-1.5 self-start rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] lg:self-auto",
-              collectionTone.bg,
-              collectionTone.border,
-              collectionTone.text
-            )}
-          >
+          <Badge variant={collectionRate >= 95 ? "success" : collectionRate >= 80 ? "warning" : "destructive"}
+            className="gap-1.5 self-start lg:self-auto">
             <span aria-hidden="true" className={cn("h-1.5 w-1.5 rounded-full", collectionTone.dot)} />
             {Math.round(collectionRate)}% collected
-          </span>
+          </Badge>
         </div>
       </div>
 

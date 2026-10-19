@@ -12,9 +12,9 @@ export function LeaseWizardProgress({ step }: { step: LeaseWizardStep }) {
         </span>
         <span className="text-muted-foreground">{percent}%</span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-muted">
+      <div className="h-2 overflow-hidden rounded-[1px] bg-muted">
         <div
-          className="h-full rounded-full bg-primary transition-all duration-300"
+          className="h-full rounded-[1px] bg-[var(--action)] transition-all duration-300"
           style={{ width: `${percent}%` }}
         />
       </div>
@@ -25,7 +25,7 @@ export function LeaseWizardProgress({ step }: { step: LeaseWizardStep }) {
             className={[
               "rounded-lg border px-3 py-2 text-xs font-medium transition-all duration-300",
               step === index
-                ? "border-primary/40 bg-primary/10 text-foreground"
+                ? "border-[var(--line)] bg-[var(--surface-3)] text-[var(--ink)]"
                 : step > index
                   ? "border-[var(--pos)] bg-[var(--pos-bg)] text-[var(--pos)]"
                   : "border-border bg-card text-muted-foreground"
@@ -38,4 +38,3 @@ export function LeaseWizardProgress({ step }: { step: LeaseWizardStep }) {
     </div>
   );
 }
-

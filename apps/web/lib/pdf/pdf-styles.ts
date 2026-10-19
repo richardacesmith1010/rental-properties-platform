@@ -1,14 +1,14 @@
 import { StyleSheet } from "@react-pdf/renderer";
 
 export const colors = {
-  text: "#191B1E",
-  textMuted: "#6F757C",
-  border: "#E6E6E0",
+  text: "#0B0C0E",
+  textMuted: "#4D535C",
+  border: "#D9DCE1",
   white: "#FFFFFF",
-  surface2: "#F5F5F1",
-  accent: "#1D4ED8",
-  success: "#15803D",
-  danger: "#B91C1C"
+  surface2: "#F3F4F6",
+  accent: "#2442B8",
+  success: "#0E7A3E",
+  danger: "#B4232A"
 };
 
 export const styles = StyleSheet.create({
@@ -36,7 +36,7 @@ export const styles = StyleSheet.create({
   },
   brandName: {
     fontSize: 24,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Times-Bold",
     color: colors.text
   },
   brandSubtitle: {
@@ -60,7 +60,7 @@ export const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Times-Bold",
     marginBottom: 6
   },
   subtitle: {
@@ -70,11 +70,12 @@ export const styles = StyleSheet.create({
   },
   badge: {
     alignSelf: "flex-start",
-    backgroundColor: colors.success,
-    color: colors.white,
+    borderWidth: 1,
+    borderColor: colors.success,
+    color: colors.success,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 999,
+    borderRadius: 2,
     fontSize: 9,
     fontFamily: "Helvetica-Bold",
     marginBottom: 16
@@ -92,7 +93,7 @@ export const styles = StyleSheet.create({
   panel: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 10,
+    borderRadius: 2,
     paddingVertical: 12,
     paddingHorizontal: 14,
     backgroundColor: colors.white
@@ -100,7 +101,7 @@ export const styles = StyleSheet.create({
   accentPanel: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 10,
+    borderRadius: 2,
     paddingVertical: 12,
     paddingHorizontal: 14,
     backgroundColor: colors.surface2,
@@ -138,11 +139,11 @@ export const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 13,
-    fontFamily: "Helvetica-Bold"
+    fontFamily: "Times-Bold"
   },
   totalValue: {
     fontSize: 13,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Times-Bold",
     color: colors.text
   },
   twoColumnRow: {
@@ -172,7 +173,7 @@ export const styles = StyleSheet.create({
   },
   emptyStateTitle: {
     fontSize: 16,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Times-Bold",
     marginBottom: 10
   },
   emptyStateBody: {

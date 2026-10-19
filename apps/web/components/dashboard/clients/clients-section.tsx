@@ -17,8 +17,8 @@ function ClientRow({ client }: { client: ClientOverview }) {
   return (
     <Link href={`/manager/clients/${client.id}`} title={`View ${client.name}`}
       className="flex min-h-11 items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 text-[var(--ink)]">
-      <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[var(--accent-weak)]
-        font-semibold text-[var(--accent)]">
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[var(--surface-3)]
+        font-semibold text-[var(--ink)]">
         {initials}
       </span>
       <span className="min-w-0 flex-1">

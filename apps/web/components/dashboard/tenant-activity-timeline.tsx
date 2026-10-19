@@ -252,7 +252,7 @@ export function TenantActivityTimeline({
                 return (
                   <div key={row.key} className="flex items-center gap-3">
                     <div className="h-px flex-1 bg-border/70" />
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    <p className="domus-section-label">
                       {row.label}
                     </p>
                     <div className="h-px flex-1 bg-border/70" />
@@ -267,7 +267,7 @@ export function TenantActivityTimeline({
               return (
                 <div key={row.key} className="rounded-2xl border border-border/80 bg-background px-4 py-4">
                   <div className="flex items-start gap-3">
-                    <div className="rounded-full bg-muted p-2 text-muted-foreground">
+                    <div className="rounded-xl bg-muted p-2 text-muted-foreground">
                       <Icon className="h-4 w-4" />
                     </div>
                     <div className="min-w-0 flex-1">
