@@ -1858,3 +1858,7 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Design call (Claude): all home pass cards graphite (no per-home colors) — owner may ask for muted shades instead.
 - **Next:** 242d owner screens (Codex running), 242e tenant/manager/PDFs (packet `docs/sprint242e-codex-prompt.md`),
   242f finish + screenshots + build 4.
+- **242d** `919d9df` owner screens + chrome (56 files; copy diff none; gate 2,937). Simulator light + dark: graphite pass
+  card (dark `#1F2226` + border), serif titles/amounts, square tags, ink tab-bar rule, action Add button ✅.
+  **242f list:** Needs-you rows still amber-filled (spec: plain rows + tag); Home title missing the 2 px rule; native
+  Face ID offer sheet + lock screen buttons still iOS blue (`LockViewController.swift`, iPhone tier).
