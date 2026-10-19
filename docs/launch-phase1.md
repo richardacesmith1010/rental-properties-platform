@@ -12,7 +12,7 @@ Store, under reviewed legal terms. Done = every row below is ✅. Claude drives;
 | A4 | Lawyer packet: current drafts + exact questions (§E) | Ready to send once the owner picks a lawyer |
 | A8 | Early-access `/terms` + `/privacy` live (Sprint 239a; text `docs/legal/early-access-terms-privacy-2026-10-18.md`) | ✅ Live 2026-10-18 (239a–c) |
 | A5 | Notifications "on" readiness: review the test week, per-user settings for rent due / late / receipt / repairs | Next sprint after 238g |
-| A6 | App Store polish: screenshots (ASC-14), status-bar theme (IOS-4), reset-email dead end (IOS-5 ✅) | IOS-4 ✅ 2026-10-18; screenshots + build 3 next |
+| A6 | App Store polish: screenshots (ASC-14), status-bar theme (IOS-4), reset-email dead end (IOS-5 ✅) | IOS-4 ✅, screenshots ✅, build 3 uploaded 2026-10-18 |
 | A7 | Account-deletion fixture dry run (runbook §15) | ✅ PASS 2026-10-18; runbook rev 3.4 |
 
 ## B. Owner one-steps (Claude prepares each page first; one action each)
@@ -22,7 +22,7 @@ Store, under reviewed legal terms. Done = every row below is ✅. Claude drives;
 | B2 ✅ 2026-10-18 | **Approve the legal defaults** (§C) | Unblocks App Privacy, the 7-year purge job, publishing Terms/Privacy |
 | B3 ✅ 2026-10-18 (option 1) | **Pick a pricing option** (§D) | Everything after launch depends on it; App Store rules depend on it |
 | B4 | **Choose a lawyer** (small-business / SaaS; flat fee) and send the packet (§E) | Strangers should not sign unreviewed terms |
-| B5 | TestFlight build 3: install on your iPhone, one check at a time | Real-device proof for the launch cover and Face ID |
+| B5 | TestFlight build 3 (uploaded 2026-10-18): install on your iPhone, one check at a time | Real-device proof for the launch cover and Face ID |
 | B6 | App Store Connect: Publish App Privacy, App Review info (demo login from A1), Pricing & Availability, Submit | The store listing |
 | B7 | Run your own rentals on Domus for one full month (1st Home, Mom's House) | The "real month" every category is waiting on |
 | B8 | Plaid: confirm Transactions access is approved (Plaid dashboard) | Unblocks live bank sync (Owner + Money scores) |

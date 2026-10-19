@@ -1824,3 +1824,12 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Verified: xcodebuild test 127/127; gate 2,907; smoke + CI green. Simulator: iPhone Light + Domus Dark → white status
   bar ✅; cold launch keeps it ✅; iPhone Dark + Domus Light → dark status bar ✅; Match my device follows iPhone ✅.
 - Ships to phones with TestFlight build 3 (native change). Web side is live and harmless in browsers.
+
+## 2026-10-18 — App Store screenshots + TestFlight build 3 uploaded
+- **ASC-14 done:** 6 screenshots in `docs/app-store/screenshots-6.9/` (1320×2868 JPEG, no alpha, light, 9:41 status bar,
+  demo data): owner home, Money (2026), Bank "Money to check", tenant home, tenant messages, report a repair. Caveats:
+  Money shows "-$173" (demo rent $4 by design); message times show UTC ("4:37 AM") — timezone backlog.
+- **Build 3** uploaded (`testflight.sh`, `** EXPORT SUCCEEDED **`, "Upload submitted for build 3"); counter committed.
+  Contains 241a (IOS-4 status bar) + everything since build 2. Owner group gets it automatically after processing.
+- **Owner next (one action):** TestFlight on iPhone → Install Domus build 3. Then Claude's device checks: offline page
+  (airplane mode), status bar both themes, Face ID.
