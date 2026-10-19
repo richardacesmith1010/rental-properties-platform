@@ -1,4 +1,4 @@
-# Sprint 242f-native — Face ID lock screen and offer in graphite (iPhone tier, look only) — rev 1
+# Sprint 242f-native — Face ID lock screen and offer in graphite (iPhone tier, look only) — rev 2 (rev 1 ChatGPT APPROVE WITH CHANGES folded in)
 
 ## 1. Objective
 The native Face ID screens still use the old Wallet blue: the "Domus is locked" screen (capsule blue "Open with Face
@@ -35,9 +35,12 @@ Every string, the lock state machine, biometrics, timing, `LaunchSplashGate.swif
 1. In `LockViewController`, replace `accent` with a small palette (dynamic `UIColor`s, light / dark exactly as §2):
    `static let action`, `static let actionText`, `static let ground`, `static let ink`, `static let link`. Remove `accent`
    (update every reference; `AppLockController` uses the palette for the alert tint).
-2. `view.backgroundColor = Self.ground`. Title color `Self.ink`; title font: the `.title1` descriptor with
-   `.withDesign(.serif)` and bold traits (falls back to the current font if the serif design is unavailable), still
-   Dynamic Type (`adjustsFontForContentSizeCategory` unchanged).
+2. `view.backgroundColor = Self.ground`. Title color `Self.ink`. Title font: build a bold serif font at the
+   `.title1` default size (descriptor `.withDesign(.serif)` + `.traitBold`), then scale it with
+   `UIFontMetrics(forTextStyle: .title1).scaledFont(for:)`; keep `adjustsFontForContentSizeCategory = true`. If the serif
+   bold descriptor cannot be built, use exactly today's font (bold `.title1` via `preferredFont`) — never an unscaled or
+   non-bold font. Put the construction in a testable static helper, e.g.
+   `static func titleFont(compatibleWith traits: UITraitCollection?) -> UIFont`.
 3. Primary button: `baseBackgroundColor = Self.action`, `baseForegroundColor = Self.actionText`,
    `cornerStyle = .fixed` with `background.cornerRadius = 4`. Height rules unchanged.
 4. Fallback button: `baseForegroundColor = Self.link`.
@@ -59,7 +62,10 @@ If the sandbox blocks the Simulator, say so; Claude runs it.
    the view background resolves to the ground color; the primary button's configuration has background
    `LockViewController.action`, foreground `actionText`, `cornerStyle == .fixed`, `background.cornerRadius == 4`; the
    fallback's foreground is `link`; the button titles are still "Open with Face ID" and "Sign in with password"; the
-   title label text is still "Domus is locked" and its font descriptor has the serif design when available.
+   title label text is still "Domus is locked", its `textColor` resolves to ink, and its font descriptor has the serif
+   design when available.
+2b. `testTitleFontScalesWithDynamicType`: `titleFont(compatibleWith:)` for content size `.large` vs
+   `.accessibilityExtraExtraExtraLarge` → the second `pointSize` is strictly larger; both are bold.
 3. Existing `AppLockControllerTests` pass unchanged, plus one new test: when the offer is presented, the presented
    `UIAlertController`'s `view.tintColor` resolves to the ink color (use the existing offer-presentation test harness).
 4. All other `AppTests` pass.
