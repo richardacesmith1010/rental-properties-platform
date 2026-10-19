@@ -14,7 +14,7 @@ export default function OpenGraphImage() {
       <div
         style={{
           alignItems: "center",
-          background: "#020617",
+          background: "#0B0C0E",
           display: "flex",
           height: "100%",
           justifyContent: "center",
@@ -33,7 +33,7 @@ export default function OpenGraphImage() {
           <div
             style={{
               alignItems: "center",
-              background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
+              background: "#0B0C0E",
               borderRadius: 28,
               display: "flex",
               height: 128,
@@ -41,21 +41,15 @@ export default function OpenGraphImage() {
               width: 128,
             }}
           >
-            <span
-              style={{
-                color: "#ffffff",
-                fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif",
-                fontSize: 82,
-                fontWeight: 800,
-                lineHeight: 1,
-              }}
-            >
-              D
-            </span>
+            <svg width={80} height={80} viewBox="16.5 24.5 77 77" xmlns="http://www.w3.org/2000/svg">
+              <path d="M33 92 V50 A22 22 0 0 1 77 50 V92" fill="none" stroke="#FFFFFF" strokeWidth="7" />
+              <path d="M20 92 H90" fill="none" stroke="#FFFFFF" strokeWidth="7" />
+              <circle cx="66" cy="70" r="4" fill="#8DA2F0" />
+            </svg>
           </div>
           <div
             style={{
-              color: "#ffffff",
+              color: "#FFFFFF",
               display: "flex",
               flexDirection: "column",
               fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif",
@@ -65,7 +59,7 @@ export default function OpenGraphImage() {
             <span style={{ fontSize: 64, fontWeight: 700, letterSpacing: -1.2 }}>
               Domus — Rental Operations Platform
             </span>
-            <span style={{ color: "#a5b4fc", fontSize: 34, fontWeight: 500 }}>
+            <span style={{ color: "#A5ABB4", fontSize: 34, fontWeight: 500 }}>
               Run your rental portfolio with confidence.
             </span>
           </div>

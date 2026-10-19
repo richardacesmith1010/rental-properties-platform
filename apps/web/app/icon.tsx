@@ -13,24 +13,17 @@ export default function Icon() {
       <div
         style={{
           alignItems: "center",
-          background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
+          background: "#0B0C0E",
           display: "flex",
           height: "100%",
           justifyContent: "center",
           width: "100%",
         }}
       >
-        <span
-          style={{
-            color: "#ffffff",
-            fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif",
-            fontSize: 20,
-            fontWeight: 800,
-            lineHeight: 1,
-          }}
-        >
-          D
-        </span>
+        <svg width={20} height={20} viewBox="16.5 24.5 77 77" xmlns="http://www.w3.org/2000/svg">
+          <path d="M33 92 V50 A22 22 0 0 1 77 50 V92" fill="none" stroke="#FFFFFF" strokeWidth="7" />
+          <path d="M20 92 H90" fill="none" stroke="#FFFFFF" strokeWidth="7" />
+        </svg>
       </div>
     ),
     {
