@@ -13,8 +13,9 @@ export default function NotFound() {
         <Link
           href="/"
           className={[
-            "inline-flex items-center rounded-xl bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white",
-            "transition hover:bg-[var(--accent-strong)] focus-visible:outline-none focus-visible:ring-2",
+            "inline-flex items-center rounded-xl bg-[var(--action)] px-5 py-3 text-sm " +
+              "font-semibold text-[var(--action-contrast)]",
+            "transition hover:bg-[var(--action-strong)] focus-visible:outline-none focus-visible:ring-2",
             "focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2 ring-offset-[var(--ground)]"
           ].join(" ")}
           title="Return to Domus home page."

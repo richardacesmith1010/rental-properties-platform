@@ -19,8 +19,9 @@ export default function OwnerError({
 
   return (
     <div className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md rounded-3xl border border-[var(--line)] bg-[var(--surface)] p-8 text-center shadow-[var(--domus-shadow-md)]">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-2)]">
+      <div className="w-full max-w-md rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-8 text-center
+        shadow-[var(--domus-shadow-md)]">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-xl bg-[var(--surface-2)]">
           <TriangleAlert className="h-7 w-7 text-[var(--accent)]" />
         </div>
         <h1 className="text-2xl font-semibold text-[var(--ink)]">Owner dashboard error</h1>

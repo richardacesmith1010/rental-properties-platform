@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import type { OwnerWalletHomeResult, WalletHomeEntry } from "@/lib/owner-wallet-home";
-import { passCardStyle } from "../owner-home/home-pass-card";
+import { Badge } from "@/components/ui/badge";
 
 export function leaseEndLabel(date: string | null) {
   return date ? new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", {
@@ -13,25 +13,29 @@ export function leaseEndLabel(date: string | null) {
 }
 
 function field(label: string, value: string) {
-  return <div className="min-w-0"><dt className="text-xs text-white/80">{label}</dt>
+  return <div className="min-w-0"><dt className="text-xs text-[var(--hero-muted)]">{label}</dt>
     <dd className="num mt-1 truncate text-sm font-semibold">{value}</dd></div>;
 }
 
-function WalletCard({ home, index, onAddTenant }: {
-  home: WalletHomeEntry; index: number; onAddTenant: (id: string) => void;
+function WalletCard({ home, onAddTenant }: {
+  home: WalletHomeEntry; onAddTenant: (id: string) => void;
 }) {
   const leased = home.activeLeases.length > 0;
   const names = [...new Set(home.activeLeases.flatMap((lease) =>
     lease.tenantNames.map((name) => `${name}${lease.invitePending ? " · Invite sent" : ""}`)))].join(", ");
   const rent = home.activeLeases.reduce((sum, lease) => sum + lease.rentCents, 0);
   const chip = leased ? (home.isLate ? "Rent late" : "Rented") : "No lease yet";
-  return <article className="overflow-hidden text-white" style={passCardStyle(index)}>
+  return <article className="overflow-hidden rounded-[var(--radius-pass)] border border-[var(--line)]
+    bg-[var(--hero)] text-[var(--hero-ink)]">
     <a href={`/owner/properties/${encodeURIComponent(home.id)}`} title={`Open ${home.name}`}
-      className="block min-h-11 p-5 text-white">
+      className="block min-h-11 p-5 text-[var(--hero-ink)]">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0"><h3 className="truncate text-[17px] font-bold">{home.name}</h3>
-          <p className="mt-1 truncate text-[13px] text-white/80">{home.addressLine1} · {home.city}, {home.state}</p></div>
-        <span className="shrink-0 rounded-full border border-white/80 px-2.5 py-1 text-xs font-semibold">{chip}</span>
+        <div className="min-w-0"><h3 className="truncate font-display text-[17px] font-semibold">{home.name}</h3>
+          <p className="mt-1 truncate text-[13px] text-[var(--hero-muted)]">
+            {home.addressLine1} · {home.city}, {home.state}</p></div>
+        <Badge variant={home.isLate ? "warning" : "outline"} className={`shrink-0 bg-transparent
+          ${home.isLate ? "border-[var(--warn-line)] text-[#F3C97A]" :
+            "border-[var(--hero-line)] text-[var(--hero-muted)]"}`}>{chip}</Badge>
       </div>
       {leased && <dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-5 pb-2">
         {field("Tenant", names)}
@@ -44,8 +48,8 @@ function WalletCard({ home, index, onAddTenant }: {
     </a>
     {!leased && <button type="button" onClick={() => onAddTenant(home.id)}
       title={`Add tenant and lease to ${home.name}`}
-      className="mx-5 mb-5 min-h-11 w-[calc(100%-2.5rem)] rounded-xl bg-white px-4 font-semibold"
-      style={{ color: passCardStyle(index).backgroundColor }}>Add tenant and lease</button>}
+      className="mx-5 mb-5 min-h-11 w-[calc(100%-2.5rem)] rounded-xl bg-[var(--action)] px-4
+        font-semibold text-[var(--action-contrast)] hover:bg-[var(--action-strong)]">Add tenant and lease</button>}
   </article>;
 }
 
@@ -62,19 +66,18 @@ export function HomesWallet({ wallet, onAddHome, onAddTenant, manageContent }: {
   }
   const ordered = [...groups.values()].sort((a, b) =>
     Number(a.type !== "individual") - Number(b.type !== "individual") || a.name.localeCompare(b.name));
-  let index = 0;
   return <div className="mx-auto max-w-[720px] space-y-6 py-1">
-    <header className="flex items-center justify-between gap-3">
-      <h1 className="text-[34px] font-bold leading-tight">Homes</h1>
+    <header className="flex items-center justify-between gap-3 border-b-2 border-[var(--ink)] pb-3">
+      <h1 className="font-display text-[34px] font-semibold leading-tight">Homes</h1>
       <button type="button" aria-label="Add a home" title="Add a home" onClick={onAddHome}
-        className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--accent)]
-          text-2xl font-semibold text-[var(--accent-contrast)]">+</button>
+        className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--action)]
+          text-2xl font-semibold text-[var(--action-contrast)] hover:bg-[var(--action-strong)]">+</button>
     </header>
     {!wallet?.ok && <p className="text-sm text-[var(--muted)]">{"Couldn't load your homes. Pull down to try again."}</p>}
     {ordered.map((group) => <section key={`${group.type}-${group.name}`} className="space-y-3">
-      <h2 className="text-[13px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+      <h2 className="domus-section-label">
         {group.name} · {group.type === "individual" ? "Personal" : "LLC"}</h2>
-      {group.homes.map((home) => <WalletCard key={home.id} home={home} index={index++} onAddTenant={onAddTenant} />)}
+      {group.homes.map((home) => <WalletCard key={home.id} home={home} onAddTenant={onAddTenant} />)}
     </section>)}
     <section><button type="button" title="Manage homes" aria-expanded={expanded}
       onClick={() => setExpanded((value) => !value)}

@@ -253,8 +253,10 @@ function ExpenseActionList({
                 }}
               >
                 <input name="amountDollars" type="number" min={0.01} step="0.01" defaultValue={(expense.amountCents / 100).toFixed(2)} className="domus-input h-10 rounded-md px-3 text-sm" />
-                <input name="expenseDate" type="date" defaultValue={expense.expenseDate} className="domus-input h-10 rounded-md px-3 text-sm" />
-                <input name="description" defaultValue={expense.description ?? ""} className="domus-input h-10 rounded-md px-3 text-sm sm:col-span-2" />
+                <input name="expenseDate" type="date" defaultValue={expense.expenseDate} className="domus-input h-10
+                  rounded-md px-3 text-sm" />
+                <input name="description" defaultValue={expense.description ?? ""} className="domus-input h-10 rounded-md
+                  px-3 text-sm sm:col-span-2" />
                 <select name="category" defaultValue={expense.category} className="domus-input h-10 rounded-md px-3 text-sm">
                   <option value="mortgage">Mortgage</option>
                   <option value="insurance">Insurance</option>
@@ -333,8 +335,8 @@ export function DrilldownPanel({
           className={`domus-kpi-pill text-left transition ${activeView === "receivables" ? "ring-2 ring-primary/40" : ""}`}
           title="Show every unpaid payment behind money owed to you."
         >
-          <p className="text-xs uppercase tracking-[0.16em] domus-muted">Money owed to you</p>
-          <span className="mt-2 block text-2xl font-bold domus-heading">{formatCurrency(openBalanceCents)}</span>
+          <p className="domus-section-label">Money owed to you</p>
+          <span className="mt-2 block font-display text-2xl font-semibold domus-heading">{formatCurrency(openBalanceCents)}</span>
         </button>
         <button
           type="button"
@@ -342,8 +344,8 @@ export function DrilldownPanel({
           className={`domus-kpi-pill text-left transition ${activeView === "net-income" ? "ring-2 ring-primary/40" : ""}`}
           title={`Show the ${reportYear} net income breakdown.`}
         >
-          <p className="text-xs uppercase tracking-[0.16em] domus-muted">Net income ({reportYear})</p>
-          <span className="mt-2 block text-2xl font-bold domus-heading">{formatCurrency(netIncomeCents)}</span>
+          <p className="domus-section-label">Net income ({reportYear})</p>
+          <span className="mt-2 block font-display text-2xl font-semibold domus-heading">{formatCurrency(netIncomeCents)}</span>
         </button>
         <button
           type="button"
@@ -351,8 +353,8 @@ export function DrilldownPanel({
           className={`domus-kpi-pill text-left transition ${activeView === "ledger" ? "ring-2 ring-primary/40" : ""}`}
           title="Show tenants with payment history balances."
         >
-          <p className="text-xs uppercase tracking-[0.16em] domus-muted">Tenants in payment history</p>
-          <span className="mt-2 block text-2xl font-bold domus-heading">{tenantCount}</span>
+          <p className="domus-section-label">Tenants in payment history</p>
+          <span className="mt-2 block font-display text-2xl font-semibold domus-heading">{tenantCount}</span>
         </button>
       </section>
 
@@ -409,7 +411,8 @@ export function DrilldownPanel({
             ) : (
               <div className="space-y-3">
                 {balanceRows.map((tenant) => (
-                  <div key={`${tenant.tenantEmail}:${tenant.chargeCount}`} className="rounded-xl border border-border/60 bg-background px-4 py-3">
+                  <div key={`${tenant.tenantEmail}:${tenant.chargeCount}`} className="rounded-xl border border-border/60
+                    bg-background px-4 py-3">
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="font-medium text-foreground">{tenant.tenantName}</p>

@@ -48,7 +48,7 @@ export function NeedsYouList({ summary, bankState, llcSetup, lateName, bankNeeds
     run: () => onOpenSection("inbox") });
   if (rows.length === 0) return null;
   return <section aria-labelledby="needs-you-title">
-    <h2 id="needs-you-title" className="mb-3 text-lg font-bold text-[var(--ink)]">Needs you</h2>
+    <h2 id="needs-you-title" className="mb-3 font-display text-[18px] font-semibold text-[var(--ink)]">Needs you</h2>
     <div className="overflow-hidden rounded-2xl bg-[var(--warn-bg)]">
       {rows.slice(0, 3).map((row) => {
         const className = [

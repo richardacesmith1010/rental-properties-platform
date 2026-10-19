@@ -330,7 +330,8 @@ export function NotificationPreferences({
           ) : null}
         </div>
 
-        <div className="mt-4 flex items-start gap-2 rounded-xl border border-[var(--warn)] bg-[var(--surface)] px-3 py-3 text-sm text-[var(--warn)]">
+        <div className="mt-4 flex items-start gap-2 rounded-xl border border-[var(--warn)] bg-[var(--surface)] px-3 py-3
+          text-sm text-[var(--warn)]">
           <MailWarning className="mt-0.5 h-4 w-4 shrink-0 text-[var(--warn)]" />
           <p>
             Pause emails while you set up sample leases or payments. Alerts in Domus will still work.
@@ -360,7 +361,7 @@ export function ManagerReminderPermissions({ accounts, onSetPermission }: {
       </div>
       <button type="button" role="switch" aria-label={`Let my manager send rent reminders for ${account.name}`}
         aria-checked={account.enabled} disabled={isPending && pendingId === account.id}
-        className="min-h-11 rounded-full border border-[var(--line)] px-4 text-sm text-[var(--ink)]"
+        className="min-h-11 rounded-xl border border-[var(--line)] px-4 text-sm text-[var(--ink)]"
         onClick={() => {
           const data = new FormData();
           data.set("accountId", account.id);

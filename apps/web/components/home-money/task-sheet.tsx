@@ -49,7 +49,8 @@ export function TaskSheet({ accountId, partners, task, onClose, onSave }: {
       <div className="flex gap-2"><button type="button" title="Close" onClick={onClose}
         className="domus-card min-h-11 rounded-xl px-4">Close</button>
         <button type="submit" title="Save" disabled={pending}
-          className="min-h-11 rounded-xl bg-[var(--accent)] px-4 text-[var(--accent-contrast)]">Save</button></div>
+          className="min-h-11 rounded-xl bg-[var(--action)] hover:bg-[var(--action-strong)] px-4
+            text-[var(--action-contrast)]">Save</button></div>
     </form>
   </div>;
 }

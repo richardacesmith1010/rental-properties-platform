@@ -282,7 +282,9 @@ export function AiAssistant({ accountId, ownerName }: AiAssistantProps) {
           role="dialog"
           aria-label="Ask Domus"
           aria-describedby="ask-domus-description"
-          className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] left-4 right-4 z-30 flex h-[min(480px,calc(100vh-9rem))] flex-col rounded-3xl border border-border bg-card shadow-2xl sm:bottom-24 sm:left-auto sm:right-6 sm:w-[360px]"
+          className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] left-4 right-4 z-30 flex
+            h-[min(480px,calc(100vh-9rem))] flex-col rounded-2xl border border-border bg-card shadow-2xl sm:bottom-24
+            sm:left-auto sm:right-6 sm:w-[360px]"
         >
           <p id="ask-domus-description" className="sr-only">{helperText}</p>
           <header className="flex items-center justify-between border-b border-border px-4 py-3">
@@ -318,7 +320,8 @@ export function AiAssistant({ accountId, ownerName }: AiAssistantProps) {
                     <button
                       key={prompt}
                       type="button"
-                      className="rounded-full border border-border bg-background px-3 py-2 text-left text-sm text-foreground transition hover:bg-muted"
+                      className="rounded-xl border border-border bg-background px-3 py-2 text-left text-sm text-foreground
+                        transition hover:bg-muted"
                       onClick={() => void attemptSend(prompt)}
                       disabled={isLoading || checkingConsent || savingConsent || showConsent}
                       title={prompt}
@@ -348,7 +351,7 @@ export function AiAssistant({ accountId, ownerName }: AiAssistantProps) {
                         className={cn(
                           "max-w-[85%] whitespace-pre-wrap px-4 py-2 text-sm shadow-sm",
                           message.role === "user"
-                          ? "rounded-2xl rounded-br-sm bg-[var(--accent)] text-white"
+                          ? "rounded-2xl rounded-br-sm bg-[var(--surface-2)] text-[var(--ink)]"
                           : "rounded-2xl rounded-bl-sm bg-muted text-foreground"
                         )}
                     >
@@ -388,7 +391,9 @@ export function AiAssistant({ accountId, ownerName }: AiAssistantProps) {
                   }
                 }}
                 placeholder="Ask anything about your properties..."
-                className="min-h-11 flex-1 resize-none rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-line)]"
+                className="min-h-11 flex-1 resize-none rounded-2xl border border-border bg-background px-4 py-3 text-sm
+                  text-foreground outline-none transition placeholder:text-muted-foreground focus:border-[var(--accent)]
+                  focus:ring-2 focus:ring-[var(--accent-line)]"
                 rows={1}
                 disabled={isLoading || checkingConsent || savingConsent || showConsent}
               />
@@ -406,7 +411,7 @@ export function AiAssistant({ accountId, ownerName }: AiAssistantProps) {
           </form>
           {consentError && !showConsent ? <p role="alert" className="px-4 pb-2 text-sm text-[var(--crit)]">
             {consentError}</p> : null}
-          {showConsent ? <div className="absolute inset-0 z-10 flex items-center justify-center rounded-3xl
+          {showConsent ? <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl
             bg-[var(--surface)] p-5" role="dialog" aria-modal="true" aria-label="Ask Domus uses AI">
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-[var(--ink)]">Ask Domus uses AI</h3>

@@ -70,7 +70,8 @@ function StatusCard({
         <p className="mt-3 text-sm opacity-90">{description}</p>
         <Link
           href={href}
-          className="mt-6 inline-flex rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]"
+          className="mt-6 inline-flex rounded-lg bg-[var(--action)] px-4 py-2 text-sm font-semibold
+            text-[var(--action-contrast)] transition hover:bg-[var(--action-strong)]"
         >
           {ctaLabel}
         </Link>

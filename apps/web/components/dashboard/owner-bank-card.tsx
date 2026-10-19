@@ -29,9 +29,10 @@ export function OwnerBankCard({ state, role = "owner" }: { state: OwnerBankCardS
       };
 
   return (
-    <section className="domus-card flex flex-col gap-4 border-[var(--accent-line)] p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+    <section className="domus-card flex flex-col gap-4 border-[var(--accent-line)] p-4 sm:flex-row sm:items-center
+      sm:justify-between sm:p-5">
       <div className="flex min-w-0 gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--accent-weak)] text-[var(--accent)]">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-2)] text-[var(--ink)]">
           <Landmark className="h-5 w-5" aria-hidden="true" />
         </span>
         <div>
@@ -41,7 +42,8 @@ export function OwnerBankCard({ state, role = "owner" }: { state: OwnerBankCardS
       </div>
       <Link
         href={state.href}
-        className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-contrast)] transition hover:opacity-90"
+        className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-[var(--action)] px-4 text-sm
+          font-semibold text-[var(--action-contrast)] transition hover:bg-[var(--action-strong)]"
         title={content.button}
       >
         {content.button}

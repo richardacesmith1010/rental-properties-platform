@@ -58,8 +58,8 @@ function SummaryTile({ title, value, detail, progress }: { title: string; value:
     <p className="text-sm font-medium text-[var(--muted)]">{title}</p>
     <p className="mt-2 text-2xl font-semibold text-[var(--ink)]">{value}</p>
     {detail ? <p className="mt-1 text-sm text-[var(--muted)]">{detail}</p> : null}
-    {progress != null ? <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[var(--surface-2)]">
-      <div className="h-full rounded-full bg-[var(--accent)]" style={{ width: `${progress}%` }} />
+    {progress != null ? <div className="mt-4 h-1.5 overflow-hidden rounded-[1px] bg-[var(--surface-2)]">
+      <div className="h-full rounded-[1px] bg-[var(--ink)]" style={{ width: `${progress}%` }} />
     </div> : null}
   </div>;
 }

@@ -98,7 +98,7 @@ export function OwnerBottomBar({ items = [], activeItemId, onOpenMore,
   ];
   const bar = <>
     <nav aria-label="Owner shortcuts" className="fixed inset-x-0 bottom-0 z-40 grid h-[84px] grid-cols-5
-      border-t border-[var(--line)] bg-[color:color-mix(in_srgb,var(--surface)_92%,transparent)]
+      border-t border-[var(--ink)] bg-[color:color-mix(in_srgb,var(--surface)_92%,transparent)]
       px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur-[20px] lg:hidden">
       {tabs.map(({ label, icon: Icon, count }) => {
         const selected = active === label;
@@ -106,7 +106,7 @@ export function OwnerBottomBar({ items = [], activeItemId, onOpenMore,
           label === "More" ? `${count} unread notifications` : `${count} unread`;
         const common = `relative flex min-h-11 flex-col items-center justify-center gap-0.5 px-1
           text-[11px] font-semibold focus-visible:outline-2 focus-visible:outline-[var(--accent)]
-          ${selected ? "text-[var(--accent)]" : "text-[var(--faint)] hover:text-[var(--accent)]"}`;
+          ${selected ? "text-[var(--ink)]" : "text-[var(--faint)] hover:text-[var(--ink)]"}`;
         const children = <><Icon size={24} strokeWidth={2} aria-hidden="true" />
           <span aria-hidden={Boolean(count)}>{label}</span>
           {count ? <span aria-hidden="true" className="absolute right-2 top-1 min-w-4 rounded-full

@@ -21,11 +21,12 @@ export default async function OwnerSetupPage() {
 
   return (
     <main className="app-surface flex min-h-screen flex-col items-center justify-center px-4 py-12">
-      <div className="mb-8 text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--accent)] text-xl font-bold text-white shadow-[var(--domus-shadow-sm)]">
+      <div className="mb-8 border-b-2 border-[var(--ink)] pb-3 text-center">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--surface-2)] text-xl
+          font-bold text-[var(--ink)] shadow-[var(--domus-shadow-sm)]">
           D
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Set up your account</h1>
+        <h1 className="font-display text-2xl font-semibold text-foreground">Set up your account</h1>
         <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
           Choose how you own your homes. An LLC (a business you own the homes through) can share access.
           Set up your account to receive rent money.

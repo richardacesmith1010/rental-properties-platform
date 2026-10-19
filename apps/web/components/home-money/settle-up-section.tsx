@@ -49,12 +49,12 @@ export function SettleUpSection({ accountId, rows, period, allTimeHref, onAddPay
           {formatCurrency(suggestion.amountCents)}</span></span>
         <button type="button" title={`Add ${suggestion.fromName} pays ${suggestion.toName} as planned`}
           disabled={pending} onClick={() => void addSuggestions([suggestion])}
-          className="min-h-11 rounded-xl bg-[var(--accent)] px-4 text-[var(--accent-contrast)]">
+          className="min-h-11 rounded-xl bg-[var(--action)] hover:bg-[var(--action-strong)] px-4 text-[var(--action-contrast)]">
           Add as planned</button>
       </div>)}
     {suggestions.length >= 2 && <button type="button" title="Add all as planned" disabled={pending}
       onClick={() => void addSuggestions(suggestions)}
-      className="min-h-11 rounded-xl bg-[var(--accent)] px-4 text-[var(--accent-contrast)]">
+      className="min-h-11 rounded-xl bg-[var(--action)] hover:bg-[var(--action-strong)] px-4 text-[var(--action-contrast)]">
       Add all as planned</button>}
     {error && <p role="alert" className="text-sm text-[var(--crit)]">{error}</p>}
   </section>;

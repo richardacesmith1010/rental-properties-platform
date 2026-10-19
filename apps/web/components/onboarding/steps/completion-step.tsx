@@ -11,7 +11,7 @@ interface CompletionStepProps {
 export function CompletionStep({ stepsCompleted, onFinish }: CompletionStepProps) {
   return (
     <div className="space-y-5 text-center">
-      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--line)]">
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-xl bg-[var(--surface-2)] ring-1 ring-[var(--line)]">
         <CheckCircle className="h-8 w-8 text-[var(--pos)]" />
       </div>
 

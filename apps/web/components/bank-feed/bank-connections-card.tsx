@@ -124,7 +124,8 @@ export function BankConnectionsCard({ ownerAccountId, connections, pendingMatch,
     <div className="flex items-center justify-between gap-2">
       <h2 className="text-xl font-semibold">Your banks</h2>
       {!unavailable ? <button type="button" title="Connect a bank" disabled={busy} onClick={() => void openLink()}
-        className="min-h-11 rounded-md bg-[var(--accent)] px-4 text-[var(--accent-contrast)]">Connect a bank</button> : null}
+        className="min-h-11 rounded-md bg-[var(--action)] hover:bg-[var(--action-strong)] px-4
+          text-[var(--action-contrast)]">Connect a bank</button> : null}
     </div>
     {unavailable ? <p className="text-sm text-[var(--muted)]">
       To connect a bank, use Domus on a computer for now.</p> : null}

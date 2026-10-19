@@ -44,7 +44,7 @@ export function PartnersCard({ accountId, report, period, allTimeHref, periodHre
     <div className="flex items-start justify-between gap-2"><div><h2 className="text-lg font-semibold">Partners</h2>
       <p className="text-sm text-[var(--muted)]">Who put in what · {period}</p></div>
       <Link href={period === "All time" ? periodHref : allTimeHref} title="Show partner totals for all time"
-        className="min-h-11 rounded-full px-3 py-2 text-sm text-[var(--accent)]">
+        className="min-h-11 rounded-xl px-3 py-2 text-sm text-[var(--accent)]">
         {period === "All time" ? "This period" : "All time"}</Link></div>
     <div>{report.rows.map((row) => <PartnerRow key={row.id ?? "llc"} row={row} />)}</div>
     {report.hasPlanned && <div className="rounded-xl bg-[var(--surface-2)] p-3 text-sm text-[var(--muted)]">
@@ -79,7 +79,7 @@ export function PartnersCard({ accountId, report, period, allTimeHref, periodHre
       </div>)}</div>}
     {error && <p role="alert" className="text-sm text-[var(--crit)]">{error}</p>}
     <div className="flex flex-wrap gap-2">
-      <button className="min-h-11 rounded-xl bg-[var(--accent)] px-4 text-[var(--accent-contrast)]"
+      <button className="min-h-11 rounded-xl bg-[var(--action)] hover:bg-[var(--action-strong)] px-4 text-[var(--action-contrast)]"
         type="button" title="Add a payment" onClick={() => setSheet("payment")}>Add a payment</button>
       <button className="domus-card min-h-11 rounded-xl px-4" type="button" title="Manage partners"
         onClick={() => setSheet("partners")}>Manage partners</button>

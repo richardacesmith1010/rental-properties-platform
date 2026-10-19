@@ -29,7 +29,8 @@ export function BankBalancesCard({ accounts, save }: { accounts: Bank[];
     {uploadAccounts.map((bank) => <div key={bank.id} className="border-t border-[var(--line)] pt-3">
       <div className="flex items-center justify-between gap-3">
         <div><p className="font-medium">{bank.nickname}</p>
-          {bank.balance_cents !== null ? <p className="tabular-nums">{formatCurrency(bank.balance_cents)}</p> : null}
+          {bank.balance_cents !== null ? <p className="font-display font-semibold tabular-nums">
+            {formatCurrency(bank.balance_cents)}</p> : null}
           {bank.balance_as_of ? <p className="text-xs text-[var(--muted)]">
             as of {new Date(bank.balance_as_of).toLocaleDateString("en-US")}</p> : null}</div>
         {bank.source === "upload" ? <button type="button" title="Update balance"
@@ -41,7 +42,8 @@ export function BankBalancesCard({ accounts, save }: { accounts: Bank[];
         <input type="number" step="0.01" title="Balance" aria-label="Balance" value={amount}
           className="domus-input min-w-0 flex-1" onChange={(event) => setAmount(event.target.value)} />
         <button type="button" title="Save" disabled={busy} onClick={() => void submit(bank.id)}
-          className="min-h-11 rounded-md bg-[var(--accent)] px-4 text-[var(--accent-contrast)]">Save</button>
+          className="min-h-11 rounded-md bg-[var(--action)] hover:bg-[var(--action-strong)] px-4
+            text-[var(--action-contrast)]">Save</button>
       </div> : null}
     </div>)}
     {error ? <p role="alert" className="text-sm text-[var(--crit)]">{error}</p> : null}

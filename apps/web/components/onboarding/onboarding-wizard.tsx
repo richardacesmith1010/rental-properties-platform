@@ -106,11 +106,11 @@ export function OnboardingWizard({
           {steps.map((step, i) => (
             <div key={step} className="flex items-center gap-2">
               <div
-                className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${
+                className={`flex h-7 w-7 items-center justify-center rounded-xl text-xs font-semibold ${
                   i < currentStepIndex
                     ? "bg-[var(--pos-bg)] text-[var(--pos)]"
                     : i === currentStepIndex
-                      ? "bg-[var(--accent)] text-white"
+                      ? "bg-[var(--surface)] text-[var(--ink)] shadow-[var(--shadow-sm)]"
                       : "bg-[var(--surface-2)] text-[var(--muted)]"
                 }`}
               >

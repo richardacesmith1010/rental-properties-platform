@@ -82,7 +82,7 @@ function HeaderStat({
           duration={1200}
           className="tabular-nums text-[25px] font-[660] tracking-[-0.025em] text-[var(--ink)]"
         />
-        <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+        <p className="mt-2 domus-section-label">
           {label}
         </p>
       </div>
@@ -155,7 +155,8 @@ export function DashboardHeader({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+      <div className={`flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between
+        ${role === "owner" ? "border-b-2 border-[var(--ink)] pb-3" : ""}`}>
         <div className="min-w-0">
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <Badge variant="outline" className="capitalize">
@@ -163,7 +164,10 @@ export function DashboardHeader({
             </Badge>
             <span
               suppressHydrationWarning
-              className="inline-flex items-center gap-2 rounded-full border border-[color:color-mix(in_srgb,var(--line)_84%,transparent)] bg-[color:color-mix(in_srgb,var(--surface)_94%,transparent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)] shadow-sm backdrop-blur-sm"
+              className="inline-flex items-center gap-2 rounded-xl border
+                border-[color:color-mix(in_srgb,var(--line)_84%,transparent)]
+                bg-[color:color-mix(in_srgb,var(--surface)_94%,transparent)] px-3 py-1 domus-section-label shadow-sm
+                backdrop-blur-sm"
             >
               <CalendarClock className="h-3.5 w-3.5" />
               {formatHeaderDate(now)}
@@ -171,7 +175,7 @@ export function DashboardHeader({
           </div>
           {greetingContent ?? (
             <>
-              <h1 className="text-[22px] font-[640] tracking-[-0.02em] text-[var(--ink)] sm:text-[28px]">
+              <h1 className="font-display text-[22px] font-semibold text-[var(--ink)] sm:text-[28px]">
                 {greeting ? `${greeting}, ${displayName}` : displayName}
               </h1>
               <p className="mt-2 max-w-2xl text-sm text-[var(--muted)]">

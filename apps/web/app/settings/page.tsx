@@ -113,8 +113,8 @@ export default async function SettingsPage(props: SettingsPageProps) {
     <main id="main-content" className="app-surface min-h-screen px-4 pb-20 pt-[calc(env(safe-area-inset-top,0px)+1.25rem)]
       sm:px-6 lg:pt-5 sm:py-6 lg:px-8">
       <div className="mx-auto max-w-4xl space-y-6">
-        <header className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--ink)]">Settings</h1>
+        <header className="space-y-2 border-b-2 border-[var(--ink)] pb-3">
+          <h1 className="font-display text-2xl font-semibold text-[var(--ink)]">Settings</h1>
           <p className="text-sm text-[var(--ink-2)]">
             Manage your Domus experience and preferences.
           </p>

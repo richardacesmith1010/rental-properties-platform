@@ -78,7 +78,10 @@ export function HelpMenu({ onSubmitFeedback }: HelpMenuProps) {
         ref={triggerRef}
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--accent-line)] bg-[var(--accent)] text-white shadow-lg transition hover:bg-[var(--accent-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ground)]"
+        className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--accent-line)]
+          bg-[var(--action)] text-[var(--action-contrast)] shadow-lg transition hover:bg-[var(--action-strong)]
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)] focus-visible:ring-offset-2
+          focus-visible:ring-offset-[var(--ground)]"
         title="Open help options."
         aria-label="Help"
         aria-expanded={open}
@@ -100,7 +103,9 @@ export function HelpMenu({ onSubmitFeedback }: HelpMenuProps) {
             type="button"
             role="menuitem"
             onClick={openAssistant}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-[var(--ink-2)] transition hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)]"
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-[var(--ink-2)]
+              transition hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2
+              focus-visible:ring-[var(--accent-line)]"
             title="Ask Domus about your properties."
           >
             <Sparkles className="h-4 w-4" />

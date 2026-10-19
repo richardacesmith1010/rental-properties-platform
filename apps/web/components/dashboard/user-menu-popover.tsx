@@ -42,7 +42,7 @@ function Avatar({
   return (
     <div
       className={cn(
-        "flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent)] text-xs font-semibold text-white",
+        "flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface-2)] text-xs font-semibold text-[var(--ink)]",
         className
       )}
     >
@@ -169,7 +169,8 @@ export function UserMenuPopover({
             <Link
               href="/settings"
               onClick={() => setOpen(false)}
-              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-[var(--ink-2)] transition hover:bg-[var(--surface-2)]"
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-[var(--ink-2)] transition
+                hover:bg-[var(--surface-2)]"
               title="Open your account settings."
             >
               <Settings className="h-4 w-4" />
@@ -179,7 +180,8 @@ export function UserMenuPopover({
             <a
               href="mailto:support@domusbase.com"
               onClick={() => setOpen(false)}
-              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-[var(--ink-2)] transition hover:bg-[var(--surface-2)]"
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-[var(--ink-2)] transition
+                hover:bg-[var(--surface-2)]"
               title="Email Domus support."
             >
               <LifeBuoy className="h-4 w-4" />
@@ -192,7 +194,8 @@ export function UserMenuPopover({
               type="button"
               onClick={handleSignOut}
               disabled={signingOut}
-              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-[var(--crit)] transition hover:bg-[var(--crit-bg)] disabled:cursor-not-allowed disabled:opacity-70"
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-[var(--crit)] transition
+                hover:bg-[var(--crit-bg)] disabled:cursor-not-allowed disabled:opacity-70"
               title="Sign out and return to the login page."
             >
               <LogOut className="h-4 w-4" />

@@ -83,7 +83,8 @@ describe("owner grouped navigation", () => {
     const actual = Array.from(nav.querySelectorAll("button,a")).map(el => el.querySelector("span.truncate")?.textContent ?? el.textContent);
     expect(actual).toEqual(llc ? labels : labels.filter(label => label !== "Members"));
     expect(within(nav).getByRole("button", { name: "Rent 2 late" })).toHaveAttribute("aria-current", "page");
-    expect(within(nav).getByRole("button", { name: "Rent 2 late" })).toHaveClass("hover:bg-[var(--accent-weak)]");
+    expect(within(nav).getByRole("button", { name: "Rent 2 late" }))
+      .toHaveClass("bg-[var(--surface-2)]", "text-[var(--ink)]", "font-semibold");
     expect(within(nav).getByRole("button", { name: "Messages 3" })).toBeVisible();
     expect(within(nav).getByRole("button", { name: "Alerts 4" })).toBeVisible();
   });

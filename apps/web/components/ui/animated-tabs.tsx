@@ -24,9 +24,9 @@ export function AnimatedTabs({
   activeTab,
   onTabChange,
   className,
-  activeClassName = "text-[var(--accent)]",
+  activeClassName = "bg-[var(--surface)] text-[var(--ink)] shadow-[var(--shadow-sm)]",
   inactiveClassName = "text-[var(--muted)] hover:text-[var(--ink)]",
-  indicatorClassName = "bg-[var(--accent)]",
+  indicatorClassName = "bg-[var(--ink)]",
 }: AnimatedTabsProps) {
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const [indicator, setIndicator] = useState({ left: 0, width: 0 });
@@ -49,7 +49,7 @@ export function AnimatedTabs({
 
   return (
     <div className={cn("relative", className)}>
-      <div className="flex gap-1" role="tablist">
+      <div className="flex gap-1 bg-[var(--surface-3)]" role="tablist">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -75,7 +75,7 @@ export function AnimatedTabs({
       </div>
       <div
         className={cn(
-          "absolute bottom-0 h-0.5 rounded-full transition-all duration-300",
+          "absolute bottom-0 h-0.5 rounded-[1px] transition-all duration-300",
           indicatorClassName
         )}
         style={{

@@ -31,7 +31,8 @@ export function TasksCard({ accountId, tasks, partners, onAdd, onUpdate, onRemov
     <h2 className="text-lg font-semibold">Tasks</h2>
     {!visible.length ? <><p className="text-sm text-[var(--muted)]">No shared tasks yet.</p>
       <div className="flex flex-wrap gap-2"><button type="button" title="Add common tasks" onClick={common} disabled={pending}
-        className="min-h-11 rounded-xl bg-[var(--accent)] px-4 text-[var(--accent-contrast)]">Add common tasks</button>
+        className="min-h-11 rounded-xl bg-[var(--action)] hover:bg-[var(--action-strong)] px-4
+          text-[var(--action-contrast)]">Add common tasks</button>
         <button type="button" title="Add a task" onClick={() => setSheet("add")}
           className="domus-card min-h-11 rounded-xl px-4">Add a task</button></div></> : <>
       <div>{visible.map((task) => {

@@ -1,13 +1,9 @@
 import { ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import type { WalletHomeEntry } from "@/lib/owner-wallet-home";
+import { Badge } from "@/components/ui/badge";
 
-export const passCardColors = ["#14532D", "#1E3A8A", "#111214", "#7C2D12"];
-export const passCardStyle = (index: number) => ({
-  backgroundColor: passCardColors[index % passCardColors.length], borderRadius: 22, boxShadow: "var(--shadow-lg)"
-});
-
-export function HomePassCard({ home, index, single, showAccount = false }: {
+export function HomePassCard({ home, single, showAccount = false }: {
   home: WalletHomeEntry; index: number; single?: boolean; showAccount?: boolean;
 }) {
   const nextDates = home.activeLeases.filter((lease) => lease.nextDueDate)
@@ -19,25 +15,29 @@ export function HomePassCard({ home, index, single, showAccount = false }: {
   const invitePending = home.activeLeases.some((lease) => lease.invitePending);
   return (
     <a href={`/owner/money?property=${encodeURIComponent(home.id)}`} title={`Open money for ${home.name}`}
-      className={`flex min-h-64 snap-start flex-col justify-between p-5 text-white ${single
-        ? "min-w-full" : "min-w-[88%] sm:min-w-[calc(50%-0.375rem)]"}`}
-      style={passCardStyle(index)}>
+      className={`flex min-h-64 snap-start flex-col justify-between rounded-[var(--radius-pass)] border
+        border-[var(--line)] bg-[var(--hero)] p-5 text-[var(--hero-ink)] ${single
+        ? "min-w-full" : "min-w-[88%] sm:min-w-[calc(50%-0.375rem)]"}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="truncate text-xl font-bold">{home.name}</h2>
-          <p className="mt-1 text-sm">{home.city}, {home.state}{showAccount ? ` · ${home.accountName}` : ""}</p>
+          <h2 className="truncate font-display text-xl font-semibold">{home.name}</h2>
+          <p className="mt-1 text-sm text-[var(--hero-muted)]">
+            {home.city}, {home.state}{showAccount ? ` · ${home.accountName}` : ""}</p>
         </div>
-        <span className="shrink-0 rounded-full border border-white px-2.5 py-1 text-xs font-semibold">
+        <Badge variant={home.isLate ? "warning" : "outline"} className={`shrink-0 bg-transparent
+          ${home.isLate ? "border-[var(--warn-line)] text-[#F3C97A]" :
+            "border-[var(--hero-line)] text-[var(--hero-muted)]"}`}>
           {home.isLate ? "Rent late" : "Rented"}
-        </span>
+        </Badge>
       </div>
       <div className="py-5">
-        <p className="text-sm">Left after bills this month</p>
-        <p className="num mt-1 text-[44px] font-bold leading-none tracking-tight">
+        <p className="text-sm text-[var(--hero-muted)]">Left after bills this month</p>
+        <p className="num mt-1 font-display text-[44px] font-semibold leading-none">
           {formatCurrency(home.leftCents)}
         </p>
       </div>
-      <div className="flex items-end justify-between gap-3 text-sm">
+      <div className="flex items-end justify-between gap-3 border-t border-[var(--hero-line)] pt-0 text-sm
+        text-[var(--hero-muted)]">
         <span className="flex min-w-0 items-center gap-1">
           <span className="min-w-0 truncate">{names}</span>
           {invitePending ? <span className="shrink-0">· Invite sent</span> : null}

@@ -62,8 +62,9 @@ export function ThemeSettingsPanel() {
                 </div>
                 <span
                   className={[
-                    "inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold",
-                    selected ? "bg-primary/15 text-primary" : "bg-muted/40 text-muted-foreground"
+                    "inline-flex rounded-xl px-2.5 py-1 text-[11px] font-semibold",
+                    selected ? "bg-[var(--surface)] text-[var(--ink)] shadow-[var(--shadow-sm)]"
+                      : "bg-[var(--surface-3)] text-[var(--muted)]"
                   ].join(" ")}
                 >
                   {selected ? "Selected" : "Choose"}

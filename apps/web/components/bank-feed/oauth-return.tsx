@@ -75,9 +75,10 @@ export function OAuthReturn({ actions }: { actions: FinishActions }) {
   }, [actions, router]);
 
   return <section className="domus-card space-y-4 p-5" aria-live="polite" role={failed ? "alert" : undefined}>
-    <h1 className="text-2xl font-bold">{message}</h1>
+    <h1 className="font-display text-2xl font-semibold">{message}</h1>
     {failed ? <Link href="/owner/bank" title="Back to your banks"
-      className="inline-flex min-h-11 items-center rounded-full bg-[var(--accent)] px-5 text-[var(--accent-contrast)]">
+      className="inline-flex min-h-11 items-center rounded-xl bg-[var(--action)] hover:bg-[var(--action-strong)] px-5
+        text-[var(--action-contrast)]">
       Back to your banks</Link> : null}
   </section>;
 }

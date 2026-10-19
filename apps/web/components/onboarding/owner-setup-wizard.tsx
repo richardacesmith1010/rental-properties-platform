@@ -145,7 +145,7 @@ export function OwnerSetupWizard({
         <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-8 shadow-[var(--domus-shadow-sm)]">
           <form ref={individualFormRef} action={individualAction}>
             <div className="flex flex-col items-center text-center">
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent-weak)] text-[var(--accent)]">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--surface-2)] text-[var(--accent)]">
                 <Loader2 className={`h-7 w-7 ${individualPending ? "animate-spin" : ""}`} />
               </div>
               <h2 className="text-xl font-semibold text-[var(--ink)]">Creating your individual account</h2>

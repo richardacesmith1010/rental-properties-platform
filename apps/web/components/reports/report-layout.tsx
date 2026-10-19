@@ -71,7 +71,7 @@ export function ReportCard({ id, icon: Icon, title, description }: ReportCardPro
           <ResolvedIcon className="h-5 w-5" />
         </div>
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+          <p className="domus-section-label">
             Jump to section
           </p>
           <h2 className="mt-1 text-base font-medium text-[var(--ink)]">{title}</h2>
@@ -158,7 +158,7 @@ export function ReportSection<T>({
     <section id={id} className="domus-card scroll-mt-24 p-5 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+          <p className="domus-section-label">
             Report details
           </p>
           <h3 className="mt-1 text-[22px] font-[640] tracking-[-0.02em] text-[var(--ink)]">
@@ -190,7 +190,7 @@ export function ReportSection<T>({
                 {columns.map((column) => (
                   <th
                     key={column.key}
-                    className={`px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)] ${column.className ?? ""}`}
+                    className={`px-3 py-2 text-left domus-section-label ${column.className ?? ""}`}
                   >
                     {column.sortValue ? (
                       <button

@@ -35,7 +35,7 @@ export function AskDomusSettings({ initialEnabled, onSetConsent }: AskDomusSetti
       className="flex min-h-11 w-full items-center justify-between gap-4 rounded-xl border border-[var(--line)]
         bg-[var(--surface)] px-4 py-3 text-left text-sm text-[var(--ink)]">
       <span>Let Ask Domus answer my questions</span>
-      <span aria-hidden="true" className={`h-6 w-11 rounded-full p-1 ${enabled ? "bg-[var(--accent)]" : "bg-[var(--muted)]"}`}>
+      <span aria-hidden="true" className={`h-6 w-11 rounded-full p-1 ${enabled ? "bg-[var(--action)]" : "bg-[var(--muted)]"}`}>
         <span className={`block h-4 w-4 rounded-full bg-[var(--surface)] transition-transform
           ${enabled ? "translate-x-5" : ""}`} />
       </span>

@@ -5,7 +5,7 @@ export function RecentActivity({ money }: { money?: OwnerHomeMoneyResult }) {
   const items = money?.ok ? [...money.items].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)).slice(0, 5) : [];
   return <section aria-labelledby="recent-activity-title">
     <div className="mb-3 flex items-center justify-between gap-3">
-      <h2 id="recent-activity-title" className="text-lg font-bold text-[var(--ink)]">Recent activity</h2>
+      <h2 id="recent-activity-title" className="font-display text-[18px] font-semibold text-[var(--ink)]">Recent activity</h2>
       <a
         href="/owner/money"
         title="See all money activity"

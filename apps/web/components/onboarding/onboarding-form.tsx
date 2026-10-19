@@ -235,7 +235,8 @@ export function OnboardingForm({
 
       <div className="rounded-xl border border-[var(--accent-line)] bg-[var(--accent-weak)] px-4 py-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--surface)] text-[var(--accent)] shadow-[var(--domus-shadow-sm)]">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--surface)]
+            text-[var(--accent)] shadow-[var(--domus-shadow-sm)]">
             <RoleIcon className="h-4 w-4" />
           </div>
           <div>

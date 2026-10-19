@@ -62,7 +62,8 @@ function CommandPaletteTrigger({ onOpen }: { onOpen: () => void }) {
         <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
         <span className="truncate">Search navigation, properties, tenants...</span>
       </span>
-      <span className="tabular-nums hidden rounded-md border border-border bg-background px-2 py-0.5 text-[11px] font-semibold text-muted-foreground sm:inline-flex">
+      <span className="tabular-nums hidden rounded-md border border-border bg-background px-2 py-0.5 text-[11px]
+        font-semibold text-muted-foreground sm:inline-flex">
         ⌘K
       </span>
     </button>
@@ -144,7 +145,7 @@ function NavList({ navItems, activeItemId, onSelectItem, mobile = false }: NavLi
               <Icon className="h-4 w-4" />
               <span className="truncate">{item.label}</span>
               {typeof item.badgeCount === "number" && item.badgeCount > 0 ? (
-                <Badge variant="warning" className="ml-auto min-w-[1.5rem] justify-center rounded-full px-1.5 py-0 text-[10px]">
+                <Badge variant="warning" className="ml-auto min-w-[1.5rem] justify-center px-1.5 py-0 text-[10px]">
                   {item.badgeText ?? item.badgeCount}
                 </Badge>
               ) : null}
@@ -170,7 +171,7 @@ function NavList({ navItems, activeItemId, onSelectItem, mobile = false }: NavLi
               <Icon className="h-4 w-4" />
               <span className="truncate">{item.label}</span>
               {typeof item.badgeCount === "number" && item.badgeCount > 0 ? (
-                <Badge variant="warning" className="ml-auto min-w-[1.5rem] justify-center rounded-full px-1.5 py-0 text-[10px]">
+                <Badge variant="warning" className="ml-auto min-w-[1.5rem] justify-center px-1.5 py-0 text-[10px]">
                   {item.badgeText ?? item.badgeCount}
                 </Badge>
               ) : null}
@@ -190,7 +191,7 @@ function NavList({ navItems, activeItemId, onSelectItem, mobile = false }: NavLi
             <Icon className="h-4 w-4" />
             <span className="truncate">{item.label}</span>
             {typeof item.badgeCount === "number" && item.badgeCount > 0 ? (
-              <Badge variant="warning" className="ml-auto min-w-[1.5rem] justify-center rounded-full px-1.5 py-0 text-[10px]">
+              <Badge variant="warning" className="ml-auto min-w-[1.5rem] justify-center px-1.5 py-0 text-[10px]">
                 {item.badgeText ?? item.badgeCount}
               </Badge>
             ) : null}
@@ -254,10 +255,12 @@ export function SidebarNav({
   );
 
   return (
-    <aside className="gradient-sidebar hidden min-h-0 lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-[260px] lg:flex-shrink-0 lg:flex-col">
+    <aside className="gradient-sidebar hidden min-h-0 lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-[260px]
+      lg:flex-shrink-0 lg:flex-col">
       <div className="shrink-0 flex items-center justify-between gap-3 px-5 pb-4 pt-6">
         <div className="flex items-center gap-3">
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--surface-2)] ring-1 ring-[var(--line)]"><Landmark className="h-4 w-4 text-[var(--accent)]" /></span>
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--surface-2)] ring-1
+            ring-[var(--line)]"><Landmark className="h-4 w-4 text-[var(--accent)]" /></span>
           <div>
             <div className="text-base font-bold text-foreground">Domus</div>
           </div>
@@ -382,7 +385,8 @@ export function MobileTopBar({
                 className={`sidebar-shell-button mb-3 flex min-h-11 items-center gap-3 px-3 py-2 ${sidebarFocusRing}`}>
                 {avatarUrl ? <Image src={avatarUrl} alt="" width={32} height={32}
                   className="h-8 w-8 rounded-full object-cover" />
-                  : <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent)] font-semibold text-white">
+                  : <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--action)] font-semibold
+                    text-[var(--action-contrast)]">
                     {displayName.charAt(0).toUpperCase()}</span>}
                 <span className="min-w-0 flex-1"><span className="block truncate font-semibold">{displayName}</span>
                   <span className="block text-xs sidebar-shell-muted">Owner</span></span>

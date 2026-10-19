@@ -25,7 +25,7 @@ export function CashOnHandCard({ accounts, warning }: { accounts: CashOnHand[]; 
             <dd className="tabular-nums">−{formatCurrency(account.depositsHeldCents)}</dd></div>
           {account.complete ? <div className="flex items-end justify-between gap-2 border-t border-[var(--line)] pt-2">
             <dt className="font-semibold">Yours to use</dt>
-            <dd className="text-2xl font-bold tabular-nums">{formatCurrency(account.yoursCents)}</dd>
+            <dd className="font-display text-2xl font-semibold tabular-nums">{formatCurrency(account.yoursCents)}</dd>
           </div> : null}
         </dl>
         <p className="text-xs text-[var(--muted)]">Deposit returns are recorded from the lease page.</p>

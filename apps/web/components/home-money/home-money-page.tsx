@@ -50,17 +50,17 @@ export function HomeMoneyPage({ data, selectedMonth, months, partnerData, tasksD
     URL.revokeObjectURL(url);
   };
   return <div className="space-y-5">
-    <header className="flex items-center justify-between gap-3">
-      <h1 className="text-[34px] font-bold leading-tight">Money</h1>
+    <header className="flex items-center justify-between gap-3 border-b-2 border-[var(--ink)] pb-3">
+      <h1 className="font-display text-[34px] font-semibold leading-tight">Money</h1>
       <button type="button" onClick={download} title="Download current money for taxes"
-        className="domus-card min-h-11 rounded-full px-5 text-sm font-semibold">For taxes</button>
+        className="domus-card min-h-11 rounded-xl px-5 text-sm font-semibold">For taxes</button>
     </header>
     {data.properties.length >= 2 && <nav className="flex gap-2 overflow-x-auto pb-1" aria-label="Homes">
       {[{ id: null, name: "All homes" }, ...data.properties].map((home) => <Link key={home.id ?? "all"}
         href={`/owner/money?${home.id ? `property=${encodeURIComponent(home.id)}&` : ""}month=${selectedMonth}`}
         title={`Show money for ${home.name}`}
-        className={`flex min-h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold
-          ${propertyId === home.id ? "bg-[var(--accent)] text-[var(--accent-contrast)]" : "domus-card"}`}>
+        className={`flex min-h-11 shrink-0 items-center rounded-xl px-4 text-sm font-semibold
+          ${propertyId === home.id ? "bg-[var(--surface-2)] text-[var(--ink)]" : "domus-card"}`}>
         {home.name}
       </Link>)}
     </nav>}
@@ -79,7 +79,7 @@ export function HomeMoneyPage({ data, selectedMonth, months, partnerData, tasksD
       <p className="text-sm text-[var(--muted)]">{partnerWarning}</p>
     </section>}
     {data.alerts.length > 0 && <section aria-labelledby="heads-up-title">
-      <h2 id="heads-up-title" className="mb-2 text-lg font-semibold">Heads up</h2>
+      <h2 id="heads-up-title" className="mb-2 font-display text-[18px] font-semibold">Heads up</h2>
       <div className="space-y-2">{data.alerts.map((alert, index) => <div key={`${alert.type}-${index}`}
         className="rounded-2xl bg-[var(--warn-bg)] p-4 text-[var(--ink)]">
         <p className="font-semibold">{allHomes && data.properties.length >= 2 ? `${alert.homeName} · ` : ""}{alert.title}</p>

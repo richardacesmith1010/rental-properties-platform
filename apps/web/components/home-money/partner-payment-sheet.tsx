@@ -60,7 +60,8 @@ export function PartnerPaymentSheet({ accountId, partners, onClose, onSave }: {
     {error && <p role="alert" className="text-sm text-[var(--crit)]">{error}</p>}
     <div className="flex gap-2"><button className="domus-card min-h-11 rounded-xl px-4" type="button" title="Close payment"
       onClick={onClose}>Cancel</button>
-      <button className="min-h-11 rounded-xl bg-[var(--accent)] px-4 text-[var(--accent-contrast)]" type="button"
+      <button className="min-h-11 rounded-xl bg-[var(--action)] hover:bg-[var(--action-strong)] px-4
+        text-[var(--action-contrast)]" type="button"
         title="Save payment" disabled={pending} onClick={save}>{pending ? "Saving…" : "Save"}</button></div>
   </div>;
 }

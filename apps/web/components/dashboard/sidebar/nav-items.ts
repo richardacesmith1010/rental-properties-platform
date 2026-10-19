@@ -252,10 +252,10 @@ export function injectReportsNavItem(navItems: NavItem[], reportsHref: string | 
 
 export function navButtonClasses(isActive: boolean, mobile = false) {
   return [
-    "flex w-full items-center gap-3 rounded-[10px] px-3.5 py-2.5 text-[13px] transition-all",
+    "flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-[13px] transition-all",
     mobile ? "justify-start" : "",
     isActive
-      ? "sidebar-shell-button sidebar-shell-button-active hover:border-[var(--accent-line)] hover:bg-[var(--accent-weak)] hover:text-[var(--accent)] focus-visible:border-[var(--accent-line)] focus-visible:bg-[var(--accent-weak)] focus-visible:text-[var(--accent)]"
+      ? "sidebar-shell-button bg-[var(--surface-2)] text-[var(--ink)] font-semibold"
       : "sidebar-shell-button"
   ].join(" ");
 }

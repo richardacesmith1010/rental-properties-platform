@@ -54,7 +54,7 @@ export function ManagePartnersSheet({ accountId, partners, onClose, onAdd, onRen
     {error && <p role="alert" className="text-sm text-[var(--crit)]">{error}</p>}
     <div className="flex gap-2"><button className="domus-card min-h-11 rounded-xl px-4" type="button"
       title="Close partner list" onClick={onClose}>Close</button>
-      <button className="min-h-11 rounded-xl bg-[var(--accent)] px-4 text-[var(--accent-contrast)]"
+      <button className="min-h-11 rounded-xl bg-[var(--action)] hover:bg-[var(--action-strong)] px-4 text-[var(--action-contrast)]"
         type="button" title="Add person" disabled={pending} onClick={add}>+ Add a person</button></div>
   </div>;
 }

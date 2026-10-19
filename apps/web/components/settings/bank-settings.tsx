@@ -6,6 +6,7 @@ import { SubmitButton } from "@/components/shared/submit-button";
 import type { ActionState } from "@/app/actions";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -93,9 +94,9 @@ export function BankSettings({
                     <div className="space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-semibold text-[var(--ink)]">{account.accountName}</p>
-                        <span className="rounded-full bg-[var(--pos-bg)] px-2 py-0.5 text-xs font-semibold text-[var(--pos)]">
+                        <Badge variant="success">
                           Connected for rent.
-                        </span>
+                        </Badge>
                       </div>
                       <p className="text-sm text-[var(--muted)]">{propertySummary}</p>
                     </div>
@@ -115,9 +116,9 @@ export function BankSettings({
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-sm font-semibold text-[var(--ink)]">Your personal properties</p>
-                      <span className="rounded-full bg-[var(--pos-bg)] px-2 py-0.5 text-xs font-semibold text-[var(--pos)]">
+                      <Badge variant="success">
                         Connected for rent.
-                      </span>
+                      </Badge>
                     </div>
                     <p className="text-sm text-[var(--muted)]">
                       Stripe is ready to collect rent for properties tied to your profile.

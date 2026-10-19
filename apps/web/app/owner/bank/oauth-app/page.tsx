@@ -9,7 +9,8 @@ export default async function BankAppOAuthPage() {
     <div className="domus-card mx-auto max-w-3xl space-y-5 p-5">
       <h1 className="text-xl font-semibold">Open the Domus app to finish.</h1>
       <Link href="/owner/bank"
-        className="inline-flex min-h-11 items-center rounded-md bg-[var(--accent)] px-4 text-[var(--accent-contrast)]">
+        className="inline-flex min-h-11 items-center rounded-md bg-[var(--action)] hover:bg-[var(--action-strong)] px-4
+          text-[var(--action-contrast)]">
         Back to your banks
       </Link>
     </div>
