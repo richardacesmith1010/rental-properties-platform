@@ -1836,3 +1836,13 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - **Owner device check 2026-10-18 (build 3):** Airplane Mode → cold open shows the Domus offline page with Try again;
   Airplane Mode off → Try again → Home. ✅ Offline page verified on a real iPhone (notes 1c item 6 is true).
 - **Phase 1 stage 1B (store-ready app) is complete** except App Store Connect owner steps (B6).
+
+## 2026-10-18 — Visual redesign: "Registry in graphite" chosen (look only)
+- Owner: Domus looks "bare bones basic"; wants it "official, professional, clean… a serious app with no frivolity."
+  Look only — no feature/layout changes; distinct from the 10-11 Wallet structure, which stays.
+- Canvas https://claude.ai/artifact/DP3NYT3Thaaycw7WvyUkue: A Ledger, B Registry, C Graphite, + two B+C mixes.
+  **Owner 2026-10-18: "Go with B + C in graphite. Turn it into the design system and plan the rollout."**
+- Spec `docs/design/domus-design-system.md` (tokens light/dark, type, shape, buttons, doorway mark, email);
+  rollout `docs/design/redesign-rollout.md`: 242a foundations → 242b brand mark (iPhone tier) → 242c front door →
+  242d owner → 242e tenant/manager/docs → 242f finish + TestFlight build 4.
+- Time-zone sprint shelved by owner ("We can shelve that sprint for later").
