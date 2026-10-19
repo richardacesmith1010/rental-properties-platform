@@ -1846,3 +1846,15 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   rollout `docs/design/redesign-rollout.md`: 242a foundations → 242b brand mark (iPhone tier) → 242c front door →
   242d owner → 242e tenant/manager/docs → 242f finish + TestFlight build 4.
 - Time-zone sprint shelved by owner ("We can shelve that sprint for later").
+
+## 2026-10-18 — Redesign sprints 242a–242c SHIPPED (Registry in graphite)
+- **242a** `29c9fbe` foundations: graphite/steel/cobalt tokens (light + dark), action/hero tokens, 4 px radii,
+  Public Sans + Source Serif 4, graphite primary buttons, square uppercase badges. Gate 2,921; smoke + CI green.
+- **242b** `9d36421` brand mark (iPhone tier; ChatGPT rev 1 AWC → rev 2): doorway `icon.svg`, iOS AppIcon + Splash
+  light/dark regenerated (catalog-validated tests), web icons/OG. XCTest 127/127 (two AppLock timing flakes under gate
+  load; clean on rerun). Live icons verified. Reaches phones with TestFlight build 4.
+- **242c** `ae0412a` front door: `DomusMark`/`DomusWordmark`, landing, login, auth pages, email shell. Copy diff = none
+  (3 strings only re-wrapped). Live check: login + landing render the new look.
+- Design call (Claude): all home pass cards graphite (no per-home colors) — owner may ask for muted shades instead.
+- **Next:** 242d owner screens (Codex running), 242e tenant/manager/PDFs (packet `docs/sprint242e-codex-prompt.md`),
+  242f finish + screenshots + build 4.
