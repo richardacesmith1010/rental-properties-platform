@@ -1833,3 +1833,6 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   Contains 241a (IOS-4 status bar) + everything since build 2. Owner group gets it automatically after processing.
 - **Owner next (one action):** TestFlight on iPhone → Install Domus build 3. Then Claude's device checks: offline page
   (airplane mode), status bar both themes, Face ID.
+- **Owner device check 2026-10-18 (build 3):** Airplane Mode → cold open shows the Domus offline page with Try again;
+  Airplane Mode off → Try again → Home. ✅ Offline page verified on a real iPhone (notes 1c item 6 is true).
+- **Phase 1 stage 1B (store-ready app) is complete** except App Store Connect owner steps (B6).

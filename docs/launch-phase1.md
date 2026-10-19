@@ -22,7 +22,7 @@ Store, under reviewed legal terms. Done = every row below is ✅. Claude drives;
 | B2 ✅ 2026-10-18 | **Approve the legal defaults** (§C) | Unblocks App Privacy, the 7-year purge job, publishing Terms/Privacy |
 | B3 ✅ 2026-10-18 (option 1) | **Pick a pricing option** (§D) | Everything after launch depends on it; App Store rules depend on it |
 | B4 | **Choose a lawyer** (small-business / SaaS; flat fee) and send the packet (§E) | Strangers should not sign unreviewed terms |
-| B5 | TestFlight build 3 (uploaded 2026-10-18): install on your iPhone, one check at a time | Real-device proof for the launch cover and Face ID |
+| B5 ✅ 2026-10-18 | TestFlight build 3 installed; offline page verified on device | Real-device proof for the launch cover and Face ID |
 | B6 | App Store Connect: Publish App Privacy, App Review info (demo login from A1), Pricing & Availability, Submit | The store listing |
 | B7 | Run your own rentals on Domus for one full month (1st Home, Mom's House) | The "real month" every category is waiting on |
 | B8 | Plaid: confirm Transactions access is approved (Plaid dashboard) | Unblocks live bank sync (Owner + Money scores) |
