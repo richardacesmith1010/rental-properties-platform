@@ -1862,3 +1862,9 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   card (dark `#1F2226` + border), serif titles/amounts, square tags, ink tab-bar rule, action Add button ✅.
   **242f list:** Needs-you rows still amber-filled (spec: plain rows + tag); Home title missing the 2 px rule; native
   Face ID offer sheet + lock screen buttons still iOS blue (`LockViewController.swift`, iPhone tier).
+- **242e** `0d0d701` tenant/manager/shared sections/receipts/PDFs (61 files; only "New"/"Next up" moved into `Badge`;
+  gate 2,941; smoke 10/10; CI success). Tenant walk at phone width: Home, Rent, Messages ✅.
+- **242f queued** (Codex usage limit until 00:26): `docs/sprint242f-native-codex-prompt.md` rev 2 (ChatGPT AWC: Dynamic
+  Type-scaled serif title) and `docs/sprint242f-web-codex-prompt.md` (header Landmark → DomusMark, Needs-you plain rows
+  + markers, Home title rule, CardTitle serif, decorative accent icons → ink-2). Then: new App Store screenshots,
+  TestFlight build 4. ChatGPT usage also near limit (resets 00:26).
