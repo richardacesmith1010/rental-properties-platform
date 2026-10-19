@@ -49,6 +49,7 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
     var onNavigationFailure: (() -> Void)?
     var onPlaidLink: ((PlaidLinkRequest) -> Void)?
     var onFaceId: ((FaceIdRequest) -> Void)?
+    var onTheme: ((ThemeRequest) -> Void)?
 
     init(original: NSObject, downloads: DownloadHandler, offlineURL: URL?, startupURL: URL,
          mainWebView: MainWebViewLoading, opener: NavigationOpening? = nil,
@@ -309,6 +310,8 @@ final class DomusNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegat
             if let request = PlaidLinkRequest(body: body) { onPlaidLink?(request) }
         } else if name == "domusFaceId" {
             if let request = FaceIdRequest(body: body) { onFaceId?(request) }
+        } else if name == "domusTheme", let request = ThemeRequest(body: body) {
+            onTheme?(request)
         } else if name == "domusShareCsv", let body = body as? [String: Any],
                   let filename = body["filename"] as? String, filename.lowercased().hasSuffix(".csv"),
                   let csv = body["csv"] as? String {
@@ -325,6 +328,25 @@ enum MessageProvenance {
     }
     static func accepts(mainFrame: Bool, scheme: String, host: String, port: Int, currentURL: URL?) -> Bool {
         mainFrame && scheme == "https" && host == "domusbase.com" && [0, 443].contains(port) && trustedURL(currentURL)
+    }
+}
+
+struct ThemeRequest {
+    let theme: String
+
+    init?(body: Any) {
+        guard let body = body as? [String: Any], body.count == 1,
+              let theme = body["theme"] as? String,
+              ["light", "dark", "system"].contains(theme) else { return nil }
+        self.theme = theme
+    }
+
+    var interfaceStyle: UIUserInterfaceStyle {
+        switch theme {
+        case "light": return .light
+        case "dark": return .dark
+        default: return .unspecified
+        }
     }
 }
 

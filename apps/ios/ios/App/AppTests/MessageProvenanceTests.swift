@@ -1,9 +1,102 @@
 import XCTest
+import UIKit
 import WebKit
 @testable import App
 
 @MainActor
 final class MessageProvenanceTests: XCTestCase {
+    func testThemeRequestAcceptsOnlyKnownValues() throws {
+        for body: Any in ["dark", [:], ["theme": "sepia"], ["theme": 1], ["theme": "dark", "extra": 1]] {
+            XCTAssertNil(ThemeRequest(body: body))
+        }
+        let styles: [(String, UIUserInterfaceStyle)] = [("light", .light), ("dark", .dark), ("system", .unspecified)]
+        for (theme, style) in styles {
+            let request = try XCTUnwrap(ThemeRequest(body: ["theme": theme]))
+            XCTAssertEqual(request.theme, theme)
+            XCTAssertEqual(request.interfaceStyle, style)
+        }
+    }
+
+    func testThemeMessageIgnoredFromUntrustedOrigin() throws {
+        let web = WKWebView()
+        let start = try XCTUnwrap(URL(string: "https://domusbase.com/settings"))
+        let handler = DomusNavigationDelegate(original: NSObject(), downloads: DownloadHandler(presenter: MessagePresenter()),
+                                              offlineURL: nil, startupURL: start, mainWebView: web)
+        var themes: [String] = []
+        handler.onTheme = { themes.append($0.theme) }
+        let invalid: [(Bool, String, String, Int, URL?)] = [
+            (false, "https", "domusbase.com", 443, start), (true, "http", "domusbase.com", 443, start),
+            (true, "https", "other.example", 443, start), (true, "https", "domusbase.com", 8443, start),
+            (true, "https", "domusbase.com", 443, URL(string: "https://other.example"))
+        ]
+        for (main, scheme, host, port, current) in invalid {
+            handler.handleMessage(name: "domusTheme", body: ["theme": "dark"], mainFrame: main,
+                                  scheme: scheme, host: host, port: port, currentURL: current)
+        }
+        XCTAssertTrue(themes.isEmpty)
+        handler.handleMessage(name: "domusTheme", body: ["theme": "dark"], mainFrame: true,
+                              scheme: "https", host: "domusbase.com", port: 443, currentURL: start)
+        XCTAssertEqual(themes, ["dark"])
+    }
+
+    private func freshThemeDefaults() throws -> UserDefaults {
+        let suite = "MessageProvenanceTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        addTeardownBlock { defaults.removePersistentDomain(forName: suite) }
+        return defaults
+    }
+
+    func testThemeStoreRoundTripAndFallback() throws {
+        let defaults = try freshThemeDefaults()
+        XCTAssertEqual(ThemeStore.load(defaults: defaults), .unspecified)
+        ThemeStore.save("dark", defaults: defaults)
+        XCTAssertEqual(ThemeStore.load(defaults: defaults), .dark)
+        defaults.set("sepia", forKey: ThemeStore.key)
+        XCTAssertEqual(ThemeStore.load(defaults: defaults), .unspecified)
+    }
+
+    func testApplyThemeSetsWindowsAndPersists() throws {
+        let defaults = try freshThemeDefaults()
+        let bridge = DomusBridgeViewController()
+        bridge.themeDefaults = defaults
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let window = UIWindow(windowScene: scene)
+        window.frame = scene.coordinateSpace.bounds
+        let root = UIViewController()
+        window.rootViewController = root
+        window.isHidden = false
+        bridge.appWindow = window
+        defer { window.isHidden = true; window.rootViewController = nil }
+
+        for (theme, style) in [("dark", UIUserInterfaceStyle.dark), ("light", .light), ("system", .unspecified)] {
+            bridge.applyTheme(try XCTUnwrap(ThemeRequest(body: ["theme": theme])))
+            if #available(iOS 17.0, *) { window.updateTraitsIfNeeded() }
+            window.layoutIfNeeded()
+            XCTAssertEqual(window.overrideUserInterfaceStyle, style)
+            XCTAssertEqual(defaults.string(forKey: ThemeStore.key), theme)
+            if style != .unspecified {
+                XCTAssertEqual(root.view.traitCollection.userInterfaceStyle, style)
+            }
+        }
+    }
+
+    func testRepeatedThemeRepairsMismatchedLockWindow() throws {
+        let bridge = DomusBridgeViewController()
+        bridge.themeDefaults = try freshThemeDefaults()
+        let window = UIWindow()
+        let lockWindow = UIWindow()
+        bridge.appWindow = window
+        bridge.lockWindowProvider = { lockWindow }
+        let dark = try XCTUnwrap(ThemeRequest(body: ["theme": "dark"]))
+        bridge.applyTheme(dark)
+        XCTAssertEqual(window.overrideUserInterfaceStyle, .dark)
+        XCTAssertEqual(lockWindow.overrideUserInterfaceStyle, .dark)
+        lockWindow.overrideUserInterfaceStyle = .light
+        bridge.applyTheme(dark)
+        XCTAssertEqual(lockWindow.overrideUserInterfaceStyle, .dark)
+        XCTAssertEqual(bridge.themeDefaults.string(forKey: ThemeStore.key), "dark")
+    }
+
     private func accepts(main: Bool = true, scheme: String = "https", host: String = "domusbase.com",
                          port: Int = 443, current: String = "https://domusbase.com/settings") -> Bool {
         MessageProvenance.accepts(mainFrame: main, scheme: scheme, host: host, port: port, currentURL: URL(string: current))

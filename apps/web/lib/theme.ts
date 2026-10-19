@@ -5,6 +5,33 @@ export type DomusTheme = ThemePreference;
 export const DOMUS_THEME_KEY = "domus-theme";
 export const DOMUS_THEME_ATTRIBUTE = "data-theme";
 
+export const THEME_INIT_SCRIPT = `
+  try {
+    const legacyLight = ['atlas', 'light'].join('-');
+    const legacyDarkValues = new Set([
+      ['noctis', 'neon'].join('-'),
+      ['imperium', 'night'].join('-')
+    ]);
+    const rawTheme = localStorage.getItem('${DOMUS_THEME_KEY}');
+    const theme =
+      rawTheme === 'light' || rawTheme === 'dark' || rawTheme === 'system'
+        ? rawTheme
+        : rawTheme === legacyLight
+          ? 'light'
+          : legacyDarkValues.has(rawTheme ?? '')
+            ? 'dark'
+            : 'system';
+
+    if (theme === 'system') {
+      document.documentElement.removeAttribute('${DOMUS_THEME_ATTRIBUTE}');
+    } else {
+      document.documentElement.setAttribute('${DOMUS_THEME_ATTRIBUTE}', theme);
+    }
+    window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.domusTheme &&
+      window.webkit.messageHandlers.domusTheme.postMessage({ theme: theme });
+  } catch (error) {}
+`;
+
 const LEGACY_LIGHT_THEME = ["atlas", "light"].join("-");
 const LEGACY_DARK_THEMES = new Set([
   ["noctis", "neon"].join("-"),
@@ -52,6 +79,20 @@ export function resolveTheme(theme: ThemePreference = getStoredTheme()): Resolve
   return theme === "system" ? getSystemTheme() : theme;
 }
 
+type NativeThemeWindow = Window & {
+  webkit?: { messageHandlers?: { domusTheme?: { postMessage: (body: { theme: ThemePreference }) => void } } };
+};
+
+export function notifyNativeTheme(theme: ThemePreference): void {
+  try {
+    if (typeof window !== "undefined") {
+      (window as NativeThemeWindow).webkit?.messageHandlers?.domusTheme?.postMessage({ theme });
+    }
+  } catch {
+    // A native bridge failure must not interrupt the page's theme update.
+  }
+}
+
 export function applyTheme(theme: ThemePreference): void {
   if (typeof document === "undefined") {
     return;
@@ -59,10 +100,11 @@ export function applyTheme(theme: ThemePreference): void {
 
   if (theme === "system") {
     document.documentElement.removeAttribute(DOMUS_THEME_ATTRIBUTE);
-    return;
+  } else {
+    document.documentElement.setAttribute(DOMUS_THEME_ATTRIBUTE, theme);
   }
 
-  document.documentElement.setAttribute(DOMUS_THEME_ATTRIBUTE, theme);
+  notifyNativeTheme(theme);
 }
 
 export function setTheme(theme: ThemePreference): void {

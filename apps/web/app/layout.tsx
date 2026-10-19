@@ -6,7 +6,7 @@ import { HelpMenu } from "@/components/help-menu";
 import { InstallPromptBanner } from "@/components/pwa/install-prompt";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SonnerProvider } from "@/components/ui/sonner-provider";
-import { DOMUS_THEME_ATTRIBUTE, DOMUS_THEME_KEY } from "@/lib/theme";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import { isNativeAppServer } from "@/lib/native-app-server";
 import "./globals.css";
 
@@ -16,31 +16,6 @@ const geist = Geist({
   display: "swap",
   variable: "--font-geist",
 });
-
-const themeInitScript = `
-  try {
-    const legacyLight = ['atlas', 'light'].join('-');
-    const legacyDarkValues = new Set([
-      ['noctis', 'neon'].join('-'),
-      ['imperium', 'night'].join('-')
-    ]);
-    const rawTheme = localStorage.getItem('${DOMUS_THEME_KEY}');
-    const theme =
-      rawTheme === 'light' || rawTheme === 'dark' || rawTheme === 'system'
-        ? rawTheme
-        : rawTheme === legacyLight
-          ? 'light'
-          : legacyDarkValues.has(rawTheme ?? '')
-            ? 'dark'
-            : 'system';
-
-    if (theme === 'system') {
-      document.documentElement.removeAttribute('${DOMUS_THEME_ATTRIBUTE}');
-    } else {
-      document.documentElement.setAttribute('${DOMUS_THEME_ATTRIBUTE}', theme);
-    }
-  } catch (error) {}
-`;
 
 export const metadata: Metadata = {
   title: {
@@ -103,7 +78,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: themeInitScript
+            __html: THEME_INIT_SCRIPT
           }}
         />
       </head>

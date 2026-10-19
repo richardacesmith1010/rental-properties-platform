@@ -8,7 +8,8 @@ import {
   normalizeTheme,
   onSystemThemeChange,
   resolveTheme,
-  setTheme
+  setTheme,
+  THEME_INIT_SCRIPT
 } from "../theme";
 
 function installMatchMediaMock(matches = false) {
@@ -78,6 +79,7 @@ describe("theme utilities", () => {
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     window.localStorage.clear();
     document.documentElement.removeAttribute(DOMUS_THEME_ATTRIBUTE);
   });
@@ -168,6 +170,51 @@ describe("theme utilities", () => {
     setTheme("dark");
     expect(window.localStorage.getItem(DOMUS_THEME_KEY)).toBe("dark");
     expect(document.documentElement.getAttribute(DOMUS_THEME_ATTRIBUTE)).toBe("dark");
+  });
+
+  it("tells the iPhone app the theme", () => {
+    const postMessage = vi.fn();
+    vi.stubGlobal("webkit", { messageHandlers: { domusTheme: { postMessage } } });
+
+    applyTheme("dark");
+    applyTheme("system");
+    setTheme("light");
+
+    expect(postMessage.mock.calls).toEqual([
+      [{ theme: "dark" }], [{ theme: "system" }], [{ theme: "light" }]
+    ]);
+  });
+
+  it("does nothing in a normal browser", () => {
+    vi.stubGlobal("webkit", undefined);
+    expect(() => applyTheme("dark")).not.toThrow();
+    expect(document.documentElement.getAttribute(DOMUS_THEME_ATTRIBUTE)).toBe("dark");
+
+    const postMessage = vi.fn(() => { throw new Error("Bridge unavailable"); });
+    vi.stubGlobal("webkit", { messageHandlers: { domusTheme: { postMessage } } });
+    expect(() => applyTheme("light")).not.toThrow();
+    expect(postMessage).toHaveBeenCalledWith({ theme: "light" });
+    expect(document.documentElement.getAttribute(DOMUS_THEME_ATTRIBUTE)).toBe("light");
+  });
+
+  it("boot script tells the app", () => {
+    const postMessage = vi.fn();
+    vi.stubGlobal("webkit", { messageHandlers: { domusTheme: { postMessage } } });
+    window.localStorage.setItem(DOMUS_THEME_KEY, "dark");
+    const boot = new Function(THEME_INIT_SCRIPT);
+
+    boot();
+    expect(postMessage.mock.calls).toEqual([[{ theme: "dark" }]]);
+    expect(document.documentElement.getAttribute(DOMUS_THEME_ATTRIBUTE)).toBe("dark");
+
+    vi.stubGlobal("webkit", undefined);
+    expect(boot).not.toThrow();
+
+    vi.stubGlobal("webkit", { messageHandlers: { domusTheme: { postMessage } } });
+    window.localStorage.setItem(DOMUS_THEME_KEY, "sepia");
+    boot();
+    expect(postMessage.mock.calls).toEqual([[{ theme: "dark" }], [{ theme: "system" }]]);
+    expect(document.documentElement.hasAttribute(DOMUS_THEME_ATTRIBUTE)).toBe(false);
   });
 
   it("notifies listeners when the system theme changes", () => {

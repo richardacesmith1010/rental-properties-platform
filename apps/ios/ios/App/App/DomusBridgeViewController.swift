@@ -10,6 +10,20 @@ enum InspectionPolicy {
     #endif
 }
 
+enum ThemeStore {
+    static let key = "domus.themePreference"
+
+    static func save(_ value: String, defaults: UserDefaults = .standard) {
+        defaults.set(value, forKey: key)
+    }
+
+    static func load(defaults: UserDefaults = .standard) -> UIUserInterfaceStyle {
+        guard let stored = defaults.string(forKey: key),
+              let request = ThemeRequest(body: ["theme": stored]) else { return .unspecified }
+        return request.interfaceStyle
+    }
+}
+
 class DomusBridgeViewController: CAPBridgeViewController {
     private var navigationHandler: DomusNavigationDelegate?
 
@@ -17,6 +31,8 @@ class DomusBridgeViewController: CAPBridgeViewController {
     weak var appWindow: UIWindow?
     private(set) var appLockController: AppLockController?
     let launchCover = LaunchCoverAdapter()
+    var themeDefaults: UserDefaults = .standard
+    lazy var lockWindowProvider: () -> UIWindow? = { [weak self] in self?.appLockController?.lockWindow }
     var lockSettings: LockSettingsStoring = LockSettings()
 
     override func viewDidLoad() {
@@ -92,6 +108,7 @@ class DomusBridgeViewController: CAPBridgeViewController {
         handler.onMainFrameCommit = { [weak self] in self?.appLockController?.mainFrameCommitted($0) }
         handler.onNavigationFailure = { [weak self] in self?.appLockController?.navigationFailed() }
         handler.onPlaidLink = { [weak self] in self?.plaidLinkBridge?.open($0) }
+        handler.onTheme = { [weak self] in self?.applyTheme($0) }
         handler.onFaceId = { [weak self] in self?.appLockController?.message($0) }
         navigationHandler = handler
         webView.navigationDelegate = handler
@@ -99,6 +116,21 @@ class DomusBridgeViewController: CAPBridgeViewController {
         webView.configuration.userContentController.add(handler, name: "domusShareCsv")
         webView.configuration.userContentController.add(handler, name: "domusFaceId")
         webView.configuration.userContentController.add(handler, name: "domusPlaidLink")
+        webView.configuration.userContentController.add(handler, name: "domusTheme")
+    }
+
+    func applyTheme(_ request: ThemeRequest) {
+        let style = request.interfaceStyle
+        let lockWindow = lockWindowProvider()
+        if let lockWindow, lockWindow.overrideUserInterfaceStyle != style {
+            lockWindow.overrideUserInterfaceStyle = style
+        }
+        if appWindow?.overrideUserInterfaceStyle == style,
+           themeDefaults.string(forKey: ThemeStore.key) == request.theme,
+           lockWindow == nil || lockWindow?.overrideUserInterfaceStyle == style { return }
+        appWindow?.overrideUserInterfaceStyle = style
+        ThemeStore.save(request.theme, defaults: themeDefaults)
+        setNeedsStatusBarAppearanceUpdate()
     }
 
     @objc private func launchSceneChanged(_ notification: Notification) {
@@ -106,6 +138,7 @@ class DomusBridgeViewController: CAPBridgeViewController {
     }
 
     @objc private func lockWindowShown(_ notification: Notification) {
+        appLockController?.lockWindow?.overrideUserInterfaceStyle = ThemeStore.load(defaults: themeDefaults)
         yieldLaunchCoverToLock(notification: notification, source: notification.name.rawValue)
     }
 
