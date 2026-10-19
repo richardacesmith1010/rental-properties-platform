@@ -1814,3 +1814,13 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Small findings (backlog): `/reset-password` repeats its subtitle twice; Safari shows an "Install Domus … Add to Home
   Screen" banner that now competes with the App Store app.
 - **Next:** IOS-4 status-bar theme (iPhone code → L3, ChatGPT review, gpt-6-astra high).
+
+## 2026-10-18 — Sprint 241a SHIPPED (IOS-4: status bar follows the Domus theme)
+- L3/iPhone. ChatGPT rev 1 APPROVE WITH CHANGES (lock-window repair on repeat; real trait-propagation test; `theme` field;
+  boot-script fallback test) → rev 2 → Codex gpt-6-astra high. `e5566c7`.
+- Design: page posts `domusTheme {theme: light|dark|system}` (applyTheme + pre-hydration boot script, now
+  `THEME_INIT_SCRIPT` in lib/theme.ts); native validates (provenance first, exact shape), sets app + lock window
+  `overrideUserInterfaceStyle` (system → unspecified), persists in UserDefaults `domus.themePreference`, applied on cold launch.
+- Verified: xcodebuild test 127/127; gate 2,907; smoke + CI green. Simulator: iPhone Light + Domus Dark → white status
+  bar ✅; cold launch keeps it ✅; iPhone Dark + Domus Light → dark status bar ✅; Match my device follows iPhone ✅.
+- Ships to phones with TestFlight build 3 (native change). Web side is live and harmless in browsers.
