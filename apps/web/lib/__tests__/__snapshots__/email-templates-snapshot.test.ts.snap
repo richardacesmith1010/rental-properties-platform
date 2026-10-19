@@ -78,9 +78,9 @@ View all feedback: https://domusbase.com/ops?section=feedback",
   "invoice": {
     "html": "<!DOCTYPE html>
 <html lang="en">
-  <body style="margin:0;padding:24px;background-color:#FBFBF9;font-family:Arial,Helvetica,sans-serif;color:#191B1E;">
+  <body style="margin:0;padding:24px;background-color:#F3F4F6;font-family:'Public Sans',Arial,Helvetica,sans-serif;color:#2E3238;">
     
-    <span style="display:none;font-size:1px;color:#FBFBF9;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    <span style="display:none;font-size:1px;color:#F3F4F6;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
       Invoice INV-188 from Courtney &amp; Co - $1,234.56 paid
     </span>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
@@ -88,12 +88,12 @@ View all feedback: https://domusbase.com/ops?section=feedback",
         <td align="center">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;border-collapse:collapse;">
             <tr>
-              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-bottom:none;border-radius:16px 16px 0 0;">
+              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-bottom:none;border-radius:4px 4px 0 0;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
                   <tr>
                     <td style="vertical-align:middle;">
-                      <div style="font-size:20px;font-weight:700;line-height:1.2;color:#191B1E;">Domus</div>
-                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#6F757C;">
+                      <div style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:600;line-height:1.2;color:#0B0C0E;">Domus</div>
+                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#4D535C;">
                         Manage your rentals
                       </div>
                     </td>
@@ -102,15 +102,15 @@ View all feedback: https://domusbase.com/ops?section=feedback",
               </td>
             </tr>
             <tr>
-              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #E6E6E0;border-right:1px solid #E6E6E0;">
-                <div style="font-size:24px;font-weight:700;line-height:1.3;color:#191B1E;">Manager payment confirmed</div>
-                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#3A3F45;">
+              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #D9DCE1;border-right:1px solid #D9DCE1;">
+                <div style="font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:600;line-height:1.3;color:#0B0C0E;">Manager payment confirmed</div>
+                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#2E3238;">
                   <p style="margin:0;">Hi Alexandra &amp; Morgan &lt;The Very Long Tenant Name&gt; O&#39;Connor-Smith, Courtney &amp; Co marked the repair for Oak &lt;House&gt; as paid.
         The amount was $1,234.56 on October 7, 2026.</p><p style="margin:16px 0 0 0;">Description: <strong>Pipe &lt;repair&gt;</strong></p><p style="margin:16px 0 0 0;">Invoice number: <strong>INV-188</strong></p><p style="margin:16px 0 0 0;">Property: <strong>Oak &lt;House&gt;</strong></p><p style="margin:16px 0 0 0;">Amount: <strong>$1,234.56</strong></p><p style="margin:16px 0 0 0;">Open Domus to download the PDF invoice and review the payment record.</p>
                 </div>
                 <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:24px;border-collapse:collapse;">
                   <tr>
-                    <td align="center" bgcolor="#1D4ED8" style="border-radius:999px;">
+                    <td align="center" bgcolor="#0B0C0E" style="border-radius:4px;">
                       <a
                         href="https://domusbase.com/tenant?tab=rent&amp;unit=B"
                         style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:700;line-height:1;text-decoration:none;color:#FFFFFF;"
@@ -123,14 +123,14 @@ View all feedback: https://domusbase.com/ops?section=feedback",
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-top:none;border-radius:0 0 16px 16px;">
-                <div style="font-size:12px;line-height:1.6;color:#6F757C;">
+              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-top:none;border-radius:0 0 4px 4px;">
+                <div style="font-size:12px;line-height:1.6;color:#4D535C;">
                   Domus. Manage your rentals.<br />
                   Manage rent, repairs, files, and messages in one place.
                 </div>
                 
-                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#6F757C;">
-                  <a href="https://domusbase.com/settings" style="color:#1D4ED8;text-decoration:underline;">
+                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#4D535C;">
+                  <a href="https://domusbase.com/settings" style="color:#2442B8;text-decoration:underline;">
                     Manage notification preferences
                   </a>
                 </div>
@@ -157,9 +157,9 @@ Manage notification preferences: https://domusbase.com/settings",
   "invoicePending": {
     "html": "<!DOCTYPE html>
 <html lang="en">
-  <body style="margin:0;padding:24px;background-color:#FBFBF9;font-family:Arial,Helvetica,sans-serif;color:#191B1E;">
+  <body style="margin:0;padding:24px;background-color:#F3F4F6;font-family:'Public Sans',Arial,Helvetica,sans-serif;color:#2E3238;">
     
-    <span style="display:none;font-size:1px;color:#FBFBF9;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    <span style="display:none;font-size:1px;color:#F3F4F6;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
       Invoice INV-189 from Courtney - $0.00
     </span>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
@@ -167,12 +167,12 @@ Manage notification preferences: https://domusbase.com/settings",
         <td align="center">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;border-collapse:collapse;">
             <tr>
-              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-bottom:none;border-radius:16px 16px 0 0;">
+              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-bottom:none;border-radius:4px 4px 0 0;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
                   <tr>
                     <td style="vertical-align:middle;">
-                      <div style="font-size:20px;font-weight:700;line-height:1.2;color:#191B1E;">Domus</div>
-                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#6F757C;">
+                      <div style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:600;line-height:1.2;color:#0B0C0E;">Domus</div>
+                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#4D535C;">
                         Manage your rentals
                       </div>
                     </td>
@@ -181,15 +181,15 @@ Manage notification preferences: https://domusbase.com/settings",
               </td>
             </tr>
             <tr>
-              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #E6E6E0;border-right:1px solid #E6E6E0;">
-                <div style="font-size:24px;font-weight:700;line-height:1.3;color:#191B1E;">Manager payment invoice</div>
-                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#3A3F45;">
+              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #D9DCE1;border-right:1px solid #D9DCE1;">
+                <div style="font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:600;line-height:1.3;color:#0B0C0E;">Manager payment invoice</div>
+                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#2E3238;">
                   <p style="margin:0;">Hi Alex, Courtney recorded a fee bill for Oak.
         The amount was $0.00 on October 7, 2026.</p><p style="margin:16px 0 0 0;">Description: <strong>Credit</strong></p><p style="margin:16px 0 0 0;">Invoice number: <strong>INV-189</strong></p><p style="margin:16px 0 0 0;">Property: <strong>Oak</strong></p><p style="margin:16px 0 0 0;">Amount: <strong>$0.00</strong></p><p style="margin:16px 0 0 0;">Open Domus to download the PDF invoice and review the payment record.</p>
                 </div>
                 <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:24px;border-collapse:collapse;">
                   <tr>
-                    <td align="center" bgcolor="#1D4ED8" style="border-radius:999px;">
+                    <td align="center" bgcolor="#0B0C0E" style="border-radius:4px;">
                       <a
                         href="https://domusbase.com/tenant?tab=rent&amp;unit=B"
                         style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:700;line-height:1;text-decoration:none;color:#FFFFFF;"
@@ -202,14 +202,14 @@ Manage notification preferences: https://domusbase.com/settings",
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-top:none;border-radius:0 0 16px 16px;">
-                <div style="font-size:12px;line-height:1.6;color:#6F757C;">
+              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-top:none;border-radius:0 0 4px 4px;">
+                <div style="font-size:12px;line-height:1.6;color:#4D535C;">
                   Domus. Manage your rentals.<br />
                   Manage rent, repairs, files, and messages in one place.
                 </div>
                 
-                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#6F757C;">
-                  <a href="https://domusbase.com/settings" style="color:#1D4ED8;text-decoration:underline;">
+                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#4D535C;">
+                  <a href="https://domusbase.com/settings" style="color:#2442B8;text-decoration:underline;">
                     Manage notification preferences
                   </a>
                 </div>
@@ -236,9 +236,9 @@ Manage notification preferences: https://domusbase.com/settings",
   "llc": {
     "html": "<!DOCTYPE html>
 <html lang="en">
-  <body style="margin:0;padding:24px;background-color:#FBFBF9;font-family:Arial,Helvetica,sans-serif;color:#191B1E;">
+  <body style="margin:0;padding:24px;background-color:#F3F4F6;font-family:'Public Sans',Arial,Helvetica,sans-serif;color:#2E3238;">
     
-    <span style="display:none;font-size:1px;color:#FBFBF9;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    <span style="display:none;font-size:1px;color:#F3F4F6;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
       You&#39;ve been invited to join Oak &amp; Elm LLC on Domus
     </span>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
@@ -246,12 +246,12 @@ Manage notification preferences: https://domusbase.com/settings",
         <td align="center">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;border-collapse:collapse;">
             <tr>
-              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-bottom:none;border-radius:16px 16px 0 0;">
+              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-bottom:none;border-radius:4px 4px 0 0;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
                   <tr>
                     <td style="vertical-align:middle;">
-                      <div style="font-size:20px;font-weight:700;line-height:1.2;color:#191B1E;">Domus</div>
-                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#6F757C;">
+                      <div style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:600;line-height:1.2;color:#0B0C0E;">Domus</div>
+                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#4D535C;">
                         Manage your rentals
                       </div>
                     </td>
@@ -260,14 +260,14 @@ Manage notification preferences: https://domusbase.com/settings",
               </td>
             </tr>
             <tr>
-              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #E6E6E0;border-right:1px solid #E6E6E0;">
-                <div style="font-size:24px;font-weight:700;line-height:1.3;color:#191B1E;">Join Oak &amp; Elm LLC on Domus</div>
-                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#3A3F45;">
+              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #D9DCE1;border-right:1px solid #D9DCE1;">
+                <div style="font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:600;line-height:1.3;color:#0B0C0E;">Join Oak &amp; Elm LLC on Domus</div>
+                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#2E3238;">
                   <p style="margin:0;">Hi,</p><p style="margin:16px 0 0 0;">Alexandra &amp; Morgan &lt;The Very Long Tenant Name&gt; O&#39;Connor-Smith has invited you to join <strong>Oak &amp; Elm LLC</strong> on Domus.</p><p style="margin:16px 0 0 0;">Accept the invite to manage LLC properties with others. You can also review shared money records.</p><p style="margin:16px 0 0 0;">This invitation expires in 7 days.</p>
                 </div>
                 <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:24px;border-collapse:collapse;">
                   <tr>
-                    <td align="center" bgcolor="#1D4ED8" style="border-radius:999px;">
+                    <td align="center" bgcolor="#0B0C0E" style="border-radius:4px;">
                       <a
                         href="https://domusbase.com/tenant?tab=rent&amp;unit=B"
                         style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:700;line-height:1;text-decoration:none;color:#FFFFFF;"
@@ -280,14 +280,14 @@ Manage notification preferences: https://domusbase.com/settings",
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-top:none;border-radius:0 0 16px 16px;">
-                <div style="font-size:12px;line-height:1.6;color:#6F757C;">
+              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-top:none;border-radius:0 0 4px 4px;">
+                <div style="font-size:12px;line-height:1.6;color:#4D535C;">
                   Domus. Manage your rentals.<br />
                   Manage rent, repairs, files, and messages in one place.
                 </div>
                 
-                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#6F757C;">
-                  <a href="https://domusbase.com/settings" style="color:#1D4ED8;text-decoration:underline;">
+                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#4D535C;">
+                  <a href="https://domusbase.com/settings" style="color:#2442B8;text-decoration:underline;">
                     Manage notification preferences
                   </a>
                 </div>
@@ -310,9 +310,9 @@ This invitation expires in 7 days.",
   },
   "notification": "<!DOCTYPE html>
 <html lang="en">
-  <body style="margin:0;padding:24px;background-color:#FBFBF9;font-family:Arial,Helvetica,sans-serif;color:#191B1E;">
+  <body style="margin:0;padding:24px;background-color:#F3F4F6;font-family:'Public Sans',Arial,Helvetica,sans-serif;color:#2E3238;">
     
-    <span style="display:none;font-size:1px;color:#FBFBF9;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    <span style="display:none;font-size:1px;color:#F3F4F6;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
       Due today
     </span>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
@@ -320,12 +320,12 @@ This invitation expires in 7 days.",
         <td align="center">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;border-collapse:collapse;">
             <tr>
-              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-bottom:none;border-radius:16px 16px 0 0;">
+              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-bottom:none;border-radius:4px 4px 0 0;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
                   <tr>
                     <td style="vertical-align:middle;">
-                      <div style="font-size:20px;font-weight:700;line-height:1.2;color:#191B1E;">Domus</div>
-                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#6F757C;">
+                      <div style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:600;line-height:1.2;color:#0B0C0E;">Domus</div>
+                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#4D535C;">
                         Manage your rentals
                       </div>
                     </td>
@@ -334,14 +334,14 @@ This invitation expires in 7 days.",
               </td>
             </tr>
             <tr>
-              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #E6E6E0;border-right:1px solid #E6E6E0;">
-                <div style="font-size:24px;font-weight:700;line-height:1.3;color:#191B1E;">Rent &lt;due&gt;</div>
-                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#3A3F45;">
+              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #D9DCE1;border-right:1px solid #D9DCE1;">
+                <div style="font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:600;line-height:1.3;color:#0B0C0E;">Rent &lt;due&gt;</div>
+                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#2E3238;">
                   Pay &amp; confirm<br />Today
                 </div>
                 <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:24px;border-collapse:collapse;">
                   <tr>
-                    <td align="center" bgcolor="#1D4ED8" style="border-radius:999px;">
+                    <td align="center" bgcolor="#0B0C0E" style="border-radius:4px;">
                       <a
                         href="https://domusbase.com/tenant?tab=rent&amp;unit=B"
                         style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:700;line-height:1;text-decoration:none;color:#FFFFFF;"
@@ -354,14 +354,14 @@ This invitation expires in 7 days.",
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-top:none;border-radius:0 0 16px 16px;">
-                <div style="font-size:12px;line-height:1.6;color:#6F757C;">
+              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-top:none;border-radius:0 0 4px 4px;">
+                <div style="font-size:12px;line-height:1.6;color:#4D535C;">
                   Domus. Manage your rentals.<br />
                   Manage rent, repairs, files, and messages in one place.
                 </div>
                 
-                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#6F757C;">
-                  <a href="https://domusbase.com/settings" style="color:#1D4ED8;text-decoration:underline;">
+                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#4D535C;">
+                  <a href="https://domusbase.com/settings" style="color:#2442B8;text-decoration:underline;">
                     Manage notification preferences
                   </a>
                 </div>
@@ -375,19 +375,19 @@ This invitation expires in 7 days.",
 </html>",
   "notificationMinimal": "<!DOCTYPE html>
 <html lang="en">
-  <body style="margin:0;padding:24px;background-color:#FBFBF9;font-family:Arial,Helvetica,sans-serif;color:#191B1E;">
+  <body style="margin:0;padding:24px;background-color:#F3F4F6;font-family:'Public Sans',Arial,Helvetica,sans-serif;color:#2E3238;">
     
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
       <tr>
         <td align="center">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;border-collapse:collapse;">
             <tr>
-              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-bottom:none;border-radius:16px 16px 0 0;">
+              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-bottom:none;border-radius:4px 4px 0 0;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
                   <tr>
                     <td style="vertical-align:middle;">
-                      <div style="font-size:20px;font-weight:700;line-height:1.2;color:#191B1E;">Domus</div>
-                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#6F757C;">
+                      <div style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:600;line-height:1.2;color:#0B0C0E;">Domus</div>
+                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#4D535C;">
                         Manage your rentals
                       </div>
                     </td>
@@ -396,14 +396,14 @@ This invitation expires in 7 days.",
               </td>
             </tr>
             <tr>
-              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #E6E6E0;border-right:1px solid #E6E6E0;">
-                <div style="font-size:24px;font-weight:700;line-height:1.3;color:#191B1E;">Hello</div>
-                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#3A3F45;">
+              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #D9DCE1;border-right:1px solid #D9DCE1;">
+                <div style="font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:600;line-height:1.3;color:#0B0C0E;">Hello</div>
+                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#2E3238;">
                   Welcome
                 </div>
                 <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:24px;border-collapse:collapse;">
                   <tr>
-                    <td align="center" bgcolor="#1D4ED8" style="border-radius:999px;">
+                    <td align="center" bgcolor="#0B0C0E" style="border-radius:4px;">
                       <a
                         href="https://domusbase.com"
                         style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:700;line-height:1;text-decoration:none;color:#FFFFFF;"
@@ -416,14 +416,14 @@ This invitation expires in 7 days.",
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-top:none;border-radius:0 0 16px 16px;">
-                <div style="font-size:12px;line-height:1.6;color:#6F757C;">
+              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-top:none;border-radius:0 0 4px 4px;">
+                <div style="font-size:12px;line-height:1.6;color:#4D535C;">
                   Domus. Manage your rentals.<br />
                   Manage rent, repairs, files, and messages in one place.
                 </div>
                 
-                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#6F757C;">
-                  <a href="https://domusbase.com/settings" style="color:#1D4ED8;text-decoration:underline;">
+                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#4D535C;">
+                  <a href="https://domusbase.com/settings" style="color:#2442B8;text-decoration:underline;">
                     Manage notification preferences
                   </a>
                 </div>
@@ -438,9 +438,9 @@ This invitation expires in 7 days.",
   "ownerMessage": {
     "html": "<!DOCTYPE html>
 <html lang="en">
-  <body style="margin:0;padding:24px;background-color:#FBFBF9;font-family:Arial,Helvetica,sans-serif;color:#191B1E;">
+  <body style="margin:0;padding:24px;background-color:#F3F4F6;font-family:'Public Sans',Arial,Helvetica,sans-serif;color:#2E3238;">
     
-    <span style="display:none;font-size:1px;color:#FBFBF9;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    <span style="display:none;font-size:1px;color:#F3F4F6;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
       Message from Courtney &amp; Co about Oak &lt;House&gt;
     </span>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
@@ -448,12 +448,12 @@ This invitation expires in 7 days.",
         <td align="center">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;border-collapse:collapse;">
             <tr>
-              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-bottom:none;border-radius:16px 16px 0 0;">
+              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-bottom:none;border-radius:4px 4px 0 0;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
                   <tr>
                     <td style="vertical-align:middle;">
-                      <div style="font-size:20px;font-weight:700;line-height:1.2;color:#191B1E;">Domus</div>
-                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#6F757C;">
+                      <div style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:600;line-height:1.2;color:#0B0C0E;">Domus</div>
+                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#4D535C;">
                         Manage your rentals
                       </div>
                     </td>
@@ -462,14 +462,14 @@ This invitation expires in 7 days.",
               </td>
             </tr>
             <tr>
-              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #E6E6E0;border-right:1px solid #E6E6E0;">
-                <div style="font-size:24px;font-weight:700;line-height:1.3;color:#191B1E;">Message from Courtney &amp; Co</div>
-                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#3A3F45;">
+              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #D9DCE1;border-right:1px solid #D9DCE1;">
+                <div style="font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:600;line-height:1.3;color:#0B0C0E;">Message from Courtney &amp; Co</div>
+                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#2E3238;">
                   <p style="margin:0;">Hi Alexandra &amp; Morgan &lt;The Very Long Tenant Name&gt; O&#39;Connor-Smith,</p><p style="margin:16px 0 0 0;">Courtney &amp; Co sent you a message about <strong>Oak &lt;House&gt;</strong>.</p><div style="margin:16px 0 0 0;padding:16px;border-radius:16px;background-color:#F5F5F1;border:1px solid #E6E6E0;color:#3A3F45;">"Please call &amp; confirm"</div><p style="margin:16px 0 0 0;">Open Domus to reply or review the conversation.</p>
                 </div>
                 <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:24px;border-collapse:collapse;">
                   <tr>
-                    <td align="center" bgcolor="#1D4ED8" style="border-radius:999px;">
+                    <td align="center" bgcolor="#0B0C0E" style="border-radius:4px;">
                       <a
                         href="https://domusbase.com/tenant?tab=rent&amp;unit=B"
                         style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:700;line-height:1;text-decoration:none;color:#FFFFFF;"
@@ -482,14 +482,14 @@ This invitation expires in 7 days.",
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-top:none;border-radius:0 0 16px 16px;">
-                <div style="font-size:12px;line-height:1.6;color:#6F757C;">
+              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-top:none;border-radius:0 0 4px 4px;">
+                <div style="font-size:12px;line-height:1.6;color:#4D535C;">
                   Domus. Manage your rentals.<br />
                   Manage rent, repairs, files, and messages in one place.
                 </div>
                 
-                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#6F757C;">
-                  <a href="https://domusbase.com/settings" style="color:#1D4ED8;text-decoration:underline;">
+                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#4D535C;">
+                  <a href="https://domusbase.com/settings" style="color:#2442B8;text-decoration:underline;">
                     Manage notification preferences
                   </a>
                 </div>
@@ -515,9 +515,9 @@ Manage notification preferences: https://domusbase.com/settings",
   "propertyMessage": {
     "html": "<!DOCTYPE html>
 <html lang="en">
-  <body style="margin:0;padding:24px;background-color:#FBFBF9;font-family:Arial,Helvetica,sans-serif;color:#191B1E;">
+  <body style="margin:0;padding:24px;background-color:#F3F4F6;font-family:'Public Sans',Arial,Helvetica,sans-serif;color:#2E3238;">
     
-    <span style="display:none;font-size:1px;color:#FBFBF9;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    <span style="display:none;font-size:1px;color:#F3F4F6;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
       Message from Manager &lt;M&gt; about Oak &amp; Elm
     </span>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
@@ -525,12 +525,12 @@ Manage notification preferences: https://domusbase.com/settings",
         <td align="center">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;border-collapse:collapse;">
             <tr>
-              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-bottom:none;border-radius:16px 16px 0 0;">
+              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-bottom:none;border-radius:4px 4px 0 0;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
                   <tr>
                     <td style="vertical-align:middle;">
-                      <div style="font-size:20px;font-weight:700;line-height:1.2;color:#191B1E;">Domus</div>
-                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#6F757C;">
+                      <div style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:600;line-height:1.2;color:#0B0C0E;">Domus</div>
+                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#4D535C;">
                         Manage your rentals
                       </div>
                     </td>
@@ -539,14 +539,14 @@ Manage notification preferences: https://domusbase.com/settings",
               </td>
             </tr>
             <tr>
-              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #E6E6E0;border-right:1px solid #E6E6E0;">
-                <div style="font-size:24px;font-weight:700;line-height:1.3;color:#191B1E;">Message from Manager &lt;M&gt;</div>
-                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#3A3F45;">
+              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #D9DCE1;border-right:1px solid #D9DCE1;">
+                <div style="font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:600;line-height:1.3;color:#0B0C0E;">Message from Manager &lt;M&gt;</div>
+                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#2E3238;">
                   <p style="margin:0;">Hi Alexandra &amp; Morgan &lt;The Very Long Tenant Name&gt; O&#39;Connor-Smith,</p><p style="margin:16px 0 0 0;">Manager &lt;M&gt; sent you a message about <strong>Oak &amp; Elm</strong>.</p><div style="margin:16px 0 0 0;padding:16px;border-radius:16px;background-color:#F5F5F1;border:1px solid #E6E6E0;color:#3A3F45;">"Hello &lt;tenant&gt;<br />Please reply"</div><p style="margin:16px 0 0 0;">Open Domus to reply or review the conversation.</p>
                 </div>
                 <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:24px;border-collapse:collapse;">
                   <tr>
-                    <td align="center" bgcolor="#1D4ED8" style="border-radius:999px;">
+                    <td align="center" bgcolor="#0B0C0E" style="border-radius:4px;">
                       <a
                         href="https://domusbase.com/tenant?tab=rent&amp;unit=B"
                         style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:700;line-height:1;text-decoration:none;color:#FFFFFF;"
@@ -559,14 +559,14 @@ Manage notification preferences: https://domusbase.com/settings",
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-top:none;border-radius:0 0 16px 16px;">
-                <div style="font-size:12px;line-height:1.6;color:#6F757C;">
+              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-top:none;border-radius:0 0 4px 4px;">
+                <div style="font-size:12px;line-height:1.6;color:#4D535C;">
                   Domus. Manage your rentals.<br />
                   Manage rent, repairs, files, and messages in one place.
                 </div>
                 
-                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#6F757C;">
-                  <a href="https://domusbase.com/settings" style="color:#1D4ED8;text-decoration:underline;">
+                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#4D535C;">
+                  <a href="https://domusbase.com/settings" style="color:#2442B8;text-decoration:underline;">
                     Manage notification preferences
                   </a>
                 </div>
@@ -594,9 +594,9 @@ Manage notification preferences: https://domusbase.com/settings",
     {
       "html": "<!DOCTYPE html>
 <html lang="en">
-  <body style="margin:0;padding:24px;background-color:#FBFBF9;font-family:Arial,Helvetica,sans-serif;color:#191B1E;">
+  <body style="margin:0;padding:24px;background-color:#F3F4F6;font-family:'Public Sans',Arial,Helvetica,sans-serif;color:#2E3238;">
     
-    <span style="display:none;font-size:1px;color:#FBFBF9;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    <span style="display:none;font-size:1px;color:#F3F4F6;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
       Rent Reminder: $1,234.56 due on October 8, 2026
     </span>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
@@ -604,12 +604,12 @@ Manage notification preferences: https://domusbase.com/settings",
         <td align="center">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;border-collapse:collapse;">
             <tr>
-              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-bottom:none;border-radius:16px 16px 0 0;">
+              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-bottom:none;border-radius:4px 4px 0 0;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
                   <tr>
                     <td style="vertical-align:middle;">
-                      <div style="font-size:20px;font-weight:700;line-height:1.2;color:#191B1E;">Domus</div>
-                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#6F757C;">
+                      <div style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:600;line-height:1.2;color:#0B0C0E;">Domus</div>
+                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#4D535C;">
                         Manage your rentals
                       </div>
                     </td>
@@ -618,14 +618,14 @@ Manage notification preferences: https://domusbase.com/settings",
               </td>
             </tr>
             <tr>
-              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #E6E6E0;border-right:1px solid #E6E6E0;">
-                <div style="font-size:24px;font-weight:700;line-height:1.3;color:#191B1E;">Rent reminder</div>
-                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#3A3F45;">
+              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #D9DCE1;border-right:1px solid #D9DCE1;">
+                <div style="font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:600;line-height:1.3;color:#0B0C0E;">Rent reminder</div>
+                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#2E3238;">
                   <p style="margin:0;">Hi Alexandra &amp; Morgan &lt;The Very Long Tenant Name&gt; O&#39;Connor-Smith, your rent of $1,234.56 for Oak &amp; Elm is due on October 8, 2026.</p><p style="margin:16px 0 0 0;">Open your dashboard to see what you owe and pay safely.</p>
                 </div>
                 <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:24px;border-collapse:collapse;">
                   <tr>
-                    <td align="center" bgcolor="#1D4ED8" style="border-radius:999px;">
+                    <td align="center" bgcolor="#0B0C0E" style="border-radius:4px;">
                       <a
                         href="https://domusbase.com/tenant?tab=rent&amp;unit=B"
                         style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:700;line-height:1;text-decoration:none;color:#FFFFFF;"
@@ -638,14 +638,14 @@ Manage notification preferences: https://domusbase.com/settings",
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-top:none;border-radius:0 0 16px 16px;">
-                <div style="font-size:12px;line-height:1.6;color:#6F757C;">
+              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-top:none;border-radius:0 0 4px 4px;">
+                <div style="font-size:12px;line-height:1.6;color:#4D535C;">
                   Domus. Manage your rentals.<br />
                   Manage rent, repairs, files, and messages in one place.
                 </div>
                 
-                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#6F757C;">
-                  <a href="https://domusbase.com/settings" style="color:#1D4ED8;text-decoration:underline;">
+                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#4D535C;">
+                  <a href="https://domusbase.com/settings" style="color:#2442B8;text-decoration:underline;">
                     Manage notification preferences
                   </a>
                 </div>
@@ -667,9 +667,9 @@ Manage notification preferences: https://domusbase.com/settings",
     {
       "html": "<!DOCTYPE html>
 <html lang="en">
-  <body style="margin:0;padding:24px;background-color:#FBFBF9;font-family:Arial,Helvetica,sans-serif;color:#191B1E;">
+  <body style="margin:0;padding:24px;background-color:#F3F4F6;font-family:'Public Sans',Arial,Helvetica,sans-serif;color:#2E3238;">
     
-    <span style="display:none;font-size:1px;color:#FBFBF9;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    <span style="display:none;font-size:1px;color:#F3F4F6;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
       Rent Due Today: $1,234.56
     </span>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
@@ -677,12 +677,12 @@ Manage notification preferences: https://domusbase.com/settings",
         <td align="center">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;border-collapse:collapse;">
             <tr>
-              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-bottom:none;border-radius:16px 16px 0 0;">
+              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-bottom:none;border-radius:4px 4px 0 0;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
                   <tr>
                     <td style="vertical-align:middle;">
-                      <div style="font-size:20px;font-weight:700;line-height:1.2;color:#191B1E;">Domus</div>
-                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#6F757C;">
+                      <div style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:600;line-height:1.2;color:#0B0C0E;">Domus</div>
+                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#4D535C;">
                         Manage your rentals
                       </div>
                     </td>
@@ -691,14 +691,14 @@ Manage notification preferences: https://domusbase.com/settings",
               </td>
             </tr>
             <tr>
-              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #E6E6E0;border-right:1px solid #E6E6E0;">
-                <div style="font-size:24px;font-weight:700;line-height:1.3;color:#191B1E;">Rent reminder</div>
-                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#3A3F45;">
+              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #D9DCE1;border-right:1px solid #D9DCE1;">
+                <div style="font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:600;line-height:1.3;color:#0B0C0E;">Rent reminder</div>
+                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#2E3238;">
                   <p style="margin:0;">Hi Alexandra &amp; Morgan &lt;The Very Long Tenant Name&gt; O&#39;Connor-Smith, your rent of $1,234.56 for Oak &amp; Elm is due today.</p><p style="margin:16px 0 0 0;">Open your dashboard to see what you owe and pay safely.</p>
                 </div>
                 <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:24px;border-collapse:collapse;">
                   <tr>
-                    <td align="center" bgcolor="#1D4ED8" style="border-radius:999px;">
+                    <td align="center" bgcolor="#0B0C0E" style="border-radius:4px;">
                       <a
                         href="https://domusbase.com/tenant?tab=rent&amp;unit=B"
                         style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:700;line-height:1;text-decoration:none;color:#FFFFFF;"
@@ -711,14 +711,14 @@ Manage notification preferences: https://domusbase.com/settings",
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-top:none;border-radius:0 0 16px 16px;">
-                <div style="font-size:12px;line-height:1.6;color:#6F757C;">
+              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-top:none;border-radius:0 0 4px 4px;">
+                <div style="font-size:12px;line-height:1.6;color:#4D535C;">
                   Domus. Manage your rentals.<br />
                   Manage rent, repairs, files, and messages in one place.
                 </div>
                 
-                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#6F757C;">
-                  <a href="https://domusbase.com/settings" style="color:#1D4ED8;text-decoration:underline;">
+                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#4D535C;">
+                  <a href="https://domusbase.com/settings" style="color:#2442B8;text-decoration:underline;">
                     Manage notification preferences
                   </a>
                 </div>
@@ -740,9 +740,9 @@ Manage notification preferences: https://domusbase.com/settings",
     {
       "html": "<!DOCTYPE html>
 <html lang="en">
-  <body style="margin:0;padding:24px;background-color:#FBFBF9;font-family:Arial,Helvetica,sans-serif;color:#191B1E;">
+  <body style="margin:0;padding:24px;background-color:#F3F4F6;font-family:'Public Sans',Arial,Helvetica,sans-serif;color:#2E3238;">
     
-    <span style="display:none;font-size:1px;color:#FBFBF9;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    <span style="display:none;font-size:1px;color:#F3F4F6;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
       Overdue Rent: $1,234.56 was due October 8, 2026
     </span>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
@@ -750,12 +750,12 @@ Manage notification preferences: https://domusbase.com/settings",
         <td align="center">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;border-collapse:collapse;">
             <tr>
-              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-bottom:none;border-radius:16px 16px 0 0;">
+              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-bottom:none;border-radius:4px 4px 0 0;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
                   <tr>
                     <td style="vertical-align:middle;">
-                      <div style="font-size:20px;font-weight:700;line-height:1.2;color:#191B1E;">Domus</div>
-                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#6F757C;">
+                      <div style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:600;line-height:1.2;color:#0B0C0E;">Domus</div>
+                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#4D535C;">
                         Manage your rentals
                       </div>
                     </td>
@@ -764,15 +764,15 @@ Manage notification preferences: https://domusbase.com/settings",
               </td>
             </tr>
             <tr>
-              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #E6E6E0;border-right:1px solid #E6E6E0;">
-                <div style="font-size:24px;font-weight:700;line-height:1.3;color:#191B1E;">Overdue rent reminder</div>
-                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#3A3F45;">
+              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #D9DCE1;border-right:1px solid #D9DCE1;">
+                <div style="font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:600;line-height:1.3;color:#0B0C0E;">Overdue rent reminder</div>
+                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#2E3238;">
                   <p style="margin:0;">Hi Alexandra &amp; Morgan &lt;The Very Long Tenant Name&gt; O&#39;Connor-Smith, your rent of $1,234.56 for Oak &amp; Elm was due October 8, 2026.
         It is now overdue. Please pay as soon as possible.</p><p style="margin:16px 0 0 0;">Open your dashboard to see what you owe and pay safely.</p>
                 </div>
                 <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:24px;border-collapse:collapse;">
                   <tr>
-                    <td align="center" bgcolor="#1D4ED8" style="border-radius:999px;">
+                    <td align="center" bgcolor="#0B0C0E" style="border-radius:4px;">
                       <a
                         href="https://domusbase.com/tenant?tab=rent&amp;unit=B"
                         style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:700;line-height:1;text-decoration:none;color:#FFFFFF;"
@@ -785,14 +785,14 @@ Manage notification preferences: https://domusbase.com/settings",
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-top:none;border-radius:0 0 16px 16px;">
-                <div style="font-size:12px;line-height:1.6;color:#6F757C;">
+              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-top:none;border-radius:0 0 4px 4px;">
+                <div style="font-size:12px;line-height:1.6;color:#4D535C;">
                   Domus. Manage your rentals.<br />
                   Manage rent, repairs, files, and messages in one place.
                 </div>
                 
-                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#6F757C;">
-                  <a href="https://domusbase.com/settings" style="color:#1D4ED8;text-decoration:underline;">
+                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#4D535C;">
+                  <a href="https://domusbase.com/settings" style="color:#2442B8;text-decoration:underline;">
                     Manage notification preferences
                   </a>
                 </div>
@@ -815,9 +815,9 @@ Manage notification preferences: https://domusbase.com/settings",
   ],
   "shell": "<!DOCTYPE html>
 <html lang="en">
-  <body style="margin:0;padding:24px;background-color:#FBFBF9;font-family:Arial,Helvetica,sans-serif;color:#191B1E;">
+  <body style="margin:0;padding:24px;background-color:#F3F4F6;font-family:'Public Sans',Arial,Helvetica,sans-serif;color:#2E3238;">
     
-    <span style="display:none;font-size:1px;color:#FBFBF9;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    <span style="display:none;font-size:1px;color:#F3F4F6;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
       Preview &lt;rent&gt;
     </span>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
@@ -825,12 +825,12 @@ Manage notification preferences: https://domusbase.com/settings",
         <td align="center">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;border-collapse:collapse;">
             <tr>
-              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-bottom:none;border-radius:16px 16px 0 0;">
+              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-bottom:none;border-radius:4px 4px 0 0;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
                   <tr>
                     <td style="vertical-align:middle;">
-                      <div style="font-size:20px;font-weight:700;line-height:1.2;color:#191B1E;">Domus</div>
-                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#6F757C;">
+                      <div style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:600;line-height:1.2;color:#0B0C0E;">Domus</div>
+                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#4D535C;">
                         Manage your rentals
                       </div>
                     </td>
@@ -839,14 +839,14 @@ Manage notification preferences: https://domusbase.com/settings",
               </td>
             </tr>
             <tr>
-              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #E6E6E0;border-right:1px solid #E6E6E0;">
-                <div style="font-size:24px;font-weight:700;line-height:1.3;color:#191B1E;"><strong>Title</strong></div>
-                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#3A3F45;">
+              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #D9DCE1;border-right:1px solid #D9DCE1;">
+                <div style="font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:600;line-height:1.3;color:#0B0C0E;"><strong>Title</strong></div>
+                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#2E3238;">
                   <p>Body</p>
                 </div>
                 <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:24px;border-collapse:collapse;">
                   <tr>
-                    <td align="center" bgcolor="#1D4ED8" style="border-radius:999px;">
+                    <td align="center" bgcolor="#0B0C0E" style="border-radius:4px;">
                       <a
                         href="https://domusbase.com/tenant?tab=rent&amp;unit=B"
                         style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:700;line-height:1;text-decoration:none;color:#FFFFFF;"
@@ -859,14 +859,14 @@ Manage notification preferences: https://domusbase.com/settings",
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-top:none;border-radius:0 0 16px 16px;">
-                <div style="font-size:12px;line-height:1.6;color:#6F757C;">
+              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-top:none;border-radius:0 0 4px 4px;">
+                <div style="font-size:12px;line-height:1.6;color:#4D535C;">
                   Domus. Manage your rentals.<br />
                   Manage rent, repairs, files, and messages in one place.
                 </div>
                 
-                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#6F757C;">
-                  <a href="https://domusbase.com/tenant?tab=rent&amp;unit=B" style="color:#1D4ED8;text-decoration:underline;">
+                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#4D535C;">
+                  <a href="https://domusbase.com/tenant?tab=rent&amp;unit=B" style="color:#2442B8;text-decoration:underline;">
                     Manage notification preferences
                   </a>
                 </div>
@@ -880,19 +880,19 @@ Manage notification preferences: https://domusbase.com/settings",
 </html>",
   "shellMinimal": "<!DOCTYPE html>
 <html lang="en">
-  <body style="margin:0;padding:24px;background-color:#FBFBF9;font-family:Arial,Helvetica,sans-serif;color:#191B1E;">
+  <body style="margin:0;padding:24px;background-color:#F3F4F6;font-family:'Public Sans',Arial,Helvetica,sans-serif;color:#2E3238;">
     
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
       <tr>
         <td align="center">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;border-collapse:collapse;">
             <tr>
-              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-bottom:none;border-radius:16px 16px 0 0;">
+              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-bottom:none;border-radius:4px 4px 0 0;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
                   <tr>
                     <td style="vertical-align:middle;">
-                      <div style="font-size:20px;font-weight:700;line-height:1.2;color:#191B1E;">Domus</div>
-                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#6F757C;">
+                      <div style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:600;line-height:1.2;color:#0B0C0E;">Domus</div>
+                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#4D535C;">
                         Manage your rentals
                       </div>
                     </td>
@@ -901,14 +901,14 @@ Manage notification preferences: https://domusbase.com/settings",
               </td>
             </tr>
             <tr>
-              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #E6E6E0;border-right:1px solid #E6E6E0;">
-                <div style="font-size:24px;font-weight:700;line-height:1.3;color:#191B1E;">Title</div>
-                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#3A3F45;">
+              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #D9DCE1;border-right:1px solid #D9DCE1;">
+                <div style="font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:600;line-height:1.3;color:#0B0C0E;">Title</div>
+                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#2E3238;">
                   Body
                 </div>
                 <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:24px;border-collapse:collapse;">
                   <tr>
-                    <td align="center" bgcolor="#1D4ED8" style="border-radius:999px;">
+                    <td align="center" bgcolor="#0B0C0E" style="border-radius:4px;">
                       <a
                         href="https://domusbase.com/tenant?tab=rent&amp;unit=B"
                         style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:700;line-height:1;text-decoration:none;color:#FFFFFF;"
@@ -921,8 +921,8 @@ Manage notification preferences: https://domusbase.com/settings",
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-top:none;border-radius:0 0 16px 16px;">
-                <div style="font-size:12px;line-height:1.6;color:#6F757C;">
+              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-top:none;border-radius:0 0 4px 4px;">
+                <div style="font-size:12px;line-height:1.6;color:#4D535C;">
                   Domus. Manage your rentals.<br />
                   Manage rent, repairs, files, and messages in one place.
                 </div>
@@ -938,9 +938,9 @@ Manage notification preferences: https://domusbase.com/settings",
   "tenantInvite": {
     "html": "<!DOCTYPE html>
 <html lang="en">
-  <body style="margin:0;padding:24px;background-color:#FBFBF9;font-family:Arial,Helvetica,sans-serif;color:#191B1E;">
+  <body style="margin:0;padding:24px;background-color:#F3F4F6;font-family:'Public Sans',Arial,Helvetica,sans-serif;color:#2E3238;">
     
-    <span style="display:none;font-size:1px;color:#FBFBF9;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    <span style="display:none;font-size:1px;color:#F3F4F6;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
       Courtney &amp; Co invited you to Domus
     </span>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
@@ -948,12 +948,12 @@ Manage notification preferences: https://domusbase.com/settings",
         <td align="center">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;border-collapse:collapse;">
             <tr>
-              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-bottom:none;border-radius:16px 16px 0 0;">
+              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-bottom:none;border-radius:4px 4px 0 0;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
                   <tr>
                     <td style="vertical-align:middle;">
-                      <div style="font-size:20px;font-weight:700;line-height:1.2;color:#191B1E;">Domus</div>
-                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#6F757C;">
+                      <div style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:600;line-height:1.2;color:#0B0C0E;">Domus</div>
+                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#4D535C;">
                         Manage your rentals
                       </div>
                     </td>
@@ -962,14 +962,14 @@ Manage notification preferences: https://domusbase.com/settings",
               </td>
             </tr>
             <tr>
-              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #E6E6E0;border-right:1px solid #E6E6E0;">
-                <div style="font-size:24px;font-weight:700;line-height:1.3;color:#191B1E;">Welcome to Domus</div>
-                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#3A3F45;">
+              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #D9DCE1;border-right:1px solid #D9DCE1;">
+                <div style="font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:600;line-height:1.3;color:#0B0C0E;">Welcome to Domus</div>
+                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#2E3238;">
                   <p style="margin:0;">Hi Alexandra &amp; Morgan &lt;The Very Long Tenant Name&gt; O&#39;Connor-Smith,</p><p style="margin:16px 0 0 0;">Courtney &amp; Co invited you to Domus to manage your rental at <strong>Oak &lt;House&gt; (123 Oak &amp; Elm St), B</strong>.</p><p style="margin:16px 0 0 0;">Your monthly rent is <strong>$1,234.56</strong>.</p><p style="margin:16px 0 0 0;">Lease term: 2026-11-01 to 2027-10-31.</p><p style="margin:16px 0 0 0;">Accept the invite and set your password. Then view your lease, report problems, and pay rent.</p>
                 </div>
                 <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:24px;border-collapse:collapse;">
                   <tr>
-                    <td align="center" bgcolor="#1D4ED8" style="border-radius:999px;">
+                    <td align="center" bgcolor="#0B0C0E" style="border-radius:4px;">
                       <a
                         href="https://domusbase.com/tenant?tab=rent&amp;unit=B"
                         style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:700;line-height:1;text-decoration:none;color:#FFFFFF;"
@@ -982,14 +982,14 @@ Manage notification preferences: https://domusbase.com/settings",
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-top:none;border-radius:0 0 16px 16px;">
-                <div style="font-size:12px;line-height:1.6;color:#6F757C;">
+              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-top:none;border-radius:0 0 4px 4px;">
+                <div style="font-size:12px;line-height:1.6;color:#4D535C;">
                   Domus. Manage your rentals.<br />
                   Manage rent, repairs, files, and messages in one place.
                 </div>
                 
-                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#6F757C;">
-                  <a href="https://domusbase.com/settings" style="color:#1D4ED8;text-decoration:underline;">
+                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#4D535C;">
+                  <a href="https://domusbase.com/settings" style="color:#2442B8;text-decoration:underline;">
                     Manage notification preferences
                   </a>
                 </div>
@@ -1012,9 +1012,9 @@ Pay rent, report problems, and view your lease in Domus.",
   "tenantInviteEndOnly": {
     "html": "<!DOCTYPE html>
 <html lang="en">
-  <body style="margin:0;padding:24px;background-color:#FBFBF9;font-family:Arial,Helvetica,sans-serif;color:#191B1E;">
+  <body style="margin:0;padding:24px;background-color:#F3F4F6;font-family:'Public Sans',Arial,Helvetica,sans-serif;color:#2E3238;">
     
-    <span style="display:none;font-size:1px;color:#FBFBF9;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    <span style="display:none;font-size:1px;color:#F3F4F6;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
       Courtney invited you to Domus
     </span>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
@@ -1022,12 +1022,12 @@ Pay rent, report problems, and view your lease in Domus.",
         <td align="center">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;border-collapse:collapse;">
             <tr>
-              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-bottom:none;border-radius:16px 16px 0 0;">
+              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-bottom:none;border-radius:4px 4px 0 0;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
                   <tr>
                     <td style="vertical-align:middle;">
-                      <div style="font-size:20px;font-weight:700;line-height:1.2;color:#191B1E;">Domus</div>
-                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#6F757C;">
+                      <div style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:600;line-height:1.2;color:#0B0C0E;">Domus</div>
+                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#4D535C;">
                         Manage your rentals
                       </div>
                     </td>
@@ -1036,14 +1036,14 @@ Pay rent, report problems, and view your lease in Domus.",
               </td>
             </tr>
             <tr>
-              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #E6E6E0;border-right:1px solid #E6E6E0;">
-                <div style="font-size:24px;font-weight:700;line-height:1.3;color:#191B1E;">Welcome to Domus</div>
-                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#3A3F45;">
+              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #D9DCE1;border-right:1px solid #D9DCE1;">
+                <div style="font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:600;line-height:1.3;color:#0B0C0E;">Welcome to Domus</div>
+                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#2E3238;">
                   <p style="margin:0;">Hi Alex,</p><p style="margin:16px 0 0 0;">Courtney invited you to Domus to manage your rental at <strong>123 Oak St</strong>.</p><p style="margin:16px 0 0 0;">Lease end: 2027-10-31.</p><p style="margin:16px 0 0 0;">Accept the invite and set your password. Then view your lease, report problems, and pay rent.</p>
                 </div>
                 <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:24px;border-collapse:collapse;">
                   <tr>
-                    <td align="center" bgcolor="#1D4ED8" style="border-radius:999px;">
+                    <td align="center" bgcolor="#0B0C0E" style="border-radius:4px;">
                       <a
                         href="https://domusbase.com/tenant?tab=rent&amp;unit=B"
                         style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:700;line-height:1;text-decoration:none;color:#FFFFFF;"
@@ -1056,14 +1056,14 @@ Pay rent, report problems, and view your lease in Domus.",
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-top:none;border-radius:0 0 16px 16px;">
-                <div style="font-size:12px;line-height:1.6;color:#6F757C;">
+              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-top:none;border-radius:0 0 4px 4px;">
+                <div style="font-size:12px;line-height:1.6;color:#4D535C;">
                   Domus. Manage your rentals.<br />
                   Manage rent, repairs, files, and messages in one place.
                 </div>
                 
-                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#6F757C;">
-                  <a href="https://domusbase.com/settings" style="color:#1D4ED8;text-decoration:underline;">
+                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#4D535C;">
+                  <a href="https://domusbase.com/settings" style="color:#2442B8;text-decoration:underline;">
                     Manage notification preferences
                   </a>
                 </div>
@@ -1085,9 +1085,9 @@ Pay rent, report problems, and view your lease in Domus.",
   "tenantInviteMinimal": {
     "html": "<!DOCTYPE html>
 <html lang="en">
-  <body style="margin:0;padding:24px;background-color:#FBFBF9;font-family:Arial,Helvetica,sans-serif;color:#191B1E;">
+  <body style="margin:0;padding:24px;background-color:#F3F4F6;font-family:'Public Sans',Arial,Helvetica,sans-serif;color:#2E3238;">
     
-    <span style="display:none;font-size:1px;color:#FBFBF9;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    <span style="display:none;font-size:1px;color:#F3F4F6;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
       Courtney invited you to Domus
     </span>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
@@ -1095,12 +1095,12 @@ Pay rent, report problems, and view your lease in Domus.",
         <td align="center">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;border-collapse:collapse;">
             <tr>
-              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-bottom:none;border-radius:16px 16px 0 0;">
+              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-bottom:none;border-radius:4px 4px 0 0;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
                   <tr>
                     <td style="vertical-align:middle;">
-                      <div style="font-size:20px;font-weight:700;line-height:1.2;color:#191B1E;">Domus</div>
-                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#6F757C;">
+                      <div style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:600;line-height:1.2;color:#0B0C0E;">Domus</div>
+                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#4D535C;">
                         Manage your rentals
                       </div>
                     </td>
@@ -1109,14 +1109,14 @@ Pay rent, report problems, and view your lease in Domus.",
               </td>
             </tr>
             <tr>
-              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #E6E6E0;border-right:1px solid #E6E6E0;">
-                <div style="font-size:24px;font-weight:700;line-height:1.3;color:#191B1E;">Welcome to Domus</div>
-                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#3A3F45;">
+              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #D9DCE1;border-right:1px solid #D9DCE1;">
+                <div style="font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:600;line-height:1.3;color:#0B0C0E;">Welcome to Domus</div>
+                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#2E3238;">
                   <p style="margin:0;">Hi Alex,</p><p style="margin:16px 0 0 0;">Courtney invited you to Domus to manage your rental at <strong>123 Oak St</strong>.</p><p style="margin:16px 0 0 0;">Accept the invite and set your password. Then view your lease, report problems, and pay rent.</p>
                 </div>
                 <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:24px;border-collapse:collapse;">
                   <tr>
-                    <td align="center" bgcolor="#1D4ED8" style="border-radius:999px;">
+                    <td align="center" bgcolor="#0B0C0E" style="border-radius:4px;">
                       <a
                         href="https://domusbase.com/tenant?tab=rent&amp;unit=B"
                         style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:700;line-height:1;text-decoration:none;color:#FFFFFF;"
@@ -1129,14 +1129,14 @@ Pay rent, report problems, and view your lease in Domus.",
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-top:none;border-radius:0 0 16px 16px;">
-                <div style="font-size:12px;line-height:1.6;color:#6F757C;">
+              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-top:none;border-radius:0 0 4px 4px;">
+                <div style="font-size:12px;line-height:1.6;color:#4D535C;">
                   Domus. Manage your rentals.<br />
                   Manage rent, repairs, files, and messages in one place.
                 </div>
                 
-                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#6F757C;">
-                  <a href="https://domusbase.com/settings" style="color:#1D4ED8;text-decoration:underline;">
+                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#4D535C;">
+                  <a href="https://domusbase.com/settings" style="color:#2442B8;text-decoration:underline;">
                     Manage notification preferences
                   </a>
                 </div>
@@ -1157,9 +1157,9 @@ Pay rent, report problems, and view your lease in Domus.",
   "tenantInviteStartOnly": {
     "html": "<!DOCTYPE html>
 <html lang="en">
-  <body style="margin:0;padding:24px;background-color:#FBFBF9;font-family:Arial,Helvetica,sans-serif;color:#191B1E;">
+  <body style="margin:0;padding:24px;background-color:#F3F4F6;font-family:'Public Sans',Arial,Helvetica,sans-serif;color:#2E3238;">
     
-    <span style="display:none;font-size:1px;color:#FBFBF9;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    <span style="display:none;font-size:1px;color:#F3F4F6;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
       Courtney invited you to Domus
     </span>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
@@ -1167,12 +1167,12 @@ Pay rent, report problems, and view your lease in Domus.",
         <td align="center">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;border-collapse:collapse;">
             <tr>
-              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-bottom:none;border-radius:16px 16px 0 0;">
+              <td style="padding:20px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-bottom:none;border-radius:4px 4px 0 0;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
                   <tr>
                     <td style="vertical-align:middle;">
-                      <div style="font-size:20px;font-weight:700;line-height:1.2;color:#191B1E;">Domus</div>
-                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#6F757C;">
+                      <div style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:600;line-height:1.2;color:#0B0C0E;">Domus</div>
+                      <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#4D535C;">
                         Manage your rentals
                       </div>
                     </td>
@@ -1181,14 +1181,14 @@ Pay rent, report problems, and view your lease in Domus.",
               </td>
             </tr>
             <tr>
-              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #E6E6E0;border-right:1px solid #E6E6E0;">
-                <div style="font-size:24px;font-weight:700;line-height:1.3;color:#191B1E;">Welcome to Domus</div>
-                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#3A3F45;">
+              <td style="padding:32px 24px;background-color:#FFFFFF;border-left:1px solid #D9DCE1;border-right:1px solid #D9DCE1;">
+                <div style="font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:600;line-height:1.3;color:#0B0C0E;">Welcome to Domus</div>
+                <div style="margin-top:14px;font-size:15px;line-height:1.7;color:#2E3238;">
                   <p style="margin:0;">Hi Alex,</p><p style="margin:16px 0 0 0;">Courtney invited you to Domus to manage your rental at <strong>123 Oak St</strong>.</p><p style="margin:16px 0 0 0;">Lease start: 2026-11-01.</p><p style="margin:16px 0 0 0;">Accept the invite and set your password. Then view your lease, report problems, and pay rent.</p>
                 </div>
                 <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:24px;border-collapse:collapse;">
                   <tr>
-                    <td align="center" bgcolor="#1D4ED8" style="border-radius:999px;">
+                    <td align="center" bgcolor="#0B0C0E" style="border-radius:4px;">
                       <a
                         href="https://domusbase.com/tenant?tab=rent&amp;unit=B"
                         style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:700;line-height:1;text-decoration:none;color:#FFFFFF;"
@@ -1201,14 +1201,14 @@ Pay rent, report problems, and view your lease in Domus.",
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #E6E6E0;border-top:none;border-radius:0 0 16px 16px;">
-                <div style="font-size:12px;line-height:1.6;color:#6F757C;">
+              <td style="padding:18px 24px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-top:none;border-radius:0 0 4px 4px;">
+                <div style="font-size:12px;line-height:1.6;color:#4D535C;">
                   Domus. Manage your rentals.<br />
                   Manage rent, repairs, files, and messages in one place.
                 </div>
                 
-                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#6F757C;">
-                  <a href="https://domusbase.com/settings" style="color:#1D4ED8;text-decoration:underline;">
+                <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#4D535C;">
+                  <a href="https://domusbase.com/settings" style="color:#2442B8;text-decoration:underline;">
                     Manage notification preferences
                   </a>
                 </div>

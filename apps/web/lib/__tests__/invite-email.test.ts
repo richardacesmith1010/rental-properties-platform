@@ -27,8 +27,8 @@ describe("tenant invite email", () => {
     expect(result.html).toContain("123 Oak Street, Denver CO 80203");
     expect(result.html).toContain("Unit B");
     expect(result.text).toContain("Monthly rent: $1,850.00");
-    expect(result.html).toContain("border:1px solid #E6E6E0");
-    expect(result.html).toContain("color:#1D4ED8");
+    expect(result.html).toContain("border:1px solid #D9DCE1");
+    expect(result.html).toContain("color:#2442B8");
     expect(result.html).not.toContain("mascot");
   });
 

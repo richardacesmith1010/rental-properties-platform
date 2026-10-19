@@ -35,10 +35,10 @@ export function CheckEmail({ email, onForgot, onBack }: {
     }
   }
   return <div className="flex flex-col items-center py-4 text-center">
-    <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--pos-bg)]">
+    <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--line)] bg-[var(--pos-bg)]">
       <CheckCircle className="h-7 w-7 text-[var(--pos)]" />
     </div>
-    <h2 className="text-lg font-semibold text-[var(--ink)]">Check your email</h2>
+    <h2 className="text-lg font-display font-semibold text-[var(--ink)]">Check your email</h2>
     <p className="mt-2 text-sm text-[var(--muted)]">
       We sent a confirmation link to <span className="font-medium text-[var(--ink)]">{email}</span>.
       Click the link in your email to finish setting up your account.

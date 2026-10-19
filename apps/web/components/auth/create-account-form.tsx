@@ -17,7 +17,7 @@ const roles: { id: Role; label: string; note: string }[] = [
   { id: "manager", label: "I manage rentals for others", note: "Run homes for owners" },
   { id: "tenant", label: "I rent a home", note: "Pay rent and report problems" }
 ];
-const fieldClass = "h-[52px] rounded-[14px]";
+const fieldClass = "h-[52px] rounded-xl";
 function allowedRole(value?: string): Role {
   return roles.find((role) => role.id === value)?.id ?? "owner";
 }
@@ -80,7 +80,7 @@ export function CreateAccountForm({ initialRole }: { initialRole?: string }) {
   return <>
     <Link href="/login" className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--accent)]"
       title="Return to sign in.">‹ Sign in</Link>
-    <h1 className="mt-4 text-[34px] font-bold leading-tight text-[var(--ink)]">Create your account</h1>
+    <h1 className="mt-4 text-[34px] font-display font-semibold leading-tight text-[var(--ink)]">Create your account</h1>
     <p className="mt-2 text-[17px] text-[var(--muted)]">First, what brings you to Domus?</p>
     {step === 1 ? <div className="mt-8 space-y-5">
       <div role="radiogroup" aria-label="I am" className="space-y-3">
@@ -96,7 +96,8 @@ export function CreateAccountForm({ initialRole }: { initialRole?: string }) {
       <p className="text-center text-[13px] text-[var(--muted)]">
         Renting from someone on Domus? Use the link they sent you.
       </p>
-      <Button type="button" className="h-[54px] w-full rounded-2xl text-[var(--accent-contrast)]" onClick={() => setStep(2)}
+      <Button type="button" className="h-[54px] w-full rounded-xl bg-[var(--action)] text-[var(--action-contrast)]
+        hover:bg-[var(--action-strong)]" onClick={() => setStep(2)}
         title="Continue to account details.">Continue</Button>
     </div> : <div className="mt-8">
       <button type="button" className="mb-5 min-h-11 text-sm font-semibold text-[var(--accent)]"
@@ -118,7 +119,7 @@ export function CreateAccountForm({ initialRole }: { initialRole?: string }) {
             Passwords do not match yet.</p> : null}</div>
         {error ? <Alert variant="error" role="alert">{error}</Alert> : null}
         <Button type="submit" loading={loading} disabled={!canSubmit || loading}
-          className="h-[54px] w-full rounded-2xl text-[var(--accent-contrast)]"
+          className="h-[54px] w-full rounded-xl bg-[var(--action)] text-[var(--action-contrast)] hover:bg-[var(--action-strong)]"
           title="Create your Domus account.">Create account</Button>
         <nav aria-label="Legal links" className="flex justify-center gap-5 text-sm text-[var(--muted)]">
           <Link href="/privacy" className="min-h-11 py-3 underline">Privacy</Link>

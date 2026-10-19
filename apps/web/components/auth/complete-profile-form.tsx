@@ -71,6 +71,7 @@ export function CompleteProfileForm({ email }: CompleteProfileFormProps) {
           Password
         </label>
         <Input
+          className="rounded-xl"
           id="complete-profile-password"
           type="password"
           value={password}
@@ -87,6 +88,7 @@ export function CompleteProfileForm({ email }: CompleteProfileFormProps) {
           Confirm Password
         </label>
         <Input
+          className="rounded-xl"
           id="complete-profile-confirm-password"
           type="password"
           value={confirmPassword}
@@ -106,7 +108,8 @@ export function CompleteProfileForm({ email }: CompleteProfileFormProps) {
         </Alert>
       ) : null}
 
-      <Button type="submit" disabled={!canSubmit || loading} loading={loading} className="w-full" title={`Set a password for ${email}.`}>
+      <Button type="submit" disabled={!canSubmit || loading} loading={loading} className="w-full rounded-xl"
+        title={`Set a password for ${email}.`}>
         <Lock className="mr-2 h-4 w-4" />
         Complete Setup
       </Button>

@@ -49,8 +49,11 @@ function ConfirmContent() {
     return (
       <div className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
         <div className="domus-card w-full max-w-lg border border-border/70 p-8 text-center shadow-xl">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--line)]"><MailCheck className="h-7 w-7 text-[var(--accent)]" /></div>
-          <h1 className="mt-6 text-3xl font-semibold tracking-tight text-foreground">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-[var(--line)]
+              bg-[var(--surface-2)]">
+            <MailCheck className="h-7 w-7 text-[var(--ink-2)]" />
+          </div>
+          <h1 className="mt-6 text-3xl font-display font-semibold text-foreground">
             This link looks broken.
           </h1>
           <p className="mt-3 text-sm leading-6 text-muted-foreground">
@@ -67,8 +70,11 @@ function ConfirmContent() {
   return (
     <div className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
       <div className="domus-card w-full max-w-lg border border-border/70 p-8 text-center shadow-xl">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--line)]"><MailCheck className="h-7 w-7 text-[var(--accent)]" /></div>
-        <h1 className="mt-6 text-3xl font-semibold tracking-tight text-foreground">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-[var(--line)]
+              bg-[var(--surface-2)]">
+            <MailCheck className="h-7 w-7 text-[var(--ink-2)]" />
+          </div>
+        <h1 className="mt-6 text-3xl font-display font-semibold text-foreground">
           {getHeading(type)}
         </h1>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
@@ -96,8 +102,11 @@ export default function ConfirmPage() {
       fallback={
         <div className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
           <div className="domus-card w-full max-w-lg border border-border/70 p-8 text-center shadow-xl">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--line)]"><MailCheck className="h-7 w-7 text-[var(--accent)]" /></div>
-            <h1 className="mt-6 text-3xl font-semibold tracking-tight text-foreground">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-[var(--line)]
+              bg-[var(--surface-2)]">
+            <MailCheck className="h-7 w-7 text-[var(--ink-2)]" />
+          </div>
+            <h1 className="mt-6 text-3xl font-display font-semibold text-foreground">
               Continue to Domus
             </h1>
           </div>

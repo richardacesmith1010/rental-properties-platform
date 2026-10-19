@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowRight, BarChart3, House, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, BarChart3, ShieldCheck, Sparkles } from "lucide-react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
+import { DomusMark, DomusWordmark } from "@/components/brand/domus-mark";
 import { SignInForm } from "@/components/auth/sign-in-form";
 import { CreateAccountForm } from "@/components/auth/create-account-form";
 import { Alert } from "@/components/ui/alert";
@@ -52,13 +53,13 @@ export default async function LoginPage(props: LoginPageProps) {
           <div className="relative z-10 flex items-center justify-between">
             <Link href="/marketing" className="inline-flex items-center" title="Return to the Domus marketing page.">
               <div>
-                <p className="text-xl font-bold tracking-tight text-[var(--ink)]">Domus</p>
+                <DomusWordmark />
                 <p className="text-xs text-[var(--muted)]">Rental Property Management</p>
               </div>
             </Link>
             <Link
               href="/marketing"
-              className="hidden items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface)]
+              className="hidden items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)]
                 px-4 py-2 text-sm font-medium text-[var(--ink-2)] transition hover:border-[var(--accent-line)]
                 hover:bg-[var(--accent-weak)] hover:text-[var(--accent)] lg:inline-flex"
               title="Explore Domus features and pricing."
@@ -70,14 +71,12 @@ export default async function LoginPage(props: LoginPageProps) {
 
           <div className="relative z-10 mt-8 grid gap-6 lg:mt-16 lg:grid-cols-[1fr_auto] lg:items-center lg:gap-10">
             <div className="max-w-2xl space-y-5">
-              <p className="inline-flex items-center gap-2 rounded-full border border-[var(--accent-line)]
-                bg-[var(--accent-weak)] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em]
-                text-[var(--accent)]">
-                <Sparkles className="h-3.5 w-3.5" />
+              <p className="domus-section-label inline-flex items-center gap-2">
+                <Sparkles className="h-3.5 w-3.5 text-[var(--ink-2)]" />
                 Your rental workspace
               </p>
               <div className="space-y-4">
-                <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-5xl">
+                <h1 className="text-3xl font-display font-semibold leading-tight sm:text-5xl">
                   Manage your rentals like a pro.
                 </h1>
                 <p className="max-w-xl text-base leading-7 text-[var(--ink-2)] sm:text-lg">
@@ -86,7 +85,7 @@ export default async function LoginPage(props: LoginPageProps) {
               </div>
 
               <div className="hidden gap-3 text-sm text-[var(--ink-2)] sm:grid sm:grid-cols-2">
-                <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-4">
+                <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-4">
                   <div className="flex items-center gap-2 font-semibold text-[var(--ink)]">
                     <BarChart3 className="h-4 w-4" />
                     See what matters first
@@ -95,7 +94,7 @@ export default async function LoginPage(props: LoginPageProps) {
                     Revenue, occupancy, open repairs, and overdue balances stay visible without a spreadsheet.
                   </p>
                 </div>
-                <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-4">
+                <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-4">
                   <div className="flex items-center gap-2 font-semibold text-[var(--ink)]">
                     <ShieldCheck className="h-4 w-4" />
                     Built for real operations
@@ -113,11 +112,8 @@ export default async function LoginPage(props: LoginPageProps) {
         <section className="flex flex-1 items-center justify-center bg-[var(--ground)] px-5 py-10 sm:px-6 lg:px-10">
           <div className="w-full max-w-[420px]">
             {!isSignup ? <>
-              <div aria-hidden="true" className="mb-7 flex h-14 w-14 items-center justify-center rounded-2xl
-                bg-[var(--accent)] text-[var(--accent-contrast)]">
-                <House className="h-7 w-7" />
-              </div>
-              <h1 className="text-[34px] font-bold leading-tight text-[var(--ink)]">Welcome back</h1>
+              <div className="mb-7"><DomusMark size={56} /></div>
+              <h1 className="text-[34px] font-display font-semibold leading-tight text-[var(--ink)]">Welcome back</h1>
               <p className="mt-2 text-[17px] text-[var(--muted)]">Sign in to see your rent, bills and homes.</p>
               <div className="mt-8 space-y-4">
                 {searchParams?.deleted === "requested" ? (

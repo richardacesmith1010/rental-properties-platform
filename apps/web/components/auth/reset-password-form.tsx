@@ -65,6 +65,7 @@ export function ResetPasswordForm() {
             New Password
           </label>
           <Input
+            className="rounded-xl"
             id="reset-new-password"
             type="password"
             value={newPassword}
@@ -81,6 +82,7 @@ export function ResetPasswordForm() {
             Confirm Password
           </label>
           <Input
+            className="rounded-xl"
             id="reset-confirm-password"
             type="password"
             value={confirmPassword}
@@ -97,7 +99,7 @@ export function ResetPasswordForm() {
 
       {error ? <Alert variant="error">{error}</Alert> : null}
 
-      <Button type="submit" disabled={!canSubmit || loading} loading={loading} title="Update your account password.">
+      <Button type="submit" className="rounded-xl" disabled={!canSubmit || loading} loading={loading} title="Update your account password.">
         <Lock className="mr-2 h-4 w-4" />
         Update Password
       </Button>

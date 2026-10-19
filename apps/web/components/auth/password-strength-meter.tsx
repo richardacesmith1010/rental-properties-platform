@@ -5,7 +5,7 @@ import { validatePassword } from "@/lib/password-validation";
 const strengthBarColors = [
   "bg-[var(--crit)]",
   "bg-[var(--warn)]",
-  "bg-[var(--accent)]",
+  "bg-[var(--ink-2)]",
   "bg-[var(--pos)]"
 ] as const;
 
@@ -22,7 +22,7 @@ export function PasswordStrengthMeter({ password }: { password: string }) {
         {strengthBarColors.map((color, index) => (
           <div
             key={color}
-            className={`h-1.5 rounded-full ${index < strength.score ? color : "bg-[var(--surface-2)]"}`}
+            className={`h-1.5 rounded-[1px] ${index < strength.score ? color : "bg-[var(--surface-2)]"}`}
           />
         ))}
       </div>

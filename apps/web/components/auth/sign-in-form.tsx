@@ -11,12 +11,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 const emptyLoginState: LoginActionState = {};
-const fieldClass = "h-[52px] rounded-[14px]";
+const fieldClass = "h-[52px] rounded-xl";
 
 function SignInButton() {
   const { pending } = useFormStatus();
   return <Button type="submit" disabled={pending} title="Sign in to your Domus account."
-    className="h-[54px] w-full rounded-2xl text-[var(--accent-contrast)]">
+    className="h-[54px] w-full rounded-xl bg-[var(--action)] text-[var(--action-contrast)] hover:bg-[var(--action-strong)]">
     {pending ? "Signing in…" : "Sign in"}
   </Button>;
 }
@@ -26,7 +26,7 @@ function ForgotPasswordView({ email, setEmail, onBack }: {
 }) {
   const [state, formAction] = useFormState(forgotPasswordAction, null);
   if (state?.success) return <div className="text-center">
-    <h2 className="text-lg font-semibold text-[var(--ink)]">Check your email</h2>
+    <h2 className="text-lg font-display font-semibold text-[var(--ink)]">Check your email</h2>
     <p className="mt-2 text-sm text-[var(--muted)]">
       If an account exists for <span className="font-medium text-[var(--ink)]">{email}</span>, a reset link has been sent.
     </p>
@@ -35,14 +35,14 @@ function ForgotPasswordView({ email, setEmail, onBack }: {
     </button>
   </div>;
   return <div className="space-y-4">
-    <h2 className="text-lg font-semibold text-[var(--ink)]">Reset your password</h2>
+    <h2 className="text-lg font-display font-semibold text-[var(--ink)]">Reset your password</h2>
     <p className="text-sm text-[var(--muted)]">Enter your email and we&apos;ll send you a reset link.</p>
     <form action={formAction} className="space-y-3">
       <label htmlFor="forgot-email" className="block text-sm font-medium text-[var(--ink)]">Email</label>
       <Input id="forgot-email" name="email" type="email" autoComplete="email" className={fieldClass}
         value={email} onChange={(event) => setEmail(event.target.value)} required />
       {state?.error ? <Alert variant="error" role="alert">{state.error}</Alert> : null}
-      <SubmitButton className="h-[54px] w-full rounded-2xl" title="Send a reset link to this email address.">
+      <SubmitButton className="h-[54px] w-full rounded-xl" title="Send a reset link to this email address.">
         Send reset link
       </SubmitButton>
     </form>
@@ -85,7 +85,7 @@ export function SignInForm({ initialForgot = false, initialEmail = "" }: {
     <div className="mt-8 space-y-3 text-center">
       <p className="text-sm text-[var(--muted)]">New to Domus?</p>
       <Link href="/login?mode=signup" title="Create a Domus account."
-        className="flex h-[52px] w-full items-center justify-center rounded-[14px] border border-[var(--line)]
+        className="flex h-[52px] w-full items-center justify-center rounded-xl border border-[var(--line)]
           bg-[var(--surface)] font-semibold text-[var(--ink)]">Create an account</Link>
     </div>
   </>;
