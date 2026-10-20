@@ -44,7 +44,7 @@ export function LeaseFormStep({
         return (
           <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-5">
             <div className="flex items-start gap-3">
-              <ClipboardList className="mt-0.5 h-5 w-5 text-[var(--accent)]" />
+              <ClipboardList className="mt-0.5 h-5 w-5 text-[var(--ink-2)]" />
               <div className="space-y-4">
                 <div>
                   <p className="font-semibold text-[var(--ink)]">No properties found</p>
@@ -112,7 +112,7 @@ export function LeaseFormStep({
         return (
           <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-5">
             <div className="flex items-start gap-3">
-              <Building2 className="mt-0.5 h-5 w-5 text-[var(--accent)]" />
+              <Building2 className="mt-0.5 h-5 w-5 text-[var(--ink-2)]" />
               <div className="space-y-4">
                 <div>
                   <p className="font-semibold text-[var(--ink)]">{selectedProperty.name} has no units</p>
@@ -157,7 +157,7 @@ export function LeaseFormStep({
         return (
           <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-5">
             <div className="flex items-start gap-3">
-              <UserRound className="mt-0.5 h-5 w-5 text-[var(--accent)]" />
+              <UserRound className="mt-0.5 h-5 w-5 text-[var(--ink-2)]" />
               <div className="space-y-4">
                 <div>
                   <p className="font-semibold text-[var(--ink)]">No tenants available</p>

@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import { Fragment, useContext, type ReactNode } from "react";
 import { OwnerSectionCacheContext } from "../owner-section-cache";
 import { Drawer } from "vaul";
-import { Bell, Landmark, Menu, Search, Settings, LifeBuoy, type LucideIcon } from "lucide-react";
+import { Bell, Menu, Search, Settings, LifeBuoy, type LucideIcon } from "lucide-react";
+import { DomusMark } from "@/components/brand/domus-mark";
 import { Badge } from "@/components/ui/badge";
 import { GlobalSearch, type GlobalSearchItem } from "@/components/dashboard/global-search";
 import { NotificationBellMenu } from "@/components/dashboard/notification-bell-menu";
@@ -260,7 +261,7 @@ export function SidebarNav({
       <div className="shrink-0 flex items-center justify-between gap-3 px-5 pb-4 pt-6">
         <div className="flex items-center gap-3">
           <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--surface-2)] ring-1
-            ring-[var(--line)]"><Landmark className="h-4 w-4 text-[var(--accent)]" /></span>
+            ring-[var(--line)]"><DomusMark size={32} /></span>
           <div>
             <div className="text-base font-bold text-foreground">Domus</div>
           </div>
@@ -452,8 +453,8 @@ export function MobileTopBar({
       pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] shadow-sm lg:hidden">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--surface-2)] ring-1 ring-[var(--line)]">
-            <Landmark className="h-4 w-4 text-[var(--accent)]" />
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--surface-2)] ring-1 ring-[var(--line)]">
+            <DomusMark size={32} />
           </span>
           <span className="sr-only">Domus</span>
         </div>

@@ -54,7 +54,7 @@ export function WelcomeCard({
   return (
     <div className="mx-auto w-full max-w-3xl rounded-2xl border border-border/60 bg-card px-6 py-8 text-center shadow-sm sm:px-8">
       <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-xl bg-[var(--surface-2)] ring-1 ring-[var(--line)]">
-        <Landmark className="h-7 w-7 text-[var(--accent)]" />
+        <Landmark className="h-7 w-7 text-[var(--ink-2)]" />
       </div>
       <p className="domus-section-label">
         Owner setup

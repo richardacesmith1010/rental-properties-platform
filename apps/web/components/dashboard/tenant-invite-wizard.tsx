@@ -216,7 +216,7 @@ export function TenantInviteWizard({
             <div className={[
               "flex h-14 w-14 shrink-0 items-center justify-center self-center rounded-xl",
               "bg-[var(--surface-2)] ring-1 ring-[var(--line)] sm:self-start"
-            ].join(" ")}><UserRoundPlus className="h-6 w-6 text-[var(--accent)]" /></div>
+            ].join(" ")}><UserRoundPlus className="h-6 w-6 text-[var(--ink-2)]" /></div>
           </div>
           <TenantInviteWizardProgress step={step} />
         </div>

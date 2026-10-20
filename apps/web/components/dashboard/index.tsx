@@ -373,19 +373,19 @@ export function Dashboard(props: DashboardProps) {
         {isOwnerRole ? (
           <div className="mt-3 flex min-h-0 flex-1 flex-col">
             {activeSection !== "portfolio" && <div
-              className={`flex w-full items-start justify-between gap-3 py-4 ${isOwnerDailyOpsHomePage
-                ? "mx-auto max-w-[720px]"
-                : "flex-col sm:flex-row"}`}
+              className={`flex w-full items-start justify-between gap-3 pt-4 pb-3 ${isOwnerDailyOpsHomePage
+                ? "mx-auto max-w-[720px] border-b-2 border-[var(--ink)]"
+                : "flex-col sm:flex-row border-b-2 border-[var(--ink)]"}`}
             >
               <div className={isOwnerDailyOpsHomePage ? "" : "min-w-0 break-words"}>
                 {isDailyOpsHomePage ? (
                   <div>
                     <p className="text-sm text-[var(--muted)]">{greeting ? `${greeting}, ${displayName}` : displayName}</p>
-                    <h1 className="font-display mt-1 text-[34px] font-bold leading-tight text-[var(--ink)]">Home</h1>
+                    <h1 className="font-display mt-1 text-[34px] font-semibold leading-tight text-[var(--ink)]">Home</h1>
                   </div>
                 ) : (
                   <>
-                    <h1 className="font-display break-words text-[34px] font-bold leading-tight text-[var(--ink)]">{activeSectionLabel}</h1>
+                    <h1 className="font-display break-words text-[34px] font-semibold leading-tight text-[var(--ink)]">{activeSectionLabel}</h1>
                     <p className="mt-1 text-[15px] text-[var(--muted)]">
                       {ownerPageDescriptions[activeSection] ?? "Manage your homes and the people who live there."}
                     </p>

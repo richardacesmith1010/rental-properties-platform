@@ -21,7 +21,7 @@ export default function ManagerError({
     <div className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
       <div className="domus-card w-full max-w-md p-8 text-center">
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-xl bg-[var(--surface-2)]">
-          <TriangleAlert className="h-7 w-7 text-[var(--accent)]" />
+          <TriangleAlert className="h-7 w-7 text-[var(--ink-2)]" />
         </div>
         <h1 className="font-display text-2xl font-semibold text-[var(--ink)]">Manager dashboard error</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">

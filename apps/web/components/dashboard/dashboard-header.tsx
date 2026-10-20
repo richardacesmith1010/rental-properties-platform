@@ -70,7 +70,7 @@ function HeaderStat({
 }) {
   return (
     <div className="domus-card flex min-w-[150px] flex-1 items-start gap-3 px-4 py-4 shadow-sm">
-      <div className="rounded-2xl bg-[var(--surface-2)] p-2 text-[var(--accent)]">
+      <div className="rounded-2xl bg-[var(--surface-2)] p-2 text-[var(--ink-2)]">
         <Icon className="h-4 w-4" />
       </div>
       <div className="min-w-0">

@@ -206,7 +206,7 @@ export function FinancialOverviewPanel({
       <div className="flex flex-col gap-4 border-b border-[color:color-mix(in_srgb,var(--line)_84%,transparent)] pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent-weak)] text-[var(--accent)]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent-weak)] text-[var(--ink-2)]">
               <Wallet className="h-5 w-5" />
             </div>
             <div>

@@ -83,7 +83,7 @@ export function TenantOverview({
         <Link href={buildSectionHref("maintenance")}
           className="domus-card flex min-h-16 items-center justify-between p-4" title="Report a repair.">
           <span className="flex items-center gap-3">
-            <Wrench className="h-5 w-5 text-[var(--accent)]" /><span className="font-semibold">Report a repair</span>
+            <Wrench className="h-5 w-5 text-[var(--ink-2)]" /><span className="font-semibold">Report a repair</span>
           </span>
           <ChevronRight className="h-4 w-4" />
         </Link>

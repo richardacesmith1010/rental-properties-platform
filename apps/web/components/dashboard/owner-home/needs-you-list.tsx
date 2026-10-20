@@ -49,13 +49,20 @@ export function NeedsYouList({ summary, bankState, llcSetup, lateName, bankNeeds
   if (rows.length === 0) return null;
   return <section aria-labelledby="needs-you-title">
     <h2 id="needs-you-title" className="mb-3 font-display text-[18px] font-semibold text-[var(--ink)]">Needs you</h2>
-    <div className="overflow-hidden rounded-2xl bg-[var(--warn-bg)]">
+    <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
       {rows.slice(0, 3).map((row) => {
         const className = [
           "flex min-h-11 w-full items-center justify-between gap-3 border-b",
           "border-[var(--line)] px-4 py-3 text-left font-medium text-[var(--ink)] last:border-0",
         ].join(" ");
-        const content = <><span>{row.label}</span><ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" /></>;
+        const content = <>
+          <span className="flex items-center gap-3">
+            <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-[1px] ${row.key === "late"
+              ? "bg-[var(--warn)]" : "bg-[var(--accent)]"}`} />
+            <span>{row.label}</span>
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+        </>;
         return row.href ? <a key={row.key} href={row.href} title={row.label} className={className}>{content}</a>
           : <button key={row.key} type="button" onClick={row.run} title={row.label} className={className}>{content}</button>;
       })}
