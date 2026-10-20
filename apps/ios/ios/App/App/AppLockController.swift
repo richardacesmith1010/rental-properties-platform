@@ -129,6 +129,7 @@ final class AppLockController {
         let message = kind == .touchId ? "Next time, just touch the sensor to open Domus."
             : "Next time, just look at your phone to open Domus."
         let alert = UIAlertController(title: "Open Domus with \(kind.title)?", message: message, preferredStyle: .alert)
+        alert.view.tintColor = LockViewController.ink
         // Mark before presenting, so lifecycle callbacks cannot present a second offer.
         _ = lock.send(.offerAnswered, attempt: UUID())
         let use = UIAlertAction(title: "Use \(kind.title)", style: .default) { [weak self] _ in

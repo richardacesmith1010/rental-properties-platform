@@ -2,11 +2,41 @@ import UIKit
 
 @MainActor
 final class LockViewController: UIViewController {
-    static let accent = UIColor { traits in
+    static let action = UIColor { traits in
         traits.userInterfaceStyle == .dark
-            ? UIColor(red: 76 / 255, green: 141 / 255, blue: 1, alpha: 1)
-            : UIColor(red: 10 / 255, green: 91 / 255, blue: 211 / 255, alpha: 1)
+            ? UIColor(red: 242 / 255, green: 243 / 255, blue: 245 / 255, alpha: 1)
+            : UIColor(red: 11 / 255, green: 12 / 255, blue: 14 / 255, alpha: 1)
     }
+    static let actionText = UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 11 / 255, green: 12 / 255, blue: 14 / 255, alpha: 1)
+            : .white
+    }
+    static let ground = UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 14 / 255, green: 15 / 255, blue: 17 / 255, alpha: 1)
+            : UIColor(red: 243 / 255, green: 244 / 255, blue: 246 / 255, alpha: 1)
+    }
+    static let ink = action
+    static let link = UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 141 / 255, green: 162 / 255, blue: 240 / 255, alpha: 1)
+            : UIColor(red: 36 / 255, green: 66 / 255, blue: 184 / 255, alpha: 1)
+    }
+
+    static func titleFont(compatibleWith traits: UITraitCollection?) -> UIFont {
+        let base = UIFont.preferredFont(forTextStyle: .title1,
+                                        compatibleWith: UITraitCollection(preferredContentSizeCategory: .large))
+        if let descriptor = base.fontDescriptor.withDesign(.serif)?.withSymbolicTraits(.traitBold) {
+            return UIFontMetrics(forTextStyle: .title1).scaledFont(
+                for: UIFont(descriptor: descriptor, size: base.pointSize), compatibleWith: traits)
+        }
+        let preferred = UIFont.preferredFont(forTextStyle: .title1, compatibleWith: traits)
+        let bold = preferred.fontDescriptor.withSymbolicTraits(.traitBold)
+            ?? UIFont.boldSystemFont(ofSize: preferred.pointSize).fontDescriptor
+        return UIFont(descriptor: bold, size: preferred.pointSize)
+    }
+
     var unlock: (() -> Void)?
     var password: (() -> Void)?
     private let primary = UIButton(type: .system)
@@ -15,7 +45,7 @@ final class LockViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = Self.ground
         view.isOpaque = true
         view.accessibilityViewIsModal = true
         let icon = UIImageView(image: UIImage(named: "AppIcon60x60"))
@@ -35,21 +65,21 @@ final class LockViewController: UIViewController {
         ])
         let title = UILabel()
         title.text = "Domus is locked"
-        let titleFont = UIFont.preferredFont(forTextStyle: .title1)
-        title.font = UIFont(descriptor: titleFont.fontDescriptor.withSymbolicTraits(.traitBold)
-                            ?? titleFont.fontDescriptor, size: 0)
+        title.textColor = Self.ink
+        title.font = Self.titleFont(compatibleWith: traitCollection)
         title.adjustsFontForContentSizeCategory = true
         title.numberOfLines = 0
         title.textAlignment = .center
         var primaryStyle = UIButton.Configuration.filled()
-        primaryStyle.baseBackgroundColor = Self.accent
-        primaryStyle.baseForegroundColor = UIColor { $0.userInterfaceStyle == .dark ? .black : .white }
-        primaryStyle.cornerStyle = .capsule
+        primaryStyle.baseBackgroundColor = Self.action
+        primaryStyle.baseForegroundColor = Self.actionText
+        primaryStyle.cornerStyle = .fixed
+        primaryStyle.background.cornerRadius = 4
         primary.configuration = primaryStyle
         primary.heightAnchor.constraint(greaterThanOrEqualToConstant: 50).isActive = true
         primary.addTarget(self, action: #selector(openTapped), for: .touchUpInside)
         var fallbackStyle = UIButton.Configuration.plain()
-        fallbackStyle.baseForegroundColor = Self.accent
+        fallbackStyle.baseForegroundColor = Self.link
         fallback.configuration = fallbackStyle
         fallback.setTitle("Sign in with password", for: .normal)
         fallback.addTarget(self, action: #selector(passwordTapped), for: .touchUpInside)
