@@ -1878,6 +1878,6 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - **App Store screenshots** retaken in the new look (`docs/app-store/screenshots-6.9/`, 6 × 1320×2868 JPEG, no alpha).
 - **TestFlight build 4** uploaded (`** EXPORT SUCCEEDED **`); carries doorway icon, splash, graphite Face ID screens,
   IOS-4 status bar. Owner group auto-distributes after processing.
-- **Owner next (one action):** TestFlight → Install Domus build 4.
+- **Owner 2026-10-20: "Build 4 is installed on my iPhone."** ✅
 - Rollout plan 242a–f is done. Remaining known items (not redesign): time-zone sprint (shelved by owner), sign-in `next`
   param, More drawer delay, cold-launch black screen.
