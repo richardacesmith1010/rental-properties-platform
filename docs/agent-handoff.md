@@ -1868,3 +1868,16 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   Type-scaled serif title) and `docs/sprint242f-web-codex-prompt.md` (header Landmark → DomusMark, Needs-you plain rows
   + markers, Home title rule, CardTitle serif, decorative accent icons → ink-2). Then: new App Store screenshots,
   TestFlight build 4. ChatGPT usage also near limit (resets 00:26).
+
+## 2026-10-20 — Redesign complete: 242f shipped, screenshots retaken, TestFlight build 4 uploaded
+- Codex jobs queued behind the 10-18 usage limit were stuck (Mac slept through the wait); killed and re-dispatched 10-20.
+- **242f-native** `033ab3e` (ChatGPT rev 1 AWC → rev 2): Face ID lock screen + offer in graphite — ground, action
+  button (4 pt corners), cobalt link, Dynamic Type-scaled serif title; offer alert tinted ink. XCTest 130/130.
+- **242f-web** `426c2dd` (+ web2 title rule): doorway mark in the app header, plain Needs-you rows with square markers,
+  serif `CardTitle`, decorative icons → ink-2, 2 px ink rule under dashboard titles. Gate 2,945; smoke 10/10.
+- **App Store screenshots** retaken in the new look (`docs/app-store/screenshots-6.9/`, 6 × 1320×2868 JPEG, no alpha).
+- **TestFlight build 4** uploaded (`** EXPORT SUCCEEDED **`); carries doorway icon, splash, graphite Face ID screens,
+  IOS-4 status bar. Owner group auto-distributes after processing.
+- **Owner next (one action):** TestFlight → Install Domus build 4.
+- Rollout plan 242a–f is done. Remaining known items (not redesign): time-zone sprint (shelved by owner), sign-in `next`
+  param, More drawer delay, cold-launch black screen.
