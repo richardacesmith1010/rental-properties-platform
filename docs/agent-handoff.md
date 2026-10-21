@@ -1902,3 +1902,18 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   **Second REJECT → owner asked: "Continue" (third review) or "Simplify" (drop repeat-email keys).** Live test window
   Oct 1–20: 12 overdue + 4 receipt deliveries, all sent, 0 failed. `notifications.entity_type` has no check constraint.
 - **Next:** owner answer on 244a; meanwhile item list 6–8 (sign-in `next`, More drawer delay, cold-launch black screen).
+
+## 2026-10-20 — Sprint 245b SHIPPED (phone More menu); 244a + 245a ChatGPT-approved
+- **245b** `bfa52f4` (L2): vaul `handleOnly` (content no longer captured as a drag, so iOS scroll guard stays on), overlay
+  blur removed, 200 ms ease-out slide (scoped `[data-vaul-drawer].domus-mobile-drawer`, reduced motion → 0), one
+  `overscroll-contain touch-pan-y` scroller in both owner drawers, no hover-preload on mobile rows. Gate 2,967; CI
+  success; prod smoke 27/27 (deployed from a clean worktree while Codex ran 244a). Live WebKit iPhone 15 Pro on
+  production as smoke owner: tap → panel settled 347–363 ms (incl. harness polling), 1 scroller, computed 0.2 s.
+  Momentum feel on a real phone not measured (owner will notice on next use; web change, no TestFlight needed).
+- **244a** rev 6 APPROVED by ChatGPT (owner: "Continue sprint 244a… until you and Chat agree"): 6 rounds — race-safe
+  claim, Resend `Idempotency-Key`, immutable `first_attempt_at` 20 h unknown-result deadline, stored exact request body,
+  re-gate before any retry, key namespaces, two-stage migration. Codex (gpt-6-sol high) running.
+- **245a** rev 3 APPROVED by ChatGPT: shared branded `SafeNextPath` guard (path canonicalized, query preserved), role-
+  scoped destinations, middleware overwrites client `x-domus-path`, `next` never forwarded for invite/recovery. Queued
+  after 244a.
+- Seen on Simulator cold launch: ~2–3 s black screen before the splash (backlog item 8, iPhone tier).
