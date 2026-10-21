@@ -1985,3 +1985,5 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - **TestFlight build 5** uploaded (`** EXPORT SUCCEEDED **`, "Upload submitted for build 5"): carries 246a launch
   screen. Owner next: TestFlight → Install build 5; then cold-launch check (expect the door, no black).
 - **Scorecard:** Speed 85 → 88.
+- **Owner 2026-10-21: "Excellent, please go ahead. Everything worked."** Build 5 installed; instant tabs and launch
+  screen confirmed by the owner. Next: 244b (notification settings per role + repair status notices).
