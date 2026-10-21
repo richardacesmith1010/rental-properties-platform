@@ -158,13 +158,12 @@ Every count must be 0. If not, stop and re-answer this section before upload.
 
 ## 4) Screenshot plan
 
-**Format.** iPhone 6.9-inch display, **1320 × 2868** portrait PNG, light mode, **5–6 shots**.
+**Format.** iPhone 6.9-inch display, **1320 × 2868** portrait JPEG (no alpha), light mode, **5–6 shots**.
 The app is iPhone only (`TARGETED_DEVICE_FAMILY = 1`) and portrait only (`Info.plist:56-59`).
 So no iPad or landscape shots are needed. App Store Connect scales 6.9-inch shots for smaller iPhones.
 
-**When.** After both of these:
-1. Sprint 238d ships: safe-area headers (P3), help button overlap (P2), "Repair" wording (P7), message pill (P5).
-2. The App Review demo owner and tenant exist (Q10). Fake data only. Never real tenant data.
+**When.** Done 2026-10-20 in the graphite look (242f). Retake `05-tenant-messages.jpg` — it shows a UTC time
+("4:37 AM") from before Sprint 243a (Mountain time). Fake data only; never real tenant data.
 
 Demo rent is under $5 on purpose. Online pay starts at $5 (`lib/payment-fees.ts:13`).
 So no real charge can happen, and the tenant sees no Pay rent button (`lib/tenant-pay-state.ts:24`).
@@ -180,16 +179,17 @@ To make Home look normal, the seed can add past fake payments. Mark them paid by
 - Sign in with the demo accounts. Passwords: `[OWNER: APPREVIEW_* in apps/web/.env.local — never paste here]`.
 - Capture: `xcrun simctl io booted screenshot --type=png <name>.png`.
 
-**Shots, in upload order.**
+**Shots, in upload order** (files in `docs/app-store/screenshots-6.9/`, current tab labels: owner
+Home/Money/Homes/Messages/More, tenant Home/Rent/Repairs/Messages).
 
-| # | Account | Screen | Must show | Caption (optional overlay) |
+| # | File | Account | Screen | Caption (optional overlay) |
 |---|---|---|---|---|
-| 1 | Demo owner | Home (Wallet) | Rent collected this month, next rent due, tab bar | See your rent at a glance. |
-| 2 | Demo tenant | Home | "Paid … Thank you!" (needs a past fake payment and no open rent) | See when your rent is paid. |
-| 3 | Demo tenant | Problems tab (renamed by 238d) → new repair with a photo | Photo attached, "Repair" wording (238d) | Report a repair with a photo. |
-| 4 | Demo owner | Money | Income, costs and a receipt; header clear of the status bar | Track rent and costs in one place. |
-| 5 | Demo owner | Inbox tab (page "Messages") → one thread | Owner and tenant messages; pill not clipped | Message your tenants in one place. |
-| 6 (optional) | Demo owner | Homes | Home cards with fake addresses | All your homes in one list. |
+| 1 | `01-owner-home.jpg` | Demo owner | Home | See your rent at a glance. |
+| 2 | `02-money.jpg` | Demo owner | Money | Track rent and costs in one place. |
+| 3 | `03-bank.jpg` | Demo owner | Bank → "Money to check" | Sort bank items in one tap. |
+| 4 | `04-tenant-home.jpg` | Demo tenant | Home | See when your rent is due. |
+| 5 | `05-tenant-messages.jpg` | Demo tenant | Messages → thread (**retake: Mountain time**) | Message your landlord. |
+| 6 | `06-tenant-repair.jpg` | Demo tenant | Repairs → new repair with a photo | Report a repair with a photo. |
 
 **Before upload, every shot must pass:**
 - exactly 1320 × 2868; light mode; status bar shows 9:41 and a full battery;
@@ -206,5 +206,4 @@ Drag the shots in the order above. Claude does this; it needs no owner click bey
 - **Publish** click on App Privacy — owner step 8 in the plan.
 - `[OWNER: APPREVIEW_* in apps/web/.env.local — never paste here]` — demo passwords stay in `.env.local` only.
 
-Contact for privacy questions: privacy@domusbase.com. Support: support@domusbase.com, https://domusbase.com/support
-(live after Sprint 238c; until then use https://domusbase.com).
+Contact for privacy questions: privacy@domusbase.com. Support: support@domusbase.com, https://domusbase.com/support.

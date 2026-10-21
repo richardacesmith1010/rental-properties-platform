@@ -138,19 +138,22 @@ Lines that depend on unshipped work (do not submit until each is true):
 
 | Line | Needs |
 |---|---|
-| "It asks for your OK before it uses your data." / "You can turn it off in Settings." | Sprint 238c (Ask Domus consent sheet and Settings switch) live |
-| "Or visit https://domusbase.com/support." | Sprint 238c (`/support` page) live. Until then, use `https://domusbase.com`. |
+| "It asks for your OK before it uses your data." / "You can turn it off in Settings." | **Met** — consent sheet (`ai-assistant.tsx:415`) and Settings switch live |
+| "Or visit https://domusbase.com/support." | **Met** — `/support` is live |
 | "Ask to delete your account in Settings." / "within 30 days" | **Met 2026-10-17** (238b `cda681a` live; walked on the Simulator). Claude adds both lines back in App Store Connect. |
 | "Privacy policy: https://domusbase.com/privacy" | Page is live today; the updated legal text waits on Q9 |
 
 Notes:
 - Every sentence is 12 words or fewer. Checked by script.
-- No push or reminder claims. The app sends no notifications (owner rule).
+- No push or reminder claims. Email notices exist but stay in test mode until launch (owner rule); the listing
+  makes no notification claim.
 - "Domus has no ads" matches the audit: no ad SDK or tracking found.
 - The download line names tenants and managers only. Owners have no download in Settings yet:
   `apps/web/app/api/account/export/route.ts:25` returns 403 for owners, and "Your data" is tenant and manager only
   (`settings-layout.tsx:35`). If owner export ships, change it back to "Download your data any time in Settings."
-- "Domus is free" matches Price = Free. Future paid plans fall under 3.1.1 (ASR-15).
+- "Domus is free" matches Price = Free: free for landlords and tenants (pricing option 1, 2026-10-18). The Manager
+  plan, when it ships, is billed on the web only; the app shows no price or purchase link (3.1.3(f) companion-app
+  note goes in the review notes then, with a comped manager demo account).
 - Apple bars naming other phone platforms (2.3.10). None are named.
 
 ## 6. Keywords (97 / 100)
@@ -169,7 +172,6 @@ property,manager,lease,maintenance,autopay,apartment,expense,receipt,tax,LLC,scr
 | Field | Value | Count |
 |---|---|---|
 | Support URL (required) | `https://domusbase.com/support` | 29 |
-| Support URL until Sprint 238c ships | `https://domusbase.com` | 21 |
 | Marketing URL (optional) | `https://domusbase.com` | 21 |
 | Privacy Policy URL (required) | `https://domusbase.com/privacy` | 29 |
 

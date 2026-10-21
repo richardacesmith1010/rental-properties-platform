@@ -53,7 +53,7 @@ App Store Connect holds one login. The tenant login goes inside the notes (1c).
 | Phone number | `OWNER: phone number` |
 | Email | support@domusbase.com |
 
-### 1c. Notes (paste as is after replacing each OWNER item; 3,194 / 4,000 with placeholders)
+### 1c. Notes (paste as is after replacing each OWNER item; 3,494 / 4,000 with placeholders)
 
 The order follows plan section 3, item 2: native features first; camera and offline last (weak 4.2 evidence).
 
@@ -80,7 +80,7 @@ Domus never sees Face ID data.
 Sign in as the owner. On Home, tap "bank items to check".
 On the Bank page, tap Connect a bank.
 Plaid's own iPhone sheet opens (the Plaid LinkKit SDK).
-You can close it at any time.
+Please just open it and close it.
 
 3. Universal link return
 Some banks sign you in on their own site or app.
@@ -108,6 +108,8 @@ Domus sells no digital goods and has no in-app purchases.
 The app is free.
 The demo rent is under $5 on purpose.
 Online pay starts at $5, so no real money can move.
+So the tenant sees no Pay button. That is expected.
+Past demo payments were entered by hand.
 
 BANK CONNECT NEEDS A REAL BANK
 Plaid is live, so it needs a real US bank.
@@ -124,7 +126,7 @@ Switch back to Domus to keep going.
 
 MESSAGES
 Messages are private between people on the same lease.
-Owner: Inbox tab. Tenant: Messages tab.
+Owner and tenant: Messages tab.
 To report abuse, email support@domusbase.com.
 Or tap the ? button, then Send feedback.
 
@@ -144,6 +146,14 @@ We delete the account within 30 days.
 
 NO PUSH ALERTS
 Domus sends no push alerts in this version.
+Email notices are in test mode. Demo accounts get none.
+
+FINDING SETTINGS
+Owner: More tab → Settings.
+Tenant: the ☰ menu at the top → Settings.
+
+TIMES
+Times show in Mountain time (Denver).
 
 Help: support@domusbase.com or https://domusbase.com/support
 Privacy: https://domusbase.com/privacy
@@ -203,28 +213,30 @@ Messages are private between people on the same lease.
 Help: support@domusbase.com
 ```
 
-### 2d. What to Test, build 2 (871 / 4,000)
+### 2d. What to Test, build 5 (881 / 4,000)
 
-Update this block for each new build. Build 2 is the first upload (`apps/ios/build-number.txt` is at 1).
+Update this block for each new build. Build 5 was uploaded 2026-10-21 (`apps/ios/build-number.txt` is at 5).
 
 ```text
 Thanks for testing Domus on iPhone!
 Sign in with your Domus email and password.
 
-Please try these:
-1. Face ID: after you sign in, tap Use Face ID.
+New in this build:
+1. Open Domus. You should see the door logo right away.
+   There should be no black screen first.
+2. Face ID screens now match the Domus look.
+3. Tabs at the bottom now switch right away.
+4. Open a Domus link while signed out. Sign in.
+   You should land on the page the link opened.
+
+Please also try these:
+5. Face ID: after you sign in, tap Use Face ID.
    Leave the app, then come back. It should ask for Face ID.
-2. Save a photo: open a repair photo full size.
-   Press and hold it, then save it to Photos.
-3. Camera: take a photo for a repair or a receipt.
-4. Files: open a rent receipt and tap Download PDF.
-   The share sheet should open. Save the file or share it.
-5. Offline: fully close Domus. Turn on Airplane Mode.
+6. Files: open a rent receipt and tap Download PDF.
+   The share sheet should open.
+7. Offline: fully close Domus. Turn on Airplane Mode.
    Open Domus. It should say "Can't reach Domus right now."
    Turn Airplane Mode off and tap Try again.
-   You should land back in Domus.
-6. Owners only: on the Bank page, tap Connect a bank.
-   Only connect a bank that is yours.
 
 To send us a note, take a screenshot.
 TestFlight lets you add a comment to it.
@@ -237,18 +249,17 @@ You can also email support@domusbase.com.
 - Only these links and emails appear: https://domusbase.com, https://domusbase.com/support,
   https://domusbase.com/privacy, support@domusbase.com.
 - "Plaid LinkKit SDK", "universal link" and "guideline 3.1.3(e)" are for Apple's reviewer, not app users.
-- Labels in quotes or after an arrow are copied from the app. Re-check them after Sprint 238d, which renames
-  the tenant "Problems" tab to "Repairs" (P7) and the owner "Inbox" tab to "Messages" (P4)
-  (`docs/sprint238d-codex-prompt.md:46-50`). If 238d ships first, change "Owner: Inbox tab" in 1c.
+- Labels in quotes or after an arrow are copied from the app (re-checked 2026-10-21 against
+  `owner-bottom-bar.tsx` / `tenant-bottom-bar.tsx`: owner Home/Money/Homes/Messages/More; tenant
+  Home/Rent/Repairs/Messages).
 
 ## 4. What must be true before pasting
 
-1. **Sprint 238a in the uploaded build:** UserDefaults in the privacy manifest; Photos-add string (no crash on Save to
+1. ✅ **Sprint 238a in the uploaded build:** UserDefaults in the privacy manifest; Photos-add string (no crash on Save to
    Photos); camera text "Take photos of repairs, receipts, and your profile."; offline Try again goes to `/login`.
-2. **Sprint 238b live:** "Delete my account" in Settings → Your data (tenant, manager) and at the top of Settings →
+2. ✅ **Sprint 238b live:** "Delete my account" in Settings → Your data (tenant, manager) and at the top of Settings →
    Account & Data (owner). Type DELETE; sign-out; 30-day notice (`docs/sprint238b-codex-prompt.md:51-72`).
-3. **Sprint 238c live:** Ask Domus consent sheet naming Anthropic; Settings on/off switch; `/support` returns 200.
-   Until `/support` is live, change the Help line to https://domusbase.com.
+3. ✅ **Sprint 238c live:** Ask Domus consent sheet naming Anthropic; Settings on/off switch; `/support` returns 200.
 4. **Universal links live:** verified 2026-10-16 — `APPLE_APP_ID` is set on Vercel and the AASA route returns 200 JSON. ✅
    The route returns 404 when the variable is missing
    (`apps/web/app/.well-known/apple-app-site-association/route.ts`). If it is not live, delete item 3 from 1c.
@@ -258,7 +269,7 @@ You can also email support@domusbase.com.
 
 ## 5. Demo account data the seed must create (plan section 3, item 8)
 
-The notes promise these things, so the seed (`scripts/seed-smoke-accounts.mjs`, `appreview` graph) must create them:
+The notes promise these things, so the seed (`scripts/seed-appreview-accounts.mjs`) must create them:
 
 | Promise in the notes | Seed needs | Why (code) |
 |---|---|---|
@@ -268,7 +279,7 @@ The notes promise these things, so the seed (`scripts/seed-smoke-accounts.mjs`, 
 | Home → "bank items to check"; items under "Money to check" | Rows in `bank_review_items` for the demo owner's bank account. A file upload does not queue items (`apps/web/lib/bank-feed/process-upload.ts` returns them to the page only), so the seed must insert these rows | `apps/web/components/dashboard/owner-home/needs-you-list.tsx:30-31`, `apps/web/lib/owner-wallet-home.ts:36-46`, `apps/web/components/bank-feed/queued-review-list.tsx:27-28` |
 | Owner → Reports → Export CSV | Rent and payment rows so reports are not empty | `apps/web/components/reports/report-layout.tsx:97` |
 | Settings → Bank Account → Set up rent payments | Demo owner not connected to Stripe | `apps/web/components/settings/bank-settings.tsx:70-73` |
-| Messages tab / Inbox tab | One message thread between the demo owner and tenant | `apps/web/app/tenant/page.tsx:279` |
+| Messages tab (owner and tenant) | One message thread between the demo owner and tenant | `apps/web/app/tenant/page.tsx:279` |
 | Repair photo to press and hold | One open repair with a photo | `apps/web/components/dashboard/maintenance/photo-upload.tsx` |
 
 ## 6. Evidence for each claim in the notes
