@@ -53,6 +53,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { redirect } from "next/navigation";
 import { SectionNotFoundState } from "@/components/dashboard/section-renderer-support";
+import { TenantSectionTabs } from "@/components/dashboard/tenant-section-tabs";
 import { TenantBottomBar } from "@/components/dashboard/tenant-bottom-bar";
 import { getTenantPayState, getNextRentDueDate } from "@/lib/tenant-pay-state";
 import { isRentOpenForTenant } from "@/lib/rent-urgency";
@@ -269,38 +270,51 @@ export default async function TenantPage(props: TenantPageProps) {
 
       <main id="main-content" tabIndex={-1} className="relative flex-1 pb-[calc(env(safe-area-inset-bottom,0px)+10rem)]
         lg:ml-[260px] lg:pb-0">
-        <div className={[
-          "flex flex-col gap-4 border-b-2 border-[var(--ink)] px-6 pb-3 pt-6 sm:flex-row sm:items-start",
-          "sm:justify-between lg:px-8 lg:pt-8"
-        ].join(" ")}>
-          <div id="overview">
-            <h1 className="font-display text-2xl font-semibold text-[var(--ink)]">
-              {activeSection === "overview" ? `Hi, ${displayName}` : tenantSectionLabel[activeSection]}
-            </h1>
-            <p className="mt-1 text-sm text-[var(--muted)]">
-              {activeSection === "overview" ? "Your rent, repairs, and lease at a glance."
-                : activeSection === "charges" ? "Pay rent and see what you've paid."
-                  : activeSection === "notifications" ? "Talk with your landlord."
-                    : "Everything you need for your home."}
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-6 px-6 pb-24 pt-6 lg:px-8">
-          <StripeTestModeBanner />
-          {activeSection !== "overview" || hasUnknownSection ? (
-            <div className="flex items-center justify-between">
-              {activeSection !== "notifications" ? <h2 className="font-display text-[18px] font-semibold text-[var(--ink)]">
-                {hasUnknownSection ? "Section not found" : tenantSectionLabel[activeSection]}
-              </h2> : null}
+        {hasUnknownSection || activeSection === "documents" ? <>
+          <div className={[
+            "flex flex-col gap-4 border-b-2 border-[var(--ink)] px-6 pb-3 pt-6 sm:flex-row sm:items-start",
+            "sm:justify-between lg:px-8 lg:pt-8"
+          ].join(" ")}>
+            <div id="overview">
+              <h1 className="font-display text-2xl font-semibold text-[var(--ink)]">
+                {activeSection === "overview" ? `Hi, ${displayName}` : tenantSectionLabel[activeSection]}
+              </h1>
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                {activeSection === "overview" ? "Your rent, repairs, and lease at a glance." : "Everything you need for your home."}
+              </p>
             </div>
-          ) : null}
-
-          {hasUnknownSection ? (
-            <SectionNotFoundState activeSection={sectionValue ?? "unknown"} role="tenant" />
-          ) : null}
-
-          {!hasUnknownSection && activeSection === "overview" && (
+          </div>
+          <div className="space-y-6 px-6 pb-24 pt-6 lg:px-8">
+            <StripeTestModeBanner />
+            <div className="flex items-center justify-between">
+              <h2 className="font-display text-[18px] font-semibold text-[var(--ink)]">
+                {hasUnknownSection ? "Section not found" : tenantSectionLabel.documents}
+              </h2>
+            </div>
+            {hasUnknownSection ? <SectionNotFoundState activeSection={sectionValue ?? "unknown"} role="tenant" /> : null}
+            {!hasUnknownSection && activeSection === "documents" && (
+              <TenantDocumentsSection
+                packets={documentsData.packets}
+                files={documentsData.files}
+                onSignPacket={signDocumentPacket}
+                isFeatureReady={capabilities.documentsEnabled}
+                featureWarning={capabilities.warnings.documents}
+                propertyFilesEnabled={documentsData.propertyFilesEnabled}
+                propertyFilesWarning={documentsData.propertyFilesWarning}
+                assetAccessEnabled={capabilities.documentAssetAccessEnabled}
+                assetAccessWarning={
+                  capabilities.documentsEnabled && !capabilities.documentAssetAccessEnabled
+                    ? "Document records are available, but secure file links are not configured yet."
+                    : null
+                }
+              />
+            )}
+          </div>
+        </> : <TenantSectionTabs
+          initialSection={activeSection}
+          displayName={displayName}
+          banner={<StripeTestModeBanner />}
+          overview={<>
             <div className="space-y-5">
               <TenantOverview
                 userName={displayName}
@@ -325,9 +339,8 @@ export default async function TenantPage(props: TenantPageProps) {
               />
 
             </div>
-          )}
-
-          {!hasUnknownSection && activeSection === "charges" && (
+          </>}
+          charges={<>
             <div className="space-y-6">
               <TenantRentCard
                 charges={paymentData.charges}
@@ -411,9 +424,8 @@ export default async function TenantPage(props: TenantPageProps) {
                 </CardContent>
               </Card>
             </div>
-          )}
-
-          {!hasUnknownSection && activeSection === "maintenance" && (
+          </>}
+          maintenance={<>
             <>
               <TicketForm
                 units={maintenanceData.units}
@@ -436,28 +448,9 @@ export default async function TenantPage(props: TenantPageProps) {
                 photoWorkflowWarning={capabilities.warnings.photoWorkflow}
               />
             </>
-          )}
-
-          {!hasUnknownSection && activeSection === "documents" && (
-            <TenantDocumentsSection
-              packets={documentsData.packets}
-              files={documentsData.files}
-              onSignPacket={signDocumentPacket}
-              isFeatureReady={capabilities.documentsEnabled}
-              featureWarning={capabilities.warnings.documents}
-              propertyFilesEnabled={documentsData.propertyFilesEnabled}
-              propertyFilesWarning={documentsData.propertyFilesWarning}
-              assetAccessEnabled={capabilities.documentAssetAccessEnabled}
-              assetAccessWarning={
-                capabilities.documentsEnabled && !capabilities.documentAssetAccessEnabled
-                  ? "Document records are available, but secure file links are not configured yet."
-                  : null
-              }
-            />
-          )}
-
-          {!hasUnknownSection && activeSection === "notifications" &&
-            (capabilities.notificationsEnabled || capabilities.inboxThreadsEnabled ? (
+          </>}
+          notifications={<>
+            {capabilities.notificationsEnabled || capabilities.inboxThreadsEnabled ? (
               <InboxSection
                 viewerRole="tenant"
                 notifications={notifications}
@@ -481,10 +474,11 @@ export default async function TenantPage(props: TenantPageProps) {
                   "Notifications are not ready yet. Complete setup and reload."
                 }
               />
-            ))}
-        </div>
+            )}
+          </>}
+        />}
       </main>
-      <TenantBottomBar activeItemId={activeSection} />
+      {hasUnknownSection || activeSection === "documents" ? <TenantBottomBar activeItemId={activeSection} /> : null}
     </div>
   );
 }

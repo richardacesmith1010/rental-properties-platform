@@ -41,12 +41,23 @@ vi.mock("@/components/dashboard/sidebar-nav", () => ({
 }));
 vi.mock("@/components/dashboard/tenant-rent-card", () => ({ TenantRentCard: () => null }));
 vi.mock("@/components/dashboard/charges-section", () => ({ ChargesSection: () => null }));
+vi.mock("@/components/dashboard/ticket-form", () => ({ TicketForm: () => null }));
+vi.mock("@/components/dashboard/maintenance-section", () => ({ MaintenanceSection: () => null }));
 vi.mock("@/components/dashboard/tenant-bottom-bar", () => ({ TenantBottomBar: () => null }));
 vi.mock("@/components/shared/stripe-test-mode-banner", () => ({ StripeTestModeBanner: () => null }));
 
 import TenantPage from "@/app/tenant/page";
 
 describe("tenant Rent page", () => {
+  it("T1 renders all four tenant tab sections with only Home visible", async () => {
+    const page = await TenantPage({ searchParams: Promise.resolve({ section: "overview" }) });
+    const container = document.createElement("div");
+    container.innerHTML = renderToStaticMarkup(page);
+    const sections = Array.from(container.querySelectorAll("[data-tenant-section]"));
+    expect(sections.map((section) => section.getAttribute("data-tenant-section")))
+      .toEqual(["overview", "charges", "maintenance", "notifications"]);
+    expect(sections.map((section) => section.hasAttribute("hidden"))).toEqual([false, true, true, true]);
+  });
   it("paid line shows the date only", async () => {
     const page = await TenantPage({ searchParams: Promise.resolve({ section: "charges" }) });
     const container = document.createElement("div");

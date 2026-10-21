@@ -5,9 +5,13 @@ import OwnerLayout from "@/app/owner/layout";
 import { MessageCircle, Receipt } from "lucide-react";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import type { AnchorHTMLAttributes } from "react";
 
 const state = vi.hoisted(() => ({ path: "/owner" }));
 vi.mock("next/navigation", () => ({ usePathname: () => state.path }));
+vi.mock("next/link", () => ({ default: ({ prefetch, ...props }: AnchorHTMLAttributes<HTMLAnchorElement> & {
+  prefetch?: boolean;
+}) => <a {...props} data-prefetch={String(prefetch)} /> }));
 vi.mock("@/components/theme-provider", () => ({
   useDomusTheme: () => ({ theme: "light", setTheme: vi.fn() })
 }));
@@ -24,6 +28,39 @@ beforeEach(() => {
 });
 
 describe("owner phone bar", () => {
+  it("T6 selects Home, Homes and Messages in place on the dashboard", () => {
+    const onSelectItem = vi.fn();
+    render(<OwnerBottomBar activeItemId="overview" onSelectItem={onSelectItem} />);
+    const nav = screen.getByRole("navigation", { name: "Owner shortcuts" });
+    for (const [label, section] of [["Homes", "portfolio"], ["Messages", "inbox"], ["Home", "overview"]]) {
+      const link = within(nav).getByRole("link", { name: label });
+      expect(fireEvent.click(link)).toBe(false);
+      expect(onSelectItem).toHaveBeenLastCalledWith(section);
+      expect(link).toHaveAttribute("aria-current", "page");
+    }
+  });
+
+  it("T6 keeps owner tab destinations on Money", () => {
+    state.path = "/owner/money";
+    window.history.replaceState(null, "", "/owner/money?account=abc");
+    const onSelectItem = vi.fn();
+    render(<OwnerBottomBar onSelectItem={onSelectItem} />);
+    const nav = screen.getByRole("navigation", { name: "Owner shortcuts" });
+    expect(within(nav).getByRole("link", { name: "Home" })).toHaveAttribute("href", "/owner?account=abc");
+    expect(within(nav).getByRole("link", { name: "Homes" }))
+      .toHaveAttribute("href", "/owner?account=abc&section=portfolio");
+    expect(within(nav).getByRole("link", { name: "Messages" }))
+      .toHaveAttribute("href", "/owner?account=abc&section=inbox");
+    expect(onSelectItem).not.toHaveBeenCalled();
+  });
+
+  it("T7 prefetches Money with the active account", () => {
+    window.history.replaceState(null, "", "/owner?account=abc");
+    render(<OwnerBottomBar />);
+    expect(screen.getByRole("link", { name: "Money" }))
+      .toHaveAttribute("href", "/owner/money?account=abc");
+    expect(screen.getByRole("link", { name: "Money" })).toHaveAttribute("data-prefetch", "true");
+  });
   it.each([
     ["/owner", null, "Home"], ["/owner", "overview", "Home"],
     ["/owner/money", null, "Money"], ["/owner/bank", null, "Money"],

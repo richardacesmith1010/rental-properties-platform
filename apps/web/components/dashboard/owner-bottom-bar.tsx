@@ -4,6 +4,7 @@ import { BarChart3, Building2, Home, Menu, MessageCircle, type LucideIcon } from
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { useDomusTheme } from "@/components/theme-provider";
 import { MobileDrawer } from "@/components/ui/mobile-drawer";
 import { ownerMenuGroups } from "./dashboard-config";
@@ -73,11 +74,13 @@ function StandaloneDrawer({ open, onOpenChange, search }: {
   </MobileDrawer>;
 }
 
-export function OwnerBottomBar({ items = [], activeItemId, onOpenMore,
+export function OwnerBottomBar({ items = [], activeItemId, onSelectItem, onOpenMore,
   unreadNotificationCount = 0 }: OwnerBottomBarProps) {
   const pathname = usePathname();
   const [location, setLocation] = useState<{ pathname: string } | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedTab, setSelectedTab] = useState<OwnerTab | null>(null);
+  useEffect(() => setSelectedTab(null), [activeItemId, pathname]);
   useEffect(() => {
     setLocation({ pathname: pathname ?? window.location.pathname });
   }, [pathname]);
@@ -86,7 +89,7 @@ export function OwnerBottomBar({ items = [], activeItemId, onOpenMore,
 
   const section = location.pathname === "/owner"
     ? activeItemId ?? new URLSearchParams(search).get("section") : undefined;
-  const active = resolveOwnerTab(location.pathname, section);
+  const active = selectedTab ?? resolveOwnerTab(location.pathname, section);
   const lateCount = items.find((item) => item.id === "charges")?.badgeCount ?? 0;
   const inboxCount = items.find((item) => item.id === "inbox")?.badgeCount ?? 0;
   const tabs: Array<{ label: OwnerTab; icon: LucideIcon; count?: number }> = [
@@ -115,8 +118,18 @@ export function OwnerBottomBar({ items = [], activeItemId, onOpenMore,
           aria-label={count ? `More, ${badgeLabel}` : "More"}
           aria-current={selected ? "page" : undefined} className={common}
           onClick={() => onOpenMore ? onOpenMore() : setDrawerOpen(true)}>{children}</button>
+          : label === "Money" ? <Link key={label} href={tabHref(label, search)} prefetch title={`Open ${label}.`}
+            aria-label={label} aria-current={selected ? "page" : undefined} className={common}>{children}</Link>
           : <a key={label} href={tabHref(label, search)} title={`Open ${label}.`}
-            onClick={(event) => { event.currentTarget.href = tabHref(label, window.location.search); }}
+            onClick={(event) => {
+              event.currentTarget.href = tabHref(label, window.location.search);
+              if (!onSelectItem || location.pathname !== "/owner" || event.button !== 0 ||
+                event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+              event.preventDefault();
+              const id = label === "Home" ? "overview" : label === "Homes" ? "portfolio" : "inbox";
+              setSelectedTab(label);
+              onSelectItem(id);
+            }}
             aria-label={count ? `${label}, ${badgeLabel}` : label}
             aria-current={selected ? "page" : undefined} className={common}>{children}</a>;
       })}

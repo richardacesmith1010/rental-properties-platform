@@ -12,11 +12,13 @@ const items = [
   ["notifications", "Messages", MessageCircle]
 ] as const;
 
-export function TenantBottomBar({ activeItemId }: { activeItemId: string }) {
+export function TenantBottomBar({ activeItemId, onSelect }: {
+  activeItemId: string;
+  onSelect?: (id: "overview" | "charges" | "maintenance" | "notifications") => void;
+}) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  if (!mounted) return null;
-  return createPortal(
+  const bar = (
     <nav aria-label="Tenant shortcuts" className={[
       "fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 gap-1 border-t border-[var(--ink)]",
       "bg-[color:color-mix(in_srgb,var(--surface)_96%,transparent)] px-2",
@@ -25,6 +27,11 @@ export function TenantBottomBar({ activeItemId }: { activeItemId: string }) {
     ].join(" ")}>
       {items.map(([id, label, Icon]) => (
         <Link key={id} href={`/tenant?section=${id}`}
+          onClick={(event) => {
+            if (!onSelect || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+            onSelect(id);
+          }}
           aria-current={activeItemId === id ? "page" : undefined}
           className={`flex min-h-11 flex-col items-center justify-center rounded-xl text-[11px] ${
             activeItemId === id ? "font-semibold text-[var(--ink)]" : "text-[var(--faint)]"
@@ -32,7 +39,7 @@ export function TenantBottomBar({ activeItemId }: { activeItemId: string }) {
           <Icon className="h-5 w-5" /><span>{label}</span>
         </Link>
       ))}
-    </nav>,
-    document.body
+    </nav>
   );
+  return mounted ? createPortal(bar, document.body) : bar;
 }
