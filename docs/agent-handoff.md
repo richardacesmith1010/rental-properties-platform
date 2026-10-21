@@ -1935,3 +1935,21 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   SplashBoard's limit → "bad launch image" denylist; plus unsigned Simulator builds (-67056). Codex (gpt-6-astra high)
   running. **245a** (sign-in `next`) rev 3 APPROVED, queued.
 - Decision (Claude): invites stay outside the notifications switch (sent because a person pressed Invite).
+
+## 2026-10-20 — Sprint 246a COMMITTED (iPhone launch black screen); ships to phones with TestFlight build 5
+- **246a** `dffd8fa` (iPhone tier, ChatGPT rev 3 APPROVE, gpt-6-astra high). Root cause from the Simulator log:
+  `splashboardd` "Estimated size (29900800) is over limit" for the 2732² `Splash` → SpringBoard "bad launch image" →
+  later launches "denied app" → black until first frame. (Unsigned Simulator builds also failed earlier with -67056.)
+- Fix: launch storyboard = `LaunchBackground` color (#F3F4F6 / #0E0F11) + centered `LaunchMark` 312×316.5 pt (aspect
+  70:71, width ≤ root − 32 pt; PNG max 936×949 = 3.55 MB decoded; `assets.mjs` throws above 4,000,000 B before
+  writing); Capacitor SplashScreen `backgroundColor` removed (no light flash in dark); Simulator ad-hoc signing
+  (`CODE_SIGN_IDENTITY[sdk=iphonesimulator*] = -`).
+- Verified: node 79/79 (local `Signing.local.xcconfig` parked outside the repo during the run, restored byte-identical);
+  XCTest 133/133 incl. 3 LaunchScreenTests (light/dark resolution, 320/375/402 layouts, resolved-variant pixel);
+  signature valid; simulated entitlements keep `applinks:domusbase.com` (+ Xcode app id); clean install → SplashBoard
+  "launch image generation completed" (no over-limit/denylist lines); cold launch light = door on #F3F4F6 from the first
+  captured frame (was solid black); dark = white door on #0E0F11; Face ID "Not now" + sign-in persisted across relaunch
+  (app uses UserDefaults/WK cookies, no keychain).
+- Grooming: `npm run assets` also runs `capacitor-assets generate --ios`, which could recreate a `Splash.imageset`;
+  change the script to icons only (L1, next iOS sprint).
+- **Next:** 245a (sign-in `next`, Codex running) → ship → TestFlight build 5 (246a) → owner installs (one tap).
