@@ -1970,3 +1970,18 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   tenant tab = one RSC GET of the whole page 0.65–0.97 s (no prefetch; router cache not reused); owner tabs = full
   reloads 0.9–1.1 s visible / 1.5–1.9 s idle. **247a** packet (instant tabs: tenant sections rendered once + client
   switch; owner bar uses in-page section switch; Money prefetched) — Codex running.
+
+## 2026-10-21 — Sprints 247a/247b SHIPPED (instant phone tabs); TestFlight build 5 uploaded (246a launch screen)
+- **247a** `e10034b` (L2): tenant's four main sections render once (`TenantSectionTabs`, `history.pushState`/popstate,
+  focus to sr-only heading, hidden sections keep form state); owner bar Home/Homes/Messages use the in-page section
+  switch on `/owner`; Money is a prefetched `Link`. Codex finding on the router cache: Next 15.5 `staleTimes.dynamic`
+  only extends existing entries; it does not create them — why revisits refetched is unproven (moot now).
+- **247b** `c0498bf` (L1): section headings sr-only + no focus ring after a switch (one "Rent" title, no blue box).
+- Smoke tooling (Claude): `smoke-speed` tenant Home now targets the quick-action link (`d4ad10b`); the hidden Repairs
+  section repeated the words.
+- Verified prod (WebKit iPhone 15 Pro, smoke accounts): tenant tabs 31–49 ms, owner Home/Homes/Messages 29–74 ms,
+  0 RSC/document requests, URL + `aria-current` update; Money 54 ms. Tenant Home first load median 641 ms (unchanged).
+  Gate 3,116; CI success; prod smoke 27/27 (twice). Screenshots light + dark readable.
+- **TestFlight build 5** uploaded (`** EXPORT SUCCEEDED **`, "Upload submitted for build 5"): carries 246a launch
+  screen. Owner next: TestFlight → Install build 5; then cold-launch check (expect the door, no black).
+- **Scorecard:** Speed 85 → 88.
