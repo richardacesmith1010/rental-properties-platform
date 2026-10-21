@@ -1917,3 +1917,21 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   scoped destinations, middleware overwrites client `x-domus-path`, `next` never forwarded for invite/recovery. Queued
   after 244a.
 - Seen on Simulator cold launch: ~2–3 s black screen before the splash (backlog item 8, iPhone tier).
+
+## 2026-10-20 — Sprint 244a SHIPPED (notifications correct before "on"); 246a + 245a approved
+- **244a** `99fb4c8` (L3, ChatGPT rev 6 APPROVE, + fix1): tenant consent merge on tenant-facing automated messages;
+  recipient email lookup in every mode; claim → send → record email path (unique index, `Idempotency-Key`
+  `domus-n-<id>[-k-<key>]`, stored exact `email_request_body`, re-gate before retry, immutable `first_attempt_at` 20 h
+  unknown-result deadline, terminal `"Not sent: …"`), keyed follow-ups, `manager_payment` entity, invoice email gated,
+  cron summaries `"<Label>: N sent, N emailed, N skipped."`. fix1: stale webhook assertions, N3-overdue test, legacy
+  null-body failed rows rebuilt instead of marked terminal.
+- **Rollout:** dry run of both migrations rolled back ✅ → migration 1 (4 columns) applied ✅ → deploy ✅ → migration 2
+  unique index applied ✅ (valid, unique, def matches) → SQL probe: distinct keys insert, duplicate key rejected (rolled
+  back) ✅. Attacker SQL as `authenticated` (tenant with 42 of 140 rows): sees 42, 0 bodies; UPDATE denied (42501);
+  `anon` sees 0 ✅. Gate 3,008; CI success; prod smoke 27/27; Vercel runtime errors (1 h) none; pending/unknown email
+  rows: 0. Production stays in **test** mode (allowlist). First live exercise = next scheduled cron.
+- **Scorecard:** Notifications 45 → 55.
+- **246a** (iPhone launch black screen) rev 3 APPROVED: root cause from `splashboardd` log — 2732² splash ≈ 30 MB over
+  SplashBoard's limit → "bad launch image" denylist; plus unsigned Simulator builds (-67056). Codex (gpt-6-astra high)
+  running. **245a** (sign-in `next`) rev 3 APPROVED, queued.
+- Decision (Claude): invites stay outside the notifications switch (sent because a person pressed Invite).
