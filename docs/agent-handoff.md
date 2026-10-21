@@ -2021,3 +2021,17 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Applied live; first real run: 11 rows, all 0 eligible / 0 blocked. Gate 3,146.
 - Policy §7 updated: report runs daily; deletion stays off until the lawyer confirms + owner approves.
 - **Later (needs lawyer + owner):** deletion sprint — children-first purge, de-identify shared records, storage via API.
+
+## 2026-10-21 — Sprint 249a SHIPPED (polish batch) + banner rollback; App Store docs refreshed
+- **249a** `ca58f2e` (L2): `/settings?section=…` opens that tab (verified live: owner → Notifications); reset page one
+  subtitle; FAQ "Yes. Domus is free for landlords and tenants. You don't need a credit card."; disabled primary buttons
+  `--surface-3` / `--muted`, no opacity fade (live: light rgb(236,238,241)/rgb(77,83,92), dark rgb(42,45,50)/
+  rgb(163,169,178), opacity 1). Gate 3,154; CI success; smoke 27/27.
+- **Regression caught in the live walk:** 249a's fixed 96 px install-banner lift (my packet) covered **Sign in** on
+  iPhone Safari `/login`. Claude rolled back that one class + its test (`7f8e876`, deployed). L-034 added. Proper fix
+  249b (CSS var set by the tab bars) — Codex running.
+- **App Store docs** (`af79575`, `39941a5`): review notes (Messages tab, Settings paths, Mountain time, test-mode email,
+  no Pay button in demo, What to Test build 5, gates marked done), listing (pricing wording, gates met), privacy answers
+  (shot table matches the 6 files; JPEG). Screenshot 05 shows a UTC time — optional cosmetic retake.
+- Verified already fixed (no work): review-card keys, tenant "Already paid?", chat timestamp contrast, old signup copy.
+- Guarded: `apps/ios` `npm run assets` would recreate `Splash.imageset`; the 246a assets test fails if it does.
