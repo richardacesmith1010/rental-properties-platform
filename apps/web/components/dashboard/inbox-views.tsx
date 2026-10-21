@@ -45,7 +45,7 @@ export const unavailableAction: StatefulAction = async () => ({
 
 function mapNotificationToSection(type: NotificationDTO["type"]): string {
   if (type === "owner_message") return "inbox";
-  if (type === "new_ticket" || type === "ticket_resolved") return "maintenance";
+  if (type === "new_ticket" || type === "ticket_in_progress" || type === "ticket_resolved") return "maintenance";
   if (type === "late_rent" || type === "payment_recorded") return "charges";
   if (type === "lease_updated") return "leases";
   if (type === "document_sent" || type === "document_signed") return "documents";

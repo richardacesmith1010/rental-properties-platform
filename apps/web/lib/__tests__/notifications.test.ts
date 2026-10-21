@@ -35,6 +35,8 @@ vi.mock("@/lib/notification-preferences", async (importOriginal) => ({
 }));
 
 import { createNotificationWithDelivery, getNotificationsForUser, notifyPropertyTeam } from "@/lib/notifications";
+import { getPrimaryNotificationAction } from "@/lib/notification-actions";
+import { getNotificationActionLink } from "@/lib/notification-feed";
 import {
   createNotificationAdminClient as createBaseAdminClient, notificationDeliveryInserts, notificationUpserts
 } from "./notification-test-helpers";
@@ -89,6 +91,14 @@ function createNotificationAdminClient(config: Parameters<typeof createBaseAdmin
 }
 
 describe("notifications utilities", () => {
+  it("R5 links a repair-started notice to the tenant repair", () => {
+    const notification = { type: "ticket_in_progress", entityType: "maintenance_ticket", entityId: "ticket-1",
+      title: "Your repair has started", body: "Work has started." };
+    expect(getPrimaryNotificationAction(notification, "tenant")).toMatchObject({
+      label: "Track Your Repair", href: "/tenant?section=maintenance&ticketId=ticket-1"
+    });
+    expect(getNotificationActionLink(notification)).toEqual({ label: "View Repair", sectionId: "maintenance" });
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("DOMUS_NOTIFICATIONS_ENABLED", "true");
@@ -552,6 +562,95 @@ describe("notifications utilities", () => {
       entityType: "inbox_thread"
     });
     expect(createAdminClientMock).not.toHaveBeenCalled();
+  });
+
+  it("R4b sends repair-started email once per row, even for concurrent calls, and preserves read time", async () => {
+    vi.stubEnv("RESEND_API_KEY", "test-key");
+    vi.stubEnv("RESEND_FROM_EMAIL", "alerts@domusbase.com");
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200,
+      json: async () => ({ id: "resend-1" }) });
+    vi.stubGlobal("fetch", fetchMock);
+    const notifications = new Map<string, { id: string; read_at: string | null; title: string; body: string }>();
+    const emails = new Map<string, Record<string, unknown>>();
+    let claims = 0;
+    const admin = { from: (table: string) => {
+      if (table === "profiles") return { select: () => ({ eq: () => ({ maybeSingle: async () => ({
+        data: { email: "tenant@example.com", role: "tenant", notification_preferences: defaultNotificationPreferences,
+          notifications_paused_until: null }, error: null
+      }) }) }) };
+      if (table === "notifications") return { upsert: (row: {
+        recipient_profile_id: string; type: string; entity_type: string; entity_id: string;
+        title: string; body: string
+      }) => ({ select: () => ({ single: async () => {
+        const key = `${row.recipient_profile_id}:${row.type}:${row.entity_type}:${row.entity_id}`;
+        const old = notifications.get(key);
+        const next = { id: old?.id ?? "notification-1", read_at: old?.read_at ?? null,
+          title: row.title, body: row.body };
+        notifications.set(key, next);
+        return { data: { id: next.id }, error: null };
+      } }) }) };
+      if (table === "notification_deliveries") return {
+        select: () => {
+          const filters: Record<string, unknown> = {};
+          const query = {
+            eq: (column: string, value: unknown) => { filters[column] = value; return query; },
+            is: (column: string, value: unknown) => { filters[column] = value; return query; },
+            maybeSingle: async () => ({ data: emails.get(`${filters.notification_id}:email`) ?? null, error: null }),
+            then: (resolve: (value: unknown) => unknown) =>
+              Promise.resolve({ data: [], error: null }).then(resolve)
+          };
+          return query;
+        },
+        insert: (row: Record<string, unknown>) => {
+          if (row.channel === "in_app") return Promise.resolve({ error: null });
+          return { select: () => ({ single: async () => {
+            const key = `${row.notification_id}:email`;
+            if (emails.has(key)) return { data: null, error: { code: "23505" } };
+            claims += 1;
+            const next = { ...row, id: `delivery-${claims}` };
+            emails.set(key, next);
+            return { data: next, error: null };
+          } }) };
+        },
+        update: (value: Record<string, unknown>) => {
+          const filters: Record<string, unknown> = {};
+          const query = {
+            eq: (column: string, match: unknown) => { filters[column] = match; return query; },
+            select: () => ({ maybeSingle: async () => {
+              const key = "notification-1:email";
+              const old = emails.get(key);
+              if (!old || old.id !== filters.id || old.claim_token !== filters.claim_token) {
+                return { data: null, error: null };
+              }
+              emails.set(key, { ...old, ...value });
+              return { data: { id: old.id }, error: null };
+            } })
+          };
+          return query;
+        }
+      };
+      throw new Error(`Unexpected table ${table}`);
+    } };
+    createAdminClientMock.mockReturnValue(admin);
+    const params = { recipientProfileId: "tenant-1", type: "ticket_in_progress" as const,
+      title: "Your repair has started", body: 'Work has started on "Leak".',
+      entityType: "maintenance_ticket", entityId: "ticket-1", actorProfileId: "manager-1" };
+    const first = await createNotificationWithDelivery(params);
+    expect(first.email.status).toBe("sent");
+    const row = notifications.values().next().value!;
+    row.read_at = "2026-10-20T12:00:00.000Z";
+    const second = await createNotificationWithDelivery(params);
+    expect(second.email).toEqual({ status: "skipped", reason: "duplicate" });
+    expect(notifications.size).toBe(1);
+    expect(notifications.values().next().value).toMatchObject({
+      id: "notification-1", read_at: "2026-10-20T12:00:00.000Z"
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    emails.clear();
+    fetchMock.mockClear();
+    const concurrent = await Promise.all([createNotificationWithDelivery(params), createNotificationWithDelivery(params)]);
+    expect(concurrent.map((result) => result.email.status).sort()).toEqual(["sent", "skipped"]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
 });

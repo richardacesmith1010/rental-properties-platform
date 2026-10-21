@@ -113,6 +113,7 @@ export function getNotificationActions(
 
   if (
     notification.type === "new_ticket" ||
+    notification.type === "ticket_in_progress" ||
     notification.type === "ticket_resolved" ||
     notification.entityType === "maintenance_ticket" ||
     notification.entityType === "ticket"

@@ -41,7 +41,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   getUserNotificationPreferenceSettings,
-  NOTIFICATION_EMAIL_PREFERENCE_OPTIONS
+  notificationPreferenceOptionsForRole
 } from "@/lib/notification-preferences";
 import {
   getRentCollectionConnectHref,
@@ -197,7 +197,7 @@ export default async function SettingsPage(props: SettingsPageProps) {
               content: (
                 <div className="space-y-4">
                 <NotificationPreferences
-                  options={NOTIFICATION_EMAIL_PREFERENCE_OPTIONS}
+                  options={notificationPreferenceOptionsForRole(role)}
                   settings={notificationPreferences}
                   onUpdatePreferences={updateNotificationPreferences}
                   onPauseNotifications={pauseNotificationEmails}

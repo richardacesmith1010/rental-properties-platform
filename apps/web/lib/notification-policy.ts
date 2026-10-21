@@ -2,7 +2,8 @@ import type { NotificationType } from "@/lib/notifications";
 
 export type NotificationEvent =
   | "rent_paid_manual" | "rent_paid_stripe" | "late_fee" | "overdue_followup" | "autopay_failed"
-  | "bank_payment_failed" | "rent_due_reminder" | "ticket_created" | "ticket_comment" | "ticket_resolved"
+  | "bank_payment_failed" | "rent_due_reminder" | "ticket_created" | "ticket_comment" | "ticket_in_progress"
+  | "ticket_resolved"
   | "lease_ending_soon" | "lease_ended" | "lease_changed";
 
 export interface EventRule {
@@ -53,6 +54,10 @@ const rules: Record<NotificationEvent, EventRule> = {
   },
   ticket_resolved: {
     type: "ticket_resolved", owners: false, managers: "none",
+    tenant: "always", email: true, excludeActor: false
+  },
+  ticket_in_progress: {
+    type: "ticket_in_progress", owners: false, managers: "none",
     tenant: "always", email: true, excludeActor: false
   },
   lease_ending_soon: {

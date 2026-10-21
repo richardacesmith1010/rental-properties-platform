@@ -290,23 +290,30 @@ export async function updateTicketStatus(
     }));
   }
 
-  if (status === "resolved" && ticket.tenant_profile_id) {
+  if ((status === "resolved" || (status === "in_progress" && ticket.status !== status)) && ticket.tenant_profile_id) {
     const admin = createAdminClient();
-    const { data: tenantProfile } = await admin
+    const { data: tenantProfile, error: tenantProfileError } = await admin
       .from("profiles")
       .select("id, email")
       .eq("id", ticket.tenant_profile_id)
       .maybeSingle();
 
-    if (tenantProfile?.id) {
+    if (tenantProfileError) {
+      console.error(`[maintenance] tenant_profile_lookup: ${tenantProfileError.code ?? "unknown"}`);
+    }
+
+    if (!tenantProfileError && tenantProfile?.id) {
       void createNotificationWithDelivery({
         recipientProfileId: tenantProfile.id,
         recipientEmail: tenantProfile.email,
-        type: "ticket_resolved",
-        title: "Maintenance Request Resolved",
-        body: `Your maintenance request "${ticket.title}" has been resolved.`,
+        type: status === "in_progress" ? "ticket_in_progress" : "ticket_resolved",
+        title: status === "in_progress" ? "Your repair has started" : "Maintenance Request Resolved",
+        body: status === "in_progress"
+          ? `Work has started on "${ticket.title}".`
+          : `Your maintenance request "${ticket.title}" has been resolved.`,
         entityType: "maintenance_ticket",
-        entityId: ticket.id
+        entityId: ticket.id,
+        ...(status === "in_progress" ? { actorProfileId: user.id } : {})
       }).catch(
         sideEffectError("updateTicketStatus", "notify_tenant", {
           userId: user.id,

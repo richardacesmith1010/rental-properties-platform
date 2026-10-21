@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   areNotificationEmailsPaused,
   DEFAULT_NOTIFICATION_EMAIL_PREFERENCES,
@@ -7,10 +9,68 @@ import {
   resolveTenantDeliveryPreference,
   resolveCombinedNotificationDeliveryPreference,
   resolveNotificationDeliveryPreference,
-  resolveNotificationPauseUntil
+  resolveNotificationPauseUntil,
+  notificationPreferenceOptionsForRole,
+  getNotificationPreferenceKeyForType
 } from "@/lib/notification-preferences";
 
 describe("notification preference helpers", () => {
+  it("R1 returns the exact role-specific switches, order, and copy", () => {
+    expect(notificationPreferenceOptionsForRole("tenant")).toEqual([
+      { key: "rent_due_reminder", label: "Rent reminders", description: "Email me 3 days before rent is due." },
+      { key: "late_rent", label: "Late rent", description: "Email me when my rent is late." },
+      { key: "delinquency_escalation", label: "Overdue rent", description: "Email me again if rent stays unpaid." },
+      { key: "payment_received", label: "Receipts", description: "Email me when my payment is recorded." },
+      { key: "maintenance_updates", label: "Repairs", description: "Email me when my repair is started or fixed." },
+      { key: "lease_expiration", label: "Lease ending", description: "Email me before my lease ends." }
+    ]);
+    expect(notificationPreferenceOptionsForRole("owner")).toEqual([
+      { key: "rent_due_reminder", label: "Rent reminders",
+        description: "Let Domus remind my tenants 3 days before rent is due." },
+      { key: "late_rent", label: "Late rent",
+        description: "Email me when rent is late. Let Domus tell my tenant too." },
+      { key: "delinquency_escalation", label: "Overdue rent",
+        description: "Email me if rent stays unpaid. Let Domus remind my tenant too." },
+      { key: "payment_received", label: "Payments", description: "Email me when a payment is recorded." },
+      { key: "maintenance_updates", label: "Repairs", description: "Email me when a tenant reports a repair." },
+      { key: "lease_expiration", label: "Lease ending",
+        description: "Email me before a lease ends. Let Domus tell my tenant too." }
+    ]);
+    expect(notificationPreferenceOptionsForRole("manager")).toEqual([
+      { key: "late_rent", label: "Late rent", description: "Email me when rent is late." },
+      { key: "delinquency_escalation", label: "Overdue rent",
+        description: "Email me again if rent stays unpaid." },
+      { key: "payment_received", label: "Payments", description: "Email me when a payment is recorded." },
+      { key: "maintenance_updates", label: "Repairs", description: "Email me when a tenant reports a repair." },
+      { key: "lease_expiration", label: "Lease ending", description: "Email me before a lease ends." },
+      { key: "manager_invoice", label: "My invoices", description: "Email me when an owner pays my fee." }
+    ]);
+  });
+
+  it("R5 maps repair started to the repairs email preference", () => {
+    expect(getNotificationPreferenceKeyForType("ticket_in_progress")).toBe("maintenance_updates");
+  });
+
+  it("R6 keeps the forward and rollback type sets exact and swaps constraints without a gap", () => {
+    const sql = readFileSync(resolve(process.cwd(), "../../supabase/migrations/20261101_sprint244b_ticket_in_progress_type.sql"), "utf8");
+    const expected = ["new_ticket", "late_rent", "ticket_resolved", "payment_recorded", "lease_updated",
+      "document_sent", "document_signed", "application_reviewed", "rent_due_reminder", "invite_accepted",
+      "owner_message", "announcement", "lease_expiring_soon", "lease_expired", "delinquency_escalation",
+      "distribution_change_requested", "distribution_change_approved", "distribution_change_rejected",
+      "withdrawal_requested", "withdrawal_approved", "withdrawal_rejected", "withdrawal_completed"];
+    const clauses = [...sql.matchAll(/add constraint notifications_type_check_v[12] check \(type in \(([\s\S]*?)\)\) not valid;/g)];
+    expect(clauses).toHaveLength(2);
+    const types = (clause: string) => [...clause.matchAll(/'([^']+)'/g)].map((match) => match[1]);
+    expect(types(clauses[0][1])).toEqual([...expected, "ticket_in_progress"]);
+    expect(types(clauses[1][1])).toEqual(expected);
+    for (const version of ["v2", "v1"]) {
+      expect(sql).toContain(`validate constraint notifications_type_check_${version};`);
+      expect(sql).toContain(`rename constraint notifications_type_check_${version} to notifications_type_check;`);
+    }
+    expect(sql.indexOf("validate constraint notifications_type_check_v2"))
+      .toBeLessThan(sql.indexOf("drop constraint notifications_type_check;"));
+    expect(sql).toContain("delete from notifications where type = 'ticket_in_progress';");
+  });
   it.each([
     ["rent_due_reminder", "rent_due_reminder"],
     ["late_rent", "late_rent"],

@@ -102,6 +102,42 @@ export const NOTIFICATION_EMAIL_PREFERENCE_OPTIONS: NotificationPreferenceOption
     }
   ];
 
+const ROLE_NOTIFICATION_OPTIONS: Record<"owner" | "manager" | "tenant", NotificationPreferenceOption[]> = {
+  tenant: [
+    { key: "rent_due_reminder", label: "Rent reminders", description: "Email me 3 days before rent is due." },
+    { key: "late_rent", label: "Late rent", description: "Email me when my rent is late." },
+    { key: "delinquency_escalation", label: "Overdue rent", description: "Email me again if rent stays unpaid." },
+    { key: "payment_received", label: "Receipts", description: "Email me when my payment is recorded." },
+    { key: "maintenance_updates", label: "Repairs", description: "Email me when my repair is started or fixed." },
+    { key: "lease_expiration", label: "Lease ending", description: "Email me before my lease ends." }
+  ],
+  owner: [
+    { key: "rent_due_reminder", label: "Rent reminders",
+      description: "Let Domus remind my tenants 3 days before rent is due." },
+    { key: "late_rent", label: "Late rent",
+      description: "Email me when rent is late. Let Domus tell my tenant too." },
+    { key: "delinquency_escalation", label: "Overdue rent",
+      description: "Email me if rent stays unpaid. Let Domus remind my tenant too." },
+    { key: "payment_received", label: "Payments", description: "Email me when a payment is recorded." },
+    { key: "maintenance_updates", label: "Repairs", description: "Email me when a tenant reports a repair." },
+    { key: "lease_expiration", label: "Lease ending",
+      description: "Email me before a lease ends. Let Domus tell my tenant too." }
+  ],
+  manager: [
+    { key: "late_rent", label: "Late rent", description: "Email me when rent is late." },
+    { key: "delinquency_escalation", label: "Overdue rent",
+      description: "Email me again if rent stays unpaid." },
+    { key: "payment_received", label: "Payments", description: "Email me when a payment is recorded." },
+    { key: "maintenance_updates", label: "Repairs", description: "Email me when a tenant reports a repair." },
+    { key: "lease_expiration", label: "Lease ending", description: "Email me before a lease ends." },
+    { key: "manager_invoice", label: "My invoices", description: "Email me when an owner pays my fee." }
+  ]
+};
+
+export function notificationPreferenceOptionsForRole(role: "owner" | "manager" | "tenant"): NotificationPreferenceOption[] {
+  return ROLE_NOTIFICATION_OPTIONS[role];
+}
+
 const PAUSE_UNTIL_RESUMED_ISO = "9999-12-31T23:59:59.000Z";
 const preferenceKeySet = new Set<string>(NOTIFICATION_EMAIL_PREFERENCE_KEYS);
 
@@ -189,6 +225,7 @@ export function getNotificationPreferenceKeyForType(
     case "payment_recorded":
       return "payment_received";
     case "new_ticket":
+    case "ticket_in_progress":
     case "ticket_resolved":
       return "maintenance_updates";
     case "lease_expiring_soon":

@@ -21,6 +21,18 @@ vi.mock("@/lib/notification-preferences", () => ({
 }));
 
 describe("notification property-team policy", () => {
+  it("R4c gives owners and managers no repair-started notice", async () => {
+    vi.stubEnv("DOMUS_NOTIFICATIONS_ENABLED", "true");
+    const admin = createNotificationAdminClient({
+      members: [{ profile_id: "owner-1", can_receive_critical_alerts: true }],
+      assignments: ["manager-1"],
+      profiles: ["owner-1", "manager-1"].map((id) => ({ id, email: `${id}@example.com` }))
+    });
+    createAdminClientMock.mockReturnValue(admin);
+    await notifyPropertyTeam({ propertyId: "property-1", event: "ticket_in_progress", type: "ticket_in_progress",
+      title: "Your repair has started", body: "Work has started.", entityType: "maintenance_ticket" });
+    expect(notificationUpserts(admin)).toHaveLength(0);
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("DOMUS_NOTIFICATIONS_ENABLED", "true");

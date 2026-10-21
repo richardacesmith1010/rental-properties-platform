@@ -33,6 +33,8 @@ vi.mock("@/app/actions/maintenance-queries", () => ({
 }));
 
 const ticketId = "550e8400-e29b-41d4-a716-446655440000";
+let currentStatus = "open";
+let currentTenant: string | null = "tenant-1";
 
 function form(status: string) {
   const data = new FormData();
@@ -44,15 +46,20 @@ function form(status: string) {
 describe("resolved ticket notifications", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    currentStatus = "open";
+    currentTenant = "tenant-1";
     const supabase = {
       from: vi.fn(() => ({
         select: () => ({ eq: () => ({ single: async () => ({
           data: {
-            id: ticketId, property_id: "property-1", tenant_profile_id: "tenant-1",
-            title: "Leak", status: "open"
+            id: ticketId, property_id: "property-1", tenant_profile_id: currentTenant,
+            title: "Leak", status: currentStatus
           }, error: null
         }) }) }),
-        update: () => ({ eq: async () => ({ error: null }) })
+        update: (data: { status: string }) => ({ eq: async () => {
+          currentStatus = data.status;
+          return { error: null };
+        } })
       }))
     };
     mocks.auth.mockResolvedValue({ user: { id: "manager-1" }, supabase });
@@ -69,7 +76,7 @@ describe("resolved ticket notifications", () => {
     mocks.audit.mockResolvedValue(undefined);
   });
 
-  it("notifies the stored tenant and sends no team notice when fixed", async () => {
+  it("notifies the stored tenant and property team when resolved", async () => {
     expect(await updateTicketStatus(null, form("resolved"))).toMatchObject({ success: true });
     expect(mocks.notification).toHaveBeenCalledWith(expect.objectContaining({
       recipientProfileId: "tenant-1", type: "ticket_resolved"
@@ -77,6 +84,71 @@ describe("resolved ticket notifications", () => {
     expect(mocks.team).toHaveBeenCalledWith(expect.objectContaining({
       event: "ticket_resolved", type: "ticket_resolved"
     }));
+  });
+
+  it("R4 sends the exact tenant notice when a repair starts, with no team notice", async () => {
+    expect(await updateTicketStatus(null, form("in_progress"))).toMatchObject({ success: true });
+    expect(mocks.notification.mock.calls).toEqual([[{
+      recipientProfileId: "tenant-1", recipientEmail: "tenant@example.com",
+      type: "ticket_in_progress", title: "Your repair has started",
+      body: 'Work has started on "Leak".', entityType: "maintenance_ticket", entityId: ticketId,
+      actorProfileId: "manager-1"
+    }]]);
+    expect(mocks.team).not.toHaveBeenCalled();
+  });
+
+  it("R4 sends nothing for unchanged status or a repair with no tenant", async () => {
+    currentStatus = "in_progress";
+    await updateTicketStatus(null, form("in_progress"));
+    currentStatus = "open";
+    currentTenant = null;
+    await updateTicketStatus(null, form("in_progress"));
+    expect(mocks.notification).not.toHaveBeenCalled();
+    expect(mocks.team).not.toHaveBeenCalled();
+  });
+
+  it("R4 keeps resolved tenant and team calls after a repair starts", async () => {
+    await updateTicketStatus(null, form("in_progress"));
+    await updateTicketStatus(null, form("resolved"));
+    expect(mocks.notification.mock.calls).toEqual([
+      [{ recipientProfileId: "tenant-1", recipientEmail: "tenant@example.com",
+        type: "ticket_in_progress", title: "Your repair has started", body: 'Work has started on "Leak".',
+        entityType: "maintenance_ticket", entityId: ticketId, actorProfileId: "manager-1" }],
+      [{ recipientProfileId: "tenant-1", recipientEmail: "tenant@example.com",
+        type: "ticket_resolved", title: "Maintenance Request Resolved",
+        body: 'Your maintenance request "Leak" has been resolved.',
+        entityType: "maintenance_ticket", entityId: ticketId }]
+    ]);
+    expect(mocks.team.mock.calls).toEqual([[{
+      propertyId: "property-1", event: "ticket_resolved", type: "ticket_resolved", title: "Repair resolved",
+      body: '"Leak" was marked resolved.', entityType: "maintenance_ticket", entityId: ticketId,
+      actorProfileId: "manager-1"
+    }]]);
+  });
+
+  it("R4 keeps the closed team notice only", async () => {
+    await updateTicketStatus(null, form("closed"));
+    expect(mocks.notification).not.toHaveBeenCalled();
+    expect(mocks.team.mock.calls).toEqual([[{
+      propertyId: "property-1", event: "ticket_resolved", type: "ticket_resolved", title: "Repair resolved",
+      body: '"Leak" was marked closed.', entityType: "maintenance_ticket", entityId: ticketId,
+      actorProfileId: "manager-1"
+    }]]);
+  });
+
+  it("R4 calls delivery again after a repair reopens and restarts", async () => {
+    await updateTicketStatus(null, form("in_progress"));
+    await updateTicketStatus(null, form("open"));
+    await updateTicketStatus(null, form("in_progress"));
+    expect(mocks.notification.mock.calls).toEqual([
+      [{ recipientProfileId: "tenant-1", recipientEmail: "tenant@example.com",
+        type: "ticket_in_progress", title: "Your repair has started", body: 'Work has started on "Leak".',
+        entityType: "maintenance_ticket", entityId: ticketId, actorProfileId: "manager-1" }],
+      [{ recipientProfileId: "tenant-1", recipientEmail: "tenant@example.com",
+        type: "ticket_in_progress", title: "Your repair has started", body: 'Work has started on "Leak".',
+        entityType: "maintenance_ticket", entityId: ticketId, actorProfileId: "manager-1" }]
+    ]);
+    expect(mocks.team).not.toHaveBeenCalled();
   });
 
   it("creating a tenant ticket writes rows only for owners and this home's managers", async () => {

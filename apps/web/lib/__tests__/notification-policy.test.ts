@@ -27,4 +27,12 @@ describe("notification event policy", () => {
     expect(rulesFor("lease_changed")).toMatchObject({ owners: false, managers: "none", email: false });
     expect(rulesFor("lease_ending_soon")).toMatchObject({ owners: true, managers: "all_homes" });
   });
+
+  it("R4c permits repair-started notices for tenants only", () => {
+    expect(rulesFor("ticket_in_progress")).toEqual({
+      type: "ticket_in_progress", owners: false, managers: "none", tenant: "always",
+      email: true, excludeActor: false
+    });
+    expect(tenantEligibleForEvent("ticket_in_progress", false)).toBe(true);
+  });
 });

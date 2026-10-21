@@ -218,6 +218,7 @@ export const createAnnouncementSchema = announcementTargetingBaseSchema
 export const updateNotificationPreferenceSchema = z.object({
   notificationType: z.enum([
     "new_ticket",
+    "ticket_in_progress",
     "late_rent",
     "ticket_resolved",
     "payment_recorded",

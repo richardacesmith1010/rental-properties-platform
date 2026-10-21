@@ -217,6 +217,7 @@ export function InboxSection({
               >
                 <option value="all">All event types</option>
                 <option value="new_ticket">New repair</option>
+                <option value="ticket_in_progress">Repair started</option>
                 <option value="late_rent">Late rent</option>
                 <option value="ticket_resolved">Repair resolved</option>
                 <option value="payment_recorded">Payment recorded</option>

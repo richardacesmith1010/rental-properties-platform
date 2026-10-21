@@ -27,6 +27,7 @@ export type { GroupedNotifications, NotificationActionLink } from "@/lib/notific
 
 export type NotificationType =
   | "new_ticket"
+  | "ticket_in_progress"
   | "late_rent"
   | "ticket_resolved"
   | "payment_recorded"
