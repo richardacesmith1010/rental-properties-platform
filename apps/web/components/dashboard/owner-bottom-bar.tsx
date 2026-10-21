@@ -9,6 +9,7 @@ import { useDomusTheme } from "@/components/theme-provider";
 import { MobileDrawer } from "@/components/ui/mobile-drawer";
 import { ownerMenuGroups } from "./dashboard-config";
 import type { NavItem } from "./sidebar/nav-items";
+import { useTabbarHeightVar } from "./use-tabbar-height-var";
 
 interface OwnerBottomBarProps {
   items?: NavItem[];
@@ -80,6 +81,7 @@ export function OwnerBottomBar({ items = [], activeItemId, onSelectItem, onOpenM
   const [location, setLocation] = useState<{ pathname: string } | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState<OwnerTab | null>(null);
+  const setNav = useTabbarHeightVar();
   useEffect(() => setSelectedTab(null), [activeItemId, pathname]);
   useEffect(() => {
     setLocation({ pathname: pathname ?? window.location.pathname });
@@ -100,7 +102,7 @@ export function OwnerBottomBar({ items = [], activeItemId, onSelectItem, onOpenM
     { label: "More", icon: Menu, count: unreadNotificationCount }
   ];
   const bar = <>
-    <nav aria-label="Owner shortcuts" className="fixed inset-x-0 bottom-0 z-40 grid h-[84px] grid-cols-5
+    <nav ref={setNav} aria-label="Owner shortcuts" className="fixed inset-x-0 bottom-0 z-40 grid h-[84px] grid-cols-5
       border-t border-[var(--ink)] bg-[color:color-mix(in_srgb,var(--surface)_92%,transparent)]
       px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur-[20px] lg:hidden">
       {tabs.map(({ label, icon: Icon, count }) => {

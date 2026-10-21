@@ -29,7 +29,8 @@ it("retains service-worker registration and installation in a normal mobile brow
   expect(register).toHaveBeenCalledExactlyOnceWith("/sw.js", { scope: "/" });
   expect(screen.getByText("Install Domus for quick access")).toBeInTheDocument();
   const banner = screen.getByText("Install Domus for quick access").closest(".fixed");
-  // 249a's fixed 96px lift covered Sign in on pages without a tab bar; reverted until 249b.
-  expect(banner?.className).toContain("bottom-4");
+  expect(banner?.className).toContain("bottom-[calc(var(--domus-tabbar-height,0px)+1rem)]");
+  expect(banner?.className).not.toContain("bottom-4");
+  expect(document.documentElement.style.getPropertyValue("--domus-tabbar-height")).toBe("");
   expect(screen.getByText("Install Domus App")).toBeInTheDocument();
 });

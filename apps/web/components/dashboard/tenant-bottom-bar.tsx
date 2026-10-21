@@ -4,6 +4,7 @@ import { Home, MessageCircle, Receipt, Wrench } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { useTabbarHeightVar } from "./use-tabbar-height-var";
 
 const items = [
   ["overview", "Home", Home],
@@ -17,9 +18,10 @@ export function TenantBottomBar({ activeItemId, onSelect }: {
   onSelect?: (id: "overview" | "charges" | "maintenance" | "notifications") => void;
 }) {
   const [mounted, setMounted] = useState(false);
+  const setNav = useTabbarHeightVar();
   useEffect(() => setMounted(true), []);
   const bar = (
-    <nav aria-label="Tenant shortcuts" className={[
+    <nav ref={setNav} aria-label="Tenant shortcuts" className={[
       "fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 gap-1 border-t border-[var(--ink)]",
       "bg-[color:color-mix(in_srgb,var(--surface)_96%,transparent)] px-2",
       "pb-[max(env(safe-area-inset-bottom,0px),0.5rem)] pt-2",

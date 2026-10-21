@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OwnerBottomBar, resolveOwnerTab } from "@/components/dashboard/owner-bottom-bar";
 import OwnerLayout from "@/app/owner/layout";
 import { MessageCircle, Receipt } from "lucide-react";
@@ -27,7 +27,33 @@ beforeEach(() => {
   window.matchMedia = vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() });
 });
 
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+
 describe("owner phone bar", () => {
+  it("B2 measures the visible nav, updates on resize, and removes the height on unmount", () => {
+    let onResize: ResizeObserverCallback = () => {};
+    const disconnect = vi.fn();
+    vi.stubGlobal("ResizeObserver", class {
+      constructor(callback: ResizeObserverCallback) { onResize = callback; }
+      observe = vi.fn();
+      disconnect = disconnect;
+    });
+    let height = 84;
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(() => ({ height } as DOMRect));
+
+    const { unmount } = render(<OwnerBottomBar />);
+    expect(document.documentElement.style.getPropertyValue("--domus-tabbar-height")).toBe("84px");
+    height = 0;
+    act(() => onResize([], {} as ResizeObserver));
+    expect(document.documentElement.style.getPropertyValue("--domus-tabbar-height")).toBe("0px");
+    unmount();
+    expect(disconnect).toHaveBeenCalledOnce();
+    expect(document.documentElement.style.getPropertyValue("--domus-tabbar-height")).toBe("");
+  });
+
   it("T6 selects Home, Homes and Messages in place on the dashboard", () => {
     const onSelectItem = vi.fn();
     render(<OwnerBottomBar activeItemId="overview" onSelectItem={onSelectItem} />);

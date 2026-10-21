@@ -1,9 +1,35 @@
-import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { act, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { TenantBottomBar } from "@/components/dashboard/tenant-bottom-bar";
 import { renderToStaticMarkup } from "react-dom/server";
 
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+
 describe("tenant phone bar", () => {
+  it("B2 measures the visible nav, updates on resize, and removes the height on unmount", () => {
+    let onResize: ResizeObserverCallback = () => {};
+    const disconnect = vi.fn();
+    vi.stubGlobal("ResizeObserver", class {
+      constructor(callback: ResizeObserverCallback) { onResize = callback; }
+      observe = vi.fn();
+      disconnect = disconnect;
+    });
+    let height = 84;
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(() => ({ height } as DOMRect));
+
+    const { unmount } = render(<TenantBottomBar activeItemId="overview" />);
+    expect(document.documentElement.style.getPropertyValue("--domus-tabbar-height")).toBe("84px");
+    height = 0;
+    act(() => onResize([], {} as ResizeObserver));
+    expect(document.documentElement.style.getPropertyValue("--domus-tabbar-height")).toBe("0px");
+    unmount();
+    expect(disconnect).toHaveBeenCalled();
+    expect(document.documentElement.style.getPropertyValue("--domus-tabbar-height")).toBe("");
+  });
+
   it("Messages uses the chat icon", () => {
     render(<TenantBottomBar activeItemId="overview" />);
     const nav = screen.getByRole("navigation", { name: "Tenant shortcuts" });
