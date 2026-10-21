@@ -49,4 +49,4 @@ When a user disconnects a bank in Domus:
 
 ## 7. Roles and review
 - **Owner's duties:** the owner enforces this policy and reviews it every year.
-- **Automation:** steps marked automatic are done by code. The 90-day review-queue cleanup runs every day on its own (since 2026-10-14). The 7-year purge job still needs to be built and is tracked in `docs/agent-handoff.md`. Until then, the owner runs it by hand each quarter.
+- **Automation:** steps marked automatic are done by code. The 90-day review-queue cleanup runs every day on its own (since 2026-10-14). Since 2026-10-21 a daily **retention report** (09:45 UTC) counts what the 7-year and 3-year rules in §3 would make eligible, and what would block a safe delete; it deletes nothing. Nothing is old enough yet (earliest records are from 2026). Automatic deletion will be switched on only after the lawyer confirms the periods and the owner approves; until then no records are deleted under these rules.

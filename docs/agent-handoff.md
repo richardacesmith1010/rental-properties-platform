@@ -2005,3 +2005,19 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - **248a** (retention report job, report-only) rev 4 APPROVED after 4 rounds (allowlisted SQL surface, invocation clock
   `v_run_at`, UTC anchors, live-FK blocker graph, anniversary boundaries, md5 non-mutation suite). Codex running.
 - Process: L-033 added (twice a failed packet edit was sent for review — verify edits before sending).
+
+## 2026-10-21 — Sprint 248a SHIPPED (retention report job — report only)
+- **248a** `da4036b` (L3, ChatGPT rev 4 APPROVE): `retention_reports` (RLS on, all privileges revoked from public/anon/
+  authenticated/service_role, unique `(run_at, category)`) + `report_retention_candidates()` (security definer,
+  `search_path=''`, `timezone=UTC`, allowlisted read-only SQL surface, `v_run_at` invocation clock) + pg_cron
+  `domus-retention-report` `45 9 * * *`. Rules: money from Jan 1 of tax year + 8; leases/repairs on the 7-/3-year
+  anniversary; lease blockers from the live FK graph (documents, inspections, renewal successor, non-eligible money
+  descendants, any rent_charge_lines — conservative). App: `closed` repairs now get `resolved_at`.
+- Live suite (rolled back, twice): fixtures → leases 6 eligible / 3 blocked, repairs 1 (`eligible_photos=2`),
+  payments 1, charges 2, expenses 1, deposit returns 1 (exact); two runs in one transaction → 11 + 11 rows, distinct
+  `run_at`, identical results incl. a Denver-session run; 20 user tables md5-identical before/after; 400-day prune
+  boundary (401 pruned, 399 kept); EXECUTE/SELECT denied to anon/authenticated/service_role; cron row active.
+  (First suite run showed false hash diffs: my test switched the session time zone before hashing — fixed.)
+- Applied live; first real run: 11 rows, all 0 eligible / 0 blocked. Gate 3,146.
+- Policy §7 updated: report runs daily; deletion stays off until the lawyer confirms + owner approves.
+- **Later (needs lawyer + owner):** deletion sprint — children-first purge, de-identify shared records, storage via API.
