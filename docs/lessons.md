@@ -210,3 +210,11 @@ default value "on" for a wrapping label. It also names buttons from `title`, not
 `aria-labelledby`. Wrapping labels are valid HTML and name the control in Chrome and VoiceOver.
 **Rule:** The Browser pane's accessibility output is a heuristic, not Chrome's accessibility tree. Confirm any "no name"
 finding with `input.labels` (or a jsdom `getByRole(..., { name })` test) before planning a fix.
+
+## L-033 — Never send a review packet in the same step as the edit that produces it (2026-10-21)
+**What happened:** Twice (244b rev 2, 248a rev 2) a Python edit of the packet failed on an exact-match assertion, but
+the copy-to-clipboard and the ChatGPT paste/send ran in the same batch, so ChatGPT reviewed the **old** packet under a
+"rev 2" note. Each needed a correction message and another review round.
+**What was correct:** Edit → verify (the script prints `ALL OK`, grep for the new markers) → only then copy and send.
+**Rule:** Packet edits and the ChatGPT send are separate steps. Before `pbcopy`, confirm the edit succeeded (script
+exit + a grep for a phrase unique to the new revision). Never chain the browser send in parallel with the edit.
