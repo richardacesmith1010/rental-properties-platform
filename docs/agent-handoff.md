@@ -1987,3 +1987,21 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - **Scorecard:** Speed 85 → 88.
 - **Owner 2026-10-21: "Excellent, please go ahead. Everything worked."** Build 5 installed; instant tabs and launch
   screen confirmed by the owner. Next: 244b (notification settings per role + repair status notices).
+
+## 2026-10-21 — Sprint 244b SHIPPED (notification settings per role + repair started); 248a approved
+- **244b** `47f7c22` (L3, ChatGPT rev 3 APPROVE): `notificationPreferenceOptionsForRole` — tenant 6 / owner 6 / manager 6
+  switches, exact plain copy (owner: "Let Domus remind my tenants…"); hidden keys preserved on save (server-boundary
+  test). New `ticket_in_progress` type: tenant notice "Your repair has started" on a move into in_progress (tenant-only
+  policy, one email per repair via the 244a claim index; in-app row updates, `read_at` kept).
+- Migration: live constraint diffed = 22 types, no `_v2`; rolled-back dry run (new type accepted, bogus rejected);
+  applied NOT VALID → VALIDATE → drop → rename; live now 23 types, validated, single constraint. Applied **before**
+  deploy.
+- Verified: gate 3,133; CI success; prod smoke 27/27; live Settings → Notifications (WebKit, smoke accounts): tenant
+  [Rent reminders, Late rent, Overdue rent, Receipts, Repairs, Lease ending]; owner [Rent reminders, Late rent, Overdue
+  rent, Payments, Repairs, Lease ending] + manager-reminder switch; manager [Late rent, Overdue rent, Payments, Repairs,
+  Lease ending, My invoices]. First live repair-started notice = next time a repair is started.
+- Backlog (L1): `/settings?section=notifications` does not open that tab (always Profile).
+- **Scorecard:** Notifications 55 → 60.
+- **248a** (retention report job, report-only) rev 4 APPROVED after 4 rounds (allowlisted SQL surface, invocation clock
+  `v_run_at`, UTC anchors, live-FK blocker graph, anniversary boundaries, md5 non-mutation suite). Codex running.
+- Process: L-033 added (twice a failed packet edit was sent for review — verify edits before sending).
