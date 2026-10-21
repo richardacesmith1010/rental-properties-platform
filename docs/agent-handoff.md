@@ -1953,3 +1953,20 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Grooming: `npm run assets` also runs `capacitor-assets generate --ios`, which could recreate a `Splash.imageset`;
   change the script to icons only (L1, next iOS sprint).
 - **Next:** 245a (sign-in `next`, Codex running) → ship → TestFlight build 5 (246a) → owner installs (one tap).
+
+## 2026-10-21 — Sprint 245a SHIPPED (sign-in returns you to the page you asked for)
+- **245a** `4392190` (L3, ChatGPT rev 3 APPROVE, + fix1): branded `SafeNextPath` guard in `lib/route-resolver.ts`
+  (ASCII, canonical decoded path, no dot segments/double encoding, query kept byte-for-byte, blocked auth/api/
+  onboarding/ops paths), role-scoped `isNextAllowedForRole`; guards redirect to `/login?next=…` from the middleware
+  `x-domus-path` header (client value overwritten); `next` honored by login page, password action, and email-link
+  callback only when the user would otherwise land on their role home; never forwarded for invite/recovery.
+- **fix1 (Claude review catch):** the first middleware version forwarded headers cloned before Supabase's `setAll`, so
+  a mid-request session refresh would have passed the **stale cookie** downstream. Fixed (headers rebuilt after refresh;
+  test asserts forwarded cookie = fresh value).
+- Verified: gate 3,104; CI success; prod smoke 27/27; live (WebKit, smoke accounts): signed-out `/owner/money?year=2026`
+  → `/login?next=%2Fowner%2Fmoney%3Fyear%3D2026` → sign in → `/owner/money?year=2026` ✅; `next=//evil.com` → `/owner` ✅;
+  tenant with `next=/owner/money` → `/tenant` ✅.
+- **Owner report 2026-10-21:** "about 2 seconds to go to the next screen" between tabs. Measured prod (WebKit iPhone):
+  tenant tab = one RSC GET of the whole page 0.65–0.97 s (no prefetch; router cache not reused); owner tabs = full
+  reloads 0.9–1.1 s visible / 1.5–1.9 s idle. **247a** packet (instant tabs: tenant sections rendered once + client
+  switch; owner bar uses in-page section switch; Money prefetched) — Codex running.
