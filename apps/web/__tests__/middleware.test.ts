@@ -50,4 +50,34 @@ describe("middleware session-expired cookie", () => {
   it("does not show an expiry on a public route", async () => {
     expect(await sessionCookie("/login", "sb-xyz-auth-token=stale")).toBeUndefined();
   });
+
+  it.each(["//evil.com", "/tenant"])("S4 replaces spoofed navigation header %s", async (spoof) => {
+    const request = new NextRequest("http://localhost/owner/money?year=2026", {
+      headers: { "x-domus-path": spoof }
+    });
+    const response = await middleware(request);
+    expect(response.headers.get("x-middleware-override-headers")?.split(",")).toContain("x-domus-path");
+    expect(response.headers.get("x-middleware-request-x-domus-path")).toEqual("/owner/money?year=2026");
+  });
+
+  it("S12 preserves refreshed cookies and navigation header", async () => {
+    let refresh: ((cookies: { name: string; value: string; options: { path: string } }[]) => void) | undefined;
+    createServerClientMock.mockImplementation((_url, _key, options) => {
+      refresh = options.cookies.setAll;
+      return { auth: { getUser: async () => {
+        refresh?.([{ name: "sb-test-auth-token", value: "fresh", options: { path: "/" } }]);
+        return { data: { user: { id: "owner-1" } } };
+      } } };
+    });
+    const request = new NextRequest("http://localhost/owner/money?year=2026", {
+      headers: { cookie: "sb-test-auth-token=stale", "x-domus-path": "//evil.com" }
+    });
+    const response = await middleware(request);
+    const forwarded = response.headers.get("x-middleware-override-headers")?.split(",");
+    expect(forwarded).toContain("cookie");
+    expect(forwarded).toContain("x-domus-path");
+    expect(response.headers.get("x-middleware-request-cookie")).toEqual("sb-test-auth-token=fresh");
+    expect(response.headers.get("x-middleware-request-x-domus-path")).toEqual("/owner/money?year=2026");
+    expect(response.cookies.get("sb-test-auth-token")?.value).toEqual("fresh");
+  });
 });

@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
+vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
 
 import { getAuthenticatedUser, getAuthState, getCurrentUserRole, getUserProfileSummary } from "@/lib/auth";

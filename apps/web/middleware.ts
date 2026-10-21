@@ -15,14 +15,22 @@ function isProtectedRoute(pathname: string) {
   return protectedRoutePrefixes.some((prefix) => pathname.startsWith(prefix));
 }
 
+function forwardedHeaders(request: NextRequest) {
+  const requestHeaders = new Headers(request.headers);
+  // Navigation metadata only. Never use this header for authorization.
+  requestHeaders.delete("x-domus-path");
+  requestHeaders.set("x-domus-path", request.nextUrl.pathname + request.nextUrl.search);
+  return requestHeaders;
+}
+
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+  let supabaseResponse = NextResponse.next({ request: { headers: forwardedHeaders(request) } });
   const hadAuthCookie = request.cookies.getAll().some(({ name }) => /^sb-.+-auth-token(\.\d+)?$/.test(name));
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    return NextResponse.next({ request });
+    return supabaseResponse;
   }
 
   const supabase = createServerClient(
@@ -37,7 +45,7 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value, options }) =>
             request.cookies.set(name, value)
           );
-          supabaseResponse = NextResponse.next({ request });
+          supabaseResponse = NextResponse.next({ request: { headers: forwardedHeaders(request) } });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           );

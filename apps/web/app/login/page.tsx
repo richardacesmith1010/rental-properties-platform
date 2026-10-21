@@ -7,7 +7,8 @@ import { DomusMark, DomusWordmark } from "@/components/brand/domus-mark";
 import { SignInForm } from "@/components/auth/sign-in-form";
 import { CreateAccountForm } from "@/components/auth/create-account-form";
 import { Alert } from "@/components/ui/alert";
-import { getCurrentUserRole, getRoleHomePath } from "@/lib/auth";
+import { getAuthState, getCurrentUserRole, getRoleHomePath } from "@/lib/auth";
+import { getSafeNextPath, isNextAllowedForRole, resolveAuthRoute } from "@/lib/route-resolver";
 import { createClient } from "@/lib/supabase/server";
 
 interface LoginPageProps {
@@ -19,6 +20,7 @@ interface LoginPageProps {
     mode?: string;
     role?: string;
     deleted?: string;
+    next?: string | string[];
   }>;
 }
 
@@ -38,10 +40,14 @@ export default async function LoginPage(props: LoginPageProps) {
   const passwordReset = searchParams?.password_reset === "true";
   const isSignup = searchParams?.mode === "signup";
   const sessionExpired = cookieStore.get("x-session-expired")?.value === "1";
+  const next = getSafeNextPath(searchParams?.next);
 
   if (data.user) {
     const role = await getCurrentUserRole(data.user.id);
-    redirect(getRoleHomePath(role));
+    const authState = await getAuthState(data.user.id, { invitedAt: data.user.invited_at ?? null });
+    const destination = resolveAuthRoute({ hasSession: true, ...authState });
+    if (destination !== getRoleHomePath(role)) redirect(destination);
+    redirect(next && isNextAllowedForRole(next, role) ? next : getRoleHomePath(role));
   }
 
   return (
@@ -166,7 +172,7 @@ export default async function LoginPage(props: LoginPageProps) {
                   </Alert>
                 ) : null}
 
-                <SignInForm />
+                <SignInForm next={next} />
               </div>
             </> : <CreateAccountForm initialRole={searchParams?.role} />}
 

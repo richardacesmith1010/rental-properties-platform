@@ -51,8 +51,8 @@ function ForgotPasswordView({ email, setEmail, onBack }: {
   </div>;
 }
 
-export function SignInForm({ initialForgot = false, initialEmail = "" }: {
-  initialForgot?: boolean; initialEmail?: string;
+export function SignInForm({ initialForgot = false, initialEmail = "", next }: {
+  initialForgot?: boolean; initialEmail?: string; next?: string | null;
 }) {
   const [state, formAction] = useFormState(loginAction, emptyLoginState);
   const [forgotMode, setForgotMode] = useState(initialForgot);
@@ -60,6 +60,7 @@ export function SignInForm({ initialForgot = false, initialEmail = "" }: {
   if (forgotMode) return <ForgotPasswordView email={email} setEmail={setEmail} onBack={() => setForgotMode(false)} />;
   return <>
     <form action={formAction} className="space-y-4">
+      {next ? <input type="hidden" name="next" value={next} /> : null}
       <div>
         <label htmlFor="sign-in-email" className="mb-2 block text-sm font-medium text-[var(--ink)]">Email</label>
         <Input id="sign-in-email" name="email" type="email" autoComplete="email" required className={fieldClass}

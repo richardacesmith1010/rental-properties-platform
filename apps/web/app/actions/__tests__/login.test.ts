@@ -3,9 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const redirectMock = vi.hoisted(() => vi.fn());
 const createClientMock = vi.hoisted(() => vi.fn());
+const getAuthStateMock = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({ redirect: redirectMock }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: createClientMock }));
+vi.mock("@/lib/auth", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/auth")>(), getAuthState: getAuthStateMock
+}));
 
 import { loginAction } from "@/app/actions/login";
 import { resetFailureLimiterState } from "@/lib/rate-limit";
@@ -41,7 +45,7 @@ function loginForm(email = "person@example.com", password = "CorrectHorse1") {
 
 function useSignInMock(signInWithPassword: SignInMock) {
   createClientMock.mockReturnValue({
-    auth: { signInWithPassword }
+    auth: { signInWithPassword, getUser: vi.fn().mockResolvedValue({ data: { user: { id: "owner-1" } } }) }
   } as unknown as SupabaseClient);
 }
 
@@ -65,6 +69,8 @@ describe("loginAction failure limiting", () => {
     vi.setSystemTime(new Date("2026-10-03T12:00:00.000Z"));
     vi.clearAllMocks();
     resetFailureLimiterState();
+    getAuthStateMock.mockResolvedValue({ role: "owner", hasProfile: true,
+      onboardingComplete: true, needsPasswordSet: false });
     redirectMock.mockImplementation((path: string) => {
       throw new Error(`REDIRECT:${path}`);
     });
@@ -268,5 +274,45 @@ describe("loginAction failure limiting", () => {
     for (let index = 0; index < 5; index += 1) await loginAction({}, loginForm());
     await expect(loginAction({}, loginForm())).resolves.toEqual(BLOCKED_RESPONSE);
     expect(signIn).toHaveBeenCalledTimes(8);
+  });
+
+  it.each([
+    ["/owner/money", "/owner/money"], ["/owner?q=a%23b%26c", "/owner?q=a%23b%26c"],
+    ["/tenant", "/"], ["//evil.com", "/"]
+  ])("S6 redirects an owner with next %s to %s", async (next, destination) => {
+    useSignInMock(vi.fn<SignIn>().mockResolvedValue({ error: null }));
+    const form = loginForm();
+    form.set("next", next);
+    await expect(loginAction({}, form)).rejects.toThrow(`REDIRECT:${destination}`);
+    expect(redirectMock).toHaveBeenCalledWith(destination);
+  });
+
+  it("S6 keeps onboarding when the profile is incomplete", async () => {
+    useSignInMock(vi.fn<SignIn>().mockResolvedValue({ error: null }));
+    getAuthStateMock.mockResolvedValue({ role: "owner", hasProfile: true,
+      onboardingComplete: false, needsPasswordSet: false });
+    const form = loginForm();
+    form.set("next", "/owner/money");
+    await expect(loginAction({}, form)).rejects.toThrow("REDIRECT:/");
+    expect(redirectMock).toHaveBeenCalledWith("/");
+  });
+
+  it("S11 ignores repeated next fields", async () => {
+    useSignInMock(vi.fn<SignIn>().mockResolvedValue({ error: null }));
+    const form = loginForm();
+    form.append("next", "/owner");
+    form.append("next", "//evil.com");
+    await expect(loginAction({}, form)).rejects.toThrow("REDIRECT:/");
+    expect(redirectMock).toHaveBeenCalledWith("/");
+  });
+
+  it("S6 leaves failed sign-in error and redirect unchanged", async () => {
+    useSignInMock(vi.fn<SignIn>().mockResolvedValue(INVALID_CREDENTIALS));
+    const form = loginForm();
+    form.set("next", "/owner/money");
+    expect(await loginAction({}, form)).toEqual({
+      error: "Wrong email or password. Try again or reset your password."
+    });
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 });

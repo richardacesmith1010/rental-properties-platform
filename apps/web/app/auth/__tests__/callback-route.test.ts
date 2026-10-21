@@ -1,13 +1,18 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { redirect } from "next/navigation";
 const mocks = vi.hoisted(() => ({ createClient: vi.fn(), manager: vi.fn(), tenant: vi.fn(),
   notify: vi.fn(), state: vi.fn(), route: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
 vi.mock("@/lib/invitations", () => ({ markManagerInvitationsAccepted: mocks.manager,
   markTenantInvitationAccepted: mocks.tenant }));
 vi.mock("@/lib/notifications", () => ({ notifyOwnerMembersOfAcceptedTenantInvite: mocks.notify }));
-vi.mock("@/lib/auth", () => ({ getAuthState: mocks.state }));
-vi.mock("@/lib/route-resolver", () => ({ resolveAuthRoute: mocks.route }));
+vi.mock("@/lib/auth", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/auth")>(), getAuthState: mocks.state
+}));
+vi.mock("@/lib/route-resolver", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/route-resolver")>(), resolveAuthRoute: mocks.route
+}));
 import { GET } from "@/app/auth/callback/route";
 const userId = crypto.randomUUID();
 let exchange: ReturnType<typeof vi.fn>;
@@ -65,5 +70,49 @@ describe("A29 manager acceptance on callback sessions", () => {
     const response = await GET(url("code=abc"));
     expect(response.headers.get("location")).toContain("/login?confirmed=true");
     expect(mocks.manager).not.toHaveBeenCalled();
+  });
+});
+
+describe("S8 callback return navigation", () => {
+  it("returns a complete owner to the requested page", async () => {
+    user.user_metadata = { role: "owner" };
+    mocks.state.mockResolvedValue({ role: "owner", hasProfile: true, onboardingComplete: true,
+      needsPasswordSet: false });
+    mocks.route.mockReturnValue("/owner");
+    const response = await GET(url("token_hash=tok&type=email&next=%2Fowner%2Fmoney"));
+    expect(response.headers.get("location")).toEqual("https://app.example.com/owner/money");
+    expect(mocks.tenant).not.toHaveBeenCalled();
+  });
+
+  it("keeps onboarding ahead of next", async () => {
+    mocks.state.mockResolvedValue({ role: "owner", hasProfile: true, onboardingComplete: false,
+      needsPasswordSet: false });
+    mocks.route.mockReturnValue("/onboarding");
+    const response = await GET(url("token_hash=tok&type=email&next=%2Fowner%2Fmoney"));
+    expect(response.headers.get("location")).toEqual("https://app.example.com/onboarding");
+  });
+
+  it("keeps recovery on reset password", async () => {
+    const response = await GET(url("token_hash=tok&type=recovery&next=%2Fowner%2Fmoney"));
+    expect(response.headers.get("location")).toEqual("https://app.example.com/reset-password");
+  });
+
+  it("keeps invite acceptance and its destination with raw next present", async () => {
+    const response = await GET(url("token_hash=tok&type=invite&next=%2Fmanager"));
+    expect(response.headers.get("location")).toEqual("https://app.example.com/manager");
+    expect(mocks.manager).toHaveBeenCalledWith(userId);
+    expect(mocks.tenant).toHaveBeenCalledWith(userId);
+  });
+
+  it("keeps role home for an unsafe next", async () => {
+    const response = await GET(url("token_hash=tok&type=email&next=%2F%2Fevil.com"));
+    expect(response.headers.get("location")).toEqual("https://app.example.com/manager");
+  });
+
+  it("S10 rethrows a Next redirect thrown during route resolution", async () => {
+    mocks.route.mockImplementation(() => redirect("/onboarding"));
+    await expect(GET(url("token_hash=tok&type=email"))).rejects.toMatchObject({
+      digest: "NEXT_REDIRECT;replace;/onboarding;307;"
+    });
   });
 });

@@ -1,19 +1,14 @@
 import { NextResponse } from "next/server";
+import { unstable_rethrow } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthState } from "@/lib/auth";
 import { markManagerInvitationsAccepted, markTenantInvitationAccepted } from "@/lib/invitations";
 import { sideEffectError } from "@/lib/logger";
 import { notifyOwnerMembersOfAcceptedTenantInvite } from "@/lib/notifications";
-import { resolveAuthRoute } from "@/lib/route-resolver";
+import { getRoleHomePath } from "@/lib/auth";
+import { getSafeNextPath, isNextAllowedForRole, resolveAuthRoute } from "@/lib/route-resolver";
 
 export const dynamic = "force-dynamic";
-
-function getSafeNextPath(rawNext: string | null) {
-  if (!rawNext || !rawNext.startsWith("/") || rawNext.startsWith("//")) {
-    return "/";
-  }
-  return rawNext;
-}
 
 function hasInvitedSession(
   type: string | null,
@@ -151,7 +146,7 @@ export async function GET(request: Request) {
             return NextResponse.redirect(`${origin}/login?${params.toString()}`);
           }
           return NextResponse.redirect(
-            `${origin}/login?confirmed=true&next=${encodeURIComponent(next)}`
+            `${origin}/login?confirmed=true${next ? `&next=${encodeURIComponent(next)}` : ""}`
           );
         }
         throw error;
@@ -164,7 +159,8 @@ export async function GET(request: Request) {
       if (type === "recovery") {
         return NextResponse.redirect(`${origin}/reset-password`);
       }
-    } else if (tokenHash && (type === "email" || type === "recovery" || type === "invite" || type === "magiclink" || type === "email_change")) {
+    } else if (tokenHash && (type === "email" || type === "signup" || type === "recovery" ||
+      type === "invite" || type === "magiclink" || type === "email_change")) {
       const { error } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
         type
@@ -217,9 +213,14 @@ export async function GET(request: Request) {
         hasSession: true,
         ...authState
       });
-      return NextResponse.redirect(`${origin}${destination}`);
+      const role = authState.role;
+      const safeDestination = type !== "recovery" && !hasInvitedSession(type, rawNext, freshUser) &&
+        role && destination === getRoleHomePath(role) && next && isNextAllowedForRole(next, role)
+        ? next : destination;
+      return NextResponse.redirect(`${origin}${safeDestination}`);
     }
   } catch (error) {
+    unstable_rethrow(error);
     const params = new URLSearchParams();
     const message = error instanceof Error ? error.message : "";
 

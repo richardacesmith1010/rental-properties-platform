@@ -2,6 +2,8 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+import { getSafeNextPath } from "@/lib/route-resolver";
 import { getCheckedAuthUser, getCurrentUserRole, getRoleHomePath, type AppRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -21,7 +23,8 @@ export async function requireAuth(...allowedRoles: AppRole[]): Promise<AuthResul
   const user = await getCheckedAuthUser(supabase);
 
   if (!user) {
-    redirect("/login");
+    const next = getSafeNextPath((await headers()).get("x-domus-path"));
+    redirect(next ? `/login?next=${encodeURIComponent(next)}` : "/login");
   }
 
   const role = await getCurrentUserRole(user.id);

@@ -9,6 +9,7 @@ const getRoleHomePathMock = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({
   redirect: redirectMock
 }));
+vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: createClientMock

@@ -5,6 +5,7 @@ import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { buildConfirmCallbackUrl } from "@/lib/route-resolver";
 
 function getHeading(type: string | null) {
   if (type === "email") {
@@ -30,20 +31,13 @@ function ConfirmContent() {
   const searchParams = useSearchParams();
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type");
+  const rawNext = searchParams.getAll("next");
+  const nextParam = rawNext.length === 1 ? rawNext[0] : null;
   const [loading, setLoading] = useState(false);
 
   const callbackUrl = useMemo(() => {
-    if (!tokenHash) {
-      return null;
-    }
-
-    const params = new URLSearchParams();
-    params.set("token_hash", tokenHash);
-    if (type) {
-      params.set("type", type);
-    }
-    return `/auth/callback?${params.toString()}`;
-  }, [tokenHash, type]);
+    return buildConfirmCallbackUrl(tokenHash, type, nextParam);
+  }, [tokenHash, type, nextParam]);
 
   if (!tokenHash || !callbackUrl) {
     return (

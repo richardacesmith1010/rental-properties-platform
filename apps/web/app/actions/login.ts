@@ -7,6 +7,8 @@ import {
 } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import { mapAuthErrorMessage } from "@/lib/password-validation";
+import { getAuthState, getRoleHomePath } from "@/lib/auth";
+import { getSafeNextPath, isNextAllowedForRole, resolveAuthRoute } from "@/lib/route-resolver";
 
 export interface LoginActionState {
   error?: string;
@@ -19,6 +21,8 @@ export async function loginAction(
 ): Promise<LoginActionState> {
   const rawEmail = formData.get("email");
   const rawPassword = formData.get("password");
+  const nextValues = formData.getAll("next");
+  const next = nextValues.length === 1 ? getSafeNextPath(nextValues[0]) : null;
 
   if (typeof rawEmail !== "string" || typeof rawPassword !== "string") {
     return { error: "Enter your email and password." };
@@ -40,6 +44,7 @@ export async function loginAction(
   }
 
   let outcome: "rejected" | "succeeded" | "errored" = "errored";
+  let destination = "/";
 
   try {
     const supabase = createClient();
@@ -50,10 +55,22 @@ export async function loginAction(
       return { error: mapAuthErrorMessage(error.message) };
     }
 
+    if (next) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const authState = await getAuthState(user.id, { invitedAt: user.invited_at ?? null });
+        const stateDestination = resolveAuthRoute({ hasSession: true, ...authState });
+        if (authState.role && stateDestination === getRoleHomePath(authState.role) &&
+            isNextAllowedForRole(next, authState.role)) {
+          destination = next;
+        }
+      }
+    }
+
     outcome = "succeeded";
   } finally {
     completeFailureAttempt(result.reservation, outcome);
   }
 
-  redirect("/");
+  redirect(destination);
 }

@@ -2,6 +2,8 @@ import { paymentMethodLabel } from "@/lib/payment-method-label";
 import Link from "next/link";
 import { ChevronLeft, Download } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
+import { headers } from "next/headers";
+import { getSafeNextPath } from "@/lib/route-resolver";
 import { withChargeEditingFallback } from "@/lib/charge-audit";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserRole } from "@/lib/auth";
@@ -26,7 +28,8 @@ export default async function ReceiptPage(props: ReceiptPageProps) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    const next = getSafeNextPath((await headers()).get("x-domus-path"));
+    redirect(next ? `/login?next=${encodeURIComponent(next)}` : "/login");
   }
 
   const role = await getCurrentUserRole(user.id);

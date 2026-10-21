@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+import { getSafeNextPath } from "@/lib/route-resolver";
 import { createClient } from "@/lib/supabase/server";
 import { checkedSupabaseCall, isUnauthenticatedAuthError } from "@/lib/supabase-transient";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -20,7 +22,8 @@ export async function getAuthenticatedUser() {
   const user = await getCheckedAuthUser(supabase);
 
   if (!user) {
-    redirect("/login");
+    const next = getSafeNextPath((await headers()).get("x-domus-path"));
+    redirect(next ? `/login?next=${encodeURIComponent(next)}` : "/login");
   }
 
   return user;
