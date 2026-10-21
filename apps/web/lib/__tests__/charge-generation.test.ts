@@ -11,7 +11,8 @@ vi.mock("@/lib/notifications", () => ({
   createNotificationWithDelivery: createNotificationWithDeliveryMock,
   notifyPropertyTeam: notifyPropertyTeamMock
 }));
-vi.mock("@/lib/notification-preferences", () => ({
+vi.mock("@/lib/notification-preferences", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/notification-preferences")>(),
   getPropertyNotificationDeliveryPreferences: getPropertyNotificationDeliveryPreferencesMock,
   getNotificationPreference: vi.fn().mockResolvedValue({ inAppEnabled: true, emailEnabled: true })
 }));
@@ -34,6 +35,7 @@ function createLateFeeSupabaseMock(params: {
   clientHome?: boolean;
   accountError?: boolean;
   existingLateFee?: boolean;
+  tenantPrefs?: Record<string, boolean>;
 }) {
   const update = vi.fn(() => {
     const builder = {
@@ -133,7 +135,8 @@ function createLateFeeSupabaseMock(params: {
         return {
           select: vi.fn(() => ({
             in: vi.fn(async () => ({
-              data: [{ id: "tenant-1", email: "tenant@example.com" }],
+              data: [{ id: "tenant-1", email: "tenant@example.com",
+                notification_preferences: params.tenantPrefs ?? {} }],
               error: null
             }))
           }))
@@ -158,9 +161,23 @@ function setToday(isoDateTime: string) {
 }
 
 describe("charge generation", () => {
+  it("N3 merges tenant late notice denial and keeps the in-app channel", async () => {
+    setToday("2026-10-03T12:00:00.000Z");
+    const { supabase } = createLateFeeSupabaseMock({
+      collectsOutsideDomus: false, tenantPrefs: { late_rent: false }
+    });
+    await applyLateFeesToOverdueCharges(supabase, ["lease-1"], "2026-10-03");
+    expect(createNotificationWithDeliveryMock).toHaveBeenCalledWith(expect.objectContaining({
+      deliveryPreference: { emailEnabled: false, inAppEnabled: true,
+        emailBlockReason: "late_rent emails are disabled" }
+    }));
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
-    createNotificationWithDeliveryMock.mockResolvedValue(undefined);
+    createNotificationWithDeliveryMock.mockResolvedValue({
+      inApp: { status: "sent" }, email: { status: "skipped" }
+    });
     notifyPropertyTeamMock.mockResolvedValue(undefined);
     getPropertyNotificationDeliveryPreferencesMock.mockResolvedValue(new Map());
   });
@@ -380,7 +397,7 @@ describe("charge generation", () => {
 
     await expect(
       applyLateFeesToOverdueCharges(supabase, ["lease-1"], "2026-10-03")
-    ).resolves.toBe(0);
+    ).resolves.toBe("Late notices: 0 sent, 0 emailed, 0 skipped.");
     expect(update).not.toHaveBeenCalled();
     expect(insert).not.toHaveBeenCalled();
   });
@@ -428,7 +445,7 @@ describe("charge generation", () => {
 
     await expect(
       applyLateFeesToOverdueCharges(supabase, ["lease-1"], "2026-10-03")
-    ).resolves.toBe(1);
+    ).resolves.toBe("Late notices: 1 sent, 0 emailed, 0 skipped.");
     expect(update).toHaveBeenCalledWith({ status: "late" });
     expect(insert).toHaveBeenCalledWith([
       expect.objectContaining({
@@ -444,7 +461,7 @@ describe("charge generation", () => {
     setToday("2026-10-03T12:00:00.000Z");
     const { supabase, update, insert } = createLateFeeSupabaseMock({ collectsOutsideDomus: null });
     await expect(applyLateFeesToOverdueCharges(supabase, ["lease-1"], "2026-10-03"))
-      .resolves.toBe(1);
+      .resolves.toBe("Late notices: 0 sent, 0 emailed, 0 skipped.");
     expect(update).toHaveBeenCalledWith({ status: "late" });
     expect(insert).toHaveBeenCalledWith([expect.objectContaining({
       category: "late_fee", amount_cents: 5000, parent_charge_id: "charge-1"

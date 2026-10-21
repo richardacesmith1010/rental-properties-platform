@@ -247,6 +247,28 @@ export function resolveNotificationDeliveryPreference(
   };
 }
 
+export function mergeDeliveryPreferences(
+  a: NotificationDeliveryPreference,
+  b: NotificationDeliveryPreference
+): NotificationDeliveryPreference {
+  return {
+    emailEnabled: a.emailEnabled && b.emailEnabled,
+    inAppEnabled: a.inAppEnabled && b.inAppEnabled,
+    emailBlockReason: a.emailBlockReason ?? b.emailBlockReason ?? null
+  };
+}
+
+export function resolveTenantDeliveryPreference(
+  row: { notification_preferences?: unknown; notifications_paused_until?: string | null } | null | undefined,
+  type: NotificationType | NotificationEmailPreferenceKey
+): NotificationDeliveryPreference {
+  return resolveNotificationDeliveryPreference({
+    preferences: normalizeNotificationEmailPreferences(row?.notification_preferences),
+    pausedUntil: row?.notifications_paused_until ?? null,
+    schemaReady: true
+  }, type);
+}
+
 export function resolveCombinedNotificationDeliveryPreference(
   settingsList: NotificationPreferenceSettings[],
   typeOrKey: NotificationType | NotificationEmailPreferenceKey | null

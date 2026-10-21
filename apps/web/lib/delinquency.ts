@@ -7,7 +7,10 @@ import {
 } from "@/lib/notifications";
 import {
   getPropertyNotificationDeliveryPreferences,
+  mergeDeliveryPreferences,
+  resolveTenantDeliveryPreference
 } from "@/lib/notification-preferences";
+import { summarizeNotificationResults } from "@/lib/idempotency";
 import { notificationsEnabled } from "@/lib/notifications-switch";
 import { tenantEligibleForEvent } from "@/lib/notification-policy";
 import { getClientHomeFlags, tracksLateRent } from "@/lib/lease-collection";
@@ -34,13 +37,11 @@ function getTenantDisplayName(profile: { full_name?: string | null; email?: stri
 
 export async function sendDelinquencyEscalations(supabase: SupabaseClient): Promise<string> {
   if (!notificationsEnabled()) {
-    return "Notifications off: 0 sent.";
+    return summarizeNotificationResults("Overdue rent follow-ups", []);
   }
 
   const today = new Date();
   const todayIso = today.toISOString().slice(0, 10);
-  const recentThreshold = new Date(today);
-  recentThreshold.setUTCDate(recentThreshold.getUTCDate() - 30);
 
   const { data: charges, error: chargesError } = await supabase
     .from("rent_charges")
@@ -63,7 +64,7 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
     .filter((charge) => charge.daysPastDue >= 30);
 
   if (candidates.length === 0) {
-    return "Overdue rent follow-ups sent: 0.";
+    return summarizeNotificationResults("Overdue rent follow-ups", []);
   }
 
   const leaseIds = Array.from(new Set(candidates.map((charge) => charge.lease_id)));
@@ -83,23 +84,6 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
       collects_outside_domus: boolean;
     }>).map((lease) => [lease.id, lease])
   );
-  const { data: existingNotifications, error: existingError } = await supabase
-    .from("notifications")
-    .select("entity_id, recipient_profile_id")
-    .eq("type", "delinquency_escalation")
-    .eq("entity_type", "rent_charge")
-    .in("entity_id", candidates.map((charge) => charge.id))
-    .gte("created_at", recentThreshold.toISOString());
-  if (existingError) {
-    throw existingError;
-  }
-
-  const alreadySent = new Set(
-    ((existingNotifications ?? []) as Array<{ entity_id: string | null; recipient_profile_id: string | null }>)
-      .filter((row) => row.entity_id && row.recipient_profile_id)
-      .map((row) => `${row.entity_id}:${row.recipient_profile_id}`)
-  );
-
   const unitIds = Array.from(new Set((leases ?? []).map((lease) => lease.unit_id)));
   const { data: units, error: unitsError } = await supabase
     .from("units")
@@ -121,7 +105,7 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
       ...lease, clientHome: propertyId ? clientFlags.get(propertyId) === true : false
     });
   });
-  if (candidates.length === 0) return "Overdue rent follow-ups sent: 0.";
+  if (candidates.length === 0) return summarizeNotificationResults("Overdue rent follow-ups", []);
   const { data: properties, error: propertiesError } = await supabase
     .from("properties")
     .select("id, name")
@@ -135,14 +119,22 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
     new Set((leases ?? []).map((lease) => lease.tenant_profile_id).filter((id): id is string => Boolean(id)))
   );
   const { data: profiles, error: profilesError } = tenantIds.length
-    ? await supabase.from("profiles").select("id, email, full_name").in("id", tenantIds)
-    : { data: [] as Array<{ id: string; email: string | null; full_name: string | null }>, error: null };
+    ? await supabase.from("profiles")
+        .select("id, email, full_name, notification_preferences, notifications_paused_until")
+        .in("id", tenantIds)
+    : { data: [] as Array<{
+      id: string; email: string | null; full_name: string | null;
+      notification_preferences?: unknown; notifications_paused_until?: string | null;
+    }>, error: null };
   if (profilesError) {
     throw profilesError;
   }
 
   const profileById = new Map(
-    ((profiles ?? []) as Array<{ id: string; email: string | null; full_name: string | null }>).map((profile) => [profile.id, profile])
+    ((profiles ?? []) as Array<{
+      id: string; email: string | null; full_name: string | null;
+      notification_preferences?: unknown; notifications_paused_until?: string | null;
+    }>).map((profile) => [profile.id, profile])
   );
   const deliveryByPropertyId = await getPropertyNotificationDeliveryPreferences(
     supabase,
@@ -156,7 +148,7 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
     const property = unit ? propertyById.get(unit.property_id) : null;
     const tenantProfile = lease?.tenant_profile_id ? profileById.get(lease.tenant_profile_id) ?? null : null;
     if (!lease || !unit || !property) {
-      return 0;
+      return null;
     }
 
     const stage = charge.daysPastDue >= 90 ? "final" : charge.daysPastDue >= 60 ? "urgent" : "friendly";
@@ -186,7 +178,7 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
     });
 
     const notifications: Promise<unknown>[] = [];
-    if (lease.tenant_profile_id && !alreadySent.has(`${charge.id}:${lease.tenant_profile_id}`) &&
+    if (lease.tenant_profile_id &&
       tenantEligibleForEvent("overdue_followup", lease.collects_outside_domus)) notifications.push(
       createNotificationWithDelivery({
         recipientProfileId: lease.tenant_profile_id,
@@ -198,7 +190,11 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
         entityId: charge.id,
         propertyId: unit.property_id,
         emailContent: reminderEmail,
-        deliveryPreference: deliveryByPropertyId.get(unit.property_id)
+        emailKey: `overdue-${charge.daysPastDue >= 90 ? 90 : charge.daysPastDue >= 60 ? 60 : 30}`,
+        deliveryPreference: mergeDeliveryPreferences(
+          deliveryByPropertyId.get(unit.property_id) ?? { emailEnabled: true, inAppEnabled: true },
+          resolveTenantDeliveryPreference(tenantProfile, "delinquency_escalation")
+        )
       })
     );
 
@@ -216,18 +212,18 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
       })
     );
 
-    await Promise.all(notifications);
-
-    return 1;
+    const results = await Promise.all(notifications);
+    return results[0] && typeof results[0] === "object" && "inApp" in results[0]
+      ? results[0] as Awaited<ReturnType<typeof createNotificationWithDelivery>> : null;
   });
 
   const results = await Promise.all(work);
-  return `Overdue rent follow-ups sent: ${results.reduce<number>((sum, value) => sum + value, 0)}.`;
+  return summarizeNotificationResults("Overdue rent follow-ups", results);
 }
 
 export async function sendRentDueReminders(supabase: SupabaseClient): Promise<string> {
   if (!notificationsEnabled()) {
-    return "Notifications off: 0 sent.";
+    return summarizeNotificationResults("Reminders", []);
   }
 
   const targetDate = new Date();
@@ -252,7 +248,7 @@ export async function sendRentDueReminders(supabase: SupabaseClient): Promise<st
     amount_cents: number;
   }>;
   if (pendingCharges.length === 0) {
-    return "Reminders sent: 0.";
+    return summarizeNotificationResults("Reminders", []);
   }
 
   const leaseIds = Array.from(new Set(pendingCharges.map((charge) => charge.lease_id)));
@@ -302,14 +298,22 @@ export async function sendRentDueReminders(supabase: SupabaseClient): Promise<st
     new Set(Array.from(leaseById.values()).map((lease) => lease.tenant_profile_id).filter((id): id is string => Boolean(id)))
   );
   const { data: profiles, error: profilesError } = tenantIds.length
-    ? await supabase.from("profiles").select("id, email, full_name").in("id", tenantIds)
-    : { data: [] as Array<{ id: string; email: string | null; full_name: string | null }>, error: null };
+    ? await supabase.from("profiles")
+        .select("id, email, full_name, notification_preferences, notifications_paused_until")
+        .in("id", tenantIds)
+    : { data: [] as Array<{
+      id: string; email: string | null; full_name: string | null;
+      notification_preferences?: unknown; notifications_paused_until?: string | null;
+    }>, error: null };
   if (profilesError) {
     throw profilesError;
   }
 
   const profileById = new Map(
-    ((profiles ?? []) as Array<{ id: string; email: string | null; full_name: string | null }>).map((profile) => [profile.id, profile])
+    ((profiles ?? []) as Array<{
+      id: string; email: string | null; full_name: string | null;
+      notification_preferences?: unknown; notifications_paused_until?: string | null;
+    }>).map((profile) => [profile.id, profile])
   );
   const deliveryByPropertyId = await getPropertyNotificationDeliveryPreferences(
     supabase,
@@ -325,7 +329,7 @@ export async function sendRentDueReminders(supabase: SupabaseClient): Promise<st
       const property = unit ? propertyById.get(unit.property_id) : null;
 
       if (!tenantId || !unit || !property || !tenantEligibleForEvent("rent_due_reminder", lease.collects_outside_domus)) {
-        return 0;
+        return null;
       }
 
       const profile = profileById.get(tenantId);
@@ -338,7 +342,7 @@ export async function sendRentDueReminders(supabase: SupabaseClient): Promise<st
         dashboardUrl: getTenantDashboardUrl()
       });
 
-      await createNotificationWithDelivery({
+      return createNotificationWithDelivery({
         recipientProfileId: tenantId,
         recipientEmail: profile?.email ?? null,
         type: "rent_due_reminder",
@@ -348,11 +352,13 @@ export async function sendRentDueReminders(supabase: SupabaseClient): Promise<st
         entityId: charge.id,
         propertyId: unit.property_id,
         emailContent: reminderEmail,
-        deliveryPreference: deliveryByPropertyId.get(unit.property_id)
+        deliveryPreference: mergeDeliveryPreferences(
+          deliveryByPropertyId.get(unit.property_id) ?? { emailEnabled: true, inAppEnabled: true },
+          resolveTenantDeliveryPreference(profile, "rent_due_reminder")
+        )
       });
-      return 1;
     })
   );
 
-  return `Reminders sent: ${sent.reduce<number>((total, count) => total + count, 0)}.`;
+  return summarizeNotificationResults("Reminders", sent);
 }

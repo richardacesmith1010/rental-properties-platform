@@ -408,7 +408,8 @@ async function createTransfersForPayment(
       notifyManagerOfFeeTransfer(supabase, {
         managerProfileId: managerInfo.managerProfileId,
         amountCents: effectiveFee,
-        chargeId: params.chargeId
+        chargeId: params.chargeId,
+        managerPaymentId: managerTransfer.id
       });
     }
   } catch (transferError) {
@@ -436,6 +437,7 @@ function notifyManagerOfFeeTransfer(
     managerProfileId: string;
     amountCents: number;
     chargeId: string;
+    managerPaymentId: string;
   }
 ) {
   void (async () => {
@@ -458,8 +460,8 @@ function notifyManagerOfFeeTransfer(
       type: "payment_recorded",
       title: "Management fee received",
       body: `Your management fee of ${formatCurrency(params.amountCents)} for ${locationLabel} was sent to your bank.`,
-      entityType: "rent_charge",
-      entityId: params.chargeId
+      entityType: "manager_payment",
+      entityId: params.managerPaymentId
     });
   })().catch(sideEffectError("notifyManagerOfFeeTransfer", "notify_manager", {
     userId: params.managerProfileId,
@@ -503,7 +505,8 @@ function queuePaymentNotifications(ctx: Ctx, amountCents: number) {
 function queueAutopayFailure(
   context: Ctx | null,
   tenantProfile: { id: string; email: string | null } | null,
-  disabled: boolean
+  disabled: boolean,
+  stripeObjectId: string
 ) {
   if (tenantProfile?.id) {
     void createNotificationWithDelivery({
@@ -515,7 +518,8 @@ function queueAutopayFailure(
         ? "Your automatic payment failed twice. Please update your payment method in Settings."
         : "We'll retry your payment in 3 days. Ensure your payment method is up to date.",
       entityType: "rent_charge",
-      entityId: context?.charge.id
+      entityId: context?.charge.id,
+      emailKey: `payment-failed-${stripeObjectId}`
     }).catch(sideEffectError("handlePaymentFailed", "notify_tenant", {
       userId: tenantProfile.id,
       entityType: "rent_charge",
@@ -688,7 +692,8 @@ async function recordPayment({
           notifyManagerOfFeeTransfer(supabase, {
             managerProfileId: managerInfo.managerProfileId,
             amountCents: managerFeeCents,
-            chargeId: ctx.charge.id
+            chargeId: ctx.charge.id,
+            managerPaymentId: managerTransfer.id
           });
         } catch (transferError) {
           console.error(
@@ -787,7 +792,7 @@ export async function handlePaymentIntentPaymentFailed(supabase: AdminClient, pa
     last_failed_at: failureTimestamp,
     updated_at: failureTimestamp
   });
-  queueAutopayFailure(context, tenantProfile.data, nextRetryCount >= 2);
+  queueAutopayFailure(context, tenantProfile.data, nextRetryCount >= 2, paymentIntent.id);
 
   return received("autopay_failure_recorded");
 }
@@ -883,7 +888,8 @@ export async function handleAsyncPaymentFailed(
           `for ${formatUnitLabel(ctx.unit.unit_number)} didn't clear. ` +
           "Please try again or use a different payment method.",
         entityType: "rent_charge",
-        entityId: ctx.charge.id
+        entityId: ctx.charge.id,
+        emailKey: `payment-failed-${session.payment_intent ?? session.id}`
       }).catch(sideEffectError("handleAsyncPaymentFailed", "notify_tenant", {
         userId: ctx.tenantProfile.id,
         entityType: "rent_charge",

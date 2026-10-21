@@ -38,3 +38,16 @@ export function shouldRecordSuccessfulDelivery(
     (row) => row.channel === channel && row.status === "sent"
   );
 }
+
+export function summarizeNotificationResults(
+  label: string,
+  results: Array<{
+    inApp: { status: "sent" | "skipped" };
+    email: { status: "sent" | "failed" | "skipped" };
+  } | null | undefined>
+): string {
+  const recipients = results.filter((result) => result != null);
+  const sent = recipients.filter((result) => result!.inApp.status === "sent" || result!.email.status === "sent").length;
+  const emailed = recipients.filter((result) => result!.email.status === "sent").length;
+  return `${label}: ${sent} sent, ${emailed} emailed, ${recipients.length - sent} skipped.`;
+}

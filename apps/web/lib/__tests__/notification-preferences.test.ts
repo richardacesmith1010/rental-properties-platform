@@ -3,12 +3,49 @@ import {
   areNotificationEmailsPaused,
   DEFAULT_NOTIFICATION_EMAIL_PREFERENCES,
   normalizeNotificationEmailPreferences,
+  mergeDeliveryPreferences,
+  resolveTenantDeliveryPreference,
   resolveCombinedNotificationDeliveryPreference,
   resolveNotificationDeliveryPreference,
   resolveNotificationPauseUntil
 } from "@/lib/notification-preferences";
 
 describe("notification preference helpers", () => {
+  it.each([
+    ["rent_due_reminder", "rent_due_reminder"],
+    ["late_rent", "late_rent"],
+    ["delinquency_escalation", "delinquency_escalation"],
+    ["lease_expiring_soon", "lease_expiration"]
+  ] as const)("N1 and N3 tenant %s consent blocks email and keeps in-app", (type, key) => {
+    const owner = resolveTenantDeliveryPreference(null, type);
+    const tenant = resolveTenantDeliveryPreference({ notification_preferences: { [key]: false } }, type);
+    const merged = mergeDeliveryPreferences(owner, tenant);
+    expect(merged.emailEnabled).toEqual(false);
+    expect(merged.inAppEnabled).toEqual(true);
+    expect(merged.emailBlockReason).toEqual(`${key} emails are disabled`);
+  });
+
+  it("N1 tenant pause blocks only email with the pause reason", () => {
+    const owner = resolveTenantDeliveryPreference(null, "rent_due_reminder");
+    const tenant = resolveTenantDeliveryPreference({
+      notifications_paused_until: "9999-12-31T23:59:59.000Z"
+    }, "rent_due_reminder");
+    expect(mergeDeliveryPreferences(owner, tenant)).toEqual({
+      emailEnabled: false, inAppEnabled: true,
+      emailBlockReason: "email notifications are paused until resumed"
+    });
+  });
+
+  it("N2 owner denial takes precedence over tenant permission", () => {
+    const owner = resolveTenantDeliveryPreference({
+      notification_preferences: { rent_due_reminder: false }
+    }, "rent_due_reminder");
+    const tenant = resolveTenantDeliveryPreference(null, "rent_due_reminder");
+    expect(mergeDeliveryPreferences(owner, tenant)).toEqual({
+      emailEnabled: false, inAppEnabled: true,
+      emailBlockReason: "rent_due_reminder emails are disabled"
+    });
+  });
   it("returns false when the pause window is not active", () => {
     expect(areNotificationEmailsPaused(null)).toBe(false);
     expect(

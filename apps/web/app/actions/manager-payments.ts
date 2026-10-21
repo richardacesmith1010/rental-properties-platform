@@ -58,7 +58,15 @@ async function sendManagerPaymentInvoiceEmails(
   paymentId: string,
   status: "pending" | "paid"
 ) {
-  const notificationSettings = await getUserNotificationPreferenceSettings(actorUserId);
+  const context = await getManagerPaymentEmailContext(paymentId);
+  if (!context) return;
+  const { data: payment, error: paymentError } = await createAdminClient()
+    .from("manager_payments").select("manager_profile_id").eq("id", paymentId).maybeSingle();
+  if (paymentError || !payment) {
+    console.error(`[manager-payments] recipient_lookup: ${paymentError?.code ?? "missing_row"}`);
+    return;
+  }
+  const notificationSettings = await getUserNotificationPreferenceSettings(payment.manager_profile_id);
   const deliveryPreference = resolveNotificationDeliveryPreference(
     notificationSettings,
     "manager_invoice"
@@ -66,11 +74,6 @@ async function sendManagerPaymentInvoiceEmails(
 
   if (!deliveryPreference.emailEnabled) {
     // Email delivery skipped — preference or pause active
-    return;
-  }
-
-  const context = await getManagerPaymentEmailContext(paymentId);
-  if (!context) {
     return;
   }
 
@@ -86,6 +89,7 @@ async function sendManagerPaymentInvoiceEmails(
         actorUserId,
         paymentId,
         propertyId: context.propertyId,
+        deliveryPreference,
         managerName: context.managerName,
         managerEmail: context.managerEmail,
         ownerName: context.ownerName,
@@ -167,7 +171,12 @@ export async function setupManagerPaymentConfig(
     .upsert(payload, { onConflict: "property_id,manager_profile_id" });
 
   if (error) {
-    return { success: false, error: error.message.includes("manager_payment_configs") ? error.message : "Unable to save manager payment terms right now." };
+    return {
+      success: false,
+      error: error.message.includes("manager_payment_configs")
+        ? error.message
+        : "Unable to save manager payment terms right now."
+    };
   }
 
   revalidateManagerPaymentPaths();

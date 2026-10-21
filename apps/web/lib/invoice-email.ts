@@ -1,5 +1,7 @@
 import { logAudit } from "@/lib/audit";
 import { buildInvoiceEmailTemplate } from "@/lib/email-templates";
+import { notificationAllowlist, notificationMode, isNotificationRecipientAllowed } from "@/lib/notifications-switch";
+import type { NotificationDeliveryPreference } from "@/lib/notification-preferences";
 
 export interface InvoiceEmailParams {
   managerName: string;
@@ -21,6 +23,7 @@ export interface SendInvoiceEmailParams extends InvoiceEmailParams {
   actorUserId?: string;
   paymentId?: string;
   propertyId?: string;
+  deliveryPreference?: NotificationDeliveryPreference;
 }
 
 export function buildInvoiceEmail(params: InvoiceEmailParams) {
@@ -39,6 +42,13 @@ export function buildInvoiceEmail(params: InvoiceEmailParams) {
 }
 
 export async function sendInvoiceEmail(params: SendInvoiceEmailParams): Promise<boolean> {
+  if (params.deliveryPreference?.emailEnabled === false) return false;
+  const mode = notificationMode();
+  const allowlist = notificationAllowlist();
+  if (!isNotificationRecipientAllowed(mode, params.managerEmail, allowlist)) return false;
+  const cc = params.ownerEmail && params.ownerEmail !== params.managerEmail &&
+    isNotificationRecipientAllowed(mode, params.ownerEmail, allowlist)
+    ? [params.ownerEmail] : undefined;
   const apiKey = process.env.RESEND_API_KEY;
   const fromEmail = process.env.RESEND_FROM_EMAIL;
 
@@ -58,10 +68,7 @@ export async function sendInvoiceEmail(params: SendInvoiceEmailParams): Promise<
       body: JSON.stringify({
         from: fromEmail,
         to: [params.managerEmail],
-        cc:
-          params.ownerEmail && params.ownerEmail !== params.managerEmail
-            ? [params.ownerEmail]
-            : undefined,
+        cc,
         subject,
         html,
         text,

@@ -297,6 +297,12 @@ export async function sendBatchPaymentReminder(
   }
 
   if (notificationsEnabled()) {
+    const denverParts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Denver", year: "numeric", month: "2-digit", day: "2-digit"
+    }).formatToParts(new Date());
+    const denverDate = ["year", "month", "day"]
+      .map((part) => denverParts.find((value) => value.type === part)?.value ?? "")
+      .join("-");
     await Promise.all(notifications.map(async (notification) => {
       const tenantProfile = tenantProfileById.get(notification.recipient_profile_id);
       await createNotificationWithDelivery({
@@ -310,7 +316,8 @@ export async function sendBatchPaymentReminder(
         title: notification.title,
         body: notification.body,
         entityType: notification.entity_type,
-        entityId: notification.entity_id
+        entityId: notification.entity_id,
+        emailKey: `manual-reminder-${denverDate}`
       });
     }));
   }

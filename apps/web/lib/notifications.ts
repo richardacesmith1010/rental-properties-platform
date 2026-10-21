@@ -6,7 +6,10 @@ import { ANNOUNCEMENT_NOTIFICATION_TYPE } from "@/lib/announcements";
 import { buildNotificationEmail } from "@/lib/email-templates";
 import { shouldRecordSuccessfulDelivery } from "@/lib/idempotency";
 import {
-  getNotificationPreference,
+  DEFAULT_NOTIFICATION_EMAIL_PREFERENCES,
+  mergeDeliveryPreferences,
+  resolveNotificationDeliveryPreference,
+  resolveTenantDeliveryPreference,
   type NotificationDeliveryPreference
 } from "@/lib/notification-preferences";
 import {
@@ -122,6 +125,7 @@ interface CreateNotificationParams {
   emailContent?: NotificationEmailContent;
   deliveryPreference?: NotificationDeliveryPreference;
   emailMode?: "default" | "never";
+  emailKey?: string;
 }
 
 function buildNotificationPlainText(params: {
@@ -143,187 +147,134 @@ function buildNotificationPlainText(params: {
   ].join("\n");
 }
 
-async function resolveRecipientRole(
-  admin: SupabaseClient,
-  recipientProfileId: string,
-  providedRole?: NotificationRecipientRole
-): Promise<NotificationRecipientRole> {
-  if (providedRole) {
-    return providedRole;
-  }
-
-  const { data: profile, error } = await admin
-    .from("profiles")
-    .select("role")
-    .eq("id", recipientProfileId)
-    .maybeSingle();
-
-  if (error) {
-    console.error(`[notifications] role_lookup: ${error.code ?? "unknown"}`);
-    throw new Error("Notification recipient role lookup failed");
-  }
-  return profile?.role === "owner" || profile?.role === "manager" || profile?.role === "tenant"
-    ? profile.role
-    : "owner";
+export type NotificationSkipReason =
+  | "off" | "test_not_allowed" | "preferences" | "paused" | "self" | "duplicate" | "error";
+export interface NotificationDeliveryResult {
+  inApp: { status: "sent" | "skipped"; reason?: NotificationSkipReason };
+  email: { status: "sent" | "failed" | "skipped"; reason?: NotificationSkipReason };
 }
 
-export async function createNotificationWithDelivery(params: CreateNotificationParams) {
-  const mode = notificationMode();
-  if (mode === "off") {
-    console.info(`[notifications] off: skipped ${params.type}`);
-    return;
-  }
+function skipped(reason: NotificationSkipReason): NotificationDeliveryResult {
+  return { inApp: { status: "skipped", reason }, email: { status: "skipped", reason } };
+}
 
-  if (params.actorProfileId && params.actorProfileId === params.recipientProfileId) return;
+export async function createNotificationWithDelivery(
+  params: CreateNotificationParams
+): Promise<NotificationDeliveryResult> {
+  if (params.emailKey !== undefined && !/^[A-Za-z0-9][A-Za-z0-9:_-]{0,99}$/.test(params.emailKey)) {
+    throw new TypeError("Invalid email key");
+  }
+  const mode = notificationMode();
+  if (mode === "off") return skipped("off");
+  if (params.actorProfileId && params.actorProfileId === params.recipientProfileId) return skipped("self");
+
   try {
     const admin = createAdminClient();
-    let recipientEmail = params.recipientEmail;
-    if (mode === "test") {
-      const { data: canonicalProfile, error: profileError } = await admin.from("profiles")
-        .select("email").eq("id", params.recipientProfileId).maybeSingle();
-      if (profileError) console.error(`[notifications] profile_lookup: ${profileError.code ?? "unknown"}`);
-      if (profileError || !isNotificationRecipientAllowed(mode, canonicalProfile?.email, notificationAllowlist())) {
-        console.info(`[notifications] test mode: skipped ${params.type}`);
-        return;
-      }
-      recipientEmail = canonicalProfile?.email;
+    const { data: canonicalProfile, error: profileError } = await admin.from("profiles")
+      .select("email, role, notification_preferences, notifications_paused_until")
+      .eq("id", params.recipientProfileId).maybeSingle();
+    if (profileError) {
+      console.error(`[notifications] profile_lookup: ${profileError.code ?? "unknown"}`);
+      return skipped("error");
     }
-    const preference =
-      params.deliveryPreference ??
-      (await getNotificationPreference(params.recipientProfileId, params.type));
-    const shouldCreateInApp = preference.inAppEnabled;
-    const shouldSendEmail = preference.emailEnabled && params.emailMode !== "never";
-    const recipientRole = shouldSendEmail
-      ? await resolveRecipientRole(admin, params.recipientProfileId, params.recipientRole)
-      : null;
-
-    if (!shouldCreateInApp && !shouldSendEmail) {
-      return;
+    const recipientEmail = canonicalProfile?.email ?? null;
+    if (mode === "test" && !isNotificationRecipientAllowed(mode, recipientEmail, notificationAllowlist())) {
+      return skipped("test_not_allowed");
     }
-
-    let notificationId: string | null = null;
-    let deliveryRows: Array<{
-      channel: "in_app" | "email";
-      status: "pending" | "sent" | "failed";
-    }> = [];
-
-    if (shouldCreateInApp) {
-      const { data: notification, error } = await admin
-        .from("notifications")
-        .upsert(
-          {
-            recipient_profile_id: params.recipientProfileId,
-            type: params.type,
-            title: params.title,
-            body: params.body,
-            entity_type: params.entityType,
-            entity_id: params.entityId ?? null
-          },
-          { onConflict: "recipient_profile_id,type,entity_type,entity_id" }
-        )
-        .select("id")
-        .single();
-
-      if (error || !notification) {
-        console.error(`[notifications] upsert: ${error?.code ?? "missing_row"}`);
-        return;
-      }
-
-      notificationId = notification.id;
-
-      const { data: existingDeliveries, error: deliveryError } = await admin
-        .from("notification_deliveries")
-        .select("channel, status")
-        .eq("notification_id", notification.id);
-
-      if (deliveryError) {
-        console.error(`[notifications] delivery_lookup: ${deliveryError.code ?? "unknown"}`);
-        return;
-      }
-      deliveryRows = (existingDeliveries ?? []).map((row) => ({
-        channel: row.channel as "in_app" | "email",
-        status: row.status as "pending" | "sent" | "failed"
-      }));
-
-      if (shouldRecordSuccessfulDelivery(deliveryRows, "in_app")) {
-        await insertDeliveryRecord(admin, {
-          notification_id: notification.id,
-          channel: "in_app",
-          status: "sent"
-        });
-      }
-    }
-
-    let emailResult: {
-      status: "sent" | "failed";
-      providerRef: string | null;
-      errorMessage: string | null;
-    } | null = null;
-
-    if (
-      !shouldSendEmail &&
-      params.recipientEmail &&
-      preference.emailBlockReason
-    ) {
-      // Email delivery skipped — preference or pause active
-    }
-
-    if (shouldSendEmail && shouldRecordSuccessfulDelivery(deliveryRows, "email")) {
-      const primaryAction =
-        getPrimaryNotificationAction(
-          {
-            type: params.type,
-            entityType: params.entityType,
-            entityId: params.entityId ?? null,
-            title: params.title,
-            body: params.body
-          },
-          recipientRole ?? "owner"
-        ) ?? {
-          label: "Open Domus",
-          href: "/",
-          variant: "default"
+    const hasCurrentSettings = canonicalProfile && "notification_preferences" in canonicalProfile;
+    const currentPreference = hasCurrentSettings
+      ? resolveTenantDeliveryPreference(canonicalProfile, params.type)
+      : resolveNotificationDeliveryPreference({
+          preferences: { ...DEFAULT_NOTIFICATION_EMAIL_PREFERENCES }, pausedUntil: null, schemaReady: false
+        }, params.type);
+    const preference = params.deliveryPreference
+      ? hasCurrentSettings
+        ? mergeDeliveryPreferences(params.deliveryPreference, currentPreference)
+        : params.deliveryPreference
+      : currentPreference;
+    const inApp: NotificationDeliveryResult["inApp"] = preference.inAppEnabled
+      ? { status: "skipped", reason: "error" }
+      : { status: "skipped", reason: "preferences" };
+    const email: NotificationDeliveryResult["email"] = preference.emailEnabled && params.emailMode !== "never"
+      ? { status: "skipped", reason: "error" }
+      : {
+          status: "skipped",
+          reason: preference.emailBlockReason?.includes("paused") ? "paused" : "preferences"
         };
+    if (!preference.inAppEnabled && (!preference.emailEnabled || params.emailMode === "never")) {
+      return { inApp, email };
+    }
+
+    const profileRole = canonicalProfile?.role;
+    const recipientRole: NotificationRecipientRole = params.recipientRole ??
+      (profileRole === "owner" || profileRole === "manager" || profileRole === "tenant" ? profileRole : "owner");
+    const { data: notification, error: upsertError } = await admin.from("notifications")
+      .upsert({
+        recipient_profile_id: params.recipientProfileId,
+        type: params.type,
+        title: params.title,
+        body: params.body,
+        entity_type: params.entityType,
+        entity_id: params.entityId ?? null
+      }, { onConflict: "recipient_profile_id,type,entity_type,entity_id" })
+      .select("id").single();
+    if (upsertError || !notification) {
+      console.error(`[notifications] upsert: ${upsertError?.code ?? "missing_row"}`);
+      return { inApp, email };
+    }
+
+    if (preference.inAppEnabled) {
+      const { data: rows, error: lookupError } = await admin.from("notification_deliveries")
+        .select("channel, status").eq("notification_id", notification.id);
+      if (lookupError) {
+        console.error(`[notifications] in_app_lookup: ${lookupError.code ?? "unknown"}`);
+      } else if (!shouldRecordSuccessfulDelivery(rows ?? [], "in_app")) {
+        inApp.reason = "duplicate";
+      } else if (await insertDeliveryRecord(admin, {
+        notification_id: notification.id, channel: "in_app", status: "sent"
+      })) {
+        inApp.status = "sent";
+        delete inApp.reason;
+      }
+    }
+
+    if (preference.emailEnabled && params.emailMode !== "never") {
+      const primaryAction = getPrimaryNotificationAction({
+        type: params.type,
+        entityType: params.entityType,
+        entityId: params.entityId ?? null,
+        title: params.title,
+        body: params.body
+      }, recipientRole) ?? { label: "Open Domus", href: "/", variant: "default" };
       const ctaUrl = toAbsoluteNotificationUrl(primaryAction.href);
       const emailContent = params.emailContent ?? {
         subject: params.title,
         text: buildNotificationPlainText({
-          title: params.title,
-          body: params.body,
-          ctaText: primaryAction.label,
-          ctaUrl
+          title: params.title, body: params.body, ctaText: primaryAction.label, ctaUrl
         }),
         html: buildNotificationEmail({
-          title: params.title,
-          body: params.body,
-          ctaText: primaryAction.label,
-          ctaUrl,
-          preheaderText: params.title
+          title: params.title, body: params.body, ctaText: primaryAction.label,
+          ctaUrl, preheaderText: params.title
         })
       };
-
-      emailResult = await sendNotificationEmail({
+      const outcome = await sendNotificationEmail(admin, {
+        notificationId: notification.id,
+        emailKey: params.emailKey,
         to: recipientEmail,
         subject: emailContent.subject,
         text: emailContent.text,
         html: emailContent.html
       });
+      email.status = outcome.status;
+      if (outcome.reason) email.reason = outcome.reason;
+      else delete email.reason;
     }
-
-    if (emailResult && notificationId) {
-      await insertDeliveryRecord(admin, {
-        notification_id: notificationId,
-        channel: "email",
-        status: emailResult.status,
-        provider_ref: emailResult.providerRef,
-        error_message: emailResult.errorMessage
-      });
-    }
+    return { inApp, email };
   } catch (error) {
     console.error(`[notifications] delivery: ${error instanceof Error ? error.name : "unknown"}`);
+    return skipped("error");
   }
 }
-
 
 export {
   notifyPropertyTeam,

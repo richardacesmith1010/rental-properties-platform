@@ -5,8 +5,11 @@ import {
   notifyPropertyTeam
 } from "@/lib/notifications";
 import {
-  getPropertyNotificationDeliveryPreferences
+  getPropertyNotificationDeliveryPreferences,
+  mergeDeliveryPreferences,
+  resolveTenantDeliveryPreference
 } from "@/lib/notification-preferences";
+import { summarizeNotificationResults } from "@/lib/idempotency";
 import { notificationsEnabled } from "@/lib/notifications-switch";
 
 export async function detectExpiredLeases(supabase: SupabaseClient): Promise<string> {
@@ -68,15 +71,21 @@ export async function detectExpiredLeases(supabase: SupabaseClient): Promise<str
     new Set(candidates.map((lease) => lease.tenant_profile_id).filter((id): id is string => Boolean(id)))
   );
   const { data: profiles, error: profilesError } = tenantIds.length
-    ? await supabase.from("profiles").select("id, email").in("id", tenantIds)
-    : { data: [] as Array<{ id: string; email: string | null }>, error: null };
+    ? await supabase.from("profiles").select("id, email, notification_preferences, notifications_paused_until").in("id", tenantIds)
+    : { data: [] as Array<{
+      id: string; email: string | null; notification_preferences?: unknown;
+      notifications_paused_until?: string | null;
+    }>, error: null };
   if (profilesError) {
     throw profilesError;
   }
 
   const unitById = new Map(unitRows.map((unit) => [unit.id, unit]));
   const propertyById = new Map(((properties ?? []) as Array<{ id: string; name: string }>).map((property) => [property.id, property]));
-  const profileById = new Map(((profiles ?? []) as Array<{ id: string; email: string | null }>).map((profile) => [profile.id, profile]));
+  const profileById = new Map(((profiles ?? []) as Array<{
+      id: string; email: string | null; notification_preferences?: unknown;
+      notifications_paused_until?: string | null;
+    }>).map((profile) => [profile.id, profile]));
   const deliveryByPropertyId = await getPropertyNotificationDeliveryPreferences(
     supabase,
     propertyIds,
@@ -100,9 +109,12 @@ export async function detectExpiredLeases(supabase: SupabaseClient): Promise<str
             body: `Your lease for ${formatUnitLabel(unit?.unit_number ?? "?")} at ${property?.name ?? "your property"} has expired.`,
             entityType: "lease",
             entityId: lease.id,
-            deliveryPreference: unit?.property_id
-              ? deliveryByPropertyId.get(unit.property_id)
-              : undefined
+            deliveryPreference: mergeDeliveryPreferences(
+              unit?.property_id
+                ? deliveryByPropertyId.get(unit.property_id) ?? { emailEnabled: true, inAppEnabled: true }
+                : { emailEnabled: true, inAppEnabled: true },
+              resolveTenantDeliveryPreference(tenantProfile, "lease_expired")
+            )
           })
         );
       }
@@ -130,7 +142,7 @@ export async function detectExpiredLeases(supabase: SupabaseClient): Promise<str
 
 export async function sendLeaseExpirationWarnings(supabase: SupabaseClient): Promise<string> {
   if (!notificationsEnabled()) {
-    return "Notifications off: 0 sent.";
+    return summarizeNotificationResults("Lease notices", []);
   }
 
   const today = new Date();
@@ -161,7 +173,7 @@ export async function sendLeaseExpirationWarnings(supabase: SupabaseClient): Pro
   }>).filter((lease) => !["terminated", "renewed", "expired"].includes(lease.lease_status ?? "active"));
 
   if (candidates.length === 0) {
-    return "Expiration warnings sent: 0.";
+    return summarizeNotificationResults("Lease notices", []);
   }
 
   const candidateIds = candidates.map((lease) => lease.id);
@@ -205,15 +217,21 @@ export async function sendLeaseExpirationWarnings(supabase: SupabaseClient): Pro
     new Set(candidates.map((lease) => lease.tenant_profile_id).filter((id): id is string => Boolean(id)))
   );
   const { data: profiles, error: profilesError } = tenantIds.length
-    ? await supabase.from("profiles").select("id, email").in("id", tenantIds)
-    : { data: [] as Array<{ id: string; email: string | null }>, error: null };
+    ? await supabase.from("profiles").select("id, email, notification_preferences, notifications_paused_until").in("id", tenantIds)
+    : { data: [] as Array<{
+      id: string; email: string | null; notification_preferences?: unknown;
+      notifications_paused_until?: string | null;
+    }>, error: null };
   if (profilesError) {
     throw profilesError;
   }
 
   const unitById = new Map(unitRows.map((unit) => [unit.id, unit]));
   const propertyById = new Map(((properties ?? []) as Array<{ id: string; name: string }>).map((property) => [property.id, property]));
-  const profileById = new Map(((profiles ?? []) as Array<{ id: string; email: string | null }>).map((profile) => [profile.id, profile]));
+  const profileById = new Map(((profiles ?? []) as Array<{
+      id: string; email: string | null; notification_preferences?: unknown;
+      notifications_paused_until?: string | null;
+    }>).map((profile) => [profile.id, profile]));
   const deliveryByPropertyId = await getPropertyNotificationDeliveryPreferences(
     supabase,
     propertyIds,
@@ -237,9 +255,12 @@ export async function sendLeaseExpirationWarnings(supabase: SupabaseClient): Pro
           "Contact your landlord about renewal.",
         entityType: "lease",
         entityId: lease.id,
-        deliveryPreference: unit?.property_id
-          ? deliveryByPropertyId.get(unit.property_id)
-          : undefined
+        deliveryPreference: mergeDeliveryPreferences(
+          unit?.property_id
+            ? deliveryByPropertyId.get(unit.property_id) ?? { emailEnabled: true, inAppEnabled: true }
+            : { emailEnabled: true, inAppEnabled: true },
+          resolveTenantDeliveryPreference(tenantProfile, "lease_expiring_soon")
+        )
       });
     });
 
@@ -256,6 +277,7 @@ export async function sendLeaseExpirationWarnings(supabase: SupabaseClient): Pro
       entityId: lease.id
     });
   });
-  await Promise.all([...pendingNotifications, ...teamNotifications]);
-  return `Expiration warnings sent: ${pendingNotifications.length}.`;
+  const results = await Promise.all(pendingNotifications);
+  await Promise.all(teamNotifications);
+  return summarizeNotificationResults("Lease notices", results);
 }

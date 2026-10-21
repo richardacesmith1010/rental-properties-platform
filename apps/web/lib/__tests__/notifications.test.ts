@@ -21,9 +21,13 @@ const defaultNotificationPreferences = vi.hoisted(() => ({
 vi.mock("@/lib/supabase/server", () => ({ createClient: createClientMock }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: createAdminClientMock }));
 vi.mock("@/lib/email-templates", () => ({ buildNotificationEmail: buildNotificationEmailMock }));
-vi.mock("@/lib/idempotency", () => ({ shouldRecordSuccessfulDelivery: shouldRecordSuccessfulDeliveryMock }));
+vi.mock("@/lib/idempotency", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/idempotency")>(),
+  shouldRecordSuccessfulDelivery: shouldRecordSuccessfulDeliveryMock
+}));
 vi.mock("@/lib/inbox", () => ({ ensureInboxThreadForEvent: ensureInboxThreadForEventMock }));
-vi.mock("@/lib/notification-preferences", () => ({
+vi.mock("@/lib/notification-preferences", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/notification-preferences")>(),
   DEFAULT_NOTIFICATION_EMAIL_PREFERENCES: defaultNotificationPreferences,
   getNotificationPreference: getNotificationPreferenceMock,
   getUserNotificationPreferenceSettingsMap: getUserNotificationPreferenceSettingsMapMock,
@@ -32,8 +36,57 @@ vi.mock("@/lib/notification-preferences", () => ({
 
 import { createNotificationWithDelivery, getNotificationsForUser, notifyPropertyTeam } from "@/lib/notifications";
 import {
-  createNotificationAdminClient, notificationDeliveryInserts, notificationUpserts
+  createNotificationAdminClient as createBaseAdminClient, notificationDeliveryInserts, notificationUpserts
 } from "./notification-test-helpers";
+
+function createNotificationAdminClient(config: Parameters<typeof createBaseAdminClient>[0]) {
+  const admin = createBaseAdminClient(config);
+  const originalFrom = admin.from.bind(admin);
+  admin.from = vi.fn((table: string) => {
+    // Test-only adapter for the delivery claim query builder.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const query: any = originalFrom(table);
+    if (table === "profiles" && config.profiles === undefined) {
+      const select = query.select.bind(query);
+      query.select = vi.fn((columns: string) => {
+        const selected = select(columns);
+        selected.eq = vi.fn(() => ({ maybeSingle: vi.fn().mockResolvedValue({
+          data: { id: "user-1", email: "user@example.com" }, error: null
+        }) }));
+        return selected;
+      });
+    }
+    if (table === "notification_deliveries") {
+      const originalSelect = query.select.bind(query);
+      query.select = vi.fn((columns: string) => {
+        const selected = originalSelect(columns);
+        const originalEq = selected.eq.bind(selected);
+        selected.eq = vi.fn((column: string, value: string) => {
+          const result = originalEq(column, value);
+          result.eq = vi.fn(() => result);
+          return result;
+        });
+        return selected;
+      });
+      query.insert = vi.fn((row: { channel: string; claim_token?: string; email_request_body?: string }) =>
+        row.channel === "email"
+          ? { select: () => ({ single: async () => ({ data: {
+              id: "delivery-1", status: "pending", claim_token: row.claim_token,
+              email_request_body: row.email_request_body, first_attempt_at: new Date().toISOString()
+            }, error: null }) }) }
+          : Promise.resolve({ error: null }));
+      query.update = vi.fn(() => {
+        const result = { eq: vi.fn(), select: () => ({ maybeSingle: async () => ({
+          data: { id: "delivery-1" }, error: null
+        }) }) };
+        result.eq.mockReturnValue(result);
+        return result;
+      });
+    }
+    return query;
+  }) as typeof admin.from;
+  return admin;
+}
 
 describe("notifications utilities", () => {
   beforeEach(() => {
@@ -125,7 +178,7 @@ describe("notifications utilities", () => {
       vi.stubGlobal("fetch", fetchMock);
       vi.spyOn(console, "info").mockImplementation(() => {});
 
-      await createNotificationWithDelivery({
+      const result = await createNotificationWithDelivery({
         recipientProfileId: "user-1",
         recipientEmail: "user@example.com",
         type,
@@ -138,12 +191,18 @@ describe("notifications utilities", () => {
       expect(createAdminClientMock).not.toHaveBeenCalled();
       expect(getNotificationPreferenceMock).not.toHaveBeenCalled();
       expect(fetchMock).not.toHaveBeenCalled();
-      expect(console.info).toHaveBeenCalledWith(`[notifications] off: skipped ${type}`);
+      expect(result).toEqual({
+        inApp: { status: "skipped", reason: "off" },
+        email: { status: "skipped", reason: "off" }
+      });
+      expect(console.info).not.toHaveBeenCalled();
     }
   );
 
   it("handles missing email gracefully", async () => {
-    const admin = createNotificationAdminClient({ existingDeliveries: [] });
+    const admin = createNotificationAdminClient({
+      existingDeliveries: [], profiles: [{ id: "user-1", email: null }]
+    });
     createAdminClientMock.mockReturnValue(admin);
     getNotificationPreferenceMock.mockResolvedValueOnce({ inAppEnabled: true, emailEnabled: true });
 
@@ -157,7 +216,7 @@ describe("notifications utilities", () => {
         entityType: "rent_charge",
         entityId: "charge-1"
       })
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ inApp: { status: "sent" }, email: { status: "failed" } });
   });
 
   it("uses custom email content when provided", async () => {
@@ -209,10 +268,26 @@ describe("notifications utilities", () => {
       title: "Late rent",
       body: "Past due",
       entityType: "rent_charge",
-      entityId: "charge-1"
+      entityId: "charge-1",
+      deliveryPreference: { inAppEnabled: false, emailEnabled: false }
     });
 
     expect(admin.from).not.toHaveBeenCalledWith("notifications");
+  });
+
+  it("N11 reports an in-app send when the recipient blocks email", async () => {
+    const admin = createNotificationAdminClient({});
+    createAdminClientMock.mockReturnValue(admin);
+    const result = await createNotificationWithDelivery({
+      recipientProfileId: "user-1", type: "rent_due_reminder", title: "Rent due", body: "Pay soon",
+      entityType: "rent_charge", entityId: "charge-1",
+      deliveryPreference: {
+        inAppEnabled: true, emailEnabled: false, emailBlockReason: "rent_due_reminder emails are disabled"
+      }
+    });
+    expect(result).toEqual({
+      inApp: { status: "sent" }, email: { status: "skipped", reason: "preferences" }
+    });
   });
 
   it("notifies all eligible owner members for a property", async () => {
@@ -289,12 +364,16 @@ describe("notifications utilities", () => {
     getNotificationPreferenceMock.mockResolvedValue({ inAppEnabled: true, emailEnabled: true });
     const admin = createNotificationAdminClient({ profiles: [{ id: "user-1", email: canonical }] });
     createAdminClientMock.mockReturnValue(admin);
-    await createNotificationWithDelivery({
+    const result = await createNotificationWithDelivery({
       recipientProfileId: "user-1", recipientEmail: caller, type: "late_rent",
       title: "Rent late", body: "Due", entityType: "rent_charge", entityId: "charge-1"
     });
     expect(notificationUpserts(admin)).toHaveLength(allowed ? 1 : 0);
     if (!allowed) expect(admin.from).not.toHaveBeenCalledWith("notification_deliveries");
+    if (!allowed) expect(result).toEqual({
+      inApp: { status: "skipped", reason: "test_not_allowed" },
+      email: { status: "skipped", reason: "test_not_allowed" }
+    });
     expect(fetchMock).toHaveBeenCalledTimes(allowed ? 1 : 0);
     if (allowed) expect(JSON.parse(fetchMock.mock.calls[0][1].body).to).toEqual(["allowed@example.com"]);
   });

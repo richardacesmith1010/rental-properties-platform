@@ -331,8 +331,8 @@ describe("stripe webhook handlers", () => {
         type: "payment_recorded",
         title: "Management fee received",
         body: "Your management fee of $112.50 for Atlas House Unit 1A was sent to your bank.",
-        entityType: "rent_charge",
-        entityId: "charge-1"
+        entityType: "manager_payment",
+        entityId: "tr_manager_123"
       })
     ]);
   });
@@ -366,8 +366,8 @@ describe("stripe webhook handlers", () => {
         type: "payment_recorded",
         title: "Management fee received",
         body: "Your management fee of $112.50 for Atlas House Unit 1A was sent to your bank.",
-        entityType: "rent_charge",
-        entityId: "charge-1"
+        entityType: "manager_payment",
+        entityId: "tr_manager_123"
       })
     ]);
   });

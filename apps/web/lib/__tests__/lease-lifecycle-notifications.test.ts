@@ -8,13 +8,38 @@ vi.mock("@/lib/notifications", () => ({
   createNotificationWithDelivery: createNotificationMock,
   notifyPropertyTeam: notifyTeamMock
 }));
-vi.mock("@/lib/notification-preferences", () => ({
+vi.mock("@/lib/notification-preferences", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/notification-preferences")>(),
   getPropertyNotificationDeliveryPreferences: propertyPreferencesMock
 }));
 
 import { sendLeaseExpirationWarnings } from "@/lib/lease-lifecycle";
 
 describe("lease lifecycle notification switch", () => {
+  it("N3 merges tenant lease expiration denial while keeping in-app delivery", async () => {
+    vi.stubEnv("DOMUS_NOTIFICATIONS_ENABLED", "true");
+    const from = vi.fn((table: string) => {
+      if (table === "leases") return { select: () => ({ eq: () => ({ gte: () => ({
+        lte: async () => ({ data: [{ id: "lease-1", unit_id: "unit-1",
+          tenant_profile_id: "tenant-1", end_date: "2026-05-20", lease_status: "active", active: true }],
+          error: null })
+      }) }) }) };
+      if (table === "notifications") return { select: () => ({ eq: () => ({ eq: () => ({
+        in: () => ({ gte: async () => ({ data: [], error: null }) })
+      }) }) }) };
+      const rows = table === "units" ? [{ id: "unit-1", property_id: "property-1", unit_number: "101" }]
+        : table === "properties" ? [{ id: "property-1", name: "Oak House" }]
+          : [{ id: "tenant-1", email: "tenant@example.com",
+            notification_preferences: { lease_expiration: false } }];
+      return { select: () => ({ in: async () => ({ data: rows, error: null }) }) };
+    });
+    await sendLeaseExpirationWarnings({ from } as unknown as SupabaseClient);
+    expect(createNotificationMock).toHaveBeenCalledWith(expect.objectContaining({
+      deliveryPreference: { emailEnabled: false, inAppEnabled: true,
+        emailBlockReason: "lease_expiration emails are disabled" }
+    }));
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
@@ -31,7 +56,7 @@ describe("lease lifecycle notification switch", () => {
   it("returns before querying for expiration warnings when notifications are off", async () => {
     vi.stubEnv("DOMUS_NOTIFICATIONS_ENABLED", "false");
     const supabase = { from: vi.fn() } as unknown as SupabaseClient;
-    await expect(sendLeaseExpirationWarnings(supabase)).resolves.toContain("Notifications off");
+    await expect(sendLeaseExpirationWarnings(supabase)).resolves.toBe("Lease notices: 0 sent, 0 emailed, 0 skipped.");
     expect(supabase.from).not.toHaveBeenCalled();
   });
 
@@ -59,7 +84,7 @@ describe("lease lifecycle notification switch", () => {
       return { select: () => ({ in: async () => ({ data: rows, error: null }) }) };
     });
     const supabase = { from } as unknown as SupabaseClient;
-    expect(await sendLeaseExpirationWarnings(supabase)).toBe("Expiration warnings sent: 0.");
+    expect(await sendLeaseExpirationWarnings(supabase)).toBe("Lease notices: 0 sent, 0 emailed, 0 skipped.");
     expect(createNotificationMock).not.toHaveBeenCalled();
     expect(notifyTeamMock).toHaveBeenCalledWith(expect.objectContaining({
       event: "lease_ending_soon", propertyId: "property-1"

@@ -68,6 +68,22 @@ function reminderFormData() {
 }
 
 describe("notification actions", () => {
+  it("N8 gives manual reminders one key per Denver calendar day", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-10-21T05:30:00.000Z"));
+      await sendBatchPaymentReminder(null, reminderFormData());
+      await sendBatchPaymentReminder(null, reminderFormData());
+      vi.setSystemTime(new Date("2026-10-21T06:30:00.000Z"));
+      await sendBatchPaymentReminder(null, reminderFormData());
+      expect(createNotificationWithDeliveryMock.mock.calls.map(([call]) => call.emailKey)).toEqual([
+        "manual-reminder-2026-10-20", "manual-reminder-2026-10-20", "manual-reminder-2026-10-21"
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("DOMUS_NOTIFICATIONS_ENABLED", "true");

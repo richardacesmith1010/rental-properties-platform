@@ -13,11 +13,13 @@ vi.mock("@/lib/notifications", () => ({
   createNotificationWithDelivery: createNotificationWithDeliveryMock,
   notifyPropertyTeam: notifyPropertyTeamMock
 }));
-vi.mock("@/lib/notification-preferences", () => ({
+vi.mock("@/lib/notification-preferences", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/notification-preferences")>(),
   getPropertyNotificationDeliveryPreferences: getPropertyNotificationDeliveryPreferencesMock
 }));
 
 import { sendDelinquencyEscalations, sendRentDueReminders } from "@/lib/delinquency";
+import { summarizeNotificationResults } from "@/lib/idempotency";
 
 interface ChargeRow {
   id: string;
@@ -52,6 +54,8 @@ interface ProfileRow {
   id: string;
   email: string | null;
   full_name: string | null;
+  notification_preferences?: Record<string, boolean>;
+  notifications_paused_until?: string | null;
 }
 
 interface NotificationRow {
@@ -245,6 +249,90 @@ function buildDelinquencyConfig(overrides: Partial<DelinquencySupabaseConfig> = 
 }
 
 describe("delinquency notifications", () => {
+  it.each([
+    [{ notification_preferences: { delinquency_escalation: false } }, "delinquency_escalation emails are disabled"],
+    [{ notifications_paused_until: "2026-06-01T00:00:00.000Z" },
+      "email notifications are paused until 2026-06-01T00:00:00.000Z"]
+  ])("N3 overdue merges tenant consent and keeps team delivery: %s", async (settings, emailBlockReason) => {
+    const supabase = createSupabaseMock(buildDelinquencyConfig({
+      charges: [{ id: "charge-1", lease_id: "lease-1", due_date: "2026-04-03",
+        amount_cents: 150000, status: "late", category: "rent", deleted_at: null }],
+      profiles: [{ id: "tenant-1", email: "tenant@example.com", full_name: "Tenant", ...settings }]
+    }));
+
+    expect(await sendDelinquencyEscalations(supabase)).toEqual(
+      "Overdue rent follow-ups: 1 sent, 0 emailed, 0 skipped."
+    );
+    expect(createNotificationWithDeliveryMock).toHaveBeenCalledWith(expect.objectContaining({
+      recipientProfileId: "tenant-1", type: "delinquency_escalation", emailKey: "overdue-30",
+      deliveryPreference: { emailEnabled: false, inAppEnabled: true, emailBlockReason }
+    }));
+    expect(notifyPropertyTeamMock).toHaveBeenCalledWith(expect.objectContaining({
+      propertyId: "property-1", event: "overdue_followup", entityId: "charge-1"
+    }));
+  });
+
+  it("N1 merges tenant rent reminder consent before sending", async () => {
+    const supabase = createSupabaseMock(buildDelinquencyConfig({
+      charges: [{ id: "charge-1", lease_id: "lease-1", due_date: "2026-05-06",
+        amount_cents: 150000, status: "pending", category: "rent", deleted_at: null }],
+      profiles: [{ id: "tenant-1", email: "tenant@example.com", full_name: "Tenant",
+        notification_preferences: { rent_due_reminder: false } }]
+    }));
+    await sendRentDueReminders(supabase);
+    expect(createNotificationWithDeliveryMock).toHaveBeenCalledWith(expect.objectContaining({
+      deliveryPreference: { emailEnabled: false, inAppEnabled: true,
+        emailBlockReason: "rent_due_reminder emails are disabled" }
+    }));
+  });
+
+  it("N2 keeps owner rent reminder denial when tenant allows email", async () => {
+    getPropertyNotificationDeliveryPreferencesMock.mockResolvedValue(new Map([["property-1", {
+      emailEnabled: false, inAppEnabled: true, emailBlockReason: "owner disabled"
+    }]]));
+    const supabase = createSupabaseMock(buildDelinquencyConfig({ charges: [{
+      id: "charge-1", lease_id: "lease-1", due_date: "2026-05-06",
+      amount_cents: 150000, status: "pending", category: "rent", deleted_at: null
+    }] }));
+    await sendRentDueReminders(supabase);
+    expect(createNotificationWithDeliveryMock).toHaveBeenCalledWith(expect.objectContaining({
+      deliveryPreference: { emailEnabled: false, inAppEnabled: true, emailBlockReason: "owner disabled" }
+    }));
+  });
+
+  it.each(["Reminders", "Overdue rent follow-ups", "Late notices", "Lease notices"])(
+    "N12 counts mixed outcomes in the %s cron summary",
+    (label) => {
+      const results = [
+        { inApp: { status: "sent" as const }, email: { status: "sent" as const } },
+        { inApp: { status: "sent" as const }, email: { status: "skipped" as const } },
+        { inApp: { status: "sent" as const }, email: { status: "failed" as const } },
+        { inApp: { status: "skipped" as const }, email: { status: "failed" as const } },
+        { inApp: { status: "skipped" as const }, email: { status: "skipped" as const } }
+      ];
+      expect(summarizeNotificationResults(label, results)).toEqual(
+        `${label}: 3 sent, 1 emailed, 2 skipped.`
+      );
+    }
+  );
+  it("N4 loads unique tenant preferences with one batched profiles query for three charges", async () => {
+    const charges = ["charge-1", "charge-2", "charge-3"].map((id) => ({
+      id, lease_id: "lease-1", due_date: "2026-05-06", amount_cents: 150000,
+      status: "pending", category: "rent", deleted_at: null
+    }));
+    const supabase = createSupabaseMock(buildDelinquencyConfig({ charges }));
+    await sendRentDueReminders(supabase);
+    const profileCalls = vi.mocked(supabase.from).mock.calls.filter(([table]) => table === "profiles");
+    expect(profileCalls).toHaveLength(1);
+    const profileIndex = vi.mocked(supabase.from).mock.calls.findIndex(([table]) => table === "profiles");
+    const profileQuery = vi.mocked(supabase.from).mock.results[profileIndex].value as {
+      select: ReturnType<typeof vi.fn>;
+    };
+    const profileBuilder = profileQuery.select.mock.results[0].value as { in: ReturnType<typeof vi.fn> };
+    expect(profileBuilder.in.mock.calls).toEqual([["id", ["tenant-1"]]]);
+    expect(createNotificationWithDeliveryMock).toHaveBeenCalledTimes(3);
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("DOMUS_NOTIFICATIONS_ENABLED", "true");
@@ -255,7 +343,9 @@ describe("delinquency notifications", () => {
       text: "Reminder text",
       html: "<p>Reminder</p>"
     });
-    createNotificationWithDeliveryMock.mockResolvedValue(undefined);
+    createNotificationWithDeliveryMock.mockResolvedValue({
+      inApp: { status: "sent" }, email: { status: "skipped" }
+    });
     notifyPropertyTeamMock.mockResolvedValue(undefined);
     getPropertyNotificationDeliveryPreferencesMock.mockResolvedValue(
       new Map([["property-1", { inAppEnabled: true, emailEnabled: true }]])
@@ -274,7 +364,7 @@ describe("delinquency notifications", () => {
       vi.stubEnv("DOMUS_NOTIFICATIONS_ENABLED", "false");
       const supabase = { from: vi.fn() } as unknown as SupabaseClient;
 
-      await expect(sendNotifications(supabase)).resolves.toContain("Notifications off");
+      await expect(sendNotifications(supabase)).resolves.toContain("0 sent, 0 emailed, 0 skipped");
       expect(supabase.from).not.toHaveBeenCalled();
       expect(createNotificationWithDeliveryMock).not.toHaveBeenCalled();
     }
@@ -308,7 +398,7 @@ describe("delinquency notifications", () => {
 
     const result = await sendDelinquencyEscalations(supabase);
 
-    expect(result).toBe("Overdue rent follow-ups sent: 1.");
+    expect(result).toBe("Overdue rent follow-ups: 1 sent, 0 emailed, 0 skipped.");
     expect(createNotificationWithDeliveryMock).toHaveBeenCalledTimes(1);
     expect(createNotificationWithDeliveryMock).toHaveBeenCalledWith(
       expect.objectContaining({ entityId: "charge-active" })
@@ -342,7 +432,7 @@ describe("delinquency notifications", () => {
     );
 
     await expect(sendDelinquencyEscalations(supabase)).resolves.toBe(
-      "Overdue rent follow-ups sent: 0."
+      "Overdue rent follow-ups: 0 sent, 0 emailed, 0 skipped."
     );
     expect(createNotificationWithDeliveryMock).not.toHaveBeenCalled();
     expect(notifyPropertyTeamMock).not.toHaveBeenCalled();
@@ -376,7 +466,7 @@ describe("delinquency notifications", () => {
 
     const result = await sendRentDueReminders(supabase);
 
-    expect(result).toBe("Reminders sent: 1.");
+    expect(result).toBe("Reminders: 1 sent, 0 emailed, 0 skipped.");
     expect(createNotificationWithDeliveryMock).toHaveBeenCalledTimes(1);
     expect(createNotificationWithDeliveryMock).toHaveBeenCalledWith(
       expect.objectContaining({ entityId: "charge-active" })
@@ -397,7 +487,7 @@ describe("delinquency notifications", () => {
         collects_outside_domus: outside
       }]
     }));
-    expect(await sendRentDueReminders(supabase)).toBe(`Reminders sent: ${eligible ? 1 : 0}.`);
+    expect(await sendRentDueReminders(supabase)).toBe(`Reminders: ${eligible ? 1 : 0} sent, 0 emailed, 0 skipped.`);
     expect(createNotificationWithDeliveryMock).toHaveBeenCalledTimes(eligible ? 1 : 0);
   });
 
@@ -416,7 +506,7 @@ describe("delinquency notifications", () => {
         properties: [{ id: "property-1", name: "Client Home", owner_account_id: "account-1" }],
         accounts: [{ id: "account-1", managed_client: true }]
       }));
-      expect(await sendDelinquencyEscalations(supabase)).toBe("Overdue rent follow-ups sent: 1.");
+      expect(await sendDelinquencyEscalations(supabase)).toBe("Overdue rent follow-ups: 0 sent, 0 emailed, 0 skipped.");
       expect(createNotificationWithDeliveryMock).not.toHaveBeenCalled();
       expect(notifyPropertyTeamMock).toHaveBeenCalledWith(expect.objectContaining({
         event: "overdue_followup", propertyId: "property-1"

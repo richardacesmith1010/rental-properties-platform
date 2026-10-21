@@ -8,7 +8,12 @@ import {
   createNotificationWithDelivery,
   notifyPropertyTeam
 } from "@/lib/notifications";
-import { getPropertyNotificationDeliveryPreferences } from "@/lib/notification-preferences";
+import {
+  getPropertyNotificationDeliveryPreferences,
+  mergeDeliveryPreferences,
+  resolveTenantDeliveryPreference
+} from "@/lib/notification-preferences";
+import { summarizeNotificationResults } from "@/lib/idempotency";
 import { getAdministeredPropertyIds } from "@/lib/property-access";
 import { tenantEligibleForEvent } from "@/lib/notification-policy";
 import { getClientHomeFlags, isCollectedOutsideDomus, tracksLateRent } from "@/lib/lease-collection";
@@ -187,11 +192,10 @@ export async function applyLateFeesToOverdueCharges(
   supabase: SupabaseClient,
   leaseIds: string[],
   todayIso = new Date().toISOString().slice(0, 10)
-): Promise<number> {
+): Promise<string> {
   if (leaseIds.length === 0) {
-    return 0;
+    return summarizeNotificationResults("Late notices", []);
   }
-
   const { data: lateCandidates, error: candidateError } = await withChargeEditingFallback(
     () =>
       supabase
@@ -211,16 +215,13 @@ export async function applyLateFeesToOverdueCharges(
         .eq("category", "rent")
         .lt("due_date", todayIso)
   );
-
   if (candidateError) {
     throw candidateError;
   }
-
   const candidateRows = (lateCandidates ?? []) as Array<LateChargeRow & { status?: string; category?: string | null }>;
   if (candidateRows.length === 0) {
-    return 0;
+    return summarizeNotificationResults("Late notices", []);
   }
-
   const candidateLeaseIds = Array.from(new Set(candidateRows.map((charge) => charge.lease_id)));
   const { data: lateLeases, error: leaseError } = await supabase
     .from("leases")
@@ -229,7 +230,6 @@ export async function applyLateFeesToOverdueCharges(
   if (leaseError) {
     throw leaseError;
   }
-
   const leaseById = new Map(((lateLeases ?? []) as LateLeaseRow[]).map((lease) => [lease.id, lease]));
   const unitIds = [...new Set((lateLeases ?? []).map((lease) => lease.unit_id))];
   const { data: units, error: unitError } = unitIds.length
@@ -256,11 +256,9 @@ export async function applyLateFeesToOverdueCharges(
     }
     return isPastGraceWindow(charge.due_date, lease.grace_period_days ?? 5, today);
   });
-
   if (lateStatusChargeRows.length === 0 && lateFeeChargeRows.length === 0) {
-    return 0;
+    return summarizeNotificationResults("Late notices", []);
   }
-
   const lateStatusChargeIds = lateStatusChargeRows.map((charge) => charge.id);
   if (lateStatusChargeIds.length > 0) {
     const { error: lateUpdateError } = await supabase
@@ -272,7 +270,6 @@ export async function applyLateFeesToOverdueCharges(
       throw lateUpdateError;
     }
   }
-
   const lateFeeChargeIds = lateFeeChargeRows.map((charge) => charge.id);
   const { data: existingLateFeeCharges, error: existingLateFeeError } = lateFeeChargeIds.length > 0
     ? await supabase
@@ -285,13 +282,11 @@ export async function applyLateFeesToOverdueCharges(
   if (existingLateFeeError) {
     throw existingLateFeeError;
   }
-
   const lateFeesByParentChargeId = new Set(
     ((existingLateFeeCharges ?? []) as Array<{ parent_charge_id: string | null }>)
       .map((row) => row.parent_charge_id)
       .filter((value): value is string => Boolean(value))
   );
-
   const lateFeeInserts = lateFeeChargeRows
     .map((charge) => {
       const lease = leaseById.get(charge.lease_id);
@@ -299,7 +294,6 @@ export async function applyLateFeesToOverdueCharges(
       if (!lease || lateFeeCents <= 0 || lateFeesByParentChargeId.has(charge.id)) {
         return null;
       }
-
       return {
         lease_id: charge.lease_id,
         due_date: charge.due_date,
@@ -313,7 +307,6 @@ export async function applyLateFeesToOverdueCharges(
       lease_id: string; due_date: string; amount_cents: number;
       status: "pending"; category: "late_fee"; parent_charge_id: string;
     } => row !== null);
-
   if (lateFeeInserts.length > 0) {
     const { error: lateFeeInsertError } = await supabase.from("rent_charges").insert(lateFeeInserts);
     if (lateFeeInsertError && lateFeeInsertError.code !== "23505") {
@@ -322,7 +315,7 @@ export async function applyLateFeesToOverdueCharges(
   }
 
   const notificationChargeRows = lateStatusChargeRows;
-  if (notificationChargeRows.length === 0) return lateStatusChargeRows.length;
+  if (notificationChargeRows.length === 0) return summarizeNotificationResults("Late notices", []);
   const lateLeaseRows = Array.from(new Set(notificationChargeRows.map((charge) => charge.lease_id)))
     .map((leaseId) => leaseById.get(leaseId))
     .filter((lease): lease is LateLeaseRow => Boolean(lease));
@@ -345,18 +338,24 @@ export async function applyLateFeesToOverdueCharges(
     new Set(lateLeaseRows.map((lease) => lease.tenant_profile_id).filter((id): id is string => Boolean(id)))
   );
   const { data: profiles, error: profilesError } = tenantIds.length
-    ? await supabase.from("profiles").select("id, email").in("id", tenantIds)
-    : { data: [] as Array<{ id: string; email: string | null }>, error: null };
+    ? await supabase.from("profiles").select("id, email, notification_preferences, notifications_paused_until").in("id", tenantIds)
+    : { data: [] as Array<{
+      id: string; email: string | null; notification_preferences?: unknown;
+      notifications_paused_until?: string | null;
+    }>, error: null };
   if (profilesError) {
     throw profilesError;
   }
 
-  const emailByTenantId = new Map(
-    ((profiles ?? []) as Array<{ id: string; email: string | null }>)
-      .map((profile) => [profile.id, profile.email])
+  const profileByTenantId = new Map(
+    ((profiles ?? []) as Array<{
+      id: string; email: string | null; notification_preferences?: unknown;
+      notifications_paused_until?: string | null;
+    }>)
+      .map((profile) => [profile.id, profile])
   );
-  await Promise.all(
-    notificationChargeRows.flatMap((charge) => {
+  const results = await Promise.all(
+    notificationChargeRows.map(async (charge) => {
       const lease = leaseById.get(charge.lease_id);
       const propertyId = lease?.unit_id ? propertyIdByUnitId.get(lease.unit_id) ?? null : null;
       const notifications: Promise<unknown>[] = [];
@@ -365,15 +364,18 @@ export async function applyLateFeesToOverdueCharges(
         notifications.push(
           createNotificationWithDelivery({
             recipientProfileId: lease.tenant_profile_id,
-            recipientEmail: emailByTenantId.get(lease.tenant_profile_id) ?? null,
+            recipientEmail: profileByTenantId.get(lease.tenant_profile_id)?.email ?? null,
             type: "late_rent",
             title: "Rent payment overdue",
             body: `Your rent due ${formatDate(charge.due_date)} is now late.`,
             entityType: "rent_charge",
             entityId: charge.id,
-            deliveryPreference: propertyId
-              ? propertyDeliveryPreferences.get(propertyId)
-              : undefined
+            deliveryPreference: mergeDeliveryPreferences(
+              propertyId
+                ? propertyDeliveryPreferences.get(propertyId) ?? { emailEnabled: true, inAppEnabled: true }
+                : { emailEnabled: true, inAppEnabled: true },
+              resolveTenantDeliveryPreference(profileByTenantId.get(lease.tenant_profile_id), "late_rent")
+            )
           })
         );
       }
@@ -392,11 +394,13 @@ export async function applyLateFeesToOverdueCharges(
         );
       }
 
-      return notifications;
+      const deliveries = await Promise.all(notifications);
+      return deliveries[0] && typeof deliveries[0] === "object" && "inApp" in deliveries[0]
+        ? deliveries[0] as Awaited<ReturnType<typeof createNotificationWithDelivery>> : null;
     })
   );
 
-  return lateStatusChargeRows.length;
+  return summarizeNotificationResults("Late notices", results);
 }
 
 export async function generateMonthlyChargesForPropertyIdsWithClient(
