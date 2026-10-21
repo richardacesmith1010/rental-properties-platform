@@ -1,0 +1,26 @@
+{
+  "widthPt": 312,
+  "heightPt": 316.45714285714286,
+  "aspect": 0.9859154929577465,
+  "probe": {
+    "x": 156,
+    "y": 300.85714285714283
+  },
+  "pixelSizes": [
+    {
+      "scale": 1,
+      "width": 312,
+      "height": 316
+    },
+    {
+      "scale": 2,
+      "width": 624,
+      "height": 633
+    },
+    {
+      "scale": 3,
+      "width": 936,
+      "height": 949
+    }
+  ]
+}

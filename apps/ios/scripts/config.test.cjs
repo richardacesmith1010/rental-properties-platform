@@ -75,11 +75,49 @@ test("App Store plist has exact camera and Photos save messages", () => {
   assert.equal(info.NSCameraUsageDescription, "Take photos of repairs, receipts, and your profile.");
   assert.equal(info.NSPhotoLibraryAddUsageDescription, "Save photos from Domus to your phone.");
 });
-test("source and generated config disable the plugin launch splash", () => {
+test("L7 source and generated splash config use the adaptive storyboard background", () => {
   const generated = JSON.parse(readFileSync("ios/App/App/capacitor.config.json", "utf8"));
   for (const value of [config(), generated]) {
     assert.equal(value.plugins.SplashScreen.launchShowDuration, 0);
     assert.equal(value.plugins.SplashScreen.launchAutoHide, true);
+    assert.equal(Object.hasOwn(value.plugins.SplashScreen, "backgroundColor"), false);
+  }
+});
+test("L4 checked-in signing enables ad-hoc Simulator builds and preserves device signing", () => {
+  const signing = readFileSync("ios/App/Signing.xcconfig", "utf8");
+  assert.match(signing, /^CODE_SIGN_IDENTITY\[sdk=iphonesimulator\*\] = -$/m);
+  assert.doesNotMatch(signing, /^CODE_SIGNING_ALLOWED\[sdk=iphonesimulator\*\]/m);
+  assert.match(signing, /^CODE_SIGN_IDENTITY\[sdk=iphoneos\*\] = Apple Development$/m);
+  const baseline = successful(run("git", ["show", "HEAD:apps/ios/ios/App/Signing.xcconfig"]));
+  const deviceSettings = value => value.split("\n").filter(line => !line.includes("[sdk=iphonesimulator*]"));
+  assert.deepEqual(deviceSettings(signing), deviceSettings(baseline));
+});
+test("L7 native splash consumers instantiate the launch storyboard without a Splash image", () => {
+  const pluginRoot = path.join(ios, "node_modules/@capacitor/splash-screen/ios");
+  function swiftFiles(root) {
+    return fs.readdirSync(root, { withFileTypes: true }).flatMap(entry => {
+      const file = path.join(root, entry.name);
+      return entry.isDirectory() ? swiftFiles(file) : entry.name.endsWith(".swift") ? [file] : [];
+    });
+  }
+  const sources = [...swiftFiles(pluginRoot), path.join(ios, "ios/App/App/LaunchSplashGate.swift")];
+  for (const file of sources) assert.doesNotMatch(readFileSync(file, "utf8"), /["']Splash["']/);
+  const plugin = readFileSync(path.join(pluginRoot, "Sources/SplashScreenPlugin/SplashScreen.swift"), "utf8");
+  assert.match(plugin, /UILaunchStoryboardName/);
+  assert.match(plugin, /UIStoryboard\(name:/);
+  assert.match(plugin, /instantiateInitialViewController\(\)/);
+  const cover = readFileSync("ios/App/App/LaunchSplashGate.swift", "utf8");
+  assert.match(cover, /UIStoryboard\(name: "LaunchScreen"/);
+  assert.match(cover, /instantiateInitialViewController\(\)/);
+});
+test("L6b launch XCTest and shared fixture belong to the test target", () => {
+  const project = plist(projectFile).objects;
+  const target = Object.values(project).find(object => object.isa === "PBXNativeTarget" && object.name === "AppTests");
+  for (const [file, phase] of [["LaunchScreenTests.swift", "PBXSourcesBuildPhase"],
+    ["LaunchMarkFixture.json", "PBXResourcesBuildPhase"]]) {
+    const buildPhase = target.buildPhases.map(id => project[id]).find(object => object.isa === phase);
+    assert.ok(buildPhase, `${file}: missing ${phase}`);
+    assert.ok(buildPhase.files.some(id => project[project[id].fileRef].path === file), `${file}: missing membership`);
   }
 });
 test("privacy manifest matches audit flags/purposes and App Resources", () => {
@@ -167,6 +205,8 @@ test("tracked sources contain no assigned team; secrets and artifacts are ignore
   const files = successful(run("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z", "apps/ios"], { cwd: repo })).split("\0").filter(Boolean);
   for (const file of files) {
     // Only the example is permitted to assign its non-secret placeholder.
+    // Deleted tracked assets stay in the index until this no-commit sprint is staged.
+    if (!fs.existsSync(path.join(repo, file))) continue;
     const source = readFileSync(path.join(repo, file), "utf8");
     const assignments = [...source.matchAll(/^[ \t]*DEVELOPMENT_TEAM[ \t]*=[ \t]*([^\r\n]*)/gm)];
     for (const match of assignments) {
@@ -429,8 +469,8 @@ for (const [configuration, sdk, team] of [["Debug", "iphonesimulator", ""], ["Re
       assert.equal(app.CODE_SIGN_IDENTITY, "Apple Development");
       assert.equal(app.CODE_SIGNING_ALLOWED, "YES");
     } else {
-      assert.equal(app.CODE_SIGN_IDENTITY || "", "");
-      assert.equal(app.CODE_SIGNING_ALLOWED, "NO");
+      assert.equal(app.CODE_SIGN_IDENTITY, "-");
+      assert.equal(app.CODE_SIGNING_ALLOWED, "YES");
     }
     if (configuration === "Release") {
       assert.doesNotMatch(app.SWIFT_ACTIVE_COMPILATION_CONDITIONS || "", /\bDEBUG\b/);
