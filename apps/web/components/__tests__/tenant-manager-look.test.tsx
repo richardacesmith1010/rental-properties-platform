@@ -56,11 +56,11 @@ describe("tenant and manager look", () => {
     expect(screen.getByRole("button", { name: "I paid this" })).toHaveClass("border-[var(--ink)]");
   });
 
-  it("messages use action and surface bubbles with their existing text", () => {
+  it("messages use hero and surface-3 bubbles with their existing text", () => {
     render(<InboxSection notifications={[]} threads={[thread]} properties={[{ id: "home", name: "Atlas House" }]}
       currentUserId="tenant" onMarkRead={action} onSendMessage={action} onStartTenantConversation={action} />);
-    expect(screen.getByText("Thank you.").closest(".rounded-2xl")).toHaveClass("bg-[var(--action)]");
-    expect(screen.getByText("Welcome home.").closest(".rounded-2xl")).toHaveClass("bg-[var(--surface-2)]");
+    expect(screen.getByText("Thank you.").closest(".rounded-2xl")).toHaveClass("bg-[var(--hero)]");
+    expect(screen.getByText("Welcome home.").closest(".rounded-2xl")).toHaveClass("bg-[var(--surface-3)]");
     expect(screen.getByText("You")).toBeInTheDocument();
     expect(screen.getByText("Alex Landlord")).toBeInTheDocument();
   });

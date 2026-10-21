@@ -277,8 +277,8 @@ export function TenantInboxView({
                           className={[
                             "max-w-[85%] rounded-2xl px-3 py-2",
                             mine
-                              ? "bg-[var(--action)] text-[var(--action-contrast)]"
-                              : "bg-[var(--surface-2)] text-[var(--ink)]"
+                              ? "bg-[var(--hero)] text-[var(--hero-ink)]"
+                              : "bg-[var(--surface-3)] text-[var(--ink)]"
                           ].join(" ")}
                         >
                           <p className="text-xs font-semibold">
