@@ -110,8 +110,8 @@ describe("hydration-safe dashboard timestamps", () => {
       />
     );
 
-    expect(html).toContain('title="Mar 13, 2026, 11:45 AM"');
-    expect(html).toContain(">Mar 13, 2026, 11:45 AM</span>");
+    expect(html).toContain('title="Mar 13, 2026, 5:45 AM"');
+    expect(html).toContain(">Mar 13, 2026, 5:45 AM</span>");
 
     render(
       <BankBalanceCard
@@ -128,7 +128,7 @@ describe("hydration-safe dashboard timestamps", () => {
     expect(screen.getByText("15 minutes ago")).toBeInTheDocument();
   });
 
-  it("renders UTC-pinned approval timestamps in SSR markup", () => {
+  it("renders Denver approval timestamps in SSR markup", () => {
     const html = renderToStaticMarkup(
       <DistributionApprovalCard
         request={distributionRequest}
@@ -137,6 +137,6 @@ describe("hydration-safe dashboard timestamps", () => {
       />
     );
 
-    expect(html).toContain("Mar 13, 6:45 PM");
+    expect(html).toContain("Mar 13, 12:45 PM");
   });
 });

@@ -1,4 +1,4 @@
-import { formatCurrency, formatDate } from "@/lib/format";
+import { DISPLAY_TIME_ZONE, formatCurrency, formatDate, isCalendarDateString } from "@/lib/format";
 
 export interface AiContextInput {
   properties: Array<{
@@ -30,12 +30,18 @@ export interface AiContextInput {
   }>;
 }
 
+const longDateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "long", day: "numeric", year: "numeric", timeZone: DISPLAY_TIME_ZONE
+});
+const calendarMonthYearFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short", year: "numeric", timeZone: "UTC"
+});
+const instantMonthYearFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short", year: "numeric", timeZone: DISPLAY_TIME_ZONE
+});
+
 function getLongDate(value: Date) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric"
-  }).format(value);
+  return longDateFormatter.format(value);
 }
 
 function getMonthYear(value: string) {
@@ -44,10 +50,7 @@ function getMonthYear(value: string) {
     return value;
   }
 
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    year: "numeric"
-  }).format(parsed);
+  return (isCalendarDateString(value) ? calendarMonthYearFormatter : instantMonthYearFormatter).format(parsed);
 }
 
 function getFirstName(value: string | null | undefined) {

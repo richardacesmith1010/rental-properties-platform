@@ -64,7 +64,7 @@ describe("formatDate", () => {
 
 describe("formatDateTime", () => {
   it("formats ISO datetimes", () => {
-    expect(formatDateTime("2026-03-13T18:45:00.000Z")).toBe("Mar 13, 2026, 6:45 PM");
+    expect(formatDateTime("2026-03-13T18:45:00.000Z")).toBe("Mar 13, 2026, 12:45 PM");
   });
 
   it("returns invalid datetime strings unchanged", () => {
@@ -73,14 +73,54 @@ describe("formatDateTime", () => {
 });
 
 describe("formatShortDateTime", () => {
-  it("formats UTC datetimes without a year", () => {
-    expect(formatShortDateTime("2026-03-13T18:45:00.000Z")).toBe("Mar 13, 6:45 PM");
+  it("formats Denver datetimes without a year", () => {
+    expect(formatShortDateTime("2026-03-13T18:45:00.000Z")).toBe("Mar 13, 12:45 PM");
   });
 });
 
 describe("formatMonthDay", () => {
-  it("formats month/day values in UTC", () => {
+  it("formats month/day values in Denver", () => {
     expect(formatMonthDay("2026-03-13T18:45:00.000Z")).toBe("Mar 13");
+  });
+});
+
+describe("display time zone contract", () => {
+  it("A1 shows an MDT afternoon instant", () => {
+    expect(formatDateTime("2026-03-13T18:45:00Z")).toEqual("Mar 13, 2026, 12:45 PM");
+  });
+
+  it("A2 shows an MST winter instant", () => {
+    expect(formatDateTime("2026-12-01T18:45:00Z")).toEqual("Dec 1, 2026, 11:45 AM");
+  });
+
+  it("A3 moves an instant to the prior Denver day", () => {
+    expect(formatDate("2026-10-21T04:30:00Z")).toEqual("Oct 20, 2026");
+  });
+
+  it("A4 preserves a calendar date in both formats", () => {
+    expect(formatDate("2026-10-01")).toEqual("Oct 1, 2026");
+    expect(formatMonthDay("2026-10-01")).toEqual("Oct 1");
+  });
+
+  it("A5 moves a month/day instant to October", () => {
+    expect(formatMonthDay("2026-11-01T05:00:00Z")).toEqual("Oct 31");
+  });
+
+  it("A6 shows the Denver time on the prior day", () => {
+    expect(formatShortDateTime("2026-10-21T04:37:00Z")).toEqual("Oct 20, 10:37 PM");
+  });
+
+  it("A7 treats Date objects as instants", () => {
+    expect(formatDate(new Date("2026-10-21T04:30:00Z"))).toEqual("Oct 20, 2026");
+  });
+
+  it("A8 preserves invalid and empty input behavior for every formatter", () => {
+    for (const formatter of [formatDate, formatMonthDay, formatDateTime, formatShortDateTime]) {
+      expect(formatter(null)).toEqual("");
+      expect(formatter(undefined)).toEqual("");
+      expect(formatter("")).toEqual("");
+      expect(formatter("not a date")).toEqual("not a date");
+    }
   });
 });
 
@@ -138,6 +178,10 @@ describe("formatRelativeTime", () => {
 
   it("falls back to formatted dates for older timestamps", () => {
     expect(formatRelativeTime("2026-03-01T12:00:00.000Z", now)).toBe("Mar 1, 2026");
+  });
+
+  it("keeps an older calendar date on its own day", () => {
+    expect(formatRelativeTime("2026-03-01", now)).toEqual("Mar 1, 2026");
   });
 
   it("returns invalid strings unchanged", () => {

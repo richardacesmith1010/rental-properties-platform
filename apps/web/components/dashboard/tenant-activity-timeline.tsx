@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { DISPLAY_TIME_ZONE } from "@/lib/format";
 
 interface TenantActivityTimelineProps {
   tenantProfileId: string;
@@ -56,12 +57,14 @@ const activityTypeConfig: Record<
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
-  year: "numeric"
+  year: "numeric",
+  timeZone: DISPLAY_TIME_ZONE
 });
 
 const timeFormatter = new Intl.DateTimeFormat("en-US", {
   hour: "numeric",
-  minute: "2-digit"
+  minute: "2-digit",
+  timeZone: DISPLAY_TIME_ZONE
 });
 
 export function TenantActivityTimeline({

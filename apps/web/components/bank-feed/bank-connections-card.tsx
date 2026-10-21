@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatDate } from "@/lib/format";
 import { openNativePlaidLink, useNativePlaidLink } from "./native-plaid-link";
 import { loadPlaidScript } from "./plaid-script";
 import { clearLinkSession, finishLinkSession, saveLinkSession, type LinkSession } from "./link-session";
@@ -134,7 +134,7 @@ export function BankConnectionsCard({ ownerAccountId, connections, pendingMatch,
         <div><p className="font-medium">{connection.institution_name}</p>
           {connection.accounts.map((account) => <p key={account.id} className="text-sm text-[var(--muted)]">
             {account.nickname}{account.balance_cents != null ? ` · ${formatCurrency(account.balance_cents)}` : ""}
-            {account.balance_as_of ? ` · as of ${new Date(account.balance_as_of).toLocaleDateString("en-US")}` : ""}</p>)}
+            {account.balance_as_of ? ` · as of ${formatDate(account.balance_as_of)}` : ""}</p>)}
           <p className="text-sm text-[var(--muted)]">
             {unavailable && connection.status === "needs_login" ? null : statusText(connection)}</p>
         </div>

@@ -1,4 +1,6 @@
-export const STATEMENT_ZONE = "America/Denver";
+import { DISPLAY_TIME_ZONE } from "@/lib/format";
+
+export const STATEMENT_ZONE = DISPLAY_TIME_ZONE;
 
 export function denverDate(now = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", {

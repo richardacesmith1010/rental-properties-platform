@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatDate } from "@/lib/format";
 
 type Bank = { id: string; nickname: string; source: string; balance_cents: number | null;
   balance_as_of: string | null };
@@ -32,7 +32,7 @@ export function BankBalancesCard({ accounts, save }: { accounts: Bank[];
           {bank.balance_cents !== null ? <p className="font-display font-semibold tabular-nums">
             {formatCurrency(bank.balance_cents)}</p> : null}
           {bank.balance_as_of ? <p className="text-xs text-[var(--muted)]">
-            as of {new Date(bank.balance_as_of).toLocaleDateString("en-US")}</p> : null}</div>
+            as of {formatDate(bank.balance_as_of)}</p> : null}</div>
         {bank.source === "upload" ? <button type="button" title="Update balance"
           className="min-h-11 text-[var(--accent)]" onClick={() => {
             setEditing(bank.id); setAmount(bank.balance_cents === null ? "" : String(bank.balance_cents / 100));

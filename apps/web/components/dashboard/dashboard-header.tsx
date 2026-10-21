@@ -13,6 +13,7 @@ import {
 import type { DashboardData } from "@/lib/dashboard";
 import { Badge } from "@/components/ui/badge";
 import { CountUp } from "@/components/ui/count-up";
+import { DISPLAY_TIME_ZONE } from "@/lib/format";
 import { useTimeOfDayGreeting } from "./use-time-of-day-greeting";
 
 interface DashboardHeaderProps {
@@ -44,13 +45,12 @@ function getDisplayName({
   return userEmail;
 }
 
+const headerDateFormatter = new Intl.DateTimeFormat("en-US", {
+  weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: DISPLAY_TIME_ZONE
+});
+
 function formatHeaderDate(date = new Date()) {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
+  return headerDateFormatter.format(date);
 }
 
 function HeaderStat({

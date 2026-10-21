@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { ChargeMoreMenu } from "@/components/dashboard/charge-more-menu";
 import { ManualPaymentForm } from "@/components/dashboard/manual-payment-form";
-import { cn, formatCurrency, formatDate } from "@/lib/format";
+import { cn, formatCurrency, formatDate, formatMonthDay } from "@/lib/format";
 import { calculateCardFee, formatCentsAsDollars } from "@/lib/payment-fees";
 import { getStatusClasses, getStatusCategory, statusAriaLabel } from "@/lib/status-colors";
 import { chargeCategoryLabel, type ChargeCategory } from "@/lib/charge-audit";
@@ -175,9 +175,7 @@ export function ChargeRow({
                     <Badge variant="outline"
                       title="Your tenant says they paid. Check, then tap Mark paid."
                     >
-                      Tenant says paid · {new Intl.DateTimeFormat("en-US", {
-                        month: "short", day: "numeric", timeZone: "UTC"
-                      }).format(new Date(`${charge.tenantReportedPaidAt.slice(0, 10)}T00:00:00.000Z`))}
+                      Tenant says paid · {formatMonthDay(charge.tenantReportedPaidAt)}
                     </Badge>
                   ) : null}
                 {category !== "rent" ? (

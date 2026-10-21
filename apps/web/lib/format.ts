@@ -1,6 +1,12 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
+export const DISPLAY_TIME_ZONE = "America/Denver";
+
+export function isCalendarDateString(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
 const currencyFormatterNoCents = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -21,6 +27,9 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
   timeZone: "UTC"
 });
+const instantDateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short", day: "numeric", year: "numeric", timeZone: DISPLAY_TIME_ZONE
+});
 
 const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -30,6 +39,10 @@ const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit",
   timeZone: "UTC"
 });
+const instantDateTimeFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit",
+  timeZone: DISPLAY_TIME_ZONE
+});
 
 const shortDateTimeFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -38,12 +51,27 @@ const shortDateTimeFormatter = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit",
   timeZone: "UTC"
 });
+const instantShortDateTimeFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: DISPLAY_TIME_ZONE
+});
 
 const monthDayFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
   timeZone: "UTC"
 });
+const instantMonthDayFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short", day: "numeric", timeZone: DISPLAY_TIME_ZONE
+});
+const monthNameFormatter = new Intl.DateTimeFormat("en-US", { month: "long", timeZone: "UTC" });
+const instantMonthNameFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "long", timeZone: DISPLAY_TIME_ZONE
+});
+
+function formatterForValue(value: string | Date | null | undefined, calendar: Intl.DateTimeFormat,
+  instant: Intl.DateTimeFormat): Intl.DateTimeFormat {
+  return typeof value === "string" && isCalendarDateString(value) ? calendar : instant;
+}
 
 function normalizeDate(value: string | Date | null | undefined): Date | null {
   if (value == null) {
@@ -68,7 +96,7 @@ export function formatDate(value: string | Date | null | undefined): string {
   if (!parsed) {
     return typeof value === "string" ? value : "";
   }
-  return dateFormatter.format(parsed);
+  return formatterForValue(value, dateFormatter, instantDateFormatter).format(parsed);
 }
 
 export function formatDateTime(value: string | Date | null | undefined): string {
@@ -76,7 +104,7 @@ export function formatDateTime(value: string | Date | null | undefined): string 
   if (!parsed) {
     return typeof value === "string" ? value : "";
   }
-  return dateTimeFormatter.format(parsed);
+  return formatterForValue(value, dateTimeFormatter, instantDateTimeFormatter).format(parsed);
 }
 
 export function formatShortDateTime(value: string | Date | null | undefined): string {
@@ -84,7 +112,7 @@ export function formatShortDateTime(value: string | Date | null | undefined): st
   if (!parsed) {
     return typeof value === "string" ? value : "";
   }
-  return shortDateTimeFormatter.format(parsed);
+  return formatterForValue(value, shortDateTimeFormatter, instantShortDateTimeFormatter).format(parsed);
 }
 
 export function formatMonthDay(value: string | Date | null | undefined): string {
@@ -92,7 +120,13 @@ export function formatMonthDay(value: string | Date | null | undefined): string 
   if (!parsed) {
     return typeof value === "string" ? value : "";
   }
-  return monthDayFormatter.format(parsed);
+  return formatterForValue(value, monthDayFormatter, instantMonthDayFormatter).format(parsed);
+}
+
+export function formatMonthName(value: string | Date | null | undefined): string {
+  const parsed = normalizeDate(value);
+  if (!parsed) return typeof value === "string" ? value : "";
+  return formatterForValue(value, monthNameFormatter, instantMonthNameFormatter).format(parsed);
 }
 
 export function formatUnitLabel(unitNumber: string | null | undefined): string {
@@ -141,7 +175,7 @@ export function formatRelativeTime(
   }
 
   if (!now) {
-    return formatDateTime(parsed);
+    return formatDateTime(value);
   }
 
   const diffMs = now.getTime() - parsed.getTime();
@@ -173,7 +207,7 @@ export function formatRelativeTime(
       : `in ${diffDays} day${diffDays === 1 ? "" : "s"}`;
   }
 
-  return formatDate(parsed);
+  return formatDate(value);
 }
 
 export function getGeneratedMessage(value: string | string[] | undefined) {

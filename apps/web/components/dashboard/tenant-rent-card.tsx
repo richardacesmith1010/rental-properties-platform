@@ -5,7 +5,7 @@ import { useFormState } from "react-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/shared/submit-button";
-import { formatCurrency, formatDate, formatMonthDay } from "@/lib/format";
+import { formatCurrency, formatDate, formatMonthDay, formatMonthName } from "@/lib/format";
 import type { TenantCharge } from "@/lib/tenant-payments";
 import type { TenantPayState } from "@/lib/tenant-pay-state";
 import { chargeBreakdown } from "@/lib/charge-breakdown";
@@ -54,7 +54,7 @@ function ReportPaidRow({ charge, action }: { charge: TenantCharge; action: State
           </span>
         ) : charge.tenantReportedPaidAt ? (
           <span className="text-sm text-[var(--pos)]">
-            Sent {formatMonthDay(charge.tenantReportedPaidAt.slice(0, 10))}. Your landlord will check and mark it paid.
+            Sent {formatMonthDay(charge.tenantReportedPaidAt)}. Your landlord will check and mark it paid.
           </span>
         ) : (
           <form action={formAction}>
@@ -100,7 +100,7 @@ export function TenantRentCard({
     ? `${formatCurrency(amountCents)} · ${dueMonthCount} month${dueMonthCount === 1 ? "" : "s"}`
     : formatCurrency(amountCents);
   const label = futureCharge && !charge ? "Next rent" : payState === "paid" && lastPaidAt
-    ? `${new Intl.DateTimeFormat("en-US", { month: "long", timeZone: "UTC" }).format(new Date(`${lastPaidAt}T00:00:00.000Z`))} rent`
+    ? `${formatMonthName(lastPaidAt)} rent`
     : payState === "not_posted" ? "Next rent" : "Rent due";
 
   if (payState === "no_lease") {

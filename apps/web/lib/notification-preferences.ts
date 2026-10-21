@@ -1,4 +1,5 @@
 import { normalizePauseTimestamp } from "@/lib/notification-preference-time";
+import { DISPLAY_TIME_ZONE } from "@/lib/format";
 import type { NotificationType } from "@/lib/notifications";
 
 export const NOTIFICATION_EMAIL_PREFERENCE_KEYS = [
@@ -172,7 +173,8 @@ export function formatNotificationsPausedLabel(
   return `until ${new Date(normalized).toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
-    year: "numeric"
+    year: "numeric",
+    timeZone: DISPLAY_TIME_ZONE
   })}`;
 }
 
