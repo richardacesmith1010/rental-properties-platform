@@ -58,7 +58,8 @@ test.describe("authenticated content speed", () => {
       name: "tenant Home",
       budgetMs: 3_000,
       visible: async (current) => {
-        await expect(current.getByText("Report a repair", { exact: true })).toBeVisible();
+        // Home's quick action; the Repairs section (also in the page since 247a, hidden) repeats the words.
+        await expect(current.getByRole("link", { name: "Report a repair", exact: true })).toBeVisible();
       }
     });
   });
