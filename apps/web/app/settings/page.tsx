@@ -53,6 +53,7 @@ export const dynamic = "force-dynamic";
 interface SettingsPageProps {
   searchParams?: Promise<{
     connect?: string | string[];
+    section?: string | string[];
   }>;
 }
 
@@ -137,6 +138,7 @@ export default async function SettingsPage(props: SettingsPageProps) {
 
         <SettingsLayout
           role={role}
+          initialSection={typeof searchParams?.section === "string" ? searchParams.section : undefined}
           sections={{
             profile: {
               title: "Profile",

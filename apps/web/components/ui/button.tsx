@@ -91,10 +91,16 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     const isDisabled = disabled || loading;
     const activeVariant = success ? "success" : variant;
+    const primaryDisabled = isDisabled && (activeVariant == null || activeVariant === "default" || activeVariant === "gradient");
+    const variantClasses = buttonVariants({ variant: activeVariant, size, className });
 
     return (
       <button
-        className={cn(buttonVariants({ variant: activeVariant, size, className }), loading && "relative cursor-wait")}
+        className={cn(
+          primaryDisabled ? variantClasses.replace("disabled:opacity-50", "") : variantClasses,
+          primaryDisabled && "disabled:border-[var(--line)] disabled:bg-[var(--surface-3)] disabled:text-[var(--muted)]",
+          loading && "relative cursor-wait"
+        )}
         ref={ref}
         disabled={isDisabled}
         {...props}

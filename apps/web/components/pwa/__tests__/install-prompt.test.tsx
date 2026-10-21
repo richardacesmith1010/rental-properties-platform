@@ -28,5 +28,8 @@ it("retains service-worker registration and installation in a normal mobile brow
   render(<><InstallPromptBanner /><InstallDomusSettingsCard /></>);
   expect(register).toHaveBeenCalledExactlyOnceWith("/sw.js", { scope: "/" });
   expect(screen.getByText("Install Domus for quick access")).toBeInTheDocument();
+  const banner = screen.getByText("Install Domus for quick access").closest(".fixed");
+  expect(banner?.className).toContain("bottom-[calc(env(safe-area-inset-bottom,0px)+96px)]");
+  expect(banner?.className).toContain("lg:bottom-4");
   expect(screen.getByText("Install Domus App")).toBeInTheDocument();
 });

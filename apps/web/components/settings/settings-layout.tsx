@@ -15,6 +15,7 @@ interface SettingsSection {
 interface SettingsLayoutProps {
   role: SettingsRole;
   sections: Record<string, SettingsSection>;
+  initialSection?: string;
 }
 
 interface SettingsNavItem {
@@ -36,7 +37,7 @@ const settingsNav: SettingsNavItem[] = [
   { id: "yourData", label: "Your data", icon: Download, roles: ["tenant", "manager"] }
 ];
 
-export function SettingsLayout({ role, sections }: SettingsLayoutProps) {
+export function SettingsLayout({ role, sections, initialSection }: SettingsLayoutProps) {
   const availableNav = useMemo(
     () =>
       settingsNav.filter((item) => {
@@ -47,7 +48,9 @@ export function SettingsLayout({ role, sections }: SettingsLayoutProps) {
       }),
     [role]
   );
-  const [activeSection, setActiveSection] = useState(availableNav[0]?.id ?? "profile");
+  const [activeSection, setActiveSection] = useState(
+    () => availableNav.find((item) => item.id === initialSection)?.id ?? availableNav[0]?.id ?? "profile"
+  );
 
   useEffect(() => {
     if (!availableNav.some((item) => item.id === activeSection)) {

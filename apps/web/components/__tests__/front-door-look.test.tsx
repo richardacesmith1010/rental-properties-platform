@@ -1,8 +1,10 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import LoginPage from "@/app/login/page";
+import ResetPasswordPage from "@/app/reset-password/page";
 import { DomusMark, DomusWordmark } from "@/components/brand/domus-mark";
 import { LandingPage } from "@/components/marketing/landing-page";
+import { faqs } from "@/components/marketing/landing-content";
 import { SignInForm } from "@/components/auth/sign-in-form";
 import { CreateAccountForm } from "@/components/auth/create-account-form";
 
@@ -50,6 +52,19 @@ describe("front door look", () => {
       expect(screen.getByRole("heading", { name: text })).toBeInTheDocument();
     }
     hasNoOldShape(container);
+  });
+
+  it("answers the free-plan FAQ with the approved terms", () => {
+    expect(faqs.find((item) => item.q === "Is Domus really free?")?.a).toBe(
+      "Yes. Domus is free for landlords and tenants. You don't need a credit card."
+    );
+  });
+
+  it("shows the reset-password subtitle exactly once", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    render(await ResetPasswordPage());
+    expect(screen.getAllByText("Enter a new password for your Domus account.")).toHaveLength(1);
+    expect(screen.queryByText("Set a new password for your Domus account.")).not.toBeInTheDocument();
   });
 
   it("auth forms use square fields and action submit", () => {

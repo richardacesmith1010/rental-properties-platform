@@ -55,10 +55,6 @@ export function ResetPasswordForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <p className="text-sm text-[var(--ink-2)]">
-        Set a new password for your Domus account.
-      </p>
-
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <label className="mb-1.5 block text-sm font-medium text-[var(--ink-2)]" htmlFor="reset-new-password">

@@ -239,7 +239,7 @@ export function InstallPromptBanner() {
   };
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[70] px-4">
+    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom,0px)+96px)] lg:bottom-4 z-[70] px-4">
       <div className="mx-auto max-w-lg pointer-events-auto rounded-2xl border border-border/70 bg-card/95 shadow-xl backdrop-blur">
         <div className="flex items-start gap-3 px-4 py-4 sm:px-5">
           <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
