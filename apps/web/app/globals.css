@@ -4,6 +4,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Vaul injects its default animation after app styles. Keep this drawer's timing fixed. */
+[data-vaul-drawer].domus-mobile-drawer {
+  animation-duration: 200ms !important;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1) !important;
+  transition-duration: 200ms !important;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-vaul-drawer].domus-mobile-drawer {
+    animation-duration: 0ms !important;
+    transition-duration: 0ms !important;
+  }
+}
+
 @layer base {
   :root {
     --ground: #F3F4F6;

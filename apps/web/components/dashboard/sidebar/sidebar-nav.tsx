@@ -161,8 +161,8 @@ function NavList({ navItems, activeItemId, onSelectItem, mobile = false }: NavLi
               key={item.id}
               type="button"
               onClick={() => onSelectItem(item.id)}
-              onMouseEnter={item.group ? () => cache?.preloadSection(item.id, 150) : undefined}
-              onMouseLeave={item.group ? () => cache?.cancelScheduledPreload() : undefined}
+              onMouseEnter={!mobile && item.group ? () => cache?.preloadSection(item.id, 150) : undefined}
+              onMouseLeave={!mobile && item.group ? () => cache?.cancelScheduledPreload() : undefined}
               onFocus={item.group ? () => cache?.preloadSection(item.id) : undefined}
               onBlur={item.group ? () => cache?.cancelScheduledPreload() : undefined}
               className={className}
@@ -381,7 +381,7 @@ export function MobileTopBar({
               </button>
             )}
           >
-            <div className="flex max-h-[calc(100svh-2rem)] min-h-0 flex-col pr-1">
+            <div className="flex flex-col pr-1">
               {role === "owner" ? <Drawer.Close asChild><a href="/settings" title="Open settings."
                 className={`sidebar-shell-button mb-3 flex min-h-11 items-center gap-3 px-3 py-2 ${sidebarFocusRing}`}>
                 {avatarUrl ? <Image src={avatarUrl} alt="" width={32} height={32}
@@ -402,7 +402,7 @@ export function MobileTopBar({
                   {unreadNotificationCount} unread
                 </Badge>
               </div>}
-              <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-4">
+              <div className="flex flex-col gap-4 pb-4">
                 {commandPaletteEnabled && onOpenCommandPalette ? (
                   <CommandPaletteTrigger onOpen={onOpenCommandPalette} />
                 ) : searchItems.length > 0 ? (
@@ -436,7 +436,7 @@ export function MobileTopBar({
                 </div>
                 <nav
                   aria-label="Main navigation"
-                  className="min-h-0 flex-1 space-y-1 overflow-y-auto rounded-2xl border border-border bg-card p-2"
+                  className="space-y-1 rounded-2xl border border-border bg-card p-2"
                 >
                   <NavList navItems={navItems} activeItemId={activeItemId} onSelectItem={onSelectItem} mobile />
                   {role === "owner" || role === "manager" ? <WorkspaceFooterLinks /> : null}
