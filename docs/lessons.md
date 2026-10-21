@@ -218,3 +218,11 @@ the copy-to-clipboard and the ChatGPT paste/send ran in the same batch, so ChatG
 **What was correct:** Edit → verify (the script prints `ALL OK`, grep for the new markers) → only then copy and send.
 **Rule:** Packet edits and the ChatGPT send are separate steps. Before `pbcopy`, confirm the edit succeeded (script
 exit + a grep for a phrase unique to the new revision). Never chain the browser send in parallel with the edit.
+
+#### L-034 | 2026-10-21 | DESIGN — Moving a global fixed overlay must be checked on pages without the thing it avoids
+**What happened:** 249a's packet (Claude) lifted the site-wide install banner by a fixed 96 px to clear the phone tab
+bars. On pages with no tab bar (`/login` on iPhone Safari) the banner then sat on the **Sign in** button. Unit tests
+passed (they asserted the new class); the live WebKit walk caught it; Claude rolled back the one line (`7f8e876`).
+**Rule:** For any change to a component mounted in the root layout (banners, toasts, help buttons), the packet must
+name at least one page **without** the anchor element and the live walk must tap the primary button there. Prefer
+offsets driven by the anchor itself (a CSS variable set while it is mounted) over fixed numbers.
