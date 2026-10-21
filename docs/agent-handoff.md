@@ -1881,3 +1881,24 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - **Owner 2026-10-20: "Build 4 is installed on my iPhone."** ✅
 - Rollout plan 242a–f is done. Remaining known items (not redesign): time-zone sprint (shelved by owner), sign-in `next`
   param, More drawer delay, cold-launch black screen.
+
+## 2026-10-20 — Sprint 243a + 243b SHIPPED (times in Mountain time; dark chat bubbles); scorecard rescored
+- Owner unshelved the time-zone sprint ("We can work on the time zones now").
+- **243a** `ce5cdac` (L2, + fix1 test expectations): instants (timestamps) display in `DISPLAY_TIME_ZONE = "America/Denver"`
+  (lib/format.ts, shared with statements); `YYYY-MM-DD` calendar dates keep their exact output. Fixes UTC message/payment
+  times, paid dates a day off near midnight, host-zone bank "as of" dates, and a latent crash in the tenant "paid" month
+  label (`${paid_at}T00:00:00Z` → Invalid time value). Tests pass under TZ=UTC, Pacific/Kiritimati, America/Los_Angeles.
+- **243b** `586c94e` (L1): smoke caught tenant "mine" chat bubbles as light boxes in dark mode (pre-existing since 242e);
+  now `--hero`/`--hero-ink`, replies `--surface-3`.
+- Verified: gate 2,961; CI `gate` success (243a); production smoke 27/27 after 243b; live tenant Messages light + dark at
+  390 px: "Oct 7, 2026, 11:04 AM" = SQL `17:04 UTC` → Denver 11:04 AM ✅.
+- **Decisions (Claude):** one app-wide display zone (owner's homes are Mountain; renders identically server/phone, no
+  hydration flicker). Per-user zones = later sprint 243c when a non-Mountain user exists; rent "today/late" cutoffs and
+  month bucketing still UTC (inventory in the 243a review) = later sprint.
+- **Scorecard:** Phone app 74 → 78, Launch & legal 64 → 70 (8 of 14 at ≥ 80).
+- **244a (notifications correct before "on", L3):** packet `docs/sprint244a-codex-prompt.md` rev 3. ChatGPT rev 1 REJECT
+  (race-unsafe email key) → rev 2 REJECT (stale reclaim, provider-accepted-then-DB-fail, fencing) → rev 3 folds all in
+  (Resend `Idempotency-Key` verified in Resend docs: 24 h, same key+payload returns original, different payload 409).
+  **Second REJECT → owner asked: "Continue" (third review) or "Simplify" (drop repeat-email keys).** Live test window
+  Oct 1–20: 12 overdue + 4 receipt deliveries, all sent, 0 failed. `notifications.entity_type` has no check constraint.
+- **Next:** owner answer on 244a; meanwhile item list 6–8 (sign-in `next`, More drawer delay, cold-launch black screen).
