@@ -33,7 +33,13 @@ describe("tenant section tabs", () => {
     expect(screen.getByText("Rent content").closest("[data-tenant-section]")).not.toHaveAttribute("hidden");
     expect(screen.getByText("See repairs").closest("[data-tenant-section]")).toHaveAttribute("hidden");
     expect(within(bar).getByRole("link", { name: "Rent" })).toHaveAttribute("aria-current", "page");
-    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Rent", level: 2 }));
+    const rentHeadings = screen.getAllByRole("heading", { name: "Rent" });
+    expect(rentHeadings).toHaveLength(2);
+    expect(rentHeadings[0].tagName).toBe("H1");
+    expect(rentHeadings[1]).toHaveClass("sr-only", "outline-none");
+    expect(rentHeadings[1]).toHaveAttribute("tabindex", "-1");
+    expect(document.activeElement).toBe(rentHeadings[1]);
+    expect(rentHeadings.filter((heading) => !heading.classList.contains("sr-only"))).toHaveLength(1);
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(routerPush).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
@@ -46,6 +52,12 @@ describe("tenant section tabs", () => {
     fireEvent.popState(window);
     expect(screen.getByText("Repairs content").closest("[data-tenant-section]")).not.toHaveAttribute("hidden");
     expect(screen.getByText("Rent content").closest("[data-tenant-section]")).toHaveAttribute("hidden");
+    const repairHeadings = screen.getAllByRole("heading", { name: "Repairs" });
+    expect(repairHeadings).toHaveLength(2);
+    expect(repairHeadings[0].tagName).toBe("H1");
+    expect(repairHeadings[1]).toHaveClass("sr-only", "outline-none");
+    expect(repairHeadings[1]).toHaveAttribute("tabindex", "-1");
+    expect(repairHeadings.filter((heading) => !heading.classList.contains("sr-only"))).toHaveLength(1);
   });
 
   it("T4 preserves a message draft while its section is hidden", () => {
@@ -71,6 +83,7 @@ describe("tenant section tabs", () => {
     renderTabs();
     const link = screen.getByRole("link", { name: "Lease documents" });
     expect(link).toHaveAttribute("href", "/tenant?section=documents");
+    push.mockClear();
     link.addEventListener("click", (event) => event.preventDefault(), { once: true });
     link.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
     expect(push).not.toHaveBeenCalled();

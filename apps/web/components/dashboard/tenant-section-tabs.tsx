@@ -81,12 +81,10 @@ export function TenantSectionTabs(props: TenantSectionTabsProps) {
       <div className="space-y-6 px-6 pb-24 pt-6 lg:px-8">
         {props.banner}
         {sections.map((id) => <section key={id} data-tenant-section={id} hidden={active !== id}>
-          {id !== "overview" && id !== "notifications" ? <h2 ref={(node) => { headings.current[id] = node; }}
-            tabIndex={-1} className="font-display text-[18px] font-semibold text-[var(--ink)]">
+          <h2 ref={(node) => { headings.current[id] = node; }} tabIndex={-1}
+            className="sr-only outline-none focus:outline-none">
             {labels[id]}
-          </h2> : <h2 ref={(node) => { headings.current[id] = node; }} tabIndex={-1} className="sr-only">
-            {labels[id]}
-          </h2>}
+          </h2>
           {props[id]}
         </section>)}
       </div>
