@@ -6,7 +6,7 @@
 Bring the remaining three large dashboard components under 500 lines each by splitting them into focused modules, with **zero behaviour change**.
 
 ## 2. Context
-- Branch `main`, HEAD = Sprint 166a commit or later docs-only. Paths under `apps/web/`.
+- Branch `main`, HEAD `adf2a11` or later docs-only. Paths under `apps/web/`.
 - Targets: `components/dashboard/unified-property-wizard.tsx` (777 — multi-step property/unit/lease wizard used by owners and managers), `components/dashboard/leases-section.tsx` (738 — lease list, edit, renew, end, rent change, pays-outside flag), `components/dashboard/inbox-section.tsx` (~526 — owner/manager inbox with Timeline/Threads + tenant simple chat from Sprint 163 + tenant composer from Sprint 162).
 - Behaviour to keep (L-014): owner Add → Add a home opens this wizard; post-create jump to Homes; lease edit/renew/end/rent change; "Pays outside Domus" badge + flag; owner/manager inbox tabs and reply; tenant chat ("You" bubbles, reply box, composer when no thread, multi-home picker).
 
