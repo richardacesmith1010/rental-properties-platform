@@ -162,8 +162,9 @@ Every count must be 0. If not, stop and re-answer this section before upload.
 The app is iPhone only (`TARGETED_DEVICE_FAMILY = 1`) and portrait only (`Info.plist:56-59`).
 So no iPad or landscape shots are needed. App Store Connect scales 6.9-inch shots for smaller iPhones.
 
-**When.** Done 2026-10-20 in the graphite look (242f). Retake `05-tenant-messages.jpg` — it shows a UTC time
-("4:37 AM") from before Sprint 243a (Mountain time). Fake data only; never real tenant data.
+**When.** Done 2026-10-20 in the graphite look (242f). Optional retake: `05-tenant-messages.jpg` shows a UTC time
+("4:37 AM") from before Sprint 243a (Mountain time). Cosmetic only — not a submission blocker. A retake needs the
+demo tenant signed in inside the app on the Pro Max Simulator (owner sign-in or a dev build pointed at localhost). Fake data only; never real tenant data.
 
 Demo rent is under $5 on purpose. Online pay starts at $5 (`lib/payment-fees.ts:13`).
 So no real charge can happen, and the tenant sees no Pay rent button (`lib/tenant-pay-state.ts:24`).
@@ -188,7 +189,7 @@ Home/Money/Homes/Messages/More, tenant Home/Rent/Repairs/Messages).
 | 2 | `02-money.jpg` | Demo owner | Money | Track rent and costs in one place. |
 | 3 | `03-bank.jpg` | Demo owner | Bank → "Money to check" | Sort bank items in one tap. |
 | 4 | `04-tenant-home.jpg` | Demo tenant | Home | See when your rent is due. |
-| 5 | `05-tenant-messages.jpg` | Demo tenant | Messages → thread (**retake: Mountain time**) | Message your landlord. |
+| 5 | `05-tenant-messages.jpg` | Demo tenant | Messages → thread (optional retake: time shows UTC) | Message your landlord. |
 | 6 | `06-tenant-repair.jpg` | Demo tenant | Repairs → new repair with a photo | Report a repair with a photo. |
 
 **Before upload, every shot must pass:**
