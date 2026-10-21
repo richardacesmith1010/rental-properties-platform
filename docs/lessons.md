@@ -211,7 +211,7 @@ default value "on" for a wrapping label. It also names buttons from `title`, not
 **Rule:** The Browser pane's accessibility output is a heuristic, not Chrome's accessibility tree. Confirm any "no name"
 finding with `input.labels` (or a jsdom `getByRole(..., { name })` test) before planning a fix.
 
-## L-033 — Never send a review packet in the same step as the edit that produces it (2026-10-21)
+#### L-033 | 2026-10-21 | PROCESS — Never send a review packet in the same step as the edit that produces it
 **What happened:** Twice (244b rev 2, 248a rev 2) a Python edit of the packet failed on an exact-match assertion, but
 the copy-to-clipboard and the ChatGPT paste/send ran in the same batch, so ChatGPT reviewed the **old** packet under a
 "rev 2" note. Each needed a correction message and another review round.
