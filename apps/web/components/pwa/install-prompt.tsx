@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { CheckCircle2, Download, Share2, Smartphone } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,14 @@ import { isNativeApp } from "@/lib/native-app";
 
 const DISMISS_KEY = "domus-install-dismissed-until";
 const DISMISS_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+const INSTALL_BANNER_EXCLUDED_PATHS = [
+  "/login",
+  "/auth",
+  "/reset-password",
+  "/complete-profile",
+  "/onboarding",
+  "/join"
+];
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -217,13 +226,18 @@ function IosInstallInstructions() {
 }
 
 export function InstallPromptBanner() {
+  const pathname = usePathname() ?? "";
   const { canInstall, dismissedUntil, dismiss, isInstalled, isIos, isMobile, ready, promptInstall } = usePwaInstallState();
   const [showIosInstructions, setShowIosInstructions] = useState(false);
   const [installing, setInstalling] = useState(false);
 
   const shouldRender = ready && !isInstalled && isMobile && !dismissedUntil && canInstall;
 
-  if (isNativeApp() || !shouldRender) {
+  const isExcludedPath = INSTALL_BANNER_EXCLUDED_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`)
+  );
+
+  if (isNativeApp() || isExcludedPath || !shouldRender) {
     return null;
   }
 

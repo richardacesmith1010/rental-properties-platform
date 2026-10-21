@@ -2,6 +2,9 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { InstallDomusSettingsCard, InstallPromptBanner } from "../install-prompt";
 
+let pathname = "/owner";
+vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
+
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 function browser(userAgent: string) {
@@ -24,6 +27,7 @@ it("never registers a worker or shows either install surface in the app", () => 
 });
 
 it("retains service-worker registration and installation in a normal mobile browser", () => {
+  pathname = "/owner";
   const register = browser("iPhone Safari");
   render(<><InstallPromptBanner /><InstallDomusSettingsCard /></>);
   expect(register).toHaveBeenCalledExactlyOnceWith("/sw.js", { scope: "/" });
@@ -33,4 +37,25 @@ it("retains service-worker registration and installation in a normal mobile brow
   expect(banner?.className).not.toContain("bottom-4");
   expect(document.documentElement.style.getPropertyValue("--domus-tabbar-height")).toBe("");
   expect(screen.getByText("Install Domus App")).toBeInTheDocument();
+});
+
+it.each([
+  "/login",
+  "/auth/confirm",
+  "/reset-password",
+  "/complete-profile",
+  "/onboarding",
+  "/join/abc"
+])("hides the banner on setup route %s", (route) => {
+  pathname = route;
+  browser("iPhone Safari");
+  render(<InstallPromptBanner />);
+  expect(screen.queryByText("Install Domus for quick access")).not.toBeInTheDocument();
+});
+
+it("renders on /loginx because it is not a login route segment", () => {
+  pathname = "/loginx";
+  browser("iPhone Safari");
+  render(<InstallPromptBanner />);
+  expect(screen.getByText("Install Domus for quick access")).toBeInTheDocument();
 });
