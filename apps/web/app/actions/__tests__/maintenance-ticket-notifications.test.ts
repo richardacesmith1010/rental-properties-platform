@@ -35,6 +35,8 @@ vi.mock("@/app/actions/maintenance-queries", () => ({
 const ticketId = "550e8400-e29b-41d4-a716-446655440000";
 let currentStatus = "open";
 let currentTenant: string | null = "tenant-1";
+let currentResolvedAt: string | null = null;
+let lastUpdate: Record<string, unknown> = {};
 
 function form(status: string) {
   const data = new FormData();
@@ -48,16 +50,20 @@ describe("resolved ticket notifications", () => {
     vi.clearAllMocks();
     currentStatus = "open";
     currentTenant = "tenant-1";
+    currentResolvedAt = null;
+    lastUpdate = {};
     const supabase = {
       from: vi.fn(() => ({
         select: () => ({ eq: () => ({ single: async () => ({
           data: {
             id: ticketId, property_id: "property-1", tenant_profile_id: currentTenant,
-            title: "Leak", status: currentStatus
+            title: "Leak", status: currentStatus, resolved_at: currentResolvedAt
           }, error: null
         }) }) }),
-        update: (data: { status: string }) => ({ eq: async () => {
+        update: (data: { status: string; resolved_at?: string }) => ({ eq: async () => {
+          lastUpdate = data;
           currentStatus = data.status;
+          if (data.resolved_at) currentResolvedAt = data.resolved_at;
           return { error: null };
         } })
       }))
@@ -134,6 +140,27 @@ describe("resolved ticket notifications", () => {
       body: '"Leak" was marked closed.', entityType: "maintenance_ticket", entityId: ticketId,
       actorProfileId: "manager-1"
     }]]);
+  });
+
+  it("G3 stamps a closed repair when it has no close date", async () => {
+    expect(await updateTicketStatus(null, form("closed"))).toMatchObject({ success: true });
+    expect(lastUpdate).toEqual({ status: "closed", resolved_at: expect.any(String) });
+    expect(new Date(lastUpdate.resolved_at as string).toISOString()).toBe(lastUpdate.resolved_at);
+  });
+
+  it("G3 preserves an existing close date when closing", async () => {
+    currentResolvedAt = "2024-01-02T03:04:05.000Z";
+    expect(await updateTicketStatus(null, form("closed"))).toMatchObject({ success: true });
+    expect(lastUpdate).toEqual({ status: "closed" });
+  });
+
+  it("G3 keeps resolved stamping and leaves in-progress unstamped", async () => {
+    expect(await updateTicketStatus(null, form("in_progress"))).toMatchObject({ success: true });
+    expect(lastUpdate).toEqual({ status: "in_progress" });
+    currentResolvedAt = "2024-01-02T03:04:05.000Z";
+    expect(await updateTicketStatus(null, form("resolved"))).toMatchObject({ success: true });
+    expect(lastUpdate).toEqual({ status: "resolved", resolved_at: expect.any(String) });
+    expect(new Date(lastUpdate.resolved_at as string).toISOString()).toBe(lastUpdate.resolved_at);
   });
 
   it("R4 calls delivery again after a repair reopens and restarts", async () => {

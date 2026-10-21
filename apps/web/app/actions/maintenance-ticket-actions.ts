@@ -238,7 +238,7 @@ export async function updateTicketStatus(
 
   const { data: ticket } = await supabase
     .from("maintenance_tickets")
-    .select("id, property_id, tenant_profile_id, title, status")
+    .select("id, property_id, tenant_profile_id, title, status, resolved_at")
     .eq("id", ticketId)
     .single();
 
@@ -252,7 +252,7 @@ export async function updateTicketStatus(
   }
 
   const updateData: Record<string, unknown> = { status };
-  if (status === "resolved") {
+  if (status === "resolved" || (status === "closed" && !ticket.resolved_at)) {
     updateData.resolved_at = new Date().toISOString();
   }
 
