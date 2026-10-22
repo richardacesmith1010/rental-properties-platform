@@ -2068,3 +2068,16 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   Oct 31 10:30 pm, morning M; TZ Kiritimati/UTC/Tokyo); gate 3,206; CI success; prod smoke 27/27.
 - **Next:** 253a (Codex running) → 250b (reports/dashboard/form defaults; packet `docs/sprint250b-codex-prompt.md`,
   L2) → 253b → 253c → 253d.
+
+## 2026-10-22 — Sprint 253a SHIPPED (split stripe-webhook-handlers.ts, verbatim)
+- **253a** `97d37fb` (L3, ChatGPT rev 4 AWC adopted): 1,005-line file → façade 304 + `lib/stripe-webhook/` context 152,
+  notify 119, transfers 174, payments 278 (all `server-only`). Shared dev script `apps/web/scripts/verify-verbatim-split.mjs`
+  (TypeScript AST, exact one match per name).
+- Verified by Claude: proof script 24/24 symbols OK + façade text OK (BASE `bab4284`); tamper test (one added space) →
+  `DIFF createTransfersForPayment`; six handler types identical (TS checker, BASE vs now); characterization 13/13 before
+  and after (only diff: `vi.mock("server-only")`); allowlist import graph + no cycle; no outside importer. Gate 3,209;
+  CI success; deployed revision = `97d37fb`; prod smoke 27/27; Sentry no new issues.
+- **Claude decision (W3):** exceptions 8 → 9 — the same "Management fee for charge" string was used twice in the old
+  file (one key); the guard keys by file, so the two moved copies need two keys. Same string, same reason.
+- **Webhook delivery check: INCONCLUSIVE** — 0 Stripe events in the last 6 h and 0 webhook requests since deploy.
+  Recheck at the next real delivery (Vercel log 2xx + Stripe Workbench delivery list).
