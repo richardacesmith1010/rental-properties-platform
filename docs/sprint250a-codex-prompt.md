@@ -1,4 +1,4 @@
-# Sprint 250a — Rent "today" is the Denver calendar day (money + notification logic) (L3) — rev 3 (rev 1 AWC → rev 2 AWC → rev 3)
+# Sprint 250a — Rent "today" is the Denver calendar day (money + notification logic) (L3) — rev 3 APPROVED (rev 1 AWC → rev 2 AWC → rev 3 APPROVE)
 
 ## 1. Objective
 Display already uses America/Denver (243a). Business logic still decides "today" with UTC
@@ -56,7 +56,10 @@ dates, so scheduled runs are unchanged; manual triggers and all request-time che
    **Staying open past midnight / app resume:** a small client hook (`useDenverDayRefresh(todayIso)`, in
    `lib/denver-calendar.ts` or next to the cards) runs **after** hydration: on mount, on `visibilitychange` to visible,
    and on a timer at the next Denver midnight, it compares `todayDenver()` with the server-provided `todayIso`; if they
-   differ it calls `router.refresh()` once, so the server recomputes `todayIso`, due/late text **and** payment-button
+   differ it calls `router.refresh()` once per stale `todayIso` value (if the refresh fails or the prop is still stale, the
+   next visibility change or timer tries again); the midnight timer is cleared and rescheduled whenever `todayIso`
+   changes (DST-safe: compute the next Denver midnight with `denverDayStartUtc(addDays(todayIso, 1))`), so the server
+   recomputes `todayIso`, due/late text **and** payment-button
    eligibility together. Never re-render "today" from the client clock directly.
 4. **Idempotency unchanged:** charge generation, late fees, reminders and follow-ups keep their existing unique keys
    and dedupe; this sprint changes only which day is "today".
@@ -120,7 +123,7 @@ Evening instant **E = 2026-11-01T04:30:00Z** (Denver: Oct 31 22:30 MDT; also the
 - D4s Production sequence (mocked Supabase honoring the existing charge unique key / upsert): manual run at E, then the
   scheduled run at **S = 2026-11-01T08:00:00Z** (the real cron time; Denver Nov 1, 01:00 MST), then a rerun at S → the lease has exactly one charge each for 2026-10-01, 2026-11-01 and
   2026-12-01 (3 rows, no duplicates); late fees, reminders (E target Nov 3, M target Nov 4 — different charges) and
-  overdue follow-ups (due 2026-10-01: stage 30 at E, still stage 30 at M with key `overdue-30` → one email) produce
+  overdue follow-ups (due 2026-10-01: stage 30 at E, still stage 30 at S with key `overdue-30` → one email) produce
   no duplicate rows or emails.
 - D5 Late fee / status (existing rule: late when today > due + grace): due 2026-10-25, grace 5 (window ends Oct 30) →
   at E (Denver Oct 31) **late**; due 2026-10-26, grace 5 (window ends Oct 31) → at E **not** late, at M (Nov 1) late. `isPastGraceWindow` uses the passed today
