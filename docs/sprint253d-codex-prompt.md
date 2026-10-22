@@ -1,4 +1,4 @@
-# Sprint 253d — Code health: split `lib/stripe-connect.ts` (685 lines) by verbatim moves behind a re-export façade (L3: money) — rev 1
+# Sprint 253d — Code health: split `lib/stripe-connect.ts` (685 lines) by verbatim moves behind a re-export façade (L3: money) — rev 2 (253c AWC applied: semantic export proof)
 
 ## 1. Objective
 `apps/web/lib/stripe-connect.ts` is 685 lines (limit 500). It creates Stripe Express accounts and links, decides
@@ -62,7 +62,8 @@ or `"use server"`. Any importer of `@/lib/stripe-connect`. Renaming anything. Ed
 - `apps/web/lib/stripe-connect/api.ts`, `rent-collection.ts`, `property-accounts.ts` (new)
 - `apps/web/lib/__tests__/stripe-connect-split.test.ts` (new: characterization of the uncovered functions + structure,
   §8 S2/S4)
-- `apps/web/scripts/verify-verbatim-split.mjs` — only if a generic gap blocks this file (report the diff)
+- `apps/web/scripts/verify-verbatim-split.mjs`, `verify-export-surface.mjs` — only if a generic gap blocks this file
+  (report the diff)
 
 ## 6. Implementation requirements
 Do these in order.
@@ -85,8 +86,8 @@ Do these in order.
 4. Add the structure `describe` (S4). Run the shared proof script:
    `node scripts/verify-verbatim-split.mjs --base $BASE --old lib/stripe-connect.ts --facade lib/stripe-connect.ts --new
    lib/stripe-connect/api.ts lib/stripe-connect/rent-collection.ts lib/stripe-connect/property-accounts.ts`.
-5. **Export surface.** Emit declarations for `lib/stripe-connect.ts` at BASE and after; every exported declaration
-   text identical and export name sets equal (diff expected empty).
+5. **Export surface (semantic):** run Sprint 253c's `node scripts/verify-export-surface.mjs --base $BASE --facade
+   lib/stripe-connect.ts` — identical name sets, namespaces (type/value/both) and public types for every export.
 6. Each file ≤ 500 lines; every new line ≤ 140 characters.
 
 ## 7. Validation
@@ -101,8 +102,8 @@ then from the repo root `npm run lint:web` and `npm run build:web` (Claude runs 
 ## 8. Acceptance criteria
 - S1 `stripe-connect.test.ts` passes with the same count before and after, with no edit.
 - S2 The step-2 characterization passes before the move and, unchanged (same hash prefix), after it.
-- S3 The proof script prints `OK` for every symbol and no `DIFF`; the export-surface declaration diff is empty and the
-  export name sets are equal.
+- S3 The proof script prints `OK` for every symbol and no `DIFF`; `verify-export-surface.mjs` reports identical name
+  sets, namespaces and public types for every export.
 - S4 Structure test: no new file contains `"use server"`, `"use client"` or `server-only`; the façade contains only
   `export { … } from` / `export type { … } from` statements whose names equal the BASE export list (hard-coded) — no
   `export *`; every internal import edge belongs to the §3 allowlist (unused permitted edges do not fail; any other
@@ -119,7 +120,7 @@ next steps for Claude' sections. Report compact status only.
 
 ## 10. Constraints
 Stay inside §5. Do not commit. No Undo (no behavior change). Tests never call Stripe (fetch is mocked). Claude re-runs
-the proof script and the declaration diff, runs the gate, deploys, confirms the production deployment's commit SHA
+both proof scripts, runs the gate, deploys, confirms the production deployment's commit SHA
 equals the shipped commit, then on that revision (read-only, no payment, no new Stripe account or link created): the
 owner test account's Settings → bank status and Rent tab render; `/api/health` reports Stripe config OK; Sentry has no
 new issues on `/settings`, `/owner`, `/tenant` or `/api/webhooks/stripe`.

@@ -1,4 +1,4 @@
-# Sprint 253c — Code health: split `lib/ownership.ts` (709 lines) by verbatim moves behind a re-export façade (L3: auth) — rev 1
+# Sprint 253c — Code health: split `lib/ownership.ts` (709 lines) by verbatim moves behind a re-export façade (L3: auth) — rev 2 (rev 1 AWC)
 
 ## 1. Objective
 `apps/web/lib/ownership.ts` is 709 lines (limit 500). It holds the ownership-account loaders and
@@ -58,6 +58,7 @@ importer of `@/lib/ownership`. Renaming anything. Existing test edits.
 - `apps/web/lib/__tests__/ownership-split.test.ts` (new: structure + `canUserAdministerOwnershipAccount`
   characterization, §8 C2/C4)
 - `apps/web/scripts/verify-verbatim-split.mjs` — only if a generic gap blocks this file (report the diff)
+- `apps/web/scripts/verify-export-surface.mjs` (new, dev-only, §6 step 5)
 
 ## 6. Implementation requirements
 Do these in order.
@@ -67,7 +68,7 @@ Do these in order.
    `@/lib/supabase/admin` with a fake whose two `maybeSingle()` queries return configured rows and record their filters.
    Cases: active member row → `true`; creator row only → `true`; neither → `false`; member query missing-schema error →
    `false`; creator query missing-schema error → `false`; a non-missing-schema error with no data → `false`. Assert the
-   exact recorded filters of both queries (`ownership_account_members`: `account_id`, `profile_id`, `active = true`;
+   exact recorded filters of both queries across the suite (a case may short-circuit; `ownership_account_members`: `account_id`, `profile_id`, `active = true`;
    `ownership_accounts`: `id`, `created_by_profile_id`). Then record `shasum -a 256` of the new test file. The
    structure cases (C4) go in a **separate** `describe` appended in step 4; the report shows the step-2 hash and
    proves the later diff of this file is additions only (the step-2 text is an unchanged prefix).
@@ -76,9 +77,13 @@ Do these in order.
 4. Add the structure `describe` (C4). Run the shared proof script:
    `node scripts/verify-verbatim-split.mjs --base $BASE --old lib/ownership.ts --facade lib/ownership.ts --new
    lib/ownership/types.ts lib/ownership/accounts.ts lib/ownership/members.ts lib/ownership/governance.ts`.
-5. **Export surface.** Emit declarations for `lib/ownership.ts` at BASE and after (TypeScript compiler API or
-   `tsc --declaration --emitDeclarationOnly`); every exported name's declaration text must be identical and the export
-   name sets equal (diff expected empty).
+5. **Export surface (semantic).** Add `apps/web/scripts/verify-export-surface.mjs` (dev-only, shared with Sprint 253d):
+   with the TypeScript compiler API (a `Program` over BASE's file via `git show` written to a temp copy, and over the
+   current tree), enumerate the façade's exports, resolve re-export aliases to their declarations, and require
+   identical exported-name sets; for each name compare the printed public type/signature (`checker.typeToString` /
+   `signatureToString` with `NoTruncation`) and whether it occupies the type namespace, value namespace or both. Fail
+   on any public API change; allow the change from inline declarations to named re-exports. On failure print
+   `name | BASE kind | AFTER kind | API match`.
 6. Each file ≤ 500 lines; every new line ≤ 140 characters.
 
 ## 7. Validation
@@ -87,16 +92,18 @@ cd apps/web
 npx vitest run lib/__tests__/ownership-split.test.ts lib/__tests__/ownership-membership-query.test.ts \
   lib/__tests__/owner-rpc-parity.test.ts lib/__tests__/invitations-scope.test.ts lib/__tests__/client-owner-access.test.ts \
   lib/__tests__/speed-loaders.test.ts components/__tests__/members-section.test.tsx components/__tests__/account-switcher.test.tsx
+node scripts/verify-export-surface.mjs --base $BASE --facade lib/ownership.ts
 npx tsc --noEmit
 ```
-then from the repo root `npm run lint:web` and `npm run build:web` (Claude runs `npm run gate:web`).
+(eight test files: seven pre-existing plus the new split test) then from the repo root `npm run lint:web` and `npm run build:web` (Claude runs `npm run gate:web`).
 
 ## 8. Acceptance criteria
-- C1 The seven existing test files pass with the same per-file counts before and after, with no edit to them.
+- C1 The seven pre-existing regression files pass with the same per-file counts before and after, with no edit to them.
 - C2 The `canUserAdministerOwnershipAccount` characterization (six cases plus exact filters) passes before the move
   and, unchanged, after it.
 - C3 The proof script prints `OK` for every symbol and no `DIFF` (the façade at BASE minus moved blocks equals the
-  façade's non-export text); the export-surface declaration diff is empty and the export name sets are equal.
+  façade's non-export text); `verify-export-surface.mjs` reports identical name sets, namespaces and
+  public types for every export. (The verbatim proof alone covers source-body identity.)
 - C4 Structure test: no new file contains `"use server"`, `"use client"` or `server-only`; `types.ts` has no value
   imports and declares only interfaces/types; the façade contains only `export { … } from` / `export type { … } from`
   statements whose names equal the BASE export list (hard-coded in the test) — no `export *`; every internal import
@@ -112,7 +119,7 @@ Compact status only: BASE SHA, C1–C6 → test names, validation counts. Do NOT
 next steps for Claude' sections. Report compact status only.
 
 ## 10. Constraints
-Stay inside §5. Do not commit. No Undo (no behavior change). Claude re-runs the proof script and the declaration diff,
+Stay inside §5. Do not commit. No Undo (no behavior change). Claude re-runs both proof scripts,
 runs the gate, deploys, confirms the production deployment's commit SHA equals the shipped commit, then walks the owner
 test account's Home and Ownership section and the manager test account's Home on that revision (read-only; nothing
 submitted) and checks Sentry for new issues on `/owner` and `/manager`.
