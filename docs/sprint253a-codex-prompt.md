@@ -1,4 +1,4 @@
-# Sprint 253a — Code health: split `stripe-webhook-handlers.ts` (1,005 lines) by verbatim moves (L3: money) — rev 3 (rev 1 AWC → rev 2 AWC)
+# Sprint 253a — Code health: split `stripe-webhook-handlers.ts` (1,005 lines) by verbatim moves (L3: money) — rev 4 (rev 1 AWC → rev 2 AWC → rev 3 + test-harness note)
 
 ## 1. Objective
 `apps/web/lib/stripe-webhook-handlers.ts` is 1,005 lines (the largest source file; limit 500). Split it into focused
@@ -43,6 +43,10 @@ now-moved private symbol — none should).
 - `apps/web/lib/stripe-webhook-handlers.ts`
 - `apps/web/lib/stripe-webhook/context.ts`, `notify.ts`, `transfers.ts`, `payments.ts` (new)
 - `apps/web/lib/plain-language/exceptions.json` (paths only)
+- `apps/web/lib/__tests__/stripe-webhook-handlers.test.ts` — **one line only**: add `vi.mock("server-only", () => ({}));`
+  next to the existing `vi.mock` calls (the repo pattern, used in 45 test files). The real `server-only` package throws
+  outside the `react-server` condition, so the new modules' first statement would otherwise break this suite at import.
+  No other edit to this file.
 - `apps/web/lib/__tests__/stripe-webhook-split.test.ts` (new: structure test, §8 W4)
 - `apps/web/scripts/verify-webhook-split.mjs` (new, dev-only proof script)
 
@@ -80,8 +84,8 @@ npx tsc --noEmit
 then from the repo root `npm run lint:web` and `npm run build:web` (Claude runs `npm run gate:web`).
 
 ## 8. Acceptance criteria
-- W1 `stripe-webhook-handlers.test.ts` passes with the **same** test count before and after (report both), with no
-  edit to the file.
+- W1 `stripe-webhook-handlers.test.ts` passes with the **same** test count before and after (report both); its only
+  diff is the one `vi.mock("server-only", …)` line (report the `git diff` of the file, expected +1 line).
 - W2 The six exported handler declarations (parameters and return types) are identical before and after (the §6 step 3
   declaration diff is empty), and `verify-webhook-split.mjs` prints `OK` for every symbol and no `DIFF`.
 - W3 `exceptions.json` before vs after differs **only** in file paths for moved strings: every affected string is

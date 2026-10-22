@@ -61,7 +61,8 @@ Do these in order.
    values? }` in call order when awaited; `storage.from(bucket).remove(paths)` records `{ bucket, remove: paths }`.
    Selects return fixture rows keyed by table so `loadDeletionScope` produces a scope where **every** id array and both
    file arrays are non-empty (distinct ids per table, e.g. `"lease-1"`). Mock `./auth-helpers` (`requireAuth`),
-   `@/lib/rate-limit`, `@/lib/property-access`, `next/cache` (`revalidatePath`) and `@/lib/logger`. Shared helpers:
+   `@/lib/rate-limit`, `@/lib/property-access`, `next/cache` (`revalidatePath`), `@/lib/logger` and
+   `server-only` (`vi.mock("server-only", () => ({}))`, the repo pattern; the real package throws under vitest). Shared helpers:
    `mutationLog()` (deletes/updates/storage removals only, in order) and `expectNoWrites()` (no delete, update,
    storage removal, RPC or `revalidatePath` call). No `expect` inside mock implementations (L-028). Assert with
    `toEqual` on literal arrays written in the test (no generated snapshot files). Run it against the unchanged file and
