@@ -2035,3 +2035,25 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   (shot table matches the 6 files; JPEG). Screenshot 05 shows a UTC time — optional cosmetic retake.
 - Verified already fixed (no work): review-card keys, tenant "Already paid?", chat timestamp contrast, old signup copy.
 - Guarded: `apps/ios` `npm run assets` would recreate `Splash.imageset`; the 246a assets test fails if it does.
+
+## 2026-10-22 — Sprints 249b/249c, 251a/251b, 252a SHIPPED; WEB-3 resolved; 253a–d packets approved
+- **249b** `08e5248` + **249c** `96b476b` (L2): install banner sits above the tab bar via `--domus-tabbar-height` (set
+  by the tab bars), and never shows on sign-in/setup pages (`/login`, `/auth`, `/reset-password`, `/complete-profile`,
+  `/onboarding`, `/join`). Live iPhone Safari: Sign in visible and tappable.
+- **251a/251b** `776ad88` (L1): Sprint 160 test debt paid (O2 confirmations, O4 rent pre-fill, O5 joined prompt). The
+  new test found a real double "Unit D added." toast → fixed (module WeakSet guard; duplicate `FormSuccess` removed).
+- **252a** `6efe35d` (L2): full production axe scan (WCAG 2.1 A/AA, every section, all roles, light + dark, iPhone
+  WebKit) found 52 → fixed (dropdown/date/file names, nested Homes card control, focusable inbox scroll box, terms/
+  privacy contrast). **Re-scan after deploy: 0 findings.** Smoke 26/27 first run: one keyboard spec hit "Owner
+  dashboard error" from a client `TypeError: network error` (Sentry WEB-9, 20:35Z, no server error in Vercel logs);
+  rerun 3/3 green → recorded as a flake. Follow-up idea (grooming): owner error screen auto-retries once on a network
+  error.
+- **WEB-3 resolved:** Oct 17 event = same trace as WEB-6 (fixed by 238j photo shrink); Oct 7 event = WEB-4 (Supabase
+  504). WEB-4 resolved; WEB-5 ignored (walk noise).
+- **Packets (all ChatGPT AWC, changes adopted):** 253a stripe-webhook split rev 4; 253b account-wipe characterize +
+  split rev 2; 253c ownership split rev 2; 253d stripe-connect split rev 3. Shared dev scripts: syntax-aware
+  `verify-verbatim-split.mjs` (253a) and semantic `verify-export-surface.mjs` (253c). Claude decisions: no
+  `server-only` in 253c/d (current files have none; ~20 transitive tests would break); 253a's handlers test may gain
+  only `vi.mock("server-only")` (package throws under vitest).
+- **250a** (business "today" = Denver calendar day; L3, ChatGPT rev 3 APPROVE): Codex done, gate 3,206; Claude review
+  done (helpers, money rules, client `todayIso` + midnight refresh, tests D1–D12); shipping now.
