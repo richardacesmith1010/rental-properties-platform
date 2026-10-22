@@ -12,6 +12,7 @@ const planCustomDistributionTransfersMock = vi.hoisted(() => vi.fn());
 const recordPaymentDistributionMock = vi.hoisted(() => vi.fn());
 const sideEffectErrorMock = vi.hoisted(() => vi.fn());
 
+vi.mock("server-only", () => ({}));
 vi.mock("@/lib/distributions", () => ({
   getDistributionMembersForAccount: getDistributionMembersForAccountMock,
   planCustomDistributionTransfers: planCustomDistributionTransfersMock,
