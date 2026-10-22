@@ -1,4 +1,4 @@
-# Sprint 253b — Code health: characterize, then split `app/actions/account-wipe.ts` (780 lines) (L3: deletion) — rev 1
+# Sprint 253b — Code health: characterize, then split `app/actions/account-wipe.ts` (780 lines) (L3: deletion) — rev 2 (rev 1 AWC)
 
 ## 1. Objective
 `apps/web/app/actions/account-wipe.ts` is 780 lines (limit 500) and has **no tests**. It permanently deletes an owner's
@@ -65,10 +65,13 @@ Do these in order.
    `mutationLog()` (deletes/updates/storage removals only, in order) and `expectNoWrites()` (no delete, update,
    storage removal, RPC or `revalidatePath` call). No `expect` inside mock implementations (L-028). Assert with
    `toEqual` on literal arrays written in the test (no generated snapshot files). Run it against the unchanged file and
-   record the pass count.
+   record the pass count, then **freeze it**: record `shasum -a 256 apps/web/app/actions/__tests__/account-wipe.test.ts`;
+   the hash after the split must be identical.
 3. **Move verbatim.** Cut each block character for character; add only `export` and the imports each file needs.
    No reformatting, renaming, reordering inside a block, or comment edits. Import order inside the façade may change.
-4. **Proof script** `verify-account-wipe-split.mjs`: reads `git show $BASE:apps/web/app/actions/account-wipe.ts`,
+4. **Proof script** `verify-account-wipe-split.mjs` (syntax-aware: use the TypeScript compiler API
+   `ts.createSourceFile` to find top-level declarations and take each node's full source text; no regex extraction; each
+   symbol name must match **exactly one** top-level declaration per file, else fail): reads `git show $BASE:apps/web/app/actions/account-wipe.ts`,
    extracts every top-level symbol block by name, extracts the same names from the three new/changed files, strips only
    a leading `export ` added by this sprint, and asserts byte-identical text per symbol (`OK <symbol>` / `DIFF
    <symbol>`), including the six action bodies and the private auth helpers left in the façade. It also asserts the
@@ -104,10 +107,15 @@ then from the repo root `npm run lint:web` and `npm run build:web` (Claude runs 
 - K4 A mutation error (non-missing-schema) on the first delete → the action's exact error message from the source (e.g.
   `"Unable to complete the full account wipe right now."`) and **no later** mutation is recorded; a missing-schema error
   on a select or delete is skipped and the run continues (assert a later delete is recorded).
+- K4b A non-missing-schema error on a **later** delete (after at least three earlier deletes succeeded, e.g. the
+  `leases` delete in `deleteAllProperties`) → exact error message, `mutationLog()` equals the exact literal prefix of
+  earlier mutations, and nothing after the failure runs. A non-missing-schema error on an `updateByIds` call that is part
+  of a normal trace → the same: exact message, exact prefix, nothing later. The report marks these as **behavior
+  characterized** (partial deletion today), not behavior desired.
 - K5 A storage removal error is logged through `sideEffectError("accountWipe", "remove_storage_objects", …)` and the
   run continues.
-- K6 The K1–K5 file passes with the **same** test count before and after the move (report both) with no edit to it after
-  step 2, and `verify-account-wipe-split.mjs` prints `OK` for every symbol and no `DIFF`; the declaration diff is empty.
+- K6 The K1–K5 file passes with the **same** test count before and after the move (report both) and the **same SHA-256**
+  (report both in the K6 line with BASE SHA and declaration-diff status), and `verify-account-wipe-split.mjs` prints `OK` for every symbol and no `DIFF`; the declaration diff is empty.
 - K7 Structure test: first statement of each new module is `import "server-only"`; no new module contains
   `"use server"` or `"use client"`; the façade still starts with `"use server"` and its exports are exactly the six
   action names (parse the file; fail on any other `export`); every internal import edge belongs to the §3 allowlist (an
@@ -122,7 +130,8 @@ or 'recommended next steps for Claude' sections. Report compact status only.
 
 ## 10. Constraints
 Stay inside §5. Do not commit. No Undo (no behavior change). Never run any wipe action against a real database — tests
-use the fake admin client only. Claude re-runs the proof script and the declaration diff, runs the gate, deploys, then
-verifies on production **without deleting anything**: the Settings page loads for the owner test account and the
+use the fake admin client only. Claude re-runs the proof script, the test hash and the declaration diff, runs the gate,
+deploys, confirms the production deployment's commit SHA equals the shipped commit, then verifies on that revision
+**without deleting anything**: the Settings page loads for the owner test account and the
 "Delete" section renders (nothing is submitted); Sentry shows no new issue on `/settings`.
 The user should never need to read instructions to complete this flow (no UI change).
