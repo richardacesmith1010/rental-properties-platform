@@ -1,4 +1,4 @@
-# Sprint 253d — Code health: split `lib/stripe-connect.ts` (685 lines) by verbatim moves behind a re-export façade (L3: money) — rev 2 (253c AWC applied: semantic export proof)
+# Sprint 253d — Code health: split `lib/stripe-connect.ts` (685 lines) by verbatim moves behind a re-export façade (L3: money) — rev 3 (rev 2 AWC)
 
 ## 1. Objective
 `apps/web/lib/stripe-connect.ts` is 685 lines (limit 500). It creates Stripe Express accounts and links, decides
@@ -79,8 +79,8 @@ Do these in order.
      authority loader returning `null` → the source's result.
    - `createAccountLink`, `createLoginLink`, `getAccount`: the exact Stripe path, method and form body sent, the
      returned value, and that `assertConnectContext` runs before any request (a rejecting context → no `fetch`).
-   Then record `shasum -a 256` of the new test file; structure cases (S4) go in a separate `describe` appended in step
-   4, and the report proves the step-2 text is an unchanged prefix.
+   Then record the file's byte length `N` and `shasum -a 256`. Structure cases (S4) go in a separate `describe`
+   appended in step 4; afterwards `head -c N <file> | shasum -a 256` must equal the step-2 hash (report both).
 3. **Move verbatim** per §3; add only `export` and imports. No reformatting, renaming, reordering inside a block, or
    comment edits.
 4. Add the structure `describe` (S4). Run the shared proof script:
@@ -94,13 +94,19 @@ Do these in order.
 ```
 cd apps/web
 npx vitest run lib/__tests__/stripe-connect.test.ts lib/__tests__/stripe-connect-split.test.ts
-npx vitest run lib/__tests__/stripe-webhook-handlers.test.ts lib/__tests__/plain-language.test.ts
+npx vitest run lib/__tests__/stripe-webhook-handlers.test.ts lib/__tests__/plain-language.test.ts \
+  lib/__tests__/charge-checkout.test.ts lib/__tests__/autopay.test.ts app/actions/__tests__/charges.test.ts \
+  app/actions/__tests__/connect.test.ts lib/__tests__/owner-page-data.test.ts lib/__tests__/owner-section-route.test.ts \
+  app/tenant/__tests__/paid-line.test.tsx app/connect/onboard/__tests__/page.test.tsx
 npx tsc --noEmit
 ```
 then from the repo root `npm run lint:web` and `npm run build:web` (Claude runs `npm run gate:web`).
 
 ## 8. Acceptance criteria
-- S1 `stripe-connect.test.ts` passes with the same count before and after, with no edit.
+- S1 `stripe-connect.test.ts` and the ten downstream suites in §7 (charge-checkout, autopay, charges, connect, webhook
+  handlers, owner page data, owner section route, paid line, connect onboard, plain-language) pass with the same
+  per-file counts before and after, with no edit. The report names which suite proves owner routing and which proves
+  manager routing (and whether each uses the real module or a mock of it).
 - S2 The step-2 characterization passes before the move and, unchanged (same hash prefix), after it.
 - S3 The proof script prints `OK` for every symbol and no `DIFF`; `verify-export-surface.mjs` reports identical name
   sets, namespaces and public types for every export.
@@ -122,6 +128,8 @@ next steps for Claude' sections. Report compact status only.
 Stay inside §5. Do not commit. No Undo (no behavior change). Tests never call Stripe (fetch is mocked). Claude re-runs
 both proof scripts, runs the gate, deploys, confirms the production deployment's commit SHA
 equals the shipped commit, then on that revision (read-only, no payment, no new Stripe account or link created): the
-owner test account's Settings → bank status and Rent tab render; `/api/health` reports Stripe config OK; Sentry has no
+owner test account's Settings → bank status and Rent tab render; if a test property with an already-connected manager
+Stripe account exists (Claude checks by SQL), the manager test account's Rent view for it renders and SQL confirms
+`getManagerStripeAccountForProperty`'s inputs are unchanged — otherwise the report records "no safe manager fixture"; `/api/health` reports Stripe config OK; Sentry has no
 new issues on `/settings`, `/owner`, `/tenant` or `/api/webhooks/stripe`.
 The user should never need to read instructions to complete this flow (no UI change).
