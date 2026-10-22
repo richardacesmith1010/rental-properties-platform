@@ -29,10 +29,10 @@ const chargeId = "550e8400-e29b-41d4-a716-446655440001";
 const actorId = "550e8400-e29b-41d4-a716-446655440002";
 
 function db(result: { code: string; reopened?: boolean; status?: string } = { code: "ok", reopened: true },
-  options: { outside?: boolean; rpcError?: boolean } = {}) {
+  options: { outside?: boolean; rpcError?: boolean; dueDate?: string } = {}) {
   const rpc = vi.fn().mockResolvedValue({ data: result, error: options.rpcError ? { message: "rpc failed" } : null });
   const from = vi.fn((table: string) => {
-    const data = table === "rent_charges" ? { id: chargeId, lease_id: "lease", due_date: "2026-10-15" }
+    const data = table === "rent_charges" ? { id: chargeId, lease_id: "lease", due_date: options.dueDate ?? "2026-10-15" }
       : table === "leases" ? { id: "lease", unit_id: "unit", grace_period_days: 5,
         collects_outside_domus: options.outside ?? false }
         : { id: "unit", property_id: "home" };
@@ -55,6 +55,14 @@ describe("undoManualPayment", () => {
     db();
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-10-16T12:00:00Z"));
+  });
+
+  it("D6 restores pending during the Denver evening grace day", async () => {
+    const { rpc } = db({ code: "ok", reopened: true }, { dueDate: "2026-10-26" });
+    vi.setSystemTime(new Date("2026-11-01T04:30:00Z"));
+    expect(await undoManualPayment(chargeId)).toEqual({ success: true,
+      message: "Payment undone. This rent is open again." });
+    expect(rpc.mock.calls.at(-1)?.[1].p_restore_status).toEqual("pending");
   });
 
   it("reopens paid rent inside grace and refreshes three views", async () => {

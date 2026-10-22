@@ -1,3 +1,6 @@
+import { todayDenver } from "@/lib/denver-calendar";
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TenantRentCard } from "@/components/dashboard/tenant-rent-card";
@@ -40,7 +43,7 @@ describe("TenantRentCard", () => {
     const october = { ...baseProps.charges[0], dueDate: "2026-10-15", status: "pending" as const,
       amountCents: 120000 };
     const november = { ...october, id: "november", dueDate: "2026-11-15" };
-    render(<TenantRentCard {...baseProps} charges={[october, november]} payState="outside" />);
+    render(<TenantRentCard todayIso={todayDenver()} {...baseProps} charges={[october, november]} payState="outside" />);
     expect(screen.getByText("$1,200")).toBeInTheDocument();
     expect(screen.queryByText(/2 months/)).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "I paid this" })).toHaveLength(1);
@@ -51,7 +54,7 @@ describe("TenantRentCard", () => {
     vi.setSystemTime(new Date("2026-10-15T12:00:00Z"));
     const november = { ...baseProps.charges[0], dueDate: "2026-11-15", status: "pending" as const,
       amountCents: 120000 };
-    render(<TenantRentCard {...baseProps} charges={[november]} payState="not_posted" />);
+    render(<TenantRentCard todayIso={todayDenver()} {...baseProps} charges={[november]} payState="not_posted" />);
     expect(screen.getByText("$1,200 on Nov 15.")).toBeInTheDocument();
     expect(screen.queryByText("Rent due")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "I paid this" })).not.toBeInTheDocument();
@@ -63,13 +66,14 @@ describe("TenantRentCard", () => {
     ["paid", "Paid Oct 1, 2026. Thank you!"],
     ["not_posted", "You can pay once it's posted."]
   ] as const)("renders the %s state", (payState, copy) => {
-    render(<TenantRentCard {...baseProps} payState={payState} lastPaidAt={payState === "paid" ? "2026-10-01" : null} />);
+    render(<TenantRentCard todayIso={todayDenver()} {...baseProps} payState={payState}
+      lastPaidAt={payState === "paid" ? "2026-10-01" : null} />);
     expect(screen.getByText(copy)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Pay rent" })).not.toBeInTheDocument();
   });
 
   it("reveals payment methods after Pay rent", () => {
-    render(<TenantRentCard {...baseProps} payState="can_pay" />);
+    render(<TenantRentCard todayIso={todayDenver()} {...baseProps} payState="can_pay" />);
     expect(screen.getByText("$1")).toBeInTheDocument();
     expect(screen.queryByText("Bank account")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Pay rent" }));
@@ -80,7 +84,7 @@ describe("TenantRentCard", () => {
     formDispatches.length = 0;
     const onPayCharge = vi.fn(async () => ({ success: false, error: "Card pay failed." }));
     const { container } = render(
-      <TenantRentCard {...baseProps} payState="can_pay" onPayCharge={onPayCharge} />
+      <TenantRentCard todayIso={todayDenver()} {...baseProps} payState="can_pay" onPayCharge={onPayCharge} />
     );
     fireEvent.click(screen.getByRole("button", { name: "Pay rent" }));
     const cardForm = Array.from(container.querySelectorAll("form"))[1];
@@ -97,14 +101,14 @@ describe("TenantRentCard", () => {
 
   it("shows pending pay labels after opening payment options", () => {
     paymentStatus.pending = true;
-    render(<TenantRentCard {...baseProps} payState="can_pay" />);
+    render(<TenantRentCard todayIso={todayDenver()} {...baseProps} payState="can_pay" />);
     fireEvent.click(screen.getByRole("button", { name: "Pay rent" }));
     expect(screen.getAllByText("Opening payment…")).toHaveLength(2);
     paymentStatus.pending = false;
   });
 
   it("explains when there is no lease without showing zero rent", () => {
-    render(<TenantRentCard {...baseProps} payState="no_lease" rentAmountCents={null} charges={[]} />);
+    render(<TenantRentCard todayIso={todayDenver()} {...baseProps} payState="no_lease" rentAmountCents={null} charges={[]} />);
     expect(screen.getByText("Your lease isn't set up yet")).toBeInTheDocument();
     expect(screen.queryByText("$0.00")).not.toBeInTheDocument();
   });
@@ -112,23 +116,24 @@ describe("TenantRentCard", () => {
   it("totals multiple unpaid months and only shows a late-fee warning when needed", () => {
     const charges = [baseProps.charges[0], { ...baseProps.charges[0],
       id: "2", amountCents: 250, dueDate: "2026-11-01" }];
-    const { rerender } = render(<TenantRentCard {...baseProps} charges={charges} payState="can_pay" lateFeeCents={500} />);
+    const { rerender } = render(<TenantRentCard todayIso={todayDenver()} {...baseProps}
+      charges={charges} payState="can_pay" lateFeeCents={500} />);
     expect(screen.getByText("$3.50 · 2 months")).toBeInTheDocument();
     expect(screen.getByText("A $5 late fee may apply.")).toBeInTheDocument();
-    rerender(<TenantRentCard {...baseProps} charges={charges} payState="can_pay" lateFeeCents={0} />);
+    rerender(<TenantRentCard todayIso={todayDenver()} {...baseProps} charges={charges} payState="can_pay" lateFeeCents={0} />);
     expect(screen.queryByText(/late fee may apply/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/charges?/i)).not.toBeInTheDocument();
   });
 
   it("counts rent and water on the same due month as one month", () => {
     const charges = [baseProps.charges[0], { ...baseProps.charges[0], id: "water", amountCents: 250 }];
-    render(<TenantRentCard {...baseProps} charges={charges} payState="can_pay" />);
+    render(<TenantRentCard todayIso={todayDenver()} {...baseProps} charges={charges} payState="can_pay" />);
     expect(screen.getByText("$3.50 · 1 month")).toBeInTheDocument();
   });
 
   it.each(["not_ready", "outside"] as const)("totals unpaid months when pay state is %s", (payState) => {
     const charges = [baseProps.charges[0], { ...baseProps.charges[0], id: "2", amountCents: 250, dueDate: "2026-11-01" }];
-    render(<TenantRentCard {...baseProps} charges={charges} payState={payState} />);
+    render(<TenantRentCard todayIso={todayDenver()} {...baseProps} charges={charges} payState={payState} />);
     expect(screen.getByText("$3.50 · 2 months")).toBeInTheDocument();
     expect(screen.getByText(/due Oct 1/)).toBeInTheDocument();
   });
@@ -138,7 +143,7 @@ describe("TenantRentCard", () => {
       { ...baseProps.charges[0], id: "nov", dueDate: "2026-11-01", amountCents: 250 },
       { ...baseProps.charges[0], id: "oct", dueDate: "2026-10-01" }
     ];
-    render(<TenantRentCard {...baseProps} charges={charges} payState="not_ready" />);
+    render(<TenantRentCard todayIso={todayDenver()} {...baseProps} charges={charges} payState="not_ready" />);
     expect(screen.getByText("Already paid? Tell your landlord.")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "I paid this" })).toHaveLength(2);
     expect(screen.getAllByText(/rent ·/).map((node) => node.textContent)).toEqual([
@@ -151,7 +156,7 @@ describe("TenantRentCard", () => {
       { ...baseProps.charges[0], tenantReportedPaidAt: "2026-10-07T17:04:35Z" },
       { ...baseProps.charges[0], id: "2", dueDate: "2026-11-01" }
     ];
-    render(<TenantRentCard {...baseProps} charges={charges} payState="not_ready" />);
+    render(<TenantRentCard todayIso={todayDenver()} {...baseProps} charges={charges} payState="not_ready" />);
     expect(screen.getByText("Sent Oct 7. Your landlord will check and mark it paid.")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "I paid this" })).toHaveLength(1);
     expect(screen.getByText("Nov 1 rent · $1")).toBeInTheDocument();
@@ -162,7 +167,8 @@ describe("TenantRentCard", () => {
     const action = vi.fn(async () => ({ success: true as const }));
     const charges = [baseProps.charges[0], { ...baseProps.charges[0], id: "2", dueDate: "2026-11-01" }];
     const { container } = render(
-      <TenantRentCard {...baseProps} charges={charges} payState="not_ready" onRequestManualPaymentConfirmation={action} />
+      <TenantRentCard todayIso={todayDenver()} {...baseProps} charges={charges} payState="not_ready"
+        onRequestManualPaymentConfirmation={action} />
     );
     const form = container.querySelectorAll("form")[1];
     form.addEventListener("submit", (event) => {
@@ -181,7 +187,7 @@ describe("TenantRentCard", () => {
     formDispatches.length = 0;
     const action = vi.fn(async () => ({ success: false, error: "Please try again." }));
     const { container } = render(
-      <TenantRentCard {...baseProps} payState="not_ready" onRequestManualPaymentConfirmation={action} />
+      <TenantRentCard todayIso={todayDenver()} {...baseProps} payState="not_ready" onRequestManualPaymentConfirmation={action} />
     );
     const form = container.querySelector("form")!;
     form.addEventListener("submit", (event) => {
@@ -194,19 +200,19 @@ describe("TenantRentCard", () => {
   });
 
   it("shows the report button for rent paid outside Domus", () => {
-    render(<TenantRentCard {...baseProps} payState="outside" />);
+    render(<TenantRentCard todayIso={todayDenver()} {...baseProps} payState="outside" />);
     expect(screen.getByRole("button", { name: "I paid this" })).toBeInTheDocument();
   });
 
   it.each(["can_pay", "paid", "not_posted", "no_lease"] as const)(
     "does not show the report button in %s", (payState) => {
-      render(<TenantRentCard {...baseProps} payState={payState} />);
+      render(<TenantRentCard todayIso={todayDenver()} {...baseProps} payState={payState} />);
       expect(screen.queryByRole("button", { name: "I paid this" })).not.toBeInTheDocument();
     }
   );
 
   it("does not prompt when no month is unpaid", () => {
-    render(<TenantRentCard {...baseProps} payState="not_ready" charges={[]} />);
+    render(<TenantRentCard todayIso={todayDenver()} {...baseProps} payState="not_ready" charges={[]} />);
     expect(screen.queryByText("Already paid? Tell your landlord.")).not.toBeInTheDocument();
   });
 });

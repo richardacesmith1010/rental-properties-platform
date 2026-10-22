@@ -47,6 +47,7 @@ export interface ChargeRowData {
 
 interface ChargeRowProps {
   charge: ChargeRowData;
+  todayIso: string;
   last: boolean;
   batchActionsEnabled: boolean;
   selected: boolean;
@@ -95,6 +96,7 @@ export { ManualPaymentForm } from "@/components/dashboard/manual-payment-form";
 
 export function ChargeRow({
   charge,
+  todayIso,
   last,
   batchActionsEnabled,
   selected,
@@ -254,7 +256,7 @@ export function ChargeRow({
               {isTenantView &&
               (tenantPayState === undefined || tenantPayState === "can_pay") &&
               charge.status !== "paid" &&
-              charge.status !== "waived" && isRentOpenForTenant(charge.dueDate) ? (
+              charge.status !== "waived" && isRentOpenForTenant(charge.dueDate, todayIso) ? (
                 <div className="w-full space-y-2 xl:w-[18rem]">
                   <div
                     className={[

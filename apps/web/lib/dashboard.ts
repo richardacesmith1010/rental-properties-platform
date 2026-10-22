@@ -1,3 +1,4 @@
+import { todayDenver } from "@/lib/denver-calendar";
 import { assembleOwnerDashboardPayload, type OwnerDashboardPayload } from "@/lib/dashboard-rpc";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -173,7 +174,7 @@ export async function getDashboardData(
   try {
     const { data, error } = await admin.rpc("owner_dashboard_payload", {
       p_property_ids: propertyIds,
-      p_today: new Date().toISOString().slice(0, 10)
+      p_today: todayDenver()
     });
     if (error || !data) {
       const code = /^[A-Z0-9]{5,10}$/.test(error?.code ?? "") ? error!.code : "UNKNOWN";

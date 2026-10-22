@@ -1,3 +1,4 @@
+import { todayDenver } from "@/lib/denver-calendar";
 import { fireEvent, render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -32,7 +33,7 @@ function makeCharge(status: ChargeStatus): ChargeRowData {
 
 function renderCharge(status: ChargeStatus, canModify: boolean, manualFormOpen = false) {
   return render(
-    <ChargeRow
+    <ChargeRow todayIso={todayDenver()}
       charge={makeCharge(status)}
       last
       batchActionsEnabled={false}

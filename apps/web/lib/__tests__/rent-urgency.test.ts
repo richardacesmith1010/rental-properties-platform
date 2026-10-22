@@ -48,7 +48,7 @@ describe("getChargeUrgency", () => {
 });
 
 describe("isRentOpenForTenant", () => {
-  it("opens past, today, and five days ahead on UTC dates", () => {
+  it("opens past, today, and five days ahead on Denver dates", () => {
     const today = new Date("2026-10-10T23:30:00Z");
     expect(isRentOpenForTenant("2026-10-09", today)).toBe(true);
     expect(isRentOpenForTenant("2026-10-10", today)).toBe(true);
@@ -56,8 +56,9 @@ describe("isRentOpenForTenant", () => {
     expect(isRentOpenForTenant("2026-10-16", today)).toBe(false);
   });
 
-  it("uses UTC midnight even when the local evening is still yesterday", () => {
+  it("waits for Denver midnight even after UTC midnight", () => {
     expect(isRentOpenForTenant("2026-10-15", new Date("2026-10-09T23:30:00Z"))).toBe(false);
-    expect(isRentOpenForTenant("2026-10-15", new Date("2026-10-10T00:30:00Z"))).toBe(true);
+    expect(isRentOpenForTenant("2026-10-15", new Date("2026-10-10T00:30:00Z"))).toBe(false);
+    expect(isRentOpenForTenant("2026-10-15", new Date("2026-10-10T06:30:00Z"))).toBe(true);
   });
 });

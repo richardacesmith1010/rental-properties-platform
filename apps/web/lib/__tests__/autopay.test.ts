@@ -312,6 +312,23 @@ const dueCharge = (status: string, dueDate = "2026-05-01"): ChargeRow => ({
 });
 
 describe("processAutopayCharges", () => {
+  it("D8 pays November 1 only after Denver reaches that date", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const config = buildAutopayConfig({ charges: [dueCharge("pending", "2026-11-01")] });
+      vi.setSystemTime(new Date("2026-11-01T04:30:00Z"));
+      expect(await processAutopayCharges(createSupabaseMock(config))).toEqual({
+        processed: 0, succeeded: 0, failed: 0, skipped: 0
+      });
+      expect(createOffSessionPaymentIntentMock).not.toHaveBeenCalled();
+      vi.setSystemTime(new Date("2026-11-01T12:00:00Z"));
+      expect(await processAutopayCharges(createSupabaseMock(config))).toEqual({
+        processed: 1, succeeded: 1, failed: 0, skipped: 0
+      });
+      expect(createOffSessionPaymentIntentMock).toHaveBeenCalledTimes(1);
+    } finally { vi.useRealTimers(); }
+  });
+
   it("does not select rent paid early when its due date arrives", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-05-02T12:00:00Z"));

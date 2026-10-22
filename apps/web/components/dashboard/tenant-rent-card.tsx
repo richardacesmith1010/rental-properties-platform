@@ -1,5 +1,8 @@
 "use client";
 
+import { daysBetween } from "@/lib/denver-calendar";
+import { useDenverDayRefresh } from "@/components/dashboard/use-denver-day-refresh";
+
 import { useState } from "react";
 import { useFormState } from "react-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +20,7 @@ type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionS
 
 interface TenantRentCardProps {
   charges: TenantCharge[];
+  todayIso: string;
   payState: TenantPayState;
   rentDueDate: string | null;
   rentAmountCents: number | null;
@@ -29,12 +33,8 @@ interface TenantRentCardProps {
   onSetupAutopay?: StatefulAction;
 }
 
-function relativeDueText(dueDate: string) {
-  const today = new Date();
-  const todayStart = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
-  const due = new Date(`${dueDate}T00:00:00.000Z`);
-  const dueStart = Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate());
-  const days = Math.ceil((dueStart - todayStart) / 86400000);
+function relativeDueText(dueDate: string, todayIso: string) {
+  const days = daysBetween(todayIso, dueDate);
   if (days < 0) return `${Math.abs(days)} day${Math.abs(days) === 1 ? "" : "s"} late`;
   if (days === 0) return "today";
   return `in ${days} day${days === 1 ? "" : "s"}`;
@@ -72,6 +72,7 @@ function ReportPaidRow({ charge, action }: { charge: TenantCharge; action: State
 
 export function TenantRentCard({
   charges,
+  todayIso,
   payState,
   rentDueDate,
   rentAmountCents,
@@ -84,11 +85,11 @@ export function TenantRentCard({
   onSetupAutopay
 }: TenantRentCardProps) {
   const [showPayment, setShowPayment] = useState(false);
-  const today = new Date();
+  useDenverDayRefresh(todayIso);
   const unpaidCharges = charges.filter((item) =>
-    (item.status === "pending" || item.status === "late") && isRentOpenForTenant(item.dueDate, today));
+    (item.status === "pending" || item.status === "late") && isRentOpenForTenant(item.dueDate, todayIso));
   const futureCharge = charges.filter((item) =>
-    (item.status === "pending" || item.status === "late") && !isRentOpenForTenant(item.dueDate, today))
+    (item.status === "pending" || item.status === "late") && !isRentOpenForTenant(item.dueDate, todayIso))
     .sort((left, right) => left.dueDate.localeCompare(right.dueDate))[0];
   const charge = unpaidCharges[0] ?? null;
   const dueDate = unpaidCharges.map((item) => item.dueDate).sort()[0] ?? charge?.dueDate ?? rentDueDate;
@@ -117,7 +118,7 @@ export function TenantRentCard({
   }
 
   if (showPayment && payState === "can_pay") {
-    return <PayRentCard charges={charges} onPayCharge={onPayCharge} onPayWithACH={onPayWithACH}
+    return <PayRentCard charges={charges} todayIso={todayIso} onPayCharge={onPayCharge} onPayWithACH={onPayWithACH}
       onRequestManualPaymentConfirmation={onRequestManualPaymentConfirmation} chargesHref="/tenant?section=charges"
       autopayEnrollments={autopayEnrollments} onSetupAutopay={onSetupAutopay} payState={payState}
       rentDueDate={rentDueDate} rentAmountCents={rentAmountCents} lastPaidAt={lastPaidAt} />;
@@ -141,7 +142,7 @@ export function TenantRentCard({
           {dueDate && payState !== "paid" && !(futureCharge && !charge) ? (
             <p className="mt-2 text-sm text-[var(--muted)]">
               {payState === "not_posted" ? `due ${formatMonthDay(dueDate)}`
-                : `due ${formatMonthDay(dueDate)} · ${relativeDueText(dueDate)}`}
+                : `due ${formatMonthDay(dueDate)} · ${relativeDueText(dueDate, todayIso)}`}
             </p>
           ) : null}
           {futureCharge && charge ? <p className="mt-2 text-sm text-[var(--muted)]">

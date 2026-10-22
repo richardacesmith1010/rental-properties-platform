@@ -1,3 +1,6 @@
+import { todayDenver } from "@/lib/denver-calendar";
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 import { renderToBuffer } from "@react-pdf/renderer";
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
@@ -44,7 +47,7 @@ describe("tenant and manager look", () => {
   });
 
   it("rent due keeps visible copy and displays the amount and outline report button", () => {
-    render(<TenantRentCard charges={[{ id: "1", leaseId: "lease", propertyId: "home", propertyLabel: "Home",
+    render(<TenantRentCard todayIso={todayDenver()} charges={[{ id: "1", leaseId: "lease", propertyId: "home", propertyLabel: "Home",
       propertyName: "Home", unitNumber: "1", dueDate: "2026-10-01", amountCents: 120000,
       status: "late" }]} payState="not_ready" rentDueDate="2026-10-01" rentAmountCents={120000}
       lastPaidAt={null} onPayCharge={action} onRequestManualPaymentConfirmation={action} />);

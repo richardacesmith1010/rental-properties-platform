@@ -36,6 +36,7 @@ function createLateFeeSupabaseMock(params: {
   accountError?: boolean;
   existingLateFee?: boolean;
   tenantPrefs?: Record<string, boolean>;
+  dueDate?: string;
 }) {
   const update = vi.fn(() => {
     const builder = {
@@ -49,7 +50,7 @@ function createLateFeeSupabaseMock(params: {
   const candidate = {
     id: "charge-1",
     lease_id: "lease-1",
-    due_date: "2026-09-01",
+    due_date: params.dueDate ?? "2026-09-01",
     status: "pending",
     category: "rent"
   };
@@ -210,6 +211,64 @@ describe("charge generation", () => {
       { lease_id: "lease-1", due_date: "2026-11-20" }];
     expect(await generateMonthlyChargesForPropertyIdsWithClient(client, ["property-1"]))
       .toBe("Rent is already up to date.");
+  });
+
+  it("D5 marks October 26 rent late only after Denver leaves October 31", async () => {
+    setToday("2026-11-01T04:30:00Z");
+    const evening = createLateFeeSupabaseMock({ collectsOutsideDomus: false, dueDate: "2026-10-26" });
+    await applyLateFeesToOverdueCharges(evening.supabase, ["lease-1"], "2026-10-31");
+    expect(evening.update).not.toHaveBeenCalled();
+    expect(evening.insert).not.toHaveBeenCalled();
+    setToday("2026-11-01T12:00:00Z");
+    const morning = createLateFeeSupabaseMock({ collectsOutsideDomus: false, dueDate: "2026-10-26" });
+    await applyLateFeesToOverdueCharges(morning.supabase, ["lease-1"], "2026-11-01");
+    expect(morning.update).toHaveBeenCalledTimes(1);
+    expect(morning.insert).toHaveBeenCalledTimes(1);
+  });
+
+  it("D4s inserts one late fee before cron and none on rerun", async () => {
+    setToday("2026-11-01T04:30:00Z");
+    const evening = createLateFeeSupabaseMock({ collectsOutsideDomus: false, dueDate: "2026-10-25" });
+    await applyLateFeesToOverdueCharges(evening.supabase, ["lease-1"], "2026-10-31");
+    expect(evening.insert).toHaveBeenCalledTimes(1);
+    setToday("2026-11-01T08:00:00Z");
+    const cron = createLateFeeSupabaseMock({ collectsOutsideDomus: false,
+      dueDate: "2026-10-25", existingLateFee: true });
+    await applyLateFeesToOverdueCharges(cron.supabase, ["lease-1"], "2026-11-01");
+    await applyLateFeesToOverdueCharges(cron.supabase, ["lease-1"], "2026-11-01");
+    expect(cron.insert).not.toHaveBeenCalled();
+  });
+
+  it("D4s keeps one rent row per due date across evening, cron, and rerun", async () => {
+    const rows: Array<{ lease_id: string; due_date: string; category: string }> = [];
+    const lease = { id: "lease-1", unit_id: "unit-1", tenant_profile_id: "tenant-1",
+      start_date: "2026-01-01", end_date: "2027-06-30", created_at: "2026-01-01T12:00:00Z",
+      due_day_of_month: 1, monthly_rent_cents: 100000, lease_status: "active" };
+    createAdminClientMock.mockReturnValue({});
+    createRentChargeWithLinesMock.mockImplementation(async (_admin: unknown, leaseId: string, dueDate: string) => {
+      if (rows.some((row) => row.lease_id === leaseId && row.due_date === dueDate && row.category === "rent")) {
+        return false;
+      }
+      rows.push({ lease_id: leaseId, due_date: dueDate, category: "rent" });
+      return true;
+    });
+    const client = { from: (table: string) => ({ select: (columns: string) => {
+      const data = table === "units" ? [{ id: "unit-1", property_id: "property-1" }]
+        : table === "leases" ? [lease]
+          : table === "rent_charges" && columns === "lease_id, due_date" ? rows
+            : [];
+      const query = { in: () => query, eq: () => query, is: () => query, lt: () => query,
+        then: (done: (value: unknown) => void) => Promise.resolve({ data, error: null }).then(done) };
+      return query;
+    } }) } as unknown as SupabaseClient;
+    for (const instant of ["2026-11-01T04:30:00Z", "2026-11-01T08:00:00Z", "2026-11-01T08:00:00Z"]) {
+      setToday(instant);
+      await generateMonthlyChargesForPropertyIdsWithClient(client, ["property-1"]);
+    }
+    expect(rows.map((row) => row.due_date).sort()).toEqual([
+      "2026-10-01", "2026-11-01", "2026-12-01"
+    ]);
+    expect(createRentChargeWithLinesMock).toHaveBeenCalledTimes(3);
   });
 
   it("returns exactly the current month and next month as charge candidates", () => {

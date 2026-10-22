@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const revalidatePathMock = vi.hoisted(() => vi.fn());
 const createAdminClientMock = vi.hoisted(() => vi.fn());
@@ -115,6 +115,7 @@ function reportDb(fixture: ReportFixture = {}) {
 }
 
 describe("manual payment report claim", () => {
+  afterEach(() => vi.useRealTimers());
   beforeEach(() => {
     vi.clearAllMocks();
     checkRateLimitMock.mockReturnValue({ allowed: true, remaining: 10 });
@@ -128,6 +129,20 @@ describe("manual payment report claim", () => {
       .toEqual({ success: false, error: "This rent is not due yet." });
     expect(db.updates).toHaveLength(0);
     expect(db.calls).not.toContain("message");
+  });
+
+  it("D3 rejects November 6 at E and accepts it at M", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-01T04:30:00Z"));
+    const eveningDb = reportDb({ dueDate: "2026-11-06" });
+    expect(await requestManualPaymentConfirmation(null, new FormData()))
+      .toEqual({ success: false, error: "This rent is not due yet." });
+    expect(eveningDb.updates).toEqual([]);
+    vi.setSystemTime(new Date("2026-11-01T12:00:00Z"));
+    const morningDb = reportDb({ dueDate: "2026-11-06" });
+    expect(await requestManualPaymentConfirmation(null, new FormData()))
+      .toEqual({ success: true, message: "Sent. Your landlord will check and mark it paid." });
+    expect(morningDb.updates).toHaveLength(1);
   });
 
   it("claims an open charge before creating one owner message", async () => {

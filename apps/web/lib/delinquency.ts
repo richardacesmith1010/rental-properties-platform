@@ -1,3 +1,4 @@
+import { addDays, daysBetween, todayDenver } from "@/lib/denver-calendar";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatCurrency, formatDate, formatUnitLabel } from "@/lib/format";
 import { buildRentReminderEmail } from "@/lib/email-templates";
@@ -14,12 +15,6 @@ import { summarizeNotificationResults } from "@/lib/idempotency";
 import { notificationsEnabled } from "@/lib/notifications-switch";
 import { tenantEligibleForEvent } from "@/lib/notification-policy";
 import { getClientHomeFlags, tracksLateRent } from "@/lib/lease-collection";
-
-function differenceInDays(fromDate: string, toDate: string) {
-  const from = new Date(`${fromDate}T00:00:00.000Z`);
-  const to = new Date(`${toDate}T00:00:00.000Z`);
-  return Math.floor((to.getTime() - from.getTime()) / 86400000);
-}
 
 function getTenantDashboardUrl() {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://domusbase.com";
@@ -40,8 +35,7 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
     return summarizeNotificationResults("Overdue rent follow-ups", []);
   }
 
-  const today = new Date();
-  const todayIso = today.toISOString().slice(0, 10);
+  const todayIso = todayDenver();
 
   const { data: charges, error: chargesError } = await supabase
     .from("rent_charges")
@@ -60,7 +54,7 @@ export async function sendDelinquencyEscalations(supabase: SupabaseClient): Prom
     amount_cents: number;
     status: string;
   }>)
-    .map((charge) => ({ ...charge, daysPastDue: differenceInDays(charge.due_date, todayIso) }))
+    .map((charge) => ({ ...charge, daysPastDue: daysBetween(charge.due_date, todayIso) }))
     .filter((charge) => charge.daysPastDue >= 30);
 
   if (candidates.length === 0) {
@@ -226,9 +220,7 @@ export async function sendRentDueReminders(supabase: SupabaseClient): Promise<st
     return summarizeNotificationResults("Reminders", []);
   }
 
-  const targetDate = new Date();
-  targetDate.setUTCDate(targetDate.getUTCDate() + 3);
-  const targetDueDateIso = targetDate.toISOString().slice(0, 10);
+  const targetDueDateIso = addDays(todayDenver(), 3);
 
   const { data: charges, error: chargesError } = await supabase
     .from("rent_charges")

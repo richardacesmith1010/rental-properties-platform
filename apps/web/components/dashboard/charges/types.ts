@@ -27,6 +27,7 @@ export interface AutopayEnrollmentView {
 
 export interface ChargesSectionProps {
   charges: Charge[];
+  todayIso: string;
   onPayCharge: (formData: FormData) => Promise<void>;
   onPayWithACH?: (formData: FormData) => Promise<void>;
   onDeletePendingCharge?: StatefulAction;

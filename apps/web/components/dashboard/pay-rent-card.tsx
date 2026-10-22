@@ -1,5 +1,7 @@
 "use client";
 
+import { daysBetween, todayDenver } from "@/lib/denver-calendar";
+
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { AlertTriangle, CheckCircle2, Clock3 } from "lucide-react";
@@ -37,6 +39,7 @@ export interface AutopayEnrollmentView {
 
 interface PayRentCardProps {
   charges: TenantCharge[];
+  todayIso: string;
   onPayCharge: StatefulAction;
   onPayWithACH?: StatefulAction;
   onRequestManualPaymentConfirmation: StatefulAction;
@@ -61,12 +64,8 @@ const unavailableAutopayAction: StatefulAction = async () => ({
   error: "Autopay is unavailable right now."
 });
 
-function getRelativeDueText(dueDate: string) {
-  const today = new Date();
-  const currentDay = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
-  const due = new Date(`${dueDate}T00:00:00.000Z`);
-  const dueDay = Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate());
-  const diffDays = Math.ceil((dueDay - currentDay) / 86400000);
+function getRelativeDueText(dueDate: string, todayIso: string) {
+  const diffDays = daysBetween(todayIso, dueDate);
 
   if (diffDays < 0) {
     return `${Math.abs(diffDays)} day${Math.abs(diffDays) === 1 ? "" : "s"} ago`;
@@ -84,6 +83,7 @@ function formatAutopayCardLabel(enrollment: AutopayEnrollmentView) {
 
 export function PayRentCard({
   charges,
+  todayIso,
   onPayCharge,
   onPayWithACH,
   onRequestManualPaymentConfirmation,
@@ -107,11 +107,10 @@ export function PayRentCard({
     onSetupAutopay ?? unavailableAutopayAction,
     null
   );
-  const today = new Date();
-  const openCharges = charges.filter((item) => isRentOpenForTenant(item.dueDate, today));
-  const futureCharge = charges.filter((item) => !isRentOpenForTenant(item.dueDate, today))
+  const openCharges = charges.filter((item) => isRentOpenForTenant(item.dueDate, todayIso));
+  const futureCharge = charges.filter((item) => !isRentOpenForTenant(item.dueDate, todayIso))
     .sort((left, right) => left.dueDate.localeCompare(right.dueDate))[0];
-  const orderedCharges = sortTenantChargesByUrgency(openCharges, today);
+  const orderedCharges = sortTenantChargesByUrgency(openCharges, todayIso);
   const charge = orderedCharges[0];
   const emptyTitle = futureCharge || payState === "not_posted" ? "Next rent"
     : payState === "paid" ? "Rent paid" : "No payments due right now";
@@ -170,7 +169,7 @@ export function PayRentCard({
     );
   }
 
-  const urgency = getChargeUrgency(charge, today);
+  const urgency = getChargeUrgency(charge, todayIso);
   const additionalCharges = openCharges.filter((item) => item.id !== charge.id);
   const isLate = charge.status === "late" || urgency.level === "overdue";
   const Icon = isLate ? AlertTriangle : Clock3;
@@ -235,8 +234,8 @@ export function PayRentCard({
               <div className="space-y-2 text-center sm:text-left">
                 <p className="text-base font-medium tabular-nums text-[var(--ink)] sm:text-lg">
                   {isLate
-                    ? `Your rent of ${formatCurrency(charge.amountCents)} was due ${getRelativeDueText(charge.dueDate)}.`
-                    : `Due ${formatDate(charge.dueDate)} (${getRelativeDueText(charge.dueDate)})`}
+                    ? `Your rent of ${formatCurrency(charge.amountCents)} was due ${getRelativeDueText(charge.dueDate, todayIso)}.`
+                    : `Due ${formatDate(charge.dueDate)} (${getRelativeDueText(charge.dueDate, todayIso)})`}
                 </p>
                 <p className="text-sm text-muted-foreground sm:text-base">
                   <span className="block sm:inline">{charge.propertyName}</span>
@@ -408,7 +407,7 @@ export function PayRentCard({
   );
 }
 
-export function sortTenantChargesByUrgency(charges: TenantCharge[], today = new Date()) {
+export function sortTenantChargesByUrgency(charges: TenantCharge[], today: Date | string = todayDenver()) {
   return [...charges].sort((left, right) => {
     const leftUrgency = getChargeUrgency(left, today);
     const rightUrgency = getChargeUrgency(right, today);

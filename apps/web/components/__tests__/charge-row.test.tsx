@@ -1,3 +1,4 @@
+import { todayDenver } from "@/lib/denver-calendar";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ChargeRow, type ChargeRowData } from "@/components/dashboard/charge-row";
@@ -22,7 +23,7 @@ const charge: ChargeRowData = {
 
 function renderCharge(isTenantView: boolean, row: ChargeRowData = charge) {
   return render(
-    <ChargeRow
+    <ChargeRow todayIso={todayDenver()}
       charge={row}
       last
       batchActionsEnabled={false}
@@ -77,7 +78,7 @@ describe("ChargeRow", () => {
     const reminder = vi.fn();
     const message = vi.fn();
     render(
-      <ChargeRow
+      <ChargeRow todayIso={todayDenver()}
         charge={charge}
         last
         batchActionsEnabled={false}

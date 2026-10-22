@@ -1,3 +1,4 @@
+import { todayDenver } from "@/lib/denver-calendar";
 import { recordDepositReturn, clearDepositReturn } from "@/app/actions/deposits";
 import { addPartner, setExpensePaidBy } from "@/app/actions/partners";
 import { billTenantForExpense } from "@/app/actions/charge-lines";
@@ -167,6 +168,7 @@ export default async function OwnerPage(props: OwnerPageProps) {
         property={ownerPage.initialPropertyId}
       >
       <Dashboard
+      todayIso={todayDenver()}
         data={dashboard}
         ownerYearRent={ownerPage.ownerYearRent}
         ownerWalletHome={ownerPage.ownerWalletHome}

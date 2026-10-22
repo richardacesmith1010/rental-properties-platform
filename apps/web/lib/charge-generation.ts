@@ -1,3 +1,4 @@
+import { addDays, denverDateOf, denverMonth, todayDenver } from "@/lib/denver-calendar";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -32,14 +33,6 @@ type LateLeaseRow = {
   late_fee_cents: number | null; lease_status: LeaseStatus; collects_outside_domus: boolean;
 };
 
-function startOfUtcDay(value: Date) {
-  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
-}
-
-function toUtcDateIso(value: string) {
-  return startOfUtcDay(new Date(value)).toISOString().slice(0, 10);
-}
-
 function monthStartFromIso(value: string) {
   const parsed = new Date(`${value}T00:00:00.000Z`);
   return new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), 1));
@@ -62,13 +55,14 @@ export function isLeaseActiveForChargeMonth(lease: LeaseRow, dueDateIso: string)
 }
 
 function isDueDateWithinLeaseWindow(lease: LeaseRow, dueDateIso: string) {
-  const leaseCreatedIso = toUtcDateIso(lease.created_at);
+  const leaseCreatedIso = denverDateOf(lease.created_at);
   return dueDateIso >= leaseCreatedIso && dueDateIso >= lease.start_date && dueDateIso <= lease.end_date;
 }
 
-export function getCandidateMonths(baseDate = new Date()) {
-  const baseYear = baseDate.getUTCFullYear();
-  const baseMonth = baseDate.getUTCMonth();
+export function getCandidateMonths(baseDate: Date | string = todayDenver()) {
+  const month = typeof baseDate === "string" ? baseDate.slice(0, 7) : denverMonth(baseDate);
+  const [baseYear, calendarMonth] = month.split("-").map(Number);
+  const baseMonth = calendarMonth - 1;
   return [
     { year: baseYear, month: baseMonth },
     { year: baseMonth === 11 ? baseYear + 1 : baseYear, month: (baseMonth + 1) % 12 }
@@ -88,10 +82,9 @@ function nextDueDateOnOrAfterToday(dueDayOfMonth: number, todayIso: string) {
   return todayIso;
 }
 export function buildDueDatesByLeaseId(leases: LeaseRow[], todayIso: string) {
-  const today = new Date(`${todayIso}T00:00:00.000Z`);
   const dueDatesByLeaseId = new Map<string, string[]>();
   for (const lease of leases) {
-    const dueDates = getCandidateMonths(today)
+    const dueDates = getCandidateMonths(todayIso)
       .map((candidate) => new Date(Date.UTC(candidate.year, candidate.month, lease.due_day_of_month)))
       .map((date) => date.toISOString().slice(0, 10))
       .filter(
@@ -119,32 +112,32 @@ export function buildDueDatesByLeaseId(leases: LeaseRow[], todayIso: string) {
   }
   return dueDatesByLeaseId;
 }
-export function isPastGraceWindow(dueDateIso: string, gracePeriodDays: number, today: Date) {
-  const dueDate = new Date(`${dueDateIso}T00:00:00.000Z`);
-  dueDate.setUTCDate(dueDate.getUTCDate() + gracePeriodDays);
-  return startOfUtcDay(today).getTime() > dueDate.getTime();
+export function isPastGraceWindow(dueDateIso: string, gracePeriodDays: number, today: string | Date) {
+  const todayIso = typeof today === "string" ? today : todayDenver(today);
+  return todayIso > addDays(dueDateIso, gracePeriodDays);
 }
 
-async function updateLeaseStatuses(supabase: SupabaseClient, propertyIds: string[]) {
+export async function updateLeaseStatuses(supabase: SupabaseClient, propertyIds: string[]) {
   if (propertyIds.length === 0) {
     return;
   }
 
-  const today = startOfUtcDay(new Date());
-  const thirtyDaysFromNow = new Date(today);
-  thirtyDaysFromNow.setUTCDate(thirtyDaysFromNow.getUTCDate() + 30);
+  const todayIso = todayDenver();
+  const thirtyDaysFromNowIso = addDays(todayIso, 30);
 
-  const { data: propertyUnits } = await supabase.from("units").select("id").in("property_id", propertyIds);
+  const { data: propertyUnits, error: unitsError } = await supabase.from("units").select("id").in("property_id", propertyIds);
+  if (unitsError) throw unitsError;
   const unitIds = (propertyUnits ?? []).map((unit) => unit.id);
   if (unitIds.length === 0) {
     return;
   }
 
-  const { data: activeLeases } = await supabase
+  const { data: activeLeases, error: leasesError } = await supabase
     .from("leases")
     .select("id, end_date, lease_status, active")
     .in("unit_id", unitIds)
     .eq("active", true);
+  if (leasesError) throw leasesError;
 
   const expiringSoonLeaseIds: string[] = [];
   const expiredLeaseIds: string[] = [];
@@ -154,13 +147,12 @@ async function updateLeaseStatuses(supabase: SupabaseClient, propertyIds: string
       continue;
     }
 
-    const endDate = new Date(`${lease.end_date}T00:00:00.000Z`);
-    if (endDate.getTime() < today.getTime()) {
+    if (lease.end_date < todayIso) {
       expiredLeaseIds.push(lease.id);
       continue;
     }
 
-    if (status === "active" && endDate.getTime() <= thirtyDaysFromNow.getTime()) {
+    if (status === "active" && lease.end_date <= thirtyDaysFromNowIso) {
       expiringSoonLeaseIds.push(lease.id);
     }
   }
@@ -191,7 +183,7 @@ async function updateLeaseStatuses(supabase: SupabaseClient, propertyIds: string
 export async function applyLateFeesToOverdueCharges(
   supabase: SupabaseClient,
   leaseIds: string[],
-  todayIso = new Date().toISOString().slice(0, 10)
+  todayIso = todayDenver()
 ): Promise<string> {
   if (leaseIds.length === 0) {
     return summarizeNotificationResults("Late notices", []);
@@ -238,7 +230,6 @@ export async function applyLateFeesToOverdueCharges(
   if (unitError) throw unitError;
   const latePropertyIdByUnitId = new Map((units ?? []).map((unit) => [unit.id, unit.property_id]));
   const clientFlags = await getClientHomeFlags(supabase, [...latePropertyIdByUnitId.values()]);
-  const today = new Date();
   const lateStatusChargeRows = candidateRows.filter((charge) => {
     const lease = leaseById.get(charge.lease_id);
     const propertyId = lease ? latePropertyIdByUnitId.get(lease.unit_id) : null;
@@ -247,14 +238,14 @@ export async function applyLateFeesToOverdueCharges(
     })) {
       return false;
     }
-    return isPastGraceWindow(charge.due_date, lease.grace_period_days ?? 5, today);
+    return isPastGraceWindow(charge.due_date, lease.grace_period_days ?? 5, todayIso);
   });
   const lateFeeChargeRows = candidateRows.filter((charge) => {
     const lease = leaseById.get(charge.lease_id);
     if (!lease || isCollectedOutsideDomus(lease)) {
       return false;
     }
-    return isPastGraceWindow(charge.due_date, lease.grace_period_days ?? 5, today);
+    return isPastGraceWindow(charge.due_date, lease.grace_period_days ?? 5, todayIso);
   });
   if (lateStatusChargeRows.length === 0 && lateFeeChargeRows.length === 0) {
     return summarizeNotificationResults("Late notices", []);
@@ -407,7 +398,7 @@ export async function generateMonthlyChargesForPropertyIdsWithClient(
   supabase: SupabaseClient,
   propertyIds: string[]
 ): Promise<string> {
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayIso = todayDenver();
   if (propertyIds.length === 0) {
     return "No properties found for your account.";
   }

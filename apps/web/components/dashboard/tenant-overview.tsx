@@ -20,6 +20,7 @@ function buildSectionHref(section: TenantOverviewSection): string {
 
 interface TenantOverviewProps {
   userName: string;
+  todayIso: string;
   charges: TenantCharge[];
   nextCharge: { amountCents: number; dueDate: string } | null;
   lease: {
@@ -46,6 +47,7 @@ interface TenantOverviewProps {
 
 export function TenantOverview({
   userName: _userName,
+  todayIso,
   charges,
   nextCharge: _nextCharge,
   lease,
@@ -66,6 +68,7 @@ export function TenantOverview({
   return (
     <div className="space-y-6">
       <TenantRentCard
+        todayIso={todayIso}
         charges={charges}
         onPayCharge={onPayCharge}
         onPayWithACH={onPayWithACH}

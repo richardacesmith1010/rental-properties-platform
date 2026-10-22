@@ -1,3 +1,4 @@
+import { todayDenver } from "@/lib/denver-calendar";
 import { recordDepositReturn, clearDepositReturn } from "@/app/actions/deposits";
 import { getClientsOverview } from "@/lib/client-overview";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -251,6 +252,7 @@ export default async function ManagerPage(props: ManagerPageProps) {
 
   return (
     <Dashboard
+      todayIso={todayDenver()}
       data={{ ...dashboardWithLines, charges: chargesWithReminderPermission }}
       clients={clients}
       onCreateClientAccount={createClientAccount}

@@ -57,6 +57,7 @@ export function renderSectionCases({
       return renderSection(
         "Charges",
         <ChargesSection
+          todayIso={props.todayIso}
           charges={props.data.charges}
           onPayCharge={props.onPayCharge}
           onDeletePendingCharge={props.onDeletePendingCharge}

@@ -1,3 +1,4 @@
+import { addDays, todayDenver } from "@/lib/denver-calendar";
 import { createClient } from "@/lib/supabase/server";
 import { checkPartnerAccess, loadPartners, type Partner } from "@/lib/partners";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
@@ -72,10 +73,10 @@ export async function countMyDueTasks(userId: string, today: Date): Promise<numb
   }
   const partnerIds = (partners.data ?? []).map((partner) => partner.id);
   if (!partnerIds.length) return 0;
-  const limit = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + 7));
+  const limit = addDays(todayDenver(today), 7);
   const tasks = await client.from("account_tasks")
     .select("id", { count: "exact", head: true }).in("owner_partner_id", partnerIds)
-    .eq("active", true).lte("next_due_on", day(limit));
+    .eq("active", true).lte("next_due_on", limit);
   if (tasks.error) {
     if (isMissingSchemaError(tasks.error)) return 0;
     throw tasks.error;

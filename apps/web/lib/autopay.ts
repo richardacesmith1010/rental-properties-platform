@@ -1,3 +1,4 @@
+import { todayDenver } from "@/lib/denver-calendar";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { generateMonthlyChargesForPropertyIdsWithClient } from "@/lib/charge-generation";
@@ -80,7 +81,7 @@ export async function processAutopayCharges(
     return { processed: 0, succeeded: 0, failed: 0, skipped: 0 };
   }
 
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayIso = todayDenver();
   const userIds = Array.from(new Set(activeEnrollments.map((row) => row.tenant_profile_id)));
 
   const [chargesResult, profilesResult] = await Promise.all([

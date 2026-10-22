@@ -1,3 +1,4 @@
+import { daysBetween, todayDenver } from "@/lib/denver-calendar";
 import { createClient } from "@/lib/supabase/server";
 
 export interface TenantLeaseDetails {
@@ -17,11 +18,7 @@ export interface TenantLeaseDetails {
 }
 
 function getDaysRemaining(endDate: string) {
-  const today = new Date();
-  const todayStart = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
-  const end = new Date(`${endDate}T00:00:00.000Z`);
-  const endStart = Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate());
-  return Math.max(0, Math.ceil((endStart - todayStart) / (1000 * 60 * 60 * 24)));
+  return Math.max(0, daysBetween(todayDenver(), endDate));
 }
 
 export async function getTenantLeaseDetails(userId: string): Promise<TenantLeaseDetails[]> {

@@ -1,3 +1,4 @@
+import { daysBetween, todayDenver } from "@/lib/denver-calendar";
 import type { DashboardCharge } from "@/lib/dashboard";
 import type { MaintenanceTicket } from "@/lib/maintenance";
 import type { ManagerPaymentDTO } from "@/lib/manager-payments";
@@ -43,17 +44,12 @@ const severityRank: Record<ActionItemSeverity, number> = {
   info: 2
 };
 
-function startOfUtcDay(value: Date) {
-  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
-}
-
 function parseDateOnly(value: string) {
   return new Date(`${value}T00:00:00.000Z`);
 }
 
 function diffUtcDays(target: Date, base: Date) {
-  const msPerDay = 24 * 60 * 60 * 1000;
-  return Math.round((startOfUtcDay(target).getTime() - startOfUtcDay(base).getTime()) / msPerDay);
+  return daysBetween(base.toISOString().slice(0, 10), target.toISOString().slice(0, 10));
 }
 
 function possessive(name: string) {
@@ -85,8 +81,9 @@ export function getNextDueDateForLease(lease: LeaseListItem, today: Date) {
   const leaseStart = parseDateOnly(lease.startDate);
   const leaseEnd = parseDateOnly(lease.endDate);
   const monthCandidates = [0, 1].map((offset) => {
-    const year = today.getUTCFullYear() + Math.floor((today.getUTCMonth() + offset) / 12);
-    const month = (today.getUTCMonth() + offset) % 12;
+    const [baseYear, baseMonth] = todayDenver(today).split("-").map(Number);
+    const year = baseYear + Math.floor((baseMonth - 1 + offset) / 12);
+    const month = (baseMonth - 1 + offset) % 12;
     const day = Math.max(1, Math.min(28, lease.dueDayOfMonth));
     return new Date(Date.UTC(year, month, day));
   });
@@ -95,7 +92,7 @@ export function getNextDueDateForLease(lease: LeaseListItem, today: Date) {
     if (candidate < leaseStart || candidate > leaseEnd) {
       continue;
     }
-    if (candidate >= startOfUtcDay(today)) {
+    if (candidate >= parseDateOnly(todayDenver(today))) {
       return candidate;
     }
   }
@@ -106,7 +103,7 @@ export function getNextDueDateForLease(lease: LeaseListItem, today: Date) {
 export function getNextRentCollectionLabel(
   params: Pick<ActionItemInput, "charges" | "leases"> & { today?: Date }
 ) {
-  const today = params.today ? startOfUtcDay(params.today) : startOfUtcDay(new Date());
+  const today = parseDateOnly(todayDenver(params.today));
   const nextPendingCharge = params.charges
     .filter((charge) => charge.category === "rent" && charge.status === "pending")
     .map((charge) => ({
@@ -124,7 +121,7 @@ export function getNextRentCollectionLabel(
   }
 
   const nextLeaseDueDate = params.leases
-    .map((lease) => getNextDueDateForLease(lease, today))
+    .map((lease) => getNextDueDateForLease(lease, params.today ?? new Date()))
     .filter((value): value is Date => Boolean(value))
     .sort((left, right) => left.getTime() - right.getTime())[0];
 
@@ -148,7 +145,7 @@ export function computeActionItems({
   today = new Date()
 }: ActionItemInput): ActionItem[] {
   const items: ActionItem[] = [];
-  const todayStart = startOfUtcDay(today);
+  const todayStart = parseDateOnly(todayDenver(today));
 
   for (const charge of charges) {
     if (charge.category !== "rent") {

@@ -1,5 +1,5 @@
+import { todayDenver } from "@/lib/denver-calendar";
 import "server-only";
-import { DISPLAY_TIME_ZONE } from "@/lib/format";
 
 import { getManagedHomeIds, isActiveClientManager } from "@/lib/client-accounts";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -32,10 +32,6 @@ type UnitRow = { id: string; property_id: string };
 type LeaseRow = { id: string; unit_id: string; active: boolean; due_day_of_month?: number };
 type RentRow = { lease_id: string; due_date: string; status: string };
 
-function todayInZone(now: Date, zone = DISPLAY_TIME_ZONE) {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit" })
-    .format(now);
-}
 function dueLabel(date: string) {
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
     .format(new Date(`${date}T12:00:00Z`));
@@ -43,7 +39,7 @@ function dueLabel(date: string) {
 
 export function getHomeStatus(leases: LeaseRow[], rents: RentRow[], now = new Date()): Pick<ClientHome, "status" | "dueLabel" | "dueDate"> {
   if (!leases.length) return { status: "no_tenant" };
-  const today = todayInZone(now);
+  const today = todayDenver(now);
   const currentMonth = today.slice(0, 7);
   const leaseIds = new Set(leases.map((lease) => lease.id));
   const relevant = rents.filter((rent) => leaseIds.has(rent.lease_id));

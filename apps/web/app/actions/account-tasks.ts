@@ -1,5 +1,7 @@
 "use server";
 
+import { todayDenver } from "@/lib/denver-calendar";
+
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserRole } from "@/lib/auth";
@@ -44,7 +46,7 @@ export async function addTask(input: Omit<Input, "nextDueOn"> & { nextDueOn?: st
   const access = await allowed(input.accountId);
   if (!access) return denied();
   const normalized = { ...input, nextDueOn: input.nextDueOn === undefined
-    ? input.frequency === "as_needed" ? null : new Date().toISOString().slice(0, 10) : input.nextDueOn };
+    ? input.frequency === "as_needed" ? null : todayDenver() : input.nextDueOn };
   const parsed = parse(createTaskSchema, normalized);
   if (invalid(parsed)) return { ok: false, error: parsed.error };
   const ownerError = await ownerValid(access.client, input.accountId, parsed.ownerPartnerId);
@@ -90,7 +92,7 @@ export async function markTaskDone(taskId: string): Promise<Result> {
   if (!access) return denied();
   const parsed = parse(markTaskDoneSchema, { accountId: task.account_id, taskId });
   if (invalid(parsed)) return { ok: false, error: parsed.error };
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayDenver();
   const next = nextDueAfter(task.frequency, task.next_due_on, today);
   const { data, error } = await access.client.from("account_tasks")
     .update({ last_done_on: today, next_due_on: next })
@@ -108,7 +110,7 @@ export async function addCommonTasks(accountId: string): Promise<Result> {
     .select("title").eq("account_id", accountId);
   if (readError) return failure(readError);
   const titles = new Set((existing ?? []).map((row) => row.title.trim().toLocaleLowerCase()));
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayDenver();
   const rows = COMMON_TASKS.filter((task) => !titles.has(task.title.toLocaleLowerCase()))
     .map((task) => ({ account_id: accountId, title: task.title, frequency: task.frequency,
       next_due_on: commonDue(task.frequency, today), owner_partner_id: null, created_by_profile_id: access.userId }));

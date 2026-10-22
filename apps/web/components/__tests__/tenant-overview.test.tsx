@@ -1,3 +1,6 @@
+import { todayDenver } from "@/lib/denver-calendar";
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
@@ -32,7 +35,7 @@ describe("TenantOverview outside-Domus status", () => {
 
   it.each([[0, "No open repairs."], [1, "1 open repair."], [3, "3 open repairs."]])(
     "shows repair wording for %i open tickets", (openTicketCount, copy) => {
-      render(<TenantOverview userName="Resident" charges={[]} nextCharge={null} lease={null}
+      render(<TenantOverview todayIso={todayDenver()} userName="Resident" charges={[]} nextCharge={null} lease={null}
         openTicketCount={openTicketCount} payState="no_lease" onPayCharge={async () => null}
         onRequestManualPaymentConfirmation={async () => null} />);
       expect(screen.getByText("Report a repair")).toBeInTheDocument();
@@ -43,7 +46,7 @@ describe("TenantOverview outside-Domus status", () => {
 
   it("explains the missing lease without showing zero rent", () => {
     render(
-      <TenantOverview
+      <TenantOverview todayIso={todayDenver()}
         userName="Resident"
         charges={[]}
         nextCharge={null}
@@ -67,7 +70,7 @@ describe("TenantOverview outside-Domus status", () => {
       amountCents: 125000, status: "pending" as const
     };
     const { container, rerender } = render(
-      <TenantOverview
+      <TenantOverview todayIso={todayDenver()}
         userName="Resident" charges={[charge]} nextCharge={null} lease={null}
         openTicketCount={0} payState="can_pay" onPayCharge={onPayCharge}
         onPayWithACH={async () => null} onRequestManualPaymentConfirmation={async () => null}
@@ -86,7 +89,7 @@ describe("TenantOverview outside-Domus status", () => {
     });
     paymentStatus.pending = true;
     rerender(
-      <TenantOverview
+      <TenantOverview todayIso={todayDenver()}
         userName="Resident" charges={[charge]} nextCharge={null} lease={null}
         openTicketCount={0} payState="can_pay" onPayCharge={onPayCharge}
         onPayWithACH={async () => null} onRequestManualPaymentConfirmation={async () => null}
@@ -113,7 +116,7 @@ describe("TenantOverview outside-Domus status", () => {
     };
 
     render(
-      <TenantOverview
+      <TenantOverview todayIso={todayDenver()}
         userName="Resident"
         charges={[charge]}
         nextCharge={{ amountCents: charge.amountCents, dueDate: charge.dueDate }}

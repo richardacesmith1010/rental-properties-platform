@@ -1,5 +1,8 @@
 "use server";
 
+import { addDays, denverMonth, todayDenver } from "@/lib/denver-calendar";
+import { shiftMonth } from "@/lib/statement-month";
+
 import { renderToBuffer } from "@react-pdf/renderer";
 import { revalidatePath } from "next/cache";
 import { sendInvoiceEmail } from "@/lib/invoice-email";
@@ -218,7 +221,7 @@ export async function recordManagerPayment(
     description,
     amount_cents: Math.round(amountDollars * 100),
     status: "pending",
-    payment_date: new Date().toISOString().slice(0, 10),
+    payment_date: todayDenver(),
     invoice_number: invoiceNumber,
     notes: notes?.trim() || null,
     created_by: user.id
@@ -339,9 +342,10 @@ export async function generateMonthlyManagerPayments(
   }
 
   const admin = createAdminClient();
-  const today = new Date();
-  const monthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1)).toISOString().slice(0, 10);
-  const monthEnd = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 0)).toISOString().slice(0, 10);
+  const month = denverMonth();
+  const monthStart = `${month}-01`;
+  const today = new Date(`${monthStart}T12:00:00Z`);
+  const monthEnd = addDays(`${shiftMonth(month, 1)}-01`, -1);
 
   const propertyIds = parsed.data.propertyId
     ? [parsed.data.propertyId]
@@ -364,14 +368,15 @@ export async function generateMonthlyManagerPayments(
   }
 
   const configIds = (configs ?? []).map((config) => config.id);
-  const { data: existingPayments } = configIds.length
+  const { data: existingPayments, error: existingPaymentsError } = configIds.length
     ? await admin
         .from("manager_payments")
         .select("config_id")
         .in("config_id", configIds)
         .gte("payment_date", monthStart)
         .lte("payment_date", monthEnd)
-    : { data: [] as Array<{ config_id: string | null }> };
+    : { data: [] as Array<{ config_id: string | null }>, error: null };
+  if (existingPaymentsError) return { success: false, error: "Unable to load recurring manager payments." };
   const existingConfigIds = new Set((existingPayments ?? []).map((payment) => payment.config_id).filter(Boolean));
 
   const rowsToInsert = (configs ?? [])

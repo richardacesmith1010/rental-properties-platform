@@ -333,6 +333,52 @@ describe("delinquency notifications", () => {
     expect(createNotificationWithDeliveryMock).toHaveBeenCalledTimes(3);
   });
 
+  it("D7 targets November 3 at E and November 4 at M", async () => {
+    const charges = ["03", "04"].map((day) => ({ id: `charge-${day}`, lease_id: "lease-1",
+      due_date: `2026-11-${day}`, amount_cents: 150000, status: "pending", category: "rent", deleted_at: null }));
+    const supabase = createSupabaseMock(buildDelinquencyConfig({ charges }));
+    vi.setSystemTime(new Date("2026-11-01T04:30:00Z"));
+    expect(await sendRentDueReminders(supabase)).toEqual("Reminders: 1 sent, 0 emailed, 0 skipped.");
+    expect(createNotificationWithDeliveryMock.mock.calls.map((call) => call[0].entityId)).toEqual(["charge-03"]);
+    vi.setSystemTime(new Date("2026-11-01T12:00:00Z"));
+    expect(await sendRentDueReminders(supabase)).toEqual("Reminders: 1 sent, 0 emailed, 0 skipped.");
+    expect(createNotificationWithDeliveryMock.mock.calls.map((call) => call[0].entityId))
+      .toEqual(["charge-03", "charge-04"]);
+  });
+
+  it("D4s dedupes overdue and reminder emails across E, S, and rerun", async () => {
+    const sent = new Set<string>();
+    createNotificationWithDeliveryMock.mockImplementation(async (input: {
+      entityId: string; emailKey?: string; type: string
+    }) => {
+      const key = `${input.entityId}:${input.emailKey ?? input.type}`;
+      if (sent.has(key)) return { inApp: { status: "skipped" }, email: { status: "skipped" } };
+      sent.add(key);
+      return { inApp: { status: "sent" }, email: { status: "sent" } };
+    });
+    const charges = [
+      { id: "october", due_date: "2026-10-01", status: "late" },
+      { id: "nov03", due_date: "2026-11-03", status: "pending" },
+      { id: "nov04", due_date: "2026-11-04", status: "pending" }
+    ].map((charge) => ({ ...charge, lease_id: "lease-1", amount_cents: 150000,
+      category: "rent", deleted_at: null }));
+    const supabase = createSupabaseMock(buildDelinquencyConfig({ charges }));
+    for (const instant of ["2026-11-01T04:30:00Z", "2026-11-01T08:00:00Z", "2026-11-01T08:00:00Z"]) {
+      vi.setSystemTime(new Date(instant));
+      await sendDelinquencyEscalations(supabase);
+      await sendRentDueReminders(supabase);
+    }
+    expect(createNotificationWithDeliveryMock.mock.calls.map((call) =>
+      `${call[0].entityId}:${call[0].emailKey ?? call[0].type}`)).toEqual([
+      "october:overdue-30", "nov03:rent_due_reminder",
+      "october:overdue-30", "nov04:rent_due_reminder",
+      "october:overdue-30", "nov04:rent_due_reminder"
+    ]);
+    expect([...sent]).toEqual([
+      "october:overdue-30", "nov03:rent_due_reminder", "nov04:rent_due_reminder"
+    ]);
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("DOMUS_NOTIFICATIONS_ENABLED", "true");

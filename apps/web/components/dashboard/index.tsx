@@ -230,6 +230,7 @@ export function Dashboard(props: DashboardProps) {
     <div className="min-h-full">
       <SectionRenderer
         {...sectionRendererProps}
+        todayIso={props.todayIso}
         safePortfolio={activeSection === "charges" ? filteredPortfolio : safePortfolio}
         ownerWalletHome={props.ownerWalletHome}
         onAddHome={openPropertyWizard}

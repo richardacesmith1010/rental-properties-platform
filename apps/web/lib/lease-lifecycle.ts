@@ -1,3 +1,4 @@
+import { addDays, todayDenver } from "@/lib/denver-calendar";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatUnitLabel } from "@/lib/format";
 import {
@@ -13,7 +14,7 @@ import { summarizeNotificationResults } from "@/lib/idempotency";
 import { notificationsEnabled } from "@/lib/notifications-switch";
 
 export async function detectExpiredLeases(supabase: SupabaseClient): Promise<string> {
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayIso = todayDenver();
   const { data: leases, error: leaseError } = await supabase
     .from("leases")
     .select("id, unit_id, tenant_profile_id, end_date, lease_status, active")
@@ -145,12 +146,9 @@ export async function sendLeaseExpirationWarnings(supabase: SupabaseClient): Pro
     return summarizeNotificationResults("Lease notices", []);
   }
 
-  const today = new Date();
-  const todayIso = today.toISOString().slice(0, 10);
-  const warningDate = new Date(today);
-  warningDate.setUTCDate(warningDate.getUTCDate() + 30);
-  const warningIso = warningDate.toISOString().slice(0, 10);
-  const recentThreshold = new Date(today);
+  const todayIso = todayDenver();
+  const warningIso = addDays(todayIso, 30);
+  const recentThreshold = new Date();
   recentThreshold.setUTCDate(recentThreshold.getUTCDate() - 30);
 
   const { data: leases, error: leaseError } = await supabase

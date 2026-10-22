@@ -79,6 +79,7 @@ export type DashboardCapabilities = FeatureCapabilitiesDTO & {
 };
 
 export interface DashboardProps {
+  todayIso: string;
   data: DashboardData;
   ownerYearRent?: OwnerYearRentResult;
   ownerWalletHome?: OwnerWalletHomeResult;

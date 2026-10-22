@@ -1,5 +1,7 @@
 "use server";
 
+import { todayDenver } from "@/lib/denver-calendar";
+
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAudit } from "@/lib/audit";
@@ -297,12 +299,7 @@ export async function sendBatchPaymentReminder(
   }
 
   if (notificationsEnabled()) {
-    const denverParts = new Intl.DateTimeFormat("en-US", {
-      timeZone: "America/Denver", year: "numeric", month: "2-digit", day: "2-digit"
-    }).formatToParts(new Date());
-    const denverDate = ["year", "month", "day"]
-      .map((part) => denverParts.find((value) => value.type === part)?.value ?? "")
-      .join("-");
+    const denverDate = todayDenver();
     await Promise.all(notifications.map(async (notification) => {
       const tenantProfile = tenantProfileById.get(notification.recipient_profile_id);
       await createNotificationWithDelivery({

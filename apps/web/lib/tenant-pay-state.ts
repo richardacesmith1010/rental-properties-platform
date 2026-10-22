@@ -1,3 +1,4 @@
+import { todayDenver } from "@/lib/denver-calendar";
 import { MIN_ONLINE_PAYMENT_CENTS } from "@/lib/payment-fees";
 import { isCollectedOutsideDomus } from "@/lib/lease-collection";
 import { isRentOpenForTenant } from "@/lib/rent-urgency";
@@ -28,15 +29,15 @@ export function getTenantPayState(input: TenantPayStateInput): TenantPayState {
 }
 
 export function getNextRentDueDate(dueDayOfMonth: number, today = new Date(), leaseStartDate?: string): string {
-  const year = today.getUTCFullYear();
-  const month = today.getUTCMonth();
+  const [year, calendarMonth] = todayDenver(today).split("-").map(Number);
+  const month = calendarMonth - 1;
   const daysInMonth = (candidateYear: number, candidateMonth: number) =>
     new Date(Date.UTC(candidateYear, candidateMonth + 1, 0)).getUTCDate();
   const buildCandidate = (candidateYear: number, candidateMonth: number) =>
     new Date(Date.UTC(candidateYear, candidateMonth, Math.min(dueDayOfMonth, daysInMonth(candidateYear, candidateMonth))));
 
   let candidate = buildCandidate(year, month);
-  if (candidate < new Date(Date.UTC(year, month, today.getUTCDate()))) {
+  if (candidate.toISOString().slice(0, 10) < todayDenver(today)) {
     candidate = buildCandidate(year, month + 1);
   }
 

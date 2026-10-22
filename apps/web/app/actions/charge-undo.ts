@@ -1,5 +1,7 @@
 "use server";
 
+import { todayDenver } from "@/lib/denver-calendar";
+
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -48,9 +50,8 @@ export async function undoManualPayment(chargeId: string): Promise<ActionState> 
   } catch {
     return { success: false, error: defaultError };
   }
-  const today = new Date();
   const restoreStatus = tracksLateRent({ ...lease, clientHome }) &&
-    isPastGraceWindow(charge.due_date, lease.grace_period_days ?? 5, today) ? "late" : "pending";
+    isPastGraceWindow(charge.due_date, lease.grace_period_days ?? 5, todayDenver()) ? "late" : "pending";
 
   const { data, error } = await admin.rpc("undo_manual_payment", {
     p_charge_id: parsed.data, p_actor_id: user.id, p_restore_status: restoreStatus

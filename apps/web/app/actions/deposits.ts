@@ -1,5 +1,7 @@
 "use server";
 
+import { todayDenver } from "@/lib/denver-calendar";
+
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canUserAdministerProperty } from "@/lib/property-access";
@@ -24,7 +26,7 @@ export async function recordDepositReturn(input: {
   const { user } = await requireAuth("owner", "manager");
   const parsed = createDepositReturnSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Enter a valid amount and date." };
-  if (parsed.data.returnedOn > new Date().toISOString().slice(0, 10)) {
+  if (parsed.data.returnedOn > todayDenver()) {
     return { ok: false, error: "The return date cannot be in the future." };
   }
   if (!(await authorizeLease(parsed.data.leaseId, user.id))) return { ok: false, error: "Access denied." };

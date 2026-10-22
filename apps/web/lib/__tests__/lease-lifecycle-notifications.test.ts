@@ -53,6 +53,25 @@ describe("lease lifecycle notification switch", () => {
     vi.useRealTimers();
   });
 
+  it("D9b queries warning dates using Denver boundaries", async () => {
+    vi.stubEnv("DOMUS_NOTIFICATIONS_ENABLED", "true");
+    const windows: Array<{ from: string; through: string }> = [];
+    const client = { from: () => ({ select: () => ({ eq: () => ({
+      gte: (_field: string, from: string) => ({ lte: async (_other: string, through: string) => {
+        windows.push({ from, through });
+        return { data: [], error: null };
+      } })
+    }) }) }) } as unknown as SupabaseClient;
+    vi.setSystemTime(new Date("2026-11-01T04:30:00Z"));
+    await sendLeaseExpirationWarnings(client);
+    vi.setSystemTime(new Date("2026-11-01T12:00:00Z"));
+    await sendLeaseExpirationWarnings(client);
+    expect(windows).toEqual([
+      { from: "2026-10-31", through: "2026-11-30" },
+      { from: "2026-11-01", through: "2026-12-01" }
+    ]);
+  });
+
   it("returns before querying for expiration warnings when notifications are off", async () => {
     vi.stubEnv("DOMUS_NOTIFICATIONS_ENABLED", "false");
     const supabase = { from: vi.fn() } as unknown as SupabaseClient;

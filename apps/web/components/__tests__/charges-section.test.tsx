@@ -1,3 +1,4 @@
+import { todayDenver } from "@/lib/denver-calendar";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ChargesSection } from "@/components/dashboard/charges-section";
@@ -58,7 +59,7 @@ describe("ChargesSection", () => {
   it("clears the prior manual-payment alert after a successful undo", async () => {
     manualState.current = { success: true, message: "Manual payment recorded." };
     try {
-      render(<ChargesSection charges={[{ id: "paid", propertyId: "home", dueDate: "2026-10-01",
+      render(<ChargesSection todayIso={todayDenver()} charges={[{ id: "paid", propertyId: "home", dueDate: "2026-10-01",
         amountCents: 100000, status: "paid", category: "rent" }]}
         onPayCharge={async () => {}} onRecordManualPayment={async () => ({ success: true })}
         isOwnerView showManualPayment />);
@@ -78,7 +79,7 @@ describe("ChargesSection", () => {
     const futureIso = new Date(today.getTime() + 31 * 86400000).toISOString().slice(0, 10);
     const base = { id: "open", propertyId: "home", dueDate: todayIso,
       amountCents: 120000, status: "pending" as const, category: "rent" as const };
-    render(<ChargesSection charges={[base, { ...base, id: "future", dueDate: futureIso }]}
+    render(<ChargesSection todayIso={todayDenver()} charges={[base, { ...base, id: "future", dueDate: futureIso }]}
       onPayCharge={async () => {}} isOwnerView />);
     expect(screen.getByRole("button", { name: "Due soon (1)" })).toBeInTheDocument();
     expect(document.getElementById("charge-open")).toBeInTheDocument();
@@ -89,7 +90,7 @@ describe("ChargesSection", () => {
     const charge = { id: "paid-1", propertyId: "home", dueDate: "2026-10-01",
       amountCents: 120000, status: "paid" as const, category: "rent" as const };
     const undo = vi.fn(async () => ({ success: true as const, message: "Payment undone. This rent is open again." }));
-    const view = render(<ChargesSection charges={[charge]} onPayCharge={async () => {}}
+    const view = render(<ChargesSection todayIso={todayDenver()} charges={[charge]} onPayCharge={async () => {}}
       onRecordManualPayment={undo} isOwnerView />);
     fireEvent.click(screen.getByRole("button", { name: "Paid" }));
     fireEvent.click(screen.getByRole("button", { name: "Open more payment actions" }));
@@ -97,7 +98,7 @@ describe("ChargesSection", () => {
     expect(screen.getByText("Undo this payment? The rent may show as unpaid again.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Keep it" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Keep it" }));
-    view.rerender(<ChargesSection charges={[charge]} onPayCharge={async () => {}}
+    view.rerender(<ChargesSection todayIso={todayDenver()} charges={[charge]} onPayCharge={async () => {}}
       onRecordManualPayment={undo} isTenantView />);
     expect(screen.queryByRole("button", { name: "Open more payment actions" })).not.toBeInTheDocument();
   });
@@ -107,7 +108,7 @@ describe("ChargesSection", () => {
     const twoDaysAgo = new Date(due.getTime() - 2 * 86400000).toISOString().slice(0, 10);
     const sixDaysAgo = new Date(due.getTime() - 6 * 86400000).toISOString().slice(0, 10);
     const base = { propertyId: "home", amountCents: 100000, category: "rent" as const };
-    render(<ChargesSection charges={[
+    render(<ChargesSection todayIso={todayDenver()} charges={[
       { ...base, id: "inside-grace", dueDate: twoDaysAgo, status: "pending" as const },
       { ...base, id: "past-grace", dueDate: sixDaysAgo, status: "late" as const }
     ]} onPayCharge={async () => {}} isOwnerView />);
@@ -124,7 +125,7 @@ describe("ChargesSection", () => {
       status: "late" as const, propertyName: "Client House", unitNumber: "1",
       tenantName: "Tenant", category: "rent" as const, collectsOutsideDomus: true
     };
-    render(<ChargesSection charges={[
+    render(<ChargesSection todayIso={todayDenver()} charges={[
       { ...base, clientHome: true }, { ...base, id: "owner-late", clientHome: false }
     ]} onPayCharge={async () => {}} isOwnerView />);
     expect(screen.getByRole("button", { name: "Late (1)" })).toBeInTheDocument();
@@ -155,14 +156,14 @@ describe("ChargesSection", () => {
   };
 
   it("shows the lease-aware empty state with an add-rent link", () => {
-    const { rerender } = render(<ChargesSection charges={[]} onPayCharge={async () => {}}
+    const { rerender } = render(<ChargesSection todayIso={todayDenver()} charges={[]} onPayCharge={async () => {}}
       isOwnerView availableLeases={[{ id: "lease-1", tenantLabel: "Maya", propertyLabel: "Home" }]}
       onGenerateChargesHref="/owner/generate" />);
     expect(screen.getByRole("heading", { name: "No rent yet" })).toBeInTheDocument();
     expect(screen.getByText("This month's rent shows up by tomorrow morning.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Add this month's rent now" }))
       .toHaveAttribute("href", "/owner/generate");
-    rerender(<ChargesSection charges={[]} onPayCharge={async () => {}} isOwnerView
+    rerender(<ChargesSection todayIso={todayDenver()} charges={[]} onPayCharge={async () => {}} isOwnerView
       onGenerateChargesHref="/owner/generate" />);
     expect(screen.getByText("Rent will appear here after you create a lease.")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Add this month's rent now" })).not.toBeInTheDocument();
@@ -172,15 +173,15 @@ describe("ChargesSection", () => {
     const leaseB = { id: "lease-b", tenantLabel: "Sam", propertyLabel: "Home B" };
     const oldRent = { id: "old-rent", leaseId: "lease-b", propertyId: "home-b",
       dueDate: "2025-01-01", amountCents: 100000, status: "paid" as const, category: "rent" as const };
-    const view = render(<ChargesSection charges={[oldRent]} onPayCharge={async () => {}}
+    const view = render(<ChargesSection todayIso={todayDenver()} charges={[oldRent]} onPayCharge={async () => {}}
       isOwnerView availableLeases={[leaseB]} onGenerateChargesHref="/owner/generate" />);
     expect(screen.getByRole("heading", { name: "No rent yet" })).toBeInTheDocument();
     expect(screen.getByText("This month's rent shows up by tomorrow morning.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Add this month's rent now" })).toBeInTheDocument();
-    view.rerender(<ChargesSection charges={[oldRent]} onPayCharge={async () => {}}
+    view.rerender(<ChargesSection todayIso={todayDenver()} charges={[oldRent]} onPayCharge={async () => {}}
       isOwnerView availableLeases={[]} onGenerateChargesHref="/owner/generate" />);
     expect(screen.getByText("No rent matches this filter right now.")).toBeInTheDocument();
-    view.rerender(<ChargesSection charges={[]} onPayCharge={async () => {}}
+    view.rerender(<ChargesSection todayIso={todayDenver()} charges={[]} onPayCharge={async () => {}}
       isOwnerView availableLeases={[]} onGenerateChargesHref="/owner/generate" />);
     expect(screen.getByText("Rent will appear here after you create a lease.")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Add this month's rent now" })).not.toBeInTheDocument();
@@ -189,12 +190,12 @@ describe("ChargesSection", () => {
   it("hides add-now when each active lease has this month's rent", () => {
     const month = new Date().toISOString().slice(0, 7);
     const lease = { id: "lease-1", tenantLabel: "Maya", propertyLabel: "Home" };
-    const { rerender } = render(<ChargesSection isOwnerView onPayCharge={async () => {}}
+    const { rerender } = render(<ChargesSection todayIso={todayDenver()} isOwnerView onPayCharge={async () => {}}
       availableLeases={[lease]} onGenerateChargesHref="/owner/generate"
       charges={[{ id: "rent-1", leaseId: "lease-1", propertyId: "home",
         dueDate: `${month}-20`, amountCents: 100000, status: "pending", category: "rent" }]} />);
     expect(screen.queryByRole("link", { name: "Add this month's rent now" })).not.toBeInTheDocument();
-    rerender(<ChargesSection isOwnerView onPayCharge={async () => {}}
+    rerender(<ChargesSection todayIso={todayDenver()} isOwnerView onPayCharge={async () => {}}
       availableLeases={[lease, { id: "lease-2", tenantLabel: "Ana", propertyLabel: "Home" }]}
       onGenerateChargesHref="/owner/generate"
       charges={[{ id: "rent-1", leaseId: "lease-1", propertyId: "home",
@@ -206,7 +207,7 @@ describe("ChargesSection", () => {
 
   it("shows the generate charges link when href is provided", () => {
     render(
-      <ChargesSection
+      <ChargesSection todayIso={todayDenver()}
         charges={[]}
         onPayCharge={async () => {}}
         onGenerateChargesHref="/owner/generate"
@@ -223,7 +224,7 @@ describe("ChargesSection", () => {
   });
 
   it("does not show the generate link when href is omitted", () => {
-    render(<ChargesSection charges={[]} onPayCharge={async () => {}} />);
+    render(<ChargesSection todayIso={todayDenver()} charges={[]} onPayCharge={async () => {}} />);
 
     expect(
       screen.queryByRole("link", { name: "Generate this month's rent" })
@@ -232,7 +233,7 @@ describe("ChargesSection", () => {
 
   it("shows batch controls when reminder actions are enabled", () => {
     render(
-      <ChargesSection
+      <ChargesSection todayIso={todayDenver()}
         charges={charges}
         onPayCharge={async () => {}}
         onSendBatchPaymentReminder={async () => ({ success: true, message: "Reminder sent." })}
@@ -248,7 +249,7 @@ describe("ChargesSection", () => {
 
   it("supports selecting all visible charges", () => {
     render(
-      <ChargesSection
+      <ChargesSection todayIso={todayDenver()}
         charges={charges}
         onPayCharge={async () => {}}
         onSendBatchPaymentReminder={async () => ({ success: true })}
@@ -262,20 +263,20 @@ describe("ChargesSection", () => {
   });
 
   it("adds an aria label to charge status badges", () => {
-    render(<ChargesSection charges={charges} onPayCharge={async () => {}} />);
+    render(<ChargesSection todayIso={todayDenver()} charges={charges} onPayCharge={async () => {}} />);
 
     expect(screen.getByLabelText("Charge status: Pending")).toBeInTheDocument();
   });
 
   it("shows reminder activity for owner charges when available", () => {
-    render(<ChargesSection charges={charges} onPayCharge={async () => {}} />);
+    render(<ChargesSection todayIso={todayDenver()} charges={charges} onPayCharge={async () => {}} />);
 
     expect(screen.getByText("Reminder sent Mar 15, 2026")).toBeInTheDocument();
   });
 
   it("shows labeled charge actions in the more menu when charge management is available", () => {
     render(
-      <ChargesSection
+      <ChargesSection todayIso={todayDenver()}
         charges={charges}
         onPayCharge={async () => {}}
         onEditCharge={async () => ({ success: true })}
@@ -293,7 +294,7 @@ describe("ChargesSection", () => {
 
   it("does not show the more menu for paid charges", () => {
     render(
-      <ChargesSection
+      <ChargesSection todayIso={todayDenver()}
         charges={[paidCharge]}
         onPayCharge={async () => {}}
         onDeletePendingCharge={async () => ({ success: true })}
@@ -305,7 +306,7 @@ describe("ChargesSection", () => {
 
   it("opens a confirmation dialog before deleting a pending charge", () => {
     render(
-      <ChargesSection
+      <ChargesSection todayIso={todayDenver()}
         charges={charges}
         onPayCharge={async () => {}}
         onEditCharge={async () => ({ success: true })}
@@ -323,7 +324,7 @@ describe("ChargesSection", () => {
 
   it("shows a message action for owner charge rows when tenant messaging is enabled", () => {
     render(
-      <ChargesSection
+      <ChargesSection todayIso={todayDenver()}
         charges={charges}
         onPayCharge={async () => {}}
         onSendMessageToTenant={async () => ({ success: true, message: "Sent." })}
@@ -337,7 +338,7 @@ describe("ChargesSection", () => {
     const payment = calculateCardFee(charges[0].amountCents);
 
     render(
-      <ChargesSection
+      <ChargesSection todayIso={todayDenver()}
         charges={charges}
         onPayCharge={async () => {}}
         onPayWithACH={async () => {}}
@@ -356,7 +357,8 @@ describe("ChargesSection", () => {
   });
 
   it("hides tenant autopay and row payment controls when online pay is unavailable", () => {
-    render(<ChargesSection charges={charges} onPayCharge={async () => {}} onPayWithACH={async () => {}} isTenantView tenantPayState="not_ready" />);
+    render(<ChargesSection todayIso={todayDenver()} charges={charges} onPayCharge={async () => {}}
+      onPayWithACH={async () => {}} isTenantView tenantPayState="not_ready" />);
     expect(screen.queryByText("Enable Autopay")).not.toBeInTheDocument();
     expect(screen.queryByText(/processing fee/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Pay from bank account")).not.toBeInTheDocument();
@@ -364,7 +366,7 @@ describe("ChargesSection", () => {
 
   it("shows owner filters and defaults to late when rent is late", () => {
     render(
-      <ChargesSection
+      <ChargesSection todayIso={todayDenver()}
         charges={[{ ...charges[0], status: "late" }, paidCharge]}
         onPayCharge={async () => {}}
         isOwnerView
@@ -380,7 +382,7 @@ describe("ChargesSection", () => {
 
   it("gives managers the simple rent view without owner bank messaging", () => {
     render(
-      <ChargesSection
+      <ChargesSection todayIso={todayDenver()}
         charges={[{ ...charges[0], status: "late" }, paidCharge]}
         onPayCharge={async () => {}}
         onRecordManualPayment={async () => ({ success: true })}
@@ -408,27 +410,27 @@ describe("ChargesSection", () => {
   });
 
   it("defaults owner rent to due soon when no rent is late", () => {
-    render(<ChargesSection charges={charges} onPayCharge={async () => {}} isOwnerView />);
+    render(<ChargesSection todayIso={todayDenver()} charges={charges} onPayCharge={async () => {}} isOwnerView />);
 
     expect(screen.getByRole("button", { name: "Due soon (1)" })).toHaveClass("font-semibold");
   });
 
   it("shows owner add link when a lease has no current rent", () => {
     const { rerender } = render(
-      <ChargesSection charges={[]} onPayCharge={async () => {}} isOwnerView
+      <ChargesSection todayIso={todayDenver()} charges={[]} onPayCharge={async () => {}} isOwnerView
         availableLeases={[{ id: "lease-1", tenantLabel: "Maya", propertyLabel: "Home" }]}
         onGenerateChargesHref="/owner/generate" />
     );
     expect(screen.getByRole("link", { name: "Add this month's rent now" })).toBeInTheDocument();
 
-    rerender(<ChargesSection charges={[]} onPayCharge={async () => {}} onGenerateChargesHref="/owner/generate" />);
+    rerender(<ChargesSection todayIso={todayDenver()} charges={[]} onPayCharge={async () => {}} onGenerateChargesHref="/owner/generate" />);
     expect(screen.getByRole("link", { name: "Generate this month's rent" })).toBeInTheDocument();
   });
 
   it("shows owner row actions and moves Message into more", async () => {
     const remind = vi.fn(async () => ({ success: true as const }));
     render(
-      <ChargesSection
+      <ChargesSection todayIso={todayDenver()}
         charges={[{ ...charges[0], status: "late" }]}
         onPayCharge={async () => {}}
         onRecordManualPayment={async () => ({ success: true })}
@@ -454,7 +456,7 @@ describe("ChargesSection", () => {
       { ...charges[0], id: "allowed", propertyId: "home-1", status: "late", managerReminderAllowed: true },
       { ...charges[0], id: "blocked", propertyId: "home-2", status: "late", managerReminderAllowed: false }
     ] as const;
-    render(<ChargesSection charges={[...managerCharges]} onPayCharge={async () => {}}
+    render(<ChargesSection todayIso={todayDenver()} charges={[...managerCharges]} onPayCharge={async () => {}}
       onSendBatchPaymentReminder={remind} simpleRentView />);
     expect(screen.getAllByRole("button", { name: "Remind" })).toHaveLength(1);
     const rows = [document.getElementById("charge-allowed"), document.getElementById("charge-blocked")];
@@ -468,12 +470,12 @@ describe("ChargesSection", () => {
 
   it("shows the bank line only for an owner whose bank is not ready", () => {
     const { rerender } = render(
-      <ChargesSection charges={[]} onPayCharge={async () => {}} isOwnerView bankConnected={false} />
+      <ChargesSection todayIso={todayDenver()} charges={[]} onPayCharge={async () => {}} isOwnerView bankConnected={false} />
     );
     expect(screen.getByText(/Tenants can’t pay online/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Connect bank" })).toHaveAttribute("href", "/owner");
 
-    rerender(<ChargesSection charges={[]} onPayCharge={async () => {}} isOwnerView bankConnected />);
+    rerender(<ChargesSection todayIso={todayDenver()} charges={[]} onPayCharge={async () => {}} isOwnerView bankConnected />);
     expect(screen.queryByText(/Tenants can’t pay online/)).not.toBeInTheDocument();
   });
 });

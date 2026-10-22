@@ -1,3 +1,4 @@
+import { todayDenver } from "@/lib/denver-calendar";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { TenantRentCard } from "@/components/dashboard/tenant-rent-card";
@@ -14,7 +15,7 @@ vi.mock("react-dom", async (importOriginal) => ({
 
 describe("Denver component display", () => {
   it("B3 renders paid rent from a full timestamp", () => {
-    render(<TenantRentCard charges={[]} payState="paid" rentDueDate={null} rentAmountCents={100000}
+    render(<TenantRentCard todayIso={todayDenver()} charges={[]} payState="paid" rentDueDate={null} rentAmountCents={100000}
       lastPaidAt="2026-10-02T16:00:00+00:00" onPayCharge={vi.fn()}
       onRequestManualPaymentConfirmation={vi.fn()} />);
     expect(screen.getByText("October rent")).toBeInTheDocument();
@@ -25,7 +26,7 @@ describe("Denver component display", () => {
       id: "charge", propertyId: "home", dueDate: "2026-10-01", amountCents: 100000,
       status: "pending", category: "rent", tenantReportedPaidAt: "2026-10-21T03:00:00Z"
     };
-    render(<ChargeRow charge={charge} last batchActionsEnabled={false} selected={false}
+    render(<ChargeRow todayIso={todayDenver()} charge={charge} last batchActionsEnabled={false} selected={false}
       onToggleSelection={vi.fn()} canModify={false} category="rent" isTenantView={false}
       paymentsAvailable={false} stripeConfigured={false} onPayCharge={vi.fn()}
       showManualPayment={false} manualFormOpen={false} manualPaymentAction={vi.fn()}

@@ -4,6 +4,7 @@ import type { OwnerWalletHomeResult } from "@/lib/owner-wallet-home";
 import { renderSectionCases } from "./sections/render-section-cases";
 
 export interface SectionRendererComponentProps extends SectionRendererProps {
+  todayIso: string;
   ownerWalletHome?: OwnerWalletHomeResult;
   onAddHome?: () => void;
   onAddTenantToHome?: (id: string) => void;

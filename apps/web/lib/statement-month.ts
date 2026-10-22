@@ -1,12 +1,7 @@
-import { DISPLAY_TIME_ZONE } from "@/lib/format";
+import { addDays, denverDayStartUtc, denverDateOf, STATEMENT_ZONE, todayDenver } from "@/lib/denver-calendar";
 
-export const STATEMENT_ZONE = DISPLAY_TIME_ZONE;
-
-export function denverDate(now = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: STATEMENT_ZONE, year: "numeric", month: "2-digit", day: "2-digit"
-  }).format(now);
-}
+export { STATEMENT_ZONE };
+export const denverDate = todayDenver;
 
 export function latestStatementMonth(now = new Date()): string {
   return denverDate(now).slice(0, 7);
@@ -34,21 +29,11 @@ export function isStatementMonth(month: string, now = new Date()): boolean {
   return month <= latest && month >= shiftMonth(latest, -36);
 }
 
-function midnightUtc(date: string): string {
-  const noon = new Date(`${date}T07:00:00Z`);
-  const zone = new Intl.DateTimeFormat("en-US", { timeZone: STATEMENT_ZONE, timeZoneName: "shortOffset" })
-    .formatToParts(noon).find((part) => part.type === "timeZoneName")?.value ?? "GMT-7";
-  const match = /^GMT([+-])(\d{1,2})(?::(\d{2}))?$/.exec(zone);
-  if (!match) throw new Error("Could not read Denver time.");
-  const minutes = (Number(match[2]) * 60 + Number(match[3] ?? 0)) * (match[1] === "+" ? 1 : -1);
-  return new Date(Date.parse(`${date}T00:00:00Z`) - minutes * 60_000).toISOString();
-}
-
 export function statementMonthWindow(month: string) {
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new Error("Invalid month.");
   const next = shiftMonth(month, 1);
-  const endDate = new Date(Date.parse(`${next}-01T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
-  return { start: midnightUtc(`${month}-01`), next: midnightUtc(`${next}-01`),
+  const endDate = addDays(`${next}-01`, -1);
+  return { start: denverDayStartUtc(`${month}-01`), next: denverDayStartUtc(`${next}-01`),
     startDate: `${month}-01`, nextDate: `${next}-01`, endDate };
 }
 
@@ -63,7 +48,7 @@ export function statementPeriodLabel(month: string): string {
   return `${label.replace(/ \d{4}$/, "")} 1 – ${end}, ${month.slice(0, 4)}`;
 }
 
-export function denverDateFromTimestamp(value: string): string { return denverDate(new Date(value)); }
+export function denverDateFromTimestamp(value: string): string { return denverDateOf(value); }
 export function madeDate(value: string): string {
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: STATEMENT_ZONE })
     .format(new Date(value));

@@ -1,3 +1,4 @@
+import { todayDenver } from "@/lib/denver-calendar";
 import { paymentMethodLabel } from "@/lib/payment-method-label";
 import Link from "next/link";
 import {
@@ -168,6 +169,7 @@ export default async function TenantPage(props: TenantPageProps) {
   const hasActiveLease = leaseDetails.length > 0;
   const lastActivePayment = paymentHistory.find(isActivePayment);
   const today = new Date();
+  const todayIso = todayDenver(today);
   const currentCharge = paymentData.charges.find((charge) => isRentOpenForTenant(charge.dueDate, today)) ?? null;
   const ownerConnected = currentCharge ? ownerConnectedMap.get(currentCharge.propertyId) ?? false : false;
   const stripeConfigured = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
@@ -317,6 +319,7 @@ export default async function TenantPage(props: TenantPageProps) {
           overview={<>
             <div className="space-y-5">
               <TenantOverview
+                todayIso={todayIso}
                 userName={displayName}
                 charges={paymentData.charges}
                 nextCharge={nextCharge}
@@ -343,6 +346,7 @@ export default async function TenantPage(props: TenantPageProps) {
           charges={<>
             <div className="space-y-6">
               <TenantRentCard
+                todayIso={todayIso}
                 charges={paymentData.charges}
                 payState={payState}
                 rentDueDate={rentDueDate}
@@ -356,6 +360,7 @@ export default async function TenantPage(props: TenantPageProps) {
                 onSetupAutopay={setupAutopay}
               />
               <ChargesSection
+                todayIso={todayIso}
                 charges={paymentData.charges}
                 onPayCharge={payWithCard as (formData: FormData) => Promise<void>}
                 onPayWithACH={payWithACH as (formData: FormData) => Promise<void>}

@@ -1,3 +1,4 @@
+import { todayDenver } from "@/lib/denver-calendar";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { PayRentCard, sortTenantChargesByUrgency } from "@/components/dashboard/pay-rent-card";
@@ -54,12 +55,12 @@ describe("PayRentCard", () => {
     try {
       const october = { ...charges[0], id: "oct", dueDate: "2026-10-15" };
       const november = { ...charges[0], id: "nov", dueDate: "2026-11-15" };
-      const { container, rerender } = render(<PayRentCard charges={[november, october]}
+      const { container, rerender } = render(<PayRentCard todayIso={todayDenver()} charges={[november, october]}
         onPayCharge={async () => ({ success: true })}
         onRequestManualPaymentConfirmation={async () => ({ success: true })} chargesHref="/tenant" />);
       expect(container.querySelector('input[name="chargeId"]')).toHaveValue("oct");
       expect(screen.queryByText(/more month.*waiting/)).not.toBeInTheDocument();
-      rerender(<PayRentCard charges={[november]} onPayCharge={async () => ({ success: true })}
+      rerender(<PayRentCard todayIso={todayDenver()} charges={[november]} onPayCharge={async () => ({ success: true })}
         onRequestManualPaymentConfirmation={async () => ({ success: true })} chargesHref="/tenant" />);
       expect(screen.queryByRole("button", { name: /^Pay \$/ })).not.toBeInTheDocument();
     } finally { vi.useRealTimers(); }
@@ -70,7 +71,7 @@ describe("PayRentCard", () => {
     vi.setSystemTime(new Date("2026-10-15T12:00:00Z"));
     try {
       const november = { ...charges[0], dueDate: "2026-11-15", amountCents: 120000 };
-      render(<PayRentCard charges={[november]} onPayCharge={async () => ({ success: true })}
+      render(<PayRentCard todayIso={todayDenver()} charges={[november]} onPayCharge={async () => ({ success: true })}
         onRequestManualPaymentConfirmation={async () => ({ success: true })} chargesHref="/tenant" />);
       expect(screen.getByRole("heading", { name: "Next rent" })).toBeInTheDocument();
       expect(screen.getByText("$1,200 on Nov 15.")).toBeInTheDocument();
@@ -84,7 +85,7 @@ describe("PayRentCard", () => {
     try {
       const late = { ...charges[1], dueDate: "2026-10-01" };
       const due = { ...charges[0], dueDate: "2026-10-15" };
-      const { container } = render(<PayRentCard charges={[due, late]}
+      const { container } = render(<PayRentCard todayIso={todayDenver()} charges={[due, late]}
         onPayCharge={async () => ({ success: true })}
         onRequestManualPaymentConfirmation={async () => ({ success: true })} chargesHref="/tenant" />);
       expect(container.querySelector('input[name="chargeId"]')).toHaveValue(late.id);
@@ -96,7 +97,7 @@ describe("PayRentCard", () => {
     const onPayWithACH = vi.fn(async () => ({ success: false, error: "Bank pay failed." }));
     formDispatches.length = 0;
     const { container } = render(
-      <PayRentCard
+      <PayRentCard todayIso={todayDenver()}
         charges={[charges[0]]}
         onPayCharge={onPayCharge}
         onPayWithACH={onPayWithACH}
@@ -127,7 +128,7 @@ describe("PayRentCard", () => {
   it("shows a pending label while opening checkout", () => {
     paymentStatus.pending = true;
     render(
-      <PayRentCard
+      <PayRentCard todayIso={todayDenver()}
         charges={[charges[0]]}
         onPayCharge={async () => null}
         onPayWithACH={async () => null}
@@ -141,7 +142,7 @@ describe("PayRentCard", () => {
 
   it("shows the receipt in Domus copy", () => {
     render(
-      <PayRentCard
+      <PayRentCard todayIso={todayDenver()}
         charges={[charges[0]]}
         onPayCharge={async () => null}
         onRequestManualPaymentConfirmation={async () => null}
@@ -161,7 +162,7 @@ describe("PayRentCard", () => {
   it("shows the most urgent charge as the dominant payment card", () => {
     const lateChargePayment = calculateCardFee(charges[1].amountCents);
     render(
-      <PayRentCard
+      <PayRentCard todayIso={todayDenver()}
         charges={charges}
         onPayCharge={async () => ({ success: true })}
         onPayWithACH={async () => ({ success: true })}
@@ -187,7 +188,7 @@ describe("PayRentCard", () => {
   it("shows the fee-inclusive card payment amount", () => {
     const payment = calculateCardFee(charges[0].amountCents);
     render(
-      <PayRentCard
+      <PayRentCard todayIso={todayDenver()}
         charges={[charges[0]]}
         onPayCharge={async () => ({ success: true })}
         onPayWithACH={async () => ({ success: true })}
@@ -205,7 +206,7 @@ describe("PayRentCard", () => {
 
   it("shows the active autopay badge when enrollment is enabled", () => {
     render(
-      <PayRentCard
+      <PayRentCard todayIso={todayDenver()}
         charges={[charges[0]]}
         onPayCharge={async () => ({ success: true })}
         onPayWithACH={async () => ({ success: true })}
@@ -232,7 +233,7 @@ describe("PayRentCard", () => {
 
   it("shows the paused autopay message when enrollment is disabled", () => {
     render(
-      <PayRentCard
+      <PayRentCard todayIso={todayDenver()}
         charges={[charges[0]]}
         onPayCharge={async () => ({ success: true })}
         onPayWithACH={async () => ({ success: true })}
@@ -260,7 +261,7 @@ describe("PayRentCard", () => {
 
   it("shows the all-set state when no charges are open", () => {
     render(
-      <PayRentCard
+      <PayRentCard todayIso={todayDenver()}
         charges={[]}
         onPayCharge={async () => ({ success: true })}
         onRequestManualPaymentConfirmation={async () => ({ success: true })}
@@ -279,7 +280,7 @@ describe("PayRentCard", () => {
 
   it("shows the lease setup message when the tenant has no active lease", () => {
     render(
-      <PayRentCard
+      <PayRentCard todayIso={todayDenver()}
         charges={[]}
         onPayCharge={async () => ({ success: true })}
         onRequestManualPaymentConfirmation={async () => ({ success: true })}

@@ -1,3 +1,4 @@
+import { daysBetween, todayDenver } from "@/lib/denver-calendar";
 import { tracksLateRent, type LeaseCollectionPreference } from "@/lib/lease-collection";
 
 export type ChargeUrgencyLevel = "none" | "upcoming" | "due_today" | "overdue";
@@ -12,28 +13,19 @@ export interface ChargeUrgencyResult {
   daysUntilDue: number;
 }
 
-function startOfUtcDay(date: Date) {
-  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-}
-
-function dueDateStart(dueDate: string) {
-  const parsed = new Date(`${dueDate}T00:00:00.000Z`);
-  return Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate());
-}
-
-export function isRentOpenForTenant(dueDate: string, today = new Date()): boolean {
-  return dueDateStart(dueDate) - startOfUtcDay(today) <= 5 * 86400000;
+export function isRentOpenForTenant(dueDate: string, today: Date | string = todayDenver()): boolean {
+  return daysBetween(typeof today === "string" ? today : todayDenver(today), dueDate) <= 5;
 }
 
 export function getChargeUrgency(
   charge: ChargeUrgencyInput,
-  now: Date = new Date()
+  now: Date | string = todayDenver()
 ): ChargeUrgencyResult {
   if (charge.status === "paid") {
     return { level: "none", daysUntilDue: 0 };
   }
 
-  const daysUntilDue = Math.round((dueDateStart(charge.dueDate) - startOfUtcDay(now)) / 86400000);
+  const daysUntilDue = daysBetween(typeof now === "string" ? now : todayDenver(now), charge.dueDate);
 
   if (daysUntilDue > 5) {
     return { level: "none", daysUntilDue };
@@ -70,7 +62,7 @@ function urgencyPriority(level: ChargeUrgencyLevel) {
 
 export function getMostUrgentCharge<T extends ChargeUrgencyInput>(
   charges: T[],
-  now: Date = new Date()
+  now: Date | string = todayDenver()
 ): { charge: T; urgency: ChargeUrgencyResult } | null {
   let selected: { charge: T; urgency: ChargeUrgencyResult } | null = null;
 

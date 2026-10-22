@@ -1,4 +1,6 @@
 "use client";
+
+import { useDenverDayRefresh } from "@/components/dashboard/use-denver-day-refresh";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useFormState } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -29,6 +31,7 @@ import type { ChargesSectionProps } from "./types";
 
 export function ChargesSection({
   charges,
+  todayIso,
   onPayCharge,
   onPayWithACH,
   onDeletePendingCharge,
@@ -69,9 +72,9 @@ export function ChargesSection({
   const lateCount = charges.filter(
     (charge) => charge.status === "late" && tracksLateRent(charge)
   ).length;
-  const today = new Date();
+  useDenverDayRefresh(todayIso);
   const pendingCount = charges.filter((charge) => charge.status === "pending").length;
-  const dueSoonCount = charges.filter((c) => c.status === "pending" && isRentOpenForTenant(c.dueDate, today)).length;
+  const dueSoonCount = charges.filter((c) => c.status === "pending" && isRentOpenForTenant(c.dueDate, todayIso)).length;
   const filterPendingCount = simpleRentView ? dueSoonCount : pendingCount;
   const [activeFilter, setActiveFilter] = useState<ChargeFilter>(
     simpleRentView ? (lateCount > 0 ? "late" : "due_soon") : "all"
@@ -103,7 +106,7 @@ export function ChargesSection({
   const filteredCharges = charges.filter((charge) => {
       if (activeFilter === "all") return true;
       if (activeFilter === "due_soon") return charge.status === "pending" &&
-        isRentOpenForTenant(charge.dueDate, today);
+        isRentOpenForTenant(charge.dueDate, todayIso);
       if (activeFilter === "late") {
         return charge.status === "late" && tracksLateRent(charge);
       }
@@ -360,6 +363,7 @@ export function ChargesSection({
                 return (
                   <ChargeRow
                     key={charge.id}
+                    todayIso={todayIso}
                     charge={charge}
                     last={index === visibleCharges.length - 1}
                     batchActionsEnabled={batchActionsEnabled}
