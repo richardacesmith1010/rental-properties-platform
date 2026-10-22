@@ -1,4 +1,4 @@
-# Sprint 253a — Code health: split `stripe-webhook-handlers.ts` (1,005 lines) by verbatim moves (L3: money)
+# Sprint 253a — Code health: split `stripe-webhook-handlers.ts` (1,005 lines) by verbatim moves (L3: money) — rev 2 (rev 1 AWC)
 
 ## 1. Objective
 `apps/web/lib/stripe-webhook-handlers.ts` is 1,005 lines (the largest source file; limit 500). Split it into focused
@@ -27,7 +27,10 @@ New folder `apps/web/lib/stripe-webhook/`, each file starting with `import "serv
 3. `transfers.ts` — `createTransfersForPayment`.
 4. `payments.ts` — `insertPaymentRecord`, `markChargePaid`, `updateAutopay`, `recordPayment`.
 `lib/stripe-webhook-handlers.ts` keeps only the six exported handlers plus imports. Moved functions gain `export` and
-nothing else. Import direction (no cycles): `context` ← `notify`, `transfers` ← `payments` ← handlers file.
+nothing else. **Allowed import edges (the only ones):** `notify → context`; `transfers → context, notify`;
+`payments → context, notify, transfers`; façade `stripe-webhook-handlers.ts → context, notify, transfers, payments`.
+`context` imports none of the new modules. Nothing outside `lib/stripe-webhook/` and the façade imports
+`lib/stripe-webhook/*` (tests excepted).
 Update `lib/plain-language/exceptions.json` so every exception that pointed at a moved string points at its new file
 (same strings, same count).
 
@@ -41,6 +44,7 @@ now-moved private symbol — none should).
 - `apps/web/lib/stripe-webhook/context.ts`, `notify.ts`, `transfers.ts`, `payments.ts` (new)
 - `apps/web/lib/plain-language/exceptions.json` (paths only)
 - `apps/web/lib/__tests__/stripe-webhook-split.test.ts` (new: structure test, §8 W4)
+- `apps/web/scripts/verify-webhook-split.mjs` (new, dev-only proof script)
 
 ## 6. Implementation requirements
 Do these in order.
@@ -48,10 +52,20 @@ Do these in order.
    the pass count (it is the characterization suite; it must pass unchanged before and after).
 2. **Move verbatim.** Cut each function/type block character for character into its new file; add only `export`
    and the imports each file needs. No reformatting, renaming, reordering inside a block, or comment edits.
-3. **Verbatim check (Claude diffs this).** For every moved block, the text in the new file equals the HEAD text
-   (allowing only the added `export ` keyword). The handlers file differs from HEAD only by removed blocks and import
-   edits. Every changed/new line ≤ 140 characters. L-015: non-whitespace characters across old + new files within
-   ±10% of HEAD.
+3. **Verbatim proof (primary).** Add `apps/web/scripts/verify-webhook-split.mjs` (dev-only, not shipped) that reads
+   HEAD's file via `git show <base>:apps/web/lib/stripe-webhook-handlers.ts`, extracts every top-level symbol block
+   (types, functions) by name, extracts the same names from the new files and the façade, removes only a leading
+   `export ` added by this sprint, and asserts **byte-identical** text per symbol (prints `OK <symbol>` / `DIFF
+   <symbol>`). The six handler bodies in the façade must also be byte-identical to HEAD. It also asserts that the
+   façade's non-import text equals HEAD minus the moved blocks. Claude re-runs it. Character totals (L-015) are reported
+   only as a supplement.
+   **Long lines:** before moving, list every line in the moved blocks already longer than 140 characters; those lines
+   stay verbatim (exempt, listed in the report). No reformatting of money code; every *new* line (imports, `export`)
+   ≤ 140 characters.
+   **Signatures:** before editing, emit declarations for the façade at HEAD
+   (`npx tsc --declaration --emitDeclarationOnly --noEmit false --outDir <tmp>` scoped to the file, or an equivalent
+   `ts-morph`-free script using the TypeScript compiler API) and save the six exported function declarations; after
+   the move, emit again; the six declaration texts must be identical (report the diff, expected empty).
 4. Each new file ≤ 500 lines; the handlers file ≤ 500 lines.
 
 ## 7. Validation
@@ -66,11 +80,15 @@ then from the repo root `npm run lint:web` and `npm run build:web` (Claude runs 
 ## 8. Acceptance criteria
 - W1 `stripe-webhook-handlers.test.ts` passes with the **same** test count before and after (report both), with no
   edit to the file.
-- W2 The six handler exports are unchanged in name and type (TS: `import * as H` in the new test and assert the
-  six function names exist and `typeof === "function"`).
-- W3 Plain-language guard passes with the same number of exceptions (report before/after counts).
-- W4 Structure test: every new module's first statement is `import "server-only"`; no new module imports
-  `@/lib/stripe-webhook-handlers` (no cycle); each file ≤ 500 lines.
+- W2 The six exported handler declarations (parameters and return types) are identical before and after (the §6 step 3
+  declaration diff is empty), and `verify-webhook-split.mjs` prints `OK` for every symbol and no `DIFF`.
+- W3 `exceptions.json` before vs after differs **only** in file paths for moved strings: every affected string is
+  byte-identical, each new path really contains its string, and no exception is added, removed or duplicated (the
+  plain-language guard passes; report the changed entries).
+- W4 Structure test (parses import statements of the five files): first statement of each new module is
+  `import "server-only"`; none contains `"use server"` or `"use client"`; the import graph equals exactly the §3
+  allowed edges (fail on any other edge or cycle); a repo search finds no importer of `lib/stripe-webhook/*` outside
+  the folder, the façade and tests; each file ≤ 500 lines.
 - W5 Report a table: each moved symbol → HEAD line range → new file:line range, plus `wc -l` of all five files and the
   L-015 character totals.
 
@@ -79,7 +97,9 @@ Compact status only: W1–W5, validation counts. Do NOT include 'Claude prompt' 
 sections. Report compact status only.
 
 ## 10. Constraints
-Stay inside §5. Do not commit. No Undo (no behavior change). Claude diffs every moved block against HEAD, runs the
-gate, deploys, and runs production smoke plus a Stripe webhook health check (Stripe dashboard event delivery for the
-last day unchanged; no new Sentry errors on `/api/webhooks/stripe`).
+Stay inside §5. Do not commit. No Undo (no behavior change). Claude re-runs the proof script and the declaration
+diff, runs the gate, deploys, confirms the deployed revision, then checks **without replaying or creating any live
+payment event**: Vercel runtime logs for `/api/webhooks/stripe` after deploy show only 2xx responses for real
+deliveries (Hobby keeps 1 h — check within the hour), the Stripe events API shows no new failed/pending webhook
+deliveries since deploy, and Sentry has no new issues on the webhook route.
 The user should never need to read instructions to complete this flow (no UI change).
