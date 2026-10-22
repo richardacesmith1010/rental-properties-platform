@@ -48,7 +48,8 @@ change. Adding `unstable_rethrow` or any other fix (record ideas in the report o
 - `apps/web/lib/account-wipe/scope.ts`, `apps/web/lib/account-wipe/mutations.ts` (new)
 - `apps/web/app/actions/__tests__/account-wipe.test.ts` (new: characterization, §8 K1–K5)
 - `apps/web/lib/__tests__/account-wipe-split.test.ts` (new: structure, §8 K7)
-- `apps/web/scripts/verify-account-wipe-split.mjs` (new, dev-only proof script)
+- `apps/web/scripts/verify-verbatim-split.mjs` (from Sprint 253a — reuse it; edit only if a generic gap blocks this
+  file, and report the diff)
 - `apps/web/lib/plain-language/exceptions.json` — **paths only**, and only if the plain-language guard requires it for a
   moved string (report each changed entry; if a string would need a *new* exception, stop and report instead).
 
@@ -70,10 +71,10 @@ Do these in order.
    the hash after the split must be identical.
 3. **Move verbatim.** Cut each block character for character; add only `export` and the imports each file needs.
    No reformatting, renaming, reordering inside a block, or comment edits. Import order inside the façade may change.
-4. **Proof script** `verify-account-wipe-split.mjs` (syntax-aware: use the TypeScript compiler API
-   `ts.createSourceFile` to find top-level declarations and take each node's full source text; no regex extraction; each
-   symbol name must match **exactly one** top-level declaration per file, else fail): reads `git show $BASE:apps/web/app/actions/account-wipe.ts`,
-   extracts every top-level symbol block by name, extracts the same names from the three new/changed files, strips only
+4. **Proof script:** run Sprint 253a's syntax-aware `scripts/verify-verbatim-split.mjs --base $BASE --old
+   app/actions/account-wipe.ts --facade app/actions/account-wipe.ts --new lib/account-wipe/scope.ts
+   lib/account-wipe/mutations.ts` (TypeScript compiler API, exactly one match per name). It extracts every top-level
+   symbol block by name from BASE and from the three files, strips only
    a leading `export ` added by this sprint, and asserts byte-identical text per symbol (`OK <symbol>` / `DIFF
    <symbol>`), including the six action bodies and the private auth helpers left in the façade. It also asserts the
    façade's non-import text equals BASE minus the moved blocks. **Long lines:** list every line in moved blocks already
@@ -88,7 +89,8 @@ Do these in order.
 cd apps/web
 npx vitest run app/actions/__tests__/account-wipe.test.ts lib/__tests__/account-wipe-split.test.ts
 npx vitest run lib/__tests__/plain-language.test.ts
-node scripts/verify-account-wipe-split.mjs
+node scripts/verify-verbatim-split.mjs --base $BASE --old app/actions/account-wipe.ts \
+  --facade app/actions/account-wipe.ts --new lib/account-wipe/scope.ts lib/account-wipe/mutations.ts
 npx tsc --noEmit
 ```
 then from the repo root `npm run lint:web` and `npm run build:web` (Claude runs `npm run gate:web`).
@@ -116,7 +118,8 @@ then from the repo root `npm run lint:web` and `npm run build:web` (Claude runs 
 - K5 A storage removal error is logged through `sideEffectError("accountWipe", "remove_storage_objects", …)` and the
   run continues.
 - K6 The K1–K5 file passes with the **same** test count before and after the move (report both) and the **same SHA-256**
-  (report both in the K6 line with BASE SHA and declaration-diff status), and `verify-account-wipe-split.mjs` prints `OK` for every symbol and no `DIFF`; the declaration diff is empty.
+  (report both in the K6 line with BASE SHA and declaration-diff status), and the proof script prints `OK` for every
+  symbol and no `DIFF`; the declaration diff is empty.
 - K7 Structure test: first statement of each new module is `import "server-only"`; no new module contains
   `"use server"` or `"use client"`; the façade still starts with `"use server"` and its exports are exactly the six
   action names (parse the file; fail on any other `export`); every internal import edge belongs to the §3 allowlist (an

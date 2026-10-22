@@ -48,7 +48,7 @@ now-moved private symbol — none should).
   outside the `react-server` condition, so the new modules' first statement would otherwise break this suite at import.
   No other edit to this file.
 - `apps/web/lib/__tests__/stripe-webhook-split.test.ts` (new: structure test, §8 W4)
-- `apps/web/scripts/verify-webhook-split.mjs` (new, dev-only proof script)
+- `apps/web/scripts/verify-verbatim-split.mjs` (new, dev-only, **generic** proof script reused by Sprints 253b–d)
 
 ## 6. Implementation requirements
 Do these in order.
@@ -58,9 +58,11 @@ Do these in order.
    the pass count (it is the characterization suite; it must pass unchanged before and after).
 2. **Move verbatim.** Cut each function/type block character for character into its new file; add only `export`
    and the imports each file needs. No reformatting, renaming, reordering inside a block, or comment edits.
-3. **Verbatim proof (primary).** Add `apps/web/scripts/verify-webhook-split.mjs` (dev-only, not shipped) that reads
-   HEAD's file via `git show <base>:apps/web/lib/stripe-webhook-handlers.ts`, extracts every top-level symbol block
-   (types, functions) by name, extracts the same names from the new files and the façade, removes only a leading
+3. **Verbatim proof (primary).** Add `apps/web/scripts/verify-verbatim-split.mjs` (dev-only, not shipped, generic:
+   `node scripts/verify-verbatim-split.mjs --base <sha> --old <path> --facade <path> --new <path>...`). It reads the old
+   file via `git show <base>:<path>`, finds every top-level declaration with the TypeScript compiler API
+   (`ts.createSourceFile`, each node's full text; no regex extraction; each name must match exactly one top-level
+   declaration per file, else fail), extracts the same names from the new files and the façade, removes only a leading
    `export ` added by this sprint, and asserts **byte-identical** text per symbol (prints `OK <symbol>` / `DIFF
    <symbol>`). The six handler bodies in the façade must also be byte-identical to HEAD. It also asserts that the
    façade's non-import text equals HEAD minus the moved blocks. Claude re-runs it. Character totals (L-015) are reported
@@ -87,7 +89,7 @@ then from the repo root `npm run lint:web` and `npm run build:web` (Claude runs 
 - W1 `stripe-webhook-handlers.test.ts` passes with the **same** test count before and after (report both); its only
   diff is the one `vi.mock("server-only", …)` line (report the `git diff` of the file, expected +1 line).
 - W2 The six exported handler declarations (parameters and return types) are identical before and after (the §6 step 3
-  declaration diff is empty), and `verify-webhook-split.mjs` prints `OK` for every symbol and no `DIFF`.
+  declaration diff is empty), and `verify-verbatim-split.mjs` prints `OK` for every symbol and no `DIFF`.
 - W3 `exceptions.json` before vs after differs **only** in file paths for moved strings: every affected string is
   byte-identical, each new path really contains its string, and no exception is added, removed or duplicated (the
   plain-language guard passes; report the changed entries).
