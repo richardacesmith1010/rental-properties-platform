@@ -204,6 +204,7 @@ export function InboxSection({
                 />
               </div>
               <Select
+                aria-label="Filter by status"
                 value={readFilter}
                 onChange={(event) => setReadFilter(event.target.value as ReadFilter)}
               >
@@ -212,6 +213,7 @@ export function InboxSection({
                 <option value="read">Read only</option>
               </Select>
               <Select
+                aria-label="Filter by event"
                 value={typeFilter}
                 onChange={(event) => setTypeFilter(event.target.value as NotificationFilter)}
               >
@@ -428,7 +430,7 @@ export function InboxSection({
                         </div>
                       </div>
 
-                      <div className="max-h-64 overflow-y-auto pr-1">
+                      <div className="max-h-64 overflow-y-auto pr-1" tabIndex={0} aria-label="Messages list">
                         {selectedThread.messages.length === 0 ? (
                           <EmptyState message="No messages in this thread yet." />
                         ) : (

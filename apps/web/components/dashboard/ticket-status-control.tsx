@@ -31,7 +31,7 @@ export function TicketStatusControl({
   return (
     <form action={action} className="flex items-center gap-2">
       <input type="hidden" name="ticketId" value={ticketId} />
-      <Select name="status" defaultValue={currentStatus} className="h-8 w-32 text-xs">
+      <Select name="status" aria-label="Repair status" defaultValue={currentStatus} className="h-8 w-32 text-xs">
         <option value="open">Open</option>
         <option value="in_progress">In Progress</option>
         <option value="resolved">Resolved</option>

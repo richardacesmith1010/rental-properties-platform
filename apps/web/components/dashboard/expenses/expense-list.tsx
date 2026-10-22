@@ -62,7 +62,8 @@ export function ExpenseList({
   return (
     <div>
       <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-4">
-        <Select value={selectedPropertyId} onChange={(event) => setSelectedPropertyId(event.target.value)}>
+        <Select aria-label="Filter by property" value={selectedPropertyId}
+          onChange={(event) => setSelectedPropertyId(event.target.value)}>
           <option value="">All properties</option>
           {data.properties.map((property) => (
             <option key={property.id} value={property.id}>
@@ -70,12 +71,15 @@ export function ExpenseList({
             </option>
           ))}
         </Select>
-        <Select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
+        <Select aria-label="Filter by category" value={categoryFilter}
+          onChange={(event) => setCategoryFilter(event.target.value)}>
           <option value="all">All categories</option>
           {expenseCategories.map((category) => <option key={category} value={category}>{formatCategory(category)}</option>)}
         </Select>
-        <Input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} />
-        <Input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
+        <Input aria-label="Start date" type="date" value={dateFrom}
+          onChange={(event) => setDateFrom(event.target.value)} />
+        <Input aria-label="End date" type="date" value={dateTo}
+          onChange={(event) => setDateTo(event.target.value)} />
       </div>
       {filteredExpenses.length === 0 ? (
         data.expenses.length === 0 ? (
@@ -160,21 +164,35 @@ function ExpenseRow({ expense, vendors, receiptFiles, onUpdateExpense, onDeleteE
               startTransition(() => updateAction(formData));
             }} className="mt-3 grid gap-2 sm:grid-cols-3">
               <input type="hidden" name="expenseId" value={expense.id} />
-              <Select name="category" defaultValue={expense.category}>{expenseCategories.map((category) => <option key={category} value={category}>{formatCategory(category)}</option>)}</Select>
+              <Select name="category" aria-label="Expense category" defaultValue={expense.category}>
+                {expenseCategories.map((category) =>
+                  <option key={category} value={category}>{formatCategory(category)}</option>)}
+              </Select>
               <Input name="amountDollars" type="number" min={0.01} step="0.01" defaultValue={expense.amountCents / 100} required />
-              <Input name="expenseDate" type="date" defaultValue={expense.expenseDate} required />
+              <Input name="expenseDate" aria-label="Expense date" type="date" defaultValue={expense.expenseDate} required />
               <Textarea name="description" rows={2} defaultValue={expense.description ?? ""} placeholder="Description" className="sm:col-span-3" />
               <label className="flex items-center gap-2 text-xs text-[var(--ink-2)]"><input type="checkbox" name="recurring" value="true" defaultChecked={expense.recurring} />Recurring</label>
-              <Select name="recurringFrequency" defaultValue={expense.recurringFrequency ?? ""}><option value="">Not recurring</option>{recurringFrequencies.map((frequency) => <option key={frequency} value={frequency}>{formatCategory(frequency)}</option>)}</Select>
-              <Select name="vendorId" defaultValue={expense.vendorId ?? ""}><option value="">No vendor linked</option>{vendors.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.name}</option>)}</Select>
-              <Select name="receiptFileId" defaultValue={expense.receiptFileId ?? ""}><option value="">No receipt file</option>{receiptFiles.map((file) => <option key={file.id} value={file.id}>{file.fileName}</option>)}</Select>
+              <Select name="recurringFrequency" aria-label="Recurring frequency"
+                defaultValue={expense.recurringFrequency ?? ""}>
+                <option value="">Not recurring</option>
+                {recurringFrequencies.map((frequency) =>
+                  <option key={frequency} value={frequency}>{formatCategory(frequency)}</option>)}
+              </Select>
+              <Select name="vendorId" aria-label="Vendor" defaultValue={expense.vendorId ?? ""}>
+                <option value="">No vendor linked</option>
+                {vendors.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.name}</option>)}
+              </Select>
+              <Select name="receiptFileId" aria-label="Receipt file" defaultValue={expense.receiptFileId ?? ""}>
+                <option value="">No receipt file</option>
+                {receiptFiles.map((file) => <option key={file.id} value={file.id}>{file.fileName}</option>)}
+              </Select>
               {partnerAccount && onSetPaidBy && <label className="block text-sm font-medium">Who paid?
                 <Select value={payerId} onChange={(event) => setPayerId(event.target.value)}>
                   <option value="">The LLC (from its bank)</option>
                   {partnerAccount.partners.filter((partner) => partner.active || partner.id === savedPayerId)
                     .map((partner) => <option key={partner.id} value={partner.id}>{partner.displayName}</option>)}
                 </Select></label>}
-              <Input name="receiptFile" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"
+              <Input name="receiptFile" aria-label="Upload receipt" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"
                 className="sm:col-span-2" />
               <div className="sm:col-span-3 flex items-center gap-2"><Button type="submit" size="sm" variant="outline"
                 loading={isPending} disabled={isPending} title="Save updates to this expense.">Save Expense</Button>

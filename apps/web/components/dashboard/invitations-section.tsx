@@ -118,7 +118,17 @@ export function InvitationsSection({ ownershipAccounts, properties, invitations,
 
   const renderOwnerStep = () => {
     if (ownerStep === 0) {
-      return <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Step 1: Pick ownership account for co-owner access.</p><Select value={ownerDraft.ownershipAccountId} onChange={(event) => setOwnerDraft((current) => ({ ...current, ownershipAccountId: event.target.value }))} onKeyDown={(event) => onEnterNext(event, ownerStepComplete(ownerStep), 1)} required><option value="">Select ownership account</option>{ownershipAccounts.map((account) => <option key={account.id} value={account.id}>{account.displayName}</option>)}</Select></div>;
+      return <div className="space-y-3">
+        <p className="text-sm text-[var(--ink-2)]">Step 1: Pick ownership account for co-owner access.</p>
+        <Select aria-label="Ownership account" value={ownerDraft.ownershipAccountId}
+          onChange={(event) => setOwnerDraft((current) =>
+            ({ ...current, ownershipAccountId: event.target.value }))}
+          onKeyDown={(event) => onEnterNext(event, ownerStepComplete(ownerStep), 1)} required>
+          <option value="">Select ownership account</option>
+          {ownershipAccounts.map((account) =>
+            <option key={account.id} value={account.id}>{account.displayName}</option>)}
+        </Select>
+      </div>;
     }
     if (ownerStep === 1) {
       return <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Step 2: Enter co-owner email address.</p><Input type="email" value={ownerDraft.email} onChange={(event) => setOwnerDraft((current) => ({ ...current, email: event.target.value }))} onKeyDown={(event) => onEnterNext(event, ownerStepComplete(ownerStep), 2)} placeholder="co-owner@email.com" required /></div>;

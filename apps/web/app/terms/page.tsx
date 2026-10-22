@@ -12,7 +12,7 @@ export default function TermsPage() {
       <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 pb-16 pt-10 md:px-10">
         <header className="space-y-3">
           <h1 className="text-3xl font-semibold tracking-tight text-[var(--ink)]">Terms of Service</h1>
-          <p className="text-sm text-[var(--faint)]">Last updated: October 18, 2026</p>
+          <p className="text-sm text-[var(--muted)]">Last updated: October 18, 2026</p>
           <p className="rounded-xl border border-[var(--warn)] bg-[var(--warn-bg)] px-4 py-3 text-sm text-[var(--warn)]">
             Early access version. A lawyer is reviewing these terms. We will tell you before a final version takes effect.
           </p>

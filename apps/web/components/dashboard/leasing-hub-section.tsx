@@ -288,7 +288,7 @@ export function LeasingHubSection({
           <form action={createListingAction} className="rounded-lg border border-[var(--line)] bg-[var(--surface-2)] p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Create listing</p>
             <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <Select name="propertyId" required>
+              <Select name="propertyId" aria-label="Property" required>
                 <option value="">Select property</option>
                 {portfolio.properties.map((property) => (
                   <option key={property.id} value={property.id}>

@@ -391,6 +391,7 @@ export function ApplicationsSection({
             <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <Select
                 name="listingId"
+                aria-label="Listing"
                 value={selectedListingId}
                 onChange={(event) => setSelectedListingId(event.target.value)}
                 required

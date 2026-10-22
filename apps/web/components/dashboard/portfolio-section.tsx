@@ -150,35 +150,16 @@ export function PortfolioSection({
                   </div>;
                 })() : null}
               <div
-                role={onSelectProperty && activeEditPropertyId !== property.id ? "button" : undefined}
-                tabIndex={onSelectProperty && activeEditPropertyId !== property.id ? 0 : undefined}
                 className={
                   onSelectProperty && activeEditPropertyId !== property.id
-                    ? "rounded-2xl border border-border/40 bg-card/80 shadow-sm transition-shadow hover:shadow-md "
-                      + "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-line)] "
-                      + "focus-visible:ring-offset-2"
+                    ? "rounded-2xl border border-border/40 bg-card/80 shadow-sm transition-shadow hover:shadow-md"
                     : undefined
                 }
-                onClick={() => {
-                  if (onSelectProperty && activeEditPropertyId !== property.id) {
-                    onSelectProperty(property.id);
-                  }
+                onClick={(event) => {
+                  if (!onSelectProperty || activeEditPropertyId === property.id) return;
+                  if ((event.target as HTMLElement).closest("button, a, input, select, textarea, [contenteditable]")) return;
+                  onSelectProperty(property.id);
                 }}
-                onKeyDown={(event) => {
-                  if (
-                    onSelectProperty &&
-                    activeEditPropertyId !== property.id &&
-                    (event.key === "Enter" || event.key === " ")
-                  ) {
-                    event.preventDefault();
-                    onSelectProperty(property.id);
-                  }
-                }}
-                title={
-                  onSelectProperty && activeEditPropertyId !== property.id
-                    ? `Open the dashboard filtered to ${property.name}.`
-                    : undefined
-                }
               >
                 <DataRow last={i === visibleProperties.length - 1}>
                   <div className="min-w-0 flex-1">
@@ -206,7 +187,22 @@ export function PortfolioSection({
                             }}
                           />
                         ) : (
-                          <p className="text-base font-medium text-foreground">{property.name}</p>
+                          onSelectProperty && activeEditPropertyId !== property.id ? (
+                            <button
+                              type="button"
+                              className="min-h-11 text-left text-base font-medium text-foreground focus-visible:outline-none
+                                focus-visible:ring-2 focus-visible:ring-[var(--accent-line)]"
+                              onClick={() => onSelectProperty(property.id)}
+                              onKeyDown={(event) => {
+                                if (event.key !== "Enter" && event.key !== " ") return;
+                                event.preventDefault();
+                                onSelectProperty(property.id);
+                              }}
+                              title={`Open the dashboard filtered to ${property.name}.`}
+                            >
+                              {property.name}
+                            </button>
+                          ) : <p className="text-base font-medium text-foreground">{property.name}</p>
                         )}
                       </div>
                       {showControls && onUpdateProperty ? (

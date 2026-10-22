@@ -58,7 +58,17 @@ export function InviteTenantForm({ properties, onInviteTenant, onSuccess }: { pr
       <FormError state={state} />
       <FormSuccess state={state} message="Invitation sent!" />
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{TENANT_STEPS.map((label, index) => <StepPill key={label} label={label} active={step === index} done={stepComplete(index)} skipped={skippedSteps.includes(index)} />)}</div>
-      {step === 0 ? <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Step 1: Pick the property first. Tenant invites are always property-linked.</p><Select value={draft.propertyId} onChange={(event) => setDraft((current) => ({ ...current, propertyId: event.target.value }))} onKeyDown={(event) => onEnterNext(event, stepComplete(step), 1)} required><option value="">Assign to property</option>{properties.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}</Select></div> : null}
+      {step === 0 ? <div className="space-y-3">
+        <p className="text-sm text-[var(--ink-2)]">
+          Step 1: Pick the property first. Tenant invites are always property-linked.
+        </p>
+        <Select aria-label="Property" value={draft.propertyId}
+          onChange={(event) => setDraft((current) => ({ ...current, propertyId: event.target.value }))}
+          onKeyDown={(event) => onEnterNext(event, stepComplete(step), 1)} required>
+          <option value="">Assign to property</option>
+          {properties.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}
+        </Select>
+      </div> : null}
       {step === 1 ? <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Step 2: Enter tenant email address.</p><Input type="email" value={draft.email} onChange={(event) => setDraft((current) => ({ ...current, email: event.target.value }))} onKeyDown={(event) => onEnterNext(event, stepComplete(step), 2)} placeholder="tenant@email.com" required /></div> : null}
       {step === 2 ? <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Step 3: Enter tenant full legal name.</p><Input value={draft.fullName} onChange={(event) => setDraft((current) => ({ ...current, fullName: event.target.value }))} onKeyDown={(event) => onEnterNext(event, stepComplete(step), 3)} placeholder="Tenant full name" required /></div> : null}
       {step === 3 ? <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Final step: review and send tenant invite.</p><div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-3 py-3 text-sm text-[var(--ink-2)]"><p><span className="font-semibold">Property:</span> {properties.find((property) => property.id === draft.propertyId)?.name ?? "Not set"}</p><p><span className="font-semibold">Email:</span> {draft.email || "Not set"}</p><p><span className="font-semibold">Name:</span> {draft.fullName || "Not set"}</p></div><form className="space-y-2" action={action}><input type="hidden" name="propertyId" value={draft.propertyId} /><input type="hidden" name="email" value={draft.email} /><input type="hidden" name="fullName" value={draft.fullName} /><SubmitButton className="w-full" disabled={!requiredComplete} title="Send tenant invitation.">Send Tenant Invite</SubmitButton></form></div> : null}

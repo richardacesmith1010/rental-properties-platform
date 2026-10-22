@@ -147,6 +147,7 @@ export function ProfileSettings({
           <input
             key={fileInputKey}
             id="settings-avatar"
+            aria-label="Profile photo"
             name="avatarFile"
             type="file"
             accept="image/jpeg,image/png,image/webp"

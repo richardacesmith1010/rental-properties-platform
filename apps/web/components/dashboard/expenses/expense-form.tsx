@@ -197,7 +197,7 @@ export function ExpenseForm({ data, vendors, propertyFiles, onCreateExpense, onA
         </div>
         {step === 0 ? <div className="space-y-3">
           <p className="text-sm text-[var(--ink-2)]">Step 1: Select the property this expense belongs to.</p>
-          <Select value={draft.propertyId} onChange={(event) => {
+          <Select aria-label="Property" value={draft.propertyId} onChange={(event) => {
             setDraft((current) => ({ ...current, propertyId: event.target.value, receiptFileId: "" }));
             setPayerId("");
             setBillTenant(false);
@@ -208,7 +208,7 @@ export function ExpenseForm({ data, vendors, propertyFiles, onCreateExpense, onA
         </div> : null}
         {step === 1 ? <div className="space-y-3">
           <p className="text-sm text-[var(--ink-2)]">Step 2: Choose the expense category.</p>
-          <Select value={draft.category} onChange={(event) => {
+          <Select aria-label="Expense category" value={draft.category} onChange={(event) => {
             setDraft((current) => ({ ...current, category: event.target.value }));
             setBillTenant(false);
           }}>
@@ -217,10 +217,45 @@ export function ExpenseForm({ data, vendors, propertyFiles, onCreateExpense, onA
           </Select>
         </div> : null}
         {step === 2 ? <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Step 3: Enter amount in US dollars.</p><Input value={draft.amountDollars} onChange={(event) => setDraft((current) => ({ ...current, amountDollars: event.target.value }))} onKeyDown={(event) => onEnterNext(event, stepComplete(step), 3)} type="number" min={0.01} step="0.01" placeholder="Amount (USD)" required /></div> : null}
-        {step === 3 ? <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Step 4: Select the date of the expense.</p><Input value={draft.expenseDate} onChange={(event) => setDraft((current) => ({ ...current, expenseDate: event.target.value }))} type="date" required /></div> : null}
-        {step === 4 ? <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Step 5: Set recurring behavior.</p><label className="flex items-center gap-2 text-xs text-[var(--ink-2)]"><input type="checkbox" checked={draft.recurring} onChange={(event) => setDraft((current) => ({ ...current, recurring: event.target.checked, recurringFrequency: event.target.checked ? current.recurringFrequency : "" }))} />Recurring expense</label><Select value={draft.recurringFrequency} onChange={(event) => setDraft((current) => ({ ...current, recurringFrequency: event.target.value }))} disabled={!draft.recurring}><option value="">Not recurring</option>{recurringFrequencies.map((frequency) => <option key={frequency} value={frequency}>{formatCategory(frequency)}</option>)}</Select></div> : null}
-        {step === 5 ? <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Step 6: Link a vendor (optional).</p><Select value={draft.vendorId} onChange={(event) => setDraft((current) => ({ ...current, vendorId: event.target.value }))}><option value="">No vendor linked</option>{availableVendors.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.name}</option>)}</Select></div> : null}
-        {step === 6 ? <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Step 7: Link an existing receipt file (optional).</p><Select value={draft.receiptFileId} onChange={(event) => setDraft((current) => ({ ...current, receiptFileId: event.target.value }))}><option value="">No existing receipt file</option>{availableCreateReceiptFiles.map((file) => <option key={file.id} value={file.id}>{file.fileName}</option>)}</Select></div> : null}
+        {step === 3 ? <div className="space-y-3">
+          <p className="text-sm text-[var(--ink-2)]">Step 4: Select the date of the expense.</p>
+          <Input aria-label="Expense date" value={draft.expenseDate}
+            onChange={(event) => setDraft((current) => ({ ...current, expenseDate: event.target.value }))}
+            type="date" required />
+        </div> : null}
+        {step === 4 ? <div className="space-y-3">
+          <p className="text-sm text-[var(--ink-2)]">Step 5: Set recurring behavior.</p>
+          <label className="flex items-center gap-2 text-xs text-[var(--ink-2)]">
+            <input type="checkbox" checked={draft.recurring}
+              onChange={(event) => setDraft((current) => ({ ...current, recurring: event.target.checked,
+                recurringFrequency: event.target.checked ? current.recurringFrequency : "" }))} />
+            Recurring expense
+          </label>
+          <Select aria-label="Recurring frequency" value={draft.recurringFrequency}
+            onChange={(event) => setDraft((current) => ({ ...current, recurringFrequency: event.target.value }))}
+            disabled={!draft.recurring}>
+            <option value="">Not recurring</option>
+            {recurringFrequencies.map((frequency) =>
+              <option key={frequency} value={frequency}>{formatCategory(frequency)}</option>)}
+          </Select>
+        </div> : null}
+        {step === 5 ? <div className="space-y-3">
+          <p className="text-sm text-[var(--ink-2)]">Step 6: Link a vendor (optional).</p>
+          <Select aria-label="Vendor" value={draft.vendorId}
+            onChange={(event) => setDraft((current) => ({ ...current, vendorId: event.target.value }))}>
+            <option value="">No vendor linked</option>
+            {availableVendors.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.name}</option>)}
+          </Select>
+        </div> : null}
+        {step === 6 ? <div className="space-y-3">
+          <p className="text-sm text-[var(--ink-2)]">Step 7: Link an existing receipt file (optional).</p>
+          <Select aria-label="Receipt file" value={draft.receiptFileId}
+            onChange={(event) => setDraft((current) => ({ ...current, receiptFileId: event.target.value }))}>
+            <option value="">No existing receipt file</option>
+            {availableCreateReceiptFiles.map((file) =>
+              <option key={file.id} value={file.id}>{file.fileName}</option>)}
+          </Select>
+        </div> : null}
         {step === 7 ? <div className="space-y-3"><p className="text-sm text-[var(--ink-2)]">Step 8: Add description (optional).</p><Textarea value={draft.description} onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))} onKeyDown={(event) => onEnterNext(event, true, 8)} rows={2} placeholder="Description (optional)" /></div> : null}
         {step === 8 ? <div className="space-y-3">
           <p className="text-sm text-[var(--ink-2)]">Final step: review details and save.</p>
@@ -272,7 +307,8 @@ export function ExpenseForm({ data, vendors, propertyFiles, onCreateExpense, onA
             <input type="hidden" name="vendorId" value={draft.vendorId} />
             <input type="hidden" name="receiptFileId" value={draft.receiptFileId} />
             <input type="hidden" name="description" value={draft.description} />
-            <Input name="receiptFile" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" />
+            <Input name="receiptFile" aria-label="Upload receipt" type="file"
+              accept="image/jpeg,image/png,image/webp,application/pdf" />
             <SubmitButton className="w-full" disabled={!requiredComplete || Boolean(retry) || Boolean(retryBillId)}
               title="Create this expense record.">Save Expense</SubmitButton>
           </form>

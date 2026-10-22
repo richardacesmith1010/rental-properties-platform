@@ -111,6 +111,7 @@ export function CreateAccountWorkflowCard({
           <div className="space-y-3">
             <p className="text-sm text-[var(--ink-2)]">Step 1: Choose account type.</p>
             <Select
+              aria-label="Account type"
               value={createDraft.accountType}
               onChange={(event) =>
                 setCreateDraft((current) => ({
@@ -251,6 +252,7 @@ export function LinkPropertyWorkflowCard({
           <div className="space-y-3">
             <p className="text-sm text-[var(--ink-2)]">Step 1: Choose the property to link.</p>
             <Select
+              aria-label="Property"
               value={linkDraft.propertyId}
               onChange={(event) =>
                 setLinkDraft((current) => ({
@@ -274,6 +276,7 @@ export function LinkPropertyWorkflowCard({
           <div className="space-y-3">
             <p className="text-sm text-[var(--ink-2)]">Step 2: Choose the ownership account.</p>
             <Select
+              aria-label="Ownership account"
               value={linkDraft.ownershipAccountId}
               onChange={(event) =>
                 setLinkDraft((current) => ({
