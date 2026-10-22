@@ -1,4 +1,4 @@
-# Sprint 253a — Code health: split `stripe-webhook-handlers.ts` (1,005 lines) by verbatim moves (L3: money) — rev 2 (rev 1 AWC)
+# Sprint 253a — Code health: split `stripe-webhook-handlers.ts` (1,005 lines) by verbatim moves (L3: money) — rev 3 (rev 1 AWC → rev 2 AWC)
 
 ## 1. Objective
 `apps/web/lib/stripe-webhook-handlers.ts` is 1,005 lines (the largest source file; limit 500). Split it into focused
@@ -48,7 +48,9 @@ now-moved private symbol — none should).
 
 ## 6. Implementation requirements
 Do these in order.
-1. **Baseline first.** Before editing, run `npx vitest run lib/__tests__/stripe-webhook-handlers.test.ts` and record
+1. **Baseline first.** Record `BASE=$(git rev-parse HEAD)` and confirm `git diff --quiet $BASE --
+   apps/web/lib/stripe-webhook-handlers.ts apps/web/lib/plain-language/exceptions.json` (no local edits); use that one
+   SHA for every source comparison and declaration snapshot, and print it in the report. Then, run `npx vitest run lib/__tests__/stripe-webhook-handlers.test.ts` and record
    the pass count (it is the characterization suite; it must pass unchanged before and after).
 2. **Move verbatim.** Cut each function/type block character for character into its new file; add only `export`
    and the imports each file needs. No reformatting, renaming, reordering inside a block, or comment edits.
@@ -86,8 +88,9 @@ then from the repo root `npm run lint:web` and `npm run build:web` (Claude runs 
   byte-identical, each new path really contains its string, and no exception is added, removed or duplicated (the
   plain-language guard passes; report the changed entries).
 - W4 Structure test (parses import statements of the five files): first statement of each new module is
-  `import "server-only"`; none contains `"use server"` or `"use client"`; the import graph equals exactly the §3
-  allowed edges (fail on any other edge or cycle); a repo search finds no importer of `lib/stripe-webhook/*` outside
+  `import "server-only"`; none contains `"use server"` or `"use client"`; every actual internal import edge among the
+  five files belongs to the §3 allowlist (a permitted edge that is not used does **not** fail; any other edge, a
+  reverse dependency, a self-import or a cycle fails); a repo search finds no importer of `lib/stripe-webhook/*` outside
   the folder, the façade and tests; each file ≤ 500 lines.
 - W5 Report a table: each moved symbol → HEAD line range → new file:line range, plus `wc -l` of all five files and the
   L-015 character totals.
@@ -100,6 +103,8 @@ sections. Report compact status only.
 Stay inside §5. Do not commit. No Undo (no behavior change). Claude re-runs the proof script and the declaration
 diff, runs the gate, deploys, confirms the deployed revision, then checks **without replaying or creating any live
 payment event**: Vercel runtime logs for `/api/webhooks/stripe` after deploy show only 2xx responses for real
-deliveries (Hobby keeps 1 h — check within the hour), the Stripe events API shows no new failed/pending webhook
-deliveries since deploy, and Sentry has no new issues on the webhook route.
+deliveries (Hobby keeps 1 h — check within the hour), Stripe Workbench / the webhook endpoint's delivery log
+(not the Events API) shows the post-deploy delivery outcomes and retries are all successful, and Sentry has no new
+issues on the webhook route. Claude reports the number of real post-deploy deliveries examined; if none occurred,
+delivery verification is **INCONCLUSIVE**, not PASS (rechecked at the next real delivery).
 The user should never need to read instructions to complete this flow (no UI change).
