@@ -2057,3 +2057,14 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   only `vi.mock("server-only")` (package throws under vitest).
 - **250a** (business "today" = Denver calendar day; L3, ChatGPT rev 3 APPROVE): Codex done, gate 3,206; Claude review
   done (helpers, money rules, client `todayIso` + midnight refresh, tests D1–D12); shipping now.
+
+## 2026-10-22 — Sprint 250a SHIPPED (business "today" = Denver calendar day)
+- **250a** `bab4284` (L3, ChatGPT rev 3 APPROVE): new `lib/denver-calendar.ts`; rent opening (5 days), urgency, grace +
+  late fees, charge candidate months, lease-created day, lease status (expired / expiring soon), reminders (+3 days),
+  overdue day counts, autopay start, statement month, tenant next due date now use the Denver day. Rent cards get
+  `todayIso` from the server and `useDenverDayRefresh` refreshes at Denver midnight / on tab focus.
+  `updateLeaseStatuses` now checks its read errors (L-002).
+- Verified: Claude review of helpers (DST-correct `denverDayStartUtc`), money rules and tests D1–D12 (evening fixture E
+  Oct 31 10:30 pm, morning M; TZ Kiritimati/UTC/Tokyo); gate 3,206; CI success; prod smoke 27/27.
+- **Next:** 253a (Codex running) → 250b (reports/dashboard/form defaults; packet `docs/sprint250b-codex-prompt.md`,
+  L2) → 253b → 253c → 253d.
