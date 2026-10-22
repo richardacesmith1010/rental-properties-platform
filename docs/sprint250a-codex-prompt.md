@@ -1,4 +1,4 @@
-# Sprint 250a — Rent "today" is the Denver calendar day (money + notification logic) (L3) — rev 2 (rev 1 AWC)
+# Sprint 250a — Rent "today" is the Denver calendar day (money + notification logic) (L3) — rev 3 (rev 1 AWC → rev 2 AWC → rev 3)
 
 ## 1. Objective
 Display already uses America/Denver (243a). Business logic still decides "today" with UTC
@@ -53,6 +53,11 @@ dates, so scheduled runs are unchanged; manual triggers and all request-time che
    during render (so SSR and hydration always agree, even if Denver midnight passes between them). The prop flows from
    `app/tenant/page.tsx` and the owner/manager charge list loaders that already render these cards (add those files to
    §5 and list each).
+   **Staying open past midnight / app resume:** a small client hook (`useDenverDayRefresh(todayIso)`, in
+   `lib/denver-calendar.ts` or next to the cards) runs **after** hydration: on mount, on `visibilitychange` to visible,
+   and on a timer at the next Denver midnight, it compares `todayDenver()` with the server-provided `todayIso`; if they
+   differ it calls `router.refresh()` once, so the server recomputes `todayIso`, due/late text **and** payment-button
+   eligibility together. Never re-render "today" from the client clock directly.
 4. **Idempotency unchanged:** charge generation, late fees, reminders and follow-ups keep their existing unique keys
    and dedupe; this sprint changes only which day is "today".
 5. Tests in §8.
@@ -113,7 +118,7 @@ Evening instant **E = 2026-11-01T04:30:00Z** (Denver: Oct 31 22:30 MDT; also the
   end 2027-06-30, created 2026-01-01T12:00:00Z, due day 1): at E → due dates exactly `["2026-10-01","2026-11-01"]`;
   at M → exactly `["2026-11-01","2026-12-01"]`.
 - D4s Production sequence (mocked Supabase honoring the existing charge unique key / upsert): manual run at E, then the
-  scheduled run at M, then a rerun at M → the lease has exactly one charge each for 2026-10-01, 2026-11-01 and
+  scheduled run at **S = 2026-11-01T08:00:00Z** (the real cron time; Denver Nov 1, 01:00 MST), then a rerun at S → the lease has exactly one charge each for 2026-10-01, 2026-11-01 and
   2026-12-01 (3 rows, no duplicates); late fees, reminders (E target Nov 3, M target Nov 4 — different charges) and
   overdue follow-ups (due 2026-10-01: stage 30 at E, still stage 30 at M with key `overdue-30` → one email) produce
   no duplicate rows or emails.
@@ -129,6 +134,11 @@ Evening instant **E = 2026-11-01T04:30:00Z** (Denver: Oct 31 22:30 MDT; also the
 - D9b Lease status (`updateLeaseStatuses`, expired when end < today; expiring_soon when end ≤ today + 30): end
   2026-10-31 → at E still active/expiring (not expired), at M expired; end 2026-11-30 → expiring_soon at E; end
   2026-12-01 → not expiring at E, expiring_soon at M. Same boundaries in `lib/lease-lifecycle.ts` expiry warnings.
+- D10h Cross-midnight hydration (same file): server-render the tenant rent card HTML with `todayIso="2026-10-31"`, then
+  hydrate with system time at M (Denver Nov 1) → no React hydration mismatch warning (spy `console.error`), the first
+  client render shows the server text, and `router.refresh` is called exactly once after mount; a `visibilitychange`
+  to visible with the same day → no extra refresh; at the next Denver midnight timer → one refresh. After the refresh
+  (rerender with `todayIso="2026-11-01"`), the Pay button eligibility matches the Nov 1 rule (D3).
 - D10 Client (`components/__tests__/denver-client-cards.test.tsx`, run under `TZ=Asia/Tokyo` too): rendering
   `TenantRentCard`/`PayRentCard` with prop `todayIso="2026-10-31"` for a Nov 1 charge reads "in 1 day"; with
   `todayIso="2026-11-01"` reads "today"; the cards do not call `todayDenver()`/`Date` for "today" during render (spy).
@@ -138,8 +148,8 @@ Evening instant **E = 2026-11-01T04:30:00Z** (Denver: Oct 31 22:30 MDT; also the
 Assert exact values with `toEqual`; no `expect` inside mock implementations.
 
 ## 9. Report format
-Compact status only: files changed with line deltas, D1–D11 → test names, every changed old test (old → new, why),
-validation output counts for all three runs. Do NOT include 'Claude prompt' or 'recommended next steps for Claude'
+Compact status only: files changed with line deltas, D1–D12 (incl. D4s, D9b, D10h) → test names, every changed old
+test (old → new, why), the D12 audit table, and validation output counts for all four commands in §7. Do NOT include 'Claude prompt' or 'recommended next steps for Claude'
 sections. Report compact status only.
 
 ## 10. Constraints
