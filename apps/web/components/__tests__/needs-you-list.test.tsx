@@ -28,4 +28,30 @@ describe("NeedsYouList", () => {
     render(<NeedsYouList {...props} summary={{ ...base, openRepairCount: 2, newMessageCount: 1 }} />);
     expect(screen.getAllByRole("button").map((row) => row.textContent)).toEqual(["2 open repairs", "1 new message"]);
   });
+
+  it("opens the first joined tenant lease and selects its property", () => {
+    const selectProperty = vi.fn();
+    const openLease = vi.fn();
+    render(<NeedsYouList {...props} onSelectProperty={selectProperty} onOpenLeaseWizard={openLease}
+      summary={{ ...base, joinedWithoutLease: [
+        { id: "i1", fullName: "Dana", propertyId: "p1" } as never,
+        { id: "i2", fullName: "Sam", propertyId: "p2" } as never
+      ] }} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Dana joined. Set up their lease" }));
+    expect(selectProperty).toHaveBeenCalledExactlyOnceWith("p1");
+    expect(openLease).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: "Sam joined. Set up their lease" })).not.toBeInTheDocument();
+  });
+
+  it("opens the lease wizard without selecting a property when the invite has none", () => {
+    const selectProperty = vi.fn();
+    const openLease = vi.fn();
+    render(<NeedsYouList {...props} onSelectProperty={selectProperty} onOpenLeaseWizard={openLease}
+      summary={{ ...base, joinedWithoutLease: [{ id: "i1", fullName: "Dana", propertyId: null } as never] }} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Dana joined. Set up their lease" }));
+    expect(selectProperty).not.toHaveBeenCalled();
+    expect(openLease).toHaveBeenCalledTimes(1);
+  });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { useFormState } from "react-dom";
 import type { StatefulAction, ActionState } from "@/app/actions";
 import type { PortfolioData } from "@/lib/portfolio";
@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/shared/submit-button";
-import { FieldLabel, FormError, FormSuccess } from "./form-helpers";
+import { FieldLabel, FormError } from "./form-helpers";
 import { toast } from "sonner";
 
 interface UnitDraft {
@@ -28,6 +28,8 @@ const UNIT_STEP_LABELS = [
   "Default Rent",
   "Review & Save"
 ] as const;
+
+const handledSuccessStates = new WeakSet<NonNullable<ActionState>>();
 
 interface UnitFormProps {
   portfolio: PortfolioData;
@@ -64,7 +66,6 @@ export function UnitForm({
     [initialPropertyId, portfolio.properties]
   );
   const [state, action] = useFormState(onCreateUnit, null);
-  const handledStateRef = useRef<ActionState>(null);
   const [stepIndex, setStepIndex] = useState(0);
   const [skippedSteps, setSkippedSteps] = useState<number[]>([]);
   const [draft, setDraft] = useState<UnitDraft>({
@@ -91,8 +92,9 @@ export function UnitForm({
 
   useEffect(() => {
     if (!state?.success) return;
-    if (handledStateRef.current === state) return;
-    handledStateRef.current = state;
+    if (handledSuccessStates.has(state)) return;
+    handledSuccessStates.add(state);
+    const unitNumber = draft.unitNumber;
     setStepIndex(0);
     setSkippedSteps([]);
     setDraft({
@@ -102,7 +104,7 @@ export function UnitForm({
       bathrooms: "1",
       monthlyRentDollars: ""
     });
-    toast.success(`Unit ${draft.unitNumber} added.`);
+    toast.success(`Unit ${unitNumber} added.`);
     onUnitCreated?.();
   }, [draft.unitNumber, getDefaultPropertyId, onUnitCreated, state]);
 
@@ -232,11 +234,17 @@ export function UnitForm({
       <div className="space-y-3">
         <p className="text-sm text-[var(--ink-2)]">Final step: review and save the unit.</p>
         <div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-3 py-3 text-sm text-[var(--ink-2)]">
-          <p><span className="font-semibold">Property:</span> {portfolio.properties.find((property) => property.id === draft.propertyId)?.name ?? "Not set"}</p>
+          <p>
+            <span className="font-semibold">Property:</span>{" "}
+            {portfolio.properties.find((property) => property.id === draft.propertyId)?.name ?? "Not set"}
+          </p>
           <p><span className="font-semibold">Unit Label:</span> {draft.unitNumber || "Not set"}</p>
           <p><span className="font-semibold">Bedrooms:</span> {draft.bedrooms || "Not set"}</p>
           <p><span className="font-semibold">Bathrooms:</span> {draft.bathrooms || "Not set"}</p>
-          <p><span className="font-semibold">Default Rent:</span> {draft.monthlyRentDollars ? `$${draft.monthlyRentDollars}` : "Not set"}</p>
+          <p>
+            <span className="font-semibold">Default Rent:</span>{" "}
+            {draft.monthlyRentDollars ? `$${draft.monthlyRentDollars}` : "Not set"}
+          </p>
         </div>
         {!requiredComplete && (
           <p className="text-xs text-[var(--warn)]">Required details are still missing. Complete all required steps before save.</p>
@@ -270,7 +278,6 @@ export function UnitForm({
       </CardHeader>
       <CardContent className="space-y-4">
         <FormError state={state} />
-        <FormSuccess state={state} />
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {UNIT_STEP_LABELS.map((label, index) => (

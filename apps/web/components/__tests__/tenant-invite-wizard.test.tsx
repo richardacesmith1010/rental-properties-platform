@@ -1,4 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { TenantInviteWizard } from "@/components/dashboard/tenant-invite-wizard";
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 import { getTenantInviteStepError, type TenantInviteWizardDraft } from "@/components/dashboard/tenant-invite-wizard";
 
 function buildDraft(overrides: Partial<TenantInviteWizardDraft> = {}): TenantInviteWizardDraft {
@@ -67,8 +71,6 @@ describe("tenant invite wizard step validation", () => {
   });
 });
 
-import { render, screen } from "@testing-library/react";
-import { vi } from "vitest";
 import type { PropertyListItem } from "@/lib/portfolio";
 import { TenantInviteStepOne, TenantInviteSuccess } from "@/components/dashboard/tenant-invite-wizard-support";
 
@@ -96,5 +98,36 @@ describe("tenant invite delivery", () => {
     expect(screen.getByRole("button", { name: "Add a unit" })).toBeInTheDocument();
     rerender(<TenantInviteStepOne {...props} properties={[{ id: "home", name: "Home", unitCount: 2 } as PropertyListItem]} />);
     expect(screen.getByText("Every unit has a tenant. Add a unit first.")).toBeInTheDocument();
+  });
+});
+
+const inviteProperties = [{
+  id: "p1", name: "Maple", addressLine1: "1 Maple", city: "Denver", state: "CO", postalCode: "80000", unitCount: 2
+}] as PropertyListItem[];
+const inviteUnits = [185000, 200000].map((monthlyRentCents, index) => ({
+  id: `u${index + 1}`, propertyId: "p1", propertyName: "Maple", unitNumber: `${index + 1}`,
+  bedrooms: 2, bathrooms: 1, monthlyRentCents, squareFeet: null, occupied: false, active: true
+}));
+
+describe("TenantInviteWizard rent prefill", () => {
+  it("prefills the selected unit rent and skips rent when sending the invite", async () => {
+    const invite = vi.fn().mockResolvedValue({ success: true, message: "Sent" });
+    render(<TenantInviteWizard
+      open properties={inviteProperties} units={inviteUnits} leases={[]} onOpenChange={vi.fn()}
+      onInviteTenant={invite} onOpenSection={vi.fn()}
+    />);
+    fireEvent.change(screen.getByLabelText("Unit"), { target: { value: "u1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    fireEvent.change(screen.getByLabelText("Full name"), { target: { value: "Dana Doe" } });
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "dana@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
+    await waitFor(() => expect(screen.getByLabelText("Monthly rent (optional)")).toHaveValue(1850));
+    expect(screen.getByRole("button", { name: "Skip — you'll add rent later" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Skip — you'll add rent later" }));
+
+    await waitFor(() => expect(invite).toHaveBeenCalledTimes(1));
+    const formData = invite.mock.calls[0]?.[1] as FormData;
+    expect(formData.has("monthlyRentDollars")).toBe(false);
   });
 });

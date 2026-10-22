@@ -200,4 +200,22 @@ describe("lease wizard step validation", () => {
     expect(draft.unitId).toBe("unit-1");
     expect(draft.tenantProfileId).toBe("tenant-1");
   });
+
+  it("prefills initial rent from the only vacant unit and leaves rent blank for two units", () => {
+    const property = {
+      id: "property-1", name: "Maple", addressLine1: "1 Maple", city: "Denver", state: "CO", postalCode: "80000",
+      managementFeeCents: 0, unitCount: 2, ownerAccountId: null, ownerAccountName: "Owner",
+      ownerAccountIsClient: false, active: true
+    };
+    const unit = {
+      id: "unit-1", propertyId: "property-1", propertyName: "Maple", unitNumber: "1", bedrooms: 2, bathrooms: 1,
+      monthlyRentCents: 235000, squareFeet: null, occupied: false, active: true
+    };
+    const draft = (units: typeof unit[]) => createDefaultLeaseWizardDraft({
+      properties: [property], units, leases: [], tenants: []
+    });
+
+    expect(draft([unit]).monthlyRentDollars).toBe("2350.00");
+    expect(draft([unit, { ...unit, id: "unit-2", unitNumber: "2" }]).monthlyRentDollars).toBe("");
+  });
 });
