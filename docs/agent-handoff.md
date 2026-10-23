@@ -2140,3 +2140,13 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - **Screen-reader audit** (iPhone WebKit; VoiceOver itself does not run in the Simulator): 19 screens, all roles +
   public. All controls and images named. Found: manager pages have no `h1`; duplicate section ids (wrapper + card);
   owner Repairs `h1 → h3` skip and an empty `h3`. → **254b** (Codex running).
+
+## 2026-10-23 — Sprint 254b SHIPPED (screen-reader structure)
+- **254b** `8c99573` (L2): manager page title is now an `h1` (owner/tenant unchanged, exactly one `h1` per page);
+  `CardTitle` gets `as="h2" | "h3"` (default h3) and section cards use `h2`; inner section cards no longer repeat the
+  `<section id>`; `EmptyState` renders no heading when the title is blank.
+- Verified: 11 new tests (H1–H4), no snapshot changes; gate 3,344; CI success; Vercel deploy success; smoke 27/27.
+  **Production re-audit (iPhone WebKit, 19 screens, all roles + public): every screen h1 = 1, 0 heading skips, 0
+  duplicate ids, 0 unnamed controls, 0 images without alt** (was: manager h1 = 0, dup ids on 6 screens, 2 skips).
+- **Next proposal:** wrap the account wipe in one transaction (characterized partial deletion, 253b) — L3, needs a
+  DB function + ChatGPT review; or the Stripe webhook delivery recheck at the next real event.
