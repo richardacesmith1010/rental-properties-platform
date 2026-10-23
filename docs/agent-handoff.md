@@ -2113,3 +2113,16 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   façade export (`unique` MISSING at BASE) and a changed parameter type (2 exports DIFF), files restored byte-exact;
   `canUserAdministerOwnershipAccount` 6 cases with exact filters. Gate 3,299; CI success; deployed = `00c1868`; smoke
   27/27; read-only walk owner Home + Ownership and manager Home (content present, 0 page errors); Sentry clean.
+
+## 2026-10-22 — Sprint 253d SHIPPED (split lib/stripe-connect.ts); all four large money/deletion files done
+- **253d** `07c3cdb` (L3, ChatGPT rev 3 AWC adopted): 15 characterization tests for uncovered paths (manager payout
+  routing, rent-collection authority, account/login links, getAccount — fetch mocked), then 685 lines → façade 9 +
+  `lib/stripe-connect/` api 186, rent-collection 221, property-accounts 284.
+- Verified by Claude: verbatim 32/32 + façade OK (BASE `00c1868`); export surface 17/17; prefix hash unchanged; the
+  15 tests pass **on BASE in a clean worktree**; 3 mutations of manager routing on BASE (fee ≤ 0, onboarding check,
+  oldest-manager order) each caught. 11 downstream suites same counts. Gate 3,318; CI success; smoke 27/27; `/api/health`
+  Stripe ok; read-only walk owner bank settings, Rent, bank activity (0 page errors; only POST = sign-in); Sentry clean.
+- No safe manager fixture: no active manager has a connected Stripe account (SQL) — manager routing covered by tests.
+- Deploy note: the CLI build failed on a transient Google Fonts fetch (`next/font`), but the git-integration build of
+  the same commit was READY and is the `domusbase.com` alias (checked).
+- Code health: no money/deletion file > 500 lines. Largest remaining: `sidebar-nav.tsx` 504 (L1 split, queued).
