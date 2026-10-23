@@ -2164,3 +2164,16 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - **Found (L-004): `vendors` has no `property_id`** — "Delete All Properties … and vendors" never deleted vendors
   (op silently skipped). Vendors are keyed by `owner_account_id` (cascade from ownership_accounts) /
   `owner_profile_id`; `preventive_maintenance_schedules.assigned_vendor_id` is NO ACTION. → **255b** after 255a.
+
+## 2026-10-23 — Sprint 255a SHIPPED (account wipe = one transaction)
+- **255a** `623c354` (+ fix1 removing six `as never` log casts) (L3, ChatGPT rev 3 AWC adopted): every wipe action
+  builds an ordered plan (no I/O) and sends it in **one** `account_wipe_apply` RPC; storage files are removed only
+  after a validated success reply. Outcomes: known SQLSTATE / PGRST202-203 → `database_rollback_confirmed`; anything
+  else, or an invalid success reply → `rpc_result_unknown` (never retried, no storage cleanup). User messages unchanged.
+- Verified by Claude: every literal delete-order array byte-identical to HEAD (script; only the old partial-prefix
+  test replaced, intended); fullAccountWipe hoisted reads + plan order reviewed; gate 3,372; CI success; Vercel deploy
+  success; smoke 27/27; read-only Account & Data walk (0 POSTs); live service-role no-op RPC rows 0; Sentry clean.
+- Behavior change (intended): a confirmed DB failure now deletes **nothing** (was partial).
+- **255b next:** wipe coverage gaps — vendors (2 live rows never deleted), plus NO ACTION FKs that would block a wipe
+  if rows existed: documents (lease/property/unit), inspections (lease), communication_logs (property/unit),
+  preventive_maintenance_schedules (vendor). All four have 0 rows today.
