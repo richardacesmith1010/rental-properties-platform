@@ -4,8 +4,12 @@ const mocks = vi.hoisted(() => ({
   auth: vi.fn(), rate: vi.fn(), accounts: vi.fn(), properties: vi.fn(),
   revalidate: vi.fn(), sideEffectError: vi.fn(), sideEffectHandler: vi.fn(),
   log: [] as Array<Record<string, unknown>>,
+  directWrites: [] as Array<{ table: string; op: string }>,
   failures: [] as Array<{ table: string; op: string; code?: string; at?: number }>,
-  storageError: false
+  storageError: false,
+  rpcReply: null as null | ((ops: Array<{ label: string }>) => unknown),
+  rpcReject: false,
+  dbState: ["original"] as string[]
 }));
 
 vi.mock("server-only", () => ({}));
@@ -41,8 +45,8 @@ function query(table: string) {
   const filters: Filter[] = [];
   const chain = {
     select(_columns: string) { op = "select"; return chain; },
-    delete() { op = "delete"; return chain; },
-    update(next: unknown) { op = "update"; values = next; return chain; },
+    delete() { op = "delete"; mocks.directWrites.push({ table, op }); return chain; },
+    update(next: unknown) { op = "update"; values = next; mocks.directWrites.push({ table, op }); return chain; },
     in(column: string, value: unknown) { filters.push(["in", column, value]); return chain; },
     eq(column: string, value: unknown) { filters.push(["eq", column, value]); return chain; },
     not(column: string, value: string, modifier: unknown) {
@@ -66,7 +70,21 @@ function query(table: string) {
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
     from: query,
-    rpc: async () => { mocks.log.push({ op: "rpc" }); return { error: null }; },
+    rpc: async (name: string, args: { p_ops: Array<{ label: string }> }) => {
+      mocks.log.push({ op: "rpc", name, args });
+      if (mocks.rpcReject) throw new Error("network error");
+      const response = mocks.rpcReply?.(args.p_ops) ?? {
+        data: {
+          operations: args.p_ops.length,
+          results: args.p_ops.map((op) => op.label === "Delete vendors"
+            ? { label: op.label, skipped: true } : { label: op.label, rows: 1 })
+        },
+        error: null
+      };
+      if ((response as { error?: unknown }).error === null &&
+        (response as { data?: unknown }).data !== null) mocks.dbState = [];
+      return response;
+    },
     storage: { from: (bucket: string) => ({ remove: async (paths: string[]) => {
       mocks.log.push({ bucket, remove: paths });
       return { error: mocks.storageError ? { message: "storage failure" } : null };
@@ -90,14 +108,36 @@ function form(confirmation?: string) {
   return data;
 }
 function run(action: Action, confirmation = "DELETE") { return action({ success: false, error: "previous" }, form(confirmation)); }
-function mutationLog() {
-  return mocks.log.filter((entry) => entry.op === "delete" || entry.op === "update" || entry.remove)
-    .map((entry) => entry.remove
-      ? [entry.bucket, "remove", entry.remove]
-      : [entry.table, entry.op, entry.filters, ...(entry.op === "update" ? [entry.values] : [])]);
+function opsToLog(ops: Array<Record<string, unknown>>) {
+  return ops.map((op) => [
+    op.table, op.kind,
+    (op.filters as Array<Record<string, unknown>>).map((filter) => filter.op === "not_null"
+      ? ["not", filter.column, ["is", null]]
+      : [filter.op, filter.column, filter.op === "in" ? filter.values : filter.value]),
+    ...(op.kind === "update" ? [op.set] : [])
+  ]);
+}
+function rpcCalls() { return mocks.log.filter((entry) => entry.op === "rpc"); }
+function rpcPayload() {
+  return (rpcCalls()[0].args as { p_ops: Array<Record<string, unknown>> }).p_ops;
+}
+function assertTrace(expected: unknown[][]) {
+  const database = expected.filter((entry) => entry[1] !== "remove");
+  const storage = expected.filter((entry) => entry[1] === "remove");
+  expect(rpcCalls()).toHaveLength(1);
+  expect(rpcCalls()[0].name).toBe("account_wipe_apply");
+  expect(mocks.directWrites).toEqual([]);
+  expect(mocks.log.filter((entry) => entry.op === "delete" || entry.op === "update")).toEqual([]);
+  expect(opsToLog(rpcPayload())).toEqual(database);
+  expect(mocks.log.filter((entry) => entry.remove).map((entry) => [entry.bucket, "remove", entry.remove]))
+    .toEqual(storage);
+  const rpcIndex = mocks.log.findIndex((entry) => entry.op === "rpc");
+  expect(mocks.log.slice(0, rpcIndex).some((entry) => entry.remove)).toBe(false);
+  expect(mocks.revalidate.mock.calls).toEqual([["/settings"], ["/owner"], ["/manager"], ["/tenant"]]);
 }
 function expectNoWrites() {
-  expect(mutationLog()).toEqual([]);
+  expect(mocks.directWrites).toEqual([]);
+  expect(mocks.log.filter((entry) => entry.op === "delete" || entry.op === "update" || entry.remove)).toEqual([]);
   expect(mocks.log.some((entry) => entry.op === "rpc")).toBe(false);
   expect(mocks.revalidate).not.toHaveBeenCalled();
 }
@@ -105,8 +145,12 @@ function expectNoWrites() {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.log.length = 0;
+  mocks.directWrites.length = 0;
   mocks.failures.length = 0;
   mocks.storageError = false;
+  mocks.rpcReply = null;
+  mocks.rpcReject = false;
+  mocks.dbState = ["original"];
   mocks.auth.mockResolvedValue({ user: { id: "owner-1", email: "OWNER@EXAMPLE.COM" }, role: "owner" });
   mocks.rate.mockReturnValue({ allowed: true });
   mocks.accounts.mockResolvedValue(["account-1"]);
@@ -215,19 +259,19 @@ const fullLog = [
 describe("account wipe characterization", () => {
   it("K1 fullAccountWipe deletes the complete ordered scope", async () => {
     expect(await run(fullAccountWipe)).toEqual({ success: true, message: "Your Domus account data has been wiped." });
-    expect(mutationLog()).toEqual(fullLog);
+    assertTrace(fullLog);
     expect(mocks.revalidate.mock.calls).toEqual([["/settings"], ["/owner"], ["/manager"], ["/tenant"]]);
   });
   it("K2 deleteAllProperties keeps templates and deletes its complete ordered scope", async () => {
     expect(await run(deleteAllProperties)).toEqual({
       success: true, message: "All properties and related operational data have been removed."
     });
-    expect(mutationLog()).toEqual(propertiesLog);
-    expect(mutationLog().some((entry) => entry[0] === "document_templates")).toBe(false);
+    assertTrace(propertiesLog);
+    expect(opsToLog(rpcPayload()).some((entry) => entry[0] === "document_templates")).toBe(false);
   });
   it("K2 deleteAllTenants deletes its complete ordered scope", async () => {
     expect(await run(deleteAllTenants)).toEqual({ success: true, message: "All tenant-linked data has been removed." });
-    expect(mutationLog()).toEqual([
+    assertTrace([
       ["payment_distributions", "delete", [["in", "payment_id", ["payment-1"]]]],
       ["payments", "delete", [["in", "id", ["payment-1"]]]],
       ["rent_charges", "delete", [["in", "id", ["charge-1"]]]],
@@ -246,14 +290,14 @@ describe("account wipe characterization", () => {
     expect(await run(deleteAllManagers)).toEqual({
       success: true, message: "All property manager assignments and invites have been removed."
     });
-    expect(mutationLog()).toEqual([
+    assertTrace([
       ["property_managers", "delete", [["in", "property_id", ["property-1"]]]],
       ["invitations", "delete", [["eq", "role", "manager"], ["in", "property_id", ["property-1"]]]]
     ]);
   });
   it("K2 deleteAllLeases deletes its complete ordered scope", async () => {
     expect(await run(deleteAllLeases)).toEqual({ success: true, message: "All leases and rent schedules have been removed." });
-    expect(mutationLog()).toEqual([
+    assertTrace([
       ...leaseFinancials,
       ["document_signers", "delete", [["in", "packet_id", ["packet-1"]]]],
       ["document_packets", "delete", [["in", "id", ["packet-1"]]]],
@@ -263,7 +307,7 @@ describe("account wipe characterization", () => {
   });
   it("K2 deleteAllFinancialData deletes its complete ordered scope", async () => {
     expect(await run(deleteAllFinancialData)).toEqual({ success: true, message: "All financial records have been cleared." });
-    expect(mutationLog()).toEqual([
+    assertTrace([
       ["payment_distributions", "delete", [["in", "payment_id", ["payment-1"]]]],
       ["payment_distributions", "delete", [["in", "account_id", ["account-1"]]]],
       ["payments", "delete", [["in", "id", ["payment-1"]]]],
@@ -289,82 +333,90 @@ describe("account wipe characterization", () => {
       expectNoWrites();
     });
   }
-  it("K4 first delete error stops fullAccountWipe with its exact error", async () => {
-    mocks.failures.push({ table: "payment_distributions", op: "delete" });
+  it.each(["22P02", "42883", "PGRST202"])("A2 confirmed %s rolls back the full wipe", async (code) => {
+    mocks.rpcReply = () => ({ data: null, error: { code, message: "simulated failure" } });
     expect(await run(fullAccountWipe)).toEqual({
       success: false, error: "Unable to complete the full account wipe right now."
     });
-    expect(mutationLog()).toEqual([
-      ["payment_distributions", "delete", [["in", "payment_id", ["payment-1"]]]]
-    ]);
+    expect(rpcCalls()).toHaveLength(1);
+    expect(mocks.directWrites).toEqual([]);
+    expect(mocks.log.filter((entry) => entry.op === "delete" || entry.op === "update" || entry.remove)).toEqual([]);
+    expect(mocks.dbState).toEqual(["original"]);
     expect(mocks.revalidate).not.toHaveBeenCalled();
+    expect(mocks.sideEffectError).toHaveBeenCalledExactlyOnceWith(
+      "fullAccountWipe", "database_rollback_confirmed"
+    );
   });
-  it("K4 missing-schema select and delete continue to later deletes", async () => {
-    mocks.failures.push({ table: "rental_listings", op: "select", code: "42P01" });
-    mocks.failures.push({ table: "payment_distributions", op: "delete", code: "42P01" });
-    expect(await run(deleteAllProperties)).toEqual({
-      success: true, message: "All properties and related operational data have been removed."
-    });
-    expect(mutationLog()).toEqual(propertiesLog.filter((entry) =>
-      !(entry[0] === "rental_listings" && entry[1] === "delete")));
-    expect(mutationLog().some((entry) => entry[0] === "properties")).toBe(true);
+  it.each(["reject", "empty", "PGRST000", "PGRST003", "08006", "57P01", "no-code"])(
+    "A2b unknown RPC outcome %s is never retried", async (caseName) => {
+      if (caseName === "reject") mocks.rpcReject = true;
+      else if (caseName === "empty") mocks.rpcReply = () => ({ data: null, error: null });
+      else mocks.rpcReply = () => ({ data: null, error: caseName === "no-code"
+        ? { message: "Bad gateway" } : { code: caseName } });
+      expect(await run(fullAccountWipe)).toEqual({
+        success: false, error: "Unable to complete the full account wipe right now."
+      });
+      expect(rpcCalls()).toHaveLength(1);
+      expect(mocks.directWrites).toEqual([]);
+      expect(mocks.log.filter((entry) => entry.op === "delete" || entry.op === "update" || entry.remove)).toEqual([]);
+      expect(mocks.revalidate).not.toHaveBeenCalled();
+      expect(mocks.sideEffectError).toHaveBeenCalledExactlyOnceWith(
+        "fullAccountWipe", "rpc_result_unknown"
+      );
+    }
+  );
+  it.each(["count", "not-array", "missing", "label", "negative", "unexpected-skip"])(
+    "A2c invalid success %s blocks storage and revalidation", async (caseName) => {
+      mocks.rpcReply = (ops) => {
+        const results: Array<Record<string, unknown>> = ops.map((op) => ({ label: op.label, rows: 0 }));
+        let operations = ops.length;
+        if (caseName === "count") operations--;
+        if (caseName === "missing") results.pop();
+        if (caseName === "label") results[0].label = "wrong";
+        if (caseName === "negative") results[0].rows = -1;
+        if (caseName === "unexpected-skip") results[0] = { label: ops[0].label, skipped: true };
+        return { data: { operations, results: caseName === "not-array" ? {} : results }, error: null };
+      };
+      expect(await run(deleteAllProperties)).toEqual({
+        success: false, error: "Unable to delete property data right now."
+      });
+      expect(rpcCalls()).toHaveLength(1);
+      expect(mocks.directWrites).toEqual([]);
+      expect(mocks.log.filter((entry) => entry.remove)).toEqual([]);
+      expect(mocks.revalidate).not.toHaveBeenCalled();
+      expect(mocks.sideEffectError).toHaveBeenCalledExactlyOnceWith(
+        "deleteAllProperties", "rpc_result_unknown"
+      );
+    }
+  );
+  it("A4 reads four request sets before the RPC and puts their IDs in ordered vote deletes", async () => {
+    expect(await run(fullAccountWipe)).toEqual({ success: true, message: "Your Domus account data has been wiped." });
+    const rpcIndex = mocks.log.findIndex((entry) => entry.op === "rpc");
+    const requestTables = [
+      "withdrawal_requests", "distribution_change_requests", "account_rename_requests", "account_delete_requests"
+    ];
+    for (const table of requestTables) {
+      expect(mocks.log.findIndex((entry) => entry.table === table && entry.op === "select")).toBeLessThan(rpcIndex);
+    }
+    expect(opsToLog(rpcPayload()).filter((entry) => String(entry[0]).endsWith("_votes"))).toEqual(
+      fullLog.filter((entry) => String(entry[0]).endsWith("_votes"))
+    );
   });
-  it("K4b later delete error preserves exact partial prefix", async () => {
-    mocks.failures.push({ table: "leases", op: "delete" });
-    expect(await run(deleteAllProperties)).toEqual({
-      success: false, error: "Unable to delete property data right now."
-    });
-    expect(mutationLog()).toEqual([
-      ...leaseFinancials, ...maintenance, ...documents, ...pipeline, ...automation,
-      ["manager_payments", "delete", [["in", "property_id", ["property-1"]]]],
-      ["manager_payment_configs", "delete", [["in", "property_id", ["property-1"]]]],
-      ["property_expenses", "delete", [["in", "id", ["expense-1"]]]],
-      ["vendors", "delete", [["in", "property_id", ["property-1"]]]],
-      ["notification_deliveries", "delete", [["in", "notification_id", [
-        "notification-property", "notification-unit", "notification-lease", "notification-rent_charge",
-        "notification-charge", "notification-maintenance_ticket", "notification-ticket", "notification-expense",
-        "notification-invitation", "notification-manager_payment"
-      ]]]],
-      ["notifications", "delete", [["in", "id", [
-        "notification-property", "notification-unit", "notification-lease", "notification-rent_charge",
-        "notification-charge", "notification-maintenance_ticket", "notification-ticket", "notification-expense",
-        "notification-invitation", "notification-manager_payment"
-      ]]]],
-      ["message_deliveries", "delete", [["in", "message_id", ["message-1"]]]],
-      ["inbox_messages", "delete", [["in", "id", ["message-1"]]]],
-      ["inbox_threads", "delete", [["in", "id", ["thread-1"]]]],
-      ["property_managers", "delete", [["in", "property_id", ["property-1"]]]],
-      ["invitations", "delete", [["in", "id", ["invitation-1"]]]],
-      ["leases", "delete", [["in", "id", ["lease-1"]]]]
-    ]);
-    expect(mocks.revalidate).not.toHaveBeenCalled();
-  });
-  it("K4b update error preserves exact partial prefix", async () => {
-    mocks.failures.push({ table: "units", op: "update" });
-    expect(await run(deleteAllLeases)).toEqual({
-      success: false, error: "Unable to delete lease data right now."
-    });
-    expect(mutationLog()).toEqual([
-      ...leaseFinancials,
-      ["document_signers", "delete", [["in", "packet_id", ["packet-1"]]]],
-      ["document_packets", "delete", [["in", "id", ["packet-1"]]]],
-      ["leases", "delete", [["in", "id", ["lease-1"]]]],
-      ["units", "update", [["in", "id", ["unit-1"]]], { occupied: false }]
-    ]);
-    expect(mocks.revalidate).not.toHaveBeenCalled();
-  });
-  it("K5 storage removal errors are logged and the wipe continues", async () => {
+  it("A5 storage removal errors are logged and the next removal runs", async () => {
     mocks.storageError = true;
     expect(await run(deleteAllProperties)).toEqual({
       success: true, message: "All properties and related operational data have been removed."
     });
-    expect(mutationLog()).toEqual(propertiesLog);
-    expect(mocks.sideEffectError).toHaveBeenCalledWith("accountWipe", "remove_storage_objects", {
-      entityType: "maintenance-photos"
-    });
-    expect(mocks.sideEffectError).toHaveBeenCalledWith("accountWipe", "remove_storage_objects", {
-      entityType: "property-files"
-    });
-    expect(mocks.sideEffectHandler).toHaveBeenCalledTimes(2);
+    assertTrace(propertiesLog);
+    for (const bucket of ["maintenance-photos", "property-files"]) {
+      expect(mocks.sideEffectError).toHaveBeenCalledWith("accountWipe", "remove_storage_objects", {
+        entityType: bucket
+      });
+    }
+    expect(mocks.sideEffectError).toHaveBeenCalledTimes(4);
+    expect(mocks.sideEffectError.mock.calls.filter((call) => call[1] === "storage_cleanup_failed")).toEqual([
+      ["deleteAllProperties", "storage_cleanup_failed"],
+      ["deleteAllProperties", "storage_cleanup_failed"]
+    ]);
   });
 });

@@ -7,7 +7,7 @@ import { requireAuth } from "./auth-helpers";
 import type { ActionState } from "./shared";
 import { unique, selectRows, loadDeletionScope } from "@/lib/account-wipe/scope";
 import {
-  executeMutation, deleteByIds, updateByIds, deleteDistributionRecords,
+  createWipePlan, applyWipePlan, deleteDistributionRecords,
   deleteLeaseFinancials, deleteLeasingPipeline, deleteDocuments,
   deleteMaintenance, deleteAutomation
 } from "@/lib/account-wipe/mutations";
@@ -63,25 +63,27 @@ export async function deleteAllProperties(
 
   try {
     const scope = await loadDeletionScope(auth.userId);
-    await deleteLeaseFinancials(scope);
-    await deleteMaintenance(scope);
-    await deleteDocuments(scope, false);
-    await deleteLeasingPipeline(scope);
-    await deleteAutomation(scope);
-    await deleteByIds("manager_payments", "property_id", scope.propertyIds, "Delete manager payments");
-    await deleteByIds("manager_payment_configs", "property_id", scope.propertyIds, "Delete manager payment configs");
-    await deleteByIds("property_expenses", "id", scope.expenseIds, "Delete expenses");
-    await deleteByIds("vendors", "property_id", scope.propertyIds, "Delete vendors");
-    await deleteByIds("notification_deliveries", "notification_id", scope.propertyNotificationIds, "Delete property notification deliveries");
-    await deleteByIds("notifications", "id", scope.propertyNotificationIds, "Delete property notifications");
-    await deleteByIds("message_deliveries", "message_id", scope.propertyMessageIds, "Delete property message deliveries");
-    await deleteByIds("inbox_messages", "id", scope.propertyMessageIds, "Delete property inbox messages");
-    await deleteByIds("inbox_threads", "id", scope.propertyThreadIds, "Delete property inbox threads");
-    await deleteByIds("property_managers", "property_id", scope.propertyIds, "Delete property managers");
-    await deleteByIds("invitations", "id", scope.invitationIds, "Delete invitations");
-    await deleteByIds("leases", "id", scope.leaseIds, "Delete leases");
-    await deleteByIds("units", "id", scope.unitIds, "Delete units");
-    await deleteByIds("properties", "id", scope.propertyIds, "Delete properties");
+    const plan = createWipePlan("deleteAllProperties");
+    deleteLeaseFinancials(plan, scope);
+    deleteMaintenance(plan, scope);
+    deleteDocuments(plan, scope, false);
+    deleteLeasingPipeline(plan, scope);
+    deleteAutomation(plan, scope);
+    plan.deleteIn("manager_payments", "property_id", scope.propertyIds, "Delete manager payments");
+    plan.deleteIn("manager_payment_configs", "property_id", scope.propertyIds, "Delete manager payment configs");
+    plan.deleteIn("property_expenses", "id", scope.expenseIds, "Delete expenses");
+    plan.deleteIn("vendors", "property_id", scope.propertyIds, "Delete vendors");
+    plan.deleteIn("notification_deliveries", "notification_id", scope.propertyNotificationIds, "Delete property notification deliveries");
+    plan.deleteIn("notifications", "id", scope.propertyNotificationIds, "Delete property notifications");
+    plan.deleteIn("message_deliveries", "message_id", scope.propertyMessageIds, "Delete property message deliveries");
+    plan.deleteIn("inbox_messages", "id", scope.propertyMessageIds, "Delete property inbox messages");
+    plan.deleteIn("inbox_threads", "id", scope.propertyThreadIds, "Delete property inbox threads");
+    plan.deleteIn("property_managers", "property_id", scope.propertyIds, "Delete property managers");
+    plan.deleteIn("invitations", "id", scope.invitationIds, "Delete invitations");
+    plan.deleteIn("leases", "id", scope.leaseIds, "Delete leases");
+    plan.deleteIn("units", "id", scope.unitIds, "Delete units");
+    plan.deleteIn("properties", "id", scope.propertyIds, "Delete properties");
+    await applyWipePlan(plan);
     await revalidateSettingsSurfaces();
     return { success: true, message: "All properties and related operational data have been removed." };
   } catch (error) {
@@ -140,30 +142,24 @@ export async function deleteAllTenants(
       "Load tenant document packets"
     );
 
-    await deleteByIds("payment_distributions", "payment_id", paymentRows.map((payment) => payment.id), "Delete tenant payment distributions");
-    await deleteByIds("payments", "id", paymentRows.map((payment) => payment.id), "Delete tenant payments");
-    await deleteByIds("rent_charges", "id", chargeIds, "Delete tenant rent charges");
-    await deleteByIds("autopay_enrollments", "lease_id", tenantLeaseIds, "Delete tenant autopay enrollments");
-    await deleteByIds("document_signers", "packet_id", packetRows.map((packet) => packet.id), "Delete tenant document signers");
-    await deleteByIds("document_packets", "id", packetRows.map((packet) => packet.id), "Delete tenant document packets");
-    await executeMutation(
-      admin
-        .from("maintenance_tickets")
-        .delete()
-        .in("property_id", scope.propertyIds)
-        .not("tenant_profile_id", "is", null),
-      "Delete tenant maintenance tickets"
-    );
-    await executeMutation(
-      admin
-        .from("invitations")
-        .delete()
-        .eq("role", "tenant")
-        .in("property_id", scope.propertyIds),
-      "Delete tenant invitations"
-    );
-    await deleteByIds("leases", "id", tenantLeaseIds, "Delete tenant leases");
-    await updateByIds("units", { occupied: false }, "id", tenantUnitIds, "Reset unit occupancy");
+    const plan = createWipePlan("deleteAllTenants");
+    plan.deleteIn("payment_distributions", "payment_id", paymentRows.map((payment) => payment.id), "Delete tenant payment distributions");
+    plan.deleteIn("payments", "id", paymentRows.map((payment) => payment.id), "Delete tenant payments");
+    plan.deleteIn("rent_charges", "id", chargeIds, "Delete tenant rent charges");
+    plan.deleteIn("autopay_enrollments", "lease_id", tenantLeaseIds, "Delete tenant autopay enrollments");
+    plan.deleteIn("document_signers", "packet_id", packetRows.map((packet) => packet.id), "Delete tenant document signers");
+    plan.deleteIn("document_packets", "id", packetRows.map((packet) => packet.id), "Delete tenant document packets");
+    plan.deleteWhere("maintenance_tickets", [
+      { op: "in", column: "property_id", values: scope.propertyIds },
+      { op: "not_null", column: "tenant_profile_id" }
+    ], "Delete tenant maintenance tickets");
+    plan.deleteWhere("invitations", [
+      { op: "eq", column: "role", value: "tenant" },
+      { op: "in", column: "property_id", values: scope.propertyIds }
+    ], "Delete tenant invitations");
+    plan.deleteIn("leases", "id", tenantLeaseIds, "Delete tenant leases");
+    plan.updateIn("units", { occupied: false }, "id", tenantUnitIds, "Reset unit occupancy");
+    await applyWipePlan(plan);
     await revalidateSettingsSurfaces();
     return { success: true, message: "All tenant-linked data has been removed." };
   } catch (error) {
@@ -187,17 +183,14 @@ export async function deleteAllManagers(
   }
 
   try {
-    const admin = createAdminClient();
     const scope = await loadDeletionScope(auth.userId);
-    await deleteByIds("property_managers", "property_id", scope.propertyIds, "Delete property managers");
-    await executeMutation(
-      admin
-        .from("invitations")
-        .delete()
-        .eq("role", "manager")
-        .in("property_id", scope.propertyIds),
-      "Delete manager invitations"
-    );
+    const plan = createWipePlan("deleteAllManagers");
+    plan.deleteIn("property_managers", "property_id", scope.propertyIds, "Delete property managers");
+    plan.deleteWhere("invitations", [
+      { op: "eq", column: "role", value: "manager" },
+      { op: "in", column: "property_id", values: scope.propertyIds }
+    ], "Delete manager invitations");
+    await applyWipePlan(plan);
     await revalidateSettingsSurfaces();
     return { success: true, message: "All property manager assignments and invites have been removed." };
   } catch (error) {
@@ -229,11 +222,13 @@ export async function deleteAllLeases(
         : Promise.resolve({ data: [], error: null }),
       "Load lease document packets"
     );
-    await deleteLeaseFinancials(scope);
-    await deleteByIds("document_signers", "packet_id", packetRows.map((packet) => packet.id), "Delete lease document signers");
-    await deleteByIds("document_packets", "id", packetRows.map((packet) => packet.id), "Delete lease document packets");
-    await deleteByIds("leases", "id", scope.leaseIds, "Delete leases");
-    await updateByIds("units", { occupied: false }, "id", scope.unitIds, "Reset occupied units");
+    const plan = createWipePlan("deleteAllLeases");
+    deleteLeaseFinancials(plan, scope);
+    plan.deleteIn("document_signers", "packet_id", packetRows.map((packet) => packet.id), "Delete lease document signers");
+    plan.deleteIn("document_packets", "id", packetRows.map((packet) => packet.id), "Delete lease document packets");
+    plan.deleteIn("leases", "id", scope.leaseIds, "Delete leases");
+    plan.updateIn("units", { occupied: false }, "id", scope.unitIds, "Reset occupied units");
+    await applyWipePlan(plan);
     await revalidateSettingsSurfaces();
     return { success: true, message: "All leases and rent schedules have been removed." };
   } catch (error) {
@@ -258,10 +253,12 @@ export async function deleteAllFinancialData(
 
   try {
     const scope = await loadDeletionScope(auth.userId);
-    await deleteDistributionRecords(scope);
-    await deleteByIds("payments", "id", scope.paymentIds, "Delete payments");
-    await deleteByIds("rent_charges", "id", scope.chargeIds, "Delete rent charges");
-    await deleteByIds("property_expenses", "property_id", scope.propertyIds, "Delete expenses");
+    const plan = createWipePlan("deleteAllFinancialData");
+    deleteDistributionRecords(plan, scope);
+    plan.deleteIn("payments", "id", scope.paymentIds, "Delete payments");
+    plan.deleteIn("rent_charges", "id", scope.chargeIds, "Delete rent charges");
+    plan.deleteIn("property_expenses", "property_id", scope.propertyIds, "Delete expenses");
+    await applyWipePlan(plan);
     await revalidateSettingsSurfaces();
     return { success: true, message: "All financial records have been cleared." };
   } catch (error) {
@@ -287,84 +284,69 @@ export async function fullAccountWipe(
   try {
     const admin = createAdminClient();
     const scope = await loadDeletionScope(auth.userId);
-
-    await deleteLeaseFinancials(scope);
-    await deleteMaintenance(scope);
-    await deleteByIds("property_expenses", "property_id", scope.propertyIds, "Delete expenses");
-    await deleteDocuments(scope, true);
-    await deleteLeasingPipeline(scope);
-    await deleteAutomation(scope);
-    await deleteByIds("vendors", "property_id", scope.propertyIds, "Delete vendors");
-    if (scope.propertyIds.length > 0) {
-      await executeMutation(
-        admin.from("invitations").delete().in("property_id", scope.propertyIds),
-        "Delete invitations by property"
+    const requestIds = await Promise.all([
+      ["withdrawal_requests", "Load withdrawal requests"],
+      ["distribution_change_requests", "Load distribution change requests"],
+      ["account_rename_requests", "Load account rename requests"],
+      ["account_delete_requests", "Load account delete requests"]
+    ].map(async ([table, label]) => {
+      const found = await selectRows<{ id: string }>(
+        scope.accountIds.length
+          ? admin.from(table).select("id").in("ownership_account_id", scope.accountIds)
+          : Promise.resolve({ data: [], error: null }),
+        label
       );
+      return found.map((row) => row.id);
+    }));
+
+    const plan = createWipePlan("fullAccountWipe");
+    deleteLeaseFinancials(plan, scope);
+    deleteMaintenance(plan, scope);
+    plan.deleteIn("property_expenses", "property_id", scope.propertyIds, "Delete expenses");
+    deleteDocuments(plan, scope, true);
+    deleteLeasingPipeline(plan, scope);
+    deleteAutomation(plan, scope);
+    plan.deleteIn("vendors", "property_id", scope.propertyIds, "Delete vendors");
+    if (scope.propertyIds.length > 0) {
+      plan.deleteWhere("invitations", [{ op: "in", column: "property_id", values: scope.propertyIds }],
+        "Delete invitations by property");
     }
     if (scope.accountIds.length > 0) {
-      await executeMutation(
-        admin.from("invitations").delete().in("ownership_account_id", scope.accountIds),
-        "Delete invitations by account"
-      );
+      plan.deleteWhere("invitations", [{ op: "in", column: "ownership_account_id", values: scope.accountIds }],
+        "Delete invitations by account");
     }
     if (auth.email) {
-      await executeMutation(
-        admin.from("invitations").delete().eq("email", auth.email.toLowerCase()),
-        "Delete invitations by email"
-      );
+      plan.deleteWhere("invitations", [{ op: "eq", column: "email", value: auth.email.toLowerCase() }],
+        "Delete invitations by email");
     }
-    await executeMutation(
-      admin.from("invitations").delete().eq("invited_by", auth.userId),
-      "Delete invitations by inviter"
-    );
-    await executeMutation(
-      admin.from("invitations").delete().eq("invited_profile_id", auth.userId),
-      "Delete invitations by invitee"
-    );
-    await deleteByIds("leases", "id", scope.leaseIds, "Delete leases");
-    await deleteByIds("units", "id", scope.unitIds, "Delete units");
-    await deleteByIds("property_managers", "property_id", scope.propertyIds, "Delete property managers");
-    await deleteByIds("properties", "id", scope.propertyIds, "Delete properties");
-    await deleteByIds("withdrawal_votes", "request_id", await selectRows<{ id: string }>(
-      scope.accountIds.length
-        ? admin.from("withdrawal_requests").select("id").in("ownership_account_id", scope.accountIds)
-        : Promise.resolve({ data: [], error: null }),
-      "Load withdrawal requests"
-    ).then((rows) => rows.map((row) => row.id)), "Delete withdrawal votes");
-    await deleteByIds("withdrawal_requests", "ownership_account_id", scope.accountIds, "Delete withdrawal requests");
-    await deleteByIds("distribution_change_votes", "request_id", await selectRows<{ id: string }>(
-      scope.accountIds.length
-        ? admin.from("distribution_change_requests").select("id").in("ownership_account_id", scope.accountIds)
-        : Promise.resolve({ data: [], error: null }),
-      "Load distribution change requests"
-    ).then((rows) => rows.map((row) => row.id)), "Delete distribution change votes");
-    await deleteByIds("distribution_change_requests", "ownership_account_id", scope.accountIds, "Delete distribution change requests");
-    await deleteByIds("account_rename_votes", "request_id", await selectRows<{ id: string }>(
-      scope.accountIds.length
-        ? admin.from("account_rename_requests").select("id").in("ownership_account_id", scope.accountIds)
-        : Promise.resolve({ data: [], error: null }),
-      "Load account rename requests"
-    ).then((rows) => rows.map((row) => row.id)), "Delete account rename votes");
-    await deleteByIds("account_rename_requests", "ownership_account_id", scope.accountIds, "Delete account rename requests");
-    await deleteByIds("account_delete_votes", "request_id", await selectRows<{ id: string }>(
-      scope.accountIds.length
-        ? admin.from("account_delete_requests").select("id").in("ownership_account_id", scope.accountIds)
-        : Promise.resolve({ data: [], error: null }),
-      "Load account delete requests"
-    ).then((rows) => rows.map((row) => row.id)), "Delete account delete votes");
-    await deleteByIds("account_delete_requests", "ownership_account_id", scope.accountIds, "Delete account delete requests");
-    await deleteByIds("ownership_account_members", "account_id", scope.accountIds, "Delete ownership account members");
-    await executeMutation(
-      admin.from("ownership_account_members").delete().eq("profile_id", auth.userId),
-      "Delete remaining ownership memberships"
-    );
-    await deleteByIds("ownership_accounts", "id", scope.accountIds, "Delete ownership accounts");
-    await deleteByIds("notification_deliveries", "notification_id", scope.notificationIds, "Delete notification deliveries");
-    await deleteByIds("notifications", "id", scope.notificationIds, "Delete notifications");
-    await deleteByIds("message_deliveries", "message_id", scope.messageIds, "Delete message deliveries");
-    await deleteByIds("inbox_messages", "id", scope.messageIds, "Delete inbox messages");
-    await deleteByIds("inbox_threads", "id", scope.threadIds, "Delete inbox threads");
-    await executeMutation(admin.from("notification_preferences").delete().eq("profile_id", auth.userId), "Delete notification preferences");
+    plan.deleteWhere("invitations", [{ op: "eq", column: "invited_by", value: auth.userId }],
+      "Delete invitations by inviter");
+    plan.deleteWhere("invitations", [{ op: "eq", column: "invited_profile_id", value: auth.userId }],
+      "Delete invitations by invitee");
+    plan.deleteIn("leases", "id", scope.leaseIds, "Delete leases");
+    plan.deleteIn("units", "id", scope.unitIds, "Delete units");
+    plan.deleteIn("property_managers", "property_id", scope.propertyIds, "Delete property managers");
+    plan.deleteIn("properties", "id", scope.propertyIds, "Delete properties");
+    plan.deleteIn("withdrawal_votes", "request_id", requestIds[0], "Delete withdrawal votes");
+    plan.deleteIn("withdrawal_requests", "ownership_account_id", scope.accountIds, "Delete withdrawal requests");
+    plan.deleteIn("distribution_change_votes", "request_id", requestIds[1], "Delete distribution change votes");
+    plan.deleteIn("distribution_change_requests", "ownership_account_id", scope.accountIds, "Delete distribution change requests");
+    plan.deleteIn("account_rename_votes", "request_id", requestIds[2], "Delete account rename votes");
+    plan.deleteIn("account_rename_requests", "ownership_account_id", scope.accountIds, "Delete account rename requests");
+    plan.deleteIn("account_delete_votes", "request_id", requestIds[3], "Delete account delete votes");
+    plan.deleteIn("account_delete_requests", "ownership_account_id", scope.accountIds, "Delete account delete requests");
+    plan.deleteIn("ownership_account_members", "account_id", scope.accountIds, "Delete ownership account members");
+    plan.deleteWhere("ownership_account_members", [{ op: "eq", column: "profile_id", value: auth.userId }],
+      "Delete remaining ownership memberships");
+    plan.deleteIn("ownership_accounts", "id", scope.accountIds, "Delete ownership accounts");
+    plan.deleteIn("notification_deliveries", "notification_id", scope.notificationIds, "Delete notification deliveries");
+    plan.deleteIn("notifications", "id", scope.notificationIds, "Delete notifications");
+    plan.deleteIn("message_deliveries", "message_id", scope.messageIds, "Delete message deliveries");
+    plan.deleteIn("inbox_messages", "id", scope.messageIds, "Delete inbox messages");
+    plan.deleteIn("inbox_threads", "id", scope.threadIds, "Delete inbox threads");
+    plan.deleteWhere("notification_preferences", [{ op: "eq", column: "profile_id", value: auth.userId }],
+      "Delete notification preferences");
+    await applyWipePlan(plan);
     await revalidateSettingsSurfaces();
     return { success: true, message: "Your Domus account data has been wiped." };
   } catch (error) {
