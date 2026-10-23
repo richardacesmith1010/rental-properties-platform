@@ -2092,3 +2092,14 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   wording); gate 3,237; CI success; prod smoke 27/27. Audit table in the Codex report (all §2 sites + extra sweep).
 - Time zones now done end to end except SQL functions (`owner_dashboard_payload`, retention report) — left as UTC by
   design (backlog if a report ever disagrees).
+
+## 2026-10-22 — Sprint 253b SHIPPED (characterize + split account-wipe.ts)
+- **253b** `031ddf4` (L3, ChatGPT rev 2 AWC adopted): 47 characterization tests for all six wipe actions (complete
+  ordered delete/update/storage traces, guards ×6 actions, first/later/update failure prefixes = partial deletion
+  today, storage-error logging). Then façade 374 (`"use server"`, exactly six exports) + `lib/account-wipe/` scope 311,
+  mutations 109 (`server-only`). Proof script now skips directive statements (generic gap).
+- Verified by Claude: proof 26/26 + façade OK (BASE `404ee91`); test SHA-256 unchanged; the suite run **on BASE code in
+  a clean worktree** passes 47/47; mutation check on BASE (swap two deletes + one extra delete) → 7 failures; 253a
+  proof still OK with the edited script. Gate 3,289; CI success; deployed = `031ddf4`; smoke 27/27; read-only walk of
+  owner Settings → Account & Data (six forms render, 0 page errors, 0 POSTs); Sentry no new issues.
+- **Characterized, not desired (future sprint idea):** a mid-wipe error leaves a partial deletion (no transaction).
