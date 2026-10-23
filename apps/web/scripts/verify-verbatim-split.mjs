@@ -49,7 +49,7 @@ function parseDeclarations(file, source) {
   if (ast.parseDiagnostics.length) throw new Error(`TypeScript parse failed: ${file}`);
   const declarations = new Map();
   for (const node of ast.statements) {
-    if (ts.isImportDeclaration(node)) continue;
+    if (ts.isImportDeclaration(node) || (ts.isExpressionStatement(node) && ts.isStringLiteral(node.expression))) continue;
     const name = declarationName(node);
     if (declarations.has(name)) throw new Error(`Duplicate top-level declaration ${name} in ${file}`);
     declarations.set(name, { node, text: node.getFullText(ast), ast });
