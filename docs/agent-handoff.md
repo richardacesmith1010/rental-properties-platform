@@ -2103,3 +2103,13 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   proof still OK with the edited script. Gate 3,289; CI success; deployed = `031ddf4`; smoke 27/27; read-only walk of
   owner Settings → Account & Data (six forms render, 0 page errors, 0 POSTs); Sentry no new issues.
 - **Characterized, not desired (future sprint idea):** a mid-wipe error leaves a partial deletion (no transaction).
+
+## 2026-10-22 — Sprint 253c SHIPPED (split lib/ownership.ts behind a re-export façade)
+- **253c** `00c1868` (L3, ChatGPT rev 2 AWC adopted): 709 lines → façade 8 (named re-exports only) + `lib/ownership/`
+  types 125 (type-only, client-safe), accounts 243, members 192, governance 157. No `server-only` (Claude decision:
+  current file had none; ~20 transitive tests would break). New dev script `scripts/verify-export-surface.mjs`
+  (TS checker: names, type/value namespace, public types); verbatim script now skips export declarations.
+- Verified by Claude: verbatim 27/27 + façade OK (BASE `031ddf4`); export surface 17/17; tamper tests caught an extra
+  façade export (`unique` MISSING at BASE) and a changed parameter type (2 exports DIFF), files restored byte-exact;
+  `canUserAdministerOwnershipAccount` 6 cases with exact filters. Gate 3,299; CI success; deployed = `00c1868`; smoke
+  27/27; read-only walk owner Home + Ownership and manager Home (content present, 0 page errors); Sentry clean.
