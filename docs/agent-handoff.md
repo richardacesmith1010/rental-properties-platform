@@ -2150,3 +2150,17 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   duplicate ids, 0 unnamed controls, 0 images without alt** (was: manager h1 = 0, dup ids on 6 screens, 2 skips).
 - **Next proposal:** wrap the account wipe in one transaction (characterized partial deletion, 253b) — L3, needs a
   DB function + ChatGPT review; or the Stripe webhook delivery recheck at the next real event.
+
+## 2026-10-23 — Sprint 255a in progress (account wipe = one transaction); migration applied
+- **Design (Claude):** `public.account_wipe_apply(p_ops jsonb)` — security invoker, `search_path=''`, EXECUTE
+  `service_role` only; allowlisted tables/columns, `%I`/`%L`, values cast to catalog type (uuid/text), every op needs an
+  `in`/`eq` filter, only update = `units.occupied=false`, missing table/column skipped, 500 ops / 1 MB limits.
+- ChatGPT: rev 1 AWC (outcome classes, hoisted-read parity proof, typed comparisons, rollback order) → rev 2 AWC
+  (error-code classification, success-response validation before storage cleanup) → rev 3 adopted.
+- Dry runs on prod (rolled back, 14 cases) pass; **applied live** (`sprint255a_account_wipe_apply`): body md5 matches
+  the file (`448dc053…`), grants postgres + service_role only, anon REST call → 42501, service-role no-op → rows 0,
+  bad table → 42501. Unused until the 255a app code ships. Rollback: redeploy previous app → confirm alias + no
+  in-flight `/settings` POSTs on the 255a deployment for 5 min → `supabase/rollback/20261103_sprint255a_…_rollback.sql`.
+- **Found (L-004): `vendors` has no `property_id`** — "Delete All Properties … and vendors" never deleted vendors
+  (op silently skipped). Vendors are keyed by `owner_account_id` (cascade from ownership_accounts) /
+  `owner_profile_id`; `preventive_maintenance_schedules.assigned_vendor_id` is NO ACTION. → **255b** after 255a.
