@@ -2126,3 +2126,17 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Deploy note: the CLI build failed on a transient Google Fonts fetch (`next/font`), but the git-integration build of
   the same commit was READY and is the `domusbase.com` alias (checked).
 - Code health: no money/deletion file > 500 lines. Largest remaining: `sidebar-nav.tsx` 504 (L1 split, queued).
+
+## 2026-10-23 — Sprint 254a SHIPPED (network-blip auto-retry; sidebar split)
+- **254a** `a702f2d` (L2): new `components/ui/use-network-error-retry.ts`; the root, owner, manager and tenant error
+  screens retry once (router.refresh + reset) on a client network blip (`network error`, `Load failed`,
+  `Failed to fetch`, chunk-load) with no `digest`, showing "Loading again…" (`role=status`); at most once per path per
+  30 s (sessionStorage, failures tolerated); Sentry gets a warning tagged `auto_retry: started`, a repeat shows the
+  card and reports an error. `sidebar-nav.tsx` 504 → 442 (helpers moved verbatim to `sidebar-controls.tsx`, proof OK).
+  **No source file > 500 lines now.**
+- Verified: 15 tests (N1–N6); gate 3,333; CI success; deploy (git integration) READY and aliased; smoke 27/27. A live
+  dropped-request test could not trigger the path (the Money route came from the prefetch cache) — behavior is
+  covered by unit tests only. Residual: if a refresh never settles, the screen could stay on "Loading again…".
+- **Screen-reader audit** (iPhone WebKit; VoiceOver itself does not run in the Simulator): 19 screens, all roles +
+  public. All controls and images named. Found: manager pages have no `h1`; duplicate section ids (wrapper + card);
+  owner Repairs `h1 → h3` skip and an empty `h3`. → **254b** (Codex running).
