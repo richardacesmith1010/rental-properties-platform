@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import * as Sentry from "@sentry/nextjs";
 import { TriangleAlert } from "lucide-react";
+import { useNetworkErrorRetry } from "@/components/ui/use-network-error-retry";
 
 export default function Error({
   error,
@@ -11,9 +12,23 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { retrying } = useNetworkErrorRetry(error, reset);
+
   useEffect(() => {
-    Sentry.captureException(error);
-  }, [error]);
+    if (retrying) {
+      Sentry.captureException(error, { level: "warning", tags: { auto_retry: "started" } });
+    } else {
+      Sentry.captureException(error);
+    }
+  }, [error, retrying]);
+
+  if (retrying) {
+    return (
+      <div className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
+        <p role="status" aria-live="polite" className="text-sm text-[var(--muted)]">Loading again…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
