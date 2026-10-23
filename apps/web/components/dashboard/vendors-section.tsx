@@ -164,9 +164,9 @@ export function VendorsSection({
   const canSkipCreateStep = (step: number) => step === 1 || step === 2 || step === 4 || step === 5;
 
   return (
-    <Card id="vendors" className="border border-border/50 shadow-sm">
+    <Card className="border border-border/50 shadow-sm">
       <CardHeader>
-        <CardTitle className="text-xl font-semibold">Vendors</CardTitle>
+        <CardTitle as="h2" className="text-xl font-semibold">Vendors</CardTitle>
       </CardHeader>
       <CardContent>
         {showCreateWorkflow ? (

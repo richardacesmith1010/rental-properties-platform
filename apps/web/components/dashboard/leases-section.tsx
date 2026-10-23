@@ -80,7 +80,7 @@ export function LeasesSection({
   }, [deleteState, renewState, rentAmountState, terminateState, updateState]);
 
   return (
-    <Card id="leases" className="border border-border/50 shadow-sm">
+    <Card className="border border-border/50 shadow-sm">
       <LeaseSectionHeading
         showControls={showControls}
         onOpenLeaseWizard={onOpenLeaseWizard}

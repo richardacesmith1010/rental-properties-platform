@@ -150,9 +150,9 @@ export function MaintenanceSection({
         : "Switch filters to review the rest of your repair history.";
 
   return (
-    <Card id="maintenance" className="border border-border/50 shadow-sm">
+    <Card className="border border-border/50 shadow-sm">
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle className="text-xl font-semibold">{sectionTitle}</CardTitle>
+        <CardTitle as="h2" className="text-xl font-semibold">{sectionTitle}</CardTitle>
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"

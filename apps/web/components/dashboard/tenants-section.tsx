@@ -207,9 +207,9 @@ export function TenantsSection({
 
   if (tenantRows.length === 0) {
     return (
-      <Card id="tenants" className="border border-border/50 shadow-sm">
+      <Card className="border border-border/50 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold">Tenants (0)</CardTitle>
+          <CardTitle as="h2" className="text-xl font-semibold">Tenants (0)</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -223,9 +223,9 @@ export function TenantsSection({
   }
 
   return (
-    <Card id="tenants" className="border border-border/50 shadow-sm">
+    <Card className="border border-border/50 shadow-sm">
       <CardHeader className="gap-3">
-        <CardTitle className="text-xl font-semibold">
+        <CardTitle as="h2" className="text-xl font-semibold">
           Tenants ({tenantRows.length})
         </CardTitle>
         <div className="relative">

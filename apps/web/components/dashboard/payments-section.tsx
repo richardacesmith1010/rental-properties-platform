@@ -22,9 +22,9 @@ interface PaymentsSectionProps {
 
 export function PaymentsSection({ payments }: PaymentsSectionProps) {
   return (
-    <Card id="payments">
+    <Card>
       <CardHeader>
-        <CardTitle>Recent Payments</CardTitle>
+        <CardTitle as="h2">Recent Payments</CardTitle>
       </CardHeader>
       <CardContent>
         {payments.length === 0 ? (

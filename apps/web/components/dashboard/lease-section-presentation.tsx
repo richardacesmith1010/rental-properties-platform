@@ -141,7 +141,7 @@ export function LeaseSectionHeading({
     <>
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <CardTitle className="text-xl font-semibold">Leases</CardTitle>
+          <CardTitle as="h2" className="text-xl font-semibold">Leases</CardTitle>
           <p className="text-sm text-muted-foreground">
             Keep lease terms, renewals, and tenant assignments in one place.
           </p>

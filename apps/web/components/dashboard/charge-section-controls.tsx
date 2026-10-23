@@ -30,7 +30,7 @@ export function ChargeSectionHeader({
   return (
     <CardHeader className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
       {!simpleRentView ? (
-        <CardTitle className="text-xl font-semibold">
+        <CardTitle as="h2" className="text-xl font-semibold">
           {isTenantView ? "Rent" : "Rent"}
         </CardTitle>
       ) : null}

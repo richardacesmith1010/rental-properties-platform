@@ -256,7 +256,7 @@ export function ChargesSection({
     });
   };
   return (
-    <Card id="charges" className="border border-border/50 shadow-sm">
+    <Card className="border border-border/50 shadow-sm">
       <ChargeSectionHeader
         isTenantView={isTenantView}
         simpleRentView={simpleRentView}

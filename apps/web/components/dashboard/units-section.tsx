@@ -83,9 +83,9 @@ export function UnitsSection({
   }, [deleteState, updateState]);
 
   return (
-    <Card id="units" className="border border-border/50 shadow-sm">
+    <Card className="border border-border/50 shadow-sm">
       <CardHeader>
-        <CardTitle className="text-xl font-semibold">Units</CardTitle>
+        <CardTitle as="h2" className="text-xl font-semibold">Units</CardTitle>
       </CardHeader>
       <CardContent>
         {showControls && (

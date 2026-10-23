@@ -105,9 +105,9 @@ export function PortfolioSection({
   }, [deleteState, managementFeeState, updateState]);
 
   return (
-    <Card id="portfolio" className="border border-border/50 shadow-sm">
+    <Card className="border border-border/50 shadow-sm">
       <CardHeader>
-        <CardTitle className="text-xl font-semibold">
+        <CardTitle as="h2" className="text-xl font-semibold">
           {role === "manager" ? "Homes you manage" : "Your homes"}
         </CardTitle>
       </CardHeader>

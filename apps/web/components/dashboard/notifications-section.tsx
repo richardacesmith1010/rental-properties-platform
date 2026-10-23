@@ -60,9 +60,9 @@ export function NotificationsSection({
   }, [notifications]);
 
   return (
-    <Card id="notifications" className="border border-border/50 shadow-sm">
+    <Card className="border border-border/50 shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="flex items-center gap-2 text-xl font-semibold">
+        <CardTitle as="h2" className="flex items-center gap-2 text-xl font-semibold">
           <Bell className="h-4 w-4" />
           Notifications
         </CardTitle>

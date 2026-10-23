@@ -34,22 +34,25 @@ function PageHeader({
   title,
   pageCountLabel,
   description,
-  actions
+  actions,
+  as = "h2"
 }: {
   title: string;
   pageCountLabel?: string | null;
   description: string;
   actions?: ReactNode;
+  as?: "h1" | "h2";
 }) {
+  const Heading = as;
   return (
     <div className={[
       "flex shrink-0 flex-col gap-4 border-b-2 border-[var(--ink)] px-4 py-4 sm:flex-row sm:items-end",
       "sm:justify-between sm:px-6"
     ].join(" ")}>
       <div className="min-w-0 space-y-1">
-        <h2 className="truncate font-display text-[22px] font-semibold text-[var(--ink)]">
+        <Heading className="truncate font-display text-[22px] font-semibold text-[var(--ink)]">
           {title}
-        </h2>
+        </Heading>
         {description ? <p className="text-sm text-[var(--muted)]">{description}</p> : null}
         {pageCountLabel ? <p className="domus-section-label">{pageCountLabel}</p> : null}
       </div>
@@ -438,6 +441,7 @@ export function Dashboard(props: DashboardProps) {
             <div className="domus-card mt-4 flex min-h-0 flex-1 flex-col overflow-hidden shadow-sm sm:rounded-2xl">
               <PageHeader
                 title={contentZoneTitle}
+                as={isManagerRole ? "h1" : "h2"}
                 pageCountLabel={isManagerRole ? null : contentZoneLabel}
                 description={isManagerRole ? ownerPageDescriptions[activeSection] ?? "Manage your homes and the people who live there." : ""}
                 actions={

@@ -35,9 +35,9 @@ export function ActivityFeed({ logs, limit = 20 }: ActivityFeedProps) {
   const visibleLogs = logs.slice(0, limit);
 
   return (
-    <Card id="activity">
+    <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle as="h2" className="flex items-center gap-2">
           <Activity className="h-4 w-4" />
           Activity
         </CardTitle>

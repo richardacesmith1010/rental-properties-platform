@@ -168,7 +168,7 @@ export function TenantInboxView({
 }: TenantInboxViewProps) {
   const tenantThread = selectedThread;
   return (
-    <Card id="inbox" className="border border-border/50 shadow-sm">
+    <Card className="border border-border/50 shadow-sm">
       <CardContent className="space-y-4 p-4 sm:p-5">
         {!hasActiveLease ? (
           <p className="text-sm text-[var(--muted)]">

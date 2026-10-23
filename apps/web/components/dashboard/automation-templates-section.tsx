@@ -185,9 +185,9 @@ export function AutomationTemplatesSection({
   const enabledCount = filteredTemplates.filter((template) => activeTemplateIds.has(template.id)).length;
 
   return (
-    <Card id="automations">
+    <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Automatic steps</CardTitle>
+        <CardTitle as="h2">Automatic steps</CardTitle>
         <Badge variant={enabledCount > 0 ? "success" : "outline"}>{enabledCount} enabled</Badge>
       </CardHeader>
       <CardContent className="space-y-3">

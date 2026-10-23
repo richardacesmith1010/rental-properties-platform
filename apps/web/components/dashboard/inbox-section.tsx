@@ -136,9 +136,9 @@ export function InboxSection({
   }
 
   return (
-    <Card id="inbox" className="border border-border/50 shadow-sm">
+    <Card className="border border-border/50 shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="flex items-center gap-2 text-xl font-semibold">
+        <CardTitle as="h2" className="flex items-center gap-2 text-xl font-semibold">
           <Bell className="h-4 w-4" />
           {onStartTenantConversation ? "Messages" : "Domus Inbox"}
         </CardTitle>

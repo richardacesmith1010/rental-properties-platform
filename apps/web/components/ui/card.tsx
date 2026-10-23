@@ -55,9 +55,17 @@ const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
 ));
 CardHeader.displayName = "CardHeader";
 
-const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(({ className, ...props }, ref) => (
-  <h3 ref={ref} className={cn("domus-heading font-display text-[17px] font-semibold", className)} {...props} />
-));
+type CardTitleProps = React.HTMLAttributes<HTMLHeadingElement> & { as?: "h2" | "h3" };
+const CardTitle = React.forwardRef<HTMLHeadingElement, CardTitleProps>(({ as = "h3", className, ...props }, ref) => {
+  const Heading = as;
+  return (
+    <Heading
+      ref={ref}
+      className={cn("domus-heading font-display text-[17px] font-semibold", className)}
+      {...props}
+    />
+  );
+});
 CardTitle.displayName = "CardTitle";
 
 const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(({ className, ...props }, ref) => (
