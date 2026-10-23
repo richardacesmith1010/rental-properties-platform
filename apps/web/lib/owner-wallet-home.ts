@@ -1,3 +1,4 @@
+import { addDays, denverDateOf, todayDenver } from "@/lib/denver-calendar";
 import { countMyDueTasks } from "@/lib/account-tasks";
 import { depositHeldCents } from "@/lib/deposits";
 import { getNextDueDateForLease } from "@/lib/action-items";
@@ -68,9 +69,12 @@ export async function loadOwnerWalletHome(userId: string, today = new Date()): P
         yearRentReceivedByPropertyId: {}, ...bankNeeds, myTasksDueCount };
     }
     const admin = createAdminClient();
-    const yearFrom = `${today.getUTCFullYear()}-01-01`;
-    const yearTo = `${today.getUTCFullYear() + 1}-01-01`;
-    const previousFrom = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1))
+    const denverToday = todayDenver(today);
+    const year = Number(denverToday.slice(0, 4));
+    const month = Number(denverToday.slice(5, 7));
+    const yearFrom = `${year}-01-01`;
+    const yearTo = `${year + 1}-01-01`;
+    const previousFrom = new Date(Date.UTC(year, month - 2, 1))
       .toISOString().slice(0, 10);
     const from = previousFrom < yearFrom ? previousFrom : yearFrom;
     const portfolioPromise = measurePerf("owner", "home.wallet.portfolio", () =>
@@ -80,7 +84,8 @@ export async function loadOwnerWalletHome(userId: string, today = new Date()): P
     const [portfolio, accounts, rentRows, expenses, bankNeeds, lines, myTasksDueCount, invites] = await Promise.all([
       portfolioPromise,
       accountsPromise,
-      measurePerf("owner", "home.wallet.rent-rows", () => loadRentRowsForProperties(ids, from, yearTo)),
+      measurePerf("owner", "home.wallet.rent-rows", () =>
+        loadRentRowsForProperties(ids, addDays(from, -1), addDays(yearTo, 1))),
       measurePerf("owner", "home.wallet.expenses", async () => await admin.from("property_expenses")
         .select("id, property_id, category, description, amount_cents, expense_date")
         .in("property_id", ids).gte("expense_date", from).lt("expense_date", yearTo)),
@@ -116,7 +121,10 @@ export async function loadOwnerWalletHome(userId: string, today = new Date()): P
     const unitProperty = new Map(rentRows.units.map((unit) => [unit.id, unit.property_id]));
     const leaseProperty = new Map(rentRows.leases.map((lease) => [lease.id, unitProperty.get(lease.unit_id)]));
     const chargeProperty = new Map(rentRows.charges.map((charge) => [charge.id, leaseProperty.get(charge.lease_id)]));
-    const inByProperty = rentOnlyReceivedByPropertyId(ids, rentRows.charges, rentRows.payments,
+    const denverPayments = rentRows.payments.map((payment) => ({
+      ...payment, paid_at: payment.paid_at.includes("T") ? denverDateOf(payment.paid_at) : payment.paid_at
+    }));
+    const inByProperty = rentOnlyReceivedByPropertyId(ids, rentRows.charges, denverPayments,
       chargeProperty, yearFrom, yearTo, lines);
     const yearRentReceivedByPropertyId = inByProperty;
     const outByProperty = new Map<string, number>();
@@ -142,7 +150,7 @@ export async function loadOwnerWalletHome(userId: string, today = new Date()): P
       paymentsByCharge.set(payment.rent_charge_id, group);
     }
     const dueByProperty = new Map<string, { due: number; onTime: number }>();
-    const todayDate = today.toISOString().slice(0, 10);
+    const todayDate = denverToday;
     for (const charge of rentRows.charges) {
       if (charge.category !== "rent" || charge.due_date < yearFrom || charge.due_date > todayDate) continue;
       const propertyId = chargeProperty.get(charge.id);
@@ -153,8 +161,10 @@ export async function loadOwnerWalletHome(userId: string, today = new Date()): P
       due.setUTCDate(due.getUTCDate() + (leaseById.get(charge.lease_id)?.grace_period_days ?? 0));
       const deadline = due.toISOString().slice(0, 10);
       const paidOnTime = (paymentsByCharge.get(charge.id) ?? [])
-        .filter((payment) => payment.paid_at.slice(0, 10) >= yearFrom &&
-          payment.paid_at.slice(0, 10) <= deadline && payment.paid_at.slice(0, 10) <= todayDate)
+        .filter((payment) => {
+          const paidOn = payment.paid_at.includes("T") ? denverDateOf(payment.paid_at) : payment.paid_at;
+          return paidOn >= yearFrom && paidOn <= deadline && paidOn <= todayDate;
+        })
         .reduce((sum, payment) => sum + payment.amount_cents, 0);
       if (paidOnTime >= charge.amount_cents) count.onTime += 1;
       dueByProperty.set(propertyId, count);

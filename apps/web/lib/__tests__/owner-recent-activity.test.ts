@@ -35,7 +35,7 @@ describe("loadOwnerHomeMoney", () => {
   it("batches all homes and computes current-month collected minus expenses per home", async () => {
     const result = await loadOwnerHomeMoney(["p1", "p2"], new Date("2026-10-11T00:00:00Z"));
     expect(rentRows).toHaveBeenCalledOnce();
-    expect(rentRows).toHaveBeenCalledWith(["p1", "p2"], "2026-09-01", "2026-11-01");
+    expect(rentRows).toHaveBeenCalledWith(["p1", "p2"], "2026-08-31", "2026-11-02");
     expect(result).toMatchObject({ ok: true, leftByPropertyId: { p1: 75000, p2: -4000 } });
     if (result.ok) expect(result.items.map((item) => item.title)).toEqual(["Insurance", "Plumber", "Rent from Maya", "Rent from Angel"]);
   });

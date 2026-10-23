@@ -1,5 +1,6 @@
 "use client";
 
+import { todayDenver } from "@/lib/denver-calendar";
 import { useFormState } from "react-dom";
 import { toast } from "sonner";
 import { SubmitButton } from "@/components/shared/submit-button";
@@ -67,7 +68,7 @@ export function TaxSummaryReport({ data, year, onSave }: TaxSummaryReportProps) 
       title="Rental tax summary"
       description="Rental income and deductions by home for your tax preparer."
       rows={data}
-      onExport={() => downloadReportCsv(`domus-tax-summary-${new Date().toISOString().slice(0, 10)}.csv`, taxSummaryToCsv(data))}
+      onExport={() => downloadReportCsv(`domus-tax-summary-${todayDenver()}.csv`, taxSummaryToCsv(data))}
       defaultSortKey="property"
       columns={[
         { key: "property", label: "Property", sortValue: (row) => row.propertyName, render: (row) => row.propertyName },

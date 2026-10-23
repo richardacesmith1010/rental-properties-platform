@@ -19,7 +19,7 @@ import { dollarsToCents, updatePropertyTaxYearSchema } from "../validations";
 
 function query(result: { data: unknown; error: unknown }) {
   const chain: Record<string, unknown> = {};
-  for (const method of ["select", "in", "is", "gte", "lte", "eq"]) chain[method] = () => chain;
+  for (const method of ["select", "in", "is", "gte", "lt", "lte", "eq"]) chain[method] = () => chain;
   chain.then = (resolve: (value: unknown) => void) => Promise.resolve(result).then(resolve);
   return chain;
 }

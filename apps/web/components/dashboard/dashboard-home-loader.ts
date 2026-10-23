@@ -1,3 +1,4 @@
+import { todayDenver } from "@/lib/denver-calendar";
 import { useMemo } from "react";
 import { getNextDueDateForLease, getNextRentCollectionLabel } from "@/lib/action-items";
 import { isCollectedOutsideDomus, tracksLateRent } from "@/lib/lease-collection";
@@ -154,7 +155,7 @@ export function useDashboardHomeState(
         (charge) =>
           charge.status === "pending" &&
           tracksLateRent(charge) &&
-          charge.dueDate >= today.toISOString().slice(0, 10) &&
+          charge.dueDate >= todayDenver(today) &&
           Boolean(charge.leaseId && activeLeaseIds.has(charge.leaseId))
       )
       .sort((left, right) => left.dueDate.localeCompare(right.dueDate));

@@ -1,3 +1,4 @@
+import { addDays, denverDateOf, denverMonth } from "@/lib/denver-calendar";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadRentRowsForProperties } from "@/lib/owner-rent-rows";
 import { dateOnly, rentReceivedByPropertyId } from "@/lib/rent-received";
@@ -18,19 +19,22 @@ export function buildHomeMoney({ rentRows, expenses, propertyNames, tenantNameBy
   rentRows: RentRows; expenses: Expense[]; propertyNames: Record<string, string>;
   tenantNameByLeaseId: Map<string, string>; ids: string[]; today: Date;
 }): OwnerHomeMoneyResult {
-  const from = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1)).toISOString().slice(0, 10);
-  const currentFrom = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1)).toISOString().slice(0, 10);
-  const to = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 1)).toISOString().slice(0, 10);
+  const [year, month] = denverMonth(today).split("-").map(Number);
+  const from = new Date(Date.UTC(year, month - 2, 1)).toISOString().slice(0, 10);
+  const currentFrom = new Date(Date.UTC(year, month - 1, 1)).toISOString().slice(0, 10);
+  const to = new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 10);
   const { units, leases, charges, payments } = rentRows;
   const unitProperty = new Map(units.map((row) => [row.id, row.property_id]));
   const leaseProperty = new Map(leases.map((row) => [row.id, unitProperty.get(row.unit_id)]));
   const chargeProperty = new Map(charges.map((row) => [row.id, leaseProperty.get(row.lease_id)]));
   const chargeLease = new Map(charges.map((row) => [row.id, row.lease_id]));
-  const inByProperty = rentReceivedByPropertyId(ids, charges, payments, chargeProperty, currentFrom, to);
+  const denverPayments = payments.map((payment) => ({ ...payment,
+    paid_at: payment.paid_at.includes("T") ? denverDateOf(payment.paid_at) : payment.paid_at }));
+  const inByProperty = rentReceivedByPropertyId(ids, charges, denverPayments, chargeProperty, currentFrom, to);
   const outByProperty: Record<string, number> = {};
   const items: OwnerMoneyItem[] = [];
   for (const payment of payments) {
-    const date = dateOnly(payment.paid_at);
+    const date = payment.paid_at.includes("T") ? denverDateOf(payment.paid_at) : payment.paid_at;
     if (date < from || date >= to) continue;
     const propertyId = chargeProperty.get(payment.rent_charge_id);
     if (!propertyId) continue;
@@ -57,12 +61,13 @@ export function buildHomeMoney({ rentRows, expenses, propertyNames, tenantNameBy
 
 export async function loadOwnerHomeMoney(propertyIds: string[], today = new Date()): Promise<OwnerHomeMoneyResult> {
   if (!propertyIds.length) return { ok: true, leftByPropertyId: {}, items: [] };
-  const from = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1)).toISOString().slice(0, 10);
-  const to = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 1)).toISOString().slice(0, 10);
+  const [year, month] = denverMonth(today).split("-").map(Number);
+  const from = new Date(Date.UTC(year, month - 2, 1)).toISOString().slice(0, 10);
+  const to = new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 10);
   try {
     const admin = createAdminClient();
     const [rentRows, expenseResult, propertyResult] = await Promise.all([
-      loadRentRowsForProperties(propertyIds, from, to),
+      loadRentRowsForProperties(propertyIds, addDays(from, -1), addDays(to, 1)),
       admin.from("property_expenses").select("id, property_id, category, description, amount_cents, expense_date")
         .in("property_id", propertyIds).gte("expense_date", from).lt("expense_date", to),
       admin.from("properties").select("id, name").in("id", propertyIds)

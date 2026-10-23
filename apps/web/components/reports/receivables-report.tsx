@@ -1,5 +1,6 @@
 "use client";
 
+import { todayDenver } from "@/lib/denver-calendar";
 import type { ActionState } from "@/app/actions";
 import { downloadReportCsv, receivablesToCsv } from "@/lib/csv-export-reports";
 import type { ReceivableItem } from "@/lib/reports";
@@ -28,7 +29,7 @@ export function ReceivablesReport({
       title="Accounts Receivable"
       description="All outstanding balances grouped by tenant."
       rows={data}
-      onExport={() => downloadReportCsv(`domus-accounts-receivable-${new Date().toISOString().slice(0, 10)}.csv`, receivablesToCsv(data))}
+      onExport={() => downloadReportCsv(`domus-accounts-receivable-${todayDenver()}.csv`, receivablesToCsv(data))}
       defaultSortKey="owed"
       defaultSortDirection="desc"
       columns={[

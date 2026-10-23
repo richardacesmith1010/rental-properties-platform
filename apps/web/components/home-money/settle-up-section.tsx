@@ -1,5 +1,6 @@
 "use client";
 
+import { todayDenver } from "@/lib/denver-calendar";
 import Link from "next/link";
 import { useState } from "react";
 import type { addPartnerPayment } from "@/app/actions/partners";
@@ -23,7 +24,7 @@ export function SettleUpSection({ accountId, rows, period, allTimeHref, onAddPay
   async function add(suggestion: SettleUpSuggestion) {
     const result = await onAddPayment({ accountId, fromPartnerId: suggestion.fromPartnerId,
       toPartnerId: suggestion.toPartnerId, amountCents: suggestion.amountCents,
-      paidOn: new Date().toISOString().slice(0, 10), kind: "settle_up", status: "planned", note: "Even it out" });
+      paidOn: todayDenver(), kind: "settle_up", status: "planned", note: "Even it out" });
     if (!result.ok) { setError(result.error); return false; }
     return true;
   }

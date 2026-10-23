@@ -1,5 +1,6 @@
 "use client";
 
+import { denverMonth } from "@/lib/denver-calendar";
 import { useEffect } from "react";
 import { useFormState } from "react-dom";
 import type { ActionState } from "@/app/actions";
@@ -33,7 +34,8 @@ export function ChargeCreateForm({
   onCancel
 }: ChargeCreateFormProps) {
   const [state, formAction] = useFormState(onSubmit, null);
-  const defaultDueDate = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1))
+  const month = denverMonth();
+  const defaultDueDate = new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5)), 1))
     .toISOString()
     .slice(0, 10);
 

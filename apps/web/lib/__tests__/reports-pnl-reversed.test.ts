@@ -28,7 +28,7 @@ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ from: (tabl
     in: (key: string, values: unknown[]) => { filters.push((row) => values.includes(row[key])); return query; },
     is: (key: string, value: unknown) => { if (table === "payments") state.filters.push(key);
       filters.push((row) => row[key] === value); return query; },
-    eq: () => query, gte: () => query, lte: () => query,
+    eq: () => query, gte: () => query, lt: () => query, lte: () => query,
     then: (resolve: (value: ReturnType<typeof result>) => unknown) => Promise.resolve(result()).then(resolve)
   };
   return query;

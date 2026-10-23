@@ -1,5 +1,6 @@
 "use client";
 
+import { denverMonth } from "@/lib/denver-calendar";
 import { useDenverDayRefresh } from "@/components/dashboard/use-denver-day-refresh";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useFormState } from "react-dom";
@@ -61,7 +62,7 @@ export function ChargesSection({
   hideTenantPaymentControls = false
 }: ChargesSectionProps) {
   const simpleRentView = simpleRentViewProp ?? isOwnerView;
-  const month = new Date().toISOString().slice(0, 7);
+  const month = denverMonth();
   const chargedLeaseIds = new Set(charges.filter((charge) =>
     (charge.category ?? "rent") === "rent" && charge.dueDate.startsWith(month))
     .map((charge) => charge.leaseId));
@@ -127,9 +128,7 @@ export function ChargesSection({
   }, [batchActionsEnabled, visibleCharges]);
   const paidThisMonthCount = charges.filter((charge) => {
     if (charge.status !== "paid") return false;
-    const dueDate = new Date(`${charge.dueDate}T00:00:00.000Z`);
-    const now = new Date();
-    return dueDate.getUTCMonth() === now.getUTCMonth() && dueDate.getUTCFullYear() === now.getUTCFullYear();
+    return charge.dueDate.slice(0, 7) === month;
   }).length;
   const uniqueLeaseCards = useMemo(() => {
     if (!isTenantView) {

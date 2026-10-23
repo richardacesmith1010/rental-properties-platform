@@ -12,7 +12,7 @@ describe("money page selection", () => {
   it("2c valid property is preserved", () => {
     expect(resolveMoneySelection(["allowed"], "allowed", undefined, now).propertyId).toBe("allowed");
   });
-  it("uses real UTC today for the current month", () => {
+  it("uses Denver today for the current month", () => {
     expect(resolveMoneySelection(["allowed"], undefined, "2026-10", now).alertToday).toBe("2026-10-03");
   });
   it("uses the last day for a past month", () => {

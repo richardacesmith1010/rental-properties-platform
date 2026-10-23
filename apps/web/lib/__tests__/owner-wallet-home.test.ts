@@ -102,7 +102,7 @@ describe("loadOwnerWalletHome", () => {
     await loadOwnerWalletHome("owner", today);
     expect(mocks.inIds).toHaveBeenCalledWith("property_id", ["p1", "p2"]);
     expect(mocks.portfolio).toHaveBeenCalledWith("owner", null, ["p1", "p2"]);
-    expect(mocks.rentRows).toHaveBeenCalledWith(["p1", "p2"], "2026-01-01", "2027-01-01");
+    expect(mocks.rentRows).toHaveBeenCalledWith(["p1", "p2"], "2025-12-31", "2027-01-02");
     expect(mocks.rentRows).toHaveBeenCalledTimes(1);
     expect(mocks.from).not.toHaveBeenCalledWith("profiles");
     expect(mocks.from).not.toHaveBeenCalledWith("properties");
@@ -151,7 +151,7 @@ describe("loadOwnerWalletHome", () => {
         amount_cents: 2000, expense_date: "2027-01-04" }
     ], error: null });
     const result = await loadOwnerWalletHome("owner", new Date("2027-01-10T12:00:00Z"));
-    expect(mocks.rentRows).toHaveBeenCalledWith(["p1", "p2"], "2026-12-01", "2028-01-01");
+    expect(mocks.rentRows).toHaveBeenCalledWith(["p1", "p2"], "2026-11-30", "2028-01-02");
     if (result.ok) {
       expect(result.homes[0].leftCents).toBe(4000);
       expect(result.ytd).toEqual({ inCents: 6000, outCents: 2000 });

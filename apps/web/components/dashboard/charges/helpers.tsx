@@ -1,5 +1,6 @@
 "use client";
 
+import { todayDenver } from "@/lib/denver-calendar";
 import type { ActionState } from "@/app/actions";
 import type { StatefulAction } from "./types";
 import { Alert } from "@/components/ui/alert";
@@ -55,7 +56,7 @@ export function exportChargesCsv(charges: Charge[]) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `charges-export-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.download = `charges-export-${todayDenver()}.csv`;
   link.click();
   URL.revokeObjectURL(url);
 }

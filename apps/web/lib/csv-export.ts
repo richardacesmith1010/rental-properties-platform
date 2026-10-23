@@ -1,3 +1,4 @@
+import { todayDenver } from "@/lib/denver-calendar";
 import { downloadReportCsv } from "./csv-export-reports";
 import type { ExpenseCategoryMetric, MonthlyRentMetric } from "./analytics";
 
@@ -21,7 +22,7 @@ export function exportChargesCSV(metrics: MonthlyRentMetric[]): void {
   ]);
 
   downloadCSV(
-    `domus-rent-collection-${new Date().toISOString().slice(0, 10)}.csv`,
+    `domus-rent-collection-${todayDenver()}.csv`,
     headers,
     rows
   );
@@ -34,5 +35,5 @@ export function exportExpensesCSV(categories: ExpenseCategoryMetric[]): void {
     (category.totalCents / 100).toFixed(2)
   ]);
 
-  downloadCSV(`domus-expenses-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
+  downloadCSV(`domus-expenses-${todayDenver()}.csv`, headers, rows);
 }

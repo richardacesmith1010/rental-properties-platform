@@ -1,5 +1,6 @@
 "use client";
 
+import { todayDenver } from "@/lib/denver-calendar";
 import { useState } from "react";
 import type { Partner } from "@/lib/partners";
 import type { addPartnerPayment } from "@/app/actions/partners";
@@ -11,7 +12,7 @@ export function PartnerPaymentSheet({ accountId, partners, onClose, onSave }: {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(todayDenver());
   const [kind, setKind] = useState<keyof typeof kindLabels>("reimbursement");
   const [status, setStatus] = useState<"done" | "planned">("done");
   const [note, setNote] = useState("");

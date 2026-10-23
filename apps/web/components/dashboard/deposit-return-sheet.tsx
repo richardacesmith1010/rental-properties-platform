@@ -1,5 +1,6 @@
 "use client";
 
+import { todayDenver } from "@/lib/denver-calendar";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/format";
@@ -16,7 +17,7 @@ export function DepositReturnSheet({ leaseId, depositCents, recorded, onRecord, 
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState(String(depositCents / 100));
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(todayDenver());
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   async function save() {
@@ -55,7 +56,7 @@ export function DepositReturnSheet({ leaseId, depositCents, recorded, onRecord, 
         <input className="domus-input mt-1 w-full" title="Amount returned" type="number" min="0" step="0.01"
           value={amount} onChange={(event) => setAmount(event.target.value)} /></label>
       <label className="block text-sm">Date
-        <input className="domus-input mt-1 w-full" title="Return date" type="date" max={new Date().toISOString().slice(0, 10)}
+        <input className="domus-input mt-1 w-full" title="Return date" type="date" max={todayDenver()}
           value={date} onChange={(event) => setDate(event.target.value)} /></label>
       <button type="button" title="Save" disabled={busy} onClick={() => void save()}
         className="min-h-11 rounded-md bg-[var(--action)] px-4 text-[var(--action-contrast)]">Save</button>

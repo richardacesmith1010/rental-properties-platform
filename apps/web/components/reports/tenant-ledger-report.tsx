@@ -1,5 +1,6 @@
 "use client";
 
+import { todayDenver } from "@/lib/denver-calendar";
 import type { ActionState } from "@/app/actions";
 import { downloadReportCsv, tenantLedgerToCsv } from "@/lib/csv-export-reports";
 import type { TenantLedger } from "@/lib/reports";
@@ -58,7 +59,7 @@ export function TenantLedgerReport({
       title="Payment history"
       description="Complete charge and payment history for each tenant."
       rows={rows}
-      onExport={() => downloadReportCsv(`domus-tenant-ledger-${new Date().toISOString().slice(0, 10)}.csv`, tenantLedgerToCsv(data))}
+      onExport={() => downloadReportCsv(`domus-tenant-ledger-${todayDenver()}.csv`, tenantLedgerToCsv(data))}
       defaultSortKey="date"
       defaultSortDirection="desc"
       columns={[

@@ -1,3 +1,4 @@
+import { denverYear } from "@/lib/denver-calendar";
 import Link from "next/link";
 
 export function monthLabel(month: string) {
@@ -8,7 +9,7 @@ export function PeriodSwitch({ months, selectedMonth, propertyId }: {
   months: string[]; selectedMonth: string; propertyId: string | null;
 }) {
   const choices = [...months.slice(0, 2).map((month) => ({ value: month, label: monthLabel(month) })),
-    { value: "year", label: months[0]?.slice(0, 4) ?? new Date().getUTCFullYear().toString() }];
+    { value: "year", label: months[0]?.slice(0, 4) ?? denverYear().toString() }];
   return <div role="tablist" aria-label="Period" className="grid grid-cols-3 rounded-xl bg-[var(--surface-3)] p-1">
     {choices.map((choice) => <Link key={choice.value} role="tab" aria-selected={selectedMonth === choice.value}
       href={`/owner/money?${propertyId ? `property=${encodeURIComponent(propertyId)}&` : ""}month=${choice.value}`}

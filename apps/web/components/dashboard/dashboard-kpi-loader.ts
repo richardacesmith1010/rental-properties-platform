@@ -1,3 +1,4 @@
+import { denverMonth, denverYear, todayDenver } from "@/lib/denver-calendar";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AnalyticsDashboardData } from "@/lib/analytics";
 import type { AuditLogEntry } from "@/lib/audit";
@@ -56,18 +57,12 @@ export function computeFilteredKpis(params: {
     (ticket) => ticket.priority === "high" || ticket.priority === "urgent"
   );
   const lateCharges = charges.filter((charge) => charge.status === "late");
-  const currentMonth = new Date().getUTCMonth();
-  const currentYear = new Date().getUTCFullYear();
+  const currentMonthKey = denverMonth();
   const currentMonthRentCharges = charges.filter((charge) => {
     if (charge.category !== "rent") {
       return false;
     }
-    const dueDate = new Date(`${charge.dueDate}T00:00:00.000Z`);
-    return (
-      !Number.isNaN(dueDate.getTime()) &&
-      dueDate.getUTCMonth() === currentMonth &&
-      dueDate.getUTCFullYear() === currentYear
-    );
+    return charge.dueDate.slice(0, 7) === currentMonthKey;
   });
   const collectedRentCents = currentMonthRentCharges
     .filter((charge) => charge.status === "paid")
@@ -78,7 +73,7 @@ export function computeFilteredKpis(params: {
   const overdueRentCents = currentMonthRentCharges
     .filter((charge) => charge.status === "late")
     .reduce((sum, charge) => sum + charge.amountCents, 0);
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayIso = todayDenver();
   const outstandingCharges = charges.filter(
     (charge) => (charge.status === "pending" && charge.dueDate <= todayIso) || charge.status === "late"
   );
@@ -388,9 +383,8 @@ export function useDashboardKpiData(
   }, [displayDashboardData.kpis.monthlyGrossRentCents, filteredPortfolio.properties,
     filteredPortfolio.units, filteredTickets, selectedProperty, validScope.kind]);
   const financialOverviewData = useMemo(() => {
-    const now = new Date();
-    const currentYear = now.getUTCFullYear();
-    const currentMonth = now.getUTCMonth();
+    const currentYear = denverYear();
+    const currentMonth = Number(denverMonth().slice(5)) - 1;
     const currentYearStartIso = `${currentYear}-01-01`;
     const visibleExpenses = selectedHomeIds
       ? safeExpenses.expenses.filter((expense) => selectedHomeIds.has(expense.propertyId))

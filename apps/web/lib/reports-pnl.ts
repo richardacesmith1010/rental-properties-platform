@@ -1,3 +1,4 @@
+import { denverDateOf, denverDayStartUtc, denverYear } from "@/lib/denver-calendar";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { type ChargeDetailRecordDTO, type ExpenseLineItemDTO, withChargeEditingFallback } from "@/lib/charge-audit";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
@@ -93,7 +94,7 @@ export function mapExpenseCategoryToTaxField(
 
 export async function getMonthlyPnLReport(
   userId: string,
-  year = new Date().getUTCFullYear()
+  year = denverYear()
 ): Promise<MonthlyPnLRow[]> {
   try {
     const admin = createAdminClient();
@@ -134,8 +135,8 @@ export async function getMonthlyPnLReport(
           .select("rent_charge_id, amount_cents, paid_at, reversed_at")
           .in("rent_charge_id", Array.from(chargeById.keys()))
           .is("reversed_at", null)
-          .gte("paid_at", startOfYear(year))
-          .lte("paid_at", `${endOfYear(year)}T23:59:59.999Z`)
+          .gte("paid_at", denverDayStartUtc(startOfYear(year)))
+          .lt("paid_at", denverDayStartUtc(startOfYear(year + 1)))
       : { data: [], error: null };
     if (paymentError) throw paymentError;
 
@@ -176,7 +177,7 @@ export async function getMonthlyPnLReport(
       const charge = chargeById.get(payment.rent_charge_id);
       const lease = charge ? leaseById.get(charge.lease_id) : null;
       const unit = lease ? context.unitById.get(lease.unit_id) : null;
-      const month = monthKey(payment.paid_at);
+      const month = monthKey(denverDateOf(payment.paid_at));
       if (!charge || !lease || !unit || !month) {
         continue;
       }
@@ -273,7 +274,7 @@ export async function getMonthlyPnLReport(
 
 export async function getTaxSummaryReport(
   userId: string,
-  year = new Date().getUTCFullYear()
+  year = denverYear()
 ): Promise<TaxSummaryRow[]> {
   if (await getCurrentUserRole(userId) !== "owner") throw new Error("Owner access required");
   try {
@@ -311,8 +312,8 @@ export async function getTaxSummaryReport(
           .select("rent_charge_id, amount_cents, paid_at")
           .in("rent_charge_id", Array.from(chargeById.keys()))
           .is("reversed_at", null)
-          .gte("paid_at", startOfYear(year))
-          .lte("paid_at", `${endOfYear(year)}T23:59:59.999Z`)
+          .gte("paid_at", denverDayStartUtc(startOfYear(year)))
+          .lt("paid_at", denverDayStartUtc(startOfYear(year + 1)))
       : { data: [], error: null };
     if (paymentError) throw paymentError;
 

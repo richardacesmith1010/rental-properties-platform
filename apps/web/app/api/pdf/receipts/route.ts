@@ -1,3 +1,4 @@
+import { denverYear } from "@/lib/denver-calendar";
 import { NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { getCurrentUserRole } from "@/lib/auth";
@@ -30,8 +31,8 @@ export async function GET(request: Request) {
 
   const role = await getCurrentUserRole(user.id);
   const searchParams = new URL(request.url).searchParams;
-  const selectedYear = Number(searchParams.get("year") ?? new Date().getUTCFullYear());
-  const year = Number.isFinite(selectedYear) ? selectedYear : new Date().getUTCFullYear();
+  const selectedYear = Number(searchParams.get("year") ?? denverYear());
+  const year = Number.isFinite(selectedYear) ? selectedYear : denverYear();
   const result = await getReceiptsPdfDataForYear(user.id, role, year);
 
   if (!result.ok) {

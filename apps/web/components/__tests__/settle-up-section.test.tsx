@@ -33,12 +33,15 @@ describe("SettleUpSection", () => {
     expect(screen.queryByRole("button", { name: "Add as planned" })).toBeNull();
   });
   it("8 UI c: Add as planned sends the correct direction, cents and payment details", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-01T04:30:00Z"));
     const action = show();
     fireEvent.click(screen.getAllByRole("button", { name: "Add as planned" })[0]);
-    await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
+    expect(action).toHaveBeenCalledTimes(1);
     expect(action).toHaveBeenCalledWith({ accountId: "llc", fromPartnerId: "b", toPartnerId: "a",
-      amountCents: 1000, paidOn: new Date().toISOString().slice(0, 10), kind: "settle_up",
+      amountCents: 1000, paidOn: "2026-10-31", kind: "settle_up",
       status: "planned", note: "Even it out" });
+    vi.useRealTimers();
   });
   it("8 UI d: Add all saves in order and stops at the first error", async () => {
     const action = vi.fn().mockResolvedValueOnce({ ok: false, error: "Could not save." });

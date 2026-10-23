@@ -1,6 +1,7 @@
+import { denverYear } from "@/lib/denver-calendar";
 import { formatCurrency } from "@/lib/format";
 
-export function YtdTiles({ incomeCents, expensesCents, selectedPropertyId, year = new Date().getUTCFullYear(),
+export function YtdTiles({ incomeCents, expensesCents, selectedPropertyId, year = denverYear(),
   expensesReady = true, expensesFailed = false }: {
   incomeCents: number | null; expensesCents: number; selectedPropertyId?: string | null; year?: number;
   expensesReady?: boolean; expensesFailed?: boolean;

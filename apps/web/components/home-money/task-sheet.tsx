@@ -1,4 +1,6 @@
 "use client";
+
+import { todayDenver } from "@/lib/denver-calendar";
 import { useState } from "react";
 import type { AccountTask, TaskFrequency } from "@/lib/account-tasks";
 import type { Partner } from "@/lib/partners";
@@ -10,7 +12,7 @@ export function TaskSheet({ accountId, partners, task, onClose, onSave }: {
 }) {
   const [title, setTitle] = useState(task?.title ?? "");
   const [frequency, setFrequency] = useState<TaskFrequency>(task?.frequency ?? "monthly");
-  const [nextDueOn, setNextDueOn] = useState(task?.nextDueOn ?? new Date().toISOString().slice(0, 10));
+  const [nextDueOn, setNextDueOn] = useState(task?.nextDueOn ?? todayDenver());
   const [ownerPartnerId, setOwnerPartnerId] = useState(task?.ownerPartnerId ?? "");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);

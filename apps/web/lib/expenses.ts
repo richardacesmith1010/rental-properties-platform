@@ -1,3 +1,4 @@
+import { denverMonth } from "@/lib/denver-calendar";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserRole } from "@/lib/auth";
@@ -94,10 +95,10 @@ function monthKey(value: string): string | null {
 }
 
 function buildLastTwelveMonthKeys(): string[] {
-  const now = new Date();
+  const [year, currentMonth] = denverMonth().split("-").map(Number);
   const keys: string[] = [];
   for (let offset = 11; offset >= 0; offset -= 1) {
-    const current = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - offset, 1));
+    const current = new Date(Date.UTC(year, currentMonth - 1 - offset, 1));
     const month = String(current.getUTCMonth() + 1).padStart(2, "0");
     keys.push(`${current.getUTCFullYear()}-${month}`);
   }

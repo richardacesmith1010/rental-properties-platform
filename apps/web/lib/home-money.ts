@@ -1,3 +1,4 @@
+import { addDays, denverDateOf } from "@/lib/denver-calendar";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canUserAdministerProperty } from "@/lib/property-access";
 import { escapeCell } from "@/lib/csv-export-reports";
@@ -72,7 +73,7 @@ async function loadRows(propertyId: string, from: string, to: string) {
   const admin = createAdminClient();
   const [property, rentRows] = await Promise.all([
     checked(admin.from("properties").select("id, name").eq("id", propertyId).maybeSingle()),
-    loadPropertyRentRows(propertyId, from, to)
+    loadPropertyRentRows(propertyId, addDays(from, -1), addDays(to, 1))
   ]);
   const { leases, charges, payments } = rentRows;
   const chargeLines = linesByCharge(await getChargeLines(charges.map((charge) => charge.id)));
@@ -107,11 +108,11 @@ async function loadRows(propertyId: string, from: string, to: string) {
   const entries: Entry[] = [];
   for (const payment of payments) {
     if (payment.reversed_at) continue;
+    const date = payment.paid_at.includes("T") ? denverDateOf(payment.paid_at) : payment.paid_at;
+    if (date < from || date >= to) continue;
     const charge = chargeMap.get(payment.rent_charge_id);
     if (!charge) continue;
     const lease = leaseMap.get(charge.lease_id);
-    const date = dateOnly(payment.paid_at);
-    if (date < from || date >= to) continue;
     const lines = chargeLines.get(charge.id) ?? [];
     const split = lines.length
       ? splitChargePayment(chargeBreakdown(charge, lines))
@@ -157,7 +158,9 @@ export async function loadHomeMoney(userId: string, propertyId: string,
   range: { from: string; to: string }): Promise<HomeMoney | null> {
   if (!(await canUserAdministerProperty(userId, propertyId))) return null;
   const { property, entries, charges, payments } = await loadRows(propertyId, range.from, range.to);
-  const inCents = rentReceivedCents(charges, payments, range.from, range.to);
+  const inCents = rentReceivedCents(charges,
+    payments.map((payment) => ({ ...payment,
+      paid_at: payment.paid_at.includes("T") ? denverDateOf(payment.paid_at) : payment.paid_at })), range.from, range.to);
   const outCents = entries.filter((entry) => entry.direction === "out")
     .reduce((sum, entry) => sum + entry.amountCents, 0);
   return { property, entries, totals: { inCents, outCents, leftCents: inCents - outCents } };

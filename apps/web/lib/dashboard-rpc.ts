@@ -1,3 +1,4 @@
+import { denverMonth } from "@/lib/denver-calendar";
 import {
   getChargeAuditSummary, normalizeChargeCategory, type ChargeCategory,
   type ChargeEditHistoryEntryDTO, type ChargeStatus
@@ -85,9 +86,7 @@ export function assembleOwnerDashboardPayload(
   }
   const charges = rawCharges.map(row => ({ ...row, category: normalizeChargeCategory(row.category) }));
   const monthCharges = charges.filter(row => {
-    const due = new Date(`${row.due_date}T00:00:00.000Z`);
-    return !Number.isNaN(due.getTime()) && due.getUTCMonth() === today.getUTCMonth()
-      && due.getUTCFullYear() === today.getUTCFullYear() && row.category === "rent";
+    return row.due_date.slice(0, 7) === denverMonth(today) && row.category === "rent";
   });
   const collected = monthCharges.filter(row => row.status === "paid")
     .reduce((sum, row) => sum + row.amount_cents, 0);

@@ -1,5 +1,6 @@
 "use client";
 
+import { todayDenver } from "@/lib/denver-calendar";
 import type { ActionState } from "@/app/actions";
 import { downloadReportCsv, monthlyPnlToCsv } from "@/lib/csv-export-reports";
 import type { MonthlyPnLRow } from "@/lib/reports";
@@ -34,7 +35,7 @@ export function MonthlyPnLReport({ data, onEditCharge, onUpdateExpense }: Monthl
       title="Money in and out"
       description="Revenue versus expenses by property and month."
       rows={data}
-      onExport={() => downloadReportCsv(`domus-monthly-pnl-${new Date().toISOString().slice(0, 10)}.csv`, monthlyPnlToCsv(data))}
+      onExport={() => downloadReportCsv(`domus-monthly-pnl-${todayDenver()}.csv`, monthlyPnlToCsv(data))}
       defaultSortKey="month"
       columns={[
         { key: "month", label: "Month", sortValue: (row) => row.month, render: (row) => row.month },

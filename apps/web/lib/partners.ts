@@ -1,3 +1,4 @@
+import { todayDenver } from "@/lib/denver-calendar";
 import { createClient } from "@/lib/supabase/server";
 
 export type Partner = { id: string; accountId: string; displayName: string; active: boolean; profileId: string | null };
@@ -141,6 +142,6 @@ export async function loadPartnerReport(accountId: string, range: ReportRange): 
       toPartnerId: row.to_partner_id, amountCents: row.amount_cents, paidOn: row.paid_on,
       kind: row.kind as PartnerPayment["kind"], status: row.status as "done" | "planned", note: row.note }));
     return { ok: true, data: calculatePartnerReport(partners, expensesResult.data ?? [],
-      attributionResult.data ?? [], payments, range, new Date().toISOString().slice(0, 10)) };
+      attributionResult.data ?? [], payments, range, todayDenver()) };
   } catch { return { ok: false, error: "unavailable" }; }
 }

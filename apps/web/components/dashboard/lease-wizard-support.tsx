@@ -1,3 +1,4 @@
+import { denverMonth } from "@/lib/denver-calendar";
 import type { LeaseListItem, PropertyListItem, TenantOption, UnitListItem } from "@/lib/portfolio";
 
 export type LeaseWizardStep = 0 | 1 | 2 | 3;
@@ -30,8 +31,8 @@ export const LEASE_WIZARD_STEP_TITLES = [
 ] as const;
 
 function firstOfNextMonth() {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
+  const month = denverMonth();
+  return new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5)), 1))
     .toISOString()
     .slice(0, 10);
 }

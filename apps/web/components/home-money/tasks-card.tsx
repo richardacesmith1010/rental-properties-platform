@@ -1,4 +1,6 @@
 "use client";
+
+import { todayDenver } from "@/lib/denver-calendar";
 import { useState } from "react";
 import type { AccountTask } from "@/lib/account-tasks";
 import type { Partner } from "@/lib/partners";
@@ -20,7 +22,7 @@ export function TasksCard({ accountId, tasks, partners, onAdd, onUpdate, onRemov
   const [removedIds, setRemovedIds] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayDenver();
   const visible = tasks.filter((task) => !removedIds.includes(task.id));
   async function common() {
     setPending(true); const result = await onCommon(accountId); setPending(false);

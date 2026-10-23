@@ -1,5 +1,6 @@
 "use client";
 
+import { todayDenver } from "@/lib/denver-calendar";
 import type { ActionState } from "@/app/actions";
 import { delinquencyToCsv, downloadReportCsv } from "@/lib/csv-export-reports";
 import type { DelinquencyItem } from "@/lib/reports";
@@ -28,7 +29,7 @@ export function DelinquencyReport({
       title="Overdue Rent Aging"
       description="Outstanding balances grouped into 30/60/90+ day buckets."
       rows={data}
-      onExport={() => downloadReportCsv(`domus-delinquency-aging-${new Date().toISOString().slice(0, 10)}.csv`, delinquencyToCsv(data))}
+      onExport={() => downloadReportCsv(`domus-delinquency-aging-${todayDenver()}.csv`, delinquencyToCsv(data))}
       defaultSortKey="total"
       defaultSortDirection="desc"
       columns={[

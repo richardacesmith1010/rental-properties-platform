@@ -1,3 +1,4 @@
+import { denverMonth } from "@/lib/denver-calendar";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdministeredPropertyIds, getAdministeredPropertyIdsForAccount } from "@/lib/property-access";
 import { getChargeAuditSummary, getChargeEditHistoryMap, normalizeChargeCategory,
@@ -370,17 +371,9 @@ export async function getDashboardDataLegacy(
     (tenantProfiles ?? []).map((profile) => [profile.id, profile.email ?? null])
   );
 
-  const now = new Date();
-  const currentMonth = now.getUTCMonth();
-  const currentYear = now.getUTCFullYear();
+  const currentMonth = denverMonth();
   const currentMonthCharges = charges.filter((charge) => {
-    const dueDate = new Date(`${charge.due_date}T00:00:00.000Z`);
-    return (
-      !Number.isNaN(dueDate.getTime()) &&
-      dueDate.getUTCMonth() === currentMonth &&
-      dueDate.getUTCFullYear() === currentYear &&
-      charge.category === "rent"
-    );
+    return charge.due_date.slice(0, 7) === currentMonth && charge.category === "rent";
   });
   const collectedRentCents = currentMonthCharges
     .filter((charge) => charge.status === "paid")

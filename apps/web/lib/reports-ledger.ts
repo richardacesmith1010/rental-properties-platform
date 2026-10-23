@@ -1,3 +1,4 @@
+import { todayDenver } from "@/lib/denver-calendar";
 import type { ChargeDetailRecordDTO } from "@/lib/charge-audit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
@@ -180,7 +181,7 @@ export interface MonthlyLeaseLedger {
 export function buildMonthlyLeaseLedger(lease: MonthlyLeaseLedger["lease"],
   charges: Array<{ id: string; due_date: string; amount_cents: number; status: string; deleted_at: string | null }>,
   payments: Array<{ rent_charge_id: string; amount_cents: number; reversed_at: string | null }>,
-  lines: Awaited<ReturnType<typeof getChargeLines>>, today = new Date().toISOString().slice(0, 10)
+  lines: Awaited<ReturnType<typeof getChargeLines>>, today = todayDenver()
 ): MonthlyLeaseLedger {
   const eligible = charges.filter((charge) => !charge.deleted_at && charge.status !== "waived");
   const lineMap = linesByCharge(lines);

@@ -1,3 +1,4 @@
+import { denverYear } from "@/lib/denver-calendar";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Download } from "lucide-react";
@@ -39,9 +40,9 @@ export default async function ReportsPage(props: ReportsPageProps) {
       ? searchParams.year
       : Array.isArray(searchParams?.year)
         ? searchParams.year[0]
-        : new Date().getUTCFullYear()
+        : denverYear()
   );
-  const reportYear = Number.isFinite(selectedYear) ? selectedYear : new Date().getUTCFullYear();
+  const reportYear = Number.isFinite(selectedYear) ? selectedYear : denverYear();
 
   if (role !== "owner" && role !== "manager") {
     redirect(getRoleHomePath(role));
@@ -56,7 +57,7 @@ export default async function ReportsPage(props: ReportsPageProps) {
     getReceivablesReport(user.id),
   ]);
 
-  const yearOptions = Array.from({ length: 4 }, (_, index) => new Date().getUTCFullYear() - index);
+  const yearOptions = Array.from({ length: 4 }, (_, index) => denverYear() - index);
   const monthlyLedgers = role === "owner" ? await getMonthlyLeaseLedgers(rentRoll
     .filter((row) => ["active", "expiring_soon"].includes(row.leaseStatus))
     .map((row) => row.leaseId)) : new Map();

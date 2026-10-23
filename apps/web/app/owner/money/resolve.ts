@@ -1,16 +1,17 @@
+import { todayDenver } from "@/lib/denver-calendar";
 export function resolveMoneySelection(
   propertyIds: string[],
   requestedProperty: string | undefined,
   requestedMonth: string | undefined,
   now: Date
 ) {
-  const today = now.toISOString().slice(0, 10);
+  const today = todayDenver(now);
   const currentMonth = today.slice(0, 7);
   const propertyId = propertyIds.includes(requestedProperty ?? "") ? requestedProperty! : null;
   const selectedMonth = requestedMonth === "year" ? "year"
     : /^\d{4}-(0[1-9]|1[0-2])$/.test(requestedMonth ?? "") ? requestedMonth! : currentMonth;
   const [year, value] = selectedMonth === "year"
-    ? [now.getUTCFullYear(), 1] : selectedMonth.split("-").map(Number);
+    ? [Number(today.slice(0, 4)), 1] : selectedMonth.split("-").map(Number);
   const from = new Date(Date.UTC(year, value - 1, 1)).toISOString().slice(0, 10);
   const to = selectedMonth === "year" ? `${year + 1}-01-01`
     : new Date(Date.UTC(year, value, 1)).toISOString().slice(0, 10);

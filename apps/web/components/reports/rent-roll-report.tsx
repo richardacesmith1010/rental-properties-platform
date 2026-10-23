@@ -1,5 +1,6 @@
 "use client";
 
+import { todayDenver } from "@/lib/denver-calendar";
 import type { ActionState } from "@/app/actions";
 import { downloadReportCsv, rentRollToCsv } from "@/lib/csv-export-reports";
 import type { RentRollItem } from "@/lib/reports";
@@ -28,7 +29,7 @@ export function RentRollReport({
       title="Rent Roll"
       description="Current tenant roster with rent amounts and balances."
       rows={data}
-      onExport={() => downloadReportCsv(`domus-rent-roll-${new Date().toISOString().slice(0, 10)}.csv`, rentRollToCsv(data))}
+      onExport={() => downloadReportCsv(`domus-rent-roll-${todayDenver()}.csv`, rentRollToCsv(data))}
       exportLabel="Export CSV"
       defaultSortKey="property"
       columns={[

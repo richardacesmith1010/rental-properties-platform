@@ -1,3 +1,4 @@
+import { todayDenver } from "@/lib/denver-calendar";
 import type { ChargeDetailRecordDTO } from "@/lib/charge-audit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
@@ -84,7 +85,7 @@ export async function getDelinquencyReport(
         });
       }).map((lease) => lease.id));
 
-    const todayIso = new Date().toISOString().slice(0, 10);
+    const todayIso = todayDenver();
     const grouped = new Map<string, DelinquencyItem>();
 
     for (const [leaseId, chargeDetails] of detailsByLeaseId.entries()) {
@@ -170,7 +171,7 @@ export async function getReceivablesReport(userId: string): Promise<ReceivableIt
         propertyName: property?.name ?? "Unknown Property",
         chargeCount: 0,
         totalOwedCents: 0,
-        oldestDueDate: chargeDetails[0]?.dueDate ?? new Date().toISOString().slice(0, 10),
+        oldestDueDate: chargeDetails[0]?.dueDate ?? todayDenver(),
         chargeDetails: [] as ChargeDetailRecordDTO[]
       };
 

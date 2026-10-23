@@ -1,3 +1,4 @@
+import { addDays, denverDayStartUtc, todayDenver } from "@/lib/denver-calendar";
 import {
   getAdministeredPropertyIds,
   getAdministeredPropertyIdsForAccount
@@ -64,14 +65,13 @@ export async function getRecentPaymentsForAi(userId: string, accountId?: string)
     return [] as AiRecentPayment[];
   }
 
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30);
+  const thirtyDaysAgo = denverDayStartUtc(addDays(todayDenver(), -30));
 
   const { data: payments, error: paymentsError } = await admin
     .from("payments")
     .select("rent_charge_id, amount_cents, paid_at")
     .in("rent_charge_id", chargeIds)
-    .gte("paid_at", thirtyDaysAgo.toISOString())
+    .gte("paid_at", thirtyDaysAgo)
     .is("reversed_at", null)
     .order("paid_at", { ascending: false })
     .limit(10);

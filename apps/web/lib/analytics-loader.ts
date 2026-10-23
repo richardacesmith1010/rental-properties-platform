@@ -1,3 +1,4 @@
+import { denverMonth, denverYear, todayDenver } from "@/lib/denver-calendar";
 import { average } from "@/lib/analytics-average";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdministeredPropertyIds, getAdministeredPropertyIdsForAccount } from "@/lib/property-access";
@@ -28,12 +29,12 @@ const EMPTY_ANALYTICS: AnalyticsDashboardData = {
 };
 
 
-function buildLastTwelveMonths(): MonthWindow[] {
-  const now = new Date();
+export function buildLastTwelveMonths(): MonthWindow[] {
+  const [year, month] = denverMonth().split("-").map(Number);
   const months: MonthWindow[] = [];
 
   for (let offset = 11; offset >= 0; offset -= 1) {
-    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - offset, 1));
+    const start = new Date(Date.UTC(year, month - 1 - offset, 1));
     const end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0));
     months.push({
       key: start.toISOString().slice(0, 7),
@@ -51,9 +52,8 @@ function buildLastTwelveMonths(): MonthWindow[] {
 }
 
 
-function startOfCurrentYearIso(): string {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), 0, 1)).toISOString().slice(0, 10);
+export function startOfCurrentYearIso(): string {
+  return new Date(Date.UTC(denverYear(), 0, 1)).toISOString().slice(0, 10);
 }
 
 
@@ -74,9 +74,9 @@ export async function getOwnerAnalyticsData(
   try {
     const lastTwelveMonths = buildLastTwelveMonths();
     const analyticsStartDate = lastTwelveMonths[0]?.startIso ?? startOfCurrentYearIso();
-    const analyticsEndDate = lastTwelveMonths[lastTwelveMonths.length - 1]?.endIso ?? new Date().toISOString().slice(0, 10);
+    const analyticsEndDate = lastTwelveMonths[lastTwelveMonths.length - 1]?.endIso ?? todayDenver();
     const currentYearStart = startOfCurrentYearIso();
-    const currentMonthKey = monthKey(new Date().toISOString().slice(0, 10));
+    const currentMonthKey = monthKey(todayDenver());
 
     const unitsQuery = await admin
       .from("units")
