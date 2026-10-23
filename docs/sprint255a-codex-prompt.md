@@ -1,4 +1,4 @@
-# Sprint 255a — Account wipe runs as ONE database transaction (all-or-nothing) (L3: deletion + schema) — rev 2 (rev 1 AWC)
+# Sprint 255a — Account wipe runs as ONE database transaction (all-or-nothing) (L3: deletion + schema) — rev 3 (rev 1 AWC → rev 2 AWC)
 
 ## 1. Objective
 Today each of the six wipe actions in `apps/web/app/actions/account-wipe.ts` sends its deletes one request at a time
@@ -43,10 +43,16 @@ is deleted. Which rows are deleted, and in which order, must stay exactly as tod
    `deleteLeasingPipeline`, `deleteDocuments`, `deleteMaintenance`, `deleteAutomation` with the same order of entries,
    now taking the plan. Add `applyWipePlan(plan)`: one `createAdminClient().rpc("account_wipe_apply", { p_ops:
    plan.ops })`; classify the outcome:
-   - **`database_rollback_confirmed`** — a response arrived with an `error` object (PostgREST/SQL error, including
-     function missing `PGRST202`/`42883`): the transaction rolled back; throw.
-   - **`rpc_result_unknown`** — the call threw, timed out, or returned neither `data` nor `error` (network/transport):
-     the commit status is unknown; throw. **Never retry automatically.**
+   - **`database_rollback_confirmed`** — only when the response has an `error` whose `code` proves the transaction did
+     not commit: a 5-character SQLSTATE (`/^[0-9A-Z]{5}$/`) **except** class `08` (connection exception) and `57P01`,
+     `57P02`, `57P03`; or PostgREST `PGRST202` / `PGRST203` (function not found / ambiguous — never executed). Throw.
+   - **`rpc_result_unknown`** — everything else: the call threw/timed out, any other error code or no code (gateway,
+     upstream, `PGRST000`–`PGRST003`, HTTP 5xx), `{ data: null, error: null }`, **or a success response that fails
+     validation** (below). The commit status is unknown; throw. **Never retry automatically.**
+   - **Success validation** (before any storage removal): `data.operations === plan.ops.length`; `data.results` is an
+     array of the same length; entry *i* has `label === plan.ops[i].label` and is either `{ label, rows: <integer
+     ≥ 0> }` or `{ label, skipped: true }`; a skip is allowed **only** for the known no-op `vendors` / `property_id`
+     delete (see §2) — any other skip fails validation. Export the classifier and validator for tests.
    Log each with `sideEffectError("accountWipe", <category>, { action })` (no ids or emails in logs). No fallback to
    per-op writes; after success, run the queued storage removals in order (best effort, each
    failure logged with today's `sideEffectError("accountWipe", "remove_storage_objects", { entityType: bucket })` and
@@ -98,9 +104,15 @@ then from the repo root `npm run gate:web`.
   action returns today's exact error object (e.g. `{ success: false, error: "Unable to complete the full account wipe
   right now." }`), **no** storage removal, **no** `revalidatePath`, zero direct writes, one `database_rollback_confirmed`
   log, and the fake DB state is unchanged.
-- A2b (result unknown) RPC rejects (network error) or resolves `{ data: null, error: null }` → same user error object,
-  no storage removal, no `revalidatePath`, **exactly one** RPC call (no retry), one `rpc_result_unknown` log. The test
-  must not assert that nothing was deleted.
+- A2b (result unknown) each of: RPC rejects (network error); resolves `{ data: null, error: null }`; resolves an error
+  with code `PGRST000`, `PGRST003`, `08006`, `57P01`, or no code (`{ message: "Bad gateway" }`) → same user error
+  object, no storage removal, no `revalidatePath`, **exactly one** RPC call (no retry), one `rpc_result_unknown` log.
+  These tests must not assert that nothing was deleted.
+- A2c (invalid success) `data` with `operations` ≠ plan length; `results` not an array; one result missing; a label
+  out of order; `rows: -1`; an unexpected `skipped: true` on a non-vendors op → `rpc_result_unknown`, **no** storage
+  removal, no `revalidatePath`, user error object. A valid response with the vendors skip passes.
+- A2d classifier table test: `22P02`, `42501`, `57014`, `P0001`, `PGRST202` → confirmed; `08006`, `57P01`, `PGRST000`,
+  `PGRST003`, `""`, `undefined` → unknown.
 - A3 Guards (role manager/tenant, rate limit, confirmation missing/`"delete"`/`"DELETE "`) for all six actions: no RPC,
   no writes, exact error objects (keep the 253b table-driven cases).
 - A4 `fullAccountWipe`: the four request-id reads happen before the RPC, and their ids appear in the vote deletes at
@@ -109,8 +121,8 @@ then from the repo root `npm run gate:web`.
   empty `in` array keeps the op; `not_null` mapping; `updateIn` payload is exactly `{ table: "units", kind: "update",
   set: { occupied: false }, label, filters: [{ op: "in", column: "id", values }] }`; labels equal today's labels; a
   storage failure is logged and the next removal still runs.
-- A6 Old K4/K4b "partial deletion" tests are replaced by A2 (state this in the report: behavior intentionally changed
-  from partial to none).
+- A6 Old K4/K4b "partial deletion" tests are replaced by A2–A2c. Report wording: a confirmed SQL failure now commits
+  **zero** database changes; a transport/unknown outcome may still be indeterminate (and is never retried).
 - A7 Structure test still passes (façade exports exactly six; no new module imports outside the allowlist; no
   `"use server"` in `lib/account-wipe/*`).
 - A8 Gate green (counts verbatim).
@@ -125,7 +137,7 @@ review, dry run already done) **before** deploying this code, verifies grants an
 a read-only production check (owner Settings → Account & Data renders; no submit) and one live RPC call as
 `service_role` with a no-op plan (ids that match nothing) to prove the function answers `{ operations: 1, rows: 0 }`.
 Rollback (Claude): (1) redeploy the previous app revision; (2) confirm the production alias serves that revision
-(deployment SHA) and that no request to the 255a revision's wipe actions is still in flight (Vercel logs for
-`/settings` POSTs since the switch); (3) only then run `supabase/rollback/20261103_sprint255a_account_wipe_apply_
+(deployment SHA via the Vercel API) and that the 255a deployment receives no requests: no `/settings` POSTs in its
+runtime logs for 5 minutes after the alias switch; (3) only then run `supabase/rollback/20261103_sprint255a_account_wipe_apply_
 rollback.sql` (`drop function if exists public.account_wipe_apply(jsonb)`), which ChatGPT reviews with this packet.
 The user should never need to read instructions to complete this flow (no UI change).
