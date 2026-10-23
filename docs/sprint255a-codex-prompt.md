@@ -1,4 +1,4 @@
-# Sprint 255a — Account wipe runs as ONE database transaction (all-or-nothing) (L3: deletion + schema) — rev 1
+# Sprint 255a — Account wipe runs as ONE database transaction (all-or-nothing) (L3: deletion + schema) — rev 2 (rev 1 AWC)
 
 ## 1. Objective
 Today each of the six wipe actions in `apps/web/app/actions/account-wipe.ts` sends its deletes one request at a time
@@ -18,13 +18,18 @@ is deleted. Which rows are deleted, and in which order, must stay exactly as tod
   `{ "table": string, "kind": "delete" | "update", "label": string, "set"?: { "occupied": false },
   "filters": [ { "op": "in", "column": string, "values": string[] } | { "op": "eq", "column": string, "value": string }
   | { "op": "not_null", "column": string } ] }`. Tables/columns are allowlisted (the exact set the wipe uses today);
-  every op needs an `in` or `eq` filter; the only update allowed is `units` `{ "occupied": false }`. A missing
-  table/column is skipped (same as today's `isMissingSchemaError` skip). Any other error raises and rolls the whole
-  call back. Returns `{ operations, results: [{ label, rows } | { label, skipped: true }] }`. Max 500 ops.
-  Dry run (rolled back) passed: atomic rollback, injection rejected, `authenticated`/`anon` denied.
-- Claude checked (live SQL): no foreign keys reference `withdrawal_requests`, `distribution_change_requests`,
-  `account_rename_requests`, `account_delete_requests` or their vote tables, so reading their ids **before** any delete
-  returns the same ids as today's mid-sequence reads in `fullAccountWipe` (lines ~328–355).
+  every op needs an `in` or `eq` filter; the only update allowed is `units` `{ "occupied": false }`. Values are cast
+  to the column's catalog type (`uuid`/`text` only), so comparisons stay typed and indexed, and an invalid uuid fails
+  the whole call (22P02, same as PostgREST's cast error today). A missing table/column skips that op (same as today's
+  `isMissingSchemaError` skip). Any other error raises and rolls the whole call back. Returns `{ operations, results:
+  [{ label, rows } | { label, skipped: true }] }`. Limits: 500 ops, 1,000,000 bytes. Unknown JSON properties are
+  ignored. Dry run on prod (rolled back, 14 cases) passed: atomic rollback, injected column/value rejected or inert,
+  invalid uuid fails, payload limit, typed index plan, `authenticated`/`anon` denied, grants `service_role` only.
+- **Hoisted-read parity proof (Claude, live catalog):** the four request tables and four vote tables have **no
+  foreign keys** (so no cascade can reach them), **no triggers**, and the schema has **no rules**; no trigger function
+  on any table deleted earlier in `fullAccountWipe` references them (catalog search of all 9 trigger functions). So no
+  earlier op can remove or alter those rows, and reading their ids before any delete returns the same ids as today's
+  mid-sequence reads (lines ~328–355).
 - Known, out of scope here (Sprint 255b): `vendors` has no `property_id` column, so today's vendor delete is always
   skipped. Keep that op exactly as today (the function skips it).
 
@@ -37,9 +42,15 @@ is deleted. Which rows are deleted, and in which order, must stay exactly as tod
    and `ops` / `storage` accessors. Keep `deleteDistributionRecords`, `deleteLeaseFinancials`,
    `deleteLeasingPipeline`, `deleteDocuments`, `deleteMaintenance`, `deleteAutomation` with the same order of entries,
    now taking the plan. Add `applyWipePlan(plan)`: one `createAdminClient().rpc("account_wipe_apply", { p_ops:
-   plan.ops })`; on `error` throw `new Error(\`Account wipe failed: ${error.message}\`)` (no fallback to per-op writes,
-   including when the function is missing); after success, run the queued storage removals in order (best effort, each
-   failure logged with today's `sideEffectError("accountWipe", "remove_storage_objects", { entityType: bucket })`).
+   plan.ops })`; classify the outcome:
+   - **`database_rollback_confirmed`** — a response arrived with an `error` object (PostgREST/SQL error, including
+     function missing `PGRST202`/`42883`): the transaction rolled back; throw.
+   - **`rpc_result_unknown`** — the call threw, timed out, or returned neither `data` nor `error` (network/transport):
+     the commit status is unknown; throw. **Never retry automatically.**
+   Log each with `sideEffectError("accountWipe", <category>, { action })` (no ids or emails in logs). No fallback to
+   per-op writes; after success, run the queued storage removals in order (best effort, each
+   failure logged with today's `sideEffectError("accountWipe", "remove_storage_objects", { entityType: bucket })` and
+   also counted under `storage_cleanup_failed`).
 2. Façade: each action keeps auth, rate limit and confirmation exactly as today, then: load scope and **all** reads
    (hoist `fullAccountWipe`'s four request-id reads to right after `loadDeletionScope`), build the plan in today's
    exact order, `await applyWipePlan(plan)`, then `revalidateSettingsSurfaces()` and today's success message. The
@@ -83,9 +94,13 @@ then from the repo root `npm run gate:web`.
 - A1 For all six actions (success path): one RPC call, zero direct writes; `opsToLog(p_ops)` equals the literal trace
   minus storage entries; storage removals equal the literal's storage entries, in order, after the RPC; success message
   and the four `revalidatePath` calls unchanged.
-- A2 RPC returns an error → the action returns today's exact error object for that action (e.g. `{ success: false,
-  error: "Unable to complete the full account wipe right now." }`), **no** storage removal, **no** `revalidatePath`,
-  zero direct writes. Same when the error says the function does not exist (code `PGRST202`/`42883`).
+- A2 (rollback confirmed) RPC resolves with `{ error }` (SQL error; also `PGRST202`/`42883` function missing) → the
+  action returns today's exact error object (e.g. `{ success: false, error: "Unable to complete the full account wipe
+  right now." }`), **no** storage removal, **no** `revalidatePath`, zero direct writes, one `database_rollback_confirmed`
+  log, and the fake DB state is unchanged.
+- A2b (result unknown) RPC rejects (network error) or resolves `{ data: null, error: null }` → same user error object,
+  no storage removal, no `revalidatePath`, **exactly one** RPC call (no retry), one `rpc_result_unknown` log. The test
+  must not assert that nothing was deleted.
 - A3 Guards (role manager/tenant, rate limit, confirmation missing/`"delete"`/`"DELETE "`) for all six actions: no RPC,
   no writes, exact error objects (keep the 253b table-driven cases).
 - A4 `fullAccountWipe`: the four request-id reads happen before the RPC, and their ids appear in the vote deletes at
@@ -109,5 +124,8 @@ Stay inside §5. Do not commit. Never run a wipe against a real database. Claude
 review, dry run already done) **before** deploying this code, verifies grants and attacker SQL live, deploys, then runs
 a read-only production check (owner Settings → Account & Data renders; no submit) and one live RPC call as
 `service_role` with a no-op plan (ids that match nothing) to prove the function answers `{ operations: 1, rows: 0 }`.
-Rollback: deploy the previous app revision, then `supabase/rollback/20261103_sprint255a_account_wipe_apply_rollback.sql`.
+Rollback (Claude): (1) redeploy the previous app revision; (2) confirm the production alias serves that revision
+(deployment SHA) and that no request to the 255a revision's wipe actions is still in flight (Vercel logs for
+`/settings` POSTs since the switch); (3) only then run `supabase/rollback/20261103_sprint255a_account_wipe_apply_
+rollback.sql` (`drop function if exists public.account_wipe_apply(jsonb)`), which ChatGPT reviews with this packet.
 The user should never need to read instructions to complete this flow (no UI change).

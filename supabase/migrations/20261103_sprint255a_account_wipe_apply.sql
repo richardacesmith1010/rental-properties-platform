@@ -3,8 +3,10 @@
 -- operations here. Every operation runs inside this function's transaction: any error rolls
 -- back the whole wipe (today a mid-wipe error leaves a partial deletion).
 -- Identifiers are checked against a fixed allowlist and quoted with %I; values are quoted
--- with %L. Every operation needs at least one 'in' or 'eq' filter (no unfiltered deletes).
--- A missing table/column is skipped (parity with the app's isMissingSchemaError skip).
+-- with %L and cast to the column's catalog type (uuid or text only), so comparisons stay typed
+-- and indexed, and an invalid uuid fails the whole wipe (parity with PostgREST's cast error).
+-- Every operation needs at least one 'in' or 'eq' filter (no unfiltered deletes).
+-- A missing table/column skips that operation (parity with the app's isMissingSchemaError skip).
 
 create or replace function public.account_wipe_apply(p_ops jsonb)
 returns jsonb
@@ -68,12 +70,17 @@ declare
   v_values text[];
   v_conditions text[];
   v_has_key_filter boolean;
+  v_type text;
+  v_missing boolean;
   v_sql text;
   v_rows bigint;
   v_results jsonb := '[]'::jsonb;
 begin
   if p_ops is null or jsonb_typeof(p_ops) <> 'array' then
     raise exception 'account_wipe_apply: ops must be an array' using errcode = '22023';
+  end if;
+  if octet_length(p_ops::text) > 1000000 then
+    raise exception 'account_wipe_apply: payload too large' using errcode = '22023';
   end if;
   if jsonb_array_length(p_ops) > 500 then
     raise exception 'account_wipe_apply: too many operations' using errcode = '22023';
@@ -102,10 +109,23 @@ begin
 
     v_conditions := array[]::text[];
     v_has_key_filter := false;
+    v_missing := to_regclass('public.' || quote_ident(v_table)) is null;
     for v_filter in select value from jsonb_array_elements(v_op->'filters') loop
       v_column := v_filter->>'column';
       if v_column is null or not ((v_allowed->v_table) ? v_column) then
         raise exception 'account_wipe_apply: column not allowed (%)', v_label using errcode = '42501';
+      end if;
+      v_type := null;
+      if not v_missing then
+        select pg_catalog.format_type(a.atttypid, a.atttypmod) into v_type
+          from pg_catalog.pg_attribute a
+         where a.attrelid = to_regclass('public.' || quote_ident(v_table))
+           and a.attname = v_column and a.attnum > 0 and not a.attisdropped;
+        if v_type is null then
+          v_missing := true;
+        elsif v_filter->>'op' in ('in', 'eq') and v_type not in ('uuid', 'text') then
+          raise exception 'account_wipe_apply: column type not supported (%)', v_label using errcode = '42804';
+        end if;
       end if;
       case v_filter->>'op'
         when 'in' then
@@ -116,13 +136,13 @@ begin
           end if;
           select coalesce(array_agg(e), array[]::text[]) into v_values
             from jsonb_array_elements_text(v_filter->'values') e;
-          v_conditions := v_conditions || format('%I::text = any (%L::text[])', v_column, v_values);
+          v_conditions := v_conditions || format('%I = any (%L::%s[])', v_column, v_values, coalesce(v_type, 'text'));
           v_has_key_filter := true;
         when 'eq' then
           if jsonb_typeof(v_filter->'value') <> 'string' then
             raise exception 'account_wipe_apply: eq value must be a string (%)', v_label using errcode = '22023';
           end if;
-          v_conditions := v_conditions || format('%I::text = %L', v_column, v_filter->>'value');
+          v_conditions := v_conditions || format('%I = %L::%s', v_column, v_filter->>'value', coalesce(v_type, 'text'));
           v_has_key_filter := true;
         when 'not_null' then
           v_conditions := v_conditions || format('%I is not null', v_column);
@@ -133,6 +153,11 @@ begin
 
     if not v_has_key_filter then
       raise exception 'account_wipe_apply: an in or eq filter is required (%)', v_label using errcode = '22023';
+    end if;
+
+    if v_missing then
+      v_results := v_results || jsonb_build_object('label', v_label, 'skipped', true);
+      continue;
     end if;
 
     if v_kind = 'delete' then
