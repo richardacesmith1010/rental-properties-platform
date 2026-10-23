@@ -2081,3 +2081,14 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   file (one key); the guard keys by file, so the two moved copies need two keys. Same string, same reason.
 - **Webhook delivery check: INCONCLUSIVE** — 0 Stripe events in the last 6 h and 0 webhook requests since deploy.
   Recheck at the next real delivery (Vercel log 2xx + Stripe Workbench delivery list).
+
+## 2026-10-22 — Sprint 250b SHIPPED (reports, dashboard months, form defaults on the Denver day)
+- **250b** `404ee91` (L2): reports default year (page, P&L, receipts PDF, YTD), delinquency/ledger "today", owner Money
+  range, KPI "this month", wallet home + recent activity windows, analytics months, expenses months, home-money, CSV
+  file names (9 exports) and form defaults (deposit return + `max`, charge create, lease wizard start, home-money
+  task/settle-up/partner payment) now use the Denver day. `paid_at` windows use `denverDayStartUtc` or a ±1-day query
+  then a Denver-date re-filter (Claude checked every consumer re-filters).
+- Verified: Claude review (R1–R7 map to real assertions; 6 existing tests changed only for `lt` mocks or Denver
+  wording); gate 3,237; CI success; prod smoke 27/27. Audit table in the Codex report (all §2 sites + extra sweep).
+- Time zones now done end to end except SQL functions (`owner_dashboard_payload`, retention report) — left as UTC by
+  design (backlog if a report ever disagrees).
