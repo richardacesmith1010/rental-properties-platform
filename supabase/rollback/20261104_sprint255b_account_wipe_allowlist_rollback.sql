@@ -1,0 +1,3 @@
+-- Rollback for 20261104_sprint255b_account_wipe_allowlist.sql: restore the 255a function body.
+-- Deploy the 255a app revision first (255b plans use vendors.id and the new tables and would be rejected).
+-- Then re-run supabase/migrations/20261103_sprint255a_account_wipe_apply.sql verbatim.
