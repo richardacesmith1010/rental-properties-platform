@@ -2208,3 +2208,14 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Verified: 4 tests (N1–N4); gate 3,399; CI success; deploy success; smoke 27/27; Account & Data walk passes. The
   smoke owner has no shared account, so the note itself was not seen live — uses the existing `info` Alert tokens
   (`--accent` on `--accent-weak`), already covered by the axe scan elsewhere.
+
+## 2026-10-24 — Sprint 256a SHIPPED (security patch bumps)
+- **256a** `11a7214` (L2): `next` / `eslint-config-next` 15.5.27 → 15.5.28 (critical GHSA-2464-fhr4-w9xw image-optimizer
+  RCE with SVG; high GHSA-p3m5-59mp-jv5r server-action DoS) and `zod` → 4.6.7 (high GHSA-mrhx-c7xc-m3w5). Exposure was
+  low (no `dangerouslyAllowSVG`; `/_next/image` SVG probe 404) but patched at once.
+- Verified: prod audit now 8 (1 high = build-time postcss inside next/tailwind, 5 moderate, 2 low); gate 3,399 (second
+  run — the first had 4 timeouts while iCloud `fileproviderd` ran at 103% CPU; the same 30 tests passed alone in 7 s);
+  CI success; deploy success; smoke 27/27.
+- Codex hung ~17 h on this L1 job after finishing its edits (no report); Claude stopped it and verified the diff.
+- **Backlog (dependency sprint):** `@supabase/supabase-js` 2.49 → 2.118 (low), `@anthropic-ai/sdk` 0.80 → 1.x
+  (moderate, memory tool not used), Tailwind 4 (moderate, postcss chain) — majors, each needs its own review.
