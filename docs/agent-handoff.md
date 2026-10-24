@@ -2177,3 +2177,26 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - **255b next:** wipe coverage gaps — vendors (2 live rows never deleted), plus NO ACTION FKs that would block a wipe
   if rows existed: documents (lease/property/unit), inspections (lease), communication_logs (property/unit),
   preventive_maintenance_schedules (vendor). All four have 0 rows today.
+
+## 2026-10-23 — Sprint 255b SHIPPED (wipe scope = sole-owner accounts; guard; full coverage)
+- **255b** `2286e49` (L3, ChatGPT rev 3 after rev 1 + rev 2 AWC):
+  - **Security fix (pre-existing):** wipe scope came from `getAdministered*`, which includes manager-assigned
+    properties and shared co-owned accounts — a co-owner's wipe could delete a shared account's data (1 shared owner
+    account live). **Claude decision:** destructive scope = accounts where the user is the only active owner; shared
+    accounts only lose the user's own membership. Manager assignments never add scope.
+  - **Transaction-time guard:** `account_wipe_apply(p_ops, p_guard)` locks accounts, memberships and properties, re-checks
+    sole ownership + property ownership, raises `DW001` on change (classified confirmed rollback).
+  - Vendors now deleted (by id: account vendors + legacy personal); assignments only via the owner's tickets,
+    schedules only via the owner's properties (an out-of-scope reference makes the wipe roll back). Inspections,
+    documents and communication logs cleared before their lease/unit/property. A valid `skipped` reply = committed
+    (`committed_with_skip` log).
+- Verified: catalog audit (all 15 RESTRICT/NO ACTION FKs into wiped tables have their child in the wipe); rolled-back
+  populated dry run (13-step chain 1 row each, 0 left; out-of-scope vendor → 23503, nothing deleted); guard dry run
+  (second owner / moved property / not owner / unknown property → refused); migration applied, both bodies md5 =
+  file, grants service_role only; live REST: 255a-shape call still works, guard sole owner ok, shared account →
+  `DW001` in 0.18 s, anon 42501, new tables no-op rows 0. Claude review of trace diffs (only §3 insertions) and scope
+  code. Gate 3,395; CI success; deploy success; smoke 27/27; Account & Data walk (0 POSTs); Sentry clean.
+- **Lesson L-035:** PostgREST auto-retries 40001 → the first guard version looped to "upstream request timeout";
+  switched to custom `DW001`. Every RPC error path now gets one live REST call.
+- **Follow-ups (backlog):** Account & Data page could tell a co-owner that shared accounts are not wiped; drop the
+  1-arg-only call path in a later cleanup (still used internally by the guard).
