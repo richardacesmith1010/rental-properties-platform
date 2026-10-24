@@ -14,6 +14,7 @@ import { DeleteAccountSection } from "./delete-account-section";
 type StatefulAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
 interface AccountDataSettingsProps {
+  sharedAccountNames?: string[];
   onDeleteAllProperties: StatefulAction;
   onDeleteAllTenants: StatefulAction;
   onDeleteAllManagers: StatefulAction;
@@ -110,6 +111,7 @@ function DangerActionCard({
 }
 
 export function AccountDataSettings({
+  sharedAccountNames = [],
   onDeleteAllProperties,
   onDeleteAllTenants,
   onDeleteAllManagers,
@@ -119,6 +121,13 @@ export function AccountDataSettings({
 }: AccountDataSettingsProps) {
   return (
     <div className="space-y-4">
+      {sharedAccountNames.length > 0 ? (
+        <Alert role="note" variant="info" className="space-y-1">
+          <p className="font-bold">Some homes are shared with other owners.</p>
+          <p>These buttons won&apos;t delete them. A full wipe only removes you.</p>
+          <p>Shared: {[...sharedAccountNames].sort((a, b) => a.localeCompare(b)).join(", ")}</p>
+        </Alert>
+      ) : null}
       <DeleteAccountSection />
       <nav aria-label="Legal links" className="flex gap-5 text-sm text-[var(--ink-2)]">
         <Link href="/privacy" className="min-h-11 py-3 underline">Privacy</Link>
@@ -126,7 +135,8 @@ export function AccountDataSettings({
       </nav>
       <DangerActionCard
         title="Delete All Properties"
-        description="This will deactivate all your properties, units, leases, charges, payments, expenses, files, maintenance tickets, and vendors."
+        description={"This will deactivate all your properties, units, leases, charges, payments, expenses, " +
+          "files, maintenance tickets, and vendors."}
         actionLabel="Delete Properties"
         action={onDeleteAllProperties}
       />

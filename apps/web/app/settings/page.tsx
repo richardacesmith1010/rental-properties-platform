@@ -73,17 +73,33 @@ export default async function SettingsPage(props: SettingsPageProps) {
   ]);
   const rentCollectionStatus = role === "owner" ? await getRentCollectionConnectStatus(user.id) : null;
   const managerReminderAccounts: Array<{ id: string; name: string; enabled: boolean }> = [];
+  let sharedAccountNames: string[] = [];
   if (role === "owner") {
     const admin = createAdminClient();
     const { data: memberships, error: membershipError } = await admin.from("ownership_account_members")
       .select("account_id").eq("profile_id", user.id).eq("member_role", "owner").eq("active", true);
+    if (membershipError) console.error("Could not load owner memberships for shared account note.", membershipError);
     if (!membershipError && memberships?.length) {
       const accountIds = memberships.map((member) => member.account_id);
-      const [{ data: accounts, error: accountError }, { data: homes, error: homeError }] = await Promise.all([
+      const [
+        { data: accounts, error: accountError },
+        { data: homes, error: homeError },
+        { data: otherOwners, error: otherOwnersError }
+      ] = await Promise.all([
         admin.from("ownership_accounts").select("id, display_name, managers_can_send_reminders, managed_client")
           .in("id", accountIds),
-        admin.from("properties").select("id, owner_account_id").in("owner_account_id", accountIds)
+        admin.from("properties").select("id, owner_account_id").in("owner_account_id", accountIds),
+        admin.from("ownership_account_members").select("account_id, profile_id").in("account_id", accountIds)
+          .eq("member_role", "owner").eq("active", true)
       ]);
+      if (accountError) console.error("Could not load account names for shared account note.", accountError);
+      if (otherOwnersError) console.error("Could not load other owners for shared account note.", otherOwnersError);
+      if (!accountError && !otherOwnersError) {
+        const sharedIds = new Set((otherOwners ?? [])
+          .filter((member) => member.profile_id !== user.id).map((member) => member.account_id));
+        sharedAccountNames = (accounts ?? []).filter((account) => sharedIds.has(account.id))
+          .map((account) => account.display_name);
+      }
       if (!accountError && !homeError && homes?.length) {
         const { data: managers, error: managerError } = await admin.from("property_managers")
           .select("property_id").in("property_id", homes.map((home) => home.id)).eq("active", true);
@@ -237,6 +253,7 @@ export default async function SettingsPage(props: SettingsPageProps) {
               description: "Manage your data. Destructive actions cannot be undone.",
               content: (
                 <AccountDataSettings
+                  sharedAccountNames={sharedAccountNames}
                   onDeleteAllProperties={deleteAllProperties}
                   onDeleteAllTenants={deleteAllTenants}
                   onDeleteAllManagers={deleteAllManagers}
