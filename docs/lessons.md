@@ -226,3 +226,11 @@ passed (they asserted the new class); the live WebKit walk caught it; Claude rol
 **Rule:** For any change to a component mounted in the root layout (banners, toasts, help buttons), the packet must
 name at least one page **without** the anchor element and the live walk must tap the primary button there. Prefer
 offsets driven by the anchor itself (a CSS variable set while it is mounted) over fixed numbers.
+
+#### L-035 | 2026-10-23 | DATABASE — Never raise 40001/40P01 from a PostgREST RPC
+**What happened:** 255b's scope guard (Claude) raised `40001` ("wipe scope changed"). PostgREST automatically
+retries transactions that fail with serialization or deadlock codes, so the call looped until "upstream request
+timeout" instead of returning the error — the app would have logged an unknown outcome instead of a confirmed
+rollback. The rolled-back `execute_sql` dry run could not show this; only the live REST call did.
+**Rule:** Custom RPC errors use a custom SQLSTATE (e.g. `DW001`) or `P0001`, never `40001`/`40P01`. Every new RPC
+error path gets one live REST call (not only `execute_sql`) and its latency is checked.

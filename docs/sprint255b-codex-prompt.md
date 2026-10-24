@@ -46,10 +46,10 @@ Sprint 255a made every wipe one transaction. Claude's live-schema audit (2026-10
   (service_role only). `p_guard = { user_id, account_ids, property_ids }`. Inside the RPC transaction it locks those
   `ownership_accounts`, all their `ownership_account_members` rows and those `properties` (`FOR UPDATE`, ordered),
   re-checks that the user is still the **only** active owner of every account and that every property still belongs
-  to one of them, then applies the plan. Any change raises **`40001`** ("wipe scope changed") and nothing is deleted
+  to one of them, then applies the plan. Any change raises **`DW001`** ("wipe scope changed") and nothing is deleted
   (classified `database_rollback_confirmed` by the 255a classifier). Concurrent membership inserts / property
-  ownership changes block on the locks. Rolled-back dry run: valid guard runs; second owner added → 40001; property
-  moved → 40001; not an owner → 40001; unknown property → 40001; malformed → 22023.
+  ownership changes block on the locks. Rolled-back dry run: valid guard runs; second owner added → DW001; property
+  moved → DW001; not an owner → DW001; unknown property → DW001; malformed → 22023.
 
 ## 3. In scope
 1. **Scope (scope.ts).** Replace the two `getAdministered*` calls in `loadDeletionScope` with: read the user's active
@@ -77,7 +77,7 @@ Sprint 255a made every wipe one transaction. Claude's live-schema audit (2026-10
 
 5. **Guard.** `applyWipePlan(plan, guard)` sends `rpc("account_wipe_apply", { p_ops: plan.ops, p_guard: { user_id:
    userId, account_ids: scope.accountIds, property_ids: scope.propertyIds } })` for **every** action (no call without
-   `p_guard`). Each action passes the scope it loaded. A `40001` reply is a confirmed rollback (today's user error
+   `p_guard`). Each action passes the scope it loaded. A `DW001` reply is a confirmed rollback (today's user error
    message, no storage cleanup).
 6. **Skip logging.** `committed_with_skip` logs carry the count of skipped ops and their labels (labels only, no ids).
 
@@ -125,7 +125,7 @@ then from the repo root `npm run gate:web`.
 - S7 All 255a tests (A1–A8) still pass, changed only by the §3 insertions and scope fixtures.
 - S8 Gate green (counts verbatim).
 - S9 Every action's single RPC call includes `p_guard` with exactly `{ user_id, account_ids, property_ids }` equal to
-  the loaded scope; `40001` reply → confirmed rollback, user error object, no storage cleanup, no `revalidatePath`.
+  the loaded scope; `DW001` reply → confirmed rollback, user error object, no storage cleanup, no `revalidatePath`.
 - S10 In `deleteAllProperties` and `fullAccountWipe` the plan has `maintenance_assignments` (by `ticket_id`) and
   `preventive_maintenance_schedules` (by `property_id`) **before** `vendors` (assert indices).
 - S11 Isolation across **all six** actions with negative fixtures (`acct-shared`, `acct-old` inactive, manager-only
@@ -142,7 +142,7 @@ migration (superset, safe for the live 255a code) and checks body md5 + grants, 
 check that every table/column in the 255b plans exists live (catalog query; any missing → stop), then deploys and runs
 a read-only Account & Data walk and a service-role no-op plan touching every new table/column (rows 0, no skips),
 plus a live guarded call with the smoke owner's real sole-owned scope and a no-op plan (expected success) and with a
-shared account id (expected 40001).
+shared account id (expected DW001).
 Rollback: redeploy 255a, confirm the alias and that the 255b deployment serves no `/settings` POSTs for 5 minutes,
 then drop the 2-arg overload and re-run the 255a migration verbatim
 (`supabase/rollback/20261104_sprint255b_account_wipe_allowlist_rollback.sql`).

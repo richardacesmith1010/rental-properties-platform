@@ -194,7 +194,7 @@ comment on function public.account_wipe_apply(jsonb) is
 -- ({ user_id, account_ids, property_ids }). Inside the same transaction this locks those accounts,
 -- their memberships and properties, re-checks that the user is still the ONLY active owner of every
 -- account and that every property still belongs to one of them, then applies the plan. Any change since
--- the scope was loaded raises 40001 and nothing is deleted. Concurrent membership inserts and property
+-- the scope was loaded raises DW001 (custom code: PostgREST auto-retries 40001 until timeout) and nothing is deleted. Concurrent membership inserts and property
 -- ownership changes block on these locks until the wipe finishes.
 create or replace function public.account_wipe_apply(p_ops jsonb, p_guard jsonb)
 returns jsonb
@@ -238,7 +238,7 @@ begin
      or exists (
        select 1 from public.properties p
         where p.id = any (v_properties) and not (p.owner_account_id = any (v_accounts))) then
-    raise exception 'account_wipe_apply: wipe scope changed' using errcode = '40001';
+    raise exception 'account_wipe_apply: wipe scope changed' using errcode = 'DW001';
   end if;
 
   return public.account_wipe_apply(p_ops);
@@ -251,4 +251,4 @@ revoke all on function public.account_wipe_apply(jsonb, jsonb) from authenticate
 grant execute on function public.account_wipe_apply(jsonb, jsonb) to service_role;
 
 comment on function public.account_wipe_apply(jsonb, jsonb) is
-  'Sprint 255b: account_wipe_apply with a transaction-time sole-owner scope guard (locks + re-check, 40001 on change). service_role only.';
+  'Sprint 255b: account_wipe_apply with a transaction-time sole-owner scope guard (locks + re-check, DW001 on change). service_role only.';
