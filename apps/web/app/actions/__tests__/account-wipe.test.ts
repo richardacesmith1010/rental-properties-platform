@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  auth: vi.fn(), rate: vi.fn(), accounts: vi.fn(), properties: vi.fn(),
+  auth: vi.fn(), rate: vi.fn(),
   revalidate: vi.fn(), sideEffectError: vi.fn(), sideEffectHandler: vi.fn(),
   log: [] as Array<Record<string, unknown>>,
   directWrites: [] as Array<{ table: string; op: string }>,
@@ -9,20 +9,38 @@ const mocks = vi.hoisted(() => ({
   storageError: false,
   rpcReply: null as null | ((ops: Array<{ label: string }>) => unknown),
   rpcReject: false,
-  dbState: ["original"] as string[]
+  dbState: ["original"] as string[],
+  negativeFixtures: false
 }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("../auth-helpers", () => ({ requireAuth: mocks.auth }));
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: mocks.rate }));
-vi.mock("@/lib/property-access", () => ({
-  getAdministeredOwnerAccountIds: mocks.accounts,
-  getAdministeredPropertyIds: mocks.properties
-}));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 vi.mock("@/lib/logger", () => ({ sideEffectError: mocks.sideEffectError }));
 
+const negativeRows: Record<string, Record<string, unknown>[]> = {
+  ownership_account_members: [
+    { account_id: "acct-shared", profile_id: "owner-1", member_role: "owner", active: true },
+    { account_id: "acct-shared", profile_id: "co-owner", member_role: "owner", active: true },
+    { account_id: "acct-old", profile_id: "owner-1", member_role: "owner", active: false },
+    { account_id: "acct-other", profile_id: "owner-1", member_role: "manager", active: true }
+  ],
+  properties: ["shared", "old", "other"].map((kind) => ({
+    id: `property-${kind}`, owner_account_id: `acct-${kind}`
+  })),
+  vendors: [{ id: "vendor-shared", owner_account_id: "acct-shared", owner_profile_id: "owner-1" }],
+  units: [{ id: "unit-shared", property_id: "property-shared" }],
+  leases: [{ id: "lease-shared", unit_id: "unit-shared" }],
+  rent_charges: [{ id: "charge-shared", lease_id: "lease-shared" }],
+  payments: [{ id: "payment-shared", rent_charge_id: "charge-shared" }],
+  maintenance_tickets: [{ id: "ticket-shared", property_id: "property-shared" }],
+  invitations: [{ id: "invitation-shared", property_id: "property-shared" }]
+};
 const rows: Record<string, Record<string, unknown>[]> = {
+  ownership_account_members: [{ account_id: "account-1", profile_id: "owner-1", member_role: "owner", active: true }],
+  properties: [{ id: "property-1", owner_account_id: "account-1" }],
+  vendors: [{ id: "vendor-1", owner_account_id: "account-1" }],
   units: [{ id: "unit-1" }], leases: [{ id: "lease-1", unit_id: "unit-1", tenant_profile_id: "tenant-1" }],
   rent_charges: [{ id: "charge-1" }], payments: [{ id: "payment-1" }],
   maintenance_tickets: [{ id: "ticket-1" }], property_expenses: [{ id: "expense-1" }],
@@ -49,6 +67,7 @@ function query(table: string) {
     update(next: unknown) { op = "update"; values = next; mocks.directWrites.push({ table, op }); return chain; },
     in(column: string, value: unknown) { filters.push(["in", column, value]); return chain; },
     eq(column: string, value: unknown) { filters.push(["eq", column, value]); return chain; },
+    is(column: string, value: unknown) { filters.push(["is", column, value]); return chain; },
     not(column: string, value: string, modifier: unknown) {
       filters.push(["not", column, [value, modifier]]); return chain;
     },
@@ -58,10 +77,19 @@ function query(table: string) {
       const count = mocks.log.filter((item) => item.table === table && item.op === op).length;
       const failure = mocks.failures.find((item) => item.table === table && item.op === op && (item.at ?? 1) === count);
       const error = failure ? { code: failure.code ?? "P0001", message: "simulated failure" } : null;
+      const source = [...(rows[table] ?? []), ...(mocks.negativeFixtures ? negativeRows[table] ?? [] : [])];
+      const selected = source.filter((row) => filters.every(([kind, column, value]) => {
+        if (row[column] === undefined && table !== "ownership_account_members" &&
+          table !== "properties" && table !== "vendors") return true;
+        if (kind === "eq") return row[column] === value;
+        if (kind === "in") return (value as unknown[]).includes(row[column]);
+        if (kind === "is") return (row[column] ?? null) === value;
+        return true;
+      }));
       const data = table === "notifications"
         ? [{ id: filters.some((filter) => filter[1] === "recipient_profile_id")
           ? "notification-owner-1" : `notification-${filters.find((filter) => filter[1] === "entity_type")?.[2]}` }]
-        : rows[table] ?? [];
+        : selected;
       return Promise.resolve({ data, error }).then(resolve, reject);
     }
   };
@@ -70,14 +98,13 @@ function query(table: string) {
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
     from: query,
-    rpc: async (name: string, args: { p_ops: Array<{ label: string }> }) => {
+    rpc: async (name: string, args: { p_ops: Array<{ label: string }>; p_guard: unknown }) => {
       mocks.log.push({ op: "rpc", name, args });
       if (mocks.rpcReject) throw new Error("network error");
       const response = mocks.rpcReply?.(args.p_ops) ?? {
         data: {
           operations: args.p_ops.length,
-          results: args.p_ops.map((op) => op.label === "Delete vendors"
-            ? { label: op.label, skipped: true } : { label: op.label, rows: 1 })
+          results: args.p_ops.map((op) => ({ label: op.label, rows: 1 }))
         },
         error: null
       };
@@ -128,6 +155,9 @@ function assertTrace(expected: unknown[][]) {
   expect(rpcCalls()[0].name).toBe("account_wipe_apply");
   expect(mocks.directWrites).toEqual([]);
   expect(mocks.log.filter((entry) => entry.op === "delete" || entry.op === "update")).toEqual([]);
+  expect((rpcCalls()[0].args as { p_guard: unknown }).p_guard).toEqual({
+    user_id: "owner-1", account_ids: ["account-1"], property_ids: ["property-1"]
+  });
   expect(opsToLog(rpcPayload())).toEqual(database);
   expect(mocks.log.filter((entry) => entry.remove).map((entry) => [entry.bucket, "remove", entry.remove]))
     .toEqual(storage);
@@ -151,10 +181,9 @@ beforeEach(() => {
   mocks.rpcReply = null;
   mocks.rpcReject = false;
   mocks.dbState = ["original"];
+  mocks.negativeFixtures = false;
   mocks.auth.mockResolvedValue({ user: { id: "owner-1", email: "OWNER@EXAMPLE.COM" }, role: "owner" });
   mocks.rate.mockReturnValue({ allowed: true });
-  mocks.accounts.mockResolvedValue(["account-1"]);
-  mocks.properties.mockResolvedValue(["property-1"]);
   mocks.sideEffectError.mockReturnValue(mocks.sideEffectHandler);
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -193,7 +222,8 @@ const propertiesLog = [
   ["manager_payments", "delete", [["in", "property_id", ["property-1"]]]],
   ["manager_payment_configs", "delete", [["in", "property_id", ["property-1"]]]],
   ["property_expenses", "delete", [["in", "id", ["expense-1"]]]],
-  ["vendors", "delete", [["in", "property_id", ["property-1"]]]],
+  ["preventive_maintenance_schedules", "delete", [["in", "property_id", ["property-1"]]]],
+  ["vendors", "delete", [["in", "id", ["vendor-1"]]]],
   ["notification_deliveries", "delete", [["in", "notification_id", [
     "notification-property", "notification-unit", "notification-lease", "notification-rent_charge",
     "notification-charge", "notification-maintenance_ticket", "notification-ticket", "notification-expense",
@@ -209,8 +239,14 @@ const propertiesLog = [
   ["inbox_threads", "delete", [["in", "id", ["thread-1"]]]],
   ["property_managers", "delete", [["in", "property_id", ["property-1"]]]],
   ["invitations", "delete", [["in", "id", ["invitation-1"]]]],
+  ["inspections", "delete", [["in", "lease_id", ["lease-1"]]]],
+  ["documents", "delete", [["in", "lease_id", ["lease-1"]]]],
   ["leases", "delete", [["in", "id", ["lease-1"]]]],
+  ["documents", "delete", [["in", "unit_id", ["unit-1"]]]],
+  ["communication_logs", "delete", [["in", "unit_id", ["unit-1"]]]],
   ["units", "delete", [["in", "id", ["unit-1"]]]],
+  ["documents", "delete", [["in", "property_id", ["property-1"]]]],
+  ["communication_logs", "delete", [["in", "property_id", ["property-1"]]]],
   ["properties", "delete", [["in", "id", ["property-1"]]]]
 ];
 const fullLog = [
@@ -219,15 +255,22 @@ const fullLog = [
   ...documents,
   ["document_templates", "delete", [["in", "id", ["template-1"]]]],
   ...pipeline, ...automation,
-  ["vendors", "delete", [["in", "property_id", ["property-1"]]]],
+  ["preventive_maintenance_schedules", "delete", [["in", "property_id", ["property-1"]]]],
+  ["vendors", "delete", [["in", "id", ["vendor-1"]]]],
   ["invitations", "delete", [["in", "property_id", ["property-1"]]]],
   ["invitations", "delete", [["in", "ownership_account_id", ["account-1"]]]],
   ["invitations", "delete", [["eq", "email", "owner@example.com"]]],
   ["invitations", "delete", [["eq", "invited_by", "owner-1"]]],
   ["invitations", "delete", [["eq", "invited_profile_id", "owner-1"]]],
+  ["inspections", "delete", [["in", "lease_id", ["lease-1"]]]],
+  ["documents", "delete", [["in", "lease_id", ["lease-1"]]]],
   ["leases", "delete", [["in", "id", ["lease-1"]]]],
+  ["documents", "delete", [["in", "unit_id", ["unit-1"]]]],
+  ["communication_logs", "delete", [["in", "unit_id", ["unit-1"]]]],
   ["units", "delete", [["in", "id", ["unit-1"]]]],
   ["property_managers", "delete", [["in", "property_id", ["property-1"]]]],
+  ["documents", "delete", [["in", "property_id", ["property-1"]]]],
+  ["communication_logs", "delete", [["in", "property_id", ["property-1"]]]],
   ["properties", "delete", [["in", "id", ["property-1"]]]],
   ["withdrawal_votes", "delete", [["in", "request_id", ["withdrawal-1"]]]],
   ["withdrawal_requests", "delete", [["in", "ownership_account_id", ["account-1"]]]],
@@ -282,7 +325,9 @@ describe("account wipe characterization", () => {
         ["in", "property_id", ["property-1"]], ["not", "tenant_profile_id", ["is", null]]
       ]],
       ["invitations", "delete", [["eq", "role", "tenant"], ["in", "property_id", ["property-1"]]]],
-      ["leases", "delete", [["in", "id", ["lease-1"]]]],
+      ["inspections", "delete", [["in", "lease_id", ["lease-1"]]]],
+  ["documents", "delete", [["in", "lease_id", ["lease-1"]]]],
+  ["leases", "delete", [["in", "id", ["lease-1"]]]],
       ["units", "update", [["in", "id", ["unit-1"]]], { occupied: false }]
     ]);
   });
@@ -301,7 +346,9 @@ describe("account wipe characterization", () => {
       ...leaseFinancials,
       ["document_signers", "delete", [["in", "packet_id", ["packet-1"]]]],
       ["document_packets", "delete", [["in", "id", ["packet-1"]]]],
-      ["leases", "delete", [["in", "id", ["lease-1"]]]],
+      ["inspections", "delete", [["in", "lease_id", ["lease-1"]]]],
+  ["documents", "delete", [["in", "lease_id", ["lease-1"]]]],
+  ["leases", "delete", [["in", "id", ["lease-1"]]]],
       ["units", "update", [["in", "id", ["unit-1"]]], { occupied: false }]
     ]);
   });
@@ -333,7 +380,7 @@ describe("account wipe characterization", () => {
       expectNoWrites();
     });
   }
-  it.each(["22P02", "42883", "PGRST202"])("A2 confirmed %s rolls back the full wipe", async (code) => {
+  it.each(["22P02", "42883", "PGRST202", "DW001"])("A2 confirmed %s rolls back the full wipe", async (code) => {
     mocks.rpcReply = () => ({ data: null, error: { code, message: "simulated failure" } });
     expect(await run(fullAccountWipe)).toEqual({
       success: false, error: "Unable to complete the full account wipe right now."
@@ -365,7 +412,7 @@ describe("account wipe characterization", () => {
       );
     }
   );
-  it.each(["count", "not-array", "missing", "label", "negative", "unexpected-skip"])(
+  it.each(["count", "not-array", "missing", "label", "negative", "both-rows-and-skip"])(
     "A2c invalid success %s blocks storage and revalidation", async (caseName) => {
       mocks.rpcReply = (ops) => {
         const results: Array<Record<string, unknown>> = ops.map((op) => ({ label: op.label, rows: 0 }));
@@ -374,7 +421,7 @@ describe("account wipe characterization", () => {
         if (caseName === "missing") results.pop();
         if (caseName === "label") results[0].label = "wrong";
         if (caseName === "negative") results[0].rows = -1;
-        if (caseName === "unexpected-skip") results[0] = { label: ops[0].label, skipped: true };
+        if (caseName === "both-rows-and-skip") results[0] = { label: ops[0].label, rows: 0, skipped: true };
         return { data: { operations, results: caseName === "not-array" ? {} : results }, error: null };
       };
       expect(await run(deleteAllProperties)).toEqual({
@@ -389,6 +436,53 @@ describe("account wipe characterization", () => {
       );
     }
   );
+  it("S6 commits a valid skip, logs count and labels once, then removes storage", async () => {
+    mocks.rpcReply = (ops) => ({ data: {
+      operations: ops.length,
+      results: ops.map((op, index) => index < 2
+        ? { label: op.label, skipped: true } : { label: op.label, rows: 0 })
+    }, error: null });
+    expect(await run(deleteAllProperties)).toEqual({
+      success: true, message: "All properties and related operational data have been removed."
+    });
+    expect(mocks.sideEffectError).toHaveBeenCalledExactlyOnceWith("deleteAllProperties", "committed_with_skip");
+    expect(mocks.sideEffectHandler.mock.calls[0][0].message).toBe(
+      "Skipped 2 operations: Delete payment distributions by payment, Delete payment distributions by account"
+    );
+    expect(mocks.log.filter((entry) => entry.remove)).toHaveLength(2);
+  });
+  it.each(Object.entries(actions))("S9 %s rolls back on DW001 without cleanup", async (_name, action) => {
+    mocks.rpcReply = () => ({ data: null, error: { code: "DW001" } });
+    expect(await run(action)).toMatchObject({ success: false });
+    expect(rpcCalls()).toHaveLength(1);
+    expect(mocks.log.filter((entry) => entry.remove)).toEqual([]);
+    expect(mocks.revalidate).not.toHaveBeenCalled();
+    expect(mocks.sideEffectError).toHaveBeenCalledExactlyOnceWith(
+      action.name, "database_rollback_confirmed"
+    );
+  });
+  it.each([deleteAllProperties, fullAccountWipe])("S10 %s orders ticket assignments and schedules before vendors", async (action) => {
+    expect(await run(action)).toMatchObject({ success: true });
+    const ops = rpcPayload();
+    const index = (table: string) => ops.findIndex((op) => op.table === table);
+    expect(index("maintenance_assignments")).toBeGreaterThanOrEqual(0);
+    expect(index("preventive_maintenance_schedules")).toBeGreaterThan(index("maintenance_assignments"));
+    expect(index("vendors")).toBeGreaterThan(index("preventive_maintenance_schedules"));
+    expect(ops.find((op) => op.table === "vendors")?.filters).toEqual([
+      { op: "in", column: "id", values: ["vendor-1"] }
+    ]);
+    expect(JSON.stringify(ops)).not.toMatch(/"column":"(?:vendor_id|assigned_vendor_id)"/);
+  });
+  it.each(Object.entries(actions))("S11 %s isolates shared, inactive and manager-only ids", async (_name, action) => {
+    mocks.negativeFixtures = true;
+    expect(await run(action)).toMatchObject({ success: true });
+    const payload = JSON.stringify(rpcPayload());
+    for (const id of ["acct-shared", "acct-old", "acct-other", "property-shared", "property-old",
+      "property-other", "unit-shared", "lease-shared", "charge-shared", "payment-shared",
+      "ticket-shared", "vendor-shared", "invitation-shared"]) {
+      expect(payload).not.toContain(`"${id}"`);
+    }
+  });
   it("A4 reads four request sets before the RPC and puts their IDs in ordered vote deletes", async () => {
     expect(await run(fullAccountWipe)).toEqual({ success: true, message: "Your Domus account data has been wiped." });
     const rpcIndex = mocks.log.findIndex((entry) => entry.op === "rpc");

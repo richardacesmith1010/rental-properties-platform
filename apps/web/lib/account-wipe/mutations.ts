@@ -61,19 +61,26 @@ export function validateWipeRpcResult(data: unknown, ops: WipeOp[]): boolean {
     const value = entry as { label?: unknown; rows?: unknown; skipped?: unknown };
     if (value.label !== ops[index].label) return false;
     if (value.skipped === true) {
-      const op = ops[index];
-      return value.rows === undefined && op.table === "vendors" && op.kind === "delete" &&
-        op.filters.some((filter) => filter.op === "in" && filter.column === "property_id");
+      return value.rows === undefined;
     }
     return value.skipped === undefined && Number.isInteger(value.rows) && (value.rows as number) >= 0;
   });
 }
 
-export async function applyWipePlan(plan: WipePlan): Promise<void> {
+export async function applyWipePlan(
+  plan: WipePlan, guard: { userId: string; scope: DeletionScope }
+): Promise<void> {
   const admin = createAdminClient();
   let response: { data: unknown; error: unknown };
   try {
-    response = await admin.rpc("account_wipe_apply", { p_ops: plan.ops });
+    response = await admin.rpc("account_wipe_apply", {
+      p_ops: plan.ops,
+      p_guard: {
+        user_id: guard.userId,
+        account_ids: guard.scope.accountIds,
+        property_ids: guard.scope.propertyIds
+      }
+    });
   } catch {
     sideEffectError(plan.action, "rpc_result_unknown")(new Error("RPC did not respond"));
     throw new Error("Account wipe RPC outcome unknown");
@@ -90,6 +97,13 @@ export async function applyWipePlan(plan: WipePlan): Promise<void> {
   if (!validateWipeRpcResult(response.data, plan.ops)) {
     sideEffectError(plan.action, "rpc_result_unknown")(new Error("Invalid RPC response"));
     throw new Error("Account wipe RPC outcome unknown");
+  }
+  const skipped = (response.data as { results: Array<{ label: string; skipped?: boolean }> }).results
+    .filter((entry) => entry.skipped === true).map((entry) => entry.label);
+  if (skipped.length) {
+    sideEffectError(plan.action, "committed_with_skip")(
+      new Error(`Skipped ${skipped.length} operations: ${skipped.join(", ")}`)
+    );
   }
   for (const { bucket, paths } of plan.storage) {
     try {

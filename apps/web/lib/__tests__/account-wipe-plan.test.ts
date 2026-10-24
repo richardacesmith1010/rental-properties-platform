@@ -48,9 +48,9 @@ describe("account wipe plan", () => {
   ])("A2d classifies %s as %s", (code, category) => {
     expect(classifyWipeRpcError({ code })).toBe(category);
   });
-  it("A2c permits only the known vendor skip", () => {
+  it("S6 accepts any well-shaped skip and rejects mixed rows", () => {
     const plan = createWipePlan();
-    plan.deleteIn("vendors", "property_id", ["property-1"], "Delete vendors");
+    plan.deleteIn("vendors", "id", ["vendor-1"], "Delete vendors");
     plan.deleteIn("properties", "id", ["property-1"], "Delete properties");
     expect(validateWipeRpcResult({
       operations: 2,
@@ -59,6 +59,10 @@ describe("account wipe plan", () => {
     expect(validateWipeRpcResult({
       operations: 2,
       results: [{ label: "Delete vendors", rows: 0 }, { label: "Delete properties", skipped: true }]
+    }, plan.ops)).toBe(true);
+    expect(validateWipeRpcResult({
+      operations: 2,
+      results: [{ label: "Delete vendors", rows: 0, skipped: true }, { label: "Delete properties", rows: 0 }]
     }, plan.ops)).toBe(false);
   });
 });

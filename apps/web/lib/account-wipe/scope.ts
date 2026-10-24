@@ -1,15 +1,13 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  getAdministeredOwnerAccountIds,
-  getAdministeredPropertyIds
-} from "@/lib/property-access";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 
 export interface DeletionScope {
   accountIds: string[];
+  sharedAccountIds: string[];
   propertyIds: string[];
+  vendorIds: string[];
   unitIds: string[];
   leaseIds: string[];
   chargeIds: string[];
@@ -51,6 +49,15 @@ export async function selectRows<T>(
   return data ?? [];
 }
 
+async function selectRequiredRows<T>(
+  query: PromiseLike<{ data: T[] | null; error: { message?: string } | null }>,
+  label: string
+): Promise<T[]> {
+  const { data, error } = await query;
+  if (error) throw new Error(`${label}: ${error.message ?? "Unknown error."}`);
+  return data ?? [];
+}
+
 export async function loadNotificationIdsForEntity(
   admin: ReturnType<typeof createAdminClient>,
   entityType: string,
@@ -73,26 +80,42 @@ export async function loadNotificationIdsForEntity(
 
 export async function loadDeletionScope(userId: string): Promise<DeletionScope> {
   const admin = createAdminClient();
-  const [accountIdsSettled, propertyIdsSettled] = await Promise.allSettled([
-    getAdministeredOwnerAccountIds(userId),
-    getAdministeredPropertyIds(userId)
+  const ownMemberships = await selectRequiredRows<{ account_id: string }>(
+    admin.from("ownership_account_members").select("account_id")
+      .eq("profile_id", userId).eq("member_role", "owner").eq("active", true),
+    "load owner memberships"
+  );
+  const candidateIds = unique(ownMemberships.map((row) => row.account_id));
+  const activeOwners = await selectRequiredRows<{ account_id: string; profile_id: string }>(
+    candidateIds.length
+      ? admin.from("ownership_account_members").select("account_id, profile_id")
+          .in("account_id", candidateIds).eq("member_role", "owner").eq("active", true)
+      : Promise.resolve({ data: [], error: null }),
+    "load active owners"
+  );
+  const sharedIds = new Set(activeOwners.filter((row) => row.profile_id !== userId).map((row) => row.account_id));
+  const accountIds = candidateIds.filter((id) => !sharedIds.has(id));
+  const sharedAccountIds = candidateIds.filter((id) => sharedIds.has(id));
+  const propertyRows = await selectRequiredRows<{ id: string }>(
+    accountIds.length
+      ? admin.from("properties").select("id").in("owner_account_id", accountIds)
+      : Promise.resolve({ data: [], error: null }),
+    "load owned properties"
+  );
+  const propertyIds = unique(propertyRows.map((row) => row.id));
+  const [accountVendors, personalVendors] = await Promise.all([
+    selectRequiredRows<{ id: string }>(
+      accountIds.length
+        ? admin.from("vendors").select("id").in("owner_account_id", accountIds)
+        : Promise.resolve({ data: [], error: null }),
+      "load account vendors"
+    ),
+    selectRequiredRows<{ id: string }>(
+      admin.from("vendors").select("id").eq("owner_profile_id", userId).is("owner_account_id", null),
+      "load personal vendors"
+    )
   ]);
-
-  if (
-    accountIdsSettled.status === "rejected" ||
-    propertyIdsSettled.status === "rejected"
-  ) {
-    if (accountIdsSettled.status === "rejected") {
-      console.error("loadDeletionScope accountIds error:", accountIdsSettled.reason);
-    }
-    if (propertyIdsSettled.status === "rejected") {
-      console.error("loadDeletionScope propertyIds error:", propertyIdsSettled.reason);
-    }
-    throw new Error("Unable to load the account wipe scope.");
-  }
-
-  const accountIds = accountIdsSettled.value;
-  const propertyIds = propertyIdsSettled.value;
+  const vendorIds = unique([...accountVendors, ...personalVendors].map((row) => row.id));
 
   const unitRows = await selectRows<{ id: string }>(
     propertyIds.length
@@ -285,7 +308,9 @@ export async function loadDeletionScope(userId: string): Promise<DeletionScope> 
 
   return {
     accountIds,
+    sharedAccountIds,
     propertyIds,
+    vendorIds,
     unitIds,
     leaseIds,
     chargeIds,

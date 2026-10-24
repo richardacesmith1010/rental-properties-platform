@@ -72,7 +72,9 @@ export async function deleteAllProperties(
     plan.deleteIn("manager_payments", "property_id", scope.propertyIds, "Delete manager payments");
     plan.deleteIn("manager_payment_configs", "property_id", scope.propertyIds, "Delete manager payment configs");
     plan.deleteIn("property_expenses", "id", scope.expenseIds, "Delete expenses");
-    plan.deleteIn("vendors", "property_id", scope.propertyIds, "Delete vendors");
+    plan.deleteIn("preventive_maintenance_schedules", "property_id", scope.propertyIds,
+      "Delete property maintenance schedules");
+    plan.deleteIn("vendors", "id", scope.vendorIds, "Delete vendors");
     plan.deleteIn("notification_deliveries", "notification_id", scope.propertyNotificationIds, "Delete property notification deliveries");
     plan.deleteIn("notifications", "id", scope.propertyNotificationIds, "Delete property notifications");
     plan.deleteIn("message_deliveries", "message_id", scope.propertyMessageIds, "Delete property message deliveries");
@@ -80,10 +82,16 @@ export async function deleteAllProperties(
     plan.deleteIn("inbox_threads", "id", scope.propertyThreadIds, "Delete property inbox threads");
     plan.deleteIn("property_managers", "property_id", scope.propertyIds, "Delete property managers");
     plan.deleteIn("invitations", "id", scope.invitationIds, "Delete invitations");
+    plan.deleteIn("inspections", "lease_id", scope.leaseIds, "Delete lease inspections");
+    plan.deleteIn("documents", "lease_id", scope.leaseIds, "Delete lease documents");
     plan.deleteIn("leases", "id", scope.leaseIds, "Delete leases");
+    plan.deleteIn("documents", "unit_id", scope.unitIds, "Delete unit documents");
+    plan.deleteIn("communication_logs", "unit_id", scope.unitIds, "Delete unit communication logs");
     plan.deleteIn("units", "id", scope.unitIds, "Delete units");
+    plan.deleteIn("documents", "property_id", scope.propertyIds, "Delete property documents");
+    plan.deleteIn("communication_logs", "property_id", scope.propertyIds, "Delete property communication logs");
     plan.deleteIn("properties", "id", scope.propertyIds, "Delete properties");
-    await applyWipePlan(plan);
+    await applyWipePlan(plan, { userId: auth.userId, scope });
     await revalidateSettingsSurfaces();
     return { success: true, message: "All properties and related operational data have been removed." };
   } catch (error) {
@@ -157,9 +165,11 @@ export async function deleteAllTenants(
       { op: "eq", column: "role", value: "tenant" },
       { op: "in", column: "property_id", values: scope.propertyIds }
     ], "Delete tenant invitations");
+    plan.deleteIn("inspections", "lease_id", tenantLeaseIds, "Delete lease inspections");
+    plan.deleteIn("documents", "lease_id", tenantLeaseIds, "Delete lease documents");
     plan.deleteIn("leases", "id", tenantLeaseIds, "Delete tenant leases");
     plan.updateIn("units", { occupied: false }, "id", tenantUnitIds, "Reset unit occupancy");
-    await applyWipePlan(plan);
+    await applyWipePlan(plan, { userId: auth.userId, scope });
     await revalidateSettingsSurfaces();
     return { success: true, message: "All tenant-linked data has been removed." };
   } catch (error) {
@@ -190,7 +200,7 @@ export async function deleteAllManagers(
       { op: "eq", column: "role", value: "manager" },
       { op: "in", column: "property_id", values: scope.propertyIds }
     ], "Delete manager invitations");
-    await applyWipePlan(plan);
+    await applyWipePlan(plan, { userId: auth.userId, scope });
     await revalidateSettingsSurfaces();
     return { success: true, message: "All property manager assignments and invites have been removed." };
   } catch (error) {
@@ -226,9 +236,11 @@ export async function deleteAllLeases(
     deleteLeaseFinancials(plan, scope);
     plan.deleteIn("document_signers", "packet_id", packetRows.map((packet) => packet.id), "Delete lease document signers");
     plan.deleteIn("document_packets", "id", packetRows.map((packet) => packet.id), "Delete lease document packets");
+    plan.deleteIn("inspections", "lease_id", scope.leaseIds, "Delete lease inspections");
+    plan.deleteIn("documents", "lease_id", scope.leaseIds, "Delete lease documents");
     plan.deleteIn("leases", "id", scope.leaseIds, "Delete leases");
     plan.updateIn("units", { occupied: false }, "id", scope.unitIds, "Reset occupied units");
-    await applyWipePlan(plan);
+    await applyWipePlan(plan, { userId: auth.userId, scope });
     await revalidateSettingsSurfaces();
     return { success: true, message: "All leases and rent schedules have been removed." };
   } catch (error) {
@@ -258,7 +270,7 @@ export async function deleteAllFinancialData(
     plan.deleteIn("payments", "id", scope.paymentIds, "Delete payments");
     plan.deleteIn("rent_charges", "id", scope.chargeIds, "Delete rent charges");
     plan.deleteIn("property_expenses", "property_id", scope.propertyIds, "Delete expenses");
-    await applyWipePlan(plan);
+    await applyWipePlan(plan, { userId: auth.userId, scope });
     await revalidateSettingsSurfaces();
     return { success: true, message: "All financial records have been cleared." };
   } catch (error) {
@@ -306,7 +318,9 @@ export async function fullAccountWipe(
     deleteDocuments(plan, scope, true);
     deleteLeasingPipeline(plan, scope);
     deleteAutomation(plan, scope);
-    plan.deleteIn("vendors", "property_id", scope.propertyIds, "Delete vendors");
+    plan.deleteIn("preventive_maintenance_schedules", "property_id", scope.propertyIds,
+      "Delete property maintenance schedules");
+    plan.deleteIn("vendors", "id", scope.vendorIds, "Delete vendors");
     if (scope.propertyIds.length > 0) {
       plan.deleteWhere("invitations", [{ op: "in", column: "property_id", values: scope.propertyIds }],
         "Delete invitations by property");
@@ -323,9 +337,15 @@ export async function fullAccountWipe(
       "Delete invitations by inviter");
     plan.deleteWhere("invitations", [{ op: "eq", column: "invited_profile_id", value: auth.userId }],
       "Delete invitations by invitee");
+    plan.deleteIn("inspections", "lease_id", scope.leaseIds, "Delete lease inspections");
+    plan.deleteIn("documents", "lease_id", scope.leaseIds, "Delete lease documents");
     plan.deleteIn("leases", "id", scope.leaseIds, "Delete leases");
+    plan.deleteIn("documents", "unit_id", scope.unitIds, "Delete unit documents");
+    plan.deleteIn("communication_logs", "unit_id", scope.unitIds, "Delete unit communication logs");
     plan.deleteIn("units", "id", scope.unitIds, "Delete units");
     plan.deleteIn("property_managers", "property_id", scope.propertyIds, "Delete property managers");
+    plan.deleteIn("documents", "property_id", scope.propertyIds, "Delete property documents");
+    plan.deleteIn("communication_logs", "property_id", scope.propertyIds, "Delete property communication logs");
     plan.deleteIn("properties", "id", scope.propertyIds, "Delete properties");
     plan.deleteIn("withdrawal_votes", "request_id", requestIds[0], "Delete withdrawal votes");
     plan.deleteIn("withdrawal_requests", "ownership_account_id", scope.accountIds, "Delete withdrawal requests");
@@ -346,7 +366,7 @@ export async function fullAccountWipe(
     plan.deleteIn("inbox_threads", "id", scope.threadIds, "Delete inbox threads");
     plan.deleteWhere("notification_preferences", [{ op: "eq", column: "profile_id", value: auth.userId }],
       "Delete notification preferences");
-    await applyWipePlan(plan);
+    await applyWipePlan(plan, { userId: auth.userId, scope });
     await revalidateSettingsSurfaces();
     return { success: true, message: "Your Domus account data has been wiped." };
   } catch (error) {
