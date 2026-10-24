@@ -2200,3 +2200,11 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   switched to custom `DW001`. Every RPC error path now gets one live REST call.
 - **Follow-ups (backlog):** Account & Data page could tell a co-owner that shared accounts are not wiped; drop the
   1-arg-only call path in a later cleanup (still used internally by the guard).
+
+## 2026-10-23 — Sprint 255c SHIPPED (shared-account note on Account & Data)
+- **255c** `26178a4` (L2): owners who share an account see, above the delete cards: "Some homes are shared with other
+  owners. / These buttons won't delete them. A full wipe only removes you. / Shared: <names>". One extra read in the
+  settings owner branch (batched with the existing reads; errors logged, note hidden).
+- Verified: 4 tests (N1–N4); gate 3,399; CI success; deploy success; smoke 27/27; Account & Data walk passes. The
+  smoke owner has no shared account, so the note itself was not seen live — uses the existing `info` Alert tokens
+  (`--accent` on `--accent-weak`), already covered by the axe scan elsewhere.
