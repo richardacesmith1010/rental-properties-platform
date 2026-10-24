@@ -189,3 +189,66 @@ grant execute on function public.account_wipe_apply(jsonb) to service_role;
 
 comment on function public.account_wipe_apply(jsonb) is
   'Sprint 255a/255b: applies an owner data wipe plan (ordered, allowlisted deletes plus units.occupied reset) in one transaction. service_role only.';
+
+-- Sprint 255b (ChatGPT rev 2): transaction-time scope guard. The app passes the scope it loaded
+-- ({ user_id, account_ids, property_ids }). Inside the same transaction this locks those accounts,
+-- their memberships and properties, re-checks that the user is still the ONLY active owner of every
+-- account and that every property still belongs to one of them, then applies the plan. Any change since
+-- the scope was loaded raises 40001 and nothing is deleted. Concurrent membership inserts and property
+-- ownership changes block on these locks until the wipe finishes.
+create or replace function public.account_wipe_apply(p_ops jsonb, p_guard jsonb)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_user uuid;
+  v_accounts uuid[];
+  v_properties uuid[];
+begin
+  if p_guard is null or jsonb_typeof(p_guard) <> 'object'
+     or jsonb_typeof(p_guard->'account_ids') <> 'array' or jsonb_typeof(p_guard->'property_ids') <> 'array' then
+    raise exception 'account_wipe_apply: guard must be an object with account_ids and property_ids' using errcode = '22023';
+  end if;
+  v_user := (p_guard->>'user_id')::uuid;
+  if v_user is null then
+    raise exception 'account_wipe_apply: guard user_id required' using errcode = '22023';
+  end if;
+  select coalesce(array_agg(distinct e::uuid), array[]::uuid[]) into v_accounts
+    from jsonb_array_elements_text(p_guard->'account_ids') e;
+  select coalesce(array_agg(distinct e::uuid), array[]::uuid[]) into v_properties
+    from jsonb_array_elements_text(p_guard->'property_ids') e;
+
+  perform 1 from public.ownership_accounts where id = any (v_accounts) order by id for update;
+  perform 1 from public.ownership_account_members where account_id = any (v_accounts)
+    order by account_id, profile_id for update;
+  perform 1 from public.properties where id = any (v_properties) order by id for update;
+
+  if (select count(*) from public.ownership_accounts where id = any (v_accounts)) <> cardinality(v_accounts)
+     or exists (
+       select 1 from unnest(v_accounts) a(id)
+        where not exists (
+          select 1 from public.ownership_account_members m
+           where m.account_id = a.id and m.profile_id = v_user and m.member_role = 'owner' and m.active))
+     or exists (
+       select 1 from public.ownership_account_members m
+        where m.account_id = any (v_accounts) and m.member_role = 'owner' and m.active and m.profile_id <> v_user)
+     or (select count(*) from public.properties where id = any (v_properties)) <> cardinality(v_properties)
+     or exists (
+       select 1 from public.properties p
+        where p.id = any (v_properties) and not (p.owner_account_id = any (v_accounts))) then
+    raise exception 'account_wipe_apply: wipe scope changed' using errcode = '40001';
+  end if;
+
+  return public.account_wipe_apply(p_ops);
+end;
+$$;
+
+revoke all on function public.account_wipe_apply(jsonb, jsonb) from public;
+revoke all on function public.account_wipe_apply(jsonb, jsonb) from anon;
+revoke all on function public.account_wipe_apply(jsonb, jsonb) from authenticated;
+grant execute on function public.account_wipe_apply(jsonb, jsonb) to service_role;
+
+comment on function public.account_wipe_apply(jsonb, jsonb) is
+  'Sprint 255b: account_wipe_apply with a transaction-time sole-owner scope guard (locks + re-check, 40001 on change). service_role only.';

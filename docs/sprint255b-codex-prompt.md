@@ -1,4 +1,4 @@
-# Sprint 255b — Account wipe: safe scope (sole-owner accounts only), vendors, and every blocking table (L3: deletion) — rev 2 (rev 1 AWC)
+# Sprint 255b — Account wipe: safe scope (sole-owner accounts only), vendors, and every blocking table (L3: deletion) — rev 3 (rev 1 AWC → rev 2 AWC)
 
 ## 1. Objective
 Sprint 255a made every wipe one transaction. Claude's live-schema audit (2026-10-23) found three remaining problems:
@@ -42,6 +42,14 @@ Sprint 255a made every wipe one transaction. Claude's live-schema audit (2026-10
 - Positions today: `deleteAllProperties` vendors op `account-wipe.ts:75`, leases/units/properties `:83-85`;
   `fullAccountWipe` vendors `:309`, leases/units `:326-327`, properties `:329`; `deleteAllLeases` leases `:229`;
   `deleteAllTenants` leases `:160`. `documents.storage_path` has no bucket used by the app: delete rows only.
+- **Transaction-time guard (same migration):** new overload `public.account_wipe_apply(p_ops jsonb, p_guard jsonb)`
+  (service_role only). `p_guard = { user_id, account_ids, property_ids }`. Inside the RPC transaction it locks those
+  `ownership_accounts`, all their `ownership_account_members` rows and those `properties` (`FOR UPDATE`, ordered),
+  re-checks that the user is still the **only** active owner of every account and that every property still belongs
+  to one of them, then applies the plan. Any change raises **`40001`** ("wipe scope changed") and nothing is deleted
+  (classified `database_rollback_confirmed` by the 255a classifier). Concurrent membership inserts / property
+  ownership changes block on the locks. Rolled-back dry run: valid guard runs; second owner added → 40001; property
+  moved → 40001; not an owner → 40001; unknown property → 40001; malformed → 22023.
 
 ## 3. In scope
 1. **Scope (scope.ts).** Replace the two `getAdministered*` calls in `loadDeletionScope` with: read the user's active
@@ -66,6 +74,12 @@ Sprint 255a made every wipe one transaction. Claude's live-schema audit (2026-10
    table/column does not exist, so there was nothing to delete). Treat it as success, log one
    `sideEffectError(plan.action, "committed_with_skip")` per call, and continue with storage cleanup. Remove the
    vendors-only skip exception from `validateWipeRpcResult` (any op may skip; shape rules stay).
+
+5. **Guard.** `applyWipePlan(plan, guard)` sends `rpc("account_wipe_apply", { p_ops: plan.ops, p_guard: { user_id:
+   userId, account_ids: scope.accountIds, property_ids: scope.propertyIds } })` for **every** action (no call without
+   `p_guard`). Each action passes the scope it loaded. A `40001` reply is a confirmed rollback (today's user error
+   message, no storage cleanup).
+6. **Skip logging.** `committed_with_skip` logs carry the count of skipped ops and their labels (labels only, no ids).
 
 ## 4. Out of scope
 The SQL files. UI copy (a follow-up may explain shared accounts on the Account & Data page). `deleteAllManagers` /
@@ -110,6 +124,13 @@ then from the repo root `npm run gate:web`.
   log; malformed replies (wrong count, wrong label, `rows: -1`, both `rows` and `skipped`) → `rpc_result_unknown`.
 - S7 All 255a tests (A1–A8) still pass, changed only by the §3 insertions and scope fixtures.
 - S8 Gate green (counts verbatim).
+- S9 Every action's single RPC call includes `p_guard` with exactly `{ user_id, account_ids, property_ids }` equal to
+  the loaded scope; `40001` reply → confirmed rollback, user error object, no storage cleanup, no `revalidatePath`.
+- S10 In `deleteAllProperties` and `fullAccountWipe` the plan has `maintenance_assignments` (by `ticket_id`) and
+  `preventive_maintenance_schedules` (by `property_id`) **before** `vendors` (assert indices).
+- S11 Isolation across **all six** actions with negative fixtures (`acct-shared`, `acct-old` inactive, manager-only
+  property of `acct-other`): no op value in any plan equals an id belonging to those accounts, their properties,
+  units, leases, charges, payments, tickets, vendors or invitations.
 
 ## 9. Report format
 Compact status only: S1–S8 → test names, per-array diff summary, counts. Do NOT include 'Claude prompt' or
@@ -119,7 +140,10 @@ Compact status only: S1–S8 → test names, per-array diff summary, counts. Do 
 Stay inside §5. Do not commit. Never run a wipe against a real database. Before deploy Claude (1) applies the
 migration (superset, safe for the live 255a code) and checks body md5 + grants, (2) runs a fail-closed compatibility
 check that every table/column in the 255b plans exists live (catalog query; any missing → stop), then deploys and runs
-a read-only Account & Data walk and a service-role no-op plan touching every new table/column (rows 0, no skips).
-Rollback: redeploy 255a, confirm the alias, then re-run the 255a migration verbatim
+a read-only Account & Data walk and a service-role no-op plan touching every new table/column (rows 0, no skips),
+plus a live guarded call with the smoke owner's real sole-owned scope and a no-op plan (expected success) and with a
+shared account id (expected 40001).
+Rollback: redeploy 255a, confirm the alias and that the 255b deployment serves no `/settings` POSTs for 5 minutes,
+then drop the 2-arg overload and re-run the 255a migration verbatim
 (`supabase/rollback/20261104_sprint255b_account_wipe_allowlist_rollback.sql`).
 The user should never need to read instructions to complete this flow (no UI change).
