@@ -1,7 +1,8 @@
 -- Sprint 255b: widen the account_wipe_apply allowlist so wipes cover every owner table.
--- Adds: vendors.id, maintenance_assignments.vendor_id, preventive_maintenance_schedules
--- (property_id, assigned_vendor_id), documents (lease_id, property_id, unit_id), inspections.lease_id,
--- communication_logs (property_id, unit_id). Superset only: vendors.property_id stays allowed so the
+-- Adds: vendors.id, preventive_maintenance_schedules.property_id, documents (lease_id, property_id,
+-- unit_id), inspections.lease_id, communication_logs (property_id, unit_id). Vendor-referencing rows are
+-- never deleted by vendor id: they go only through the owner's own tickets/properties, so a reference
+-- from outside the wipe scope makes the vendor delete fail and the whole wipe roll back. Superset only: vendors.property_id stays allowed so the
 -- 255a app revision keeps working until 255b is deployed (it is a missing column, so it is skipped).
 -- Function body is otherwise identical to 255a.
 
@@ -34,7 +35,7 @@ declare
     "communication_logs": ["property_id", "unit_id"],
     "documents": ["lease_id", "property_id", "unit_id"],
     "inspections": ["lease_id"],
-    "maintenance_assignments": ["ticket_id", "vendor_id"],
+    "maintenance_assignments": ["ticket_id"],
     "maintenance_photos": ["id"],
     "maintenance_tickets": ["id", "property_id", "tenant_profile_id"],
     "manager_payment_configs": ["property_id"],
@@ -47,7 +48,7 @@ declare
     "ownership_accounts": ["id"],
     "payment_distributions": ["account_id", "payment_id"],
     "payments": ["id"],
-    "preventive_maintenance_schedules": ["property_id", "assigned_vendor_id"],
+    "preventive_maintenance_schedules": ["property_id"],
     "properties": ["id"],
     "property_expenses": ["id", "property_id"],
     "property_files": ["id"],
