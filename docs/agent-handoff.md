@@ -2326,3 +2326,20 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   a qualifying charge exists (none today).
 - Next: 258b — late-fee notes for landlords (lease form + manual "Late fee" charge), revoke the unused client late-fee
   insert in `guard_client_rent_charge_write` (migration); then the Ingle rename once domains are bought.
+
+## 2026-10-25 — LLC research: yes, Colorado, "Ingle Homes LLC"; homes in their own state LLCs
+- Doc for the owner: https://claude.ai/artifact/CaZMmcEH55K1gip1unBPss (10 sections, ~90 primary sources, 5 research
+  agents at effort max; Claude verified SOS fees, FinCEN, HB26-1223, Fannie D1-4.1-02, C.R.S. 7-80-703/-801 and the
+  Stripe/DORA quotes against saved texts).
+- Findings that change plans: (1) Stripe Connect makes the platform owner personally, unlimitedly liable today →
+  entity switch is step 1 after formation. (2) Colorado taxes SaaS from 2027-01-01 (HB26-1223); Denver already does
+  (5.15%) → paid-plan pricing needs tax hooks and billing addresses (rules map rows added). (3) Delaware LLC tax is
+  $400/yr now; DE/WY/NV buy nothing for a Denver resident (must register in CO anyway; McClure; Albright; bankruptcy).
+  (4) CO SMLLC dissolves on day 91 with no member → operating agreement names a successor. (5) SC home: SC LLC now
+  ($110, $0 deed fee per SCDOR 2024 manual, no reassessment); PA home: ~2% transfer tax, decide at next tenant/refi;
+  Fannie/Freddie allow borrower-controlled LLC transfers, FHA/VA don't. (6) Manager users need broker/property-manager
+  licenses in CO/SC/IL/PA → Terms warranty. (7) Illinois' broker definition is the only one that names rent collection
+  "through any technology" → watch item.
+- Owner decisions pending: registered agent (self vs commercial), file the LLC, insurance quotes, deed moves.
+- Corrections to earlier docs: Delaware "$300" → $400; FinCEN exemption now permanent (final rule eff. 2026-08-14).
+- Codex not involved (docs only). ChatGPT not used (research, not a packet).
