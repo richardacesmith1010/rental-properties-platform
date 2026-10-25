@@ -2228,3 +2228,15 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   (server-generated link → `/auth/callback` → `/tenant`) passes.
 - Codex runs are now capped (`perl -e 'alarm 2400; exec …'`; macOS has no `timeout`).
 - **Backlog:** supabase-js 2.118 (postgrest-js 2.x types), anthropic-sdk 1.x, Tailwind 4 — majors.
+
+## 2026-10-24 — Sprint 256c SHIPPED (Anthropic SDK patch) — Ask Domus is down: no API credits (owner)
+- **256c** `d9193b6` (L2): `@anthropic-ai/sdk` ^0.80.0 → ^0.99.0 (memory-tool advisories; no code change). Prod audit
+  now 5 (1 high + 4 moderate, all the build-time postcss / Tailwind 3 chain). Gate 3,399; CI success; deploy; smoke
+  27/27.
+- **Live Ask Domus check found an outage (not caused by 256c):** POST `/api/ai/chat` → 500. Vercel log:
+  `400 invalid_request_error "Your credit balance is too low to access the Anthropic API"`. The SDK reached the API
+  correctly. Test account's `ai_consent_at` set for the check and reset to null afterwards.
+- **Owner action (money):** add credits / a plan in the Anthropic Console for the org used by `ANTHROPIC_API_KEY`.
+- Follow-up idea (L1): when the AI provider is unavailable, show "Ask Domus is resting. Try again later." instead of
+  the generic error, and alert the platform email once.
+- Remaining dependency backlog: Tailwind 4 (clears the last high/moderate postcss advisories; major, visual risk).
