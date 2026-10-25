@@ -2240,3 +2240,13 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Follow-up idea (L1): when the AI provider is unavailable, show "Ask Domus is resting. Try again later." instead of
   the generic error, and alert the platform email once.
 - Remaining dependency backlog: Tailwind 4 (clears the last high/moderate postcss advisories; major, visual risk).
+
+## 2026-10-24 — Sprint 257a SHIPPED (Ask Domus "resting" + platform alert)
+- **257a** `9ebc3bb` (L2): provider failures (billing / auth / rate limit / overloaded / connection, by SDK error class
+  and status) return 503 "Ask Domus is resting. Try again later." (also mid-stream) and send one platform alert per
+  kind per hour per instance (no user data in the body). Our own errors keep the 500 generic message, no alert.
+- Verified: 18 route tests; gate 3,414; CI success; deploy success; smoke 27/27 on rerun (first run stopped at the
+  capability check with a blank "missing table automation_runs" REST error — 24/24 on immediate rerun); live: owner
+  test account → 503 + new message; Vercel log `Ask Domus provider unavailable: billing 400 req_…`; no alert-send error
+  logged (email delivery itself not confirmable from here). Test account `ai_consent_at` set and reset.
+- Ask Domus stays down until the owner adds Anthropic credits.
