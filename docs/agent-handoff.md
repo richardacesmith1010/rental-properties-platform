@@ -2310,3 +2310,19 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Owner-only next: approve buying getingle.com + ingle.homes (needs registrant contact); lawyer clearance + filing;
   LLC "Ingle Homes LLC"; then the rename sprint (web copy, emails, iOS display name, new domain + redirects).
 - Round-2 picks (Plainroof etc.) and round-3 alternates (Umbral, Nostos, Insula, Lintel) are archived in this entry.
+
+## Sprint 258a SHIPPED — automatic late fees paused in every state (L3, `d2e23ad`, 2026-10-25)
+- `lib/late-fee-policy.ts` `automaticLateFeesEnabled()` returns `false` (code constant, not env). The nightly job and
+  the owner "generate" path still mark rent late and send late notices; they add no fee and skip the existing-fee
+  lookup; a count-only log `[late-fees] paused: N fee(s) not added` prints when a fee would have been added.
+- Why: C.R.S. 38-12-105(1)(c)(f)(g)(j) (fee in the lease, no subsidy share, once per late payment, written notice
+  within 180 days) can't be proven yet (L-040). Production had 0 late-fee rows; no other automatic writer (audit in the
+  packet). Enablement checklist: `docs/compliance/rules-map.md`.
+- Review: ChatGPT GPT-6 · High — rev 1 REJECT → rev 2 APPROVE WITH CHANGES → rev 3 adopted (unmocked integration test,
+  full fee-writer audit, prod fee-row count). Picker restored to GPT-5.6 Sol · Medium.
+- Codex: `gpt-6.1-sol` · high, 70,950 tokens, 1 attempt (gpt-6-sol L3 baseline ≈ 130k–170k) — trial 1 of 3.
+- Verified: P1–P9 mapped to tests (P9 unmocked, fails if the switch returns true); lines ≤ 140; `charge-generation.ts`
+  498 lines; gate 3,422 tests green; Vercel success; CI `gate` success; smoke passed. Live log line can only appear when
+  a qualifying charge exists (none today).
+- Next: 258b — late-fee notes for landlords (lease form + manual "Late fee" charge), revoke the unused client late-fee
+  insert in `guard_client_rent_charge_write` (migration); then the Ingle rename once domains are bought.
