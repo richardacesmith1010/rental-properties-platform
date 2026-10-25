@@ -260,3 +260,19 @@ Nothing checked the menus, and reports never said which settings ran.
 **Rule:** CLAUDE.md §3a. Every reply names the Claude model and effort for the next message (a Stop hook enforces it).
 Packets and handoffs record the Codex and ChatGPT settings that ran. The monthly rules watch re-reads all three model
 menus and updates the table.
+
+#### L-039 | 2026-10-24 | DATA — "States in use" must come from every real home, not the leases under discussion
+**What happened:** The new rules map and the lawyer packet said users' homes are in Colorado and South Carolina. A
+query of all properties (test owners excluded) showed real homes in Illinois (live lease, collected in Domus) and
+Pennsylvania too. Both had no rules researched, so they were invisible to the "is it allowed?" checks.
+**Rule:** Compute states in use from `properties` joined to non-test owners (exclude only `richard.ace.smith+…`), grouped
+by `state`, and write the query next to the result. Re-run it in every rules watch and before every stage gate.
+
+#### L-040 | 2026-10-24 | RESEARCH — Quote the operative statute verbatim; summaries drop clauses
+**What happened:** The 10-24 research summarized C.R.S. 38-12-105 from secondary sources and missed (1)(j) — no late
+fee without written notice to the tenant within 180 days of the due date — and the force of (1)(c) and (1)(f). Sprint
+258a rev 1 built a correct cap and 7-day timer that would still have charged unlawful fees. ChatGPT (GPT-6 · High)
+caught it; the official 2024 Title 38 text confirmed it.
+**Rule:** Packet §11 quotes the governing section's operative text verbatim from the official source (extract the PDF
+text if needed), not a summary. List every condition with "Can Domus prove it today?"; if any answer is no, the safe
+default ships first.

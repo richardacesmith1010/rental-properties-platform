@@ -2296,6 +2296,6 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   GPT-5.6 Sol · Medium. **Decision:** L3/iPhone reviews use GPT-6 at top thinking, picker restored afterward. iPhone
   work recommends Fable 5.1 · High per the 10-09 "best Claude model" exception.
 - Lessons L-037 (outside rules) and L-038 (model menus drift). Rules map + stage gates in `docs/compliance/`.
-- **postcss override:** pixel diff 74/74 screenshots at 0.00% vs the Tailwind 3 baseline. Gate rerun needed: today's
-  run had 2 timeouts (password-settings, front-door-look) at load average 40 while a 274 MB binary grep ran.
+- **postcss override SHIPPED** (`fce18b6`): pixel diff 74/74 screenshots at 0.00% vs the Tailwind 3 baseline; gate
+  3,414 green on rerun (first run: 2 timeouts at load average 40); Vercel success; CI `gate` success; smoke passed.
 - Removed the temporary `web-prod-3100` entry from the owner's `.claude/launch.json`; stopped that local server.

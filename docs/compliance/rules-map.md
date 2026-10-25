@@ -5,13 +5,17 @@ Status: **OK** (complies) · **GAP** (doesn't comply; fix planned) · **SAFE** (
 decision waits) · **UNKNOWN** (not researched, or verified more than 6 months ago). Seeded 2026-10-24 from the
 independent legal research (https://claude.ai/artifact/C64vE2Co62CkpZPpPCSac8). Update in the same commit as any change.
 
-States with users' homes (live data, 2026-10-24): **Colorado, South Carolina.**
+States with real users' homes (live data, 2026-10-24; test accounts `richard.ace.smith+…` excluded): **Colorado** (12
+homes, no live lease), **Illinois** (1, Springfield, live lease collected in Domus), **South Carolina** (1, Goose Creek,
+live lease collected outside Domus), **Pennsylvania** (1, Ardmore, no lease). Test accounts also use Oregon. Query:
+`properties` → `profiles` on `owner_profile_id`, excluding test emails, grouped by `state` (L-039).
 
 | Area | Rule (source) | Domus today | Status | Fix | Verified |
 | --- | --- | --- | --- | --- | --- |
-| Late fees — CO | C.R.S. 38-12-105 (SB21-173): ≥7 days late; cap greater of $50 or 5% of past-due rent; rent only; disclosed in lease; no eviction for fees | 5-day default grace; flat lease amount, no cap | GAP | Per-state late-fee rules | 2026-10-24 |
+| Late fees — CO | C.R.S. 38-12-105(1) (SB21-173; official 2024 text read): (a) ≥7 days late; (b) cap greater of $50 or 5% of past-due rent; (c) disclosed in the rental agreement; (d)(e) no eviction for fees; (f) none on a subsidy's share; (g) once per late payment; (h) no interest; (i) not recouped from rent; (j) written notice to the tenant within 180 days of the due date. Void lease term (2); $50/violation, 7-day cure, then $150–$1,000 + attorney fees (3)–(5) | 5-day default grace; flat lease amount, no cap; no fee notice; subsidies not tracked | GAP | 258a: pause automatic fees in every state (code switch). Later: prove (a)–(j) before turning on | 2026-10-24 |
 | Late fees — SC | No statutory cap or grace; lease must disclose; must be reasonable (secondary sources) | One SC lease: 5% ($117.50), grace 5, collected outside Domus | OK | Keep lease terms | 2026-10-24 (secondary) |
-| Late fees — other states | Vary (NY ≥5 days, lesser of $50/5%; TX ≥2 days, 10–12%; MA none before 30 days) | Same flat logic everywhere | GAP | No automatic fee where no state rule is set up | 2026-10-24 |
+| Late fees — other states | Vary (NY ≥5 days, lesser of $50/5%; TX ≥2 days, 10–12%; MA none before 30 days; OR ORS 90.260) | Same flat logic everywhere, incl. IL (live lease, no fee set) and PA | GAP | No automatic fee where no state rule is set up (258a) | 2026-10-24 |
+| Landlord-tenant basics — IL, PA | Not researched (deposits, notices, late fees, screening); IL home is in Springfield, outside the Chicago/Cook County ordinances | Same flat logic | UNKNOWN | Research before outside testers (Gate 1) | — |
 | Rental fees — CO | C.R.S. 6-1-737 (HB25-1090, eff. 2026-01-01): processing fee only if a free way to pay exists, ≤ cost, disclose who gets it | Card fee ≈3% to tenant; free bank option exists | GAP | Landlord pays card cost (owner decision 2026-10-24) | 2026-10-24 |
 | Card surcharge | Visa Core Rules 5.5.1.x (credit only, ≤3% and ≤ cost, 30-day notice, disclosure); Mastercard; C.R.S. 5-2-212 (≤2% or actual cost, no debit) | Fee on any card incl. debit; gross-up; no notices; Domus is merchant (no on_behalf_of) | GAP | Remove tenant fee; landlord pays | 2026-10-24 |
 | Money transmission | 31 CFR 1010.100(ff)(5)(ii)(B) + FIN-2014-R009; C.R.S. 11-110-301 agent-of-payee (HB25-1201) | Stripe holds funds; no agent-of-payee terms; "Domus does not hold your money" inaccurate for ACH | GAP | Landlord agent terms; rent paid on success; accurate wording | 2026-10-24 |
@@ -37,3 +41,15 @@ States with users' homes (live data, 2026-10-24): **Colorado, South Carolina.**
 | Trademark | DOMUSO Reg. 5180719 (incontestable, rental payments) | Name "Domus" | GAP | Rename (round 2 in progress) | 2026-10-24 |
 | Email | CAN-SPAM 15 U.S.C. 7704 (address only in commercial email) | Transactional only | OK | Add PO box before any marketing | 2026-10-24 |
 | Retention | IRS record periods; C.R.S. 13-80-103.5 (6 years for rent debts) | 7 years financial, 7 years after lease end | OK | Add property-records rule | 2026-10-24 |
+
+## Turning automatic late fees back on (checklist)
+`automaticLateFeesEnabled()` in `apps/web/lib/late-fee-policy.ts` stays `false` until one L3 sprint, reviewed by
+ChatGPT, proves all of these for each state it enables:
+- [ ] The state's statute is quoted verbatim in the packet (L-040) and has a row above, verified within 6 months.
+- [ ] Timing and cap (CO: 7+ days late; greater of $50 or 5% of past-due rent; once per late payment, (1)(a)(b)(g)).
+- [ ] Proof the fee is in the signed lease, not just a form field ((1)(c)).
+- [ ] Subsidy share excluded, or no fee when the split is unknown ((1)(f)).
+- [ ] Written notice to the tenant within 180 days, with a delivery record ((1)(j)); real notices need the owner's go.
+- [ ] One fee per late payment enforced by the database, safe under concurrent runs and payment webhooks.
+- [ ] No interest; never taken out of a rent payment; autopay still pays rent charges only ((1)(h)(i)).
+- [ ] Owner approval to turn it on (money to real tenants).
