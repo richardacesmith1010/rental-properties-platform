@@ -2299,3 +2299,14 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - **postcss override SHIPPED** (`fce18b6`): pixel diff 74/74 screenshots at 0.00% vs the Tailwind 3 baseline; gate
   3,414 green on rerun (first run: 2 timeouts at load average 40); Vercel success; CI `gate` success; smoke passed.
 - Removed the temporary `web-prod-3100` entry from the owner's `.claude/launch.json`; stopped that local server.
+
+## 2026-10-25 — Owner decision: the product name is Ingle
+- After round 3 (iconic names), the owner chose **Ingle** (the hearth fire; "inglenook").
+- Claude's checks: USPTO tmsearch "ingle" 30 results, no live INGLE mark (live marks only contain it: INGLEWINE and
+  INGLEHOOD apparel, INGLESIDE pizza/foundation); "ingel" 3, none live; "engle" live surname marks incl. class 36
+  ENGLE MARTIN (insurance claims) and ENGLE CAPITAL (investment advice). Colorado SOS: "Ingle, LLC" in good standing
+  (2014) → form "Ingle Homes LLC" (only expired "Inglenook Custom Homes" records). Domains (Vercel, 10-25): getingle.com
+  $11.25/yr, ingle.homes $1.99 first year ($16.99 renewal); ingle.com taken since 1995; ingle.co $1,232 premium.
+- Owner-only next: approve buying getingle.com + ingle.homes (needs registrant contact); lawyer clearance + filing;
+  LLC "Ingle Homes LLC"; then the rename sprint (web copy, emails, iOS display name, new domain + redirects).
+- Round-2 picks (Plainroof etc.) and round-3 alternates (Umbral, Nostos, Insula, Lintel) are archived in this entry.

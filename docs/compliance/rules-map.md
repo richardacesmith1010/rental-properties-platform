@@ -38,7 +38,7 @@ live lease collected outside Domus), **Pennsylvania** (1, Ardmore, no lease). Te
 | Backups claim | Supabase Free: no automatic backups | Security policy claims daily backups | GAP | Supabase Pro or reword | 2026-10-24 |
 | App Store entity | Apple 5.1.1(ix) (financial apps from a legal entity) | Individual account | GAP | LLC + D-U-N-S + Apple org (owner) | 2026-10-24 |
 | Account deletion | Apple 5.1.1(v) (confirmation when complete) | No completion message | GAP | Send confirmation | 2026-10-24 |
-| Trademark | DOMUSO Reg. 5180719 (incontestable, rental payments) | Name "Domus" | GAP | Rename (round 2 in progress) | 2026-10-24 |
+| Trademark | DOMUSO Reg. 5180719 (incontestable, rental payments) | Name "Domus"; owner chose **Ingle** (2026-10-25). USPTO knockout: no live INGLE mark; live ENGLE surname marks in class 36 (insurance claims, investment advice) | GAP | Lawyer clearance + filing (classes 9, 36, 42); LLC "Ingle Homes LLC" ("Ingle, LLC" exists in CO); rename sprint | 2026-10-25 |
 | Email | CAN-SPAM 15 U.S.C. 7704 (address only in commercial email) | Transactional only | OK | Add PO box before any marketing | 2026-10-24 |
 | Retention | IRS record periods; C.R.S. 13-80-103.5 (6 years for rent debts) | 7 years financial, 7 years after lease end | OK | Add property-records rule | 2026-10-24 |
 
