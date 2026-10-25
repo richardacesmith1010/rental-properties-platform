@@ -4,8 +4,30 @@
     {
       "name": "web-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "apps/web"],
-      "port": 3000
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "apps/web"
+      ],
+      "port": 3000,
+      "autoPort": true
+    },
+    {
+      "name": "laptop-hud",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "/Users/courtneysmith/Documents/Codex/laptop-hud/server.js"
+      ],
+      "port": 7777
+    },
+    {
+      "name": "grand-theft-laptop",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "/Users/courtneysmith/Documents/Codex/grand-theft-laptop/serve.js"
+      ],
+      "port": 7778
     }
   ]
 }

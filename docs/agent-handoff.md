@@ -2343,3 +2343,5 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Owner decisions pending: registered agent (self vs commercial), file the LLC, insurance quotes, deed moves.
 - Corrections to earlier docs: Delaware "$300" → $400; FinCEN exemption now permanent (final rule eff. 2026-08-14).
 - Codex not involved (docs only). ChatGPT not used (research, not a packet).
+- 2026-10-25 owner decision: the owner serves as the LLC's registered agent (home street address goes on the public
+  record; Colorado requires a physical CO address and ID verification for individual agents since 2025-07-01).
