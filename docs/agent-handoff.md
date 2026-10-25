@@ -2250,3 +2250,13 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   test account → 503 + new message; Vercel log `Ask Domus provider unavailable: billing 400 req_…`; no alert-send error
   logged (email delivery itself not confirmable from here). Test account `ai_consent_at` set and reset.
 - Ask Domus stays down until the owner adds Anthropic credits.
+
+## 2026-10-24 — Owner decisions
+- No Anthropic credits until profitable or required — Ask Domus stays "resting" (257a message).
+- LLC + business insurance: owner will do it before outside users join.
+- Card fee (≈3% incl. debit): ask the lawyer (lawyer packet question 4).
+- Paid hosting (Vercel Pro, Supabase Pro): approved; owner buys when real tenants pay online (money step).
+- App Store submit + Plaid: go — Claude opened App Store Connect in Chrome; first owner step is sign-in.
+- Notifications: not yet.
+- Lawyer packet published as a doc: https://claude.ai/artifact/9xqoFhPGaQoNM1QhvVfWhX (11 questions, live Terms and
+  Privacy text, retention, vendors).
