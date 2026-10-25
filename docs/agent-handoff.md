@@ -2219,3 +2219,12 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Codex hung ~17 h on this L1 job after finishing its edits (no report); Claude stopped it and verified the diff.
 - **Backlog (dependency sprint):** `@supabase/supabase-js` 2.49 → 2.118 (low), `@anthropic-ai/sdk` 0.80 → 1.x
   (moderate, memory tool not used), Tailwind 4 (moderate, postcss chain) — majors, each needs its own review.
+
+## 2026-10-24 — Sprint 256b SHIPPED (Supabase client security patch)
+- **256b** `ef2f44e` (L2): `@supabase/supabase-js` 2.49.1 → 2.50.0 (auth-js 2.68.0 → 2.70.0 fixes GHSA-8r88-6cj9-9fh5;
+  postgrest-js 1.19.2 → 1.19.4, same 1.x). `@supabase/ssr` 0.5.2 unchanged (peer ^2.43.4).
+- Verified: prod audit 6 (1 high build-time postcss, 5 moderate: anthropic-sdk memory tool, tailwind/postcss chain);
+  gate 3,399; CI success; deploy success; smoke 27/27 (password sign-in, all roles); live magic-link sign-in
+  (server-generated link → `/auth/callback` → `/tenant`) passes.
+- Codex runs are now capped (`perl -e 'alarm 2400; exec …'`; macOS has no `timeout`).
+- **Backlog:** supabase-js 2.118 (postgrest-js 2.x types), anthropic-sdk 1.x, Tailwind 4 — majors.
