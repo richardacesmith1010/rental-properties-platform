@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import Anthropic, { APIConnectionError, APIConnectionTimeoutError, APIError } from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUserRole, getUserProfileSummary } from "@/lib/auth";
@@ -14,6 +14,7 @@ import type { PortfolioData } from "@/lib/portfolio";
 import { getPortfolioData } from "@/lib/portfolio";
 import { getRecentPaymentsForAi } from "@/lib/ai-recent-payments";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { sendPlatformAlert } from "@/lib/platform-alerts";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -24,6 +25,35 @@ const HOURLY_REQUEST_LIMIT = 20;
 const HOUR_MS = 60 * 60 * 1000;
 const MISSING_KEY_MESSAGE =
   "The AI assistant isn't set up yet. Ask your account owner to add the API key in settings.";
+const PROVIDER_UNAVAILABLE_MESSAGE = "Ask Domus is resting. Try again later.";
+
+function providerUnavailableKind(error: unknown):
+  "billing" | "auth" | "rate_limit" | "overloaded" | "connection" | null {
+  if (error instanceof APIConnectionTimeoutError || error instanceof APIConnectionError) return "connection";
+  if (!(error instanceof APIError)) return null;
+
+  const status = error.status;
+  const detail = error.error as { error?: { message?: unknown; type?: unknown }; message?: unknown } | undefined;
+  const message = typeof detail?.error?.message === "string" ? detail.error.message
+    : typeof detail?.message === "string" ? detail.message : error.message;
+
+  if (status === 402 || (status === 400 && /credit balance/i.test(message))) return "billing";
+  if (status === 401 || status === 403) return "auth";
+  if (status === 429) return "rate_limit";
+  if (status === 529 || (status !== undefined && status >= 500 && status <= 504)) return "overloaded";
+  return null;
+}
+
+function alertProviderUnavailable(error: APIError, kind: NonNullable<ReturnType<typeof providerUnavailableKind>>) {
+  const status = error.status ?? "unknown";
+  const requestId = error.requestID ?? "unknown";
+  console.error("Ask Domus provider unavailable:", kind, status, requestId);
+  void sendPlatformAlert({
+    subject: "Ask Domus is unavailable",
+    body: `${kind} — status ${status}, request ${requestId}, ${new Date().toISOString()}. Users see: Ask Domus is resting.`,
+    dedupeKey: `ask-domus-provider:${kind}`
+  });
+}
 
 const aiChatRequestSchema = z.object({
   messages: z
@@ -225,8 +255,10 @@ export async function POST(request: Request) {
                 controller.enqueue(encoder.encode(event.delta.text));
               }
             }
-          } catch {
-            controller.enqueue(encoder.encode("Something went wrong. Try again."));
+          } catch (error) {
+            const kind = providerUnavailableKind(error);
+            if (kind) alertProviderUnavailable(error as APIError, kind);
+            controller.enqueue(encoder.encode(kind ? PROVIDER_UNAVAILABLE_MESSAGE : "Something went wrong. Try again."));
           } finally {
             controller.close();
           }
@@ -240,6 +272,11 @@ export async function POST(request: Request) {
       }
     );
   } catch (error) {
+    const kind = providerUnavailableKind(error);
+    if (kind) {
+      alertProviderUnavailable(error as APIError, kind);
+      return NextResponse.json({ error: PROVIDER_UNAVAILABLE_MESSAGE }, { status: 503 });
+    }
     console.error("Ask Domus chat error:", error);
     return NextResponse.json({ error: "Something went wrong. Try again." }, { status: 500 });
   }
