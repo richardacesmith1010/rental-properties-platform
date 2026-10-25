@@ -15,20 +15,20 @@
     "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.99.0",
-    "@radix-ui/react-slot": "^1.2.4",
+    "@anthropic-ai/sdk": "^0.137.0",
+    "@radix-ui/react-slot": "^1.5.0",
     "@react-pdf/renderer": "^4.3.2",
-    "@sentry/nextjs": "^11.4.0",
-    "@supabase/ssr": "0.5.2",
-    "@supabase/supabase-js": "2.50.0",
+    "@sentry/nextjs": "^11.8.0",
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.118.0",
     "@vercel/analytics": "^2.0.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "lucide-react": "^0.575.0",
+    "lucide-react": "^0.577.0",
     "next": "15.5.28",
     "plaid": "^41.4.0",
-    "react": "19.2.8",
-    "react-dom": "19.2.8",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "recharts": "^3.8.0",
     "server-only": "0.0.1",
     "sonner": "^2.0.7",
@@ -38,14 +38,14 @@
     "zod": "^4.6.6"
   },
   "devDependencies": {
-    "@axe-core/playwright": "^4.13.0",
-    "@playwright/test": "^1.58.2",
+    "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "^1.64.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
-    "@testing-library/user-event": "^14.6.1",
+    "@testing-library/user-event": "^14.6.8",
     "@types/node": "22.10.1",
-    "@types/react": "19.2.18",
-    "@types/react-dom": "19.2.7",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
     "@vitejs/plugin-react": "^5.1.4",
@@ -55,7 +55,7 @@
     "jsdom": "^28.1.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.19",
-    "typescript": "5.6.3",
-    "vitest": "^4.0.18"
+    "typescript": "5.9.3",
+    "vitest": "^4.1.12"
   }
 }
