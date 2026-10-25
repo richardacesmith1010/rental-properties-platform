@@ -21,6 +21,10 @@ vi.mock("@/lib/charge-lines", async (importOriginal) => ({
   ...await importOriginal<typeof import("@/lib/charge-lines")>(),
   createRentChargeWithLines: createRentChargeWithLinesMock
 }));
+vi.mock("@/lib/late-fee-policy", () => ({ automaticLateFeesEnabled: vi.fn(() => false) }));
+import { automaticLateFeesEnabled } from "@/lib/late-fee-policy";
+import { formatDate } from "@/lib/format";
+import { createLateFeeSupabaseMock, setToday } from "./late-fee-test-helpers";
 import { createNotificationAdminClient, notificationUpserts } from "./notification-test-helpers";
 import {
   buildDueDatesByLeaseId,
@@ -29,137 +33,6 @@ import {
   applyLateFeesToOverdueCharges,
   generateMonthlyChargesForPropertyIdsWithClient
 } from "@/lib/charge-generation";
-
-function createLateFeeSupabaseMock(params: {
-  collectsOutsideDomus: boolean | null;
-  clientHome?: boolean;
-  accountError?: boolean;
-  existingLateFee?: boolean;
-  tenantPrefs?: Record<string, boolean>;
-  dueDate?: string;
-}) {
-  const update = vi.fn(() => {
-    const builder = {
-      in: vi.fn(() => builder),
-      then: (resolve: (value: { error: null }) => unknown) =>
-        Promise.resolve({ error: null }).then(resolve)
-    };
-    return builder;
-  });
-  const insert = vi.fn(async () => ({ error: null }));
-  const candidate = {
-    id: "charge-1",
-    lease_id: "lease-1",
-    due_date: params.dueDate ?? "2026-09-01",
-    status: "pending",
-    category: "rent"
-  };
-
-  const client = {
-    from: vi.fn((table: string) => {
-      if (table === "rent_charges") {
-        return {
-          select: vi.fn((columns: string) => {
-            if (columns.includes("parent_charge_id")) {
-              const builder = {
-                in: vi.fn(() => builder),
-                eq: vi.fn(() => builder),
-                is: vi.fn(async () => ({
-                  data: params.existingLateFee
-                    ? [{ id: "late-fee-1", parent_charge_id: "charge-1" }]
-                    : [],
-                  error: null
-                }))
-              };
-              return builder;
-            }
-
-            const builder = {
-              in: vi.fn(() => builder),
-              eq: vi.fn(() => builder),
-              lt: vi.fn(() => builder),
-              is: vi.fn(async () => ({ data: [candidate], error: null }))
-            };
-            return builder;
-          }),
-          update,
-          insert
-        };
-      }
-
-      if (table === "leases") {
-        return {
-          select: vi.fn(() => ({
-            in: vi.fn(async () => ({
-              data: [
-                {
-                  id: "lease-1",
-                  tenant_profile_id: "tenant-1",
-                  unit_id: "unit-1",
-                  grace_period_days: 5,
-                  late_fee_cents: 5000,
-                  lease_status: "active",
-                  collects_outside_domus: params.collectsOutsideDomus
-                }
-              ],
-              error: null
-            }))
-          }))
-        };
-      }
-
-      if (table === "units") {
-        return {
-          select: vi.fn(() => ({
-            in: vi.fn(async () => ({
-              data: [{ id: "unit-1", property_id: "property-1" }],
-              error: null
-            }))
-          }))
-        };
-      }
-
-      if (table === "properties") {
-        return { select: vi.fn(() => ({ in: vi.fn(async () => ({
-          data: [{ id: "property-1", owner_account_id: "account-1" }], error: null
-        })) })) };
-      }
-
-      if (table === "ownership_accounts") {
-        return { select: vi.fn(() => ({ in: vi.fn(async () => ({
-          data: [{ id: "account-1", managed_client: params.clientHome === true }],
-          error: params.accountError ? new Error("account lookup failed") : null
-        })) })) };
-      }
-
-      if (table === "profiles") {
-        return {
-          select: vi.fn(() => ({
-            in: vi.fn(async () => ({
-              data: [{ id: "tenant-1", email: "tenant@example.com",
-                notification_preferences: params.tenantPrefs ?? {} }],
-              error: null
-            }))
-          }))
-        };
-      }
-
-      throw new Error(`Unexpected table ${table}`);
-    })
-  };
-
-  return {
-    supabase: client as unknown as SupabaseClient,
-    from: client.from,
-    update,
-    insert
-  };
-}
-
-function setToday(isoDateTime: string) {
-  vi.useFakeTimers();
-  vi.setSystemTime(new Date(isoDateTime));
-}
 
 describe("charge generation", () => {
   it("N3 merges tenant late notice denial and keeps the in-app channel", async () => {
@@ -176,6 +49,7 @@ describe("charge generation", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(automaticLateFeesEnabled).mockReturnValue(false);
     createNotificationWithDeliveryMock.mockResolvedValue({
       inApp: { status: "sent" }, email: { status: "skipped" }
     });
@@ -184,8 +58,80 @@ describe("charge generation", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.useRealTimers();
     vi.unstubAllEnvs();
+  });
+
+  it("P2 pauses eligible fees without querying existing fees and preserves late status and summary", async () => {
+    setToday("2026-10-03T12:00:00.000Z");
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const { supabase, from, update, insert } = createLateFeeSupabaseMock({
+      collectsOutsideDomus: false, lateFeeCents: 5000, dueDate: "2026-09-01"
+    });
+    expect(await applyLateFeesToOverdueCharges(supabase, ["lease-1"], "2026-10-03"))
+      .toBe("Late notices: 1 sent, 0 emailed, 0 skipped.");
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update.mock.calls).toEqual([[{ status: "late" }]]);
+    expect(insert).not.toHaveBeenCalled();
+    const chargeQueries = from.mock.results.filter((_, index) => from.mock.calls[index][0] === "rent_charges");
+    expect(chargeQueries.flatMap(({ value }) => value.select.mock.calls))
+      .toEqual([["id, lease_id, due_date, status, category"]]);
+    expect(log.mock.calls).toEqual([["[late-fees] paused:", 1, "fee(s) not added"]]);
+  });
+
+  it("P3 preserves exact tenant and team late notices while fees are paused", async () => {
+    setToday("2026-10-03T12:00:00.000Z");
+    const { supabase } = createLateFeeSupabaseMock({ collectsOutsideDomus: false, lateFeeCents: 5000 });
+    await applyLateFeesToOverdueCharges(supabase, ["lease-1"], "2026-10-03");
+    expect(createNotificationWithDeliveryMock.mock.calls).toEqual([[{
+      recipientProfileId: "tenant-1", recipientEmail: "tenant@example.com", type: "late_rent",
+      title: "Rent payment overdue", body: `Your rent due ${formatDate("2026-09-01")} is now late.`,
+      entityType: "rent_charge", entityId: "charge-1",
+      deliveryPreference: { emailEnabled: true, inAppEnabled: true, emailBlockReason: null }
+    }]]);
+    expect(notifyPropertyTeamMock.mock.calls).toEqual([[{
+      propertyId: "property-1", event: "late_fee", type: "late_rent", title: "Rent is late",
+      body: `Rent due ${formatDate("2026-09-01")} is now late.`, entityType: "rent_charge", entityId: "charge-1"
+    }]]);
+    for (const [notice] of [...createNotificationWithDeliveryMock.mock.calls, ...notifyPropertyTeamMock.mock.calls]) {
+      expect(`${notice.title} ${notice.body}`).not.toMatch(/fee/i);
+    }
+  });
+
+  it("P4 logs once with two eligible charges on two leases", async () => {
+    setToday("2026-10-03T12:00:00.000Z");
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const { supabase, insert } = createLateFeeSupabaseMock({
+      collectsOutsideDomus: false, additionalCandidates: [{ lateFeeCents: 5000 }]
+    });
+    await applyLateFeesToOverdueCharges(supabase, ["lease-1", "lease-2"], "2026-10-03");
+    expect(log.mock.calls).toEqual([["[late-fees] paused:", 2, "fee(s) not added"]]);
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("P4b counts only fee-eligible candidates among zero-fee and within-grace charges", async () => {
+    setToday("2026-10-03T12:00:00.000Z");
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const { supabase, insert } = createLateFeeSupabaseMock({
+      collectsOutsideDomus: false,
+      additionalCandidates: [{ lateFeeCents: 0 }, { dueDate: "2026-10-01" }]
+    });
+    await applyLateFeesToOverdueCharges(supabase, ["lease-1", "lease-2", "lease-3"], "2026-10-03");
+    expect(log.mock.calls).toEqual([["[late-fees] paused:", 1, "fee(s) not added"]]);
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { collectsOutsideDomus: false, lateFeeCents: 0 },
+    { collectsOutsideDomus: true, lateFeeCents: 5000 }
+  ])("P5 skips the paused log and insert for ineligible lease %j", async (options) => {
+    setToday("2026-10-03T12:00:00.000Z");
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const { supabase, insert } = createLateFeeSupabaseMock(options);
+    await applyLateFeesToOverdueCharges(supabase, ["lease-1"], "2026-10-03");
+    expect(log).not.toHaveBeenCalled();
+    expect(insert).not.toHaveBeenCalled();
   });
 
   it("returns exact rent messages for two added rows and none", async () => {
@@ -213,7 +159,10 @@ describe("charge generation", () => {
       .toBe("Rent is already up to date.");
   });
 
-  it("D5 marks October 26 rent late only after Denver leaves October 31", async () => {
+  // Dormant-path coverage
+  // only. Passing these tests does not make automatic late fees legal; see lib/late-fee-policy.ts.
+  it("[fees on] D5 marks October 26 rent late only after Denver leaves October 31", async () => {
+    vi.mocked(automaticLateFeesEnabled).mockReturnValue(true);
     setToday("2026-11-01T04:30:00Z");
     const evening = createLateFeeSupabaseMock({ collectsOutsideDomus: false, dueDate: "2026-10-26" });
     await applyLateFeesToOverdueCharges(evening.supabase, ["lease-1"], "2026-10-31");
@@ -226,7 +175,10 @@ describe("charge generation", () => {
     expect(morning.insert).toHaveBeenCalledTimes(1);
   });
 
-  it("D4s inserts one late fee before cron and none on rerun", async () => {
+  // Dormant-path coverage
+  // only. Passing these tests does not make automatic late fees legal; see lib/late-fee-policy.ts.
+  it("[fees on] D4s inserts one late fee before cron and none on rerun", async () => {
+    vi.mocked(automaticLateFeesEnabled).mockReturnValue(true);
     setToday("2026-11-01T04:30:00Z");
     const evening = createLateFeeSupabaseMock({ collectsOutsideDomus: false, dueDate: "2026-10-25" });
     await applyLateFeesToOverdueCharges(evening.supabase, ["lease-1"], "2026-10-31");
@@ -496,7 +448,10 @@ describe("charge generation", () => {
     expect(insert).not.toHaveBeenCalled();
   });
 
-  it("preserves late status and late-fee behavior for unflagged leases", async () => {
+  // Dormant-path coverage
+  // only. Passing these tests does not make automatic late fees legal; see lib/late-fee-policy.ts.
+  it("[fees on] preserves late status and late-fee behavior for unflagged leases", async () => {
+    vi.mocked(automaticLateFeesEnabled).mockReturnValue(true);
     setToday("2026-10-03T12:00:00.000Z");
     const { supabase, update, insert } = createLateFeeSupabaseMock({
       collectsOutsideDomus: false
@@ -516,7 +471,10 @@ describe("charge generation", () => {
     ]);
   });
 
-  it("null lease collection flag keeps the fee and owner notice but blocks tenant late notice", async () => {
+  // Dormant-path coverage
+  // only. Passing these tests does not make automatic late fees legal; see lib/late-fee-policy.ts.
+  it("[fees on] null lease collection flag keeps the fee and owner notice but blocks tenant late notice", async () => {
+    vi.mocked(automaticLateFeesEnabled).mockReturnValue(true);
     setToday("2026-10-03T12:00:00.000Z");
     const { supabase, update, insert } = createLateFeeSupabaseMock({ collectsOutsideDomus: null });
     await expect(applyLateFeesToOverdueCharges(supabase, ["lease-1"], "2026-10-03"))

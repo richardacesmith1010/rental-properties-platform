@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createRentChargeWithLines } from "@/lib/charge-lines";
 import { withChargeEditingFallback } from "@/lib/charge-audit";
+import { automaticLateFeesEnabled } from "@/lib/late-fee-policy";
 import { formatDate } from "@/lib/format";
 import {
   createNotificationWithDelivery,
@@ -240,13 +241,20 @@ export async function applyLateFeesToOverdueCharges(
     }
     return isPastGraceWindow(charge.due_date, lease.grace_period_days ?? 5, todayIso);
   });
+  const feesEnabled = automaticLateFeesEnabled();
+  let pausedFeeCount = 0;
   const lateFeeChargeRows = candidateRows.filter((charge) => {
     const lease = leaseById.get(charge.lease_id);
     if (!lease || isCollectedOutsideDomus(lease)) {
       return false;
     }
-    return isPastGraceWindow(charge.due_date, lease.grace_period_days ?? 5, todayIso);
+    const pastGrace = isPastGraceWindow(charge.due_date, lease.grace_period_days ?? 5, todayIso);
+    if (!feesEnabled && pastGrace && (lease.late_fee_cents ?? 0) > 0) pausedFeeCount += 1;
+    return feesEnabled && pastGrace;
   });
+  if (pausedFeeCount > 0) {
+    console.log("[late-fees] paused:", pausedFeeCount, "fee(s) not added");
+  }
   if (lateStatusChargeRows.length === 0 && lateFeeChargeRows.length === 0) {
     return summarizeNotificationResults("Late notices", []);
   }
