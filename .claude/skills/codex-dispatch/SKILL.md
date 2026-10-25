@@ -19,6 +19,7 @@ Write `docs/sprintNNN-codex-prompt.md` with all 10 sections:
 8. Acceptance criteria (named tests that call real code)
 9. Report format
 10. Constraints
+11. External rules (CLAUDE.md §4b) — required when the change touches money, contracts, personal data, housing, identity, messaging or the brand: each governing law/rule/vendor term per state in use, with a primary-source link, Domus's current behavior, and the acceptance tests that enforce it. Check `docs/compliance/rules-map.md` first; run `/risk-review` if the area is new.
 
 Before sending, check it against `docs/lessons.md`:
 - Every acceptance criterion stays inside §5 (L-011).
@@ -33,13 +34,20 @@ Always include these lines:
 - "Do NOT include 'Claude prompt' or 'recommended next steps for Claude' sections. Report compact status only."
 - For UI: "The user should never need to read instructions to complete this flow…"
 
-## 2. Severity → reviewer → model
-| Level | What | ChatGPT review | Model / effort |
+## 2. Severity → reviewer → model (CLAUDE.md §3a)
+| Level | What | ChatGPT review | Codex model / effort |
 |---|---|---|---|
 | L1 | copy, styling, one component | no | `gpt-6-luna` low |
-| L2 | feature or logic | no | `gpt-6-sol` medium |
-| L3 | money, auth, schema, prod config, data integrity | **yes** (`/chatgpt-review`) | `gpt-6-sol` high |
+| L2 | feature or logic | no | `gpt-6.1-sol` medium |
+| L3 | money, auth, schema, prod config, data integrity | **yes** (`/chatgpt-review`, GPT-6 top thinking) | `gpt-6.1-sol` high |
 | iPhone app (any) | `apps/ios` | **yes** | `gpt-6-astra` high |
+| Second try after a FAIL | any | as above | `gpt-6-astra` xhigh |
+
+- Put the model, effort and a one-line reason in the packet header and the handoff; log `tokens used` from the end of
+  the Codex log.
+- `gpt-6.1-sol` replaced `gpt-6-sol` on 2026-10-24 (the Codex menu now calls `gpt-6-sol` "previous generation"). Over
+  the first three sprints, compare tokens and review findings with the `gpt-6-sol` baseline (L3 medium ≈ 130k–170k).
+  Go back if it costs 25% more with no better results.
 
 ## 3. Run it (background, survives capacity errors)
 Commit the packet first, so the diff only shows Codex's work.

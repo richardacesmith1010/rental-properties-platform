@@ -2260,3 +2260,42 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Notifications: not yet.
 - Lawyer packet published as a doc: https://claude.ai/artifact/9xqoFhPGaQoNM1QhvVfWhX (11 questions, live Terms and
   Privacy text, retention, vendors).
+
+## 2026-10-24 — Independent legal research; Tailwind 4 parked; postcss override
+- **Research doc:** https://claude.ai/artifact/C64vE2Co62CkpZPpPCSac8 (5 parallel research agents + Claude's own code/data
+  checks; every lawyer-packet question answered with primary sources). Lawyer packet got Q12 (trademark) and the
+  Colorado + South Carolina note.
+- **Top findings:** (1) rename — Domuso Reg. 5180719 (incontestable, class 36 rental payments) verified on TSDR; pick
+  Hallfold (.com/.app unregistered, RDAP 2026-10-25 02:35 UTC). (2) Terms are browsewrap — no "I agree" at sign-up or
+  invite. (3) Colorado late fees: 7 days + cap greater of $50/5% (38-12-105) vs our 5-day default. (4) Card fee breaks
+  Visa/MC/Colorado (debit, cap, notices; 5-2-212, 6-1-737). (5) Vercel Hobby forbids payment processing. (6) Domus owes
+  1099-Ks (Stripe files only if the connected account pays fees). (7) LLC withdrawals pay from the platform balance
+  (`app/actions/withdrawals.ts` → `createStripeTransfer`, no source) — 0 withdrawal_requests ever; pause/redesign.
+  (8) Security policy's "daily backups" claim false on Supabase Free.
+- Live data checked: only one lease has a late fee (SC, $117.50 = 5%, grace 5, collects outside Domus); 0 late-fee
+  charges ever; 0 withdrawals.
+- **257b Tailwind 4: parked on branch `tw4-wip` (`2565a22`), not shipped.** Pixel diff (74 shots, local prod builds,
+  same data) found regressions: tenant top-bar account chip text invisible; `space-y` margin change shifts layouts on
+  ~30 screens. Tailwind 4 only cleared 3 build-time moderates; not worth it now.
+- **postcss override** (root `package.json` `overrides.postcss: ^8.5.31`) clears the 1 high (postcss inside Next). Prod
+  audit: 0 high/critical; 3 moderate (Tailwind 3 build chain, attacker can't supply CSS). Gate 3,414 (2nd run; first had
+  a load timeout in plain-language). Pixel diff vs baseline running before ship.
+- iCloud created 94 `* 2.*` duplicates during the Codex run (all byte-identical to HEAD) — removed.
+
+## 2026-10-24 — Standing rule: model and effort on every reply (owner directive)
+- **Rule (CLAUDE.md §3a):** every reply ends with "**Set before your next message:** <model> · <effort> — <next work>",
+  plus Codex and ChatGPT settings when the next run uses them. Table by work type in §3a. The app refuses a session
+  changing its own model/effort, so the owner sets Claude; Claude sets Codex, ChatGPT and subagents and records them.
+- **Enforced:** Stop hook `.claude/hooks/require-model-line.py` (sends a reply back once if the line is missing;
+  fails open). 7 pipe tests pass; mid-session settings reload proven with a temporary sentinel hook (removed). Each
+  stop logs to `/tmp/domus-model-line-hook.log`.
+- **Assessment:** this chat runs Opus 5.5 · Max. Codex menu (`~/.codex/models_cache.json`, fetched 2026-10-25 03:13
+  UTC): `gpt-6.1-sol` "latest workhorse", `gpt-6-sol` now "previous generation", `gpt-6-astra` frontier, `gpt-6-luna`
+  fast; efforts low → ultra. **Decision:** L2/L3 move to `gpt-6.1-sol` (medium/high) on trial for 3 sprints with token
+  comparison. ChatGPT picker offers GPT-6 and GPT-5.6 Sol with a 3-step thinking slider; reviews had been running on
+  GPT-5.6 Sol · Medium. **Decision:** L3/iPhone reviews use GPT-6 at top thinking, picker restored afterward. iPhone
+  work recommends Fable 5.1 · High per the 10-09 "best Claude model" exception.
+- Lessons L-037 (outside rules) and L-038 (model menus drift). Rules map + stage gates in `docs/compliance/`.
+- **postcss override:** pixel diff 74/74 screenshots at 0.00% vs the Tailwind 3 baseline. Gate rerun needed: today's
+  run had 2 timeouts (password-settings, front-door-look) at load average 40 while a 274 MB binary grep ran.
+- Removed the temporary `web-prod-3100` entry from the owner's `.claude/launch.json`; stopped that local server.

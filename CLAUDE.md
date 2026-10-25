@@ -42,7 +42,7 @@ Claude drives the cadence, so the owner never has to ask "what's next".
 Claude doesn't ask before using or building any of the following when it helps:
 - **Skills (`.claude/skills/`):** add one when a procedure repeats. Today: `/ship`, `/codex-dispatch`, `/chatgpt-review`.
 - **Hooks (`.claude/settings.json`):** turn a written rule into a tool-enforced one.
-  - Live now: the session-start repo summary, the deploy-from-dirty-tree block, and the commit block for secrets and iCloud `* 2.*` files.
+  - Live now: the session-start repo summary, the deploy-from-dirty-tree block, the commit block for secrets and iCloud `* 2.*` files, and the model/effort line check on every reply (§3a).
 - **Subagents:** use them for parallel review or search.
 - **Worktrees:** use one for an isolated deploy or experiment.
 - **Background jobs:** start long jobs with `run_in_background`; for waiting, use `/loop`, `Monitor` or scheduled tasks, never polling `sleep`.
@@ -50,6 +50,34 @@ Claude doesn't ask before using or building any of the following when it helps:
 - **Connectors:** use any available connector (Supabase, Vercel, Sentry, Chrome, iOS Simulator).
 
 Report what was set up in one line. Safety still applies: credentials, payments, legal acceptance and messages to people are the owner's.
+
+## 3a) Model and effort: always say it (owner directive, 2026-10-24)
+The owner never sends a message without knowing the right model and effort. The app won't let a session change its own
+model or effort, so Claude says what to set. Claude sets Codex, ChatGPT and subagents itself.
+- **Every reply ends with one line:** `**Set before your next message:** <model> · <effort> — <the next work>.`
+  - Pick by the hardest step of the next run. Say "keep" when nothing changes and "lower" when work gets easier.
+  - Add `Codex: <model> · <effort>` and `ChatGPT: <model> · <thinking>` when the next run uses them.
+  - The Stop hook `.claude/hooks/require-model-line.py` sends back any reply without the line.
+- **Record what ran:** each packet header and handoff entry names the Codex model and effort (with a one-line reason)
+  and the ChatGPT model and thinking level actually used.
+
+| Next run | Claude (owner sets) | Codex (Claude sets) | ChatGPT (Claude sets) |
+| --- | --- | --- | --- |
+| Research, legal/compliance, naming, risk review, architecture, migration design | Opus 5.5 · Max | — | — |
+| L3 (money, auth, schema, prod config, data): packet, review rounds, build review | Opus 5.5 · Max | `gpt-6.1-sol` · high | GPT-6 · top thinking |
+| iPhone app, any size (owner exception, 2026-10-09) | Fable 5.1 · High | `gpt-6-astra` · high | GPT-6 · top thinking |
+| L2 feature or logic | Opus 5.5 · High | `gpt-6.1-sol` · medium | — |
+| L1 copy or styling; ship, deploy, smoke, docs | Opus 5.5 · Medium | `gpt-6-luna` · low | — |
+| Status and quick questions | Opus 5.5 · Low | — | — |
+| The same FAIL, second try | Opus 5.5 · Max | `gpt-6-astra` · xhigh | GPT-6 · top thinking |
+
+- **Fable 5.1** is Anthropic's strongest model, at 2.5× Opus 5.5's price and with slower turns. Outside iPhone work, use
+  it only when Opus 5.5 · Max fails the same problem twice. If Fable isn't in the menu, use Opus 5.5 · Max.
+- **ChatGPT:** set the picker before pasting. If a choice says "Usage limit reached", use the highest open one and log
+  it. Put the picker back afterward, because it is shared with the owner's other chats.
+- **Subagents:** research, risk personas, naming and legal checks run at effort max; code search uses the Explore agent.
+- **Menus change.** The monthly rules watch re-reads the Claude, Codex (`~/.codex/models_cache.json`) and ChatGPT
+  model lists and updates this table (L-038).
 
 ## 4) Verification gate (every cycle)
 1. **Code.** Changes stay in scope, with no auth regressions. Every Supabase mutation's error is checked (L-002). Every server action has auth + role + permission checks.
@@ -66,6 +94,24 @@ Report what was set up in one line. Safety still applies: credentials, payments,
 - **Automatic FAIL:** a gate, smoke or CI failure; an auth, payment or security regression; a schema mismatch; a server action missing checks.
 - **On FAIL:** stop and report the exact command, the exact error, and the smallest fix.
 
+## 4b) Risk discovery: "is it allowed?" (owner directive, 2026-10-24)
+Correctness checks don't catch outside rules (L-037). Every cycle also asks whether the behavior is allowed.
+- **External rules (packet §11).** Any packet touching money, contracts, personal data, housing, identity, messaging or
+  the brand names the laws, card-network rules, platform rules (Apple, Plaid, Stripe), tax rules and vendor terms that
+  govern it, for every state with a user's home, with primary sources. They become acceptance tests.
+- **Research is Claude's; acceptance is the owner's.** Answer legal and compliance questions with primary sources
+  instead of parking them as "ask a lawyer"; only accepting terms, signing and filing stay with the owner.
+- **Red-team pre-mortem (`/risk-review`)** for every new feature area and before every stage gate.
+- **Park the decision, not the risk.** When a risk is found, switch the product to the safe default that day (flag off,
+  conservative values); the owner list shows the interim protection.
+- **Rules map** `docs/compliance/rules-map.md` and **stage gates** `docs/compliance/stage-gates.md` stay current; a
+  rule's "verified" date older than 6 months counts as unknown.
+- **Claims audit:** every promise in policies, pages and store listings is checked against fact on each infra or vendor
+  change and quarterly.
+- **Monthly rules watch:** a scheduled research run (state legislatures, card networks, Apple, IRS, vendor terms)
+  writes changes to the handoff.
+- **Effort:** research, design, risk and money/legal work run at Max (§3a).
+
 ## 5) Production bugs: data before hypotheses (L-008)
 Check, in order:
 1. Vercel runtime logs for the route;
@@ -75,7 +121,7 @@ Check, in order:
 Hypothesize only after one of these shows something.
 
 ## 6) Packets (details in `/codex-dispatch`)
-- **All 10 sections:** Objective, Context, In scope, Out of scope, Exact files, Requirements, Validation, Acceptance, Report format, Constraints.
+- **All 10 sections:** Objective, Context, In scope, Out of scope, Exact files, Requirements, Validation, Acceptance, Report format, Constraints — plus **§11 External rules** when §4b applies.
 - **Acceptance criteria stay inside the file list** (L-011).
 - **Copy:** exact copy only; never invented URLs or emails (L-012, L-020).
 - **Role reuse:** when code is generalized to another role, pin the original role's behavior (L-014).

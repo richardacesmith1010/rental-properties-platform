@@ -234,3 +234,29 @@ timeout" instead of returning the error — the app would have logged an unknown
 rollback. The rolled-back `execute_sql` dry run could not show this; only the live REST call did.
 **Rule:** Custom RPC errors use a custom SQLSTATE (e.g. `DW001`) or `P0001`, never `40001`/`40P01`. Every new RPC
 error path gets one live REST call (not only `execute_sql`) and its latency is checked.
+
+#### L-036 | 2026-10-24 | VERIFICATION — CSS/framework upgrades need a before/after pixel diff, not just green tests
+**What happened:** 257b (Tailwind 3 → 4 via the official upgrade tool) passed all 3,414 tests, lint, typecheck and
+build. A 74-screenshot pixel diff (local prod builds, same data, light/dark, phone/desktop) showed invisible text in the
+tenant account chip and layout shifts on ~30 screens (v4 `space-y` and cascade-layer changes). Tests never assert layout.
+**Rule:** Any change to the CSS toolchain, design tokens, or a UI framework major version ships only after a pixel diff
+against a baseline captured from the pre-change build (`scratchpad/walk/twshots.spec.ts` + `tw/diff.py` pattern). Any
+page-height change or > 0.5% pixel change gets a side-by-side look before deciding.
+
+#### L-037 | 2026-10-24 | PROCESS — Correctness checks can't see rules nobody wrote down
+**What happened:** The 2026-10-24 research found gaps every gate had passed: browsewrap Terms, the Colorado late-fee
+cap, card-fee rules, the Vercel Hobby commercial-use ban, Domus's own 1099-K duty, LLC withdrawals paid from the
+platform balance, a false "daily backups" claim, and the DOMUSO trademark. About half had been flagged on 10-16 but
+parked as "ask the lawyer" with no interim protection. Gates ask "does it work?", never "is it allowed?".
+**Rule:** CLAUDE.md §4b. Packets that touch money, contracts, personal data, housing, identity, messaging or the brand
+carry §11 External rules with primary sources and acceptance tests. Run `/risk-review` before new feature areas and
+stage gates. Research is Claude's; acceptance is the owner's. Park the decision, not the risk: switch to a safe default
+the same day. Keep `docs/compliance/rules-map.md` current.
+
+#### L-038 | 2026-10-24 | PROCESS — Model menus drift; reviews ran below the best available model
+**What happened:** ChatGPT reviews of L3 packets were still set to GPT-5.6 Sol · Medium thinking while GPT-6 was
+offered, and Codex L2/L3 ran `gpt-6-sol` after the Codex menu relabeled it "previous generation" behind `gpt-6.1-sol`.
+Nothing checked the menus, and reports never said which settings ran.
+**Rule:** CLAUDE.md §3a. Every reply names the Claude model and effort for the next message (a Stop hook enforces it).
+Packets and handoffs record the Codex and ChatGPT settings that ran. The monthly rules watch re-reads all three model
+menus and updates the table.
