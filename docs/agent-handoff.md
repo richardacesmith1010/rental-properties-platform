@@ -2350,3 +2350,8 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   the Ingle rename sprint so the new address never shows "Domus". Successor member for the operating agreement:
   Courtney Smith (owner's wife). Colorado LLC filing open in Chrome at the registered-agent ID step (owner types the
   license number; the safety check blocks Claude from entering it).
+- 2026-10-28 **Ingle Homes LLC FILED** with the Colorado SOS: ID 20268335374, 10/28/2026 5:50 PM, effective immediately,
+  member-managed, registered agent and organizer Richard Ace Smith at 901 N Colorado Blvd Apt 5313, Denver CO 80206;
+  SOS email notices to the owner. Receipt emailed to the owner. Operating agreement draft updated (ID, address,
+  successor Courtney Smith). Next: trade name "Ingle" ($20), EIN, sign operating agreement, bank account, then the
+  Stripe entity switch.
