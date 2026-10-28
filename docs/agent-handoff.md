@@ -2345,3 +2345,8 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Codex not involved (docs only). ChatGPT not used (research, not a packet).
 - 2026-10-25 owner decision: the owner serves as the LLC's registered agent (home street address goes on the public
   record; Colorado requires a physical CO address and ID verification for individual agents since 2025-07-01).
+- 2026-10-28 owner bought **inglehomes.com** ($11.25/yr) and **ingle.homes** ($1.99, renews $16.99) on Vercel (team
+  scope, auto-renew on, expire 2027-10). getingle.com rejected by the owner. Not attached to the project yet: hold until
+  the Ingle rename sprint so the new address never shows "Domus". Successor member for the operating agreement:
+  Courtney Smith (owner's wife). Colorado LLC filing open in Chrome at the registered-agent ID step (owner types the
+  license number; the safety check blocks Claude from entering it).

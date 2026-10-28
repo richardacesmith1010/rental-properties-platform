@@ -9,3 +9,4 @@
 - 2026-10-22 — WEB-3 explained and resolved: the 10-17 event shares Sentry trace 951b48b0… with WEB-6 (repair photo
   > 1 MB, fixed by 238j); the 10-07 event matches WEB-4 (Supabase 504, retried since 197) — both resolved. Vercel Hobby
   keeps runtime logs 1 h only, so Sentry trace ids are the way to pair client and server errors.
+- 2026-10-26: PASS 6/6 — repo clean at 92b05b8; Vercel logged in; Codex 0.160.0 logged in (0.164.0 available); smoke "3 passed" + "Smoke checks passed"; Stripe ok:true; DB last cron 2026-10-26 08:19 UTC, payments 7d 0, open rent charges 9.
