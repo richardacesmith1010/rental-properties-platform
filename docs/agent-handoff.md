@@ -2355,3 +2355,7 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   SOS email notices to the owner. Receipt emailed to the owner. Operating agreement draft updated (ID, address,
   successor Courtney Smith). Next: trade name "Ingle" ($20), EIN, sign operating agreement, bank account, then the
   Stripe entity switch.
+- 2026-10-28 **Trade name "Ingle" filed** for Ingle Homes LLC: SOS document 20268335497, $20, effective immediately.
+  The confirmation page says "file a renewal every year"; the SOS FAQ read on 10-24 said reporting-entity trade names
+  last while the entity is in good standing. Verify in the November rules watch. Periodic report month: October ($25).
+  Next owner steps: EIN (IRS online, owner types SSN), sign operating agreement, open bank account, Stripe entity switch.
