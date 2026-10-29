@@ -2359,3 +2359,8 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   The confirmation page says "file a renewal every year"; the SOS FAQ read on 10-24 said reporting-entity trade names
   last while the entity is in good standing. Verify in the November rules watch. Periodic report month: October ($25).
   Next owner steps: EIN (IRS online, owner types SSN), sign operating agreement, open bank account, Stripe entity switch.
+
+## 2026-10-28 — EIN assigned
+- IRS EIN for Ingle Homes LLC: **43-2687479** (name control INGL; single-member LLC, disregarded entity by default; activity "Service — rental property management software"). Usable now for bank/licenses; e-file/TIN matching after ~2 weeks (≈2026-11-11).
+- Owner saves the CP 575 PDF from the IRS page. No Form 8832/2553 election made (default disregarded entity).
+- Next: operating agreement (cash amount) → business bank account → Denver eBiz → Stripe entity switch (TIN match after 11-11).
