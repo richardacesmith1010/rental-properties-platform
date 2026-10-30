@@ -276,3 +276,8 @@ caught it; the official 2024 Title 38 text confirmed it.
 **Rule:** Packet §11 quotes the governing section's operative text verbatim from the official source (extract the PDF
 text if needed), not a summary. List every condition with "Can Domus prove it today?"; if any answer is no, the safe
 default ships first.
+
+#### L-041 | 2026-10-30 | PROCESS — One driver per checkout when a chat rotates
+**What happened:** At the 60 MB rotation, Claude started a linked session for Stage 1 *and* told the owner to "talk to the new session from now on". The owner opened their own new chat ("Agreement") and typed "I agree"; it read the handoff and also started Sprint 259a in the same folder. Within 15 minutes it overwrote the linked session's migration and rollback files with a different design.
+**What was correct:** Two Claude sessions sharing one checkout (and one Chrome, one Codex runner) must never drive the same sprint. The owner's own chat wins; the other hands over its findings in a new file and stops writing.
+**Rule:** When rotating, do one of two things, never both: (a) start the linked session and tell the owner "open this link to talk to it", with the link as the only call to action; or (b) don't start one, and let the owner open the new chat. Before any sprint writes, a session runs `list_sessions` and stops if another running session in the same folder has touched the same sprint.
