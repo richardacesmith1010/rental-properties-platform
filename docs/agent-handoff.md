@@ -2375,3 +2375,19 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   OPT account only (Denver set quarterly, online, email notices). **No sales-tax license yet** — add before the first
   paid plan (Denver taxes SaaS 5.15%). Website listed domusbase.com until the Ingle rename.
 - Next: watch for Denver's account-number email; home-occupation permit; owner calls NFCU (1-877-418-1462) by 11-04 to fund $255.
+
+## 2026-10-30 — Owner decision: lawyer front closed; Stage 1 (Gate 1) started
+- Owner: aunt Grace, an attorney, read the document the owner sent her (written by Claude), called it one of the most
+  detailed she has seen, and concurs. Owner decision: "good to go on the lawyer front" — no paid lawyer review.
+  Which document she read: not stated.
+- What changes: the Gate 1 Terms/Privacy rewrite ships on Claude's primary-source research + ChatGPT review; the
+  "lawyer" banner comes off when the rewrite ships; scorecard Launch & legal stops waiting on a lawyer; trademark is
+  filed by the owner at USPTO (Claude prefills; the fee is a money step).
+- What does not change: deleting real user data (7-year purge, signed-lease deletion) still needs the owner's own OK
+  when built (§2a stop list). Recommended, owner's choice: send Grace the final rewritten Terms/Privacy for a quick
+  read before publishing (one email the owner sends).
+- Readiness check (10-30): scorecard 8 of 14 at 80+; Gate 1 2 of 10 (late fees paused; name + domains); Gate 2 1 of 4
+  (LLC); Gate 3 0 of 6. CI, daily prod smoke, crons green; 0 Plaid connections; no new real users since March;
+  Dependabot 15 alerts (10 high) untriaged.
+- Chat rotated: session transcript 60 MB (> 50 MB, L-010) and topic changed → Stage 1 runs in a new session, starting
+  with Sprint 259a (sign-up/invite "I agree" + Terms version record, L3).
