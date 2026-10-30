@@ -2368,3 +2368,10 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - Navy Federal business membership application in progress (owner decision 10-28: NFCU, Basic Business Checking + Membership Savings; $255 funding by owner call). Account rule: Ingle's own money only; rent never flows through it. Website listed: domusbase.com until rename.
 - NFCU business membership application **submitted** 2026-10-28 (Application-2469899). Portal to-do: upload Certificate of Good Standing (have: conf 19190139), Fictitious Name Certification (CO trade-name certificate of fact), driver's license image, IRS EIN letter (CP 575). Then owner calls 1-877-418-1462 within 5 days to fund $255.
 - Colorado trade name "Ingle" (20268335497): SOS shows renewal n/a, expiration n/a — no yearly renewal (closes the open question).
+
+### 2026-10-30 — Denver eBiz registration submitted (Ingle Homes LLC)
+- Submitted 10-30 (draft ref 1-355-754-752; login RSMITH1010). Owner signed the penalty-of-perjury attestation.
+- Choices (Claude, recorded): NAICS 513210; LLC – Disregarded Entity; Service Only; New Start Up 10/28/2026; 0 employees;
+  OPT account only (Denver set quarterly, online, email notices). **No sales-tax license yet** — add before the first
+  paid plan (Denver taxes SaaS 5.15%). Website listed domusbase.com until the Ingle rename.
+- Next: watch for Denver's account-number email; home-occupation permit; owner calls NFCU (1-877-418-1462) by 11-04 to fund $255.
