@@ -1,7 +1,8 @@
-# Sprint 259b — Close the LLC invitation-token exposure, make joining single-use, lift the 259a invite hold (L3) — rev 6 (rev 1 AWC → rev 2; rev 3 AWC → rev 4 AWC → rev 5 AWC → rev 6)
+# Sprint 259b — Close the LLC invitation-token exposure, make joining single-use, lift the 259a invite hold (L3) — rev 7 (rev 1 AWC → rev 2; rev 3 AWC → rev 4 AWC → rev 5 AWC → rev 6 AWC → rev 7)
 
 Codex: `gpt-6.1-sol` · high (L3: auth tokens, consent gating, an atomic join; 6.1-sol trial 3 of 3). ChatGPT review:
-GPT-6 · High (top thinking) — rev 1, 3, 4 and 5 APPROVE WITH CHANGES (every REQUIRED item adopted below).
+GPT-6 · High (top thinking) — rev 1, 3, 4, 5 and 6 APPROVE WITH CHANGES; every REQUIRED item adopted below (review
+complete).
 Claude: Opus 5.5 · Max. Runs after Sprint 259a is committed (it removes 259a's hold); ships after 259a is live.
 
 **Rev 2 changes (every rev 1 REQUIRED item):** release gate (migration and live D1 before any code deploy); join-flow
@@ -60,6 +61,16 @@ checked with `clock_timestamp()` at the moment of the update.
 Optional items taken: the version-authority note (Appendix A header, R6); bare sensitive values in Sentry (R7, T20);
 the resend-failure recovery (R6, T4); R2's stale resend sentence (R2).
 
+**Rev 7 changes (the rev 6 REQUIRED item, plus four OPTIONAL items):**
+1. *The temporary lock helper is locked down (D4):* created with its grants and a privilege check in one transaction;
+   EXECUTE for the service role only; it locks only synthetic fixtures (an `@example.invalid` invitation sent by a
+   tester) and refuses to run after a 2-hour expiry; Claude always drops it after the run, pass or fail, then checks
+   it is gone and no fixture is left. It stays in `public` because the racers and the holder must be separate API
+   sessions. The permanent function, its grants, the unique index and the postcondition apply as one migration
+   transaction.
+Optional items taken: per-race evidence without tokens (outcomes, waits, final state; D4); R3 now names R8; R8 was
+checked on the rendered page (one `main` landmark holding the alert with the exact text); rollback order (D4).
+
 ## 1. Objective
 An LLC invitation token lets its holder create the invitee's login at `/join-llc` (password chosen by the holder,
 `email_confirm: true`). Until 2026-10-30 every active LLC member could read pending tokens from the database (closed
@@ -89,8 +100,9 @@ agreed to the Terms. Then turn LLC invites back on.
   membership upsert on the primary key `(account_id, profile_id)`, and the invitation update where status is pending
   or accepted. `cancelLLCInvitation` and `resendLLCInvitation` update by id with no status condition.
   `idx_llc_invitations_unique_pending` allows one pending invitation per account and email; `token` is a `uuid`.
-- **Database (Claude's; Codex must not edit).** `20261108_sprint259b_accept_llc_invitation.sql` (Appendix A): Claude
-  applies it after this review and before the code deploys (D4). `accept_llc_invitation(p_invitation_id,
+- **Database (Claude's; Codex must not edit).** `20261108_sprint259b_accept_llc_invitation.sql` (Appendix A) is
+  **applied live (2026-10-30); D4 and D5 passed** (live SQL test; 30 forced-contention races; helper dropped; 0
+  fixtures; member writers = `accept_llc_invitation`, `handle_new_user`). The app may call it now. `accept_llc_invitation(p_invitation_id,
   p_invitation_token, p_profile_id, p_full_name, p_nickname, p_terms_version, p_privacy_version) returns text`:
   `accepted` |
   `not_active` | `agreement_required`; service role only. Dry run 2026-10-30
@@ -132,7 +144,8 @@ Terms rewrite); the profile's change to `owner` on joining (unchanged); the migr
 `llc-invite-flow.test.ts`, `app/actions/__tests__/llc-invite-agreement.test.ts`,
 `app/actions/__tests__/llc-join-journey.test.ts` (new), `lib/__tests__/legal-acceptance.test.ts`,
 `lib/__tests__/agreement-enforcement-inventory.test.ts` (reason text only),
-`lib/__tests__/membership-writers-inventory.test.ts` (new), `lib/__tests__/sentry-scrub.test.ts`, and owner page-data
+`lib/__tests__/membership-writers-inventory.test.ts` (new), `lib/__tests__/sentry-scrub.test.ts`,
+`tests/e2e/agreement-flow.spec.ts` (R8 only), and owner page-data
 and dashboard tests only where the DTO shape is asserted. `docs/grooming.md` only if `app/actions/llc-invitations.ts`
 (510 lines today) stays above 500 lines.
 
@@ -142,7 +155,7 @@ and dashboard tests only where the DTO shape is asserted. `docs/grooming.md` onl
 - **R2** Remove `LLC_INVITES_PAUSED`, `isLlcInvitesPaused()` and every check and copy 259a added for the hold, keeping
   259a's agreement checkbox, version check and `llc_invite` record on the create-account path. `resendLLCInvitation`
   keeps loading the invitation server-side by id with the admin client; R6 decides the token it emails.
-- **R3** No behavior changes beyond R1, R2 and R5–R7.
+- **R3** No behavior changes beyond R1, R2 and R5–R8 (R8 is test-only).
 - **R4 Join-flow audit:** test that `acceptLLCInvitation`, `signInToJoinLLC` and `createAccountToJoinLLC` each require
   a pending invitation, not expired (7 days from `created_at`), the signed-in or created user's email equal to the
   invitation email, and single use. Identity stays on the server sources in §2; emails compare through
@@ -185,6 +198,10 @@ and dashboard tests only where the DTO shape is asserted. `docs/grooming.md` onl
     failure returns today's "Unable to resend the invitation email right now."; the invitation stays pending with the
     new token, the earlier link no longer works, and another resend rotates again and emails. Remove the
     now-unreachable "Invitation emailed, but its expiry could not be reset."
+- **R8 E2E locator (found in the 259a release run, 2026-10-30).** In `tests/e2e/agreement-flow.spec.ts` (E2E-R1),
+  scope the alert check to the page: `page.getByRole("main").getByRole("alert")`. Next's route announcer is also
+  `role="alert"`, so the unscoped locator fails strict mode after a client navigation. Checked on the rendered page
+  in the 259a release run: one `main` landmark, holding the alert with the exact text. No other spec change.
 - **R7 Sentry gets no token.** `scrubSentryEvent` keeps today's removals and adds: `request.url` and breadcrumb
   `data.url`, `data.from` and `data.to` lose their query string and fragment; `request.query_string` is deleted; and
   every string anywhere in the event (message, exception values, breadcrumbs, `extra`, `contexts`, `tags`, request
@@ -278,7 +295,12 @@ then `npm run gate:web` from the repo root.
   row lock; accept/accept → one `accepted`, one `not_active`, one membership; accept/cancel → accepted + cancel 0
   rows + membership, or `not_active` + cancel 1 row + no membership; accept/resend → accepted + resend 0 rows + old
   token kept + membership, or `not_active` + new token + no membership, then the old token fails again and the new
-  one joins; zero fixtures left; the helper is gone.
+  one joins; zero fixtures left; the helper is gone. The helper is created from
+  `supabase/tests/sprint259b_accept_concurrency_helper.sql` in one call (grants and privilege check in the same
+  transaction, fixture-only guard, 2-hour expiry) and dropped after the run whatever the result; a failed drop or a
+  leftover fixture fails D4. The script's report holds outcomes, waits and final states, never a token. The
+  migration applies as one transaction, so a failed postcondition leaves nothing behind. If the app ever rolls back to
+  259a's hold, the function stays installed and unused; drop it only after the app stops calling it.
 - **D5** (Claude, live) the database functions that write `ownership_account_members` are exactly `handle_new_user`
   and `accept_llc_invitation` (`pg_proc` source scan).
 

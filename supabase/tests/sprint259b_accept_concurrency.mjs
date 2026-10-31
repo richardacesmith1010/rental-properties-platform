@@ -34,6 +34,8 @@ const HASH = {
 const users = [];
 const accounts = [];
 const failures = [];
+const races = []; // evidence per race: outcomes, waits, final state; never a token
+let lastWaits = [];
 const tally = { acceptAccept: 0, acceptBeatCancel: 0, cancelBeatAccept: 0, acceptBeatResend: 0, resendBeatAccept: 0 };
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -76,12 +78,14 @@ async function state(inv, person) {
 }
 // Starts the lock holder, then both racers while it holds the row; returns each racer's result and wait time.
 async function race(inv, racers) {
-  const holding = admin.rpc("zz_test_259b_hold", { p_invitation_id: inv.id, p_ms: HOLD_MS });
+  // Supabase builders send nothing until awaited; .then() starts the holder now.
+  const holding = admin.rpc("zz_test_259b_hold", { p_invitation_id: inv.id, p_ms: HOLD_MS }).then((result) => result);
   await sleep(START_DELAY_MS);
   const started = Date.now();
   const results = await Promise.all(racers.map((run) => run().then((result) => ({ result, ms: Date.now() - started }))));
   checked(await holding, "hold");
-  if (results.some(({ ms }) => ms < MIN_WAIT_MS)) failures.push(`no contention: waits ${results.map((r) => r.ms).join("/")} ms`);
+  lastWaits = results.map(({ ms }) => ms);
+  if (lastWaits.some((ms) => ms < MIN_WAIT_MS)) failures.push(`no contention: waits ${lastWaits.join("/")} ms`);
   return results.map(({ result }) => result);
 }
 
@@ -99,6 +103,7 @@ try {
     const outcomes = (await race(a, [() => accept(a, invitee), () => accept(a, invitee)]))
       .map((result) => checked(result, "accept")).sort();
     const sa = await state(a, invitee);
+    races.push({ round, race: "accept/accept", outcomes, waitsMs: lastWaits, status: sa.status, members: sa.members });
     if (outcomes.join() === "accepted,not_active" && sa.status === "accepted" && sa.members === 1) tally.acceptAccept += 1;
     else failures.push(`round ${round} accept/accept: ${outcomes.join()} ${sa.status} members=${sa.members}`);
 
@@ -107,6 +112,8 @@ try {
     const outB = checked(accB, "accept");
     const cancelled = checked(canB, "cancel").length;
     const sb = await state(b, invitee);
+    races.push({ round, race: "accept/cancel", outcomes: [outB, `cancel rows ${cancelled}`], waitsMs: lastWaits,
+      status: sb.status, members: sb.members });
     if (outB === "accepted" && cancelled === 0 && sb.status === "accepted" && sb.members === 1) tally.acceptBeatCancel += 1;
     else if (outB === "not_active" && cancelled === 1 && sb.status === "cancelled" && sb.members === 0) {
       tally.cancelBeatAccept += 1;
@@ -117,6 +124,8 @@ try {
     const outC = checked(accC, "accept");
     const rotated = checked(resC, "resend");
     const sc = await state(c, invitee);
+    races.push({ round, race: "accept/resend", outcomes: [outC, `resend rows ${rotated.length}`], waitsMs: lastWaits,
+      status: sc.status, tokenChanged: sc.token !== c.token, members: sc.members });
     if (outC === "accepted" && rotated.length === 0 && sc.status === "accepted" && sc.token === c.token
         && sc.members === 1) {
       tally.acceptBeatResend += 1;
@@ -146,5 +155,5 @@ try {
   ]);
   leftovers = counts.reduce((sum, result) => sum + (result.count ?? 1), 0);
 }
-console.log(JSON.stringify({ rounds: ROUNDS, holdMs: HOLD_MS, ...tally, failures, leftovers }));
+console.log(JSON.stringify({ rounds: ROUNDS, holdMs: HOLD_MS, ...tally, failures, leftovers, races }));
 process.exit(failures.length === 0 && leftovers === 0 ? 0 : 1);

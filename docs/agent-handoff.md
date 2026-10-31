@@ -2460,3 +2460,29 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   create `supabase/tests/sprint259b_accept_concurrency_helper.sql` → `node supabase/tests/sprint259b_accept_concurrency.mjs 10`
   → drop the helper → D5 → Codex `gpt-6.1-sol` · high.
 - **Owner step unchanged:** the `LEGAL_RECORD_HMAC_KEY` command, then 259a ships (release steps in the entry above).
+
+## 2026-10-30 (night) — Sprint 259a SHIPPED (PASS_WITH_RISK); 259b reviewed, its database function live
+- **Owner step done:** `LEGAL_RECORD_HMAC_KEY` added to Vercel production and `apps/web/.env.local` (one-click command; never shown).
+- **259a live:** pushed `fb1abab` (Vercel Git deploy, domusbase.com READY). CI `gate` success. Smoke PASS (owner Home 762 ms,
+  Rent 713 ms, tenant Home 727 ms medians).
+- **Agreement E2E** (local production build of `fb1abab` on the live database with the real key; the spec types test
+  passwords, so it ran on localhost, not the live site): S1 forged-role sign-up → `sign_up` record, confirmed sign-in skips
+  /agree; owner recovery (API 403 → 200, error + focus, Terms sheet, Back bar, 375 px, no console errors); tenant exits.
+  `check`: owner 1 agree_page, signup 1 sign_up (role owner), tenant 0; email HMACs match the key.
+- **Live walk on domusbase.com** (server magic link, no password): tenant tester → /agree → agreed → /onboarding, 0 console
+  errors; record agree_page / tenant / web / key 1 / published hashes / app_commit `fb1abab…`; HMAC matches.
+- **Cleanup:** testers, records, manifest and E2E env lines removed (0 left). Push guard removed.
+- **Consent screenshots:** `docs/legal/consent-screens/2026-10-30/` (7 files: /agree light + dark at 375 and 1280, Terms
+  sheet, sign-up light + dark). Readable in both themes.
+- **iPhone (Simulator):** the live app opens the existing demo account straight to Home (no /agree: exemption works). Not
+  walked in the app: the Terms sheet and Back bar (passed on the web at 375 px; needs a signed-out app session). → next.
+- **Found:** E2E-R1's `getByRole("alert")` also matches Next's route announcer (ran with a local, reverted fix; permanent
+  fix is 259b R8). Help bubble overlaps the right end of "Create account" at 375 px (L1 follow-up).
+- **Rules map:** Contract formation OK for new accounts (older accounts: Terms rewrite). Scorecard: Launch & legal 70 → 74.
+- **259b:** ChatGPT GPT-6 · High on revs 3–6, all APPROVE WITH CHANGES; rev 7 adopts the last REQUIRED item (review
+  complete; picker restored to 5.6 Medium). Migration `20261108` applied live. D4 passed: live SQL test; 30
+  forced-contention races (racers waited 1.9–2.1 s): accept/accept 10/10, accept/cancel both orders (3/7),
+  accept/resend both orders (2/8); helper dropped; 0 fixtures. D5: member writers = `accept_llc_invitation`,
+  `handle_new_user`. Race-script bug fixed (Supabase builders send nothing until awaited). **Next:** Codex `gpt-6.1-sol` ·
+  high on rev 7 (code: DTO token, hold lift, R4–R8), then review → gate → deploy → D3 smoke.
+- Transcript 24 MB.
