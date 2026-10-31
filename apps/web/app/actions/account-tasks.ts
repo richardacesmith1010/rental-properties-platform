@@ -2,6 +2,7 @@
 
 import { todayDenver } from "@/lib/denver-calendar";
 
+import { requireAuth } from "./auth-helpers";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserRole } from "@/lib/auth";
@@ -43,6 +44,7 @@ const fields = (input: Input) => ({ title: input.title, frequency: input.frequen
   next_due_on: input.nextDueOn, owner_partner_id: input.ownerPartnerId });
 
 export async function addTask(input: Omit<Input, "nextDueOn"> & { nextDueOn?: string | null }): Promise<Result> {
+  await requireAuth("owner");
   const access = await allowed(input.accountId);
   if (!access) return denied();
   const normalized = { ...input, nextDueOn: input.nextDueOn === undefined
@@ -57,6 +59,7 @@ export async function addTask(input: Omit<Input, "nextDueOn"> & { nextDueOn?: st
   refresh(); return { ok: true };
 }
 export async function updateTask(input: Input & { taskId: string }): Promise<Result> {
+  await requireAuth("owner");
   const access = await allowed(input.accountId);
   if (!access) return denied();
   const parsed = parse(updateTaskSchema, input);
@@ -70,6 +73,7 @@ export async function updateTask(input: Input & { taskId: string }): Promise<Res
   refresh(); return { ok: true };
 }
 export async function removeTask(accountId: string, taskId: string): Promise<Result> {
+  await requireAuth("owner");
   const access = await allowed(accountId);
   if (!access) return denied();
   const parsed = parse(deleteTaskSchema, { accountId, taskId });
@@ -81,6 +85,7 @@ export async function removeTask(accountId: string, taskId: string): Promise<Res
   refresh(); return { ok: true };
 }
 export async function markTaskDone(taskId: string): Promise<Result> {
+  await requireAuth("owner");
   const client = createClient();
   const { data: auth, error: authError } = await client.auth.getUser();
   if (authError || !auth.user || await getCurrentUserRole(auth.user.id) !== "owner") return denied();
@@ -102,6 +107,7 @@ export async function markTaskDone(taskId: string): Promise<Result> {
   refresh(); return { ok: true };
 }
 export async function addCommonTasks(accountId: string): Promise<Result> {
+  await requireAuth("owner");
   const access = await allowed(accountId);
   if (!access) return denied();
   const parsed = parse(addCommonTasksSchema, { accountId });

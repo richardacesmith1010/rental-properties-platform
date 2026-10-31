@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import { CheckEmail } from "@/components/auth/check-email";
 import { SignInForm } from "@/components/auth/sign-in-form";
@@ -8,8 +8,11 @@ import { PasswordStrengthMeter } from "@/components/auth/password-strength-meter
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { mapAuthErrorMessage, validatePassword } from "@/lib/password-validation";
-import { createClient } from "@/lib/supabase/client";
+import { validatePassword } from "@/lib/password-validation";
+import type { signUpAction } from "@/app/actions/sign-up";
+import { SubmitButton } from "@/components/shared/submit-button";
+import { LegalAgreementCheckbox } from "@/components/legal/legal-agreement-checkbox";
+import { LEGAL_DOCUMENTS } from "@/lib/legal-versions";
 
 type Role = "owner" | "manager" | "tenant";
 const roles: { id: Role; label: string; note: string }[] = [
@@ -22,59 +25,38 @@ function allowedRole(value?: string): Role {
   return roles.find((role) => role.id === value)?.id ?? "owner";
 }
 
-export function CreateAccountForm({ initialRole }: { initialRole?: string }) {
+export function CreateAccountForm({ initialRole, action }: { initialRole?: string; action: typeof signUpAction }) {
+  const [state, formAction] = useActionState(action, null);
+  const [agreed, setAgreed] = useState(false);
   const [role, setRole] = useState<Role>(() => allowedRole(initialRole));
   const [step, setStep] = useState<1 | 2>(1);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [signupComplete, setSignupComplete] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const passwordStrength = validatePassword(password);
   const passwordsMatch = confirmPassword.length === 0 || password === confirmPassword;
   const canSubmit = passwordStrength.isValid && confirmPassword.length > 0 && password === confirmPassword;
 
-  async function handleSignupSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      if (!passwordStrength.isValid) {
-        setError(passwordStrength.errors[0] ?? "Use at least 8 characters with a capital letter and a number.");
-        return;
-      }
-      if (password !== confirmPassword) {
-        setError("Passwords do not match yet.");
-        return;
-      }
-      // Validate again at the call boundary, including the callback destination.
-      const selectedRole = allowedRole(role);
-      const rolePath = `/${selectedRole}`;
-      const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(rolePath)}`;
-      const supabase = createClient();
-      const { error: signUpError } = await supabase.auth.signUp({
-        email, password, options: { emailRedirectTo, data: { role: selectedRole } }
-      });
-      if (signUpError) {
-        if (signUpError.code === "user_already_exists" || /already registered/i.test(signUpError.message)) {
-          setSignupComplete(true);
-          return;
-        }
-        setError(mapAuthErrorMessage(signUpError.message));
-        return;
-      }
-      setSignupComplete(true);
-    } catch (caughtError) {
-      setError(caughtError instanceof Error ? mapAuthErrorMessage(caughtError.message) : "Something went wrong. Try again.");
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (state?.error) { setError(state.error); document.getElementById("signup-agree")?.focus(); }
+  }, [state]);
+  function handleSignupSubmit(event: React.FormEvent<HTMLFormElement>) {
+    if (!canSubmit) {
+      event.preventDefault();
+      setError(passwordStrength.isValid ? "Passwords do not match yet." : passwordStrength.errors[0]);
+      return;
+    }
+    if (!agreed) {
+      event.preventDefault();
+      setError("Check the box to agree first.");
+      document.getElementById("signup-agree")?.focus();
     }
   }
 
   if (showForgot) return <SignInForm initialForgot initialEmail={email} />;
-  if (signupComplete) return <CheckEmail email={email} onForgot={() => setShowForgot(true)}
+  if (state?.success) return <CheckEmail email={email} onForgot={() => setShowForgot(true)}
     onBack={() => { window.location.assign("/login"); }} />;
 
   return <>
@@ -102,7 +84,10 @@ export function CreateAccountForm({ initialRole }: { initialRole?: string }) {
     </div> : <div className="mt-8">
       <button type="button" className="mb-5 min-h-11 text-sm font-semibold text-[var(--accent)]"
         onClick={() => setStep(1)} title="Change account type.">‹ Change</button>
-      <form onSubmit={handleSignupSubmit} className="space-y-4">
+      <form action={formAction} onSubmit={handleSignupSubmit} className="space-y-4">
+        <input type="hidden" name="role" value={role} />
+        <input type="hidden" name="termsVersion" value={LEGAL_DOCUMENTS.terms.current} />
+        <input type="hidden" name="privacyVersion" value={LEGAL_DOCUMENTS.privacy.current} />
         <div><label htmlFor="signup-email" className="mb-2 block text-sm font-medium text-[var(--ink)]">Email</label>
           <Input id="signup-email" name="email" type="email" autoComplete="email" required className={fieldClass}
             value={email} onChange={(event) => setEmail(event.target.value)} /></div>
@@ -117,14 +102,14 @@ export function CreateAccountForm({ initialRole }: { initialRole?: string }) {
             onChange={(event) => setConfirmPassword(event.target.value)} />
           {confirmPassword.length > 0 && !passwordsMatch ? <p className="mt-2 text-xs font-medium text-[var(--crit)]">
             Passwords do not match yet.</p> : null}</div>
-        {error ? <Alert variant="error" role="alert">{error}</Alert> : null}
-        <Button type="submit" loading={loading} disabled={!canSubmit || loading}
+        {error ? <Alert id="signup-error" variant="error" role="alert">{error}</Alert> : null}
+        <LegalAgreementCheckbox id="signup-agree" checked={agreed} onCheckedChange={(value) => {
+          setAgreed(value); setError(null);
+        }} invalid={Boolean(error)} describedBy={error ? "signup-error" : undefined} />
+        <SubmitButton disabled={!canSubmit}
           className="h-[54px] w-full rounded-xl bg-[var(--action)] text-[var(--action-contrast)] hover:bg-[var(--action-strong)]"
-          title="Create your Domus account.">Create account</Button>
-        <nav aria-label="Legal links" className="flex justify-center gap-5 text-sm text-[var(--muted)]">
-          <Link href="/privacy" className="min-h-11 py-3 underline">Privacy</Link>
-          <Link href="/terms" className="min-h-11 py-3 underline">Terms</Link>
-        </nav>
+          title="Create your Domus account.">Create account</SubmitButton>
+
       </form>
     </div>}
   </>;

@@ -3,9 +3,9 @@ import { requestAccountDeletion } from "@/app/actions/account-deletion-request";
 import { resetRateLimitState } from "@/lib/rate-limit";
 
 const mocks = vi.hoisted(() => ({
-  requireAuth: vi.fn(), createAdminClient: vi.fn(), logAudit: vi.fn(), cookies: vi.fn(), redirect: vi.fn()
+  requireAuthForExit: vi.fn(), createAdminClient: vi.fn(), logAudit: vi.fn(), cookies: vi.fn(), redirect: vi.fn()
 }));
-vi.mock("@/app/actions/auth-helpers", () => ({ requireAuth: mocks.requireAuth }));
+vi.mock("@/app/actions/auth-helpers", () => ({ requireAuthForExit: mocks.requireAuthForExit }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }));
 vi.mock("@/lib/audit", () => ({ logAudit: mocks.logAudit }));
 vi.mock("next/headers", () => ({ cookies: mocks.cookies }));
@@ -46,7 +46,7 @@ function form(confirmation = "DELETE") {
   return data;
 }
 function session(role: "owner" | "manager" | "tenant" = "tenant", userId = id) {
-  mocks.requireAuth.mockResolvedValue({ user: { id: userId, email }, role,
+  mocks.requireAuthForExit.mockResolvedValue({ user: { id: userId, email }, role,
     supabase: { auth: { signOut }, from: sessionFrom } });
 }
 async function run(data = form()) {
@@ -94,9 +94,9 @@ beforeEach(() => {
 
 describe("requestAccountDeletion", () => {
   it("requires an allowed signed-in role before any work", async () => {
-    mocks.requireAuth.mockRejectedValue(new Error("REDIRECT:/login"));
+    mocks.requireAuthForExit.mockRejectedValue(new Error("REDIRECT:/login"));
     await expect(run()).rejects.toThrow("REDIRECT:/login");
-    expect(mocks.requireAuth).toHaveBeenCalledWith("owner", "manager", "tenant");
+    expect(mocks.requireAuthForExit).toHaveBeenCalledWith("owner", "manager", "tenant");
     expect(from).not.toHaveBeenCalled();
     expect(signOut).not.toHaveBeenCalled();
     expect(mocks.logAudit).not.toHaveBeenCalled();

@@ -64,6 +64,7 @@ export async function createTestUser(options: {
       email: normalizedEmail,
       full_name: fullName,
       role: options.role,
+      is_tester: true,
       onboarding_completed_at: onboardingCompleted ? new Date().toISOString() : null
     },
     { onConflict: "id" }

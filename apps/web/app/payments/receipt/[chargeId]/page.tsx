@@ -1,9 +1,8 @@
+import { getAuthenticatedUser } from "@/lib/auth";
 import { paymentMethodLabel } from "@/lib/payment-method-label";
 import Link from "next/link";
 import { ChevronLeft, Download } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
-import { headers } from "next/headers";
-import { getSafeNextPath } from "@/lib/route-resolver";
 import { withChargeEditingFallback } from "@/lib/charge-audit";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserRole } from "@/lib/auth";
@@ -23,14 +22,7 @@ interface ReceiptPageProps {
 export default async function ReceiptPage(props: ReceiptPageProps) {
   const params = await props.params;
   const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    const next = getSafeNextPath((await headers()).get("x-domus-path"));
-    redirect(next ? `/login?next=${encodeURIComponent(next)}` : "/login");
-  }
+  const user = await getAuthenticatedUser();
 
   const role = await getCurrentUserRole(user.id);
   if (role !== "tenant") {

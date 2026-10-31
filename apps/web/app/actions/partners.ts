@@ -1,5 +1,6 @@
 "use server";
 
+import { requireAuth } from "./auth-helpers";
 import { revalidatePath } from "next/cache";
 import { getCurrentUserRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -40,6 +41,7 @@ async function ownerClient(accountId: string) {
 function refresh() { revalidatePath("/owner"); revalidatePath("/owner/money"); }
 
 export async function addPartner(accountId: string, displayName: string): Promise<Failure | Success<{ id: string }>> {
+  await requireAuth("owner");
   const owner = await ownerClient(accountId);
   if (!owner) return denied();
   const input = validate(createPartnerSchema, { accountId, displayName });
@@ -52,6 +54,7 @@ export async function addPartner(accountId: string, displayName: string): Promis
 }
 
 export async function renamePartner(accountId: string, partnerId: string, displayName: string): Promise<Failure | Success> {
+  await requireAuth("owner");
   const owner = await ownerClient(accountId);
   if (!owner) return denied();
   const input = validate(updatePartnerSchema, { accountId, partnerId, displayName });
@@ -65,6 +68,7 @@ export async function renamePartner(accountId: string, partnerId: string, displa
 }
 
 export async function deactivatePartner(accountId: string, partnerId: string): Promise<Failure | Success> {
+  await requireAuth("owner");
   const owner = await ownerClient(accountId);
   if (!owner) return denied();
   const input = validate(deletePartnerSchema, { accountId, partnerId });
@@ -90,6 +94,7 @@ const paymentRow = (input: PaymentInput) => ({ from_partner_id: input.fromPartne
   kind: input.kind, status: input.status, note: input.note });
 
 export async function addPartnerPayment(input: PaymentInput): Promise<Failure | Success<{ id: string }>> {
+  await requireAuth("owner");
   const owner = await ownerClient(input.accountId);
   if (!owner) return denied();
   const parsed = validate(createPartnerPaymentSchema, input);
@@ -104,6 +109,7 @@ export async function addPartnerPayment(input: PaymentInput): Promise<Failure | 
 }
 
 export async function updatePartnerPayment(input: PaymentInput & { id: string }): Promise<Failure | Success> {
+  await requireAuth("owner");
   const owner = await ownerClient(input.accountId);
   if (!owner) return denied();
   const parsed = validate(updatePartnerPaymentSchema, input);
@@ -126,6 +132,7 @@ export async function updatePartnerPayment(input: PaymentInput & { id: string })
 }
 
 export async function deletePartnerPayment(accountId: string, id: string): Promise<Failure | Success> {
+  await requireAuth("owner");
   const owner = await ownerClient(accountId);
   if (!owner) return denied();
   const parsed = validate(deletePartnerPaymentSchema, { accountId, id });
@@ -139,6 +146,7 @@ export async function deletePartnerPayment(accountId: string, id: string): Promi
 }
 
 export async function setExpensePaidBy(expenseId: string, partnerId: string | null): Promise<Failure | Success> {
+  await requireAuth("owner");
   const client = createClient();
   const { data: auth, error: authError } = await client.auth.getUser();
   if (authError || !auth.user || await getCurrentUserRole(auth.user.id) !== "owner") return denied();

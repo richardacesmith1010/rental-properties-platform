@@ -1,3 +1,4 @@
+import { signUpAction } from "@/app/actions/sign-up";
 import Link from "next/link";
 import { ArrowRight, BarChart3, ShieldCheck, Sparkles } from "lucide-react";
 import { cookies } from "next/headers";
@@ -174,7 +175,7 @@ export default async function LoginPage(props: LoginPageProps) {
 
                 <SignInForm next={next} />
               </div>
-            </> : <CreateAccountForm initialRole={searchParams?.role} />}
+            </> : <CreateAccountForm action={signUpAction} initialRole={searchParams?.role} />}
 
             <footer className="mt-6 text-center text-xs text-muted-foreground">
               <p>&copy; {currentYear} Domus. All rights reserved.</p>

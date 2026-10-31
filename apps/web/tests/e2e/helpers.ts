@@ -36,10 +36,15 @@ export async function loginAsRole(
   await page.getByRole("button", { name: "Sign in" }).click();
 
   const redirected = await page
-    .waitForURL(/\/(owner|manager|tenant|onboarding|owner\/setup)/, { timeout: 12_000 })
+    .waitForURL(/\/(owner|manager|tenant|onboarding|owner\/setup|agree)/, { timeout: 12_000 })
     .then(() => true)
     .catch(() => false);
 
+  if (redirected && new URL(page.url()).pathname === "/agree") {
+    await page.getByLabel("I am 18 or older. I agree to the Terms of Service.", { exact: true }).check();
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await page.waitForURL(/\/(owner|manager|tenant|onboarding)/);
+  }
   return redirected && !page.url().includes("/login");
 }
 

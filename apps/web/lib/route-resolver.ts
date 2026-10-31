@@ -10,7 +10,7 @@ export type SafeNextPath = string & { readonly __brand: "SafeNextPath" };
 
 const blockedPaths = [
   "/login", "/logout", "/auth", "/api", "/onboarding", "/complete-profile",
-  "/reset-password", "/signup", "/_next", "/ops"
+  "/agree", "/reset-password", "/signup", "/_next", "/ops"
 ];
 
 function isAtOrUnder(path: string, prefix: string): boolean {

@@ -75,7 +75,7 @@ describe("front door look", () => {
     expect(screen.getByRole("button", { name: "Sign in" })).toHaveClass("bg-[var(--action)]");
     signIn.unmount();
 
-    const signup = render(<CreateAccountForm />);
+    const signup = render(<CreateAccountForm action={async () => ({ success: false })} />);
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     for (const element of signup.container.querySelectorAll("input, button")) {
       expect(element.className).not.toContain("rounded-[14px]");

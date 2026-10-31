@@ -1,3 +1,4 @@
+import { checkAgreement } from "@/lib/legal-acceptance";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { getSafeNextPath } from "@/lib/route-resolver";
@@ -17,7 +18,7 @@ export interface UserProfileSummary {
   stripeOnboardingComplete: boolean;
 }
 
-export async function getAuthenticatedUser() {
+export async function getAuthenticatedUser(options?: { legal?: "require" | "skip" }) {
   const supabase = createClient();
   const user = await getCheckedAuthUser(supabase);
 
@@ -26,6 +27,16 @@ export async function getAuthenticatedUser() {
     redirect(next ? `/login?next=${encodeURIComponent(next)}` : "/login");
   }
 
+  if (options?.legal !== "skip") {
+    // Settle immediately so a failed read never becomes an unhandled rejection while headers resolve.
+    const agreement = checkAgreement(supabase, user).then(
+      (status) => ({ status, error: null }), (error: unknown) => ({ status: null, error })
+    );
+    const next = getSafeNextPath((await headers()).get("x-domus-path"));
+    const result = await agreement;
+    if (result.error) throw result.error;
+    if (result.status === "required") redirect(next ? `/agree?next=${encodeURIComponent(next)}` : "/agree");
+  }
   return user;
 }
 

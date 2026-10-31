@@ -1,3 +1,4 @@
+import { agreementApiResponse } from "@/lib/legal-acceptance";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserRole } from "@/lib/auth";
@@ -21,6 +22,9 @@ export async function GET(_request: Request, props: RouteParams) {
   if (!user) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
+  const agreement = await agreementApiResponse(supabase, user);
+  if (agreement) return agreement;
+
 
   const role = await getCurrentUserRole(user.id);
   const result = await getSignedPropertyFileAsset(user.id, role, params.fileId);

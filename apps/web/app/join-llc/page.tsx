@@ -1,3 +1,6 @@
+import { LEGAL_DOCUMENTS } from "@/lib/legal-versions";
+import { LegalAgreementCheckbox } from "@/components/legal/legal-agreement-checkbox";
+import { isLlcInvitesPaused } from "@/lib/llc-invitations";
 import Link from "next/link";
 import { ArrowRight, Building2, ShieldCheck, Users } from "lucide-react";
 import { redirect } from "next/navigation";
@@ -59,6 +62,9 @@ function InviteErrorState({
 }
 
 export default async function JoinLlcPage(props: JoinLlcPageProps) {
+  if (isLlcInvitesPaused()) return <main className="app-surface min-h-screen p-6 text-[var(--ink)]">
+    <p>This invite is paused for a safety fix. Please try again in a few days.</p>
+  </main>;
   const searchParams = await props.searchParams;
   const token = typeof searchParams?.token === "string" ? searchParams.token : "";
   if (!token) {
@@ -109,7 +115,8 @@ export default async function JoinLlcPage(props: JoinLlcPageProps) {
         <main className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
           <div className="w-full max-w-xl rounded-2xl border border-border bg-card p-8 shadow-xl">
             <Alert variant="warning" className="px-4 py-3">
-              You&apos;re signed in as <span className="font-semibold text-foreground">{user.email}</span>, but this invitation was sent to <span className="font-semibold text-foreground">{invitation.email}</span>.
+              You&apos;re signed in as <span className="font-semibold text-foreground">{user.email}</span>, but this
+              invitation was sent to <span className="font-semibold text-foreground">{invitation.email}</span>.
             </Alert>
             <h1 className="font-display mt-6 text-2xl font-semibold text-foreground">Wrong account open</h1>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
@@ -253,13 +260,15 @@ export default async function JoinLlcPage(props: JoinLlcPageProps) {
                       <label htmlFor="join-llc-email" className="mb-1.5 block text-sm font-medium text-foreground">
                         Email
                       </label>
-                      <Input id="join-llc-email" name="email" value={invitation.email} readOnly title="This invitation is tied to this email address." />
+                      <Input id="join-llc-email" name="email" value={invitation.email} readOnly
+                        title="This invitation is tied to this email address." />
                     </div>
                     <div>
                       <label htmlFor="join-llc-password" className="mb-1.5 block text-sm font-medium text-foreground">
                         Password
                       </label>
-                      <Input id="join-llc-password" name="password" type="password" placeholder="Enter your password" required title="Enter your Domus password to join this LLC." />
+                      <Input id="join-llc-password" name="password" type="password" placeholder="Enter your password" required
+                        title="Enter your Domus password to join this LLC." />
                     </div>
                     <Button type="submit" className="w-full" title={`Sign in and join ${invitation.accountName}.`}>
                       Join {invitation.accountName}
@@ -272,34 +281,44 @@ export default async function JoinLlcPage(props: JoinLlcPageProps) {
                       <label htmlFor="join-llc-signup-email" className="mb-1.5 block text-sm font-medium text-foreground">
                         Email
                       </label>
-                      <Input id="join-llc-signup-email" value={invitation.email} readOnly title="This new account will be created for the invited email address." />
+                      <Input id="join-llc-signup-email" value={invitation.email} readOnly
+                        title="This new account will be created for the invited email address." />
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>
                         <label htmlFor="join-llc-first-name" className="mb-1.5 block text-sm font-medium text-foreground">
                           First name
                         </label>
-                        <Input id="join-llc-first-name" name="firstName" placeholder="First name" required title="Enter the first name for this Domus owner profile." />
+                        <Input id="join-llc-first-name" name="firstName" placeholder="First name" required
+                          title="Enter the first name for this Domus owner profile." />
                       </div>
                       <div>
                         <label htmlFor="join-llc-last-name" className="mb-1.5 block text-sm font-medium text-foreground">
                           Last name
                         </label>
-                        <Input id="join-llc-last-name" name="lastName" placeholder="Last name" required title="Enter the last name for this Domus owner profile." />
+                        <Input id="join-llc-last-name" name="lastName" placeholder="Last name" required
+                          title="Enter the last name for this Domus owner profile." />
                       </div>
                     </div>
                     <div>
                       <label htmlFor="join-llc-create-password" className="mb-1.5 block text-sm font-medium text-foreground">
                         Password
                       </label>
-                      <Input id="join-llc-create-password" name="password" type="password" minLength={6} placeholder="Create a password" required title="Create a password for your new Domus account." />
+                      <Input id="join-llc-create-password" name="password" type="password" minLength={8}
+                        placeholder="Create a password" required
+                        title="Create a password for your new Domus account." />
                     </div>
                     <div>
                       <label htmlFor="join-llc-confirm-password" className="mb-1.5 block text-sm font-medium text-foreground">
                         Confirm password
                       </label>
-                      <Input id="join-llc-confirm-password" name="confirmPassword" type="password" minLength={6} placeholder="Confirm your password" required title="Confirm your new Domus password." />
+                      <Input id="join-llc-confirm-password" name="confirmPassword" type="password" minLength={8}
+                        placeholder="Confirm your password" required
+                        title="Confirm your new Domus password." />
                     </div>
+                    <input type="hidden" name="termsVersion" value={LEGAL_DOCUMENTS.terms.current} />
+                    <input type="hidden" name="privacyVersion" value={LEGAL_DOCUMENTS.privacy.current} />
+                    <LegalAgreementCheckbox id="llc-agree" required />
                     <Button type="submit" className="w-full" title={`Create your account and join ${invitation.accountName}.`}>
                       Create Account & Join {invitation.accountName}
                     </Button>

@@ -211,6 +211,7 @@ export async function disableAutopay(
 }
 
 export async function getAutopayEnrollments(userId: string): Promise<AutopayEnrollment[]> {
+  await requireAuth("tenant");
   const supabase = createClient();
   const {
     data: { user }

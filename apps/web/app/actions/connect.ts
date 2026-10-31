@@ -1,11 +1,14 @@
 "use server";
 
+import { unstable_rethrow } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getStripeConnectOnboardingErrorCopy } from "@/lib/stripe-errors";
 import { assertStripeEligibleAccount, STRIPE_CLIENT_MESSAGE, StripeNotEligibleError } from "@/lib/client-accounts";
-import { createAccountLink, createExpressAccount, createLoginLink, getAccount, hasRentCollectionAuthorityForAccount } from "@/lib/stripe-connect";
+import {
+  createAccountLink, createExpressAccount, createLoginLink, getAccount, hasRentCollectionAuthorityForAccount
+} from "@/lib/stripe-connect";
 import { requireAuth } from "./auth-helpers";
 import type { ActionState } from "./shared";
 
@@ -54,6 +57,7 @@ export async function initiateStripeConnect(): Promise<ActionState> {
     );
     return { success: true, url: accountLink.url };
   } catch (err) {
+    unstable_rethrow(err);
     console.error("initiateStripeConnect error:", err);
     return {
       success: false,
@@ -119,6 +123,7 @@ export async function initiateAccountStripeConnect(
     );
     return { success: true, url: accountLink.url };
   } catch (err) {
+    unstable_rethrow(err);
     console.error("initiateAccountStripeConnect error:", err);
     return {
       success: false,
@@ -217,6 +222,7 @@ export async function initiateMemberPayoutConnect(
 
     return { success: true, url: accountLink.url };
   } catch (err) {
+    unstable_rethrow(err);
     console.error("initiateMemberPayoutConnect error:", err);
     return {
       success: false,
@@ -306,6 +312,7 @@ export async function checkConnectStatus(accountId?: string | null): Promise<Act
       detailsSubmitted: account.details_submitted
     };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       success: false,
       error: error instanceof StripeNotEligibleError ? STRIPE_CLIENT_MESSAGE
@@ -378,6 +385,7 @@ export async function getExpressDashboardUrl(
       message: "Stripe dashboard link ready."
     };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       success: false,
       error: error instanceof StripeNotEligibleError ? STRIPE_CLIENT_MESSAGE

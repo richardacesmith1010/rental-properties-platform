@@ -23,7 +23,7 @@ if ! printf "%s" "$LOGIN_HTML" | grep -qi "Domus"; then
 fi
 
 echo "[smoke] Checking protected route guards"
-for path in /owner /manager /tenant /owner/generate /settings /complete-profile; do
+for path in /owner /manager /tenant /owner/generate /settings /agree /complete-profile; do
   HEADERS="$(mktemp)"
   BODY="$(mktemp)"
   STATUS="$(curl -s -D "$HEADERS" -o "$BODY" -w "%{http_code}" "$APP_URL$path")"

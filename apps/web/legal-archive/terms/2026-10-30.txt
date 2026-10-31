@@ -1,0 +1,27 @@
+Terms of Service
+Last updated: October 30, 2026
+These terms are in effect now. We will tell you before we change them.
+Who we are
+Domus ("we") is run by Richard Smith, an individual. You can reach us at support@domusbase.com.
+What Domus does
+Domus helps landlords, property managers, and tenants handle rent, repairs, leases, documents, and messages in one place.
+Your account
+- Keep your sign-in details safe. You are responsible for what happens in your account.
+- Give true, current information.
+- Only add homes, tenants, or managers you have the right to manage.
+Early access and price
+Domus is free while it is in early access. We will tell you at least 30 days before we start charging. You can stop using Domus before any charge starts.
+Payments
+Online rent payments are handled by Stripe. Stripe's terms apply to those payments. Fees shown before you pay are the fees you pay.
+Bank data
+If you link a bank (through Plaid) or upload a bank file, you allow Domus to read those transactions to sort your rental money. You can delete them at any time.
+AI helper
+Some features use an AI helper (Anthropic's Claude) to answer questions about your data. Its answers can be wrong. Check anything important before you act on it.
+Rules
+Don't use Domus to break the law, harm others, send spam or harmful code, or get into data that isn't yours.
+Ending your account
+You can ask to delete your account at any time in Settings. We can pause or close accounts that break these terms.
+No guarantees
+Domus is provided "as is". We work to keep it running and correct, but we can't promise it will always be available or error-free.
+Changes
+If we change these terms in a way that matters, we will tell you in the app or by email before the change takes effect.

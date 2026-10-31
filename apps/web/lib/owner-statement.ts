@@ -1,3 +1,4 @@
+import { agreementApiResponse } from "@/lib/legal-acceptance";
 import "server-only";
 
 import { getCheckedAuthUser, getCurrentUserRole } from "@/lib/auth";
@@ -232,8 +233,11 @@ export async function loadStatementDownload(request: Request, now = new Date()):
   const failure = (status: number, error: string) => ({ ok: false as const,
     response: Response.json({ ok: false, error }, { status, headers: { "Cache-Control": "private, no-store" } }) });
   try {
-    const user = await getCheckedAuthUser(createClient());
+    const supabase = createClient();
+    const user = await getCheckedAuthUser(supabase);
     if (!user) return failure(401, "Please sign in.");
+    const agreement = await agreementApiResponse(supabase, user);
+    if (agreement) return { ok: false, response: agreement };
     if (await getCurrentUserRole(user.id) !== "manager") return failure(403, "Access denied.");
     if (!checkRateLimit(`ownerStatement:${user.id}`, 30, 3_600_000).allowed)
       return failure(429, "Too many downloads. Try again later.");

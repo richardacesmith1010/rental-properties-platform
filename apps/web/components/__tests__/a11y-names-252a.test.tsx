@@ -158,9 +158,9 @@ describe("Sprint 252a accessible controls", () => {
 
   it("uses muted text for both legal update dates", () => {
     const terms = render(<TermsPage />);
-    expect(screen.getByText("Last updated: October 18, 2026")).toHaveClass("text-[var(--muted)]");
+    expect(screen.getByText("Last updated: October 30, 2026")).toHaveClass("text-[var(--muted)]");
     terms.unmount();
     render(<PrivacyPage />);
-    expect(screen.getByText("Last updated: October 18, 2026")).toHaveClass("text-[var(--muted)]");
+    expect(screen.getByText("Last updated: October 30, 2026")).toHaveClass("text-[var(--muted)]");
   });
 });

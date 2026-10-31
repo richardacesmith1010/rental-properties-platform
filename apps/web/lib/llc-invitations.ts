@@ -150,7 +150,8 @@ export async function getLLCInvitationContextByToken(
   const { data, error } = await admin
     .from("llc_invitations")
     .select(
-      "id, ownership_account_id, invited_by, email, token, status, created_at, accepted_at, ownership_accounts(display_name), profiles!llc_invitations_invited_by_fkey(full_name)"
+      `id, ownership_account_id, invited_by, email, token, status, created_at, accepted_at,
+       ownership_accounts(display_name), profiles!llc_invitations_invited_by_fkey(full_name)`
     )
     .eq("token", token)
     .maybeSingle();
@@ -320,3 +321,8 @@ export async function acceptLLCInvitationMembership(params: {
 
   return { success: true as const, accountId: params.invitation.accountId };
 }
+
+const LLC_INVITES_PAUSED = true;
+export const LLC_INVITE_OWNER_PAUSE_MESSAGE =
+  "Partner invites are paused for a safety fix. Please try again in a few days.";
+export function isLlcInvitesPaused() { return LLC_INVITES_PAUSED; }

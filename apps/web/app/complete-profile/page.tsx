@@ -1,3 +1,8 @@
+import { createClient } from "@/lib/supabase/server";
+import { legalStatus, readOwnLegalAcceptances } from "@/lib/legal-acceptance";
+import { getCurrentUserRole } from "@/lib/auth";
+import { DeclineOptions } from "@/components/legal/decline-options";
+import { recordInviteAgreement } from "@/app/actions/legal-acceptance";
 import { redirect } from "next/navigation";
 import { UserRoundCheck } from "lucide-react";
 import { getAuthState, getAuthenticatedUser } from "@/lib/auth";
@@ -8,7 +13,9 @@ import { resolveAuthRoute } from "@/lib/route-resolver";
 export const dynamic = "force-dynamic";
 
 export default async function CompleteProfilePage() {
-  const user = await getAuthenticatedUser();
+  const user = await getAuthenticatedUser({ legal: "skip" });
+  const [rows, role] = await Promise.all([readOwnLegalAcceptances(createClient()), getCurrentUserRole(user.id)]);
+  const needsAgreement = !legalStatus(user.id, rows).accepted;
   const authState = await getAuthState(user.id);
 
   if (!authState.needsPasswordSet) {
@@ -35,7 +42,8 @@ export default async function CompleteProfilePage() {
           <h1 className="font-display font-display text-2xl font-semibold text-[var(--ink)]">Welcome to Domus!</h1>
           <p className="mt-2 text-sm text-[var(--muted)]">
             {inviteContext?.propertyAddress
-              ? `${inviteContext.ownerName ?? "Your landlord"} invited you to ${inviteContext.propertyAddress}${inviteContext.unitLabel ? `, ${inviteContext.unitLabel}` : ""}. Set your password to continue.`
+              ? `${inviteContext.ownerName ?? "Your landlord"} invited you to ${inviteContext.propertyAddress}` +
+                `${inviteContext.unitLabel ? `, ${inviteContext.unitLabel}` : ""}. Set your password to continue.`
               : "Set your password to complete your account setup."}
           </p>
         </div>
@@ -45,7 +53,8 @@ export default async function CompleteProfilePage() {
           <p className="mt-1 text-sm font-medium text-[var(--ink)]">{user.email ?? "unknown"}</p>
         </div>
 
-        <CompleteProfileForm email={user.email ?? ""} />
+        <CompleteProfileForm email={user.email ?? ""} needsAgreement={needsAgreement} recordAgreement={recordInviteAgreement} />
+        <DeclineOptions role={role} />
       </div>
     </main>
   );

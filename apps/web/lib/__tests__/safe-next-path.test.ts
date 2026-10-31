@@ -45,3 +45,8 @@ describe("safe return navigation", () => {
     expect(isNextAllowedForRole("/owner", "owner")).toEqual(true);
   });
 });
+
+ it("N1 refuses agreement self loops", () => {
+   expect(getSafeNextPath("/agree")).toBeNull();
+   expect(getSafeNextPath("/agree?next=%2Ftenant")).toBeNull();
+ });

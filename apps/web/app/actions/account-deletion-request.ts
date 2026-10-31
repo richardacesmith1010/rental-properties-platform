@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { requireAuth } from "@/app/actions/auth-helpers";
+import { requireAuthForExit } from "@/app/actions/auth-helpers";
 import type { ActionState } from "@/app/actions/shared";
 import { logAudit } from "@/lib/audit";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -17,7 +17,7 @@ function logFailure(tag: string, error: unknown) {
 }
 
 export async function requestAccountDeletion(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { user, role, supabase } = await requireAuth("owner", "manager", "tenant");
+  const { user, role, supabase } = await requireAuthForExit("owner", "manager", "tenant");
   if (!checkRateLimit(`requestAccountDeletion:${user.id}`, 3, 10 * 60 * 1000).allowed) {
     return { success: false, error: "Too many tries. Please wait 10 minutes." };
   }

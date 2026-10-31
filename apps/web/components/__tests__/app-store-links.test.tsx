@@ -24,11 +24,11 @@ describe("App Store links and support", () => {
     expect(sitemap().some((entry) => entry.url === "https://domusbase.com/support")).toBe(true);
   });
 
-  it("shows Privacy and Terms under the sign-up button", () => {
-    render(<CreateAccountForm />);
+  it("opens Privacy and Terms in sheets on the sign-up form", () => {
+    render(<CreateAccountForm action={async () => ({ success: false })} />);
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    expect(screen.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy");
-    expect(screen.getByRole("link", { name: "Terms" })).toHaveAttribute("href", "/terms");
+    expect(screen.getByRole("button", { name: "Read the Privacy Policy" })).toHaveAttribute("type", "button");
+    expect(screen.getByRole("button", { name: "Read the Terms" })).toHaveAttribute("type", "button");
   });
 
   it("shows Privacy and Terms in tenant, manager, and owner data panels", () => {

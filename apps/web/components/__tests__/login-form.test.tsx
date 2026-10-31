@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SignInForm } from "@/components/auth/sign-in-form";
 import { CreateAccountForm } from "@/components/auth/create-account-form";
 
-const mocks = vi.hoisted(() => ({ signUp: vi.fn(), resend: vi.fn(), login: vi.fn(), pending: false, state: {} as { error?: string } }));
+const mocks = vi.hoisted(() => ({ signUp: vi.fn(), signupAction: vi.fn(), resend: vi.fn(), login: vi.fn(),
+  pending: false, state: {} as { error?: string } }));
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ auth: mocks }) }));
 vi.mock("@/app/actions/login", () => ({ loginAction: mocks.login }));
 vi.mock("@/app/actions/forgot-password", () => ({ forgotPasswordAction: vi.fn() }));
@@ -18,6 +19,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.state = {};
   mocks.pending = false;
+  mocks.signupAction.mockResolvedValue({ success: true, email: "person@example.com" });
   mocks.signUp.mockResolvedValue({ data: { user: {} }, error: null });
   mocks.login.mockResolvedValue({});
 });
@@ -29,6 +31,7 @@ function details() {
   fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "Password123" } });
 }
 async function submitSignup() {
+  fireEvent.click(screen.getByLabelText("I am 18 or older. I agree to the Terms of Service."));
   fireEvent.submit(screen.getByRole("button", { name: "Create account" }).closest("form")!);
   await screen.findByText("Check your email");
 }
@@ -82,11 +85,11 @@ describe("SignInForm", () => {
 describe("CreateAccountForm", () => {
   it.each([["manager", "I manage rentals for others"], [undefined, "I own rentals"],
     ["admin", "I own rentals"], ["../evil", "I own rentals"]])("8.3a-c and i defaults %s to %s", (role, label) => {
-    render(<CreateAccountForm initialRole={role} />);
+    render(<CreateAccountForm action={mocks.signupAction} initialRole={role} />);
     expect(screen.getByRole("radio", { name: new RegExp(label) })).toBeChecked();
   });
   it("8.3d-e reveals fields and Change keeps email", () => {
-    render(<CreateAccountForm />);
+    render(<CreateAccountForm action={mocks.signupAction} />);
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "person@example.com" } });
     fireEvent.click(screen.getByRole("button", { name: "‹ Change" }));
@@ -94,34 +97,34 @@ describe("CreateAccountForm", () => {
     expect(screen.getByLabelText("Email")).toHaveValue("person@example.com");
   });
   it("8.3f sends tenant role and callback path", async () => {
-    render(<CreateAccountForm />);
+    render(<CreateAccountForm action={mocks.signupAction} />);
     fireEvent.click(screen.getByRole("radio", { name: /I rent a home/ }));
     details(); await submitSignup();
-    expect(mocks.signUp).toHaveBeenCalledWith({ email: "person@example.com", password: "Password123",
-      options: { data: { role: "tenant" },
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=%2Ftenant` } });
+    expect(Object.fromEntries(mocks.signupAction.mock.calls[0][1])).toEqual({
+      email: "person@example.com", password: "Password123", confirmPassword: "Password123", role: "tenant", agree: "yes",
+      termsVersion: "2026-10-30", privacyVersion: "2026-10-30"
+    });
+    expect(mocks.signUp).not.toHaveBeenCalled();
   });
   it.each(["admin", "../evil"])("8.3i allowlists invalid role %s at signUp", async (role) => {
-    render(<CreateAccountForm initialRole={role} />);
+    render(<CreateAccountForm action={mocks.signupAction} initialRole={role} />);
     details(); await submitSignup();
-    expect(mocks.signUp.mock.calls[0][0].options).toEqual({ data: { role: "owner" },
-      emailRedirectTo: `${window.location.origin}/auth/callback?next=%2Fowner` });
+    expect(mocks.signupAction.mock.calls[0][1].get("role")).toEqual("owner");
   });
   it("8.3g,j shows identical check-email output for existing and new accounts", async () => {
-    const first = render(<CreateAccountForm />);
+    const first = render(<CreateAccountForm action={mocks.signupAction} />);
     details(); await submitSignup();
     const normal = screen.getByText("Check your email").parentElement!.textContent;
     expect(screen.getByRole("button", { name: "Send it again" })).toBeInTheDocument();
     first.unmount();
-    mocks.signUp.mockResolvedValue({ data: { user: null },
-      error: { code: "user_already_exists", message: "User already registered" } });
-    render(<CreateAccountForm />);
+    mocks.signupAction.mockResolvedValue({ success: true, email: "person@example.com" });
+    render(<CreateAccountForm action={mocks.signupAction} />);
     details(); await submitSignup();
     expect(screen.getByText("Check your email").parentElement!.textContent).toBe(normal);
     expect(screen.getByRole("button", { name: "Send it again" })).toBeInTheDocument();
   });
   it("8.3g keeps resend response indistinguishable", async () => {
-    render(<CreateAccountForm />);
+    render(<CreateAccountForm action={mocks.signupAction} />);
     details(); await submitSignup();
     mocks.resend.mockResolvedValue({ data: {}, error: { message: "rate limit" } });
     fireEvent.click(screen.getByRole("button", { name: "Send it again" }));
@@ -131,7 +134,7 @@ describe("CreateAccountForm", () => {
       options: { emailRedirectTo: `${window.location.origin}/auth/callback` } });
   });
   it("8.3h blocks weak and mismatched passwords", async () => {
-    render(<CreateAccountForm />);
+    render(<CreateAccountForm action={mocks.signupAction} />);
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "person@example.com" } });
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "weak" } });
@@ -143,7 +146,7 @@ describe("CreateAccountForm", () => {
     expect(mocks.signUp).not.toHaveBeenCalled();
   });
   it("8.3l uses a native signup form and submit button for Enter", () => {
-    render(<CreateAccountForm />);
+    render(<CreateAccountForm action={mocks.signupAction} />);
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(screen.getByLabelText("Password").closest("form")).toBe(
       screen.getByRole("button", { name: "Create account" }).closest("form")
@@ -151,13 +154,12 @@ describe("CreateAccountForm", () => {
     expect(screen.getByRole("button", { name: "Create account" })).toHaveAttribute("type", "submit");
   });
   it("8.3k uses changed radio selection", async () => {
-    render(<CreateAccountForm />);
+    render(<CreateAccountForm action={mocks.signupAction} />);
     fireEvent.click(screen.getByRole("radio", { name: /I manage rentals/ }));
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     fireEvent.click(screen.getByRole("button", { name: "‹ Change" }));
     fireEvent.click(screen.getByRole("radio", { name: /I rent a home/ }));
     details(); await submitSignup();
-    expect(mocks.signUp.mock.calls[0][0].options.data).toEqual({ role: "tenant" });
-    expect(mocks.signUp.mock.calls[0][0].options.emailRedirectTo).toMatch(/next=%2Ftenant$/);
+    expect(mocks.signupAction.mock.calls[0][1].get("role")).toEqual("tenant");
   });
 });

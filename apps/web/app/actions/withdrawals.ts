@@ -1,5 +1,6 @@
 "use server";
 
+import { unstable_rethrow } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { formatCurrency } from "@/lib/format";
 import { getActiveMembers } from "@/lib/ownership-members";
@@ -489,6 +490,7 @@ export async function executeApprovedWithdrawal(
       };
     }
   } catch (error) {
+    unstable_rethrow(error);
     console.error("executeApprovedWithdrawal error:", error);
     return {
       success: false,

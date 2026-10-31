@@ -13,7 +13,7 @@ export async function GET() {
   // API routes use a JSON 401, as in /api/pdf/receipts.
   let user;
   try {
-    user = await getAuthenticatedUser();
+    user = await getAuthenticatedUser({ legal: "skip" });
   } catch (error) {
     if (error && typeof error === "object" && "digest" in error &&
       String(error.digest).startsWith("NEXT_REDIRECT")) return failure(401, "Please sign in.");

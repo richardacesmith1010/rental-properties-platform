@@ -54,3 +54,5 @@ When building a new component or module, if it will exceed 20KB, split it into s
 ### Import Verification
 
 After any file rename, move, or delete, you MUST run `npm run gate:web` and confirm zero broken imports before reporting done. A passing gate is the only acceptable proof that renames didn't break anything. If the gate fails after a rename, fix the imports — don't revert the rename.
+
+- Sprint 259a: split LLC join registration from `app/actions/llc-invitations.ts` (510-line exception) in 259b.

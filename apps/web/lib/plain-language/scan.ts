@@ -61,7 +61,8 @@ function expressionText(node: ts.Node): string | null {
 }
 
 export function scanSource(source: string, file: string): PlainLanguageHit[] {
-  if (/^apps\/web\/app\/(?:terms|privacy|ops)\//.test(file)) return [];
+  if (/^apps\/web\/app\/(?:terms|privacy|ops)\//.test(file) ||
+      /^apps\/web\/components\/legal\/(?:terms|privacy)-document\.tsx$/.test(file)) return [];
   const email = isEmailFile(file);
   const tree = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, file.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
   const hits: PlainLanguageHit[] = [];

@@ -1,3 +1,4 @@
+import { agreementApiResponse } from "@/lib/legal-acceptance";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { loadOwnerSectionDataForUser } from "@/app/owner/owner-section-data-core";
@@ -13,6 +14,8 @@ export async function GET(request: Request) {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return json({ error: "Authentication required." }, 401);
+    const agreement = await agreementApiResponse(supabase, user);
+    if (agreement) return agreement;
     const input: Record<string, unknown> = {};
     for (const [key, value] of new URL(request.url).searchParams) {
       if (!["section", "account", "property", "mode", "preload"].includes(key) ||

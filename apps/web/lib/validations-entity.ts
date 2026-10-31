@@ -1,3 +1,4 @@
+import { validatePassword } from "@/lib/password-validation";
 import { z } from "zod";
 import { parseInvitationEmails } from "@/lib/llc-invitations";
 import {
@@ -336,8 +337,12 @@ export const createLlcInvitationAccountSchema = z
     token: z.string().uuid("Invalid invitation."),
     firstName: z.string().min(1, "First name is required.").max(80, "First name must be under 80 characters."),
     lastName: z.string().min(1, "Last name is required.").max(80, "Last name must be under 80 characters."),
-    password: z.string().min(6, "Password should be at least 6 characters."),
-    confirmPassword: z.string().min(6, "Confirm your password.")
+    agree: z.literal("yes", { error: "Check the box to agree first." }),
+    termsVersion: z.string(),
+    privacyVersion: z.string(),
+    password: z.string().min(8, "Use at least 8 characters with a capital letter and a number.")
+      .refine((value) => validatePassword(value).isValid, "Use at least 8 characters with a capital letter and a number."),
+    confirmPassword: z.string().min(8, "Confirm your password.")
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match.",

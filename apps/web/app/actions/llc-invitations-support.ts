@@ -1,7 +1,10 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { agreementClient, legalRecordFailure, recordLegalAcceptance } from "@/lib/legal-acceptance";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   acceptLLCInvitationMembership,
+  isLlcInvitesPaused,
   getLLCInvitationContextByToken,
   type LLCInvitationContext,
   normalizeInvitationEmail
@@ -106,6 +109,7 @@ export function revalidateLlcSurfaces() {
 export async function resolveInvitationForAcceptance(
   token: string
 ): Promise<InvitationLookupResult> {
+  if (isLlcInvitesPaused()) return { error: "This invite is paused for a safety fix. Please try again in a few days." };
   const invitation = await getLLCInvitationContextByToken(token);
   if (!invitation) {
     return { error: "This invitation is invalid." } satisfies InvitationLookupResult;
@@ -155,4 +159,16 @@ export async function finalizeInvitationAcceptance(params: {
   }
 
   return { success: true, accountId: result.accountId };
+}
+
+export async function recordLlcRegistrationAgreement(
+  admin: SupabaseClient, profileId: string, createdEmail: string | undefined, invitationEmail: string
+) {
+  if (!createdEmail) return legalRecordFailure("llc_invite", "no_email");
+  if (normalizeInvitationEmail(createdEmail) !== normalizeInvitationEmail(invitationEmail)) {
+    return legalRecordFailure("llc_invite", "email_mismatch");
+  }
+  return recordLegalAcceptance(admin, {
+    profileId, email: invitationEmail, source: "llc_invite", client: await agreementClient()
+  });
 }

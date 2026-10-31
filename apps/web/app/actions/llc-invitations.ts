@@ -1,11 +1,14 @@
 "use server";
 
+import { versionsMatch } from "@/lib/legal-acceptance";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { sendLLCInvitationEmail } from "@/lib/llc-invitation-email";
 import {
   canUserManageLLCInvitations,
+  isLlcInvitesPaused,
+  LLC_INVITE_OWNER_PAUSE_MESSAGE,
   getExistingProfileByEmail,
   normalizeInvitationEmail,
   parseInvitationEmails
@@ -30,6 +33,7 @@ import {
   LLC_INVITATIONS_SCHEMA_ERROR,
   loadInviteManagementContext,
   resolveInvitationForAcceptance,
+  recordLlcRegistrationAgreement,
   revalidateLlcSurfaces
 } from "./llc-invitations-support";
 import { ensureCapabilityEnabled, type ActionState } from "./shared";
@@ -39,6 +43,7 @@ export async function sendLLCInvitations(
   formData: FormData
 ): Promise<ActionState> {
   const { user } = await requireAuth("owner");
+  if (isLlcInvitesPaused()) return { success: false, error: LLC_INVITE_OWNER_PAUSE_MESSAGE };
 
   if (!checkRateLimit(`sendLLCInvitations:${user.id}`, 10, 60 * 60 * 1000).allowed) {
     return { success: false, error: "Too many invitation requests. Please try again later." };
@@ -218,6 +223,7 @@ export async function resendLLCInvitation(
   formData: FormData
 ): Promise<ActionState> {
   const { user } = await requireAuth("owner");
+  if (isLlcInvitesPaused()) return { success: false, error: LLC_INVITE_OWNER_PAUSE_MESSAGE };
 
   if (!checkRateLimit(`resendLLCInvitation:${user.id}`, 20, 60 * 60 * 1000).allowed) {
     return { success: false, error: "Too many resend attempts. Please try again later." };
@@ -435,6 +441,9 @@ export async function createAccountToJoinLLC(formData: FormData) {
   }
 
   const { token, firstName, lastName, password } = parsed.data;
+  if (!versionsMatch(parsed.data.termsVersion, parsed.data.privacyVersion)) {
+    redirect(buildJoinRedirect(token, "signup", "We just updated the Terms. Reload the page to read them."));
+  }
   const inviteResult = await resolveInvitationForAcceptance(token);
   if ("error" in inviteResult) {
     redirect(
@@ -476,6 +485,7 @@ export async function createAccountToJoinLLC(formData: FormData) {
     redirect(buildJoinRedirect(token, createUserError?.message?.toLowerCase().includes("already") ? "signin" : "signup", errorMessage));
   }
 
+  await recordLlcRegistrationAgreement(admin, createdUser.user.id, createdUser.user.email, email);
   const accepted = await finalizeInvitationAcceptance({
     token,
     profileId: createdUser.user.id,

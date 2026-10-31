@@ -10,7 +10,7 @@ vi.mock("@/components/marketing/landing-shell", () => ({
 
 afterEach(cleanup);
 
-const banner = "Early access version. A lawyer is reviewing these terms. We will tell you before a final version takes effect.";
+
 const forbidden = ["March 4", "[", "LAWYER", "DECISION", "billed"];
 
 function expectSentence(sentence: string) {
@@ -21,8 +21,8 @@ function expectSentence(sentence: string) {
 }
 
 function expectHeaderAndCopy(headings: string[]) {
-  expect(screen.getByText("Last updated: October 18, 2026")).toBeInTheDocument();
-  expect(screen.getByText(banner)).toBeInTheDocument();
+  expect(screen.getByText("Last updated: October 30, 2026")).toBeInTheDocument();
+  expect(screen.getByText(/in effect now\. We will tell you before we change/)).toBeInTheDocument();
   expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual(headings);
   for (const text of forbidden) expect(document.body.textContent).not.toContain(text);
 }
@@ -58,6 +58,9 @@ describe("early-access legal pages", () => {
       "No guarantees",
       "Changes",
     ]);
+    expect(screen.getByText("These terms are in effect now. We will tell you before we change them.")).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain("does not hold your money");
+    expect(document.body.textContent).not.toContain("18 or older");
     expectSentence('Domus ("we") is run by Richard Smith, an individual.');
     expectSentence("We will tell you at least 30 days before we start charging.");
   });
@@ -76,6 +79,7 @@ describe("early-access legal pages", () => {
       "Changes",
       "Contact",
     ]);
+    expect(screen.getByText("This policy is in effect now. We will tell you before we change it.")).toBeInTheDocument();
     expectSentence("We answer within 30 days.");
     expectSentence("Financial records (rent, payments, expenses) are kept for 7 years after the tax year they belong to.");
     expectSentence("Owners: Settings → Account & Data → Delete my account.");

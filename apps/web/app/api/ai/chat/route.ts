@@ -1,3 +1,4 @@
+import { agreementApiResponse } from "@/lib/legal-acceptance";
 import Anthropic, { APIConnectionError, APIConnectionTimeoutError, APIError } from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -171,6 +172,9 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const agreement = await agreementApiResponse(supabase, user);
+  if (agreement) return agreement;
+
 
   const body = await request.json().catch(() => null);
   const parsed = aiChatRequestSchema.safeParse(body);

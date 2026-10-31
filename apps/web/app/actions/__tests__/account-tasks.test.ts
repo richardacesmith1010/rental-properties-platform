@@ -1,3 +1,4 @@
+vi.mock("@/app/actions/auth-helpers", () => ({ requireAuth: async () => ({}) }));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ role: vi.fn(), access: vi.fn(), getUser: vi.fn(), from: vi.fn(),
   reads: new Map<string, unknown>(), mutations: [] as Array<{ table: string; kind: string; value: unknown }> }));

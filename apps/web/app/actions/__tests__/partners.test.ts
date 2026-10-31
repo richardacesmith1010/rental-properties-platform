@@ -1,3 +1,4 @@
+vi.mock("@/app/actions/auth-helpers", () => ({ requireAuth: async () => ({}) }));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const db = vi.hoisted(() => ({ role: "owner", member: true, accountType: "llc", errorTable: "", errorCode: "XX000", errorOperation: "",
   partnerAccount: "account", partnerActive: true, attribution: null as string | null,

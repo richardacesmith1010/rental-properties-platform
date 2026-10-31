@@ -38,3 +38,8 @@ Codex owns this log (moved verbatim from AGENTS.md §12 on 2026-10-14). Read bef
 **What was correct:** Run the standalone TypeScript check after the build finishes when both use the same `.next` directory.
 **Rule:** Do not run `npx tsc --noEmit -p apps/web/tsconfig.json` concurrently with `npm run build --workspace @domus/web`; rerun it after the build if a generated-type race occurs.
 
+
+#### L-008 | 2026-10-30 | QUALITY
+**What happened:** Wrapping a Supabase select projection with string concatenation widened its inferred type.
+**What was correct:** A multiline template literal preserves the projection's literal type and inferred result columns.
+**Rule:** Keep Supabase select projections as literals when wrapping lines; verify with TypeScript after the build.

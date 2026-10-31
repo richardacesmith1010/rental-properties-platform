@@ -1,3 +1,4 @@
+import { getAuthenticatedUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { updateFeedbackStatus } from "@/app/actions/feedback";
@@ -22,13 +23,7 @@ export default async function OpsPage(
 ) {
   const searchParams = await props.searchParams;
   const supabase = await createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
+  const user = await getAuthenticatedUser();
 
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
 
